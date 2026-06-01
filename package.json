@@ -1,0 +1,28 @@
+{
+  "name": "tindivo",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Tindivo 2.0 — plataforma de delivery hiper-local (monorepo)",
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": ">=20.9.0",
+    "pnpm": ">=9"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "type-check": "turbo run type-check",
+    "test": "turbo run test",
+    "clean": "turbo run clean && rimraf node_modules",
+    "db:types": "supabase gen types typescript --project-id psjigdoinfpgrnedxeyf --schema public > packages/supabase/src/database.types.ts",
+    "db:lint": "supabase db lint --project-id psjigdoinfpgrnedxeyf"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "catalog:",
+    "turbo": "catalog:",
+    "typescript": "catalog:"
+  }
+}

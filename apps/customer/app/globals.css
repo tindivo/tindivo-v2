@@ -1,0 +1,256 @@
+@import "tailwindcss";
+@import "../../../packages/ui/src/theme.css";
+
+/* Escanea las clases usadas en el paquete de UI compartido. */
+@source '../../../packages/ui/src';
+
+/* Base: light mode siempre, mobile-first. */
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+/* =========================================================================
+   Sistema visual de la app cliente — portado 1:1 del prototipo (jesus).
+   Paleta/fuentes ya vienen de theme.css (brand #F97316, surface #FAF6F1…).
+   ========================================================================= */
+.t-display {
+  font-family: var(--font-bricolage), -apple-system, system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.t-eyebrow {
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: rgba(26, 22, 20, 0.55);
+}
+.t-muted {
+  color: rgba(26, 22, 20, 0.55);
+}
+
+/* Botones */
+.t-btn {
+  appearance: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 17px;
+  letter-spacing: -0.01em;
+  border-radius: 18px;
+  padding: 18px 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: transform 80ms ease, opacity 120ms ease, background 120ms ease;
+}
+.t-btn:active {
+  transform: scale(0.98);
+}
+.t-btn:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+.t-btn-primary {
+  background: #f97316;
+  color: #fff;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06), 0 8px 22px -8px rgba(249, 115, 22, 0.55);
+}
+.t-btn-primary:hover:not(:disabled) {
+  background: #ea580c;
+}
+.t-btn-secondary {
+  background: #1a1614;
+  color: #fff;
+}
+.t-btn-ghost {
+  background: rgba(26, 22, 20, 0.06);
+  color: #1a1614;
+}
+.t-btn-block {
+  width: 100%;
+}
+
+/* Cards / chips / campos */
+.t-card {
+  background: #fff;
+  border-radius: 22px;
+  padding: 14px;
+  border: 1px solid rgba(26, 22, 20, 0.05);
+}
+.t-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 500;
+  background: #fff;
+  color: #1a1614;
+  border: 1px solid rgba(26, 22, 20, 0.08);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.t-chip.active {
+  background: #1a1614;
+  color: #fff;
+  border-color: #1a1614;
+}
+.t-field {
+  background: #fff;
+  border-radius: 16px;
+  padding: 14px 16px;
+  border: 1px solid rgba(26, 22, 20, 0.06);
+  font-family: inherit;
+  font-size: 16px;
+  width: 100%;
+  outline: none;
+  color: #1a1614;
+}
+.t-field:focus {
+  border-color: #1a1614;
+}
+textarea.t-field {
+  resize: none;
+  min-height: 80px;
+}
+.t-field-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(26, 22, 20, 0.55);
+  margin-bottom: 8px;
+}
+
+/* Quantity stepper */
+.t-qty {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(26, 22, 20, 0.06);
+  border-radius: 999px;
+  padding: 4px;
+}
+.t-qty button {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  font-size: 20px;
+  color: #1a1614;
+  cursor: pointer;
+  border-radius: 999px;
+}
+.t-qty .val {
+  min-width: 28px;
+  text-align: center;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Imagen placeholder rayada (cuando el ítem no tiene foto) */
+.t-ph-image {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #f0ebe3;
+  flex-shrink: 0;
+}
+.t-ph-image::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent 0,
+    transparent 9px,
+    rgba(26, 22, 20, 0.045) 9px,
+    rgba(26, 22, 20, 0.045) 10px
+  );
+}
+
+/* Tabs de categoría sticky */
+.t-section-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  background: rgba(250, 246, 241, 0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  padding: 10px 16px;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-bottom: 1px solid rgba(26, 22, 20, 0.05);
+}
+.t-section-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+/* CTA pegajoso con degradado */
+.t-sticky-cta {
+  padding: 12px 16px 20px;
+  background: linear-gradient(
+    180deg,
+    rgba(250, 246, 241, 0) 0%,
+    rgba(250, 246, 241, 0.95) 30%,
+    #faf6f1 100%
+  );
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+}
+
+/* Bottom sheet modal */
+.t-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 80;
+  animation: t-fade-in 200ms ease;
+}
+.t-modal-sheet {
+  width: 100%;
+  max-width: 768px;
+  background: #faf6f1;
+  border-radius: 28px 28px 0 0;
+  max-height: 90%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: t-slide-up 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes t-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes t-slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+/* Scroll sin barra visible */
+.t-scroll {
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.t-scroll::-webkit-scrollbar {
+  display: none;
+}

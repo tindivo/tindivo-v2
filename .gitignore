@@ -1,0 +1,51 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+.next/
+out/
+dist/
+build/
+.turbo/
+
+# Testing
+coverage/
+*.lcov
+
+# Environment (never commit real secrets)
+.env
+.env.local
+.env.*.local
+.env.development.local
+.env.production.local
+
+# Supabase local
+supabase/.branches/
+supabase/.temp/
+supabase/.env
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+
+# Misc
+*.tsbuildinfo
+.vercel/
+Docs.rar
+
+# QA / Playwright artifacts
+.playwright-mcp/
+/tindivo-marketplace.png
+/tindivo-menu.png
+/tindivo-cart.png
+/tindivo-admin.png

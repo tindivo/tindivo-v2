@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Tindivo · Design Spec v1.0</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --brand: #F97316;
+    --brand-dark: #C2410C;
+    --ink: #1A1614;
+    --muted: rgba(26,22,20,0.6);
+    --quiet: rgba(26,22,20,0.45);
+    --surface: #FAF6F1;
+    --card: #fff;
+    --border: rgba(26,22,20,0.08);
+    --danger: #DC2626;
+    --success: #1A8050;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: 'Geist', -apple-system, system-ui, sans-serif;
+    color: var(--ink);
+    background: #ECEAE5;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .doc {
+    max-width: 880px;
+    margin: 0 auto;
+    background: #fff;
+    padding: 64px 64px 96px;
+    min-height: 100vh;
+  }
+  /* Cover */
+  .cover {
+    padding: 28px 0 48px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--brand);
+  }
+  .cover h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-size: 56px;
+    font-weight: 700;
+    letter-spacing: -0.035em;
+    line-height: 1.02;
+    margin: 14px 0 14px;
+  }
+  .cover .sub {
+    font-size: 18px;
+    color: var(--muted);
+    max-width: 560px;
+    line-height: 1.5;
+  }
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 22px;
+    margin-top: 28px;
+    font-size: 13px;
+  }
+  .meta dt {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--quiet);
+    margin-bottom: 4px;
+  }
+  .meta dd {
+    margin: 0;
+    font-weight: 600;
+  }
+
+  /* Headings */
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    margin: 56px 0 8px;
+    line-height: 1.1;
+  }
+  h2 .num {
+    color: var(--brand);
+    font-feature-settings: 'tnum';
+    margin-right: 10px;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    margin: 30px 0 8px;
+    line-height: 1.25;
+  }
+  h4 {
+    font-family: 'Geist', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    margin: 22px 0 6px;
+    color: var(--ink);
+  }
+  p { margin: 0 0 12px; color: var(--ink); }
+  p.lead { color: var(--muted); font-size: 15px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  ul li, ol li { margin-bottom: 5px; line-height: 1.55; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.88em;
+    background: rgba(26,22,20,0.05);
+    padding: 1px 6px;
+    border-radius: 4px;
+    color: var(--brand-dark);
+  }
+  strong { font-weight: 600; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
+
+  /* TOC */
+  .toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 22px 24px;
+    margin: 0 0 40px;
+  }
+  .toc-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--quiet);
+    margin-bottom: 12px;
+  }
+  .toc ol {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    columns: 2;
+    column-gap: 32px;
+  }
+  .toc ol li {
+    margin-bottom: 6px;
+    font-size: 13px;
+    break-inside: avoid;
+  }
+  .toc ol li a {
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .toc ol li a:hover { color: var(--brand); }
+  .toc-num {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--quiet);
+    margin-right: 10px;
+    font-size: 11px;
+  }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0 20px;
+    font-size: 13px;
+  }
+  th, td {
+    text-align: left;
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--quiet);
+    font-weight: 600;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  td.mono-cell {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+
+  /* Color swatches */
+  .swatches {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+    margin: 14px 0 20px;
+  }
+  .swatch {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fff;
+  }
+  .swatch-color {
+    height: 64px;
+  }
+  .swatch-meta {
+    padding: 8px 10px;
+    font-size: 11px;
+  }
+  .swatch-name {
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 2px;
+  }
+  .swatch-val {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--quiet);
+    font-size: 10px;
+  }
+
+  /* Callouts */
+  .callout {
+    border-left: 3px solid var(--brand);
+    background: rgba(249,115,22,0.06);
+    padding: 14px 16px;
+    border-radius: 0 12px 12px 0;
+    margin: 14px 0 20px;
+    font-size: 13.5px;
+  }
+  .callout strong { color: var(--brand-dark); }
+  .callout-rule {
+    border-left-color: var(--ink);
+    background: rgba(26,22,20,0.04);
+  }
+  .callout-rule strong { color: var(--ink); }
+  .callout-warn {
+    border-left-color: var(--danger);
+    background: rgba(220,38,38,0.05);
+  }
+  .callout-warn strong { color: var(--danger); }
+
+  /* States grid */
+  .state-grid {
+    display: grid;
+    grid-template-columns: auto 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin: 14px 0 20px;
+  }
+  .state-grid > div {
+    background: #fff;
+    padding: 10px 12px;
+    font-size: 12.5px;
+  }
+  .state-grid .head {
+    background: var(--surface);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--quiet);
+  }
+
+  /* Flow diagram */
+  .flow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin: 14px 0 20px;
+    font-size: 12.5px;
+  }
+  .flow-step {
+    padding: 8px 12px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-weight: 500;
+  }
+  .flow-step.start { border-color: var(--brand); color: var(--brand-dark); background: rgba(249,115,22,0.06); }
+  .flow-step.end { border-color: var(--success); color: var(--success); background: rgba(26,128,80,0.06); }
+  .flow-step.danger { border-color: var(--danger); color: var(--danger); background: rgba(220,38,38,0.05); }
+  .flow-arrow {
+    color: var(--quiet);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* Page break for print */
+  @media print {
+    body { background: #fff; }
+    .doc { box-shadow: none; padding: 24mm 18mm; max-width: none; }
+    h2 { page-break-before: auto; page-break-after: avoid; }
+    h3, h4 { page-break-after: avoid; }
+    table, .callout, .swatches { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="doc">
+
+<!-- ───────────────────────────────────────────── COVER ─────── -->
+<section class="cover">
+  <div class="eyebrow">Tindivo · Producto · v1.0</div>
+  <h1>Design Spec</h1>
+  <div class="sub">Especificación completa de diseño para la PWA de delivery Tindivo, piloto con Priamo en San Jacinto, Áncash. Cubre sistema visual, componentes, pantallas, flujos y reglas de negocio que impactan la UX.</div>
+  <dl class="meta">
+    <div><dt>Versión</dt><dd>1.0</dd></div>
+    <div><dt>Plataforma</dt><dd>PWA web mobile-first</dd></div>
+    <div><dt>Piloto</dt><dd>Priamo · San Jacinto, Áncash</dd></div>
+    <div><dt>Geo centro</dt><dd>-9.1547, -78.5042</dd></div>
+    <div><dt>Color marca</dt><dd>Tailwind orange-500</dd></div>
+  </dl>
+</section>
+
+<!-- ───────────────────────────────────────────── TOC ─────────── -->
+<nav class="toc">
+  <div class="toc-title">Contenido</div>
+  <ol>
+    <li><span class="toc-num">00</span><a href="#overview">Resumen del producto</a></li>
+    <li><span class="toc-num">01</span><a href="#system">Sistema de diseño</a></li>
+    <li><span class="toc-num">02</span><a href="#components">Componentes</a></li>
+    <li><span class="toc-num">03</span><a href="#screens">Pantallas</a></li>
+    <li><span class="toc-num">04</span><a href="#flows">Flujos de usuario</a></li>
+    <li><span class="toc-num">05</span><a href="#rules">Reglas de negocio</a></li>
+    <li><span class="toc-num">06</span><a href="#fixes">Bitácora de iteraciones</a></li>
+    <li><span class="toc-num">07</span><a href="#impl">Notas de implementación</a></li>
+  </ol>
+</nav>
+
+<!-- ──────────────────────────────────────────── 0. OVERVIEW ──── -->
+<section id="overview">
+<h2><span class="num">00</span>Resumen del producto</h2>
+
+<p class="lead">Tindivo es una plataforma de delivery y gestión de pedidos para restaurantes pequeños y medianos en San Jacinto, Áncash. Su objetivo en el piloto es migrar los pedidos que hoy ocurren por WhatsApp a una experiencia web estructurada con seguimiento en tiempo real.</p>
+
+<h3>Restaurantes en el catálogo</h3>
+<table>
+  <thead>
+    <tr><th>Restaurante</th><th>Estado</th><th>Tipo</th><th>Notas</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>Priamo</strong></td><td>Activo (piloto)</td><td>Pizzas &amp; hamburguesas</td><td>Único con flujo completo, badge "Más pedido".</td></tr>
+    <tr><td>La Nonna</td><td>Próximamente</td><td>Pastas frescas</td><td>Card visible en 40% opacidad, sin metadata, no clickeable.</td></tr>
+    <tr><td>La Florencia</td><td>Próximamente</td><td>Comida criolla</td><td>Mismo estado inactivo.</td></tr>
+  </tbody>
+</table>
+
+<h3>Stack referencial</h3>
+<ul>
+  <li>Frontend: Next.js (PWA), React</li>
+  <li>Backend: Supabase (Postgres + Realtime + Auth + Storage)</li>
+  <li>Mapas: Google Maps JavaScript API con marcador draggable</li>
+  <li>Push: Web Push API (sólo panel del restaurante)</li>
+  <li>Pago: directo a Yape del restaurante (Tindivo no retiene fondos)</li>
+</ul>
+</section>
+
+<!-- ──────────────────────────────────────────── 1. SYSTEM ──── -->
+<section id="system">
+<h2><span class="num">01</span>Sistema de diseño</h2>
+
+<h3>1.1 Identidad</h3>
+<p>Tindivo proyecta cercanía y velocidad en zona rural. La paleta gira en torno al naranja Tailwind (acogedor, comestible, con energía) sobre un crema cálido. La tipografía display es generosa y bold; el cuerpo es neutro y legible. La iconografía es lineal, 2px stroke, no decorativa. Las fotos de comida son protagonistas; los placeholders se evitan en cards de restaurante.</p>
+
+<h3>1.2 Color tokens</h3>
+<div class="swatches">
+  <div class="swatch"><div class="swatch-color" style="background:#F97316"></div><div class="swatch-meta"><div class="swatch-name">Brand</div><div class="swatch-val">#F97316 · orange-500</div></div></div>
+  <div class="swatch"><div class="swatch-color" style="background:#EA580C"></div><div class="swatch-meta"><div class="swatch-name">Brand hover</div><div class="swatch-val">#EA580C · orange-600</div></div></div>
+  <div class="swatch"><div class="swatch-color" style="background:#C2410C"></div><div class="swatch-meta"><div class="swatch-name">Brand dark</div><div class="swatch-val">#C2410C · orange-700</div></div></div>
+  <div class="swatch"><div class="swatch-color" style="background:#7C2D12"></div><div class="swatch-meta"><div class="swatch-name">Brand text</div><div class="swatch-val">#7C2D12 · orange-900</div></div></div>
+  <div class="swatch"><div class="swatch-color" style="background:#1A1614"></div><div class="swatch-meta"><div class="swatch-name">Ink</div><div class="swatch-val">#1A1614</div></div></div>
+  <div class="swatch"><div class="swatch-color" style="background:#FAF6F1; box-shadow:inset 0 0 0 1px var(--border)"></div><div class="swatch-meta"><div class="swatch-name">Surface</div><div class="swatch-val">#FAF6F1</div></div></div>
+  <div class="swatch"><div class="swatch-color" style="background:#fff; box-shadow:inset 0 0 0 1px var(--border)"></div><div class="swatch-meta"><div class="swatch-name">Card</div><div class="swatch-val">#FFFFFF</div></div></div>
+  <div class="swatch"><div class="swatch-color" style="background:#ECEAE5"></div><div class="swatch-meta"><div class="swatch-name">Stage</div><div class="swatch-val">#ECEAE5</div></div></div>
+  <div class="swatch"><div class="swatch-color" style="background:#DC2626"></div><div class="swatch-meta"><div class="swatch-name">Danger</div><div class="swatch-val">#DC2626</div></div></div>
+  <div class="swatch"><div class="swatch-color" style="background:#1A8050"></div><div class="swatch-meta"><div class="swatch-name">Success</div><div class="swatch-val">#1A8050</div></div></div>
+  <div class="swatch"><div class="swatch-color" style="background:#25D366"></div><div class="swatch-meta"><div class="swatch-name">WhatsApp</div><div class="swatch-val">#25D366</div></div></div>
+  <div class="swatch"><div class="swatch-color" style="background:linear-gradient(135deg,#6E27C5,#4A1199)"></div><div class="swatch-meta"><div class="swatch-name">Yape</div><div class="swatch-val">#6E27C5 → #4A1199</div></div></div>
+</div>
+
+<h4>Opacidades de texto sobre fondo claro</h4>
+<table>
+  <tr><td class="mono-cell">color: var(--ink)</td><td>Texto principal · 100%</td></tr>
+  <tr><td class="mono-cell">rgba(26,22,20,0.7)</td><td>Texto secundario</td></tr>
+  <tr><td class="mono-cell">rgba(26,22,20,0.55)</td><td>Texto sutil · subtítulos, hints</td></tr>
+  <tr><td class="mono-cell">rgba(26,22,20,0.45)</td><td>Disabled / counters / placeholders</td></tr>
+</table>
+
+<h3>1.3 Tipografía</h3>
+<table>
+  <thead><tr><th>Rol</th><th>Familia</th><th>Pesos</th><th>Uso</th></tr></thead>
+  <tbody>
+    <tr><td>Display</td><td>Bricolage Grotesque</td><td>700</td><td>Headlines, títulos de pantalla, nombres de producto. <code>letter-spacing: -0.02em a -0.035em</code></td></tr>
+    <tr><td>Body</td><td>Geist</td><td>400, 500, 600, 700</td><td>Párrafos, labels, botones, inputs.</td></tr>
+    <tr><td>Mono</td><td>JetBrains Mono</td><td>400, 500</td><td>Eyebrows (uppercase + tracking), IDs, coordenadas, contadores.</td></tr>
+  </tbody>
+</table>
+
+<h4>Escala</h4>
+<table>
+  <thead><tr><th>Token</th><th>Tamaño</th><th>Uso típico</th></tr></thead>
+  <tbody>
+    <tr><td>display/xl</td><td>38px</td><td>Hero del restaurante (Priamo)</td></tr>
+    <tr><td>display/lg</td><td>32px</td><td>Greeting de landing (32px, weight 700)</td></tr>
+    <tr><td>display/md</td><td>26–28px</td><td>Títulos de pantalla, modales</td></tr>
+    <tr><td>display/sm</td><td>20–22px</td><td>Section headers, restaurant names</td></tr>
+    <tr><td>body/lg</td><td>17px</td><td>Botones primarios</td></tr>
+    <tr><td>body/md</td><td>14–15px</td><td>Cuerpo, labels</td></tr>
+    <tr><td>body/sm</td><td>12–13px</td><td>Hints, subtítulos, meta</td></tr>
+    <tr><td>eyebrow</td><td>10–11px</td><td>Mono uppercase con tracking 0.12–0.20em</td></tr>
+  </tbody>
+</table>
+
+<h3>1.4 Espacio y radios</h3>
+<ul>
+  <li>Grilla mental: <strong>8pt</strong>. Padding interno de cards 14–16. Padding lateral de pantalla 16–20. Padding superior debajo del status bar 54px.</li>
+  <li>Radios: <strong>10</strong> (chips internos), <strong>12</strong> (chips/badges), <strong>14</strong> (banners callout), <strong>16</strong> (inputs/fields), <strong>18</strong> (botones primarios, address cards), <strong>22</strong> (cards y banners principales), <strong>28</strong> (esquina superior del bottom sheet), <strong>999</strong> (pills, avatars, dots).</li>
+  <li>Sombras de marca: <code>0 8px 22px -8px rgba(249,115,22,0.55)</code> para botones primarios; sombras suaves de elevación <code>0 1px 2px rgba(0,0,0,0.04)</code> para cards interactivas.</li>
+</ul>
+
+<h3>1.5 Iconografía</h3>
+<p>Conjunto inline SVG propio: Back, Close, Plus, Minus, Check, Search, Bag, Star (no usado en el flujo final), Clock, Pin, Upload, Phone, Truck, Store. Stroke <code>2 – 2.4px</code>, esquinas redondeadas. Iconos sobre fondo dark blur se invierten a blanco (header de menu).</p>
+
+<h3>1.6 Imagery</h3>
+<ul>
+  <li><strong>Cards de restaurante</strong>: foto cuadrada real (88×88, radius 14), <code>background-size: cover</code>.</li>
+  <li><strong>Hero de restaurante</strong>: foto fullbleed 300px de alto con gradient overlay <code>linear-gradient(180deg, rgba(0,0,0,0.15) 0%, transparent 35%, rgba(0,0,0,0.75) 100%)</code>. Texto blanco con <code>text-shadow</code>.</li>
+  <li><strong>Productos del menú</strong>: placeholder rayado (45°) con etiqueta mono. Se sustituye por fotos reales cuando estén disponibles.</li>
+</ul>
+
+</section>
+
+<!-- ──────────────────────────────────────────── 2. COMPONENTS ─ -->
+<section id="components">
+<h2><span class="num">02</span>Componentes</h2>
+
+<h3>2.1 Botones</h3>
+<table>
+  <thead><tr><th>Variante</th><th>Estilo</th><th>Estados</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Primary</strong></td><td>Fondo <code>#F97316</code>, texto blanco, padding 18×22, radius 18, font 17/600, sombra naranja. Hover: <code>#EA580C</code>.</td><td>Disabled → opacity 35% + sin sombra. <strong>Smart enable</strong>: en formularios, se muestra opaco (rgba(249,115,22,0.32)) hasta validar y full vibrante una vez válido.</td></tr>
+    <tr><td>Secondary</td><td>Fondo <code>#1A1614</code> ink, texto blanco. Mismo padding/radius.</td><td>Usado en confirmación negativa / botones secundarios densos.</td></tr>
+    <tr><td>Ghost</td><td>Fondo <code>rgba(26,22,20,0.06)</code>, texto ink.</td><td>Acciones terciarias, "Atrás" en footers, cierre de modales.</td></tr>
+    <tr><td>Danger</td><td>Outline rojo: <code>rgba(220,38,38,0.06)</code> bg + <code>rgba(220,38,38,0.18)</code> border + <code>#DC2626</code> text.</td><td>Cancelar pedido. Versión sólida para confirmaciones destructivas.</td></tr>
+    <tr><td>Glass</td><td>Fondo <code>rgba(0,0,0,0.45)</code> + <code>backdrop-filter: blur(8px)</code> + borde blanco 12%.</td><td>Botones flotantes sobre fotos (back arrow, "Entrar" pill).</td></tr>
+  </tbody>
+</table>
+
+<h3>2.2 Inputs &amp; fields</h3>
+<ul>
+  <li>Background: <code>#fff</code>. Border: <code>1px solid rgba(26,22,20,0.08)</code>. Radius: 16. Padding: 14×16. Font: 16/regular.</li>
+  <li>Focus: border ink. <strong>Error</strong>: border 2px <code>#DC2626</code> + background rosado <code>rgba(220,38,38,0.03)</code> + texto de error rojo debajo con ícono ⚠.</li>
+  <li>Field label: 12px/600, uppercase, tracking 0.04em, color muted. Asterisco naranja para required.</li>
+  <li>Textarea: <code>resize: none</code>, mínimo 80px de altura, contador derecho (e.g. <code>34/140</code>).</li>
+  <li>Prefijo +51 fijo con bandera 🇵🇪, separador vertical y input numérico tabular.</li>
+</ul>
+
+<h3>2.3 Cards</h3>
+<ul>
+  <li><strong>Producto en menú</strong>: hflex con contenido a la izquierda, imagen 92×92 a la derecha, badge "+" naranja flotante en la esquina.</li>
+  <li><strong>Address card</strong>: emoji label + nombre + chip "Por defecto" + línea + caja de referencia gris.</li>
+  <li><strong>Payment method card</strong>: icono cuadrado de color (Yape morado, Efectivo verde, Prepay naranja), nombre + descripción, radio derecho. Expandible inline cuando se selecciona.</li>
+  <li><strong>User card</strong> (cuenta): gradient naranja con avatar circular, nombre display 20px, chip de teléfono.</li>
+</ul>
+
+<h3>2.4 Modales y bottom sheets</h3>
+<ul>
+  <li><strong>Backdrop</strong>: <code>rgba(0,0,0,0.5)</code>, animación <code>fadeIn 200ms</code>.</li>
+  <li><strong>Bottom sheet</strong>: <code>border-radius: 28px 28px 0 0</code>, max-height 88-94%, animación <code>slideUp 280ms cubic-bezier(.22,1,.36,1)</code>.</li>
+  <li><strong>Pager horizontal</strong> (onboarding): dos o cuatro paneles en flex, <code>transform: translateX</code> con cubic-bezier <code>(.22,1,.36,1)</code> en 360–400ms.</li>
+  <li><strong>Confirmation dialog</strong> (cancelar pedido): centrado vertical, 22px radius, icon circle 48px + título display + texto + 2 botones gris/rojo.</li>
+</ul>
+
+<h3>2.5 Segmented control</h3>
+<p>Background <code>rgba(26,22,20,0.06)</code>, padding 4, radius 14. Item seleccionado: fondo blanco + sombra suave, font 14/600. Iconos opcionales al inicio. Usado para Delivery/Pick-up.</p>
+
+<h3>2.6 Chips y badges</h3>
+<ul>
+  <li><strong>Section tab (sticky)</strong>: pill blanca con border sutil; activa: ink negro.</li>
+  <li><strong>Status badge</strong> (e.g. "Más pedido"): 9–10px/700, uppercase, tracking 0.08em, padding 3×7, radius 6. Color sobre tinte (naranja en orange-100, verde en green-100, etc).</li>
+  <li><strong>Progress chip</strong> (onboarding): <code>Paso N de 2</code> en fondo orange-100 con texto orange-500.</li>
+  <li><strong>Live pulse</strong>: dot pequeño 6px + <code>@keyframes pulse</code> (opacity 1→0.45) cada 1.6s.</li>
+</ul>
+
+<h3>2.7 Quantity stepper</h3>
+<p>Pill <code>rgba(26,22,20,0.06)</code>, dos botones circulares 26–32px con − y +, número tabular en el centro. Versión mini en cart items, versión grande en modal de producto.</p>
+
+<h3>2.8 Mapa interactivo</h3>
+<ul>
+  <li>SVG estilizado de San Jacinto con grid, calles blancas, plaza verde, etiqueta de Priamo (en producción reemplazar por Google Maps JS API).</li>
+  <li>Pin naranja <code>#F97316</code> con drop-shadow, arrastrable.</li>
+  <li>Badge mono con coordenadas <code>-9.1547, -78.5042</code> arriba izquierda.</li>
+  <li>Hint <em>"Arrastra para ajustar"</em> arriba derecha.</li>
+  <li>Botón "Mi ubicación" inferior derecho.</li>
+</ul>
+
+<h3>2.9 Hero banner</h3>
+<p>Gradient diagonal triple (naranja 0% → 50% → 70%) + SVG blob orgánico (opacity 18%) + radial glow + textura sutil. Eyebrow chip "Solo en Tindivo" en fondo blanco translúcido con backdrop-blur. Copy display 22/700, letter-spacing -0.02em.</p>
+
+</section>
+
+<!-- ──────────────────────────────────────────── 3. SCREENS ─── -->
+<section id="screens">
+<h2><span class="num">03</span>Pantallas</h2>
+
+<p class="lead">El producto consta de 13 pantallas principales más 4 sub-pasos de onboarding. La barra de estado del iPhone (54px superior) se respeta en todas. La indicación home (34px inferior) también.</p>
+
+<!-- 3.1 -->
+<h3>3.1 Landing · Selector de restaurante</h3>
+<table>
+  <tr><td class="mono-cell">screen.id</td><td><code>landing</code></td></tr>
+  <tr><td class="mono-cell">Estado base</td><td>Usuario logueado o no</td></tr>
+</table>
+<h4>Contenido</h4>
+<ul>
+  <li><strong>Header</strong>: location mono ("San Jacinto, Áncash" uppercase) + título "Tindivo" + esquina derecha: avatar con inicial (logueado) o pill "Entrar" con fondo blur dark (no logueado).</li>
+  <li><strong>Greeting display</strong> 32px/700, letter-spacing -0.03em: "¿Qué pedimos / hoy en la noche?" o "Buenas noches, [Nombre] 🍕".</li>
+  <li><strong>Search bar</strong> visual con icono Search a la izquierda.</li>
+  <li><strong>Hero banner</strong> con gradient + blob + chip "Solo en Tindivo" + copy <em>"Pide en minutos, paga al recibir o por Yape."</em></li>
+  <li><strong>Restaurantes</strong>: título sin contador. Cards con foto thumbnail real, badge "Más pedido" en activos, ETA + fee abajo.</li>
+  <li><strong>Inactivos</strong>: opacity 40% + <code>filter: grayscale(1)</code>, sin metadata extra, <code>disabled</code> (no clickeable).</li>
+  <li><strong>Footer mono</strong>: <code>tindivo · v1.0 · piloto</code> y "Pedidos directos desde San Jacinto. Hecho en Áncash."</li>
+</ul>
+
+<!-- 3.2 -->
+<h3>3.2 Menu · Carta del restaurante</h3>
+<table>
+  <tr><td class="mono-cell">screen.id</td><td><code>menu</code></td></tr>
+</table>
+<h4>Hero (foto real + gradient)</h4>
+<ul>
+  <li>Altura 300px, <code>background-image</code> de la foto de Priamo a cover.</li>
+  <li>Overlay: <code>linear-gradient(180deg, rgba(0,0,0,0.15) 0%, transparent 35%, rgba(0,0,0,0.25) 55%, rgba(0,0,0,0.75) 100%)</code>.</li>
+  <li>Top bar (z-index 2, padding-top 54px): back arrow + esquina derecha "Entrar" (no logueado) o avatar inicial (logueado). Todos con <code>rgba(0,0,0,0.45)</code> + blur 8px + borde blanco 12%.</li>
+  <li>Bottom block: nombre display 38px + tagline + meta: <code>⏱ ~23 min</code> + <code>🚚 S/ 2.00 delivery</code>. Sin estrellas ni reviews. Todo blanco con text-shadow.</li>
+</ul>
+<h4>Body</h4>
+<ul>
+  <li>Sticky tabs de sección con chips (Pizzas, Hamburguesas, Bebidas) — backdrop-blur 14px.</li>
+  <li>Secciones con header display + blurb. Items en cards verticales con imagen 92×92, contenido a la izquierda y botón flotante "+" naranja.</li>
+  <li>Floating cart bar fijo abajo (apparece cuando hay items): naranja sólido, contador en círculo + "Ver mi pedido" + total tabular.</li>
+</ul>
+
+<!-- 3.3 -->
+<h3>3.3 Product Modal · Configurador</h3>
+<table>
+  <tr><td class="mono-cell">component</td><td><code>ProductModal</code></td></tr>
+  <tr><td class="mono-cell">Trigger</td><td>Tap en cualquier ProductRow del menú</td></tr>
+</table>
+<ul>
+  <li>Bottom sheet con hero rayado del producto, título display 26px, desc 14px muted, "Desde S/X" precio inicial.</li>
+  <li><strong>Modifier groups</strong> en cards individuales:
+    <ul>
+      <li>Header: nombre + chip de estado (<em>Obligatorio</em> rojo / <em>Listo</em> verde / <em>0/3</em> contador).</li>
+      <li>Tipo <code>single</code>: lista de opciones con radio circular naranja.</li>
+      <li>Tipo <code>multi</code>: checkbox cuadrado naranja con check blanco. Bloquea selección cuando se alcanza <code>max</code>.</li>
+      <li>Precio por opción: <code>+S/X.XX</code> o "Incluido" en gris.</li>
+      <li><strong>Required missing</strong>: card con border 1px <code>#F97316</code> rojo cambiado a brand; chip "Obligatorio".</li>
+    </ul>
+  </li>
+  <li>Nota especial (textarea opcional, 140 char counter).</li>
+  <li>Footer sticky: qty stepper + botón "Agregar · S/X.XX". Disabled si quedan grupos required sin completar (texto cambia a "Completa N opciones").</li>
+</ul>
+
+<!-- 3.4 -->
+<h3>3.4 Cart · Carrito</h3>
+<table><tr><td class="mono-cell">screen.id</td><td><code>cart</code></td></tr></table>
+<ul>
+  <li>Header con back, título "Mi pedido".</li>
+  <li>Cards de cart items: thumbnail rayado + nombre + lista de modificadores separados por " · " + nota en italic ("…") + qty mini stepper + total tabular. Botón X arriba derecha para remover.</li>
+  <li>Card "Resumen": Subtotal, Delivery (S/2), Total bold.</li>
+  <li>Banner ETA: <em>"Tiempo estimado de entrega: ~23 min una vez confirmado el pago."</em> Fondo orange-100, texto orange-900.</li>
+  <li>Sticky CTA "Continuar · S/X". <strong>Gate</strong>: si el usuario no está logueado o falta phone/address, se reabre el onboarding sheet automáticamente (ver 3.5).</li>
+  <li>Empty state cuando <code>cart.length === 0</code>: "Carrito vacío / Agrega productos desde la carta."</li>
+</ul>
+
+<!-- 3.5 -->
+<h3>3.5 Onboarding · Bottom sheet de 4 sub-pasos</h3>
+<table>
+  <tr><td class="mono-cell">component</td><td><code>AuthOnboarding</code></td></tr>
+  <tr><td class="mono-cell">Trigger</td><td>Cualquier acción de "confirmar" con usuario incompleto (cart→checkout)</td></tr>
+</table>
+
+<h4>Header del sheet</h4>
+<ul>
+  <li>Lado izquierdo: botón X (cierra el sheet — temporal) con microcopy debajo <em>"Puedes completar esto después"</em>. En el sub-paso "email" la X se convierte en flecha Back que regresa a "method".</li>
+  <li>Lado derecho: chip naranja <code>Paso 1 de 2</code> o <code>Paso 2 de 2</code> en los pasos phone/address; en method/email muestra label mono "Crear cuenta" / "Con correo".</li>
+</ul>
+
+<h4>Sub-pasos (slide horizontal)</h4>
+<ol>
+  <li><strong>method</strong>: Logo "T" naranja con shadow, título "Crea tu cuenta en Tindivo", subtítulo "Sin verificación de correo. Empiezas a pedir al instante." Botones: Google (primario, blanco con logo a color) + Email (outline). Divider con eyebrow "¿Ya tienes cuenta?" + "Iniciar sesión". Footer microcopy de Términos.</li>
+  <li><strong>email</strong>: 3 campos en una pantalla — Nombre completo, Correo, Contraseña (min 6). Botón "Crear cuenta" activo cuando los tres son válidos.</li>
+  <li><strong>phone (Paso 1 de 2)</strong>:
+    <ul>
+      <li>Card de bienvenida con avatar gradient + "¡Hola, María! · Cuenta lista" + email.</li>
+      <li>Display "¿Cuál es tu número / de WhatsApp?" + subtítulo "El repartidor te contactará aquí si tiene alguna duda."</li>
+      <li>Input con 🇵🇪 +51 fijo + separador + número tabular grande (font 22/600). <strong>Auto-focus</strong> 420ms después de abrir si name está pre-rellenado.</li>
+      <li>Hint <em>"Debe empezar con 9 y tener 9 dígitos."</em></li>
+      <li>Banner verde con icono WhatsApp <em>"Nunca compartimos tu número..."</em></li>
+      <li>Footer: botón "Continuar". <strong>Estado activo cuando hay 9 dígitos válidos</strong>; tap con menos de 9 dígitos → input en rojo + texto <em>"⚠ Ingresa tu número de WhatsApp para continuar."</em></li>
+    </ul>
+  </li>
+  <li><strong>address (Paso 2 de 2)</strong>:
+    <ul>
+      <li>Display "Tu dirección / de entrega" + subtítulo "Mueve el pin a tu casa en San Jacinto."</li>
+      <li>Mapa con pin naranja arrastrable. Debajo coords mono.</li>
+      <li>Textarea "Referencia *" con placeholder <em>"Ej. Casa color blanco con reja negra, frente a la bodega de don Carlos"</em>. Validación min 6 chars. Char counter.</li>
+      <li>Footer: "Atrás" + "Guardar y empezar a pedir". Mismo patrón de validación que phone.</li>
+    </ul>
+  </li>
+</ol>
+
+<!-- 3.6 -->
+<h3>3.6 Checkout · Entrega + confirmación</h3>
+<table><tr><td class="mono-cell">screen.id</td><td><code>checkout</code></td></tr></table>
+<ul>
+  <li>Segmented control "Delivery / Pick-up".</li>
+  <li><strong>Delivery</strong>: lista de direcciones guardadas con radio. "+ Añadir nueva" inline. Banner info <em>"Solo entregamos en el polígono de cobertura de San Jacinto..."</em>.</li>
+  <li><strong>Pick-up</strong>: card del local con nombre, dirección, horario, ETA.</li>
+  <li>Teléfono de contacto con +51 prefijo, validado.</li>
+  <li>Textarea "Nota adicional (opcional)" con char counter (200).</li>
+  <li>Card de resumen mini.</li>
+  <li>CTA "Revisar y pagar · S/X" → abre <strong>Modal de confirmación de dirección</strong>:
+    <ul>
+      <li>Mini-mapa con pin en posición guardada.</li>
+      <li>Card de dirección con etiqueta + jirón + caja gris "Referencia: ...".</li>
+      <li>Card de contacto con teléfono + nombre.</li>
+      <li>Card de pedido con líneas + total.</li>
+      <li>Botón "✏️ Editar esta dirección" → va al editor.</li>
+      <li>Footer: "Volver" + "Sí, ir al pago".</li>
+    </ul>
+  </li>
+</ul>
+
+<!-- 3.7 -->
+<h3>3.7 Payment Method · Delivery (selector)</h3>
+<table><tr><td class="mono-cell">screen.id</td><td><code>payment</code> · delivery branch</td></tr></table>
+<ul>
+  <li>Card de total a pagar arriba.</li>
+  <li>Tres cards de método con radio:
+    <ul>
+      <li><strong>Yape al recibir</strong> (badge "Más usado"). Expansión: nota morada <em>"El motorizado lleva su QR y número Yape."</em></li>
+      <li><strong>Efectivo al recibir</strong>. Expansión: campo opcional "Pago con S/ X" que calcula el vuelto en vivo (verde si suficiente, rojo si menor al total).</li>
+      <li><strong>Prepagar por Yape</strong>. Expansión inline con card Yape morada (número + Copiar) + monto exacto en orange-100 + nota informativa <em>"Sin subir captura. El restaurante valida tu pago por su lado y te llama para confirmar."</em></li>
+    </ul>
+  </li>
+  <li>Banner inferior <em>"El restaurante te llamará en breve al +51 XXX para confirmar tu pedido."</em></li>
+  <li>CTA dual:
+    <ul>
+      <li>Yape al recibir / Efectivo → "Enviar pedido · S/X" → ir directo a Order Confirmed.</li>
+      <li>Prepagar por Yape → <strong>"Continuar al pago · S/X"</strong> → ir a 3.8 (PrepayUpload con timer).</li>
+    </ul>
+  </li>
+</ul>
+
+<!-- 3.8 -->
+<h3>3.8 Pre-payment Upload · Pick-up &amp; Delivery prepay</h3>
+<table>
+  <tr><td class="mono-cell">screen.id</td><td><code>prepay</code> (delivery) o <code>payment</code> (pickup)</td></tr>
+  <tr><td class="mono-cell">component</td><td><code>PickupPaymentScreen</code> con prop <code>mode</code></td></tr>
+</table>
+<ul>
+  <li>Banner de timer arriba: <em>"Sube tu comprobante en los próximos <strong>10:00</strong> o el pedido se cancela."</em> Se pone rojo en el último minuto. Decrementa cada segundo. Se detiene al subir.</li>
+  <li>Banner explicativo según modo:
+    <ul>
+      <li><strong>pickup</strong>: <em>"Para recojos en local el pago se hace antes. Así el restaurante prepara tu pedido apenas confirme tu Yape."</em></li>
+      <li><strong>delivery-prepay</strong>: <em>"Elegiste prepagar por Yape. Sube tu comprobante para que el restaurante confirme y empiece a preparar."</em></li>
+    </ul>
+  </li>
+  <li>Card Yape morada con número y botón Copiar.</li>
+  <li>Card monto exacto en orange-100 con botón Copiar.</li>
+  <li>4 pasos numerados (cómo pagar).</li>
+  <li>Dropzone dashed naranja. Al "subir": cambia a verde con border solid + miniatura YAPE + <em>"Listo para enviar ✓"</em>.</li>
+  <li>CTA "Enviar pedido · S/X" disabled hasta upload.</li>
+  <li><strong>Timeout</strong>: al llegar a 00:00 sin upload → navegación automática a Order Cancelled (reason: timeout).</li>
+</ul>
+
+<!-- 3.9 -->
+<h3>3.9 Order Confirmed · Interstitial</h3>
+<table><tr><td class="mono-cell">screen.id</td><td><code>confirmed</code></td></tr></table>
+<ul>
+  <li>Background gradient <code>#FAF6F1 → #FFF7ED</code>.</li>
+  <li>Check naranja 96×96 con animación <code>okPop</code> (scale .3→1.08→1) + check dibujado (stroke-dashoffset) + anillo expansivo continuo.</li>
+  <li>Order ID <code>#TND-XXXXX</code> en eyebrow naranja.</li>
+  <li>Display adaptativo según <code>order.method</code>:
+    <table>
+      <tr><th>Tipo</th><th>Título</th><th>Mensaje</th></tr>
+      <tr><td>Delivery</td><td>"Tu pedido<br/>fue enviado"</td><td>"El restaurante te llamará en breve para confirmarlo."</td></tr>
+      <tr><td>Pick-up</td><td>"Pedido<br/>enviado"</td><td>"El restaurante revisará tu pago y te llamará para confirmar cuándo estará listo."</td></tr>
+    </table>
+  </li>
+  <li>Cards de recap: "Llamada a +51 [phone]" y "Pago [method] · S/X" (label cambia a <em>"Pagado por Yape"</em> en pick-up).</li>
+  <li>CTAs: "Ver seguimiento del pedido" (primary) + "Volver al inicio" (link). Footer: SupportLink WhatsApp.</li>
+</ul>
+
+<!-- 3.10 -->
+<h3>3.10 Tracking · Seguimiento del pedido</h3>
+<table><tr><td class="mono-cell">screen.id</td><td><code>tracking</code></td></tr></table>
+<h4>Hero card oscura</h4>
+<ul>
+  <li>Background <code>#1A1614</code> con radial glow naranja. Order ID chip con dot pulse + barra de progreso gradient.</li>
+  <li>Display 30px con label del estado actual.</li>
+  <li>Counter "Paso N de 5 · ETA ~23 min".</li>
+</ul>
+<h4>Timeline (vertical)</h4>
+<table>
+  <thead><tr><th>Estado</th><th>Label</th><th>Sub</th><th>Quien lo activa</th></tr></thead>
+  <tbody>
+    <tr><td><code>sent</code></td><td>Pedido enviado</td><td>El restaurante te llamará en breve</td><td>Sistema (al enviar)</td></tr>
+    <tr><td><code>confirmed</code></td><td>Confirmado</td><td>Tu pedido fue confirmado por teléfono</td><td>Restaurante</td></tr>
+    <tr><td><code>preparing</code></td><td>Preparando</td><td>Tu pedido está en cocina</td><td>Restaurante</td></tr>
+    <tr><td><code>ontheway</code></td><td>En camino</td><td>Repartidor en ruta</td><td>Motorizado</td></tr>
+    <tr><td><code>delivered</code></td><td>Entregado</td><td>¡Buen provecho!</td><td>Motorizado</td></tr>
+  </tbody>
+</table>
+<p>Cada paso: check (done) / pulse dot (active con anillo glow) / muted dot (pending). Conector vertical naranja cuando done.</p>
+
+<h4>Footer del tracking — condicional</h4>
+<ul>
+  <li><strong>Estado <code>sent</code> (cancelable)</strong>: botón outline rojo "✕ Cancelar pedido" + microcopy <em>"Puedes cancelar mientras el restaurante aún no confirma."</em> + SupportLink debajo. Tap → confirm dialog "¿Cancelar tu pedido?" con botones gris/rojo.</li>
+  <li><strong>Estados <code>confirmed</code>+</strong>: card blanca con check verde + texto <em>"Tu pedido ya está en preparación y no puede cancelarse."</em> + SupportLink integrado.</li>
+</ul>
+
+<!-- 3.11 -->
+<h3>3.11 Order Cancelled · Interstitial</h3>
+<table><tr><td class="mono-cell">screen.id</td><td><code>cancelled</code></td></tr></table>
+<p>Adaptativo según <code>cancelReason</code>:</p>
+<table>
+  <thead><tr><th>Reason</th><th>Icono</th><th>Título</th><th>Mensaje</th></tr></thead>
+  <tbody>
+    <tr><td><code>timeout</code></td><td>Reloj rojo</td><td>Se acabó el tiempo / para pagar</td><td>"Tu pedido fue cancelado porque no recibimos tu comprobante a tiempo. Puedes volver a pedir cuando quieras."</td></tr>
+    <tr><td><code>user</code></td><td>X rojo</td><td>Cancelaste / tu pedido</td><td>"Tu pedido fue cancelado sin costo porque aún no estaba confirmado por el restaurante. Puedes volver a pedir cuando quieras."</td></tr>
+  </tbody>
+</table>
+<p>CTA "Volver al menú" + SupportLink.</p>
+
+<!-- 3.12 -->
+<h3>3.12 Account · Mi cuenta</h3>
+<table><tr><td class="mono-cell">screen.id</td><td><code>account</code></td></tr></table>
+<ul>
+  <li>User card con gradient naranja: avatar circular (inicial), nombre display, email, chip de teléfono.</li>
+  <li>Sección <strong>"Mis direcciones"</strong>: header + link "+ Añadir" naranja, lista de address cards. Cada una: emoji + label + chip "Por defecto" (si aplica) + jirón + caja gris de referencia + acciones (Editar, Marcar como predeterminada).</li>
+  <li>Sección <strong>"Pedidos anteriores"</strong>: lista de 3 con check verde, items, ID y fecha, total tabular.</li>
+  <li>Sección <strong>"Cuenta"</strong>: lista de settings con emoji y chevron (Perfil, Notificaciones, Ayuda, Términos, Cerrar sesión en rojo).</li>
+</ul>
+
+<!-- 3.13 -->
+<h3>3.13 Address Edit / Add</h3>
+<table><tr><td class="mono-cell">screen.id</td><td><code>addressEdit</code></td></tr></table>
+<ul>
+  <li>Label segmented (Casa 🏠 / Trabajo 💼 / Otro 📍).</li>
+  <li>Mapa con pin arrastrable (reutiliza MapView).</li>
+  <li>Calle / Jirón input.</li>
+  <li>Textarea Referencia required con char counter 140.</li>
+  <li>Toggle "Usar como predeterminada" — iOS-style switch naranja.</li>
+  <li>Botón Eliminar dirección (solo en edición).</li>
+  <li>Sticky CTA "Guardar dirección" / "Guardar cambios".</li>
+</ul>
+
+</section>
+
+<!-- ──────────────────────────────────────────── 4. FLOWS ───── -->
+<section id="flows">
+<h2><span class="num">04</span>Flujos de usuario</h2>
+
+<h3>4.1 Primer pedido (sin sesión)</h3>
+<div class="flow">
+  <span class="flow-step start">Landing</span><span class="flow-arrow">→</span>
+  <span class="flow-step">Menu Priamo</span><span class="flow-arrow">→</span>
+  <span class="flow-step">Product Modal</span><span class="flow-arrow">→</span>
+  <span class="flow-step">Cart</span><span class="flow-arrow">→</span>
+  <span class="flow-step">Onboarding sheet</span><span class="flow-arrow">→</span>
+  <span class="flow-step">Checkout</span><span class="flow-arrow">→</span>
+  <span class="flow-step">Confirm modal</span><span class="flow-arrow">→</span>
+  <span class="flow-step">Payment method</span><span class="flow-arrow">→</span>
+  <span class="flow-step">Prepay upload (si aplica)</span><span class="flow-arrow">→</span>
+  <span class="flow-step end">Order Confirmed</span><span class="flow-arrow">→</span>
+  <span class="flow-step end">Tracking</span>
+</div>
+<p>El onboarding sheet se inserta en el cart→checkout cuando el usuario no está logueado. Empieza en <code>method</code> y avanza hasta <code>address</code>; al terminar, aterriza directo en checkout con la dirección recién creada como default.</p>
+
+<h3>4.2 Usuario recurrente</h3>
+<p>Misma cadena pero salta el onboarding (ya tiene phone + addresses). Se reabre solo si el usuario logueado eliminó su dirección por defecto o no tiene teléfono.</p>
+
+<h3>4.3 Dismissal y reapertura del onboarding</h3>
+<ul>
+  <li>X en <strong>method</strong>: cierra el sheet, usuario sigue no logueado.</li>
+  <li>X en <strong>phone</strong> o <strong>address</strong>: cierra el sheet, mantiene la cuenta parcial (name+email solo).</li>
+  <li>En <strong>email</strong> la X se convierte en Back y vuelve a method.</li>
+  <li>Reapertura automática al intentar avanzar de cart a checkout: si <code>!isOnboardingComplete(user)</code>, se vuelve a abrir el sheet en el sub-paso correcto.</li>
+</ul>
+
+<h3>4.4 Timeout de pago</h3>
+<div class="flow">
+  <span class="flow-step start">Prepay Upload (timer 10:00)</span><span class="flow-arrow">→</span>
+  <span class="flow-step danger">00:00 sin upload</span><span class="flow-arrow">→</span>
+  <span class="flow-step danger">Order Cancelled (timeout)</span><span class="flow-arrow">→</span>
+  <span class="flow-step">Volver al menú</span>
+</div>
+<p>Aplica idéntico para Pick-up (siempre) y Delivery + Prepagar por Yape (opcional).</p>
+
+<h3>4.5 Cancelación manual</h3>
+<div class="flow">
+  <span class="flow-step start">Tracking · estado sent</span><span class="flow-arrow">→</span>
+  <span class="flow-step">Tap "Cancelar pedido"</span><span class="flow-arrow">→</span>
+  <span class="flow-step">Confirm dialog</span><span class="flow-arrow">→</span>
+  <span class="flow-step danger">Order Cancelled (user)</span>
+</div>
+<p>Solo permitido en estado <code>sent</code>. En <code>confirmed</code> y posteriores el botón se sustituye por mensaje informativo + SupportLink.</p>
+
+<h3>4.6 Soporte WhatsApp</h3>
+<p>El componente <code>SupportLink</code> aparece en Order Confirmed, Tracking, Order Cancelled y en el footer del estado no-cancelable. Abre <code>wa.me/51987654321</code> con mensaje pre-rellenado <em>"Hola Tindivo 👋, tengo un problema con mi pedido #TND-XXXXX."</em></p>
+
+</section>
+
+<!-- ──────────────────────────────────────────── 5. RULES ───── -->
+<section id="rules">
+<h2><span class="num">05</span>Reglas de negocio</h2>
+
+<h3>5.1 Pago — política unificada</h3>
+<div class="state-grid">
+  <div class="head">Tipo de pedido</div>
+  <div class="head">Método</div>
+  <div class="head">Comprobante en app</div>
+  <div>Delivery</div><div>Yape al recibir</div><div>No requerido. CTA directo a Order Confirmed.</div>
+  <div>Delivery</div><div>Efectivo al recibir</div><div>No requerido. Campo opcional de "Pago con S/X" para vuelto.</div>
+  <div>Delivery</div><div>Prepagar por Yape</div><div><strong>Requerido</strong>. Pantalla 3.8 con timer 10:00.</div>
+  <div>Pick-up</div><div>(único) Prepago Yape</div><div><strong>Requerido</strong>. Pantalla 3.8 con timer 10:00.</div>
+</div>
+
+<div class="callout">
+  <strong>Tindivo no retiene fondos.</strong> El cliente transfiere directo a la cuenta Yape del restaurante. Tindivo cobra su comisión al restaurante semanal/quincenalmente, separado del flujo de cobro al cliente. Esto evita riesgo regulatorio de intermediación financiera en el piloto.
+</div>
+
+<h3>5.2 Validación de campos</h3>
+<table>
+  <thead><tr><th>Campo</th><th>Regla</th><th>Mensaje de error</th></tr></thead>
+  <tbody>
+    <tr><td>Teléfono</td><td>9 dígitos, debe empezar con 9 (móvil PE)</td><td>"Ingresa tu número de WhatsApp para continuar."</td></tr>
+    <tr><td>Referencia</td><td>Mínimo 6 caracteres, máximo 140</td><td>"Escribe una referencia para que el motorizado te encuentre."</td></tr>
+    <tr><td>Vuelto en efectivo</td><td>Si se ingresa, debe ser ≥ total</td><td>"Debe ser mayor a S/ X.XX."</td></tr>
+    <tr><td>Email</td><td>Formato estándar <code>\S+@\S+\.\S+</code></td><td>Validación implícita (botón disabled)</td></tr>
+    <tr><td>Contraseña</td><td>Min 6 caracteres</td><td>Hint: "Mínimo 6 caracteres."</td></tr>
+  </tbody>
+</table>
+
+<h3>5.3 Estados del pedido y permisos</h3>
+<table>
+  <thead><tr><th>Estado</th><th>Cancelable</th><th>Editable</th></tr></thead>
+  <tbody>
+    <tr><td><code>sent</code> Pedido enviado</td><td>✅ Sí (sin costo)</td><td>No</td></tr>
+    <tr><td><code>confirmed</code> Confirmado</td><td>❌ No</td><td>No</td></tr>
+    <tr><td><code>preparing</code> Preparando</td><td>❌ No (mediación por soporte)</td><td>No</td></tr>
+    <tr><td><code>ontheway</code> En camino</td><td>❌ No</td><td>No</td></tr>
+    <tr><td><code>delivered</code> Entregado</td><td>—</td><td>—</td></tr>
+  </tbody>
+</table>
+
+<h3>5.4 Costos y comisiones (referencia operativa)</h3>
+<table>
+  <tr><td>Costo de delivery al cliente</td><td>S/ 2.00</td></tr>
+  <tr><td>Comisión por pedido al restaurante (delivery)</td><td>S/ 1.00</td></tr>
+  <tr><td>Costo de pick-up al cliente</td><td>S/ 0.00</td></tr>
+  <tr><td>Comisión pick-up al restaurante</td><td>S/ 0.50 (no activa en piloto)</td></tr>
+  <tr><td>ETA por defecto</td><td>~23 min (valor único, no rango)</td></tr>
+</table>
+
+<h3>5.5 Restaurantes</h3>
+<ul>
+  <li>Solo Priamo está activo en el piloto. Las cards inactivas se muestran al 40% opacidad + grayscale 100%, sin metadata extra, sin badge "Próximamente" textual.</li>
+  <li>El menú se organiza en secciones: Pizzas, Hamburguesas, Bebidas.</li>
+  <li>Cada producto tiene categoría que dicta sus modifier groups (Pizzas: Tamaño + Masa + Extras; Burgers: Cocción + Acompañamiento + Extras + Salsa; Bebidas: ninguno).</li>
+</ul>
+
+<h3>5.6 Constraints del piloto</h3>
+<div class="callout callout-rule">
+  <strong>Decisiones de simplicidad para validar antes de escalar:</strong>
+  <ul style="margin-top:8px;">
+    <li>Sin verificación OTP del teléfono</li>
+    <li>Sin verificación de email</li>
+    <li>Sin pasarela de pago integrada (solo Yape directo)</li>
+    <li>Sin app nativa — todo es PWA</li>
+    <li>Sin tracking GPS del motorizado en mapa</li>
+    <li>Sin modificadores negativos estructurados (se resuelve con nota libre)</li>
+    <li>Carta editada por admin Tindivo, no por el restaurante</li>
+  </ul>
+</div>
+
+<h3>5.7 Cobertura geográfica</h3>
+<p>Polígono dibujado sobre el mapa de San Jacinto. Mapa centrado por defecto en <code>-9.1547, -78.5042</code>. Las faldas del cerro están excluidas por seguridad del motorizado. Cliente fuera de zona ve: <em>"Lo sentimos, tu ubicación está fuera de nuestra zona de cobertura actual. Puedes hacer un pedido de Pick-up directamente en el local."</em></p>
+
+</section>
+
+<!-- ──────────────────────────────────────────── 6. FIXES ──── -->
+<section id="fixes">
+<h2><span class="num">06</span>Bitácora de iteraciones</h2>
+
+<p class="lead">Cambios aplicados durante el desarrollo, en orden cronológico. Útiles para entender por qué la app está donde está y evitar revertir decisiones intencionales.</p>
+
+<table>
+  <thead><tr><th style="width:40px">#</th><th>Área</th><th>Cambio</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>Marca</td><td>Color rojo → naranja Tailwind <code>#F97316</code> en todo el sistema.</td></tr>
+    <tr><td>2</td><td>Geo</td><td>Miraflores Lima → San Jacinto Áncash. Coordenadas reales <code>-9.1547, -78.5042</code>. Mapa estilizado con plaza, calles y label del restaurante.</td></tr>
+    <tr><td>3</td><td>Cuenta</td><td>Onboarding completo, gestión de múltiples direcciones, historial de pedidos, perfil, modal de confirmación de dirección antes del pago.</td></tr>
+    <tr><td>4</td><td>Pago v1</td><td>Eliminado upload de captura genérico. Sustituido por selector de 3 métodos (Yape al recibir / Efectivo / Prepagar) en delivery.</td></tr>
+    <tr><td>5</td><td>Confirmación</td><td>Nueva pantalla <code>OrderConfirmedScreen</code> con check animado y mensaje "El restaurante te llamará en breve para confirmarlo."</td></tr>
+    <tr><td>6</td><td>Tracking</td><td>Estados simplificados: eliminado "Pendiente de pago" y "Validando pago" (no hay validación en app). Flujo nuevo: <code>sent → confirmed → preparing → ontheway → delivered</code>.</td></tr>
+    <tr><td>7</td><td>Pago v2</td><td>Para pick-up se restaura prepago obligatorio con upload + timer 10 minutos.</td></tr>
+    <tr><td>8</td><td>Onboarding sheet</td><td>Header: chip naranja "Paso N de 2" reemplazó las 4 líneas. Botón Continuar smart-state (opaco→vibrante). Tap inválido → input rojo + microcopy. X dismiss con texto "Puedes completar esto después". Reapertura automática al confirmar pedido. Auto-focus del phone si name pre-rellenado. Step 2 entra con slide horizontal. Agregado sub-paso de elección Google/email.</td></tr>
+    <tr><td>9</td><td>Hero del menu</td><td>Fondo sólido naranja reemplazado por foto real con overlay gradient. Eliminadas estrella y reviews. ETA "~23 min" (valor único). Top-right adapta entre avatar y pill "Entrar".</td></tr>
+    <tr><td>10</td><td>Landing</td><td>Eliminadas estrellas, reviews, contador "1 abierto · 2 próximos", chips de categoría. Banner reescrito a <em>"Pide en minutos, paga al recibir o por Yape."</em></td></tr>
+    <tr><td>11</td><td>Diseño visual</td><td>Cards de restaurante con fotos reales (88×88). Título landing a 32px/700. Hero banner con SVG blob orgánico. Inactivos al 40% opacidad full grayscale.</td></tr>
+    <tr><td>12</td><td>Delivery prepago</td><td>"Prepagar por Yape" en delivery ahora usa el mismo flujo de upload + timer 10:00 que pick-up.</td></tr>
+    <tr><td>13</td><td>Soporte</td><td><code>SupportLink</code> agregado en Order Confirmed, Tracking y Order Cancelled. Abre WhatsApp con mensaje pre-rellenado incluyendo order ID.</td></tr>
+    <tr><td>14</td><td>Cancelación</td><td>Botón "Cancelar pedido" rojo solo durante estado <code>sent</code>. Modal de confirmación. Estados ≥ <code>confirmed</code> muestran card informativa. <code>OrderCancelledScreen</code> adapta título/copy según <code>reason: timeout | user</code>.</td></tr>
+  </tbody>
+</table>
+
+</section>
+
+<!-- ──────────────────────────────────────────── 7. IMPL ───── -->
+<section id="impl">
+<h2><span class="num">07</span>Notas de implementación</h2>
+
+<h3>7.1 Estructura del prototipo</h3>
+<table>
+  <thead><tr><th>Archivo</th><th>Contenido</th></tr></thead>
+  <tbody>
+    <tr><td class="mono-cell">Tindivo.html</td><td>Entry point con scripts e imports</td></tr>
+    <tr><td class="mono-cell">styles.css</td><td>Tokens globales + reglas de surface, btns, fields, sheets</td></tr>
+    <tr><td class="mono-cell">data.jsx</td><td>Datos del restaurante, menú, restaurantes, addresses seed, past orders</td></tr>
+    <tr><td class="mono-cell">ui.jsx</td><td>Iconos SVG, ProductImage, Segmented, ScreenHeader</td></tr>
+    <tr><td class="mono-cell">product-modal.jsx</td><td>ProductModal con grupos de modifiers</td></tr>
+    <tr><td class="mono-cell">screens-menu-cart.jsx</td><td>MenuScreen + CartScreen + componentes auxiliares</td></tr>
+    <tr><td class="mono-cell">screens-checkout.jsx</td><td>CheckoutScreen, ConfirmAddressModal, DeliveryPaymentScreen, PickupPaymentScreen, OrderConfirmedScreen, OrderCancelledScreen, TrackingScreen, SupportLink, MapView</td></tr>
+    <tr><td class="mono-cell">screens-landing.jsx</td><td>LandingScreen + RestaurantCard</td></tr>
+    <tr><td class="mono-cell">screens-auth.jsx</td><td>AuthOnboarding + 4 sub-pasos</td></tr>
+    <tr><td class="mono-cell">screens-account.jsx</td><td>AccountScreen, AddressCard, AddressEditScreen</td></tr>
+    <tr><td class="mono-cell">app.jsx</td><td>App root: estado, ruteo entre screens, demo controls</td></tr>
+  </tbody>
+</table>
+
+<h3>7.2 Estado clave de la app</h3>
+<ul>
+  <li><code>screen</code>: landing | menu | cart | checkout | payment | prepay | confirmed | tracking | cancelled | account | addressEdit</li>
+  <li><code>user</code>: <code>{ signedIn, name, email, phone, addresses: Address[] }</code></li>
+  <li><code>order</code>: <code>{ method: 'delivery' | 'pickup', addressId, phone, note }</code></li>
+  <li><code>submittedOrder</code>: <code>{ id, phone, method, payment: { methodId, methodLabel, change } }</code></li>
+  <li><code>trackingState</code>: id de TRACKING_STATES</li>
+  <li><code>cancelReason</code>: <code>'timeout' | 'user'</code></li>
+  <li><code>authOpen</code>: boolean para mostrar el bottom sheet de onboarding</li>
+</ul>
+
+<h3>7.3 Gates principales</h3>
+<ul>
+  <li><code>isOnboardingComplete(user)</code>: <code>user.signedIn &amp;&amp; user.phone &amp;&amp; user.addresses.length > 0</code></li>
+  <li><code>handleOpenCart</code>: si no signed in, abre sheet + navega a cart; si signed pero incompleto, abre sheet + navega; si completo, va directo.</li>
+  <li><code>handleProceedToCheckout</code>: si no completo, reabre sheet; si completo, navega a checkout.</li>
+</ul>
+
+<h3>7.4 Animaciones reutilizadas</h3>
+<table>
+  <thead><tr><th>Token</th><th>Curva</th><th>Duración</th></tr></thead>
+  <tbody>
+    <tr><td>Slide up del sheet</td><td><code>cubic-bezier(.22,1,.36,1)</code></td><td>280ms</td></tr>
+    <tr><td>Pager horizontal</td><td><code>cubic-bezier(.22,1,.36,1)</code></td><td>360–400ms</td></tr>
+    <tr><td>Fade del backdrop</td><td>ease</td><td>200ms</td></tr>
+    <tr><td>Pulse (estado activo)</td><td>ease-in-out</td><td>1.6s loop</td></tr>
+    <tr><td>okPop (check de confirmación)</td><td><code>cubic-bezier(.34,1.56,.64,1)</code></td><td>480ms</td></tr>
+    <tr><td>Progress bar</td><td><code>cubic-bezier(.4,0,.2,1)</code></td><td>600ms</td></tr>
+  </tbody>
+</table>
+
+<h3>7.5 Producción — sustituciones recomendadas</h3>
+<ul>
+  <li><strong>Mapa</strong>: reemplazar <code>MapView</code> stylized por Google Maps JS API con marcador draggable y polígono de cobertura. Mantener overlays UI (chip de coords, hint, botón mi ubicación).</li>
+  <li><strong>Auth</strong>: integrar Supabase Auth (Google OAuth + email) preservando los sub-pasos del bottom sheet como están.</li>
+  <li><strong>Upload de comprobante</strong>: usar Supabase Storage. La UI dropzone se mantiene.</li>
+  <li><strong>Realtime</strong>: suscribir el tracking a Supabase Realtime para que los cambios de estado vengan del backend; mantener el timeline UI como vive.</li>
+  <li><strong>Push</strong>: solo para el panel del restaurante (no este producto). Cliente recibe updates vía la pantalla de tracking.</li>
+</ul>
+
+</section>
+
+<hr/>
+<p style="font-size: 12px; color: var(--quiet); text-align: center; margin-top: 40px;">
+  Documento generado a partir de las iteraciones de diseño de Tindivo · Piloto Priamo · San Jacinto, Áncash.<br/>
+  Para uso interno. v1.0 · May 2026.
+</p>
+
+</div>
+</body>
+</html>

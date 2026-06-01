@@ -1,0 +1,51 @@
+/**
+ * Design System Tindivo (Tailwind v4 @theme). Fuente: 06-ui-design-system.md +
+ * DECISIONS §16. Light mode siempre. Naranja protagonista. Las apps importan
+ * este archivo después de `@import "tailwindcss";`.
+ *
+ * Las familias de fuente referencian variables que cada app define con next/font
+ * (--font-bricolage, --font-geist, --font-jetbrains).
+ */
+@theme {
+  /* Marca */
+  --color-brand: #f97316;
+  --color-brand-dark: #c2410c;
+  --color-brand-light: #fed7aa;
+
+  /* Tinta (texto) */
+  --color-ink: #1a1614;
+  --color-ink-muted: #57534e;
+  --color-ink-subtle: #a8a29e;
+
+  /* Superficies */
+  --color-surface: #faf6f1;
+  --color-card: #ffffff;
+  --color-border: #eae7e2;
+
+  /* Semánticos */
+  --color-success: #16a34a;
+  --color-warning: #f59e0b;
+  --color-danger: #dc2626;
+  --color-info: #0ea5e9;
+
+  /* Tipografía */
+  --font-display: var(--font-bricolage), system-ui, sans-serif;
+  --font-sans: var(--font-geist), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+
+  /* Radios (muy redondeados) */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-2xl: 32px;
+  --radius-3xl: 48px;
+
+  /* Sombras (elevación sutil) */
+  --shadow-elev-1: 0 1px 2px rgb(26 22 20 / 0.06);
+  --shadow-elev-2: 0 2px 8px rgb(26 22 20 / 0.08);
+  --shadow-elev-3: 0 8px 24px rgb(26 22 20 / 0.1);
+  --shadow-elev-4: 0 16px 48px rgb(26 22 20 / 0.12);
+  --shadow-glow-brand: 0 0 0 4px rgb(249 115 22 / 0.18);
+  --shadow-glow-danger: 0 0 0 4px rgb(220 38 38 / 0.18);
+}

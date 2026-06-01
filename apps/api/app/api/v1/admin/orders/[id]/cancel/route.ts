@@ -1,0 +1,44 @@
+import { DomainError } from '@tindivo/core'
+import { z } from 'zod'
+import { requireRole } from '@/lib/http/auth'
+import { corsHeaders, handleOptions } from '@/lib/http/cors'
+import { handleError, ok } from '@/lib/http/problem'
+import { getRequestId } from '@/lib/http/request-id'
+import { createServiceClient } from '@/lib/supabase/service'
+
+export const dynamic = 'force-dynamic'
+
+const Schema = z.object({ note: z.string().trim().min(3).max(300) })
+
+export function OPTIONS(req: Request): Response {
+  return handleOptions(req)
+}
+
+/** El admin cancela un pedido con razón obligatoria (queda en auditoría). */
+export async function POST(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> },
+): Promise<Response> {
+  const requestId = getRequestId(req)
+  try {
+    const { user } = await requireRole(req, 'admin')
+    const { id } = await params
+    const body = Schema.parse(await req.json())
+    const service = createServiceClient()
+    const { data, error } = await service.rpc('advance_order', {
+      p_order_id: id,
+      p_actor_user_id: user.id,
+      p_actor_role: 'admin',
+      p_action: 'cancel',
+      p_params: { reason: 'admin_cancelled', note: body.note },
+    })
+    if (error) {
+      if (error.code === 'P0002') throw new DomainError(error.message, 'not_found')
+      if (error.code === 'P0001') throw new DomainError(error.message, 'validation_error')
+      throw new Error(error.message)
+    }
+    return ok(data, { headers: corsHeaders(req) })
+  } catch (err) {
+    return handleError(err, requestId, req)
+  }
+}

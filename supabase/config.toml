@@ -1,0 +1,9 @@
+# Supabase config — proyecto "Web v2" (independiente del v1)
+# Las migraciones se aplican vía el MCP de Supabase (no hay CLI local).
+project_id = "psjigdoinfpgrnedxeyf"
+
+[db]
+major_version = 17
+
+[db.migrations]
+schema_paths = ["./migrations"]
