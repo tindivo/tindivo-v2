@@ -12,6 +12,9 @@ export const dynamic = 'force-dynamic'
 const Schema = z.object({
   pass: z.boolean(),
   reason: z.string().trim().max(200).optional(),
+  reasonCode: z
+    .enum(['out_of_stock', 'closed', 'out_of_zone', 'invalid_proof', 'no_answer', 'other'])
+    .optional(),
 })
 
 export function OPTIONS(req: Request): Response {
@@ -35,6 +38,7 @@ export async function POST(
       p_actor_role: 'business',
       p_pass: body.pass,
       p_reason: body.reason ?? undefined,
+      p_reason_code: body.reasonCode ?? undefined,
     })
     if (error) {
       if (error.code === 'P0002') throw new DomainError(error.message, 'not_found')

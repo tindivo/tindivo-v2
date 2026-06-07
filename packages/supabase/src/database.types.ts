@@ -128,6 +128,7 @@ export type Database = {
       businesses: {
         Row: {
           accent_color: string
+          accepting_orders_until: string | null
           accepts_web_delivery: boolean
           accepts_web_pickup: boolean
           address: string | null
@@ -167,6 +168,7 @@ export type Database = {
         }
         Insert: {
           accent_color?: string
+          accepting_orders_until?: string | null
           accepts_web_delivery?: boolean
           accepts_web_pickup?: boolean
           address?: string | null
@@ -206,6 +208,7 @@ export type Database = {
         }
         Update: {
           accent_color?: string
+          accepting_orders_until?: string | null
           accepts_web_delivery?: boolean
           accepts_web_pickup?: boolean
           address?: string | null
@@ -368,6 +371,7 @@ export type Database = {
           order_id: string
           proof_url: string | null
           reason: string
+          replenished_at: string | null
           resolved_at: string | null
           resolved_by: string | null
           status: Database["public"]["Enums"]["contingency_advance_status"]
@@ -386,6 +390,7 @@ export type Database = {
           order_id: string
           proof_url?: string | null
           reason: string
+          replenished_at?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
           status?: Database["public"]["Enums"]["contingency_advance_status"]
@@ -404,6 +409,7 @@ export type Database = {
           order_id?: string
           proof_url?: string | null
           reason?: string
+          replenished_at?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
           status?: Database["public"]["Enums"]["contingency_advance_status"]
@@ -1350,7 +1356,10 @@ export type Database = {
           order_amount: number
           order_number: number
           payment_intent: Database["public"]["Enums"]["payment_intent"]
+          payment_proof_status: string | null
           payment_real: Database["public"]["Enums"]["payment_real"] | null
+          payment_verified_at: string | null
+          payment_verified_by: string | null
           pending_acceptance_at: string | null
           picked_up_at: string | null
           prep_extended_at: string | null
@@ -1358,6 +1367,10 @@ export type Database = {
           prep_time_minutes: number | null
           preparing_at: string | null
           ready_early_used: boolean
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_reason_code: string | null
+          rejection_reason_text: string | null
           short_id: string
           source: Database["public"]["Enums"]["order_source"]
           status: Database["public"]["Enums"]["order_status"]
@@ -1413,7 +1426,10 @@ export type Database = {
           order_amount: number
           order_number?: number
           payment_intent: Database["public"]["Enums"]["payment_intent"]
+          payment_proof_status?: string | null
           payment_real?: Database["public"]["Enums"]["payment_real"] | null
+          payment_verified_at?: string | null
+          payment_verified_by?: string | null
           pending_acceptance_at?: string | null
           picked_up_at?: string | null
           prep_extended_at?: string | null
@@ -1421,6 +1437,10 @@ export type Database = {
           prep_time_minutes?: number | null
           preparing_at?: string | null
           ready_early_used?: boolean
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason_code?: string | null
+          rejection_reason_text?: string | null
           short_id: string
           source?: Database["public"]["Enums"]["order_source"]
           status?: Database["public"]["Enums"]["order_status"]
@@ -1476,7 +1496,10 @@ export type Database = {
           order_amount?: number
           order_number?: number
           payment_intent?: Database["public"]["Enums"]["payment_intent"]
+          payment_proof_status?: string | null
           payment_real?: Database["public"]["Enums"]["payment_real"] | null
+          payment_verified_at?: string | null
+          payment_verified_by?: string | null
           pending_acceptance_at?: string | null
           picked_up_at?: string | null
           prep_extended_at?: string | null
@@ -1484,6 +1507,10 @@ export type Database = {
           prep_time_minutes?: number | null
           preparing_at?: string | null
           ready_early_used?: boolean
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason_code?: string | null
+          rejection_reason_text?: string | null
           short_id?: string
           source?: Database["public"]["Enums"]["order_source"]
           status?: Database["public"]["Enums"]["order_status"]
@@ -1525,6 +1552,20 @@ export type Database = {
             columns: ["driver_id"]
             isOneToOne: false
             referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_payment_verified_by_fkey"
+            columns: ["payment_verified_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_rejected_by_fkey"
+            columns: ["rejected_by"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
           {
@@ -1951,10 +1992,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      admin_metrics: {
-        Args: { p_from: string; p_to: string }
-        Returns: Json
-      }
+      admin_metrics: { Args: { p_from: string; p_to: string }; Returns: Json }
       advance_order: {
         Args: {
           p_action: string
@@ -1986,14 +2024,17 @@ export type Database = {
       create_business_manual_order: {
         Args: {
           p_business_user_id: string
-          p_customer_name: string
-          p_customer_phone: string
-          p_delivery_address?: string
+          p_cash_amount?: number
+          p_client_pays_with?: number
+          p_customer_name?: string
+          p_customer_phone?: string
           p_delivery_method: Database["public"]["Enums"]["delivery_method"]
           p_delivery_reference?: string
-          p_items: Json
           p_notes?: string
+          p_order_amount: number
           p_payment_intent: Database["public"]["Enums"]["payment_intent"]
+          p_prep_time_minutes?: number
+          p_yape_amount?: number
         }
         Returns: Json
       }
@@ -2064,7 +2105,11 @@ export type Database = {
         Returns: Json
       }
       dispute_contingency_advance: {
-        Args: { p_advance_id: string; p_business_user_id: string; p_note: string }
+        Args: {
+          p_advance_id: string
+          p_business_user_id: string
+          p_note: string
+        }
         Returns: Json
       }
       expire_order: {
@@ -2094,6 +2139,10 @@ export type Database = {
         Returns: boolean
       }
       is_within_platform_schedule: { Args: never; Returns: boolean }
+      pause_business_orders: {
+        Args: { p_business_user_id: string; p_minutes?: number }
+        Returns: Json
+      }
       pay_settlement: {
         Args: {
           p_method?: string
@@ -2121,6 +2170,10 @@ export type Database = {
         }
         Returns: Json
       }
+      resume_business_orders: {
+        Args: { p_business_user_id: string }
+        Returns: Json
+      }
       set_driver_availability: {
         Args: { p_available: boolean; p_user_id: string }
         Returns: Json
@@ -2133,6 +2186,7 @@ export type Database = {
           p_order_id: string
           p_pass: boolean
           p_reason?: string
+          p_reason_code?: string
         }
         Returns: Json
       }

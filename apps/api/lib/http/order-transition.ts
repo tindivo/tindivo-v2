@@ -7,12 +7,23 @@ import { corsHeaders } from './cors'
 import { handleError, ok } from './problem'
 import { getRequestId } from './request-id'
 
+const REJECTION_CODES = [
+  'out_of_stock',
+  'closed',
+  'out_of_zone',
+  'invalid_proof',
+  'no_answer',
+  'other',
+] as const
+
 const TransitionSchema = z.object({
   action: z.string().min(1),
   prepTimeMinutes: z.number().int().min(1).max(120).optional(),
   band: DistanceBandSchema.optional(),
   paymentReal: PaymentRealSchema.optional(),
   reason: z.string().max(200).optional(),
+  reasonCode: z.enum(REJECTION_CODES).optional(),
+  reasonText: z.string().max(300).optional(),
 })
 
 /** Lógica compartida de transición de pedido para negocio y motorizado. */
@@ -36,6 +47,8 @@ export async function handleOrderTransition(
         band: body.band,
         paymentReal: body.paymentReal,
         reason: body.reason,
+        reasonCode: body.reasonCode,
+        reasonText: body.reasonText,
       },
     })
     if (error) {

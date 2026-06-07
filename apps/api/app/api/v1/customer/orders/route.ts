@@ -11,6 +11,14 @@ import { createServiceClient } from '@/lib/supabase/service'
 
 export const dynamic = 'force-dynamic'
 
+/** Modo ocupado: el negocio pausó (futuro o 'infinity'). */
+function isBusinessPaused(until: string | null): boolean {
+  if (!until) return false
+  if (until === 'infinity') return true
+  const t = Date.parse(until)
+  return Number.isFinite(t) && t > Date.now()
+}
+
 export function OPTIONS(req: Request): Response {
   return handleOptions(req)
 }
@@ -32,6 +40,20 @@ export async function POST(req: Request): Promise<Response> {
     const body = CreateOrderRequestSchema.parse(await req.json())
     const requestHash = await sha256Hex(JSON.stringify(body))
     const service = createServiceClient()
+
+    // Busy mode: si el negocio está pausado, no aceptamos pedidos web nuevos.
+    const { data: biz } = await service
+      .from('businesses')
+      .select('accepting_orders_until')
+      .eq('id', body.businessId)
+      .maybeSingle()
+    if (isBusinessPaused(biz?.accepting_orders_until ?? null)) {
+      return problem('forbidden', {
+        detail: 'El restaurante está pausado temporalmente. Vuelve a intentar en unos minutos.',
+        requestId,
+        headers: corsHeaders(req),
+      })
+    }
 
     const result = await withIdempotency(
       service,

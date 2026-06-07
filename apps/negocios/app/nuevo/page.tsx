@@ -1,230 +1,501 @@
 'use client'
 
 import { ApiError } from '@tindivo/api-client'
-import { Button, Card, CardBody } from '@tindivo/ui'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { type FormEvent, useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { MS, soles } from '@/components/dashboard/primitives'
 import { api } from '@/lib/api'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
-const inputCls =
-  'mt-1 h-11 w-full rounded-xl border border-border bg-surface px-3 text-[15px] outline-none focus:border-brand'
-const labelCls = 'font-mono text-[11px] text-ink-subtle uppercase tracking-wide'
-const soles = (n: number) => `S/ ${n.toFixed(2)}`
+const PREP_PRESETS = [10, 15, 20, 25, 30, 35, 40, 45, 50]
+type Payment = 'pending_cash' | 'pending_wallet' | 'prepaid' | 'pending_mixed'
 
-interface MenuItem {
-  id: string
-  name: string
-  base_price: number
+const PAYMENTS: { id: Payment; icon: string; label: string; sub: string }[] = [
+  {
+    id: 'pending_cash',
+    icon: 'payments',
+    label: 'Efectivo',
+    sub: 'El motorizado cobra en efectivo',
+  },
+  {
+    id: 'pending_wallet',
+    icon: 'qr_code_2',
+    label: 'Billetera digital',
+    sub: 'Yape, Plin u otra — el moto muestra QR',
+  },
+  {
+    id: 'prepaid',
+    icon: 'verified',
+    label: 'Ya pagó',
+    sub: 'El cliente ya realizó la transferencia',
+  },
+  {
+    id: 'pending_mixed',
+    icon: 'shuffle',
+    label: 'Mixto',
+    sub: 'Una parte con billetera, otra en efectivo',
+  },
+]
+
+function num(v: string): number {
+  const n = Number.parseFloat(v.replace(',', '.'))
+  return Number.isFinite(n) ? n : 0
 }
 
 export default function NuevoPedidoPage() {
   const router = useRouter()
-  const [items, setItems] = useState<MenuItem[]>([])
-  const [qty, setQty] = useState<Record<string, number>>({})
-  const [form, setForm] = useState({
-    customerName: '',
-    customerPhone: '',
-    deliveryMethod: 'delivery',
-    paymentIntent: 'pending_cash',
-    deliveryAddress: '',
-    deliveryReference: '',
-    notes: '',
-  })
-  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
-  const [saving, setSaving] = useState(false)
+  const [ready, setReady] = useState(false)
+
+  const [prep, setPrep] = useState(20)
+  const [name, setName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [reference, setReference] = useState('')
+  const [payment, setPayment] = useState<Payment>('pending_cash')
+  const [amount, setAmount] = useState('')
+  const [paysWith, setPaysWith] = useState('')
+  const [walletPart, setWalletPart] = useState('')
+  const [cashPart, setCashPart] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
 
   useEffect(() => {
-    const supabase = getSupabaseBrowser()
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (!data.session) {
-        router.replace('/')
-        return
-      }
-      const { data: mi } = await supabase
-        .from('menu_items')
-        .select('id,name,base_price')
-        .eq('is_available', true)
-        .order('display_order')
-      setItems((mi ?? []) as MenuItem[])
-    })
+    getSupabaseBrowser()
+      .auth.getSession()
+      .then(({ data }) => {
+        if (!data.session) router.replace('/')
+        else setReady(true)
+      })
   }, [router])
 
-  const selected = items.filter((i) => (qty[i.id] ?? 0) > 0)
-  const total = selected.reduce((s, i) => s + Number(i.base_price) * (qty[i.id] ?? 0), 0)
+  const amountN = num(amount)
+  const isCashish = payment === 'pending_cash' || payment === 'pending_mixed'
+  const cashTarget = payment === 'pending_mixed' ? num(cashPart) : amountN
+  const change = useMemo(() => {
+    if (!isCashish) return 0
+    const c = num(paysWith) - cashTarget
+    return c > 0 ? c : 0
+  }, [isCashish, paysWith, cashTarget])
 
-  async function submit(e: FormEvent) {
-    e.preventDefault()
-    if (selected.length === 0) {
-      setMsg({ ok: false, text: 'Agrega al menos un ítem.' })
-      return
-    }
-    setSaving(true)
-    setMsg(null)
+  const mixedOk =
+    payment !== 'pending_mixed' || Math.abs(num(walletPart) + num(cashPart) - amountN) < 0.005
+  const phoneOk = phone.trim() === '' || /^9\d{8}$/.test(phone.replace(/\D/g, ''))
+  const canSubmit = amountN > 0 && mixedOk && phoneOk && !busy
+
+  async function submit() {
+    if (!canSubmit) return
+    setBusy(true)
+    setError(null)
     try {
-      const r = await api.post<{ data: { shortId: string } }>('/business/orders', {
-        deliveryMethod: form.deliveryMethod,
-        paymentIntent: form.paymentIntent,
-        customerName: form.customerName,
-        customerPhone: form.customerPhone,
-        deliveryAddress: form.deliveryMethod === 'delivery' ? form.deliveryAddress : undefined,
-        deliveryReference: form.deliveryMethod === 'delivery' ? form.deliveryReference : undefined,
-        notes: form.notes || undefined,
-        items: selected.map((i) => ({ menuItemId: i.id, quantity: qty[i.id] })),
+      await api.post('/business/orders', {
+        deliveryMethod: 'delivery',
+        paymentIntent: payment,
+        customerName: name.trim() || undefined,
+        customerPhone: phone.trim() ? phone.replace(/\D/g, '') : undefined,
+        deliveryReference: reference.trim() || undefined,
+        prepTimeMinutes: prep,
+        orderAmount: amountN,
+        clientPaysWith: isCashish && num(paysWith) > 0 ? num(paysWith) : undefined,
+        yapeAmount: payment === 'pending_mixed' ? num(walletPart) : undefined,
+        cashAmount: payment === 'pending_mixed' ? num(cashPart) : undefined,
       })
-      setMsg({ ok: true, text: `Pedido #${r.data.shortId} creado.` })
-      setQty({})
-      setForm({
-        ...form,
-        customerName: '',
-        customerPhone: '',
-        deliveryAddress: '',
-        deliveryReference: '',
-        notes: '',
-      })
+      router.replace('/')
     } catch (err) {
-      setMsg({
-        ok: false,
-        text: err instanceof ApiError ? (err.problem.detail ?? err.message) : 'Error',
-      })
-    } finally {
-      setSaving(false)
+      setError(
+        err instanceof ApiError
+          ? (err.problem.detail ?? err.message)
+          : 'No se pudo crear el pedido',
+      )
+      setBusy(false)
     }
   }
 
+  if (!ready) return <div className="p-10 text-ink-muted">Cargando…</div>
+
   return (
-    <div className="mx-auto max-w-2xl px-4 py-6">
-      <Link href="/" className="font-mono text-[11px] text-ink-subtle uppercase tracking-widest">
-        ← Pedidos
-      </Link>
-      <h1 className="mt-2 mb-5 font-display font-semibold text-[24px] text-ink">
-        Nuevo pedido manual
-      </h1>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: '100dvh',
+        background: 'var(--tv-surface)',
+      }}
+    >
+      {/* Header */}
+      <div
+        style={{
+          padding: '10px 14px 12px',
+          background: '#fff',
+          borderBottom: '1px solid var(--tv-border)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          position: 'sticky',
+          top: 0,
+          zIndex: 10,
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => router.replace('/')}
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 12,
+            background: 'rgba(26,22,20,0.06)',
+            border: 'none',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <MS name="arrow_back" size={22} />
+        </button>
+        <div style={{ flex: 1 }}>
+          <div className="tv-display" style={{ fontSize: 18, lineHeight: 1.1 }}>
+            Solicitar motorizado
+          </div>
+          <div className="tv-label" style={{ marginTop: 2 }}>
+            PEDIDO POR TELÉFONO
+          </div>
+        </div>
+      </div>
 
-      <form onSubmit={submit} className="space-y-4">
-        <Card>
-          <CardBody className="grid gap-3 sm:grid-cols-2">
-            <label className="block">
-              <span className={labelCls}>Cliente</span>
-              <input
-                className={inputCls}
-                value={form.customerName}
-                onChange={(e) => setForm({ ...form, customerName: e.target.value })}
-                required
-              />
-            </label>
-            <label className="block">
-              <span className={labelCls}>Teléfono</span>
-              <input
-                className={inputCls}
-                value={form.customerPhone}
-                onChange={(e) => setForm({ ...form, customerPhone: e.target.value })}
-                required
-              />
-            </label>
-            <label className="block">
-              <span className={labelCls}>Entrega</span>
-              <select
-                className={inputCls}
-                value={form.deliveryMethod}
-                onChange={(e) => setForm({ ...form, deliveryMethod: e.target.value })}
+      <div
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          padding: '16px 14px 140px',
+          maxWidth: 560,
+          width: '100%',
+          margin: '0 auto',
+        }}
+      >
+        {/* 1 · Prep */}
+        <div style={card}>
+          <div className="tv-label-input">TIEMPO DE PREPARACIÓN</div>
+          <div
+            style={{
+              display: 'flex',
+              gap: 6,
+              overflowX: 'auto',
+              scrollbarWidth: 'none',
+              padding: '2px 0 6px',
+            }}
+          >
+            {PREP_PRESETS.map((m) => (
+              <button
+                type="button"
+                key={m}
+                onClick={() => setPrep(m)}
+                style={{
+                  flexShrink: 0,
+                  minWidth: 52,
+                  border: m === prep ? 'none' : '1px solid var(--tv-border)',
+                  background: m === prep ? 'var(--tv-ink)' : '#fff',
+                  color: m === prep ? '#fff' : 'var(--tv-ink)',
+                  fontFamily: "var(--font-jetbrains), 'JetBrains Mono', monospace",
+                  fontWeight: 700,
+                  fontSize: 14,
+                  padding: '10px 0',
+                  borderRadius: 12,
+                  cursor: 'pointer',
+                }}
               >
-                <option value="delivery">Delivery</option>
-                <option value="pickup">Recojo</option>
-              </select>
-            </label>
-            <label className="block">
-              <span className={labelCls}>Pago</span>
-              <select
-                className={inputCls}
-                value={form.paymentIntent}
-                onChange={(e) => setForm({ ...form, paymentIntent: e.target.value })}
+                {m}m
+              </button>
+            ))}
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--tv-ink-muted)', marginTop: 2 }}>
+            El motorizado llegará ~{prep + 5}–{prep + 15} min desde ahora.
+          </div>
+        </div>
+
+        {/* 2 · Cliente */}
+        <div style={card}>
+          <div className="tv-label" style={{ marginBottom: 10 }}>
+            DATOS DEL CLIENTE
+          </div>
+          <div style={{ marginBottom: 10 }}>
+            <div className="tv-label-input">NOMBRE (OPCIONAL)</div>
+            <input
+              className="tv-input"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="María Quispe"
+            />
+          </div>
+          <div>
+            <div className="tv-label-input">TELÉFONO (OPCIONAL)</div>
+            <input
+              className="tv-input tv-mono"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="987 654 321"
+              inputMode="numeric"
+            />
+            {!phoneOk && (
+              <div style={{ fontSize: 11, color: 'var(--tv-danger)', marginTop: 4 }}>
+                Debe tener 9 dígitos y empezar por 9.
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* 3 · Dirección o referencia */}
+        <div style={card}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+            <div className="tv-label" style={{ flex: 1 }}>
+              DIRECCIÓN O REFERENCIA
+            </div>
+            <span className="tv-mono" style={{ fontSize: 11, color: 'var(--tv-ink-muted)' }}>
+              {reference.length}/500
+            </span>
+          </div>
+          <textarea
+            className="tv-input"
+            style={{ minHeight: 80, resize: 'none', lineHeight: 1.5 }}
+            maxLength={500}
+            value={reference}
+            onChange={(e) => setReference(e.target.value)}
+            placeholder="Jr. San Martín 245 — Casa azul, al lado de la bodega Lucy"
+          />
+          <div style={{ fontSize: 11, color: 'var(--tv-ink-muted)', marginTop: 4 }}>
+            El motorizado verá este texto en su app al recoger el pedido.
+          </div>
+        </div>
+
+        {/* 4 · Pago */}
+        <div style={card}>
+          <div className="tv-label" style={{ marginBottom: 10 }}>
+            MÉTODO DE PAGO
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {PAYMENTS.map((o) => (
+              <button
+                type="button"
+                key={o.id}
+                onClick={() => setPayment(o.id)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  padding: '12px 14px',
+                  borderRadius: 14,
+                  cursor: 'pointer',
+                  background: '#fff',
+                  fontFamily: 'inherit',
+                  textAlign: 'left',
+                  border:
+                    payment === o.id ? '2px solid var(--tv-ink)' : '1px solid var(--tv-border)',
+                }}
               >
-                <option value="pending_cash">Efectivo</option>
-                <option value="pending_yape">Yape al recibir</option>
-                <option value="prepaid">Prepago</option>
-              </select>
-            </label>
-            {form.deliveryMethod === 'delivery' && (
-              <>
-                <label className="block sm:col-span-2">
-                  <span className={labelCls}>Dirección</span>
-                  <input
-                    className={inputCls}
-                    value={form.deliveryAddress}
-                    onChange={(e) => setForm({ ...form, deliveryAddress: e.target.value })}
-                  />
-                </label>
-                <label className="block sm:col-span-2">
-                  <span className={labelCls}>Referencia</span>
-                  <input
-                    className={inputCls}
-                    value={form.deliveryReference}
-                    onChange={(e) => setForm({ ...form, deliveryReference: e.target.value })}
-                  />
-                </label>
-              </>
-            )}
-            <label className="block sm:col-span-2">
-              <span className={labelCls}>Notas</span>
-              <input
-                className={inputCls}
-                value={form.notes}
-                onChange={(e) => setForm({ ...form, notes: e.target.value })}
-              />
-            </label>
-          </CardBody>
-        </Card>
+                <div
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 10,
+                    flexShrink: 0,
+                    background: payment === o.id ? 'var(--tv-ink)' : 'rgba(26,22,20,0.06)',
+                    color: payment === o.id ? '#fff' : 'var(--tv-ink)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <MS name={o.icon} size={20} filled={payment === o.id} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600 }}>{o.label}</div>
+                  <div style={{ fontSize: 12, color: 'var(--tv-ink-muted)', marginTop: 2 }}>
+                    {o.sub}
+                  </div>
+                </div>
+                {payment === o.id && (
+                  <MS name="check_circle" size={20} filled style={{ color: 'var(--tv-brand)' }} />
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
 
-        <Card>
-          <CardBody>
-            <p className="mb-2 font-display font-semibold text-[15px] text-ink">Ítems</p>
-            {items.length === 0 ? (
-              <p className="text-[13px] text-ink-subtle">
-                Sin ítems en el menú. Agrégalos en Menú.
-              </p>
-            ) : (
-              <ul className="space-y-1">
-                {items.map((i) => (
-                  <li key={i.id} className="flex items-center justify-between py-1 text-[14px]">
-                    <span className="text-ink">
-                      {i.name} · <span className="font-mono">{soles(Number(i.base_price))}</span>
-                    </span>
-                    <span className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        className="h-7 w-7 rounded-lg border border-border"
-                        onClick={() =>
-                          setQty({ ...qty, [i.id]: Math.max(0, (qty[i.id] ?? 0) - 1) })
-                        }
-                      >
-                        −
-                      </button>
-                      <span className="w-6 text-center font-mono">{qty[i.id] ?? 0}</span>
-                      <button
-                        type="button"
-                        className="h-7 w-7 rounded-lg border border-border"
-                        onClick={() => setQty({ ...qty, [i.id]: (qty[i.id] ?? 0) + 1 })}
-                      >
-                        +
-                      </button>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <p className="mt-3 text-right font-mono text-[15px] text-ink">
-              Total ítems: {soles(total)}
-            </p>
-          </CardBody>
-        </Card>
+        {/* 5 · Monto */}
+        {payment !== 'prepaid' ? (
+          <div style={card}>
+            <div className="tv-label" style={{ marginBottom: 10 }}>
+              MONTO DEL PEDIDO
+            </div>
+            <div className="tv-label-input">TOTAL DEL PEDIDO (S/)</div>
+            <input
+              className="tv-input tv-mono"
+              style={{ fontSize: 20, fontWeight: 700 }}
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="0.00"
+              inputMode="decimal"
+            />
+            <div style={{ fontSize: 12, color: 'var(--tv-ink-muted)', marginTop: 4 }}>
+              No necesitas desglosar los platos. Solo el total que el cliente debe.
+            </div>
 
-        {msg && <p className={`text-sm ${msg.ok ? 'text-success' : 'text-danger'}`}>{msg.text}</p>}
-        <Button type="submit" disabled={saving}>
-          {saving ? 'Creando…' : 'Crear pedido'}
-        </Button>
-      </form>
+            {payment === 'pending_mixed' && (
+              <div
+                style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 10 }}
+              >
+                <div>
+                  <div className="tv-label-input">BILLETERA (S/)</div>
+                  <input
+                    className="tv-input tv-mono"
+                    value={walletPart}
+                    onChange={(e) => setWalletPart(e.target.value)}
+                    inputMode="decimal"
+                  />
+                </div>
+                <div>
+                  <div className="tv-label-input">EFECTIVO (S/)</div>
+                  <input
+                    className="tv-input tv-mono"
+                    value={cashPart}
+                    onChange={(e) => setCashPart(e.target.value)}
+                    inputMode="decimal"
+                  />
+                </div>
+                <div
+                  style={{
+                    gridColumn: '1/-1',
+                    fontSize: 12,
+                    color: mixedOk ? 'var(--tv-success)' : 'var(--tv-danger)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                  }}
+                >
+                  <MS name={mixedOk ? 'check_circle' : 'error'} size={14} filled />
+                  {mixedOk
+                    ? `${soles(num(walletPart))} + ${soles(num(cashPart))} = ${soles(amountN)} · suma correcta`
+                    : 'La suma de billetera + efectivo debe igualar el total'}
+                </div>
+              </div>
+            )}
+
+            {isCashish && (
+              <div style={{ marginTop: 10 }}>
+                <div className="tv-label-input">CLIENTE PAGA CON (S/)</div>
+                <input
+                  className="tv-input tv-mono"
+                  style={{ fontSize: 20, fontWeight: 700 }}
+                  value={paysWith}
+                  onChange={(e) => setPaysWith(e.target.value)}
+                  placeholder="0.00"
+                  inputMode="decimal"
+                />
+              </div>
+            )}
+
+            {isCashish && change > 0 && (
+              <div
+                style={{
+                  marginTop: 12,
+                  background: '#DCFCE7',
+                  color: '#14532D',
+                  borderRadius: 14,
+                  padding: '14px 16px',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 10,
+                }}
+              >
+                <MS
+                  name="shopping_bag"
+                  size={22}
+                  filled
+                  style={{ color: '#16A34A', flexShrink: 0, marginTop: 2 }}
+                />
+                <div>
+                  <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 2 }}>
+                    Vuelto a entregar: <span className="tv-mono">{soles(change)}</span>
+                  </div>
+                  <div style={{ fontSize: 12, color: '#166534' }}>
+                    Prepáralo en efectivo y mételo en la bolsa antes de que llegue el motorizado.
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div
+            style={{
+              background: '#E0F2FE',
+              color: '#0369A1',
+              borderRadius: 12,
+              padding: '10px 14px',
+              display: 'flex',
+              gap: 8,
+              alignItems: 'center',
+              marginBottom: 12,
+              fontSize: 13,
+            }}
+          >
+            <MS name="verified" size={18} filled />
+            <span>El cliente ya pagó — el motorizado solo entrega, no cobra.</span>
+          </div>
+        )}
+
+        {error && (
+          <div style={{ color: 'var(--tv-danger)', fontSize: 13, marginTop: 4, fontWeight: 600 }}>
+            {error}
+          </div>
+        )}
+      </div>
+
+      {/* Sticky CTA */}
+      <div
+        style={{
+          background: '#fff',
+          borderTop: '1px solid var(--tv-border)',
+          padding: '12px 14px 16px',
+          boxShadow: '0 -8px 24px rgba(0,0,0,0.06)',
+          position: 'sticky',
+          bottom: 0,
+        }}
+      >
+        <div style={{ maxWidth: 560, margin: '0 auto' }}>
+          {isCashish && change > 0 && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                marginBottom: 10,
+                background: '#DCFCE7',
+                borderRadius: 10,
+                padding: '8px 12px',
+              }}
+            >
+              <MS name="payments" size={16} filled style={{ color: '#16A34A' }} />
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#166534' }}>
+                Prepara vuelto de {soles(change)}
+              </span>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={submit}
+            disabled={!canSubmit}
+            className="tv-btn tv-btn-brand tv-btn-block tv-btn-xl"
+          >
+            <MS name="two_wheeler" size={22} filled /> {busy ? 'Creando…' : 'Pedir moto'}
+          </button>
+        </div>
+      </div>
     </div>
   )
+}
+
+const card: React.CSSProperties = {
+  background: '#fff',
+  borderRadius: 16,
+  padding: '14px 16px',
+  marginBottom: 12,
+  border: '1px solid var(--tv-border)',
 }

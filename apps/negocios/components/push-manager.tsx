@@ -41,7 +41,7 @@ export function PushManager() {
         )
         if (r !== 'unsupported') setShow(false)
       }}
-      className="fixed right-3 bottom-3 z-50 rounded-full bg-ink px-4 py-2 font-semibold text-[13px] text-white shadow-lg"
+      className="fixed right-3 bottom-24 z-40 rounded-full bg-ink px-4 py-2 font-semibold text-[13px] text-white shadow-lg lg:bottom-4"
     >
       🔔 Activar avisos
     </button>

@@ -1,22 +1,15 @@
 'use client'
 
 import { ApiError } from '@tindivo/api-client'
-import { Card, CardBody } from '@tindivo/ui'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
+import { MS, soles } from '@/components/dashboard/primitives'
+import { DashboardShell } from '@/components/dashboard/shell'
 import { api } from '@/lib/api'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
-const soles = (n: number | null) => (n == null ? '—' : `S/ ${Number(n).toFixed(2)}`)
 const DISPUTE_WINDOW_MS = 48 * 3600 * 1000
 
-const ADVANCE_STATUS: Record<string, { label: string; cls: string }> = {
-  activo: { label: 'Activo', cls: 'bg-warning/15 text-warning' },
-  disputado: { label: 'En disputa', cls: 'bg-info/15 text-info' },
-  cancelado: { label: 'Anulado', cls: 'bg-success/15 text-success' },
-}
-
+// ── Types ─────────────────────────────────────────────────────────────────────
 interface Advance {
   id: string
   amount: number
@@ -25,13 +18,6 @@ interface Advance {
   status: string
   created_at: string
   orders: { short_id: string } | null
-}
-
-const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
-  pending: { label: 'Por pagar', cls: 'bg-warning/15 text-warning' },
-  paid: { label: 'Pagado', cls: 'bg-success/15 text-success' },
-  overdue: { label: 'Vencido', cls: 'bg-danger/15 text-danger' },
-  cancelled: { label: 'Cancelado', cls: 'bg-card text-ink-muted' },
 }
 
 interface Settlement {
@@ -45,8 +31,254 @@ interface Settlement {
   paid_at: string | null
 }
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const ADVANCE_STATE: Record<string, { chipCls: string; label: string }> = {
+  activo: { chipCls: 'tv-chip-warning', label: 'Activo' },
+  disputado: { chipCls: 'tv-chip-info', label: 'En disputa' },
+  cancelado: { chipCls: 'tv-chip-success', label: 'Anulado' },
+}
+
+const SETTLEMENT_STATE: Record<string, { chipCls: string; label: string }> = {
+  paid: { chipCls: 'tv-chip-success', label: 'Pagado' },
+  pending: { chipCls: 'tv-chip-warning', label: 'Por pagar' },
+  overdue: { chipCls: 'tv-chip-danger', label: 'Vencido' },
+  cancelled: { chipCls: '', label: 'Cancelado' },
+}
+
+function fmtDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('es-PE', {
+    day: '2-digit',
+    month: 'short',
+  })
+}
+
+// ── AdvanceCard ───────────────────────────────────────────────────────────────
+function AdvanceCard({
+  a,
+  disputeId,
+  disputeNote,
+  busy,
+  err,
+  onStartDispute,
+  onNoteChange,
+  onSubmitDispute,
+  onCancelDispute,
+}: {
+  a: Advance
+  disputeId: string | null
+  disputeNote: string
+  busy: boolean
+  err: string | null
+  onStartDispute: (id: string) => void
+  onNoteChange: (v: string) => void
+  onSubmitDispute: (id: string) => void
+  onCancelDispute: () => void
+}) {
+  const stateMeta = ADVANCE_STATE[a.status] ?? { chipCls: '', label: a.status }
+  const canDispute =
+    a.actor_charged === 'restaurante' &&
+    a.status === 'activo' &&
+    Date.now() - new Date(a.created_at).getTime() < DISPUTE_WINDOW_MS
+  const windowExpired = !canDispute && a.status === 'activo' && a.actor_charged === 'restaurante'
+  const hoursLeft = Math.max(
+    0,
+    Math.floor((DISPUTE_WINDOW_MS - (Date.now() - new Date(a.created_at).getTime())) / 3600000),
+  )
+
+  return (
+    <div
+      style={{
+        background: '#fff',
+        borderRadius: 14,
+        padding: 12,
+        border: '1px solid var(--tv-border)',
+        boxShadow: 'var(--tv-elev-1)',
+      }}
+    >
+      {/* Header row */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 8 }}>
+        <div className="tv-mono" style={{ fontSize: 18, fontWeight: 700, color: 'var(--tv-ink)' }}>
+          − {soles(a.amount)}
+        </div>
+        <div style={{ flex: 1 }} />
+        <span className={`tv-chip ${stateMeta.chipCls}`}>{stateMeta.label}</span>
+      </div>
+
+      {/* Reason */}
+      <div
+        style={{
+          fontSize: 13,
+          lineHeight: 1.4,
+          marginBottom: 8,
+          color: 'var(--tv-ink)',
+        }}
+      >
+        {a.reason}
+      </div>
+
+      {/* Meta row */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          fontSize: 11,
+          color: 'var(--tv-ink-muted)',
+        }}
+      >
+        <MS name="receipt_long" size={12} />
+        {a.orders?.short_id && <span className="tv-mono">#{a.orders.short_id}</span>}
+        {a.orders?.short_id && <span>·</span>}
+        <span>{fmtDate(a.created_at)}</span>
+      </div>
+
+      {/* Dispute zone — only for activo */}
+      {a.status === 'activo' && (
+        <div
+          style={{
+            marginTop: 10,
+            paddingTop: 10,
+            borderTop: '1px solid var(--tv-border)',
+          }}
+        >
+          {canDispute && disputeId !== a.id && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ flex: 1, fontSize: 11, color: 'var(--tv-ink-muted)' }}>
+                Ventana de disputa: <strong style={{ color: 'var(--tv-ink)' }}>{hoursLeft}h</strong>{' '}
+                restantes
+              </div>
+              <button
+                type="button"
+                className="tv-btn tv-btn-dark tv-btn-sm"
+                onClick={() => onStartDispute(a.id)}
+              >
+                <MS name="gavel" size={14} /> Disputar
+              </button>
+            </div>
+          )}
+          {canDispute && disputeId === a.id && (
+            <div>
+              {err && (
+                <p style={{ fontSize: 12, color: 'var(--tv-danger)', marginBottom: 6 }}>{err}</p>
+              )}
+              <textarea
+                className="tv-input"
+                style={{ minHeight: 76, resize: 'vertical', fontSize: 13 }}
+                placeholder="¿Por qué no corresponde este adelanto?"
+                value={disputeNote}
+                onChange={(e) => onNoteChange(e.target.value)}
+              />
+              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                <button
+                  type="button"
+                  className="tv-btn tv-btn-danger tv-btn-sm"
+                  disabled={busy}
+                  onClick={() => onSubmitDispute(a.id)}
+                >
+                  {busy ? 'Enviando…' : 'Enviar disputa'}
+                </button>
+                <button
+                  type="button"
+                  className="tv-btn tv-btn-ghost tv-btn-sm"
+                  onClick={onCancelDispute}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+          {windowExpired && (
+            <div
+              style={{
+                fontSize: 11,
+                color: 'var(--tv-ink-subtle)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              <MS name="lock" size={12} />
+              Ventana de disputa (48 h) vencida
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── SettlementRow ─────────────────────────────────────────────────────────────
+function SettlementRow({ s }: { s: Settlement }) {
+  const stateMeta = SETTLEMENT_STATE[s.status] ?? { chipCls: '', label: s.status }
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        padding: '12px 14px',
+        background: '#fff',
+        borderRadius: 12,
+        border: '1px solid var(--tv-border)',
+      }}
+    >
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--tv-ink)' }}>
+          {fmtDate(s.period_start)} – {fmtDate(s.period_end)}
+        </div>
+        <div style={{ fontSize: 11, color: 'var(--tv-ink-muted)', marginTop: 2 }}>
+          {s.order_count} pedidos
+          {s.paid_at ? ` · pagado el ${fmtDate(s.paid_at)}` : ''}
+        </div>
+      </div>
+      <div className="tv-mono" style={{ fontSize: 14, fontWeight: 700 }}>
+        {soles(s.total_amount)}
+      </div>
+      <span className={`tv-chip ${stateMeta.chipCls}`} style={{ fontSize: 11 }}>
+        {stateMeta.label}
+      </span>
+    </div>
+  )
+}
+
+// ── SectionHeader ─────────────────────────────────────────────────────────────
+function SectionHeader({
+  icon,
+  title,
+  badge,
+  hint,
+}: {
+  icon: string
+  title: string
+  badge?: number
+  hint?: string
+}) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        marginBottom: 10,
+      }}
+    >
+      <MS name={icon} size={20} filled style={{ color: 'var(--tv-warning)' }} />
+      <div style={{ fontSize: 16, fontWeight: 700 }}>{title}</div>
+      {badge != null && <span className="tv-chip">{badge}</span>}
+      {hint && (
+        <>
+          <div style={{ flex: 1 }} />
+          <div style={{ fontSize: 12, color: 'var(--tv-ink-muted)' }}>{hint}</div>
+        </>
+      )}
+    </div>
+  )
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
 export default function DeudaPage() {
-  const router = useRouter()
+  const BLOCK_THRESHOLD = 300
+
   const [balance, setBalance] = useState<number>(0)
   const [blocked, setBlocked] = useState(false)
   const [yape, setYape] = useState<string | null>(null)
@@ -56,7 +288,6 @@ export default function DeudaPage() {
   const [disputeNote, setDisputeNote] = useState('')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
-  const [ready, setReady] = useState(false)
 
   const load = useCallback(async () => {
     const supabase = getSupabaseBrowser()
@@ -76,12 +307,16 @@ export default function DeudaPage() {
     ])
     if (biz) {
       setBalance(Number(biz.balance_due))
-      setBlocked(biz.is_blocked)
+      setBlocked(Boolean(biz.is_blocked))
     }
     setSettlements((stl ?? []) as Settlement[])
     setAdvances((adv ?? []) as Advance[])
     if (cfg?.value) setYape(String(cfg.value).replace(/"/g, ''))
   }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
 
   async function dispute(id: string) {
     const note = disputeNote.trim()
@@ -103,171 +338,413 @@ export default function DeudaPage() {
     }
   }
 
-  useEffect(() => {
-    getSupabaseBrowser()
-      .auth.getSession()
-      .then(({ data }) => {
-        if (!data.session) {
-          router.replace('/')
-          return
-        }
-        load()
-        setReady(true)
-      })
-  }, [router, load])
+  const pct = Math.min(balance / BLOCK_THRESHOLD, 1) * 100
+  const whatsappHref = yape
+    ? `https://wa.me/${yape.replace(/\D/g, '')}?text=${encodeURIComponent('Hola Tindivo, quiero coordinar el pago de mi deuda.')}`
+    : '#'
 
-  if (!ready) return <div className="p-10 text-ink-muted">Cargando…</div>
+  // ── WhatsApp CTA (shared between mobile and desktop header) ──────────────────
+  const WhatsAppBtn = ({ size = 'normal' }: { size?: 'normal' | 'sm' }) => (
+    <a
+      href={whatsappHref}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`tv-btn tv-btn-brand${size === 'sm' ? ' tv-btn-sm' : ''}`}
+      style={{ textDecoration: 'none' }}
+    >
+      <MS name="chat" size={size === 'sm' ? 14 : 18} />
+      {size === 'sm' ? 'Abrir' : 'WhatsApp a Tindivo'}
+    </a>
+  )
 
-  return (
-    <div className="mx-auto max-w-2xl px-4 py-6">
-      <Link href="/" className="font-mono text-[11px] text-ink-subtle uppercase tracking-widest">
-        ← Pedidos
-      </Link>
-      <h1 className="mt-2 mb-5 font-display font-semibold text-[24px] text-ink">
-        Mi deuda con Tindivo
-      </h1>
+  // ── Hero negro (balance + progress) ──────────────────────────────────────────
+  const BalanceHero = ({ large = false }: { large?: boolean }) => (
+    <div
+      style={{
+        background: 'linear-gradient(135deg, #1A1614 0%, #2A2422 100%)',
+        color: '#fff',
+        borderRadius: 20,
+        padding: large ? 22 : '20px 18px',
+      }}
+    >
+      <div className="tv-label" style={{ color: 'rgba(255,255,255,0.6)' }}>
+        DEBES AHORA
+      </div>
+      <div
+        className="tv-mono"
+        style={{
+          fontSize: large ? 54 : 40,
+          fontWeight: 700,
+          lineHeight: 1,
+          margin: `${large ? 8 : 6}px 0 ${large ? 16 : 14}px`,
+        }}
+      >
+        {soles(balance)}
+      </div>
 
-      {blocked && (
-        <p className="mb-4 rounded-xl bg-danger/15 px-3 py-2 text-[14px] text-danger">
-          ⛔ Tu cuenta está suspendida por deuda. Regulariza para reactivarla.
-        </p>
-      )}
+      {/* Progress bar */}
+      <div style={{ marginBottom: large ? 12 : 10 }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            fontSize: 11,
+            color: 'rgba(255,255,255,0.7)',
+            marginBottom: large ? 6 : 4,
+          }}
+        >
+          <span>0</span>
+          <span>Suspensión a {soles(BLOCK_THRESHOLD)}</span>
+        </div>
+        <div
+          style={{
+            height: large ? 8 : 6,
+            background: 'rgba(255,255,255,0.12)',
+            borderRadius: 999,
+            overflow: 'hidden',
+          }}
+        >
+          <div
+            style={{
+              width: `${pct}%`,
+              height: '100%',
+              background: pct >= 80 ? 'var(--tv-danger)' : 'var(--tv-brand)',
+              transition: 'width 600ms ease',
+            }}
+          />
+        </div>
+      </div>
 
-      <Card>
-        <CardBody>
-          <p className="font-mono text-[11px] text-ink-subtle uppercase tracking-wide">
-            Deuda actual
-          </p>
-          <p className="mt-1 font-display font-semibold text-[34px] text-ink">{soles(balance)}</p>
-          <p className="mt-1 text-[13px] text-ink-muted">
-            Comisión acumulada de pedidos entregados, pendiente de liquidar.
-          </p>
-        </CardBody>
-      </Card>
-
-      <Card className="mt-3">
-        <CardBody>
-          <p className="text-[14px] text-ink">
-            <span className="font-medium">Cómo pagar:</span> coordina por WhatsApp el pago semanal a
-            Tindivo {yape && <>(Yape {yape})</>}.
-          </p>
-        </CardBody>
-      </Card>
-
-      {advances.length > 0 && (
-        <>
-          <h2 className="mt-6 mb-2 font-display font-semibold text-[16px] text-ink">
-            Adelantos del fondo
-          </h2>
-          {err && <p className="mb-2 text-danger text-sm">{err}</p>}
-          <ul className="space-y-2">
-            {advances.map((a) => {
-              const st = ADVANCE_STATUS[a.status] ?? {
-                label: a.status,
-                cls: 'bg-card text-ink-muted',
-              }
-              const canDispute =
-                a.actor_charged === 'restaurante' &&
-                a.status === 'activo' &&
-                Date.now() - new Date(a.created_at).getTime() < DISPUTE_WINDOW_MS
-              return (
-                <li key={a.id} className="rounded-xl border border-border p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="flex flex-wrap items-center gap-2">
-                        <span className="font-mono font-semibold text-[15px] text-ink">
-                          {soles(a.amount)}
-                        </span>
-                        {a.orders?.short_id && (
-                          <span className="font-mono text-[12px] text-ink-muted">
-                            #{a.orders.short_id}
-                          </span>
-                        )}
-                        <span className={`rounded-lg px-2 py-0.5 text-[12px] ${st.cls}`}>
-                          {st.label}
-                        </span>
-                      </p>
-                      <p className="mt-1 text-[13px] text-ink-muted">{a.reason}</p>
-                    </div>
-                    {canDispute && disputeId !== a.id && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setDisputeId(a.id)
-                          setDisputeNote('')
-                          setErr(null)
-                        }}
-                        className="shrink-0 rounded-lg border border-danger/30 bg-danger/5 px-3 py-1.5 font-semibold text-[13px] text-danger"
-                      >
-                        Disputar
-                      </button>
-                    )}
-                  </div>
-                  {disputeId === a.id && (
-                    <div className="mt-3">
-                      <textarea
-                        className="h-20 w-full rounded-xl border border-border bg-surface p-2 text-[14px] outline-none focus:border-brand"
-                        placeholder="¿Por qué no corresponde este adelanto?"
-                        value={disputeNote}
-                        onChange={(e) => setDisputeNote(e.target.value)}
-                      />
-                      <div className="mt-2 flex gap-2">
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => dispute(a.id)}
-                          className="rounded-lg bg-danger px-3 py-1.5 font-semibold text-[13px] text-white disabled:opacity-50"
-                        >
-                          {busy ? 'Enviando…' : 'Enviar disputa'}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setDisputeId(null)}
-                          className="rounded-lg bg-card px-3 py-1.5 text-[13px] text-ink-muted"
-                        >
-                          Cancelar
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                  {!canDispute && a.status === 'activo' && a.actor_charged === 'restaurante' && (
-                    <p className="mt-1 text-[12px] text-ink-subtle">
-                      Ventana de disputa (48 h) vencida.
-                    </p>
-                  )}
-                </li>
-              )
-            })}
-          </ul>
-        </>
-      )}
-
-      <h2 className="mt-6 mb-2 font-display font-semibold text-[16px] text-ink">
-        Historial de liquidaciones
-      </h2>
-      {settlements.length === 0 ? (
-        <p className="text-[14px] text-ink-subtle">Aún no hay liquidaciones generadas.</p>
+      {large ? (
+        // Desktop info strip
+        <div style={{ display: 'flex', gap: 10, fontSize: 13 }}>
+          <div
+            style={{
+              background: 'rgba(255,255,255,0.06)',
+              padding: '8px 12px',
+              borderRadius: 10,
+              flex: 1,
+            }}
+          >
+            <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11 }}>RIESGO DE SUSPENSIÓN</div>
+            <div style={{ marginTop: 2, fontWeight: 600 }}>{Math.round(pct)}% del límite</div>
+          </div>
+          <div
+            style={{
+              background: 'rgba(255,255,255,0.06)',
+              padding: '8px 12px',
+              borderRadius: 10,
+              flex: 1,
+            }}
+          >
+            <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11 }}>ADELANTOS ACTIVOS</div>
+            <div style={{ marginTop: 2, fontWeight: 600 }}>
+              {advances.filter((a) => a.status === 'activo').length} adelantos
+            </div>
+          </div>
+        </div>
       ) : (
-        <ul className="space-y-2">
-          {settlements.map((s) => {
-            const st = STATUS_LABEL[s.status] ?? { label: s.status, cls: 'bg-card text-ink-muted' }
-            return (
-              <li
-                key={s.id}
-                className="flex items-center justify-between border-border border-t py-2 text-[14px]"
-              >
-                <span className="font-mono text-[12px] text-ink-muted">
-                  {s.period_start} → {s.period_end} · {s.order_count} ped.
-                </span>
-                <span className="flex items-center gap-2">
-                  <span className="font-mono text-ink">{soles(s.total_amount)}</span>
-                  <span className={`rounded-lg px-2 py-0.5 text-[12px] ${st.cls}`}>{st.label}</span>
-                </span>
-              </li>
-            )
-          })}
-        </ul>
+        // Mobile info strip
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            background: 'rgba(255,255,255,0.06)',
+            borderRadius: 10,
+            padding: '8px 10px',
+            fontSize: 12,
+          }}
+        >
+          <MS name="info" size={14} />
+          <span>Suspensión automática al llegar a {soles(BLOCK_THRESHOLD)}</span>
+        </div>
       )}
     </div>
+  )
+
+  // ── Cómo pagar card ───────────────────────────────────────────────────────────
+  const HowToPayCard = () => (
+    <div
+      style={{
+        background: '#fff',
+        borderRadius: 20,
+        padding: 22,
+        border: '1px solid var(--tv-border)',
+      }}
+    >
+      <div className="tv-label">CÓMO PAGAR</div>
+      <div
+        style={{
+          marginTop: 10,
+          fontSize: 14,
+          lineHeight: 1.6,
+          color: 'var(--tv-ink-muted)',
+        }}
+      >
+        Coordina el pago con Tindivo a través de WhatsApp. Una vez confirmado, tu saldo se actualiza
+        en segundos.
+      </div>
+      <div
+        style={{
+          background: 'var(--tv-surface)',
+          borderRadius: 12,
+          padding: '12px 14px',
+          marginTop: 12,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+        }}
+      >
+        <MS name="chat" size={20} style={{ color: 'var(--tv-success)', flexShrink: 0 }} />
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 13, fontWeight: 600 }}>Soporte Tindivo</div>
+          {yape && (
+            <div className="tv-mono" style={{ fontSize: 12, color: 'var(--tv-ink-muted)' }}>
+              {yape}
+            </div>
+          )}
+        </div>
+        <WhatsAppBtn size="sm" />
+      </div>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          marginTop: 12,
+          fontSize: 12,
+          color: 'var(--tv-ink-muted)',
+        }}
+      >
+        <MS name="info" size={14} />
+        {`Si tu deuda llega a ${soles(BLOCK_THRESHOLD)}, tu cuenta queda suspendida automáticamente.`}
+      </div>
+    </div>
+  )
+
+  const disputeableCount = advances.filter(
+    (a) =>
+      a.actor_charged === 'restaurante' &&
+      a.status === 'activo' &&
+      Date.now() - new Date(a.created_at).getTime() < DISPUTE_WINDOW_MS,
+  ).length
+
+  return (
+    <DashboardShell
+      active="deuda"
+      title="Deuda con Tindivo"
+      subtitle="Comisiones acumuladas y fondo de contingencia"
+      headerRight={
+        /* Desktop header CTA */
+        <div className="hidden lg:block">
+          <WhatsAppBtn />
+        </div>
+      }
+    >
+      {/* Suspended banner */}
+      {blocked && (
+        <div
+          style={{
+            background: 'var(--tv-danger-soft)',
+            borderRadius: 12,
+            padding: '10px 14px',
+            marginBottom: 14,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            color: 'var(--tv-danger)',
+            fontSize: 14,
+            fontWeight: 600,
+          }}
+        >
+          <MS name="block" size={18} filled style={{ flexShrink: 0 }} />
+          Tu cuenta está suspendida por deuda. Regulariza para reactivarla.
+        </div>
+      )}
+
+      {/* ── MOBILE layout ─────────────────────────────────────────────────── */}
+      <div className="lg:hidden flex flex-col" style={{ gap: 14 }}>
+        <BalanceHero large={false} />
+
+        <a
+          href={whatsappHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="tv-btn tv-btn-brand tv-btn-block tv-btn-lg"
+          style={{ textDecoration: 'none' }}
+        >
+          <MS name="chat" size={18} /> Pagar por WhatsApp a Tindivo
+        </a>
+
+        {advances.length > 0 && (
+          <div>
+            <SectionHeader
+              icon="report_problem"
+              title="Adelantos del fondo"
+              badge={advances.length}
+              hint="48h para disputar"
+            />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {advances.map((a) => (
+                <AdvanceCard
+                  key={a.id}
+                  a={a}
+                  disputeId={disputeId}
+                  disputeNote={disputeNote}
+                  busy={busy}
+                  err={disputeId === a.id ? err : null}
+                  onStartDispute={(id) => {
+                    setDisputeId(id)
+                    setDisputeNote('')
+                    setErr(null)
+                  }}
+                  onNoteChange={setDisputeNote}
+                  onSubmitDispute={dispute}
+                  onCancelDispute={() => setDisputeId(null)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              marginBottom: 10,
+            }}
+          >
+            <MS name="history" size={20} style={{ color: 'var(--tv-ink-muted)' }} />
+            <div style={{ fontSize: 16, fontWeight: 700 }}>Liquidaciones semanales</div>
+          </div>
+          {settlements.length === 0 ? (
+            <div
+              style={{
+                textAlign: 'center',
+                padding: '24px 16px',
+                color: 'var(--tv-ink-subtle)',
+                fontSize: 14,
+              }}
+            >
+              Aún no hay liquidaciones generadas.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {settlements.map((s) => (
+                <SettlementRow key={s.id} s={s} />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── DESKTOP layout ────────────────────────────────────────────────── */}
+      <div className="hidden lg:block">
+        {/* Top row: balance hero + cómo pagar */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1.2fr 1fr',
+            gap: 16,
+            marginBottom: 18,
+          }}
+        >
+          <BalanceHero large />
+          <HowToPayCard />
+        </div>
+
+        {/* Bottom row: advances + settlements */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 16 }}>
+          {/* Advances */}
+          <div>
+            <SectionHeader
+              icon="report_problem"
+              title="Adelantos del fondo"
+              badge={advances.length}
+              hint={
+                disputeableCount > 0
+                  ? `${disputeableCount} disputable${disputeableCount > 1 ? 's' : ''}`
+                  : 'Tienes 48h para disputar después del cobro'
+              }
+            />
+            {advances.length === 0 ? (
+              <div
+                style={{
+                  padding: '24px 16px',
+                  textAlign: 'center',
+                  color: 'var(--tv-ink-subtle)',
+                  fontSize: 14,
+                  background: '#fff',
+                  borderRadius: 14,
+                  border: '1px solid var(--tv-border)',
+                }}
+              >
+                Sin adelantos registrados.
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10 }}>
+                {advances.map((a) => (
+                  <AdvanceCard
+                    key={a.id}
+                    a={a}
+                    disputeId={disputeId}
+                    disputeNote={disputeNote}
+                    busy={busy}
+                    err={disputeId === a.id ? err : null}
+                    onStartDispute={(id) => {
+                      setDisputeId(id)
+                      setDisputeNote('')
+                      setErr(null)
+                    }}
+                    onNoteChange={setDisputeNote}
+                    onSubmitDispute={dispute}
+                    onCancelDispute={() => setDisputeId(null)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Settlements */}
+          <div>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                marginBottom: 10,
+              }}
+            >
+              <MS name="history" size={20} style={{ color: 'var(--tv-ink-muted)' }} />
+              <div style={{ fontSize: 16, fontWeight: 700 }}>Liquidaciones semanales</div>
+            </div>
+            {settlements.length === 0 ? (
+              <div
+                style={{
+                  padding: '24px 16px',
+                  textAlign: 'center',
+                  color: 'var(--tv-ink-subtle)',
+                  fontSize: 14,
+                  background: '#fff',
+                  borderRadius: 14,
+                  border: '1px solid var(--tv-border)',
+                }}
+              >
+                Aún no hay liquidaciones generadas.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {settlements.map((s) => (
+                  <SettlementRow key={s.id} s={s} />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </DashboardShell>
   )
 }

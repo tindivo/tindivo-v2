@@ -2,34 +2,20 @@
 
 import { ApiError } from '@tindivo/api-client'
 import { Button, Card, CardBody } from '@tindivo/ui'
-import Link from 'next/link'
-import { type FormEvent, useCallback, useEffect, useState } from 'react'
+import { type FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
+import type { DetailActions, DetailItem } from '@/components/dashboard/pedido-detail'
+import { PedidosDesktop, PedidosMobile } from '@/components/dashboard/pedidos-view'
 import { api } from '@/lib/api'
+import {
+  getColumn,
+  isBusinessPaused,
+  ORDER_SELECT,
+  type OrderRow,
+  pauseMinutesLeft,
+  toOrderVM,
+} from '@/lib/orders/view-model'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
-import { useAudioAlert } from '@/lib/use-audio-alert'
-
-const soles = (n: number | null) => (n == null ? '—' : `S/ ${Number(n).toFixed(2)}`)
-
-const PAYMENT_LABEL: Record<string, string> = {
-  prepaid: 'Prepago Yape',
-  pending_yape: 'Yape al recibir',
-  pending_cash: 'Efectivo',
-  pending_mixed: 'Mixto',
-}
-
-interface Order {
-  id: string
-  short_id: string
-  status: string
-  customer_name: string | null
-  customer_phone: string | null
-  delivery_reference: string | null
-  order_amount: number
-  payment_intent: string
-  delivery_method: string
-  prep_time_minutes: number | null
-  created_at: string
-}
+import { unlockAudio, useDashboardSounds } from '@/lib/use-audio-alert'
 
 const inputCls =
   'mt-1 h-11 w-full rounded-xl border border-border bg-surface px-3 text-[15px] outline-none focus:border-brand'
@@ -108,339 +94,327 @@ function Login({ onAuthed }: { onAuthed: () => void }) {
   )
 }
 
+interface BizState {
+  name: string
+  accent: string
+  qrUrl: string | null
+  until: string | null
+  blocked: boolean
+  reason: string | null
+}
+
 function Board({ onSignOut }: { onSignOut: () => void }) {
-  const [orders, setOrders] = useState<Order[]>([])
-  const [bizName, setBizName] = useState<string>('Mi negocio')
-  const [blocked, setBlocked] = useState<{ on: boolean; reason: string | null }>({
-    on: false,
+  const [rows, setRows] = useState<OrderRow[]>([])
+  const [now, setNow] = useState(() => Date.now())
+  const [biz, setBiz] = useState<BizState>({
+    name: 'Mi negocio',
+    accent: '#F472B6',
+    qrUrl: null,
+    until: null,
+    blocked: false,
     reason: null,
   })
   const [soundOn, setSoundOn] = useState(false)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [detailItems, setDetailItems] = useState<DetailItem[] | null>(null)
+  const [detailProofUrl, setDetailProofUrl] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [showPause, setShowPause] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const refetch = useCallback(async () => {
+  const refetchOrders = useCallback(async () => {
     const supabase = getSupabaseBrowser()
     const { data, error: e } = await supabase
       .from('orders')
-      .select(
-        'id,short_id,status,customer_name,customer_phone,delivery_reference,order_amount,payment_intent,delivery_method,prep_time_minutes,created_at',
-      )
+      .select(ORDER_SELECT)
       .order('created_at', { ascending: false })
-      .limit(50)
+      .limit(100)
     if (e) setError(e.message)
-    else setOrders(data as Order[])
+    else setRows((data ?? []) as unknown as OrderRow[])
+  }, [])
+
+  const refetchBiz = useCallback(async () => {
+    const supabase = getSupabaseBrowser()
+    const { data } = await supabase
+      .from('businesses')
+      .select('name,accent_color,qr_url,accepting_orders_until,is_blocked,block_reason')
+      .maybeSingle()
+    if (data)
+      setBiz({
+        name: data.name ?? 'Mi negocio',
+        accent: data.accent_color ? `#${data.accent_color}` : '#F472B6',
+        qrUrl: data.qr_url ?? null,
+        until: (data.accepting_orders_until as string | null) ?? null,
+        blocked: data.is_blocked ?? false,
+        reason: data.block_reason ?? null,
+      })
   }, [])
 
   useEffect(() => {
     const supabase = getSupabaseBrowser()
-    supabase
-      .from('businesses')
-      .select('name,is_blocked,block_reason')
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data?.name) setBizName(data.name)
-        if (data) setBlocked({ on: data.is_blocked, reason: data.block_reason })
-      })
-    refetch()
+    refetchBiz()
+    refetchOrders()
     const channel = supabase
       .channel('biz-orders')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => refetch())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () =>
+        refetchOrders(),
+      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'businesses' }, () =>
+        refetchBiz(),
+      )
       .subscribe()
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [refetch])
+  }, [refetchOrders, refetchBiz])
 
-  const active = orders.filter((o) => !['delivered', 'cancelled'].includes(o.status))
-  const pendingCount = orders.filter((o) => o.status === 'pending_acceptance').length
-  useAudioAlert(pendingCount > 0, soundOn)
+  // Tick para countdowns / buffer.
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(t)
+  }, [])
 
-  async function transition(id: string, action: string, params: Record<string, unknown> = {}) {
-    setError(null)
-    try {
-      await api.post(`/business/orders/${id}/transition`, { action, ...params })
-      await refetch()
-    } catch (err) {
-      setError(err instanceof ApiError ? (err.problem.detail ?? err.message) : 'Error')
+  // Datos derivados del pedido seleccionado (para deps honestas del efecto).
+  const selRow = selectedId ? (rows.find((r) => r.id === selectedId) ?? null) : null
+  const selSource = selRow?.source ?? null
+  const selProofPath = selRow?.comprobante_prepago_url ?? null
+
+  // Detalle: carga lazy de items (Online) + comprobante firmado (prepago).
+  // Se re-ejecuta si el cliente sube el comprobante con el detalle abierto.
+  useEffect(() => {
+    let cancel = false
+    setDetailItems(null)
+    setDetailProofUrl(null)
+    if (!selectedId) return
+    const supabase = getSupabaseBrowser()
+    void (async () => {
+      if (selSource === 'customer_pwa') {
+        const { data } = await supabase
+          .from('customer_order_items')
+          .select(
+            'item_name_snapshot,quantity,unit_price,line_total,note,customer_order_item_modifiers(option_name_snapshot)',
+          )
+          .eq('order_id', selectedId)
+        if (!cancel)
+          setDetailItems(
+            (data ?? []).map((r) => {
+              const mods = (
+                (r.customer_order_item_modifiers ?? []) as { option_name_snapshot: string }[]
+              )
+                .map((m) => m.option_name_snapshot)
+                .join(', ')
+              return {
+                qty: r.quantity as number,
+                name: r.item_name_snapshot as string,
+                price: Number(r.line_total ?? (r.unit_price as number) * (r.quantity as number)),
+                note: (r.note as string | null) ?? null,
+                mods: mods || null,
+              }
+            }),
+          )
+      }
+      if (selProofPath) {
+        try {
+          const r = await api.get<{ data: { url: string | null } }>(
+            `/business/orders/${selectedId}/prepay-proof`,
+          )
+          if (!cancel) setDetailProofUrl(r.data.url)
+        } catch {
+          /* sin comprobante todavía */
+        }
+      }
+    })()
+    return () => {
+      cancel = true
     }
-  }
+  }, [selectedId, selSource, selProofPath])
 
-  async function extendPrep(id: string) {
-    setError(null)
-    try {
-      await api.post(`/business/orders/${id}/extend-prep`, {})
-      await refetch()
-    } catch (err) {
-      setError(err instanceof ApiError ? (err.problem.detail ?? err.message) : 'Error')
-    }
-  }
-
-  async function validate(id: string, pass: boolean) {
-    setError(null)
-    try {
-      await api.post(`/business/orders/${id}/validate`, { pass })
-      await refetch()
-    } catch (err) {
-      setError(err instanceof ApiError ? (err.problem.detail ?? err.message) : 'Error')
-    }
-  }
-
-  return (
-    <div className="mx-auto max-w-3xl px-4 py-6">
-      <header className="mb-4 flex items-center justify-between">
-        <div>
-          <p className="font-mono text-[11px] text-ink-subtle uppercase tracking-widest">
-            {bizName}
-          </p>
-          <h1 className="font-display font-semibold text-[24px] text-ink">Pedidos</h1>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link href="/menu">
-            <Button size="sm" variant="outline">
-              Menú
-            </Button>
-          </Link>
-          <Link href="/efectivo">
-            <Button size="sm" variant="outline">
-              Efectivo
-            </Button>
-          </Link>
-          <Link href="/deuda">
-            <Button size="sm" variant="outline">
-              Deuda
-            </Button>
-          </Link>
-          <Link href="/nuevo">
-            <Button size="sm" variant="outline">
-              + Pedido
-            </Button>
-          </Link>
-          <Link href="/configuracion">
-            <Button size="sm" variant="outline">
-              Config
-            </Button>
-          </Link>
-          <Button
-            size="sm"
-            variant={soundOn ? 'brand' : 'outline'}
-            onClick={() => setSoundOn((s) => !s)}
-          >
-            {soundOn ? '🔔 Alertas ON' : '🔕 Activar alertas'}
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={async () => {
-              await getSupabaseBrowser().auth.signOut()
-              onSignOut()
-            }}
-          >
-            Salir
-          </Button>
-        </div>
-      </header>
-
-      {blocked.on && (
-        <p className="mb-3 rounded-xl bg-danger/15 px-3 py-2 text-[14px] text-danger">
-          ⛔ Tu cuenta está suspendida{blocked.reason ? ` (${blocked.reason})` : ''}. Ve a{' '}
-          <Link href="/deuda" className="underline">
-            Deuda
-          </Link>{' '}
-          o contacta a soporte.
-        </p>
-      )}
-      {pendingCount > 0 && (
-        <p className="mb-3 rounded-xl bg-warning/15 px-3 py-2 text-[14px] text-warning">
-          {pendingCount} pedido{pendingCount === 1 ? '' : 's'} esperando que aceptes.
-        </p>
-      )}
-      {error && <p className="mb-3 text-danger text-sm">{error}</p>}
-
-      {active.length === 0 ? (
-        <Card>
-          <CardBody>
-            <p className="py-8 text-center text-ink-subtle">
-              Sin pedidos activos. Aquí aparecerán al instante.
-            </p>
-          </CardBody>
-        </Card>
-      ) : (
-        <ul className="space-y-3">
-          {active.map((o) => (
-            <li key={o.id}>
-              <OrderCard
-                order={o}
-                onTransition={transition}
-                onExtend={extendPrep}
-                onValidate={validate}
-              />
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+  const vms = useMemo(() => rows.map((r) => toOrderVM(r, now)), [rows, now])
+  const newOrders = useMemo(() => vms.filter((v) => getColumn(v.status) === 'nuevos'), [vms])
+  const cookingOrders = useMemo(() => vms.filter((v) => getColumn(v.status) === 'cocina'), [vms])
+  const routeOrders = useMemo(() => vms.filter((v) => getColumn(v.status) === 'reparto'), [vms])
+  const history = useMemo(
+    () => vms.filter((v) => getColumn(v.status) === 'entregados').slice(0, 40),
+    [vms],
   )
-}
+  const counts = {
+    new: newOrders.length,
+    cooking: cookingOrders.length,
+    route: routeOrders.length,
+    today: vms.filter((v) => v.status === 'delivered').length,
+  }
+  const selected = selectedId ? (vms.find((v) => v.rowId === selectedId) ?? null) : null
+  const paused = isBusinessPaused(biz.until, now)
+  const pauseMin = pauseMinutesLeft(biz.until, now)
+  const hasWaiting = cookingOrders.some((o) => o.state === 'waiting')
+  const hasBufferP3 = cookingOrders.some((o) => o.state === 'buffer_p3')
 
-function OrderCard({
-  order,
-  onTransition,
-  onExtend,
-  onValidate,
-}: {
-  order: Order
-  onTransition: (id: string, action: string, params?: Record<string, unknown>) => Promise<void>
-  onExtend: (id: string) => Promise<void>
-  onValidate: (id: string, pass: boolean) => Promise<void>
-}) {
-  const [prep, setPrep] = useState(25)
-  const [busy, setBusy] = useState(false)
+  useDashboardSounds({ hasPending: counts.new > 0, hasWaiting, hasBufferP3, soundOn })
 
-  const run = async (action: string, params?: Record<string, unknown>) => {
+  const run = useCallback(async (fn: () => Promise<void>) => {
     setBusy(true)
-    await onTransition(order.id, action, params)
-    setBusy(false)
+    setError(null)
+    try {
+      await fn()
+    } catch (err) {
+      setError(err instanceof ApiError ? (err.problem.detail ?? err.message) : 'Error inesperado')
+    } finally {
+      setBusy(false)
+    }
+  }, [])
+
+  const post = (path: string, body: unknown) => api.post(path, body)
+
+  const actions: DetailActions = {
+    onClose: () => setSelectedId(null),
+    onAccept: (prep) =>
+      run(async () => {
+        if (!selected) return
+        const id = selected.rowId
+        if (selected.status === 'validando')
+          await post(`/business/orders/${id}/validate`, { pass: true })
+        await post(`/business/orders/${id}/transition`, { action: 'accept' })
+        await post(`/business/orders/${id}/transition`, {
+          action: 'preparing',
+          prepTimeMinutes: prep,
+        })
+        setSelectedId(null)
+        await refetchOrders()
+      }),
+    onReject: (code, text) =>
+      run(async () => {
+        if (!selected) return
+        const id = selected.rowId
+        if (selected.status === 'validando')
+          await post(`/business/orders/${id}/validate`, {
+            pass: false,
+            reason: text,
+            reasonCode: code,
+          })
+        else
+          await post(`/business/orders/${id}/transition`, {
+            action: 'cancel',
+            reason: 'business_cancelled',
+            reasonCode: code,
+            reasonText: text,
+          })
+        setSelectedId(null)
+        await refetchOrders()
+      }),
+    onVerifyProof: () =>
+      run(async () => {
+        if (!selected) return
+        await post(`/business/orders/${selected.rowId}/validate`, { pass: true })
+        await refetchOrders()
+      }),
+    onRejectProof: () =>
+      run(async () => {
+        if (!selected) return
+        await post(`/business/orders/${selected.rowId}/validate`, {
+          pass: false,
+          reason: 'Comprobante inválido',
+          reasonCode: 'invalid_proof',
+        })
+        setSelectedId(null)
+        await refetchOrders()
+      }),
+    onExtend: () =>
+      run(async () => {
+        if (!selected) return
+        await post(`/business/orders/${selected.rowId}/extend-prep`, {})
+        await refetchOrders()
+      }),
+    onReady: () =>
+      run(async () => {
+        if (!selected) return
+        await post(`/business/orders/${selected.rowId}/transition`, { action: 'ready' })
+        setSelectedId(null)
+        await refetchOrders()
+      }),
+    onCancel: (code, text) =>
+      run(async () => {
+        if (!selected) return
+        await post(`/business/orders/${selected.rowId}/transition`, {
+          action: 'cancel',
+          reason: 'business_cancelled',
+          reasonCode: code,
+          reasonText: text,
+        })
+        setSelectedId(null)
+        await refetchOrders()
+      }),
+  }
+
+  const onConfirmPause = (min: number | null) =>
+    run(async () => {
+      await post('/business/pause', { minutes: min })
+      setShowPause(false)
+      await refetchBiz()
+    })
+  const onResume = () =>
+    run(async () => {
+      await api.delete('/business/pause')
+      await refetchBiz()
+    })
+
+  const toggleSound = () =>
+    setSoundOn((s) => {
+      if (!s) unlockAudio()
+      return !s
+    })
+
+  const viewProps = {
+    bizName: biz.name,
+    accent: biz.accent,
+    paused,
+    pauseMinLeft: pauseMin,
+    soundOn,
+    onToggleSound: toggleSound,
+    onOpenPause: () => setShowPause(true),
+    onResume,
+    counts,
+    newOrders,
+    cookingOrders,
+    routeOrders,
+    history,
+    onOpen: (o: { rowId: string }) => setSelectedId(o.rowId),
+    onSignOut: async () => {
+      await getSupabaseBrowser().auth.signOut()
+      onSignOut()
+    },
+    selected,
+    detailItems,
+    detailProofUrl,
+    qrUrl: biz.qrUrl,
+    detailBusy: busy,
+    actions,
+    showPauseModal: showPause,
+    onClosePause: () => setShowPause(false),
+    onConfirmPause,
   }
 
   return (
-    <Card>
-      <CardBody>
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="font-mono text-[13px] text-ink">#{order.short_id}</p>
-            <p className="font-medium text-[15px] text-ink">{order.customer_name ?? 'Cliente'}</p>
-            <p className="text-[13px] text-ink-muted">
-              {soles(order.order_amount)} ·{' '}
-              {PAYMENT_LABEL[order.payment_intent] ?? order.payment_intent} ·{' '}
-              {order.delivery_method === 'pickup' ? 'Recojo' : 'Delivery'}
+    <>
+      {(error || biz.blocked) && (
+        <div className="fixed top-2 left-1/2 z-[400] -translate-x-1/2 px-2">
+          {biz.blocked && (
+            <p className="mb-1 rounded-xl bg-danger px-3 py-2 text-center text-[13px] text-white shadow">
+              Tu cuenta está suspendida{biz.reason ? ` (${biz.reason})` : ''}.
             </p>
-            {order.delivery_reference && (
-              <p className="mt-1 text-[13px] text-ink-subtle">📍 {order.delivery_reference}</p>
-            )}
-          </div>
-        </div>
-
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          {order.status === 'validando' && (
-            <>
-              <span className="rounded-lg bg-info/15 px-2 py-1 text-[13px] text-info">
-                {order.payment_intent === 'prepaid'
-                  ? 'Revisa el comprobante de Yape'
-                  : 'Llama al cliente para validar'}
-              </span>
-              {order.payment_intent === 'prepaid' && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={async () => {
-                    try {
-                      const r = await api.get<{ data: { url: string | null } }>(
-                        `/business/orders/${order.id}/prepay-proof`,
-                      )
-                      if (r.data.url) window.open(r.data.url, '_blank')
-                    } catch {}
-                  }}
-                >
-                  Ver comprobante
-                </Button>
-              )}
-              <Button
-                size="sm"
-                disabled={busy}
-                onClick={async () => {
-                  setBusy(true)
-                  await onValidate(order.id, true)
-                  setBusy(false)
-                }}
-              >
-                {order.payment_intent === 'prepaid' ? 'Aprobar' : 'Validar'}
-              </Button>
-              <Button
-                size="sm"
-                variant="danger"
-                disabled={busy}
-                onClick={async () => {
-                  setBusy(true)
-                  await onValidate(order.id, false)
-                  setBusy(false)
-                }}
-              >
-                {order.payment_intent === 'prepaid' ? 'Rechazar' : 'No contesta'}
-              </Button>
-            </>
           )}
-          {order.status === 'pending_acceptance' && (
-            <>
-              <Button size="sm" disabled={busy} onClick={() => run('accept')}>
-                Aceptar
-              </Button>
-              <Button
-                size="sm"
-                variant="danger"
-                disabled={busy}
-                onClick={() => run('cancel', { reason: 'business_cancelled' })}
-              >
-                Rechazar
-              </Button>
-            </>
-          )}
-          {order.status === 'confirmed' && (
-            <>
-              <label className="flex items-center gap-1 text-[13px] text-ink-muted">
-                Prep:
-                <input
-                  type="number"
-                  className="h-9 w-16 rounded-lg border border-border bg-surface px-2 text-center"
-                  value={prep}
-                  min={1}
-                  max={120}
-                  onChange={(e) => setPrep(Number(e.target.value))}
-                />
-                min
-              </label>
-              <Button
-                size="sm"
-                disabled={busy}
-                onClick={() => run('preparing', { prepTimeMinutes: prep })}
-              >
-                Empezar a preparar
-              </Button>
-            </>
-          )}
-          {order.status === 'preparing' && (
-            <>
-              <Button size="sm" disabled={busy} onClick={() => run('ready')}>
-                Listo para recoger
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={busy}
-                onClick={async () => {
-                  setBusy(true)
-                  await onExtend(order.id)
-                  setBusy(false)
-                }}
-              >
-                +10 min
-              </Button>
-            </>
-          )}
-          {[
-            'waiting_driver',
-            'heading_to_restaurant',
-            'waiting_at_restaurant',
-            'picked_up',
-          ].includes(order.status) && (
-            <span className="rounded-lg bg-brand-light px-2 py-1 text-[13px] text-brand-dark">
-              {order.status === 'waiting_driver' && 'Buscando motorizado…'}
-              {order.status === 'heading_to_restaurant' && 'Motorizado en camino'}
-              {order.status === 'waiting_at_restaurant' && 'Motorizado en el local'}
-              {order.status === 'picked_up' && 'En reparto'}
-            </span>
+          {error && (
+            <p className="rounded-xl bg-ink px-3 py-2 text-center text-[13px] text-white shadow">
+              {error}
+            </p>
           )}
         </div>
-      </CardBody>
-    </Card>
+      )}
+      <div className="lg:hidden">
+        <PedidosMobile {...viewProps} />
+      </div>
+      <div className="hidden lg:block">
+        <PedidosDesktop {...viewProps} />
+      </div>
+    </>
   )
 }

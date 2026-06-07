@@ -9,25 +9,20 @@ import { createServiceClient } from '@/lib/supabase/service'
 
 export const dynamic = 'force-dynamic'
 
+// Pedido manual = SOLO monto total (sin selección de platos). Nombre y teléfono
+// son opcionales; un único campo de dirección/referencia (máx 500).
 const Schema = z.object({
   deliveryMethod: DeliveryMethodSchema,
   paymentIntent: PaymentIntentSchema,
-  customerName: z.string().trim().min(1).max(120),
-  customerPhone: z.string().trim().min(1).max(20),
-  deliveryAddress: z.string().trim().max(200).optional(),
-  deliveryReference: z.string().trim().max(200).optional(),
+  customerName: z.string().trim().max(120).optional(),
+  customerPhone: z.string().trim().max(20).optional(),
+  deliveryReference: z.string().trim().max(500).optional(),
   notes: z.string().trim().max(500).optional(),
-  items: z
-    .array(
-      z.object({
-        menuItemId: z.uuid().optional(),
-        name: z.string().trim().max(120).optional(),
-        unitPrice: z.number().nonnegative().optional(),
-        quantity: z.number().int().min(1).max(99).default(1),
-        note: z.string().trim().max(140).optional(),
-      }),
-    )
-    .max(50),
+  prepTimeMinutes: z.number().int().min(1).max(120).default(20),
+  orderAmount: z.number().positive().max(99_999_999.99),
+  clientPaysWith: z.number().nonnegative().max(99_999_999.99).optional(),
+  yapeAmount: z.number().nonnegative().max(99_999_999.99).optional(),
+  cashAmount: z.number().nonnegative().max(99_999_999.99).optional(),
 })
 
 export function OPTIONS(req: Request): Response {
@@ -45,18 +40,15 @@ export async function POST(req: Request): Promise<Response> {
       p_business_user_id: user.id,
       p_delivery_method: body.deliveryMethod,
       p_payment_intent: body.paymentIntent,
-      p_customer_name: body.customerName,
-      p_customer_phone: body.customerPhone,
-      p_items: body.items.map((i) => ({
-        menu_item_id: i.menuItemId ?? null,
-        name: i.name ?? null,
-        unitPrice: i.unitPrice ?? null,
-        quantity: i.quantity,
-        note: i.note ?? null,
-      })),
-      p_delivery_address: body.deliveryAddress ?? undefined,
+      p_customer_name: body.customerName ?? undefined,
+      p_customer_phone: body.customerPhone ?? undefined,
+      p_order_amount: body.orderAmount,
+      p_prep_time_minutes: body.prepTimeMinutes,
       p_delivery_reference: body.deliveryReference ?? undefined,
       p_notes: body.notes ?? undefined,
+      p_client_pays_with: body.clientPaysWith ?? undefined,
+      p_yape_amount: body.yapeAmount ?? undefined,
+      p_cash_amount: body.cashAmount ?? undefined,
     })
     if (error) {
       if (error.code === 'P0002') throw new DomainError(error.message, 'not_found')
