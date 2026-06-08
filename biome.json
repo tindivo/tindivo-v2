@@ -14,7 +14,9 @@
       "!**/*.css",
       "!**/.next",
       "!**/dist",
-      "!**/.turbo"
+      "!**/.turbo",
+      "!supabase/functions/**",
+      "!supabase/functions-js/**"
     ]
   },
   "formatter": {
