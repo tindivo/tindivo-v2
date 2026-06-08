@@ -49,19 +49,31 @@ jobs:
   db-types-drift:
     name: DB types drift (database.types.ts vs Supabase)
     runs-on: ubuntu-latest
-    # Solo corre si el secret de Supabase está configurado.
-    if: ${{ secrets.SUPABASE_ACCESS_TOKEN != '' }}
+    # `secrets` NO es un contexto válido en `if` de job (rechaza el workflow entero).
+    # Se mapea a env y un step-guard condiciona los pasos siguientes.
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_PROJECT_ID: psjigdoinfpgrnedxeyf
     steps:
       - uses: actions/checkout@v4
+      - name: Guard — ¿hay token de Supabase configurado?
+        id: guard
+        run: |
+          if [ -n "$SUPABASE_ACCESS_TOKEN" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "Sin SUPABASE_ACCESS_TOKEN; se omite el chequeo de drift."
+          fi
       - uses: supabase/setup-cli@v1
+        if: steps.guard.outputs.run == 'true'
         with:
           version: latest
       - name: Generar tipos desde la DB
+        if: steps.guard.outputs.run == 'true'
         run: supabase gen types typescript --project-id "$SUPABASE_PROJECT_ID" --schema public > /tmp/database.types.ts
       - name: Verificar que no hay drift
+        if: steps.guard.outputs.run == 'true'
         run: |
           if ! diff -q packages/supabase/src/database.types.ts /tmp/database.types.ts > /dev/null; then
             echo "::error::database.types.ts está desactualizado. Corre 'pnpm db:types' y commitea."
