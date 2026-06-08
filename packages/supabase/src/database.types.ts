@@ -2240,6 +2240,38 @@ export type Database = {
         }
         Returns: Json
       }
+      create_customer_incident: {
+        Args: {
+          p_description?: string
+          p_incident_type: Database["public"]["Enums"]["incident_type"]
+          p_order_id: string
+          p_reported_by: string
+          p_reported_by_role: string
+        }
+        Returns: {
+          created_at: string
+          customer_phone: string
+          customer_user_id: string | null
+          delivery_reference: string | null
+          description: string | null
+          id: string
+          incident_type: Database["public"]["Enums"]["incident_type"]
+          is_strike: boolean
+          order_id: string | null
+          reported_by: string | null
+          reported_by_role: string | null
+          review_result: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "customer_incidents"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       create_customer_order: {
         Args: {
           p_business_id: string
@@ -2257,6 +2289,36 @@ export type Database = {
         }
         Returns: Json
       }
+      create_fraud_claim: {
+        Args: {
+          p_amount: number
+          p_business_user_id: string
+          p_evidence_url?: string
+          p_order_id: string
+          p_reason: string
+        }
+        Returns: {
+          amount: number
+          business_id: string
+          created_at: string
+          created_by: string | null
+          evidence_url: string | null
+          id: string
+          order_id: string
+          reason: string
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: Database["public"]["Enums"]["fraud_claim_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "fraud_coverage_claims"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       current_business_id: { Args: never; Returns: string }
       current_driver_id: { Args: never; Returns: string }
       current_user_has_role: {
@@ -2266,6 +2328,10 @@ export type Database = {
       current_user_role: { Args: never; Returns: string }
       customer_contraentrega_blocked: {
         Args: { p_phone: string; p_reference: string }
+        Returns: boolean
+      }
+      customer_is_blocked: {
+        Args: { p_phone: string; p_user_id: string }
         Returns: boolean
       }
       derive_business_primary_capability: {
@@ -2334,6 +2400,89 @@ export type Database = {
         }
         Returns: Json
       }
+      request_order_validation: {
+        Args: { p_business_user_id: string; p_order_id: string }
+        Returns: {
+          appears_in_queue_at: string | null
+          assigned_at: string | null
+          business_id: string
+          business_notes: string | null
+          cancel_note: string | null
+          cancel_reason: Database["public"]["Enums"]["cancel_reason"] | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          cash_amount: number | null
+          cash_owed_at_delivery: number | null
+          change_to_give: number | null
+          client_pays_with: number | null
+          comprobante_prepago_url: string | null
+          confirmed_at: string | null
+          created_at: string
+          customer_name: string | null
+          customer_notes: string | null
+          customer_phone: string | null
+          customer_user_id: string | null
+          delivered_at: string | null
+          delivery_address: string | null
+          delivery_coordinates_lat: number | null
+          delivery_coordinates_lng: number | null
+          delivery_distance_band:
+            | Database["public"]["Enums"]["distance_band"]
+            | null
+          delivery_fee: number
+          delivery_maps_url: string | null
+          delivery_method: Database["public"]["Enums"]["delivery_method"]
+          delivery_reference: string | null
+          driver_id: string | null
+          driver_notes: string | null
+          estimated_ready_at: string | null
+          heading_at: string | null
+          id: string
+          is_manual: boolean | null
+          occupancy_slots: number
+          order_amount: number
+          order_number: number
+          payment_intent: Database["public"]["Enums"]["payment_intent"]
+          payment_proof_status: string | null
+          payment_real: Database["public"]["Enums"]["payment_real"] | null
+          payment_verified_at: string | null
+          payment_verified_by: string | null
+          pending_acceptance_at: string | null
+          picked_up_at: string | null
+          prep_extended_at: string | null
+          prep_extension_count: number
+          prep_time_minutes: number | null
+          preparing_at: string | null
+          ready_early_used: boolean
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_reason_code: string | null
+          rejection_reason_text: string | null
+          requires_validation: boolean
+          short_id: string
+          source: Database["public"]["Enums"]["order_source"]
+          status: Database["public"]["Enums"]["order_status"]
+          tindivo_commission: number | null
+          tracking_link_sent_at: string | null
+          tracking_link_sent_by: string | null
+          updated_at: string
+          urgent_since: string | null
+          validated_at: string | null
+          validated_by: string | null
+          validating_at: string | null
+          validation_result: string | null
+          waiting_at_restaurant_at: string | null
+          waiting_driver_at: string | null
+          yape_amount: number | null
+          yape_confirmed: boolean
+        }
+        SetofOptions: {
+          from: "*"
+          to: "orders"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       resolve_cash_settlement: {
         Args: {
           p_admin_user_id: string
@@ -2352,9 +2501,64 @@ export type Database = {
         }
         Returns: Json
       }
+      resolve_fraud_claim: {
+        Args: {
+          p_approve: boolean
+          p_claim_id: string
+          p_note?: string
+          p_resolver: string
+        }
+        Returns: {
+          amount: number
+          business_id: string
+          created_at: string
+          created_by: string | null
+          evidence_url: string | null
+          id: string
+          order_id: string
+          reason: string
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: Database["public"]["Enums"]["fraud_claim_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "fraud_coverage_claims"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       resume_business_orders: {
         Args: { p_business_user_id: string }
         Returns: Json
+      }
+      review_customer_incident: {
+        Args: { p_incident_id: string; p_result: string; p_reviewer: string }
+        Returns: {
+          created_at: string
+          customer_phone: string
+          customer_user_id: string | null
+          delivery_reference: string | null
+          description: string | null
+          id: string
+          incident_type: Database["public"]["Enums"]["incident_type"]
+          is_strike: boolean
+          order_id: string | null
+          reported_by: string | null
+          reported_by_role: string | null
+          review_result: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "customer_incidents"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       set_driver_availability: {
         Args: { p_available: boolean; p_user_id: string }
