@@ -1,5 +1,6 @@
 'use client'
 
+import { ApiError } from '@tindivo/api-client'
 import { useCallback, useEffect, useState } from 'react'
 import {
   FONT_MONO,
@@ -9,8 +10,161 @@ import {
   soles,
 } from '@/components/dashboard/primitives'
 import { DashboardShell, useDashboard } from '@/components/dashboard/shell'
+import { api } from '@/lib/api'
 import { mapPayment } from '@/lib/orders/view-model'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
+
+// ── Reclamo de cobertura por fraude (sobre un pedido cancelado) ────────────────
+function ClaimModal({ orders, onClose }: { orders: HistDisplay[]; onClose: () => void }) {
+  const [orderId, setOrderId] = useState(orders[0]?.id ?? '')
+  const [amount, setAmount] = useState(String(orders[0]?.total ?? ''))
+  const [reason, setReason] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [done, setDone] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  function pick(id: string) {
+    setOrderId(id)
+    const o = orders.find((x) => x.id === id)
+    if (o) setAmount(String(o.total))
+  }
+
+  async function submit() {
+    if (!orderId || reason.trim().length < 4) return
+    setBusy(true)
+    setErr(null)
+    try {
+      await api.post(
+        '/business/fraud-claims',
+        { orderId, amount: Number(amount) || 0, reason: reason.trim() },
+        crypto.randomUUID(),
+      )
+      setDone(true)
+    } catch (e) {
+      setErr(
+        e instanceof ApiError ? (e.problem.detail ?? e.message) : 'No se pudo enviar el reclamo',
+      )
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 100,
+        display: 'flex',
+        alignItems: 'flex-end',
+        justifyContent: 'center',
+      }}
+    >
+      <button
+        type="button"
+        aria-label="Cerrar"
+        onClick={onClose}
+        style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)', border: 'none' }}
+      />
+      <div
+        style={{
+          position: 'relative',
+          background: '#fff',
+          borderRadius: '20px 20px 0 0',
+          width: '100%',
+          maxWidth: 460,
+          padding: '18px 16px 24px',
+        }}
+      >
+        {done ? (
+          <div style={{ textAlign: 'center', padding: '12px 0' }}>
+            <MS name="verified" size={36} filled style={{ color: 'var(--tv-success)' }} />
+            <div style={{ fontSize: 17, fontWeight: 700, marginTop: 8 }}>Reclamo enviado</div>
+            <div style={{ fontSize: 13, color: 'var(--tv-ink-muted)', marginTop: 4 }}>
+              Tindivo lo revisará. Si se aprueba, se descuenta de tu próxima liquidación.
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="tv-btn tv-btn-block"
+              style={{ marginTop: 16, background: 'var(--tv-ink)', color: '#fff' }}
+            >
+              Listo
+            </button>
+          </div>
+        ) : (
+          <>
+            <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 2 }}>
+              Reclamar cobertura por fraude
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--tv-ink-muted)', marginBottom: 14 }}>
+              Si perdiste dinero por un pedido cancelado, solicita cobertura del fondo.
+            </div>
+
+            <div className="tv-label" style={{ fontSize: 10, marginBottom: 4 }}>
+              PEDIDO CANCELADO
+            </div>
+            <select
+              value={orderId}
+              onChange={(e) => pick(e.target.value)}
+              className="tv-input"
+              style={{ width: '100%', marginBottom: 12 }}
+            >
+              {orders.map((o) => (
+                <option key={o.id} value={o.id}>
+                  #{o.shortId} · {o.customer} · {soles(o.total)}
+                </option>
+              ))}
+            </select>
+
+            <div className="tv-label" style={{ fontSize: 10, marginBottom: 4 }}>
+              MONTO A RECLAMAR (S/)
+            </div>
+            <input
+              type="number"
+              inputMode="decimal"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="tv-input"
+              style={{ width: '100%', marginBottom: 12 }}
+            />
+
+            <div className="tv-label" style={{ fontSize: 10, marginBottom: 4 }}>
+              MOTIVO
+            </div>
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              rows={3}
+              placeholder="Describe qué pasó (preparaste el pedido, el cliente no recibió, etc.)"
+              className="tv-input"
+              style={{ width: '100%', resize: 'vertical' }}
+            />
+
+            {err && (
+              <div style={{ color: 'var(--tv-danger)', fontSize: 13, marginTop: 8 }}>{err}</div>
+            )}
+
+            <button
+              type="button"
+              onClick={submit}
+              disabled={busy || !orderId || reason.trim().length < 4}
+              className="tv-btn tv-btn-block"
+              style={{
+                marginTop: 16,
+                background: 'var(--tv-brand)',
+                color: '#fff',
+                opacity: busy || reason.trim().length < 4 ? 0.5 : 1,
+              }}
+            >
+              {busy ? 'Enviando…' : 'Enviar reclamo'}
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type HistFilter = 'all' | 'delivered' | 'cancelled' | 'web' | 'manual'
@@ -477,6 +631,7 @@ function HistorialView() {
   const [filter, setFilter] = useState<HistFilter>('all')
   const [search, setSearch] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [claimOpen, setClaimOpen] = useState(false)
 
   const load = useCallback(async () => {
     // Build today's date range in Lima time (UTC-5)
@@ -539,6 +694,8 @@ function HistorialView() {
     manual: allDisplayRows.filter((r) => r.source === 'manual').length,
   }
 
+  const cancelledRows = allDisplayRows.filter((r) => r.isCancel)
+
   return (
     <>
       {error && (
@@ -560,6 +717,32 @@ function HistorialView() {
       <div style={{ marginBottom: 16 }}>
         <SummaryStrip rows={allDisplayRows} />
       </div>
+
+      {cancelledRows.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setClaimOpen(true)}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            background: '#fff',
+            border: '1px solid var(--tv-border)',
+            borderRadius: 12,
+            padding: '8px 12px',
+            fontFamily: 'inherit',
+            fontSize: 13,
+            fontWeight: 600,
+            color: 'var(--tv-ink)',
+            cursor: 'pointer',
+            marginBottom: 16,
+          }}
+        >
+          <MS name="gavel" size={16} style={{ color: 'var(--tv-brand)' }} /> Reclamar cobertura por
+          fraude
+        </button>
+      )}
+      {claimOpen && <ClaimModal orders={cancelledRows} onClose={() => setClaimOpen(false)} />}
 
       {/* Desktop toolbar */}
       <div

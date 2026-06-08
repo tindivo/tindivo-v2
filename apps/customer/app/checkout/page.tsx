@@ -47,6 +47,7 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [confirmed, setConfirmed] = useState<OrderResult | null>(null)
+  const [blocked, setBlocked] = useState(false)
 
   const subtotal = cart.subtotal()
   const deliveryFee = deliveryMethod === 'pickup' ? 0 : NEAR_DELIVERY_FEE
@@ -130,6 +131,10 @@ export default function CheckoutPage() {
       setConfirmed(res.data)
       cart.clear()
     } catch (err) {
+      if (err instanceof ApiError && /bloquead/i.test(err.problem.detail ?? '')) {
+        setBlocked(true)
+        return
+      }
       setError(
         err instanceof ApiError
           ? (err.problem.detail ?? err.message)
@@ -139,6 +144,7 @@ export default function CheckoutPage() {
     }
   }
 
+  if (blocked) return <Blocked />
   if (confirmed)
     return confirmed.status === 'validando' && payment === 'prepaid' ? (
       <Prepay result={confirmed} />
@@ -302,7 +308,8 @@ export default function CheckoutPage() {
                 className="rounded-xl px-3 py-2.5 text-[13px]"
                 style={{ background: 'rgba(249,115,22,0.08)', color: '#C2410C' }}
               >
-                Los pedidos de S/100 a más se pagan por adelantado con Yape.
+                Los pedidos de S/100 a más se pagan por adelantado con billetera digital
+                (Yape/Plin).
               </p>
             )}
             <div className="mt-3 flex flex-col gap-2.5">
@@ -314,12 +321,12 @@ export default function CheckoutPage() {
                 },
                 {
                   v: 'pending_yape' as PaymentIntent,
-                  label: 'Yape al recibir',
-                  desc: 'Yapea al motorizado al entregar',
+                  label: 'Billetera digital al recibir',
+                  desc: 'Yape o Plin al motorizado al entregar',
                 },
                 {
                   v: 'prepaid' as PaymentIntent,
-                  label: 'Yape por adelantado',
+                  label: 'Prepago con billetera digital',
                   desc: 'Paga ahora y sube tu comprobante',
                 },
               ].map((opt) => {
@@ -600,6 +607,50 @@ function Confirmed({ result }: { result: OrderResult }) {
       <Link href={`/pedido/${result.shortId}`} className="t-btn t-btn-primary t-btn-block mt-6">
         Ver seguimiento
       </Link>
+      <Link href="/" className="mt-3 text-[14px] text-brand">
+        Volver al inicio
+      </Link>
+    </main>
+  )
+}
+
+function Blocked() {
+  const wa = process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP
+  const href = wa
+    ? `https://wa.me/${wa.replace(/\D/g, '')}?text=${encodeURIComponent('Hola, mi cuenta aparece pausada y quiero regularizarla.')}`
+    : undefined
+  return (
+    <main className="mx-auto flex min-h-dvh max-w-[480px] flex-col items-center justify-center px-6 text-center">
+      <div
+        className="flex h-20 w-20 items-center justify-center rounded-full text-white"
+        style={{ background: '#DC2626' }}
+      >
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <title>pausa</title>
+          <path
+            d="M6 10V8a6 6 0 0112 0v2m-9 0h6a3 3 0 013 3v4a3 3 0 01-3 3H9a3 3 0 01-3-3v-4a3 3 0 013-3z"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </div>
+      <h1 className="t-display mt-5 text-[26px]">Cuenta en pausa</h1>
+      <p className="t-muted mt-2 text-[15px]">
+        Tu cuenta está temporalmente pausada por incidentes reiterados en las entregas. Escríbenos
+        para regularizar tu situación y reactivarla.
+      </p>
+      {href && (
+        <a
+          href={href}
+          target="_blank"
+          rel="noreferrer"
+          className="t-btn t-btn-primary t-btn-block mt-6"
+        >
+          Escribir por WhatsApp
+        </a>
+      )}
       <Link href="/" className="mt-3 text-[14px] text-brand">
         Volver al inicio
       </Link>
