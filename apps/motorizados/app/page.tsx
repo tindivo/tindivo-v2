@@ -15,6 +15,13 @@ const PAYMENT_LABEL: Record<string, string> = {
   pending_mixed: 'Mixto',
 }
 
+const INCIDENT_TYPES: { value: string; label: string }[] = [
+  { value: 'fake_address', label: 'Dirección falsa o inexistente' },
+  { value: 'customer_abuse', label: 'Cliente agresivo o abusivo' },
+  { value: 'payment_fraud', label: 'Problema con el pago' },
+  { value: 'other', label: 'Otro' },
+]
+
 interface Order {
   id: string
   short_id: string
@@ -182,6 +189,25 @@ function Board({ onSignOut }: { onSignOut: () => void }) {
     }
   }
 
+  async function reportIncident(
+    orderId: string,
+    incidentType: string,
+    description: string,
+  ): Promise<boolean> {
+    setError(null)
+    try {
+      await api.post(
+        '/driver/incidents',
+        { orderId, incidentType, description: description || undefined },
+        crypto.randomUUID(),
+      )
+      return true
+    } catch (err) {
+      setError(err instanceof ApiError ? (err.problem.detail ?? err.message) : 'Error')
+      return false
+    }
+  }
+
   return (
     <div className="mx-auto max-w-[768px] px-4 py-6">
       <header className="mb-4 flex items-center justify-between">
@@ -245,7 +271,7 @@ function Board({ onSignOut }: { onSignOut: () => void }) {
         <ul className="mb-6 space-y-3">
           {mine.map((o) => (
             <li key={o.id}>
-              <DriverCard order={o} onTransition={transition} />
+              <DriverCard order={o} onTransition={transition} onReport={reportIncident} />
             </li>
           ))}
         </ul>
@@ -272,19 +298,37 @@ function Board({ onSignOut }: { onSignOut: () => void }) {
 function DriverCard({
   order,
   onTransition,
+  onReport,
 }: {
   order: Order
   onTransition: (id: string, action: string, params?: Record<string, unknown>) => Promise<void>
+  onReport?: (orderId: string, incidentType: string, description: string) => Promise<boolean>
 }) {
   const [band, setBand] = useState<'near' | 'far'>('near')
   const [payment, setPayment] = useState<'paid_cash' | 'paid_yape'>('paid_cash')
   const [busy, setBusy] = useState(false)
   const [noShowArmed, setNoShowArmed] = useState(false)
+  const [reportOpen, setReportOpen] = useState(false)
+  const [incidentType, setIncidentType] = useState('')
+  const [incidentDesc, setIncidentDesc] = useState('')
+  const [reportBusy, setReportBusy] = useState(false)
+  const [reportDone, setReportDone] = useState(false)
 
   const run = async (action: string, params?: Record<string, unknown>) => {
     setBusy(true)
     await onTransition(order.id, action, params)
     setBusy(false)
+  }
+
+  const submitReport = async () => {
+    if (!onReport || !incidentType) return
+    setReportBusy(true)
+    const ok = await onReport(order.id, incidentType, incidentDesc)
+    setReportBusy(false)
+    if (ok) {
+      setReportDone(true)
+      setReportOpen(false)
+    }
   }
 
   return (
@@ -384,6 +428,66 @@ function DriverCard({
                 >
                   Cancelar
                 </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {onReport && (
+          <div className="mt-2 border-border border-t pt-2">
+            {reportDone ? (
+              <p className="text-[13px] text-success">✓ Reporte enviado. El equipo lo revisará.</p>
+            ) : !reportOpen ? (
+              <button
+                type="button"
+                className="text-[13px] text-ink-subtle underline"
+                onClick={() => setReportOpen(true)}
+              >
+                Reportar problema
+              </button>
+            ) : (
+              <div className="space-y-2">
+                <p className="font-medium text-[13px] text-ink">¿Qué problema hubo?</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {INCIDENT_TYPES.map((t) => (
+                    <button
+                      key={t.value}
+                      type="button"
+                      onClick={() => setIncidentType(t.value)}
+                      className={`h-9 rounded-lg border px-3 text-[13px] ${incidentType === t.value ? 'border-brand bg-brand-light text-brand-dark' : 'border-border text-ink-muted'}`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+                <textarea
+                  value={incidentDesc}
+                  onChange={(e) => setIncidentDesc(e.target.value)}
+                  placeholder="Detalle (opcional)"
+                  rows={2}
+                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-[14px] outline-none focus:border-brand"
+                />
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    disabled={reportBusy || !incidentType}
+                    onClick={submitReport}
+                  >
+                    {reportBusy ? 'Enviando…' : 'Enviar reporte'}
+                  </Button>
+                  <button
+                    type="button"
+                    className="text-[13px] text-ink-subtle"
+                    onClick={() => {
+                      setReportOpen(false)
+                      setIncidentType('')
+                      setIncidentDesc('')
+                    }}
+                  >
+                    Cancelar
+                  </button>
+                </div>
               </div>
             )}
           </div>
