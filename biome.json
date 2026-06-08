@@ -31,7 +31,8 @@
     "rules": {
       "recommended": true,
       "suspicious": {
-        "noExplicitAny": "warn"
+        "noExplicitAny": "warn",
+        "useGoogleFontDisplay": "off"
       },
       "style": {
         "noNonNullAssertion": "warn",

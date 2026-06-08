@@ -27,8 +27,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        {/* Material Symbols Rounded — set de iconos canónico (DECISIONS.md §16) */}
-        {/* biome-ignore lint/suspicious/useGoogleFontDisplay: display=block es intencional para el set de iconos (evita "cajas" de respaldo antes de cargar) */}
+        {/* Material Symbols Rounded — set de iconos canónico (DECISIONS.md §16).
+            display=block es intencional para iconos (regla useGoogleFontDisplay off en biome.json). */}
         <link
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block"
