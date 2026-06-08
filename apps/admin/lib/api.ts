@@ -1,4 +1,4 @@
-import { createApiClient } from '@tindivo/api-client'
+import { ApiError, createApiClient } from '@tindivo/api-client'
 import { getSupabaseBrowser } from './supabase/client'
 
 export const api = createApiClient({
@@ -8,3 +8,8 @@ export const api = createApiClient({
     return data.session?.access_token ?? null
   },
 })
+
+/** Extrae el mensaje legible de un error de API (o un genérico). */
+export function errMsg(e: unknown): string {
+  return e instanceof ApiError ? (e.problem.detail ?? e.message) : 'Error'
+}

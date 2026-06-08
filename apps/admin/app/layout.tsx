@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import { Bricolage_Grotesque, Geist, JetBrains_Mono } from 'next/font/google'
 import type { ReactNode } from 'react'
+import { AdminShell } from '@/components/admin-shell'
+import { AuthGate } from '@/components/auth-gate'
 import { PushManager } from '@/components/push-manager'
 import './globals.css'
 
@@ -25,7 +27,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="es" className={`${bricolage.variable} ${geist.variable} ${jetbrains.variable}`}>
       <body className="min-h-dvh bg-surface font-sans text-ink antialiased">
-        {children}
+        <AuthGate>
+          <AdminShell>{children}</AdminShell>
+        </AuthGate>
         <PushManager />
       </body>
     </html>

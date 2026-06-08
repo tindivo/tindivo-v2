@@ -1,4 +1,6 @@
 @import 'tailwindcss';
 @import '../../../packages/ui/src/theme.css';
+@import '../../../packages/ui/src/components.css';
 
+/* Escanea las clases del paquete de UI compartido (.t-* + componentes). */
 @source '../../../packages/ui/src';
