@@ -493,6 +493,89 @@ export type Database = {
           },
         ]
       }
+      customer_incidents: {
+        Row: {
+          created_at: string
+          customer_phone: string
+          customer_user_id: string | null
+          delivery_reference: string | null
+          description: string | null
+          id: string
+          incident_type: Database["public"]["Enums"]["incident_type"]
+          is_strike: boolean
+          order_id: string | null
+          reported_by: string | null
+          reported_by_role: string | null
+          review_result: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_phone: string
+          customer_user_id?: string | null
+          delivery_reference?: string | null
+          description?: string | null
+          id?: string
+          incident_type: Database["public"]["Enums"]["incident_type"]
+          is_strike?: boolean
+          order_id?: string | null
+          reported_by?: string | null
+          reported_by_role?: string | null
+          review_result?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_phone?: string
+          customer_user_id?: string | null
+          delivery_reference?: string | null
+          description?: string | null
+          id?: string
+          incident_type?: Database["public"]["Enums"]["incident_type"]
+          is_strike?: boolean
+          order_id?: string | null
+          reported_by?: string | null
+          reported_by_role?: string | null
+          review_result?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_incidents_customer_user_id_fkey"
+            columns: ["customer_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_incidents_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_incidents_reported_by_fkey"
+            columns: ["reported_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_incidents_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_order_item_modifiers: {
         Row: {
           additional_price_snapshot: number
@@ -584,6 +667,7 @@ export type Database = {
       }
       customer_profiles: {
         Row: {
+          blocked_until: string | null
           contraentrega_blocked: boolean
           created_at: string
           default_address: string | null
@@ -599,6 +683,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          blocked_until?: string | null
           contraentrega_blocked?: boolean
           created_at?: string
           default_address?: string | null
@@ -614,6 +699,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          blocked_until?: string | null
           contraentrega_blocked?: boolean
           created_at?: string
           default_address?: string | null
@@ -861,6 +947,83 @@ export type Database = {
             foreignKeyName: "drivers_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fraud_coverage_claims: {
+        Row: {
+          amount: number
+          business_id: string
+          created_at: string
+          created_by: string | null
+          evidence_url: string | null
+          id: string
+          order_id: string
+          reason: string
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: Database["public"]["Enums"]["fraud_claim_status"]
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          business_id: string
+          created_at?: string
+          created_by?: string | null
+          evidence_url?: string | null
+          id?: string
+          order_id: string
+          reason: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["fraud_claim_status"]
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          business_id?: string
+          created_at?: string
+          created_by?: string | null
+          evidence_url?: string | null
+          id?: string
+          order_id?: string
+          reason?: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["fraud_claim_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fraud_coverage_claims_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fraud_coverage_claims_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fraud_coverage_claims_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fraud_coverage_claims_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
@@ -1371,6 +1534,7 @@ export type Database = {
           rejected_by: string | null
           rejection_reason_code: string | null
           rejection_reason_text: string | null
+          requires_validation: boolean
           short_id: string
           source: Database["public"]["Enums"]["order_source"]
           status: Database["public"]["Enums"]["order_status"]
@@ -1379,7 +1543,10 @@ export type Database = {
           tracking_link_sent_by: string | null
           updated_at: string
           urgent_since: string | null
+          validated_at: string | null
+          validated_by: string | null
           validating_at: string | null
+          validation_result: string | null
           waiting_at_restaurant_at: string | null
           waiting_driver_at: string | null
           yape_amount: number | null
@@ -1441,6 +1608,7 @@ export type Database = {
           rejected_by?: string | null
           rejection_reason_code?: string | null
           rejection_reason_text?: string | null
+          requires_validation?: boolean
           short_id: string
           source?: Database["public"]["Enums"]["order_source"]
           status?: Database["public"]["Enums"]["order_status"]
@@ -1449,7 +1617,10 @@ export type Database = {
           tracking_link_sent_by?: string | null
           updated_at?: string
           urgent_since?: string | null
+          validated_at?: string | null
+          validated_by?: string | null
           validating_at?: string | null
+          validation_result?: string | null
           waiting_at_restaurant_at?: string | null
           waiting_driver_at?: string | null
           yape_amount?: number | null
@@ -1511,6 +1682,7 @@ export type Database = {
           rejected_by?: string | null
           rejection_reason_code?: string | null
           rejection_reason_text?: string | null
+          requires_validation?: boolean
           short_id?: string
           source?: Database["public"]["Enums"]["order_source"]
           status?: Database["public"]["Enums"]["order_status"]
@@ -1519,7 +1691,10 @@ export type Database = {
           tracking_link_sent_by?: string | null
           updated_at?: string
           urgent_since?: string | null
+          validated_at?: string | null
+          validated_by?: string | null
           validating_at?: string | null
+          validation_result?: string | null
           waiting_at_restaurant_at?: string | null
           waiting_driver_at?: string | null
           yape_amount?: number | null
@@ -1571,6 +1746,13 @@ export type Database = {
           {
             foreignKeyName: "orders_tracking_link_sent_by_fkey"
             columns: ["tracking_link_sent_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_validated_by_fkey"
+            columns: ["validated_by"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -2217,6 +2399,14 @@ export type Database = {
       contingency_advance_status: "activo" | "disputado" | "cancelado"
       delivery_method: "delivery" | "pickup"
       distance_band: "near" | "far"
+      fraud_claim_status: "pending" | "approved" | "rejected"
+      incident_type:
+        | "no_show"
+        | "fake_address"
+        | "customer_abuse"
+        | "payment_fraud"
+        | "rejected_proof"
+        | "other"
       order_source: "customer_pwa" | "business_manual"
       order_status:
         | "validando"
@@ -2413,6 +2603,15 @@ export const Constants = {
       contingency_advance_status: ["activo", "disputado", "cancelado"],
       delivery_method: ["delivery", "pickup"],
       distance_band: ["near", "far"],
+      fraud_claim_status: ["pending", "approved", "rejected"],
+      incident_type: [
+        "no_show",
+        "fake_address",
+        "customer_abuse",
+        "payment_fraud",
+        "rejected_proof",
+        "other",
+      ],
       order_source: ["customer_pwa", "business_manual"],
       order_status: [
         "validando",
