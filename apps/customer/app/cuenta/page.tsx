@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { type FormEvent, useCallback, useEffect, useState } from 'react'
+import { type LatLng, MapPicker } from '@/components/map-picker'
 import { BottomSheet, Icon, ScreenHeader } from '@/components/ui'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
@@ -28,6 +29,8 @@ interface Address {
   line: string | null
   reference: string
   is_default: boolean
+  coordinates_lat: number | null
+  coordinates_lng: number | null
 }
 interface OrderRow {
   id: string
@@ -55,7 +58,7 @@ export default function CuentaPage() {
     const [{ data: addrs }, { data: ords }] = await Promise.all([
       supabase
         .from('customer_addresses')
-        .select('id,label,line,reference,is_default')
+        .select('id,label,line,reference,is_default,coordinates_lat,coordinates_lng')
         .order('is_default', { ascending: false }),
       supabase
         .from('orders')
@@ -333,6 +336,11 @@ function AddressSheet({
   const [line, setLine] = useState(address?.line ?? '')
   const [reference, setReference] = useState(address?.reference ?? '')
   const [isDefault, setIsDefault] = useState(address?.is_default ?? false)
+  const [coords, setCoords] = useState<LatLng | null>(
+    address?.coordinates_lat != null && address?.coordinates_lng != null
+      ? { lat: Number(address.coordinates_lat), lng: Number(address.coordinates_lng) }
+      : null,
+  )
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const canSave = reference.trim().length >= 20
@@ -357,6 +365,8 @@ function AddressSheet({
       line: line.trim() || null,
       reference: reference.trim(),
       is_default: isDefault,
+      coordinates_lat: coords?.lat ?? null,
+      coordinates_lng: coords?.lng ?? null,
     }
     const { error: err } = address
       ? await supabase.from('customer_addresses').update(payload).eq('id', address.id)
@@ -383,6 +393,11 @@ function AddressSheet({
               {labelEmoji(l)} {l}
             </button>
           ))}
+        </div>
+
+        <div className="mb-3.5">
+          <span className="t-field-label">Ubicación en el mapa</span>
+          <MapPicker value={coords} onChange={setCoords} heightPx={160} />
         </div>
 
         <label className="mb-3.5 block">

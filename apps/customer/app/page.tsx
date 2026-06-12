@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { Icon } from '@/components/ui'
 import { api } from '@/lib/api'
+import { useOnboarding } from '@/lib/onboarding-store'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
 interface PublicBusiness {
@@ -36,15 +37,24 @@ export default function Home() {
           setError(e instanceof ApiError ? (e.problem.detail ?? e.message) : 'No se pudo cargar'),
       )
 
-    getSupabaseBrowser()
-      .auth.getSession()
-      .then(({ data }) => {
-        if (!active || !data.session) return
-        const meta = data.session.user.user_metadata as { full_name?: string } | undefined
-        setUser({ signedIn: true, name: meta?.full_name ?? data.session.user.email ?? '' })
-      })
+    const supabase = getSupabaseBrowser()
+    const applySession = (session: { user: { user_metadata: unknown; email?: string } } | null) => {
+      if (!active) return
+      if (!session) {
+        setUser({ signedIn: false, name: '' })
+        return
+      }
+      const meta = session.user.user_metadata as { full_name?: string } | undefined
+      setUser({ signedIn: true, name: meta?.full_name ?? session.user.email ?? '' })
+    }
+    supabase.auth.getSession().then(({ data }) => applySession(data.session))
+    // El onboarding (sheet) puede crear la sesión sin salir del home.
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) =>
+      applySession(session),
+    )
     return () => {
       active = false
+      sub.subscription.unsubscribe()
     }
   }, [])
 
@@ -60,18 +70,26 @@ export default function Home() {
           </div>
           <div className="t-display mt-0.5 text-[28px] leading-none">Tindivo</div>
         </div>
-        <Link
-          href={user.signedIn ? '/cuenta' : '/entrar'}
-          className="flex h-[42px] w-[42px] items-center justify-center rounded-full font-bold text-[14px]"
-          style={
-            user.signedIn
-              ? { background: '#F97316', color: '#fff' }
-              : { background: 'rgba(26,22,20,0.06)', color: '#1A1614' }
-          }
-          aria-label={user.signedIn ? 'Mi cuenta' : 'Ingresar'}
-        >
-          {user.signedIn ? (firstName[0]?.toUpperCase() ?? 'U') : <Icon.Person />}
-        </Link>
+        {user.signedIn ? (
+          <Link
+            href="/cuenta"
+            className="flex h-[42px] w-[42px] items-center justify-center rounded-full font-bold text-[14px]"
+            style={{ background: '#F97316', color: '#fff' }}
+            aria-label="Mi cuenta"
+          >
+            {firstName[0]?.toUpperCase() ?? 'U'}
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={() => useOnboarding.getState().openSheet({ next: null })}
+            className="flex h-[42px] w-[42px] items-center justify-center rounded-full font-bold text-[14px]"
+            style={{ background: 'rgba(26,22,20,0.06)', color: '#1A1614' }}
+            aria-label="Ingresar"
+          >
+            <Icon.Person />
+          </button>
+        )}
       </div>
 
       {/* Greeting */}

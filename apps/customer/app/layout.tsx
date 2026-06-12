@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Bricolage_Grotesque, Geist, JetBrains_Mono } from 'next/font/google'
 import type { ReactNode } from 'react'
+import { AuthOnboardingHost } from '@/components/auth-onboarding/host'
 import { PushManager } from '@/components/push-manager'
 import './globals.css'
 
@@ -33,6 +34,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body className="min-h-dvh bg-surface font-sans text-ink antialiased">
         {children}
         <PushManager />
+        <AuthOnboardingHost />
       </body>
     </html>
   )

@@ -17,14 +17,17 @@
     "@tindivo/contracts": "workspace:*",
     "@tindivo/supabase": "workspace:*",
     "@tindivo/ui": "workspace:*",
+    "leaflet": "catalog:",
     "next": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
+    "react-leaflet": "catalog:",
     "zustand": "catalog:"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "catalog:",
     "@tindivo/tsconfig": "workspace:*",
+    "@types/leaflet": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
