@@ -104,6 +104,9 @@ export async function GET(
       ...category,
       items: (items ?? [])
         .filter((item) => item.category_id === category.id)
+        // is_compact = "featured" (historical column name). Featured items first;
+        // stable sort preserves display_order within each half.
+        .sort((a, b) => Number(b.is_compact) - Number(a.is_compact))
         .map((item) => ({ ...item, modifier_groups: groupsForItem(item.id) })),
     }))
 

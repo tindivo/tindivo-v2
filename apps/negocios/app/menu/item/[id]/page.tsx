@@ -25,7 +25,8 @@ interface ModifierGroup {
   id: string
   localId: string
   name: string
-  selection_type: 'single' | 'multiple'
+  // 'multi' (not 'multiple'): must match the DB CHECK on menu_modifier_groups.selection_type
+  selection_type: 'single' | 'multi'
   is_required: boolean
   min_selections: number
   max_selections: number | null
@@ -71,7 +72,7 @@ function modeToRule(
         is_required: true,
         min_selections: 1,
         max_selections: prevMax ?? 3,
-        selection_type: 'multiple',
+        selection_type: 'multi',
       }
     case 'optional-one':
       return { is_required: false, min_selections: 0, max_selections: 1, selection_type: 'single' }
@@ -80,7 +81,7 @@ function modeToRule(
         is_required: false,
         min_selections: 0,
         max_selections: prevMax ?? 3,
-        selection_type: 'multiple',
+        selection_type: 'multi',
       }
   }
 }
@@ -1773,7 +1774,7 @@ export default function MenuItemEditorPage() {
               id: g.id,
               localId: g.id,
               name: g.name,
-              selection_type: g.selection_type as 'single' | 'multiple',
+              selection_type: g.selection_type as 'single' | 'multi',
               is_required: g.is_required,
               min_selections: g.min_selections,
               max_selections: g.max_selections,
@@ -2032,7 +2033,13 @@ export default function MenuItemEditorPage() {
             })
             .select('id')
             .single()
-          if (gErr || !newGroup) continue
+          if (gErr || !newGroup) {
+            setSaveError(
+              gErr?.message ?? `No se pudo guardar el grupo "${g.name.trim() || 'Grupo'}".`,
+            )
+            setSaving(false)
+            return false
+          }
           groupId = newGroup.id
 
           // Insert junction
@@ -2042,7 +2049,7 @@ export default function MenuItemEditorPage() {
             display_order: i,
           })
         } else {
-          await supabase
+          const { error: gUpdErr } = await supabase
             .from('menu_modifier_groups')
             .update({
               name: g.name.trim() || 'Grupo',
@@ -2053,6 +2060,11 @@ export default function MenuItemEditorPage() {
               display_order: g.display_order,
             })
             .eq('id', groupId)
+          if (gUpdErr) {
+            setSaveError(gUpdErr.message)
+            setSaving(false)
+            return false
+          }
 
           // Update junction order
           await supabase

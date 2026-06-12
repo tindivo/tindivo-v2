@@ -188,69 +188,98 @@ export default function NegocioPage({ params }: { params: Promise<{ id: string }
               )}
             </div>
             <div className="flex flex-col gap-2.5">
-              {sec.items.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  disabled={!item.is_available}
-                  onClick={() => setModalItem(item)}
-                  className="flex items-stretch gap-3.5 rounded-[20px] border border-border bg-white p-3 text-left disabled:opacity-50"
-                >
-                  <div className="flex min-w-0 flex-1 flex-col justify-between">
-                    <div>
-                      {item.badges?.[0] && (
-                        <span
-                          className="mb-1.5 inline-block rounded-md px-2 py-[3px] font-bold text-[10px] uppercase"
-                          style={{
-                            letterSpacing: '0.08em',
-                            color: '#F97316',
-                            background: 'rgba(249,115,22,0.08)',
-                          }}
-                        >
-                          {item.badges[0]}
-                        </span>
-                      )}
-                      <div className="t-display mb-1 text-[16px]">{item.name}</div>
-                      {item.description && (
-                        <div
-                          className="text-[12px] leading-[1.4]"
-                          style={{
-                            color: 'rgba(26,22,20,0.55)',
-                            display: '-webkit-box',
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: 'vertical',
-                            overflow: 'hidden',
-                          }}
-                        >
-                          {item.description}
-                        </div>
-                      )}
+              {sec.items.map((item) => {
+                const groups = item.modifier_groups ?? []
+                const hasOptions = groups.some((g) => g.options.length > 0)
+                const hasPaidOptions = groups.some((g) =>
+                  g.options.some((o) => Number(o.additional_price) > 0),
+                )
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    disabled={!item.is_available}
+                    onClick={() => setModalItem(item)}
+                    className="flex items-stretch gap-3.5 rounded-[20px] border border-border bg-white p-3 text-left disabled:opacity-50"
+                  >
+                    <div className="flex min-w-0 flex-1 flex-col justify-between">
+                      <div>
+                        {/* is_compact = "featured" (historical column name; toggle "Destacado" en negocios) */}
+                        {(item.is_compact || item.badges?.[0]) && (
+                          <span className="mb-1.5 flex flex-wrap gap-1.5">
+                            {item.is_compact && (
+                              <span
+                                className="inline-block rounded-md px-2 py-[3px] font-bold text-[10px] uppercase"
+                                style={{
+                                  letterSpacing: '0.08em',
+                                  color: '#F97316',
+                                  background: 'rgba(249,115,22,0.08)',
+                                }}
+                              >
+                                ★ Destacado
+                              </span>
+                            )}
+                            {item.badges?.[0] && (
+                              <span
+                                className="inline-block rounded-md px-2 py-[3px] font-bold text-[10px] uppercase"
+                                style={{
+                                  letterSpacing: '0.08em',
+                                  color: '#F97316',
+                                  background: 'rgba(249,115,22,0.08)',
+                                }}
+                              >
+                                {item.badges[0]}
+                              </span>
+                            )}
+                          </span>
+                        )}
+                        <div className="t-display mb-1 text-[16px]">{item.name}</div>
+                        {item.description && (
+                          <div
+                            className="text-[12px] leading-[1.4]"
+                            style={{
+                              color: 'rgba(26,22,20,0.55)',
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden',
+                            }}
+                          >
+                            {item.description}
+                          </div>
+                        )}
+                      </div>
+                      <div className="mt-2 font-semibold text-[15px] tabular-nums">
+                        {hasPaidOptions
+                          ? `Desde ${soles(item.base_price)}`
+                          : soles(item.base_price)}
+                        {hasOptions && (
+                          <span
+                            className="ml-1.5 font-normal text-[11px]"
+                            style={{ color: 'rgba(26,22,20,0.5)' }}
+                          >
+                            · Personalizable
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div className="mt-2 font-semibold text-[15px] tabular-nums">
-                      {soles(item.base_price)}
+                    <div className="relative shrink-0">
+                      <ProductImage label={item.name} hue={item.image_hue ?? 14} size={92} />
+                      <span
+                        className="absolute flex h-8 w-8 items-center justify-center rounded-full text-white"
+                        style={{
+                          right: -6,
+                          bottom: -6,
+                          background: '#F97316',
+                          boxShadow: '0 4px 12px -2px rgba(249,115,22,0.55)',
+                        }}
+                      >
+                        <Icon.Plus />
+                      </span>
                     </div>
-                  </div>
-                  <div className="relative shrink-0">
-                    <ProductImage
-                      label={item.name}
-                      hue={item.image_hue ?? 14}
-                      size={92}
-                      compact={item.is_compact}
-                    />
-                    <span
-                      className="absolute flex h-8 w-8 items-center justify-center rounded-full text-white"
-                      style={{
-                        right: -6,
-                        bottom: -6,
-                        background: '#F97316',
-                        boxShadow: '0 4px 12px -2px rgba(249,115,22,0.55)',
-                      }}
-                    >
-                      <Icon.Plus />
-                    </span>
-                  </div>
-                </button>
-              ))}
+                  </button>
+                )
+              })}
             </div>
           </div>
         ))}

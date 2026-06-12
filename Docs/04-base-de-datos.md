@@ -561,7 +561,7 @@ CREATE TABLE menu_items (
   image_hue int,                                   -- 0-360 para placeholder
   display_order int NOT NULL DEFAULT 0,
   is_available boolean DEFAULT true,
-  is_compact boolean DEFAULT false,                -- layout compacto (bebidas)
+  is_compact boolean DEFAULT false,                -- "destacado" (nombre histórico): primero en su categoría + badge
   badges text[] DEFAULT ARRAY[]::text[],           -- ['más-pedido', 'nuevo', 'edición-perú']
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()

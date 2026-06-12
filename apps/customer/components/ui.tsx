@@ -34,12 +34,10 @@ export function ProductImage({
   label,
   hue = 14,
   size = 88,
-  compact = false,
 }: {
   label?: string
   hue?: number
   size?: number
-  compact?: boolean
 }) {
   return (
     <div
@@ -54,14 +52,14 @@ export function ProductImage({
           alignItems: 'center',
           justifyContent: 'center',
           fontFamily: 'var(--font-jetbrains), monospace',
-          fontSize: compact ? 9 : 10,
+          fontSize: 10,
           color: `oklch(0.35 0.1 ${hue})`,
           letterSpacing: '0.05em',
           textAlign: 'center',
           padding: 6,
         }}
       >
-        {compact ? '◷' : label}
+        {label}
       </div>
     </div>
   )

@@ -273,7 +273,7 @@ Implementación: estado global `currentScreen` en Zustand store + Next.js App Ro
 - **RF-MENU-02** · Tabs por categoría con scroll-spy.
 - **RF-MENU-03** · Cada categoría con `name + blurb`.
 - **RF-MENU-04** · Productos con nombre, descripción, precio base, placeholder con hue HSL único, badges.
-- **RF-MENU-05** · Bebidas con layout compacto (`is_compact: true`).
+- **RF-MENU-05** · Platos destacados (`is_compact: true` — nombre histórico de columna): primero en su categoría + badge "★ Destacado". Se gestiona con el toggle "Destacado" del editor de menú de negocios.
 - **RF-MENU-06** · FAB "Ver mi pedido" persistente: muestra # items + subtotal cuando el carrito tiene contenido. Oculto si vacío.
 - **RF-MENU-07** · Botón atrás (vuelve a landing) y avatar (abre cuenta).
 
