@@ -4,15 +4,19 @@ import { type ApiEnvelope, ApiError } from '@tindivo/api-client'
 import type { DeliveryMethod, PaymentIntent } from '@tindivo/contracts'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Icon, ScreenHeader, Segmented } from '@/components/ui'
 import { api } from '@/lib/api'
 import { useCart } from '@/lib/cart'
+import { getCoverage, haversineKm } from '@/lib/coverage'
+import { useOnboarding } from '@/lib/onboarding-store'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
 const soles = (n: number) => `S/ ${n.toFixed(2)}`
 const PREPAY_THRESHOLD = 100
 const NEAR_DELIVERY_FEE = 2.0
+// Pickup disabled for the pilot (DECISIONS.md: "pickup inactivo; post-piloto").
+const PICKUP_ENABLED = false as boolean
 const labelEmoji = (l: string) => (l === 'Casa' ? '🏠' : l === 'Trabajo' ? '💼' : '📍')
 
 interface Address {
@@ -21,12 +25,37 @@ interface Address {
   line: string | null
   reference: string
   is_default: boolean
+  coordinates_lat: number | null
+  coordinates_lng: number | null
 }
 interface OrderResult {
   id: string
   shortId: string
   status: string
   total: number
+}
+
+type CashChoice = 'exact' | '20' | '50' | '100' | 'custom'
+const CASH_CHIPS: { value: CashChoice; label: string; amount: number | null }[] = [
+  { value: 'exact', label: 'Exacto', amount: null },
+  { value: '20', label: 'S/ 20', amount: 20 },
+  { value: '50', label: 'S/ 50', amount: 50 },
+  { value: '100', label: 'S/ 100', amount: 100 },
+]
+
+/** Posición del dispositivo (una vez). Rechaza si no hay API o el usuario niega. */
+function getPositionOnce(): Promise<GeolocationPosition> {
+  return new Promise((resolve, reject) => {
+    if (typeof navigator === 'undefined' || !('geolocation' in navigator)) {
+      reject(new Error('geolocation_unavailable'))
+      return
+    }
+    navigator.geolocation.getCurrentPosition(resolve, reject, {
+      enableHighAccuracy: true,
+      timeout: 10_000,
+      maximumAge: 60_000,
+    })
+  })
 }
 
 export default function CheckoutPage() {
@@ -44,6 +73,10 @@ export default function CheckoutPage() {
   const [name, setName] = useState('')
   const [note, setNote] = useState('')
   const [payment, setPayment] = useState<PaymentIntent>('pending_cash')
+  const [cashChoice, setCashChoice] = useState<CashChoice>('exact')
+  const [cashCustom, setCashCustom] = useState('')
+  const [geoBlock, setGeoBlock] = useState<'outside' | 'unavailable' | null>(null)
+  const [locating, setLocating] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [confirmed, setConfirmed] = useState<OrderResult | null>(null)
@@ -57,6 +90,12 @@ export default function CheckoutPage() {
   )
   const mustPrepay = subtotal >= PREPAY_THRESHOLD
 
+  // Gate de auth (DECISIONS §15): el carrito no exige login; el checkout sí.
+  // En vez de redirigir a /entrar, abre el sheet de onboarding sobre esta página.
+  const sheetOpen = useOnboarding((s) => s.open)
+  const openedSheetRef = useRef(false)
+  const profilePromptedRef = useRef(false)
+
   useEffect(() => {
     if (cart.count() === 0 && !confirmed) {
       router.replace('/')
@@ -65,25 +104,49 @@ export default function CheckoutPage() {
     const supabase = getSupabaseBrowser()
     supabase.auth.getSession().then(async ({ data }) => {
       if (!data.session) {
-        router.replace('/entrar?next=/checkout')
+        const ob = useOnboarding.getState()
+        if (openedSheetRef.current && !ob.open) {
+          // Cerró el sheet sin iniciar sesión: volver al carrito/carta.
+          router.back()
+          return
+        }
+        if (!ob.open) {
+          openedSheetRef.current = true
+          ob.openSheet({ next: '/checkout', inPlace: true })
+        }
         return
       }
+      if (useOnboarding.getState().open) return // esperar a que termine el onboarding
       const meta = data.session.user.user_metadata as { full_name?: string } | undefined
       const { data: prof } = await supabase
         .from('customer_profiles')
         .select('full_name,phone')
         .maybeSingle()
+      // Red de seguridad: sesión (p.ej. Google en otro dispositivo) sin perfil → completar datos.
+      if (!prof && !profilePromptedRef.current) {
+        profilePromptedRef.current = true
+        useOnboarding.getState().openSheet({
+          step: 'google-name',
+          path: 'google',
+          variant: 'profile-incomplete',
+          next: '/checkout',
+          inPlace: true,
+          fullName: meta?.full_name ?? null,
+          email: data.session.user.email ?? null,
+        })
+        return
+      }
       setName(prof?.full_name ?? meta?.full_name ?? '')
       if (prof?.phone) setPhone(prof.phone.replace(/\D/g, '').slice(-9))
       const { data: addrs } = await supabase
         .from('customer_addresses')
-        .select('id,label,line,reference,is_default')
+        .select('id,label,line,reference,is_default,coordinates_lat,coordinates_lng')
         .order('is_default', { ascending: false })
       setAddresses((addrs ?? []) as Address[])
       setAddressId((addrs ?? []).find((a) => a.is_default)?.id ?? addrs?.[0]?.id ?? null)
       setAuthReady(true)
     })
-  }, [cart, confirmed, router])
+  }, [cart, confirmed, router, sheetOpen])
 
   useEffect(() => {
     if (mustPrepay && payment !== 'prepaid') setPayment('prepaid')
@@ -92,8 +155,21 @@ export default function CheckoutPage() {
   const selectedAddress = addresses.find((a) => a.id === addressId)
   const reference = deliveryMethod === 'delivery' ? (selectedAddress?.reference ?? manualRef) : ''
 
+  // "¿Con cuánto pagarás?" (solo efectivo): Exacto = total (vuelto 0).
+  const cashAmount =
+    cashChoice === 'exact'
+      ? total
+      : cashChoice === 'custom'
+        ? Number.parseFloat(cashCustom) || 0
+        : Number(cashChoice)
+  const cashChange = Math.round((cashAmount - total) * 100) / 100
+
   function goToPayment() {
     setError(null)
+    if (name.trim().length === 0) {
+      setError('Ingresa tu nombre')
+      return
+    }
     if (deliveryMethod === 'delivery' && reference.trim().length < 20) {
       setError('Elige o agrega una dirección con referencia de al menos 20 caracteres')
       return
@@ -107,7 +183,36 @@ export default function CheckoutPage() {
 
   async function placeOrder() {
     setError(null)
+    if (payment === 'pending_cash' && cashAmount < total) {
+      setError('El monto con el que pagarás debe cubrir el total del pedido')
+      return
+    }
     setLoading(true)
+
+    // Gate de cobertura (estricto): sin ubicación verificada dentro de San
+    // Jacinto no se crea el pedido. La cobertura viene de app_settings.
+    setLocating(true)
+    try {
+      const pos = await getPositionOnce()
+      const cov = await getCoverage()
+      const distance = haversineKm(
+        { lat: pos.coords.latitude, lng: pos.coords.longitude },
+        { lat: cov.centerLat, lng: cov.centerLng },
+      )
+      if (distance > cov.radiusKm) {
+        setGeoBlock('outside')
+        setLoading(false)
+        return
+      }
+    } catch {
+      // PERMISSION_DENIED / POSITION_UNAVAILABLE / TIMEOUT / sin API.
+      setGeoBlock('unavailable')
+      setLoading(false)
+      return
+    } finally {
+      setLocating(false)
+    }
+
     try {
       const res = await api.post<{ data: OrderResult }>(
         '/customer/orders',
@@ -117,8 +222,17 @@ export default function CheckoutPage() {
           paymentIntent: payment,
           customerName: name.trim() || 'Cliente',
           customerPhone: phone,
+          cashPayingWith:
+            payment === 'pending_cash' ? Math.round(cashAmount * 100) / 100 : undefined,
           deliveryAddress: selectedAddress?.line ?? undefined,
           deliveryReference: deliveryMethod === 'delivery' ? reference : undefined,
+          coordinates:
+            deliveryMethod === 'delivery' && selectedAddress?.coordinates_lat != null
+              ? {
+                  lat: Number(selectedAddress.coordinates_lat),
+                  lng: Number(selectedAddress.coordinates_lng),
+                }
+              : undefined,
           items: cart.lines.map((l) => ({
             menuItemId: l.itemId,
             quantity: l.quantity,
@@ -145,6 +259,16 @@ export default function CheckoutPage() {
   }
 
   if (blocked) return <Blocked />
+  if (geoBlock)
+    return (
+      <GeoBlocked
+        kind={geoBlock}
+        onRetry={() => {
+          setGeoBlock(null)
+          void placeOrder()
+        }}
+      />
+    )
   if (confirmed)
     return confirmed.status === 'validando' && payment === 'prepaid' ? (
       <Prepay result={confirmed} />
@@ -168,14 +292,16 @@ export default function CheckoutPage() {
       <div className="px-4 pt-3">
         {step === 'delivery' ? (
           <>
-            <Segmented
-              value={deliveryMethod}
-              onChange={setDeliveryMethod}
-              options={[
-                { value: 'delivery' as DeliveryMethod, label: 'Delivery', icon: <Icon.Truck /> },
-                { value: 'pickup' as DeliveryMethod, label: 'Recojo', icon: <Icon.Store /> },
-              ]}
-            />
+            {PICKUP_ENABLED && (
+              <Segmented
+                value={deliveryMethod}
+                onChange={setDeliveryMethod}
+                options={[
+                  { value: 'delivery' as DeliveryMethod, label: 'Delivery', icon: <Icon.Truck /> },
+                  { value: 'pickup' as DeliveryMethod, label: 'Recojo', icon: <Icon.Store /> },
+                ]}
+              />
+            )}
 
             {deliveryMethod === 'delivery' && (
               <div className="mt-5">
@@ -261,7 +387,22 @@ export default function CheckoutPage() {
               </div>
             )}
 
+            {/* Datos del usuario: precargados del onboarding, editables aquí. */}
             <label className="mt-5 block">
+              <span className="t-field-label">
+                Nombre <span style={{ color: '#F97316' }}>*</span>
+              </span>
+              <input
+                className="t-field"
+                placeholder="Tu nombre"
+                value={name}
+                maxLength={120}
+                autoComplete="name"
+                onChange={(e) => setName(e.target.value)}
+              />
+            </label>
+
+            <label className="mt-4 block">
               <span className="t-field-label">
                 Teléfono de contacto <span style={{ color: '#F97316' }}>*</span>
               </span>
@@ -293,6 +434,8 @@ export default function CheckoutPage() {
                 onChange={(e) => setNote(e.target.value)}
               />
             </label>
+
+            <OrderDetail />
 
             <Summary
               subtotal={subtotal}
@@ -337,7 +480,13 @@ export default function CheckoutPage() {
                     key={opt.v}
                     type="button"
                     disabled={disabled}
-                    onClick={() => setPayment(opt.v)}
+                    onClick={() => {
+                      setPayment(opt.v)
+                      if (opt.v !== 'pending_cash') {
+                        setCashChoice('exact')
+                        setCashCustom('')
+                      }
+                    }}
                     className="flex items-center gap-3 rounded-[18px] bg-white p-4 text-left disabled:opacity-40"
                     style={{ border: sel ? '2px solid #F97316' : '1px solid rgba(26,22,20,0.05)' }}
                   >
@@ -362,6 +511,85 @@ export default function CheckoutPage() {
                 )
               })}
             </div>
+
+            {payment === 'pending_cash' && (
+              <div
+                className="mt-3 rounded-[18px] bg-white p-4"
+                style={{ border: '1px solid rgba(26,22,20,0.05)' }}
+              >
+                <div className="font-semibold text-[15px]">¿Con cuánto pagarás?</div>
+                <p className="mt-0.5 text-[12px]" style={{ color: 'rgba(26,22,20,0.55)' }}>
+                  Así el motorizado lleva tu vuelto exacto.
+                </p>
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {CASH_CHIPS.filter((c) => c.amount === null || c.amount >= total).map((c) => {
+                    const sel = cashChoice === c.value
+                    return (
+                      <button
+                        key={c.value}
+                        type="button"
+                        onClick={() => setCashChoice(c.value)}
+                        className="rounded-full px-3.5 py-2 font-semibold text-[13px]"
+                        style={
+                          sel
+                            ? { background: '#F97316', color: '#fff' }
+                            : {
+                                background: 'rgba(26,22,20,0.04)',
+                                border: '1px solid rgba(26,22,20,0.08)',
+                              }
+                        }
+                      >
+                        {c.label}
+                      </button>
+                    )
+                  })}
+                  <button
+                    type="button"
+                    onClick={() => setCashChoice('custom')}
+                    className="rounded-full px-3.5 py-2 font-semibold text-[13px]"
+                    style={
+                      cashChoice === 'custom'
+                        ? { background: '#F97316', color: '#fff' }
+                        : {
+                            background: 'rgba(26,22,20,0.04)',
+                            border: '1px solid rgba(26,22,20,0.08)',
+                          }
+                    }
+                  >
+                    Otro monto
+                  </button>
+                </div>
+                {cashChoice === 'custom' && (
+                  <div className="mt-3 flex items-center gap-2">
+                    <span
+                      className="rounded-2xl border border-border bg-white px-3 py-3.5 font-mono text-[15px]"
+                      style={{ color: 'rgba(26,22,20,0.6)' }}
+                    >
+                      S/
+                    </span>
+                    <input
+                      className="t-field"
+                      inputMode="decimal"
+                      placeholder={total.toFixed(2)}
+                      value={cashCustom}
+                      maxLength={7}
+                      onChange={(e) => setCashCustom(e.target.value.replace(/[^\d.]/g, ''))}
+                    />
+                  </div>
+                )}
+                <p
+                  className="mt-3 text-[13px] font-medium tabular-nums"
+                  style={{ color: cashAmount >= total ? '#1A8050' : '#DC2626' }}
+                >
+                  {cashAmount >= total
+                    ? cashChange > 0
+                      ? `Tu vuelto: ${soles(cashChange)}`
+                      : 'Pago exacto, sin vuelto.'
+                    : `El monto debe cubrir el total (${soles(total)})`}
+                </p>
+              </div>
+            )}
+
             <Summary
               subtotal={subtotal}
               deliveryFee={deliveryFee}
@@ -386,11 +614,133 @@ export default function CheckoutPage() {
             disabled={loading}
             onClick={placeOrder}
           >
-            {loading ? 'Enviando…' : `Confirmar pedido · ${soles(total)}`}
+            {locating
+              ? 'Verificando ubicación…'
+              : loading
+                ? 'Enviando…'
+                : `Confirmar pedido · ${soles(total)}`}
           </button>
         )}
       </div>
     </main>
+  )
+}
+
+/** Detalle colapsable del carrito: líneas con adicionales, nota, cantidad y eliminar. */
+function OrderDetail() {
+  const cart = useCart()
+  const [open, setOpen] = useState(false)
+  const count = cart.count()
+  if (count === 0) return null
+
+  return (
+    <div
+      className="mt-5 overflow-hidden rounded-[22px] bg-white"
+      style={{ border: '1px solid rgba(26,22,20,0.05)' }}
+    >
+      <button
+        type="button"
+        className="flex w-full items-center gap-3 p-4 text-left"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+      >
+        <span
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px]"
+          style={{ background: 'rgba(26,22,20,0.05)' }}
+        >
+          <Icon.Bag />
+        </span>
+        <span className="flex-1">
+          <span className="block font-semibold text-[15px]">Detalle del pedido</span>
+          <span className="block text-[12px]" style={{ color: 'rgba(26,22,20,0.55)' }}>
+            {count} {count === 1 ? 'producto' : 'productos'}
+          </span>
+        </span>
+        <span
+          aria-hidden
+          style={{
+            transform: open ? 'rotate(90deg)' : 'rotate(-90deg)',
+            transition: 'transform 200ms ease',
+            color: 'rgba(26,22,20,0.4)',
+            display: 'inline-flex',
+          }}
+        >
+          <Icon.Back />
+        </span>
+      </button>
+
+      {open && (
+        <div className="border-t px-4 pb-4" style={{ borderColor: 'rgba(26,22,20,0.06)' }}>
+          {cart.lines.map((line, i) => (
+            <div
+              key={line.key}
+              className="pt-3.5"
+              style={{
+                borderTop: i > 0 ? '1px solid rgba(26,22,20,0.05)' : 'none',
+                marginTop: i > 0 ? 14 : 0,
+              }}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium text-[14px]">
+                    <span className="tabular-nums">{line.quantity}×</span> {line.name}
+                  </div>
+                  {line.modifiers.map((m) => (
+                    <div
+                      key={`${line.key}-${m.optionId}`}
+                      className="mt-0.5 flex justify-between text-[12px]"
+                      style={{ color: 'rgba(26,22,20,0.55)' }}
+                    >
+                      <span>{m.optionName}</span>
+                      {m.price > 0 && <span className="tabular-nums">+{soles(m.price)}</span>}
+                    </div>
+                  ))}
+                  {line.note && (
+                    <div
+                      className="mt-0.5 text-[12px] italic"
+                      style={{ color: 'rgba(26,22,20,0.45)' }}
+                    >
+                      “{line.note}”
+                    </div>
+                  )}
+                </div>
+                <div className="shrink-0 font-semibold text-[14px] tabular-nums">
+                  {soles(line.unitPrice * line.quantity)}
+                </div>
+              </div>
+              <div className="mt-2.5 flex items-center justify-between">
+                <div className="t-qty" style={{ transform: 'scale(0.9)', transformOrigin: 'left' }}>
+                  <button
+                    type="button"
+                    onClick={() => cart.setQty(line.key, line.quantity - 1)}
+                    disabled={line.quantity <= 1}
+                    aria-label="Menos"
+                  >
+                    <Icon.Minus />
+                  </button>
+                  <span className="val">{line.quantity}</span>
+                  <button
+                    type="button"
+                    onClick={() => cart.setQty(line.key, line.quantity + 1)}
+                    aria-label="Más"
+                  >
+                    <Icon.Plus />
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => cart.remove(line.key)}
+                  className="rounded-lg px-2.5 py-1.5 font-medium text-[12px]"
+                  style={{ background: 'rgba(220,38,38,0.06)', color: '#DC2626' }}
+                >
+                  Eliminar
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -437,6 +787,7 @@ function Row({ label, value, big }: { label: string; value: string; big?: boolea
 interface PrepayInfo {
   businessName: string
   yapeNumber: string | null
+  qrUrl: string | null
   total: number
   hasProof: boolean
 }
@@ -447,6 +798,9 @@ function Prepay({ result }: { result: OrderResult }) {
   const [sent, setSent] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // El comprobante se previsualiza antes de enviarse (envío explícito).
+  const [pendingFile, setPendingFile] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
 
   useEffect(() => {
     api
@@ -464,9 +818,28 @@ function Prepay({ result }: { result: OrderResult }) {
     return () => clearInterval(t)
   }, [sent])
 
-  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+  // Liberar el object URL del preview al desmontar.
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl)
+    }
+  }, [previewUrl])
+
+  function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
+    setError(null)
+    setPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev)
+      return URL.createObjectURL(file)
+    })
+    setPendingFile(file)
+    // Permite re-seleccionar el mismo archivo tras "Cambiar imagen".
+    e.target.value = ''
+  }
+
+  async function submitProof() {
+    if (!pendingFile) return
     setUploading(true)
     setError(null)
     const supabase = getSupabaseBrowser()
@@ -475,7 +848,7 @@ function Prepay({ result }: { result: OrderResult }) {
     const path = `${userId}/${result.id}`
     const { error: upErr } = await supabase.storage
       .from('payment-proofs')
-      .upload(path, file, { upsert: true, contentType: file.type })
+      .upload(path, pendingFile, { upsert: true, contentType: pendingFile.type })
     if (upErr) {
       setError(upErr.message)
       setUploading(false)
@@ -542,12 +915,31 @@ function Prepay({ result }: { result: OrderResult }) {
             style={{ border: '1px solid rgba(26,22,20,0.06)' }}
           >
             <p className="t-eyebrow">Yapea a {info?.businessName ?? 'el restaurante'}</p>
+            {info?.qrUrl && (
+              <div className="mt-3 flex justify-center">
+                <img
+                  src={info.qrUrl}
+                  alt={`QR de Yape de ${info.businessName}`}
+                  className="rounded-2xl"
+                  style={{
+                    width: 180,
+                    height: 180,
+                    objectFit: 'contain',
+                    border: '1px solid rgba(26,22,20,0.08)',
+                    background: '#fff',
+                  }}
+                />
+              </div>
+            )}
             <p className="mt-1 font-mono font-semibold text-[24px]">{info?.yapeNumber ?? '…'}</p>
             <p className="mt-1 text-[15px]">
               Monto: <span className="font-semibold">{soles(info?.total ?? result.total)}</span>
             </p>
             <ol className="mt-3 space-y-1.5 text-[13px]" style={{ color: 'rgba(26,22,20,0.7)' }}>
-              <li>1. Abre Yape/Plin y envía el monto exacto al número de arriba.</li>
+              <li>
+                1. Abre Yape/Plin y {info?.qrUrl ? 'escanea el QR o envía' : 'envía'} el monto
+                exacto al número de arriba.
+              </li>
               <li>2. Toma captura del comprobante.</li>
               <li>3. Súbela aquí abajo para confirmar tu pedido.</li>
             </ol>
@@ -555,16 +947,54 @@ function Prepay({ result }: { result: OrderResult }) {
 
           {error && <p className="mt-3 text-danger text-sm">{error}</p>}
 
-          <label className="t-btn t-btn-primary t-btn-block mt-5 cursor-pointer">
-            {uploading ? 'Subiendo…' : 'Subir comprobante'}
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={onFile}
-              disabled={uploading || expired}
-            />
-          </label>
+          {previewUrl ? (
+            <div
+              className="mt-5 rounded-[18px] bg-white p-4"
+              style={{ border: '1px solid rgba(26,22,20,0.06)' }}
+            >
+              <p className="t-eyebrow">Tu comprobante</p>
+              <img
+                src={previewUrl}
+                alt="Vista previa del comprobante"
+                className="mt-2 w-full rounded-xl"
+                style={{ maxHeight: 280, objectFit: 'contain', background: 'rgba(26,22,20,0.04)' }}
+              />
+              <div className="mt-3 flex gap-2.5">
+                <label
+                  className="flex-1 cursor-pointer rounded-[14px] px-4 py-3 text-center font-semibold text-[14px]"
+                  style={{ background: 'rgba(26,22,20,0.06)' }}
+                >
+                  Cambiar imagen
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={onFile}
+                    disabled={uploading || expired}
+                  />
+                </label>
+                <button
+                  type="button"
+                  className="t-btn t-btn-primary flex-1"
+                  disabled={uploading || expired}
+                  onClick={submitProof}
+                >
+                  {uploading ? 'Enviando…' : 'Enviar comprobante'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <label className="t-btn t-btn-primary t-btn-block mt-5 cursor-pointer">
+              Subir comprobante
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={onFile}
+                disabled={uploading || expired}
+              />
+            </label>
+          )}
           <Link
             href={`/pedido/${result.shortId}`}
             className="mt-3 block text-center text-[14px] text-brand"
@@ -607,6 +1037,45 @@ function Confirmed({ result }: { result: OrderResult }) {
       <Link href={`/pedido/${result.shortId}`} className="t-btn t-btn-primary t-btn-block mt-6">
         Ver seguimiento
       </Link>
+      <Link href="/" className="mt-3 text-[14px] text-brand">
+        Volver al inicio
+      </Link>
+    </main>
+  )
+}
+
+/** Bloqueo por cobertura: solo se entrega dentro del radio de San Jacinto. */
+function GeoBlocked({ kind, onRetry }: { kind: 'outside' | 'unavailable'; onRetry: () => void }) {
+  const outside = kind === 'outside'
+  return (
+    <main className="mx-auto flex min-h-dvh max-w-[480px] flex-col items-center justify-center px-6 text-center">
+      <div
+        className="flex h-20 w-20 items-center justify-center rounded-full text-white"
+        style={{ background: outside ? '#C2410C' : '#F97316' }}
+      >
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <title>ubicación</title>
+          <path
+            d="M12 21s-7-5.5-7-11a7 7 0 1114 0c0 5.5-7 11-7 11z"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <circle cx="12" cy="10" r="2.5" stroke="currentColor" strokeWidth="2" />
+        </svg>
+      </div>
+      <h1 className="t-display mt-5 text-[26px]">
+        {outside ? 'Estás fuera de San Jacinto' : 'Necesitamos tu ubicación'}
+      </h1>
+      <p className="t-muted mt-2 text-[15px]">
+        {outside
+          ? 'Por ahora solo entregamos dentro de San Jacinto. Si crees que es un error, acércate a la zona de cobertura e inténtalo de nuevo.'
+          : 'Activa tu ubicación para confirmar que estás en San Jacinto. Revisa el permiso de ubicación de tu navegador y vuelve a intentar.'}
+      </p>
+      <button type="button" onClick={onRetry} className="t-btn t-btn-primary t-btn-block mt-6">
+        Volver a intentar
+      </button>
       <Link href="/" className="mt-3 text-[14px] text-brand">
         Volver al inicio
       </Link>

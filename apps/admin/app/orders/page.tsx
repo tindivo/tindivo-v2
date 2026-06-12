@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { DataTable, EmptyState, fieldSm, Ico, SectionHeader, StatusBadge } from '@/components/admin'
 import { api, errMsg } from '@/lib/api'
 import { soles } from '@/lib/format'
-import { ACTIVE_STATUSES, ORDER_STATUS } from '@/lib/labels'
+import { ACTIVE_STATUSES, ORDER_STATUS, PAYMENT_INTENT_LABEL } from '@/lib/labels'
 import type { OrderRow } from '@/lib/types'
 
 export default function OrdersPage() {
@@ -101,6 +101,21 @@ export default function OrdersPage() {
                   const s = ORDER_STATUS[o.status] ?? { label: o.status, tone: 'neutral' as const }
                   return <StatusBadge label={s.label} tone={s.tone} />
                 },
+              },
+              {
+                key: 'pago',
+                header: 'Pago',
+                render: (o) => (
+                  <span>
+                    {PAYMENT_INTENT_LABEL[o.payment_intent] ?? o.payment_intent}
+                    {o.payment_intent === 'pending_cash' && o.client_pays_with != null && (
+                      <span className="block text-[11px] text-ink-subtle tabular-nums">
+                        paga con {soles(Number(o.client_pays_with))} · vuelto{' '}
+                        {soles(Number(o.change_to_give ?? 0))}
+                      </span>
+                    )}
+                  </span>
+                ),
               },
               {
                 key: 'monto',

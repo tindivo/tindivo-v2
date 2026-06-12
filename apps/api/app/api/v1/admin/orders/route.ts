@@ -19,7 +19,7 @@ export async function GET(req: Request): Promise<Response> {
     const { data, error } = await service
       .from('orders')
       .select(
-        'id,short_id,order_number,status,customer_name,customer_phone,order_amount,delivery_fee,tindivo_commission,delivery_method,payment_intent,created_at,business_id,driver_id',
+        'id,short_id,order_number,status,customer_name,customer_phone,order_amount,delivery_fee,tindivo_commission,delivery_method,payment_intent,client_pays_with,change_to_give,created_at,business_id,driver_id',
       )
       .order('created_at', { ascending: false })
       .limit(100)

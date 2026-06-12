@@ -77,6 +77,9 @@ export async function POST(req: Request): Promise<Response> {
             modifiers: i.modifiers ?? [],
           })),
           p_source: 'customer_pwa',
+          // Only meaningful for cash on delivery (the RPC also guards by intent).
+          p_client_pays_with:
+            body.paymentIntent === 'pending_cash' ? (body.cashPayingWith ?? undefined) : undefined,
         })
         if (error) {
           if (error.code === 'P0002') throw new DomainError(error.message, 'not_found')

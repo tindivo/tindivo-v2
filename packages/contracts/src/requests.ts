@@ -26,6 +26,8 @@ export const CreateOrderRequestSchema = z
     deliveryAddress: z.string().max(200).optional(),
     deliveryReference: AddressReferenceSchema.optional(),
     coordinates: CoordinatesSchema.optional(),
+    /** Cash on delivery: bill the customer pays with (server validates >= total). */
+    cashPayingWith: z.number().positive().max(1000).optional(),
     items: z.array(CreateOrderItemSchema).min(1).max(50),
   })
   .refine((d) => d.deliveryMethod === 'pickup' || (d.deliveryReference?.length ?? 0) >= 20, {

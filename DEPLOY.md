@@ -7,7 +7,8 @@ Lo marcado **[tú]** requiere tus credenciales; el resto ya está preparado en e
 
 ## 0. Pre-requisitos
 
-- Proyecto Supabase **"Web v2"** (`psjigdoinfpgrnedxeyf`) — ya tiene migraciones 0001–0029 aplicadas.
+- Proyecto Supabase **"Web v2"** (`psjigdoinfpgrnedxeyf`) — migraciones aplicadas hasta `0041`
+  (incluida `0041_tracking_item_modifiers.sql`, que expone los adicionales en el tracking).
 - Cuenta Vercel, cuenta Inngest Cloud (keys ya en `apps/api/.env.local`), dominio `tindivo.com`.
 
 ## 1. Variables de entorno por app **[tú]**
@@ -40,6 +41,24 @@ supabase secrets set --project-ref psjigdoinfpgrnedxeyf \
 `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` los inyecta Supabase automáticamente al Edge Function.
 
 > **Rota** la llave privada VAPID y la signing key de Inngest si se compartieron en texto plano.
+
+## 2.1 Supabase Auth — onboarding del cliente **[tú]**
+
+El onboarding del customer (bottom-sheet con Google + correo sin verificación) requiere
+configuración manual en dashboards:
+
+1. **Google Cloud Console** (console.cloud.google.com → APIs & Services → Credentials):
+   - Crear **OAuth 2.0 Client ID** tipo "Web application".
+   - Authorized JavaScript origins: `http://localhost:3000` y `https://tindivo.com`.
+   - Authorized redirect URI: `https://psjigdoinfpgrnedxeyf.supabase.co/auth/v1/callback`.
+2. **Supabase dashboard** (proyecto Web v2):
+   - Authentication → Sign In / Providers → **Google: ON** (pegar Client ID + Secret del paso 1).
+   - Authentication → Sign In / Providers → Email: **desactivar "Confirm email"**
+     (el flujo es "sin verificación de correo; empiezas a pedir al instante").
+   - Authentication → URL Configuration → Redirect URLs: añadir
+     `http://localhost:3000/auth/callback` y `https://tindivo.com/auth/callback`.
+
+> El mapa de direcciones usa **Leaflet + OpenStreetMap**: no requiere API key ni billing.
 
 ## 3. Vercel — 5 proyectos **[tú]**
 

@@ -2275,6 +2275,7 @@ export type Database = {
       create_customer_order: {
         Args: {
           p_business_id: string
+          p_client_pays_with?: number
           p_customer_name: string
           p_customer_phone: string
           p_customer_user_id: string

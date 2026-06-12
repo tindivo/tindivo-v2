@@ -19,10 +19,17 @@ const STEPS: { key: TrackingStep; label: string; sub: string }[] = [
   { key: 'delivered', label: 'Entregado', sub: '¡Buen provecho!' },
 ]
 
+interface TrackingItemModifier {
+  group: string
+  name: string
+  price: number
+}
 interface TrackingItem {
   name: string
   qty: number
   lineTotal: number
+  /** Snapshots de adicionales (get_tracking, migración 0041). */
+  modifiers?: TrackingItemModifier[]
 }
 interface Tracking {
   shortId: string
@@ -32,6 +39,9 @@ interface Tracking {
   deliveryMethod: string
   paymentIntent: string
   cancelReason: string | null
+  /** Efectivo: con cuánto paga el cliente y su vuelto (migración 0042). */
+  paysWith?: number | null
+  changeToGive?: number | null
   estimatedReadyAt: string | null
   driverName: string | null
   amount: number
@@ -369,15 +379,26 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
               {itemCount === 1 ? 'producto' : 'productos'}
             </div>
           </div>
-          {data.items.map((it) => (
-            <div
-              key={`${it.name}-${it.qty}-${it.lineTotal}`}
-              className="flex justify-between py-1.5 text-[14px] text-ink-muted"
-            >
-              <span>
-                {it.qty}× {it.name}
-              </span>
-              <span className="tabular-nums">{soles(it.lineTotal)}</span>
+          {data.items.map((it, idx) => (
+            <div key={`item-${idx}-${it.name}`} className="py-1.5">
+              <div className="flex justify-between text-[14px] text-ink-muted">
+                <span>
+                  {it.qty}× {it.name}
+                </span>
+                <span className="tabular-nums">{soles(it.lineTotal)}</span>
+              </div>
+              {(it.modifiers ?? []).map((m, mi) => (
+                <div
+                  key={`item-${idx}-mod-${mi}-${m.name}`}
+                  className="mt-0.5 flex justify-between pl-5 text-[12px]"
+                  style={{ color: 'rgba(26,22,20,0.5)' }}
+                >
+                  <span>{m.name}</span>
+                  {Number(m.price) > 0 && (
+                    <span className="tabular-nums">+{soles(Number(m.price))}</span>
+                  )}
+                </div>
+              ))}
             </div>
           ))}
           <div className="my-2.5 h-px" style={{ background: 'rgba(26,22,20,0.08)' }} />
@@ -385,6 +406,17 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
             <div className="flex justify-between py-1 text-[13px] text-ink-muted">
               <span>Motorizado</span>
               <span className="font-medium text-ink">{data.driverName}</span>
+            </div>
+          )}
+          {data.paymentIntent === 'pending_cash' && data.paysWith != null && (
+            <div className="flex justify-between py-1 text-[13px] text-ink-muted">
+              <span>Efectivo</span>
+              <span className="font-medium text-ink tabular-nums">
+                Pagas con {soles(Number(data.paysWith))}
+                {Number(data.changeToGive ?? 0) > 0
+                  ? ` · vuelto ${soles(Number(data.changeToGive))}`
+                  : ' · exacto'}
+              </span>
             </div>
           )}
           <div className="flex items-center justify-between pt-1">

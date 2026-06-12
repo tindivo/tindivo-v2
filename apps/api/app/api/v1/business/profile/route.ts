@@ -13,6 +13,7 @@ const Schema = z.object({
   phone: z.string().trim().max(20).optional(),
   yapeNumber: z.string().trim().max(20).optional(),
   plinNumber: z.string().trim().max(20).optional(),
+  qrUrl: z.url().max(500).optional(),
   tagline: z.string().trim().max(120).optional(),
   accentColor: z
     .string()
@@ -45,6 +46,7 @@ export async function PATCH(req: Request): Promise<Response> {
       ...(body.phone !== undefined && { phone: body.phone }),
       ...(body.yapeNumber !== undefined && { yape_number: body.yapeNumber }),
       ...(body.plinNumber !== undefined && { plin_number: body.plinNumber }),
+      ...(body.qrUrl !== undefined && { qr_url: body.qrUrl }),
       ...(body.tagline !== undefined && { tagline: body.tagline }),
       ...(body.accentColor !== undefined && { accent_color: body.accentColor }),
       ...(body.estimatedEtaMin !== undefined && { estimated_eta_min: body.estimatedEtaMin }),

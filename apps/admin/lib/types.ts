@@ -41,5 +41,8 @@ export interface OrderRow {
   order_amount: number
   tindivo_commission: number | null
   delivery_method: string
+  payment_intent: string
+  client_pays_with: number | null
+  change_to_give: number | null
   created_at: string
 }

@@ -14,6 +14,13 @@ export const ORDER_STATUS: Record<string, { label: string; tone: Tone }> = {
   cancelled: { label: 'Cancelado', tone: 'danger' },
 }
 
+export const PAYMENT_INTENT_LABEL: Record<string, string> = {
+  pending_cash: 'Efectivo',
+  pending_yape: 'Yape al recibir',
+  prepaid: 'Prepago',
+  pending_mixed: 'Mixto',
+}
+
 export const STATEMENT_STATUS: Record<string, { label: string; tone: Tone }> = {
   pending: { label: 'Por cobrar', tone: 'warning' },
   paid: { label: 'Pagado', tone: 'success' },
