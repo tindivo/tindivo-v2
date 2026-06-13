@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from 'next'
 import { Bricolage_Grotesque, Geist, JetBrains_Mono } from 'next/font/google'
 import type { ReactNode } from 'react'
+import { OfflineBanner } from '@/components/offline-banner'
 import { PushManager } from '@/components/push-manager'
+import { TransferWatcher } from '@/components/transfers/transfer-watcher'
 import './globals.css'
 
 const bricolage = Bricolage_Grotesque({
@@ -27,6 +29,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="es" className={`${bricolage.variable} ${geist.variable} ${jetbrains.variable}`}>
       <body className="min-h-dvh bg-surface font-sans text-ink antialiased">
+        <OfflineBanner />
+        <TransferWatcher />
         {children}
         <PushManager />
       </body>

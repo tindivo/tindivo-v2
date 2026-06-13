@@ -1,21 +1,27 @@
 'use client'
 
 import { type ApiEnvelope, ApiError } from '@tindivo/api-client'
-import { Button, Card, CardBody } from '@tindivo/ui'
-import Link from 'next/link'
+import { ScreenHeader } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { type FormEvent, useCallback, useEffect, useState } from 'react'
 import { api } from '@/lib/api'
+import { soles } from '@/lib/format'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
-const soles = (n: number | null) => (n == null ? '—' : `S/ ${Number(n).toFixed(2)}`)
-
-const STATUS_LABEL: Record<string, string> = {
-  pending_confirmation: 'Por confirmar',
-  confirmed: 'Confirmado',
-  disputed: 'En disputa',
-  resolved: 'Resuelto',
-  auto_assumed_confirmed: 'Confirmado (auto)',
+const STATUS_CHIP: Record<string, { label: string; bg: string; color: string }> = {
+  pending_confirmation: {
+    label: 'Por confirmar',
+    bg: 'rgba(245,158,11,0.15)',
+    color: '#92400E',
+  },
+  confirmed: { label: 'Confirmado', bg: 'rgba(22,163,74,0.1)', color: '#16a34a' },
+  auto_assumed_confirmed: {
+    label: 'Confirmado (auto)',
+    bg: 'rgba(22,163,74,0.1)',
+    color: '#16a34a',
+  },
+  disputed: { label: 'En disputa', bg: 'rgba(220,38,38,0.1)', color: '#DC2626' },
+  resolved: { label: 'Resuelto', bg: 'rgba(26,22,20,0.06)', color: '#57534E' },
 }
 
 interface TodayRow {
@@ -71,56 +77,67 @@ export default function EfectivoPage() {
   const pending = today.filter((t) => t.status == null || t.status === 'pending_confirmation')
 
   return (
-    <div className="mx-auto max-w-[768px] px-4 py-6">
-      <Link href="/" className="font-mono text-[11px] text-ink-subtle uppercase tracking-widest">
-        ← Entregas
-      </Link>
-      <h1 className="mt-2 mb-5 font-display font-semibold text-[24px] text-ink">
-        Efectivo del turno
-      </h1>
-      {error && <p className="mb-3 text-danger text-sm">{error}</p>}
+    <main className="mx-auto min-h-dvh max-w-[480px] bg-surface pb-10">
+      <ScreenHeader title="Efectivo del turno" onBack={() => router.push('/')} />
 
-      <h2 className="mb-2 font-display font-semibold text-[16px] text-ink">A entregar hoy</h2>
-      {today.length === 0 ? (
-        <p className="mb-6 text-[14px] text-ink-subtle">No recolectaste efectivo hoy.</p>
-      ) : (
-        <ul className="mb-6 space-y-3">
-          {today.map((t) => (
-            <li key={t.businessId}>
-              <CashDeliverCard row={t} onDone={load} setError={setError} />
-            </li>
-          ))}
-        </ul>
-      )}
+      <div className="px-4">
+        {error && <p className="mt-3 text-[13px] text-danger">{error}</p>}
 
-      {pending.length === 0 && today.length > 0 && (
-        <p className="mb-6 rounded-xl bg-success/15 px-3 py-2 text-[14px] text-success">
-          Todo el efectivo de hoy fue entregado. 🎉
-        </p>
-      )}
+        <h2 className="t-eyebrow mt-4 mb-2" style={{ marginBottom: 8 }}>
+          A entregar hoy
+        </h2>
+        {today.length === 0 ? (
+          <p className="t-muted text-[14px]">No recolectaste efectivo hoy.</p>
+        ) : (
+          <div className="flex flex-col gap-2.5">
+            {today.map((t) => (
+              <CashDeliverCard key={t.businessId} row={t} onDone={load} setError={setError} />
+            ))}
+          </div>
+        )}
 
-      <h2 className="mb-2 font-display font-semibold text-[16px] text-ink">Historial</h2>
-      {history.length === 0 ? (
-        <p className="text-[14px] text-ink-subtle">Sin entregas anteriores.</p>
-      ) : (
-        <ul className="space-y-2">
-          {history.map((h) => (
-            <li
-              key={h.id}
-              className="flex items-center justify-between border-border border-t py-2 text-[14px]"
-            >
-              <span className="text-ink">
-                {h.businesses?.name ?? '—'}{' '}
-                <span className="font-mono text-[12px] text-ink-subtle">{h.settlement_date}</span>
-              </span>
-              <span className="font-mono text-ink-muted">
-                {soles(h.delivered_amount)} · {STATUS_LABEL[h.status] ?? h.status}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+        {pending.length === 0 && today.length > 0 && (
+          <div className="mt-3 rounded-[18px] bg-success/10 px-4 py-3 font-semibold text-[14px] text-success">
+            Todo el efectivo de hoy fue entregado 🎉
+          </div>
+        )}
+
+        <h2 className="t-eyebrow mt-6" style={{ marginBottom: 8 }}>
+          Historial
+        </h2>
+        {history.length === 0 ? (
+          <p className="t-muted text-[14px]">Sin entregas anteriores.</p>
+        ) : (
+          <div className="overflow-hidden rounded-[18px] border border-ink/5 bg-white">
+            {history.map((h, i) => {
+              const chip = STATUS_CHIP[h.status]
+              return (
+                <div
+                  key={h.id}
+                  className="flex items-center justify-between px-4 py-3"
+                  style={{
+                    borderTop: i > 0 ? '1px solid rgba(26,22,20,0.06)' : 'none',
+                  }}
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-[14px]">{h.businesses?.name ?? '—'}</p>
+                    <p className="font-mono text-[11px] text-ink-subtle">{h.settlement_date}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold text-[14px] tabular-nums">
+                      {soles(h.delivered_amount)}
+                    </p>
+                    <p className="text-[11px]" style={{ color: chip?.color ?? '#57534E' }}>
+                      {chip?.label ?? h.status}
+                    </p>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    </main>
   )
 }
 
@@ -136,6 +153,7 @@ function CashDeliverCard({
   const [amount, setAmount] = useState(String(row.expected.toFixed(2)))
   const [busy, setBusy] = useState(false)
   const settled = row.status != null
+  const chip = settled ? STATUS_CHIP[row.status as string] : null
 
   async function submit(e: FormEvent) {
     e.preventDefault()
@@ -155,39 +173,51 @@ function CashDeliverCard({
   }
 
   return (
-    <Card>
-      <CardBody>
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="font-medium text-[15px] text-ink">{row.businessName}</p>
-            <p className="text-[13px] text-ink-muted">
-              {row.orderCount} pedido{row.orderCount === 1 ? '' : 's'} · esperado{' '}
-              <span className="font-mono">{soles(row.expected)}</span>
-            </p>
-          </div>
-          {settled && (
-            <span className="rounded-lg bg-success/15 px-2 py-1 text-[12px] text-success">
-              {STATUS_LABEL[row.status as string] ?? row.status}
-            </span>
-          )}
+    <div className="rounded-[22px] border border-ink/5 bg-white p-[18px]">
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="font-semibold text-[16px]">{row.businessName}</p>
+          <p className="mt-0.5 text-[13px]" style={{ color: 'rgba(26,22,20,0.55)' }}>
+            {row.orderCount} pedido{row.orderCount === 1 ? '' : 's'} en efectivo
+          </p>
         </div>
-        {!settled && (
-          <form onSubmit={submit} className="mt-3 flex flex-wrap items-center gap-2">
-            <label className="flex items-center gap-1 text-[13px] text-ink-muted">
-              Entregué S/
-              <input
-                className="h-10 w-24 rounded-lg border border-border bg-surface px-2 text-center font-mono outline-none focus:border-brand"
-                inputMode="decimal"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-              />
-            </label>
-            <Button type="submit" size="sm" disabled={busy}>
-              Entregar al negocio
-            </Button>
-          </form>
+        {chip && (
+          <span
+            className="rounded-md px-2 py-1 font-bold font-mono text-[10px] uppercase"
+            style={{ letterSpacing: '0.08em', background: chip.bg, color: chip.color }}
+          >
+            {chip.label}
+          </span>
         )}
-      </CardBody>
-    </Card>
+      </div>
+
+      <p className="t-display mt-2 text-[24px] tabular-nums">{soles(row.expected)}</p>
+
+      {!settled && (
+        <form onSubmit={submit} className="mt-3 flex items-center gap-2">
+          <span
+            className="rounded-2xl border border-border bg-white px-3 py-3 font-mono text-[15px]"
+            style={{ color: 'rgba(26,22,20,0.6)' }}
+          >
+            S/
+          </span>
+          <input
+            className="t-field text-center font-mono"
+            style={{ flex: 1 }}
+            inputMode="decimal"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+          />
+          <button
+            type="submit"
+            className="t-btn t-btn-primary"
+            style={{ padding: '12px 20px', fontSize: 14 }}
+            disabled={busy}
+          >
+            {busy ? '…' : 'Entregar'}
+          </button>
+        </form>
+      )}
+    </div>
   )
 }

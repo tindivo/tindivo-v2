@@ -1425,6 +1425,7 @@ export type Database = {
       order_transfer_requests: {
         Row: {
           created_at: string
+          expires_at: string | null
           from_driver_id: string
           id: string
           order_id: string
@@ -1435,6 +1436,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          expires_at?: string | null
           from_driver_id: string
           id?: string
           order_id: string
@@ -1445,6 +1447,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          expires_at?: string | null
           from_driver_id?: string
           id?: string
           order_id?: string
@@ -2185,6 +2188,13 @@ export type Database = {
         }
         Returns: Json
       }
+      apply_order_transfer: {
+        Args: {
+          p_final: Database["public"]["Enums"]["transfer_request_status"]
+          p_req: Database["public"]["Tables"]["order_transfer_requests"]["Row"]
+        }
+        Returns: undefined
+      }
       auto_confirm_cash_settlement: { Args: { p_id: string }; Returns: Json }
       block_business: {
         Args: { p_by: string; p_id: string; p_reason: string }
@@ -2368,6 +2378,7 @@ export type Database = {
         }
         Returns: Json
       }
+      expire_order_transfers: { Args: never; Returns: number }
       extend_order_prep: {
         Args: { p_business_user_id: string; p_order_id: string }
         Returns: Json
@@ -2398,6 +2409,14 @@ export type Database = {
           p_note?: string
           p_paid_by: string
           p_settlement_id: string
+        }
+        Returns: Json
+      }
+      request_order_transfer: {
+        Args: {
+          p_order_id: string
+          p_reason?: string
+          p_to_driver_user_id: string
         }
         Returns: Json
       }
@@ -2530,6 +2549,14 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      respond_order_transfer: {
+        Args: {
+          p_accept: boolean
+          p_request_id: string
+          p_responder_user_id: string
+        }
+        Returns: Json
       }
       resume_business_orders: {
         Args: { p_business_user_id: string }

@@ -82,9 +82,13 @@ Verificado en vivo:
 - ✅ `create_customer_order`: cliente bloqueado → **rechazado**; cliente normal → **creado** (no rompió el camino crítico).
 - ✅ Bugfix `0035` reverificado en vivo: prepago verificado **sobrevive** el cron; sin verificar **se cancela**.
 - ✅ Build + type-check + lint + CI (GitHub Actions) en **verde**.
+- ✅ **Write-test HTTP en vivo (producción, por la UI)**: el botón "Confirmar strike" del admin disparó
+  `PUT /admin/incidents/{id}/review` real → trigger → `customer_strikes` → `customer_profiles` (`strikes=1`,
+  visible en `/strikes`); pedido manual creado por la UI de negocios llegó a `waiting_driver`
+  (`order.created → order.ready`). Todos los datos de prueba se limpiaron tras verificar.
 
-Pendiente de prueba: write-test HTTP en vivo de los endpoints (bloqueado por guardrail — mutaría prod);
-flujo logueado e2e de motorizados/cliente.
+Pendiente de prueba: flujo logueado e2e de **motorizados** (reportar incidente) y **cliente**
+(pantalla "Cuenta en pausa") con sesión real por la UI.
 
 ---
 
@@ -111,7 +115,8 @@ flujo logueado e2e de motorizados/cliente.
 - **DNS [tú]**: `negocios/admin/motorizados.tindivo.com` no resuelven (configurar CNAME a Vercel).
   Hoy operativo por los alias `*.vercel.app`. `api.tindivo.com` ✅ ya operativo.
 - **`request_order_validation` rate-limit**: lógica `count >= max` correcta pero no e2e-testeada (cambio de día UTC).
-- **Endpoints HTTP de escritura**: verificados por construcción (RPC + patrón), no por write-test en vivo.
+- **Endpoints HTTP de escritura**: el de admin (`review`) verificado **e2e por HTTP en producción** (vía UI);
+  los demás (resolve claim, request-validation, driver incident) verificados por construcción + RPC e2e.
 - **Path manual** (`create_business_manual_order`): aún tiene el chequeo viejo de 2-strikes (path secundario).
 
 ---

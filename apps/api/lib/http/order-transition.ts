@@ -20,6 +20,8 @@ const TransitionSchema = z.object({
   action: z.string().min(1),
   prepTimeMinutes: z.number().int().min(1).max(120).optional(),
   band: DistanceBandSchema.optional(),
+  /** Backpack slots declared at pickup (clamped 1-3 server-side too). */
+  slots: z.number().int().min(1).max(3).optional(),
   paymentReal: PaymentRealSchema.optional(),
   reason: z.string().max(200).optional(),
   reasonCode: z.enum(REJECTION_CODES).optional(),
@@ -45,6 +47,7 @@ export async function handleOrderTransition(
       p_params: {
         prepTimeMinutes: body.prepTimeMinutes,
         band: body.band,
+        slots: body.slots,
         paymentReal: body.paymentReal,
         reason: body.reason,
         reasonCode: body.reasonCode,

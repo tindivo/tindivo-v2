@@ -50,6 +50,20 @@ export function sendOrderValidation(data: OrderValidationData) {
   return inngest.send({ name: EVENT_ORDER_VALIDATION, data })
 }
 
+export const EVENT_TRANSFER_REQUESTED = 'transfer/requested' as const
+
+/** Datos del evento que agenda la expiración de una solicitud de transferencia. */
+export type TransferRequestedData = {
+  requestId: string
+  /** Override del deadline en ms — SOLO para tests locales. */
+  sleepMs?: number
+}
+
+/** Envío tipado del evento `transfer/requested` (TTL ~30s, timeout-as-accept). */
+export function sendTransferRequested(data: TransferRequestedData) {
+  return inngest.send({ name: EVENT_TRANSFER_REQUESTED, data })
+}
+
 export const EVENT_ORDER_PREPAY = 'order/prepay' as const
 
 /** Datos del evento que agenda el timeout de verificación de prepago (10 min). */

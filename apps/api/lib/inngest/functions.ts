@@ -6,10 +6,12 @@ import {
   EVENT_ORDER_CREATED,
   EVENT_ORDER_PREPAY,
   EVENT_ORDER_VALIDATION,
+  EVENT_TRANSFER_REQUESTED,
   inngest,
   type OrderCreatedData,
   type OrderPrepayData,
   type OrderValidationData,
+  type TransferRequestedData,
 } from './client'
 
 /**
@@ -155,10 +157,44 @@ export const orderPrepayTimeout: InngestFunction.Any = inngest.createFunction(
   },
 )
 
+/**
+ * Timeout de transferencia entre motorizados: si el dueño no responde dentro de
+ * `timers.transferTtlSeconds` (30s), el silencio acepta (spec v1). El barrido
+ * `expire_order_transfers` es idempotente y re-chequea bajo FOR UPDATE, así que
+ * convive con el cron failsafe de 1 min y con la expiración perezosa de respond.
+ */
+export const transferRequestTimeout: InngestFunction.Any = inngest.createFunction(
+  {
+    id: 'transfer-request-timeout',
+    name: 'Timeout-as-accept de transferencia',
+    triggers: [{ event: EVENT_TRANSFER_REQUESTED }],
+  },
+  async ({ event, step }) => {
+    const { sleepMs: override } = event.data as TransferRequestedData
+    const sleepMs = await step.run('resolve-deadline', async () => {
+      if (typeof override === 'number') return override
+      const svc = createServiceClient()
+      const { data } = await svc.from('app_settings').select('value').eq('key', 'timers').single()
+      const seconds =
+        (data?.value as { transferTtlSeconds?: number } | null)?.transferTtlSeconds ?? 30
+      // +2s de gracia: la expiración exacta la decide la BD (expires_at).
+      return (seconds + 2) * 1_000
+    })
+    await step.sleep('transfer-window', sleepMs)
+    return await step.run('expire-due-transfers', async () => {
+      const svc = createServiceClient()
+      const { data, error } = await svc.rpc('expire_order_transfers')
+      if (error) throw new Error(error.message)
+      return { expired: data }
+    })
+  },
+)
+
 /** Registro de funciones servidas por el endpoint /api/inngest. */
 export const functions: InngestFunction.Any[] = [
   orderAcceptanceTimeout,
   cashSettlementAutoConfirm,
   orderValidationTimeout,
   orderPrepayTimeout,
+  transferRequestTimeout,
 ]
