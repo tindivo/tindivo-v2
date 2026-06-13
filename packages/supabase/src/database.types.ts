@@ -1501,6 +1501,12 @@ export type Database = {
           customer_notes: string | null
           customer_phone: string | null
           customer_user_id: string | null
+          customer_gps_accuracy_m: number | null
+          customer_gps_distance_to_center_km: number | null
+          customer_gps_lat: number | null
+          customer_gps_lng: number | null
+          customer_gps_method: string | null
+          customer_gps_validated_at: string | null
           delivered_at: string | null
           delivery_address: string | null
           delivery_coordinates_lat: number | null
@@ -1538,6 +1544,7 @@ export type Database = {
           rejection_reason_code: string | null
           rejection_reason_text: string | null
           requires_validation: boolean
+          risk_flags: Json
           short_id: string
           source: Database["public"]["Enums"]["order_source"]
           status: Database["public"]["Enums"]["order_status"]
@@ -1550,6 +1557,7 @@ export type Database = {
           validated_by: string | null
           validating_at: string | null
           validation_result: string | null
+          validation_reason_code: string | null
           waiting_at_restaurant_at: string | null
           waiting_driver_at: string | null
           yape_amount: number | null
@@ -1575,6 +1583,12 @@ export type Database = {
           customer_notes?: string | null
           customer_phone?: string | null
           customer_user_id?: string | null
+          customer_gps_accuracy_m?: number | null
+          customer_gps_distance_to_center_km?: number | null
+          customer_gps_lat?: number | null
+          customer_gps_lng?: number | null
+          customer_gps_method?: string | null
+          customer_gps_validated_at?: string | null
           delivered_at?: string | null
           delivery_address?: string | null
           delivery_coordinates_lat?: number | null
@@ -1612,6 +1626,7 @@ export type Database = {
           rejection_reason_code?: string | null
           rejection_reason_text?: string | null
           requires_validation?: boolean
+          risk_flags?: Json
           short_id: string
           source?: Database["public"]["Enums"]["order_source"]
           status?: Database["public"]["Enums"]["order_status"]
@@ -1624,6 +1639,7 @@ export type Database = {
           validated_by?: string | null
           validating_at?: string | null
           validation_result?: string | null
+          validation_reason_code?: string | null
           waiting_at_restaurant_at?: string | null
           waiting_driver_at?: string | null
           yape_amount?: number | null
@@ -1649,6 +1665,12 @@ export type Database = {
           customer_notes?: string | null
           customer_phone?: string | null
           customer_user_id?: string | null
+          customer_gps_accuracy_m?: number | null
+          customer_gps_distance_to_center_km?: number | null
+          customer_gps_lat?: number | null
+          customer_gps_lng?: number | null
+          customer_gps_method?: string | null
+          customer_gps_validated_at?: string | null
           delivered_at?: string | null
           delivery_address?: string | null
           delivery_coordinates_lat?: number | null
@@ -1686,6 +1708,7 @@ export type Database = {
           rejection_reason_code?: string | null
           rejection_reason_text?: string | null
           requires_validation?: boolean
+          risk_flags?: Json
           short_id?: string
           source?: Database["public"]["Enums"]["order_source"]
           status?: Database["public"]["Enums"]["order_status"]
@@ -1698,6 +1721,7 @@ export type Database = {
           validated_by?: string | null
           validating_at?: string | null
           validation_result?: string | null
+          validation_reason_code?: string | null
           waiting_at_restaurant_at?: string | null
           waiting_driver_at?: string | null
           yape_amount?: number | null
@@ -2286,6 +2310,11 @@ export type Database = {
         Args: {
           p_business_id: string
           p_client_pays_with?: number
+          p_customer_gps_accuracy_m?: number
+          p_customer_gps_distance_to_center_km?: number
+          p_customer_gps_lat?: number
+          p_customer_gps_lng?: number
+          p_customer_gps_method?: string
           p_customer_name: string
           p_customer_phone: string
           p_customer_user_id: string
@@ -2343,6 +2372,10 @@ export type Database = {
       }
       customer_is_blocked: {
         Args: { p_phone: string; p_user_id: string }
+        Returns: boolean
+      }
+      customer_requires_prepayment: {
+        Args: { p_phone: string; p_reference: string; p_user_id: string }
         Returns: boolean
       }
       derive_business_primary_capability: {

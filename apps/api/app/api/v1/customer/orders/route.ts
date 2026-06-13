@@ -80,6 +80,11 @@ export async function POST(req: Request): Promise<Response> {
           // Only meaningful for cash on delivery (the RPC also guards by intent).
           p_client_pays_with:
             body.paymentIntent === 'pending_cash' ? (body.cashPayingWith ?? undefined) : undefined,
+          p_customer_gps_lat: body.gpsValidation?.lat,
+          p_customer_gps_lng: body.gpsValidation?.lng,
+          p_customer_gps_accuracy_m: body.gpsValidation?.accuracyM,
+          p_customer_gps_distance_to_center_km: body.gpsValidation?.distanceToCenterKm,
+          p_customer_gps_method: body.gpsValidation?.method,
         })
         if (error) {
           if (error.code === 'P0002') throw new DomainError(error.message, 'not_found')

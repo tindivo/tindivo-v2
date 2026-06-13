@@ -12,6 +12,23 @@ export const CreateOrderItemSchema = z.object({
 })
 export type CreateOrderItem = z.infer<typeof CreateOrderItemSchema>
 
+export const CustomerGpsValidationMethodSchema = z.enum([
+  'gps_high_accuracy',
+  'gps_low_accuracy',
+  'manual_skip_prepaid',
+  'failed',
+])
+export type CustomerGpsValidationMethod = z.infer<typeof CustomerGpsValidationMethodSchema>
+
+export const CustomerGpsValidationSchema = z.object({
+  lat: z.number().min(-90).max(90).optional(),
+  lng: z.number().min(-180).max(180).optional(),
+  accuracyM: z.number().nonnegative().max(100_000).optional(),
+  distanceToCenterKm: z.number().nonnegative().max(50_000).optional(),
+  method: CustomerGpsValidationMethodSchema,
+})
+export type CustomerGpsValidation = z.infer<typeof CustomerGpsValidationSchema>
+
 /**
  * Cuerpo de POST /api/v1/customer/orders. El servidor recalcula montos desde los
  * precios snapshot del menú (no confía en el cliente) y valida el umbral de prepago.
@@ -26,6 +43,7 @@ export const CreateOrderRequestSchema = z
     deliveryAddress: z.string().max(200).optional(),
     deliveryReference: AddressReferenceSchema.optional(),
     coordinates: CoordinatesSchema.optional(),
+    gpsValidation: CustomerGpsValidationSchema.optional(),
     /** Cash on delivery: bill the customer pays with (server validates >= total). */
     cashPayingWith: z.number().positive().max(1000).optional(),
     items: z.array(CreateOrderItemSchema).min(1).max(50),

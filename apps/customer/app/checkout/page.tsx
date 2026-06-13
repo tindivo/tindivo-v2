@@ -8,12 +8,12 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Icon, ScreenHeader, Segmented } from '@/components/ui'
 import { api } from '@/lib/api'
 import { useCart } from '@/lib/cart'
-import { getCoverage, haversineKm } from '@/lib/coverage'
+import { getLocationValidation, haversineKm } from '@/lib/coverage'
 import { useOnboarding } from '@/lib/onboarding-store'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
 const soles = (n: number) => `S/ ${n.toFixed(2)}`
-const PREPAY_THRESHOLD = 100
+const DEFAULT_PREPAY_THRESHOLD = 80
 const NEAR_DELIVERY_FEE = 2.0
 // Pickup disabled for the pilot (DECISIONS.md: "pickup inactivo; post-piloto").
 const PICKUP_ENABLED = false as boolean
@@ -35,6 +35,23 @@ interface OrderResult {
   total: number
 }
 
+interface CustomerProfile {
+  full_name: string | null
+  phone: string | null
+  contraentrega_blocked?: boolean | null
+  blocked_until?: string | null
+}
+
+type GeoBlockKind = 'far' | 'unavailable' | 'low_accuracy'
+
+interface GpsValidationPayload {
+  lat?: number
+  lng?: number
+  accuracyM?: number
+  distanceToCenterKm?: number
+  method: 'gps_high_accuracy' | 'gps_low_accuracy' | 'manual_skip_prepaid' | 'failed'
+}
+
 type CashChoice = 'exact' | '20' | '50' | '100' | 'custom'
 const CASH_CHIPS: { value: CashChoice; label: string; amount: number | null }[] = [
   { value: 'exact', label: 'Exacto', amount: null },
@@ -44,7 +61,7 @@ const CASH_CHIPS: { value: CashChoice; label: string; amount: number | null }[] 
 ]
 
 /** Posición del dispositivo (una vez). Rechaza si no hay API o el usuario niega. */
-function getPositionOnce(): Promise<GeolocationPosition> {
+function getPositionOnce(timeoutMs = 15_000): Promise<GeolocationPosition> {
   return new Promise((resolve, reject) => {
     if (typeof navigator === 'undefined' || !('geolocation' in navigator)) {
       reject(new Error('geolocation_unavailable'))
@@ -52,8 +69,8 @@ function getPositionOnce(): Promise<GeolocationPosition> {
     }
     navigator.geolocation.getCurrentPosition(resolve, reject, {
       enableHighAccuracy: true,
-      timeout: 10_000,
-      maximumAge: 60_000,
+      timeout: timeoutMs,
+      maximumAge: 0,
     })
   })
 }
@@ -75,7 +92,9 @@ export default function CheckoutPage() {
   const [payment, setPayment] = useState<PaymentIntent>('pending_cash')
   const [cashChoice, setCashChoice] = useState<CashChoice>('exact')
   const [cashCustom, setCashCustom] = useState('')
-  const [geoBlock, setGeoBlock] = useState<'outside' | 'unavailable' | null>(null)
+  const [geoBlock, setGeoBlock] = useState<GeoBlockKind | null>(null)
+  const [prepayThreshold, setPrepayThreshold] = useState(DEFAULT_PREPAY_THRESHOLD)
+  const [prepayOnlyByRisk, setPrepayOnlyByRisk] = useState(false)
   const [locating, setLocating] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -88,13 +107,27 @@ export default function CheckoutPage() {
     () => Math.round((subtotal + deliveryFee) * 100) / 100,
     [subtotal, deliveryFee],
   )
-  const mustPrepay = subtotal >= PREPAY_THRESHOLD
+  const amountRequiresPrepay = subtotal >= prepayThreshold
+  const mustPrepay = amountRequiresPrepay || prepayOnlyByRisk
 
   // Gate de auth (DECISIONS §15): el carrito no exige login; el checkout sí.
   // En vez de redirigir a /entrar, abre el sheet de onboarding sobre esta página.
   const sheetOpen = useOnboarding((s) => s.open)
   const openedSheetRef = useRef(false)
   const profilePromptedRef = useRef(false)
+
+  useEffect(() => {
+    getSupabaseBrowser()
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'prepay_threshold')
+      .maybeSingle()
+      .then(({ data }) => {
+        const raw = data?.value
+        const value = typeof raw === 'number' ? raw : typeof raw === 'string' ? Number(raw) : null
+        if (value && Number.isFinite(value)) setPrepayThreshold(value)
+      })
+  }, [])
 
   useEffect(() => {
     if (cart.count() === 0 && !confirmed) {
@@ -120,7 +153,7 @@ export default function CheckoutPage() {
       const meta = data.session.user.user_metadata as { full_name?: string } | undefined
       const { data: prof } = await supabase
         .from('customer_profiles')
-        .select('full_name,phone')
+        .select('full_name,phone,contraentrega_blocked,blocked_until')
         .maybeSingle()
       // Red de seguridad: sesión (p.ej. Google en otro dispositivo) sin perfil → completar datos.
       if (!prof && !profilePromptedRef.current) {
@@ -136,8 +169,15 @@ export default function CheckoutPage() {
         })
         return
       }
-      setName(prof?.full_name ?? meta?.full_name ?? '')
-      if (prof?.phone) setPhone(prof.phone.replace(/\D/g, '').slice(-9))
+      const profile = prof as CustomerProfile | null
+      if (profile?.blocked_until && new Date(profile.blocked_until) > new Date()) {
+        setBlocked(true)
+        setAuthReady(true)
+        return
+      }
+      setPrepayOnlyByRisk(Boolean(profile?.contraentrega_blocked))
+      setName(profile?.full_name ?? meta?.full_name ?? '')
+      if (profile?.phone) setPhone(profile.phone.replace(/\D/g, '').slice(-9))
       const { data: addrs } = await supabase
         .from('customer_addresses')
         .select('id,label,line,reference,is_default,coordinates_lat,coordinates_lng')
@@ -181,29 +221,66 @@ export default function CheckoutPage() {
     setStep('payment')
   }
 
-  async function placeOrder() {
+  async function collectGpsValidation(
+    selectedPayment: PaymentIntent,
+    skipGps: boolean,
+  ): Promise<{ payload?: GpsValidationPayload; issue?: GeoBlockKind }> {
+    if (deliveryMethod !== 'delivery') return {}
+    if (skipGps) return { payload: { method: 'manual_skip_prepaid' } }
+
+    try {
+      const cfg = await getLocationValidation()
+      const pos = await getPositionOnce(cfg.timeoutMs)
+      const distance = haversineKm(
+        { lat: pos.coords.latitude, lng: pos.coords.longitude },
+        { lat: cfg.centerLat, lng: cfg.centerLng },
+      )
+      const accuracyM = pos.coords.accuracy
+      const method = accuracyM > cfg.maxAccuracyM ? 'gps_low_accuracy' : 'gps_high_accuracy'
+
+      if (accuracyM > cfg.maxAccuracyM && selectedPayment !== 'prepaid') {
+        return { issue: 'low_accuracy' }
+      }
+      if (distance > cfg.warningRadiusKm && selectedPayment !== 'prepaid') {
+        return { issue: 'far' }
+      }
+
+      return {
+        payload: {
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          accuracyM,
+          distanceToCenterKm: Math.round(distance * 1000) / 1000,
+          method,
+        },
+      }
+    } catch {
+      if (selectedPayment === 'prepaid') return { payload: { method: 'manual_skip_prepaid' } }
+      return { issue: 'unavailable' }
+    }
+  }
+
+  async function placeOrder(options?: { paymentIntent?: PaymentIntent; skipGps?: boolean }) {
+    const selectedPayment = options?.paymentIntent ?? payment
     setError(null)
-    if (payment === 'pending_cash' && cashAmount < total) {
+    if (selectedPayment === 'pending_cash' && cashAmount < total) {
       setError('El monto con el que pagarás debe cubrir el total del pedido')
       return
     }
     setLoading(true)
+    let gpsPayload: GpsValidationPayload | undefined
 
-    // Gate de cobertura (estricto): sin ubicación verificada dentro de San
-    // Jacinto no se crea el pedido. La cobertura viene de app_settings.
+    // GPS antifraude: ubicación normal continúa, zona de advertencia va a
+    // validación manual, y GPS fallido/incierto permite continuar con prepago.
     setLocating(true)
     try {
-      const pos = await getPositionOnce()
-      const cov = await getCoverage()
-      const distance = haversineKm(
-        { lat: pos.coords.latitude, lng: pos.coords.longitude },
-        { lat: cov.centerLat, lng: cov.centerLng },
-      )
-      if (distance > cov.radiusKm) {
-        setGeoBlock('outside')
+      const gps = await collectGpsValidation(selectedPayment, Boolean(options?.skipGps))
+      if (gps.issue) {
+        setGeoBlock(gps.issue)
         setLoading(false)
         return
       }
+      gpsPayload = gps.payload
     } catch {
       // PERMISSION_DENIED / POSITION_UNAVAILABLE / TIMEOUT / sin API.
       setGeoBlock('unavailable')
@@ -219,11 +296,11 @@ export default function CheckoutPage() {
         {
           businessId: cart.businessId,
           deliveryMethod,
-          paymentIntent: payment,
+          paymentIntent: selectedPayment,
           customerName: name.trim() || 'Cliente',
           customerPhone: phone,
           cashPayingWith:
-            payment === 'pending_cash' ? Math.round(cashAmount * 100) / 100 : undefined,
+            selectedPayment === 'pending_cash' ? Math.round(cashAmount * 100) / 100 : undefined,
           deliveryAddress: selectedAddress?.line ?? undefined,
           deliveryReference: deliveryMethod === 'delivery' ? reference : undefined,
           coordinates:
@@ -233,6 +310,7 @@ export default function CheckoutPage() {
                   lng: Number(selectedAddress.coordinates_lng),
                 }
               : undefined,
+          gpsValidation: gpsPayload,
           items: cart.lines.map((l) => ({
             menuItemId: l.itemId,
             quantity: l.quantity,
@@ -266,6 +344,11 @@ export default function CheckoutPage() {
         onRetry={() => {
           setGeoBlock(null)
           void placeOrder()
+        }}
+        onPrepay={() => {
+          setGeoBlock(null)
+          setPayment('prepaid')
+          void placeOrder({ paymentIntent: 'prepaid', skipGps: true })
         }}
       />
     )
@@ -451,8 +534,9 @@ export default function CheckoutPage() {
                 className="rounded-xl px-3 py-2.5 text-[13px]"
                 style={{ background: 'rgba(249,115,22,0.08)', color: '#C2410C' }}
               >
-                Los pedidos de S/100 a más se pagan por adelantado con billetera digital
-                (Yape/Plin).
+                {amountRequiresPrepay
+                  ? `Los pedidos de ${soles(prepayThreshold)} o más requieren pago anticipado con billetera digital.`
+                  : 'Por políticas del servicio, este pedido requiere pago anticipado con billetera digital.'}
               </p>
             )}
             <div className="mt-3 flex flex-col gap-2.5">
@@ -465,7 +549,7 @@ export default function CheckoutPage() {
                 {
                   v: 'pending_yape' as PaymentIntent,
                   label: 'Billetera digital al recibir',
-                  desc: 'Yape o Plin al motorizado al entregar',
+                  desc: 'Paga con tu billetera digital al recibir',
                 },
                 {
                   v: 'prepaid' as PaymentIntent,
@@ -612,7 +696,7 @@ export default function CheckoutPage() {
             type="button"
             className="t-btn t-btn-primary t-btn-block"
             disabled={loading}
-            onClick={placeOrder}
+            onClick={() => void placeOrder()}
           >
             {locating
               ? 'Verificando ubicación…'
@@ -871,7 +955,7 @@ function Prepay({ result }: { result: OrderResult }) {
 
   return (
     <main className="mx-auto min-h-dvh max-w-[480px] px-4 pt-10 pb-12">
-      <h1 className="t-display text-[26px]">Paga por Yape</h1>
+      <h1 className="t-display text-[26px]">Paga con billetera digital</h1>
       <p className="t-muted mt-1 text-[14px]">Pedido #{result.shortId}</p>
 
       {sent ? (
@@ -914,12 +998,12 @@ function Prepay({ result }: { result: OrderResult }) {
             className="mt-4 rounded-[18px] bg-white p-5"
             style={{ border: '1px solid rgba(26,22,20,0.06)' }}
           >
-            <p className="t-eyebrow">Yapea a {info?.businessName ?? 'el restaurante'}</p>
+            <p className="t-eyebrow">Paga a {info?.businessName ?? 'el restaurante'}</p>
             {info?.qrUrl && (
               <div className="mt-3 flex justify-center">
                 <img
                   src={info.qrUrl}
-                  alt={`QR de Yape de ${info.businessName}`}
+                  alt={`QR de pago de ${info.businessName}`}
                   className="rounded-2xl"
                   style={{
                     width: 180,
@@ -937,8 +1021,8 @@ function Prepay({ result }: { result: OrderResult }) {
             </p>
             <ol className="mt-3 space-y-1.5 text-[13px]" style={{ color: 'rgba(26,22,20,0.7)' }}>
               <li>
-                1. Abre Yape/Plin y {info?.qrUrl ? 'escanea el QR o envía' : 'envía'} el monto
-                exacto al número de arriba.
+                1. Abre tu billetera digital y {info?.qrUrl ? 'escanea el QR o envía' : 'envía'} el
+                monto exacto al número de arriba.
               </li>
               <li>2. Toma captura del comprobante.</li>
               <li>3. Súbela aquí abajo para confirmar tu pedido.</li>
@@ -1044,14 +1128,38 @@ function Confirmed({ result }: { result: OrderResult }) {
   )
 }
 
-/** Bloqueo por cobertura: solo se entrega dentro del radio de San Jacinto. */
-function GeoBlocked({ kind, onRetry }: { kind: 'outside' | 'unavailable'; onRetry: () => void }) {
-  const outside = kind === 'outside'
+/** Fallback antifraude por GPS: reintentar o continuar con pago anticipado. */
+function GeoBlocked({
+  kind,
+  onRetry,
+  onPrepay,
+}: {
+  kind: GeoBlockKind
+  onRetry: () => void
+  onPrepay: () => void
+}) {
+  const copy = {
+    far: {
+      title: 'Este pedido requiere pago anticipado',
+      body: 'Detectamos que estás fuera de la zona normal de validación. Puedes continuar pagando por adelantado.',
+      color: '#C2410C',
+    },
+    unavailable: {
+      title: 'No pudimos detectar tu ubicación',
+      body: 'Revisa el permiso de ubicación de tu navegador. Si prefieres, puedes continuar con pago anticipado.',
+      color: '#F97316',
+    },
+    low_accuracy: {
+      title: 'La ubicación no fue precisa',
+      body: 'Tu navegador entregó una ubicación imprecisa. Reintenta desde un lugar con mejor señal o paga por adelantado.',
+      color: '#F59E0B',
+    },
+  }[kind]
   return (
     <main className="mx-auto flex min-h-dvh max-w-[480px] flex-col items-center justify-center px-6 text-center">
       <div
         className="flex h-20 w-20 items-center justify-center rounded-full text-white"
-        style={{ background: outside ? '#C2410C' : '#F97316' }}
+        style={{ background: copy.color }}
       >
         <svg width="36" height="36" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <title>ubicación</title>
@@ -1065,15 +1173,12 @@ function GeoBlocked({ kind, onRetry }: { kind: 'outside' | 'unavailable'; onRetr
           <circle cx="12" cy="10" r="2.5" stroke="currentColor" strokeWidth="2" />
         </svg>
       </div>
-      <h1 className="t-display mt-5 text-[26px]">
-        {outside ? 'Estás fuera de San Jacinto' : 'Necesitamos tu ubicación'}
-      </h1>
-      <p className="t-muted mt-2 text-[15px]">
-        {outside
-          ? 'Por ahora solo entregamos dentro de San Jacinto. Si crees que es un error, acércate a la zona de cobertura e inténtalo de nuevo.'
-          : 'Activa tu ubicación para confirmar que estás en San Jacinto. Revisa el permiso de ubicación de tu navegador y vuelve a intentar.'}
-      </p>
-      <button type="button" onClick={onRetry} className="t-btn t-btn-primary t-btn-block mt-6">
+      <h1 className="t-display mt-5 text-[26px]">{copy.title}</h1>
+      <p className="t-muted mt-2 text-[15px]">{copy.body}</p>
+      <button type="button" onClick={onPrepay} className="t-btn t-btn-primary t-btn-block mt-6">
+        Pagar por adelantado
+      </button>
+      <button type="button" onClick={onRetry} className="t-btn t-btn-ghost t-btn-block mt-3">
         Volver a intentar
       </button>
       <Link href="/" className="mt-3 text-[14px] text-brand">

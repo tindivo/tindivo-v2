@@ -23,7 +23,8 @@ export const ORDER_SELECT =
   'id,short_id,status,source,customer_name,customer_phone,delivery_reference,delivery_method,' +
   'order_amount,delivery_fee,payment_intent,payment_proof_status,comprobante_prepago_url,' +
   'prep_time_minutes,estimated_ready_at,prep_extension_count,client_pays_with,change_to_give,' +
-  'yape_amount,cash_amount,driver_id,created_at,pending_acceptance_at,validating_at,' +
+  'yape_amount,cash_amount,requires_validation,validation_reason_code,risk_flags,' +
+  'driver_id,created_at,pending_acceptance_at,validating_at,' +
   'waiting_driver_at,picked_up_at,delivered_at,cancelled_at,cancel_note,driver:drivers(full_name)'
 
 const limaTime = new Intl.DateTimeFormat('es-PE', {
@@ -60,6 +61,9 @@ export interface OrderRow {
   change_to_give: number | null
   yape_amount: number | null
   cash_amount: number | null
+  requires_validation: boolean | null
+  validation_reason_code: string | null
+  risk_flags: Record<string, unknown> | null
   driver_id: string | null
   created_at: string
   pending_acceptance_at: string | null
@@ -97,6 +101,9 @@ export interface OrderVM {
   cashChange: number | null
   walletPart: number | null
   cashPart: number | null
+  requiresValidation: boolean
+  validationReasonCode: string | null
+  riskFlags: Record<string, unknown>
   extensionUsed: boolean
   extensionMin: number | null
   proofStatus: string | null
@@ -232,6 +239,9 @@ export function toOrderVM(row: OrderRow, now: number = Date.now()): OrderVM {
     cashChange: row.change_to_give != null ? Number(row.change_to_give) : null,
     walletPart: row.yape_amount != null ? Number(row.yape_amount) : null,
     cashPart: row.cash_amount != null ? Number(row.cash_amount) : null,
+    requiresValidation: Boolean(row.requires_validation),
+    validationReasonCode: row.validation_reason_code,
+    riskFlags: row.risk_flags ?? {},
     extensionUsed: extCount > 0,
     extensionMin: extCount > 0 ? extCount * 10 : null,
     proofStatus: row.payment_proof_status,

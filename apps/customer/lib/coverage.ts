@@ -8,11 +8,29 @@ export interface Coverage {
   radiusKm: number
 }
 
+export interface LocationValidation {
+  centerLat: number
+  centerLng: number
+  normalRadiusKm: number
+  warningRadiusKm: number
+  maxAccuracyM: number
+  timeoutMs: number
+}
+
 // app_settings.coverage is anon-readable (RLS as_public_read). Fallback mirrors the
 // seed (0006_seed_app_settings.sql) so the map still renders if the fetch fails.
 const FALLBACK: Coverage = { centerLat: -9.1547, centerLng: -78.5042, radiusKm: 3 }
+const LOCATION_FALLBACK: LocationValidation = {
+  centerLat: -9.1547,
+  centerLng: -78.5042,
+  normalRadiusKm: 10,
+  warningRadiusKm: 30,
+  maxAccuracyM: 500,
+  timeoutMs: 15_000,
+}
 
 let cached: Promise<Coverage> | null = null
+let cachedLocation: Promise<LocationValidation> | null = null
 
 async function fetchCoverage(): Promise<Coverage> {
   try {
@@ -40,6 +58,42 @@ async function fetchCoverage(): Promise<Coverage> {
 export function getCoverage(): Promise<Coverage> {
   if (!cached) cached = fetchCoverage()
   return cached
+}
+
+async function fetchLocationValidation(): Promise<LocationValidation> {
+  try {
+    const { data } = await getSupabaseBrowser()
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'location_validation')
+      .maybeSingle()
+    const v = data?.value as Partial<LocationValidation> | null
+    if (
+      v &&
+      typeof v.centerLat === 'number' &&
+      typeof v.centerLng === 'number' &&
+      typeof v.normalRadiusKm === 'number' &&
+      typeof v.warningRadiusKm === 'number'
+    ) {
+      return {
+        centerLat: v.centerLat,
+        centerLng: v.centerLng,
+        normalRadiusKm: v.normalRadiusKm,
+        warningRadiusKm: v.warningRadiusKm,
+        maxAccuracyM:
+          typeof v.maxAccuracyM === 'number' ? v.maxAccuracyM : LOCATION_FALLBACK.maxAccuracyM,
+        timeoutMs: typeof v.timeoutMs === 'number' ? v.timeoutMs : LOCATION_FALLBACK.timeoutMs,
+      }
+    }
+    return LOCATION_FALLBACK
+  } catch {
+    return LOCATION_FALLBACK
+  }
+}
+
+export function getLocationValidation(): Promise<LocationValidation> {
+  if (!cachedLocation) cachedLocation = fetchLocationValidation()
+  return cachedLocation
 }
 
 /** Distancia de círculo máximo en km entre dos puntos lat/lng (haversine). */

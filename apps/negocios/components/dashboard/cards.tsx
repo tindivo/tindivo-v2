@@ -14,6 +14,38 @@ const COOKING_STATE_STYLE: Record<string, { border: string; borderW: string; bg:
   waiting: { border: '#4ADE80', borderW: '2px', bg: 'rgba(22,163,74,0.025)' },
 }
 
+const RISK_REASON_LABEL: Record<string, string> = {
+  gps_warning_zone: 'Validar · zona ampliada',
+  same_phone_burst: 'Validar · varios pedidos',
+  nearby_address_burst: 'Validar · direcciones cercanas',
+  new_phone_high_ticket_burst: 'Validar · patrón inusual',
+  order_spike: 'Validar · pico de pedidos',
+  standard_validation_rule: 'Validar antes de cocinar',
+}
+
+function RiskBadge({ order }: { order: OrderVM }) {
+  if (!order.requiresValidation) return null
+  return (
+    <div
+      style={{
+        marginTop: 7,
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 5,
+        borderRadius: 999,
+        background: '#FFF7ED',
+        color: '#C2410C',
+        padding: '4px 8px',
+        fontSize: 11,
+        fontWeight: 700,
+      }}
+    >
+      <MS name="shield" size={13} filled />
+      {RISK_REASON_LABEL[order.validationReasonCode ?? ''] ?? 'Validar antes de cocinar'}
+    </div>
+  )
+}
+
 // ── Status line dentro de "En cocina" ─────────────────────────────────────────
 export function CookingStatusLine({ order }: { order: OrderVM }) {
   const s = order.state
@@ -288,6 +320,7 @@ export function NuevoCard({ order, onOpen, compact = false }: CardProps) {
       </div>
 
       <IdAddress order={order} />
+      <RiskBadge order={order} />
     </div>
   )
 }
