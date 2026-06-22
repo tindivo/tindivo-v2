@@ -77,7 +77,10 @@ export function MapPicker({
     <div>
       <div
         className="relative overflow-hidden rounded-2xl"
-        style={{ height: heightPx, border: '1px solid rgba(26,22,20,0.08)' }}
+        // `isolation: isolate` crea un stacking context propio: confina los z-index
+        // internos de Leaflet (panes/controles hasta ~1000) para que no se pinten por
+        // encima de modales/bottom-sheets (que están en z-index menor en el contexto raíz).
+        style={{ height: heightPx, border: '1px solid rgba(26,22,20,0.08)', isolation: 'isolate' }}
       >
         {pos ? (
           <MapInner position={pos} onChange={onChange} polygon={polygon} circle={circle} />

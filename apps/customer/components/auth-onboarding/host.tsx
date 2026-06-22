@@ -13,9 +13,15 @@ import { getProfileStatus } from './persistence'
 export async function resumeOnboardingIfPending(): Promise<boolean> {
   const resume = readOnboardingResume()
   if (!resume) return false
-  const { data } = await getSupabaseBrowser().auth.getSession()
-  const user = data.session?.user
-  if (!user) return false
+  // getUser() valida contra el servidor: una sesión obsoleta de un usuario borrado
+  // no debe reabrir el onboarding (escribiría con un user_id inexistente → FK).
+  const supabase = getSupabaseBrowser()
+  const { data } = await supabase.auth.getUser()
+  const user = data.user
+  if (!user) {
+    await supabase.auth.signOut().catch(() => {})
+    return false
+  }
 
   const status = await getProfileStatus(user.id)
   const meta = user.user_metadata as { full_name?: string; name?: string } | undefined

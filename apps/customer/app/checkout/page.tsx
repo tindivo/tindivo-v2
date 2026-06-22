@@ -10,6 +10,8 @@ import {
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { saveAddress } from '@/components/auth-onboarding/persistence'
+import { type LatLng, MapPicker } from '@/components/map-picker'
 import { Icon, ScreenHeader, Segmented } from '@/components/ui'
 import { api } from '@/lib/api'
 import { useCart } from '@/lib/cart'
@@ -91,6 +93,9 @@ export default function CheckoutPage() {
   const [addresses, setAddresses] = useState<Address[]>([])
   const [addressId, setAddressId] = useState<string | null>(null)
   const [manualRef, setManualRef] = useState('')
+  const [manualCoords, setManualCoords] = useState<LatLng | null>(null)
+  const [manualInside, setManualInside] = useState(true)
+  const [userId, setUserId] = useState<string | null>(null)
   const [phone, setPhone] = useState('')
   const [name, setName] = useState('')
   const [note, setNote] = useState('')
@@ -140,8 +145,13 @@ export default function CheckoutPage() {
       return
     }
     const supabase = getSupabaseBrowser()
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (!data.session) {
+    // Validamos contra el servidor con getUser() (no solo getSession() cacheado):
+    // una sesión obsoleta de un usuario borrado pasaría getSession() pero fallaría
+    // aquí, evitando que el onboarding escriba con un user_id inexistente
+    // (FK violation en terms_acceptance/customer_profiles).
+    supabase.auth.getUser().then(async ({ data: userData }) => {
+      const sessionUser = userData.user
+      if (!sessionUser) {
         const ob = useOnboarding.getState()
         if (openedSheetRef.current && !ob.open) {
           // Cerró el sheet sin iniciar sesión: volver al carrito/carta.
@@ -149,13 +159,15 @@ export default function CheckoutPage() {
           return
         }
         if (!ob.open) {
+          // Limpia cualquier sesión local obsoleta antes de pedir login de nuevo.
+          await supabase.auth.signOut().catch(() => {})
           openedSheetRef.current = true
           ob.openSheet({ next: '/checkout', inPlace: true })
         }
         return
       }
       if (useOnboarding.getState().open) return // esperar a que termine el onboarding
-      const meta = data.session.user.user_metadata as { full_name?: string } | undefined
+      const meta = sessionUser.user_metadata as { full_name?: string } | undefined
       const { data: prof } = await supabase
         .from('customer_profiles')
         .select('full_name,phone,contraentrega_blocked,blocked_until')
@@ -170,7 +182,7 @@ export default function CheckoutPage() {
           next: '/checkout',
           inPlace: true,
           fullName: meta?.full_name ?? null,
-          email: data.session.user.email ?? null,
+          email: sessionUser.email ?? null,
         })
         return
       }
@@ -181,6 +193,7 @@ export default function CheckoutPage() {
         return
       }
       setPrepayOnlyByRisk(Boolean(profile?.contraentrega_blocked))
+      setUserId(sessionUser.id)
       setName(profile?.full_name ?? meta?.full_name ?? '')
       if (profile?.phone) setPhone(profile.phone.replace(/\D/g, '').slice(-9))
       const { data: addrs } = await supabase
@@ -215,11 +228,24 @@ export default function CheckoutPage() {
       setError('Ingresa tu nombre')
       return
     }
-    if (deliveryMethod === 'delivery' && reference.trim().length < ADDRESS_REFERENCE_MIN) {
-      setError(
-        `Elige o agrega una dirección con referencia de al menos ${ADDRESS_REFERENCE_MIN} caracteres`,
-      )
-      return
+    if (deliveryMethod === 'delivery') {
+      if (reference.trim().length < ADDRESS_REFERENCE_MIN) {
+        setError(
+          `Elige o agrega una dirección con referencia de al menos ${ADDRESS_REFERENCE_MIN} caracteres`,
+        )
+        return
+      }
+      // Sin dirección guardada: exigir ubicación en el mapa dentro de la zona.
+      if (!selectedAddress) {
+        if (!manualCoords) {
+          setError('Marca tu ubicación en el mapa')
+          return
+        }
+        if (!manualInside) {
+          setError('Esa ubicación está fuera de nuestra zona de reparto en San Jacinto')
+          return
+        }
+      }
     }
     if (!/^9\d{8}$/.test(phone)) {
       setError('Ingresa un celular válido (9 dígitos, empieza con 9)')
@@ -297,6 +323,21 @@ export default function CheckoutPage() {
       setLocating(false)
     }
 
+    // Sin dirección guardada: persistir la ubicación capturada (mapa + referencia)
+    // como "Casa" por defecto para reutilizarla. Best-effort: no bloquea el pedido.
+    if (deliveryMethod === 'delivery' && !selectedAddress && manualCoords && userId) {
+      try {
+        await saveAddress({
+          userId,
+          reference: manualRef,
+          lat: manualCoords.lat,
+          lng: manualCoords.lng,
+        })
+      } catch {
+        // El pedido igual lleva las coordenadas; el guardado es secundario.
+      }
+    }
+
     try {
       const res = await api.post<{ data: OrderResult }>(
         '/customer/orders',
@@ -311,12 +352,16 @@ export default function CheckoutPage() {
           deliveryAddress: selectedAddress?.line ?? undefined,
           deliveryReference: deliveryMethod === 'delivery' ? reference : undefined,
           coordinates:
-            deliveryMethod === 'delivery' && selectedAddress?.coordinates_lat != null
-              ? {
-                  lat: Number(selectedAddress.coordinates_lat),
-                  lng: Number(selectedAddress.coordinates_lng),
-                }
-              : undefined,
+            deliveryMethod !== 'delivery'
+              ? undefined
+              : selectedAddress?.coordinates_lat != null
+                ? {
+                    lat: Number(selectedAddress.coordinates_lat),
+                    lng: Number(selectedAddress.coordinates_lng),
+                  }
+                : manualCoords
+                  ? { lat: manualCoords.lat, lng: manualCoords.lng }
+                  : undefined,
           gpsValidation: gpsPayload,
           items: cart.lines.map((l) => ({
             menuItemId: l.itemId,
@@ -453,36 +498,47 @@ export default function CheckoutPage() {
                     )
                   })}
                   {addresses.length === 0 && (
-                    <label className="block">
-                      <span className="t-field-label">
-                        Referencia de entrega (mín. {ADDRESS_REFERENCE_MIN})
-                      </span>
-                      <textarea
-                        className="t-field"
-                        placeholder="Casa azul de dos pisos, frente al parque, portón negro"
-                        value={manualRef}
-                        maxLength={ADDRESS_REFERENCE_MAX}
-                        onChange={(e) => setManualRef(e.target.value)}
-                      />
-                      <div
-                        className="mt-1.5 flex justify-between gap-3 text-[11px]"
-                        style={{
-                          color:
-                            manualRef.trim().length >= ADDRESS_REFERENCE_MIN
-                              ? 'rgba(26,22,20,0.5)'
-                              : '#C2410C',
-                        }}
-                      >
-                        <span>
-                          {manualRef.trim().length >= ADDRESS_REFERENCE_MIN
-                            ? 'Referencia suficiente'
-                            : `Faltan ${ADDRESS_REFERENCE_MIN - manualRef.trim().length}`}
-                        </span>
-                        <span className="tabular-nums">
-                          {manualRef.length}/{ADDRESS_REFERENCE_MAX}
-                        </span>
+                    <div className="flex flex-col gap-3">
+                      <div>
+                        <span className="t-field-label">Tu ubicación en el mapa</span>
+                        <MapPicker
+                          value={manualCoords}
+                          onChange={setManualCoords}
+                          onValidityChange={setManualInside}
+                          heightPx={170}
+                        />
                       </div>
-                    </label>
+                      <label className="block">
+                        <span className="t-field-label">
+                          Referencia de entrega (mín. {ADDRESS_REFERENCE_MIN})
+                        </span>
+                        <textarea
+                          className="t-field"
+                          placeholder="Casa azul de dos pisos, frente al parque, portón negro"
+                          value={manualRef}
+                          maxLength={ADDRESS_REFERENCE_MAX}
+                          onChange={(e) => setManualRef(e.target.value)}
+                        />
+                        <div
+                          className="mt-1.5 flex justify-between gap-3 text-[11px]"
+                          style={{
+                            color:
+                              manualRef.trim().length >= ADDRESS_REFERENCE_MIN
+                                ? 'rgba(26,22,20,0.5)'
+                                : '#C2410C',
+                          }}
+                        >
+                          <span>
+                            {manualRef.trim().length >= ADDRESS_REFERENCE_MIN
+                              ? 'Referencia suficiente'
+                              : `Faltan ${ADDRESS_REFERENCE_MIN - manualRef.trim().length}`}
+                          </span>
+                          <span className="tabular-nums">
+                            {manualRef.length}/{ADDRESS_REFERENCE_MAX}
+                          </span>
+                        </div>
+                      </label>
+                    </div>
                   )}
                 </div>
                 <p
@@ -738,10 +794,10 @@ export default function CheckoutPage() {
   )
 }
 
-/** Detalle colapsable del carrito: líneas con adicionales, nota, cantidad y eliminar. */
+/** Detalle del carrito: thumbnail por producto, personalización agrupada, nota, cantidad y eliminar. */
 function OrderDetail() {
   const cart = useCart()
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(true)
   const count = cart.count()
   if (count === 0) return null
 
@@ -765,6 +821,7 @@ function OrderDetail() {
         <span className="flex-1">
           <span className="block font-semibold text-[15px]">Detalle del pedido</span>
           <span className="block text-[12px]" style={{ color: 'rgba(26,22,20,0.55)' }}>
+            {cart.businessName ? `${cart.businessName} · ` : ''}
             {count} {count === 1 ? 'producto' : 'productos'}
           </span>
         </span>
@@ -786,67 +843,94 @@ function OrderDetail() {
           {cart.lines.map((line, i) => (
             <div
               key={line.key}
-              className="pt-3.5"
+              className="flex items-start gap-3 pt-3.5"
               style={{
                 borderTop: i > 0 ? '1px solid rgba(26,22,20,0.05)' : 'none',
                 marginTop: i > 0 ? 14 : 0,
               }}
             >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <div className="font-medium text-[14px]">
+              {/* Placeholder de color por `hue` (mismo estándar visual que el modal de producto). */}
+              <span
+                aria-hidden
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl font-bold text-[18px]"
+                style={{
+                  background: `oklch(0.92 0.04 ${line.hue})`,
+                  color: `oklch(0.42 0.12 ${line.hue})`,
+                }}
+              >
+                {line.name.charAt(0).toUpperCase()}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="font-semibold text-[14px] leading-snug">
                     <span className="tabular-nums">{line.quantity}×</span> {line.name}
                   </div>
-                  {line.modifiers.map((m) => (
-                    <div
-                      key={`${line.key}-${m.optionId}`}
-                      className="mt-0.5 flex justify-between text-[12px]"
-                      style={{ color: 'rgba(26,22,20,0.55)' }}
-                    >
-                      <span>{m.optionName}</span>
-                      {m.price > 0 && <span className="tabular-nums">+{soles(m.price)}</span>}
-                    </div>
-                  ))}
-                  {line.note && (
-                    <div
-                      className="mt-0.5 text-[12px] italic"
-                      style={{ color: 'rgba(26,22,20,0.45)' }}
-                    >
-                      “{line.note}”
-                    </div>
-                  )}
+                  <div className="shrink-0 font-semibold text-[14px] tabular-nums">
+                    {soles(line.unitPrice * line.quantity)}
+                  </div>
                 </div>
-                <div className="shrink-0 font-semibold text-[14px] tabular-nums">
-                  {soles(line.unitPrice * line.quantity)}
-                </div>
-              </div>
-              <div className="mt-2.5 flex items-center justify-between">
-                <div className="t-qty" style={{ transform: 'scale(0.9)', transformOrigin: 'left' }}>
+
+                {line.modifiers.length > 0 && (
+                  <div className="mt-1 flex flex-col gap-0.5">
+                    {line.modifiers.map((m) => (
+                      <div
+                        key={`${line.key}-${m.optionId}`}
+                        className="flex justify-between gap-2 text-[12px]"
+                        style={{ color: 'rgba(26,22,20,0.6)' }}
+                      >
+                        <span className="min-w-0">
+                          <span style={{ color: 'rgba(26,22,20,0.4)' }}>{m.groupName}: </span>
+                          {m.optionName}
+                        </span>
+                        {m.price > 0 && (
+                          <span className="tabular-nums shrink-0">+{soles(m.price)}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {line.note && (
+                  <div
+                    className="mt-1.5 rounded-lg px-2.5 py-1.5 text-[12px]"
+                    style={{ background: 'rgba(249,115,22,0.07)', color: '#9A3412' }}
+                  >
+                    <span className="font-semibold">Nota: </span>
+                    {line.note}
+                  </div>
+                )}
+
+                <div className="mt-2.5 flex items-center justify-between">
+                  <div
+                    className="t-qty"
+                    style={{ transform: 'scale(0.9)', transformOrigin: 'left' }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => cart.setQty(line.key, line.quantity - 1)}
+                      disabled={line.quantity <= 1}
+                      aria-label="Menos"
+                    >
+                      <Icon.Minus />
+                    </button>
+                    <span className="val">{line.quantity}</span>
+                    <button
+                      type="button"
+                      onClick={() => cart.setQty(line.key, line.quantity + 1)}
+                      aria-label="Más"
+                    >
+                      <Icon.Plus />
+                    </button>
+                  </div>
                   <button
                     type="button"
-                    onClick={() => cart.setQty(line.key, line.quantity - 1)}
-                    disabled={line.quantity <= 1}
-                    aria-label="Menos"
+                    onClick={() => cart.remove(line.key)}
+                    className="rounded-lg px-2.5 py-1.5 font-medium text-[12px]"
+                    style={{ background: 'rgba(220,38,38,0.06)', color: '#DC2626' }}
                   >
-                    <Icon.Minus />
-                  </button>
-                  <span className="val">{line.quantity}</span>
-                  <button
-                    type="button"
-                    onClick={() => cart.setQty(line.key, line.quantity + 1)}
-                    aria-label="Más"
-                  >
-                    <Icon.Plus />
+                    Eliminar
                   </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => cart.remove(line.key)}
-                  className="rounded-lg px-2.5 py-1.5 font-medium text-[12px]"
-                  style={{ background: 'rgba(220,38,38,0.06)', color: '#DC2626' }}
-                >
-                  Eliminar
-                </button>
               </div>
             </div>
           ))}

@@ -35,6 +35,11 @@ async function acceptTerms(userId: string) {
   const { error } = await supabase
     .from('terms_acceptance')
     .insert({ user_id: userId, version: TERMS_VERSION })
+  // 23503 = FK violation: el user_id no existe en public.users (sesión obsoleta de un
+  // usuario borrado). Mensaje claro en vez del error crudo de Postgres.
+  if (error && error.code === '23503') {
+    throw new Error('Tu sesión ya no es válida. Cierra sesión e inicia de nuevo.')
+  }
   if (error && error.code !== '23505') throw new Error(error.message)
 }
 
