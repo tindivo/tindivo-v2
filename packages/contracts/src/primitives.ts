@@ -62,13 +62,22 @@ export const CoordinatesSchema = z.object({
 export type Coordinates = z.infer<typeof CoordinatesSchema>
 
 /**
- * Referencia de dirección. Mínimo 20 chars (FASE-1 §9) / máximo 140.
- * El mínimo de 20 obliga a una referencia útil para el motorizado en un pueblo
- * sin nomenclatura de calles consistente.
+ * Límites de la referencia de dirección (fuente única; consumida por UI y backend).
+ * Mínimo 15 chars: en San Jacinto no hay nomenclatura de calles consistente, así que la
+ * referencia debe describir la casa lo suficiente para que el motorizado la ubique (y
+ * ancla los strikes antifraude). 15 equilibra utilidad con la fricción del formulario.
+ * (DECISIONS.md §13 #12 — bajado de 20 a 15 el 2026-06-22.)
  */
+export const ADDRESS_REFERENCE_MIN = 15
+export const ADDRESS_REFERENCE_MAX = 140
+
 export const AddressReferenceSchema = z
   .string()
   .trim()
-  .min(20, { message: 'La referencia debe tener al menos 20 caracteres' })
-  .max(140, { message: 'La referencia no puede superar 140 caracteres' })
+  .min(ADDRESS_REFERENCE_MIN, {
+    message: `La referencia debe tener al menos ${ADDRESS_REFERENCE_MIN} caracteres`,
+  })
+  .max(ADDRESS_REFERENCE_MAX, {
+    message: `La referencia no puede superar ${ADDRESS_REFERENCE_MAX} caracteres`,
+  })
 export type AddressReference = z.infer<typeof AddressReferenceSchema>

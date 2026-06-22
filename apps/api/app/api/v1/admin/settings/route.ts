@@ -38,6 +38,14 @@ const EDITABLE: Record<string, z.ZodTypeAny> = {
     startHHMM: hhmm,
     endHHMM: hhmm,
   }),
+  // Polígono de cobertura (San Jacinto). El admin lo dibuja con Leaflet-draw; el
+  // cliente lo lee para restringir la selección de dirección (point-in-polygon).
+  coverage_polygon: z.object({
+    polygon: z
+      .array(z.object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) }))
+      .min(3)
+      .max(200),
+  }),
 }
 
 const PatchSchema = z.object({ key: z.string(), value: z.unknown() })

@@ -169,10 +169,19 @@ export function AuthOnboardingSheet() {
                       ob.setPath('email')
                       ob.goTo('phone')
                     }}
+                    onGoToLogin={(email) => {
+                      ob.setIdentity({ email })
+                      ob.goTo('login')
+                    }}
                   />
                 )}
                 {panel === 'login' && (
-                  <LoginStep active={active} onDone={finish} onSignup={() => ob.goTo('method')} />
+                  <LoginStep
+                    active={active}
+                    initialEmail={ob.email}
+                    onDone={finish}
+                    onSignup={() => ob.goTo('method')}
+                  />
                 )}
                 {panel === 'google-name' && (
                   <GoogleNameStep

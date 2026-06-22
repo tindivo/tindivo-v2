@@ -25,6 +25,9 @@ supabase/.branches/
 supabase/.temp/
 supabase/.env
 
+# MCP config (contains a Supabase access token — never commit)
+.mcp.json
+
 # Logs
 *.log
 npm-debug.log*

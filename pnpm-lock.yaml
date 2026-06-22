@@ -21,6 +21,9 @@ catalogs:
     '@types/leaflet':
       specifier: ^1.9.20
       version: 1.9.21
+    '@types/leaflet-draw':
+      specifier: ^1.0.13
+      version: 1.0.13
     '@types/node':
       specifier: ^24.0.0
       version: 24.12.4
@@ -45,6 +48,9 @@ catalogs:
     leaflet:
       specifier: ^1.9.4
       version: 1.9.4
+    leaflet-draw:
+      specifier: ^1.0.4
+      version: 1.0.4
     next:
       specifier: ^16.2.6
       version: 16.2.6
@@ -113,6 +119,12 @@ importers:
       '@tindivo/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      leaflet:
+        specifier: 'catalog:'
+        version: 1.9.4
+      leaflet-draw:
+        specifier: 'catalog:'
+        version: 1.0.4
       next:
         specifier: 'catalog:'
         version: 16.2.6(@opentelemetry/api@1.9.1)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -122,6 +134,9 @@ importers:
       react-dom:
         specifier: 'catalog:'
         version: 19.2.6(react@19.2.6)
+      react-leaflet:
+        specifier: 'catalog:'
+        version: 5.0.0(leaflet@1.9.4)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       recharts:
         specifier: ^3.8.1
         version: 3.8.1(@types/react@19.2.15)(react-dom@19.2.6(react@19.2.6))(react-is@19.2.7)(react@19.2.6)(redux@5.0.1)
@@ -132,6 +147,12 @@ importers:
       '@tindivo/tsconfig':
         specifier: workspace:*
         version: link:../../packages/tsconfig
+      '@types/leaflet':
+        specifier: 'catalog:'
+        version: 1.9.21
+      '@types/leaflet-draw':
+        specifier: 'catalog:'
+        version: 1.0.13
       '@types/node':
         specifier: 'catalog:'
         version: 24.12.4
@@ -1596,6 +1617,9 @@ packages:
   '@types/geojson@7946.0.16':
     resolution: {integrity: sha512-6C8nqWur3j98U6+lXDfTUWIfgvZU+EumvpHKcYjujKH7woYyLj2sUmff0tRhrqM7BohUw7Pz3ZB1jj2gW9Fvmg==}
 
+  '@types/leaflet-draw@1.0.13':
+    resolution: {integrity: sha512-YU82kilOaU+wPNbqKCCDfHH3hqepN6XilrBwG/mSeZ/z4ewumaRCOah44s3FMxSu/Aa0SVa3PPJvhIZDUA09mw==}
+
   '@types/leaflet@1.9.21':
     resolution: {integrity: sha512-TbAd9DaPGSnzp6QvtYngntMZgcRk+igFELwR2N99XZn7RXUdKgsXMR+28bUO0rPsWp8MIu/f47luLIQuSLYv/w==}
 
@@ -1996,6 +2020,9 @@ packages:
 
   json-stringify-safe@5.0.1:
     resolution: {integrity: sha512-ZClg6AaYvamvYEE82d3Iyd3vSSIjQ+odgjaTzRuO3s7toCdFKczob2i0zCh7JE8kWn17yvAWhUVxvqGwUalsRA==}
+
+  leaflet-draw@1.0.4:
+    resolution: {integrity: sha512-rsQ6saQO5ST5Aj6XRFylr5zvarWgzWnrg46zQ1MEOEIHsppdC/8hnN8qMoFvACsPvTioAuysya/TVtog15tyAQ==}
 
   leaflet@1.9.4:
     resolution: {integrity: sha512-nxS1ynzJOmOlHp+iL3FyWqK89GtNL8U8rvlMOsQdTTssxZwCXh8N2NB3GDQOL+YR3XnWyZAxwQixURb+FA74PA==}
@@ -3743,6 +3770,10 @@ snapshots:
 
   '@types/geojson@7946.0.16': {}
 
+  '@types/leaflet-draw@1.0.13':
+    dependencies:
+      '@types/leaflet': 1.9.21
+
   '@types/leaflet@1.9.21':
     dependencies:
       '@types/geojson': 7946.0.16
@@ -4108,6 +4139,8 @@ snapshots:
       bignumber.js: 9.3.1
 
   json-stringify-safe@5.0.1: {}
+
+  leaflet-draw@1.0.4: {}
 
   leaflet@1.9.4: {}
 

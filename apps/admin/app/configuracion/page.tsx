@@ -4,6 +4,7 @@ import type { ApiEnvelope } from '@tindivo/api-client'
 import { Button } from '@tindivo/ui'
 import { useCallback, useEffect, useState } from 'react'
 import { Field, SectionHeader } from '@/components/admin'
+import { CoveragePolygonEditor, type LatLng } from '@/components/coverage-polygon-editor'
 import { api, errMsg } from '@/lib/api'
 import { TIMER_FIELDS, WEEKDAYS } from '@/lib/labels'
 
@@ -194,6 +195,35 @@ function SupportCard({ value, save }: { value: Cfg; save: SaveFn }) {
   )
 }
 
+function CoverageCard({ polygon, coverage, save }: { polygon: Cfg; coverage: Cfg; save: SaveFn }) {
+  const initial = (polygon as { polygon?: LatLng[] } | null)?.polygon ?? null
+  const cov = (coverage ?? {}) as { centerLat?: number; centerLng?: number }
+  const center: LatLng = { lat: cov.centerLat ?? -9.1547, lng: cov.centerLng ?? -78.5042 }
+  const [ring, setRing] = useState<LatLng[] | null>(initial)
+  const count = ring?.length ?? 0
+  const canSave = count >= 3
+  return (
+    <div className="t-card">
+      <p className="t-display mb-1 text-[15px] text-ink">Zona de cobertura (San Jacinto)</p>
+      <p className="mb-3 text-[13px] text-ink-muted">
+        Dibuja el polígono con la herramienta de la esquina del mapa. El cliente solo podrá elegir
+        su dirección dentro de esta zona; usa “editar” para mover los vértices.
+      </p>
+      <CoveragePolygonEditor value={initial} center={center} onChange={setRing} heightPx={340} />
+      <div className="mt-2 flex items-center justify-between">
+        <span className="text-[12px] text-ink-muted">{count} vértices (mínimo 3)</span>
+        <Button
+          size="sm"
+          disabled={!canSave}
+          onClick={() => canSave && ring && save('coverage_polygon', { polygon: ring })}
+        >
+          Guardar zona
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 export default function ConfiguracionPage() {
   const [settings, setSettings] = useState<Record<string, unknown> | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -248,6 +278,11 @@ export default function ConfiguracionPage() {
           />
           <TimersCard value={settings.timers as Cfg} save={save} />
           <SupportCard value={settings.support_whatsapp as Cfg} save={save} />
+          <CoverageCard
+            polygon={settings.coverage_polygon as Cfg}
+            coverage={settings.coverage as Cfg}
+            save={save}
+          />
         </div>
       )}
     </div>

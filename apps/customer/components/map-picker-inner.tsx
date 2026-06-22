@@ -1,7 +1,16 @@
 'use client'
 
 import L from 'leaflet'
-import { MapContainer, Marker, TileLayer, useMapEvents } from 'react-leaflet'
+import { useEffect, useRef } from 'react'
+import {
+  Circle,
+  MapContainer,
+  Marker,
+  Polygon,
+  TileLayer,
+  useMap,
+  useMapEvents,
+} from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 
 export interface LatLng {
@@ -20,6 +29,13 @@ const pinIcon = L.divIcon({
   iconAnchor: [17, 42],
 })
 
+const ZONE_STYLE = {
+  color: '#F97316',
+  weight: 2,
+  fillColor: '#F97316',
+  fillOpacity: 0.12,
+} as const
+
 function TapToMove({ onChange }: { onChange: (c: LatLng) => void }) {
   useMapEvents({
     click(e) {
@@ -29,18 +45,50 @@ function TapToMove({ onChange }: { onChange: (c: LatLng) => void }) {
   return null
 }
 
-/** Mapa Leaflet/OSM con pin arrastrable. Cargar solo vía next/dynamic ssr:false. */
+/** Encuadra la vista a la zona de cobertura (una sola vez), para mostrar todo San Jacinto. */
+function FitZone({
+  polygon,
+  circle,
+}: {
+  polygon: LatLng[] | null
+  circle: { center: LatLng; radiusKm: number } | null
+}) {
+  const map = useMap()
+  const fitted = useRef(false)
+  useEffect(() => {
+    if (fitted.current) return
+    if (polygon && polygon.length >= 3) {
+      map.fitBounds(L.latLngBounds(polygon.map((p) => [p.lat, p.lng] as [number, number])), {
+        padding: [18, 18],
+      })
+      fitted.current = true
+    } else if (circle) {
+      map.fitBounds(
+        L.latLng(circle.center.lat, circle.center.lng).toBounds(circle.radiusKm * 2000),
+        { padding: [18, 18] },
+      )
+      fitted.current = true
+    }
+  }, [map, polygon, circle])
+  return null
+}
+
+/** Mapa Leaflet/OSM con pin arrastrable + zona de cobertura. Cargar solo vía next/dynamic ssr:false. */
 export default function MapPickerInner({
   position,
   onChange,
+  polygon,
+  circle,
 }: {
   position: LatLng
   onChange: (c: LatLng) => void
+  polygon: LatLng[] | null
+  circle: { center: LatLng; radiusKm: number } | null
 }) {
   return (
     <MapContainer
       center={[position.lat, position.lng]}
-      zoom={16}
+      zoom={15}
       zoomControl={false}
       style={{ width: '100%', height: '100%' }}
     >
@@ -48,6 +96,19 @@ export default function MapPickerInner({
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
       />
+      {polygon ? (
+        <Polygon
+          positions={polygon.map((p) => [p.lat, p.lng] as [number, number])}
+          pathOptions={ZONE_STYLE}
+        />
+      ) : circle ? (
+        <Circle
+          center={[circle.center.lat, circle.center.lng]}
+          radius={circle.radiusKm * 1000}
+          pathOptions={ZONE_STYLE}
+        />
+      ) : null}
+      <FitZone polygon={polygon} circle={circle} />
       <TapToMove onChange={onChange} />
       <Marker
         position={[position.lat, position.lng]}

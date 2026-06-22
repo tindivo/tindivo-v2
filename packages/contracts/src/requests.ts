@@ -1,6 +1,12 @@
 import { z } from 'zod'
 import { DeliveryMethodSchema, PaymentIntentSchema } from './enums'
-import { AddressReferenceSchema, CoordinatesSchema, PhonePeSchema, UuidSchema } from './primitives'
+import {
+  ADDRESS_REFERENCE_MIN,
+  AddressReferenceSchema,
+  CoordinatesSchema,
+  PhonePeSchema,
+  UuidSchema,
+} from './primitives'
 
 /** Línea del carrito al crear un pedido. */
 export const CreateOrderItemSchema = z.object({
@@ -48,8 +54,12 @@ export const CreateOrderRequestSchema = z
     cashPayingWith: z.number().positive().max(1000).optional(),
     items: z.array(CreateOrderItemSchema).min(1).max(50),
   })
-  .refine((d) => d.deliveryMethod === 'pickup' || (d.deliveryReference?.length ?? 0) >= 20, {
-    message: 'La referencia de dirección es obligatoria para delivery (mínimo 20 caracteres)',
-    path: ['deliveryReference'],
-  })
+  .refine(
+    (d) =>
+      d.deliveryMethod === 'pickup' || (d.deliveryReference?.length ?? 0) >= ADDRESS_REFERENCE_MIN,
+    {
+      message: `La referencia de dirección es obligatoria para delivery (mínimo ${ADDRESS_REFERENCE_MIN} caracteres)`,
+      path: ['deliveryReference'],
+    },
+  )
 export type CreateOrderRequest = z.infer<typeof CreateOrderRequestSchema>

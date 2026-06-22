@@ -1,22 +1,29 @@
 'use client'
 
-import { type FormEvent, useState } from 'react'
+import { type FormEvent, useEffect, useState } from 'react'
 import { signInWithEmail } from '../persistence'
 
 /** Inicio de sesión con correo y contraseña (panel real; en el demo era stub). */
 export function LoginStep({
   active,
+  initialEmail,
   onDone,
   onSignup,
 }: {
   active: boolean
+  initialEmail?: string | null
   onDone: () => void
   onSignup: () => void
 }) {
-  const [email, setEmail] = useState('')
+  const [email, setEmail] = useState(initialEmail ?? '')
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Precarga el correo cuando se llega aquí desde "correo duplicado" en el registro.
+  useEffect(() => {
+    if (initialEmail) setEmail(initialEmail)
+  }, [initialEmail])
 
   const valid = email.trim().length > 3 && password.length >= 6
 

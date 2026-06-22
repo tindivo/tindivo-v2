@@ -1,5 +1,6 @@
 'use client'
 
+import { ADDRESS_REFERENCE_MAX, ADDRESS_REFERENCE_MIN } from '@tindivo/contracts'
 import { type FormEvent, useState } from 'react'
 import { type LatLng, MapPicker } from '@/components/map-picker'
 import { saveAddress } from '../persistence'
@@ -17,11 +18,14 @@ export function AddressStep({
   onDone: () => void
 }) {
   const [coords, setCoords] = useState<LatLng | null>(null)
+  const [insideZone, setInsideZone] = useState(true)
   const [reference, setReference] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const valid = reference.trim().length >= 20
+  const refLen = reference.trim().length
+  const refOk = refLen >= ADDRESS_REFERENCE_MIN
+  const valid = refOk && insideZone
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
@@ -57,7 +61,14 @@ export function AddressStep({
 
         <div className="mt-4">
           {/* El mapa solo se monta con el panel activo (Leaflet mide el contenedor). */}
-          {active && <MapPicker value={coords} onChange={setCoords} heightPx={170} />}
+          {active && (
+            <MapPicker
+              value={coords}
+              onChange={setCoords}
+              onValidityChange={setInsideZone}
+              heightPx={170}
+            />
+          )}
         </div>
 
         <label className="mt-4 block">
@@ -68,17 +79,20 @@ export function AddressStep({
             className="t-field"
             placeholder="Ej: Frente a la bodega de don Carlos, puerta azul"
             value={reference}
-            maxLength={140}
+            maxLength={ADDRESS_REFERENCE_MAX}
             onChange={(e) => setReference(e.target.value)}
             tabIndex={active ? 0 : -1}
           />
         </label>
-        <div
-          className="mt-1.5 flex justify-between text-[12px]"
-          style={{ color: 'rgba(26,22,20,0.5)' }}
-        >
-          <span>Mientras más detalle, menos llamadas del motorizado.</span>
-          <span className="tabular-nums">{reference.length}/140</span>
+        <div className="mt-1.5 flex justify-between gap-3 text-[12px]">
+          <span style={{ color: refOk ? 'rgba(26,22,20,0.5)' : '#C2410C' }}>
+            {refOk
+              ? 'Mientras más detalle, menos llamadas del motorizado.'
+              : `Mínimo ${ADDRESS_REFERENCE_MIN} caracteres · faltan ${ADDRESS_REFERENCE_MIN - refLen}`}
+          </span>
+          <span className="tabular-nums" style={{ color: 'rgba(26,22,20,0.5)' }}>
+            {reference.length}/{ADDRESS_REFERENCE_MAX}
+          </span>
         </div>
 
         {error && <p className="mt-3 text-[13px] text-danger">{error}</p>}

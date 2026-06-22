@@ -1,7 +1,12 @@
 'use client'
 
 import { type ApiEnvelope, ApiError } from '@tindivo/api-client'
-import type { DeliveryMethod, PaymentIntent } from '@tindivo/contracts'
+import {
+  ADDRESS_REFERENCE_MAX,
+  ADDRESS_REFERENCE_MIN,
+  type DeliveryMethod,
+  type PaymentIntent,
+} from '@tindivo/contracts'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -210,8 +215,10 @@ export default function CheckoutPage() {
       setError('Ingresa tu nombre')
       return
     }
-    if (deliveryMethod === 'delivery' && reference.trim().length < 20) {
-      setError('Elige o agrega una dirección con referencia de al menos 20 caracteres')
+    if (deliveryMethod === 'delivery' && reference.trim().length < ADDRESS_REFERENCE_MIN) {
+      setError(
+        `Elige o agrega una dirección con referencia de al menos ${ADDRESS_REFERENCE_MIN} caracteres`,
+      )
       return
     }
     if (!/^9\d{8}$/.test(phone)) {
@@ -447,13 +454,34 @@ export default function CheckoutPage() {
                   })}
                   {addresses.length === 0 && (
                     <label className="block">
-                      <span className="t-field-label">Referencia de entrega (mín. 20)</span>
+                      <span className="t-field-label">
+                        Referencia de entrega (mín. {ADDRESS_REFERENCE_MIN})
+                      </span>
                       <textarea
                         className="t-field"
                         placeholder="Casa azul de dos pisos, frente al parque, portón negro"
                         value={manualRef}
+                        maxLength={ADDRESS_REFERENCE_MAX}
                         onChange={(e) => setManualRef(e.target.value)}
                       />
+                      <div
+                        className="mt-1.5 flex justify-between gap-3 text-[11px]"
+                        style={{
+                          color:
+                            manualRef.trim().length >= ADDRESS_REFERENCE_MIN
+                              ? 'rgba(26,22,20,0.5)'
+                              : '#C2410C',
+                        }}
+                      >
+                        <span>
+                          {manualRef.trim().length >= ADDRESS_REFERENCE_MIN
+                            ? 'Referencia suficiente'
+                            : `Faltan ${ADDRESS_REFERENCE_MIN - manualRef.trim().length}`}
+                        </span>
+                        <span className="tabular-nums">
+                          {manualRef.length}/{ADDRESS_REFERENCE_MAX}
+                        </span>
+                      </div>
                     </label>
                   )}
                 </div>

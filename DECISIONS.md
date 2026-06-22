@@ -5,7 +5,7 @@
 > este documento difieran, **gana este documento**. Se mantiene vivo: cada
 > decisión nueva o cambio se registra aquí, no en specs paralelos.
 >
-> Última actualización: Fase 1A · 2026-05-29.
+> Última actualización: 2026-06-22 (cobertura → polígono editable, referencia mín 15, Google login activo).
 
 ---
 
@@ -240,8 +240,8 @@ Codificado en `@tindivo/contracts` (`order-status.ts`: `ORDER_TRANSITIONS`, `STA
 | 8 | Comprobante de prepago: subir o no | **Sí sube**; negocio valida (10 min). §7. |
 | 9 | Gate del carrito sin auth | Onboarding diferido: ver carrito sin login; login al checkout. §15. |
 | 10 | Límite de vuelto / pago en pickup | Vuelto en `app_settings`; pickup inactivo. §7/§14. |
-| 11 | Cobertura: radio vs polígono | **Radio 3km** configurable (`app_settings`), centro San Jacinto. |
-| 12 | Referencia de dirección mínima | **Mín 20 / máx 140** (`AddressReferenceSchema`). |
+| 11 | Cobertura: radio vs polígono | **Polígono** (`app_settings.coverage_polygon`), editable por el admin con Leaflet-draw; el cliente bloquea elegir fuera (point-in-polygon). El radio 3km (`coverage`) queda como **fallback**. *(cambiado de "radio 3km" el 2026-06-22)* |
+| 12 | Referencia de dirección mínima | **Mín 15 / máx 140** (`ADDRESS_REFERENCE_MIN`/`ADDRESS_REFERENCE_MAX` en `contracts`); contador en vivo en todos los formularios. *(bajado de 20 el 2026-06-22)* |
 | 13 | Alerta urgente (5 vs 8 min) | No se activa en Fase 1; modelo conservado (>5 urgente, >8 alerta). §10. |
 | 14 | Helpers RLS sin `search_path` | `SET search_path = ''` en todos. §12. |
 | 15 | RLS incompleta | Todas las policies antes de exponer; bloqueante. §12. |
@@ -271,7 +271,8 @@ Codificado en `@tindivo/contracts` (`order-status.ts`: `ORDER_TRANSITIONS`, `STA
 - `order_event_log` + registro de adelantos + auditoría inmutable desde el día 1.
 
 **Modelado pero NO activo (UI no se construye en Fase 1):**
-- Pickup; asignación automática R1-R5 / FCFS; transferencias driver→driver; `occupancy_slots`; cola urgente; liquidación semanal automática; multi-tenant; pasarela de pago; GPS en mapa; login social; app de Soporte.
+- Pickup; asignación automática R1-R5 / FCFS; transferencias driver→driver; `occupancy_slots`; cola urgente; liquidación semanal automática; multi-tenant; pasarela de pago; GPS en mapa; app de Soporte.
+  - **Login social (Google): ACTIVADO el 2026-06-22** (provider habilitado en Supabase + Google Cloud). El correo+contraseña sin verificación sigue disponible.
 - Tablas presentes igualmente: `order_assignment_rejections`, `order_transfer_requests`, `driver_restaurants`, `occupancy_slots` (columna).
 
 ---

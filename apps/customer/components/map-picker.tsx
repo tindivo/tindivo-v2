@@ -1,8 +1,8 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { useEffect, useState } from 'react'
-import { getCoverage } from '@/lib/coverage'
+import { useEffect, useMemo, useState } from 'react'
+import { getCoverage, getCoveragePolygon, haversineKm, pointInPolygon } from '@/lib/coverage'
 import type { LatLng } from './map-picker-inner'
 
 export type { LatLng }
@@ -16,24 +16,35 @@ const MapInner = dynamic(() => import('./map-picker-inner'), {
 })
 
 /**
- * Selector de ubicación con pin arrastrable (Leaflet + OSM).
- * El centro inicial viene de app_settings.coverage (sin hardcode).
+ * Selector de ubicación con pin arrastrable (Leaflet + OSM) y zona de cobertura.
+ * El centro y el polígono vienen de app_settings (sin hardcode). El pin se puede
+ * mover libremente, pero `onValidityChange` informa si quedó dentro de la zona para
+ * que el formulario bloquee "Guardar" (mensaje inline, no se reubica el pin).
  */
 export function MapPicker({
   value,
   onChange,
+  onValidityChange,
   heightPx = 180,
 }: {
   value: LatLng | null
   onChange: (c: LatLng) => void
+  onValidityChange?: (inside: boolean) => void
   heightPx?: number
 }) {
   const [center, setCenter] = useState<LatLng | null>(null)
+  const [polygon, setPolygon] = useState<LatLng[] | null>(null)
+  const [radiusKm, setRadiusKm] = useState(3)
+  const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
     let on = true
-    getCoverage().then((c) => {
-      if (on) setCenter({ lat: c.centerLat, lng: c.centerLng })
+    Promise.all([getCoverage(), getCoveragePolygon()]).then(([cov, poly]) => {
+      if (!on) return
+      setCenter({ lat: cov.centerLat, lng: cov.centerLng })
+      setRadiusKm(cov.radiusKm)
+      setPolygon(poly?.polygon ?? null)
+      setLoaded(true)
     })
     return () => {
       on = false
@@ -48,6 +59,20 @@ export function MapPicker({
 
   const pos = value ?? center
 
+  // Dentro de la zona: polígono si está configurado; si no, círculo de radio (fallback).
+  const inside = useMemo(() => {
+    if (!loaded || !pos) return true
+    if (polygon) return pointInPolygon(pos, polygon)
+    if (center) return haversineKm(pos, center) <= radiusKm
+    return true
+  }, [loaded, pos, polygon, center, radiusKm])
+
+  useEffect(() => {
+    if (loaded && pos) onValidityChange?.(inside)
+  }, [inside, loaded, pos, onValidityChange])
+
+  const circle = polygon ? null : center ? { center, radiusKm } : null
+
   return (
     <div>
       <div
@@ -55,7 +80,7 @@ export function MapPicker({
         style={{ height: heightPx, border: '1px solid rgba(26,22,20,0.08)' }}
       >
         {pos ? (
-          <MapInner position={pos} onChange={onChange} />
+          <MapInner position={pos} onChange={onChange} polygon={polygon} circle={circle} />
         ) : (
           <div
             className="h-full w-full animate-pulse"
@@ -75,16 +100,21 @@ export function MapPicker({
       </div>
       <div
         className="mt-1.5 flex items-center gap-1.5 text-[11px]"
-        style={{ color: 'rgba(26,22,20,0.55)', fontFamily: 'var(--font-jetbrains), monospace' }}
+        style={{
+          color: inside ? 'rgba(26,22,20,0.55)' : '#C2410C',
+          fontFamily: 'var(--font-jetbrains), monospace',
+        }}
       >
         <span
           aria-hidden
           className="inline-block h-1.5 w-1.5 rounded-full"
-          style={{ background: '#F97316' }}
+          style={{ background: inside ? '#F97316' : '#DC2626' }}
         />
-        {pos
-          ? `${pos.lat.toFixed(4)}, ${pos.lng.toFixed(4)} · San Jacinto, Áncash`
-          : 'Cargando mapa…'}
+        {!pos
+          ? 'Cargando mapa…'
+          : inside
+            ? `${pos.lat.toFixed(4)}, ${pos.lng.toFixed(4)} · San Jacinto, Áncash`
+            : 'Fuera de la zona de reparto de San Jacinto'}
       </div>
     </div>
   )

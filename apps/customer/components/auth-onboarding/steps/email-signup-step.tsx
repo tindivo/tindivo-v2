@@ -9,15 +9,19 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 export function EmailSignupStep({
   active,
   onDone,
+  onGoToLogin,
 }: {
   active: boolean
   onDone: (identity: { fullName: string; email: string }) => void
+  onGoToLogin: (email: string) => void
 }) {
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // El correo ya existe: ofrecemos saltar a "Iniciar sesión" con el correo precargado.
+  const [duplicate, setDuplicate] = useState(false)
 
   const valid = fullName.trim().length >= 2 && EMAIL_RE.test(email.trim()) && password.length >= 6
 
@@ -26,6 +30,7 @@ export function EmailSignupStep({
     if (!valid || busy) return
     setBusy(true)
     setError(null)
+    setDuplicate(false)
     try {
       await signUpWithEmail({
         fullName: fullName.trim(),
@@ -34,7 +39,9 @@ export function EmailSignupStep({
       })
       onDone({ fullName: fullName.trim(), email: email.trim() })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo crear la cuenta')
+      const msg = err instanceof Error ? err.message : 'No se pudo crear la cuenta'
+      setError(msg)
+      setDuplicate(msg.includes('ya tiene una cuenta'))
     } finally {
       setBusy(false)
     }
@@ -72,7 +79,10 @@ export function EmailSignupStep({
             className="t-field"
             placeholder="tu@correo.com"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value)
+              if (duplicate) setDuplicate(false)
+            }}
             autoComplete="email"
             inputMode="email"
             tabIndex={active ? 0 : -1}
@@ -99,6 +109,17 @@ export function EmailSignupStep({
         </p>
 
         {error && <p className="mt-3 text-[13px] text-danger">{error}</p>}
+        {duplicate && (
+          <button
+            type="button"
+            onClick={() => onGoToLogin(email.trim())}
+            className="t-btn t-btn-block mt-3 font-semibold"
+            style={{ background: 'rgba(249,115,22,0.12)', color: '#C2410C' }}
+            tabIndex={active ? 0 : -1}
+          >
+            Iniciar sesión con este correo
+          </button>
+        )}
       </div>
 
       <div className="border-t px-4 pt-3.5 pb-6" style={{ borderColor: 'rgba(26,22,20,0.06)' }}>

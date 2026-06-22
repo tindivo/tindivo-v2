@@ -7,6 +7,13 @@ export const TERMS_VERSION = '2026-05'
 /** Mensajes de Supabase auth mapeados a español peruano. */
 function authErrorMessage(message: string): string {
   const m = message.toLowerCase()
+  if (
+    m.includes('provider is not enabled') ||
+    m.includes('not enabled') ||
+    m.includes('unsupported provider')
+  ) {
+    return 'El inicio con Google no está disponible por ahora. Usa tu correo para continuar.'
+  }
   if (m.includes('already registered') || m.includes('already been registered')) {
     return 'Este correo ya tiene una cuenta. Inicia sesión.'
   }

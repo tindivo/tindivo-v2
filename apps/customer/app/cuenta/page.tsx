@@ -1,5 +1,6 @@
 'use client'
 
+import { ADDRESS_REFERENCE_MAX, ADDRESS_REFERENCE_MIN } from '@tindivo/contracts'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { type FormEvent, useCallback, useEffect, useState } from 'react'
@@ -341,9 +342,12 @@ function AddressSheet({
       ? { lat: Number(address.coordinates_lat), lng: Number(address.coordinates_lng) }
       : null,
   )
+  const [insideZone, setInsideZone] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const canSave = reference.trim().length >= 20
+  const refLen = reference.trim().length
+  const refOk = refLen >= ADDRESS_REFERENCE_MIN
+  const canSave = refOk && insideZone
 
   async function save(e: FormEvent) {
     e.preventDefault()
@@ -397,7 +401,12 @@ function AddressSheet({
 
         <div className="mb-3.5">
           <span className="t-field-label">Ubicación en el mapa</span>
-          <MapPicker value={coords} onChange={setCoords} heightPx={160} />
+          <MapPicker
+            value={coords}
+            onChange={setCoords}
+            onValidityChange={setInsideZone}
+            heightPx={160}
+          />
         </div>
 
         <label className="mb-3.5 block">
@@ -418,15 +427,22 @@ function AddressSheet({
             className="t-field"
             placeholder="Frente a la bodega, casa de reja negra, tocar timbre 2 veces…"
             value={reference}
-            maxLength={140}
+            maxLength={ADDRESS_REFERENCE_MAX}
             onChange={(e) => setReference(e.target.value)}
           />
         </label>
         <div
-          className="mb-4 text-[11px]"
-          style={{ color: reference.trim().length >= 20 ? 'rgba(26,22,20,0.5)' : '#C2410C' }}
+          className="mb-4 flex justify-between gap-3 text-[11px]"
+          style={{ color: refOk ? 'rgba(26,22,20,0.5)' : '#C2410C' }}
         >
-          {reference.trim().length}/20 mínimo
+          <span>
+            {refOk
+              ? 'Referencia suficiente'
+              : `Mínimo ${ADDRESS_REFERENCE_MIN} caracteres · faltan ${ADDRESS_REFERENCE_MIN - refLen}`}
+          </span>
+          <span className="tabular-nums">
+            {reference.length}/{ADDRESS_REFERENCE_MAX}
+          </span>
         </div>
 
         <button
