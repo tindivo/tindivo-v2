@@ -31,10 +31,9 @@ export const ORDER_STATUSES = [
 export const OrderStatusSchema = z.enum(ORDER_STATUSES)
 export type OrderStatus = z.infer<typeof OrderStatusSchema>
 
-// --- Pedido: pasos del tracking que ve el CLIENTE (proyección de 5 pasos) ---
+// --- Pedido: pasos del tracking que ve el CLIENTE (proyección a 4 pasos + cancelado) ---
 export const TRACKING_STEPS = [
-  'sent',
-  'confirmed',
+  'received',
   'preparing',
   'ontheway',
   'delivered',

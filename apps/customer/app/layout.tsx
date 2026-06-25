@@ -3,6 +3,7 @@ import { Bricolage_Grotesque, Geist, JetBrains_Mono } from 'next/font/google'
 import type { ReactNode } from 'react'
 import { AuthOnboardingHost } from '@/components/auth-onboarding/host'
 import { PushManager } from '@/components/push-manager'
+import { CartHydrator } from '@/lib/cart'
 import './globals.css'
 
 const bricolage = Bricolage_Grotesque({
@@ -33,6 +34,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="es" className={`${bricolage.variable} ${geist.variable} ${jetbrains.variable}`}>
       <body className="min-h-dvh bg-surface font-sans text-ink antialiased">
         {children}
+        <CartHydrator />
         <PushManager />
         <AuthOnboardingHost />
       </body>

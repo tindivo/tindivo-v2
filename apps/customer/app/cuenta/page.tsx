@@ -1,28 +1,17 @@
 'use client'
 
-import { ADDRESS_REFERENCE_MAX, ADDRESS_REFERENCE_MIN } from '@tindivo/contracts'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { type FormEvent, useCallback, useEffect, useState } from 'react'
-import { type LatLng, MapPicker } from '@/components/map-picker'
+import {
+  AddressFields,
+  type AddressValue,
+  isReferenceOk,
+  labelEmoji,
+} from '@/components/address-fields'
 import { BottomSheet, Icon, ScreenHeader } from '@/components/ui'
+import { clearOnboardingResume } from '@/lib/onboarding-store'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
-
-const soles = (n: number | null) => (n == null ? '—' : `S/ ${Number(n).toFixed(2)}`)
-const labelEmoji = (l: string) => (l === 'Casa' ? '🏠' : l === 'Trabajo' ? '💼' : '📍')
-
-const STATUS_LABEL: Record<string, string> = {
-  validando: 'Validando',
-  pending_acceptance: 'Por aceptar',
-  confirmed: 'Confirmado',
-  preparing: 'Preparando',
-  waiting_driver: 'Buscando moto',
-  heading_to_restaurant: 'Moto en camino',
-  waiting_at_restaurant: 'Moto en local',
-  picked_up: 'En reparto',
-  delivered: 'Entregado',
-  cancelled: 'Cancelado',
-}
 
 interface Address {
   id: string
@@ -106,7 +95,11 @@ export default function CuentaPage() {
   }
 
   async function signOut() {
-    await getSupabaseBrowser().auth.signOut()
+    // `scope: 'local'` limpia la sesión de este dispositivo. Limpiamos también un
+    // posible resume de onboarding obsoleto para que no reabra el flujo del usuario
+    // anterior. El selector de cuenta de Google se fuerza en signInWithGoogle.
+    await getSupabaseBrowser().auth.signOut({ scope: 'local' })
+    clearOnboardingResume()
     router.replace('/')
   }
 
@@ -235,47 +228,27 @@ export default function CuentaPage() {
           )}
         </div>
 
-        {/* History */}
-        <div className="mt-6 mb-2">
-          <div className="t-display text-[19px]">Pedidos anteriores</div>
-        </div>
-        {orders.length === 0 ? (
-          <p className="t-muted text-[13px]">Aún no tienes pedidos.</p>
-        ) : (
-          <div className="overflow-hidden rounded-[18px] border border-border bg-white">
-            {orders.map((o, i) => (
-              <Link
-                key={o.id}
-                href={`/pedido/${o.short_id}`}
-                className="flex items-center gap-3 px-4 py-3.5"
-                style={{
-                  borderBottom: i < orders.length - 1 ? '1px solid rgba(26,22,20,0.06)' : 'none',
-                }}
-              >
-                <div
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px]"
-                  style={{
-                    background:
-                      o.status === 'delivered' ? 'rgba(26,150,80,0.1)' : 'rgba(249,115,22,0.1)',
-                    color: o.status === 'delivered' ? '#1A8050' : '#F97316',
-                  }}
-                >
-                  {o.status === 'delivered' ? <Icon.Check /> : <Icon.Clock />}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="font-mono text-[13px] font-semibold">#{o.short_id}</div>
-                  <div className="text-[11px]" style={{ color: 'rgba(26,22,20,0.55)' }}>
-                    {STATUS_LABEL[o.status] ?? o.status} ·{' '}
-                    {new Date(o.created_at).toLocaleDateString('es-PE')}
-                  </div>
-                </div>
-                <div className="font-semibold text-[14px] tabular-nums">
-                  {soles(o.order_amount)}
-                </div>
-              </Link>
-            ))}
+        {/* History → pantalla dedicada (estilo apps de delivery) */}
+        <Link
+          href="/pedidos"
+          className="mt-6 flex items-center gap-3 rounded-[18px] border border-border bg-white px-4 py-3.5"
+        >
+          <div
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+            style={{ background: 'rgba(249,115,22,0.1)', color: '#F97316' }}
+          >
+            <Icon.Clock />
           </div>
-        )}
+          <div className="min-w-0 flex-1">
+            <div className="font-semibold text-[14px]">Historial de pedidos</div>
+            <div className="text-[11px]" style={{ color: 'rgba(26,22,20,0.55)' }}>
+              {orders.length > 0
+                ? `${orders.length} ${orders.length === 1 ? 'pedido' : 'pedidos'}`
+                : 'Tus pedidos anteriores'}
+            </div>
+          </div>
+          <span style={{ opacity: 0.4 }}>›</span>
+        </Link>
 
         {/* Account links */}
         <div className="mt-6 mb-2">
@@ -333,21 +306,25 @@ function AddressSheet({
   onSaved: () => void
   onDelete?: () => void
 }) {
-  const [label, setLabel] = useState(address?.label ?? 'Casa')
-  const [line, setLine] = useState(address?.line ?? '')
-  const [reference, setReference] = useState(address?.reference ?? '')
+  const [addr, setAddr] = useState<AddressValue>({
+    label: address?.label ?? 'Casa',
+    line: address?.line ?? '',
+    reference: address?.reference ?? '',
+    coords:
+      address?.coordinates_lat != null && address?.coordinates_lng != null
+        ? { lat: Number(address.coordinates_lat), lng: Number(address.coordinates_lng) }
+        : null,
+    accuracyM: null,
+  })
   const [isDefault, setIsDefault] = useState(address?.is_default ?? false)
-  const [coords, setCoords] = useState<LatLng | null>(
-    address?.coordinates_lat != null && address?.coordinates_lng != null
-      ? { lat: Number(address.coordinates_lat), lng: Number(address.coordinates_lng) }
-      : null,
-  )
   const [insideZone, setInsideZone] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const refLen = reference.trim().length
-  const refOk = refLen >= ADDRESS_REFERENCE_MIN
-  const canSave = refOk && insideZone
+  const canSave = isReferenceOk(addr.reference) && insideZone
+
+  function patch(p: Partial<AddressValue>) {
+    setAddr((a) => ({ ...a, ...p }))
+  }
 
   async function save(e: FormEvent) {
     e.preventDefault()
@@ -365,12 +342,12 @@ function AddressSheet({
         .neq('id', address?.id ?? '')
     }
     const payload = {
-      label,
-      line: line.trim() || null,
-      reference: reference.trim(),
+      label: addr.label,
+      line: addr.line.trim() || null,
+      reference: addr.reference.trim(),
       is_default: isDefault,
-      coordinates_lat: coords?.lat ?? null,
-      coordinates_lng: coords?.lng ?? null,
+      coordinates_lat: addr.coords?.lat ?? null,
+      coordinates_lng: addr.coords?.lng ?? null,
     }
     const { error: err } = address
       ? await supabase.from('customer_addresses').update(payload).eq('id', address.id)
@@ -385,64 +362,13 @@ function AddressSheet({
     <BottomSheet open onClose={onClose}>
       <ScreenHeader title={address ? 'Editar dirección' : 'Nueva dirección'} onBack={onClose} />
       <form onSubmit={save} className="t-scroll flex-1 px-4 pt-2 pb-6">
-        <span className="t-field-label">Etiqueta</span>
-        <div className="mb-3.5 flex gap-1.5">
-          {['Casa', 'Trabajo', 'Otro'].map((l) => (
-            <button
-              key={l}
-              type="button"
-              onClick={() => setLabel(l)}
-              className={`t-chip flex-1 justify-center${label === l ? ' active' : ''}`}
-            >
-              {labelEmoji(l)} {l}
-            </button>
-          ))}
-        </div>
-
-        <div className="mb-3.5">
-          <span className="t-field-label">Ubicación en el mapa</span>
-          <MapPicker
-            value={coords}
-            onChange={setCoords}
+        <div className="mb-4">
+          <AddressFields
+            value={addr}
+            onChange={patch}
             onValidityChange={setInsideZone}
-            heightPx={160}
+            mapHeightPx={160}
           />
-        </div>
-
-        <label className="mb-3.5 block">
-          <span className="t-field-label">Calle / Jirón</span>
-          <input
-            className="t-field"
-            placeholder="Ej. Jr. Sucre 412"
-            value={line}
-            onChange={(e) => setLine(e.target.value)}
-          />
-        </label>
-
-        <label className="mb-1.5 block">
-          <span className="t-field-label">
-            Referencia <span style={{ color: '#F97316' }}>*</span>
-          </span>
-          <textarea
-            className="t-field"
-            placeholder="Frente a la bodega, casa de reja negra, tocar timbre 2 veces…"
-            value={reference}
-            maxLength={ADDRESS_REFERENCE_MAX}
-            onChange={(e) => setReference(e.target.value)}
-          />
-        </label>
-        <div
-          className="mb-4 flex justify-between gap-3 text-[11px]"
-          style={{ color: refOk ? 'rgba(26,22,20,0.5)' : '#C2410C' }}
-        >
-          <span>
-            {refOk
-              ? 'Referencia suficiente'
-              : `Mínimo ${ADDRESS_REFERENCE_MIN} caracteres · faltan ${ADDRESS_REFERENCE_MIN - refLen}`}
-          </span>
-          <span className="tabular-nums">
-            {reference.length}/{ADDRESS_REFERENCE_MAX}
-          </span>
         </div>
 
         <button

@@ -213,6 +213,10 @@ textarea.t-field {
   width: 100%;
   max-width: 768px;
   background: #faf6f1;
+  /* Color de texto base propio: el sheet usa position:fixed pero hereda `color` por el
+     árbol DOM. Si su trigger está en un contexto `text-white` (p.ej. el hero del menú),
+     sin esto el contenido heredaría blanco sobre fondo claro (ilegible). */
+  color: #1a1614;
   border-radius: 28px 28px 0 0;
   max-height: 90%;
   display: flex;

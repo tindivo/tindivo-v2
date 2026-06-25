@@ -125,15 +125,20 @@ tindivo-v2/
 ```
 `*validando` solo para contraentrega de **cliente nuevo / con strike** (validación humana por llamada, 5 min).
 
-### Proyección al tracking del cliente (5 pasos)
+### Proyección al tracking del cliente (4 pasos)
 | Estado backend | Paso cliente |
 |---|---|
-| `validando`, `pending_acceptance` | **sent** (Esperando confirmación) |
-| `confirmed` | **confirmed** (Confirmado) |
+| `validando`, `pending_acceptance`, `confirmed` | **received** (Pedido recibido) |
 | `preparing`, `waiting_driver`, `heading_to_restaurant`, `waiting_at_restaurant` | **preparing** (Preparando) |
 | `picked_up` | **ontheway** (En camino) |
 | `delivered` | **delivered** (Entregado) |
 | `cancelled` | **cancelled** (mostrado aparte) |
+
+> **Actualizado (2026-06-24):** el cliente ve **4 estados** (Pedido recibido · Preparando · En
+> camino · Entregado), no 5. `confirmed` se colapsó en "recibido" por pedido del negocio. La
+> ventana de cancelación del cliente sigue gatillada por el estado **crudo**
+> (`validando`/`pending_acceptance`), no por el bucket "recibido" (evita ofrecer cancelar un
+> pedido ya `confirmed`). El home muestra un badge "Pedido en curso" con este mismo label.
 
 Codificado en `@tindivo/contracts` (`order-status.ts`: `ORDER_TRANSITIONS`, `STATUS_TO_TRACKING`). Los guards de transición finos viven en `packages/core` (Fase 1C).
 

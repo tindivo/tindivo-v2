@@ -1,11 +1,15 @@
 'use client'
 
-import { ADDRESS_REFERENCE_MAX, ADDRESS_REFERENCE_MIN } from '@tindivo/contracts'
 import { type FormEvent, useState } from 'react'
-import { type LatLng, MapPicker } from '@/components/map-picker'
+import {
+  AddressFields,
+  type AddressValue,
+  EMPTY_ADDRESS,
+  isReferenceOk,
+} from '@/components/address-fields'
 import { saveAddress } from '../persistence'
 
-/** Paso final: ubicación con pin + referencia. Se guarda como "Casa" predeterminada. */
+/** Paso final: etiqueta + ubicación con pin/GPS + calle + referencia. Se guarda como predeterminada. */
 export function AddressStep({
   active,
   userId,
@@ -17,15 +21,16 @@ export function AddressStep({
   onBack: () => void
   onDone: () => void
 }) {
-  const [coords, setCoords] = useState<LatLng | null>(null)
+  const [addr, setAddr] = useState<AddressValue>(EMPTY_ADDRESS)
   const [insideZone, setInsideZone] = useState(true)
-  const [reference, setReference] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const refLen = reference.trim().length
-  const refOk = refLen >= ADDRESS_REFERENCE_MIN
-  const valid = refOk && insideZone
+  const valid = isReferenceOk(addr.reference) && insideZone
+
+  function patch(p: Partial<AddressValue>) {
+    setAddr((a) => ({ ...a, ...p }))
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
@@ -35,9 +40,12 @@ export function AddressStep({
     try {
       await saveAddress({
         userId,
-        reference,
-        lat: coords?.lat ?? null,
-        lng: coords?.lng ?? null,
+        label: addr.label,
+        line: addr.line,
+        reference: addr.reference,
+        lat: addr.coords?.lat ?? null,
+        lng: addr.coords?.lng ?? null,
+        accuracyM: addr.accuracyM,
       })
       onDone()
     } catch (err) {
@@ -56,43 +64,14 @@ export function AddressStep({
           de entrega
         </h2>
         <p className="mt-1.5 text-[14px]" style={{ color: 'rgba(26,22,20,0.6)' }}>
-          Mueve el pin a tu casa en San Jacinto.
+          Elige una etiqueta y marca tu casa en el mapa, o toca "Usar mi ubicación".
         </p>
 
         <div className="mt-4">
-          {/* El mapa solo se monta con el panel activo (Leaflet mide el contenedor). */}
+          {/* AddressFields monta Leaflet (mide el contenedor): solo con el panel activo. */}
           {active && (
-            <MapPicker
-              value={coords}
-              onChange={setCoords}
-              onValidityChange={setInsideZone}
-              heightPx={170}
-            />
+            <AddressFields value={addr} onChange={patch} onValidityChange={setInsideZone} />
           )}
-        </div>
-
-        <label className="mt-4 block">
-          <span className="t-field-label">
-            Referencia <span style={{ color: '#F97316' }}>*</span>
-          </span>
-          <textarea
-            className="t-field"
-            placeholder="Ej: Frente a la bodega de don Carlos, puerta azul"
-            value={reference}
-            maxLength={ADDRESS_REFERENCE_MAX}
-            onChange={(e) => setReference(e.target.value)}
-            tabIndex={active ? 0 : -1}
-          />
-        </label>
-        <div className="mt-1.5 flex justify-between gap-3 text-[12px]">
-          <span style={{ color: refOk ? 'rgba(26,22,20,0.5)' : '#C2410C' }}>
-            {refOk
-              ? 'Mientras más detalle, menos llamadas del motorizado.'
-              : `Mínimo ${ADDRESS_REFERENCE_MIN} caracteres · faltan ${ADDRESS_REFERENCE_MIN - refLen}`}
-          </span>
-          <span className="tabular-nums" style={{ color: 'rgba(26,22,20,0.5)' }}>
-            {reference.length}/{ADDRESS_REFERENCE_MAX}
-          </span>
         </div>
 
         {error && <p className="mt-3 text-[13px] text-danger">{error}</p>}

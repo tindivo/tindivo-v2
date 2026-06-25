@@ -12,8 +12,7 @@ import { getSupabaseBrowser } from '@/lib/supabase/client'
 const soles = (n: number | null | undefined) => (n == null ? '—' : `S/ ${Number(n).toFixed(2)}`)
 
 const STEPS: { key: TrackingStep; label: string; sub: string }[] = [
-  { key: 'sent', label: 'Pedido enviado', sub: 'El restaurante te llamará en breve' },
-  { key: 'confirmed', label: 'Confirmado', sub: 'Tu pedido fue confirmado por teléfono' },
+  { key: 'received', label: 'Pedido recibido', sub: 'El restaurante te llamará para confirmar' },
   { key: 'preparing', label: 'Preparando', sub: 'Tu pedido está en cocina' },
   { key: 'ontheway', label: 'En camino', sub: 'Repartidor en ruta' },
   { key: 'delivered', label: 'Entregado', sub: '¡Buen provecho!' },
@@ -236,12 +235,16 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
   const currentIdx = foundIdx < 0 ? 0 : foundIdx
   // `current` siempre cae en STEPS (el caso `cancelled` ya se manejó); fallback por seguridad de tipos.
   const step = STEPS.find((s) => s.key === current) ?? {
-    key: 'sent' as TrackingStep,
-    label: 'Pedido enviado',
-    sub: 'El restaurante te llamará en breve',
+    key: 'received' as TrackingStep,
+    label: 'Pedido recibido',
+    sub: 'El restaurante te llamará para confirmar',
   }
   const progress = ((currentIdx + 1) / STEPS.length) * 100
-  const cancellable = current === 'sent' && Boolean(ownedId)
+  // La ventana de cancelación del cliente es ANTES de la confirmación del negocio
+  // (DECISIONS §5). Se basa en el estado crudo, no en el bucket "recibido" (que ya
+  // incluye `confirmed`), para no ofrecer cancelar un pedido ya confirmado.
+  const cancellable =
+    (data.status === 'validando' || data.status === 'pending_acceptance') && Boolean(ownedId)
   const itemCount = data.items.length
 
   return (

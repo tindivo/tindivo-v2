@@ -3,10 +3,11 @@
 import { type ApiEnvelope, ApiError } from '@tindivo/api-client'
 import Link from 'next/link'
 import { use, useEffect, useRef, useState } from 'react'
+import { CartButton, CartSheet } from '@/components/cart-sheet'
 import { type ProductItem, ProductModal } from '@/components/product-modal'
-import { Icon, ProductImage } from '@/components/ui'
+import { BottomSheet, Icon, ProductImage } from '@/components/ui'
 import { api } from '@/lib/api'
-import { useCart } from '@/lib/cart'
+import { type CartLine, useCart } from '@/lib/cart'
 
 interface MenuItem extends ProductItem {
   category_id: string
@@ -43,6 +44,8 @@ export default function NegocioPage({ params }: { params: Promise<{ id: string }
   const [modalItem, setModalItem] = useState<MenuItem | null>(null)
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const cart = useCart()
+  const [cartOpen, setCartOpen] = useState(false)
+  const [pending, setPending] = useState<Omit<CartLine, 'key'> | null>(null)
 
   useEffect(() => {
     let on = true
@@ -120,6 +123,7 @@ export default function NegocioPage({ params }: { params: Promise<{ id: string }
           >
             <Icon.Back />
           </Link>
+          <CartButton tone="dark" />
         </div>
         <div className="absolute right-0 bottom-0 left-0 px-5 pb-5">
           <div
@@ -285,10 +289,11 @@ export default function NegocioPage({ params }: { params: Promise<{ id: string }
         ))}
       </div>
 
-      {/* Cart sticky bar */}
+      {/* Cart sticky bar → abre la hoja de previsualización (ver la bolsa antes de pagar) */}
       {count > 0 && (
-        <Link
-          href="/checkout"
+        <button
+          type="button"
+          onClick={() => setCartOpen(true)}
           className="fixed right-4 bottom-7 left-4 z-30 mx-auto flex max-w-[736px] items-center justify-between rounded-[18px] px-[18px] py-3.5 font-semibold text-[16px] text-white"
           style={{
             background: '#F97316',
@@ -299,21 +304,63 @@ export default function NegocioPage({ params }: { params: Promise<{ id: string }
             <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-white/[0.22] font-bold text-[13px]">
               {count}
             </span>
-            Ver mi pedido
+            Ver mi bolsa
           </span>
           <span className="tabular-nums">{soles(subtotal)}</span>
-        </Link>
+        </button>
       )}
+
+      {cartOpen && <CartSheet onClose={() => setCartOpen(false)} />}
 
       {modalItem && (
         <ProductModal
           item={modalItem}
           onClose={() => setModalItem(null)}
           onAdd={(line) => {
+            // Bolsa mono-negocio: si ya hay ítems de otro restaurante, pedir confirmación
+            // antes de vaciar y empezar de nuevo (en vez de borrar en silencio).
+            if (cart.businessId && cart.businessId !== business.id && cart.lines.length > 0) {
+              setModalItem(null)
+              setPending(line)
+              return
+            }
             cart.addLine(business.id, business.name, line)
             setModalItem(null)
           }}
         />
+      )}
+
+      {pending && (
+        <BottomSheet open onClose={() => setPending(null)}>
+          <div className="px-5 pt-6 pb-7">
+            <div className="t-display text-[20px] leading-[1.15]">¿Empezar una bolsa nueva?</div>
+            <p className="mt-2 text-[14px]" style={{ color: 'rgba(26,22,20,0.65)' }}>
+              Tu bolsa tiene productos de <span className="font-semibold">{cart.businessName}</span>
+              . Solo puedes pedir de un restaurante a la vez. Si continúas, vaciaremos tu bolsa para
+              empezar en <span className="font-semibold">{business.name}</span>.
+            </p>
+            <div className="mt-5 flex gap-2.5">
+              <button
+                type="button"
+                onClick={() => setPending(null)}
+                className="flex-1 rounded-[14px] py-3.5 font-semibold text-[15px]"
+                style={{ background: 'rgba(26,22,20,0.06)' }}
+              >
+                Mantener
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  cart.addLine(business.id, business.name, pending)
+                  setPending(null)
+                }}
+                className="t-btn t-btn-primary flex-1"
+              >
+                Vaciar y empezar
+              </button>
+            </div>
+          </div>
+        </BottomSheet>
       )}
     </main>
   )

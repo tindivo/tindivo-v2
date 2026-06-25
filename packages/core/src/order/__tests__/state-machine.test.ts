@@ -29,8 +29,10 @@ describe('máquina de estados del pedido', () => {
     expect(isTerminal('preparing')).toBe(false)
   })
 
-  it('proyecta estados backend a los 5 pasos del cliente', () => {
-    expect(toTrackingStep('pending_acceptance')).toBe('sent')
+  it('proyecta estados backend a los 4 pasos del cliente', () => {
+    expect(toTrackingStep('validando')).toBe('received')
+    expect(toTrackingStep('pending_acceptance')).toBe('received')
+    expect(toTrackingStep('confirmed')).toBe('received')
     expect(toTrackingStep('preparing')).toBe('preparing')
     expect(toTrackingStep('heading_to_restaurant')).toBe('preparing')
     expect(toTrackingStep('picked_up')).toBe('ontheway')

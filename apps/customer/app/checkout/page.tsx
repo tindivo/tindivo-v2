@@ -1,21 +1,22 @@
 'use client'
 
 import { type ApiEnvelope, ApiError } from '@tindivo/api-client'
-import {
-  ADDRESS_REFERENCE_MAX,
-  ADDRESS_REFERENCE_MIN,
-  type DeliveryMethod,
-  type PaymentIntent,
-} from '@tindivo/contracts'
+import { ADDRESS_REFERENCE_MIN, type DeliveryMethod, type PaymentIntent } from '@tindivo/contracts'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import {
+  AddressFields,
+  type AddressValue,
+  EMPTY_ADDRESS,
+  labelEmoji,
+} from '@/components/address-fields'
 import { saveAddress } from '@/components/auth-onboarding/persistence'
-import { type LatLng, MapPicker } from '@/components/map-picker'
 import { Icon, ScreenHeader, Segmented } from '@/components/ui'
 import { api } from '@/lib/api'
-import { useCart } from '@/lib/cart'
+import { useCart, useCartHydrated } from '@/lib/cart'
 import { getLocationValidation, haversineKm } from '@/lib/coverage'
+import { getCurrentPositionHA } from '@/lib/geolocation'
 import { useOnboarding } from '@/lib/onboarding-store'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
@@ -24,7 +25,6 @@ const DEFAULT_PREPAY_THRESHOLD = 80
 const NEAR_DELIVERY_FEE = 2.0
 // Pickup disabled for the pilot (DECISIONS.md: "pickup inactivo; post-piloto").
 const PICKUP_ENABLED = false as boolean
-const labelEmoji = (l: string) => (l === 'Casa' ? '🏠' : l === 'Trabajo' ? '💼' : '📍')
 
 interface Address {
   id: string
@@ -67,24 +67,10 @@ const CASH_CHIPS: { value: CashChoice; label: string; amount: number | null }[] 
   { value: '100', label: 'S/ 100', amount: 100 },
 ]
 
-/** Posición del dispositivo (una vez). Rechaza si no hay API o el usuario niega. */
-function getPositionOnce(timeoutMs = 15_000): Promise<GeolocationPosition> {
-  return new Promise((resolve, reject) => {
-    if (typeof navigator === 'undefined' || !('geolocation' in navigator)) {
-      reject(new Error('geolocation_unavailable'))
-      return
-    }
-    navigator.geolocation.getCurrentPosition(resolve, reject, {
-      enableHighAccuracy: true,
-      timeout: timeoutMs,
-      maximumAge: 0,
-    })
-  })
-}
-
 export default function CheckoutPage() {
   const router = useRouter()
   const cart = useCart()
+  const cartHydrated = useCartHydrated()
   const [authReady, setAuthReady] = useState(false)
   const [idempotencyKey] = useState(() => crypto.randomUUID())
 
@@ -92,13 +78,11 @@ export default function CheckoutPage() {
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('delivery')
   const [addresses, setAddresses] = useState<Address[]>([])
   const [addressId, setAddressId] = useState<string | null>(null)
-  const [manualRef, setManualRef] = useState('')
-  const [manualCoords, setManualCoords] = useState<LatLng | null>(null)
+  const [manualAddr, setManualAddr] = useState<AddressValue>(EMPTY_ADDRESS)
   const [manualInside, setManualInside] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
   const [phone, setPhone] = useState('')
   const [name, setName] = useState('')
-  const [note, setNote] = useState('')
   const [payment, setPayment] = useState<PaymentIntent>('pending_cash')
   const [cashChoice, setCashChoice] = useState<CashChoice>('exact')
   const [cashCustom, setCashCustom] = useState('')
@@ -140,6 +124,10 @@ export default function CheckoutPage() {
   }, [])
 
   useEffect(() => {
+    // Espera a que la bolsa se rehidrate desde localStorage antes de decidir: en una
+    // carga directa/refresh de /checkout el store arranca vacío (skipHydration) y sin
+    // este guard redirigiría al home aunque la bolsa exista.
+    if (!cartHydrated) return
     if (cart.count() === 0 && !confirmed) {
       router.replace('/')
       return
@@ -204,14 +192,15 @@ export default function CheckoutPage() {
       setAddressId((addrs ?? []).find((a) => a.is_default)?.id ?? addrs?.[0]?.id ?? null)
       setAuthReady(true)
     })
-  }, [cart, confirmed, router, sheetOpen])
+  }, [cart, cartHydrated, confirmed, router, sheetOpen])
 
   useEffect(() => {
     if (mustPrepay && payment !== 'prepaid') setPayment('prepaid')
   }, [mustPrepay, payment])
 
   const selectedAddress = addresses.find((a) => a.id === addressId)
-  const reference = deliveryMethod === 'delivery' ? (selectedAddress?.reference ?? manualRef) : ''
+  const reference =
+    deliveryMethod === 'delivery' ? (selectedAddress?.reference ?? manualAddr.reference) : ''
 
   // "¿Con cuánto pagarás?" (solo efectivo): Exacto = total (vuelto 0).
   const cashAmount =
@@ -237,7 +226,7 @@ export default function CheckoutPage() {
       }
       // Sin dirección guardada: exigir ubicación en el mapa dentro de la zona.
       if (!selectedAddress) {
-        if (!manualCoords) {
+        if (!manualAddr.coords) {
           setError('Marca tu ubicación en el mapa')
           return
         }
@@ -263,12 +252,12 @@ export default function CheckoutPage() {
 
     try {
       const cfg = await getLocationValidation()
-      const pos = await getPositionOnce(cfg.timeoutMs)
+      const fix = await getCurrentPositionHA(cfg.timeoutMs)
       const distance = haversineKm(
-        { lat: pos.coords.latitude, lng: pos.coords.longitude },
+        { lat: fix.lat, lng: fix.lng },
         { lat: cfg.centerLat, lng: cfg.centerLng },
       )
-      const accuracyM = pos.coords.accuracy
+      const accuracyM = fix.accuracyM
       const method = accuracyM > cfg.maxAccuracyM ? 'gps_low_accuracy' : 'gps_high_accuracy'
 
       if (accuracyM > cfg.maxAccuracyM && selectedPayment !== 'prepaid') {
@@ -280,8 +269,8 @@ export default function CheckoutPage() {
 
       return {
         payload: {
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
+          lat: fix.lat,
+          lng: fix.lng,
           accuracyM,
           distanceToCenterKm: Math.round(distance * 1000) / 1000,
           method,
@@ -325,13 +314,16 @@ export default function CheckoutPage() {
 
     // Sin dirección guardada: persistir la ubicación capturada (mapa + referencia)
     // como "Casa" por defecto para reutilizarla. Best-effort: no bloquea el pedido.
-    if (deliveryMethod === 'delivery' && !selectedAddress && manualCoords && userId) {
+    if (deliveryMethod === 'delivery' && !selectedAddress && manualAddr.coords && userId) {
       try {
         await saveAddress({
           userId,
-          reference: manualRef,
-          lat: manualCoords.lat,
-          lng: manualCoords.lng,
+          label: manualAddr.label,
+          line: manualAddr.line,
+          reference: manualAddr.reference,
+          lat: manualAddr.coords.lat,
+          lng: manualAddr.coords.lng,
+          accuracyM: manualAddr.accuracyM,
         })
       } catch {
         // El pedido igual lleva las coordenadas; el guardado es secundario.
@@ -349,7 +341,7 @@ export default function CheckoutPage() {
           customerPhone: phone,
           cashPayingWith:
             selectedPayment === 'pending_cash' ? Math.round(cashAmount * 100) / 100 : undefined,
-          deliveryAddress: selectedAddress?.line ?? undefined,
+          deliveryAddress: selectedAddress?.line ?? (manualAddr.line.trim() || undefined),
           deliveryReference: deliveryMethod === 'delivery' ? reference : undefined,
           coordinates:
             deliveryMethod !== 'delivery'
@@ -359,8 +351,8 @@ export default function CheckoutPage() {
                     lat: Number(selectedAddress.coordinates_lat),
                     lng: Number(selectedAddress.coordinates_lng),
                   }
-                : manualCoords
-                  ? { lat: manualCoords.lat, lng: manualCoords.lng }
+                : manualAddr.coords
+                  ? { lat: manualAddr.coords.lat, lng: manualAddr.coords.lng }
                   : undefined,
           gpsValidation: gpsPayload,
           items: cart.lines.map((l) => ({
@@ -498,47 +490,11 @@ export default function CheckoutPage() {
                     )
                   })}
                   {addresses.length === 0 && (
-                    <div className="flex flex-col gap-3">
-                      <div>
-                        <span className="t-field-label">Tu ubicación en el mapa</span>
-                        <MapPicker
-                          value={manualCoords}
-                          onChange={setManualCoords}
-                          onValidityChange={setManualInside}
-                          heightPx={170}
-                        />
-                      </div>
-                      <label className="block">
-                        <span className="t-field-label">
-                          Referencia de entrega (mín. {ADDRESS_REFERENCE_MIN})
-                        </span>
-                        <textarea
-                          className="t-field"
-                          placeholder="Casa azul de dos pisos, frente al parque, portón negro"
-                          value={manualRef}
-                          maxLength={ADDRESS_REFERENCE_MAX}
-                          onChange={(e) => setManualRef(e.target.value)}
-                        />
-                        <div
-                          className="mt-1.5 flex justify-between gap-3 text-[11px]"
-                          style={{
-                            color:
-                              manualRef.trim().length >= ADDRESS_REFERENCE_MIN
-                                ? 'rgba(26,22,20,0.5)'
-                                : '#C2410C',
-                          }}
-                        >
-                          <span>
-                            {manualRef.trim().length >= ADDRESS_REFERENCE_MIN
-                              ? 'Referencia suficiente'
-                              : `Faltan ${ADDRESS_REFERENCE_MIN - manualRef.trim().length}`}
-                          </span>
-                          <span className="tabular-nums">
-                            {manualRef.length}/{ADDRESS_REFERENCE_MAX}
-                          </span>
-                        </div>
-                      </label>
-                    </div>
+                    <AddressFields
+                      value={manualAddr}
+                      onChange={(p) => setManualAddr((a) => ({ ...a, ...p }))}
+                      onValidityChange={setManualInside}
+                    />
                   )}
                 </div>
                 <p
@@ -591,17 +547,6 @@ export default function CheckoutPage() {
               </div>
             </label>
 
-            <label className="mt-4 block">
-              <span className="t-field-label">Nota adicional (opcional)</span>
-              <textarea
-                className="t-field"
-                placeholder="¿Alguna indicación? Ej. sin cebolla, extra salsa…"
-                value={note}
-                maxLength={200}
-                onChange={(e) => setNote(e.target.value)}
-              />
-            </label>
-
             <OrderDetail />
 
             <Summary
@@ -629,16 +574,19 @@ export default function CheckoutPage() {
                   v: 'pending_cash' as PaymentIntent,
                   label: 'Efectivo al recibir',
                   desc: 'Paga en efectivo al motorizado',
+                  logos: ['cash'],
                 },
                 {
                   v: 'pending_yape' as PaymentIntent,
                   label: 'Billetera digital al recibir',
-                  desc: 'Paga con tu billetera digital al recibir',
+                  desc: 'Yape o Plin al recibir tu pedido',
+                  logos: ['yape', 'plin'],
                 },
                 {
                   v: 'prepaid' as PaymentIntent,
                   label: 'Prepago con billetera digital',
-                  desc: 'Paga ahora y sube tu comprobante',
+                  desc: 'Paga ahora con Yape/Plin y sube tu comprobante',
+                  logos: ['yape', 'plin'],
                 },
               ].map((opt) => {
                 const disabled = mustPrepay && opt.v !== 'prepaid'
@@ -668,6 +616,18 @@ export default function CheckoutPage() {
                           style={{ background: '#F97316' }}
                         />
                       )}
+                    </span>
+                    <span className="flex shrink-0 items-center gap-1">
+                      {opt.logos.map((logo) => (
+                        <img
+                          key={logo}
+                          src={`/pay/${logo}.svg`}
+                          alt={logo === 'cash' ? 'Efectivo' : logo === 'yape' ? 'Yape' : 'Plin'}
+                          width={34}
+                          height={34}
+                          className="rounded-[9px]"
+                        />
+                      ))}
                     </span>
                     <span className="flex-1">
                       <span className="block font-semibold text-[15px]">{opt.label}</span>

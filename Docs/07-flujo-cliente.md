@@ -883,20 +883,18 @@ Al expirar timer → cancelled (timeout).
 │  │ Preparando                  │   │  ← estado + descripción
 │  │ El restaurante está         │   │
 │  │ preparando tu pedido.       │   │
-│  │ Paso 3 de 5 · 25-35 min     │   │
+│  │ Paso 2 de 4 · 25-35 min     │   │
 │  └────────────────────────────┘   │
 │                                    │
-│  ● 1. Pedido enviado · 19:00       │
+│  ● 1. Pedido recibido · 19:00      │
+│  │   El restaurante te llamará     │
+│  │   para confirmar                │
 │  │                                 │
-│  ● 2. Confirmado · 19:01           │
-│  │   Tu pedido fue confirmado      │
-│  │   por teléfono                  │
+│  ● 2. Preparando · 19:05           │  ← active
 │  │                                 │
-│  ● 3. Preparando · 19:05           │  ← active
+│  ○ 3. En camino                    │
 │  │                                 │
-│  ○ 4. En camino                    │
-│  │                                 │
-│  ○ 5. Entregado                    │
+│  ○ 4. Entregado                    │
 │                                    │
 │  Detalle                           │
 │  Delivery · 3 productos            │
@@ -918,8 +916,8 @@ Al expirar timer → cancelled (timeout).
 ### RFs vinculadas
 
 - **RF-TRK-01** · Header con back (→ landing) + título "Tu pedido".
-- **RF-TRK-02** · Card de estado con `#TND-XXXXX`, estado, descripción, "Paso N de 5", ETA.
-- **RF-TRK-03** · Stepper vertical de 5 estados: Pedido enviado · Confirmado · Preparando · En camino · Entregado.
+- **RF-TRK-02** · Card de estado con `#TND-XXXXX`, estado, descripción, "Paso N de 4", ETA.
+- **RF-TRK-03** · Stepper vertical de **4 estados**: Pedido recibido · Preparando · En camino · Entregado. (`validando`/`pending_acceptance`/`confirmed` se colapsan en "Pedido recibido"; ver DECISIONS.md §5.) El home muestra un badge "Pedido en curso" con este label, con actualización en tiempo real.
 - **RF-TRK-04** · Cada estado con título + subtítulo. Estado actual y previos marcados visualmente.
 - **RF-TRK-05** · Card "Detalle" con modalidad, líneas y total pagado.
 - **RF-TRK-06** · ~~Botón demo "avanzar estado"~~ — solo prototipo. **Removido en v2**.

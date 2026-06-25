@@ -45,6 +45,21 @@ function TapToMove({ onChange }: { onChange: (c: LatLng) => void }) {
   return null
 }
 
+/**
+ * Reposiciona la vista al pin cuando `token` cambia (lo dispara "Usar mi ubicación").
+ * Guardado por token para NO recentrar al arrastrar el pin (eso sería brusco).
+ */
+function Recenter({ position, token }: { position: LatLng; token: number }) {
+  const map = useMap()
+  const last = useRef(token)
+  useEffect(() => {
+    if (token === last.current) return
+    last.current = token
+    map.setView([position.lat, position.lng], Math.max(map.getZoom(), 16))
+  }, [token, position, map])
+  return null
+}
+
 /** Encuadra la vista a la zona de cobertura (una sola vez), para mostrar todo San Jacinto. */
 function FitZone({
   polygon,
@@ -79,11 +94,13 @@ export default function MapPickerInner({
   onChange,
   polygon,
   circle,
+  recenterToken = 0,
 }: {
   position: LatLng
   onChange: (c: LatLng) => void
   polygon: LatLng[] | null
   circle: { center: LatLng; radiusKm: number } | null
+  recenterToken?: number
 }) {
   return (
     <MapContainer
@@ -109,6 +126,7 @@ export default function MapPickerInner({
         />
       ) : null}
       <FitZone polygon={polygon} circle={circle} />
+      <Recenter position={position} token={recenterToken} />
       <TapToMove onChange={onChange} />
       <Marker
         position={[position.lat, position.lng]}

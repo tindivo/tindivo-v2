@@ -3,6 +3,12 @@
 import dynamic from 'next/dynamic'
 import { useEffect, useMemo, useState } from 'react'
 import { getCoverage, getCoveragePolygon, haversineKm, pointInPolygon } from '@/lib/coverage'
+import {
+  type GeoFix,
+  GeolocationError,
+  geoErrorMessage,
+  getCurrentPositionHA,
+} from '@/lib/geolocation'
 import type { LatLng } from './map-picker-inner'
 
 export type { LatLng }
@@ -20,22 +26,32 @@ const MapInner = dynamic(() => import('./map-picker-inner'), {
  * El centro y el polígono vienen de app_settings (sin hardcode). El pin se puede
  * mover libremente, pero `onValidityChange` informa si quedó dentro de la zona para
  * que el formulario bloquee "Guardar" (mensaje inline, no se reubica el pin).
+ *
+ * El botón "Usar mi ubicación" lee el GPS con alta precisión (`getCurrentPositionHA`),
+ * mueve el pin a la ubicación real y reporta la precisión vía `onLocate`. Arrastrar el
+ * pin después invalida esa precisión (la posición ya no proviene del GPS).
  */
 export function MapPicker({
   value,
   onChange,
   onValidityChange,
+  onLocate,
   heightPx = 180,
 }: {
   value: LatLng | null
   onChange: (c: LatLng) => void
   onValidityChange?: (inside: boolean) => void
+  onLocate?: (fix: GeoFix) => void
   heightPx?: number
 }) {
   const [center, setCenter] = useState<LatLng | null>(null)
   const [polygon, setPolygon] = useState<LatLng[] | null>(null)
   const [radiusKm, setRadiusKm] = useState(3)
   const [loaded, setLoaded] = useState(false)
+  const [recenter, setRecenter] = useState(0)
+  const [locating, setLocating] = useState(false)
+  const [accuracyM, setAccuracyM] = useState<number | null>(null)
+  const [locateError, setLocateError] = useState<string | null>(null)
 
   useEffect(() => {
     let on = true
@@ -73,6 +89,31 @@ export function MapPicker({
 
   const circle = polygon ? null : center ? { center, radiusKm } : null
 
+  // Mover el pin manualmente (arrastre/tap) invalida la precisión medida por GPS.
+  function handleManualChange(c: LatLng) {
+    setAccuracyM(null)
+    setLocateError(null)
+    onChange(c)
+  }
+
+  async function useMyLocation() {
+    if (locating) return
+    setLocating(true)
+    setLocateError(null)
+    try {
+      const fix = await getCurrentPositionHA()
+      onChange({ lat: fix.lat, lng: fix.lng })
+      setAccuracyM(Math.round(fix.accuracyM))
+      setRecenter((n) => n + 1)
+      onLocate?.(fix)
+    } catch (err) {
+      const code = err instanceof GeolocationError ? err.code : 'position_unavailable'
+      setLocateError(geoErrorMessage(code))
+    } finally {
+      setLocating(false)
+    }
+  }
+
   return (
     <div>
       <div
@@ -83,7 +124,13 @@ export function MapPicker({
         style={{ height: heightPx, border: '1px solid rgba(26,22,20,0.08)', isolation: 'isolate' }}
       >
         {pos ? (
-          <MapInner position={pos} onChange={onChange} polygon={polygon} circle={circle} />
+          <MapInner
+            position={pos}
+            onChange={handleManualChange}
+            polygon={polygon}
+            circle={circle}
+            recenterToken={recenter}
+          />
         ) : (
           <div
             className="h-full w-full animate-pulse"
@@ -100,24 +147,38 @@ export function MapPicker({
         >
           Arrastra para ajustar
         </span>
+        <button
+          type="button"
+          onClick={useMyLocation}
+          disabled={locating || !loaded}
+          className="absolute right-2.5 bottom-2.5 flex items-center gap-1.5 rounded-full bg-white px-3 py-2 font-semibold text-[12px] shadow-md disabled:opacity-60"
+          style={{ zIndex: 1000, color: '#C2410C' }}
+        >
+          <span aria-hidden>📍</span>
+          {locating ? 'Ubicando…' : 'Usar mi ubicación'}
+        </button>
       </div>
       <div
         className="mt-1.5 flex items-center gap-1.5 text-[11px]"
         style={{
-          color: inside ? 'rgba(26,22,20,0.55)' : '#C2410C',
+          color: locateError ? '#DC2626' : inside ? 'rgba(26,22,20,0.55)' : '#C2410C',
           fontFamily: 'var(--font-jetbrains), monospace',
         }}
       >
         <span
           aria-hidden
           className="inline-block h-1.5 w-1.5 rounded-full"
-          style={{ background: inside ? '#F97316' : '#DC2626' }}
+          style={{ background: locateError || !inside ? '#DC2626' : '#F97316' }}
         />
-        {!pos
-          ? 'Cargando mapa…'
-          : inside
-            ? `${pos.lat.toFixed(4)}, ${pos.lng.toFixed(4)} · San Jacinto, Áncash`
-            : 'Fuera de la zona de reparto de San Jacinto'}
+        {locateError
+          ? locateError
+          : !pos
+            ? 'Cargando mapa…'
+            : !inside
+              ? 'Fuera de la zona de reparto de San Jacinto'
+              : accuracyM != null
+                ? `Ubicación obtenida · precisión ±${accuracyM} m`
+                : `${pos.lat.toFixed(4)}, ${pos.lng.toFixed(4)} · San Jacinto, Áncash`}
       </div>
     </div>
   )

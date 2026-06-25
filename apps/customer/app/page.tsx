@@ -1,8 +1,11 @@
 'use client'
 
 import { type ApiEnvelope, ApiError } from '@tindivo/api-client'
+import { type OrderStatus, type TrackingStep, toTrackingStep } from '@tindivo/contracts'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { AddressBar } from '@/components/address-bar'
+import { CartButton } from '@/components/cart-sheet'
 import { Icon } from '@/components/ui'
 import { api } from '@/lib/api'
 import { useOnboarding } from '@/lib/onboarding-store'
@@ -18,13 +21,36 @@ interface PublicBusiness {
   estimated_eta_max: number
 }
 
+// Estados internos no terminales (pedido "en curso").
+const ACTIVE_STATUSES: OrderStatus[] = [
+  'validando',
+  'pending_acceptance',
+  'confirmed',
+  'preparing',
+  'waiting_driver',
+  'heading_to_restaurant',
+  'waiting_at_restaurant',
+  'picked_up',
+]
+
+// Etiqueta del badge según el paso del cliente (4 estados).
+const TRACKING_LABEL: Record<TrackingStep, string> = {
+  received: 'Pedido recibido',
+  preparing: 'Preparando',
+  ontheway: 'En camino',
+  delivered: 'Entregado',
+  cancelled: 'Cancelado',
+}
+
 export default function Home() {
   const [items, setItems] = useState<PublicBusiness[] | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [user, setUser] = useState<{ signedIn: boolean; name: string }>({
+  const [user, setUser] = useState<{ signedIn: boolean; name: string; userId: string | null }>({
     signedIn: false,
     name: '',
+    userId: null,
   })
+  const [activeOrder, setActiveOrder] = useState<{ shortId: string; status: string } | null>(null)
 
   useEffect(() => {
     let active = true
@@ -38,14 +64,20 @@ export default function Home() {
       )
 
     const supabase = getSupabaseBrowser()
-    const applySession = (session: { user: { user_metadata: unknown; email?: string } } | null) => {
+    const applySession = (
+      session: { user: { id: string; user_metadata: unknown; email?: string } } | null,
+    ) => {
       if (!active) return
       if (!session) {
-        setUser({ signedIn: false, name: '' })
+        setUser({ signedIn: false, name: '', userId: null })
         return
       }
       const meta = session.user.user_metadata as { full_name?: string } | undefined
-      setUser({ signedIn: true, name: meta?.full_name ?? session.user.email ?? '' })
+      setUser({
+        signedIn: true,
+        name: meta?.full_name ?? session.user.email ?? '',
+        userId: session.user.id,
+      })
     }
     supabase.auth.getSession().then(({ data }) => applySession(data.session))
     // El onboarding (sheet) puede crear la sesión sin salir del home.
@@ -58,38 +90,78 @@ export default function Home() {
     }
   }, [])
 
+  // Pedido en curso: query del último pedido no terminal + realtime. La query va FUERA
+  // del callback de auth (onAuthStateChange) para evitar el deadlock de supabase-js.
+  useEffect(() => {
+    const uid = user.userId
+    if (!uid) {
+      setActiveOrder(null)
+      return
+    }
+    let active = true
+    const supabase = getSupabaseBrowser()
+    const loadActive = () => {
+      // RLS ord_customer_read limita a los pedidos del propio usuario.
+      supabase
+        .from('orders')
+        .select('short_id,status')
+        .in('status', ACTIVE_STATUSES)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .then(({ data }) => {
+          if (!active) return
+          const o = data?.[0]
+          setActiveOrder(o ? { shortId: o.short_id, status: o.status } : null)
+        })
+    }
+    loadActive()
+    const channel = supabase
+      .channel(`home-orders-${uid}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders', filter: `customer_user_id=eq.${uid}` },
+        () => loadActive(),
+      )
+      .subscribe()
+    return () => {
+      active = false
+      supabase.removeChannel(channel)
+    }
+  }, [user.userId])
+
   const firstName = user.name.split(' ')[0] || 'vecino'
 
   return (
     <main className="mx-auto min-h-dvh max-w-[768px] bg-surface">
       {/* Header */}
-      <div className="flex items-center justify-between px-5 pt-12 pb-4">
-        <div>
-          <div className="t-eyebrow" style={{ fontSize: 10, letterSpacing: '0.2em' }}>
-            San Jacinto, Áncash
-          </div>
+      <div className="flex items-center justify-between gap-3 px-5 pt-12 pb-4">
+        <div className="min-w-0">
+          <AddressBar />
           <div className="t-display mt-0.5 text-[28px] leading-none">Tindivo</div>
         </div>
-        {user.signedIn ? (
-          <Link
-            href="/cuenta"
-            className="flex h-[42px] w-[42px] items-center justify-center rounded-full font-bold text-[14px]"
-            style={{ background: '#F97316', color: '#fff' }}
-            aria-label="Mi cuenta"
-          >
-            {firstName[0]?.toUpperCase() ?? 'U'}
-          </Link>
-        ) : (
-          <button
-            type="button"
-            onClick={() => useOnboarding.getState().openSheet({ next: null })}
-            className="flex h-[42px] w-[42px] items-center justify-center rounded-full font-bold text-[14px]"
-            style={{ background: 'rgba(26,22,20,0.06)', color: '#1A1614' }}
-            aria-label="Ingresar"
-          >
-            <Icon.Person />
-          </button>
-        )}
+        <div className="flex shrink-0 items-center gap-2">
+          <CartButton />
+          {user.signedIn ? (
+            <Link
+              href="/cuenta"
+              className="flex h-[42px] w-[42px] items-center justify-center rounded-full font-bold text-[14px]"
+              style={{ background: '#F97316', color: '#fff' }}
+              aria-label="Mi cuenta"
+            >
+              {firstName[0]?.toUpperCase() ?? 'U'}
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={() => useOnboarding.getState().openSheet({ next: null })}
+              className="flex h-[42px] w-[42px] items-center justify-center rounded-full font-bold text-[14px]"
+              style={{ background: 'rgba(26,22,20,0.06)', color: '#1A1614' }}
+              aria-label="Ingresar"
+            >
+              <Icon.Person />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Greeting */}
@@ -110,6 +182,40 @@ export default function Home() {
           )}
         </h1>
       </div>
+
+      {/* Pedido en curso (badge) */}
+      {user.signedIn && activeOrder && (
+        <div className="px-4 pb-3">
+          <Link
+            href={`/pedido/${activeOrder.shortId}`}
+            className="flex items-center gap-3 rounded-[18px] px-4 py-3.5 text-white"
+            style={{ background: 'linear-gradient(135deg,#1A1614 0%,#2A211C 100%)' }}
+          >
+            <span
+              className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+              style={{ background: 'rgba(249,115,22,0.25)' }}
+            >
+              <span
+                className="absolute h-2.5 w-2.5 animate-ping rounded-full"
+                style={{ background: '#FDBA74' }}
+              />
+              <span className="h-2.5 w-2.5 rounded-full" style={{ background: '#F97316' }} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span
+                className="block font-mono text-[10px] uppercase tracking-[0.18em]"
+                style={{ color: '#FDBA74' }}
+              >
+                Pedido en curso
+              </span>
+              <span className="block font-semibold text-[15px]">
+                {TRACKING_LABEL[toTrackingStep(activeOrder.status as OrderStatus)]}
+              </span>
+            </span>
+            <span className="shrink-0 text-[13px] opacity-80">Ver ›</span>
+          </Link>
+        </div>
+      )}
 
       {/* Search (placeholder, visual) */}
       <div className="px-4 pb-2">

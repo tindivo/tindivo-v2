@@ -38,15 +38,17 @@ export function canTransition(from: OrderStatus, to: OrderStatus): boolean {
 }
 
 /**
- * Proyección estado-backend -> paso de tracking del cliente (5 pasos + cancelado).
+ * Proyección estado-backend -> paso de tracking del cliente (4 pasos + cancelado).
+ * El cliente ve solo: Pedido recibido · Preparando · En camino · Entregado (los
+ * estados `validando`/`pending_acceptance`/`confirmed` se colapsan en "recibido").
  * Resuelve la contradicción entre el vocabulario rico del backend (que las apps
  * de staff necesitan) y la vista simple que ve el cliente. Ver DECISIONS.md
  * "Máquina de estados".
  */
 export const STATUS_TO_TRACKING: Record<OrderStatus, TrackingStep> = {
-  validando: 'sent',
-  pending_acceptance: 'sent',
-  confirmed: 'confirmed',
+  validando: 'received',
+  pending_acceptance: 'received',
+  confirmed: 'received',
   preparing: 'preparing',
   waiting_driver: 'preparing',
   heading_to_restaurant: 'preparing',

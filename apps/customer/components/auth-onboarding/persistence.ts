@@ -77,12 +77,20 @@ export async function signInWithEmail(input: { email: string; password: string }
   if (error) throw new Error(authErrorMessage(error.message))
 }
 
-/** Lanza el OAuth de Google; la página se recarga al volver (ver host: resume). */
+/**
+ * Lanza el OAuth de Google; la página se recarga al volver (ver host: resume).
+ * `prompt: 'select_account'` fuerza a Google a mostrar SIEMPRE el selector de cuenta:
+ * sin esto, tras cerrar sesión el navegador reusaba en silencio la cuenta anterior y
+ * era imposible entrar con otra (bug reportado por el socio).
+ */
 export async function signInWithGoogle() {
   const supabase = getSupabaseBrowser()
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo: `${window.location.origin}/auth/callback` },
+    options: {
+      redirectTo: `${window.location.origin}/auth/callback`,
+      queryParams: { prompt: 'select_account' },
+    },
   })
   if (error) throw new Error(authErrorMessage(error.message))
 }
@@ -131,6 +139,9 @@ export async function saveAddress(input: {
   reference: string
   lat: number | null
   lng: number | null
+  label?: string
+  line?: string | null
+  accuracyM?: number | null
 }) {
   const supabase = getSupabaseBrowser()
   const { error: clearErr } = await supabase
@@ -142,8 +153,8 @@ export async function saveAddress(input: {
 
   const { error } = await supabase.from('customer_addresses').insert({
     user_id: input.userId,
-    label: 'Casa',
-    line: null,
+    label: input.label?.trim() || 'Casa',
+    line: input.line?.trim() || null,
     reference: input.reference.trim(),
     coordinates_lat: input.lat,
     coordinates_lng: input.lng,
@@ -154,7 +165,13 @@ export async function saveAddress(input: {
   if (input.lat != null && input.lng != null) {
     await supabase
       .from('customer_profiles')
-      .update({ default_coordinates_lat: input.lat, default_coordinates_lng: input.lng })
+      .update({
+        default_coordinates_lat: input.lat,
+        default_coordinates_lng: input.lng,
+        ...(input.accuracyM != null
+          ? { default_location_accuracy_m: Math.round(input.accuracyM) }
+          : {}),
+      })
       .eq('user_id', input.userId)
   }
 }
