@@ -41,6 +41,7 @@ export const REPORT_TYPE_LABEL: Record<string, string> = {
   restaurant_fake: 'Pedido fantasma',
   strike_reactivation: 'Reactivación de strike',
   advance_dispute: 'Disputa de adelanto',
+  prepay_refund_review: 'Devolución de prepago',
 }
 
 /** Tipo de incidente del motorizado → etiqueta (antifraude v1). */

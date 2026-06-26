@@ -1497,16 +1497,16 @@ export type Database = {
           comprobante_prepago_url: string | null
           confirmed_at: string | null
           created_at: string
-          customer_name: string | null
-          customer_notes: string | null
-          customer_phone: string | null
-          customer_user_id: string | null
           customer_gps_accuracy_m: number | null
           customer_gps_distance_to_center_km: number | null
           customer_gps_lat: number | null
           customer_gps_lng: number | null
           customer_gps_method: string | null
           customer_gps_validated_at: string | null
+          customer_name: string | null
+          customer_notes: string | null
+          customer_phone: string | null
+          customer_user_id: string | null
           delivered_at: string | null
           delivery_address: string | null
           delivery_coordinates_lat: number | null
@@ -1556,8 +1556,8 @@ export type Database = {
           validated_at: string | null
           validated_by: string | null
           validating_at: string | null
-          validation_result: string | null
           validation_reason_code: string | null
+          validation_result: string | null
           waiting_at_restaurant_at: string | null
           waiting_driver_at: string | null
           yape_amount: number | null
@@ -1579,16 +1579,16 @@ export type Database = {
           comprobante_prepago_url?: string | null
           confirmed_at?: string | null
           created_at?: string
-          customer_name?: string | null
-          customer_notes?: string | null
-          customer_phone?: string | null
-          customer_user_id?: string | null
           customer_gps_accuracy_m?: number | null
           customer_gps_distance_to_center_km?: number | null
           customer_gps_lat?: number | null
           customer_gps_lng?: number | null
           customer_gps_method?: string | null
           customer_gps_validated_at?: string | null
+          customer_name?: string | null
+          customer_notes?: string | null
+          customer_phone?: string | null
+          customer_user_id?: string | null
           delivered_at?: string | null
           delivery_address?: string | null
           delivery_coordinates_lat?: number | null
@@ -1638,8 +1638,8 @@ export type Database = {
           validated_at?: string | null
           validated_by?: string | null
           validating_at?: string | null
-          validation_result?: string | null
           validation_reason_code?: string | null
+          validation_result?: string | null
           waiting_at_restaurant_at?: string | null
           waiting_driver_at?: string | null
           yape_amount?: number | null
@@ -1661,16 +1661,16 @@ export type Database = {
           comprobante_prepago_url?: string | null
           confirmed_at?: string | null
           created_at?: string
-          customer_name?: string | null
-          customer_notes?: string | null
-          customer_phone?: string | null
-          customer_user_id?: string | null
           customer_gps_accuracy_m?: number | null
           customer_gps_distance_to_center_km?: number | null
           customer_gps_lat?: number | null
           customer_gps_lng?: number | null
           customer_gps_method?: string | null
           customer_gps_validated_at?: string | null
+          customer_name?: string | null
+          customer_notes?: string | null
+          customer_phone?: string | null
+          customer_user_id?: string | null
           delivered_at?: string | null
           delivery_address?: string | null
           delivery_coordinates_lat?: number | null
@@ -1720,8 +1720,8 @@ export type Database = {
           validated_at?: string | null
           validated_by?: string | null
           validating_at?: string | null
-          validation_result?: string | null
           validation_reason_code?: string | null
+          validation_result?: string | null
           waiting_at_restaurant_at?: string | null
           waiting_driver_at?: string | null
           yape_amount?: number | null
@@ -2426,6 +2426,10 @@ export type Database = {
         Returns: Json
       }
       generate_short_id: { Args: never; Returns: string }
+      geo_distance_km: {
+        Args: { p_lat1: number; p_lat2: number; p_lng1: number; p_lng2: number }
+        Returns: number
+      }
       get_tracking: { Args: { p_short_id: string }; Returns: Json }
       is_published_business: {
         Args: { p_business_id: string }
@@ -2444,6 +2448,10 @@ export type Database = {
           p_settlement_id: string
         }
         Returns: Json
+      }
+      refresh_customer_profile_risk: {
+        Args: { p_phone: string; p_user_id: string }
+        Returns: undefined
       }
       request_order_transfer: {
         Args: {
@@ -2471,6 +2479,12 @@ export type Database = {
           comprobante_prepago_url: string | null
           confirmed_at: string | null
           created_at: string
+          customer_gps_accuracy_m: number | null
+          customer_gps_distance_to_center_km: number | null
+          customer_gps_lat: number | null
+          customer_gps_lng: number | null
+          customer_gps_method: string | null
+          customer_gps_validated_at: string | null
           customer_name: string | null
           customer_notes: string | null
           customer_phone: string | null
@@ -2512,6 +2526,7 @@ export type Database = {
           rejection_reason_code: string | null
           rejection_reason_text: string | null
           requires_validation: boolean
+          risk_flags: Json
           short_id: string
           source: Database["public"]["Enums"]["order_source"]
           status: Database["public"]["Enums"]["order_status"]
@@ -2523,6 +2538,7 @@ export type Database = {
           validated_at: string | null
           validated_by: string | null
           validating_at: string | null
+          validation_reason_code: string | null
           validation_result: string | null
           waiting_at_restaurant_at: string | null
           waiting_driver_at: string | null
@@ -2704,6 +2720,7 @@ export type Database = {
         | "restaurant_fake"
         | "strike_reactivation"
         | "advance_dispute"
+        | "prepay_refund_review"
       settlement_status: "pending" | "paid" | "overdue" | "cancelled"
       transfer_request_status:
         | "pending"
@@ -2912,6 +2929,7 @@ export const Constants = {
         "restaurant_fake",
         "strike_reactivation",
         "advance_dispute",
+        "prepay_refund_review",
       ],
       settlement_status: ["pending", "paid", "overdue", "cancelled"],
       transfer_request_status: [

@@ -102,7 +102,7 @@ export const CASH_SETTLEMENT_STATUSES = [
 export const CashSettlementStatusSchema = z.enum(CASH_SETTLEMENT_STATUSES)
 export type CashSettlementStatus = z.infer<typeof CashSettlementStatusSchema>
 
-// --- Bandeja del admin: 6 tipos de reporte ---
+// --- Bandeja del admin: 7 tipos de reporte ---
 export const REPORT_TYPES = [
   'no_show', // 1
   'rejected_proof_disputed', // 2
@@ -110,6 +110,7 @@ export const REPORT_TYPES = [
   'restaurant_fake', // 4
   'strike_reactivation', // 5
   'advance_dispute', // 6
+  'prepay_refund_review', // 7 — prepago cancelado con dinero pagado, revisar devolución
 ] as const
 export const ReportTypeSchema = z.enum(REPORT_TYPES)
 export type ReportType = z.infer<typeof ReportTypeSchema>
