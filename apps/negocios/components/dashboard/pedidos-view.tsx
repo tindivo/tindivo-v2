@@ -23,7 +23,6 @@ export interface PedidosViewProps {
   routeOrders: OrderVM[]
   history: OrderVM[]
   onOpen: (o: OrderVM) => void
-  onSignOut: () => void
   selected: OrderVM | null
   detailItems: DetailItem[] | null
   detailProofUrl: string | null
@@ -37,221 +36,9 @@ export interface PedidosViewProps {
 
 const ACCENT = '#F472B6'
 
-// ── Bottom nav (mobile) ───────────────────────────────────────────────────────
-function MobileBottomNav() {
-  return (
-    <div className="tv-bottom-nav">
-      <Link href="/" className="active" style={navBtnStyle(true)}>
-        <MS name="receipt_long" size={22} filled />
-        <span>Pedidos</span>
-      </Link>
-      <Link href="/menu" style={navBtnStyle(false)}>
-        <MS name="restaurant_menu" size={22} />
-        <span>Menú</span>
-      </Link>
-      <Link href="/nuevo" className="fab">
-        <MS name="add" size={28} filled />
-      </Link>
-      <Link href="/efectivo" style={navBtnStyle(false)}>
-        <MS name="payments" size={22} />
-        <span>Efectivo</span>
-      </Link>
-      <Link href="/configuracion" style={navBtnStyle(false)}>
-        <MS name="more_horiz" size={22} />
-        <span>Más</span>
-      </Link>
-    </div>
-  )
-}
-
-function navBtnStyle(active: boolean) {
-  return {
-    background: 'none',
-    border: 'none',
-    display: 'flex',
-    flexDirection: 'column' as const,
-    alignItems: 'center',
-    gap: 2,
-    padding: '6px 4px',
-    fontFamily: 'inherit',
-    fontSize: 10,
-    color: active ? 'var(--tv-brand)' : 'var(--tv-ink-muted)',
-    fontWeight: 600,
-    cursor: 'pointer',
-    borderRadius: 10,
-    textDecoration: 'none',
-  }
-}
-
-// ── Sidebar (desktop) ─────────────────────────────────────────────────────────
-function DesktopSidebar({
-  bizName,
-  accent,
-  counts,
-  paused,
-  onSignOut,
-}: {
-  bizName: string
-  accent: string
-  counts: PedidosViewProps['counts']
-  paused: boolean
-  onSignOut: () => void
-}) {
-  const items = [
-    { id: 'pedidos', label: 'Pedidos', icon: 'receipt_long', href: '/', badge: counts.new },
-    { id: 'menu', label: 'Menú', icon: 'restaurant_menu', href: '/menu' },
-    { id: 'add', label: 'Pedir moto', icon: 'two_wheeler', href: '/nuevo' },
-    { id: 'efectivo', label: 'Efectivo', icon: 'payments', href: '/efectivo' },
-    { id: 'deuda', label: 'Deuda', icon: 'account_balance_wallet', href: '/deuda' },
-    { id: 'config', label: 'Config', icon: 'settings', href: '/configuracion' },
-  ]
-  return (
-    <aside
-      style={{
-        width: 240,
-        flexShrink: 0,
-        background: '#fff',
-        borderRight: '1px solid var(--tv-border)',
-        display: 'flex',
-        flexDirection: 'column',
-        padding: '20px 14px 16px',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 6px 18px' }}>
-        <div
-          style={{
-            width: 38,
-            height: 38,
-            borderRadius: 12,
-            background: accent,
-            color: '#fff',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontWeight: 700,
-            fontSize: 17,
-            fontFamily: "var(--font-bricolage), 'Bricolage Grotesque', sans-serif",
-          }}
-        >
-          {bizName[0] ?? 'T'}
-        </div>
-        <div style={{ minWidth: 0 }}>
-          <div className="tv-display" style={{ fontSize: 16, lineHeight: 1.1 }}>
-            {bizName}
-          </div>
-          <div className="tv-label" style={{ marginTop: 2, fontSize: 9 }}>
-            SAN JACINTO · ÁNCASH
-          </div>
-        </div>
-      </div>
-      <nav style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {items.map((it) => {
-          const active = it.id === 'pedidos'
-          return (
-            <Link
-              key={it.id}
-              href={it.href}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                padding: '10px 12px',
-                borderRadius: 12,
-                background: active ? 'var(--tv-ink)' : 'transparent',
-                color: active ? '#fff' : 'var(--tv-ink)',
-                textDecoration: 'none',
-                fontFamily: 'inherit',
-                fontSize: 14,
-                fontWeight: 500,
-              }}
-            >
-              <MS name={it.icon} size={20} filled={active} />
-              <span style={{ flex: 1 }}>{it.label}</span>
-              {it.badge != null && it.badge > 0 && (
-                <span
-                  style={{
-                    minWidth: 22,
-                    height: 22,
-                    borderRadius: 999,
-                    background: active ? 'var(--tv-brand)' : 'var(--tv-danger)',
-                    color: '#fff',
-                    fontSize: 11,
-                    fontWeight: 700,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '0 6px',
-                  }}
-                >
-                  {it.badge}
-                </span>
-              )}
-            </Link>
-          )
-        })}
-      </nav>
-      <div style={{ flex: 1 }} />
-      <div
-        className="tv-card"
-        style={{ padding: 12, marginBottom: 10, background: '#FFF4EC', boxShadow: 'none' }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <MS name="circle" size={10} filled style={{ color: paused ? '#B45309' : '#16A34A' }} />
-          <div style={{ fontSize: 13, fontWeight: 600 }}>
-            {paused ? 'Pausado' : 'Plataforma abierta'}
-          </div>
-        </div>
-        <div className="tv-label" style={{ fontSize: 9, marginTop: 4 }}>
-          {paused ? 'NO RECIBE PEDIDOS WEB' : 'RECIBIENDO PEDIDOS'}
-        </div>
-      </div>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          padding: '8px 6px',
-          borderTop: '1px solid var(--tv-border)',
-        }}
-      >
-        <div
-          style={{
-            width: 32,
-            height: 32,
-            borderRadius: 999,
-            background: 'var(--tv-brand-soft)',
-            color: 'var(--tv-brand-dark)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontWeight: 700,
-            fontSize: 13,
-          }}
-        >
-          {bizName[0] ?? 'T'}
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 600 }}>Caja</div>
-        </div>
-        <button
-          type="button"
-          onClick={onSignOut}
-          title="Salir"
-          style={{
-            width: 32,
-            height: 32,
-            borderRadius: 8,
-            background: 'rgba(26,22,20,0.06)',
-            border: 'none',
-            cursor: 'pointer',
-          }}
-        >
-          <MS name="logout" size={18} />
-        </button>
-      </div>
-    </aside>
-  )
-}
+// El sidebar (desktop) y el bottom-nav (mobile) viven ahora en el chrome compartido
+// (components/dashboard/chrome.tsx) y persisten entre secciones; esta vista solo
+// renderiza el contenido de la pantalla "Pedidos" (banners + header + kanban + detalle).
 
 // ── Empty states ──────────────────────────────────────────────────────────────
 function ColEmpty({ tab }: { tab: 'new' | 'cooking' | 'route' | 'today' }) {
@@ -379,7 +166,8 @@ export function PedidosMobile(p: PedidosViewProps) {
       style={{
         display: 'flex',
         flexDirection: 'column',
-        height: '100dvh',
+        flex: 1,
+        minHeight: 0,
         background: 'var(--tv-surface)',
         position: 'relative',
       }}
@@ -466,7 +254,7 @@ export function PedidosMobile(p: PedidosViewProps) {
               justifyContent: 'center',
               fontWeight: 700,
               fontSize: 15,
-              fontFamily: "var(--font-bricolage), 'Bricolage Grotesque', sans-serif",
+              fontFamily: "var(--font-bricolage), 'Manrope', sans-serif",
               flexShrink: 0,
             }}
           >
@@ -635,8 +423,6 @@ export function PedidosMobile(p: PedidosViewProps) {
           ))}
         {tab === 'today' && <HistoryList history={p.history} />}
       </div>
-
-      <MobileBottomNav />
     </div>
   )
 }
@@ -723,278 +509,268 @@ export function PedidosDesktop(p: PedidosViewProps) {
   const hasWaiting = p.cookingOrders.some((o) => o.state === 'waiting')
 
   return (
-    <div style={{ display: 'flex', height: '100dvh', background: 'var(--tv-surface)' }}>
-      <DesktopSidebar
-        bizName={p.bizName}
-        accent={p.accent || ACCENT}
-        counts={p.counts}
-        paused={p.paused}
-        onSignOut={p.onSignOut}
-      />
+    <div
+      style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        minWidth: 0,
+        position: 'relative',
+        background: 'var(--tv-surface)',
+      }}
+    >
+      {p.showPauseModal && (
+        <PausarModal busy={p.detailBusy} onClose={p.onClosePause} onConfirm={p.onConfirmPause} />
+      )}
+
+      {/* Banners */}
+      {p.paused && (
+        <div
+          style={{
+            background: '#FDE68A',
+            color: '#78350F',
+            padding: '9px 24px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 14,
+          }}
+        >
+          <MS name="pause_circle" size={20} filled />
+          <div style={{ flex: 1, fontSize: 14, fontWeight: 700 }}>
+            PEDIDOS PAUSADOS{p.pauseMinLeft ? ` · Reactiva en ${p.pauseMinLeft}m` : ''}
+          </div>
+          <button type="button" onClick={p.onResume} className="tv-btn tv-btn-dark tv-btn-sm">
+            <MS name="play_circle" size={16} filled /> Reanudar ahora
+          </button>
+        </div>
+      )}
+      {hasWaiting && (
+        <div
+          style={{
+            background: '#16A34A',
+            color: '#fff',
+            padding: '9px 24px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 14,
+          }}
+        >
+          <MS name="two_wheeler" size={20} filled />
+          <div style={{ flex: 1, fontSize: 14, fontWeight: 700 }}>
+            Motorizado en el local — entrégale el pedido
+          </div>
+        </div>
+      )}
+
+      {/* Header */}
+      <div
+        className="tv-glass"
+        style={{ padding: '11px 24px', display: 'flex', alignItems: 'center', gap: 16 }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 10,
+              background: p.accent || ACCENT,
+              color: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 700,
+              fontSize: 16,
+              fontFamily: "var(--font-bricolage), 'Manrope', sans-serif",
+            }}
+          >
+            {p.bizName[0] ?? 'T'}
+          </div>
+          <div>
+            <div className="tv-display" style={{ fontSize: 17, lineHeight: 1.1 }}>
+              {p.bizName}
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--tv-ink-muted)', marginTop: 2 }}>
+              <span style={{ color: p.paused ? '#B45309' : '#16A34A', fontWeight: 700 }}>
+                {p.paused ? '⏸ Pausado' : '● Abierto'}
+              </span>
+              {' · '}
+              {p.counts.new} nuevos · {p.counts.cooking} cocina · {p.counts.route} reparto ·{' '}
+              {p.counts.today} hoy
+            </div>
+          </div>
+        </div>
+        <div style={{ flex: 1 }} />
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <Link
+            href="/nuevo"
+            className="tv-btn tv-btn-dark tv-btn-sm"
+            style={{ textDecoration: 'none' }}
+          >
+            <MS name="add" size={15} /> Pedido directo
+          </Link>
+          <button
+            type="button"
+            onClick={p.paused ? p.onResume : p.onOpenPause}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '8px 12px',
+              borderRadius: 10,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              fontSize: 13,
+              fontWeight: 600,
+              border: 'none',
+              background: p.paused ? '#FDE68A' : 'rgba(26,22,20,0.08)',
+              color: p.paused ? '#78350F' : 'var(--tv-ink)',
+            }}
+          >
+            <MS name={p.paused ? 'play_circle' : 'pause_circle'} size={16} filled />
+            {p.paused ? 'Reanudar' : 'Pausar pedidos'}
+          </button>
+          <button
+            type="button"
+            onClick={p.onToggleSound}
+            className={`tv-btn tv-btn-sm ${p.soundOn ? 'tv-btn-brand' : 'tv-btn-ghost'} ${p.counts.new > 0 && p.soundOn ? 'tv-pulse-brand' : ''}`}
+          >
+            <MS
+              name={p.soundOn ? 'notifications_active' : 'notifications_off'}
+              size={15}
+              filled={p.soundOn}
+            />
+            Alertas {p.soundOn ? 'ON' : 'OFF'}
+          </button>
+        </div>
+      </div>
+
+      {/* Urgent bar */}
+      {p.counts.new > 0 && (
+        <div
+          style={{
+            margin: '10px 20px 0',
+            background: '#fff',
+            borderRadius: 12,
+            border: '1.5px solid #FCA5A5',
+            padding: '9px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+          }}
+        >
+          <MS
+            name="notifications_active"
+            size={20}
+            filled
+            style={{ color: 'var(--tv-danger)', flexShrink: 0 }}
+          />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 14, fontWeight: 700 }}>
+              {p.counts.new}{' '}
+              {p.counts.new === 1 ? 'pedido nuevo requiere' : 'pedidos nuevos requieren'} revisión
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--tv-ink-muted)' }}>
+              Toca cada card para ver el detalle y aceptar o rechazar. Se cancelan automáticamente
+              en 5 min.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Kanban 3 columnas */}
       <div
         style={{
           flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          minWidth: 0,
-          position: 'relative',
+          padding: '12px 20px 20px',
+          display: 'grid',
+          gridTemplateColumns: '1fr 1.4fr 0.9fr',
+          gap: 12,
+          alignItems: 'stretch',
+          minHeight: 0,
+          overflow: 'hidden',
         }}
       >
-        {p.showPauseModal && (
-          <PausarModal busy={p.detailBusy} onClose={p.onClosePause} onConfirm={p.onConfirmPause} />
-        )}
-
-        {/* Banners */}
-        {p.paused && (
-          <div
-            style={{
-              background: '#FDE68A',
-              color: '#78350F',
-              padding: '9px 24px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 14,
-            }}
-          >
-            <MS name="pause_circle" size={20} filled />
-            <div style={{ flex: 1, fontSize: 14, fontWeight: 700 }}>
-              PEDIDOS PAUSADOS{p.pauseMinLeft ? ` · Reactiva en ${p.pauseMinLeft}m` : ''}
-            </div>
-            <button type="button" onClick={p.onResume} className="tv-btn tv-btn-dark tv-btn-sm">
-              <MS name="play_circle" size={16} filled /> Reanudar ahora
-            </button>
-          </div>
-        )}
-        {hasWaiting && (
-          <div
-            style={{
-              background: '#16A34A',
-              color: '#fff',
-              padding: '9px 24px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 14,
-            }}
-          >
-            <MS name="two_wheeler" size={20} filled />
-            <div style={{ flex: 1, fontSize: 14, fontWeight: 700 }}>
-              Motorizado en el local — entrégale el pedido
-            </div>
-          </div>
-        )}
-
-        {/* Header */}
-        <div
-          className="tv-glass"
-          style={{ padding: '11px 24px', display: 'flex', alignItems: 'center', gap: 16 }}
+        <KanbanCol
+          title="Nuevos"
+          count={p.counts.new}
+          accentColor="#DC2626"
+          alertColor={p.counts.new > 0 ? '#DC2626' : null}
+          subtitle="Revisar antes de aceptar"
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {p.newOrders.length > 0 ? (
+            p.newOrders.map((o) => <NuevoCard key={o.rowId} order={o} compact onOpen={p.onOpen} />)
+          ) : (
             <div
               style={{
-                width: 36,
-                height: 36,
-                borderRadius: 10,
-                background: p.accent || ACCENT,
-                color: '#fff',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 700,
-                fontSize: 16,
-                fontFamily: "var(--font-bricolage), 'Bricolage Grotesque', sans-serif",
+                padding: '20px 10px',
+                textAlign: 'center',
+                color: 'var(--tv-ink-subtle)',
+                fontSize: 12,
               }}
             >
-              {p.bizName[0] ?? 'T'}
+              Sin pedidos nuevos · te avisaremos cuando lleguen
             </div>
-            <div>
-              <div className="tv-display" style={{ fontSize: 17, lineHeight: 1.1 }}>
-                {p.bizName}
-              </div>
-              <div style={{ fontSize: 11, color: 'var(--tv-ink-muted)', marginTop: 2 }}>
-                <span style={{ color: p.paused ? '#B45309' : '#16A34A', fontWeight: 700 }}>
-                  {p.paused ? '⏸ Pausado' : '● Abierto'}
-                </span>
-                {' · '}
-                {p.counts.new} nuevos · {p.counts.cooking} cocina · {p.counts.route} reparto ·{' '}
-                {p.counts.today} hoy
-              </div>
-            </div>
-          </div>
-          <div style={{ flex: 1 }} />
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <Link
-              href="/nuevo"
-              className="tv-btn tv-btn-dark tv-btn-sm"
-              style={{ textDecoration: 'none' }}
-            >
-              <MS name="add" size={15} /> Pedido directo
-            </Link>
-            <button
-              type="button"
-              onClick={p.paused ? p.onResume : p.onOpenPause}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '8px 12px',
-                borderRadius: 10,
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-                fontSize: 13,
-                fontWeight: 600,
-                border: 'none',
-                background: p.paused ? '#FDE68A' : 'rgba(26,22,20,0.08)',
-                color: p.paused ? '#78350F' : 'var(--tv-ink)',
-              }}
-            >
-              <MS name={p.paused ? 'play_circle' : 'pause_circle'} size={16} filled />
-              {p.paused ? 'Reanudar' : 'Pausar pedidos'}
-            </button>
-            <button
-              type="button"
-              onClick={p.onToggleSound}
-              className={`tv-btn tv-btn-sm ${p.soundOn ? 'tv-btn-brand' : 'tv-btn-ghost'} ${p.counts.new > 0 && p.soundOn ? 'tv-pulse-brand' : ''}`}
-            >
-              <MS
-                name={p.soundOn ? 'notifications_active' : 'notifications_off'}
-                size={15}
-                filled={p.soundOn}
-              />
-              Alertas {p.soundOn ? 'ON' : 'OFF'}
-            </button>
-          </div>
-        </div>
+          )}
+        </KanbanCol>
 
-        {/* Urgent bar */}
-        {p.counts.new > 0 && (
-          <div
-            style={{
-              margin: '10px 20px 0',
-              background: '#fff',
-              borderRadius: 12,
-              border: '1.5px solid #FCA5A5',
-              padding: '9px 16px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-            }}
-          >
-            <MS
-              name="notifications_active"
-              size={20}
-              filled
-              style={{ color: 'var(--tv-danger)', flexShrink: 0 }}
-            />
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 14, fontWeight: 700 }}>
-                {p.counts.new}{' '}
-                {p.counts.new === 1 ? 'pedido nuevo requiere' : 'pedidos nuevos requieren'} revisión
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--tv-ink-muted)' }}>
-                Toca cada card para ver el detalle y aceptar o rechazar. Se cancelan automáticamente
-                en 5 min.
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Kanban 3 columnas */}
-        <div
-          style={{
-            flex: 1,
-            padding: '12px 20px 20px',
-            display: 'grid',
-            gridTemplateColumns: '1fr 1.4fr 0.9fr',
-            gap: 12,
-            alignItems: 'stretch',
-            minHeight: 0,
-            overflow: 'hidden',
-          }}
+        <KanbanCol
+          title="En cocina"
+          count={p.counts.cooking}
+          accentColor="#C2410C"
+          subtitle="Cocinando + esperando moto"
         >
-          <KanbanCol
-            title="Nuevos"
-            count={p.counts.new}
-            accentColor="#DC2626"
-            alertColor={p.counts.new > 0 ? '#DC2626' : null}
-            subtitle="Revisar antes de aceptar"
-          >
-            {p.newOrders.length > 0 ? (
-              p.newOrders.map((o) => (
-                <NuevoCard key={o.rowId} order={o} compact onOpen={p.onOpen} />
-              ))
-            ) : (
-              <div
-                style={{
-                  padding: '20px 10px',
-                  textAlign: 'center',
-                  color: 'var(--tv-ink-subtle)',
-                  fontSize: 12,
-                }}
-              >
-                Sin pedidos nuevos · te avisaremos cuando lleguen
-              </div>
-            )}
-          </KanbanCol>
+          {cooking.length > 0 ? (
+            cooking.map((o) => <CocinaCard key={o.rowId} order={o} compact onOpen={p.onOpen} />)
+          ) : (
+            <div
+              style={{
+                padding: '20px 10px',
+                textAlign: 'center',
+                color: 'var(--tv-ink-subtle)',
+                fontSize: 12,
+              }}
+            >
+              Nada en preparación
+            </div>
+          )}
+        </KanbanCol>
 
-          <KanbanCol
-            title="En cocina"
-            count={p.counts.cooking}
-            accentColor="#C2410C"
-            subtitle="Cocinando + esperando moto"
-          >
-            {cooking.length > 0 ? (
-              cooking.map((o) => <CocinaCard key={o.rowId} order={o} compact onOpen={p.onOpen} />)
-            ) : (
-              <div
-                style={{
-                  padding: '20px 10px',
-                  textAlign: 'center',
-                  color: 'var(--tv-ink-subtle)',
-                  fontSize: 12,
-                }}
-              >
-                Nada en preparación
-              </div>
-            )}
-          </KanbanCol>
-
-          <KanbanCol
-            title="En reparto"
-            count={p.counts.route}
-            accentColor="#6D28D9"
-            subtitle="Solo monitoreo · timer desde recogida"
-          >
-            {p.routeOrders.length > 0 ? (
-              p.routeOrders.map((o) => (
-                <RepartoCard key={o.rowId} order={o} compact onOpen={p.onOpen} />
-              ))
-            ) : (
-              <div
-                style={{
-                  padding: '20px 10px',
-                  textAlign: 'center',
-                  color: 'var(--tv-ink-subtle)',
-                  fontSize: 12,
-                }}
-              >
-                Sin pedidos en camino
-              </div>
-            )}
-          </KanbanCol>
-        </div>
-
-        {/* Detail side panel */}
-        {p.selected && (
-          <DetailScreen
-            order={p.selected}
-            items={p.detailItems}
-            proofUrl={p.detailProofUrl}
-            qrUrl={p.qrUrl}
-            busy={p.detailBusy}
-            actions={p.actions}
-          />
-        )}
+        <KanbanCol
+          title="En reparto"
+          count={p.counts.route}
+          accentColor="#6D28D9"
+          subtitle="Solo monitoreo · timer desde recogida"
+        >
+          {p.routeOrders.length > 0 ? (
+            p.routeOrders.map((o) => (
+              <RepartoCard key={o.rowId} order={o} compact onOpen={p.onOpen} />
+            ))
+          ) : (
+            <div
+              style={{
+                padding: '20px 10px',
+                textAlign: 'center',
+                color: 'var(--tv-ink-subtle)',
+                fontSize: 12,
+              }}
+            >
+              Sin pedidos en camino
+            </div>
+          )}
+        </KanbanCol>
       </div>
+
+      {/* Detail side panel */}
+      {p.selected && (
+        <DetailScreen
+          order={p.selected}
+          items={p.detailItems}
+          proofUrl={p.detailProofUrl}
+          qrUrl={p.qrUrl}
+          busy={p.detailBusy}
+          actions={p.actions}
+        />
+      )}
     </div>
   )
 }

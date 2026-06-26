@@ -2,10 +2,9 @@
 
 import { ApiError } from '@tindivo/api-client'
 import { useRouter } from 'next/navigation'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { MS, soles } from '@/components/dashboard/primitives'
 import { api } from '@/lib/api'
-import { getSupabaseBrowser } from '@/lib/supabase/client'
 
 const PREP_PRESETS = [10, 15, 20, 25, 30, 35, 40, 45, 50]
 type Payment = 'pending_cash' | 'pending_wallet' | 'prepaid' | 'pending_mixed'
@@ -44,7 +43,6 @@ function num(v: string): number {
 
 export default function NuevoPedidoPage() {
   const router = useRouter()
-  const [ready, setReady] = useState(false)
 
   const [prep, setPrep] = useState(20)
   const [name, setName] = useState('')
@@ -57,15 +55,6 @@ export default function NuevoPedidoPage() {
   const [cashPart, setCashPart] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-
-  useEffect(() => {
-    getSupabaseBrowser()
-      .auth.getSession()
-      .then(({ data }) => {
-        if (!data.session) router.replace('/')
-        else setReady(true)
-      })
-  }, [router])
 
   const amountN = num(amount)
   const isCashish = payment === 'pending_cash' || payment === 'pending_mixed'
@@ -109,14 +98,13 @@ export default function NuevoPedidoPage() {
     }
   }
 
-  if (!ready) return <div className="p-10 text-ink-muted">Cargando…</div>
-
   return (
     <div
       style={{
         display: 'flex',
         flexDirection: 'column',
-        minHeight: '100dvh',
+        flex: 1,
+        minHeight: 0,
         background: 'var(--tv-surface)',
       }}
     >

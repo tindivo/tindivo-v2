@@ -1,15 +1,18 @@
 import type { Metadata } from 'next'
-import { Bricolage_Grotesque, Geist, JetBrains_Mono } from 'next/font/google'
+import { JetBrains_Mono, Manrope } from 'next/font/google'
 import type { ReactNode } from 'react'
+import { DashboardChrome } from '@/components/dashboard/chrome'
 import { PushManager } from '@/components/push-manager'
 import './globals.css'
 
-const bricolage = Bricolage_Grotesque({
+// Tipografía de branding del negocio (#6): Manrope cubre display (--font-bricolage)
+// y cuerpo (--font-geist). JetBrains Mono se mantiene para IDs/precios tabulares.
+const manropeDisplay = Manrope({
   subsets: ['latin'],
   variable: '--font-bricolage',
   display: 'swap',
 })
-const geist = Geist({ subsets: ['latin'], variable: '--font-geist', display: 'swap' })
+const manropeBody = Manrope({ subsets: ['latin'], variable: '--font-geist', display: 'swap' })
 const jetbrains = JetBrains_Mono({
   subsets: ['latin'],
   variable: '--font-jetbrains',
@@ -23,7 +26,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="es" className={`${bricolage.variable} ${geist.variable} ${jetbrains.variable}`}>
+    <html
+      lang="es"
+      className={`${manropeDisplay.variable} ${manropeBody.variable} ${jetbrains.variable}`}
+    >
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -35,7 +41,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         />
       </head>
       <body className="min-h-dvh bg-surface font-sans text-ink antialiased">
-        {children}
+        <DashboardChrome>{children}</DashboardChrome>
         <PushManager />
       </body>
     </html>
