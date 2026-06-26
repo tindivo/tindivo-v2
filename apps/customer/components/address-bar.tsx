@@ -97,21 +97,21 @@ export function AddressBar() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex max-w-[220px] items-center gap-1.5 text-left"
+        className="flex w-full min-w-0 items-center gap-1.5 text-left"
         aria-label="Cambiar dirección de entrega"
       >
-        <span style={{ color: '#F97316' }}>
+        <span className="shrink-0" style={{ color: '#F97316' }}>
           <Icon.Pin />
         </span>
-        <span className="min-w-0">
+        <span className="min-w-0 flex-1">
           <span className="t-eyebrow block" style={{ fontSize: 9, letterSpacing: '0.16em' }}>
             Entregar en
           </span>
-          <span className="flex items-center gap-1 font-semibold text-[13px] leading-tight">
+          <span className="flex min-w-0 items-center gap-1 font-semibold text-[13px] leading-tight">
             <span className="truncate">
               {labelEmoji(selected.label)} {selected.line || selected.reference}
             </span>
-            <span aria-hidden style={{ color: 'rgba(26,22,20,0.45)' }}>
+            <span aria-hidden className="shrink-0" style={{ color: 'rgba(26,22,20,0.45)' }}>
               ⌄
             </span>
           </span>

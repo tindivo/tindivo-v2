@@ -244,7 +244,9 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
   // (DECISIONS §5). Se basa en el estado crudo, no en el bucket "recibido" (que ya
   // incluye `confirmed`), para no ofrecer cancelar un pedido ya confirmado.
   const cancellable =
-    (data.status === 'validando' || data.status === 'pending_acceptance') && Boolean(ownedId)
+    (data.status === 'validando' || data.status === 'pending_acceptance') &&
+    Boolean(ownedId) &&
+    data.paymentIntent !== 'prepaid' // los pedidos prepagados no se autocancelan
   const itemCount = data.items.length
 
   return (
@@ -473,7 +475,10 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
                 <div className="font-semibold text-[13px] leading-snug">
                   {current === 'delivered'
                     ? '¡Tu pedido fue entregado! Buen provecho.'
-                    : 'Tu pedido ya está en preparación y no puede cancelarse.'}
+                    : data.paymentIntent === 'prepaid' &&
+                        (data.status === 'validando' || data.status === 'pending_acceptance')
+                      ? 'Tu pago ya fue registrado. Si necesitas cambiar algo, escríbenos por soporte.'
+                      : 'Tu pedido ya está en preparación y no puede cancelarse.'}
                 </div>
                 <div className="mt-1.5">
                   <SupportLink orderShortId={data.shortId} />

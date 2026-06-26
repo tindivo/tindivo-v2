@@ -135,9 +135,14 @@ export default function Home() {
     <main className="mx-auto min-h-dvh max-w-[768px] bg-surface">
       {/* Header */}
       <div className="flex items-center justify-between gap-3 px-5 pt-12 pb-4">
-        <div className="min-w-0">
-          <AddressBar />
-          <div className="t-display mt-0.5 text-[28px] leading-none">Tindivo</div>
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <div className="t-display shrink-0 text-[28px] leading-none">Tindivo</div>
+          <div
+            className="min-w-0 flex-1 border-l pl-3"
+            style={{ borderColor: 'rgba(26,22,20,0.10)' }}
+          >
+            <AddressBar />
+          </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <CartButton />
