@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { BottomSheet, Icon, ScreenHeader } from '@/components/ui'
-import { useCart, useCartHydrated } from '@/lib/cart'
+import { type CartLine, useCart, useCartHydrated } from '@/lib/cart'
 
 const soles = (n: number) => `S/ ${n.toFixed(2)}`
 
@@ -47,6 +47,118 @@ export function CartButton({ tone = 'light' }: { tone?: 'light' | 'dark' }) {
   )
 }
 
+/** Estado vacío de la bolsa, reutilizado por la hoja (móvil) y el sidebar (desktop). */
+export function CartEmptyState() {
+  return (
+    <div className="flex flex-col items-center gap-2 py-14 text-center">
+      <span style={{ color: 'rgba(26,22,20,0.3)' }}>
+        <Icon.Bag />
+      </span>
+      <p className="font-semibold text-[15px]">Tu bolsa está vacía</p>
+      <p className="text-[13px]" style={{ color: 'rgba(26,22,20,0.55)' }}>
+        Agrega productos de un restaurante para empezar.
+      </p>
+    </div>
+  )
+}
+
+/**
+ * Lista editable de líneas de la bolsa (cantidad, adicionales, nota, eliminar).
+ * Reutilizada por la hoja inferior (móvil) y por el sidebar fijo (desktop).
+ */
+export function CartLineList({ lines }: { lines: CartLine[] }) {
+  const cart = useCart()
+  return (
+    <div className="flex flex-col">
+      {lines.map((line, i) => (
+        <div
+          key={line.key}
+          className="flex items-start gap-3 pt-3.5"
+          style={{
+            borderTop: i > 0 ? '1px solid rgba(26,22,20,0.05)' : 'none',
+            marginTop: i > 0 ? 14 : 0,
+          }}
+        >
+          <span
+            aria-hidden
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl font-bold text-[18px]"
+            style={{
+              background: `oklch(0.92 0.04 ${line.hue})`,
+              color: `oklch(0.42 0.12 ${line.hue})`,
+            }}
+          >
+            {line.name.charAt(0).toUpperCase()}
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-3">
+              <div className="font-semibold text-[14px] leading-snug">
+                <span className="tabular-nums">{line.quantity}×</span> {line.name}
+              </div>
+              <div className="shrink-0 font-semibold text-[14px] tabular-nums">
+                {soles(line.unitPrice * line.quantity)}
+              </div>
+            </div>
+
+            {line.modifiers.length > 0 && (
+              <div className="mt-1 flex flex-col gap-0.5">
+                {line.modifiers.map((m) => (
+                  <div
+                    key={`${line.key}-${m.optionId}`}
+                    className="text-[12px]"
+                    style={{ color: 'rgba(26,22,20,0.6)' }}
+                  >
+                    <span style={{ color: 'rgba(26,22,20,0.4)' }}>{m.groupName}: </span>
+                    {m.optionName}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {line.note && (
+              <div
+                className="mt-1.5 rounded-lg px-2.5 py-1.5 text-[12px]"
+                style={{ background: 'rgba(249,115,22,0.07)', color: '#9A3412' }}
+              >
+                <span className="font-semibold">Nota: </span>
+                {line.note}
+              </div>
+            )}
+
+            <div className="mt-2.5 flex items-center justify-between">
+              <div className="t-qty" style={{ transform: 'scale(0.9)', transformOrigin: 'left' }}>
+                <button
+                  type="button"
+                  onClick={() => cart.setQty(line.key, line.quantity - 1)}
+                  disabled={line.quantity <= 1}
+                  aria-label="Menos"
+                >
+                  <Icon.Minus />
+                </button>
+                <span className="val">{line.quantity}</span>
+                <button
+                  type="button"
+                  onClick={() => cart.setQty(line.key, line.quantity + 1)}
+                  aria-label="Más"
+                >
+                  <Icon.Plus />
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => cart.remove(line.key)}
+                className="rounded-lg px-2.5 py-1.5 font-medium text-[12px]"
+                style={{ background: 'rgba(220,38,38,0.06)', color: '#DC2626' }}
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 /** Hoja de previsualización de la bolsa: ver/editar ítems y notas sin salir de la pantalla. */
 export function CartSheet({ onClose }: { onClose: () => void }) {
   const router = useRouter()
@@ -65,15 +177,7 @@ export function CartSheet({ onClose }: { onClose: () => void }) {
       <ScreenHeader title="Mi bolsa" onBack={onClose} />
       <div className="t-scroll flex-1 px-4 pt-1 pb-4">
         {count === 0 ? (
-          <div className="flex flex-col items-center gap-2 py-14 text-center">
-            <span style={{ color: 'rgba(26,22,20,0.3)' }}>
-              <Icon.Bag />
-            </span>
-            <p className="font-semibold text-[15px]">Tu bolsa está vacía</p>
-            <p className="text-[13px]" style={{ color: 'rgba(26,22,20,0.55)' }}>
-              Agrega productos de un restaurante para empezar.
-            </p>
-          </div>
+          <CartEmptyState />
         ) : (
           <>
             {cart.businessName && (
@@ -84,96 +188,7 @@ export function CartSheet({ onClose }: { onClose: () => void }) {
                 <Icon.Store /> {cart.businessName}
               </div>
             )}
-            <div className="flex flex-col">
-              {lines.map((line, i) => (
-                <div
-                  key={line.key}
-                  className="flex items-start gap-3 pt-3.5"
-                  style={{
-                    borderTop: i > 0 ? '1px solid rgba(26,22,20,0.05)' : 'none',
-                    marginTop: i > 0 ? 14 : 0,
-                  }}
-                >
-                  <span
-                    aria-hidden
-                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl font-bold text-[18px]"
-                    style={{
-                      background: `oklch(0.92 0.04 ${line.hue})`,
-                      color: `oklch(0.42 0.12 ${line.hue})`,
-                    }}
-                  >
-                    {line.name.charAt(0).toUpperCase()}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="font-semibold text-[14px] leading-snug">
-                        <span className="tabular-nums">{line.quantity}×</span> {line.name}
-                      </div>
-                      <div className="shrink-0 font-semibold text-[14px] tabular-nums">
-                        {soles(line.unitPrice * line.quantity)}
-                      </div>
-                    </div>
-
-                    {line.modifiers.length > 0 && (
-                      <div className="mt-1 flex flex-col gap-0.5">
-                        {line.modifiers.map((m) => (
-                          <div
-                            key={`${line.key}-${m.optionId}`}
-                            className="text-[12px]"
-                            style={{ color: 'rgba(26,22,20,0.6)' }}
-                          >
-                            <span style={{ color: 'rgba(26,22,20,0.4)' }}>{m.groupName}: </span>
-                            {m.optionName}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {line.note && (
-                      <div
-                        className="mt-1.5 rounded-lg px-2.5 py-1.5 text-[12px]"
-                        style={{ background: 'rgba(249,115,22,0.07)', color: '#9A3412' }}
-                      >
-                        <span className="font-semibold">Nota: </span>
-                        {line.note}
-                      </div>
-                    )}
-
-                    <div className="mt-2.5 flex items-center justify-between">
-                      <div
-                        className="t-qty"
-                        style={{ transform: 'scale(0.9)', transformOrigin: 'left' }}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => cart.setQty(line.key, line.quantity - 1)}
-                          disabled={line.quantity <= 1}
-                          aria-label="Menos"
-                        >
-                          <Icon.Minus />
-                        </button>
-                        <span className="val">{line.quantity}</span>
-                        <button
-                          type="button"
-                          onClick={() => cart.setQty(line.key, line.quantity + 1)}
-                          aria-label="Más"
-                        >
-                          <Icon.Plus />
-                        </button>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => cart.remove(line.key)}
-                        className="rounded-lg px-2.5 py-1.5 font-medium text-[12px]"
-                        style={{ background: 'rgba(220,38,38,0.06)', color: '#DC2626' }}
-                      >
-                        Eliminar
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <CartLineList lines={lines} />
           </>
         )}
       </div>
@@ -192,5 +207,72 @@ export function CartSheet({ onClose }: { onClose: () => void }) {
         </div>
       )}
     </BottomSheet>
+  )
+}
+
+/**
+ * Bolsa fija en una columna lateral (solo desktop, `lg:`). Sustituye a la barra/​hoja
+ * inferior en pantallas anchas: misma lógica de `useCart()` que la hoja, mismo CTA.
+ * Vive aquí (no en packages/ui) porque depende del store del cliente.
+ */
+export function CartSidebar({
+  businessId,
+  businessName,
+}: {
+  businessId: string
+  businessName: string
+}) {
+  const router = useRouter()
+  const hydrated = useCartHydrated()
+  const cart = useCart()
+  const subtotal = cart.subtotal()
+  const count = cart.count()
+  // La bolsa es mono-negocio: solo refleja líneas de este restaurante.
+  const ownLines = cart.businessId === businessId ? cart.lines : []
+  const showCart = hydrated && ownLines.length > 0
+
+  return (
+    <div className="rounded-[28px] border border-border bg-white p-5 shadow-elev-2">
+      <div className="flex items-center justify-between gap-2">
+        <span className="t-display text-[18px]">Mi bolsa</span>
+        {showCart && (
+          <span
+            className="inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-full px-1.5 font-bold text-[12px] text-white tabular-nums"
+            style={{ background: '#F97316' }}
+          >
+            {count}
+          </span>
+        )}
+      </div>
+      <div
+        className="mt-1 flex items-center gap-2 font-semibold text-[13px]"
+        style={{ color: 'rgba(26,22,20,0.6)' }}
+      >
+        <Icon.Store /> {businessName}
+      </div>
+
+      {showCart ? (
+        <>
+          <div className="mt-3">
+            <CartLineList lines={ownLines} />
+          </div>
+          <div className="mt-4 flex items-center justify-between border-border border-t pt-4">
+            <span className="text-[13px]" style={{ color: 'rgba(26,22,20,0.55)' }}>
+              Subtotal
+            </span>
+            <span className="font-bold text-[18px] tabular-nums">{soles(subtotal)}</span>
+          </div>
+          <button
+            type="button"
+            className="t-btn t-btn-primary t-btn-block mt-3"
+            onClick={() => router.push('/checkout')}
+          >
+            Ir a pagar
+          </button>
+        </>
+      ) : (
+        <CartEmptyState />
+      )}
+    </div>
   )
 }

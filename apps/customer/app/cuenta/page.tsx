@@ -107,7 +107,7 @@ export default function CuentaPage() {
   const initial = (profile.name[0] ?? profile.email[0] ?? 'U').toUpperCase()
 
   return (
-    <main className="mx-auto min-h-dvh max-w-[768px] bg-surface pb-16">
+    <main className="mx-auto min-h-dvh max-w-[768px] bg-surface pb-16 lg:max-w-[880px]">
       <ScreenHeader title="Mi cuenta" onBack={() => router.push('/')} />
 
       <div className="px-4 pt-2">
@@ -151,12 +151,12 @@ export default function CuentaPage() {
             <Icon.Plus style={{ width: 14, height: 14 }} /> Añadir
           </button>
         </div>
-        <div className="mt-2 flex flex-col gap-2.5">
+        <div className="mt-2 flex flex-col gap-2.5 lg:grid lg:grid-cols-2 lg:gap-3">
           {addresses.length === 0 ? (
             <button
               type="button"
               onClick={() => setEditing('new')}
-              className="flex flex-col items-center gap-1.5 rounded-[18px] px-4 py-6"
+              className="flex flex-col items-center gap-1.5 rounded-[18px] px-4 py-6 lg:col-span-2"
               style={{
                 background: 'rgba(249,115,22,0.04)',
                 border: '1.5px dashed rgba(249,115,22,0.35)',

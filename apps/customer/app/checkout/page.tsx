@@ -410,13 +410,15 @@ export default function CheckoutPage() {
     )
 
   return (
-    <main className="mx-auto min-h-dvh max-w-[768px] bg-surface pb-28">
-      <ScreenHeader
-        title={step === 'delivery' ? 'Datos de entrega' : 'Método de pago'}
-        onBack={() => (step === 'payment' ? setStep('delivery') : router.back())}
-      />
+    <main className="mx-auto min-h-dvh max-w-[768px] bg-surface pb-28 lg:grid lg:max-w-6xl lg:grid-cols-[1fr_380px] lg:items-start lg:gap-8 lg:px-6 lg:pt-1">
+      <div className="lg:col-span-2">
+        <ScreenHeader
+          title={step === 'delivery' ? 'Datos de entrega' : 'Método de pago'}
+          onBack={() => (step === 'payment' ? setStep('delivery') : router.back())}
+        />
+      </div>
 
-      <div className="px-4 pt-3">
+      <div className="px-4 pt-3 lg:px-0">
         {step === 'delivery' ? (
           <>
             {PICKUP_ENABLED && (
@@ -547,14 +549,16 @@ export default function CheckoutPage() {
               </div>
             </label>
 
-            <OrderDetail />
+            <div className="lg:hidden">
+              <OrderDetail />
 
-            <Summary
-              subtotal={subtotal}
-              deliveryFee={deliveryFee}
-              total={total}
-              count={cart.count()}
-            />
+              <Summary
+                subtotal={subtotal}
+                deliveryFee={deliveryFee}
+                total={total}
+                count={cart.count()}
+              />
+            </div>
           </>
         ) : (
           <>
@@ -718,19 +722,49 @@ export default function CheckoutPage() {
               </div>
             )}
 
-            <Summary
-              subtotal={subtotal}
-              deliveryFee={deliveryFee}
-              total={total}
-              count={cart.count()}
-            />
+            <div className="lg:hidden">
+              <Summary
+                subtotal={subtotal}
+                deliveryFee={deliveryFee}
+                total={total}
+                count={cart.count()}
+              />
+            </div>
           </>
         )}
 
         {error && <p className="mt-3 text-danger text-sm">{error}</p>}
       </div>
 
-      <div className="t-sticky-cta mx-auto max-w-[768px]">
+      {/* Resumen fijo (solo desktop): detalle + totales + CTA junto al formulario. */}
+      <aside className="hidden lg:sticky lg:top-6 lg:block">
+        <OrderDetail />
+        <Summary subtotal={subtotal} deliveryFee={deliveryFee} total={total} count={cart.count()} />
+        {step === 'delivery' ? (
+          <button
+            type="button"
+            className="t-btn t-btn-primary t-btn-block mt-4"
+            onClick={goToPayment}
+          >
+            Revisar y pagar · {soles(total)}
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="t-btn t-btn-primary t-btn-block mt-4"
+            disabled={loading}
+            onClick={() => void placeOrder()}
+          >
+            {locating
+              ? 'Verificando ubicación…'
+              : loading
+                ? 'Enviando…'
+                : `Confirmar pedido · ${soles(total)}`}
+          </button>
+        )}
+      </aside>
+
+      <div className="t-sticky-cta mx-auto max-w-[768px] lg:hidden">
         {step === 'delivery' ? (
           <button type="button" className="t-btn t-btn-primary t-btn-block" onClick={goToPayment}>
             Revisar y pagar · {soles(total)}

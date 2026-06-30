@@ -132,7 +132,7 @@ export default function Home() {
   const firstName = user.name.split(' ')[0] || 'vecino'
 
   return (
-    <main className="mx-auto min-h-dvh max-w-[768px] bg-surface">
+    <main className="mx-auto min-h-dvh max-w-[768px] bg-surface md:max-w-[880px] lg:max-w-6xl xl:max-w-7xl">
       {/* Header */}
       <div className="flex items-center justify-between gap-3 px-5 pt-12 pb-4">
         <div className="flex min-w-0 flex-1 items-center gap-3">
@@ -171,7 +171,10 @@ export default function Home() {
 
       {/* Greeting */}
       <div className="px-5 pt-1 pb-4">
-        <h1 className="t-display text-[32px] leading-[1.05]" style={{ letterSpacing: '-0.03em' }}>
+        <h1
+          className="t-display text-[32px] leading-[1.05] lg:text-[40px]"
+          style={{ letterSpacing: '-0.03em' }}
+        >
           {user.signedIn ? (
             <>
               Buenas noches,
@@ -237,7 +240,7 @@ export default function Home() {
       {/* Hero strip */}
       <div className="px-4 pt-2 pb-4">
         <div
-          className="relative overflow-hidden rounded-[22px] px-[22px] pt-[22px] pb-6 text-white"
+          className="relative overflow-hidden rounded-[22px] px-[22px] pt-[22px] pb-6 text-white lg:px-9 lg:pt-9 lg:pb-9"
           style={{
             background: 'linear-gradient(135deg, #F97316 0%, #EA580C 50%, #C2410C 100%)',
             boxShadow: '0 12px 32px -10px rgba(249,115,22,0.45)',
@@ -263,7 +266,7 @@ export default function Home() {
             >
               Solo en Tindivo
             </div>
-            <div className="t-display text-[22px] leading-[1.15]">
+            <div className="t-display text-[22px] leading-[1.15] lg:text-[28px]">
               Pide en minutos,
               <br />
               paga al recibir o por Yape.
@@ -279,14 +282,14 @@ export default function Home() {
 
       {error && <p className="px-5 text-danger text-sm">{error}</p>}
 
-      <div className="flex flex-col gap-2.5 px-4 pt-1">
+      <div className="flex flex-col gap-2.5 px-4 pt-1 md:grid md:grid-cols-2 md:gap-4 lg:grid-cols-3 lg:gap-5">
         {items === null && !error
           ? [0, 1, 2].map((i) => (
               <div key={i} className="h-[112px] animate-pulse rounded-[20px] bg-white" />
             ))
           : items?.map((b) => <RestaurantCard key={b.id} b={b} />)}
         {items && items.length === 0 && (
-          <p className="t-muted py-8 text-center text-[14px]">
+          <p className="t-muted py-8 text-center text-[14px] md:col-span-2 lg:col-span-3">
             Aún no hay restaurantes abiertos esta noche.
           </p>
         )}

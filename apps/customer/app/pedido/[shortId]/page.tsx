@@ -250,252 +250,256 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
   const itemCount = data.items.length
 
   return (
-    <main className="mx-auto min-h-dvh max-w-[768px] bg-surface pb-16">
+    <main className="mx-auto min-h-dvh max-w-[768px] bg-surface pb-16 lg:max-w-[1040px]">
       <ScreenHeader title="Tu pedido" onBack={() => router.back()} />
 
-      <div className="px-4 pt-1.5">
-        {/* Hero del estado */}
-        <div
-          className="relative overflow-hidden rounded-[22px] px-5 py-[22px] text-white"
-          style={{ background: '#1A1614' }}
-        >
+      <div className="px-4 pt-1.5 lg:grid lg:grid-cols-2 lg:items-start lg:gap-5">
+        <div className="lg:min-w-0">
+          {/* Hero del estado */}
           <div
-            aria-hidden="true"
-            className="absolute top-0 right-0 h-[140px] w-[140px] rounded-full"
-            style={{
-              background: 'radial-gradient(circle, rgba(249,115,22,0.4) 0%, transparent 70%)',
-              transform: 'translate(40px,-40px)',
-            }}
-          />
-          <div className="relative z-[1]">
+            className="relative overflow-hidden rounded-[22px] px-5 py-[22px] text-white"
+            style={{ background: '#1A1614' }}
+          >
             <div
-              className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-[5px] font-mono text-[10px] uppercase tracking-[0.2em]"
-              style={{ color: '#FED7AA', background: 'rgba(249,115,22,0.2)' }}
-            >
-              <span
-                className="h-1.5 w-1.5 animate-pulse rounded-full"
-                style={{ background: '#FDBA74' }}
-              />
-              Pedido #{data.shortId}
-            </div>
-            <div className="t-display mt-3 text-[30px] leading-tight">{step.label}</div>
-            <div className="mt-1 text-[14px] opacity-70">{step.sub}</div>
-            <div
-              className="mt-[18px] h-2 overflow-hidden rounded-full"
-              style={{ background: 'rgba(255,255,255,0.12)' }}
-            >
+              aria-hidden="true"
+              className="absolute top-0 right-0 h-[140px] w-[140px] rounded-full"
+              style={{
+                background: 'radial-gradient(circle, rgba(249,115,22,0.4) 0%, transparent 70%)',
+                transform: 'translate(40px,-40px)',
+              }}
+            />
+            <div className="relative z-[1]">
               <div
-                className="h-full rounded-full transition-[width] duration-500"
-                style={{
-                  width: `${progress}%`,
-                  background: 'linear-gradient(90deg,#F97316,#FB923C)',
-                }}
-              />
-            </div>
-            <div className="mt-2 flex justify-between text-[12px] opacity-60">
-              <span>
-                Paso {currentIdx + 1} de {STEPS.length}
-              </span>
-              {current !== 'delivered' && (
-                <span className="tabular-nums">ETA {etaLabel(data.estimatedReadyAt)}</span>
-              )}
+                className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-[5px] font-mono text-[10px] uppercase tracking-[0.2em]"
+                style={{ color: '#FED7AA', background: 'rgba(249,115,22,0.2)' }}
+              >
+                <span
+                  className="h-1.5 w-1.5 animate-pulse rounded-full"
+                  style={{ background: '#FDBA74' }}
+                />
+                Pedido #{data.shortId}
+              </div>
+              <div className="t-display mt-3 text-[30px] leading-tight">{step.label}</div>
+              <div className="mt-1 text-[14px] opacity-70">{step.sub}</div>
+              <div
+                className="mt-[18px] h-2 overflow-hidden rounded-full"
+                style={{ background: 'rgba(255,255,255,0.12)' }}
+              >
+                <div
+                  className="h-full rounded-full transition-[width] duration-500"
+                  style={{
+                    width: `${progress}%`,
+                    background: 'linear-gradient(90deg,#F97316,#FB923C)',
+                  }}
+                />
+              </div>
+              <div className="mt-2 flex justify-between text-[12px] opacity-60">
+                <span>
+                  Paso {currentIdx + 1} de {STEPS.length}
+                </span>
+                {current !== 'delivered' && (
+                  <span className="tabular-nums">ETA {etaLabel(data.estimatedReadyAt)}</span>
+                )}
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Línea de tiempo */}
-        <div
-          className="mt-3.5 rounded-[22px] bg-white px-[18px] py-5"
-          style={{ border: '1px solid rgba(26,22,20,0.05)' }}
-        >
-          {STEPS.map((s, i) => {
-            const done = i < currentIdx
-            const active = i === currentIdx
-            const last = i === STEPS.length - 1
-            return (
-              <div
-                key={s.key}
-                className="relative flex gap-3.5"
-                style={{ paddingBottom: last ? 0 : 18 }}
-              >
-                {!last && (
-                  <div
-                    className="absolute w-0.5"
-                    style={{
-                      left: 13,
-                      top: 26,
-                      bottom: -8,
-                      background: done ? '#F97316' : 'rgba(26,22,20,0.1)',
-                    }}
-                  />
-                )}
+          {/* Línea de tiempo */}
+          <div
+            className="mt-3.5 rounded-[22px] bg-white px-[18px] py-5"
+            style={{ border: '1px solid rgba(26,22,20,0.05)' }}
+          >
+            {STEPS.map((s, i) => {
+              const done = i < currentIdx
+              const active = i === currentIdx
+              const last = i === STEPS.length - 1
+              return (
                 <div
-                  className="z-[1] flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-white"
-                  style={{
-                    background: done || active ? '#F97316' : 'rgba(26,22,20,0.08)',
-                    boxShadow: active ? '0 0 0 5px rgba(249,115,22,0.18)' : 'none',
-                  }}
+                  key={s.key}
+                  className="relative flex gap-3.5"
+                  style={{ paddingBottom: last ? 0 : 18 }}
                 >
-                  {done ? (
-                    <Icon.Check />
-                  ) : (
-                    <span
-                      className={active ? 'animate-pulse' : ''}
+                  {!last && (
+                    <div
+                      className="absolute w-0.5"
                       style={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: 999,
-                        background: active ? '#fff' : 'rgba(26,22,20,0.4)',
+                        left: 13,
+                        top: 26,
+                        bottom: -8,
+                        background: done ? '#F97316' : 'rgba(26,22,20,0.1)',
                       }}
                     />
                   )}
-                </div>
-                <div className="flex-1 pt-0.5">
                   <div
-                    className="text-[15px]"
+                    className="z-[1] flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-white"
                     style={{
-                      fontWeight: active ? 600 : 500,
-                      color: done || active ? '#1A1614' : 'rgba(26,22,20,0.45)',
+                      background: done || active ? '#F97316' : 'rgba(26,22,20,0.08)',
+                      boxShadow: active ? '0 0 0 5px rgba(249,115,22,0.18)' : 'none',
                     }}
                   >
-                    {s.label}
+                    {done ? (
+                      <Icon.Check />
+                    ) : (
+                      <span
+                        className={active ? 'animate-pulse' : ''}
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: 999,
+                          background: active ? '#fff' : 'rgba(26,22,20,0.4)',
+                        }}
+                      />
+                    )}
                   </div>
+                  <div className="flex-1 pt-0.5">
+                    <div
+                      className="text-[15px]"
+                      style={{
+                        fontWeight: active ? 600 : 500,
+                        color: done || active ? '#1A1614' : 'rgba(26,22,20,0.45)',
+                      }}
+                    >
+                      {s.label}
+                    </div>
+                    <div
+                      className="mt-0.5 text-[12px]"
+                      style={{ color: active ? '#F97316' : 'rgba(26,22,20,0.5)' }}
+                    >
+                      {active ? `${s.sub} · ahora` : done ? 'Completado' : s.sub}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        <div className="lg:min-w-0">
+          {/* Detalle */}
+          <div
+            className="mt-3.5 rounded-[22px] bg-white px-[18px] py-4 lg:mt-0"
+            style={{ border: '1px solid rgba(26,22,20,0.05)' }}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <div className="t-eyebrow">Detalle</div>
+              <div className="text-[12px] text-ink-subtle">
+                {data.deliveryMethod === 'delivery' ? 'Delivery' : 'Recojo'} · {itemCount}{' '}
+                {itemCount === 1 ? 'producto' : 'productos'}
+              </div>
+            </div>
+            {data.items.map((it, idx) => (
+              <div key={`item-${idx}-${it.name}`} className="py-1.5">
+                <div className="flex justify-between text-[14px] text-ink-muted">
+                  <span>
+                    {it.qty}× {it.name}
+                  </span>
+                  <span className="tabular-nums">{soles(it.lineTotal)}</span>
+                </div>
+                {(it.modifiers ?? []).map((m, mi) => (
                   <div
-                    className="mt-0.5 text-[12px]"
-                    style={{ color: active ? '#F97316' : 'rgba(26,22,20,0.5)' }}
+                    key={`item-${idx}-mod-${mi}-${m.name}`}
+                    className="mt-0.5 flex justify-between pl-5 text-[12px]"
+                    style={{ color: 'rgba(26,22,20,0.5)' }}
                   >
-                    {active ? `${s.sub} · ahora` : done ? 'Completado' : s.sub}
+                    <span>{m.name}</span>
+                    {Number(m.price) > 0 && (
+                      <span className="tabular-nums">+{soles(Number(m.price))}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ))}
+            <div className="my-2.5 h-px" style={{ background: 'rgba(26,22,20,0.08)' }} />
+            {data.driverName && (
+              <div className="flex justify-between py-1 text-[13px] text-ink-muted">
+                <span>Motorizado</span>
+                <span className="font-medium text-ink">{data.driverName}</span>
+              </div>
+            )}
+            {data.paymentIntent === 'pending_cash' && data.paysWith != null && (
+              <div className="flex justify-between py-1 text-[13px] text-ink-muted">
+                <span>Efectivo</span>
+                <span className="font-medium text-ink tabular-nums">
+                  Pagas con {soles(Number(data.paysWith))}
+                  {Number(data.changeToGive ?? 0) > 0
+                    ? ` · vuelto ${soles(Number(data.changeToGive))}`
+                    : ' · exacto'}
+                </span>
+              </div>
+            )}
+            <div className="flex items-center justify-between pt-1">
+              <span className="font-semibold text-[16px] text-ink">
+                {data.paymentIntent === 'prepaid' ? 'Total pagado' : 'Total'}
+              </span>
+              <span className="t-display text-[18px] tabular-nums">{soles(data.total)}</span>
+            </div>
+          </div>
+
+          {/* Footer: cancelar / soporte */}
+          <div className="mt-5 border-t pt-4" style={{ borderColor: 'rgba(26,22,20,0.06)' }}>
+            {cancellable ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setConfirmCancel(true)}
+                  className="flex w-full items-center justify-center gap-2 rounded-[14px] py-3.5 font-semibold text-[14px] text-[#DC2626]"
+                  style={{
+                    background: 'rgba(220,38,38,0.06)',
+                    border: '1px solid rgba(220,38,38,0.18)',
+                  }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" />
+                    <path
+                      d="M8 8l8 8M16 8l-8 8"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  Cancelar pedido
+                </button>
+                <p className="mt-2 text-center text-[11px] text-ink-subtle leading-relaxed">
+                  Puedes cancelar mientras el restaurante aún no confirma.
+                </p>
+              </>
+            ) : (
+              <div
+                className="flex items-start gap-2.5 rounded-[14px] bg-white px-3.5 py-3"
+                style={{ border: '1px solid rgba(26,22,20,0.06)' }}
+              >
+                <div
+                  className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full text-[#1A8050]"
+                  style={{ background: 'rgba(26,150,80,0.1)' }}
+                >
+                  <Icon.Check style={{ width: 14, height: 14 }} />
+                </div>
+                <div className="flex-1">
+                  <div className="font-semibold text-[13px] leading-snug">
+                    {current === 'delivered'
+                      ? '¡Tu pedido fue entregado! Buen provecho.'
+                      : data.paymentIntent === 'prepaid' &&
+                          (data.status === 'validando' || data.status === 'pending_acceptance')
+                        ? 'Tu pago ya fue registrado. Si necesitas cambiar algo, escríbenos por soporte.'
+                        : 'Tu pedido ya está en preparación y no puede cancelarse.'}
+                  </div>
+                  <div className="mt-1.5">
+                    <SupportLink orderShortId={data.shortId} />
                   </div>
                 </div>
               </div>
-            )
-          })}
-        </div>
-
-        {/* Detalle */}
-        <div
-          className="mt-3.5 rounded-[22px] bg-white px-[18px] py-4"
-          style={{ border: '1px solid rgba(26,22,20,0.05)' }}
-        >
-          <div className="mb-3 flex items-center justify-between">
-            <div className="t-eyebrow">Detalle</div>
-            <div className="text-[12px] text-ink-subtle">
-              {data.deliveryMethod === 'delivery' ? 'Delivery' : 'Recojo'} · {itemCount}{' '}
-              {itemCount === 1 ? 'producto' : 'productos'}
-            </div>
+            )}
+            {cancellable && (
+              <div className="mt-3 flex justify-center">
+                <SupportLink orderShortId={data.shortId} />
+              </div>
+            )}
           </div>
-          {data.items.map((it, idx) => (
-            <div key={`item-${idx}-${it.name}`} className="py-1.5">
-              <div className="flex justify-between text-[14px] text-ink-muted">
-                <span>
-                  {it.qty}× {it.name}
-                </span>
-                <span className="tabular-nums">{soles(it.lineTotal)}</span>
-              </div>
-              {(it.modifiers ?? []).map((m, mi) => (
-                <div
-                  key={`item-${idx}-mod-${mi}-${m.name}`}
-                  className="mt-0.5 flex justify-between pl-5 text-[12px]"
-                  style={{ color: 'rgba(26,22,20,0.5)' }}
-                >
-                  <span>{m.name}</span>
-                  {Number(m.price) > 0 && (
-                    <span className="tabular-nums">+{soles(Number(m.price))}</span>
-                  )}
-                </div>
-              ))}
-            </div>
-          ))}
-          <div className="my-2.5 h-px" style={{ background: 'rgba(26,22,20,0.08)' }} />
-          {data.driverName && (
-            <div className="flex justify-between py-1 text-[13px] text-ink-muted">
-              <span>Motorizado</span>
-              <span className="font-medium text-ink">{data.driverName}</span>
-            </div>
-          )}
-          {data.paymentIntent === 'pending_cash' && data.paysWith != null && (
-            <div className="flex justify-between py-1 text-[13px] text-ink-muted">
-              <span>Efectivo</span>
-              <span className="font-medium text-ink tabular-nums">
-                Pagas con {soles(Number(data.paysWith))}
-                {Number(data.changeToGive ?? 0) > 0
-                  ? ` · vuelto ${soles(Number(data.changeToGive))}`
-                  : ' · exacto'}
-              </span>
-            </div>
-          )}
-          <div className="flex items-center justify-between pt-1">
-            <span className="font-semibold text-[16px] text-ink">
-              {data.paymentIntent === 'prepaid' ? 'Total pagado' : 'Total'}
-            </span>
-            <span className="t-display text-[18px] tabular-nums">{soles(data.total)}</span>
-          </div>
-        </div>
 
-        {/* Footer: cancelar / soporte */}
-        <div className="mt-5 border-t pt-4" style={{ borderColor: 'rgba(26,22,20,0.06)' }}>
-          {cancellable ? (
-            <>
-              <button
-                type="button"
-                onClick={() => setConfirmCancel(true)}
-                className="flex w-full items-center justify-center gap-2 rounded-[14px] py-3.5 font-semibold text-[14px] text-[#DC2626]"
-                style={{
-                  background: 'rgba(220,38,38,0.06)',
-                  border: '1px solid rgba(220,38,38,0.18)',
-                }}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" />
-                  <path
-                    d="M8 8l8 8M16 8l-8 8"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                  />
-                </svg>
-                Cancelar pedido
-              </button>
-              <p className="mt-2 text-center text-[11px] text-ink-subtle leading-relaxed">
-                Puedes cancelar mientras el restaurante aún no confirma.
-              </p>
-            </>
-          ) : (
-            <div
-              className="flex items-start gap-2.5 rounded-[14px] bg-white px-3.5 py-3"
-              style={{ border: '1px solid rgba(26,22,20,0.06)' }}
-            >
-              <div
-                className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full text-[#1A8050]"
-                style={{ background: 'rgba(26,150,80,0.1)' }}
-              >
-                <Icon.Check style={{ width: 14, height: 14 }} />
-              </div>
-              <div className="flex-1">
-                <div className="font-semibold text-[13px] leading-snug">
-                  {current === 'delivered'
-                    ? '¡Tu pedido fue entregado! Buen provecho.'
-                    : data.paymentIntent === 'prepaid' &&
-                        (data.status === 'validando' || data.status === 'pending_acceptance')
-                      ? 'Tu pago ya fue registrado. Si necesitas cambiar algo, escríbenos por soporte.'
-                      : 'Tu pedido ya está en preparación y no puede cancelarse.'}
-                </div>
-                <div className="mt-1.5">
-                  <SupportLink orderShortId={data.shortId} />
-                </div>
-              </div>
-            </div>
-          )}
-          {cancellable && (
-            <div className="mt-3 flex justify-center">
-              <SupportLink orderShortId={data.shortId} />
-            </div>
-          )}
+          <Link href="/" className="mt-6 inline-block text-[14px] text-brand">
+            ← Volver al inicio
+          </Link>
         </div>
-
-        <Link href="/" className="mt-6 inline-block text-[14px] text-brand">
-          ← Volver al inicio
-        </Link>
       </div>
 
       {/* Confirmación de cancelación */}

@@ -104,7 +104,7 @@ export default function PedidosPage() {
   if (!ready) return <div className="p-10 text-ink-muted">Cargando…</div>
 
   return (
-    <main className="mx-auto min-h-dvh max-w-[768px] bg-surface pb-16">
+    <main className="mx-auto min-h-dvh max-w-[768px] bg-surface pb-16 md:max-w-3xl lg:max-w-6xl">
       <ScreenHeader title="Historial de pedidos" onBack={() => router.push('/cuenta')} />
       <div className="px-4 pt-2">
         {orders.length === 0 ? (
@@ -118,7 +118,7 @@ export default function PedidosPage() {
             </Link>
           </div>
         ) : (
-          <div className="flex flex-col gap-2.5">
+          <div className="flex flex-col gap-2.5 md:grid md:grid-cols-2 md:gap-3 lg:grid-cols-3">
             {orders.map((o) => {
               const items = o.customer_order_items ?? []
               const summary = items.map((i) => `${i.quantity}× ${i.item_name_snapshot}`).join(' · ')
