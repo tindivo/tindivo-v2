@@ -182,7 +182,7 @@ export default function NuevoPedidoPage() {
                   border: m === prep ? 'none' : '1px solid var(--tv-border)',
                   background: m === prep ? 'var(--tv-ink)' : '#fff',
                   color: m === prep ? '#fff' : 'var(--tv-ink)',
-                  fontFamily: "var(--font-jetbrains), 'JetBrains Mono', monospace",
+                  fontFamily: "var(--font-jetbrains), 'Manrope', sans-serif",
                   fontWeight: 700,
                   fontSize: 14,
                   padding: '10px 0',

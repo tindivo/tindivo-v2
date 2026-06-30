@@ -297,12 +297,12 @@ Codificado en `@tindivo/contracts` (`order-status.ts`: `ORDER_TRANSITIONS`, `STA
 
 - **Filosofía**: cercano, no corporativo. Mobile-first 1:1 (base 402×874). **Sin dark mode**. Bordes muy redondeados. Naranja protagonista.
 - **Color**: Brand `#F97316` · Brand Dark `#C2410C` · Brand Light `#FED7AA` · Ink `#1A1614` · Surface `#FAF6F1` · Card `#FFFFFF` · Border `#EAE7E2` · Success `#16A34A` · Warning `#F59E0B` · Danger `#DC2626` · Info `#0EA5E9`.
-- **Tipografía**: Bricolage Grotesque (displays) · Geist (body/números) · JetBrains Mono (microlabels/IDs/precios). Máx 3 tamaños por vista.
+- **Tipografía**: Manrope única en toda la plataforma (peso 600-800 displays · 400-600 body/números · 500-700 microlabels/IDs/precios, con `tabular-nums` en contextos numéricos). Máx 3 tamaños por vista.
 - **Iconos**: Material Symbols Rounded (único set). Nunca emojis como iconos UI.
 - **Radius**: sm8/md12/lg16/xl24/2xl32/3xl48. **Glassmorphism solo en topbars**.
 - **Color de papelito por negocio**: franja/dot vertical único por negocio en todas las cards de pedido.
 - **Estados**: skeletons (no spinner), empty states con icono+copy+CTA, errores inline (no toast), success en toast 3s o modal. Touch ≥44px. Respetar `prefers-reduced-motion`.
-- **Layout**: `GlassTopBar` sticky + `main` (pt-20 pb-24) + `BottomNav` en cliente/motorizado. Cliente máx 768px; staff escala a 1280px.
+- **Layout**: `GlassTopBar` sticky + `main` (pt-20 pb-24) + `BottomNav` en cliente/motorizado. Cliente: base 768px que escala por vista en tablet/desktop (`md`/`lg`/`xl`) — grids de 2-3 columnas en home/historial, split contenido+sidebar sticky (carrito/resumen) en negocio/checkout; staff escala a 1280px.
 
 ---
 

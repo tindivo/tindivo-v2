@@ -4,7 +4,7 @@ import type { CSSProperties } from 'react'
 import type { UiPayment, UiSource } from '@/lib/orders/view-model'
 
 export const FONT_DISPLAY = "var(--font-bricolage), 'Manrope', system-ui, sans-serif"
-export const FONT_MONO = "var(--font-jetbrains), 'JetBrains Mono', ui-monospace, monospace"
+export const FONT_MONO = "var(--font-jetbrains), 'Manrope', ui-monospace, sans-serif"
 
 // ── Material Symbol ───────────────────────────────────────────────────────────
 export function MS({

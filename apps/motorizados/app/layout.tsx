@@ -1,19 +1,28 @@
 import type { Metadata, Viewport } from 'next'
-import { Bricolage_Grotesque, Geist, JetBrains_Mono } from 'next/font/google'
+import { Manrope } from 'next/font/google'
 import type { ReactNode } from 'react'
 import { OfflineBanner } from '@/components/offline-banner'
 import { PushManager } from '@/components/push-manager'
 import { TransferWatcher } from '@/components/transfers/transfer-watcher'
 import './globals.css'
 
-const bricolage = Bricolage_Grotesque({
+// Tipografía única de la plataforma (DECISIONS.md §16): Manrope cubre display
+// (--font-bricolage), cuerpo (--font-geist) y mono/tabular (--font-jetbrains).
+const bricolage = Manrope({
   subsets: ['latin'],
+  weight: ['600', '700', '800'],
   variable: '--font-bricolage',
   display: 'swap',
 })
-const geist = Geist({ subsets: ['latin'], variable: '--font-geist', display: 'swap' })
-const jetbrains = JetBrains_Mono({
+const geist = Manrope({
   subsets: ['latin'],
+  weight: ['400', '500', '600'],
+  variable: '--font-geist',
+  display: 'swap',
+})
+const jetbrains = Manrope({
+  subsets: ['latin'],
+  weight: ['500', '600', '700'],
   variable: '--font-jetbrains',
   display: 'swap',
 })

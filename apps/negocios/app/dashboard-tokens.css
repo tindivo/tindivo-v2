@@ -39,7 +39,7 @@
 
   /* Font stacks (next/font first, literal fallback) */
   --tv-font-display: var(--font-bricolage), 'Manrope', system-ui, sans-serif;
-  --tv-font-mono: var(--font-jetbrains), 'JetBrains Mono', ui-monospace, monospace;
+  --tv-font-mono: var(--font-jetbrains), 'Manrope', ui-monospace, sans-serif;
 }
 
 /* Typography */

@@ -1,20 +1,27 @@
 import type { Metadata } from 'next'
-import { JetBrains_Mono, Manrope } from 'next/font/google'
+import { Manrope } from 'next/font/google'
 import type { ReactNode } from 'react'
 import { DashboardChrome } from '@/components/dashboard/chrome'
 import { PushManager } from '@/components/push-manager'
 import './globals.css'
 
-// Tipografía de branding del negocio (#6): Manrope cubre display (--font-bricolage)
-// y cuerpo (--font-geist). JetBrains Mono se mantiene para IDs/precios tabulares.
+// Tipografía única de la plataforma (DECISIONS.md §16): Manrope cubre display
+// (--font-bricolage), cuerpo (--font-geist) y mono/tabular (--font-jetbrains).
 const manropeDisplay = Manrope({
   subsets: ['latin'],
+  weight: ['600', '700', '800'],
   variable: '--font-bricolage',
   display: 'swap',
 })
-const manropeBody = Manrope({ subsets: ['latin'], variable: '--font-geist', display: 'swap' })
-const jetbrains = JetBrains_Mono({
+const manropeBody = Manrope({
   subsets: ['latin'],
+  weight: ['400', '500', '600'],
+  variable: '--font-geist',
+  display: 'swap',
+})
+const jetbrains = Manrope({
+  subsets: ['latin'],
+  weight: ['500', '600', '700'],
   variable: '--font-jetbrains',
   display: 'swap',
 })

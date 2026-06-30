@@ -3,7 +3,8 @@
  * DECISIONS §16. Light mode siempre. Naranja protagonista. Las apps importan
  * este archivo después de `@import "tailwindcss";`.
  *
- * Las familias de fuente referencian variables que cada app define con next/font
+ * Tipografía única de la plataforma: Manrope (con variación de peso por rol),
+ * cargada por cada app vía next/font y expuesta en estas variables
  * (--font-bricolage, --font-geist, --font-jetbrains).
  */
 @theme {
@@ -31,7 +32,7 @@
   /* Tipografía */
   --font-display: var(--font-bricolage), system-ui, sans-serif;
   --font-sans: var(--font-geist), system-ui, sans-serif;
-  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+  --font-mono: var(--font-jetbrains), 'Manrope', ui-monospace, sans-serif;
 
   /* Radios (muy redondeados) */
   --radius-sm: 8px;

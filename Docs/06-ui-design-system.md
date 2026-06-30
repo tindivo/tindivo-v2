@@ -33,7 +33,7 @@
 4. **Glassmorphism en topbars**, no en todo. Es un acento, no la base.
 5. **Bordes muy redondeados** (1rem, 2rem, 3rem). El sistema es amable, no anguloso.
 6. **Material Symbols como único icon set**. Sin emojis en código (excepción: títulos textuales como saludo "Buenas noches 🍕").
-7. **Tipografía con personalidad**. Bricolage Grotesque para displays grandes (transmite carácter), Geist para body (legibilidad), JetBrains Mono para microlabels (estructura).
+7. **Tipografía con personalidad**. Una sola familia, Manrope, en toda la plataforma — la jerarquía (displays grandes, body, microlabels) se logra con variación de peso (600-800 displays, 400-600 body, 500-700 microlabels), no con familias distintas.
 8. **Color naranja como protagonista**. Marca = `#F97316`. NO dilluir con secundarios. El naranja sostiene la identidad.
 9. **Espacio en blanco generoso**. No saturar. Es preferible más vertical que más denso.
 10. **Animaciones útiles**. Cada animación tiene propósito (jerarquía, feedback, transición). No animar por decoración.
@@ -105,34 +105,39 @@ Cada negocio activo tiene UN color único asignado al crearse. La paleta predefi
 
 ## 3. Tipografía
 
-### Familias
+### Familia única
 
-| Familia | Uso | Fallback |
-|---|---|---|
-| **Bricolage Grotesque** | Displays grandes (hero titles, greeting "Buenas noches, María", landing CTAs) | system-ui, -apple-system, sans-serif |
-| **Geist** | Body, párrafos, labels normales, números | system-ui, sans-serif |
-| **JetBrains Mono** | Microlabels en mayúsculas (ej. "SAN JACINTO, ÁNCASH"), IDs (#TND-12345), times en cards | ui-monospace, monospace |
+Toda la plataforma usa **Manrope** — sin Bricolage Grotesque, sin Geist, sin JetBrains Mono. La jerarquía visual (display/heading/body/label/mono) se logra variando **peso**, no familia. Se mantienen 3 variables CSS por compatibilidad con el resto del sistema (`--font-bricolage`, `--font-geist`, `--font-jetbrains`), pero las tres cargan Manrope con distinto rango de pesos:
+
+| Rol (variable) | Uso | Pesos | Fallback |
+|---|---|---|---|
+| `--font-bricolage` | Displays grandes (hero titles, greeting "Buenas noches, María", landing CTAs) | 600-800 | system-ui, -apple-system, sans-serif |
+| `--font-geist` | Body, párrafos, labels normales, números | 400-600 | system-ui, sans-serif |
+| `--font-jetbrains` | Microlabels en mayúsculas (ej. "SAN JACINTO, ÁNCASH"), IDs (#TND-12345), times en cards — sin alineación monoespaciada; usar `tabular-nums` donde se necesite alinear columnas numéricas | 500-700 | ui-monospace, sans-serif |
 
 ### Cargar fuentes (Next.js)
 
 ```ts
 // apps/customer/app/layout.tsx
-import { Bricolage_Grotesque, Geist, JetBrains_Mono } from 'next/font/google'
+import { Manrope } from 'next/font/google'
 
-const bricolage = Bricolage_Grotesque({
+const bricolage = Manrope({
   subsets: ['latin'],
+  weight: ['600', '700', '800'],
   variable: '--font-bricolage',
   display: 'swap',
 })
 
-const geist = Geist({
+const geist = Manrope({
   subsets: ['latin'],
+  weight: ['400', '500', '600'],
   variable: '--font-geist',
   display: 'swap',
 })
 
-const jetbrains = JetBrains_Mono({
+const jetbrains = Manrope({
   subsets: ['latin'],
+  weight: ['500', '600', '700'],
   variable: '--font-jetbrains',
   display: 'swap',
 })
@@ -142,29 +147,32 @@ const jetbrains = JetBrains_Mono({
 
 ### Escala tipográfica
 
-| Token | Tamaño | Line height | Peso | Familia | Uso |
-|---|---|---|---|---|---|
-| `display-2xl` | 56px | 1.05 | 600 | Bricolage | Hero titles muy grandes (post-MVP) |
-| `display-xl` | 44px | 1.1 | 600 | Bricolage | Hero del marketplace, mensajes principales |
-| `display-lg` | 36px | 1.15 | 600 | Bricolage | Saludo personalizado ("Buenas noches, María 🍕") |
-| `display-md` | 28px | 1.2 | 600 | Bricolage | Títulos de sección importantes |
-| `display-sm` | 24px | 1.25 | 600 | Bricolage | Títulos de modal, headers de página |
-| `heading-lg` | 20px | 1.3 | 600 | Geist | Títulos de card grande |
-| `heading-md` | 18px | 1.35 | 600 | Geist | Títulos de card normal |
-| `heading-sm` | 16px | 1.4 | 600 | Geist | Subtítulos |
-| `body-lg` | 17px | 1.5 | 400 | Geist | Body destacado |
-| `body` | 15px | 1.5 | 400 | Geist | Body default |
-| `body-sm` | 13px | 1.5 | 400 | Geist | Body secundario |
-| `caption` | 12px | 1.4 | 400 | Geist | Microcopy |
-| `label` | 11px | 1.3 | 600 | JetBrains | UPPERCASE labels ("SAN JACINTO, ÁNCASH", "MÁS PEDIDO") |
-| `mono-md` | 14px | 1.4 | 400 | JetBrains | IDs (#TND-12345), times, prices |
-| `mono-sm` | 12px | 1.4 | 400 | JetBrains | Microcopy mono |
+Familia = Manrope en todas las filas; lo que cambia por fila es tamaño/line-height/peso.
+
+| Token | Tamaño | Line height | Peso | Uso |
+|---|---|---|---|---|
+| `display-2xl` | 56px | 1.05 | 700 | Hero titles muy grandes (post-MVP) |
+| `display-xl` | 44px | 1.1 | 700 | Hero del marketplace, mensajes principales |
+| `display-lg` | 36px | 1.15 | 700 | Saludo personalizado ("Buenas noches, María 🍕") |
+| `display-md` | 28px | 1.2 | 600 | Títulos de sección importantes |
+| `display-sm` | 24px | 1.25 | 600 | Títulos de modal, headers de página |
+| `heading-lg` | 20px | 1.3 | 600 | Títulos de card grande |
+| `heading-md` | 18px | 1.35 | 600 | Títulos de card normal |
+| `heading-sm` | 16px | 1.4 | 600 | Subtítulos |
+| `body-lg` | 17px | 1.5 | 400 | Body destacado |
+| `body` | 15px | 1.5 | 400 | Body default |
+| `body-sm` | 13px | 1.5 | 400 | Body secundario |
+| `caption` | 12px | 1.4 | 400 | Microcopy |
+| `label` | 11px | 1.3 | 600 | UPPERCASE labels ("SAN JACINTO, ÁNCASH", "MÁS PEDIDO") |
+| `mono-md` | 14px | 1.4 | 500 | IDs (#TND-12345), times, prices (`tabular-nums`) |
+| `mono-sm` | 12px | 1.4 | 500 | Microcopy mono (`tabular-nums`) |
 
 ### Reglas de uso
 
-- **Bricolage solo para displays**. NO en body.
-- **Geist es el caballito de batalla**. Default para todo lo demás.
-- **JetBrains Mono en mayúsculas con letter-spacing pequeño** (`tracking-wider`).
+- **Una sola familia, Manrope, siempre**. La jerarquía es 100% peso + tamaño, nunca familia distinta.
+- **`display-*` usa pesos 600-800**. No en body.
+- **`body`/`heading` es el caballito de batalla**. Default para todo lo demás (pesos 400-600).
+- **`label`/`mono-*` en mayúsculas con letter-spacing pequeño** (`tracking-wider`) y `tabular-nums` cuando alinean columnas numéricas (precios, horas).
 - **No usar más de 3 tamaños en una misma vista**. Mantén jerarquía clara.
 
 ---
@@ -561,8 +569,14 @@ screens: {
 ### Container
 
 - **Mobile**: full-width con padding 16-24px horizontal.
-- **Tablet**: max-width 768px centered.
-- **Desktop**: max-width 1280px centered (apps de staff). `tindivo.com` cliente queda en 768px máximo (es PWA).
+- **Tablet**: max-width 768px centered (apps de staff); `tindivo.com` cliente ensancha por vista (ver abajo).
+- **Desktop**: max-width 1280px centered (apps de staff).
+- **`tindivo.com` (cliente)**: el contenedor base sigue siendo 768px en mobile, pero escala por vista en `md`/`lg`/`xl` en vez de quedar fijo — el objetivo es evitar espacio vacío en pantallas grandes sin convertir la app en un sitio de escritorio genérico:
+  - **Home / Historial** (grid de cards): `md:max-w-[880px] lg:max-w-6xl xl:max-w-7xl`, lista 1→2→3 columnas.
+  - **Detalle de negocio / Checkout** (contenido + carrito o resumen): `md:max-w-[860px]` sin split en tablet; desde `lg` pasa a `grid-cols-[1fr_380px]` con un sidebar sticky (carrito en negocio, resumen de pedido en checkout).
+  - **Cuenta**: `lg:max-w-[880px]`, solo la lista de direcciones pasa a 2 columnas.
+  - **Tracking de pedido**: `lg:max-w-[1040px]`.
+  - **Legal / login / pantallas terminales**: sin cambios (768px o 480px ya son un ancho de lectura correcto).
 
 ### Safe areas
 
@@ -767,4 +781,4 @@ export default { presets: [preset], content: [...] }
 
 ---
 
-**Resumen ejecutivo**: paleta brand naranja + ink + surface cálido; tipografías Bricolage (display) / Geist (body) / JetBrains Mono (microlabels); Material Symbols como único icon set; bordes muy redondeados (1rem-3rem); glassmorphism solo en topbars; animaciones Motion con timing tokens definidos; primitives shadcn-based + patterns Tindivo en `packages/ui`. Implementado via Tailwind v4 con `@theme` y preset compartido.
+**Resumen ejecutivo**: paleta brand naranja + ink + surface cálido; tipografía única Manrope (peso 600-800 display / 400-600 body / 500-700 microlabels); Material Symbols como único icon set; bordes muy redondeados (1rem-3rem); glassmorphism solo en topbars; animaciones Motion con timing tokens definidos; primitives shadcn-based + patterns Tindivo en `packages/ui`. Implementado via Tailwind v4 con `@theme` y preset compartido.
