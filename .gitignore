@@ -52,3 +52,7 @@ Docs.rar
 /tindivo-menu.png
 /tindivo-cart.png
 /tindivo-admin.png
+/qa-*.png
+
+# QA credentials (test-only, never commit)
+Docs/QA-CATALOGO-CREDENCIALES.md

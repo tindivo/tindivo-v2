@@ -29,38 +29,63 @@ export function SupportLink({ orderShortId }: { orderShortId?: string }) {
   )
 }
 
-/** Placeholder rayado para imágenes de producto (específico del cliente). */
+/**
+ * Imagen de producto. Si hay `src` (foto subida por el negocio) la renderiza
+ * cubriendo el recuadro; si no, cae al placeholder rayado derivado del `hue`.
+ */
 export function ProductImage({
   label,
   hue = 14,
   size = 88,
+  src,
 }: {
   label?: string
   hue?: number
   size?: number
+  src?: string | null
 }) {
   return (
     <div
       className="t-ph-image"
-      style={{ width: size, height: size, background: `oklch(0.92 0.03 ${hue})` }}
+      style={{
+        width: size,
+        height: size,
+        background: `oklch(0.92 0.03 ${hue})`,
+        overflow: 'hidden',
+      }}
     >
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontFamily: 'var(--font-jetbrains), monospace',
-          fontSize: 10,
-          color: `oklch(0.35 0.1 ${hue})`,
-          letterSpacing: '0.05em',
-          textAlign: 'center',
-          padding: 6,
-        }}
-      >
-        {label}
-      </div>
+      {src ? (
+        <img
+          src={src}
+          alt={label ?? ''}
+          loading="lazy"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+          }}
+        />
+      ) : (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontFamily: 'var(--font-jetbrains), monospace',
+            fontSize: 10,
+            color: `oklch(0.35 0.1 ${hue})`,
+            letterSpacing: '0.05em',
+            textAlign: 'center',
+            padding: 6,
+          }}
+        >
+          {label}
+        </div>
+      )}
     </div>
   )
 }

@@ -56,7 +56,7 @@ export async function GET(
       supabase
         .from('menu_items')
         .select(
-          'id,category_id,name,description,base_price,image_hue,is_available,is_compact,badges,display_order',
+          'id,category_id,name,description,base_price,image_url,image_hue,is_available,is_compact,badges,display_order',
         )
         .eq('business_id', id)
         .order('display_order'),
@@ -100,15 +100,18 @@ export async function GET(
           options: optionsByGroup(g.id),
         }))
 
-    const menu = (categories ?? []).map((category) => ({
-      ...category,
-      items: (items ?? [])
-        .filter((item) => item.category_id === category.id)
-        // is_compact = "featured" (historical column name). Featured items first;
-        // stable sort preserves display_order within each half.
-        .sort((a, b) => Number(b.is_compact) - Number(a.is_compact))
-        .map((item) => ({ ...item, modifier_groups: groupsForItem(item.id) })),
-    }))
+    const menu = (categories ?? [])
+      .map((category) => ({
+        ...category,
+        items: (items ?? [])
+          .filter((item) => item.category_id === category.id)
+          // is_compact = "featured" (historical column name). Featured items first;
+          // stable sort preserves display_order within each half.
+          .sort((a, b) => Number(b.is_compact) - Number(a.is_compact))
+          .map((item) => ({ ...item, modifier_groups: groupsForItem(item.id) })),
+      }))
+      // No mostrar categorías vacías al cliente (una categoría sin platos no aporta).
+      .filter((category) => category.items.length > 0)
 
     return ok({ business, categories: menu }, { headers: corsHeaders(req) })
   } catch (err) {

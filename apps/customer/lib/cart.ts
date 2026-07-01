@@ -22,6 +22,8 @@ export interface CartLine {
   modifiers: CartModifier[]
   note: string | null
   hue: number
+  /** Foto del plato (si el negocio subió una); si no, se usa el placeholder de `hue`. */
+  imageUrl: string | null
 }
 
 interface CartState {

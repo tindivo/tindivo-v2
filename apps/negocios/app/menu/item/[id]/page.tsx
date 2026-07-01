@@ -44,11 +44,31 @@ interface FormData {
   base_price: string
   is_available: boolean
   is_compact: boolean
+  image_url: string | null
+  badges: string[]
 }
 
 interface Category {
   id: string
   name: string
+}
+
+// Presets de badge sugeridos en el editor (el negocio puede escribir uno libre).
+const BADGE_PRESETS = ['más-pedido', 'nuevo', 'recomendado', 'picante', 'edición-perú']
+
+// ── Validación de imagen de producto ──────────────────────────────────────────
+// TODO(usuario): ajustá la política según tu caso (formatos, tamaño máximo).
+// Devuelve un mensaje de error en español o null si el archivo es válido.
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024 // 5 MB
+function validateProductImage(file: File): string | null {
+  if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+    return 'Formato no permitido. Usá JPG, PNG o WebP.'
+  }
+  if (file.size > MAX_IMAGE_BYTES) {
+    return 'La imagen supera el máximo de 5 MB.'
+  }
+  return null
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -449,10 +469,12 @@ function CustomerModifierGroup({ group }: { group: ModifierGroup }) {
 function CustomerPreviewPanel({
   formData,
   groups,
+  imageSrc,
   style,
 }: {
   formData: FormData
   groups: ModifierGroup[]
+  imageSrc: string | null
   style?: React.CSSProperties
 }) {
   const basePrice = Number.parseFloat(formData.base_price) || 0
@@ -504,9 +526,17 @@ function CustomerPreviewPanel({
       {/* Content with independent scroll */}
       <div style={{ flex: 1, overflowY: 'auto', background: '#fff' }}>
         {/* Hero */}
-        <div className="tv-ph" style={{ width: '100%', height: 180, borderRadius: 0 }}>
-          <span>{formData.name.toUpperCase() || 'FOTO'}</span>
-        </div>
+        {imageSrc ? (
+          <img
+            src={imageSrc}
+            alt={formData.name || 'Foto del plato'}
+            style={{ width: '100%', height: 200, objectFit: 'cover', display: 'block' }}
+          />
+        ) : (
+          <div className="tv-ph" style={{ width: '100%', height: 180, borderRadius: 0 }}>
+            <span>{formData.name.toUpperCase() || 'FOTO'}</span>
+          </div>
+        )}
 
         <div style={{ padding: '16px 18px' }}>
           <div
@@ -518,6 +548,25 @@ function CustomerPreviewPanel({
             }}
           >
             <div style={{ flex: 1 }}>
+              {formData.badges.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 6 }}>
+                  {formData.badges.map((b) => (
+                    <span
+                      key={b}
+                      style={{
+                        background: 'rgba(249,115,22,0.1)',
+                        color: '#C2410C',
+                        borderRadius: 999,
+                        padding: '2px 8px',
+                        fontSize: 11,
+                        fontWeight: 700,
+                      }}
+                    >
+                      {b}
+                    </span>
+                  ))}
+                </div>
+              )}
               <div style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.2 }}>
                 {formData.name || 'Nombre del plato'}
               </div>
@@ -748,10 +797,18 @@ function ModifierOptionRow({
   opt,
   onChange,
   onDelete,
+  onMoveUp,
+  onMoveDown,
+  isFirst,
+  isLast,
 }: {
   opt: ModifierOption
   onChange: (patch: Partial<ModifierOption>) => void
   onDelete: () => void
+  onMoveUp: () => void
+  onMoveDown: () => void
+  isFirst: boolean
+  isLast: boolean
 }) {
   return (
     <div
@@ -764,11 +821,40 @@ function ModifierOptionRow({
         opacity: opt.is_available ? 1 : 0.55,
       }}
     >
-      <MS
-        name="drag_indicator"
-        size={16}
-        style={{ color: 'var(--tv-ink-subtle)', cursor: 'grab', flexShrink: 0 }}
-      />
+      <div style={{ display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+        <button
+          type="button"
+          onClick={onMoveUp}
+          disabled={isFirst}
+          aria-label="Subir opción"
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: isFirst ? 'default' : 'pointer',
+            padding: 0,
+            lineHeight: 0,
+            opacity: isFirst ? 0.3 : 1,
+          }}
+        >
+          <MS name="keyboard_arrow_up" size={16} style={{ color: 'var(--tv-ink-subtle)' }} />
+        </button>
+        <button
+          type="button"
+          onClick={onMoveDown}
+          disabled={isLast}
+          aria-label="Bajar opción"
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: isLast ? 'default' : 'pointer',
+            padding: 0,
+            lineHeight: 0,
+            opacity: isLast ? 0.3 : 1,
+          }}
+        >
+          <MS name="keyboard_arrow_down" size={16} style={{ color: 'var(--tv-ink-subtle)' }} />
+        </button>
+      </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <input
           className="tv-input"
@@ -869,6 +955,7 @@ function ModifierGroupCard({
   onAddOption,
   onDeleteOption,
   onChangeOption,
+  onMoveOption,
   onMoveUp,
   onMoveDown,
 }: {
@@ -881,6 +968,7 @@ function ModifierGroupCard({
   onAddOption: () => void
   onDeleteOption: (optLocalId: string) => void
   onChangeOption: (optLocalId: string, patch: Partial<ModifierOption>) => void
+  onMoveOption: (optLocalId: string, dir: -1 | 1) => void
   onMoveUp: () => void
   onMoveDown: () => void
 }) {
@@ -1067,12 +1155,16 @@ function ModifierGroupCard({
               <div />
               <div />
             </div>
-            {visibleOptions.map((opt) => (
+            {visibleOptions.map((opt, oi) => (
               <ModifierOptionRow
                 key={opt.localId}
                 opt={opt}
                 onChange={(patch) => onChangeOption(opt.localId, patch)}
                 onDelete={() => onDeleteOption(opt.localId)}
+                onMoveUp={() => onMoveOption(opt.localId, -1)}
+                onMoveDown={() => onMoveOption(opt.localId, 1)}
+                isFirst={oi === 0}
+                isLast={oi === visibleOptions.length - 1}
               />
             ))}
           </div>
@@ -1330,10 +1422,15 @@ function EditorForm({
   onGroupAddOption,
   onGroupDeleteOption,
   onGroupChangeOption,
+  onGroupMoveOption,
   onGroupMoveUp,
   onGroupMoveDown,
   onAddGroup,
   onDeleteItem,
+  imageSrc,
+  imageError,
+  onPickImage,
+  onClearImage,
 }: {
   formData: FormData
   cats: Category[]
@@ -1350,13 +1447,19 @@ function EditorForm({
     optLocalId: string,
     patch: Partial<ModifierOption>,
   ) => void
+  onGroupMoveOption: (groupLocalId: string, optLocalId: string, dir: -1 | 1) => void
   onGroupMoveUp: (index: number) => void
   onGroupMoveDown: (index: number) => void
   onAddGroup: () => void
   onDeleteItem: () => void
+  imageSrc: string | null
+  imageError: string | null
+  onPickImage: (file: File) => void
+  onClearImage: () => void
 }) {
   const basePrice = Number.parseFloat(formData.base_price) || 0
   const visibleGroups = groups.filter((g) => !g.isDeleted)
+  const [badgeInput, setBadgeInput] = useState('')
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -1371,6 +1474,82 @@ function EditorForm({
       >
         <div className="tv-label" style={{ marginBottom: 14 }}>
           A · INFORMACIÓN BÁSICA
+        </div>
+
+        {/* Foto del plato */}
+        <div style={{ marginBottom: 12 }}>
+          <div className="tv-label-input">FOTO DEL PLATO</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            {imageSrc ? (
+              <img
+                src={imageSrc}
+                alt="Foto del plato"
+                style={{
+                  width: 72,
+                  height: 72,
+                  borderRadius: 12,
+                  objectFit: 'cover',
+                  border: '1px solid var(--tv-border)',
+                  flexShrink: 0,
+                }}
+              />
+            ) : (
+              <div
+                className="tv-ph"
+                style={{
+                  width: 72,
+                  height: 72,
+                  borderRadius: 12,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <MS name="photo_camera" size={22} style={{ color: 'var(--tv-ink-subtle)' }} />
+              </div>
+            )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <label
+                className="tv-btn tv-btn-ghost tv-btn-sm"
+                style={{ cursor: 'pointer', justifyContent: 'center' }}
+              >
+                <MS name="upload" size={14} /> {imageSrc ? 'Reemplazar' : 'Subir foto'}
+                <input
+                  type="file"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0]
+                    e.target.value = ''
+                    if (f) onPickImage(f)
+                  }}
+                />
+              </label>
+              {imageSrc && (
+                <button
+                  type="button"
+                  onClick={onClearImage}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--tv-danger)',
+                    fontSize: 12,
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    padding: 0,
+                  }}
+                >
+                  Quitar foto
+                </button>
+              )}
+            </div>
+          </div>
+          {imageError && (
+            <div style={{ fontSize: 11, color: 'var(--tv-danger)', marginTop: 6 }}>
+              {imageError}
+            </div>
+          )}
         </div>
 
         <div style={{ marginBottom: 12 }}>
@@ -1393,6 +1572,78 @@ function EditorForm({
             onChange={(e) => onFormChange({ description: e.target.value })}
             placeholder="Ingredientes y características del plato"
           />
+        </div>
+
+        {/* Etiquetas (badges) */}
+        <div style={{ marginBottom: 12 }}>
+          <div className="tv-label-input">ETIQUETAS (BADGES)</div>
+          {formData.badges.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+              {formData.badges.map((b) => (
+                <span
+                  key={b}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    background: 'rgba(249,115,22,0.1)',
+                    color: '#C2410C',
+                    borderRadius: 999,
+                    padding: '3px 6px 3px 10px',
+                    fontSize: 12,
+                    fontWeight: 600,
+                  }}
+                >
+                  {b}
+                  <button
+                    type="button"
+                    onClick={() => onFormChange({ badges: formData.badges.filter((x) => x !== b) })}
+                    aria-label={`Quitar ${b}`}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      color: 'inherit',
+                      padding: 0,
+                    }}
+                  >
+                    <MS name="close" size={14} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+            {BADGE_PRESETS.filter((p) => !formData.badges.includes(p)).map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => onFormChange({ badges: [...formData.badges, p] })}
+                className="tv-btn tv-btn-ghost tv-btn-sm"
+                style={{ cursor: 'pointer' }}
+              >
+                + {p}
+              </button>
+            ))}
+            <input
+              className="tv-input"
+              style={{ flex: 1, minWidth: 120, fontSize: 13 }}
+              value={badgeInput}
+              onChange={(e) => setBadgeInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  const v = badgeInput.trim()
+                  if (v && !formData.badges.includes(v)) {
+                    onFormChange({ badges: [...formData.badges, v] })
+                  }
+                  setBadgeInput('')
+                }
+              }}
+              placeholder="Etiqueta libre + Enter"
+            />
+          </div>
         </div>
 
         <div
@@ -1608,6 +1859,7 @@ function EditorForm({
             onChangeOption={(optLocalId, patch) =>
               onGroupChangeOption(g.localId, optLocalId, patch)
             }
+            onMoveOption={(optLocalId, dir) => onGroupMoveOption(g.localId, optLocalId, dir)}
             onMoveUp={() => onGroupMoveUp(i)}
             onMoveDown={() => onGroupMoveDown(i)}
           />
@@ -1668,7 +1920,12 @@ export default function MenuItemEditorPage() {
     base_price: '',
     is_available: true,
     is_compact: false,
+    image_url: null,
+    badges: [],
   })
+  const [pendingImageFile, setPendingImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [imageError, setImageError] = useState<string | null>(null)
   const [groups, setGroups] = useState<ModifierGroup[]>([])
   const [hasUnsaved, setHasUnsaved] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -1719,7 +1976,9 @@ export default function MenuItemEditorPage() {
         // Load item
         const { data: item } = await supabase
           .from('menu_items')
-          .select('id,name,description,category_id,base_price,is_available,is_compact')
+          .select(
+            'id,name,description,category_id,base_price,is_available,is_compact,image_url,badges',
+          )
           .eq('id', itemId)
           .eq('business_id', biz.id)
           .single()
@@ -1736,6 +1995,8 @@ export default function MenuItemEditorPage() {
           base_price: Number(item.base_price).toFixed(2),
           is_available: item.is_available,
           is_compact: item.is_compact,
+          image_url: item.image_url ?? null,
+          badges: item.badges ?? [],
         })
 
         // Load modifier groups + junction + options
@@ -1898,6 +2159,28 @@ export default function MenuItemEditorPage() {
     setHasUnsaved(true)
   }
 
+  // Reordena opciones dentro de un grupo (swap con la vecina no eliminada).
+  // El save() persiste display_order = índice de array, así que el orden se guarda.
+  function moveOption(groupLocalId: string, optLocalId: string, dir: -1 | 1) {
+    setGroups((prev) =>
+      prev.map((g) => {
+        if (g.localId !== groupLocalId) return g
+        const opts = [...g.options]
+        const idx = opts.findIndex((o) => o.localId === optLocalId)
+        if (idx < 0) return g
+        let j = idx + dir
+        while (j >= 0 && j < opts.length && opts[j]?.isDeleted) j += dir
+        const a = opts[idx]
+        const b = opts[j]
+        if (j < 0 || j >= opts.length || !a || !b) return g
+        opts[idx] = b
+        opts[j] = a
+        return { ...g, options: opts }
+      }),
+    )
+    setHasUnsaved(true)
+  }
+
   function moveGroupUp(index: number) {
     const visible = groups.filter((g) => !g.isDeleted)
     if (index === 0) return
@@ -1936,6 +2219,26 @@ export default function MenuItemEditorPage() {
 
   // ── Save ──────────────────────────────────────────────────────────────────
 
+  function onPickImage(file: File) {
+    const err = validateProductImage(file)
+    if (err) {
+      setImageError(err)
+      return
+    }
+    setImageError(null)
+    setPendingImageFile(file)
+    setImagePreview(URL.createObjectURL(file))
+    setHasUnsaved(true)
+  }
+
+  function onClearImage() {
+    setPendingImageFile(null)
+    setImagePreview(null)
+    setImageError(null)
+    setFormData((f) => ({ ...f, image_url: null }))
+    setHasUnsaved(true)
+  }
+
   async function save(): Promise<boolean> {
     if (!bizId) return false
     setSaving(true)
@@ -1968,7 +2271,7 @@ export default function MenuItemEditorPage() {
             base_price: priceVal,
             is_available: formData.is_available,
             is_compact: formData.is_compact,
-            badges: [],
+            badges: formData.badges,
             display_order: 9999,
           })
           .select('id')
@@ -1989,6 +2292,8 @@ export default function MenuItemEditorPage() {
             base_price: priceVal,
             is_available: formData.is_available,
             is_compact: formData.is_compact,
+            badges: formData.badges,
+            image_url: formData.image_url,
           })
           .eq('id', itemId)
           .eq('business_id', bizId)
@@ -1997,6 +2302,38 @@ export default function MenuItemEditorPage() {
           setSaving(false)
           return false
         }
+      }
+
+      // Subir imagen del producto al bucket menu-items (carpeta = businessId por RLS).
+      // Va aquí porque un producto nuevo recién ahora tiene id (savedItemId).
+      if (pendingImageFile) {
+        const path = `${bizId}/items/${savedItemId}`
+        const { error: upErr } = await supabase.storage
+          .from('menu-items')
+          .upload(path, pendingImageFile, {
+            upsert: true,
+            contentType: pendingImageFile.type,
+          })
+        if (upErr) {
+          setSaveError(`No se pudo subir la imagen: ${upErr.message}`)
+          setSaving(false)
+          return false
+        }
+        const { data: pub } = supabase.storage.from('menu-items').getPublicUrl(path)
+        const versionedUrl = `${pub.publicUrl}?v=${Date.now()}`
+        const { error: imgErr } = await supabase
+          .from('menu_items')
+          .update({ image_url: versionedUrl })
+          .eq('id', savedItemId)
+          .eq('business_id', bizId)
+        if (imgErr) {
+          setSaveError(imgErr.message)
+          setSaving(false)
+          return false
+        }
+        setFormData((f) => ({ ...f, image_url: versionedUrl }))
+        setPendingImageFile(null)
+        setImagePreview(null)
       }
 
       // Save modifier groups
@@ -2280,6 +2617,7 @@ export default function MenuItemEditorPage() {
             <CustomerPreviewPanel
               formData={formData}
               groups={groups}
+              imageSrc={imagePreview ?? formData.image_url}
               style={{ flex: 1, borderRadius: 0 }}
             />
           </div>
@@ -2367,10 +2705,15 @@ export default function MenuItemEditorPage() {
           onGroupAddOption={addOptionToGroup}
           onGroupDeleteOption={deleteOption}
           onGroupChangeOption={changeOption}
+          onGroupMoveOption={moveOption}
           onGroupMoveUp={moveGroupUp}
           onGroupMoveDown={moveGroupDown}
           onAddGroup={addGroup}
           onDeleteItem={() => setShowDeleteModal(true)}
+          imageSrc={imagePreview ?? formData.image_url}
+          imageError={imageError}
+          onPickImage={onPickImage}
+          onClearImage={onClearImage}
         />
       </div>
 
@@ -2530,10 +2873,15 @@ export default function MenuItemEditorPage() {
               onGroupAddOption={addOptionToGroup}
               onGroupDeleteOption={deleteOption}
               onGroupChangeOption={changeOption}
+              onGroupMoveOption={moveOption}
               onGroupMoveUp={moveGroupUp}
               onGroupMoveDown={moveGroupDown}
               onAddGroup={addGroup}
               onDeleteItem={() => setShowDeleteModal(true)}
+              imageSrc={imagePreview ?? formData.image_url}
+              imageError={imageError}
+              onPickImage={onPickImage}
+              onClearImage={onClearImage}
             />
           </div>
 
@@ -2592,6 +2940,7 @@ export default function MenuItemEditorPage() {
               <CustomerPreviewPanel
                 formData={formData}
                 groups={groups}
+                imageSrc={imagePreview ?? formData.image_url}
                 style={{ height: '100%' }}
               />
             </div>

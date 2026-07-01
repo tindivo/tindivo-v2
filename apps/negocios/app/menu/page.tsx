@@ -26,6 +26,7 @@ interface MenuItem {
   is_available: boolean
   is_compact: boolean
   badges: string[]
+  imageUrl: string | null
   modifierGroups: ModifierGroup[]
 }
 
@@ -72,10 +73,18 @@ function ItemRow({ item }: { item: MenuItem }) {
         opacity: item.is_available ? 1 : 0.65,
       }}
     >
-      {/* Thumbnail placeholder */}
-      <div className="tv-ph" style={{ width: 48, height: 48, flexShrink: 0, borderRadius: 10 }}>
-        <span style={{ fontSize: 9 }}>{item.name.slice(0, 6).toUpperCase()}</span>
-      </div>
+      {/* Thumbnail */}
+      {item.imageUrl ? (
+        <img
+          src={item.imageUrl}
+          alt={item.name}
+          style={{ width: 48, height: 48, flexShrink: 0, borderRadius: 10, objectFit: 'cover' }}
+        />
+      ) : (
+        <div className="tv-ph" style={{ width: 48, height: 48, flexShrink: 0, borderRadius: 10 }}>
+          <span style={{ fontSize: 9 }}>{item.name.slice(0, 6).toUpperCase()}</span>
+        </div>
+      )}
 
       {/* Info */}
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -277,7 +286,7 @@ function CategorySection({ cat }: { cat: MenuCategory }) {
 
 // ── Empty state ───────────────────────────────────────────────────────────────
 
-function EmptyState() {
+function EmptyState({ onCreateCategory }: { onCreateCategory: () => void }) {
   return (
     <div
       style={{
@@ -362,14 +371,10 @@ function EmptyState() {
         ))}
       </div>
 
-      <Link
-        href="/menu/item/nuevo"
-        className="tv-btn tv-btn-brand tv-btn-lg"
-        style={{ textDecoration: 'none' }}
-      >
+      <button type="button" onClick={onCreateCategory} className="tv-btn tv-btn-brand tv-btn-lg">
         <MS name="add" size={20} filled />
-        Agregar el primer plato
-      </Link>
+        Crear categoría
+      </button>
     </div>
   )
 }
@@ -518,12 +523,410 @@ function DesktopCategoryRail({
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
+// ── Category manager (CRUD directo a Supabase, RLS mc_owner_all) ───────────────
+
+interface CatRow {
+  id: string
+  name: string
+  blurb: string
+  display_order: number
+  is_active: boolean
+  itemCount: number
+}
+
+function CategoryManagerModal({
+  open,
+  bizId,
+  onClose,
+  onChanged,
+}: {
+  open: boolean
+  bizId: string
+  onClose: () => void
+  onChanged: () => void
+}) {
+  const [rows, setRows] = useState<CatRow[]>([])
+  const [loading, setLoading] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<CatRow | null>(null)
+
+  const reload = useCallback(async () => {
+    const supabase = getSupabaseBrowser()
+    setLoading(true)
+    setError(null)
+    const [{ data: catData, error: catErr }, { data: itemData }] = await Promise.all([
+      supabase
+        .from('menu_categories')
+        .select('id,name,blurb,display_order,is_active')
+        .eq('business_id', bizId)
+        .order('display_order'),
+      supabase.from('menu_items').select('category_id').eq('business_id', bizId),
+    ])
+    if (catErr) {
+      setError(catErr.message)
+      setLoading(false)
+      return
+    }
+    const counts: Record<string, number> = {}
+    for (const it of itemData ?? []) counts[it.category_id] = (counts[it.category_id] ?? 0) + 1
+    setRows(
+      (catData ?? []).map((c) => ({
+        id: c.id,
+        name: c.name,
+        blurb: c.blurb ?? '',
+        display_order: c.display_order,
+        is_active: c.is_active,
+        itemCount: counts[c.id] ?? 0,
+      })),
+    )
+    setLoading(false)
+  }, [bizId])
+
+  useEffect(() => {
+    if (open) void reload()
+  }, [open, reload])
+
+  if (!open) return null
+
+  async function persist(
+    fn: () => PromiseLike<{ error: { message: string } | null }>,
+  ): Promise<void> {
+    setBusy(true)
+    setError(null)
+    const { error: e } = await fn()
+    setBusy(false)
+    if (e) {
+      setError(e.message)
+      return
+    }
+    await reload()
+    onChanged()
+  }
+
+  async function addCategory() {
+    const supabase = getSupabaseBrowser()
+    const nextOrder = rows.length > 0 ? Math.max(...rows.map((r) => r.display_order)) + 1 : 0
+    await persist(() =>
+      supabase.from('menu_categories').insert({
+        business_id: bizId,
+        name: 'Nueva categoría',
+        display_order: nextOrder,
+        is_active: true,
+      }),
+    )
+  }
+
+  async function saveName(row: CatRow, name: string) {
+    if (name.trim() === row.name) return
+    const supabase = getSupabaseBrowser()
+    await persist(() =>
+      supabase
+        .from('menu_categories')
+        .update({ name: name.trim() || 'Sin nombre' })
+        .eq('id', row.id)
+        .eq('business_id', bizId),
+    )
+  }
+
+  async function saveBlurb(row: CatRow, blurb: string) {
+    if (blurb.trim() === row.blurb) return
+    const supabase = getSupabaseBrowser()
+    await persist(() =>
+      supabase
+        .from('menu_categories')
+        .update({ blurb: blurb.trim() || null })
+        .eq('id', row.id)
+        .eq('business_id', bizId),
+    )
+  }
+
+  async function toggleActive(row: CatRow) {
+    const supabase = getSupabaseBrowser()
+    await persist(() =>
+      supabase
+        .from('menu_categories')
+        .update({ is_active: !row.is_active })
+        .eq('id', row.id)
+        .eq('business_id', bizId),
+    )
+  }
+
+  async function move(index: number, dir: -1 | 1) {
+    const other = index + dir
+    if (other < 0 || other >= rows.length) return
+    const newRows = [...rows]
+    const a = newRows[index]
+    const b = newRows[other]
+    if (!a || !b) return
+    newRows[index] = b
+    newRows[other] = a
+    const supabase = getSupabaseBrowser()
+    setBusy(true)
+    setError(null)
+    for (let i = 0; i < newRows.length; i++) {
+      const r = newRows[i]
+      if (r && r.display_order !== i) {
+        const { error: e } = await supabase
+          .from('menu_categories')
+          .update({ display_order: i })
+          .eq('id', r.id)
+          .eq('business_id', bizId)
+        if (e) {
+          setError(e.message)
+          setBusy(false)
+          return
+        }
+      }
+    }
+    setBusy(false)
+    await reload()
+    onChanged()
+  }
+
+  async function doDelete(row: CatRow) {
+    setConfirmDelete(null)
+    const supabase = getSupabaseBrowser()
+    await persist(() =>
+      supabase.from('menu_categories').delete().eq('id', row.id).eq('business_id', bizId),
+    )
+  }
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(0,0,0,0.45)',
+        zIndex: 50,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 16,
+      }}
+    >
+      <div
+        style={{
+          background: '#fff',
+          borderRadius: 16,
+          width: '100%',
+          maxWidth: 560,
+          maxHeight: '85vh',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '14px 16px',
+            borderBottom: '1px solid var(--tv-border)',
+          }}
+        >
+          <div style={{ fontSize: 16, fontWeight: 700 }}>Gestionar categorías</div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="tv-btn tv-btn-ghost tv-btn-sm"
+            aria-label="Cerrar"
+          >
+            <MS name="close" size={18} />
+          </button>
+        </div>
+
+        <div
+          style={{
+            padding: 14,
+            overflowY: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 10,
+          }}
+        >
+          {error && (
+            <div style={{ fontSize: 12, color: 'var(--tv-danger)', fontWeight: 600 }}>{error}</div>
+          )}
+          {loading ? (
+            <div style={{ color: 'var(--tv-ink-muted)', fontSize: 14 }}>Cargando…</div>
+          ) : rows.length === 0 ? (
+            <div style={{ color: 'var(--tv-ink-muted)', fontSize: 14 }}>
+              Aún no tenés categorías. Agregá la primera para empezar tu menú.
+            </div>
+          ) : (
+            rows.map((row, index) => (
+              <div
+                key={row.id}
+                style={{
+                  border: '1px solid var(--tv-border)',
+                  borderRadius: 12,
+                  padding: 10,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 8,
+                  opacity: row.is_active ? 1 : 0.6,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <button
+                      type="button"
+                      onClick={() => move(index, -1)}
+                      disabled={busy || index === 0}
+                      aria-label="Subir"
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: 0,
+                        lineHeight: 1,
+                      }}
+                    >
+                      <MS
+                        name="keyboard_arrow_up"
+                        size={18}
+                        style={{ color: 'var(--tv-ink-muted)' }}
+                      />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => move(index, 1)}
+                      disabled={busy || index === rows.length - 1}
+                      aria-label="Bajar"
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: 0,
+                        lineHeight: 1,
+                      }}
+                    >
+                      <MS
+                        name="keyboard_arrow_down"
+                        size={18}
+                        style={{ color: 'var(--tv-ink-muted)' }}
+                      />
+                    </button>
+                  </div>
+                  <input
+                    className="tv-input"
+                    style={{ flex: 1, fontSize: 14, fontWeight: 600 }}
+                    defaultValue={row.name}
+                    onBlur={(e) => saveName(row, e.target.value)}
+                    placeholder="Nombre de la categoría"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => toggleActive(row)}
+                    disabled={busy}
+                    className="tv-btn tv-btn-ghost tv-btn-sm"
+                    title={row.is_active ? 'Ocultar del menú' : 'Mostrar en el menú'}
+                  >
+                    <MS name={row.is_active ? 'visibility' : 'visibility_off'} size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDelete(row)}
+                    disabled={busy}
+                    className="tv-btn tv-btn-ghost tv-btn-sm"
+                    aria-label="Eliminar categoría"
+                    style={{ color: 'var(--tv-danger)' }}
+                  >
+                    <MS name="delete" size={16} />
+                  </button>
+                </div>
+                <input
+                  className="tv-input"
+                  style={{ fontSize: 12 }}
+                  defaultValue={row.blurb}
+                  onBlur={(e) => saveBlurb(row, e.target.value)}
+                  placeholder="Descripción corta (opcional)"
+                />
+                <div style={{ fontSize: 11, color: 'var(--tv-ink-muted)' }}>
+                  {row.itemCount} plato{row.itemCount !== 1 ? 's' : ''}
+                  {!row.is_active && ' · oculta'}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        <div style={{ padding: 14, borderTop: '1px solid var(--tv-border)' }}>
+          <button
+            type="button"
+            onClick={addCategory}
+            disabled={busy}
+            className="tv-btn tv-btn-brand tv-btn-sm"
+            style={{ width: '100%', justifyContent: 'center' }}
+          >
+            <MS name="add" size={16} /> Agregar categoría
+          </button>
+        </div>
+      </div>
+
+      {confirmDelete && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.5)',
+            zIndex: 60,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+          }}
+        >
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: 14,
+              padding: 18,
+              maxWidth: 380,
+              width: '100%',
+            }}
+          >
+            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>
+              Eliminar “{confirmDelete.name}”
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--tv-ink-muted)', marginBottom: 16 }}>
+              {confirmDelete.itemCount > 0
+                ? `Se eliminarán también ${confirmDelete.itemCount} plato${confirmDelete.itemCount !== 1 ? 's' : ''} de esta categoría. Esta acción no se puede deshacer.`
+                : 'Esta acción no se puede deshacer.'}
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(null)}
+                className="tv-btn tv-btn-ghost tv-btn-sm"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => doDelete(confirmDelete)}
+                className="tv-btn tv-btn-sm"
+                style={{ background: 'var(--tv-danger)', color: '#fff' }}
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function MenuPage() {
   const router = useRouter()
   const [cats, setCats] = useState<MenuCategory[]>([])
-  const [_bizId, setBizId] = useState<string | null>(null)
+  const [bizId, setBizId] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
   const [activeCatId, setActiveCatId] = useState<string | null>(null)
+  const [catManagerOpen, setCatManagerOpen] = useState(false)
 
   const load = useCallback(async (businessId: string) => {
     const supabase = getSupabaseBrowser()
@@ -537,7 +940,9 @@ export default function MenuPage() {
         .order('display_order'),
       supabase
         .from('menu_items')
-        .select('id,category_id,name,base_price,is_available,is_compact,badges,display_order')
+        .select(
+          'id,category_id,name,base_price,is_available,is_compact,badges,image_url,display_order',
+        )
         .eq('business_id', businessId)
         .order('display_order'),
       supabase.from('menu_item_modifier_groups').select('item_id,group_id'),
@@ -585,6 +990,7 @@ export default function MenuPage() {
             is_available: i.is_available,
             is_compact: i.is_compact,
             badges: i.badges ?? [],
+            imageUrl: i.image_url ?? null,
             modifierGroups: groupsByItem[i.id] ?? [],
           })),
       })),
@@ -626,6 +1032,14 @@ export default function MenuPage() {
 
   const headerRight = (
     <div style={{ display: 'flex', gap: 8 }}>
+      <button
+        type="button"
+        onClick={() => setCatManagerOpen(true)}
+        className="tv-btn tv-btn-ghost tv-btn-sm"
+      >
+        <MS name="category" size={16} />
+        Categorías
+      </button>
       <Link
         href="/menu/item/nuevo"
         className="tv-btn tv-btn-brand tv-btn-sm"
@@ -644,7 +1058,7 @@ export default function MenuPage() {
           Cargando…
         </div>
       ) : cats.length === 0 ? (
-        <EmptyState />
+        <EmptyState onCreateCategory={() => setCatManagerOpen(true)} />
       ) : (
         <>
           {/* Mobile: legend strip */}
@@ -707,6 +1121,14 @@ export default function MenuPage() {
             </div>
           </div>
         </>
+      )}
+      {bizId && (
+        <CategoryManagerModal
+          open={catManagerOpen}
+          bizId={bizId}
+          onClose={() => setCatManagerOpen(false)}
+          onChanged={() => load(bizId)}
+        />
       )}
     </DashboardShell>
   )

@@ -269,7 +269,12 @@ export default function NegocioPage({ params }: { params: Promise<{ id: string }
                         </div>
                       </div>
                       <div className="relative shrink-0">
-                        <ProductImage label={item.name} hue={item.image_hue ?? 14} size={92} />
+                        <ProductImage
+                          label={item.name}
+                          hue={item.image_hue ?? 14}
+                          size={92}
+                          src={item.image_url}
+                        />
                         <span
                           className="absolute flex h-8 w-8 items-center justify-center rounded-full text-white"
                           style={{

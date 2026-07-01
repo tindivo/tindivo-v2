@@ -79,16 +79,24 @@ export function CartLineList({ lines }: { lines: CartLine[] }) {
             marginTop: i > 0 ? 14 : 0,
           }}
         >
-          <span
-            aria-hidden
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl font-bold text-[18px]"
-            style={{
-              background: `oklch(0.92 0.04 ${line.hue})`,
-              color: `oklch(0.42 0.12 ${line.hue})`,
-            }}
-          >
-            {line.name.charAt(0).toUpperCase()}
-          </span>
+          {line.imageUrl ? (
+            <img
+              src={line.imageUrl}
+              alt={line.name}
+              className="h-12 w-12 shrink-0 rounded-xl object-cover"
+            />
+          ) : (
+            <span
+              aria-hidden
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl font-bold text-[18px]"
+              style={{
+                background: `oklch(0.92 0.04 ${line.hue})`,
+                color: `oklch(0.42 0.12 ${line.hue})`,
+              }}
+            >
+              {line.name.charAt(0).toUpperCase()}
+            </span>
+          )}
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-3">
               <div className="font-semibold text-[14px] leading-snug">

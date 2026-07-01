@@ -24,6 +24,7 @@ export interface ProductItem {
   name: string
   description: string | null
   base_price: number
+  image_url: string | null
   image_hue: number | null
   modifier_groups?: ModGroupData[]
 }
@@ -45,6 +46,7 @@ export function ProductModal({
     modifiers: CartModifier[]
     note: string | null
     hue: number
+    imageUrl: string | null
   }) => void
 }) {
   const groups = item.modifier_groups ?? []
@@ -131,6 +133,7 @@ export function ProductModal({
       modifiers,
       note: note.trim() || null,
       hue,
+      imageUrl: item.image_url,
     })
   }
 
@@ -139,21 +142,25 @@ export function ProductModal({
       {/* Hero */}
       <div className="relative">
         <div
-          className="t-ph-image flex h-[200px] w-full items-center justify-center"
+          className="t-ph-image flex h-[280px] w-full items-center justify-center overflow-hidden"
           style={{ borderRadius: 0, background: `oklch(0.92 0.04 ${hue})` }}
         >
-          <span
-            style={{
-              fontFamily: 'var(--font-jetbrains), monospace',
-              fontSize: 11,
-              color: `oklch(0.35 0.1 ${hue})`,
-              letterSpacing: '0.06em',
-              position: 'relative',
-              zIndex: 1,
-            }}
-          >
-            [ {item.name.toUpperCase()} ]
-          </span>
+          {item.image_url ? (
+            <img src={item.image_url} alt={item.name} className="h-full w-full object-cover" />
+          ) : (
+            <span
+              style={{
+                fontFamily: 'var(--font-jetbrains), monospace',
+                fontSize: 11,
+                color: `oklch(0.35 0.1 ${hue})`,
+                letterSpacing: '0.06em',
+                position: 'relative',
+                zIndex: 1,
+              }}
+            >
+              [ {item.name.toUpperCase()} ]
+            </span>
+          )}
         </div>
         <button
           type="button"
