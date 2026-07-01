@@ -14,6 +14,8 @@ const Schema = z.object({
   yapeNumber: z.string().trim().max(20).optional(),
   plinNumber: z.string().trim().max(20).optional(),
   qrUrl: z.url().max(500).optional(),
+  logoUrl: z.url().max(500).optional(),
+  bannerUrl: z.url().max(500).optional(),
   tagline: z.string().trim().max(120).optional(),
   accentColor: z
     .string()
@@ -47,6 +49,8 @@ export async function PATCH(req: Request): Promise<Response> {
       ...(body.yapeNumber !== undefined && { yape_number: body.yapeNumber }),
       ...(body.plinNumber !== undefined && { plin_number: body.plinNumber }),
       ...(body.qrUrl !== undefined && { qr_url: body.qrUrl }),
+      ...(body.logoUrl !== undefined && { logo_url: body.logoUrl }),
+      ...(body.bannerUrl !== undefined && { banner_url: body.bannerUrl }),
       ...(body.tagline !== undefined && { tagline: body.tagline }),
       ...(body.accentColor !== undefined && { accent_color: body.accentColor }),
       ...(body.estimatedEtaMin !== undefined && { estimated_eta_min: body.estimatedEtaMin }),

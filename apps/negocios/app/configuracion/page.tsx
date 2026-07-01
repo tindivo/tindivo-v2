@@ -292,6 +292,114 @@ function QrUploader({
   )
 }
 
+/**
+ * Uploader genérico de imagen de perfil del negocio (logo/banner). Sube al
+ * bucket indicado en `{bizId}/{pathSuffix}` (owner-folder policy) y persiste la
+ * URL versionada vía PATCH /business/profile en el campo `field`.
+ */
+function ProfileImageUploader({
+  currentUrl,
+  onUploaded,
+  bucket,
+  pathSuffix,
+  field,
+  width,
+  height,
+  radius,
+  placeholderLabel,
+}: {
+  currentUrl: string | null
+  onUploaded: (url: string) => void
+  bucket: string
+  pathSuffix: string
+  field: 'logoUrl' | 'bannerUrl'
+  width: number
+  height: number
+  radius: number
+  placeholderLabel: string
+}) {
+  const { bizId } = useDashboard()
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setError('Formato no permitido. Usá JPG, PNG o WebP.')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError('La imagen supera el máximo de 5 MB.')
+      return
+    }
+    setBusy(true)
+    setError(null)
+    const supabase = getSupabaseBrowser()
+    const path = `${bizId}/${pathSuffix}`
+    const { error: upErr } = await supabase.storage
+      .from(bucket)
+      .upload(path, file, { upsert: true, contentType: file.type })
+    if (upErr) {
+      setError(upErr.message)
+      setBusy(false)
+      return
+    }
+    const { data } = supabase.storage.from(bucket).getPublicUrl(path)
+    const versionedUrl = `${data.publicUrl}?v=${Date.now()}`
+    try {
+      await api.patch('/business/profile', { [field]: versionedUrl })
+      onUploaded(versionedUrl)
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? (err.problem.detail ?? err.message)
+          : 'No se pudo guardar la imagen',
+      )
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
+      {currentUrl ? (
+        <img
+          src={currentUrl}
+          alt={placeholderLabel}
+          style={{
+            width,
+            height,
+            borderRadius: radius,
+            objectFit: 'cover',
+            background: '#fff',
+            border: '1px solid var(--tv-border)',
+          }}
+        />
+      ) : (
+        <div className="tv-ph" style={{ width, height, borderRadius: radius }}>
+          <span>{placeholderLabel}</span>
+        </div>
+      )}
+      <label
+        className="tv-btn tv-btn-ghost tv-btn-sm"
+        style={{ cursor: 'pointer', justifyContent: 'center' }}
+      >
+        <MS name="upload" size={14} /> {busy ? 'Subiendo…' : currentUrl ? 'Reemplazar' : 'Subir'}
+        <input
+          type="file"
+          accept="image/*"
+          style={{ display: 'none' }}
+          onChange={onFile}
+          disabled={busy}
+        />
+      </label>
+      {error && <div style={{ fontSize: 11, color: 'var(--tv-danger)' }}>{error}</div>}
+    </div>
+  )
+}
+
 // ── Inner view (needs useDashboard) ──────────────────────────────────────────
 function ConfigView({
   form,
@@ -302,6 +410,10 @@ function ConfigView({
   set,
   qrUrl,
   onQrUploaded,
+  logoUrl,
+  onLogoUploaded,
+  bannerUrl,
+  onBannerUploaded,
 }: {
   form: Form
   capability: string
@@ -311,6 +423,10 @@ function ConfigView({
   set: (patch: Partial<Form>) => void
   qrUrl: string | null
   onQrUploaded: (url: string) => void
+  logoUrl: string | null
+  onLogoUploaded: (url: string) => void
+  bannerUrl: string | null
+  onBannerUploaded: (url: string) => void
 }) {
   const { bizName } = useDashboard()
   const [activeSection, setActiveSection] = useState<SectionId>('datos')
@@ -412,6 +528,51 @@ function ConfigView({
 
         {/* Datos del negocio */}
         <MobileSectionTitle>DATOS DEL NEGOCIO</MobileSectionTitle>
+        <div
+          style={{
+            background: '#fff',
+            borderRadius: 12,
+            border: '1px solid var(--tv-border)',
+            padding: 12,
+            marginBottom: 10,
+            display: 'flex',
+            gap: 16,
+            flexWrap: 'wrap',
+          }}
+        >
+          <div>
+            <div className="tv-label-input" style={{ marginBottom: 6 }}>
+              LOGO (INICIO)
+            </div>
+            <ProfileImageUploader
+              currentUrl={logoUrl}
+              onUploaded={onLogoUploaded}
+              bucket="business-logos"
+              pathSuffix="logo"
+              field="logoUrl"
+              width={80}
+              height={80}
+              radius={14}
+              placeholderLabel="LOGO"
+            />
+          </div>
+          <div style={{ flex: 1, minWidth: 160 }}>
+            <div className="tv-label-input" style={{ marginBottom: 6 }}>
+              BANNER (PORTADA)
+            </div>
+            <ProfileImageUploader
+              currentUrl={bannerUrl}
+              onUploaded={onBannerUploaded}
+              bucket="business-logos"
+              pathSuffix="banner"
+              field="bannerUrl"
+              width={200}
+              height={80}
+              radius={12}
+              placeholderLabel="BANNER"
+            />
+          </div>
+        </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <Field label="NOMBRE">
             <input
@@ -696,6 +857,40 @@ function ConfigView({
                   </span>
                 </div>
               </Field>
+              <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+                <div>
+                  <div className="tv-label-input" style={{ marginBottom: 6 }}>
+                    LOGO (APARECE EN EL INICIO)
+                  </div>
+                  <ProfileImageUploader
+                    currentUrl={logoUrl}
+                    onUploaded={onLogoUploaded}
+                    bucket="business-logos"
+                    pathSuffix="logo"
+                    field="logoUrl"
+                    width={96}
+                    height={96}
+                    radius={16}
+                    placeholderLabel="LOGO"
+                  />
+                </div>
+                <div>
+                  <div className="tv-label-input" style={{ marginBottom: 6 }}>
+                    BANNER (PORTADA DE TU PÁGINA)
+                  </div>
+                  <ProfileImageUploader
+                    currentUrl={bannerUrl}
+                    onUploaded={onBannerUploaded}
+                    bucket="business-logos"
+                    pathSuffix="banner"
+                    field="bannerUrl"
+                    width={280}
+                    height={96}
+                    radius={12}
+                    placeholderLabel="BANNER"
+                  />
+                </div>
+              </div>
             </div>
           </SectionCard>
 
@@ -824,6 +1019,8 @@ export default function ConfiguracionPage() {
   // Fuera de Form a propósito: el QR se persiste al subirse (PATCH inmediato),
   // no con el "Guardar cambios" del form.
   const [qrUrl, setQrUrl] = useState<string | null>(null)
+  const [logoUrl, setLogoUrl] = useState<string | null>(null)
+  const [bannerUrl, setBannerUrl] = useState<string | null>(null)
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const [saving, setSaving] = useState(false)
 
@@ -832,12 +1029,14 @@ export default function ConfiguracionPage() {
     supabase
       .from('businesses')
       .select(
-        'name,phone,yape_number,tagline,accent_color,estimated_eta_min,estimated_eta_max,delivery_fee,publishes_catalog,accepts_web_pickup,accepts_web_delivery,uses_tindivo_drivers,primary_capability,qr_url',
+        'name,phone,yape_number,tagline,accent_color,estimated_eta_min,estimated_eta_max,delivery_fee,publishes_catalog,accepts_web_pickup,accepts_web_delivery,uses_tindivo_drivers,primary_capability,qr_url,logo_url,banner_url',
       )
       .maybeSingle()
       .then(({ data: biz }) => {
         if (!biz) return
         setQrUrl(biz.qr_url ?? null)
+        setLogoUrl(biz.logo_url ?? null)
+        setBannerUrl(biz.banner_url ?? null)
         setForm({
           name: biz.name ?? '',
           phone: biz.phone ?? '',
@@ -916,6 +1115,10 @@ export default function ConfiguracionPage() {
             set={set}
             qrUrl={qrUrl}
             onQrUploaded={setQrUrl}
+            logoUrl={logoUrl}
+            onLogoUploaded={setLogoUrl}
+            bannerUrl={bannerUrl}
+            onBannerUploaded={setBannerUrl}
           />
         </div>
       )}

@@ -448,15 +448,6 @@ function DesktopCategoryRail({
         })}
       </div>
 
-      <Link
-        href="/menu/item/nuevo"
-        className="tv-btn tv-btn-ghost tv-btn-sm tv-btn-block"
-        style={{ marginTop: 10, textDecoration: 'none' }}
-      >
-        <MS name="add" size={14} />
-        Nuevo plato
-      </Link>
-
       {/* Legend */}
       <div
         style={{
@@ -1040,14 +1031,6 @@ export default function MenuPage() {
         <MS name="category" size={16} />
         Categorías
       </button>
-      <Link
-        href="/menu/item/nuevo"
-        className="tv-btn tv-btn-brand tv-btn-sm"
-        style={{ textDecoration: 'none' }}
-      >
-        <MS name="add" size={16} />
-        Nuevo plato
-      </Link>
     </div>
   )
 

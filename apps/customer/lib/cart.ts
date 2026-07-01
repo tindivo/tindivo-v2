@@ -48,8 +48,30 @@ interface CartState {
 let seq = 0
 const nextKey = (itemId: string) => {
   seq += 1
-  return `${itemId}-${seq}`
+  // Sufijo aleatorio: el contador `seq` se reinicia en cada carga de página, pero las
+  // líneas persistidas conservan su clave; sin esto, una línea nueva podría regenerar
+  // una clave ya existente (`itemId-1`) y colisionar → warning de React "same key".
+  const rand =
+    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
+  return `${itemId}-${seq}-${rand}`
 }
+
+/**
+ * Firma de configuración de una línea: dos líneas son "la misma" (y por tanto se
+ * fusionan sumando cantidad) si coinciden el ítem, el conjunto de opciones de
+ * modificadores y la nota. Una sola opción distinta ⇒ firma distinta ⇒ línea aparte.
+ */
+const lineSignature = (l: {
+  itemId: string
+  modifiers: CartModifier[]
+  note: string | null
+}): string =>
+  `${l.itemId}|${l.modifiers
+    .map((m) => m.optionId)
+    .sort()
+    .join(',')}|${(l.note ?? '').trim()}`
 
 // localStorage no existe en el server (Next SSR): storage no-op como fallback.
 const memoryStorage = {
@@ -69,6 +91,16 @@ export const useCart = create<CartState>()(
         set((state) => {
           const sameBusiness = state.businessId === businessId
           const lines = sameBusiness ? [...state.lines] : []
+          // Fusiona con una línea idéntica (mismo ítem + opciones + nota): suma cantidad.
+          const sig = lineSignature(line)
+          const idx = lines.findIndex((l) => lineSignature(l) === sig)
+          if (idx >= 0) {
+            const existing = lines[idx]
+            if (existing) {
+              lines[idx] = { ...existing, quantity: existing.quantity + line.quantity }
+              return { businessId, businessName, lines }
+            }
+          }
           lines.push({ ...line, key: line.key ?? nextKey(line.itemId) })
           return { businessId, businessName, lines }
         }),
@@ -111,6 +143,19 @@ export const useCart = create<CartState>()(
         businessName: s.businessName,
         lines: s.lines,
       }),
+      // Al rehidratar, re-asigna claves únicas: sana carritos previos que pudieran tener
+      // claves duplicadas y garantiza unicidad para React (keys estables por sesión).
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<
+          Pick<CartState, 'businessId' | 'businessName' | 'lines'>
+        >
+        return {
+          ...(current as CartState),
+          businessId: p.businessId ?? null,
+          businessName: p.businessName ?? null,
+          lines: (p.lines ?? []).map((l) => ({ ...l, key: nextKey(l.itemId) })),
+        }
+      },
       // Hidratamos manualmente tras montar (CartHydrator) para evitar mismatch SSR.
       skipHydration: true,
     },

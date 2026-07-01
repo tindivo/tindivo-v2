@@ -91,7 +91,7 @@ function modeToRule(
       return {
         is_required: true,
         min_selections: 1,
-        max_selections: prevMax ?? 3,
+        max_selections: prevMax && prevMax > 1 ? prevMax : 3,
         selection_type: 'multi',
       }
     case 'optional-one':
@@ -100,7 +100,7 @@ function modeToRule(
       return {
         is_required: false,
         min_selections: 0,
-        max_selections: prevMax ?? 3,
+        max_selections: prevMax && prevMax > 1 ? prevMax : 3,
         selection_type: 'multi',
       }
   }

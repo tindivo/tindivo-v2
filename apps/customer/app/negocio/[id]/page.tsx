@@ -36,6 +36,40 @@ interface BusinessDetail {
 
 const soles = (n: number) => `S/ ${n.toFixed(2)}`
 
+/** Toast "Añadido al carrito" — entra con slide-down + fade y se auto-oculta. */
+function AddedToast({ name }: { name: string }) {
+  const [shown, setShown] = useState(false)
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setShown(true))
+    return () => cancelAnimationFrame(raf)
+  }, [])
+  return (
+    <div
+      className="pointer-events-none fixed inset-x-0 top-4 z-[60] flex justify-center px-4"
+      style={{
+        transform: shown ? 'translateY(0)' : 'translateY(-14px)',
+        opacity: shown ? 1 : 0,
+        transition: 'transform 240ms cubic-bezier(0.16,1,0.3,1), opacity 240ms ease',
+      }}
+    >
+      <div className="flex max-w-[92%] items-center gap-3 rounded-2xl border border-border bg-white px-4 py-3 shadow-[0_12px_32px_-10px_rgba(0,0,0,0.28)]">
+        <span
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+          style={{ background: 'rgba(26,150,80,0.12)', color: '#1A8050' }}
+        >
+          <Icon.Check />
+        </span>
+        <div className="min-w-0">
+          <div className="font-semibold text-[14px] leading-tight">Añadido al carrito</div>
+          <div className="truncate text-[12px]" style={{ color: 'rgba(26,22,20,0.55)' }}>
+            {name}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function NegocioPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const [data, setData] = useState<BusinessDetail | null>(null)
@@ -46,6 +80,20 @@ export default function NegocioPage({ params }: { params: Promise<{ id: string }
   const cart = useCart()
   const [cartOpen, setCartOpen] = useState(false)
   const [pending, setPending] = useState<Omit<CartLine, 'key'> | null>(null)
+  const [addedToast, setAddedToast] = useState<{ name: string; id: number } | null>(null)
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function notifyAdded(name: string) {
+    if (toastTimer.current) clearTimeout(toastTimer.current)
+    setAddedToast({ name, id: Date.now() })
+    toastTimer.current = setTimeout(() => setAddedToast(null), 2200)
+  }
+  useEffect(
+    () => () => {
+      if (toastTimer.current) clearTimeout(toastTimer.current)
+    },
+    [],
+  )
 
   useEffect(() => {
     let on = true
@@ -336,6 +384,7 @@ export default function NegocioPage({ params }: { params: Promise<{ id: string }
               return
             }
             cart.addLine(business.id, business.name, line)
+            notifyAdded(line.name)
             setModalItem(null)
           }}
         />
@@ -363,6 +412,7 @@ export default function NegocioPage({ params }: { params: Promise<{ id: string }
                 type="button"
                 onClick={() => {
                   cart.addLine(business.id, business.name, pending)
+                  notifyAdded(pending.name)
                   setPending(null)
                 }}
                 className="t-btn t-btn-primary flex-1"
@@ -373,6 +423,8 @@ export default function NegocioPage({ params }: { params: Promise<{ id: string }
           </div>
         </BottomSheet>
       )}
+
+      {addedToast && <AddedToast key={addedToast.id} name={addedToast.name} />}
     </main>
   )
 }

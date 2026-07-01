@@ -16,6 +16,7 @@ interface PublicBusiness {
   name: string
   tagline: string | null
   accent_color: string
+  logo_url: string | null
   primary_capability: string
   estimated_eta_min: number
   estimated_eta_max: number
@@ -313,14 +314,22 @@ function RestaurantCard({ b }: { b: PublicBusiness }) {
       href={`/negocio/${b.id}`}
       className="flex items-stretch gap-3.5 rounded-[20px] border border-border bg-white p-3"
     >
-      <div
-        className="t-ph-image flex h-[88px] w-[88px] items-center justify-center"
-        style={{ background: `#${b.accent_color}1a` }}
-      >
-        <span style={{ color: `#${b.accent_color}`, position: 'relative', zIndex: 1 }}>
-          <Icon.Store />
-        </span>
-      </div>
+      {b.logo_url ? (
+        <img
+          src={b.logo_url}
+          alt={b.name}
+          className="h-[88px] w-[88px] shrink-0 rounded-2xl object-cover"
+        />
+      ) : (
+        <div
+          className="t-ph-image flex h-[88px] w-[88px] items-center justify-center"
+          style={{ background: `#${b.accent_color}1a` }}
+        >
+          <span style={{ color: `#${b.accent_color}`, position: 'relative', zIndex: 1 }}>
+            <Icon.Store />
+          </span>
+        </div>
+      )}
       <div className="flex min-w-0 flex-1 flex-col justify-between">
         <div>
           <div className="t-display text-[18px] leading-tight">{b.name}</div>
