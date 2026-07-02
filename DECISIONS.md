@@ -329,7 +329,7 @@ Codificado en `@tindivo/contracts` (`order-status.ts`: `ORDER_TRANSITIONS`, `STA
 - **Guard de capacidades en `POST /customer/orders`** (409 `conflict`): el RPC `create_customer_order` NO valida `accepts_web_delivery/pickup` — el guard del route handler es obligatorio. *(Follow-up opcional: duplicar el check dentro del RPC.)*
 - **Panel del negocio en modo catálogo**: nav reducido a Menú + Configuración (gate en las demás rutas). Excepción: si hay pedidos delivery en vuelo al cambiar de modo, la sección Pedidos sigue visible con aviso.
 - La **pausa** (`accepting_orders_until`) no afecta el CTA de WhatsApp (es out-of-band de la plataforma).
-- La sección **"Tiempos y precio"** (ETA + delivery fee) se oculta en configuración para `catalog_only` y su payload no reenvía esos campos.
+- **Visibilidad de secciones de configuración por modo: declarativa** (`hiddenFor` en el array `SECTIONS` de `apps/negocios/app/configuracion/page.tsx` — fuente única para nav, render y payload). Para `catalog_only` se ocultan **"Tiempos y precio"** (sin delivery web no hay ETA/fee) y **"Pago Yape"** (el Yape de la plataforma es solo para prepago de pedidos web; en catálogo el cobro es directo por WhatsApp). Los datos NO se borran: dejan de mostrarse/enviarse y reaparecen al volver a delivery.
 
 ---
 

@@ -46,10 +46,20 @@ const isWaInvalid = (v: string): boolean =>
 
 type SectionId = 'datos' | 'yape' | 'tiempos' | 'capacidades' | 'horario'
 
-const SECTIONS: { id: SectionId; icon: string; label: string }[] = [
+// Fuente única de las secciones: alimenta el nav lateral, el render (móvil y
+// desktop, vía showSection) y qué campos viajan en el payload de guardado.
+// `hiddenFor` declara los modos (primary_capability) donde la sección NO aplica.
+const SECTIONS: {
+  id: SectionId
+  icon: string
+  label: string
+  hiddenFor?: string[]
+}[] = [
   { id: 'datos', icon: 'storefront', label: 'Datos' },
-  { id: 'yape', icon: 'qr_code_2', label: 'Pago Yape' },
-  { id: 'tiempos', icon: 'schedule', label: 'Tiempos y precio' },
+  // Yape = prepago de pedidos web; en modo catálogo el cobro es directo por WhatsApp.
+  { id: 'yape', icon: 'qr_code_2', label: 'Pago Yape', hiddenFor: ['catalog_only'] },
+  // Sin delivery web no hay ETA ni costo de envío que configurar.
+  { id: 'tiempos', icon: 'schedule', label: 'Tiempos y precio', hiddenFor: ['catalog_only'] },
   { id: 'capacidades', icon: 'tune', label: 'Capacidades' },
   { id: 'horario', icon: 'calendar_month', label: 'Horario' },
 ]
@@ -508,9 +518,9 @@ function ConfigView({
   const [activeSection, setActiveSection] = useState<SectionId>('datos')
   const contentRef = useRef<HTMLDivElement>(null)
 
-  // Modo catálogo: sin delivery web no hay ETA ni costo de envío que configurar.
-  const isCatalogOnly = capability === 'catalog_only'
-  const sections = isCatalogOnly ? SECTIONS.filter((s) => s.id !== 'tiempos') : SECTIONS
+  // Visibilidad declarativa por modo del negocio (ver hiddenFor en SECTIONS).
+  const sections = SECTIONS.filter((s) => !s.hiddenFor?.some((c) => c === capability))
+  const showSection = (id: SectionId) => sections.some((s) => s.id === id)
 
   const CAP_ITEMS: {
     key: keyof Form
@@ -721,38 +731,42 @@ function ConfigView({
           </Field>
         </div>
 
-        {/* Pago Yape */}
-        <MobileSectionTitle>PAGO YAPE</MobileSectionTitle>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <Field label="NÚMERO DE YAPE">
-            <input
-              className="tv-input tv-mono"
-              value={form.yapeNumber}
-              onChange={(e) => set({ yapeNumber: e.target.value })}
-            />
-          </Field>
-          <div
-            style={{
-              background: '#fff',
-              borderRadius: 12,
-              padding: 12,
-              border: '1px solid var(--tv-border)',
-            }}
-          >
-            <div className="tv-label-input" style={{ marginBottom: 6 }}>
-              QR DE YAPE
-            </div>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-              <QrUploader qrUrl={qrUrl} onUploaded={onQrUploaded} size={96} />
-              <div style={{ flex: 1, fontSize: 12, color: 'var(--tv-ink-muted)' }}>
-                Sube tu QR para que el cliente escanee al hacer un pedido prepago.
+        {/* Pago Yape (solo modos con prepago de pedidos web) */}
+        {showSection('yape') && (
+          <>
+            <MobileSectionTitle>PAGO YAPE</MobileSectionTitle>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <Field label="NÚMERO DE YAPE">
+                <input
+                  className="tv-input tv-mono"
+                  value={form.yapeNumber}
+                  onChange={(e) => set({ yapeNumber: e.target.value })}
+                />
+              </Field>
+              <div
+                style={{
+                  background: '#fff',
+                  borderRadius: 12,
+                  padding: 12,
+                  border: '1px solid var(--tv-border)',
+                }}
+              >
+                <div className="tv-label-input" style={{ marginBottom: 6 }}>
+                  QR DE YAPE
+                </div>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                  <QrUploader qrUrl={qrUrl} onUploaded={onQrUploaded} size={96} />
+                  <div style={{ flex: 1, fontSize: 12, color: 'var(--tv-ink-muted)' }}>
+                    Sube tu QR para que el cliente escanee al hacer un pedido prepago.
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
+          </>
+        )}
 
         {/* Tiempos y precio (no aplica en modo catálogo: sin delivery web) */}
-        {!isCatalogOnly && (
+        {showSection('tiempos') && (
           <>
             <MobileSectionTitle>TIEMPOS Y PRECIO</MobileSectionTitle>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
@@ -1014,53 +1028,56 @@ function ConfigView({
             </div>
           </SectionCard>
 
-          {/* Yape */}
-          <SectionCard title="Pago por Yape" icon="qr_code_2" id="yape">
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 200px',
-                gap: 14,
-                alignItems: 'flex-start',
-              }}
-            >
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <Field label="NÚMERO DE YAPE">
-                  <input
-                    className="tv-input tv-mono"
-                    value={form.yapeNumber}
-                    onChange={(e) => set({ yapeNumber: e.target.value })}
-                  />
-                </Field>
-                <div
-                  style={{
-                    padding: '10px 12px',
-                    background: 'var(--tv-info-soft)',
-                    borderRadius: 10,
-                    fontSize: 12,
-                    color: '#0369A1',
-                    display: 'flex',
-                    gap: 8,
-                    alignItems: 'flex-start',
-                  }}
-                >
-                  <MS name="info" size={14} filled style={{ flexShrink: 0, marginTop: 1 }} />
-                  <span>
-                    Los clientes verán este número y tu QR cuando paguen por Yape antes del pedido.
-                  </span>
+          {/* Yape (solo modos con prepago de pedidos web) */}
+          {showSection('yape') && (
+            <SectionCard title="Pago por Yape" icon="qr_code_2" id="yape">
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 200px',
+                  gap: 14,
+                  alignItems: 'flex-start',
+                }}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <Field label="NÚMERO DE YAPE">
+                    <input
+                      className="tv-input tv-mono"
+                      value={form.yapeNumber}
+                      onChange={(e) => set({ yapeNumber: e.target.value })}
+                    />
+                  </Field>
+                  <div
+                    style={{
+                      padding: '10px 12px',
+                      background: 'var(--tv-info-soft)',
+                      borderRadius: 10,
+                      fontSize: 12,
+                      color: '#0369A1',
+                      display: 'flex',
+                      gap: 8,
+                      alignItems: 'flex-start',
+                    }}
+                  >
+                    <MS name="info" size={14} filled style={{ flexShrink: 0, marginTop: 1 }} />
+                    <span>
+                      Los clientes verán este número y tu QR cuando paguen por Yape antes del
+                      pedido.
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <div className="tv-label-input" style={{ marginBottom: 6 }}>
+                    QR DE YAPE
+                  </div>
+                  <QrUploader qrUrl={qrUrl} onUploaded={onQrUploaded} size={160} />
                 </div>
               </div>
-              <div>
-                <div className="tv-label-input" style={{ marginBottom: 6 }}>
-                  QR DE YAPE
-                </div>
-                <QrUploader qrUrl={qrUrl} onUploaded={onQrUploaded} size={160} />
-              </div>
-            </div>
-          </SectionCard>
+            </SectionCard>
+          )}
 
           {/* Tiempos (no aplica en modo catálogo: sin delivery web) */}
-          {!isCatalogOnly && (
+          {showSection('tiempos') && (
             <SectionCard title="Tiempos y precio" icon="schedule" id="tiempos">
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
                 <Field label="ETA MÍNIMO">
@@ -1200,12 +1217,13 @@ export default function ConfiguracionPage() {
         name: form.name,
         phone: form.phone,
         whatsappNumber: waParsed?.success ? waParsed.data : null,
-        yapeNumber: form.yapeNumber,
         tagline: form.tagline,
         accentColor: form.accentColor,
-        // En modo catálogo la sección "Tiempos y precio" no existe: no se
-        // reenvían valores que el negocio no puede ver ni editar.
+        // En modo catálogo las secciones "Pago Yape" y "Tiempos y precio" no
+        // existen: no se reenvían valores que el negocio no puede ver ni editar
+        // (los datos se conservan en la DB y reaparecen al volver a delivery).
         ...(capability !== 'catalog_only' && {
+          yapeNumber: form.yapeNumber,
           estimatedEtaMin: form.estimatedEtaMin,
           estimatedEtaMax: form.estimatedEtaMax,
           deliveryFee: form.deliveryFee,
