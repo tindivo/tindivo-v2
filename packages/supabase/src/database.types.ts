@@ -2419,6 +2419,7 @@ export type Database = {
         Args: { p_business_user_id: string; p_order_id: string }
         Returns: Json
       }
+      f_unaccent: { Args: { p_text: string }; Returns: string }
       generate_settlements: {
         Args: {
           p_created_by?: string
@@ -2639,6 +2640,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      search_catalog: {
+        Args: { p_limit?: number; p_query: string }
+        Returns: Json
       }
       set_driver_availability: {
         Args: { p_available: boolean; p_user_id: string }

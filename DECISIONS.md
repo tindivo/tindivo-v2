@@ -349,3 +349,15 @@ Codificado en `@tindivo/contracts` (`order-status.ts`: `ORDER_TRANSITIONS`, `STA
 **Idempotencia**: el replay de una Idempotency-Key ya completada se resuelve ANTES de los guards de pausa/capacidades/horario (`findCompletedReplay` en `apps/api/lib/http/idempotency.ts`) — un retry de un pedido ya creado devuelve su 201 original aunque el negocio haya cerrado entre medio (contrato estilo Stripe).
 
 **Feedback de guardado en el panel** (DECISIONS §16 aplicado): éxito = toast verde 3s global (`notifySuccess` + `SuccessToastHost` en el chrome persistente — sobrevive navegación); errores siguen inline. Cableado en configuración, editor de horario, editor de plato y uploads de imágenes.
+
+---
+
+## 20. Buscador del catálogo en el cliente (2026-07-02)
+
+Supera el "search bar no funcional v1.0" de `Docs/07-flujo-cliente.md` RF-CAT-03. Busca **negocios** (nombre + eslogan) y **platos** (nombre + descripción), insensible a **mayúsculas y tildes** en ambas direcciones ("PIÑA" ↔ "pina").
+
+- **Filtrado en Postgres, no en el cliente** (migración `0052`): extensiones `unaccent` + `pg_trgm` (schema `extensions`), wrapper **`public.f_unaccent`** (IMMUTABLE para poder indexar; si cambian las reglas del diccionario → REINDEX) e **índices GIN trigram** sobre `f_unaccent(lower(name || ' ' || descripción/eslogan))`.
+- ⚠️ **Grants de `f_unaccent`**: los índices de expresión evalúan la función con el rol que ESCRIBE la fila → EXECUTE para `authenticated` (el panel escribe `menu_items` directo vía PostgREST; revocarlo rompería el editor de menú) y `service_role` (la API escribe `businesses`). Revocada de `public`/`anon` (no escriben filas; el default de Supabase la dejaba invocable vía `/rest/v1/rpc/`).
+- **RPC `search_catalog(p_query, p_limit)`** service-only (revoke anon/authenticated; la superficie pública es `GET /api/v1/public/search?q=`, mín 2 chars, máx 60): multi-palabra con AND de términos (`LIKE ALL`), wildcards `%_\` escapados, ranking por `similarity`, solo columnas públicas seguras, mismos filtros de publicación que `/public/businesses` (+ categoría activa y plato disponible).
+- **`is_open_now` NO se calcula en el RPC**: la fuente de verdad del horario es `getOpenStatus()` en TS (§19); el home enriquece las cards de resultados desde su lista ya cargada.
+- Cliente: hook `useCatalogSearch` (debounce 300ms + AbortController anti-race); los resultados reemplazan hero+lista; los platos navegan a la página del negocio. Colisiones tipo "año"/"ano" son tolerancia de búsqueda deseada.
