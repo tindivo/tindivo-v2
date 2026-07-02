@@ -20,6 +20,8 @@ interface PublicBusiness {
   primary_capability: string
   estimated_eta_min: number
   estimated_eta_max: number
+  /** null = sin horario configurado (siempre abierto, sin badge). */
+  is_open_now?: boolean | null
 }
 
 // Estados internos no terminales (pedido "en curso").
@@ -340,12 +342,29 @@ function RestaurantCard({ b }: { b: PublicBusiness }) {
           )}
         </div>
         <div className="mt-2 flex gap-2.5 text-[12px]" style={{ color: 'rgba(26,22,20,0.7)' }}>
-          <span className="inline-flex items-center gap-1">
-            <Icon.Clock /> {b.estimated_eta_min}–{b.estimated_eta_max} min
-          </span>
-          <span className="inline-flex items-center gap-1">
-            <Icon.Truck /> Delivery
-          </span>
+          {b.primary_capability === 'catalog_only' ? (
+            // Modo catálogo: sin pedidos web — el negocio atiende por WhatsApp.
+            <span className="inline-flex items-center gap-1">
+              <Icon.Chat /> Pedidos por WhatsApp
+            </span>
+          ) : (
+            <>
+              {b.is_open_now === false && (
+                <span
+                  className="inline-flex items-center rounded-full px-2 py-[1px] font-semibold"
+                  style={{ background: 'rgba(220,38,38,0.08)', color: '#DC2626' }}
+                >
+                  Cerrado
+                </span>
+              )}
+              <span className="inline-flex items-center gap-1">
+                <Icon.Clock /> {b.estimated_eta_min}–{b.estimated_eta_max} min
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <Icon.Truck /> Delivery
+              </span>
+            </>
+          )}
         </div>
       </div>
     </Link>

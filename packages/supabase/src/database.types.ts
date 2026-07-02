@@ -164,6 +164,7 @@ export type Database = {
           updated_at: string
           user_id: string
           uses_tindivo_drivers: boolean
+          whatsapp_number: string | null
           yape_number: string | null
         }
         Insert: {
@@ -204,6 +205,7 @@ export type Database = {
           updated_at?: string
           user_id: string
           uses_tindivo_drivers?: boolean
+          whatsapp_number?: string | null
           yape_number?: string | null
         }
         Update: {
@@ -244,6 +246,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
           uses_tindivo_drivers?: boolean
+          whatsapp_number?: string | null
           yape_number?: string | null
         }
         Relationships: [
@@ -2661,6 +2664,7 @@ export type Database = {
         | "catalog_delivery"
         | "catalog_full"
         | "pickup_local"
+        | "catalog_only"
       cancel_reason:
         | "pending_acceptance_timeout"
         | "validation_timeout"
@@ -2863,6 +2867,7 @@ export const Constants = {
         "catalog_delivery",
         "catalog_full",
         "pickup_local",
+        "catalog_only",
       ],
       cancel_reason: [
         "pending_acceptance_timeout",

@@ -81,6 +81,7 @@ export const BUSINESS_PRIMARY_CAPABILITIES = [
   'catalog_delivery',
   'catalog_full',
   'pickup_local',
+  'catalog_only',
 ] as const
 export const BusinessPrimaryCapabilitySchema = z.enum(BUSINESS_PRIMARY_CAPABILITIES)
 export type BusinessPrimaryCapability = z.infer<typeof BusinessPrimaryCapabilitySchema>

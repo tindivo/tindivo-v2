@@ -2,6 +2,7 @@
 
 import { Button, Card, CardBody } from '@tindivo/ui'
 import { useCallback, useEffect, useState } from 'react'
+import { notifySuccess } from '@/components/dashboard/toast'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
 // day_of_week 0..6 = Lunes..Domingo (convención del editor).
@@ -75,7 +76,12 @@ export function ScheduleEditor() {
     const { error } = await getSupabaseBrowser()
       .from('business_schedule')
       .upsert(payload, { onConflict: 'business_id,day_of_week' })
-    setMsg(error ? error.message : 'Horario guardado')
+    if (error) {
+      setMsg(error.message) // errores inline (DECISIONS §16)
+    } else {
+      setMsg(null)
+      notifySuccess('Horario guardado')
+    }
     setSaving(false)
   }
 

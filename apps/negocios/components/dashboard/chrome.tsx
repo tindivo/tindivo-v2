@@ -1,5 +1,6 @@
 'use client'
 
+import type { BusinessPrimaryCapability } from '@tindivo/contracts'
 import { Button, Card, CardBody } from '@tindivo/ui'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -26,6 +27,7 @@ import {
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import { unlockAudio, useDashboardSounds } from '@/lib/use-audio-alert'
 import { MS } from './primitives'
+import { SuccessToastHost } from './toast'
 
 // ── Navegación (fuente única; el activo se deriva de la ruta) ─────────────────
 export type NavId = 'pedidos' | 'menu' | 'add' | 'efectivo' | 'historial' | 'deuda' | 'config'
@@ -39,6 +41,10 @@ const NAV_ITEMS: { id: NavId; label: string; icon: string; href: string }[] = [
   { id: 'deuda', label: 'Deuda', icon: 'account_balance_wallet', href: '/deuda' },
   { id: 'config', label: 'Config', icon: 'settings', href: '/configuracion' },
 ]
+
+// Modo solo-catálogo (WhatsApp): el negocio no opera delivery en la plataforma,
+// así que su panel se reduce a gestionar el menú y la configuración.
+const CATALOG_ONLY_NAV: NavId[] = ['menu', 'config']
 
 const ACCENT_DEFAULT = '#F472B6'
 
@@ -59,6 +65,7 @@ export interface DashboardCtx {
   bizName: string
   accent: string
   qrUrl: string | null
+  capability: BusinessPrimaryCapability | null
   paused: boolean
   pauseMinLeft: number | null
   blocked: boolean
@@ -85,6 +92,7 @@ interface BizState {
   name: string
   accent: string
   qrUrl: string | null
+  capability: BusinessPrimaryCapability | null
   until: string | null
   blocked: boolean
   reason: string | null
@@ -152,7 +160,13 @@ function Login({ onAuthed }: { onAuthed: () => void }) {
 
 // ── Sidebar (desktop, persistente) ────────────────────────────────────────────
 function Sidebar({ active, onSignOut }: { active: NavId; onSignOut: () => void }) {
-  const { bizName, accent, paused, counts, soundOn, toggleSound } = useDashboard()
+  const { bizName, accent, capability, paused, counts, soundOn, toggleSound } = useDashboard()
+  const catalogOnly = capability === 'catalog_only'
+  // Excepción (DECISIONS §18): con pedidos delivery en vuelo (de antes del
+  // cambio de modo), Pedidos sigue accesible desde la nav para no perderlos.
+  const hasActiveOrders = counts.new + counts.cooking + counts.route > 0
+  const catalogNav: NavId[] = hasActiveOrders ? ['pedidos', ...CATALOG_ONLY_NAV] : CATALOG_ONLY_NAV
+  const navItems = catalogOnly ? NAV_ITEMS.filter((it) => catalogNav.includes(it.id)) : NAV_ITEMS
   return (
     <aside
       style={{
@@ -194,7 +208,7 @@ function Sidebar({ active, onSignOut }: { active: NavId; onSignOut: () => void }
         </div>
       </div>
       <nav style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {NAV_ITEMS.map((it) => {
+        {navItems.map((it) => {
           const on = it.id === active
           const badge = it.id === 'pedidos' ? counts.new : undefined
           return (
@@ -260,13 +274,22 @@ function Sidebar({ active, onSignOut }: { active: NavId; onSignOut: () => void }
         style={{ padding: 12, marginBottom: 10, background: '#FFF4EC', boxShadow: 'none' }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <MS name="circle" size={10} filled style={{ color: paused ? '#B45309' : '#16A34A' }} />
+          <MS
+            name="circle"
+            size={10}
+            filled
+            style={{ color: catalogOnly ? '#16A34A' : paused ? '#B45309' : '#16A34A' }}
+          />
           <div style={{ fontSize: 13, fontWeight: 600 }}>
-            {paused ? 'Pausado' : 'Plataforma abierta'}
+            {catalogOnly ? 'Pedidos por WhatsApp' : paused ? 'Pausado' : 'Plataforma abierta'}
           </div>
         </div>
         <div className="tv-label" style={{ fontSize: 9, marginTop: 4 }}>
-          {paused ? 'NO RECIBE PEDIDOS WEB' : 'RECIBIENDO PEDIDOS'}
+          {catalogOnly
+            ? 'MODO CATÁLOGO ACTIVO'
+            : paused
+              ? 'NO RECIBE PEDIDOS WEB'
+              : 'RECIBIENDO PEDIDOS'}
         </div>
       </div>
       <div
@@ -338,7 +361,45 @@ function navBtnStyle(active: boolean) {
 }
 
 function BottomNav({ active }: { active: NavId }) {
+  const { capability, counts } = useDashboard()
   const mas = active === 'historial' || active === 'deuda' || active === 'config'
+
+  // Modo catálogo: solo Menú y Configuración (sin FAB "pedir moto").
+  // Excepción (DECISIONS §18): con pedidos delivery en vuelo, Pedidos sigue visible.
+  if (capability === 'catalog_only') {
+    const hasActiveOrders = counts.new + counts.cooking + counts.route > 0
+    return (
+      <div className="tv-bottom-nav">
+        {hasActiveOrders && (
+          <Link
+            href="/"
+            className={active === 'pedidos' ? 'active' : ''}
+            style={navBtnStyle(active === 'pedidos')}
+          >
+            <MS name="receipt_long" size={22} filled={active === 'pedidos'} />
+            <span>Pedidos</span>
+          </Link>
+        )}
+        <Link
+          href="/menu"
+          className={active === 'menu' ? 'active' : ''}
+          style={navBtnStyle(active === 'menu')}
+        >
+          <MS name="restaurant_menu" size={22} filled={active === 'menu'} />
+          <span>Menú</span>
+        </Link>
+        <Link
+          href="/configuracion"
+          className={active === 'config' ? 'active' : ''}
+          style={navBtnStyle(active === 'config')}
+        >
+          <MS name="settings" size={22} filled={active === 'config'} />
+          <span>Config</span>
+        </Link>
+      </div>
+    )
+  }
+
   return (
     <div className="tv-bottom-nav">
       <Link
@@ -423,6 +484,43 @@ function NewOrderToast({ count }: { count: number }) {
   )
 }
 
+// ── Gate del modo catálogo ─────────────────────────────────────────────────────
+/** Secciones de operación delivery bloqueadas cuando el negocio está en modo
+ *  solo-catálogo: los pedidos le llegan por WhatsApp, fuera de la plataforma. */
+function CatalogOnlyGate() {
+  return (
+    <main className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
+      <span
+        style={{
+          width: 64,
+          height: 64,
+          borderRadius: 999,
+          background: 'var(--tv-brand-soft)',
+          color: 'var(--tv-brand-dark)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <MS name="chat" size={30} filled />
+      </span>
+      <h1 className="font-display font-semibold text-[22px] text-ink">Modo catálogo activo</h1>
+      <p className="max-w-[420px] text-[14px] text-ink-muted">
+        Tu negocio publica su catálogo en Tindivo y los pedidos te llegan directo por WhatsApp. El
+        servicio de delivery de la plataforma no está disponible por ahora.
+      </p>
+      <div className="mt-2 flex gap-2">
+        <Link href="/menu" className="tv-btn tv-btn-brand">
+          <MS name="restaurant_menu" size={16} /> Mi menú
+        </Link>
+        <Link href="/configuracion" className="tv-btn tv-btn-ghost">
+          <MS name="settings" size={16} /> Configuración
+        </Link>
+      </div>
+    </main>
+  )
+}
+
 // ── Chrome autenticado: sidebar + realtime + sonido persistentes ──────────────
 function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut: () => void }) {
   const pathname = usePathname()
@@ -434,6 +532,7 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
     name: 'Mi negocio',
     accent: ACCENT_DEFAULT,
     qrUrl: null,
+    capability: null,
     until: null,
     blocked: false,
     reason: null,
@@ -445,7 +544,9 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
   const refetchBiz = useCallback(async () => {
     const { data } = await getSupabaseBrowser()
       .from('businesses')
-      .select('id,name,accent_color,qr_url,accepting_orders_until,is_blocked,block_reason')
+      .select(
+        'id,name,accent_color,qr_url,primary_capability,accepting_orders_until,is_blocked,block_reason',
+      )
       .maybeSingle()
     if (data) {
       setBizId(data.id as string)
@@ -453,6 +554,7 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
         name: (data.name as string | null) ?? 'Mi negocio',
         accent: data.accent_color ? `#${data.accent_color}` : ACCENT_DEFAULT,
         qrUrl: (data.qr_url as string | null) ?? null,
+        capability: (data.primary_capability as BusinessPrimaryCapability | null) ?? null,
         until: (data.accepting_orders_until as string | null) ?? null,
         blocked: (data.is_blocked as boolean | null) ?? false,
         reason: (data.block_reason as string | null) ?? null,
@@ -528,6 +630,7 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
       bizName: biz.name,
       accent: biz.accent,
       qrUrl: biz.qrUrl,
+      capability: biz.capability,
       paused,
       pauseMinLeft: pauseMin,
       blocked: biz.blocked,
@@ -558,6 +661,14 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
 
   if (!ready || !value) return <div className="p-10 text-ink-muted">Cargando…</div>
 
+  // Gate del modo catálogo: solo Menú y Config son operables. Excepción: si aún
+  // hay pedidos delivery en vuelo (de antes del cambio de modo), la sección de
+  // pedidos sigue visible con un aviso para no dejarlos inaccesibles.
+  const catalogOnly = value.capability === 'catalog_only'
+  const activeOrders = counts.new + counts.cooking + counts.route
+  const legacyOrdersVisible = active === 'pedidos' && activeOrders > 0
+  const gated = catalogOnly && !CATALOG_ONLY_NAV.includes(active) && !legacyOrdersVisible
+
   return (
     <Ctx.Provider value={value}>
       <div className="flex" style={{ height: '100dvh', background: 'var(--tv-surface)' }}>
@@ -565,13 +676,31 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
           <Sidebar active={active} onSignOut={onSignOut} />
         </div>
         <div className="flex flex-col" style={{ flex: 1, minWidth: 0, height: '100dvh' }}>
-          {children}
+          {catalogOnly && legacyOrdersVisible && (
+            <div
+              style={{
+                background: '#FEF3C7',
+                color: '#92400E',
+                padding: '8px 16px',
+                fontSize: 13,
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+              }}
+            >
+              <MS name="info" size={16} filled />
+              Modo catálogo activo: estos pedidos son del modo delivery anterior.
+            </div>
+          )}
+          {gated ? <CatalogOnlyGate /> : children}
           <div className="lg:hidden">
             <BottomNav active={active} />
           </div>
         </div>
       </div>
       <NewOrderToast count={counts.new} />
+      <SuccessToastHost />
     </Ctx.Provider>
   )
 }

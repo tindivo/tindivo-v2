@@ -8,6 +8,28 @@ export interface IdempotentResult {
 }
 
 /**
+ * Replay temprano: devuelve la respuesta cacheada si esta clave ya COMPLETÓ con
+ * el mismo payload; null en cualquier otro caso. Úsalo ANTES de guards que
+ * dependen del estado actual (pausa/capacidades/horario): un retry de una
+ * request ya ejecutada debe devolver la respuesta original aunque el estado
+ * del negocio haya cambiado entre medio (contrato estilo Stripe). Los casos
+ * hash-distinto / en-vuelo se dejan a withIdempotency, que ya los rechaza.
+ */
+export async function findCompletedReplay(
+  supabase: TypedSupabaseClient,
+  args: { key: string; scope: string; requestHash: string },
+): Promise<{ status: number; body: unknown } | null> {
+  const { data } = await supabase
+    .from('idempotency_keys')
+    .select('status,request_hash,response_status,response_body')
+    .eq('key', args.key)
+    .eq('scope', args.scope)
+    .maybeSingle()
+  if (data?.status !== 'completed' || data.request_hash !== args.requestHash) return null
+  return { status: data.response_status ?? 200, body: data.response_body }
+}
+
+/**
  * Idempotencia estilo Stripe. Reclama la clave con un INSERT atómico
  * (ON CONFLICT DO NOTHING vía upsert ignoreDuplicates). Si la reclama, ejecuta
  * la operación y guarda la respuesta. Si ya existía: reproduce la respuesta

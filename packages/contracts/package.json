@@ -8,7 +8,8 @@
     "./primitives": "./src/primitives.ts",
     "./enums": "./src/enums.ts",
     "./errors": "./src/errors.ts",
-    "./order-status": "./src/order-status.ts"
+    "./order-status": "./src/order-status.ts",
+    "./schedule": "./src/schedule.ts"
   },
   "scripts": {
     "type-check": "tsc --noEmit",

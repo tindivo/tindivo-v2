@@ -5,9 +5,10 @@ import { createServiceClient } from '@/lib/supabase/service'
 
 export const dynamic = 'force-dynamic'
 
-// Columnas seguras (sin yape_number/balance — el Yape se entrega al confirmar prepago).
+// Columnas seguras (sin yape_number/balance — el Yape se entrega al confirmar
+// prepago). whatsapp_number es el contacto público opt-in del modo catálogo.
 const BUSINESS_COLUMNS =
-  'id,name,accent_color,logo_url,banner_url,tagline,categoria,primary_capability,estimated_eta_min,estimated_eta_max,coordinates_lat,coordinates_lng,address,accepts_web_pickup,accepts_web_delivery'
+  'id,name,accent_color,logo_url,banner_url,tagline,categoria,primary_capability,estimated_eta_min,estimated_eta_max,coordinates_lat,coordinates_lng,address,accepts_web_pickup,accepts_web_delivery,whatsapp_number'
 
 export function OPTIONS(req: Request): Response {
   return handleOptions(req)
@@ -46,6 +47,7 @@ export async function GET(
       { data: groups },
       { data: options },
       { data: links },
+      { data: schedule },
     ] = await Promise.all([
       supabase
         .from('menu_categories')
@@ -70,6 +72,12 @@ export async function GET(
         .select('id,group_id,name,description,additional_price,display_order,is_available')
         .order('display_order'),
       supabase.from('menu_item_modifier_groups').select('item_id,group_id,display_order'),
+      // Horario semanal (informativo + estado abierto/cerrado; el cliente lo computa).
+      supabase
+        .from('business_schedule')
+        .select('day_of_week,is_open,shift1_start,shift1_end,shift2_start,shift2_end')
+        .eq('business_id', id)
+        .order('day_of_week'),
     ])
     if (catError) throw new Error(catError.message)
     if (itemError) throw new Error(itemError.message)
@@ -113,7 +121,10 @@ export async function GET(
       // No mostrar categorías vacías al cliente (una categoría sin platos no aporta).
       .filter((category) => category.items.length > 0)
 
-    return ok({ business, categories: menu }, { headers: corsHeaders(req) })
+    return ok(
+      { business, categories: menu, schedule: schedule ?? [] },
+      { headers: corsHeaders(req) },
+    )
   } catch (err) {
     return handleError(err, requestId, req)
   }

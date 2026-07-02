@@ -1,9 +1,9 @@
-import { CreateOrderRequestSchema } from '@tindivo/contracts'
+import { CreateOrderRequestSchema, getOpenStatus } from '@tindivo/contracts'
 import { DomainError } from '@tindivo/core'
 import { requireRole } from '@/lib/http/auth'
 import { corsHeaders, handleOptions } from '@/lib/http/cors'
 import { sha256Hex } from '@/lib/http/hash'
-import { withIdempotency } from '@/lib/http/idempotency'
+import { findCompletedReplay, withIdempotency } from '@/lib/http/idempotency'
 import { handleError, problem } from '@/lib/http/problem'
 import { getRequestId } from '@/lib/http/request-id'
 import { sendOrderCreated, sendOrderPrepay, sendOrderValidation } from '@/lib/inngest/client'
@@ -41,15 +41,67 @@ export async function POST(req: Request): Promise<Response> {
     const requestHash = await sha256Hex(JSON.stringify(body))
     const service = createServiceClient()
 
+    // Replay temprano: si esta Idempotency-Key ya completó, devuelve la respuesta
+    // original ANTES de los guards de pausa/capacidades/horario — el estado del
+    // negocio pudo cambiar entre el intento original y el retry (p. ej. cerró a
+    // las 23:00) y un retry de un pedido YA creado debe ver su 201 original.
+    const cached = await findCompletedReplay(service, {
+      key: idempotencyKey,
+      scope: 'create_order',
+      requestHash,
+    })
+    if (cached) {
+      return Response.json(cached.body, {
+        status: cached.status,
+        headers: { ...corsHeaders(req), 'idempotency-replayed': 'true' },
+      })
+    }
+
     // Busy mode: si el negocio está pausado, no aceptamos pedidos web nuevos.
     const { data: biz } = await service
       .from('businesses')
-      .select('accepting_orders_until')
+      .select('accepting_orders_until,accepts_web_delivery,accepts_web_pickup')
       .eq('id', body.businessId)
       .maybeSingle()
     if (isBusinessPaused(biz?.accepting_orders_until ?? null)) {
       return problem('forbidden', {
         detail: 'El restaurante está pausado temporalmente. Vuelve a intentar en unos minutos.',
+        requestId,
+        headers: corsHeaders(req),
+      })
+    }
+
+    // Capacidades: un negocio en modo catálogo (WhatsApp) no recibe pedidos web.
+    // Defensa en profundidad — el RPC create_customer_order no valida esto.
+    if (body.deliveryMethod === 'delivery' && !biz?.accepts_web_delivery) {
+      return problem('conflict', {
+        detail: 'Este negocio no acepta pedidos con delivery. Pide por WhatsApp desde su página.',
+        requestId,
+        headers: corsHeaders(req),
+      })
+    }
+    if (body.deliveryMethod === 'pickup' && !biz?.accepts_web_pickup) {
+      return problem('conflict', {
+        detail: 'Este negocio no acepta recojo en local.',
+        requestId,
+        headers: corsHeaders(req),
+      })
+    }
+
+    // Horario de atención: fuera de horario no se aceptan pedidos web.
+    // Sin horario configurado = siempre abierto. Mensaje distinto al de pausa
+    // (403 "pausado temporalmente" arriba): cerrado es 409 y menciona la apertura.
+    const { data: scheduleRows } = await service
+      .from('business_schedule')
+      .select('day_of_week,is_open,shift1_start,shift1_end,shift2_start,shift2_end')
+      .eq('business_id', body.businessId)
+    const openStatus = getOpenStatus(scheduleRows ?? [], new Date())
+    if (openStatus.kind === 'closed') {
+      return problem('conflict', {
+        detail:
+          openStatus.opensToday && openStatus.opensAt
+            ? `El restaurante está cerrado ahora. Abre hoy a las ${openStatus.opensAt}.`
+            : 'El restaurante está cerrado ahora. Revisa su horario de atención.',
         requestId,
         headers: corsHeaders(req),
       })

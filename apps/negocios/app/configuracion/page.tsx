@@ -1,9 +1,11 @@
 'use client'
 
 import { ApiError } from '@tindivo/api-client'
+import { PhonePeSchema } from '@tindivo/contracts'
 import { type FormEvent, useEffect, useRef, useState } from 'react'
 import { FONT_DISPLAY, MS } from '@/components/dashboard/primitives'
 import { DashboardShell, useDashboard } from '@/components/dashboard/shell'
+import { notifySuccess } from '@/components/dashboard/toast'
 import { ScheduleEditor } from '@/components/schedule-editor'
 import { api } from '@/lib/api'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
@@ -12,6 +14,7 @@ import { getSupabaseBrowser } from '@/lib/supabase/client'
 interface Form {
   name: string
   phone: string
+  whatsappNumber: string
   yapeNumber: string
   tagline: string
   accentColor: string
@@ -23,6 +26,23 @@ interface Form {
   acceptsWebDelivery: boolean
   usesTindivoDrivers: boolean
 }
+
+// Labels amigables del modo derivado (primary_capability).
+const CAPABILITY_LABELS: Record<string, string> = {
+  drivers_only: 'Solo motorizados',
+  catalog_pickup: 'Catálogo + recojo',
+  catalog_delivery: 'Catálogo + delivery',
+  catalog_full: 'Catálogo completo',
+  pickup_local: 'Atención en local',
+  catalog_only: 'Solo catálogo (WhatsApp)',
+}
+const capabilityLabel = (c: string): string => CAPABILITY_LABELS[c] ?? c
+
+const WA_ERROR = 'Celular peruano inválido (9 dígitos, empieza con 9).'
+
+/** Vacío = sin WhatsApp (válido). Con texto, valida contra la primitiva canónica. */
+const isWaInvalid = (v: string): boolean =>
+  v.trim() !== '' && !PhonePeSchema.safeParse(v.trim()).success
 
 type SectionId = 'datos' | 'yape' | 'tiempos' | 'capacidades' | 'horario'
 
@@ -67,12 +87,14 @@ function CapToggle({
   desc,
   on,
   onChange,
+  disabled = false,
 }: {
   icon: string
   title: string
   desc: string
   on: boolean
   onChange: (v: boolean) => void
+  disabled?: boolean
 }) {
   return (
     <div
@@ -110,6 +132,7 @@ function CapToggle({
         type="button"
         role="switch"
         aria-checked={on}
+        disabled={disabled}
         onClick={() => onChange(!on)}
         style={{
           width: 44,
@@ -117,7 +140,8 @@ function CapToggle({
           borderRadius: 999,
           background: on ? 'var(--tv-brand)' : 'var(--tv-ink-subtle)',
           border: 'none',
-          cursor: 'pointer',
+          cursor: disabled ? 'default' : 'pointer',
+          opacity: disabled ? 0.55 : 1,
           position: 'relative',
           flexShrink: 0,
           transition: 'background 140ms ease',
@@ -136,6 +160,58 @@ function CapToggle({
           }}
         />
       </button>
+    </div>
+  )
+}
+
+/** Notas de la sección Capacidades: el modo lo gestiona el admin de Tindivo. */
+function CapabilityNotes({
+  capability,
+  whatsappNumber,
+}: {
+  capability: string
+  whatsappNumber: string
+}) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div
+        style={{
+          padding: '10px 12px',
+          background: 'var(--tv-info-soft)',
+          borderRadius: 10,
+          fontSize: 12,
+          color: '#0369A1',
+          display: 'flex',
+          gap: 8,
+          alignItems: 'flex-start',
+        }}
+      >
+        <MS name="lock" size={14} filled style={{ flexShrink: 0, marginTop: 1 }} />
+        <span>
+          El modo del negocio lo gestiona Tindivo. Si quieres cambiar entre catálogo y delivery,
+          escríbenos.
+        </span>
+      </div>
+      {capability === 'catalog_only' && !whatsappNumber.trim() && (
+        <div
+          style={{
+            padding: '10px 12px',
+            background: '#FEF3C7',
+            borderRadius: 10,
+            fontSize: 12,
+            color: '#92400E',
+            display: 'flex',
+            gap: 8,
+            alignItems: 'flex-start',
+          }}
+        >
+          <MS name="warning" size={14} filled style={{ flexShrink: 0, marginTop: 1 }} />
+          <span>
+            Estás en modo catálogo: agrega tu número de WhatsApp en «Datos» para que los clientes
+            puedan pedirte.
+          </span>
+        </div>
+      )}
     </div>
   )
 }
@@ -432,6 +508,10 @@ function ConfigView({
   const [activeSection, setActiveSection] = useState<SectionId>('datos')
   const contentRef = useRef<HTMLDivElement>(null)
 
+  // Modo catálogo: sin delivery web no hay ETA ni costo de envío que configurar.
+  const isCatalogOnly = capability === 'catalog_only'
+  const sections = isCatalogOnly ? SECTIONS.filter((s) => s.id !== 'tiempos') : SECTIONS
+
   const CAP_ITEMS: {
     key: keyof Form
     icon: string
@@ -520,7 +600,7 @@ function ConfigView({
             <div style={{ fontSize: 16, fontWeight: 700 }}>{bizName}</div>
             {capability && (
               <div className="tv-label" style={{ marginTop: 4, fontSize: 10 }}>
-                MODO: {capability.toUpperCase()}
+                MODO: {capabilityLabel(capability).toUpperCase()}
               </div>
             )}
           </div>
@@ -596,6 +676,23 @@ function ConfigView({
               onChange={(e) => set({ phone: e.target.value })}
             />
           </Field>
+          <Field
+            label="WHATSAPP PARA PEDIDOS"
+            helper="Número PÚBLICO al que los clientes escriben en modo catálogo. Puede ser el mismo del negocio."
+          >
+            <input
+              className="tv-input tv-mono"
+              inputMode="numeric"
+              placeholder="9XXXXXXXX"
+              value={form.whatsappNumber}
+              onChange={(e) => set({ whatsappNumber: e.target.value })}
+            />
+            {isWaInvalid(form.whatsappNumber) && (
+              <div style={{ fontSize: 11, color: 'var(--tv-danger)', marginTop: 4 }}>
+                {WA_ERROR}
+              </div>
+            )}
+          </Field>
           <Field label="COLOR DE ACENTO (HEX)">
             <div className="tv-input" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <span
@@ -654,46 +751,51 @@ function ConfigView({
           </div>
         </div>
 
-        {/* Tiempos y precio */}
-        <MobileSectionTitle>TIEMPOS Y PRECIO</MobileSectionTitle>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          <Field label="ETA MÍN">
-            <input
-              type="number"
-              className="tv-input tv-mono"
-              value={form.estimatedEtaMin}
-              min={1}
-              max={180}
-              onChange={(e) => set({ estimatedEtaMin: Number(e.target.value) })}
-            />
-          </Field>
-          <Field label="ETA MÁX">
-            <input
-              type="number"
-              className="tv-input tv-mono"
-              value={form.estimatedEtaMax}
-              min={1}
-              max={180}
-              onChange={(e) => set({ estimatedEtaMax: Number(e.target.value) })}
-            />
-          </Field>
-        </div>
-        <div style={{ marginTop: 10 }}>
-          <Field label="DELIVERY (S/)" helper="Lo que cobras al cliente por envío.">
-            <input
-              type="number"
-              step="0.5"
-              className="tv-input tv-mono"
-              value={form.deliveryFee}
-              min={0}
-              onChange={(e) => set({ deliveryFee: Number(e.target.value) })}
-            />
-          </Field>
-        </div>
+        {/* Tiempos y precio (no aplica en modo catálogo: sin delivery web) */}
+        {!isCatalogOnly && (
+          <>
+            <MobileSectionTitle>TIEMPOS Y PRECIO</MobileSectionTitle>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <Field label="ETA MÍN">
+                <input
+                  type="number"
+                  className="tv-input tv-mono"
+                  value={form.estimatedEtaMin}
+                  min={1}
+                  max={180}
+                  onChange={(e) => set({ estimatedEtaMin: Number(e.target.value) })}
+                />
+              </Field>
+              <Field label="ETA MÁX">
+                <input
+                  type="number"
+                  className="tv-input tv-mono"
+                  value={form.estimatedEtaMax}
+                  min={1}
+                  max={180}
+                  onChange={(e) => set({ estimatedEtaMax: Number(e.target.value) })}
+                />
+              </Field>
+            </div>
+            <div style={{ marginTop: 10 }}>
+              <Field label="DELIVERY (S/)" helper="Lo que cobras al cliente por envío.">
+                <input
+                  type="number"
+                  step="0.5"
+                  className="tv-input tv-mono"
+                  value={form.deliveryFee}
+                  min={0}
+                  onChange={(e) => set({ deliveryFee: Number(e.target.value) })}
+                />
+              </Field>
+            </div>
+          </>
+        )}
 
-        {/* Capacidades */}
+        {/* Capacidades (solo lectura: el modo lo gestiona el admin) */}
         <MobileSectionTitle>CAPACIDADES</MobileSectionTitle>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <CapabilityNotes capability={capability} whatsappNumber={form.whatsappNumber} />
           {CAP_ITEMS.map((c) => (
             <CapToggle
               key={c.key}
@@ -702,6 +804,7 @@ function ConfigView({
               desc={c.desc}
               on={form[c.key] as boolean}
               onChange={(v) => set({ [c.key]: v } as Partial<Form>)}
+              disabled
             />
           ))}
         </div>
@@ -742,7 +845,7 @@ function ConfigView({
         {/* Section nav */}
         <aside style={{ position: 'sticky', top: 0 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {SECTIONS.map((it) => {
+            {sections.map((it) => {
               const on = activeSection === it.id
               return (
                 <button
@@ -815,6 +918,23 @@ function ConfigView({
                   value={form.phone}
                   onChange={(e) => set({ phone: e.target.value })}
                 />
+              </Field>
+              <Field
+                label="WHATSAPP PARA PEDIDOS"
+                helper="Número PÚBLICO al que los clientes escriben en modo catálogo."
+              >
+                <input
+                  className="tv-input tv-mono"
+                  inputMode="numeric"
+                  placeholder="9XXXXXXXX"
+                  value={form.whatsappNumber}
+                  onChange={(e) => set({ whatsappNumber: e.target.value })}
+                />
+                {isWaInvalid(form.whatsappNumber) && (
+                  <div style={{ fontSize: 11, color: 'var(--tv-danger)', marginTop: 4 }}>
+                    {WA_ERROR}
+                  </div>
+                )}
               </Field>
               <div style={{ gridColumn: '1 / -1' }}>
                 <Field label="ESLOGAN / LEMA">
@@ -939,60 +1059,66 @@ function ConfigView({
             </div>
           </SectionCard>
 
-          {/* Tiempos */}
-          <SectionCard title="Tiempos y precio" icon="schedule" id="tiempos">
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
-              <Field label="ETA MÍNIMO">
-                <input
-                  type="number"
-                  className="tv-input tv-mono"
-                  value={form.estimatedEtaMin}
-                  min={1}
-                  max={180}
-                  onChange={(e) => set({ estimatedEtaMin: Number(e.target.value) })}
-                />
-              </Field>
-              <Field label="ETA MÁXIMO">
-                <input
-                  type="number"
-                  className="tv-input tv-mono"
-                  value={form.estimatedEtaMax}
-                  min={1}
-                  max={180}
-                  onChange={(e) => set({ estimatedEtaMax: Number(e.target.value) })}
-                />
-              </Field>
-              <Field label="DELIVERY (S/)">
-                <input
-                  type="number"
-                  step="0.5"
-                  className="tv-input tv-mono"
-                  value={form.deliveryFee}
-                  min={0}
-                  onChange={(e) => set({ deliveryFee: Number(e.target.value) })}
-                />
-              </Field>
-            </div>
-          </SectionCard>
+          {/* Tiempos (no aplica en modo catálogo: sin delivery web) */}
+          {!isCatalogOnly && (
+            <SectionCard title="Tiempos y precio" icon="schedule" id="tiempos">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
+                <Field label="ETA MÍNIMO">
+                  <input
+                    type="number"
+                    className="tv-input tv-mono"
+                    value={form.estimatedEtaMin}
+                    min={1}
+                    max={180}
+                    onChange={(e) => set({ estimatedEtaMin: Number(e.target.value) })}
+                  />
+                </Field>
+                <Field label="ETA MÁXIMO">
+                  <input
+                    type="number"
+                    className="tv-input tv-mono"
+                    value={form.estimatedEtaMax}
+                    min={1}
+                    max={180}
+                    onChange={(e) => set({ estimatedEtaMax: Number(e.target.value) })}
+                  />
+                </Field>
+                <Field label="DELIVERY (S/)">
+                  <input
+                    type="number"
+                    step="0.5"
+                    className="tv-input tv-mono"
+                    value={form.deliveryFee}
+                    min={0}
+                    onChange={(e) => set({ deliveryFee: Number(e.target.value) })}
+                  />
+                </Field>
+              </div>
+            </SectionCard>
+          )}
 
-          {/* Capacidades */}
+          {/* Capacidades (solo lectura: el modo lo gestiona el admin) */}
           <SectionCard
             title="Capacidades del negocio"
             icon="tune"
             id="capacidades"
-            subtitle={capability ? `Modo actual: ${capability}` : undefined}
+            subtitle={capability ? `Modo actual: ${capabilityLabel(capability)}` : undefined}
           >
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              {CAP_ITEMS.map((c) => (
-                <CapToggle
-                  key={c.key}
-                  icon={c.icon}
-                  title={c.title}
-                  desc={c.desc}
-                  on={form[c.key] as boolean}
-                  onChange={(v) => set({ [c.key]: v } as Partial<Form>)}
-                />
-              ))}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <CapabilityNotes capability={capability} whatsappNumber={form.whatsappNumber} />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                {CAP_ITEMS.map((c) => (
+                  <CapToggle
+                    key={c.key}
+                    icon={c.icon}
+                    title={c.title}
+                    desc={c.desc}
+                    on={form[c.key] as boolean}
+                    onChange={(v) => set({ [c.key]: v } as Partial<Form>)}
+                    disabled
+                  />
+                ))}
+              </div>
             </div>
           </SectionCard>
 
@@ -1029,7 +1155,7 @@ export default function ConfiguracionPage() {
     supabase
       .from('businesses')
       .select(
-        'name,phone,yape_number,tagline,accent_color,estimated_eta_min,estimated_eta_max,delivery_fee,publishes_catalog,accepts_web_pickup,accepts_web_delivery,uses_tindivo_drivers,primary_capability,qr_url,logo_url,banner_url',
+        'name,phone,whatsapp_number,yape_number,tagline,accent_color,estimated_eta_min,estimated_eta_max,delivery_fee,publishes_catalog,accepts_web_pickup,accepts_web_delivery,uses_tindivo_drivers,primary_capability,qr_url,logo_url,banner_url',
       )
       .maybeSingle()
       .then(({ data: biz }) => {
@@ -1040,6 +1166,7 @@ export default function ConfiguracionPage() {
         setForm({
           name: biz.name ?? '',
           phone: biz.phone ?? '',
+          whatsappNumber: biz.whatsapp_number ?? '',
           yapeNumber: biz.yape_number ?? '',
           tagline: biz.tagline ?? '',
           accentColor: biz.accent_color ?? 'f97316',
@@ -1058,16 +1185,45 @@ export default function ConfiguracionPage() {
   async function save(e?: FormEvent) {
     e?.preventDefault()
     if (!form) return
+    const waTrimmed = form.whatsappNumber.trim()
+    const waParsed = waTrimmed ? PhonePeSchema.safeParse(waTrimmed) : null
+    if (waParsed && !waParsed.success) {
+      setMsg({ ok: false, text: `WhatsApp para pedidos: ${WA_ERROR.toLowerCase()}` })
+      return
+    }
     setSaving(true)
     setMsg(null)
     try {
-      const r = await api.patch<{ data: { primary_capability: string } }>('/business/profile', form)
+      // Capacidades intencionalmente FUERA del payload: el modo lo gestiona el
+      // admin, y reenviarlas pisaría un cambio de modo hecho con esta página abierta.
+      const payload = {
+        name: form.name,
+        phone: form.phone,
+        whatsappNumber: waParsed?.success ? waParsed.data : null,
+        yapeNumber: form.yapeNumber,
+        tagline: form.tagline,
+        accentColor: form.accentColor,
+        // En modo catálogo la sección "Tiempos y precio" no existe: no se
+        // reenvían valores que el negocio no puede ver ni editar.
+        ...(capability !== 'catalog_only' && {
+          estimatedEtaMin: form.estimatedEtaMin,
+          estimatedEtaMax: form.estimatedEtaMax,
+          deliveryFee: form.deliveryFee,
+        }),
+      }
+      const r = await api.patch<{ data: { primary_capability: string } }>(
+        '/business/profile',
+        payload,
+      )
       setCapability(r.data.primary_capability ?? '')
-      setMsg({ ok: true, text: 'Cambios guardados.' })
+      notifySuccess('Cambios guardados') // éxito en toast; errores inline (DECISIONS §16)
     } catch (err) {
       setMsg({
         ok: false,
-        text: err instanceof ApiError ? (err.problem.detail ?? err.message) : 'Error al guardar.',
+        text:
+          err instanceof ApiError
+            ? (err.problem.errors?.[0]?.message ?? err.problem.detail ?? err.message)
+            : 'Error al guardar.',
       })
     } finally {
       setSaving(false)
@@ -1114,11 +1270,20 @@ export default function ConfiguracionPage() {
             onSave={save}
             set={set}
             qrUrl={qrUrl}
-            onQrUploaded={setQrUrl}
+            onQrUploaded={(url) => {
+              setQrUrl(url)
+              notifySuccess('Imagen actualizada')
+            }}
             logoUrl={logoUrl}
-            onLogoUploaded={setLogoUrl}
+            onLogoUploaded={(url) => {
+              setLogoUrl(url)
+              notifySuccess('Imagen actualizada')
+            }}
             bannerUrl={bannerUrl}
-            onBannerUploaded={setBannerUrl}
+            onBannerUploaded={(url) => {
+              setBannerUrl(url)
+              notifySuccess('Imagen actualizada')
+            }}
           />
         </div>
       )}

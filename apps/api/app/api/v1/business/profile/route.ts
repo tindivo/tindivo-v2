@@ -1,3 +1,4 @@
+import { PhonePeSchema } from '@tindivo/contracts'
 import { DomainError } from '@tindivo/core'
 import { z } from 'zod'
 import { requireRole } from '@/lib/http/auth'
@@ -11,6 +12,8 @@ export const dynamic = 'force-dynamic'
 const Schema = z.object({
   name: z.string().trim().min(1).max(120).optional(),
   phone: z.string().trim().max(20).optional(),
+  // Contacto PÚBLICO para pedidos por WhatsApp (modo catálogo); null lo borra.
+  whatsappNumber: PhonePeSchema.nullable().optional(),
   yapeNumber: z.string().trim().max(20).optional(),
   plinNumber: z.string().trim().max(20).optional(),
   qrUrl: z.url().max(500).optional(),
@@ -24,10 +27,6 @@ const Schema = z.object({
   estimatedEtaMin: z.number().int().min(1).max(180).optional(),
   estimatedEtaMax: z.number().int().min(1).max(180).optional(),
   deliveryFee: z.number().nonnegative().max(50).optional(),
-  publishesCatalog: z.boolean().optional(),
-  acceptsWebPickup: z.boolean().optional(),
-  acceptsWebDelivery: z.boolean().optional(),
-  usesTindivoDrivers: z.boolean().optional(),
   categoria: z.array(z.string().trim().max(40)).max(2).optional(),
 })
 
@@ -35,8 +34,8 @@ export function OPTIONS(req: Request): Response {
   return handleOptions(req)
 }
 
-/** El negocio edita su perfil/capacidades. La consistencia de capacidades la
- *  garantiza el CHECK `capabilities_consistent` en la BD. */
+/** El negocio edita su perfil. Las capacidades (modo del negocio) NO se aceptan
+ *  aquí: las gestiona SOLO el admin vía PATCH /admin/businesses/:id (DECISIONS §18). */
 export async function PATCH(req: Request): Promise<Response> {
   const requestId = getRequestId(req)
   try {
@@ -46,6 +45,7 @@ export async function PATCH(req: Request): Promise<Response> {
       updated_at: new Date().toISOString(),
       ...(body.name !== undefined && { name: body.name }),
       ...(body.phone !== undefined && { phone: body.phone }),
+      ...(body.whatsappNumber !== undefined && { whatsapp_number: body.whatsappNumber }),
       ...(body.yapeNumber !== undefined && { yape_number: body.yapeNumber }),
       ...(body.plinNumber !== undefined && { plin_number: body.plinNumber }),
       ...(body.qrUrl !== undefined && { qr_url: body.qrUrl }),
@@ -56,14 +56,6 @@ export async function PATCH(req: Request): Promise<Response> {
       ...(body.estimatedEtaMin !== undefined && { estimated_eta_min: body.estimatedEtaMin }),
       ...(body.estimatedEtaMax !== undefined && { estimated_eta_max: body.estimatedEtaMax }),
       ...(body.deliveryFee !== undefined && { delivery_fee: body.deliveryFee }),
-      ...(body.publishesCatalog !== undefined && { publishes_catalog: body.publishesCatalog }),
-      ...(body.acceptsWebPickup !== undefined && { accepts_web_pickup: body.acceptsWebPickup }),
-      ...(body.acceptsWebDelivery !== undefined && {
-        accepts_web_delivery: body.acceptsWebDelivery,
-      }),
-      ...(body.usesTindivoDrivers !== undefined && {
-        uses_tindivo_drivers: body.usesTindivoDrivers,
-      }),
       ...(body.categoria !== undefined && { categoria: body.categoria }),
     }
     const service = createServiceClient()

@@ -1,11 +1,99 @@
 'use client'
 
+import { getOpenStatus } from '@tindivo/contracts'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { BottomSheet, Icon, ScreenHeader } from '@/components/ui'
+import { useBusinessOrdering } from '@/lib/business-ordering'
 import { type CartLine, useCart, useCartHydrated } from '@/lib/cart'
+import { buildCartWhatsAppMessage, telLink, waOrderLink } from '@/lib/whatsapp'
 
 const soles = (n: number) => `S/ ${n.toFixed(2)}`
+
+/**
+ * CTA(s) de la bolsa según el modo del negocio: checkout web (delivery) o
+ * pedido por WhatsApp + llamada (modo catálogo). El modo se resuelve con fetch
+ * fresco por negocio — nunca desde el carrito persistido en localStorage.
+ */
+function CartCtas({ layout, onNavigate }: { layout: 'row' | 'block'; onNavigate?: () => void }) {
+  const router = useRouter()
+  const cart = useCart()
+  const { loading, info } = useBusinessOrdering(cart.businessId)
+  const block = layout === 'block'
+
+  // Fuera de horario no hay checkout (los CTAs de WhatsApp nunca se bloquean).
+  // Mini-tick para que no quede stale con la hoja abierta un rato.
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 60_000)
+    return () => clearInterval(t)
+  }, [])
+  const closed =
+    info?.mode === 'delivery' &&
+    info.schedule.length > 0 &&
+    getOpenStatus(info.schedule, now).kind === 'closed'
+
+  if (info?.mode === 'whatsapp') {
+    if (!info.whatsappNumber) {
+      return (
+        <p
+          className={block ? 'mt-3 text-[13px]' : 'flex-1 text-[13px]'}
+          style={{ color: 'rgba(26,22,20,0.55)' }}
+        >
+          Este negocio aún no configuró su WhatsApp para pedidos.
+        </p>
+      )
+    }
+    const href = waOrderLink(
+      info.whatsappNumber,
+      buildCartWhatsAppMessage(cart.businessName ?? 'negocio', cart.lines, cart.subtotal()),
+    )
+    return (
+      <div className={block ? 'mt-3 flex flex-col gap-2' : 'flex flex-1 items-center gap-2'}>
+        <a
+          className={`t-btn t-btn-primary ${block ? 't-btn-block' : 'flex-1'}`}
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Pedir por WhatsApp
+        </a>
+        <a
+          className={`t-btn t-btn-secondary ${block ? 't-btn-block' : ''}`}
+          href={telLink(info.whatsappNumber)}
+          aria-label="Llamar al negocio"
+        >
+          <Icon.Phone />
+          {block && <span>Llamar</span>}
+        </a>
+      </div>
+    )
+  }
+
+  return (
+    <div className={block ? 'mt-3' : 'flex flex-1 flex-col gap-1.5'}>
+      <button
+        type="button"
+        className={`t-btn t-btn-primary ${block ? 't-btn-block' : 'w-full'}`}
+        disabled={loading || closed}
+        onClick={() => {
+          onNavigate?.()
+          router.push('/checkout')
+        }}
+      >
+        Ir a pagar
+      </button>
+      {closed && (
+        <p
+          className={`text-[12px] ${block ? 'mt-1.5' : ''}`}
+          style={{ color: 'rgba(26,22,20,0.55)' }}
+        >
+          El restaurante está cerrado ahora.
+        </p>
+      )}
+    </div>
+  )
+}
 
 /** Icono de bolsa con contador para la topbar; abre la hoja de previsualización. */
 export function CartButton({ tone = 'light' }: { tone?: 'light' | 'dark' }) {
@@ -169,16 +257,10 @@ export function CartLineList({ lines }: { lines: CartLine[] }) {
 
 /** Hoja de previsualización de la bolsa: ver/editar ítems y notas sin salir de la pantalla. */
 export function CartSheet({ onClose }: { onClose: () => void }) {
-  const router = useRouter()
   const cart = useCart()
   const lines = cart.lines
   const count = cart.count()
   const subtotal = cart.subtotal()
-
-  function goToCheckout() {
-    onClose()
-    router.push('/checkout')
-  }
 
   return (
     <BottomSheet open onClose={onClose}>
@@ -209,9 +291,7 @@ export function CartSheet({ onClose }: { onClose: () => void }) {
             </div>
             <div className="font-bold text-[18px] tabular-nums">{soles(subtotal)}</div>
           </div>
-          <button type="button" className="t-btn t-btn-primary flex-1" onClick={goToCheckout}>
-            Ir a pagar
-          </button>
+          <CartCtas layout="row" onNavigate={onClose} />
         </div>
       )}
     </BottomSheet>
@@ -230,7 +310,6 @@ export function CartSidebar({
   businessId: string
   businessName: string
 }) {
-  const router = useRouter()
   const hydrated = useCartHydrated()
   const cart = useCart()
   const subtotal = cart.subtotal()
@@ -270,13 +349,7 @@ export function CartSidebar({
             </span>
             <span className="font-bold text-[18px] tabular-nums">{soles(subtotal)}</span>
           </div>
-          <button
-            type="button"
-            className="t-btn t-btn-primary t-btn-block mt-3"
-            onClick={() => router.push('/checkout')}
-          >
-            Ir a pagar
-          </button>
+          <CartCtas layout="block" />
         </>
       ) : (
         <CartEmptyState />

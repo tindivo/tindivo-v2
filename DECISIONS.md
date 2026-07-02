@@ -314,3 +314,38 @@ Codificado en `@tindivo/contracts` (`order-status.ts`: `ORDER_TRANSITIONS`, `STA
 - **Credenciales**: Vercel (team/proyectos), Inngest (signing key o self-host), VAPID (generar par), DNS de `tindivo.com`. — *Fase 2/7.*
 - **Backups y PII**: destino de backups (el v1 mencionaba Google Drive personal = riesgo de cumplimiento). — *Fase 7.*
 - **Pickup**: confirmado soportado por el modelo pero inactivo; el cierre de `delivered` en pickup (sin motorizado) se define si se activa. — *post-piloto.*
+
+---
+
+## 18. Modo "solo catálogo (WhatsApp)" — `catalog_only` (2026-07-01)
+
+**Contexto**: el flujo delivery end-to-end no está listo para lanzar; se lanza la app del cliente como catálogo con pedido por WhatsApp, por negocio y reversible. **No se elimina código delivery — todo ramifica por capacidad.**
+
+- **Nueva capacidad derivada `catalog_only`**: `publishes_catalog ∧ ¬accepts_web_pickup ∧ ¬accepts_web_delivery`. Se añadió el valor al enum `business_primary_capability` (migración `0049`) y la rama a `derive_business_primary_capability` (migración `0050`). El valor de enum es permanente (PG no permite quitarlo); aceptado.
+- **CHECK `capabilities_consistent` relajado** (`0050`): publicar catálogo ya NO exige aceptar pedidos web. Se conservan las otras dos cláusulas (`pickup ⇒ catalog`; `delivery ⇒ catalog ∧ drivers`).
+- **`businesses.whatsapp_number`** (`0050`): contacto **PÚBLICO opt-in** para pedidos por WhatsApp (formato `^9[0-9]{8}$`). Se expone en `/public/businesses*`. **`phone` sigue siendo privado** — no reutilizarlo jamás para esto.
+- **Control del modo: SOLO admin** (presets "Delivery Tindivo" / "Solo catálogo (WhatsApp)" en `admin/negocios`, vía `PATCH /admin/businesses/:id` que ahora acepta los 4 flags). Los toggles de Capacidades en el panel del negocio quedaron **solo lectura**, y `PATCH /business/profile` ya **no acepta capacidades en su schema** (enforcement server-side, no solo UI — un negocio no puede auto-promoverse a delivery vía curl).
+- **Cliente**: el modo se resuelve con **fetch fresco** de `/public/businesses/:id` (hook `useBusinessOrdering`, cache 60s) — nunca snapshoteado en el carrito persistido. En modo catálogo, la bolsa muestra "Pedir por WhatsApp" (wa.me con carrito formateado) + "Llamar"; `/checkout` redirige a la página del negocio.
+- **Guard de capacidades en `POST /customer/orders`** (409 `conflict`): el RPC `create_customer_order` NO valida `accepts_web_delivery/pickup` — el guard del route handler es obligatorio. *(Follow-up opcional: duplicar el check dentro del RPC.)*
+- **Panel del negocio en modo catálogo**: nav reducido a Menú + Configuración (gate en las demás rutas). Excepción: si hay pedidos delivery en vuelo al cambiar de modo, la sección Pedidos sigue visible con aviso.
+- La **pausa** (`accepting_orders_until`) no afecta el CTA de WhatsApp (es out-of-band de la plataforma).
+- La sección **"Tiempos y precio"** (ETA + delivery fee) se oculta en configuración para `catalog_only` y su payload no reenvía esos campos.
+
+---
+
+## 19. Horario de atención visible al cliente + estado abierto/cerrado (2026-07-02)
+
+**Fuente de verdad del cálculo**: `getOpenStatus(days, now)` en `packages/contracts/src/schedule.ts` (puro, con 25 tests). Convenciones que NO se rompen:
+
+- **`day_of_week` 0=Lunes..6=Domingo** — la convención del editor del panel de negocios (≠ `Date.getDay()`, que usa 0=Domingo y NUNCA se usa; la hora/día se resuelve con `Intl.DateTimeFormat` en `America/Lima`, porque el server puede correr en otra TZ). El comentario stale de 0002 ("0=domingo") se corrigió en la migración `0051`.
+- **Semántica de turno `[start, end)`**: apertura inclusiva, cierre exclusivo (paridad con `is_within_platform_schedule` de 0029).
+- **Cruce de medianoche derivado POR TURNO** (`end <= start` ⇒ cruza): la columna `crosses_midnight` se IGNORA (el editor solo la deriva del turno 1). Un turno que cruza cubre la madrugada del día siguiente aunque ese día esté `is_open=false`.
+- **Sin horario configurado = siempre abierto** (mismo default que la plataforma): no se muestra UI de horario y no se bloquea nada.
+
+**Exposición**: `GET /public/businesses/:id` devuelve `schedule` (6 columnas seguras) y la lista devuelve `is_open_now: boolean | null` (null = sin horario) para el badge del home. RLS `bs_public_read` ya permitía la lectura.
+
+**Comportamiento por modo**: negocios con pedidos web cerrados → chip "Cerrado", banner "Sin atención ahora", ítems y "Ir a pagar" deshabilitados (tick 30–60s en vivo), y **guard 409 `conflict`** en `POST /customer/orders` ("El restaurante está cerrado ahora…", distinto del 403 de pausa). `catalog_only` → horario SOLO informativo; WhatsApp/Llamar nunca se bloquean.
+
+**Idempotencia**: el replay de una Idempotency-Key ya completada se resuelve ANTES de los guards de pausa/capacidades/horario (`findCompletedReplay` en `apps/api/lib/http/idempotency.ts`) — un retry de un pedido ya creado devuelve su 201 original aunque el negocio haya cerrado entre medio (contrato estilo Stripe).
+
+**Feedback de guardado en el panel** (DECISIONS §16 aplicado): éxito = toast verde 3s global (`notifySuccess` + `SuccessToastHost` en el chrome persistente — sobrevive navegación); errores siguen inline. Cableado en configuración, editor de horario, editor de plato y uploads de imágenes.

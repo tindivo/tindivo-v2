@@ -4,6 +4,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { MS, soles } from '@/components/dashboard/primitives'
 import { DashboardSidebar } from '@/components/dashboard/shell'
+import { notifySuccess } from '@/components/dashboard/toast'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -2457,9 +2458,10 @@ export default function MenuItemEditorPage() {
 
   async function handleSave() {
     const ok = await save()
-    if (ok && isNew) {
-      router.replace('/menu')
-    }
+    if (!ok) return
+    // El host del toast vive en el chrome persistente: sobrevive la navegación.
+    notifySuccess(isNew ? 'Plato creado' : 'Plato guardado')
+    if (isNew) router.replace('/menu')
   }
 
   async function handleDeleteItem() {
@@ -2488,8 +2490,10 @@ export default function MenuItemEditorPage() {
 
   async function handleSaveAndExit() {
     const ok = await save()
-    if (ok) router.push('/menu')
-    else setShowUnsavedModal(false)
+    if (ok) {
+      notifySuccess(isNew ? 'Plato creado' : 'Plato guardado')
+      router.push('/menu')
+    } else setShowUnsavedModal(false)
   }
 
   // ── Sign out ──────────────────────────────────────────────────────────────

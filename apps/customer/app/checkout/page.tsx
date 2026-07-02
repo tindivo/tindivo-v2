@@ -14,6 +14,7 @@ import {
 import { saveAddress } from '@/components/auth-onboarding/persistence'
 import { Icon, ScreenHeader, Segmented } from '@/components/ui'
 import { api } from '@/lib/api'
+import { useBusinessOrdering } from '@/lib/business-ordering'
 import { useCart, useCartHydrated } from '@/lib/cart'
 import { getLocationValidation, haversineKm } from '@/lib/coverage'
 import { getCurrentPositionHA } from '@/lib/geolocation'
@@ -103,6 +104,17 @@ export default function CheckoutPage() {
   )
   const amountRequiresPrepay = subtotal >= prepayThreshold
   const mustPrepay = amountRequiresPrepay || prepayOnlyByRisk
+
+  // Modo catálogo: el negocio no acepta pedidos web — el pedido va por WhatsApp
+  // desde su página. Cubre deep-links a /checkout y carritos persistidos de un
+  // negocio que cambió de modo (el guard 409 del API es la última línea).
+  const ordering = useBusinessOrdering(cartHydrated ? cart.businessId : null)
+  useEffect(() => {
+    if (!cartHydrated || confirmed) return
+    if (ordering.info?.mode === 'whatsapp' && cart.businessId) {
+      router.replace(`/negocio/${cart.businessId}`)
+    }
+  }, [cartHydrated, confirmed, ordering.info, cart.businessId, router])
 
   // Gate de auth (DECISIONS §15): el carrito no exige login; el checkout sí.
   // En vez de redirigir a /entrar, abre el sheet de onboarding sobre esta página.

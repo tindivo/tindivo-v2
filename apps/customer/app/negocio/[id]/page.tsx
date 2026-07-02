@@ -1,10 +1,12 @@
 'use client'
 
 import { type ApiEnvelope, ApiError } from '@tindivo/api-client'
+import { getOpenStatus, type ScheduleDayRow } from '@tindivo/contracts'
 import Link from 'next/link'
 import { use, useEffect, useRef, useState } from 'react'
 import { CartButton, CartSheet, CartSidebar } from '@/components/cart-sheet'
 import { type ProductItem, ProductModal } from '@/components/product-modal'
+import { ScheduleRow } from '@/components/schedule-row'
 import { BottomSheet, Icon, ProductImage } from '@/components/ui'
 import { api } from '@/lib/api'
 import { type CartLine, useCart } from '@/lib/cart'
@@ -30,8 +32,11 @@ interface BusinessDetail {
     banner_url: string | null
     estimated_eta_min: number
     estimated_eta_max: number
+    accepts_web_pickup: boolean
+    accepts_web_delivery: boolean
   }
   categories: Category[]
+  schedule: ScheduleDayRow[]
 }
 
 const soles = (n: number) => `S/ ${n.toFixed(2)}`
@@ -82,6 +87,21 @@ export default function NegocioPage({ params }: { params: Promise<{ id: string }
   const [pending, setPending] = useState<Omit<CartLine, 'key'> | null>(null)
   const [addedToast, setAddedToast] = useState<{ name: string; id: number } | null>(null)
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Tick para que el estado abierto/cerrado se voltee en vivo (y al volver del
+  // background en la PWA), sin recargar la página.
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 30_000)
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') setNow(new Date())
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      clearInterval(t)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [])
 
   function notifyAdded(name: string) {
     if (toastTimer.current) clearTimeout(toastTimer.current)
@@ -141,6 +161,11 @@ export default function NegocioPage({ params }: { params: Promise<{ id: string }
   const { business, categories } = data
   const count = cart.count()
   const subtotal = cart.subtotal()
+  const isCatalogOnly = !business.accepts_web_delivery && !business.accepts_web_pickup
+  const openStatus = getOpenStatus(data.schedule, now)
+  // Solo los negocios con pedidos web se bloquean fuera de horario; en modo
+  // catálogo el horario es informativo (WhatsApp queda siempre disponible).
+  const closedForOrders = !isCatalogOnly && openStatus.kind === 'closed'
 
   return (
     <main className="mx-auto min-h-dvh max-w-[768px] bg-surface pb-32 md:max-w-[860px] lg:grid lg:max-w-7xl lg:grid-cols-[1fr_380px] lg:items-start lg:gap-8 lg:px-6 lg:pt-6">
@@ -190,22 +215,75 @@ export default function NegocioPage({ params }: { params: Promise<{ id: string }
               </div>
             )}
             <div className="mt-3 flex gap-3.5 text-[13px]">
-              <span
-                className="inline-flex items-center gap-1.5"
-                style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}
-              >
-                <Icon.Clock /> {business.estimated_eta_min}–{business.estimated_eta_max} min
-              </span>
-              <span className="w-px bg-white/30" />
-              <span
-                className="inline-flex items-center gap-1.5"
-                style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}
-              >
-                <Icon.Truck /> Delivery
-              </span>
+              {!business.accepts_web_delivery && !business.accepts_web_pickup ? (
+                // Modo catálogo: sin pedidos web — el negocio atiende por WhatsApp.
+                <span
+                  className="inline-flex items-center gap-1.5"
+                  style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}
+                >
+                  <Icon.Chat /> Pedidos por WhatsApp
+                </span>
+              ) : (
+                <>
+                  <span
+                    className="inline-flex items-center gap-1.5"
+                    style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}
+                  >
+                    <Icon.Clock /> {business.estimated_eta_min}–{business.estimated_eta_max} min
+                  </span>
+                  <span className="w-px bg-white/30" />
+                  <span
+                    className="inline-flex items-center gap-1.5"
+                    style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}
+                  >
+                    <Icon.Truck /> Delivery
+                  </span>
+                  {openStatus.kind !== 'no_schedule' && (
+                    <>
+                      <span className="w-px bg-white/30" />
+                      <span
+                        className="inline-flex items-center gap-1.5 font-semibold"
+                        style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}
+                      >
+                        <span
+                          aria-hidden
+                          className="h-2 w-2 rounded-full"
+                          style={{
+                            background: openStatus.kind === 'open' ? '#4ADE80' : '#F87171',
+                          }}
+                        />
+                        {openStatus.kind === 'open' ? 'Abierto' : 'Cerrado'}
+                      </span>
+                    </>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </div>
+
+        {/* Horario de atención (colapsable). Sin horario configurado no renderiza. */}
+        <ScheduleRow schedule={data.schedule} now={now} />
+
+        {/* Fuera de horario: los negocios con pedidos web no reciben pedidos. */}
+        {closedForOrders && (
+          <div className="px-4 pt-3">
+            <div
+              className="flex items-start gap-2.5 rounded-[16px] px-4 py-3 text-[13px]"
+              style={{ background: '#FEF3C7', color: '#92400E' }}
+            >
+              <span className="mt-0.5 shrink-0">
+                <Icon.Clock />
+              </span>
+              <span>
+                <span className="font-semibold">Sin atención ahora.</span>{' '}
+                {openStatus.kind === 'closed' && openStatus.opensToday && openStatus.opensAt
+                  ? `Abre hoy a las ${openStatus.opensAt}.`
+                  : 'Revisa el horario de atención.'}
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Sticky tabs */}
         <div className="t-section-tabs">
@@ -251,7 +329,7 @@ export default function NegocioPage({ params }: { params: Promise<{ id: string }
                     <button
                       key={item.id}
                       type="button"
-                      disabled={!item.is_available}
+                      disabled={!item.is_available || closedForOrders}
                       onClick={() => setModalItem(item)}
                       className="flex items-stretch gap-3.5 rounded-[20px] border border-border bg-white p-3 text-left disabled:opacity-50"
                     >
@@ -376,6 +454,11 @@ export default function NegocioPage({ params }: { params: Promise<{ id: string }
           item={modalItem}
           onClose={() => setModalItem(null)}
           onAdd={(line) => {
+            // Defensa extra: si el negocio cerró con el modal abierto, no agregar.
+            if (closedForOrders) {
+              setModalItem(null)
+              return
+            }
             // Bolsa mono-negocio: si ya hay ítems de otro restaurante, pedir confirmación
             // antes de vaciar y empezar de nuevo (en vez de borrar en silencio).
             if (cart.businessId && cart.businessId !== business.id && cart.lines.length > 0) {
