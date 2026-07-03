@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./accent-colors": "./src/accent-colors.ts",
     "./primitives": "./src/primitives.ts",
     "./enums": "./src/enums.ts",
     "./errors": "./src/errors.ts",

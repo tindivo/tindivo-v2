@@ -1,3 +1,4 @@
+import { AccentColorSchema, DEFAULT_ACCENT_COLOR } from '@tindivo/contracts'
 import { DomainError } from '@tindivo/core'
 import { z } from 'zod'
 import { requireRole } from '@/lib/http/auth'
@@ -17,10 +18,7 @@ const Schema = z.object({
   acceptsWebPickup: z.boolean().default(false),
   acceptsWebDelivery: z.boolean().default(true),
   usesTindivoDrivers: z.boolean().default(true),
-  accentColor: z
-    .string()
-    .regex(/^[0-9a-f]{6}$/)
-    .optional(),
+  accentColor: AccentColorSchema.optional(),
   yapeNumber: z.string().optional(),
   tagline: z.string().max(120).optional(),
 })
@@ -37,7 +35,7 @@ export async function GET(req: Request): Promise<Response> {
     const service = createServiceClient()
     const { data, error } = await service
       .from('businesses')
-      .select('id,name,primary_capability,is_active,is_blocked,balance_due,created_at')
+      .select('id,name,primary_capability,is_active,is_blocked,balance_due,created_at,accent_color')
       .order('name')
     if (error) throw new Error(error.message)
     return ok(data ?? [], { headers: corsHeaders(req) })
@@ -82,7 +80,7 @@ export async function POST(req: Request): Promise<Response> {
         accepts_web_pickup: body.acceptsWebPickup,
         accepts_web_delivery: body.acceptsWebDelivery,
         uses_tindivo_drivers: body.usesTindivoDrivers,
-        accent_color: body.accentColor ?? 'f97316',
+        accent_color: body.accentColor ?? DEFAULT_ACCENT_COLOR,
         yape_number: body.yapeNumber,
         tagline: body.tagline,
       })

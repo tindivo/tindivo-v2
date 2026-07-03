@@ -76,7 +76,11 @@
 
 ### Colores de acento de negocios (papelito)
 
-Cada negocio activo tiene UN color único asignado al crearse. La paleta predefinida:
+El color lo asigna **solo el admin** (al crear el negocio, con un selector de esta paleta +
+hex personalizado; el panel del negocio lo muestra solo lectura). La fuente canónica en
+código es `BUSINESS_ACCENT_PALETTE` en `packages/contracts/src/accent-colors.ts`. **El color
+puede repetirse entre negocios activos** (unicidad eliminada el 2026-07-02, migración `0053`,
+DECISIONS §21 — el picker del admin marca "en uso" como aviso, sin bloquear). La paleta:
 
 | Nombre | Hex |
 |---|---|

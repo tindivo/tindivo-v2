@@ -144,4 +144,9 @@ export const Ico = {
       <path d="M9 6l6 6-6 6" />
     </svg>
   ),
+  check: (p: SVGProps<SVGSVGElement>) => (
+    <svg {...base} {...p} aria-hidden="true">
+      <path d="M5 12.5l4.5 4.5L19 7" />
+    </svg>
+  ),
 }

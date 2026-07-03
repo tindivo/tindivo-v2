@@ -20,10 +20,8 @@ const Schema = z.object({
   logoUrl: z.url().max(500).optional(),
   bannerUrl: z.url().max(500).optional(),
   tagline: z.string().trim().max(120).optional(),
-  accentColor: z
-    .string()
-    .regex(/^[0-9a-f]{6}$/)
-    .optional(),
+  // accentColor NO se acepta aquí: el color de papelito lo gestiona SOLO el
+  // admin (alta + PATCH /admin/businesses/:id), igual que las capacidades (§21).
   estimatedEtaMin: z.number().int().min(1).max(180).optional(),
   estimatedEtaMax: z.number().int().min(1).max(180).optional(),
   deliveryFee: z.number().nonnegative().max(50).optional(),
@@ -52,7 +50,6 @@ export async function PATCH(req: Request): Promise<Response> {
       ...(body.logoUrl !== undefined && { logo_url: body.logoUrl }),
       ...(body.bannerUrl !== undefined && { banner_url: body.bannerUrl }),
       ...(body.tagline !== undefined && { tagline: body.tagline }),
-      ...(body.accentColor !== undefined && { accent_color: body.accentColor }),
       ...(body.estimatedEtaMin !== undefined && { estimated_eta_min: body.estimatedEtaMin }),
       ...(body.estimatedEtaMax !== undefined && { estimated_eta_max: body.estimatedEtaMax }),
       ...(body.deliveryFee !== undefined && { delivery_fee: body.deliveryFee }),

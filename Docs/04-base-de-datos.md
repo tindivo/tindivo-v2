@@ -274,9 +274,9 @@ CREATE TRIGGER trg_businesses_derive_primary_capability
   FOR EACH ROW
   EXECUTE FUNCTION update_business_primary_capability();
 COMMENT ON TABLE businesses IS 'Negocios (restaurantes / locales) afiliados al servicio. Capacidades combinables determinan UI en negocios.tindivo.com.';
-CREATE UNIQUE INDEX businesses_accent_color_active_idx
-  ON businesses (accent_color)
-  WHERE is_active = true;
+-- businesses_accent_color_active_idx (UNIQUE parcial sobre accent_color) fue
+-- ELIMINADO en 0053: el color de papelito puede repetirse entre negocios
+-- activos (DECISIONS §21).
 CREATE INDEX businesses_user_id_idx ON businesses (user_id);
 CREATE INDEX businesses_active_idx ON businesses (is_active, is_blocked);
 CREATE INDEX businesses_publishes_catalog_idx ON businesses (publishes_catalog) WHERE publishes_catalog = true;

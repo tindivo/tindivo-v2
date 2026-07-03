@@ -1,4 +1,4 @@
-import { PhonePeSchema } from '@tindivo/contracts'
+import { AccentColorSchema, PhonePeSchema } from '@tindivo/contracts'
 import { DomainError } from '@tindivo/core'
 import { z } from 'zod'
 import { requireRole } from '@/lib/http/auth'
@@ -16,10 +16,7 @@ const Schema = z.object({
   phone: z.string().max(30).nullable().optional(),
   yapeNumber: z.string().max(30).nullable().optional(),
   plinNumber: z.string().max(30).nullable().optional(),
-  accentColor: z
-    .string()
-    .regex(/^[0-9a-f]{6}$/)
-    .optional(),
+  accentColor: AccentColorSchema.optional(),
   deliveryFee: money.optional(),
   commissionOverrideNear: money.nullable().optional(),
   commissionOverrideFar: money.nullable().optional(),

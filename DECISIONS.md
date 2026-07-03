@@ -5,7 +5,7 @@
 > este documento difieran, **gana este documento**. Se mantiene vivo: cada
 > decisión nueva o cambio se registra aquí, no en specs paralelos.
 >
-> Última actualización: 2026-06-22 (cobertura → polígono editable, referencia mín 15, Google login activo).
+> Última actualización: 2026-07-02 (paleta de papelito establecida en contracts; el color ya no es único entre negocios activos).
 
 ---
 
@@ -361,3 +361,17 @@ Supera el "search bar no funcional v1.0" de `Docs/07-flujo-cliente.md` RF-CAT-03
 - **RPC `search_catalog(p_query, p_limit)`** service-only (revoke anon/authenticated; la superficie pública es `GET /api/v1/public/search?q=`, mín 2 chars, máx 60): multi-palabra con AND de términos (`LIKE ALL`), wildcards `%_\` escapados, ranking por `similarity`, solo columnas públicas seguras, mismos filtros de publicación que `/public/businesses` (+ categoría activa y plato disponible).
 - **`is_open_now` NO se calcula en el RPC**: la fuente de verdad del horario es `getOpenStatus()` en TS (§19); el home enriquece las cards de resultados desde su lista ya cargada.
 - Cliente: hook `useCatalogSearch` (debounce 300ms + AbortController anti-race); los resultados reemplazan hero+lista; los platos navegan a la página del negocio. Colisiones tipo "año"/"ano" son tolerancia de búsqueda deseada.
+
+---
+
+## 21. Color de papelito: paleta establecida, fin de la unicidad (2026-07-02)
+
+El alta de un negocio fallaba con `conflict` cuando el color elegido ya pertenecía a un negocio activo (índice único parcial `businesses_accent_color_active_idx` de `0002`; el default del form de alta era además `e11d48`, ya ocupado por La Florencia). Con una paleta documentada de 12 colores la unicidad no escala más allá de 12 negocios activos.
+
+- **Paleta canónica en código**: `BUSINESS_ACCENT_PALETTE` (12 colores de `Docs/06 §2`, hex minúsculas sin `#`) + `AccentColorSchema` + `DEFAULT_ACCENT_COLOR` + `isPaletteAccentColor` en `packages/contracts/src/accent-colors.ts`. El spec 06 referencia esta constante como fuente.
+- **Unicidad eliminada** (migración `0053`): dos negocios activos PUEDEN compartir color. Sin índice de reemplazo (ninguna query filtra/joinea por `accent_color`). El CHECK `accent_color_format` (minúsculas sin `#`) sigue vigente.
+- **Colisiones visuales aceptadas por diseño**: el papelito sigue siendo identificador *referencial*, no clave. Mitigación: el picker del admin marca "en uso" (dot advisory, no bloquea) los colores de negocios activos — el panel del negocio NO lo muestra (RLS no le deja ver otros negocios y no es su decisión).
+- **El color lo gestiona SOLO el admin** (confirmado por el usuario, 2026-07-02): `accentColor` se acepta únicamente en `POST /admin/businesses` (alta) y `PATCH /admin/businesses/:id`. `PATCH /business/profile` ya NO lo acepta (mismo enforcement server-side que las capacidades, §18). El panel del negocio lo muestra **solo lectura** (swatch + candado "Lo gestiona Tindivo") en Configuración → Datos.
+- **`AccentColorSchema` normaliza** (`trim`, quita `#`, `toLowerCase`) antes de validar — cualquier cliente (curl/Capacitor) queda cubierto por el server.
+- **Selector visual** (grid de 12 swatches + "Color personalizado" colapsable, auto-expandido si el valor no es de paleta — negocios legacy): en el alta del admin (`negocios/nuevo`). Hex libre sigue permitido.
+- **Defaults**: el form de alta preselecciona el primer color de la paleta (Rosado `f472b6`); el default de la columna en DB sigue `f97316` (naranja = brand, con la reserva del spec: solo asignarlo si Tindivo no opera ese pueblo).

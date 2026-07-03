@@ -1,21 +1,34 @@
 'use client'
 
 import type { ApiEnvelope } from '@tindivo/api-client'
+import { BUSINESS_ACCENT_PALETTE } from '@tindivo/contracts'
 import Link from 'next/link'
-import { type FormEvent, useState } from 'react'
-import { Field, SectionHeader } from '@/components/admin'
+import { type FormEvent, useEffect, useState } from 'react'
+import { AccentColorPicker, Field, SectionHeader } from '@/components/admin'
 import { api, errMsg } from '@/lib/api'
 
+const DEFAULT_FORM = {
+  email: '',
+  password: '',
+  name: '',
+  tagline: '',
+  // `as string`: la paleta es `as const` y el literal sobre-estrecharía el estado.
+  accentColor: BUSINESS_ACCENT_PALETTE[0].hex as string,
+}
+
 export default function NuevoNegocioPage() {
-  const [form, setForm] = useState({
-    email: '',
-    password: '',
-    name: '',
-    tagline: '',
-    accentColor: 'e11d48',
-  })
+  const [form, setForm] = useState(DEFAULT_FORM)
+  const [usedColors, setUsedColors] = useState<string[]>([])
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const [loading, setLoading] = useState(false)
+
+  // Colores de negocios activos, para marcar "en uso" en el picker (advisory).
+  useEffect(() => {
+    api
+      .get<ApiEnvelope<{ accent_color: string; is_active: boolean }[]>>('/admin/businesses')
+      .then((r) => setUsedColors(r.data.filter((b) => b.is_active).map((b) => b.accent_color)))
+      .catch(() => setUsedColors([]))
+  }, [])
 
   async function submit(e: FormEvent) {
     e.preventDefault()
@@ -33,7 +46,8 @@ export default function NuevoNegocioPage() {
         },
       )
       setMsg({ ok: true, text: `Negocio "${r.data.business.name}" creado.` })
-      setForm({ email: '', password: '', name: '', tagline: '', accentColor: 'e11d48' })
+      setUsedColors((prev) => [...prev, form.accentColor])
+      setForm(DEFAULT_FORM)
     } catch (err) {
       setMsg({ ok: false, text: errMsg(err) })
     } finally {
@@ -87,12 +101,11 @@ export default function NuevoNegocioPage() {
               required
             />
           </Field>
-          <Field label="Color de papelito (hex)">
-            <input
-              className="t-field"
+          <Field label="Color de papelito" className="sm:col-span-2">
+            <AccentColorPicker
               value={form.accentColor}
-              onChange={(e) => setForm({ ...form, accentColor: e.target.value })}
-              pattern="[0-9a-f]{6}"
+              onChange={(hex) => setForm({ ...form, accentColor: hex })}
+              usedColors={usedColors}
             />
           </Field>
           <div className="flex items-end">

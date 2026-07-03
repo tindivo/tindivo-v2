@@ -1,3 +1,4 @@
+export { AccentColorPicker } from './accent-color-picker'
 export { AlertsBell } from './alerts-bell'
 export { BarMini } from './bar-mini'
 export { type Column, DataTable } from './data-table'

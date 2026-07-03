@@ -90,6 +90,40 @@ function Field({
   )
 }
 
+/** Color de papelito, SOLO LECTURA: lo gestiona el admin (DECISIONS §21),
+ *  igual que las capacidades — el negocio lo ve pero no lo edita. */
+function AccentColorReadonly({ value }: { value: string }) {
+  return (
+    <div className="tv-input" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <span
+        style={{
+          width: 24,
+          height: 24,
+          borderRadius: 6,
+          background: `#${value}`,
+          flexShrink: 0,
+        }}
+      />
+      <span className="tv-mono" style={{ fontSize: 14 }}>
+        #{value}
+      </span>
+      <span
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 4,
+          marginLeft: 'auto',
+          fontSize: 11,
+          color: 'var(--tv-ink-muted)',
+        }}
+      >
+        <MS name="lock" size={14} />
+        Lo gestiona Tindivo
+      </span>
+    </div>
+  )
+}
+
 /** Toggle switch card for capabilities */
 function CapToggle({
   icon,
@@ -703,31 +737,8 @@ function ConfigView({
               </div>
             )}
           </Field>
-          <Field label="COLOR DE ACENTO (HEX)">
-            <div className="tv-input" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span
-                style={{
-                  width: 24,
-                  height: 24,
-                  borderRadius: 6,
-                  background: `#${form.accentColor}`,
-                  flexShrink: 0,
-                }}
-              />
-              <input
-                style={{
-                  flex: 1,
-                  border: 'none',
-                  outline: 'none',
-                  background: 'transparent',
-                  fontFamily: 'inherit',
-                  fontSize: 15,
-                }}
-                value={form.accentColor}
-                pattern="[0-9a-fA-F]{6}"
-                onChange={(e) => set({ accentColor: e.target.value })}
-              />
-            </div>
+          <Field label="COLOR DE PAPELITO">
+            <AccentColorReadonly value={form.accentColor} />
           </Field>
         </div>
 
@@ -959,37 +970,8 @@ function ConfigView({
                   />
                 </Field>
               </div>
-              <Field label="COLOR DE ACENTO (PAPELITO)">
-                <div
-                  className="tv-input"
-                  style={{ display: 'flex', alignItems: 'center', gap: 10 }}
-                >
-                  <span
-                    style={{
-                      width: 24,
-                      height: 24,
-                      borderRadius: 6,
-                      background: `#${form.accentColor}`,
-                      flexShrink: 0,
-                    }}
-                  />
-                  <input
-                    style={{
-                      flex: 1,
-                      border: 'none',
-                      outline: 'none',
-                      background: 'transparent',
-                      fontFamily: 'inherit',
-                      fontSize: 15,
-                    }}
-                    value={form.accentColor}
-                    pattern="[0-9a-fA-F]{6}"
-                    onChange={(e) => set({ accentColor: e.target.value })}
-                  />
-                  <span className="tv-mono" style={{ color: 'var(--tv-ink-muted)', fontSize: 12 }}>
-                    #{form.accentColor}
-                  </span>
-                </div>
+              <Field label="COLOR DE PAPELITO">
+                <AccentColorReadonly value={form.accentColor} />
               </Field>
               <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 20, flexWrap: 'wrap' }}>
                 <div>
@@ -1218,7 +1200,7 @@ export default function ConfiguracionPage() {
         phone: form.phone,
         whatsappNumber: waParsed?.success ? waParsed.data : null,
         tagline: form.tagline,
-        accentColor: form.accentColor,
+        // accentColor FUERA del payload: lo gestiona solo el admin (DECISIONS §21).
         // En modo catálogo las secciones "Pago Yape" y "Tiempos y precio" no
         // existen: no se reenvían valores que el negocio no puede ver ni editar
         // (los datos se conservan en la DB y reaparecen al volver a delivery).
