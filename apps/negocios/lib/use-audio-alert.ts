@@ -20,9 +20,34 @@ export function unlockAudio(): void {
 }
 
 /**
+ * Anuncia verbalmente el estado de pedidos pendientes u otros avisos.
+ * Usa la API de Web Speech (SpeechSynthesis), disponible en Chrome/Edge/Safari.
+ * Se ejecuta después del beep, no en lugar de él.
+ */
+export function speak(text: string): void {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
+  // Cancelar cualquier utterance anterior para no acumular
+  window.speechSynthesis.cancel()
+  const utterance = new SpeechSynthesisUtterance(text)
+  utterance.lang = 'es-PE'
+  utterance.rate = 1.1 // Ligeramente más rápido que normal
+  utterance.pitch = 1.0
+  utterance.volume = 1.0 // Volumen máximo
+  window.speechSynthesis.speak(utterance)
+}
+
+/**
+ * Genera el texto de anuncio según la cantidad de pedidos pendientes.
+ */
+function pendingAnnouncement(count: number): string {
+  if (count === 1) return 'Tienes un pedido nuevo'
+  return `Tienes ${count} pedidos en espera`
+}
+
+/**
  * Tres alertas de audio del dashboard (PROPUESTAS_UX_PEDIDOS §7):
  *  · Tipo 1 — pedido nuevo: 880Hz + 1175Hz, doble bip, cada 3s mientras haya
- *    pendientes y `soundOn`.
+ *    pendientes y `soundOn` (volumen mejorado a 0.55).
  *  · Tipo 2 — motorizado llegó: 660-880-660Hz, triple bip suave, una vez al
  *    cambiar a `waiting`. Suena AUNQUE `soundOn` esté apagado (acción física).
  *  · Tipo 3 — buffer fase 3 (5m+ sin moto): 440Hz, bip largo, cada 8s.
@@ -30,17 +55,21 @@ export function unlockAudio(): void {
  */
 export function useDashboardSounds({
   hasPending,
+  pendingCount,
   hasWaiting,
   hasBufferP3,
   soundOn,
 }: {
   hasPending: boolean
+  pendingCount: number
   hasWaiting: boolean
   hasBufferP3: boolean
   soundOn: boolean
 }) {
   const t1 = useRef<ReturnType<typeof setInterval> | null>(null)
   const t3 = useRef<ReturnType<typeof setInterval> | null>(null)
+  const tVoice = useRef<ReturnType<typeof setInterval> | null>(null)
+  const prevPendingCount = useRef(0)
   const prevWaiting = useRef(false)
 
   function seq(freqs: number[], durEach: number, peak = 0.3) {
@@ -64,7 +93,7 @@ export function useDashboardSounds({
     }
   }
 
-  // Tipo 1 — pedido nuevo.
+  // Tipo 1 — pedido nuevo (bip mejorado a 0.55 de volumen).
   useEffect(() => {
     const stop = () => {
       if (t1.current) clearInterval(t1.current)
@@ -74,11 +103,36 @@ export function useDashboardSounds({
       stop()
       return stop
     }
-    const play = () => seq([880, 1175], 0.18, 0.32)
+    const play = () => seq([880, 1175], 0.18, 0.55)
     play()
     t1.current = setInterval(play, 3000)
     return stop
   }, [soundOn, hasPending])
+
+  // Anuncio por voz — cada 15 segundos mientras haya pedidos pendientes.
+  useEffect(() => {
+    const stop = () => {
+      if (tVoice.current) clearInterval(tVoice.current)
+      tVoice.current = null
+    }
+    if (!soundOn || !hasPending) {
+      stop()
+      prevPendingCount.current = 0
+      return stop
+    }
+
+    // Anunciar inmediatamente si hay un NUEVO pedido (count subió) o al iniciar el efecto
+    if (pendingCount > prevPendingCount.current) {
+      speak(pendingAnnouncement(pendingCount))
+    }
+    prevPendingCount.current = pendingCount
+
+    tVoice.current = setInterval(() => {
+      speak(pendingAnnouncement(pendingCount))
+    }, 15000)
+
+    return stop
+  }, [soundOn, hasPending, pendingCount])
 
   // Tipo 3 — buffer fase 3.
   useEffect(() => {
@@ -96,9 +150,12 @@ export function useDashboardSounds({
     return stop
   }, [soundOn, hasBufferP3])
 
-  // Tipo 2 — motorizado llegó (edge, ignora soundOn).
+  // Tipo 2 — motorizado llegó (edge, ignora soundOn) con voz.
   useEffect(() => {
-    if (hasWaiting && !prevWaiting.current) seq([660, 880, 660], 0.3, 0.22)
+    if (hasWaiting && !prevWaiting.current) {
+      seq([660, 880, 660], 0.3, 0.22)
+      speak('El motorizado llegó al local')
+    }
     prevWaiting.current = hasWaiting
   }, [hasWaiting])
 }

@@ -77,3 +77,18 @@ export type OrderPrepayData = {
 export function sendOrderPrepay(data: OrderPrepayData) {
   return inngest.send({ name: EVENT_ORDER_PREPAY, data })
 }
+
+export const EVENT_ORDER_NOTIFY_BUSINESS = 'order/notify-business' as const
+
+/** Datos del evento que notifica al negocio sobre un nuevo pedido. */
+export type OrderNotifyBusinessData = {
+  businessId: string
+  customerName: string
+  shortId: string
+  paymentIntent: string
+}
+
+/** Envío tipado del evento `order/notify-business`. */
+export function sendOrderNotifyBusiness(data: OrderNotifyBusinessData) {
+  return inngest.send({ name: EVENT_ORDER_NOTIFY_BUSINESS, data })
+}

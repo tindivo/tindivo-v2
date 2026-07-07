@@ -6,7 +6,7 @@ import { sha256Hex } from '@/lib/http/hash'
 import { findCompletedReplay, withIdempotency } from '@/lib/http/idempotency'
 import { handleError, problem } from '@/lib/http/problem'
 import { getRequestId } from '@/lib/http/request-id'
-import { sendOrderCreated, sendOrderPrepay, sendOrderValidation } from '@/lib/inngest/client'
+import { sendOrderCreated, sendOrderNotifyBusiness, sendOrderPrepay, sendOrderValidation } from '@/lib/inngest/client'
 import { createServiceClient } from '@/lib/supabase/service'
 
 export const dynamic = 'force-dynamic'
@@ -150,7 +150,7 @@ export async function POST(req: Request): Promise<Response> {
     // Agenda el timeout de aceptación SOLO en creación real (no en replay).
     // Best-effort: un fallo de Inngest nunca debe romper la creación del pedido.
     if (!result.replayed) {
-      const created = (result.body as { data?: { id?: string; status?: string } }).data
+      const created = (result.body as { data?: { id?: string; status?: string; shortId?: string } }).data
       if (created?.id) {
         try {
           // Agenda el timer según el estado/método: prepago (10m) · validación (5m) · aceptación (5m).
@@ -159,6 +159,27 @@ export async function POST(req: Request): Promise<Response> {
           else if (created.status === 'validando')
             await sendOrderValidation({ orderId: created.id })
           else await sendOrderCreated({ orderId: created.id })
+
+          // Fallback / obtención de shortId
+          let shortId = created.shortId
+          if (!shortId) {
+            const { data: oData } = await service
+              .from('orders')
+              .select('short_id')
+              .eq('id', created.id)
+              .maybeSingle()
+            shortId = oData?.short_id
+          }
+
+          // Notifica al negocio
+          if (shortId) {
+            await sendOrderNotifyBusiness({
+              businessId: body.businessId,
+              customerName: body.customerName,
+              shortId,
+              paymentIntent: body.paymentIntent,
+            })
+          }
         } catch {
           // El pedido ya está creado; el negocio lo ve igual. (TODO: dispatch vía outbox.)
         }

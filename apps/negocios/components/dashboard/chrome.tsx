@@ -25,15 +25,12 @@ import {
   toOrderVM,
 } from '@/lib/orders/view-model'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
-import { unlockAudio, useDashboardSounds } from '@/lib/use-audio-alert'
+import { speak, unlockAudio, useDashboardSounds } from '@/lib/use-audio-alert'
 import { MS } from './primitives'
 import { SuccessToastHost } from './toast'
 
 // ── Debounce hook ─────────────────────────────────────────────────────────────
-function useDebouncedCallback<T extends (...args: any[]) => void>(
-  fn: T,
-  delay: number,
-): T {
+function useDebouncedCallback<T extends (...args: any[]) => void>(fn: T, delay: number): T {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const fnRef = useRef(fn)
   fnRef.current = fn
@@ -539,6 +536,92 @@ function CatalogOnlyGate() {
   )
 }
 
+function NotificationGate({ onActivate }: { onActivate: () => void }) {
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 9999,
+        background: 'rgba(0,0,0,0.85)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 20,
+      }}
+    >
+      <div
+        style={{
+          background: '#fff',
+          borderRadius: 24,
+          padding: '32px 28px',
+          maxWidth: 420,
+          width: '100%',
+          textAlign: 'center',
+        }}
+      >
+        {/* Icono grande de campana */}
+        <div
+          style={{
+            width: 72,
+            height: 72,
+            borderRadius: 20,
+            background: 'var(--tv-brand-soft)',
+            color: 'var(--tv-brand)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 16px',
+          }}
+        >
+          <MS name="notifications_active" size={36} filled />
+        </div>
+
+        <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>
+          Activa las notificaciones
+        </div>
+
+        <div
+          style={{ fontSize: 15, color: 'var(--tv-ink-muted)', lineHeight: 1.6, marginBottom: 8 }}
+        >
+          Para recibir pedidos necesitas activar las alertas de sonido y notificaciones del
+          navegador.
+        </div>
+
+        <div
+          style={{
+            background: 'var(--tv-warning-soft)',
+            borderRadius: 12,
+            padding: '12px 16px',
+            marginBottom: 24,
+            fontSize: 13,
+            color: '#92400E',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+          }}
+        >
+          <MS name="warning" size={16} filled />
+          Sin notificaciones activas, los pedidos pueden perderse y cancelarse automáticamente.
+        </div>
+
+        <button
+          type="button"
+          onClick={onActivate}
+          className="tv-btn tv-btn-brand tv-btn-block tv-btn-xl"
+        >
+          <MS name="notifications_active" size={22} filled />
+          Activar notificaciones
+        </button>
+
+        <div style={{ fontSize: 11, color: 'var(--tv-ink-muted)', marginTop: 12 }}>
+          Puedes ajustar el volumen desde la configuración del navegador
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Chrome autenticado: sidebar + realtime + sonido persistentes ──────────────
 function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut: () => void }) {
   const pathname = usePathname()
@@ -557,7 +640,50 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
   })
   const [rows, setRows] = useState<OrderRow[]>([])
   const [now, setNow] = useState(() => Date.now())
-  const [soundOn, setSoundOn] = useState(false)
+  const [soundOn, setSoundOn] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('tindivo_sound_on') === 'true'
+    }
+    return false
+  })
+  const [gateDismissed, setGateDismissed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('tindivo_notifications_gate_dismissed') === 'true'
+    }
+    return false
+  })
+  const [gateShown, setGateShown] = useState(false)
+
+  // Mostrar gate en la carga inicial si sonido está desactivado y no ha sido descartado antes.
+  useEffect(() => {
+    if (!soundOn && !gateDismissed) {
+      setGateShown(true)
+    }
+  }, []) // Solo en el montaje
+
+  const handleActivateNotifications = useCallback(async () => {
+    // 1. Activar sonido + unlockAudio (gesto del usuario)
+    setSoundOn(true)
+    unlockAudio()
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('tindivo_sound_on', 'true')
+    }
+
+    // 2. Habla de prueba para validar que la voz funciona
+    speak('Notificaciones activadas')
+
+    // 3. Pedir permiso de push/Notification si no está concedido
+    if ('Notification' in window && Notification.permission === 'default') {
+      await Notification.requestPermission()
+    }
+
+    // 4. Cerrar el modal y persistir
+    setGateShown(false)
+    setGateDismissed(true)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('tindivo_notifications_gate_dismissed', 'true')
+    }
+  }, [])
 
   const refetchBiz = useCallback(async () => {
     const { data } = await getSupabaseBrowser()
@@ -673,12 +799,22 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
   const hasBufferP3 = vms.some((o) => o.state === 'buffer_p3')
 
   // Sonido persistente (corre en el chrome → suena en cualquier sección).
-  useDashboardSounds({ hasPending: counts.new > 0, hasWaiting, hasBufferP3, soundOn })
+  useDashboardSounds({
+    hasPending: counts.new > 0,
+    pendingCount: counts.new,
+    hasWaiting,
+    hasBufferP3,
+    soundOn,
+  })
 
   const toggleSound = useCallback(() => {
     setSoundOn((s) => {
+      const next = !s
       if (!s) unlockAudio()
-      return !s
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('tindivo_sound_on', String(next))
+      }
+      return next
     })
   }, [])
 
@@ -730,6 +866,7 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
 
   return (
     <Ctx.Provider value={value}>
+      {gateShown && <NotificationGate onActivate={handleActivateNotifications} />}
       <div className="flex" style={{ height: '100dvh', background: 'var(--tv-surface)' }}>
         <div className="hidden shrink-0 lg:block">
           <Sidebar active={active} onSignOut={onSignOut} />
