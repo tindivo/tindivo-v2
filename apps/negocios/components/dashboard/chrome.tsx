@@ -29,6 +29,24 @@ import { unlockAudio, useDashboardSounds } from '@/lib/use-audio-alert'
 import { MS } from './primitives'
 import { SuccessToastHost } from './toast'
 
+// ── Debounce hook ─────────────────────────────────────────────────────────────
+function useDebouncedCallback<T extends (...args: any[]) => void>(
+  fn: T,
+  delay: number,
+): T {
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const fnRef = useRef(fn)
+  fnRef.current = fn
+
+  return useCallback(
+    ((...args: any[]) => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+      timeoutRef.current = setTimeout(() => fnRef.current(...args), delay)
+    }) as any as T,
+    [delay],
+  )
+}
+
 // ── Navegación (fuente única; el activo se deriva de la ruta) ─────────────────
 export type NavId = 'pedidos' | 'menu' | 'add' | 'efectivo' | 'historial' | 'deuda' | 'config'
 
@@ -571,29 +589,46 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
     setRows((data ?? []) as unknown as OrderRow[])
   }, [])
 
-  // Carga inicial + suscripción Realtime ÚNICA (persiste en toda sección).
+  const debouncedRefetchOrders = useDebouncedCallback(refetchOrders, 500)
+  const debouncedRefetchBiz = useDebouncedCallback(refetchBiz, 500)
+
+  // Carga inicial (persiste en toda sección).
   useEffect(() => {
-    const supabase = getSupabaseBrowser()
     Promise.all([refetchBiz(), refetchOrders()]).finally(() => setReady(true))
+  }, [refetchBiz, refetchOrders])
+
+  // Suscripción Realtime ÚNICA (filtrada por bizId).
+  useEffect(() => {
+    if (!bizId) return
+    const supabase = getSupabaseBrowser()
     const channel = supabase
-      .channel('biz-orders')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () =>
-        refetchOrders(),
+      .channel(`biz-orders-${bizId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'orders',
+          filter: `business_id=eq.${bizId}`,
+        },
+        () => debouncedRefetchOrders(),
       )
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'businesses' }, () =>
-        refetchBiz(),
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'businesses',
+          filter: `id=eq.${bizId}`,
+        },
+        () => debouncedRefetchBiz(),
       )
       .subscribe()
+
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [refetchBiz, refetchOrders])
-
-  // Tick para countdowns / buffer.
-  useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 1000)
-    return () => clearInterval(t)
-  }, [])
+  }, [bizId, debouncedRefetchOrders, debouncedRefetchBiz])
 
   const vms = useMemo(() => rows.map((r) => toOrderVM(r, now)), [rows, now])
   const counts = useMemo(() => {
@@ -607,6 +642,30 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
     }
     return n
   }, [vms])
+
+  // Tick inteligente: solo si hay countdowns o buffer activos.
+  const needsTickRef = useRef(false)
+
+  useEffect(() => {
+    const hasTicking = vms.some(
+      (v) =>
+        v.status === 'pending_acceptance' ||
+        v.status === 'validando' ||
+        v.state === 'cooking' ||
+        v.state === 'buffer_p1' ||
+        v.state === 'buffer_p2' ||
+        v.state === 'buffer_p3' ||
+        v.state === 'picked_up',
+    )
+    needsTickRef.current = hasTicking
+  }, [vms])
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      if (needsTickRef.current) setNow(Date.now())
+    }, 1000)
+    return () => clearInterval(t)
+  }, [])
 
   const paused = isBusinessPaused(biz.until, now)
   const pauseMin = pauseMinutesLeft(biz.until, now)

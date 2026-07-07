@@ -12,10 +12,13 @@ import { getSupabaseBrowser } from '@/lib/supabase/client'
 interface ModifierOption {
   id: string
   is_available: boolean
+  additional_price: number
 }
 
 interface ModifierGroup {
   id: string
+  is_required: boolean
+  max_selections: number | null
   options: ModifierOption[]
 }
 
@@ -40,13 +43,31 @@ interface MenuCategory {
 // ── Price helpers ─────────────────────────────────────────────────────────────
 
 function itemMinPrice(item: MenuItem): number {
-  return item.base_price
+  let extra = 0
+  for (const g of item.modifierGroups) {
+    if (g.is_required && g.options.length > 0) {
+      const prices = g.options
+        .filter((o) => o.is_available)
+        .map((o) => o.additional_price)
+      if (prices.length > 0) {
+        extra += Math.min(...prices)
+      }
+    }
+  }
+  return item.base_price + extra
 }
 
 function itemMaxPrice(item: MenuItem): number {
-  // Since we don't fetch option deltas in the list view, we only show the base price
-  // The editor handles full price range computation
-  return item.base_price
+  let extra = 0
+  for (const g of item.modifierGroups) {
+    const sorted = g.options
+      .filter((o) => o.additional_price > 0)
+      .map((o) => o.additional_price)
+      .sort((a, b) => b - a)
+    const maxSel = g.max_selections ?? sorted.length
+    extra += sorted.slice(0, maxSel).reduce((a, b) => a + b, 0)
+  }
+  return item.base_price + extra
 }
 
 // ── Item row ──────────────────────────────────────────────────────────────────
@@ -922,7 +943,12 @@ export default function MenuPage() {
   const load = useCallback(async (businessId: string) => {
     const supabase = getSupabaseBrowser()
 
-    const [{ data: categories }, { data: items }, { data: junctions }] = await Promise.all([
+    const [
+      { data: categories },
+      { data: items },
+      { data: junctions },
+      { data: groupsDetails },
+    ] = await Promise.all([
       supabase
         .from('menu_categories')
         .select('id,name,display_order')
@@ -937,6 +963,10 @@ export default function MenuPage() {
         .eq('business_id', businessId)
         .order('display_order'),
       supabase.from('menu_item_modifier_groups').select('item_id,group_id'),
+      supabase
+        .from('menu_modifier_groups')
+        .select('id,is_required,max_selections')
+        .eq('business_id', businessId),
     ])
 
     // Fetch option availability per group for agotado count
@@ -945,23 +975,44 @@ export default function MenuPage() {
       groupIds.length > 0
         ? await supabase
             .from('menu_modifier_options')
-            .select('id,group_id,is_available')
+            .select('id,group_id,is_available,additional_price')
             .in('group_id', groupIds)
         : { data: [] }
 
-    const optionsByGroup: Record<string, { id: string; is_available: boolean }[]> = {}
+    const optionsByGroup: Record<
+      string,
+      { id: string; is_available: boolean; additional_price: number }[]
+    > = {}
     for (const opt of options ?? []) {
       const list = optionsByGroup[opt.group_id] ?? []
-      list.push({ id: opt.id, is_available: opt.is_available })
+      list.push({
+        id: opt.id,
+        is_available: opt.is_available,
+        additional_price: Number(opt.additional_price ?? 0),
+      })
       optionsByGroup[opt.group_id] = list
+    }
+
+    const groupsDetailsMap: Record<
+      string,
+      { is_required: boolean; max_selections: number | null }
+    > = {}
+    for (const g of groupsDetails ?? []) {
+      groupsDetailsMap[g.id] = {
+        is_required: Boolean(g.is_required),
+        max_selections: g.max_selections != null ? Number(g.max_selections) : null,
+      }
     }
 
     // Build groups per item
     const groupsByItem: Record<string, ModifierGroup[]> = {}
     for (const j of junctions ?? []) {
       const list = groupsByItem[j.item_id] ?? []
+      const details = groupsDetailsMap[j.group_id] ?? { is_required: false, max_selections: null }
       list.push({
         id: j.group_id,
+        is_required: details.is_required,
+        max_selections: details.max_selections,
         options: optionsByGroup[j.group_id] ?? [],
       })
       groupsByItem[j.item_id] = list

@@ -33,6 +33,21 @@ export default function NegocioPedidosPage() {
   const [busy, setBusy] = useState(false)
   const [showPause, setShowPause] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [supportWhatsapp, setSupportWhatsapp] = useState<string | null>(null)
+
+  useEffect(() => {
+    const supabase = getSupabaseBrowser()
+    supabase
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'support_whatsapp')
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.value) {
+          setSupportWhatsapp(String(data.value).replace(/"/g, ''))
+        }
+      })
+  }, [])
 
   // Datos derivados del pedido seleccionado (para deps honestas del efecto).
   const selRow = selectedId ? (rows.find((r) => r.id === selectedId) ?? null) : null
@@ -189,6 +204,14 @@ export default function NegocioPedidosPage() {
         setSelectedId(null)
         await refetchOrders()
       }),
+    onCallDriver: () => {
+      if (!selected) return
+      const phone = supportWhatsapp || '51900000000'
+      const msg = encodeURIComponent(
+        `Hola Tindivo, necesito un motorizado urgente para el pedido #${selected.id}. Lleva ${selected.bufferMinutes ?? '?'}min esperando.`
+      )
+      window.open(`https://wa.me/${phone.replace(/\D/g, '')}?text=${msg}`, '_blank')
+    },
   }
 
   const onConfirmPause = (min: number | null) =>
