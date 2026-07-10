@@ -1,1 +1,39 @@
-{"nodes": [{"id": "docs_01_requerimientos_funcionales_pt1", "label": "Docs/01-requerimientos-funcionales.md \u2013 Part 1", "file_type": "document", "source_file": "Docs/01-requerimientos-funcionales.md", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "docs_01_requerimientos_funcionales_pt2", "label": "Docs/01-requerimientos-funcionales.md \u2013 Part 2", "file_type": "document", "source_file": "Docs/01-requerimientos-funcionales.md", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}], "edges": [{"source": "docs_01_requerimientos_funcionales_pt1", "target": "docs_00_vision_pt1", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/01-requerimientos-funcionales.md", "source_location": null, "weight": 1.0}], "hyperedges": []}
+{
+  "nodes": [
+    {
+      "id": "docs_01_requerimientos_funcionales_pt1",
+      "label": "Docs/01-requerimientos-funcionales.md \u2013 Part 1",
+      "file_type": "document",
+      "source_file": "Docs/01-requerimientos-funcionales.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "docs_01_requerimientos_funcionales_pt2",
+      "label": "Docs/01-requerimientos-funcionales.md \u2013 Part 2",
+      "file_type": "document",
+      "source_file": "Docs/01-requerimientos-funcionales.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    }
+  ],
+  "edges": [
+    {
+      "source": "docs_01_requerimientos_funcionales_pt1",
+      "target": "docs_00_vision_pt1",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/01-requerimientos-funcionales.md",
+      "source_location": null,
+      "weight": 1.0
+    }
+  ],
+  "hyperedges": []
+}

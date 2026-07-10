@@ -1,1 +1,49 @@
-{"nodes": [{"id": "Docs_DOCUMENTACION_PANELES_TINDIVO_restaurant_panel", "label": "Restaurant Panel UI", "file_type": "code", "source_file": "Docs/DOCUMENTACION_PANELES_TINDIVO.md", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "Docs_DOCUMENTACION_PANELES_TINDIVO_super_admin_panel", "label": "Super Admin Panel UI", "file_type": "code", "source_file": "Docs/DOCUMENTACION_PANELES_TINDIVO.md", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}], "edges": [{"source": "Docs_DOCUMENTACION_PANELES_TINDIVO_restaurant_panel", "target": "Docs_09_flujo_negocios_negocios_app", "relation": "conceptually_related_to", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/DOCUMENTACION_PANELES_TINDIVO.md", "source_location": null, "weight": 1.0}, {"source": "Docs_DOCUMENTACION_PANELES_TINDIVO_super_admin_panel", "target": "Docs_FASE_1_TINDIVO_fase1_orchestration", "relation": "conceptually_related_to", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/DOCUMENTACION_PANELES_TINDIVO.md", "source_location": null, "weight": 1.0}], "hyperedges": []}
+{
+  "nodes": [
+    {
+      "id": "Docs_DOCUMENTACION_PANELES_TINDIVO_restaurant_panel",
+      "label": "Restaurant Panel UI",
+      "file_type": "code",
+      "source_file": "Docs/DOCUMENTACION_PANELES_TINDIVO.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "Docs_DOCUMENTACION_PANELES_TINDIVO_super_admin_panel",
+      "label": "Super Admin Panel UI",
+      "file_type": "code",
+      "source_file": "Docs/DOCUMENTACION_PANELES_TINDIVO.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    }
+  ],
+  "edges": [
+    {
+      "source": "Docs_DOCUMENTACION_PANELES_TINDIVO_restaurant_panel",
+      "target": "Docs_09_flujo_negocios_negocios_app",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/DOCUMENTACION_PANELES_TINDIVO.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "Docs_DOCUMENTACION_PANELES_TINDIVO_super_admin_panel",
+      "target": "Docs_FASE_1_TINDIVO_fase1_orchestration",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/DOCUMENTACION_PANELES_TINDIVO.md",
+      "source_location": null,
+      "weight": 1.0
+    }
+  ],
+  "hyperedges": []
+}

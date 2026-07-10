@@ -1,1 +1,863 @@
-{"nodes": [{"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_md", "label": "11-notificaciones-push.md", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L1"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_11_notificaciones_push", "label": "11 \u00b7 Notificaciones push", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L1"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_tabla_de_contenidos", "label": "Tabla de contenidos", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L7"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_1_problema_que_resolvemos", "label": "1. Problema que resolvemos", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L24"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_el_bug_de_latencia_en_v1", "label": "El bug de latencia en v1", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L26"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_la_causa_ra\u00edz_no_era_el_cron_es_lento", "label": "La causa ra\u00edz no era \"el cron es lento\"", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L35"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_la_soluci\u00f3n", "label": "La soluci\u00f3n", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L39"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_2_arquitectura_del_pipeline", "label": "2. Arquitectura del pipeline", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L47"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_componentes", "label": "Componentes", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L82"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_3_suscripci\u00f3n_del_cliente", "label": "3. Suscripci\u00f3n del cliente", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L91"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_flujo", "label": "Flujo", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L93"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_tabla_push_subscriptions", "label": "Tabla `push_subscriptions`", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L109"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_multi_dispositivo", "label": "Multi-dispositivo", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L136"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_limpieza_de_suscripciones_inactivas", "label": "Limpieza de suscripciones inactivas", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L140"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_4_outbox_edge_function_send_push", "label": "4. Outbox + Edge Function send-push", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L146"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_trigger_postgres", "label": "Trigger Postgres", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L148"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_edge_function_send_push", "label": "Edge Function `send-push`", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L205"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_tag_dedup", "label": "Tag dedup", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L278"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_5_inngest_para_scheduling", "label": "5. Inngest para scheduling", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L289"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_setup", "label": "Setup", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L291"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_function_checkorderoverdue", "label": "Function `checkOrderOverdue`", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L325"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_trigger_en_use_case", "label": "Trigger en use case", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L372"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_otras_functions", "label": "Otras functions", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L398"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_precisi\u00f3n", "label": "Precisi\u00f3n", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L406"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_6_failsafe_crons", "label": "6. Failsafe crons", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L412"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_7_mapa_de_eventos_notificaciones", "label": "7. Mapa de eventos \u2192 notificaciones", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L427"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_7_1_detalle_de_ordertransferautoaccepted", "label": "7.1 Detalle de `OrderTransferAutoAccepted`", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L460"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_7_2_eventos_que_no_disparan_push", "label": "7.2 Eventos que NO disparan push", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L471"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_8_reglas_de_ux_para_notificaciones", "label": "8. Reglas de UX para notificaciones", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L481"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_8_1_cu\u00e1ndo_usar_requireinteraction_true", "label": "8.1 Cu\u00e1ndo usar `requireInteraction: true`", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L483"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_8_2_cu\u00e1ndo_no_usar", "label": "8.2 Cu\u00e1ndo NO usar", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L488"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_8_3_tag_y_dedup", "label": "8.3 Tag y dedup", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L493"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_8_4_icono_y_badge", "label": "8.4 Icono y badge", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L498"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_8_5_click_action", "label": "8.5 Click action", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L504"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_8_6_permission_gate", "label": "8.6 Permission gate", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L527"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_9_limitaciones_del_so_verificadas", "label": "9. Limitaciones del SO verificadas", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L536"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_ios_safari", "label": "iOS Safari", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L538"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_android_chrome", "label": "Android Chrome", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L545"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_tags_y_colapso", "label": "Tags y colapso", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L552"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_m\u00faltiples_ventanas", "label": "M\u00faltiples ventanas", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L556"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_10_observabilidad", "label": "10. Observabilidad", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L563"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_tabla_push_delivery_log", "label": "Tabla `push_delivery_log`", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L565"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_m\u00e9tricas_a_vigilar", "label": "M\u00e9tricas a vigilar", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L586"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_retenci\u00f3n", "label": "Retenci\u00f3n", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L593"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_dashboard_admin", "label": "Dashboard admin", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L597"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_11_configuraci\u00f3n_vapid", "label": "11. Configuraci\u00f3n VAPID", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L606"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_generar_claves", "label": "Generar claves", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L608"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_variables_de_entorno", "label": "Variables de entorno", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L616"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_en_edge_function", "label": "En Edge Function", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L628"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_rotaci\u00f3n_de_claves", "label": "Rotaci\u00f3n de claves", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L640"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_12_recomendaciones_para_el_usuario_final", "label": "12. Recomendaciones para el usuario final", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L646"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_para_el_motorizado_cr\u00edtico", "label": "Para el motorizado (cr\u00edtico)", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L648"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_para_el_cliente_final_informativo", "label": "Para el cliente final (informativo)", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L656"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_para_el_negocio_importante", "label": "Para el negocio (importante)", "file_type": "document", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L661"}], "edges": [{"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_md", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_11_notificaciones_push", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L1", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_11_notificaciones_push", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_tabla_de_contenidos", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L7", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_11_notificaciones_push", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_1_problema_que_resolvemos", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L24", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_1_problema_que_resolvemos", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_el_bug_de_latencia_en_v1", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L26", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_1_problema_que_resolvemos", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_la_causa_ra\u00edz_no_era_el_cron_es_lento", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L35", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_1_problema_que_resolvemos", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_la_soluci\u00f3n", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L39", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_11_notificaciones_push", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_2_arquitectura_del_pipeline", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L47", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_2_arquitectura_del_pipeline", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_componentes", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L82", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_11_notificaciones_push", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_3_suscripci\u00f3n_del_cliente", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L91", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_3_suscripci\u00f3n_del_cliente", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_flujo", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L93", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_3_suscripci\u00f3n_del_cliente", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_tabla_push_subscriptions", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L109", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_3_suscripci\u00f3n_del_cliente", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_multi_dispositivo", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L136", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_3_suscripci\u00f3n_del_cliente", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_limpieza_de_suscripciones_inactivas", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L140", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_11_notificaciones_push", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_4_outbox_edge_function_send_push", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L146", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_4_outbox_edge_function_send_push", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_trigger_postgres", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L148", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_4_outbox_edge_function_send_push", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_edge_function_send_push", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L205", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_4_outbox_edge_function_send_push", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_tag_dedup", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L278", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_11_notificaciones_push", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_5_inngest_para_scheduling", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L289", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_5_inngest_para_scheduling", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_setup", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L291", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_5_inngest_para_scheduling", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_function_checkorderoverdue", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L325", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_5_inngest_para_scheduling", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_trigger_en_use_case", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L372", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_5_inngest_para_scheduling", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_otras_functions", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L398", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_5_inngest_para_scheduling", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_precisi\u00f3n", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L406", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_11_notificaciones_push", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_6_failsafe_crons", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L412", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_11_notificaciones_push", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_7_mapa_de_eventos_notificaciones", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L427", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_7_mapa_de_eventos_notificaciones", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_7_1_detalle_de_ordertransferautoaccepted", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L460", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_7_mapa_de_eventos_notificaciones", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_7_2_eventos_que_no_disparan_push", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L471", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_11_notificaciones_push", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_8_reglas_de_ux_para_notificaciones", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L481", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_8_reglas_de_ux_para_notificaciones", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_8_1_cu\u00e1ndo_usar_requireinteraction_true", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L483", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_8_reglas_de_ux_para_notificaciones", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_8_2_cu\u00e1ndo_no_usar", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L488", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_8_reglas_de_ux_para_notificaciones", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_8_3_tag_y_dedup", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L493", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_8_reglas_de_ux_para_notificaciones", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_8_4_icono_y_badge", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L498", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_8_reglas_de_ux_para_notificaciones", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_8_5_click_action", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L504", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_8_reglas_de_ux_para_notificaciones", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_8_6_permission_gate", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L527", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_11_notificaciones_push", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_9_limitaciones_del_so_verificadas", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L536", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_9_limitaciones_del_so_verificadas", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_ios_safari", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L538", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_9_limitaciones_del_so_verificadas", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_android_chrome", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L545", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_9_limitaciones_del_so_verificadas", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_tags_y_colapso", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L552", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_9_limitaciones_del_so_verificadas", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_m\u00faltiples_ventanas", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L556", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_11_notificaciones_push", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_10_observabilidad", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L563", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_10_observabilidad", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_tabla_push_delivery_log", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L565", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_10_observabilidad", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_m\u00e9tricas_a_vigilar", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L586", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_10_observabilidad", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_retenci\u00f3n", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L593", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_10_observabilidad", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_dashboard_admin", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L597", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_11_notificaciones_push", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_11_configuraci\u00f3n_vapid", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L606", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_11_configuraci\u00f3n_vapid", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_generar_claves", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L608", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_11_configuraci\u00f3n_vapid", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_variables_de_entorno", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L616", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_11_configuraci\u00f3n_vapid", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_en_edge_function", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L628", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_11_configuraci\u00f3n_vapid", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_rotaci\u00f3n_de_claves", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L640", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_11_notificaciones_push", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_12_recomendaciones_para_el_usuario_final", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L646", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_12_recomendaciones_para_el_usuario_final", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_para_el_motorizado_cr\u00edtico", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L648", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_12_recomendaciones_para_el_usuario_final", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_para_el_cliente_final_informativo", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L656", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_12_recomendaciones_para_el_usuario_final", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_para_el_negocio_importante", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/11-notificaciones-push.md", "source_location": "L661", "weight": 1.0}], "input_tokens": 0, "output_tokens": 0}
+{
+  "nodes": [
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_md",
+      "label": "11-notificaciones-push.md",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_11_notificaciones_push",
+      "label": "11 \u00b7 Notificaciones push",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_tabla_de_contenidos",
+      "label": "Tabla de contenidos",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L7"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_1_problema_que_resolvemos",
+      "label": "1. Problema que resolvemos",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L24"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_el_bug_de_latencia_en_v1",
+      "label": "El bug de latencia en v1",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L26"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_la_causa_ra\u00edz_no_era_el_cron_es_lento",
+      "label": "La causa ra\u00edz no era \"el cron es lento\"",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L35"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_la_soluci\u00f3n",
+      "label": "La soluci\u00f3n",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L39"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_2_arquitectura_del_pipeline",
+      "label": "2. Arquitectura del pipeline",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L47"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_componentes",
+      "label": "Componentes",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L82"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_3_suscripci\u00f3n_del_cliente",
+      "label": "3. Suscripci\u00f3n del cliente",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L91"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_flujo",
+      "label": "Flujo",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L93"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_tabla_push_subscriptions",
+      "label": "Tabla `push_subscriptions`",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L109"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_multi_dispositivo",
+      "label": "Multi-dispositivo",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L136"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_limpieza_de_suscripciones_inactivas",
+      "label": "Limpieza de suscripciones inactivas",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L140"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_4_outbox_edge_function_send_push",
+      "label": "4. Outbox + Edge Function send-push",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L146"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_trigger_postgres",
+      "label": "Trigger Postgres",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L148"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_edge_function_send_push",
+      "label": "Edge Function `send-push`",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L205"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_tag_dedup",
+      "label": "Tag dedup",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L278"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_5_inngest_para_scheduling",
+      "label": "5. Inngest para scheduling",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L289"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_setup",
+      "label": "Setup",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L291"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_function_checkorderoverdue",
+      "label": "Function `checkOrderOverdue`",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L325"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_trigger_en_use_case",
+      "label": "Trigger en use case",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L372"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_otras_functions",
+      "label": "Otras functions",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L398"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_precisi\u00f3n",
+      "label": "Precisi\u00f3n",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L406"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_6_failsafe_crons",
+      "label": "6. Failsafe crons",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L412"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_7_mapa_de_eventos_notificaciones",
+      "label": "7. Mapa de eventos \u2192 notificaciones",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L427"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_7_1_detalle_de_ordertransferautoaccepted",
+      "label": "7.1 Detalle de `OrderTransferAutoAccepted`",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L460"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_7_2_eventos_que_no_disparan_push",
+      "label": "7.2 Eventos que NO disparan push",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L471"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_8_reglas_de_ux_para_notificaciones",
+      "label": "8. Reglas de UX para notificaciones",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L481"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_8_1_cu\u00e1ndo_usar_requireinteraction_true",
+      "label": "8.1 Cu\u00e1ndo usar `requireInteraction: true`",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L483"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_8_2_cu\u00e1ndo_no_usar",
+      "label": "8.2 Cu\u00e1ndo NO usar",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L488"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_8_3_tag_y_dedup",
+      "label": "8.3 Tag y dedup",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L493"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_8_4_icono_y_badge",
+      "label": "8.4 Icono y badge",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L498"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_8_5_click_action",
+      "label": "8.5 Click action",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L504"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_8_6_permission_gate",
+      "label": "8.6 Permission gate",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L527"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_9_limitaciones_del_so_verificadas",
+      "label": "9. Limitaciones del SO verificadas",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L536"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_ios_safari",
+      "label": "iOS Safari",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L538"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_android_chrome",
+      "label": "Android Chrome",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L545"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_tags_y_colapso",
+      "label": "Tags y colapso",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L552"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_m\u00faltiples_ventanas",
+      "label": "M\u00faltiples ventanas",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L556"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_10_observabilidad",
+      "label": "10. Observabilidad",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L563"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_tabla_push_delivery_log",
+      "label": "Tabla `push_delivery_log`",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L565"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_m\u00e9tricas_a_vigilar",
+      "label": "M\u00e9tricas a vigilar",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L586"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_retenci\u00f3n",
+      "label": "Retenci\u00f3n",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L593"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_dashboard_admin",
+      "label": "Dashboard admin",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L597"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_11_configuraci\u00f3n_vapid",
+      "label": "11. Configuraci\u00f3n VAPID",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L606"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_generar_claves",
+      "label": "Generar claves",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L608"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_variables_de_entorno",
+      "label": "Variables de entorno",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L616"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_en_edge_function",
+      "label": "En Edge Function",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L628"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_rotaci\u00f3n_de_claves",
+      "label": "Rotaci\u00f3n de claves",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L640"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_12_recomendaciones_para_el_usuario_final",
+      "label": "12. Recomendaciones para el usuario final",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L646"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_para_el_motorizado_cr\u00edtico",
+      "label": "Para el motorizado (cr\u00edtico)",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L648"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_para_el_cliente_final_informativo",
+      "label": "Para el cliente final (informativo)",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L656"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_para_el_negocio_importante",
+      "label": "Para el negocio (importante)",
+      "file_type": "document",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L661"
+    }
+  ],
+  "edges": [
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_md",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_11_notificaciones_push",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_11_notificaciones_push",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_tabla_de_contenidos",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_11_notificaciones_push",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_1_problema_que_resolvemos",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L24",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_1_problema_que_resolvemos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_el_bug_de_latencia_en_v1",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L26",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_1_problema_que_resolvemos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_la_causa_ra\u00edz_no_era_el_cron_es_lento",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L35",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_1_problema_que_resolvemos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_la_soluci\u00f3n",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L39",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_11_notificaciones_push",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_2_arquitectura_del_pipeline",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L47",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_2_arquitectura_del_pipeline",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_componentes",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L82",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_11_notificaciones_push",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_3_suscripci\u00f3n_del_cliente",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L91",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_3_suscripci\u00f3n_del_cliente",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_flujo",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L93",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_3_suscripci\u00f3n_del_cliente",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_tabla_push_subscriptions",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L109",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_3_suscripci\u00f3n_del_cliente",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_multi_dispositivo",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L136",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_3_suscripci\u00f3n_del_cliente",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_limpieza_de_suscripciones_inactivas",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L140",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_11_notificaciones_push",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_4_outbox_edge_function_send_push",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L146",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_4_outbox_edge_function_send_push",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_trigger_postgres",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L148",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_4_outbox_edge_function_send_push",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_edge_function_send_push",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L205",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_4_outbox_edge_function_send_push",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_tag_dedup",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L278",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_11_notificaciones_push",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_5_inngest_para_scheduling",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L289",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_5_inngest_para_scheduling",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_setup",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L291",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_5_inngest_para_scheduling",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_function_checkorderoverdue",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L325",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_5_inngest_para_scheduling",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_trigger_en_use_case",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L372",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_5_inngest_para_scheduling",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_otras_functions",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L398",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_5_inngest_para_scheduling",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_precisi\u00f3n",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L406",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_11_notificaciones_push",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_6_failsafe_crons",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L412",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_11_notificaciones_push",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_7_mapa_de_eventos_notificaciones",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L427",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_7_mapa_de_eventos_notificaciones",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_7_1_detalle_de_ordertransferautoaccepted",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L460",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_7_mapa_de_eventos_notificaciones",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_7_2_eventos_que_no_disparan_push",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L471",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_11_notificaciones_push",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_8_reglas_de_ux_para_notificaciones",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L481",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_8_reglas_de_ux_para_notificaciones",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_8_1_cu\u00e1ndo_usar_requireinteraction_true",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L483",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_8_reglas_de_ux_para_notificaciones",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_8_2_cu\u00e1ndo_no_usar",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L488",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_8_reglas_de_ux_para_notificaciones",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_8_3_tag_y_dedup",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L493",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_8_reglas_de_ux_para_notificaciones",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_8_4_icono_y_badge",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L498",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_8_reglas_de_ux_para_notificaciones",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_8_5_click_action",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L504",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_8_reglas_de_ux_para_notificaciones",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_8_6_permission_gate",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L527",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_11_notificaciones_push",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_9_limitaciones_del_so_verificadas",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L536",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_9_limitaciones_del_so_verificadas",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_ios_safari",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L538",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_9_limitaciones_del_so_verificadas",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_android_chrome",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L545",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_9_limitaciones_del_so_verificadas",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_tags_y_colapso",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L552",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_9_limitaciones_del_so_verificadas",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_m\u00faltiples_ventanas",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L556",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_11_notificaciones_push",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_10_observabilidad",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L563",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_10_observabilidad",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_tabla_push_delivery_log",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L565",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_10_observabilidad",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_m\u00e9tricas_a_vigilar",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L586",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_10_observabilidad",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_retenci\u00f3n",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L593",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_10_observabilidad",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_dashboard_admin",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L597",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_11_notificaciones_push",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_11_configuraci\u00f3n_vapid",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L606",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_11_configuraci\u00f3n_vapid",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_generar_claves",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L608",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_11_configuraci\u00f3n_vapid",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_variables_de_entorno",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L616",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_11_configuraci\u00f3n_vapid",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_en_edge_function",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L628",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_11_configuraci\u00f3n_vapid",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_rotaci\u00f3n_de_claves",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L640",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_11_notificaciones_push",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_12_recomendaciones_para_el_usuario_final",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L646",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_12_recomendaciones_para_el_usuario_final",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_para_el_motorizado_cr\u00edtico",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L648",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_12_recomendaciones_para_el_usuario_final",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_para_el_cliente_final_informativo",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L656",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_12_recomendaciones_para_el_usuario_final",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_11_notificaciones_push_para_el_negocio_importante",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/11-notificaciones-push.md",
+      "source_location": "L661",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

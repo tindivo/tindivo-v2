@@ -1,1 +1,1055 @@
-{"nodes": [{"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_md", "label": "06-ui-design-system.md", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L1"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_06_ui_design_system", "label": "06 \u00b7 UI design system", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L1"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_tabla_de_contenidos", "label": "Tabla de contenidos", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L7"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_1_filosof\u00eda_de_dise\u00f1o", "label": "1. Filosof\u00eda de dise\u00f1o", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L26"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_principios", "label": "Principios", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L28"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_anti_patrones_a_evitar", "label": "Anti-patrones a evitar", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L41"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_2_paleta_de_color", "label": "2. Paleta de color", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L52"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_colores_fundacionales", "label": "Colores fundacionales", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L54"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_colores_sem\u00e1nticos", "label": "Colores sem\u00e1nticos", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L68"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_colores_de_acento_de_negocios_papelito", "label": "Colores de acento de negocios (papelito)", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L77"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_contraste", "label": "Contraste", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L102"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_3_tipograf\u00eda", "label": "3. Tipograf\u00eda", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L110"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_familia_\u00fanica", "label": "Familia \u00fanica", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L112"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_cargar_fuentes_next_js", "label": "Cargar fuentes (Next.js)", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L122"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_escala_tipogr\u00e1fica", "label": "Escala tipogr\u00e1fica", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L152"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_reglas_de_uso", "label": "Reglas de uso", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L174"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_4_iconograf\u00eda", "label": "4. Iconograf\u00eda", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L184"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_material_symbols", "label": "Material Symbols", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L186"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_cargar_la_fuente", "label": "Cargar la fuente", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L190"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_componente_helper", "label": "Componente helper", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L196"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_iconos_clave_por_dominio", "label": "Iconos clave por dominio", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L222"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_no_usar_emojis_como_iconos_ui", "label": "NO usar emojis como iconos UI", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L243"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_5_espaciado_y_border_radius", "label": "5. Espaciado y border-radius", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L255"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_sistema_de_espaciado_4px_base", "label": "Sistema de espaciado (4px base)", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L257"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_border_radius", "label": "Border-radius", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L272"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_6_elevaci\u00f3n_y_sombras", "label": "6. Elevaci\u00f3n y sombras", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L288"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_sistema_de_sombras", "label": "Sistema de sombras", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L290"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_reglas", "label": "Reglas", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L302"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_7_glassmorphism", "label": "7. Glassmorphism", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L311"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_css", "label": "CSS", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L315"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_reglas_326", "label": "Reglas", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L326"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_8_animaciones", "label": "8. Animaciones", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L334"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_library_motion_ex_framer_motion", "label": "Library: Motion (ex Framer Motion)", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L336"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_tokens_de_timing", "label": "Tokens de timing", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L340"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_patrones_de_animaci\u00f3n", "label": "Patrones de animaci\u00f3n", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L349"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_bottom_sheet_auth_carrito_payment_selection", "label": "Bottom sheet (auth, carrito, payment selection)", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L351"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_modal_product_modal_confirm_delivery", "label": "Modal (product modal, confirm delivery)", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L363"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_tab_content_swap", "label": "Tab content swap", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L374"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_stagger_en_listas", "label": "Stagger en listas", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L387"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_pulse_en_urgente", "label": "Pulse en URGENTE", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L401"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_respect_prefers_reduced_motion", "label": "Respect `prefers-reduced-motion`", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L416"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_9_primitives_shadcn_based", "label": "9. Primitives (shadcn-based)", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L425"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_lista_de_primitives", "label": "Lista de primitives", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L429"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_reglas_para_nuevos_primitives", "label": "Reglas para nuevos primitives", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L458"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_10_patterns_tindivo", "label": "10. Patterns Tindivo", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L466"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_lista_de_patterns", "label": "Lista de patterns", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L470"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_ejemplo_de_pattern_ordercard", "label": "Ejemplo de pattern: `OrderCard`", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L498"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_anti_patterns", "label": "Anti-patterns", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L550"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_11_layouts_mobile_first", "label": "11. Layouts mobile-first", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L558"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_breakpoints", "label": "Breakpoints", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L560"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_container", "label": "Container", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L573"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_safe_areas", "label": "Safe areas", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L585"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_pattern_de_p\u00e1gina_standard", "label": "Pattern de p\u00e1gina standard", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L598"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_12_estados_de_ui", "label": "12. Estados de UI", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L612"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_loading", "label": "Loading", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L614"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_empty", "label": "Empty", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L620"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_error", "label": "Error", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L631"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_success", "label": "Success", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L637"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_disabled", "label": "Disabled", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L642"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_hover", "label": "Hover", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L647"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_focus", "label": "Focus", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L653"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_13_accesibilidad_visual", "label": "13. Accesibilidad visual", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L660"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_14_implementaci\u00f3n_en_tailwind_v4", "label": "14. Implementaci\u00f3n en Tailwind v4", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L672"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_configuraci\u00f3n_base", "label": "Configuraci\u00f3n base", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L674"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_uso_en_componentes", "label": "Uso en componentes", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L731"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_preset_compartido", "label": "Preset compartido", "file_type": "document", "source_file": "Docs/06-ui-design-system.md", "source_location": "L747"}], "edges": [{"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_md", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_06_ui_design_system", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L1", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_06_ui_design_system", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_tabla_de_contenidos", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L7", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_06_ui_design_system", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_1_filosof\u00eda_de_dise\u00f1o", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L26", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_1_filosof\u00eda_de_dise\u00f1o", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_principios", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L28", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_1_filosof\u00eda_de_dise\u00f1o", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_anti_patrones_a_evitar", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L41", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_06_ui_design_system", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_2_paleta_de_color", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L52", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_2_paleta_de_color", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_colores_fundacionales", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L54", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_2_paleta_de_color", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_colores_sem\u00e1nticos", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L68", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_2_paleta_de_color", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_colores_de_acento_de_negocios_papelito", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L77", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_2_paleta_de_color", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_contraste", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L102", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_06_ui_design_system", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_3_tipograf\u00eda", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L110", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_3_tipograf\u00eda", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_familia_\u00fanica", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L112", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_3_tipograf\u00eda", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_cargar_fuentes_next_js", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L122", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_3_tipograf\u00eda", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_escala_tipogr\u00e1fica", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L152", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_3_tipograf\u00eda", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_reglas_de_uso", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L174", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_06_ui_design_system", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_4_iconograf\u00eda", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L184", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_4_iconograf\u00eda", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_material_symbols", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L186", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_4_iconograf\u00eda", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_cargar_la_fuente", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L190", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_4_iconograf\u00eda", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_componente_helper", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L196", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_4_iconograf\u00eda", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_iconos_clave_por_dominio", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L222", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_4_iconograf\u00eda", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_no_usar_emojis_como_iconos_ui", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L243", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_06_ui_design_system", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_5_espaciado_y_border_radius", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L255", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_5_espaciado_y_border_radius", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_sistema_de_espaciado_4px_base", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L257", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_5_espaciado_y_border_radius", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_border_radius", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L272", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_06_ui_design_system", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_6_elevaci\u00f3n_y_sombras", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L288", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_6_elevaci\u00f3n_y_sombras", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_sistema_de_sombras", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L290", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_6_elevaci\u00f3n_y_sombras", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_reglas", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L302", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_06_ui_design_system", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_7_glassmorphism", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L311", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_7_glassmorphism", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_css", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L315", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_7_glassmorphism", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_reglas_326", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L326", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_06_ui_design_system", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_8_animaciones", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L334", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_8_animaciones", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_library_motion_ex_framer_motion", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L336", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_8_animaciones", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_tokens_de_timing", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L340", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_8_animaciones", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_patrones_de_animaci\u00f3n", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L349", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_patrones_de_animaci\u00f3n", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_bottom_sheet_auth_carrito_payment_selection", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L351", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_patrones_de_animaci\u00f3n", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_modal_product_modal_confirm_delivery", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L363", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_patrones_de_animaci\u00f3n", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_tab_content_swap", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L374", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_patrones_de_animaci\u00f3n", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_stagger_en_listas", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L387", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_patrones_de_animaci\u00f3n", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_pulse_en_urgente", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L401", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_8_animaciones", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_respect_prefers_reduced_motion", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L416", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_06_ui_design_system", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_9_primitives_shadcn_based", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L425", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_9_primitives_shadcn_based", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_lista_de_primitives", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L429", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_9_primitives_shadcn_based", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_reglas_para_nuevos_primitives", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L458", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_06_ui_design_system", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_10_patterns_tindivo", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L466", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_10_patterns_tindivo", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_lista_de_patterns", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L470", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_10_patterns_tindivo", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_ejemplo_de_pattern_ordercard", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L498", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_10_patterns_tindivo", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_anti_patterns", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L550", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_06_ui_design_system", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_11_layouts_mobile_first", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L558", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_11_layouts_mobile_first", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_breakpoints", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L560", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_11_layouts_mobile_first", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_container", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L573", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_11_layouts_mobile_first", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_safe_areas", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L585", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_11_layouts_mobile_first", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_pattern_de_p\u00e1gina_standard", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L598", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_06_ui_design_system", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_12_estados_de_ui", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L612", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_12_estados_de_ui", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_loading", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L614", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_12_estados_de_ui", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_empty", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L620", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_12_estados_de_ui", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_error", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L631", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_12_estados_de_ui", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_success", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L637", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_12_estados_de_ui", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_disabled", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L642", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_12_estados_de_ui", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_hover", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L647", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_12_estados_de_ui", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_focus", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L653", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_06_ui_design_system", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_13_accesibilidad_visual", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L660", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_06_ui_design_system", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_14_implementaci\u00f3n_en_tailwind_v4", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L672", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_14_implementaci\u00f3n_en_tailwind_v4", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_configuraci\u00f3n_base", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L674", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_14_implementaci\u00f3n_en_tailwind_v4", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_uso_en_componentes", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L731", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_14_implementaci\u00f3n_en_tailwind_v4", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_preset_compartido", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/06-ui-design-system.md", "source_location": "L747", "weight": 1.0}], "input_tokens": 0, "output_tokens": 0}
+{
+  "nodes": [
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_md",
+      "label": "06-ui-design-system.md",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_06_ui_design_system",
+      "label": "06 \u00b7 UI design system",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_tabla_de_contenidos",
+      "label": "Tabla de contenidos",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L7"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_1_filosof\u00eda_de_dise\u00f1o",
+      "label": "1. Filosof\u00eda de dise\u00f1o",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L26"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_principios",
+      "label": "Principios",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L28"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_anti_patrones_a_evitar",
+      "label": "Anti-patrones a evitar",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L41"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_2_paleta_de_color",
+      "label": "2. Paleta de color",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L52"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_colores_fundacionales",
+      "label": "Colores fundacionales",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L54"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_colores_sem\u00e1nticos",
+      "label": "Colores sem\u00e1nticos",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L68"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_colores_de_acento_de_negocios_papelito",
+      "label": "Colores de acento de negocios (papelito)",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L77"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_contraste",
+      "label": "Contraste",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L102"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_3_tipograf\u00eda",
+      "label": "3. Tipograf\u00eda",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L110"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_familia_\u00fanica",
+      "label": "Familia \u00fanica",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L112"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_cargar_fuentes_next_js",
+      "label": "Cargar fuentes (Next.js)",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L122"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_escala_tipogr\u00e1fica",
+      "label": "Escala tipogr\u00e1fica",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L152"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_reglas_de_uso",
+      "label": "Reglas de uso",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L174"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_4_iconograf\u00eda",
+      "label": "4. Iconograf\u00eda",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L184"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_material_symbols",
+      "label": "Material Symbols",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L186"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_cargar_la_fuente",
+      "label": "Cargar la fuente",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L190"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_componente_helper",
+      "label": "Componente helper",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L196"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_iconos_clave_por_dominio",
+      "label": "Iconos clave por dominio",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L222"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_no_usar_emojis_como_iconos_ui",
+      "label": "NO usar emojis como iconos UI",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L243"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_5_espaciado_y_border_radius",
+      "label": "5. Espaciado y border-radius",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L255"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_sistema_de_espaciado_4px_base",
+      "label": "Sistema de espaciado (4px base)",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L257"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_border_radius",
+      "label": "Border-radius",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L272"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_6_elevaci\u00f3n_y_sombras",
+      "label": "6. Elevaci\u00f3n y sombras",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L288"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_sistema_de_sombras",
+      "label": "Sistema de sombras",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L290"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_reglas",
+      "label": "Reglas",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L302"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_7_glassmorphism",
+      "label": "7. Glassmorphism",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L311"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_css",
+      "label": "CSS",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L315"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_reglas_326",
+      "label": "Reglas",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L326"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_8_animaciones",
+      "label": "8. Animaciones",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L334"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_library_motion_ex_framer_motion",
+      "label": "Library: Motion (ex Framer Motion)",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L336"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_tokens_de_timing",
+      "label": "Tokens de timing",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L340"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_patrones_de_animaci\u00f3n",
+      "label": "Patrones de animaci\u00f3n",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L349"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_bottom_sheet_auth_carrito_payment_selection",
+      "label": "Bottom sheet (auth, carrito, payment selection)",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L351"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_modal_product_modal_confirm_delivery",
+      "label": "Modal (product modal, confirm delivery)",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L363"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_tab_content_swap",
+      "label": "Tab content swap",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L374"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_stagger_en_listas",
+      "label": "Stagger en listas",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L387"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_pulse_en_urgente",
+      "label": "Pulse en URGENTE",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L401"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_respect_prefers_reduced_motion",
+      "label": "Respect `prefers-reduced-motion`",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L416"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_9_primitives_shadcn_based",
+      "label": "9. Primitives (shadcn-based)",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L425"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_lista_de_primitives",
+      "label": "Lista de primitives",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L429"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_reglas_para_nuevos_primitives",
+      "label": "Reglas para nuevos primitives",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L458"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_10_patterns_tindivo",
+      "label": "10. Patterns Tindivo",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L466"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_lista_de_patterns",
+      "label": "Lista de patterns",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L470"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_ejemplo_de_pattern_ordercard",
+      "label": "Ejemplo de pattern: `OrderCard`",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L498"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_anti_patterns",
+      "label": "Anti-patterns",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L550"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_11_layouts_mobile_first",
+      "label": "11. Layouts mobile-first",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L558"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_breakpoints",
+      "label": "Breakpoints",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L560"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_container",
+      "label": "Container",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L573"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_safe_areas",
+      "label": "Safe areas",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L585"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_pattern_de_p\u00e1gina_standard",
+      "label": "Pattern de p\u00e1gina standard",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L598"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_12_estados_de_ui",
+      "label": "12. Estados de UI",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L612"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_loading",
+      "label": "Loading",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L614"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_empty",
+      "label": "Empty",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L620"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_error",
+      "label": "Error",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L631"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_success",
+      "label": "Success",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L637"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_disabled",
+      "label": "Disabled",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L642"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_hover",
+      "label": "Hover",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L647"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_focus",
+      "label": "Focus",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L653"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_13_accesibilidad_visual",
+      "label": "13. Accesibilidad visual",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L660"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_14_implementaci\u00f3n_en_tailwind_v4",
+      "label": "14. Implementaci\u00f3n en Tailwind v4",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L672"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_configuraci\u00f3n_base",
+      "label": "Configuraci\u00f3n base",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L674"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_uso_en_componentes",
+      "label": "Uso en componentes",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L731"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_preset_compartido",
+      "label": "Preset compartido",
+      "file_type": "document",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L747"
+    }
+  ],
+  "edges": [
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_md",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_06_ui_design_system",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_06_ui_design_system",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_tabla_de_contenidos",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_06_ui_design_system",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_1_filosof\u00eda_de_dise\u00f1o",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L26",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_1_filosof\u00eda_de_dise\u00f1o",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_principios",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L28",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_1_filosof\u00eda_de_dise\u00f1o",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_anti_patrones_a_evitar",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L41",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_06_ui_design_system",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_2_paleta_de_color",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L52",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_2_paleta_de_color",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_colores_fundacionales",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L54",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_2_paleta_de_color",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_colores_sem\u00e1nticos",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L68",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_2_paleta_de_color",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_colores_de_acento_de_negocios_papelito",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L77",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_2_paleta_de_color",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_contraste",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L102",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_06_ui_design_system",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_3_tipograf\u00eda",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L110",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_3_tipograf\u00eda",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_familia_\u00fanica",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L112",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_3_tipograf\u00eda",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_cargar_fuentes_next_js",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L122",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_3_tipograf\u00eda",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_escala_tipogr\u00e1fica",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L152",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_3_tipograf\u00eda",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_reglas_de_uso",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L174",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_06_ui_design_system",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_4_iconograf\u00eda",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L184",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_4_iconograf\u00eda",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_material_symbols",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L186",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_4_iconograf\u00eda",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_cargar_la_fuente",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L190",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_4_iconograf\u00eda",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_componente_helper",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L196",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_4_iconograf\u00eda",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_iconos_clave_por_dominio",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L222",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_4_iconograf\u00eda",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_no_usar_emojis_como_iconos_ui",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L243",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_06_ui_design_system",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_5_espaciado_y_border_radius",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L255",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_5_espaciado_y_border_radius",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_sistema_de_espaciado_4px_base",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L257",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_5_espaciado_y_border_radius",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_border_radius",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L272",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_06_ui_design_system",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_6_elevaci\u00f3n_y_sombras",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L288",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_6_elevaci\u00f3n_y_sombras",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_sistema_de_sombras",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L290",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_6_elevaci\u00f3n_y_sombras",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_reglas",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L302",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_06_ui_design_system",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_7_glassmorphism",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L311",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_7_glassmorphism",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_css",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L315",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_7_glassmorphism",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_reglas_326",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L326",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_06_ui_design_system",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_8_animaciones",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L334",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_8_animaciones",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_library_motion_ex_framer_motion",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L336",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_8_animaciones",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_tokens_de_timing",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L340",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_8_animaciones",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_patrones_de_animaci\u00f3n",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L349",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_patrones_de_animaci\u00f3n",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_bottom_sheet_auth_carrito_payment_selection",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L351",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_patrones_de_animaci\u00f3n",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_modal_product_modal_confirm_delivery",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L363",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_patrones_de_animaci\u00f3n",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_tab_content_swap",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L374",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_patrones_de_animaci\u00f3n",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_stagger_en_listas",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L387",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_patrones_de_animaci\u00f3n",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_pulse_en_urgente",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L401",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_8_animaciones",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_respect_prefers_reduced_motion",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L416",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_06_ui_design_system",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_9_primitives_shadcn_based",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L425",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_9_primitives_shadcn_based",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_lista_de_primitives",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L429",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_9_primitives_shadcn_based",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_reglas_para_nuevos_primitives",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L458",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_06_ui_design_system",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_10_patterns_tindivo",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L466",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_10_patterns_tindivo",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_lista_de_patterns",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L470",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_10_patterns_tindivo",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_ejemplo_de_pattern_ordercard",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L498",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_10_patterns_tindivo",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_anti_patterns",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L550",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_06_ui_design_system",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_11_layouts_mobile_first",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L558",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_11_layouts_mobile_first",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_breakpoints",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L560",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_11_layouts_mobile_first",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_container",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L573",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_11_layouts_mobile_first",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_safe_areas",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L585",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_11_layouts_mobile_first",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_pattern_de_p\u00e1gina_standard",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L598",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_06_ui_design_system",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_12_estados_de_ui",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L612",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_12_estados_de_ui",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_loading",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L614",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_12_estados_de_ui",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_empty",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L620",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_12_estados_de_ui",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_error",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L631",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_12_estados_de_ui",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_success",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L637",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_12_estados_de_ui",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_disabled",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L642",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_12_estados_de_ui",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_hover",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L647",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_12_estados_de_ui",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_focus",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L653",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_06_ui_design_system",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_13_accesibilidad_visual",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L660",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_06_ui_design_system",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_14_implementaci\u00f3n_en_tailwind_v4",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L672",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_14_implementaci\u00f3n_en_tailwind_v4",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_configuraci\u00f3n_base",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L674",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_14_implementaci\u00f3n_en_tailwind_v4",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_uso_en_componentes",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L731",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_14_implementaci\u00f3n_en_tailwind_v4",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_06_ui_design_system_preset_compartido",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "L747",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

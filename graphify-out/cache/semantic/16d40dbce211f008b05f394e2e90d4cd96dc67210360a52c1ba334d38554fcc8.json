@@ -1,1 +1,38 @@
-{"nodes": [{"id": "antifraude_paso2_design", "label": "Antifraude Paso 2 Design", "file_type": "document", "source_file": "ANTIFRAUDE_PASO2_DESIGN.md", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}], "edges": [{"source": "antifraude_paso2_design", "target": "decisions_pt1", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "ANTIFRAUDE_PASO2_DESIGN.md", "source_location": null, "weight": 1.0}, {"source": "antifraude_paso2_design", "target": "implementacion_antifraude_log", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "ANTIFRAUDE_PASO2_DESIGN.md", "source_location": null, "weight": 1.0}], "hyperedges": []}
+{
+  "nodes": [
+    {
+      "id": "antifraude_paso2_design",
+      "label": "Antifraude Paso 2 Design",
+      "file_type": "document",
+      "source_file": "ANTIFRAUDE_PASO2_DESIGN.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    }
+  ],
+  "edges": [
+    {
+      "source": "antifraude_paso2_design",
+      "target": "decisions_pt1",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "ANTIFRAUDE_PASO2_DESIGN.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "antifraude_paso2_design",
+      "target": "implementacion_antifraude_log",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "ANTIFRAUDE_PASO2_DESIGN.md",
+      "source_location": null,
+      "weight": 1.0
+    }
+  ],
+  "hyperedges": []
+}

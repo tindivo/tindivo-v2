@@ -1,1 +1,159 @@
-{"nodes": [{"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_md", "label": "IMPLEMENTACION_ANTIFRAUDE_LOG.md", "file_type": "document", "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md", "source_location": "L1"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_implementaci\u00f3n_antifraude_log_de_cierre_paso_5", "label": "IMPLEMENTACI\u00d3N ANTIFRAUDE \u2014 Log de cierre (Paso 5)", "file_type": "document", "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md", "source_location": "L1"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_1_resumen_de_cambios", "label": "1. Resumen de cambios", "file_type": "document", "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md", "source_location": "L12"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_2_migraciones_aplicadas_supabase_web_v2_psjigdoinfpgrnedxeyf", "label": "2. Migraciones aplicadas (Supabase \"Web v2\" `psjigdoinfpgrnedxeyf`)", "file_type": "document", "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md", "source_location": "L29"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_3_endpoints_creados_apps_api_app_api_v1", "label": "3. Endpoints creados (`apps/api/app/api/v1/`)", "file_type": "document", "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md", "source_location": "L48"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_4_frontend_paso_2_3_las_4_apps", "label": "4. Frontend (Paso 2.3) \u2014 las 4 apps", "file_type": "document", "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md", "source_location": "L61"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_5_tests_verificaci\u00f3n", "label": "5. Tests / verificaci\u00f3n", "file_type": "document", "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md", "source_location": "L71"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_6_desviaciones_respecto_al_prompt_justificadas", "label": "6. Desviaciones respecto al PROMPT (justificadas)", "file_type": "document", "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md", "source_location": "L95"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_7_issues_abiertos_pendientes", "label": "7. Issues abiertos / pendientes", "file_type": "document", "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md", "source_location": "L108"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_8_recomendaciones_para_mauricio", "label": "8. Recomendaciones para Mauricio", "file_type": "document", "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md", "source_location": "L124"}], "edges": [{"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_md", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_implementaci\u00f3n_antifraude_log_de_cierre_paso_5", "relation": "contains", "confidence": "EXTRACTED", "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md", "source_location": "L1", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_implementaci\u00f3n_antifraude_log_de_cierre_paso_5", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_1_resumen_de_cambios", "relation": "contains", "confidence": "EXTRACTED", "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md", "source_location": "L12", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_implementaci\u00f3n_antifraude_log_de_cierre_paso_5", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_2_migraciones_aplicadas_supabase_web_v2_psjigdoinfpgrnedxeyf", "relation": "contains", "confidence": "EXTRACTED", "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md", "source_location": "L29", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_implementaci\u00f3n_antifraude_log_de_cierre_paso_5", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_3_endpoints_creados_apps_api_app_api_v1", "relation": "contains", "confidence": "EXTRACTED", "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md", "source_location": "L48", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_implementaci\u00f3n_antifraude_log_de_cierre_paso_5", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_4_frontend_paso_2_3_las_4_apps", "relation": "contains", "confidence": "EXTRACTED", "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md", "source_location": "L61", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_implementaci\u00f3n_antifraude_log_de_cierre_paso_5", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_5_tests_verificaci\u00f3n", "relation": "contains", "confidence": "EXTRACTED", "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md", "source_location": "L71", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_implementaci\u00f3n_antifraude_log_de_cierre_paso_5", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_6_desviaciones_respecto_al_prompt_justificadas", "relation": "contains", "confidence": "EXTRACTED", "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md", "source_location": "L95", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_implementaci\u00f3n_antifraude_log_de_cierre_paso_5", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_7_issues_abiertos_pendientes", "relation": "contains", "confidence": "EXTRACTED", "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md", "source_location": "L108", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_implementaci\u00f3n_antifraude_log_de_cierre_paso_5", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_8_recomendaciones_para_mauricio", "relation": "contains", "confidence": "EXTRACTED", "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md", "source_location": "L124", "weight": 1.0}], "input_tokens": 0, "output_tokens": 0}
+{
+  "nodes": [
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_md",
+      "label": "IMPLEMENTACION_ANTIFRAUDE_LOG.md",
+      "file_type": "document",
+      "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_implementaci\u00f3n_antifraude_log_de_cierre_paso_5",
+      "label": "IMPLEMENTACI\u00d3N ANTIFRAUDE \u2014 Log de cierre (Paso 5)",
+      "file_type": "document",
+      "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_1_resumen_de_cambios",
+      "label": "1. Resumen de cambios",
+      "file_type": "document",
+      "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md",
+      "source_location": "L12"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_2_migraciones_aplicadas_supabase_web_v2_psjigdoinfpgrnedxeyf",
+      "label": "2. Migraciones aplicadas (Supabase \"Web v2\" `psjigdoinfpgrnedxeyf`)",
+      "file_type": "document",
+      "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md",
+      "source_location": "L29"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_3_endpoints_creados_apps_api_app_api_v1",
+      "label": "3. Endpoints creados (`apps/api/app/api/v1/`)",
+      "file_type": "document",
+      "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md",
+      "source_location": "L48"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_4_frontend_paso_2_3_las_4_apps",
+      "label": "4. Frontend (Paso 2.3) \u2014 las 4 apps",
+      "file_type": "document",
+      "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md",
+      "source_location": "L61"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_5_tests_verificaci\u00f3n",
+      "label": "5. Tests / verificaci\u00f3n",
+      "file_type": "document",
+      "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md",
+      "source_location": "L71"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_6_desviaciones_respecto_al_prompt_justificadas",
+      "label": "6. Desviaciones respecto al PROMPT (justificadas)",
+      "file_type": "document",
+      "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md",
+      "source_location": "L95"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_7_issues_abiertos_pendientes",
+      "label": "7. Issues abiertos / pendientes",
+      "file_type": "document",
+      "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md",
+      "source_location": "L108"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_8_recomendaciones_para_mauricio",
+      "label": "8. Recomendaciones para Mauricio",
+      "file_type": "document",
+      "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md",
+      "source_location": "L124"
+    }
+  ],
+  "edges": [
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_md",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_implementaci\u00f3n_antifraude_log_de_cierre_paso_5",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_implementaci\u00f3n_antifraude_log_de_cierre_paso_5",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_1_resumen_de_cambios",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md",
+      "source_location": "L12",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_implementaci\u00f3n_antifraude_log_de_cierre_paso_5",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_2_migraciones_aplicadas_supabase_web_v2_psjigdoinfpgrnedxeyf",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md",
+      "source_location": "L29",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_implementaci\u00f3n_antifraude_log_de_cierre_paso_5",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_3_endpoints_creados_apps_api_app_api_v1",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md",
+      "source_location": "L48",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_implementaci\u00f3n_antifraude_log_de_cierre_paso_5",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_4_frontend_paso_2_3_las_4_apps",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md",
+      "source_location": "L61",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_implementaci\u00f3n_antifraude_log_de_cierre_paso_5",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_5_tests_verificaci\u00f3n",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md",
+      "source_location": "L71",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_implementaci\u00f3n_antifraude_log_de_cierre_paso_5",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_6_desviaciones_respecto_al_prompt_justificadas",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md",
+      "source_location": "L95",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_implementaci\u00f3n_antifraude_log_de_cierre_paso_5",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_7_issues_abiertos_pendientes",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md",
+      "source_location": "L108",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_implementaci\u00f3n_antifraude_log_de_cierre_paso_5",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_implementacion_antifraude_log_8_recomendaciones_para_mauricio",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md",
+      "source_location": "L124",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

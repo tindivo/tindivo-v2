@@ -1,1 +1,238 @@
-{"nodes": [{"id": "admin_dashboard", "label": "Dashboard admin (KPI + monitor)", "file_type": "concept", "source_file": "Docs/08-flujo-admin.md", "source_location": "\u00a74", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "admin_metricas", "label": "Secci\u00f3n M\u00e9tricas (6 sub-tabs)", "file_type": "concept", "source_file": "Docs/08-flujo-admin.md", "source_location": "\u00a75", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "admin_pedidos", "label": "Secci\u00f3n Pedidos (filtros/detalle)", "file_type": "concept", "source_file": "Docs/08-flujo-admin.md", "source_location": "\u00a76", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "admin_tracking", "label": "Secci\u00f3n Env\u00edo de tracking", "file_type": "concept", "source_file": "Docs/08-flujo-admin.md", "source_location": "\u00a77", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "admin_negocios", "label": "Secci\u00f3n Negocios (CRUD + bloqueo)", "file_type": "concept", "source_file": "Docs/08-flujo-admin.md", "source_location": "\u00a78", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "admin_catalogos", "label": "Secci\u00f3n Cat\u00e1logos p\u00fablicos", "file_type": "concept", "source_file": "Docs/08-flujo-admin.md", "source_location": "\u00a79", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "admin_motorizados", "label": "Secci\u00f3n Motorizados (CRUD + autorizaciones)", "file_type": "concept", "source_file": "Docs/08-flujo-admin.md", "source_location": "\u00a710", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "admin_cobros", "label": "Secci\u00f3n Cobros (liquidaciones semanales)", "file_type": "concept", "source_file": "Docs/08-flujo-admin.md", "source_location": "\u00a711", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "admin_disputas", "label": "Secci\u00f3n Disputas de efectivo", "file_type": "concept", "source_file": "Docs/08-flujo-admin.md", "source_location": "\u00a712", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "admin_auditoria", "label": "Secci\u00f3n Auditor\u00eda (eventos)", "file_type": "concept", "source_file": "Docs/08-flujo-admin.md", "source_location": "\u00a713", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "admin_config", "label": "Secci\u00f3n Configuraci\u00f3n (horario, reglas, comisiones)", "file_type": "concept", "source_file": "Docs/08-flujo-admin.md", "source_location": "\u00a714", "source_url": null, "captured_at": null, "author": null, "contributor": null}], "edges": [{"source": "apps_admin", "target": "admin_dashboard", "relation": "implements", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/08-flujo-admin.md", "source_location": "\u00a74", "weight": 1.0}, {"source": "apps_admin", "target": "admin_metricas", "relation": "implements", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/08-flujo-admin.md", "source_location": "\u00a75", "weight": 1.0}, {"source": "apps_admin", "target": "admin_pedidos", "relation": "implements", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/08-flujo-admin.md", "source_location": "\u00a76", "weight": 1.0}, {"source": "apps_admin", "target": "admin_tracking", "relation": "implements", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/08-flujo-admin.md", "source_location": "\u00a77", "weight": 1.0}, {"source": "apps_admin", "target": "admin_negocios", "relation": "implements", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/08-flujo-admin.md", "source_location": "\u00a78", "weight": 1.0}, {"source": "apps_admin", "target": "admin_catalogos", "relation": "implements", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/08-flujo-admin.md", "source_location": "\u00a79", "weight": 1.0}, {"source": "apps_admin", "target": "admin_motorizados", "relation": "implements", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/08-flujo-admin.md", "source_location": "\u00a710", "weight": 1.0}, {"source": "apps_admin", "target": "admin_cobros", "relation": "implements", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/08-flujo-admin.md", "source_location": "\u00a711", "weight": 1.0}, {"source": "apps_admin", "target": "admin_disputas", "relation": "implements", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/08-flujo-admin.md", "source_location": "\u00a712", "weight": 1.0}, {"source": "apps_admin", "target": "admin_auditoria", "relation": "implements", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/08-flujo-admin.md", "source_location": "\u00a713", "weight": 1.0}, {"source": "apps_admin", "target": "admin_config", "relation": "implements", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/08-flujo-admin.md", "source_location": "\u00a714", "weight": 1.0}], "hyperedges": []}
+{
+  "nodes": [
+    {
+      "id": "admin_dashboard",
+      "label": "Dashboard admin (KPI + monitor)",
+      "file_type": "concept",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "\u00a74",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "admin_metricas",
+      "label": "Secci\u00f3n M\u00e9tricas (6 sub-tabs)",
+      "file_type": "concept",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "\u00a75",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "admin_pedidos",
+      "label": "Secci\u00f3n Pedidos (filtros/detalle)",
+      "file_type": "concept",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "\u00a76",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "admin_tracking",
+      "label": "Secci\u00f3n Env\u00edo de tracking",
+      "file_type": "concept",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "\u00a77",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "admin_negocios",
+      "label": "Secci\u00f3n Negocios (CRUD + bloqueo)",
+      "file_type": "concept",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "\u00a78",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "admin_catalogos",
+      "label": "Secci\u00f3n Cat\u00e1logos p\u00fablicos",
+      "file_type": "concept",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "\u00a79",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "admin_motorizados",
+      "label": "Secci\u00f3n Motorizados (CRUD + autorizaciones)",
+      "file_type": "concept",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "\u00a710",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "admin_cobros",
+      "label": "Secci\u00f3n Cobros (liquidaciones semanales)",
+      "file_type": "concept",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "\u00a711",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "admin_disputas",
+      "label": "Secci\u00f3n Disputas de efectivo",
+      "file_type": "concept",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "\u00a712",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "admin_auditoria",
+      "label": "Secci\u00f3n Auditor\u00eda (eventos)",
+      "file_type": "concept",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "\u00a713",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "admin_config",
+      "label": "Secci\u00f3n Configuraci\u00f3n (horario, reglas, comisiones)",
+      "file_type": "concept",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "\u00a714",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    }
+  ],
+  "edges": [
+    {
+      "source": "apps_admin",
+      "target": "admin_dashboard",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "\u00a74",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_admin",
+      "target": "admin_metricas",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "\u00a75",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_admin",
+      "target": "admin_pedidos",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "\u00a76",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_admin",
+      "target": "admin_tracking",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "\u00a77",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_admin",
+      "target": "admin_negocios",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "\u00a78",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_admin",
+      "target": "admin_catalogos",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "\u00a79",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_admin",
+      "target": "admin_motorizados",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "\u00a710",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_admin",
+      "target": "admin_cobros",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "\u00a711",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_admin",
+      "target": "admin_disputas",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "\u00a712",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_admin",
+      "target": "admin_auditoria",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "\u00a713",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_admin",
+      "target": "admin_config",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "\u00a714",
+      "weight": 1.0
+    }
+  ],
+  "hyperedges": []
+}

@@ -1,1 +1,679 @@
-{"nodes": [{"id": "next_js_16_app_router", "label": "Next.js 16 App Router", "file_type": "concept", "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a71", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "react_19", "label": "React 19", "file_type": "concept", "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a72", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "typescript_5_8", "label": "TypeScript 5.8 Strict", "file_type": "concept", "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a72", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "tailwind_css_v4", "label": "Tailwind CSS v4", "file_type": "concept", "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a72", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "material_symbols_rounded", "label": "Material Symbols Rounded", "file_type": "concept", "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a72", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "motion_ex_framer_v12", "label": "Motion (ex Framer) v12", "file_type": "concept", "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a72", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "supabase_postgresql_15", "label": "Supabase PostgreSQL 15", "file_type": "technology", "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a72", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "supabase_auth", "label": "Supabase Auth", "file_type": "technology", "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a72", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "supabase_realtime", "label": "Supabase Realtime", "file_type": "technology", "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a72", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "supabase_storage", "label": "Supabase Storage", "file_type": "technology", "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a72", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "inngest", "label": "Inngest (scheduling)", "file_type": "technology", "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a72", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "upstash_ratelimit", "label": "Upstash Ratelimit", "file_type": "technology", "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a72", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "biome", "label": "Biome (lint/format)", "file_type": "technology", "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a72", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "turborepo_pnpm", "label": "Turborepo + pnpm workspaces", "file_type": "technology", "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a72", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "vercel", "label": "Vercel (deploy)", "file_type": "technology", "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a72", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "domain_driven_design_light", "label": "DDD ligero", "file_type": "concept", "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a71", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "hexagonal_architecture", "label": "Arquitectura hexagonal", "file_type": "concept", "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a71", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "vertical_slicing", "label": "Vertical slicing", "file_type": "concept", "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a71", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "rest_single_api", "label": "REST \u00fanico en apps/api", "file_type": "concept", "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a71", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "row_level_security_rls", "label": "Row Level Security siempre activada", "file_type": "concept", "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a71", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "idempotencia_stripe_style", "label": "Idempotencia Stripe-style", "file_type": "concept", "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a71", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "outbox_pattern", "label": "Outbox pattern + Inngest", "file_type": "concept", "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a71", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "apps_api", "label": "apps/api (REST \u00fanico)", "file_type": "code", "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a73", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "apps_customer", "label": "apps/customer (PWA cliente)", "file_type": "code", "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a73", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "apps_admin", "label": "apps/admin (panel control)", "file_type": "code", "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a73", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "apps_negocios", "label": "apps/negocios (PWA negocio)", "file_type": "code", "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a73", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "apps_motorizados", "label": "apps/motorizados (PWA driver)", "file_type": "code", "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a73", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "packages_core", "label": "packages/core (dominio puro)", "file_type": "code", "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a73", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "packages_contracts", "label": "packages/contracts (Zod schemas)", "file_type": "code", "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a73", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "packages_api_client", "label": "packages/api-client (cliente REST)", "file_type": "code", "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a73", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "packages_supabase", "label": "packages/supabase (tipos + helpers)", "file_type": "code", "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a73", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "packages_ui", "label": "packages/ui (UI compartida)", "file_type": "code", "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a73", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "packages_inngest", "label": "packages/inngest (functions scheduling)", "file_type": "code", "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a73", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "packages_config", "label": "packages/config (configs compartidos)", "file_type": "code", "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a73", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "supabase_edge_functions", "label": "Edge Functions (send-push, prune-events)", "file_type": "code", "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a72", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "tanstack_query_v5", "label": "TanStack Query v5", "file_type": "technology", "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a72", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "zustand_v5", "label": "Zustand v5", "file_type": "technology", "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a72", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "react_hook_form", "label": "React Hook Form + Zod resolver", "file_type": "technology", "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a72", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "leaflet_react_leaflet", "label": "Leaflet + react-leaflet + OSM", "file_type": "technology", "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a72", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "web_push_api_vapid", "label": "Web Push API + VAPID", "file_type": "technology", "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a72", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "fetch_nativo", "label": "fetch nativo + packages/api-client", "file_type": "technology", "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a72", "source_url": null, "captured_at": null, "author": null, "contributor": null}], "edges": [{"source": "packages_core", "target": "domain_driven_design_light", "relation": "implements", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a71", "weight": 1.0}, {"source": "packages_core", "target": "hexagonal_architecture", "relation": "implements", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a71", "weight": 1.0}, {"source": "apps_customer", "target": "vertical_slicing", "relation": "implements", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a71", "weight": 1.0}, {"source": "apps_admin", "target": "vertical_slicing", "relation": "implements", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a71", "weight": 1.0}, {"source": "apps_negocios", "target": "vertical_slicing", "relation": "implements", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a71", "weight": 1.0}, {"source": "apps_motorizados", "target": "vertical_slicing", "relation": "implements", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a71", "weight": 1.0}, {"source": "apps_api", "target": "rest_single_api", "relation": "implements", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a71", "weight": 1.0}, {"source": "apps_customer", "target": "apps_api", "relation": "calls", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a78", "weight": 1.0}, {"source": "apps_admin", "target": "apps_api", "relation": "calls", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a78", "weight": 1.0}, {"source": "apps_negocios", "target": "apps_api", "relation": "calls", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a78", "weight": 1.0}, {"source": "apps_motorizados", "target": "apps_api", "relation": "calls", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a78", "weight": 1.0}, {"source": "apps_api", "target": "supabase_postgresql_15", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a72", "weight": 1.0}, {"source": "apps_customer", "target": "supabase_realtime", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a712", "weight": 1.0}, {"source": "apps_admin", "target": "supabase_realtime", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a712", "weight": 1.0}, {"source": "apps_negocios", "target": "supabase_realtime", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a712", "weight": 1.0}, {"source": "apps_motorizados", "target": "supabase_realtime", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a712", "weight": 1.0}, {"source": "apps_api", "target": "inngest", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a79", "weight": 1.0}, {"source": "packages_inngest", "target": "inngest", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a73", "weight": 1.0}, {"source": "packages_contracts", "target": "zod", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a75", "weight": 1.0}, {"source": "next_js_16_app_router", "target": "react_19", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a72", "weight": 1.0}], "hyperedges": [{"id": "apps_frontend_consumen_rest_unico", "label": "Las 4 apps frontend consumen la misma API REST", "nodes": ["apps_customer", "apps_admin", "apps_negocios", "apps_motorizados", "apps_api"], "relation": "participate_in", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a78"}, {"id": "sistema_notificaciones_outbox_push_inngest", "label": "Sistema de notificaciones con Outbox + Edge Functions + Inngest", "nodes": ["table_domain_events", "supabase_edge_functions", "inngest", "web_push_api_vapid"], "relation": "participate_in", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/03-arquitectura.md", "source_location": "\u00a79"}]}
+{
+  "nodes": [
+    {
+      "id": "next_js_16_app_router",
+      "label": "Next.js 16 App Router",
+      "file_type": "concept",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a71",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "react_19",
+      "label": "React 19",
+      "file_type": "concept",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a72",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "typescript_5_8",
+      "label": "TypeScript 5.8 Strict",
+      "file_type": "concept",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a72",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "tailwind_css_v4",
+      "label": "Tailwind CSS v4",
+      "file_type": "concept",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a72",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "material_symbols_rounded",
+      "label": "Material Symbols Rounded",
+      "file_type": "concept",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a72",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "motion_ex_framer_v12",
+      "label": "Motion (ex Framer) v12",
+      "file_type": "concept",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a72",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "supabase_postgresql_15",
+      "label": "Supabase PostgreSQL 15",
+      "file_type": "technology",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a72",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "supabase_auth",
+      "label": "Supabase Auth",
+      "file_type": "technology",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a72",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "supabase_realtime",
+      "label": "Supabase Realtime",
+      "file_type": "technology",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a72",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "supabase_storage",
+      "label": "Supabase Storage",
+      "file_type": "technology",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a72",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "inngest",
+      "label": "Inngest (scheduling)",
+      "file_type": "technology",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a72",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "upstash_ratelimit",
+      "label": "Upstash Ratelimit",
+      "file_type": "technology",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a72",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "biome",
+      "label": "Biome (lint/format)",
+      "file_type": "technology",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a72",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "turborepo_pnpm",
+      "label": "Turborepo + pnpm workspaces",
+      "file_type": "technology",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a72",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "vercel",
+      "label": "Vercel (deploy)",
+      "file_type": "technology",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a72",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "domain_driven_design_light",
+      "label": "DDD ligero",
+      "file_type": "concept",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a71",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "hexagonal_architecture",
+      "label": "Arquitectura hexagonal",
+      "file_type": "concept",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a71",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "vertical_slicing",
+      "label": "Vertical slicing",
+      "file_type": "concept",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a71",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "rest_single_api",
+      "label": "REST \u00fanico en apps/api",
+      "file_type": "concept",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a71",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "row_level_security_rls",
+      "label": "Row Level Security siempre activada",
+      "file_type": "concept",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a71",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "idempotencia_stripe_style",
+      "label": "Idempotencia Stripe-style",
+      "file_type": "concept",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a71",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "outbox_pattern",
+      "label": "Outbox pattern + Inngest",
+      "file_type": "concept",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a71",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "apps_api",
+      "label": "apps/api (REST \u00fanico)",
+      "file_type": "code",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a73",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "apps_customer",
+      "label": "apps/customer (PWA cliente)",
+      "file_type": "code",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a73",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "apps_admin",
+      "label": "apps/admin (panel control)",
+      "file_type": "code",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a73",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "apps_negocios",
+      "label": "apps/negocios (PWA negocio)",
+      "file_type": "code",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a73",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "apps_motorizados",
+      "label": "apps/motorizados (PWA driver)",
+      "file_type": "code",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a73",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "packages_core",
+      "label": "packages/core (dominio puro)",
+      "file_type": "code",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a73",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "packages_contracts",
+      "label": "packages/contracts (Zod schemas)",
+      "file_type": "code",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a73",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "packages_api_client",
+      "label": "packages/api-client (cliente REST)",
+      "file_type": "code",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a73",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "packages_supabase",
+      "label": "packages/supabase (tipos + helpers)",
+      "file_type": "code",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a73",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "packages_ui",
+      "label": "packages/ui (UI compartida)",
+      "file_type": "code",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a73",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "packages_inngest",
+      "label": "packages/inngest (functions scheduling)",
+      "file_type": "code",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a73",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "packages_config",
+      "label": "packages/config (configs compartidos)",
+      "file_type": "code",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a73",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "supabase_edge_functions",
+      "label": "Edge Functions (send-push, prune-events)",
+      "file_type": "code",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a72",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "tanstack_query_v5",
+      "label": "TanStack Query v5",
+      "file_type": "technology",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a72",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "zustand_v5",
+      "label": "Zustand v5",
+      "file_type": "technology",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a72",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "react_hook_form",
+      "label": "React Hook Form + Zod resolver",
+      "file_type": "technology",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a72",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "leaflet_react_leaflet",
+      "label": "Leaflet + react-leaflet + OSM",
+      "file_type": "technology",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a72",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "web_push_api_vapid",
+      "label": "Web Push API + VAPID",
+      "file_type": "technology",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a72",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "fetch_nativo",
+      "label": "fetch nativo + packages/api-client",
+      "file_type": "technology",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a72",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    }
+  ],
+  "edges": [
+    {
+      "source": "packages_core",
+      "target": "domain_driven_design_light",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a71",
+      "weight": 1.0
+    },
+    {
+      "source": "packages_core",
+      "target": "hexagonal_architecture",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a71",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_customer",
+      "target": "vertical_slicing",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a71",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_admin",
+      "target": "vertical_slicing",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a71",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_negocios",
+      "target": "vertical_slicing",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a71",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_motorizados",
+      "target": "vertical_slicing",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a71",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_api",
+      "target": "rest_single_api",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a71",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_customer",
+      "target": "apps_api",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a78",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_admin",
+      "target": "apps_api",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a78",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_negocios",
+      "target": "apps_api",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a78",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_motorizados",
+      "target": "apps_api",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a78",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_api",
+      "target": "supabase_postgresql_15",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a72",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_customer",
+      "target": "supabase_realtime",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a712",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_admin",
+      "target": "supabase_realtime",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a712",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_negocios",
+      "target": "supabase_realtime",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a712",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_motorizados",
+      "target": "supabase_realtime",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a712",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_api",
+      "target": "inngest",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a79",
+      "weight": 1.0
+    },
+    {
+      "source": "packages_inngest",
+      "target": "inngest",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a73",
+      "weight": 1.0
+    },
+    {
+      "source": "packages_contracts",
+      "target": "zod",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a75",
+      "weight": 1.0
+    },
+    {
+      "source": "next_js_16_app_router",
+      "target": "react_19",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a72",
+      "weight": 1.0
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "apps_frontend_consumen_rest_unico",
+      "label": "Las 4 apps frontend consumen la misma API REST",
+      "nodes": ["apps_customer", "apps_admin", "apps_negocios", "apps_motorizados", "apps_api"],
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a78"
+    },
+    {
+      "id": "sistema_notificaciones_outbox_push_inngest",
+      "label": "Sistema de notificaciones con Outbox + Edge Functions + Inngest",
+      "nodes": ["table_domain_events", "supabase_edge_functions", "inngest", "web_push_api_vapid"],
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "\u00a79"
+    }
+  ]
+}

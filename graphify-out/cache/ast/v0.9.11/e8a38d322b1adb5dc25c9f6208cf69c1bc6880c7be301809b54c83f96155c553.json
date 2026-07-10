@@ -1,1 +1,129 @@
-{"nodes": [{"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_readme_md", "label": "README.md", "file_type": "document", "source_file": "README.md", "source_location": "L1"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_readme_tindivo_2_0", "label": "Tindivo 2.0", "file_type": "document", "source_file": "README.md", "source_location": "L1"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_readme_stack", "label": "Stack", "file_type": "document", "source_file": "README.md", "source_location": "L11"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_readme_estructura", "label": "Estructura", "file_type": "document", "source_file": "README.md", "source_location": "L17"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_readme_c\u00f3mo_empezar", "label": "C\u00f3mo empezar", "file_type": "document", "source_file": "README.md", "source_location": "L39"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_readme_scripts", "label": "Scripts", "file_type": "document", "source_file": "README.md", "source_location": "L52"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_readme_estado_del_build", "label": "Estado del build", "file_type": "document", "source_file": "README.md", "source_location": "L63"}], "edges": [{"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_readme_md", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_readme_tindivo_2_0", "relation": "contains", "confidence": "EXTRACTED", "source_file": "README.md", "source_location": "L1", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_readme_md", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_md", "relation": "references", "confidence": "EXTRACTED", "source_file": "README.md", "source_location": "L8", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_readme_md", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_claude_md", "relation": "references", "confidence": "EXTRACTED", "source_file": "README.md", "source_location": "L9", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_readme_tindivo_2_0", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_readme_stack", "relation": "contains", "confidence": "EXTRACTED", "source_file": "README.md", "source_location": "L11", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_readme_tindivo_2_0", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_readme_estructura", "relation": "contains", "confidence": "EXTRACTED", "source_file": "README.md", "source_location": "L17", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_readme_tindivo_2_0", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_readme_c\u00f3mo_empezar", "relation": "contains", "confidence": "EXTRACTED", "source_file": "README.md", "source_location": "L39", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_readme_tindivo_2_0", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_readme_scripts", "relation": "contains", "confidence": "EXTRACTED", "source_file": "README.md", "source_location": "L52", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_readme_tindivo_2_0", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_readme_estado_del_build", "relation": "contains", "confidence": "EXTRACTED", "source_file": "README.md", "source_location": "L63", "weight": 1.0}], "input_tokens": 0, "output_tokens": 0}
+{
+  "nodes": [
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_readme_md",
+      "label": "README.md",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_readme_tindivo_2_0",
+      "label": "Tindivo 2.0",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_readme_stack",
+      "label": "Stack",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L11"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_readme_estructura",
+      "label": "Estructura",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L17"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_readme_c\u00f3mo_empezar",
+      "label": "C\u00f3mo empezar",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L39"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_readme_scripts",
+      "label": "Scripts",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L52"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_readme_estado_del_build",
+      "label": "Estado del build",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L63"
+    }
+  ],
+  "edges": [
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_readme_md",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_readme_tindivo_2_0",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_readme_md",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_md",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_readme_md",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_claude_md",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_readme_tindivo_2_0",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_readme_stack",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_readme_tindivo_2_0",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_readme_estructura",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L17",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_readme_tindivo_2_0",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_readme_c\u00f3mo_empezar",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L39",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_readme_tindivo_2_0",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_readme_scripts",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L52",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_readme_tindivo_2_0",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_readme_estado_del_build",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L63",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

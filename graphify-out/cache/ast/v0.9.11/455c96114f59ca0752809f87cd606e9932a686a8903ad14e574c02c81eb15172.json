@@ -1,1 +1,943 @@
-{"nodes": [{"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_md", "label": "04-base-de-datos.md", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L1"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_04_base_de_datos", "label": "04 \u00b7 Base de datos", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L1"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_tabla_de_contenidos", "label": "Tabla de contenidos", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L7"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_1_convenciones", "label": "1. Convenciones", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L28"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_2_enums", "label": "2. Enums", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L42"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_3_tablas_core", "label": "3. Tablas core", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L139"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_users_extensi\u00f3n_de_auth_users", "label": "users (extensi\u00f3n de auth.users)", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L141"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_user_roles_multi_rol", "label": "user_roles (multi-rol)", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L157"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_businesses", "label": "businesses", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L169"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_drivers", "label": "drivers", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L288"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_driver_availability", "label": "driver_availability", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L310"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_driver_restaurants_autorizaci\u00f3n_por_negocio", "label": "driver_restaurants (autorizaci\u00f3n por negocio)", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L323"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_customer_profiles", "label": "customer_profiles", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L337"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_customer_addresses", "label": "customer_addresses", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L356"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_4_tablas_de_orders_y_dominio_operativo", "label": "4. Tablas de orders y dominio operativo", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L379"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_orders", "label": "orders", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L381"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_order_status_history", "label": "order_status_history", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L478"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_order_assignment_rejections", "label": "order_assignment_rejections", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L493"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_order_transfer_requests", "label": "order_transfer_requests", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L509"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_5_tablas_de_cat\u00e1logo_men\u00fa", "label": "5. Tablas de cat\u00e1logo (men\u00fa)", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L532"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_menu_categories", "label": "menu_categories", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L534"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_menu_items", "label": "menu_items", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L550"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_menu_modifier_groups", "label": "menu_modifier_groups", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L573"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_menu_modifier_options", "label": "menu_modifier_options", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L590"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_menu_item_modifier_groups_m_n", "label": "menu_item_modifier_groups (M:N)", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L606"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_customer_order_items", "label": "customer_order_items", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L617"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_customer_order_item_modifiers", "label": "customer_order_item_modifiers", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L635"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_6_tablas_de_billing", "label": "6. Tablas de billing", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L651"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_settlements_liquidaciones_semanales", "label": "settlements (liquidaciones semanales)", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L653"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_cash_settlements_liquidaci\u00f3n_diaria_efectivo", "label": "cash_settlements (liquidaci\u00f3n diaria efectivo)", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L681"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_restaurant_payments_pagos_del_negocio_a_tindivo", "label": "restaurant_payments (pagos del negocio a Tindivo)", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L712"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_7_tablas_de_notificaciones_e_infraestructura", "label": "7. Tablas de notificaciones e infraestructura", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L731"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_push_subscriptions", "label": "push_subscriptions", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L733"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_push_delivery_log", "label": "push_delivery_log", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L754"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_domain_events_outbox", "label": "domain_events (outbox)", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L771"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_idempotency_keys", "label": "idempotency_keys", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L792"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_admin_alerts", "label": "admin_alerts", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L811"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_app_settings", "label": "app_settings", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L825"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_8_helper_functions", "label": "8. Helper functions", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L849"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_9_triggers_de_dominio", "label": "9. Triggers de dominio", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L944"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_mantener_updated_at", "label": "Mantener `updated_at`", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L946"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_mantener_assigned_at_en_orders", "label": "Mantener `assigned_at` en orders", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L969"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_actualizar_business_balance_due_en_delivered_y_payment", "label": "Actualizar `business.balance_due` en delivered y payment", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L989"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_dispatch_a_edge_function_send_push_y_o_inngest", "label": "Dispatch a Edge Function send-push y/o Inngest", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L1033"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_trigger_reactivo_de_asignaci\u00f3n_analog_al_v1", "label": "Trigger reactivo de asignaci\u00f3n (analog al v1)", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L1097"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_10_rls_policies_completas", "label": "10. RLS policies completas", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L1121"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_policies_por_tabla_subset_cr\u00edtico", "label": "Policies por tabla (subset cr\u00edtico)", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L1155"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_orders_1157", "label": "`orders`", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L1157"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_businesses_1187", "label": "`businesses`", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L1187"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_push_subscriptions_y_push_delivery_log_rls_activada_corrige_bug_v1", "label": "`push_subscriptions` y `push_delivery_log` (RLS activada \u2014 corrige bug v1)", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L1212"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_customer_profiles_y_customer_addresses", "label": "`customer_profiles` y `customer_addresses`", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L1226"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_domain_events_solo_admin_lee_inserts_por_service_role", "label": "`domain_events` (solo admin lee, INSERTs por service_role)", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L1234"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_menu_lectura_p\u00fablica_para_marketplace_escritura_para_owner", "label": "Menu (lectura p\u00fablica para marketplace, escritura para owner)", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L1241"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_11_\u00edndices", "label": "11. \u00cdndices", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L1258"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_12_publicaci\u00f3n_realtime", "label": "12. Publicaci\u00f3n realtime", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L1285"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_13_storage_buckets", "label": "13. Storage buckets", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L1301"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_14_pg_cron_schedule", "label": "14. pg_cron schedule", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L1327"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_15_retenci\u00f3n_de_datos", "label": "15. Retenci\u00f3n de datos", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L1373"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_16_seed_inicial", "label": "16. Seed inicial", "file_type": "document", "source_file": "Docs/04-base-de-datos.md", "source_location": "L1389"}], "edges": [{"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_md", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_04_base_de_datos", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L1", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_04_base_de_datos", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_tabla_de_contenidos", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L7", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_04_base_de_datos", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_1_convenciones", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L28", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_04_base_de_datos", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_2_enums", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L42", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_04_base_de_datos", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_3_tablas_core", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L139", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_3_tablas_core", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_users_extensi\u00f3n_de_auth_users", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L141", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_3_tablas_core", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_user_roles_multi_rol", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L157", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_3_tablas_core", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_businesses", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L169", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_3_tablas_core", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_drivers", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L288", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_3_tablas_core", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_driver_availability", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L310", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_3_tablas_core", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_driver_restaurants_autorizaci\u00f3n_por_negocio", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L323", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_3_tablas_core", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_customer_profiles", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L337", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_3_tablas_core", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_customer_addresses", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L356", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_04_base_de_datos", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_4_tablas_de_orders_y_dominio_operativo", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L379", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_4_tablas_de_orders_y_dominio_operativo", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_orders", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L381", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_4_tablas_de_orders_y_dominio_operativo", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_order_status_history", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L478", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_4_tablas_de_orders_y_dominio_operativo", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_order_assignment_rejections", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L493", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_4_tablas_de_orders_y_dominio_operativo", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_order_transfer_requests", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L509", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_04_base_de_datos", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_5_tablas_de_cat\u00e1logo_men\u00fa", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L532", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_5_tablas_de_cat\u00e1logo_men\u00fa", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_menu_categories", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L534", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_5_tablas_de_cat\u00e1logo_men\u00fa", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_menu_items", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L550", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_5_tablas_de_cat\u00e1logo_men\u00fa", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_menu_modifier_groups", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L573", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_5_tablas_de_cat\u00e1logo_men\u00fa", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_menu_modifier_options", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L590", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_5_tablas_de_cat\u00e1logo_men\u00fa", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_menu_item_modifier_groups_m_n", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L606", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_5_tablas_de_cat\u00e1logo_men\u00fa", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_customer_order_items", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L617", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_5_tablas_de_cat\u00e1logo_men\u00fa", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_customer_order_item_modifiers", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L635", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_04_base_de_datos", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_6_tablas_de_billing", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L651", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_6_tablas_de_billing", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_settlements_liquidaciones_semanales", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L653", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_6_tablas_de_billing", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_cash_settlements_liquidaci\u00f3n_diaria_efectivo", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L681", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_6_tablas_de_billing", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_restaurant_payments_pagos_del_negocio_a_tindivo", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L712", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_04_base_de_datos", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_7_tablas_de_notificaciones_e_infraestructura", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L731", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_7_tablas_de_notificaciones_e_infraestructura", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_push_subscriptions", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L733", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_7_tablas_de_notificaciones_e_infraestructura", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_push_delivery_log", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L754", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_7_tablas_de_notificaciones_e_infraestructura", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_domain_events_outbox", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L771", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_7_tablas_de_notificaciones_e_infraestructura", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_idempotency_keys", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L792", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_7_tablas_de_notificaciones_e_infraestructura", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_admin_alerts", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L811", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_7_tablas_de_notificaciones_e_infraestructura", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_app_settings", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L825", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_04_base_de_datos", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_8_helper_functions", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L849", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_04_base_de_datos", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_9_triggers_de_dominio", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L944", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_9_triggers_de_dominio", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_mantener_updated_at", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L946", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_9_triggers_de_dominio", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_mantener_assigned_at_en_orders", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L969", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_9_triggers_de_dominio", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_actualizar_business_balance_due_en_delivered_y_payment", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L989", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_9_triggers_de_dominio", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_dispatch_a_edge_function_send_push_y_o_inngest", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L1033", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_9_triggers_de_dominio", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_trigger_reactivo_de_asignaci\u00f3n_analog_al_v1", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L1097", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_04_base_de_datos", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_10_rls_policies_completas", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L1121", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_10_rls_policies_completas", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_policies_por_tabla_subset_cr\u00edtico", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L1155", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_policies_por_tabla_subset_cr\u00edtico", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_orders_1157", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L1157", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_policies_por_tabla_subset_cr\u00edtico", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_businesses_1187", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L1187", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_policies_por_tabla_subset_cr\u00edtico", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_push_subscriptions_y_push_delivery_log_rls_activada_corrige_bug_v1", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L1212", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_policies_por_tabla_subset_cr\u00edtico", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_customer_profiles_y_customer_addresses", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L1226", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_policies_por_tabla_subset_cr\u00edtico", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_domain_events_solo_admin_lee_inserts_por_service_role", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L1234", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_policies_por_tabla_subset_cr\u00edtico", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_menu_lectura_p\u00fablica_para_marketplace_escritura_para_owner", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L1241", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_04_base_de_datos", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_11_\u00edndices", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L1258", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_04_base_de_datos", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_12_publicaci\u00f3n_realtime", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L1285", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_04_base_de_datos", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_13_storage_buckets", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L1301", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_04_base_de_datos", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_14_pg_cron_schedule", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L1327", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_04_base_de_datos", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_15_retenci\u00f3n_de_datos", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L1373", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_04_base_de_datos", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_16_seed_inicial", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/04-base-de-datos.md", "source_location": "L1389", "weight": 1.0}], "input_tokens": 0, "output_tokens": 0}
+{
+  "nodes": [
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_md",
+      "label": "04-base-de-datos.md",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_04_base_de_datos",
+      "label": "04 \u00b7 Base de datos",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_tabla_de_contenidos",
+      "label": "Tabla de contenidos",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L7"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_1_convenciones",
+      "label": "1. Convenciones",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L28"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_2_enums",
+      "label": "2. Enums",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L42"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_3_tablas_core",
+      "label": "3. Tablas core",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L139"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_users_extensi\u00f3n_de_auth_users",
+      "label": "users (extensi\u00f3n de auth.users)",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L141"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_user_roles_multi_rol",
+      "label": "user_roles (multi-rol)",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L157"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_businesses",
+      "label": "businesses",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L169"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_drivers",
+      "label": "drivers",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L288"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_driver_availability",
+      "label": "driver_availability",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L310"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_driver_restaurants_autorizaci\u00f3n_por_negocio",
+      "label": "driver_restaurants (autorizaci\u00f3n por negocio)",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L323"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_customer_profiles",
+      "label": "customer_profiles",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L337"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_customer_addresses",
+      "label": "customer_addresses",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L356"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_4_tablas_de_orders_y_dominio_operativo",
+      "label": "4. Tablas de orders y dominio operativo",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L379"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_orders",
+      "label": "orders",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L381"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_order_status_history",
+      "label": "order_status_history",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L478"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_order_assignment_rejections",
+      "label": "order_assignment_rejections",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L493"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_order_transfer_requests",
+      "label": "order_transfer_requests",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L509"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_5_tablas_de_cat\u00e1logo_men\u00fa",
+      "label": "5. Tablas de cat\u00e1logo (men\u00fa)",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L532"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_menu_categories",
+      "label": "menu_categories",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L534"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_menu_items",
+      "label": "menu_items",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L550"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_menu_modifier_groups",
+      "label": "menu_modifier_groups",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L573"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_menu_modifier_options",
+      "label": "menu_modifier_options",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L590"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_menu_item_modifier_groups_m_n",
+      "label": "menu_item_modifier_groups (M:N)",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L606"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_customer_order_items",
+      "label": "customer_order_items",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L617"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_customer_order_item_modifiers",
+      "label": "customer_order_item_modifiers",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L635"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_6_tablas_de_billing",
+      "label": "6. Tablas de billing",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L651"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_settlements_liquidaciones_semanales",
+      "label": "settlements (liquidaciones semanales)",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L653"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_cash_settlements_liquidaci\u00f3n_diaria_efectivo",
+      "label": "cash_settlements (liquidaci\u00f3n diaria efectivo)",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L681"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_restaurant_payments_pagos_del_negocio_a_tindivo",
+      "label": "restaurant_payments (pagos del negocio a Tindivo)",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L712"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_7_tablas_de_notificaciones_e_infraestructura",
+      "label": "7. Tablas de notificaciones e infraestructura",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L731"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_push_subscriptions",
+      "label": "push_subscriptions",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L733"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_push_delivery_log",
+      "label": "push_delivery_log",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L754"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_domain_events_outbox",
+      "label": "domain_events (outbox)",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L771"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_idempotency_keys",
+      "label": "idempotency_keys",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L792"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_admin_alerts",
+      "label": "admin_alerts",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L811"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_app_settings",
+      "label": "app_settings",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L825"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_8_helper_functions",
+      "label": "8. Helper functions",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L849"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_9_triggers_de_dominio",
+      "label": "9. Triggers de dominio",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L944"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_mantener_updated_at",
+      "label": "Mantener `updated_at`",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L946"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_mantener_assigned_at_en_orders",
+      "label": "Mantener `assigned_at` en orders",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L969"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_actualizar_business_balance_due_en_delivered_y_payment",
+      "label": "Actualizar `business.balance_due` en delivered y payment",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L989"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_dispatch_a_edge_function_send_push_y_o_inngest",
+      "label": "Dispatch a Edge Function send-push y/o Inngest",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L1033"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_trigger_reactivo_de_asignaci\u00f3n_analog_al_v1",
+      "label": "Trigger reactivo de asignaci\u00f3n (analog al v1)",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L1097"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_10_rls_policies_completas",
+      "label": "10. RLS policies completas",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L1121"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_policies_por_tabla_subset_cr\u00edtico",
+      "label": "Policies por tabla (subset cr\u00edtico)",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L1155"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_orders_1157",
+      "label": "`orders`",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L1157"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_businesses_1187",
+      "label": "`businesses`",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L1187"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_push_subscriptions_y_push_delivery_log_rls_activada_corrige_bug_v1",
+      "label": "`push_subscriptions` y `push_delivery_log` (RLS activada \u2014 corrige bug v1)",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L1212"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_customer_profiles_y_customer_addresses",
+      "label": "`customer_profiles` y `customer_addresses`",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L1226"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_domain_events_solo_admin_lee_inserts_por_service_role",
+      "label": "`domain_events` (solo admin lee, INSERTs por service_role)",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L1234"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_menu_lectura_p\u00fablica_para_marketplace_escritura_para_owner",
+      "label": "Menu (lectura p\u00fablica para marketplace, escritura para owner)",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L1241"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_11_\u00edndices",
+      "label": "11. \u00cdndices",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L1258"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_12_publicaci\u00f3n_realtime",
+      "label": "12. Publicaci\u00f3n realtime",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L1285"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_13_storage_buckets",
+      "label": "13. Storage buckets",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L1301"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_14_pg_cron_schedule",
+      "label": "14. pg_cron schedule",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L1327"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_15_retenci\u00f3n_de_datos",
+      "label": "15. Retenci\u00f3n de datos",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L1373"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_16_seed_inicial",
+      "label": "16. Seed inicial",
+      "file_type": "document",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L1389"
+    }
+  ],
+  "edges": [
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_md",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_04_base_de_datos",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_04_base_de_datos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_tabla_de_contenidos",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_04_base_de_datos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_1_convenciones",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L28",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_04_base_de_datos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_2_enums",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L42",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_04_base_de_datos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_3_tablas_core",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L139",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_3_tablas_core",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_users_extensi\u00f3n_de_auth_users",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L141",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_3_tablas_core",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_user_roles_multi_rol",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L157",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_3_tablas_core",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_businesses",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L169",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_3_tablas_core",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_drivers",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L288",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_3_tablas_core",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_driver_availability",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L310",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_3_tablas_core",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_driver_restaurants_autorizaci\u00f3n_por_negocio",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L323",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_3_tablas_core",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_customer_profiles",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L337",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_3_tablas_core",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_customer_addresses",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L356",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_04_base_de_datos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_4_tablas_de_orders_y_dominio_operativo",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L379",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_4_tablas_de_orders_y_dominio_operativo",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_orders",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L381",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_4_tablas_de_orders_y_dominio_operativo",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_order_status_history",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L478",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_4_tablas_de_orders_y_dominio_operativo",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_order_assignment_rejections",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L493",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_4_tablas_de_orders_y_dominio_operativo",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_order_transfer_requests",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L509",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_04_base_de_datos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_5_tablas_de_cat\u00e1logo_men\u00fa",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L532",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_5_tablas_de_cat\u00e1logo_men\u00fa",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_menu_categories",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L534",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_5_tablas_de_cat\u00e1logo_men\u00fa",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_menu_items",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L550",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_5_tablas_de_cat\u00e1logo_men\u00fa",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_menu_modifier_groups",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L573",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_5_tablas_de_cat\u00e1logo_men\u00fa",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_menu_modifier_options",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L590",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_5_tablas_de_cat\u00e1logo_men\u00fa",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_menu_item_modifier_groups_m_n",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L606",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_5_tablas_de_cat\u00e1logo_men\u00fa",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_customer_order_items",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L617",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_5_tablas_de_cat\u00e1logo_men\u00fa",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_customer_order_item_modifiers",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L635",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_04_base_de_datos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_6_tablas_de_billing",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L651",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_6_tablas_de_billing",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_settlements_liquidaciones_semanales",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L653",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_6_tablas_de_billing",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_cash_settlements_liquidaci\u00f3n_diaria_efectivo",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L681",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_6_tablas_de_billing",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_restaurant_payments_pagos_del_negocio_a_tindivo",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L712",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_04_base_de_datos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_7_tablas_de_notificaciones_e_infraestructura",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L731",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_7_tablas_de_notificaciones_e_infraestructura",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_push_subscriptions",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L733",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_7_tablas_de_notificaciones_e_infraestructura",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_push_delivery_log",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L754",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_7_tablas_de_notificaciones_e_infraestructura",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_domain_events_outbox",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L771",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_7_tablas_de_notificaciones_e_infraestructura",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_idempotency_keys",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L792",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_7_tablas_de_notificaciones_e_infraestructura",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_admin_alerts",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L811",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_7_tablas_de_notificaciones_e_infraestructura",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_app_settings",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L825",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_04_base_de_datos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_8_helper_functions",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L849",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_04_base_de_datos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_9_triggers_de_dominio",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L944",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_9_triggers_de_dominio",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_mantener_updated_at",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L946",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_9_triggers_de_dominio",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_mantener_assigned_at_en_orders",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L969",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_9_triggers_de_dominio",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_actualizar_business_balance_due_en_delivered_y_payment",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L989",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_9_triggers_de_dominio",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_dispatch_a_edge_function_send_push_y_o_inngest",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L1033",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_9_triggers_de_dominio",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_trigger_reactivo_de_asignaci\u00f3n_analog_al_v1",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L1097",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_04_base_de_datos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_10_rls_policies_completas",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L1121",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_10_rls_policies_completas",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_policies_por_tabla_subset_cr\u00edtico",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L1155",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_policies_por_tabla_subset_cr\u00edtico",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_orders_1157",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L1157",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_policies_por_tabla_subset_cr\u00edtico",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_businesses_1187",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L1187",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_policies_por_tabla_subset_cr\u00edtico",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_push_subscriptions_y_push_delivery_log_rls_activada_corrige_bug_v1",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L1212",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_policies_por_tabla_subset_cr\u00edtico",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_customer_profiles_y_customer_addresses",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L1226",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_policies_por_tabla_subset_cr\u00edtico",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_domain_events_solo_admin_lee_inserts_por_service_role",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L1234",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_policies_por_tabla_subset_cr\u00edtico",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_menu_lectura_p\u00fablica_para_marketplace_escritura_para_owner",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L1241",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_04_base_de_datos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_11_\u00edndices",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L1258",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_04_base_de_datos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_12_publicaci\u00f3n_realtime",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L1285",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_04_base_de_datos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_13_storage_buckets",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L1301",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_04_base_de_datos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_14_pg_cron_schedule",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L1327",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_04_base_de_datos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_15_retenci\u00f3n_de_datos",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L1373",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_04_base_de_datos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_04_base_de_datos_16_seed_inicial",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "L1389",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

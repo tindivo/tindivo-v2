@@ -1,1 +1,54 @@
-{"nodes": [{"id": "implementacion_antifraude_log", "label": "Implementacion Antifraude Log (Paso 5)", "file_type": "document", "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}], "edges": [{"source": "implementacion_antifraude_log", "target": "antifraude_paso2_design", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md", "source_location": null, "weight": 1.0}, {"source": "implementacion_antifraude_log", "target": "auditoria_antifraude_actual", "relation": "references", "confidence": "INFERRED", "confidence_score": 0.7, "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md", "source_location": null, "weight": 1.0}], "hyperedges": [{"id": "antifraud_system_design", "label": "Antifraud System Documents", "nodes": ["antifraude_paso2_design", "auditoria_antifraude_actual", "implementacion_antifraude_log", "decisions_pt1", "decisions_pt2"], "relation": "form", "confidence": "EXTRACTED", "confidence_score": 0.95, "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md"}]}
+{
+  "nodes": [
+    {
+      "id": "implementacion_antifraude_log",
+      "label": "Implementacion Antifraude Log (Paso 5)",
+      "file_type": "document",
+      "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    }
+  ],
+  "edges": [
+    {
+      "source": "implementacion_antifraude_log",
+      "target": "antifraude_paso2_design",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "implementacion_antifraude_log",
+      "target": "auditoria_antifraude_actual",
+      "relation": "references",
+      "confidence": "INFERRED",
+      "confidence_score": 0.7,
+      "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md",
+      "source_location": null,
+      "weight": 1.0
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "antifraud_system_design",
+      "label": "Antifraud System Documents",
+      "nodes": [
+        "antifraude_paso2_design",
+        "auditoria_antifraude_actual",
+        "implementacion_antifraude_log",
+        "decisions_pt1",
+        "decisions_pt2"
+      ],
+      "relation": "form",
+      "confidence": "EXTRACTED",
+      "confidence_score": 0.95,
+      "source_file": "IMPLEMENTACION_ANTIFRAUDE_LOG.md"
+    }
+  ]
+}

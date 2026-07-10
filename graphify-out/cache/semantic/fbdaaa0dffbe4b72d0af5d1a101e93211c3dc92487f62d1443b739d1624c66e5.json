@@ -1,1 +1,238 @@
-{"nodes": [{"id": "errores_rfc_9457", "label": "Errores RFC 9457 Problem Details", "file_type": "concept", "source_file": "Docs/05-api-rest.md", "source_location": "\u00a74", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "autenticacion_jwt", "label": "Autenticaci\u00f3n JWT (Supabase Auth)", "file_type": "concept", "source_file": "Docs/05-api-rest.md", "source_location": "\u00a72", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "paginacion_cursor", "label": "Paginaci\u00f3n cursor-based", "file_type": "concept", "source_file": "Docs/05-api-rest.md", "source_location": "\u00a76", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "cors_politica", "label": "CORS estricto (allowed origins)", "file_type": "concept", "source_file": "Docs/05-api-rest.md", "source_location": "\u00a75", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "endpoints_publicos", "label": "Endpoints p\u00fablicos (/public, /tracking)", "file_type": "code", "source_file": "Docs/05-api-rest.md", "source_location": "\u00a77", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "endpoints_customer", "label": "Endpoints customer (/customer/*)", "file_type": "code", "source_file": "Docs/05-api-rest.md", "source_location": "\u00a78", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "endpoints_business", "label": "Endpoints business (/business/*)", "file_type": "code", "source_file": "Docs/05-api-rest.md", "source_location": "\u00a79", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "endpoints_driver", "label": "Endpoints driver (/driver/*)", "file_type": "code", "source_file": "Docs/05-api-rest.md", "source_location": "\u00a710", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "endpoints_admin", "label": "Endpoints admin (/admin/*)", "file_type": "code", "source_file": "Docs/05-api-rest.md", "source_location": "\u00a711", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "endpoints_internos", "label": "Endpoints internos (/internal/*)", "file_type": "code", "source_file": "Docs/05-api-rest.md", "source_location": "\u00a712", "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "endpoint_inngest", "label": "Endpoint Inngest (/api/inngest)", "file_type": "code", "source_file": "Docs/05-api-rest.md", "source_location": "\u00a713", "source_url": null, "captured_at": null, "author": null, "contributor": null}], "edges": [{"source": "supabase_auth", "target": "autenticacion_jwt", "relation": "implements", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/05-api-rest.md", "source_location": "\u00a72", "weight": 1.0}, {"source": "apps_api", "target": "errores_rfc_9457", "relation": "implements", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/05-api-rest.md", "source_location": "\u00a74", "weight": 1.0}, {"source": "apps_api", "target": "paginacion_cursor", "relation": "implements", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/05-api-rest.md", "source_location": "\u00a76", "weight": 1.0}, {"source": "apps_api", "target": "cors_politica", "relation": "implements", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/05-api-rest.md", "source_location": "\u00a75", "weight": 1.0}, {"source": "apps_api", "target": "endpoints_publicos", "relation": "contains", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/05-api-rest.md", "source_location": "\u00a77", "weight": 1.0}, {"source": "apps_api", "target": "endpoints_customer", "relation": "contains", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/05-api-rest.md", "source_location": "\u00a78", "weight": 1.0}, {"source": "apps_api", "target": "endpoints_business", "relation": "contains", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/05-api-rest.md", "source_location": "\u00a79", "weight": 1.0}, {"source": "apps_api", "target": "endpoints_driver", "relation": "contains", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/05-api-rest.md", "source_location": "\u00a710", "weight": 1.0}, {"source": "apps_api", "target": "endpoints_admin", "relation": "contains", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/05-api-rest.md", "source_location": "\u00a711", "weight": 1.0}, {"source": "apps_api", "target": "endpoints_internos", "relation": "contains", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/05-api-rest.md", "source_location": "\u00a712", "weight": 1.0}, {"source": "apps_api", "target": "endpoint_inngest", "relation": "contains", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs/05-api-rest.md", "source_location": "\u00a713", "weight": 1.0}], "hyperedges": []}
+{
+  "nodes": [
+    {
+      "id": "errores_rfc_9457",
+      "label": "Errores RFC 9457 Problem Details",
+      "file_type": "concept",
+      "source_file": "Docs/05-api-rest.md",
+      "source_location": "\u00a74",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "autenticacion_jwt",
+      "label": "Autenticaci\u00f3n JWT (Supabase Auth)",
+      "file_type": "concept",
+      "source_file": "Docs/05-api-rest.md",
+      "source_location": "\u00a72",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "paginacion_cursor",
+      "label": "Paginaci\u00f3n cursor-based",
+      "file_type": "concept",
+      "source_file": "Docs/05-api-rest.md",
+      "source_location": "\u00a76",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "cors_politica",
+      "label": "CORS estricto (allowed origins)",
+      "file_type": "concept",
+      "source_file": "Docs/05-api-rest.md",
+      "source_location": "\u00a75",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "endpoints_publicos",
+      "label": "Endpoints p\u00fablicos (/public, /tracking)",
+      "file_type": "code",
+      "source_file": "Docs/05-api-rest.md",
+      "source_location": "\u00a77",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "endpoints_customer",
+      "label": "Endpoints customer (/customer/*)",
+      "file_type": "code",
+      "source_file": "Docs/05-api-rest.md",
+      "source_location": "\u00a78",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "endpoints_business",
+      "label": "Endpoints business (/business/*)",
+      "file_type": "code",
+      "source_file": "Docs/05-api-rest.md",
+      "source_location": "\u00a79",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "endpoints_driver",
+      "label": "Endpoints driver (/driver/*)",
+      "file_type": "code",
+      "source_file": "Docs/05-api-rest.md",
+      "source_location": "\u00a710",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "endpoints_admin",
+      "label": "Endpoints admin (/admin/*)",
+      "file_type": "code",
+      "source_file": "Docs/05-api-rest.md",
+      "source_location": "\u00a711",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "endpoints_internos",
+      "label": "Endpoints internos (/internal/*)",
+      "file_type": "code",
+      "source_file": "Docs/05-api-rest.md",
+      "source_location": "\u00a712",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "endpoint_inngest",
+      "label": "Endpoint Inngest (/api/inngest)",
+      "file_type": "code",
+      "source_file": "Docs/05-api-rest.md",
+      "source_location": "\u00a713",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    }
+  ],
+  "edges": [
+    {
+      "source": "supabase_auth",
+      "target": "autenticacion_jwt",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/05-api-rest.md",
+      "source_location": "\u00a72",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_api",
+      "target": "errores_rfc_9457",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/05-api-rest.md",
+      "source_location": "\u00a74",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_api",
+      "target": "paginacion_cursor",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/05-api-rest.md",
+      "source_location": "\u00a76",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_api",
+      "target": "cors_politica",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/05-api-rest.md",
+      "source_location": "\u00a75",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_api",
+      "target": "endpoints_publicos",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/05-api-rest.md",
+      "source_location": "\u00a77",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_api",
+      "target": "endpoints_customer",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/05-api-rest.md",
+      "source_location": "\u00a78",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_api",
+      "target": "endpoints_business",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/05-api-rest.md",
+      "source_location": "\u00a79",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_api",
+      "target": "endpoints_driver",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/05-api-rest.md",
+      "source_location": "\u00a710",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_api",
+      "target": "endpoints_admin",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/05-api-rest.md",
+      "source_location": "\u00a711",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_api",
+      "target": "endpoints_internos",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/05-api-rest.md",
+      "source_location": "\u00a712",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_api",
+      "target": "endpoint_inngest",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/05-api-rest.md",
+      "source_location": "\u00a713",
+      "weight": 1.0
+    }
+  ],
+  "hyperedges": []
+}

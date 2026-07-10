@@ -1,1 +1,447 @@
-{"nodes": [{"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_md", "label": "DECISIONS.md", "file_type": "document", "source_file": "DECISIONS.md", "source_location": "L1"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas", "label": "Tindivo 2.0 \u2014 Decisiones can\u00f3nicas", "file_type": "document", "source_file": "DECISIONS.md", "source_location": "L1"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_0_regla_de_precedencia_de_documentos", "label": "0. Regla de precedencia de documentos", "file_type": "document", "source_file": "DECISIONS.md", "source_location": "L12"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_1_stack_y_versiones_fijadas_verificadas_en_vivo_el_2026_05_29", "label": "1. Stack y versiones (fijadas, verificadas en vivo el 2026-05-29)", "file_type": "document", "source_file": "DECISIONS.md", "source_location": "L26"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_2_proyecto_supabase", "label": "2. Proyecto Supabase", "file_type": "document", "source_file": "DECISIONS.md", "source_location": "L58"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_3_estructura_del_monorepo", "label": "3. Estructura del monorepo", "file_type": "document", "source_file": "DECISIONS.md", "source_location": "L66"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_4_modelo_de_dinero_documento_maestro_corrige_specs_09_11_12", "label": "4. Modelo de dinero (Documento Maestro \u2014 corrige specs 09/11/12)", "file_type": "document", "source_file": "DECISIONS.md", "source_location": "L97"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_5_m\u00e1quina_de_estados_del_pedido", "label": "5. M\u00e1quina de estados del pedido", "file_type": "document", "source_file": "DECISIONS.md", "source_location": "L117"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_estados_internos_del_backend_granular_order_status", "label": "Estados internos del backend (granular, `order_status`)", "file_type": "document", "source_file": "DECISIONS.md", "source_location": "L119"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_proyecci\u00f3n_al_tracking_del_cliente_4_pasos", "label": "Proyecci\u00f3n al tracking del cliente (4 pasos)", "file_type": "document", "source_file": "DECISIONS.md", "source_location": "L128"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_cancelaciones", "label": "Cancelaciones", "file_type": "document", "source_file": "DECISIONS.md", "source_location": "L145"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_invariante_cr\u00edtica_fix_del_bug_v1", "label": "Invariante cr\u00edtica (fix del bug v1)", "file_type": "document", "source_file": "DECISIONS.md", "source_location": "L152"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_6_short_id_y_n\u00famero_de_pedido", "label": "6. `short_id` y n\u00famero de pedido", "file_type": "document", "source_file": "DECISIONS.md", "source_location": "L157"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_7_pagos_del_cliente", "label": "7. Pagos del cliente", "file_type": "document", "source_file": "DECISIONS.md", "source_location": "L164"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_8_antifraude_strikes_y_validaci\u00f3n_humana", "label": "8. Antifraude: strikes y validaci\u00f3n humana", "file_type": "document", "source_file": "DECISIONS.md", "source_location": "L175"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_9_fondo_de_contingencia", "label": "9. Fondo de contingencia", "file_type": "document", "source_file": "DECISIONS.md", "source_location": "L186"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_10_reglas_de_tiempo", "label": "10. Reglas de tiempo", "file_type": "document", "source_file": "DECISIONS.md", "source_location": "L194"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_11_outbox_push_y_scheduling", "label": "11. Outbox, push y scheduling", "file_type": "document", "source_file": "DECISIONS.md", "source_location": "L210"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_12_seguridad_rls", "label": "12. Seguridad / RLS", "file_type": "document", "source_file": "DECISIONS.md", "source_location": "L221"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_13_resoluci\u00f3n_de_las_24_contradicciones_detectadas", "label": "13. Resoluci\u00f3n de las 24 contradicciones detectadas", "file_type": "document", "source_file": "DECISIONS.md", "source_location": "L234"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_14_alcance_fase_1_qu\u00e9_se_activa_vs_qu\u00e9_se_modela_pero_no", "label": "14. Alcance Fase 1 \u2014 qu\u00e9 se activa vs qu\u00e9 se modela pero no", "file_type": "document", "source_file": "DECISIONS.md", "source_location": "L267"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_15_comportamiento_del_cliente_verdad_visual_demo_spec_v2", "label": "15. Comportamiento del cliente (verdad visual = demo + spec v2)", "file_type": "document", "source_file": "DECISIONS.md", "source_location": "L285"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_16_dise\u00f1o_fuente_06_ui_design_system_md_tindivo_design_spec_html", "label": "16. Dise\u00f1o (fuente: `06-ui-design-system.md` + `Tindivo Design Spec.html`)", "file_type": "document", "source_file": "DECISIONS.md", "source_location": "L296"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_17_pendientes_que_a\u00fan_requieren_confirmaci\u00f3n_del_usuario", "label": "17. Pendientes que a\u00fan requieren confirmaci\u00f3n del usuario", "file_type": "document", "source_file": "DECISIONS.md", "source_location": "L309"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_18_modo_solo_cat\u00e1logo_whatsapp_catalog_only_2026_07_01", "label": "18. Modo \"solo cat\u00e1logo (WhatsApp)\" \u2014 `catalog_only` (2026-07-01)", "file_type": "document", "source_file": "DECISIONS.md", "source_location": "L320"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_19_horario_de_atenci\u00f3n_visible_al_cliente_estado_abierto_cerrado_2026_07_02", "label": "19. Horario de atenci\u00f3n visible al cliente + estado abierto/cerrado (2026-07-02)", "file_type": "document", "source_file": "DECISIONS.md", "source_location": "L336"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_20_buscador_del_cat\u00e1logo_en_el_cliente_2026_07_02", "label": "20. Buscador del cat\u00e1logo en el cliente (2026-07-02)", "file_type": "document", "source_file": "DECISIONS.md", "source_location": "L355"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_21_color_de_papelito_paleta_establecida_fin_de_la_unicidad_2026_07_02", "label": "21. Color de papelito: paleta establecida, fin de la unicidad (2026-07-02)", "file_type": "document", "source_file": "DECISIONS.md", "source_location": "L367"}], "edges": [{"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_md", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas", "relation": "contains", "confidence": "EXTRACTED", "source_file": "DECISIONS.md", "source_location": "L1", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_0_regla_de_precedencia_de_documentos", "relation": "contains", "confidence": "EXTRACTED", "source_file": "DECISIONS.md", "source_location": "L12", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_1_stack_y_versiones_fijadas_verificadas_en_vivo_el_2026_05_29", "relation": "contains", "confidence": "EXTRACTED", "source_file": "DECISIONS.md", "source_location": "L26", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_2_proyecto_supabase", "relation": "contains", "confidence": "EXTRACTED", "source_file": "DECISIONS.md", "source_location": "L58", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_3_estructura_del_monorepo", "relation": "contains", "confidence": "EXTRACTED", "source_file": "DECISIONS.md", "source_location": "L66", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_4_modelo_de_dinero_documento_maestro_corrige_specs_09_11_12", "relation": "contains", "confidence": "EXTRACTED", "source_file": "DECISIONS.md", "source_location": "L97", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_5_m\u00e1quina_de_estados_del_pedido", "relation": "contains", "confidence": "EXTRACTED", "source_file": "DECISIONS.md", "source_location": "L117", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_5_m\u00e1quina_de_estados_del_pedido", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_estados_internos_del_backend_granular_order_status", "relation": "contains", "confidence": "EXTRACTED", "source_file": "DECISIONS.md", "source_location": "L119", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_5_m\u00e1quina_de_estados_del_pedido", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_proyecci\u00f3n_al_tracking_del_cliente_4_pasos", "relation": "contains", "confidence": "EXTRACTED", "source_file": "DECISIONS.md", "source_location": "L128", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_5_m\u00e1quina_de_estados_del_pedido", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_cancelaciones", "relation": "contains", "confidence": "EXTRACTED", "source_file": "DECISIONS.md", "source_location": "L145", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_5_m\u00e1quina_de_estados_del_pedido", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_invariante_cr\u00edtica_fix_del_bug_v1", "relation": "contains", "confidence": "EXTRACTED", "source_file": "DECISIONS.md", "source_location": "L152", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_6_short_id_y_n\u00famero_de_pedido", "relation": "contains", "confidence": "EXTRACTED", "source_file": "DECISIONS.md", "source_location": "L157", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_7_pagos_del_cliente", "relation": "contains", "confidence": "EXTRACTED", "source_file": "DECISIONS.md", "source_location": "L164", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_8_antifraude_strikes_y_validaci\u00f3n_humana", "relation": "contains", "confidence": "EXTRACTED", "source_file": "DECISIONS.md", "source_location": "L175", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_9_fondo_de_contingencia", "relation": "contains", "confidence": "EXTRACTED", "source_file": "DECISIONS.md", "source_location": "L186", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_10_reglas_de_tiempo", "relation": "contains", "confidence": "EXTRACTED", "source_file": "DECISIONS.md", "source_location": "L194", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_11_outbox_push_y_scheduling", "relation": "contains", "confidence": "EXTRACTED", "source_file": "DECISIONS.md", "source_location": "L210", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_12_seguridad_rls", "relation": "contains", "confidence": "EXTRACTED", "source_file": "DECISIONS.md", "source_location": "L221", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_13_resoluci\u00f3n_de_las_24_contradicciones_detectadas", "relation": "contains", "confidence": "EXTRACTED", "source_file": "DECISIONS.md", "source_location": "L234", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_14_alcance_fase_1_qu\u00e9_se_activa_vs_qu\u00e9_se_modela_pero_no", "relation": "contains", "confidence": "EXTRACTED", "source_file": "DECISIONS.md", "source_location": "L267", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_15_comportamiento_del_cliente_verdad_visual_demo_spec_v2", "relation": "contains", "confidence": "EXTRACTED", "source_file": "DECISIONS.md", "source_location": "L285", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_16_dise\u00f1o_fuente_06_ui_design_system_md_tindivo_design_spec_html", "relation": "contains", "confidence": "EXTRACTED", "source_file": "DECISIONS.md", "source_location": "L296", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_17_pendientes_que_a\u00fan_requieren_confirmaci\u00f3n_del_usuario", "relation": "contains", "confidence": "EXTRACTED", "source_file": "DECISIONS.md", "source_location": "L309", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_18_modo_solo_cat\u00e1logo_whatsapp_catalog_only_2026_07_01", "relation": "contains", "confidence": "EXTRACTED", "source_file": "DECISIONS.md", "source_location": "L320", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_19_horario_de_atenci\u00f3n_visible_al_cliente_estado_abierto_cerrado_2026_07_02", "relation": "contains", "confidence": "EXTRACTED", "source_file": "DECISIONS.md", "source_location": "L336", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_20_buscador_del_cat\u00e1logo_en_el_cliente_2026_07_02", "relation": "contains", "confidence": "EXTRACTED", "source_file": "DECISIONS.md", "source_location": "L355", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_21_color_de_papelito_paleta_establecida_fin_de_la_unicidad_2026_07_02", "relation": "contains", "confidence": "EXTRACTED", "source_file": "DECISIONS.md", "source_location": "L367", "weight": 1.0}], "input_tokens": 0, "output_tokens": 0}
+{
+  "nodes": [
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_md",
+      "label": "DECISIONS.md",
+      "file_type": "document",
+      "source_file": "DECISIONS.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas",
+      "label": "Tindivo 2.0 \u2014 Decisiones can\u00f3nicas",
+      "file_type": "document",
+      "source_file": "DECISIONS.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_0_regla_de_precedencia_de_documentos",
+      "label": "0. Regla de precedencia de documentos",
+      "file_type": "document",
+      "source_file": "DECISIONS.md",
+      "source_location": "L12"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_1_stack_y_versiones_fijadas_verificadas_en_vivo_el_2026_05_29",
+      "label": "1. Stack y versiones (fijadas, verificadas en vivo el 2026-05-29)",
+      "file_type": "document",
+      "source_file": "DECISIONS.md",
+      "source_location": "L26"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_2_proyecto_supabase",
+      "label": "2. Proyecto Supabase",
+      "file_type": "document",
+      "source_file": "DECISIONS.md",
+      "source_location": "L58"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_3_estructura_del_monorepo",
+      "label": "3. Estructura del monorepo",
+      "file_type": "document",
+      "source_file": "DECISIONS.md",
+      "source_location": "L66"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_4_modelo_de_dinero_documento_maestro_corrige_specs_09_11_12",
+      "label": "4. Modelo de dinero (Documento Maestro \u2014 corrige specs 09/11/12)",
+      "file_type": "document",
+      "source_file": "DECISIONS.md",
+      "source_location": "L97"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_5_m\u00e1quina_de_estados_del_pedido",
+      "label": "5. M\u00e1quina de estados del pedido",
+      "file_type": "document",
+      "source_file": "DECISIONS.md",
+      "source_location": "L117"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_estados_internos_del_backend_granular_order_status",
+      "label": "Estados internos del backend (granular, `order_status`)",
+      "file_type": "document",
+      "source_file": "DECISIONS.md",
+      "source_location": "L119"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_proyecci\u00f3n_al_tracking_del_cliente_4_pasos",
+      "label": "Proyecci\u00f3n al tracking del cliente (4 pasos)",
+      "file_type": "document",
+      "source_file": "DECISIONS.md",
+      "source_location": "L128"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_cancelaciones",
+      "label": "Cancelaciones",
+      "file_type": "document",
+      "source_file": "DECISIONS.md",
+      "source_location": "L145"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_invariante_cr\u00edtica_fix_del_bug_v1",
+      "label": "Invariante cr\u00edtica (fix del bug v1)",
+      "file_type": "document",
+      "source_file": "DECISIONS.md",
+      "source_location": "L152"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_6_short_id_y_n\u00famero_de_pedido",
+      "label": "6. `short_id` y n\u00famero de pedido",
+      "file_type": "document",
+      "source_file": "DECISIONS.md",
+      "source_location": "L157"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_7_pagos_del_cliente",
+      "label": "7. Pagos del cliente",
+      "file_type": "document",
+      "source_file": "DECISIONS.md",
+      "source_location": "L164"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_8_antifraude_strikes_y_validaci\u00f3n_humana",
+      "label": "8. Antifraude: strikes y validaci\u00f3n humana",
+      "file_type": "document",
+      "source_file": "DECISIONS.md",
+      "source_location": "L175"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_9_fondo_de_contingencia",
+      "label": "9. Fondo de contingencia",
+      "file_type": "document",
+      "source_file": "DECISIONS.md",
+      "source_location": "L186"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_10_reglas_de_tiempo",
+      "label": "10. Reglas de tiempo",
+      "file_type": "document",
+      "source_file": "DECISIONS.md",
+      "source_location": "L194"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_11_outbox_push_y_scheduling",
+      "label": "11. Outbox, push y scheduling",
+      "file_type": "document",
+      "source_file": "DECISIONS.md",
+      "source_location": "L210"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_12_seguridad_rls",
+      "label": "12. Seguridad / RLS",
+      "file_type": "document",
+      "source_file": "DECISIONS.md",
+      "source_location": "L221"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_13_resoluci\u00f3n_de_las_24_contradicciones_detectadas",
+      "label": "13. Resoluci\u00f3n de las 24 contradicciones detectadas",
+      "file_type": "document",
+      "source_file": "DECISIONS.md",
+      "source_location": "L234"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_14_alcance_fase_1_qu\u00e9_se_activa_vs_qu\u00e9_se_modela_pero_no",
+      "label": "14. Alcance Fase 1 \u2014 qu\u00e9 se activa vs qu\u00e9 se modela pero no",
+      "file_type": "document",
+      "source_file": "DECISIONS.md",
+      "source_location": "L267"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_15_comportamiento_del_cliente_verdad_visual_demo_spec_v2",
+      "label": "15. Comportamiento del cliente (verdad visual = demo + spec v2)",
+      "file_type": "document",
+      "source_file": "DECISIONS.md",
+      "source_location": "L285"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_16_dise\u00f1o_fuente_06_ui_design_system_md_tindivo_design_spec_html",
+      "label": "16. Dise\u00f1o (fuente: `06-ui-design-system.md` + `Tindivo Design Spec.html`)",
+      "file_type": "document",
+      "source_file": "DECISIONS.md",
+      "source_location": "L296"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_17_pendientes_que_a\u00fan_requieren_confirmaci\u00f3n_del_usuario",
+      "label": "17. Pendientes que a\u00fan requieren confirmaci\u00f3n del usuario",
+      "file_type": "document",
+      "source_file": "DECISIONS.md",
+      "source_location": "L309"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_18_modo_solo_cat\u00e1logo_whatsapp_catalog_only_2026_07_01",
+      "label": "18. Modo \"solo cat\u00e1logo (WhatsApp)\" \u2014 `catalog_only` (2026-07-01)",
+      "file_type": "document",
+      "source_file": "DECISIONS.md",
+      "source_location": "L320"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_19_horario_de_atenci\u00f3n_visible_al_cliente_estado_abierto_cerrado_2026_07_02",
+      "label": "19. Horario de atenci\u00f3n visible al cliente + estado abierto/cerrado (2026-07-02)",
+      "file_type": "document",
+      "source_file": "DECISIONS.md",
+      "source_location": "L336"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_20_buscador_del_cat\u00e1logo_en_el_cliente_2026_07_02",
+      "label": "20. Buscador del cat\u00e1logo en el cliente (2026-07-02)",
+      "file_type": "document",
+      "source_file": "DECISIONS.md",
+      "source_location": "L355"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_21_color_de_papelito_paleta_establecida_fin_de_la_unicidad_2026_07_02",
+      "label": "21. Color de papelito: paleta establecida, fin de la unicidad (2026-07-02)",
+      "file_type": "document",
+      "source_file": "DECISIONS.md",
+      "source_location": "L367"
+    }
+  ],
+  "edges": [
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_md",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "DECISIONS.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_0_regla_de_precedencia_de_documentos",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "DECISIONS.md",
+      "source_location": "L12",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_1_stack_y_versiones_fijadas_verificadas_en_vivo_el_2026_05_29",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "DECISIONS.md",
+      "source_location": "L26",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_2_proyecto_supabase",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "DECISIONS.md",
+      "source_location": "L58",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_3_estructura_del_monorepo",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "DECISIONS.md",
+      "source_location": "L66",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_4_modelo_de_dinero_documento_maestro_corrige_specs_09_11_12",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "DECISIONS.md",
+      "source_location": "L97",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_5_m\u00e1quina_de_estados_del_pedido",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "DECISIONS.md",
+      "source_location": "L117",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_5_m\u00e1quina_de_estados_del_pedido",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_estados_internos_del_backend_granular_order_status",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "DECISIONS.md",
+      "source_location": "L119",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_5_m\u00e1quina_de_estados_del_pedido",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_proyecci\u00f3n_al_tracking_del_cliente_4_pasos",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "DECISIONS.md",
+      "source_location": "L128",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_5_m\u00e1quina_de_estados_del_pedido",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_cancelaciones",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "DECISIONS.md",
+      "source_location": "L145",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_5_m\u00e1quina_de_estados_del_pedido",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_invariante_cr\u00edtica_fix_del_bug_v1",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "DECISIONS.md",
+      "source_location": "L152",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_6_short_id_y_n\u00famero_de_pedido",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "DECISIONS.md",
+      "source_location": "L157",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_7_pagos_del_cliente",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "DECISIONS.md",
+      "source_location": "L164",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_8_antifraude_strikes_y_validaci\u00f3n_humana",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "DECISIONS.md",
+      "source_location": "L175",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_9_fondo_de_contingencia",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "DECISIONS.md",
+      "source_location": "L186",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_10_reglas_de_tiempo",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "DECISIONS.md",
+      "source_location": "L194",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_11_outbox_push_y_scheduling",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "DECISIONS.md",
+      "source_location": "L210",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_12_seguridad_rls",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "DECISIONS.md",
+      "source_location": "L221",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_13_resoluci\u00f3n_de_las_24_contradicciones_detectadas",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "DECISIONS.md",
+      "source_location": "L234",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_14_alcance_fase_1_qu\u00e9_se_activa_vs_qu\u00e9_se_modela_pero_no",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "DECISIONS.md",
+      "source_location": "L267",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_15_comportamiento_del_cliente_verdad_visual_demo_spec_v2",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "DECISIONS.md",
+      "source_location": "L285",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_16_dise\u00f1o_fuente_06_ui_design_system_md_tindivo_design_spec_html",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "DECISIONS.md",
+      "source_location": "L296",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_17_pendientes_que_a\u00fan_requieren_confirmaci\u00f3n_del_usuario",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "DECISIONS.md",
+      "source_location": "L309",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_18_modo_solo_cat\u00e1logo_whatsapp_catalog_only_2026_07_01",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "DECISIONS.md",
+      "source_location": "L320",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_19_horario_de_atenci\u00f3n_visible_al_cliente_estado_abierto_cerrado_2026_07_02",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "DECISIONS.md",
+      "source_location": "L336",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_20_buscador_del_cat\u00e1logo_en_el_cliente_2026_07_02",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "DECISIONS.md",
+      "source_location": "L355",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_tindivo_2_0_decisiones_can\u00f3nicas",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_decisions_21_color_de_papelito_paleta_establecida_fin_de_la_unicidad_2026_07_02",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "DECISIONS.md",
+      "source_location": "L367",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

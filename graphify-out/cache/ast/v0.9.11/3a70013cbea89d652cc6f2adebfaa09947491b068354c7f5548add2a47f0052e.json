@@ -1,1 +1,399 @@
-{"nodes": [{"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_md", "label": "00-vision.md", "file_type": "document", "source_file": "Docs/00-vision.md", "source_location": "L1"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_00_visi\u00f3n_de_producto_tindivo_v2", "label": "00 \u00b7 Visi\u00f3n de producto \u2014 Tindivo v2", "file_type": "document", "source_file": "Docs/00-vision.md", "source_location": "L1"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_tabla_de_contenidos", "label": "Tabla de contenidos", "file_type": "document", "source_file": "Docs/00-vision.md", "source_location": "L11"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_1_qu\u00e9_es_tindivo", "label": "1. \u00bfQu\u00e9 es Tindivo?", "file_type": "document", "source_file": "Docs/00-vision.md", "source_location": "L28"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_2_el_problema_que_resuelve", "label": "2. El problema que resuelve", "file_type": "document", "source_file": "Docs/00-vision.md", "source_location": "L41"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_3_los_cinco_roles_del_ecosistema", "label": "3. Los cinco roles del ecosistema", "file_type": "document", "source_file": "Docs/00-vision.md", "source_location": "L52"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_4_el_tri\u00e1ngulo_operativo", "label": "4. El tri\u00e1ngulo operativo", "file_type": "document", "source_file": "Docs/00-vision.md", "source_location": "L64"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_5_modelo_de_negocio_c\u00f3mo_gana_dinero_tindivo", "label": "5. Modelo de negocio \u00b7 c\u00f3mo gana dinero Tindivo", "file_type": "document", "source_file": "Docs/00-vision.md", "source_location": "L83"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_5_1_cobro_por_pedido_entregado", "label": "5.1 Cobro por pedido entregado", "file_type": "document", "source_file": "Docs/00-vision.md", "source_location": "L85"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_5_2_liquidaci\u00f3n_semanal", "label": "5.2 Liquidaci\u00f3n semanal", "file_type": "document", "source_file": "Docs/00-vision.md", "source_location": "L98"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_5_3_liquidaci\u00f3n_diaria_de_efectivo_entre_driver_y_negocio", "label": "5.3 Liquidaci\u00f3n diaria de efectivo (entre driver y negocio)", "file_type": "document", "source_file": "Docs/00-vision.md", "source_location": "L109"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_5_4_lo_que_no_cobra_tindivo", "label": "5.4 Lo que NO cobra Tindivo", "file_type": "document", "source_file": "Docs/00-vision.md", "source_location": "L120"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_6_arquitectura_f\u00edsica_cinco_subdominios", "label": "6. Arquitectura f\u00edsica \u00b7 cinco subdominios", "file_type": "document", "source_file": "Docs/00-vision.md", "source_location": "L127"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_7_el_papelito_de_color_pieza_\u00fanica_del_modelo", "label": "7. El \"papelito de color\" \u2014 pieza \u00fanica del modelo", "file_type": "document", "source_file": "Docs/00-vision.md", "source_location": "L148"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_reglas_asociadas_al_color", "label": "Reglas asociadas al color", "file_type": "document", "source_file": "Docs/00-vision.md", "source_location": "L158"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_8_capacidades_de_negocio_combinables", "label": "8. Capacidades de negocio combinables", "file_type": "document", "source_file": "Docs/00-vision.md", "source_location": "L167"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_reglas_de_consistencia_constraints_en_bd", "label": "Reglas de consistencia (constraints en BD)", "file_type": "document", "source_file": "Docs/00-vision.md", "source_location": "L179"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_combinaciones_can\u00f3nicas", "label": "Combinaciones can\u00f3nicas", "file_type": "document", "source_file": "Docs/00-vision.md", "source_location": "L185"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_escalabilidad_del_modelo", "label": "Escalabilidad del modelo", "file_type": "document", "source_file": "Docs/00-vision.md", "source_location": "L195"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_ui_condicional_en_negocios_tindivo_com", "label": "UI condicional en `negocios.tindivo.com`", "file_type": "document", "source_file": "Docs/00-vision.md", "source_location": "L203"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_comportamiento_del_cliente_en_tindivo_com", "label": "Comportamiento del cliente en `tindivo.com`", "file_type": "document", "source_file": "Docs/00-vision.md", "source_location": "L217"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_9_diferencias_con_el_sistema_v1", "label": "9. Diferencias con el sistema v1", "file_type": "document", "source_file": "Docs/00-vision.md", "source_location": "L228"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_10_m\u00e9tricas_de_\u00e9xito_del_piloto", "label": "10. M\u00e9tricas de \u00e9xito del piloto", "file_type": "document", "source_file": "Docs/00-vision.md", "source_location": "L246"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_11_fuera_de_alcance_del_mvp_v2", "label": "11. Fuera de alcance del MVP v2", "file_type": "document", "source_file": "Docs/00-vision.md", "source_location": "L265"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_12_glosario", "label": "12. Glosario", "file_type": "document", "source_file": "Docs/00-vision.md", "source_location": "L282"}], "edges": [{"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_md", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_00_visi\u00f3n_de_producto_tindivo_v2", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/00-vision.md", "source_location": "L1", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_00_visi\u00f3n_de_producto_tindivo_v2", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_tabla_de_contenidos", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/00-vision.md", "source_location": "L11", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_00_visi\u00f3n_de_producto_tindivo_v2", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_1_qu\u00e9_es_tindivo", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/00-vision.md", "source_location": "L28", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_00_visi\u00f3n_de_producto_tindivo_v2", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_2_el_problema_que_resuelve", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/00-vision.md", "source_location": "L41", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_00_visi\u00f3n_de_producto_tindivo_v2", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_3_los_cinco_roles_del_ecosistema", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/00-vision.md", "source_location": "L52", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_00_visi\u00f3n_de_producto_tindivo_v2", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_4_el_tri\u00e1ngulo_operativo", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/00-vision.md", "source_location": "L64", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_00_visi\u00f3n_de_producto_tindivo_v2", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_5_modelo_de_negocio_c\u00f3mo_gana_dinero_tindivo", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/00-vision.md", "source_location": "L83", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_5_modelo_de_negocio_c\u00f3mo_gana_dinero_tindivo", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_5_1_cobro_por_pedido_entregado", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/00-vision.md", "source_location": "L85", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_5_modelo_de_negocio_c\u00f3mo_gana_dinero_tindivo", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_5_2_liquidaci\u00f3n_semanal", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/00-vision.md", "source_location": "L98", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_5_modelo_de_negocio_c\u00f3mo_gana_dinero_tindivo", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_5_3_liquidaci\u00f3n_diaria_de_efectivo_entre_driver_y_negocio", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/00-vision.md", "source_location": "L109", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_5_modelo_de_negocio_c\u00f3mo_gana_dinero_tindivo", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_5_4_lo_que_no_cobra_tindivo", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/00-vision.md", "source_location": "L120", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_00_visi\u00f3n_de_producto_tindivo_v2", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_6_arquitectura_f\u00edsica_cinco_subdominios", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/00-vision.md", "source_location": "L127", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_00_visi\u00f3n_de_producto_tindivo_v2", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_7_el_papelito_de_color_pieza_\u00fanica_del_modelo", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/00-vision.md", "source_location": "L148", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_7_el_papelito_de_color_pieza_\u00fanica_del_modelo", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_reglas_asociadas_al_color", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/00-vision.md", "source_location": "L158", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_00_visi\u00f3n_de_producto_tindivo_v2", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_8_capacidades_de_negocio_combinables", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/00-vision.md", "source_location": "L167", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_8_capacidades_de_negocio_combinables", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_reglas_de_consistencia_constraints_en_bd", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/00-vision.md", "source_location": "L179", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_8_capacidades_de_negocio_combinables", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_combinaciones_can\u00f3nicas", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/00-vision.md", "source_location": "L185", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_8_capacidades_de_negocio_combinables", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_escalabilidad_del_modelo", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/00-vision.md", "source_location": "L195", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_8_capacidades_de_negocio_combinables", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_ui_condicional_en_negocios_tindivo_com", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/00-vision.md", "source_location": "L203", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_8_capacidades_de_negocio_combinables", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_comportamiento_del_cliente_en_tindivo_com", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/00-vision.md", "source_location": "L217", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_00_visi\u00f3n_de_producto_tindivo_v2", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_9_diferencias_con_el_sistema_v1", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/00-vision.md", "source_location": "L228", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_00_visi\u00f3n_de_producto_tindivo_v2", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_10_m\u00e9tricas_de_\u00e9xito_del_piloto", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/00-vision.md", "source_location": "L246", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_00_visi\u00f3n_de_producto_tindivo_v2", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_11_fuera_de_alcance_del_mvp_v2", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/00-vision.md", "source_location": "L265", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_00_visi\u00f3n_de_producto_tindivo_v2", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_12_glosario", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/00-vision.md", "source_location": "L282", "weight": 1.0}], "input_tokens": 0, "output_tokens": 0}
+{
+  "nodes": [
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_md",
+      "label": "00-vision.md",
+      "file_type": "document",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_00_visi\u00f3n_de_producto_tindivo_v2",
+      "label": "00 \u00b7 Visi\u00f3n de producto \u2014 Tindivo v2",
+      "file_type": "document",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_tabla_de_contenidos",
+      "label": "Tabla de contenidos",
+      "file_type": "document",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L11"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_1_qu\u00e9_es_tindivo",
+      "label": "1. \u00bfQu\u00e9 es Tindivo?",
+      "file_type": "document",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L28"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_2_el_problema_que_resuelve",
+      "label": "2. El problema que resuelve",
+      "file_type": "document",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L41"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_3_los_cinco_roles_del_ecosistema",
+      "label": "3. Los cinco roles del ecosistema",
+      "file_type": "document",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L52"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_4_el_tri\u00e1ngulo_operativo",
+      "label": "4. El tri\u00e1ngulo operativo",
+      "file_type": "document",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L64"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_5_modelo_de_negocio_c\u00f3mo_gana_dinero_tindivo",
+      "label": "5. Modelo de negocio \u00b7 c\u00f3mo gana dinero Tindivo",
+      "file_type": "document",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L83"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_5_1_cobro_por_pedido_entregado",
+      "label": "5.1 Cobro por pedido entregado",
+      "file_type": "document",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L85"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_5_2_liquidaci\u00f3n_semanal",
+      "label": "5.2 Liquidaci\u00f3n semanal",
+      "file_type": "document",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L98"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_5_3_liquidaci\u00f3n_diaria_de_efectivo_entre_driver_y_negocio",
+      "label": "5.3 Liquidaci\u00f3n diaria de efectivo (entre driver y negocio)",
+      "file_type": "document",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L109"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_5_4_lo_que_no_cobra_tindivo",
+      "label": "5.4 Lo que NO cobra Tindivo",
+      "file_type": "document",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L120"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_6_arquitectura_f\u00edsica_cinco_subdominios",
+      "label": "6. Arquitectura f\u00edsica \u00b7 cinco subdominios",
+      "file_type": "document",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L127"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_7_el_papelito_de_color_pieza_\u00fanica_del_modelo",
+      "label": "7. El \"papelito de color\" \u2014 pieza \u00fanica del modelo",
+      "file_type": "document",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L148"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_reglas_asociadas_al_color",
+      "label": "Reglas asociadas al color",
+      "file_type": "document",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L158"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_8_capacidades_de_negocio_combinables",
+      "label": "8. Capacidades de negocio combinables",
+      "file_type": "document",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L167"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_reglas_de_consistencia_constraints_en_bd",
+      "label": "Reglas de consistencia (constraints en BD)",
+      "file_type": "document",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L179"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_combinaciones_can\u00f3nicas",
+      "label": "Combinaciones can\u00f3nicas",
+      "file_type": "document",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L185"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_escalabilidad_del_modelo",
+      "label": "Escalabilidad del modelo",
+      "file_type": "document",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L195"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_ui_condicional_en_negocios_tindivo_com",
+      "label": "UI condicional en `negocios.tindivo.com`",
+      "file_type": "document",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L203"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_comportamiento_del_cliente_en_tindivo_com",
+      "label": "Comportamiento del cliente en `tindivo.com`",
+      "file_type": "document",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L217"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_9_diferencias_con_el_sistema_v1",
+      "label": "9. Diferencias con el sistema v1",
+      "file_type": "document",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L228"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_10_m\u00e9tricas_de_\u00e9xito_del_piloto",
+      "label": "10. M\u00e9tricas de \u00e9xito del piloto",
+      "file_type": "document",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L246"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_11_fuera_de_alcance_del_mvp_v2",
+      "label": "11. Fuera de alcance del MVP v2",
+      "file_type": "document",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L265"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_12_glosario",
+      "label": "12. Glosario",
+      "file_type": "document",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L282"
+    }
+  ],
+  "edges": [
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_md",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_00_visi\u00f3n_de_producto_tindivo_v2",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_00_visi\u00f3n_de_producto_tindivo_v2",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_tabla_de_contenidos",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_00_visi\u00f3n_de_producto_tindivo_v2",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_1_qu\u00e9_es_tindivo",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L28",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_00_visi\u00f3n_de_producto_tindivo_v2",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_2_el_problema_que_resuelve",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L41",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_00_visi\u00f3n_de_producto_tindivo_v2",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_3_los_cinco_roles_del_ecosistema",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L52",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_00_visi\u00f3n_de_producto_tindivo_v2",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_4_el_tri\u00e1ngulo_operativo",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L64",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_00_visi\u00f3n_de_producto_tindivo_v2",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_5_modelo_de_negocio_c\u00f3mo_gana_dinero_tindivo",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L83",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_5_modelo_de_negocio_c\u00f3mo_gana_dinero_tindivo",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_5_1_cobro_por_pedido_entregado",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L85",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_5_modelo_de_negocio_c\u00f3mo_gana_dinero_tindivo",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_5_2_liquidaci\u00f3n_semanal",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L98",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_5_modelo_de_negocio_c\u00f3mo_gana_dinero_tindivo",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_5_3_liquidaci\u00f3n_diaria_de_efectivo_entre_driver_y_negocio",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L109",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_5_modelo_de_negocio_c\u00f3mo_gana_dinero_tindivo",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_5_4_lo_que_no_cobra_tindivo",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L120",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_00_visi\u00f3n_de_producto_tindivo_v2",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_6_arquitectura_f\u00edsica_cinco_subdominios",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L127",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_00_visi\u00f3n_de_producto_tindivo_v2",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_7_el_papelito_de_color_pieza_\u00fanica_del_modelo",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L148",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_7_el_papelito_de_color_pieza_\u00fanica_del_modelo",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_reglas_asociadas_al_color",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L158",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_00_visi\u00f3n_de_producto_tindivo_v2",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_8_capacidades_de_negocio_combinables",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L167",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_8_capacidades_de_negocio_combinables",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_reglas_de_consistencia_constraints_en_bd",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L179",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_8_capacidades_de_negocio_combinables",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_combinaciones_can\u00f3nicas",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L185",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_8_capacidades_de_negocio_combinables",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_escalabilidad_del_modelo",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L195",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_8_capacidades_de_negocio_combinables",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_ui_condicional_en_negocios_tindivo_com",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L203",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_8_capacidades_de_negocio_combinables",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_comportamiento_del_cliente_en_tindivo_com",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L217",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_00_visi\u00f3n_de_producto_tindivo_v2",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_9_diferencias_con_el_sistema_v1",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L228",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_00_visi\u00f3n_de_producto_tindivo_v2",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_10_m\u00e9tricas_de_\u00e9xito_del_piloto",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L246",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_00_visi\u00f3n_de_producto_tindivo_v2",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_11_fuera_de_alcance_del_mvp_v2",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L265",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_00_visi\u00f3n_de_producto_tindivo_v2",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_00_vision_12_glosario",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/00-vision.md",
+      "source_location": "L282",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

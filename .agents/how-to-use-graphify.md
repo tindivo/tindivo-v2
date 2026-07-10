@@ -4,6 +4,16 @@ Esta guía explica cómo utilizar Graphify en este proyecto para explorar la arq
 
 ---
 
+## 📊 Estado Actual del Grafo
+
+- **Última regeneración:** 2026-07-10
+- **Commit base:** `64025855`
+- **Nodos:** 2,012 · **Aristas:** 4,495 · **Comunidades:** 173
+- **Extracción:** 99% EXTRACTED · 1% INFERRED
+- **Costo estimado (DeepSeek):** ~$0.01 por extracción completa
+
+---
+
 ## 🛠️ Configuración y Generación del Grafo
 
 ### 1. Variables de Entorno y API Key
@@ -12,21 +22,34 @@ Para realizar la extracción semántica de la documentación e imágenes, Graphi
 *   **Permanente a nivel de usuario en Windows:** Se registró directamente en el sistema mediante PowerShell:
     ```powershell
     [System.Environment]::SetEnvironmentVariable('DEEPSEEK_API_KEY', 'sk-c0d.....', 'User')
-    [System.Environment]::SetEnvironmentVariable('ANTHROPIC_API_KEY', 'sk-c0d.....', 'User')
     ```
-*   **En tu perfil de PowerShell:** Añadida a `$PROFILE` ([Microsoft.PowerShell_profile.ps1](file:///C:/Users/Jesus/Documents/WindowsPowerShell/Microsoft.PowerShell_profile.ps1)) para cargar automáticamente estas y otras variables al abrir cualquier terminal.
+*   **En tu perfil de PowerShell:** Añadida a `$PROFILE` para cargar automáticamente estas y otras variables al abrir cualquier terminal.
 
-### 2. Cómo se Generó el Grafo
-El grafo se construyó usando `uv` para administrar Python 3.13 de forma aislada sin requerir privilegios de administrador. Además, instalamos los extras `openai` y `anthropic` necesarios para interactuar con DeepSeek y etiquetar comunidades:
+### 2. Instalación
+El grafo se construye usando `uv` para administrar Python 3.13 de forma aislada:
 ```powershell
 uv tool install "graphifyy[openai,anthropic]" --python 3.13 --force
 ```
 
-La extracción inicial se corrió con:
+### 3. Comandos disponibles (via pnpm)
+
+| Comando | Qué hace | Costo API |
+|---|---|---|
+| `pnpm graphify:update` | Actualización incremental AST (solo código) | **Gratis** |
+| `pnpm graphify:cluster` | Re-agrupa comunidades y regenera reportes | **Gratis** |
+| `pnpm graphify:query "<pregunta>"` | Consulta el grafo en lenguaje natural | **Gratis** |
+| `pnpm graphify:path "<A>" "<B>"` | Traza la ruta más corta entre dos componentes | **Gratis** |
+| `pnpm graphify:explain "<concepto>"` | Explica un nodo específico del grafo | **Gratis** |
+| `pnpm graphify:hooks` | Instala git hooks para auto-actualizar | **Gratis** |
+
+Para regeneración completa desde cero (con extracción semántica de docs/imágenes):
 ```powershell
 graphify . --backend deepseek
 graphify cluster-only .
 ```
+
+### ⚠️ Known Issue: `graphify label`
+El etiquetado de comunidades con LLM falla en graphify v0.9.11 con DeepSeek debido a un bug de compatibilidad con `ThinkingBlock`. Las comunidades usan nombres basados en hubs (archivos principales), que son funcionales. Se espera que esto se resuelva en una versión futura de graphify.
 
 ---
 
@@ -37,7 +60,7 @@ graphify cluster-only .
 
 *   **Ejemplo de comando:**
     ```powershell
-    graphify path "orders/page.tsx" "supabase/client.ts"
+    pnpm graphify:path "orders/page.tsx" "supabase/client.ts"
     ```
     *Esto te devolverá la cadena exacta de llamadas, importaciones o referencias que unen ambos archivos.*
 
@@ -46,11 +69,11 @@ Puedes obtener explicaciones contextuales de cualquier concepto del sistema o ha
 
 *   **Explicar un componente específico:**
     ```powershell
-    graphify explain "PushManager"
+    pnpm graphify:explain "PushManager"
     ```
 *   **Preguntar sobre flujos del proyecto:**
     ```powershell
-    graphify query "¿Cómo funciona el sistema de cobros y liquidaciones de motorizados?"
+    pnpm graphify:query "¿Cómo funciona el sistema de cobros y liquidaciones de motorizados?"
     ```
     *Esto consultará el archivo `graph.json` y generará un subgrafo relevante con la respuesta estructurada sin necesidad de buscar manualmente con `grep`.*
 
@@ -69,8 +92,8 @@ No necesitas ninguna extensión para visualizar tu base de código mapeada:
 ---
 
 ## 🔄 Actualización
-Cuando realices cambios en el código o agregues nuevos archivos de diseño/documentación, puedes sincronizar el grafo de forma incremental ejecutando:
+Cuando realices cambios en el código o agregues nuevos archivos de diseño/documentación, puedes sincronizar el grafo de forma incremental:
 ```powershell
-graphify update .
+pnpm graphify:update
 ```
-*(Para hacerlo automático tras cada commit, instala los hooks con `graphify hook install`).*
+*(Para hacerlo automático tras cada commit: `pnpm graphify:hooks`).*
