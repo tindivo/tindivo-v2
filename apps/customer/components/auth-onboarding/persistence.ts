@@ -97,11 +97,19 @@ export async function signInWithGoogle() {
 
 /** Detecta si el error es un duplicado (PK unique violation), sin importar
  * cómo el cliente Supabase mapee el código de PostgREST (23505, 409, etc.). */
-function isDuplicateKeyError(err: { code?: string | number; message?: string; details?: string }): boolean {
+function isDuplicateKeyError(err: {
+  code?: string | number
+  message?: string
+  details?: string
+}): boolean {
   const c = err.code
   if (c === '23505' || c === 23505 || c === '409' || c === 409) return true
   const msg = (err.message ?? '').toLowerCase()
-  return msg.includes('duplicate key') || msg.includes('unique violation') || msg.includes('already exists')
+  return (
+    msg.includes('duplicate key') ||
+    msg.includes('unique violation') ||
+    msg.includes('already exists')
+  )
 }
 
 /**

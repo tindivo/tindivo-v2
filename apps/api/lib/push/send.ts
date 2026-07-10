@@ -78,10 +78,7 @@ export async function sendPushToUser(
 
           if (status === 404 || status === 410) {
             // Suscripción expirada o inexistente -> Eliminar de inmediato
-            await service
-              .from('push_subscriptions')
-              .delete()
-              .eq('id', sub.id)
+            await service.from('push_subscriptions').delete().eq('id', sub.id)
           } else {
             // Error transitorio -> Incrementar contador de fallos
             await service

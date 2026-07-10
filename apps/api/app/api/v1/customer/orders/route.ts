@@ -6,7 +6,12 @@ import { sha256Hex } from '@/lib/http/hash'
 import { findCompletedReplay, withIdempotency } from '@/lib/http/idempotency'
 import { handleError, problem } from '@/lib/http/problem'
 import { getRequestId } from '@/lib/http/request-id'
-import { sendOrderCreated, sendOrderNotifyBusiness, sendOrderPrepay, sendOrderValidation } from '@/lib/inngest/client'
+import {
+  sendOrderCreated,
+  sendOrderNotifyBusiness,
+  sendOrderPrepay,
+  sendOrderValidation,
+} from '@/lib/inngest/client'
 import { createServiceClient } from '@/lib/supabase/service'
 
 export const dynamic = 'force-dynamic'
@@ -150,7 +155,8 @@ export async function POST(req: Request): Promise<Response> {
     // Agenda el timeout de aceptación SOLO en creación real (no en replay).
     // Best-effort: un fallo de Inngest nunca debe romper la creación del pedido.
     if (!result.replayed) {
-      const created = (result.body as { data?: { id?: string; status?: string; shortId?: string } }).data
+      const created = (result.body as { data?: { id?: string; status?: string; shortId?: string } })
+        .data
       if (created?.id) {
         try {
           // Agenda el timer según el estado/método: prepago (10m) · validación (5m) · aceptación (5m).

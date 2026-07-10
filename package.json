@@ -18,7 +18,13 @@
     "test": "turbo run test",
     "clean": "turbo run clean && rimraf node_modules",
     "db:types": "supabase gen types typescript --project-id psjigdoinfpgrnedxeyf --schema public > packages/supabase/src/database.types.ts",
-    "db:lint": "supabase db lint --project-id psjigdoinfpgrnedxeyf"
+    "db:lint": "supabase db lint --project-id psjigdoinfpgrnedxeyf",
+    "graphify:update": "graphify update .",
+    "graphify:cluster": "graphify cluster-only .",
+    "graphify:query": "graphify query",
+    "graphify:path": "graphify path",
+    "graphify:explain": "graphify explain",
+    "graphify:hooks": "graphify hook install"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",

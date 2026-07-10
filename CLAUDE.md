@@ -48,6 +48,9 @@ pnpm lint               # biome check
 pnpm type-check         # turbo type-check
 pnpm test               # vitest (core + contracts)
 pnpm db:types           # genera packages/supabase/src/database.types.ts
+pnpm graphify:update    # actualiza el grafo incrementalmente (sin costo de API para código)
+pnpm graphify:cluster   # re-agrupa y actualiza reportes del grafo existente
+pnpm graphify:hooks     # instala post-commit git hook para auto-actualizar
 ```
 
 ## Supabase

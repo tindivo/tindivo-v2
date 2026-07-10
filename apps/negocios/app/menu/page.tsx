@@ -46,9 +46,7 @@ function itemMinPrice(item: MenuItem): number {
   let extra = 0
   for (const g of item.modifierGroups) {
     if (g.is_required && g.options.length > 0) {
-      const prices = g.options
-        .filter((o) => o.is_available)
-        .map((o) => o.additional_price)
+      const prices = g.options.filter((o) => o.is_available).map((o) => o.additional_price)
       if (prices.length > 0) {
         extra += Math.min(...prices)
       }
@@ -943,31 +941,27 @@ export default function MenuPage() {
   const load = useCallback(async (businessId: string) => {
     const supabase = getSupabaseBrowser()
 
-    const [
-      { data: categories },
-      { data: items },
-      { data: junctions },
-      { data: groupsDetails },
-    ] = await Promise.all([
-      supabase
-        .from('menu_categories')
-        .select('id,name,display_order')
-        .eq('business_id', businessId)
-        .eq('is_active', true)
-        .order('display_order'),
-      supabase
-        .from('menu_items')
-        .select(
-          'id,category_id,name,base_price,is_available,is_compact,badges,image_url,display_order',
-        )
-        .eq('business_id', businessId)
-        .order('display_order'),
-      supabase.from('menu_item_modifier_groups').select('item_id,group_id'),
-      supabase
-        .from('menu_modifier_groups')
-        .select('id,is_required,max_selections')
-        .eq('business_id', businessId),
-    ])
+    const [{ data: categories }, { data: items }, { data: junctions }, { data: groupsDetails }] =
+      await Promise.all([
+        supabase
+          .from('menu_categories')
+          .select('id,name,display_order')
+          .eq('business_id', businessId)
+          .eq('is_active', true)
+          .order('display_order'),
+        supabase
+          .from('menu_items')
+          .select(
+            'id,category_id,name,base_price,is_available,is_compact,badges,image_url,display_order',
+          )
+          .eq('business_id', businessId)
+          .order('display_order'),
+        supabase.from('menu_item_modifier_groups').select('item_id,group_id'),
+        supabase
+          .from('menu_modifier_groups')
+          .select('id,is_required,max_selections')
+          .eq('business_id', businessId),
+      ])
 
     // Fetch option availability per group for agotado count
     const groupIds = (junctions ?? []).map((j) => j.group_id)

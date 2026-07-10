@@ -1,20 +1,20 @@
 import type { InngestFunction } from 'inngest'
-import { createServiceClient } from '../supabase/service'
 import { sendPushToUser } from '../push/send'
+import { createServiceClient } from '../supabase/service'
 import {
   type CashDeliveredData,
   EVENT_CASH_DELIVERED,
   EVENT_ORDER_CREATED,
+  EVENT_ORDER_NOTIFY_BUSINESS,
   EVENT_ORDER_PREPAY,
   EVENT_ORDER_VALIDATION,
   EVENT_TRANSFER_REQUESTED,
-  EVENT_ORDER_NOTIFY_BUSINESS,
   inngest,
   type OrderCreatedData,
+  type OrderNotifyBusinessData,
   type OrderPrepayData,
   type OrderValidationData,
   type TransferRequestedData,
-  type OrderNotifyBusinessData,
 } from './client'
 
 /**
@@ -203,7 +203,8 @@ export const orderNotifyBusiness: InngestFunction.Any = inngest.createFunction(
     triggers: [{ event: EVENT_ORDER_NOTIFY_BUSINESS }],
   },
   async ({ event, step }) => {
-    const { businessId, customerName, shortId, paymentIntent } = event.data as OrderNotifyBusinessData
+    const { businessId, customerName, shortId, paymentIntent } =
+      event.data as OrderNotifyBusinessData
 
     const operatorUserId = await step.run('get-business-operator', async () => {
       const svc = createServiceClient()
