@@ -40,6 +40,30 @@ const ACCENT = '#F472B6'
 // (components/dashboard/chrome.tsx) y persisten entre secciones; esta vista solo
 // renderiza el contenido de la pantalla "Pedidos" (banners + header + kanban + detalle).
 
+// ── Banner de alertas desactivadas ────────────────────────────────────────────
+function SoundOffWarning() {
+  return (
+    <div
+      style={{
+        background: '#DC2626',
+        color: '#fff',
+        padding: '10px 16px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        fontSize: 13,
+        fontWeight: 600,
+      }}
+    >
+      <MS name="warning" size={18} filled />
+      <span style={{ flex: 1 }}>
+        Alertas desactivadas — podrías perder pedidos. Los pedidos se cancelan automáticamente en 5
+        minutos si no los atiendes.
+      </span>
+    </div>
+  )
+}
+
 // ── Empty states ──────────────────────────────────────────────────────────────
 function ColEmpty({ tab }: { tab: 'new' | 'cooking' | 'route' | 'today' }) {
   const msgs = {
@@ -221,6 +245,7 @@ export function PedidosMobile(p: PedidosViewProps) {
           </button>
         </div>
       )}
+      {!p.soundOn && <SoundOffWarning />}
       {hasWaiting && !p.paused && (
         <div
           style={{
@@ -544,6 +569,7 @@ export function PedidosDesktop(p: PedidosViewProps) {
           </button>
         </div>
       )}
+      {!p.soundOn && <SoundOffWarning />}
       {hasWaiting && (
         <div
           style={{

@@ -749,7 +749,15 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
         },
         () => debouncedRefetchBiz(),
       )
-      .subscribe()
+      .subscribe((status, err) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('[realtime] suscrito a', `biz-orders-${bizId}`)
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('[realtime] error de canal:', err)
+        } else if (status === 'CLOSED') {
+          console.warn('[realtime] canal cerrado:', `biz-orders-${bizId}`)
+        }
+      })
 
     return () => {
       supabase.removeChannel(channel)

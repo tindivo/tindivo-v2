@@ -13,7 +13,10 @@ export function getSupabaseBrowser() {
     if (!url || !key) {
       throw new Error('Faltan NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY')
     }
-    client = createBrowserClient<Database>(url, key)
+    client = createBrowserClient<Database>(url, key, {
+      // Aísla la sesión de customer de otras apps en localhost (≠ puertos = mismo dominio)
+      auth: { storageKey: 'tindivo-customer-auth' },
+    })
   }
   return client
 }

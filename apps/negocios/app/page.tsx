@@ -208,7 +208,7 @@ export default function NegocioPedidosPage() {
       if (!selected) return
       const phone = supportWhatsapp || '51900000000'
       const msg = encodeURIComponent(
-        `Hola Tindivo, necesito un motorizado urgente para el pedido #${selected.id}. Lleva ${selected.bufferMinutes ?? '?'}min esperando.`
+        `Hola Tindivo, necesito un motorizado urgente para el pedido #${selected.id}. Lleva ${selected.bufferMinutes ?? '?'}min esperando.`,
       )
       window.open(`https://wa.me/${phone.replace(/\D/g, '')}?text=${msg}`, '_blank')
     },
@@ -268,10 +268,7 @@ export default function NegocioPedidosPage() {
           )}
         </div>
       )}
-      <div
-        className="lg:hidden"
-        style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
-      >
+      <div className="flex flex-col flex-1 min-h-0 lg:hidden">
         <PedidosMobile {...viewProps} />
       </div>
       <div className="hidden lg:flex" style={{ flex: 1, minWidth: 0 }}>
