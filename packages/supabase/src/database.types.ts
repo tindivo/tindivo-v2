@@ -727,6 +727,27 @@ export type Database = {
           },
         ]
       }
+      customer_otp_attempts: {
+        Row: {
+          id: string
+          phone: string
+          sent_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          phone: string
+          sent_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          phone?: string
+          sent_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       customer_strikes: {
         Row: {
           created_at: string

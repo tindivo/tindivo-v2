@@ -22,6 +22,7 @@
     "next": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
+    "twilio": "^6.0.2",
     "web-push": "^3.6.7",
     "zod": "catalog:"
   },
