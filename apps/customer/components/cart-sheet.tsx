@@ -7,6 +7,9 @@ import { BottomSheet, Icon, ScreenHeader } from '@/components/ui'
 import { useBusinessOrdering } from '@/lib/business-ordering'
 import { type CartLine, useCart, useCartHydrated } from '@/lib/cart'
 import { buildCartWhatsAppMessage, telLink, waOrderLink } from '@/lib/whatsapp'
+import { useOrderReadiness } from '@/hooks/use-order-readiness'
+import { PhoneGateModal } from '@/components/gates/phone-gate-modal'
+import { AddressGateModal } from '@/components/gates/address-gate-modal'
 
 const soles = (n: number) => `S/ ${n.toFixed(2)}`
 
@@ -18,7 +21,12 @@ const soles = (n: number) => `S/ ${n.toFixed(2)}`
 function CartCtas({ layout, onNavigate }: { layout: 'row' | 'block'; onNavigate?: () => void }) {
   const router = useRouter()
   const cart = useCart()
-  const { loading, info } = useBusinessOrdering(cart.businessId)
+  const { loading: bizLoading, info } = useBusinessOrdering(cart.businessId)
+  
+  // Gates de preparación del pedido
+  const { ready, currentGate, refetch, loading: readinessLoading } = useOrderReadiness()
+  const [showGate, setShowGate] = useState(false)
+
   const block = layout === 'block'
 
   // Fuera de horario no hay checkout (los CTAs de WhatsApp nunca se bloquean).
@@ -28,6 +36,16 @@ function CartCtas({ layout, onNavigate }: { layout: 'row' | 'block'; onNavigate?
     const t = setInterval(() => setNow(new Date()), 60_000)
     return () => clearInterval(t)
   }, [])
+
+  // Redirección automática si se completan los gates mientras el modal de gate está abierto
+  useEffect(() => {
+    if (showGate && ready) {
+      setShowGate(false)
+      onNavigate?.()
+      router.push('/checkout')
+    }
+  }, [showGate, ready, onNavigate, router])
+
   const closed =
     info?.mode === 'delivery' &&
     info.schedule.length > 0 &&
@@ -70,28 +88,56 @@ function CartCtas({ layout, onNavigate }: { layout: 'row' | 'block'; onNavigate?
     )
   }
 
+  function handleCheckout() {
+    if (ready) {
+      onNavigate?.()
+      router.push('/checkout')
+      return
+    }
+    setShowGate(true)
+  }
+
+  async function handleGateComplete() {
+    await refetch()
+  }
+
+  const loading = bizLoading || readinessLoading
+
   return (
-    <div className={block ? 'mt-3' : 'flex flex-1 flex-col gap-1.5'}>
-      <button
-        type="button"
-        className={`t-btn t-btn-primary ${block ? 't-btn-block' : 'w-full'}`}
-        disabled={loading || closed}
-        onClick={() => {
-          onNavigate?.()
-          router.push('/checkout')
-        }}
-      >
-        Ir a pagar
-      </button>
-      {closed && (
-        <p
-          className={`text-[12px] ${block ? 'mt-1.5' : ''}`}
-          style={{ color: 'rgba(26,22,20,0.55)' }}
+    <>
+      <div className={block ? 'mt-3' : 'flex flex-1 flex-col gap-1.5'}>
+        <button
+          type="button"
+          className={`t-btn t-btn-primary ${block ? 't-btn-block' : 'w-full'}`}
+          disabled={loading || closed}
+          onClick={handleCheckout}
         >
-          El restaurante está cerrado ahora.
-        </p>
+          {readinessLoading ? 'Cargando…' : 'Ir a pagar'}
+        </button>
+        {closed && (
+          <p
+            className={`text-[12px] ${block ? 'mt-1.5' : ''}`}
+            style={{ color: 'rgba(26,22,20,0.55)' }}
+          >
+            El restaurante está cerrado ahora.
+          </p>
+        )}
+      </div>
+
+      {showGate && currentGate === 'phone' && (
+        <PhoneGateModal
+          onComplete={handleGateComplete}
+          onClose={() => setShowGate(false)}
+        />
       )}
-    </div>
+
+      {showGate && currentGate === 'address' && (
+        <AddressGateModal
+          onComplete={handleGateComplete}
+          onClose={() => setShowGate(false)}
+        />
+      )}
+    </>
   )
 }
 

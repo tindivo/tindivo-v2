@@ -9,7 +9,7 @@ export function BottomSheet({
   children,
 }: {
   open: boolean
-  onClose: () => void
+  onClose?: () => void
   children: ReactNode
 }) {
   if (!open) return null
@@ -19,10 +19,10 @@ export function BottomSheet({
       className="t-modal-backdrop"
       role="presentation"
       onClick={(e) => {
-        if (e.target === e.currentTarget) onClose()
+        if (e.target === e.currentTarget && onClose) onClose()
       }}
       onKeyDown={(e) => {
-        if (e.key === 'Escape') onClose()
+        if (e.key === 'Escape' && onClose) onClose()
       }}
     >
       <div className="t-modal-sheet" role="dialog" aria-modal="true">

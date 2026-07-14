@@ -62,7 +62,7 @@ export async function POST(req: Request): Promise<Response> {
       .services(VERIFY_SERVICE_SID)
       .verifications.create({
         to: fullPhone,
-        channel: 'whatsapp',
+        channel: 'sms',
         locale: 'es',
       })
 

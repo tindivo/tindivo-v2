@@ -24,9 +24,30 @@ export const EMPTY_ADDRESS: AddressValue = {
   accuracyM: null,
 }
 
-/** ¿La referencia cumple el mínimo de caracteres? Helper compartido por las superficies. */
+export function getReferenceError(reference: string): string | null {
+  const cleaned = reference.trim()
+  if (cleaned.length < ADDRESS_REFERENCE_MIN) {
+    return `Mínimo ${ADDRESS_REFERENCE_MIN} caracteres`
+  }
+  if (/(.)\1{3,}/i.test(cleaned)) {
+    return 'Escribe una referencia real (evita repetir letras)'
+  }
+  if (/^\d+$/.test(cleaned)) {
+    return 'Agrega una descripción, no solo números'
+  }
+  return null
+}
+
 export function isReferenceOk(reference: string): boolean {
-  return reference.trim().length >= ADDRESS_REFERENCE_MIN
+  return getReferenceError(reference) === null
+}
+
+export function isLineOk(line: string | null): boolean {
+  if (!line) return true
+  const cleaned = line.trim()
+  if (cleaned.length === 0) return true
+  if (/(.)\1{3,}/i.test(cleaned)) return false
+  return true
 }
 
 /**
@@ -48,7 +69,8 @@ export function AddressFields({
   mapHeightPx?: number
 }) {
   const refLen = value.reference.trim().length
-  const refOk = refLen >= ADDRESS_REFERENCE_MIN
+  const refError = getReferenceError(value.reference)
+  const refOk = refError === null
 
   return (
     <div>
@@ -91,6 +113,11 @@ export function AddressFields({
           value={value.line}
           onChange={(e) => onChange({ line: e.target.value })}
         />
+        {!isLineOk(value.line) && (
+          <p className="mt-1 text-[12px]" style={{ color: '#C2410C' }}>
+            Escribe una dirección real (evita repetir letras)
+          </p>
+        )}
       </label>
 
       <label className="mb-1.5 block">
@@ -116,7 +143,7 @@ export function AddressFields({
         <span>
           {refOk
             ? 'Referencia suficiente'
-            : `Mínimo ${ADDRESS_REFERENCE_MIN} caracteres · faltan ${ADDRESS_REFERENCE_MIN - refLen}`}
+            : refError}
         </span>
         <span className="tabular-nums" style={{ color: 'rgba(26,22,20,0.5)' }}>
           {value.reference.length}/{ADDRESS_REFERENCE_MAX}

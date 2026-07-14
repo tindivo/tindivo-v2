@@ -46,6 +46,21 @@ export async function POST(req: Request): Promise<Response> {
     const requestHash = await sha256Hex(JSON.stringify(body))
     const service = createServiceClient()
 
+    // Defensa en profundidad: verificar teléfono verificado
+    const { data: profile } = await service
+      .from('customer_profiles')
+      .select('phone_verified_at')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (!profile?.phone_verified_at) {
+      return problem('forbidden', {
+        detail: 'Verifica tu número de WhatsApp antes de hacer un pedido.',
+        requestId,
+        headers: corsHeaders(req),
+      })
+    }
+
     // Replay temprano: si esta Idempotency-Key ya completó, devuelve la respuesta
     // original ANTES de los guards de pausa/capacidades/horario — el estado del
     // negocio pudo cambiar entre el intento original y el retry (p. ej. cerró a

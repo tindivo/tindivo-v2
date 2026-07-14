@@ -6,6 +6,7 @@ import {
   type AddressValue,
   EMPTY_ADDRESS,
   isReferenceOk,
+  isLineOk,
 } from '@/components/address-fields'
 import { saveAddress } from '../persistence'
 
@@ -15,18 +16,20 @@ export function AddressStep({
   userId,
   onBack,
   onDone,
+  mode = 'onboarding',
 }: {
   active: boolean
   userId: string | null
   onBack: () => void
   onDone: () => void
+  mode?: 'onboarding' | 'gate'
 }) {
   const [addr, setAddr] = useState<AddressValue>(EMPTY_ADDRESS)
   const [insideZone, setInsideZone] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const valid = isReferenceOk(addr.reference) && insideZone
+  const valid = isReferenceOk(addr.reference) && isLineOk(addr.line) && insideZone
 
   function patch(p: Partial<AddressValue>) {
     setAddr((a) => ({ ...a, ...p }))
@@ -88,7 +91,7 @@ export function AddressStep({
           style={{ background: 'rgba(26,22,20,0.06)' }}
           tabIndex={active ? 0 : -1}
         >
-          Atrás
+          {mode === 'gate' ? 'Cancelar' : 'Atrás'}
         </button>
         <button
           type="submit"
@@ -96,7 +99,7 @@ export function AddressStep({
           disabled={!valid || busy}
           tabIndex={active ? 0 : -1}
         >
-          {busy ? 'Guardando…' : 'Guardar y empezar a pedir'}
+          {busy ? 'Guardando…' : mode === 'gate' ? 'Confirmar dirección' : 'Guardar y empezar a pedir'}
         </button>
       </div>
     </form>

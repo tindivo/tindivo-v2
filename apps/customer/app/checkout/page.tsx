@@ -20,6 +20,7 @@ import { getLocationValidation, haversineKm } from '@/lib/coverage'
 import { getCurrentPositionHA } from '@/lib/geolocation'
 import { useOnboarding } from '@/lib/onboarding-store'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
+import { OtpVerificationSheet } from '@/components/otp-verification-sheet'
 
 const soles = (n: number) => `S/ ${n.toFixed(2)}`
 const DEFAULT_PREPAY_THRESHOLD = 80
@@ -46,6 +47,7 @@ interface OrderResult {
 interface CustomerProfile {
   full_name: string | null
   phone: string | null
+  phone_verified_at: string | null
   contraentrega_blocked?: boolean | null
   blocked_until?: string | null
 }
@@ -95,6 +97,8 @@ export default function CheckoutPage() {
   const [error, setError] = useState<string | null>(null)
   const [confirmed, setConfirmed] = useState<OrderResult | null>(null)
   const [blocked, setBlocked] = useState(false)
+  const [verifiedPhone, setVerifiedPhone] = useState('')
+  const [showOtpSheet, setShowOtpSheet] = useState(false)
 
   const subtotal = cart.subtotal()
   const deliveryFee = deliveryMethod === 'pickup' ? 0 : NEAR_DELIVERY_FEE
@@ -170,7 +174,7 @@ export default function CheckoutPage() {
       const meta = sessionUser.user_metadata as { full_name?: string } | undefined
       const { data: prof } = await supabase
         .from('customer_profiles')
-        .select('full_name,phone,contraentrega_blocked,blocked_until')
+        .select('full_name,phone,phone_verified_at,contraentrega_blocked,blocked_until')
         .maybeSingle()
       // Red de seguridad: sesión (p.ej. Google en otro dispositivo) sin perfil → completar datos.
       if (!prof && !profilePromptedRef.current) {
@@ -187,6 +191,13 @@ export default function CheckoutPage() {
         return
       }
       const profile = prof as CustomerProfile | null
+      
+      // Guard de celular verificado: si no está verificado, redirige al inicio
+      if (profile && !profile.phone_verified_at) {
+        router.replace('/')
+        return
+      }
+
       if (profile?.blocked_until && new Date(profile.blocked_until) > new Date()) {
         setBlocked(true)
         setAuthReady(true)
@@ -195,7 +206,11 @@ export default function CheckoutPage() {
       setPrepayOnlyByRisk(Boolean(profile?.contraentrega_blocked))
       setUserId(sessionUser.id)
       setName(profile?.full_name ?? meta?.full_name ?? '')
-      if (profile?.phone) setPhone(profile.phone.replace(/\D/g, '').slice(-9))
+      if (profile?.phone) {
+        const clean = profile.phone.replace(/\D/g, '').slice(-9)
+        setPhone(clean)
+        setVerifiedPhone(clean)
+      }
       const { data: addrs } = await supabase
         .from('customer_addresses')
         .select('id,label,line,reference,is_default,coordinates_lat,coordinates_lng')
@@ -297,6 +312,15 @@ export default function CheckoutPage() {
   async function placeOrder(options?: { paymentIntent?: PaymentIntent; skipGps?: boolean }) {
     const selectedPayment = options?.paymentIntent ?? payment
     setError(null)
+
+    // Validar cambio de teléfono
+    const cleanPhone = phone.replace(/\D/g, '')
+    const phoneChanged = cleanPhone !== verifiedPhone
+    if (phoneChanged) {
+      setShowOtpSheet(true)
+      return
+    }
+
     if (selectedPayment === 'pending_cash' && cashAmount < total) {
       setError('El monto con el que pagarás debe cubrir el total del pedido')
       return
@@ -796,6 +820,19 @@ export default function CheckoutPage() {
           </button>
         )}
       </div>
+
+      <OtpVerificationSheet
+        open={showOtpSheet}
+        phone={phone}
+        onVerified={() => {
+          setVerifiedPhone(phone)
+          setShowOtpSheet(false)
+          setTimeout(() => {
+            placeOrder({ paymentIntent: payment })
+          }, 300)
+        }}
+        onClose={() => setShowOtpSheet(false)}
+      />
     </main>
   )
 }

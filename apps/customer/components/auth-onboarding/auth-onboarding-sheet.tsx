@@ -29,7 +29,7 @@ const PANEL_ORDER: OnboardingStep[] = [
 ]
 
 // Pasos posteriores a la creación de cuenta: el X significa "completar después".
-const SKIPPABLE: OnboardingStep[] = ['google-name', 'phone', 'address']
+const SKIPPABLE: OnboardingStep[] = ['google-name', 'address']
 
 /**
  * Bottom-sheet de onboarding multi-paso (réplica de tindivo-demo.vercel.app).
@@ -97,8 +97,10 @@ export function AuthOnboardingSheet() {
           : null
   const chip = stepNumber[ob.step]
 
+  const canDismiss = SKIPPABLE.includes(ob.step)
+
   return (
-    <BottomSheet open onClose={userId ? finish : abandon}>
+    <BottomSheet open onClose={canDismiss ? (userId ? finish : abandon) : undefined}>
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
         <div className="flex items-center gap-2.5">
