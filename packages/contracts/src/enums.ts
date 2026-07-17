@@ -19,6 +19,7 @@ export type UserRole = z.infer<typeof UserRoleSchema>
 export const ORDER_STATUSES = [
   'validando', // contraentrega cliente nuevo / con strike: la cajera llama (5 min)
   'pending_acceptance', // negocio debe aceptar (5 min); en prepago valida comprobante (10 min)
+  'awaiting_payment', // cliente paga y sube captura
   'confirmed', // negocio aceptó
   'preparing', // cocinando; prep_time fijado; +10 min máx 2 veces
   'waiting_driver', // listo para que un motorizado lo tome (panel plano en Fase 1)
@@ -129,6 +130,7 @@ export const CANCEL_REASONS = [
   'admin_cancelled',
   'customer_cancelled', // solo antes de la aceptación o dentro de 2 min
   'no_show', // motorizado reportó que el cliente no se presentó (genera strike)
+  'proof_rejected_final', // segundo rechazo de comprobante prepago
 ] as const
 export const CancelReasonSchema = z.enum(CANCEL_REASONS)
 export type CancelReason = z.infer<typeof CancelReasonSchema>

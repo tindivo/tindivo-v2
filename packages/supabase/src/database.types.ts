@@ -1519,6 +1519,7 @@ export type Database = {
           change_to_give: number | null
           client_pays_with: number | null
           comprobante_prepago_url: string | null
+          proof_attempt: number
           confirmed_at: string | null
           created_at: string
           customer_gps_accuracy_m: number | null
@@ -1601,6 +1602,7 @@ export type Database = {
           change_to_give?: number | null
           client_pays_with?: number | null
           comprobante_prepago_url?: string | null
+          proof_attempt?: number
           confirmed_at?: string | null
           created_at?: string
           customer_gps_accuracy_m?: number | null
@@ -1683,6 +1685,7 @@ export type Database = {
           change_to_give?: number | null
           client_pays_with?: number | null
           comprobante_prepago_url?: string | null
+          proof_attempt?: number
           confirmed_at?: string | null
           created_at?: string
           customer_gps_accuracy_m?: number | null
@@ -2502,6 +2505,7 @@ export type Database = {
           change_to_give: number | null
           client_pays_with: number | null
           comprobante_prepago_url: string | null
+          proof_attempt: number
           confirmed_at: string | null
           created_at: string
           customer_gps_accuracy_m: number | null
@@ -2699,6 +2703,7 @@ export type Database = {
         | "admin_cancelled"
         | "customer_cancelled"
         | "no_show"
+        | "proof_rejected_final"
       cash_settlement_status:
         | "pending"
         | "pending_confirmation"
@@ -2722,6 +2727,7 @@ export type Database = {
       order_status:
         | "validando"
         | "pending_acceptance"
+        | "awaiting_payment"
         | "confirmed"
         | "preparing"
         | "waiting_driver"
@@ -2903,6 +2909,7 @@ export const Constants = {
         "admin_cancelled",
         "customer_cancelled",
         "no_show",
+        "proof_rejected_final",
       ],
       cash_settlement_status: [
         "pending",
@@ -2929,6 +2936,7 @@ export const Constants = {
       order_status: [
         "validando",
         "pending_acceptance",
+        "awaiting_payment",
         "confirmed",
         "preparing",
         "waiting_driver",
