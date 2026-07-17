@@ -1,7 +1,7 @@
 'use client'
 
 import { type ApiEnvelope, ApiError } from '@tindivo/api-client'
-import { ADDRESS_REFERENCE_MIN, type DeliveryMethod, type PaymentIntent } from '@tindivo/contracts'
+import { ADDRESS_REFERENCE_MIN, ADDRESS_LINE_MIN, type DeliveryMethod, type PaymentIntent } from '@tindivo/contracts'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -10,6 +10,8 @@ import {
   type AddressValue,
   EMPTY_ADDRESS,
   labelEmoji,
+  isLineOk,
+  getLineError,
 } from '@/components/address-fields'
 import { saveAddress } from '@/components/auth-onboarding/persistence'
 import { Icon, ScreenHeader, Segmented } from '@/components/ui'
@@ -228,6 +230,8 @@ export default function CheckoutPage() {
   const selectedAddress = addresses.find((a) => a.id === addressId)
   const reference =
     deliveryMethod === 'delivery' ? (selectedAddress?.reference ?? manualAddr.reference) : ''
+  const line =
+    deliveryMethod === 'delivery' ? (selectedAddress?.line ?? manualAddr.line) : ''
 
   // "¿Con cuánto pagarás?" (solo efectivo): Exacto = total (vuelto 0).
   const cashAmount =
@@ -245,6 +249,16 @@ export default function CheckoutPage() {
       return
     }
     if (deliveryMethod === 'delivery') {
+      if (!line || line.trim().length < ADDRESS_LINE_MIN) {
+        setError(
+          `Elige o agrega una dirección de al menos ${ADDRESS_LINE_MIN} caracteres`,
+        )
+        return
+      }
+      if (!isLineOk(line)) {
+        setError(getLineError(line) ?? 'Ingresa una dirección válida')
+        return
+      }
       if (reference.trim().length < ADDRESS_REFERENCE_MIN) {
         setError(
           `Elige o agrega una dirección con referencia de al menos ${ADDRESS_REFERENCE_MIN} caracteres`,

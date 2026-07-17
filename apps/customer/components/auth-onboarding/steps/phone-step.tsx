@@ -104,6 +104,12 @@ export function PhoneStep({
       onDone()
     } catch (err) {
       if (err instanceof ApiError) {
+        if (err.status === 409) {
+          setError('Este número ya está registrado en otra cuenta. Si es tuyo, cierra sesión e inicia con esa cuenta.')
+          setPhase('input')
+          setCode('')
+          return
+        }
         setError(err.message ?? 'Código incorrecto. Intenta de nuevo.')
       } else {
         setError(err instanceof Error ? err.message : 'Código incorrecto. Intenta de nuevo.')

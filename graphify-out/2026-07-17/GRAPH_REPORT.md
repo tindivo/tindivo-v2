@@ -1,11 +1,11 @@
 # Graph Report - tindivo-v2  (2026-07-17)
 
 ## Corpus Check
-- 404 files · ~278,988 words
+- 404 files · ~278,921 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 3246 nodes · 5700 edges · 446 communities (247 shown, 199 thin omitted)
+- 3246 nodes · 5700 edges · 444 communities (244 shown, 200 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 23 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
@@ -181,12 +181,10 @@
 - Web Push API + VAPID
 - Zustand v5
 - Guía de Uso de Graphify (Tindivo Project)
-- soles
 - DEPLOY.md — Runbook de go-live (Tindivo 2.0)
 - 04 · Base de datos
 - 05 · API REST
 - 8. Endpoints customer
-- types.ts
 - 07 · Flujo del cliente final · tindivo.com
 - FASE 1 · Tindivo — Documento de Orquestación
 - 3.7 Flujo: Manejo de Errores
@@ -485,7 +483,7 @@
 - **Core Business Concepts** — concept_prepago, concept_contraentrega, concept_strikes, concept_fondo_contingencia, concept_banda, concept_equilibrio, concept_bandeja_reportes [INFERRED 0.85]
 - **Order Lifecycle Rules** — rule_umbral_prepago, rule_llamada_validacion, rule_timer_aceptacion, rule_timer_prepago, rule_timer_espera, rule_banda_dos [INFERRED 0.80]
 
-## Communities (446 total, 199 thin omitted)
+## Communities (444 total, 200 thin omitted)
 
 ### Community 0 - "ok"
 Cohesion: 0.09
@@ -517,7 +515,7 @@ Nodes (34): OPTIONS(), PUT(), Schema, OPTIONS(), PUT(), Schema, CreateSchema, PO
 
 ### Community 7 - "handleOptions"
 Cohesion: 0.07
-Nodes (27): OPTIONS(), OPTIONS(), OPTIONS(), GET(), OPTIONS(), resolveRange(), OPTIONS(), POST() (+19 more)
+Nodes (27): OPTIONS(), OPTIONS(), OPTIONS(), GET(), OPTIONS(), resolveRange(), OPTIONS(), OPTIONS() (+19 more)
 
 ### Community 8 - "page.tsx"
 Cohesion: 0.11
@@ -536,12 +534,12 @@ Cohesion: 0.06
 Nodes (34): source, assist, actions, enabled, files, ignoreUnknown, includes, formatter (+26 more)
 
 ### Community 12 - "page.tsx"
-Cohesion: 0.20
-Nodes (10): Mode, PedidoPage(), DeliverSheet(), PaymentReal, PickupSheet(), SLOT_OPTIONS, ReadyPromptSheet(), useDriverOrders() (+2 more)
+Cohesion: 0.15
+Nodes (15): Mode, DeliverSheet(), PaymentReal, DeliveredScreen(), INCIDENT_TYPES, IncidentSheet(), OrderDetail(), PickupSheet() (+7 more)
 
 ### Community 13 - "auth.ts"
 Cohesion: 0.16
-Nodes (12): OPTIONS(), POST(), OPTIONS(), POST(), Schema, OPTIONS(), POST(), AuthContext (+4 more)
+Nodes (12): OPTIONS(), POST(), Schema, OPTIONS(), POST(), OPTIONS(), POST(), AuthContext (+4 more)
 
 ### Community 14 - "dependencies"
 Cohesion: 0.06
@@ -549,7 +547,7 @@ Nodes (32): dependencies, leaflet, next, react, react-dom, react-leaflet, @supab
 
 ### Community 15 - "home.tsx"
 Cohesion: 0.16
-Nodes (13): Availability, AvailabilityCard(), Home(), Tab, STATUS_LABEL, TeamTab(), WaitTimer(), RequestTransferSheet() (+5 more)
+Nodes (19): MotorizadoPage(), PedidoPage(), Availability, AvailabilityCard(), Home(), Tab, STATUS_LABEL, TeamTab() (+11 more)
 
 ### Community 16 - "dependencies"
 Cohesion: 0.06
@@ -588,8 +586,8 @@ Cohesion: 0.11
 Nodes (23): BusinessDetail, DAY_NAMES, limaDayIdx(), ScheduleRow(), Shift, shiftLabel(), shiftsOf(), BusinessOrderingInfo (+15 more)
 
 ### Community 25 - "Icon"
-Cohesion: 0.19
-Nodes (12): CashDeliverCard(), EfectivoPage(), HistoryRow, STATUS_CHIP, TodayRow, MotorizadoPage(), Login(), INCIDENT_TYPES (+4 more)
+Cohesion: 0.18
+Nodes (11): CashDeliverCard(), EfectivoPage(), HistoryRow, STATUS_CHIP, TodayRow, PreviewSection(), WaitTimer(), SourceChip() (+3 more)
 
 ### Community 26 - "compilerOptions"
 Cohesion: 0.07
@@ -632,8 +630,8 @@ Cohesion: 0.15
 Nodes (19): DAYS, Row, Button(), ButtonProps, Size, SIZES, Variant, VARIANTS (+11 more)
 
 ### Community 36 - "page.tsx"
-Cohesion: 0.13
-Nodes (13): GET(), OPTIONS(), OPTIONS(), POST(), Schema, OPTIONS(), POST(), Schema (+5 more)
+Cohesion: 0.11
+Nodes (16): GET(), OPTIONS(), OPTIONS(), POST(), Schema, OPTIONS(), POST(), Schema (+8 more)
 
 ### Community 37 - "getSupabaseBrowser"
 Cohesion: 0.13
@@ -656,8 +654,8 @@ Cohesion: 0.13
 Nodes (22): Address, AddressSheet(), CuentaPage(), OrderRow, Profile, Addr, AddressBar(), ADDRESS_LABELS (+14 more)
 
 ### Community 42 - "order-card.tsx"
-Cohesion: 0.25
-Nodes (10): AvailableTab(), MineTab(), MINE_STEPS, OrderCard(), SourceChip(), DriverBoard, BoardOrder, orderUrgency() (+2 more)
+Cohesion: 0.18
+Nodes (15): AvailableTab(), MineTab(), MINE_STEPS, OrderCard(), IncomingBanner, BoardOrder, DriverOrderStatus, OrderSource (+7 more)
 
 ### Community 43 - "requests.ts"
 Cohesion: 0.10
@@ -668,8 +666,8 @@ Cohesion: 0.11
 Nodes (16): Address, CASH_CHIPS, CashChoice, CustomerProfile, GeoBlockKind, GpsValidationPayload, OrderDetail(), OrderResult (+8 more)
 
 ### Community 45 - "offline-queue.ts"
-Cohesion: 0.31
-Nodes (14): OfflineBanner(), useOnline(), clearOptimistic(), enqueue(), peekAll(), QueuedTransition, queueSize(), read() (+6 more)
+Cohesion: 0.18
+Nodes (20): bricolage, geist, jetbrains, metadata, viewport, OfflineBanner(), TransferWatcher(), useOnline() (+12 more)
 
 ### Community 46 - "Context and State of apps/negocios"
 Cohesion: 0.12
@@ -688,8 +686,8 @@ Cohesion: 0.04
 Nodes (44): 10 · Flujo del motorizado · motorizados.tindivo.com, 10. Transferencias con timeout-as-accept, 11. Occupancy slots y banda distancia, 12. Liquidación diaria de efectivo, 13. Historial, 14. Perfil y configuración, 1. Premisa de diseño, 2. Mapa de la PWA (+36 more)
 
 ### Community 50 - "moment-picked-up.tsx"
-Cohesion: 0.28
-Nodes (11): BusinessCard(), CustomerCard(), MapReadonly(), Inner, MomentPickedUp(), mapsDirToCoords(), mapsSearchAddress(), peDigits() (+3 more)
+Cohesion: 0.25
+Nodes (11): BusinessCard(), CollectCard(), CustomerCard(), MapReadonly(), Inner, MomentPickedUp(), mapsDirToCoords(), mapsSearchAddress() (+3 more)
 
 ### Community 51 - "package.json"
 Cohesion: 0.12
@@ -776,8 +774,8 @@ Cohesion: 0.29
 Nodes (6): compilerOptions, paths, exclude, extends, include, @/*
 
 ### Community 76 - "map-picker-inner.tsx"
-Cohesion: 0.28
-Nodes (8): DeliveryMethod, DistanceBand, CommissionConfig, CommissionOverrides, computeCommission(), config, CommissionConfigError, RFC-9457
+Cohesion: 0.30
+Nodes (8): DeliveryMethod, DistanceBand, CommissionConfig, CommissionOverrides, computeCommission(), config, applyDelivered(), CommissionConfigError
 
 ### Community 77 - "tsconfig.json"
 Cohesion: 0.29
@@ -871,10 +869,6 @@ Nodes (3): exclude, extends, include
 Cohesion: 0.15
 Nodes (12): 1. Mostrar la relación entre dos partes del proyecto (`graphify path`), 1. Variables de Entorno y API Key, 2. Explicar una funcionalidad o componente (`graphify explain` / `query`), 2. Instalación, 3. Comandos disponibles (via pnpm), 🔄 Actualización, 🛠️ Configuración y Generación del Grafo, 📊 Estado Actual del Grafo (+4 more)
 
-### Community 174 - "soles"
-Cohesion: 0.24
-Nodes (10): CollectCard(), DeliveredScreen(), OrderDetail(), PreviewSection(), MOMENTS, StatusHero(), hourOf(), PAYMENT_LABEL (+2 more)
-
 ### Community 175 - "DEPLOY.md — Runbook de go-live (Tindivo 2.0)"
 Cohesion: 0.15
 Nodes (12): 0. Pre-requisitos, 1. Variables de entorno por app **[tú]**, 2.1 Supabase Auth — onboarding del cliente **[tú]**, 2. Edge Function secrets (Web Push) **[tú]**, 3. Vercel — 5 proyectos **[tú]**, 4. DNS **[tú]**, 5. Inngest Cloud **[tú]**, 6. Seeds de go-live (+4 more)
@@ -890,10 +884,6 @@ Nodes (11): 05 · API REST, 12. Endpoints internos, 13. Endpoint Inngest, 1. Con
 ### Community 178 - "8. Endpoints customer"
 Cohesion: 0.17
 Nodes (12): 8. Endpoints customer, `DELETE /customer/addresses/{id}`, `DELETE /push/unsubscribe`, `GET /customer/addresses`, `GET /customer/orders`, `GET /customer/orders/{shortId}`, `GET /customer/profile`, `PATCH /customer/addresses/{id}` (+4 more)
-
-### Community 179 - "types.ts"
-Cohesion: 0.14
-Nodes (13): bricolage, geist, jetbrains, metadata, viewport, IncomingBanner, TransferWatcher(), DriverOrderStatus (+5 more)
 
 ### Community 180 - "07 · Flujo del cliente final · tindivo.com"
 Cohesion: 0.18
@@ -938,10 +928,6 @@ Nodes (9): devDependencies, @biomejs/biome, turbo, typescript, globalDependencie
 ### Community 190 - "tasks"
 Cohesion: 0.20
 Nodes (10): dependsOn, outputs, cache, cache, outputs, tasks, build, clean (+2 more)
-
-### Community 191 - "layout.tsx"
-Cohesion: 0.50
-Nodes (3): OPTIONS(), POST(), Schema
 
 ### Community 192 - "AUDITORÍA DEL SISTEMA ANTIFRAUDE ACTUAL — Tindivo 2.0"
 Cohesion: 0.22
@@ -1446,16 +1432,16 @@ Nodes (3): type-check, dependsOn, outputs
 ## Knowledge Gaps
 - **1858 isolated node(s):** `AuditRow`, `ClaimRow`, `SettlementRow`, `Cfg`, `SaveFn` (+1853 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **199 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **200 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `handleOptions()` connect `handleOptions` to `ok`, `route.ts`, `page.tsx`, `types.ts`, `service.ts`, `auth.ts`, `corsHeaders`, `getRequestId`, `layout.tsx`?**
+- **Why does `handleOptions()` connect `handleOptions` to `ok`, `route.ts`, `page.tsx`, `types.ts`, `service.ts`, `auth.ts`, `corsHeaders`, `getRequestId`?**
   _High betweenness centrality (0.013) - this node is a cross-community bridge._
-- **Why does `Icon` connect `moment-picked-up.tsx` to `getSupabaseBrowser`, `index.ts`, `page.tsx`, `page.tsx`, `order-card.tsx`, `page.tsx`, `page.tsx`, `soles`, `home.tsx`, `page.tsx`, `getOpenStatus`, `Icon`, `route.ts`?**
+- **Why does `Icon` connect `page.tsx` to `getSupabaseBrowser`, `index.ts`, `page.tsx`, `page.tsx`, `order-card.tsx`, `page.tsx`, `home.tsx`, `page.tsx`, `moment-picked-up.tsx`, `getOpenStatus`, `route.ts`?**
   _High betweenness centrality (0.010) - this node is a cross-community bridge._
-- **Why does `ApiError` connect `home.tsx` to `soles`, `getSupabaseBrowser`, `page.tsx`, `page.tsx`, `page.tsx`, `offline-queue.ts`, `page.tsx`, `types.ts`, `page.tsx`, `page.tsx`, `Icon`, `index.ts`, `route.ts`?**
+- **Why does `ApiError` connect `layout.tsx` to `soles`, `getSupabaseBrowser`, `page.tsx`, `order-card.tsx`, `page.tsx`, `page.tsx`, `offline-queue.ts`, `home.tsx`, `page.tsx`, `page.tsx`, `page.tsx`, `Icon`, `index.ts`, `route.ts`?**
   _High betweenness centrality (0.007) - this node is a cross-community bridge._
 - **What connects `AuditRow`, `ClaimRow`, `SettlementRow` to the rest of the system?**
   _1863 weakly-connected nodes found - possible documentation gaps or missing edges._

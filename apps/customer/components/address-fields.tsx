@@ -1,6 +1,6 @@
 'use client'
 
-import { ADDRESS_REFERENCE_MAX, ADDRESS_REFERENCE_MIN } from '@tindivo/contracts'
+import { ADDRESS_REFERENCE_MAX, ADDRESS_REFERENCE_MIN, ADDRESS_LINE_MIN } from '@tindivo/contracts'
 import { type LatLng, MapPicker } from '@/components/map-picker'
 
 /** Etiquetas de dirección (fuente única para onboarding, perfil y checkout). */
@@ -29,11 +29,15 @@ export function getReferenceError(reference: string): string | null {
   if (cleaned.length < ADDRESS_REFERENCE_MIN) {
     return `Mínimo ${ADDRESS_REFERENCE_MIN} caracteres`
   }
-  if (/(.)\1{3,}/i.test(cleaned)) {
-    return 'Escribe una referencia real (evita repetir letras)'
-  }
   if (/^\d+$/.test(cleaned)) {
     return 'Agrega una descripción, no solo números'
+  }
+  if (/(.)\1{3,}/i.test(cleaned)) {
+    return 'Evita repetir letras'
+  }
+  const noSpaces = cleaned.toLowerCase().replace(/\s+/g, '')
+  if (noSpaces.length >= 4 && /^(.{2,})\1+$/.test(noSpaces)) {
+    return 'Evita repetir patrones o palabras'
   }
   return null
 }
@@ -42,12 +46,27 @@ export function isReferenceOk(reference: string): boolean {
   return getReferenceError(reference) === null
 }
 
-export function isLineOk(line: string | null): boolean {
-  if (!line) return true
+export function getLineError(line: string | null): string | null {
+  if (!line) return 'La dirección es obligatoria'
   const cleaned = line.trim()
-  if (cleaned.length === 0) return true
-  if (/(.)\1{3,}/i.test(cleaned)) return false
-  return true
+  if (cleaned.length < ADDRESS_LINE_MIN) {
+    return `Mínimo ${ADDRESS_LINE_MIN} caracteres`
+  }
+  if (/^\d+$/.test(cleaned)) {
+    return 'Ingresa una dirección real, no solo números'
+  }
+  if (/(.)\1{3,}/i.test(cleaned)) {
+    return 'Evita repetir letras'
+  }
+  const noSpaces = cleaned.toLowerCase().replace(/\s+/g, '')
+  if (noSpaces.length >= 4 && /^(.{2,})\1+$/.test(noSpaces)) {
+    return 'Evita repetir patrones o palabras'
+  }
+  return null
+}
+
+export function isLineOk(line: string | null): boolean {
+  return getLineError(line) === null
 }
 
 /**
@@ -106,16 +125,22 @@ export function AddressFields({
       </div>
 
       <label className="mb-3.5 block">
-        <span className="t-field-label">Calle / Jirón (opcional)</span>
+        <span className="t-field-label">
+          Dirección <span style={{ color: '#F97316' }}>*</span>
+          <span style={{ color: 'rgba(26,22,20,0.45)' }}>
+            {' '}
+            · mín. {ADDRESS_LINE_MIN} caracteres
+          </span>
+        </span>
         <input
           className="t-field"
           placeholder="Ej. Jr. Sucre 412"
           value={value.line}
           onChange={(e) => onChange({ line: e.target.value })}
         />
-        {!isLineOk(value.line) && (
+        {value.line.trim().length > 0 && !isLineOk(value.line) && (
           <p className="mt-1 text-[12px]" style={{ color: '#C2410C' }}>
-            Escribe una dirección real (evita repetir letras)
+            {getLineError(value.line)}
           </p>
         )}
       </label>
@@ -143,7 +168,7 @@ export function AddressFields({
         <span>
           {refOk
             ? 'Referencia suficiente'
-            : refError}
+            : getReferenceError(value.reference)}
         </span>
         <span className="tabular-nums" style={{ color: 'rgba(26,22,20,0.5)' }}>
           {value.reference.length}/{ADDRESS_REFERENCE_MAX}

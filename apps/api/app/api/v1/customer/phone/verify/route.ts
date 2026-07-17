@@ -79,7 +79,16 @@ export async function POST(req: Request): Promise<Response> {
       })
       .eq('user_id', user.id)
 
-    if (error) throw new Error(error.message)
+    if (error) {
+      if (error.code === '23505') {
+        return problem('conflict', {
+          detail: 'Este número ya está asociado a otra cuenta.',
+          requestId,
+          headers: corsHeaders(req),
+        })
+      }
+      throw new Error(error.message)
+    }
 
     return ok(
       { verified: true, phone: fullPhone },

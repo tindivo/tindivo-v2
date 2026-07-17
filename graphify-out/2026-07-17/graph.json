@@ -2906,7 +2906,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_orders_id_cancel_route",
-      "community": 7,
+      "community": 36,
       "norm_label": "route.ts"
     },
     {
@@ -2916,7 +2916,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_orders_id_cancel_route_schema",
-      "community": 7,
+      "community": 36,
       "norm_label": "schema"
     },
     {
@@ -2926,7 +2926,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_orders_id_cancel_route_options",
-      "community": 7,
+      "community": 36,
       "norm_label": "options()"
     },
     {
@@ -2936,7 +2936,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_orders_id_cancel_route_post",
-      "community": 7,
+      "community": 36,
       "norm_label": "post()"
     },
     {
@@ -2976,7 +2976,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_reports_id_resolve_route",
-      "community": 36,
+      "community": 7,
       "norm_label": "route.ts"
     },
     {
@@ -2986,7 +2986,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_reports_id_resolve_route_schema",
-      "community": 36,
+      "community": 7,
       "norm_label": "schema"
     },
     {
@@ -2996,7 +2996,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_reports_id_resolve_route_options",
-      "community": 36,
+      "community": 7,
       "norm_label": "options()"
     },
     {
@@ -3006,7 +3006,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_reports_id_resolve_route_post",
-      "community": 36,
+      "community": 7,
       "norm_label": "post()"
     },
     {
@@ -3146,7 +3146,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_settlements_id_pay_route",
-      "community": 191,
+      "community": 7,
       "norm_label": "route.ts"
     },
     {
@@ -3156,7 +3156,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_settlements_id_pay_route_schema",
-      "community": 191,
+      "community": 7,
       "norm_label": "schema"
     },
     {
@@ -3166,7 +3166,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_settlements_id_pay_route_options",
-      "community": 191,
+      "community": 7,
       "norm_label": "options()"
     },
     {
@@ -3176,7 +3176,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_settlements_id_pay_route_post",
-      "community": 191,
+      "community": 7,
       "norm_label": "post()"
     },
     {
@@ -3346,7 +3346,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_business_contingency_id_dispute_route",
-      "community": 7,
+      "community": 13,
       "norm_label": "route.ts"
     },
     {
@@ -3356,7 +3356,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_business_contingency_id_dispute_route_schema",
-      "community": 7,
+      "community": 13,
       "norm_label": "schema"
     },
     {
@@ -3366,7 +3366,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_business_contingency_id_dispute_route_options",
-      "community": 7,
+      "community": 13,
       "norm_label": "options()"
     },
     {
@@ -3376,7 +3376,7 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_business_contingency_id_dispute_route_post",
-      "community": 7,
+      "community": 13,
       "norm_label": "post()"
     },
     {
@@ -3776,7 +3776,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_customer_orders_id_prepay_proof_route",
-      "community": 13,
+      "community": 36,
       "norm_label": "route.ts"
     },
     {
@@ -3786,7 +3786,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_customer_orders_id_prepay_proof_route_schema",
-      "community": 13,
+      "community": 36,
       "norm_label": "schema"
     },
     {
@@ -3796,7 +3796,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_customer_orders_id_prepay_proof_route_options",
-      "community": 13,
+      "community": 36,
       "norm_label": "options()"
     },
     {
@@ -3806,7 +3806,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_customer_orders_id_prepay_proof_route_post",
-      "community": 13,
+      "community": 36,
       "norm_label": "post()"
     },
     {
@@ -8636,7 +8636,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_motorizados_app_layout",
-      "community": 179,
+      "community": 45,
       "norm_label": "layout.tsx"
     },
     {
@@ -8646,7 +8646,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "apps_motorizados_app_layout_bricolage",
-      "community": 179,
+      "community": 45,
       "norm_label": "bricolage"
     },
     {
@@ -8656,7 +8656,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "apps_motorizados_app_layout_geist",
-      "community": 179,
+      "community": 45,
       "norm_label": "geist"
     },
     {
@@ -8666,7 +8666,7 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "apps_motorizados_app_layout_jetbrains",
-      "community": 179,
+      "community": 45,
       "norm_label": "jetbrains"
     },
     {
@@ -8676,7 +8676,7 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "apps_motorizados_app_layout_metadata",
-      "community": 179,
+      "community": 45,
       "norm_label": "metadata"
     },
     {
@@ -8686,7 +8686,7 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "apps_motorizados_app_layout_viewport",
-      "community": 179,
+      "community": 45,
       "norm_label": "viewport"
     },
     {
@@ -8696,7 +8696,7 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "apps_motorizados_app_layout_rootlayout",
-      "community": 179,
+      "community": 45,
       "norm_label": "rootlayout()"
     },
     {
@@ -8726,7 +8726,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_motorizados_app_page",
-      "community": 25,
+      "community": 15,
       "norm_label": "page.tsx"
     },
     {
@@ -8736,7 +8736,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "apps_motorizados_app_page_motorizadopage",
-      "community": 25,
+      "community": 15,
       "norm_label": "motorizadopage()"
     },
     {
@@ -8766,7 +8766,7 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "apps_motorizados_app_pedido_id_page_pedidopage",
-      "community": 12,
+      "community": 15,
       "norm_label": "pedidopage()"
     },
     {
@@ -8946,7 +8946,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_motorizados_components_login",
-      "community": 25,
+      "community": 15,
       "norm_label": "login.tsx"
     },
     {
@@ -8956,7 +8956,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "apps_motorizados_components_login_login",
-      "community": 25,
+      "community": 15,
       "norm_label": "login()"
     },
     {
@@ -9006,7 +9006,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_motorizados_components_order_collect_card",
-      "community": 174,
+      "community": 50,
       "norm_label": "collect-card.tsx"
     },
     {
@@ -9016,7 +9016,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "apps_motorizados_components_order_collect_card_collectcard",
-      "community": 174,
+      "community": 50,
       "norm_label": "collectcard()"
     },
     {
@@ -9076,7 +9076,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_motorizados_components_order_delivered_screen",
-      "community": 174,
+      "community": 12,
       "norm_label": "delivered-screen.tsx"
     },
     {
@@ -9086,7 +9086,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "apps_motorizados_components_order_delivered_screen_deliveredscreen",
-      "community": 174,
+      "community": 12,
       "norm_label": "deliveredscreen()"
     },
     {
@@ -9096,7 +9096,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_motorizados_components_order_incident_sheet",
-      "community": 25,
+      "community": 12,
       "norm_label": "incident-sheet.tsx"
     },
     {
@@ -9106,7 +9106,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "apps_motorizados_components_order_incident_sheet_incident_types",
-      "community": 25,
+      "community": 12,
       "norm_label": "incident_types"
     },
     {
@@ -9116,7 +9116,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "apps_motorizados_components_order_incident_sheet_incidentsheet",
-      "community": 25,
+      "community": 12,
       "norm_label": "incidentsheet()"
     },
     {
@@ -9206,7 +9206,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_motorizados_components_order_order_detail",
-      "community": 174,
+      "community": 12,
       "norm_label": "order-detail.tsx"
     },
     {
@@ -9216,7 +9216,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "apps_motorizados_components_order_order_detail_orderdetail",
-      "community": 174,
+      "community": 12,
       "norm_label": "orderdetail()"
     },
     {
@@ -9256,7 +9256,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_motorizados_components_order_preview_section",
-      "community": 174,
+      "community": 25,
       "norm_label": "preview-section.tsx"
     },
     {
@@ -9266,7 +9266,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "apps_motorizados_components_order_preview_section_previewsection",
-      "community": 174,
+      "community": 25,
       "norm_label": "previewsection()"
     },
     {
@@ -9296,7 +9296,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_motorizados_components_order_status_hero",
-      "community": 174,
+      "community": 12,
       "norm_label": "status-hero.tsx"
     },
     {
@@ -9306,7 +9306,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "apps_motorizados_components_order_status_hero_moments",
-      "community": 174,
+      "community": 12,
       "norm_label": "moments"
     },
     {
@@ -9316,7 +9316,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "apps_motorizados_components_order_status_hero_stepper",
-      "community": 174,
+      "community": 12,
       "norm_label": "stepper()"
     },
     {
@@ -9326,7 +9326,7 @@
       "source_location": "L61",
       "_origin": "ast",
       "id": "apps_motorizados_components_order_status_hero_statushero",
-      "community": 174,
+      "community": 12,
       "norm_label": "statushero()"
     },
     {
@@ -9336,7 +9336,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_motorizados_components_order_wait_timer",
-      "community": 15,
+      "community": 25,
       "norm_label": "wait-timer.tsx"
     },
     {
@@ -9346,7 +9346,7 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "apps_motorizados_components_order_wait_timer_waittimer",
-      "community": 15,
+      "community": 25,
       "norm_label": "waittimer()"
     },
     {
@@ -9356,7 +9356,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_motorizados_components_push_manager",
-      "community": 25,
+      "community": 15,
       "norm_label": "push-manager.tsx"
     },
     {
@@ -9366,7 +9366,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "apps_motorizados_components_push_manager_pushmanager",
-      "community": 25,
+      "community": 15,
       "norm_label": "pushmanager()"
     },
     {
@@ -9376,7 +9376,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_motorizados_components_source_chip",
-      "community": 42,
+      "community": 25,
       "norm_label": "source-chip.tsx"
     },
     {
@@ -9386,7 +9386,7 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "apps_motorizados_components_source_chip_sourcechip",
-      "community": 42,
+      "community": 25,
       "norm_label": "sourcechip()"
     },
     {
@@ -9426,7 +9426,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_motorizados_components_transfers_transfer_watcher",
-      "community": 179,
+      "community": 42,
       "norm_label": "transfer-watcher.tsx"
     },
     {
@@ -9436,7 +9436,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "apps_motorizados_components_transfers_transfer_watcher_incomingbanner",
-      "community": 179,
+      "community": 42,
       "norm_label": "incomingbanner"
     },
     {
@@ -9446,7 +9446,7 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "apps_motorizados_components_transfers_transfer_watcher_transferwatcher",
-      "community": 179,
+      "community": 45,
       "norm_label": "transferwatcher()"
     },
     {
@@ -9456,7 +9456,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_motorizados_hooks_use_driver_orders",
-      "community": 12,
+      "community": 15,
       "norm_label": "use-driver-orders.ts"
     },
     {
@@ -9466,7 +9466,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "apps_motorizados_hooks_use_driver_orders_driverboard",
-      "community": 42,
+      "community": 15,
       "norm_label": "driverboard"
     },
     {
@@ -9476,7 +9476,7 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "apps_motorizados_hooks_use_driver_orders_usedriverorders",
-      "community": 12,
+      "community": 15,
       "norm_label": "usedriverorders()"
     },
     {
@@ -9526,7 +9526,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_motorizados_lib_api",
-      "community": 25,
+      "community": 15,
       "norm_label": "api.ts"
     },
     {
@@ -9536,7 +9536,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "apps_motorizados_lib_api_api",
-      "community": 25,
+      "community": 15,
       "norm_label": "api"
     },
     {
@@ -9606,7 +9606,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_motorizados_lib_format",
-      "community": 174,
+      "community": 25,
       "norm_label": "format.ts"
     },
     {
@@ -9616,7 +9616,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_motorizados_lib_format_soles",
-      "community": 174,
+      "community": 25,
       "norm_label": "soles()"
     },
     {
@@ -9626,7 +9626,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "apps_motorizados_lib_format_mmss",
-      "community": 15,
+      "community": 25,
       "norm_label": "mmss()"
     },
     {
@@ -9636,7 +9636,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "apps_motorizados_lib_format_minutesuntil",
-      "community": 174,
+      "community": 25,
       "norm_label": "minutesuntil()"
     },
     {
@@ -9646,7 +9646,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "apps_motorizados_lib_format_istoday",
-      "community": 12,
+      "community": 15,
       "norm_label": "istoday()"
     },
     {
@@ -9656,7 +9656,7 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "apps_motorizados_lib_format_payment_label",
-      "community": 174,
+      "community": 25,
       "norm_label": "payment_label"
     },
     {
@@ -9666,7 +9666,7 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "apps_motorizados_lib_format_hourof",
-      "community": 174,
+      "community": 12,
       "norm_label": "hourof()"
     },
     {
@@ -9776,7 +9776,7 @@
       "source_location": "L71",
       "_origin": "ast",
       "id": "apps_motorizados_lib_offline_queue_getoptimistic",
-      "community": 12,
+      "community": 15,
       "norm_label": "getoptimistic()"
     },
     {
@@ -9786,7 +9786,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_motorizados_lib_supabase_client",
-      "community": 25,
+      "community": 15,
       "norm_label": "client.ts"
     },
     {
@@ -9796,7 +9796,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "apps_motorizados_lib_supabase_client_getsupabasebrowser",
-      "community": 25,
+      "community": 15,
       "norm_label": "getsupabasebrowser()"
     },
     {
@@ -9846,7 +9846,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_motorizados_lib_types",
-      "community": 179,
+      "community": 42,
       "norm_label": "types.ts"
     },
     {
@@ -9856,7 +9856,7 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "apps_motorizados_lib_types_driverorderstatus",
-      "community": 179,
+      "community": 42,
       "norm_label": "driverorderstatus"
     },
     {
@@ -9866,7 +9866,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "apps_motorizados_lib_types_paymentintent",
-      "community": 179,
+      "community": 42,
       "norm_label": "paymentintent"
     },
     {
@@ -9876,7 +9876,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "apps_motorizados_lib_types_ordersource",
-      "community": 179,
+      "community": 42,
       "norm_label": "ordersource"
     },
     {
@@ -9886,7 +9886,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "apps_motorizados_lib_types_transitionaction",
-      "community": 179,
+      "community": 42,
       "norm_label": "transitionaction"
     },
     {
@@ -9906,7 +9906,7 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "apps_motorizados_lib_types_orderdetailresponse",
-      "community": 174,
+      "community": 12,
       "norm_label": "orderdetailresponse"
     },
     {
@@ -9916,7 +9916,7 @@
       "source_location": "L111",
       "_origin": "ast",
       "id": "apps_motorizados_lib_types_teamresponse",
-      "community": 179,
+      "community": 42,
       "norm_label": "teamresponse"
     },
     {
@@ -9926,7 +9926,7 @@
       "source_location": "L145",
       "_origin": "ast",
       "id": "apps_motorizados_lib_types_transferrequestrow",
-      "community": 179,
+      "community": 42,
       "norm_label": "transferrequestrow"
     },
     {
@@ -13916,7 +13916,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "packages_api_client_src_index_apierror",
-      "community": 15,
+      "community": 191,
       "norm_label": "apierror"
     },
     {
@@ -13926,7 +13926,7 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "packages_api_client_src_index_apierror_constructor",
-      "community": 15,
+      "community": 191,
       "norm_label": ".constructor()"
     },
     {
@@ -13946,7 +13946,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "packages_api_client_src_index_apierror_status",
-      "community": 15,
+      "community": 191,
       "norm_label": ".status()"
     },
     {
@@ -15006,7 +15006,7 @@
       "source_location": "L60",
       "_origin": "ast",
       "id": "packages_contracts_src_errors_problemdetails",
-      "community": 15,
+      "community": 191,
       "norm_label": "problemdetails"
     },
     {
@@ -16106,7 +16106,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "packages_core_src_order_transitions_applydelivered",
-      "community": 30,
+      "community": 76,
       "norm_label": "applydelivered()"
     },
     {
@@ -16116,7 +16116,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "packages_core_src_shared_errors",
-      "community": 76,
+      "community": 30,
       "norm_label": "errors.ts"
     },
     {
@@ -16226,7 +16226,7 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "packages_core_src_shared_errors_ts_docref_rfc_9457",
-      "community": 76,
+      "community": 30,
       "norm_label": "rfc-9457"
     },
     {
@@ -17666,7 +17666,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "packages_ui_src_components_icon_icon",
-      "community": 50,
+      "community": 12,
       "norm_label": "icon"
     },
     {
@@ -51220,7 +51220,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/api/app/api/v1/customer/phone/verify/route.ts",
-      "source_location": "L98",
+      "source_location": "L89",
       "weight": 1.0,
       "source": "apps_api_app_api_v1_customer_phone_verify_route_post",
       "target": "apps_api_lib_http_problem_handleerror"
@@ -51231,7 +51231,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/api/app/api/v1/customer/phone/verify/route.ts",
-      "source_location": "L93",
+      "source_location": "L84",
       "weight": 1.0,
       "source": "apps_api_app_api_v1_customer_phone_verify_route_post",
       "target": "apps_api_lib_http_problem_ok"

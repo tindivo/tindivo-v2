@@ -99,6 +99,11 @@ export function OtpVerificationSheet({ open, phone, onVerified, onClose }: Props
       onVerified()
     } catch (err) {
       if (err instanceof ApiError) {
+        if (err.status === 409) {
+          setError('Este número ya está registrado en otra cuenta.')
+          setCode('')
+          return
+        }
         setError(err.message ?? 'Código incorrecto. Intenta de nuevo.')
       } else {
         setError(err instanceof Error ? err.message : 'Código incorrecto. Intenta de nuevo.')
