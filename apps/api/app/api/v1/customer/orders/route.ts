@@ -61,6 +61,81 @@ export async function POST(req: Request): Promise<Response> {
       })
     }
 
+    // Guardia de contraentrega: verificar elegibilidad si el pago es contraentrega
+    if (body.paymentIntent === 'pending_cash' || body.paymentIntent === 'pending_yape') {
+      // 1. Verificar historial
+      const { count } = await service
+        .from('orders')
+        .select('id', { count: 'exact', head: true })
+        .eq('customer_user_id', user.id)
+        .eq('status', 'delivered')
+
+      if ((count ?? 0) < 1) {
+        return problem('forbidden', {
+          detail: 'Tu primer pedido debe ser con pago adelantado.',
+          requestId,
+          headers: corsHeaders(req),
+        })
+      }
+
+      // 2. Verificar tope usando el prepay_threshold de app_settings
+      const { data: thresholdSetting } = await service
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'prepay_threshold')
+        .maybeSingle()
+      const threshold = Number(thresholdSetting?.value ?? 80)
+
+      const itemIds = body.items.map((i) => i.menuItemId)
+      const modifierIds = body.items.flatMap((i) => i.modifiers || [])
+
+      const { data: itemsData } = await service
+        .from('menu_items')
+        .select('id, base_price')
+        .in('id', itemIds)
+
+      const { data: modifiersData } = modifierIds.length > 0
+        ? await service
+            .from('menu_modifier_options')
+            .select('id, additional_price')
+            .in('id', modifierIds)
+        : { data: [] }
+
+      let calculatedSubtotal = 0
+      for (const item of body.items) {
+        const itemDb = itemsData?.find((db) => db.id === item.menuItemId)
+        if (itemDb) {
+          let itemUnitPrice = Number(itemDb.base_price)
+          for (const modId of item.modifiers || []) {
+            const modDb = modifiersData?.find((db) => db.id === modId)
+            if (modDb) {
+              itemUnitPrice += Number(modDb.additional_price)
+            }
+          }
+          calculatedSubtotal += itemUnitPrice * item.quantity
+        }
+      }
+
+      let deliveryFee = 0
+      if (body.deliveryMethod === 'delivery') {
+        const { data: bands } = await service
+          .from('app_settings')
+          .select('value')
+          .eq('key', 'delivery_bands')
+          .maybeSingle()
+        deliveryFee = Number((bands?.value as { near?: number })?.near ?? 2.0)
+      }
+
+      const calculatedTotal = calculatedSubtotal + deliveryFee
+      if (calculatedTotal > threshold) {
+        return problem('forbidden', {
+          detail: `Pedidos mayores a S/${threshold} requieren pago adelantado.`,
+          requestId,
+          headers: corsHeaders(req),
+        })
+      }
+    }
+
     // Replay temprano: si esta Idempotency-Key ya completó, devuelve la respuesta
     // original ANTES de los guards de pausa/capacidades/horario — el estado del
     // negocio pudo cambiar entre el intento original y el retry (p. ej. cerró a

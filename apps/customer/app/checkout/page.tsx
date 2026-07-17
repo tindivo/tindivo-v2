@@ -94,6 +94,7 @@ export default function CheckoutPage() {
   const [geoBlock, setGeoBlock] = useState<GeoBlockKind | null>(null)
   const [prepayThreshold, setPrepayThreshold] = useState(DEFAULT_PREPAY_THRESHOLD)
   const [prepayOnlyByRisk, setPrepayOnlyByRisk] = useState(false)
+  const [deliveredCount, setDeliveredCount] = useState(0)
   const [locating, setLocating] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -108,8 +109,19 @@ export default function CheckoutPage() {
     () => Math.round((subtotal + deliveryFee) * 100) / 100,
     [subtotal, deliveryFee],
   )
-  const amountRequiresPrepay = subtotal >= prepayThreshold
-  const mustPrepay = amountRequiresPrepay || prepayOnlyByRisk
+  const isNewUser = deliveredCount < 1
+  const exceedsCashCap = total > prepayThreshold
+  const isBlocked = prepayOnlyByRisk
+
+  const mustPrepay = isNewUser || exceedsCashCap || isBlocked
+
+  const prepayReason = isBlocked
+    ? 'Tu cuenta tiene restringido el pago contraentrega.'
+    : isNewUser
+      ? 'En tu primer pedido el pago es adelantado. Después podrás pagar al recibir.'
+      : exceedsCashCap
+        ? `Pedidos mayores a S/${prepayThreshold} requieren pago adelantado.`
+        : null
 
   // Modo catálogo: el negocio no acepta pedidos web — el pedido va por WhatsApp
   // desde su página. Cubre deep-links a /checkout y carritos persistidos de un
@@ -206,6 +218,12 @@ export default function CheckoutPage() {
         return
       }
       setPrepayOnlyByRisk(Boolean(profile?.contraentrega_blocked))
+      const { count } = await supabase
+        .from('orders')
+        .select('id', { count: 'exact', head: true })
+        .eq('customer_user_id', sessionUser.id)
+        .eq('status', 'delivered')
+      setDeliveredCount(count ?? 0)
       setUserId(sessionUser.id)
       setName(profile?.full_name ?? meta?.full_name ?? '')
       if (profile?.phone) {
@@ -612,14 +630,12 @@ export default function CheckoutPage() {
           </>
         ) : (
           <>
-            {mustPrepay && (
+            {prepayReason && (
               <p
                 className="rounded-xl px-3 py-2.5 text-[13px]"
                 style={{ background: 'rgba(249,115,22,0.08)', color: '#C2410C' }}
               >
-                {amountRequiresPrepay
-                  ? `Los pedidos de ${soles(prepayThreshold)} o más requieren pago anticipado con billetera digital.`
-                  : 'Por políticas del servicio, este pedido requiere pago anticipado con billetera digital.'}
+                {prepayReason}
               </p>
             )}
             <div className="mt-3 flex flex-col gap-2.5">
@@ -642,7 +658,7 @@ export default function CheckoutPage() {
                   desc: 'Paga ahora con Yape/Plin y sube tu comprobante',
                   logos: ['yape', 'plin'],
                 },
-              ].map((opt) => {
+              ].filter((opt) => !mustPrepay || opt.v === 'prepaid').map((opt) => {
                 const disabled = mustPrepay && opt.v !== 'prepaid'
                 const sel = payment === opt.v
                 return (

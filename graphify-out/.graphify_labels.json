@@ -272,6 +272,7 @@
   "270": "19. Matriz de documentos por agente",
   "271": "3. Las 4 apps — alcance por actor",
   "272": "4. COMPONENTES REUTILIZABLES",
+  "273": "route.ts",
   "274": "10. Row Level Security",
   "275": "11. Idempotencia Stripe-style",
   "276": "12. Realtime",
@@ -444,5 +445,6 @@
   "443": "Tabla idempotency_keys",
   "444": "tienda.tindivo.com",
   "445": "Verificación de Teléfono por SMS",
-  "446": "Vertical slicing"
+  "446": "Vertical slicing",
+  "447": "soles"
 }

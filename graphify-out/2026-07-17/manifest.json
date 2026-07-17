@@ -750,8 +750,8 @@
     "semantic_hash": "eb4ec76c27f0b71685ab0afeb6a3de96"
   },
   "apps/customer/components/auth-onboarding/steps/phone-step.tsx": {
-    "mtime": 1784061602.7695265,
-    "ast_hash": "1de81682256e8b838a37f9448083a7e5",
+    "mtime": 1784306516.8604918,
+    "ast_hash": "5a869560bacca71dfc4e4cd7da6b4d2d",
     "semantic_hash": ""
   },
   "apps/customer/components/cart-sheet.tsx": {
@@ -2030,8 +2030,8 @@
     "semantic_hash": ""
   },
   "apps/api/app/api/v1/customer/phone/verify/route.ts": {
-    "mtime": 1783722878.7190008,
-    "ast_hash": "6a6beaad3286994e660b7935671e3ba6",
+    "mtime": 1784306503.2679138,
+    "ast_hash": "cd0d6014d16895e708b879aabe3c08c5",
     "semantic_hash": ""
   },
   "apps/api/lib/twilio/client.ts": {
@@ -2065,8 +2065,8 @@
     "semantic_hash": ""
   },
   "apps/customer/components/otp-verification-sheet.tsx": {
-    "mtime": 1784061622.4846637,
-    "ast_hash": "87da0345887640130c68ea9a8c88dc5e",
+    "mtime": 1784306535.1385725,
+    "ast_hash": "c7f1b8a9954f864affe43a88c0d7502f",
     "semantic_hash": ""
   },
   "apps/customer/hooks/use-order-readiness.ts": {
@@ -2077,6 +2077,11 @@
   "supabase/migrations/0056_require_verified_phone.sql": {
     "mtime": 1784059172.5856023,
     "ast_hash": "e7d7453a6163061938a36552fb881750",
+    "semantic_hash": ""
+  },
+  "Docs/context/order-flow-audit.md": {
+    "mtime": 1784310111.6232033,
+    "ast_hash": "6420176f6c175aa39f23affa810d5bfe",
     "semantic_hash": ""
   }
 }
