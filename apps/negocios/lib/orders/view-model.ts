@@ -6,6 +6,7 @@ export type UiSource = 'web' | 'manual'
 export type UiPayment = 'pending_cash' | 'pending_wallet' | 'prepaid' | 'pending_mixed'
 export type UiState =
   | 'pending_acceptance'
+  | 'awaiting_payment'
   | 'validando'
   | 'cooking'
   | 'buffer_p1'
@@ -21,7 +22,7 @@ export type OrderColumn = 'nuevos' | 'cocina' | 'reparto' | 'entregados'
 /** Columnas a traer de `orders` para el kanban (incl. nombre del motorizado). */
 export const ORDER_SELECT =
   'id,short_id,status,source,customer_name,customer_phone,delivery_reference,delivery_method,' +
-  'order_amount,delivery_fee,payment_intent,payment_proof_status,comprobante_prepago_url,' +
+  'order_amount,delivery_fee,payment_intent,payment_proof_status,comprobante_prepago_url,proof_attempt,' +
   'prep_time_minutes,estimated_ready_at,prep_extension_count,client_pays_with,change_to_give,' +
   'yape_amount,cash_amount,requires_validation,validation_reason_code,risk_flags,' +
   'driver_id,created_at,pending_acceptance_at,validating_at,' +
@@ -54,6 +55,7 @@ export interface OrderRow {
   payment_intent: string
   payment_proof_status: string | null
   comprobante_prepago_url: string | null
+  proof_attempt?: number | null
   prep_time_minutes: number | null
   estimated_ready_at: string | null
   prep_extension_count: number | null
@@ -108,6 +110,8 @@ export interface OrderVM {
   extensionMin: number | null
   proofStatus: string | null
   proofUrl: string | null
+  proofAttempt: number
+  createdAtFormatted: string | null
   closedAt: string | null
   cancelReason: string | null
 }
@@ -141,7 +145,8 @@ export function mapPayment(intent: string): UiPayment {
 }
 
 export function getColumn(status: string): OrderColumn {
-  if (status === 'pending_acceptance' || status === 'validando') return 'nuevos'
+  if (status === 'pending_acceptance' || status === 'awaiting_payment' || status === 'validando')
+    return 'nuevos'
   if (
     [
       'confirmed',
@@ -160,6 +165,8 @@ function getUiState(row: OrderRow, now: number): UiState {
   switch (row.status) {
     case 'pending_acceptance':
       return 'pending_acceptance'
+    case 'awaiting_payment':
+      return 'awaiting_payment'
     case 'validando':
       return 'validando'
     case 'confirmed':
@@ -190,13 +197,15 @@ export function toOrderVM(row: OrderRow, now: number = Date.now()): OrderVM {
   const countdownSec =
     row.status === 'pending_acceptance'
       ? secondsUntil(row.pending_acceptance_at ?? row.created_at, ACCEPT_SEC, now)
-      : row.status === 'validando'
-        ? secondsUntil(
-            row.validating_at ?? row.created_at,
-            row.payment_intent === 'prepaid' ? PREPAY_SEC : VALIDATE_SEC,
-            now,
-          )
-        : 0
+      : row.status === 'awaiting_payment'
+        ? secondsUntil(row.validating_at ?? row.created_at, PREPAY_SEC, now)
+        : row.status === 'validando'
+          ? secondsUntil(
+              row.validating_at ?? row.created_at,
+              row.payment_intent === 'prepaid' ? PREPAY_SEC : VALIDATE_SEC,
+              now,
+            )
+          : 0
 
   const minutesLeft =
     state === 'cooking'
@@ -246,6 +255,8 @@ export function toOrderVM(row: OrderRow, now: number = Date.now()): OrderVM {
     extensionMin: extCount > 0 ? extCount * 10 : null,
     proofStatus: row.payment_proof_status,
     proofUrl: row.comprobante_prepago_url,
+    proofAttempt: row.proof_attempt ?? 0,
+    createdAtFormatted: fmtTime(row.created_at),
     closedAt: fmtTime(row.delivered_at ?? row.cancelled_at),
     cancelReason: row.status === 'cancelled' ? row.cancel_note : null,
   }

@@ -295,6 +295,16 @@ export function NuevoCard({ order, onOpen, compact = false }: CardProps) {
           </span>
         </div>
         <div style={{ flex: 1 }} />
+        {order.status === 'awaiting_payment' && (
+          <span style={{ fontSize: 10, fontWeight: 700, background: '#FFF7ED', color: '#C2410C', padding: '2px 6px', borderRadius: 6, border: '1px solid #FFEDD5' }}>
+            Esperando pago
+          </span>
+        )}
+        {order.status === 'validando' && (
+          <span style={{ fontSize: 10, fontWeight: 700, background: '#EFF6FF', color: '#1D4ED8', padding: '2px 6px', borderRadius: 6, border: '1px solid #BFDBFE' }}>
+            Validando
+          </span>
+        )}
         <SourceBadgeMini source={order.source} />
       </div>
 

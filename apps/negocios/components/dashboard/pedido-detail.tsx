@@ -168,43 +168,101 @@ function PaySectionWallet({ order, qrUrl }: { order: OrderVM; qrUrl: string | nu
 function PaySectionPrepaid({
   order,
   proofUrl,
+  busy,
   onVerify,
   onReject,
 }: {
   order: OrderVM
   proofUrl: string | null
+  busy?: boolean
   onVerify: () => void
   onReject: () => void
 }) {
   const verified = order.proofStatus === 'verified'
+  const isSecondAttempt = order.proofAttempt === 2
+
   return (
     <div
       style={{
         borderRadius: 12,
         overflow: 'hidden',
-        border: verified ? '1.5px solid #4ADE80' : '1px solid #E0F2FE',
+        border: verified ? '1.5px solid #4ADE80' : isSecondAttempt ? '1.5px solid #FCA5A5' : '1px solid #E0F2FE',
       }}
     >
       <div
         style={{
           padding: '10px 14px',
-          background: verified ? '#F0FDF4' : '#E0F2FE',
+          background: verified ? '#F0FDF4' : isSecondAttempt ? '#FEF2F2' : '#E0F2FE',
           display: 'flex',
           alignItems: 'center',
+          justifyContent: 'space-between',
           gap: 8,
         }}
       >
-        <MS
-          name={verified ? 'verified' : 'schedule'}
-          size={18}
-          filled
-          style={{ color: verified ? '#16A34A' : '#0369A1' }}
-        />
-        <div style={{ fontSize: 13, fontWeight: 700, color: verified ? '#166534' : '#0C4A6E' }}>
-          {verified ? 'Pago verificado' : 'Verificar comprobante de pago'}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <MS
+            name={verified ? 'verified' : 'schedule'}
+            size={18}
+            filled
+            style={{ color: verified ? '#16A34A' : isSecondAttempt ? '#DC2626' : '#0369A1' }}
+          />
+          <div style={{ fontSize: 13, fontWeight: 700, color: verified ? '#166534' : isSecondAttempt ? '#991B1B' : '#0C4A6E' }}>
+            {verified ? 'Pago verificado' : 'Verificar comprobante de pago'}
+          </div>
         </div>
+        {isSecondAttempt && !verified && (
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              background: '#FEE2E2',
+              color: '#991B1B',
+              padding: '3px 8px',
+              borderRadius: 999,
+              border: '1px solid #FCA5A5',
+            }}
+          >
+            Segundo y último intento
+          </span>
+        )}
       </div>
+
       <div style={{ padding: '12px 14px', background: '#fff' }}>
+        {/* Guía de validación (sólo si no está verificado) */}
+        {!verified && (
+          <div
+            style={{
+              marginBottom: 12,
+              padding: '10px 12px',
+              background: '#F8FAFC',
+              borderRadius: 10,
+              border: '1px solid #E2E8F0',
+              fontSize: 12,
+            }}
+          >
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--tv-ink-muted)', marginBottom: 6, letterSpacing: '0.05em' }}>
+              DATOS DE VALIDACIÓN
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--tv-ink-muted)' }}>Monto esperado:</span>
+                <span className="tv-mono" style={{ fontWeight: 700, color: '#16A34A' }}>{soles(order.total)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--tv-ink-muted)' }}>Hora del pedido:</span>
+                <span className="tv-mono" style={{ fontWeight: 700 }}>{order.createdAtFormatted ?? '—'}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--tv-ink-muted)' }}>Nombre del cliente:</span>
+                <span style={{ fontWeight: 700 }}>{order.customer ?? 'Cliente'}</span>
+              </div>
+            </div>
+            <div style={{ marginTop: 6, fontSize: 11, color: '#64748B', borderTop: '1px dashed #E2E8F0', paddingTop: 6 }}>
+              Verifica que la transferencia haya sido realizada <strong>posterior a las {order.createdAtFormatted ?? 'la hora del pedido'}</strong> por el monto exacto a nombre del cliente.
+            </div>
+          </div>
+        )}
+
         <Row label="Total pagado" value={soles(order.total)} mono bold />
         <div style={{ marginTop: 10, marginBottom: 12 }}>
           <div
@@ -253,17 +311,18 @@ function PaySectionPrepaid({
             <button
               type="button"
               onClick={onReject}
+              disabled={!proofUrl || busy}
               className="tv-btn tv-btn-sm"
-              style={{ border: '1.5px solid #FCA5A5', background: '#FFF5F5', color: '#DC2626' }}
+              style={{ border: '1.5px solid #FCA5A5', background: '#FFF5F5', color: '#DC2626', opacity: (!proofUrl || busy) ? 0.5 : 1 }}
             >
               <MS name="cancel" size={14} /> Inválido
             </button>
             <button
               type="button"
               onClick={onVerify}
-              disabled={!proofUrl}
+              disabled={!proofUrl || busy}
               className="tv-btn tv-btn-sm"
-              style={{ background: '#16A34A', color: '#fff', border: 'none' }}
+              style={{ background: '#16A34A', color: '#fff', border: 'none', opacity: (!proofUrl || busy) ? 0.5 : 1 }}
             >
               <MS name="check_circle" size={14} /> Correcto
             </button>
@@ -271,7 +330,7 @@ function PaySectionPrepaid({
         )}
         {verified && (
           <div style={{ fontSize: 12, color: '#15803D', fontWeight: 600, textAlign: 'center' }}>
-            Comprobante verificado · puedes aceptar el pedido
+            Comprobante verificado · pago registrado
           </div>
         )}
       </div>
@@ -551,11 +610,11 @@ export function DetailScreen({
   const [prep, setPrep] = useState(20)
   const [modal, setModal] = useState<null | 'reject' | 'cancel'>(null)
 
-  const isPending = order.status === 'pending_acceptance' || order.status === 'validando'
+  const isPending = order.status === 'pending_acceptance' || order.status === 'awaiting_payment' || order.status === 'validando'
   const isPrepaid = order.payment === 'prepaid'
   const isOnline = order.source === 'web'
-  const acceptDisabled = busy || (isPrepaid && order.proofStatus !== 'verified')
-  const showPrepPicker = isPending && !(isPrepaid && order.proofStatus !== 'verified')
+  const acceptDisabled = busy
+  const showPrepPicker = isPending
 
   const rejectReasons = isPrepaid
     ? [
@@ -606,7 +665,7 @@ export function DetailScreen({
         />
       )}
 
-      {/* Header */}
+      {/* Header flotante/fijo */}
       <div
         style={{
           padding: mobile ? '10px 14px' : '12px 18px',
