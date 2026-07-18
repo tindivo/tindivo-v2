@@ -78,6 +78,27 @@ export function sendOrderPrepay(data: OrderPrepayData) {
   return inngest.send({ name: EVENT_ORDER_PREPAY, data })
 }
 
+export const EVENT_ORDER_PAYMENT_TIMEOUT = 'order/payment.timeout' as const
+
+export type OrderPaymentTimeoutData = {
+  orderId: string
+  sleepMs?: number
+}
+
+export function sendOrderPaymentTimeout(data: OrderPaymentTimeoutData) {
+  return inngest.send({ name: EVENT_ORDER_PAYMENT_TIMEOUT, data })
+}
+
+export const EVENT_ORDER_PREPAY_PROOF_UPLOADED = 'order/prepay.proof_uploaded' as const
+
+export type OrderPrepayProofUploadedData = {
+  orderId: string
+}
+
+export function sendOrderPrepayProofUploaded(data: OrderPrepayProofUploadedData) {
+  return inngest.send({ name: EVENT_ORDER_PREPAY_PROOF_UPLOADED, data })
+}
+
 export const EVENT_ORDER_NOTIFY_BUSINESS = 'order/notify-business' as const
 
 /** Datos del evento que notifica al negocio sobre un nuevo pedido. */

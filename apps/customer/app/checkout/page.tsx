@@ -465,11 +465,7 @@ export default function CheckoutPage() {
       />
     )
   if (confirmed)
-    return confirmed.status === 'validando' && payment === 'prepaid' ? (
-      <Prepay result={confirmed} />
-    ) : (
-      <Confirmed result={confirmed} />
-    )
+    return <Confirmed result={confirmed} />
   if (!authReady)
     return (
       <main className="mx-auto max-w-[768px] px-4 pt-16">

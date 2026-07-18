@@ -58,6 +58,15 @@ export async function POST(
       actor_user_id: user.id,
       data: {},
     })
+
+    try {
+      const { sendOrderPrepayProofUploaded, sendOrderValidation } = await import(
+        '@/lib/inngest/client'
+      )
+      await sendOrderPrepayProofUploaded({ orderId: id })
+      await sendOrderValidation({ orderId: id })
+    } catch {}
+
     return ok({ ok: true }, { headers: corsHeaders(req) })
   } catch (err) {
     return handleError(err, requestId, req)

@@ -6,12 +6,15 @@ import {
   EVENT_CASH_DELIVERED,
   EVENT_ORDER_CREATED,
   EVENT_ORDER_NOTIFY_BUSINESS,
+  EVENT_ORDER_PAYMENT_TIMEOUT,
   EVENT_ORDER_PREPAY,
+  EVENT_ORDER_PREPAY_PROOF_UPLOADED,
   EVENT_ORDER_VALIDATION,
   EVENT_TRANSFER_REQUESTED,
   inngest,
   type OrderCreatedData,
   type OrderNotifyBusinessData,
+  type OrderPaymentTimeoutData,
   type OrderPrepayData,
   type OrderValidationData,
   type TransferRequestedData,
@@ -126,9 +129,45 @@ export const orderValidationTimeout: InngestFunction.Any = inngest.createFunctio
 )
 
 /**
- * Timeout de verificación de prepago: si el cliente no sube comprobante / el
- * negocio no lo aprueba dentro de `timers.prepayVerificationMinutes` (10 min),
- * se auto-cancela. `expire_order` re-chequea `validando` bajo FOR UPDATE.
+ * Timeout de pago: si el cliente no sube su comprobante en `awaiting_payment` dentro de
+ * `timers.paymentMinutes` (10 min), se auto-cancela con `prepay_timeout`.
+ * `cancelOn` cancela ejecuciones anteriores si se reemite el evento o se sube comprobante.
+ */
+export const orderPaymentTimeout: InngestFunction.Any = inngest.createFunction(
+  {
+    id: 'order-payment-timeout',
+    name: 'Auto-cancelar pago no realizado',
+    triggers: [{ event: EVENT_ORDER_PAYMENT_TIMEOUT }],
+    cancelOn: [
+      { event: EVENT_ORDER_PAYMENT_TIMEOUT, match: 'data.orderId' },
+      { event: EVENT_ORDER_PREPAY_PROOF_UPLOADED, match: 'data.orderId' },
+    ],
+  },
+  async ({ event, step }) => {
+    const { orderId, sleepMs: override } = event.data as OrderPaymentTimeoutData
+    const sleepMs = await step.run('resolve-deadline', async () => {
+      if (typeof override === 'number') return override
+      const svc = createServiceClient()
+      const { data } = await svc.from('app_settings').select('value').eq('key', 'timers').single()
+      const minutes =
+        (data?.value as { paymentMinutes?: number } | null)?.paymentMinutes ?? 10
+      return minutes * 60_000
+    })
+    await step.sleep('payment-window', sleepMs)
+    return await step.run('expire-if-still-awaiting-payment', async () => {
+      const svc = createServiceClient()
+      const { data, error } = await svc.rpc('expire_order', {
+        p_order_id: orderId,
+        p_reason: 'prepay_timeout',
+      })
+      if (error) throw new Error(error.message)
+      return data
+    })
+  },
+)
+
+/**
+ * Timeout de verificación de prepago (legacy): conservado por compatibilidad.
  */
 export const orderPrepayTimeout: InngestFunction.Any = inngest.createFunction(
   {

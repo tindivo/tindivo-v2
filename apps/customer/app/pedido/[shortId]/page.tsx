@@ -8,6 +8,7 @@ import { use, useCallback, useEffect, useState } from 'react'
 import { Icon, ScreenHeader, SupportLink } from '@/components/ui'
 import { api } from '@/lib/api'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
+import { PrepayProofSection } from '@/components/prepay-proof-section'
 
 const soles = (n: number | null | undefined) => (n == null ? '—' : `S/ ${Number(n).toFixed(2)}`)
 
@@ -46,6 +47,8 @@ interface Tracking {
   amount: number
   deliveryFee: number
   total: number
+  proofAttempt?: number
+  proofUrl?: string | null
   items: TrackingItem[]
 }
 
@@ -303,6 +306,62 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
               </div>
             </div>
           </div>
+          {/* Sección de pago prepago según estado */}
+          {data.paymentIntent === 'prepaid' && (
+            <>
+              {/* 1. pending_acceptance: Esperando confirmación */}
+              {data.status === 'pending_acceptance' && (
+                <div className="mt-3.5 rounded-[22px] bg-orange-50/80 p-4 font-sans text-left text-orange-950" style={{ border: '1px solid #FFEDD5' }}>
+                  <div className="flex items-center gap-2 font-semibold text-[14px]">
+                    <span className="h-2 w-2 rounded-full bg-orange-500 animate-pulse" />
+                    Esperando confirmación del restaurante
+                  </div>
+                  <p className="mt-1 text-[13px] text-orange-800">
+                    El restaurante está verificando disponibilidad de tu pedido. Te avisaremos aquí para realizar el pago.
+                  </p>
+                </div>
+              )}
+
+              {/* 2 & 4. awaiting_payment: Subida de captura (intento 0 o 1) */}
+              {data.status === 'awaiting_payment' && (
+                <div>
+                  {data.proofAttempt === 1 && (
+                    <div className="mt-3.5 rounded-[18px] bg-red-50 p-3.5 text-left text-[13px] text-red-700" style={{ border: '1px solid #FCA5A5' }}>
+                      <strong>Tu comprobante no fue válido.</strong> Revisa e intenta de nuevo. Te queda 1 intento.
+                    </div>
+                  )}
+                  <PrepayProofSection
+                    orderId={ownedId ?? data.shortId}
+                    proofAttempt={data.proofAttempt ?? 0}
+                    onProofUploaded={load}
+                  />
+                </div>
+              )}
+
+              {/* 3. validando: En revisión */}
+              {data.status === 'validando' && (
+                <div className="mt-3.5 rounded-[22px] bg-blue-50/80 p-4 font-sans text-left text-blue-950" style={{ border: '1px solid #BFDBFE' }}>
+                  <div className="flex items-center gap-2 font-semibold text-[14px]">
+                    <span className="h-2 w-2 rounded-full bg-blue-500 animate-ping" />
+                    Verificando tu pago...
+                  </div>
+                  <p className="mt-1 text-[13px] text-blue-800">
+                    El restaurante está revisando tu comprobante de pago. Te notificaremos apenas sea verificado.
+                  </p>
+                </div>
+              )}
+
+              {/* 5. cancelled por rechazo final */}
+              {data.status === 'cancelled' && data.cancelReason === 'proof_rejected_final' && (
+                <div className="mt-3.5 rounded-[22px] bg-red-50 p-4 font-sans text-left text-red-950" style={{ border: '1px solid #FECDD3' }}>
+                  <div className="font-semibold text-[14px] text-red-900">Pedido cancelado</div>
+                  <p className="mt-1 text-[13px] text-red-800">
+                    El comprobante de pago no pudo validarse tras 2 intentos.
+                  </p>
+                </div>
+              )}
+            </>
+          )}
 
           {/* Línea de tiempo */}
           <div

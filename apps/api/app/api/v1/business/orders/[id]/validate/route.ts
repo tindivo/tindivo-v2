@@ -45,11 +45,16 @@ export async function POST(
       if (error.code === 'P0001') throw new DomainError(error.message, 'forbidden')
       throw new Error(error.message)
     }
-    // Al pasar la validación, arranca el timer de aceptación (best-effort).
+    // Al pasar la validación o rechazar (regreso a awaiting_payment), agendar timers.
     const result = data as { ok?: boolean; status?: string }
     if (result?.status === 'pending_acceptance') {
       try {
         await sendOrderCreated({ orderId: id })
+      } catch {}
+    } else if (result?.status === 'awaiting_payment') {
+      try {
+        const { sendOrderPaymentTimeout } = await import('@/lib/inngest/client')
+        await sendOrderPaymentTimeout({ orderId: id })
       } catch {}
     }
     return ok(data, { headers: corsHeaders(req) })

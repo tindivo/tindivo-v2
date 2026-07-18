@@ -59,6 +59,15 @@ export async function handleOrderTransition(
       if (error.code === 'P0001') throw new DomainError(error.message, 'invalid_state_transition')
       throw new Error(error.message)
     }
+
+    const result = data as { status?: string }
+    if (body.action === 'accept' && result?.status === 'awaiting_payment') {
+      try {
+        const { sendOrderPaymentTimeout } = await import('../inngest/client')
+        await sendOrderPaymentTimeout({ orderId })
+      } catch {}
+    }
+
     return ok(data, { headers: corsHeaders(req) })
   } catch (err) {
     return handleError(err, requestId, req)
