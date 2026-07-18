@@ -470,9 +470,9 @@
     "semantic_hash": "4db14e562fa64e2ba4a6a3021bad0e8b"
   },
   "apps/api/app/api/v1/customer/orders/[id]/prepay-proof/route.ts": {
-    "mtime": 1783714444.622884,
-    "ast_hash": "e6299f58bdd5817e1ef9973f9a3d1ef9",
-    "semantic_hash": "e6299f58bdd5817e1ef9973f9a3d1ef9"
+    "mtime": 1784327340.1700368,
+    "ast_hash": "7c00633218885d4eda6bcb106b558a02",
+    "semantic_hash": ""
   },
   "apps/api/app/api/v1/customer/orders/route.ts": {
     "mtime": 1784312043.5550227,
@@ -1300,9 +1300,9 @@
     "semantic_hash": "a9d37350cf82b059d36d645807d993ec"
   },
   "packages/contracts/src/enums.ts": {
-    "mtime": 1783714445.075557,
-    "ast_hash": "ef8aa1b20b746d292265f22446ff6332",
-    "semantic_hash": "ef8aa1b20b746d292265f22446ff6332"
+    "mtime": 1784327326.0548098,
+    "ast_hash": "9d49e19c6e301210670f1207a0008038",
+    "semantic_hash": ""
   },
   "packages/contracts/src/errors.ts": {
     "mtime": 1783714445.0654285,
@@ -1315,9 +1315,9 @@
     "semantic_hash": "4d0d121337ba84972fef6a1b34bf9e67"
   },
   "packages/contracts/src/order-status.ts": {
-    "mtime": 1783714445.046039,
-    "ast_hash": "26b554448a14b68b2371d8a7e354444e",
-    "semantic_hash": "26b554448a14b68b2371d8a7e354444e"
+    "mtime": 1784327330.963619,
+    "ast_hash": "e9be77d85e0e945ce37a3e77720be59d",
+    "semantic_hash": ""
   },
   "packages/contracts/src/primitives.ts": {
     "mtime": 1784305378.924246,
@@ -1420,8 +1420,8 @@
     "semantic_hash": "a86b175d32fbe39a67878eada4cb8aa2"
   },
   "packages/supabase/src/database.types.ts": {
-    "mtime": 1783726393.2119827,
-    "ast_hash": "d517b32c6b9302f2fa055cfd5a413caa",
+    "mtime": 1784327427.2526362,
+    "ast_hash": "2b104222109fb4143aae8e5808941a8b",
     "semantic_hash": ""
   },
   "packages/supabase/src/index.ts": {
@@ -2087,6 +2087,41 @@
   "supabase/migrations/0057_contraentrega_guards.sql": {
     "mtime": 1784311948.4934196,
     "ast_hash": "3b49901acb176a8e866ba1e29c29e11b",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/0058_awaiting_payment_state.sql": {
+    "mtime": 1784326755.593457,
+    "ast_hash": "9ec6ea199743c6b30281327593a4a4ce",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/0059_prepaid_awaiting_payment_flow.sql": {
+    "mtime": 1784327316.966354,
+    "ast_hash": "ec1ce308a9ee94e07a377e7e19e20433",
+    "semantic_hash": ""
+  },
+  "Docs/context/appeal-entity-fit.md": {
+    "mtime": 1784323896.5539014,
+    "ast_hash": "99c66b1c75066e5dc896415d448e3453",
+    "semantic_hash": ""
+  },
+  "Docs/context/debt-liquidation-audit.md": {
+    "mtime": 1784323637.1786048,
+    "ast_hash": "ea36487af22e102fc8ba1129be350ca2",
+    "semantic_hash": ""
+  },
+  "Docs/context/order-states-impact.md": {
+    "mtime": 1784316005.1527545,
+    "ast_hash": "904dff66be55969f454ab42eb57647b2",
+    "semantic_hash": ""
+  },
+  "Docs/context/prepaid-ux-states-audit.md": {
+    "mtime": 1784324891.586026,
+    "ast_hash": "b9bf337a4eb58317d3d20f757798b3d2",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/0060_storage_proofs_update_policy.sql": {
+    "mtime": 1784328820.9285462,
+    "ast_hash": "4d37cf7067aac353b0a1b92fe3642e91",
     "semantic_hash": ""
   }
 }

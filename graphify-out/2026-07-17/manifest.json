@@ -475,8 +475,8 @@
     "semantic_hash": "e6299f58bdd5817e1ef9973f9a3d1ef9"
   },
   "apps/api/app/api/v1/customer/orders/route.ts": {
-    "mtime": 1784059153.1519804,
-    "ast_hash": "1a6022308881f2e69fcd969c6a4b1c1a",
+    "mtime": 1784312043.5550227,
+    "ast_hash": "48b6d63e03f786518f0af519dfd803ff",
     "semantic_hash": ""
   },
   "apps/api/app/api/v1/driver/availability/route.ts": {
@@ -645,8 +645,8 @@
     "semantic_hash": "3c0795f5413da6cf2621704d4c77ab8b"
   },
   "apps/customer/app/checkout/page.tsx": {
-    "mtime": 1784305428.9659956,
-    "ast_hash": "5d5dec39f138d96a7400db5da5c54235",
+    "mtime": 1784312112.667906,
+    "ast_hash": "ecbadded974c322362ca036c2d1da430",
     "semantic_hash": ""
   },
   "apps/customer/app/cuenta/page.tsx": {
@@ -2082,6 +2082,11 @@
   "Docs/context/order-flow-audit.md": {
     "mtime": 1784310111.6232033,
     "ast_hash": "6420176f6c175aa39f23affa810d5bfe",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/0057_contraentrega_guards.sql": {
+    "mtime": 1784311948.4934196,
+    "ast_hash": "3b49901acb176a8e866ba1e29c29e11b",
     "semantic_hash": ""
   }
 }

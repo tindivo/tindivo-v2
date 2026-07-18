@@ -249,10 +249,9 @@ export async function POST(req: Request): Promise<Response> {
         .data
       if (created?.id) {
         try {
-          // Agenda el timer según el estado/método: prepago (10m) · validación (5m) · aceptación (5m).
-          if (created.status === 'validando' && body.paymentIntent === 'prepaid')
-            await sendOrderPrepay({ orderId: created.id })
-          else if (created.status === 'validando')
+          // Agenda el timer según el estado: validación para contraentrega con strike (5m) · aceptación (5m).
+          // El pago prepago se realiza en tracking tras la aceptación del negocio.
+          if (created.status === 'validando')
             await sendOrderValidation({ orderId: created.id })
           else await sendOrderCreated({ orderId: created.id })
 
