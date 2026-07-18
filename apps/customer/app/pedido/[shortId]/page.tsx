@@ -97,6 +97,16 @@ function etaLabel(estimatedReadyAt: string | null): string {
   return '25–35 min'
 }
 
+function getStepSub(s: typeof STEPS[0], data: Tracking): string {
+  if (s.key === 'received' && data.paymentIntent === 'prepaid') {
+    if (data.status === 'pending_acceptance') return 'Esperando confirmación de disponibilidad'
+    if (data.status === 'awaiting_payment') return 'Restaurante confirmó. Paga ahora'
+    if (data.status === 'validando') return 'Verificando tu comprobante de pago'
+    if (data.status === 'confirmed') return 'Pago verificado. En preparación'
+  }
+  return s.sub
+}
+
 export default function TrackingPage({ params }: { params: Promise<{ shortId: string }> }) {
   const { shortId } = use(params)
   const router = useRouter()
@@ -283,7 +293,7 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
                 Pedido #{data.shortId}
               </div>
               <div className="t-display mt-3 text-[30px] leading-tight">{step.label}</div>
-              <div className="mt-1 text-[14px] opacity-70">{step.sub}</div>
+              <div className="mt-1 text-[14px] opacity-70">{getStepSub(step, data)}</div>
               <div
                 className="mt-[18px] h-2 overflow-hidden rounded-full"
                 style={{ background: 'rgba(255,255,255,0.12)' }}
@@ -424,7 +434,11 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
                       className="mt-0.5 text-[12px]"
                       style={{ color: active ? '#F97316' : 'rgba(26,22,20,0.5)' }}
                     >
-                      {active ? `${s.sub} · ahora` : done ? 'Completado' : s.sub}
+                      {active
+                        ? `${getStepSub(s, data)} · ahora`
+                        : done
+                          ? 'Completado'
+                          : getStepSub(s, data)}
                     </div>
                   </div>
                 </div>
@@ -537,9 +551,14 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
                   <div className="font-semibold text-[13px] leading-snug">
                     {current === 'delivered'
                       ? '¡Tu pedido fue entregado! Buen provecho.'
-                      : data.paymentIntent === 'prepaid' &&
-                          (data.status === 'validando' || data.status === 'pending_acceptance')
-                        ? 'Tu pago ya fue registrado. Si necesitas cambiar algo, escríbenos por soporte.'
+                      : data.paymentIntent === 'prepaid'
+                        ? data.status === 'pending_acceptance'
+                          ? 'El restaurante confirmará disponibilidad para que puedas realizar el pago.'
+                          : data.status === 'awaiting_payment'
+                            ? 'Realiza tu pago por Yape/Plin y sube tu comprobante para iniciar la preparación.'
+                            : data.status === 'validando'
+                              ? 'Tu comprobante está en revisión por el restaurante.'
+                              : 'Tu pedido ya está en preparación y no puede cancelarse.'
                         : 'Tu pedido ya está en preparación y no puede cancelarse.'}
                   </div>
                   <div className="mt-1.5">
