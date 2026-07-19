@@ -1170,8 +1170,8 @@
     "semantic_hash": "a0dd9d3754e84539ff450d2dfdcf8270"
   },
   "apps/negocios/components/dashboard/pedido-detail.tsx": {
-    "mtime": 1784431853.4155586,
-    "ast_hash": "9ab6178dcbbd8646fcb3ccccb86f18fe",
+    "mtime": 1784431248.8540251,
+    "ast_hash": "63f98825ccc777b6b7449c0bcc391043",
     "semantic_hash": ""
   },
   "apps/negocios/components/dashboard/pedidos-view.tsx": {
