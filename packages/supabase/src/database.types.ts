@@ -2290,6 +2290,14 @@ export type Database = {
         }
         Returns: Json
       }
+      create_appeal_report: {
+        Args: {
+          p_customer_user_id: string
+          p_description?: string
+          p_order_id: string
+        }
+        Returns: Json
+      }
       create_contingency_advance: {
         Args: {
           p_actor_charged: Database["public"]["Enums"]["contingency_actor_charged"]

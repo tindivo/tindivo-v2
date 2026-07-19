@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { getSupabaseBrowser } from '@/lib/supabase/client'
 import type { OrderVM } from '@/lib/orders/view-model'
 import { MS, mmss, PayBadgeMini, SourceBadgeMini, soles } from './primitives'
 
@@ -854,6 +855,7 @@ export function DetailScreen({
   const [modal, setModal] = useState<null | 'reject' | 'cancel'>(null)
   const [itemsOpen, setItemsOpen] = useState(order.status !== 'validando')
   const [showPrepModal, setShowPrepModal] = useState(false)
+  const [hasAppeal, setHasAppeal] = useState(false)
 
   useEffect(() => {
     const origOverflow = document.body.style.overflow
@@ -862,6 +864,21 @@ export function DetailScreen({
       document.body.style.overflow = origOverflow
     }
   }, [])
+
+  useEffect(() => {
+    if (order.status === 'cancelled') {
+      const supabase = getSupabaseBrowser()
+      supabase
+        .from('reports')
+        .select('id')
+        .eq('order_id', order.rowId)
+        .eq('type', 'rejected_proof_disputed')
+        .maybeSingle()
+        .then(({ data }) => setHasAppeal(Boolean(data)))
+    } else {
+      setHasAppeal(false)
+    }
+  }, [order.rowId, order.status])
 
   const isPending = order.status === 'pending_acceptance' || order.status === 'awaiting_payment' || order.status === 'validando'
   const isPrepaid = order.payment === 'prepaid'
@@ -1082,6 +1099,29 @@ export function DetailScreen({
           gap: 12,
         }}
       >
+        {/* Banner de apelación en revisión */}
+        {hasAppeal && (
+          <div
+            style={{
+              background: '#FEF3C7',
+              border: '1px solid #FCD34D',
+              borderRadius: 12,
+              padding: '12px 14px',
+              flexShrink: 0,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
+              <MS name="gavel" size={18} filled style={{ color: '#D97706' }} />
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#92400E' }}>
+                El cliente apeló el rechazo de este pedido
+              </div>
+            </div>
+            <div style={{ fontSize: 12, color: '#B45309', lineHeight: 1.4 }}>
+              Tindivo está revisando este caso. Te recomendamos verificar tu cuenta Yape/Plin por si el pago sí ingresó.
+            </div>
+          </div>
+        )}
+
         {/* Sección de pago (al inicio si está validando prepago) */}
         {isValidandoPrepaid && (
           <PaySectionPrepaid

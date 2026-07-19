@@ -39,6 +39,7 @@ interface Tracking {
   deliveryMethod: string
   paymentIntent: string
   cancelReason: string | null
+  hasAppeal?: boolean
   /** Efectivo: con cuánto paga el cliente y su vuelto (migración 0042). */
   paysWith?: number | null
   changeToGive?: number | null
@@ -177,6 +178,20 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
       setConfirmCancel(false)
     } finally {
       setCancelling(false)
+    }
+  }
+
+  const [appealing, setAppealing] = useState(false)
+  async function doAppeal() {
+    if (!ownedId) return
+    setAppealing(true)
+    try {
+      await api.post(`/customer/orders/${ownedId}/appeal`, {})
+      await load()
+    } catch (e) {
+      setError(e instanceof ApiError ? (e.problem.detail ?? e.message) : 'Error al apelar')
+    } finally {
+      setAppealing(false)
     }
   }
 
@@ -363,11 +378,28 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
 
               {/* 5. cancelled por rechazo final */}
               {data.status === 'cancelled' && data.cancelReason === 'proof_rejected_final' && (
-                <div className="mt-3.5 rounded-[22px] bg-red-50 p-4 font-sans text-left text-red-950" style={{ border: '1px solid #FECDD3' }}>
-                  <div className="font-semibold text-[14px] text-red-900">Pedido cancelado</div>
+                <div
+                  className="mt-3.5 rounded-[22px] bg-red-50 p-4 font-sans text-left text-red-950"
+                  style={{ border: '1px solid #FECDD3' }}
+                >
+                  <div className="font-semibold text-[14px] text-red-900">
+                    {data.hasAppeal ? 'Apelación en revisión' : 'Pedido cancelado'}
+                  </div>
                   <p className="mt-1 text-[13px] text-red-800">
-                    El comprobante de pago no pudo validarse tras 2 intentos.
+                    {data.hasAppeal
+                      ? 'Apelación enviada. Tindivo revisará tu pago en un máximo de 24 horas y te contactará por WhatsApp.'
+                      : 'El comprobante de pago no pudo validarse tras 2 intentos. Si realizaste el pago, puedes solicitar una revisión.'}
                   </p>
+                  {!data.hasAppeal && ownedId && (
+                    <button
+                      type="button"
+                      onClick={doAppeal}
+                      disabled={appealing}
+                      className="mt-3 inline-flex items-center gap-1.5 rounded-xl border border-red-300 bg-white px-3.5 py-1.5 font-sans font-semibold text-[13px] text-red-700 shadow-sm transition-opacity hover:opacity-90 disabled:opacity-50"
+                    >
+                      {appealing ? 'Enviando...' : 'Apelar rechazo'}
+                    </button>
+                  )}
                 </div>
               )}
             </>
