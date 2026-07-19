@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { OrderVM } from '@/lib/orders/view-model'
 import { MS, mmss, PayBadgeMini, SourceBadgeMini, soles } from './primitives'
 
@@ -65,6 +65,7 @@ function PaySectionCash({ order }: { order: OrderVM }) {
         borderRadius: 12,
         padding: '12px 14px',
         border: '1px solid #BBF7D0',
+        flexShrink: 0,
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
@@ -109,6 +110,7 @@ function PaySectionWallet({ order, qrUrl }: { order: OrderVM; qrUrl: string | nu
         borderRadius: 12,
         padding: '12px 14px',
         border: '1px solid #DDD6FE',
+        flexShrink: 0,
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
@@ -174,167 +176,279 @@ function PaySectionPrepaid({
 }: {
   order: OrderVM
   proofUrl: string | null
-  busy?: boolean
+  busy: boolean
   onVerify: () => void
   onReject: () => void
 }) {
-  const verified = order.proofStatus === 'verified'
-  const isSecondAttempt = order.proofAttempt === 2
+  const [zoom, setZoom] = useState(false)
+  const isSecondAttempt = (order.proofAttempt ?? 0) >= 2
+  const verified =
+    order.proofStatus === 'verified' ||
+    order.status === 'confirmed' ||
+    order.status === 'preparing' ||
+    order.status === 'waiting_driver' ||
+    order.status === 'picked_up' ||
+    order.status === 'delivered'
 
   return (
-    <div
-      style={{
-        borderRadius: 12,
-        overflow: 'hidden',
-        border: verified ? '1.5px solid #4ADE80' : isSecondAttempt ? '1.5px solid #FCA5A5' : '1px solid #E0F2FE',
-      }}
-    >
-      <div
-        style={{
-          padding: '10px 14px',
-          background: verified ? '#F0FDF4' : isSecondAttempt ? '#FEF2F2' : '#E0F2FE',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 8,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <MS
-            name={verified ? 'verified' : 'schedule'}
-            size={18}
-            filled
-            style={{ color: verified ? '#16A34A' : isSecondAttempt ? '#DC2626' : '#0369A1' }}
+    <>
+      {zoom && proofUrl && (
+        <div
+          onClick={() => setZoom(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            background: 'rgba(0,0,0,0.85)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 20,
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setZoom(false)}
+            style={{
+              position: 'absolute',
+              top: 20,
+              right: 20,
+              background: '#fff',
+              border: 'none',
+              borderRadius: '50%',
+              width: 40,
+              height: 40,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+            }}
+          >
+            <MS name="close" size={24} />
+          </button>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={proofUrl}
+            alt="Comprobante ampliado"
+            style={{
+              maxWidth: '90vw',
+              maxHeight: '85vh',
+              objectFit: 'contain',
+              borderRadius: 12,
+              boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+            }}
           />
-          <div style={{ fontSize: 13, fontWeight: 700, color: verified ? '#166534' : isSecondAttempt ? '#991B1B' : '#0C4A6E' }}>
-            {verified ? 'Pago verificado' : 'Verificar comprobante de pago'}
+          <div style={{ color: '#fff', fontSize: 13, marginTop: 12, fontWeight: 600 }}>
+            Comprobante de pago — {order.customer ?? 'Cliente'} ({soles(order.total)})
           </div>
         </div>
-        {isSecondAttempt && !verified && (
-          <span
-            style={{
-              fontSize: 10,
-              fontWeight: 700,
-              background: '#FEE2E2',
-              color: '#991B1B',
-              padding: '3px 8px',
-              borderRadius: 999,
-              border: '1px solid #FCA5A5',
-            }}
-          >
-            Segundo y último intento
-          </span>
-        )}
-      </div>
+      )}
 
-      <div style={{ padding: '12px 14px', background: '#fff' }}>
-        {/* Guía de validación (sólo si no está verificado) */}
-        {!verified && (
-          <div
-            style={{
-              marginBottom: 12,
-              padding: '10px 12px',
-              background: '#F8FAFC',
-              borderRadius: 10,
-              border: '1px solid #E2E8F0',
-              fontSize: 12,
-            }}
-          >
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--tv-ink-muted)', marginBottom: 6, letterSpacing: '0.05em' }}>
-              DATOS DE VALIDACIÓN
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--tv-ink-muted)' }}>Monto esperado:</span>
-                <span className="tv-mono" style={{ fontWeight: 700, color: '#16A34A' }}>{soles(order.total)}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--tv-ink-muted)' }}>Hora del pedido:</span>
-                <span className="tv-mono" style={{ fontWeight: 700 }}>{order.createdAtFormatted ?? '—'}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--tv-ink-muted)' }}>Nombre del cliente:</span>
-                <span style={{ fontWeight: 700 }}>{order.customer ?? 'Cliente'}</span>
-              </div>
-            </div>
-            <div style={{ marginTop: 6, fontSize: 11, color: '#64748B', borderTop: '1px dashed #E2E8F0', paddingTop: 6 }}>
-              Verifica que la transferencia haya sido realizada <strong>posterior a las {order.createdAtFormatted ?? 'la hora del pedido'}</strong> por el monto exacto a nombre del cliente.
+      <div
+        style={{
+          borderRadius: 12,
+          overflow: 'hidden',
+          border: verified
+            ? '1.5px solid #4ADE80'
+            : isSecondAttempt
+              ? '1.5px solid #FCA5A5'
+              : '1.5px solid #38BDF8',
+          boxShadow: '0 4px 14px rgba(0,0,0,0.04)',
+          flexShrink: 0,
+        }}
+      >
+        <div
+          style={{
+            padding: '10px 14px',
+            background: verified ? '#F0FDF4' : isSecondAttempt ? '#FEF2F2' : '#F0F9FF',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 8,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <MS
+              name={verified ? 'verified' : 'schedule'}
+              size={18}
+              filled
+              style={{ color: verified ? '#16A34A' : isSecondAttempt ? '#DC2626' : '#0284C7' }}
+            />
+            <div
+              style={{
+                fontSize: 13,
+                fontWeight: 700,
+                color: verified ? '#166534' : isSecondAttempt ? '#991B1B' : '#0369A1',
+              }}
+            >
+              {verified ? 'Pago verificado' : 'Verificar comprobante de pago'}
             </div>
           </div>
-        )}
+          {isSecondAttempt && !verified && (
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                background: '#FEE2E2',
+                color: '#991B1B',
+                padding: '3px 8px',
+                borderRadius: 999,
+                border: '1px solid #FCA5A5',
+              }}
+            >
+              Segundo y último intento
+            </span>
+          )}
+        </div>
 
-        <Row label="Total pagado" value={soles(order.total)} mono bold />
-        <div style={{ marginTop: 10, marginBottom: 12 }}>
-          <div
-            style={{ fontSize: 11, color: 'var(--tv-ink-muted)', marginBottom: 6, fontWeight: 600 }}
-          >
-            COMPROBANTE DEL CLIENTE
-          </div>
-          {proofUrl ? (
-            <div style={{ position: 'relative' }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={proofUrl}
-                alt="Comprobante del cliente"
+        <div style={{ padding: '12px 14px', background: '#fff' }}>
+          {/* Guía de validación */}
+          {!verified && (
+            <div
+              style={{
+                marginBottom: 10,
+                padding: '10px 12px',
+                background: '#F8FAFC',
+                borderRadius: 10,
+                border: '1px solid #E2E8F0',
+                fontSize: 12,
+              }}
+            >
+              <div
                 style={{
-                  width: '100%',
-                  height: 160,
-                  borderRadius: 10,
-                  objectFit: 'contain',
-                  background: '#F0EBE3',
+                  fontSize: 10,
+                  fontWeight: 700,
+                  color: 'var(--tv-ink-muted)',
+                  marginBottom: 6,
+                  letterSpacing: '0.05em',
                 }}
-              />
-              {verified && (
+              >
+                DATOS DE VALIDACIÓN
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.2fr', gap: 8, marginBottom: 6 }}>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontSize: 10, color: 'var(--tv-ink-muted)', marginBottom: 2 }}>Monto</span>
+                  <span className="tv-mono" style={{ fontWeight: 700, color: '#16A34A', fontSize: 13 }}>
+                    {soles(order.total)}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontSize: 10, color: 'var(--tv-ink-muted)', marginBottom: 2 }}>Hora pedido</span>
+                  <span className="tv-mono" style={{ fontWeight: 700, fontSize: 13 }}>
+                    {order.createdAtFormatted ?? '—'}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                  <span style={{ fontSize: 10, color: 'var(--tv-ink-muted)', marginBottom: 2 }}>Cliente</span>
+                  <span style={{ fontWeight: 700, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {order.customer ?? 'Cliente'}
+                  </span>
+                </div>
+              </div>
+              <div
+                style={{
+                  marginTop: 6,
+                  fontSize: 10,
+                  color: '#475569',
+                  borderTop: '1px dashed #CBD5E1',
+                  paddingTop: 5,
+                  lineHeight: 1.3,
+                }}
+              >
+                Verifica pago posterior a <strong>{order.createdAtFormatted ?? 'la hora del pedido'}</strong> por <strong>{soles(order.total)}</strong>.
+              </div>
+            </div>
+          )}
+
+          <Row label="Total pagado" value={soles(order.total)} mono bold />
+          <div style={{ marginTop: 10, marginBottom: 4 }}>
+            <div
+              style={{
+                fontSize: 10,
+                color: 'var(--tv-ink-muted)',
+                marginBottom: 6,
+                fontWeight: 700,
+                letterSpacing: '0.04em',
+              }}
+            >
+              COMPROBANTE DEL CLIENTE
+            </div>
+            {proofUrl ? (
+              <div
+                onClick={() => setZoom(true)}
+                style={{
+                  position: 'relative',
+                  cursor: 'pointer',
+                  borderRadius: 10,
+                  overflow: 'hidden',
+                  border: '1px solid #CBD5E1',
+                  background: '#F1F5F9',
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={proofUrl}
+                  alt="Comprobante del cliente"
+                  style={{
+                    width: '100%',
+                    maxHeight: 320,
+                    objectFit: 'contain',
+                    background: '#F8FAFC',
+                    display: 'block',
+                  }}
+                />
                 <div
                   style={{
                     position: 'absolute',
-                    inset: 0,
-                    background: 'rgba(22,163,74,0.15)',
-                    borderRadius: 10,
+                    bottom: 8,
+                    right: 8,
+                    background: 'rgba(15, 23, 42, 0.95)',
+                    color: '#fff',
+                    fontSize: 11,
+                    padding: '6px 12px',
+                    borderRadius: 8,
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
+                    gap: 5,
+                    fontWeight: 600,
+                    backdropFilter: 'blur(2px)',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
                   }}
                 >
-                  <MS name="check_circle" size={40} filled style={{ color: '#16A34A' }} />
+                  <MS name="zoom_in" size={15} /> Ampliar comprobante
                 </div>
-              )}
-            </div>
-          ) : (
-            <div className="tv-ph" style={{ width: '100%', height: 130, borderRadius: 10 }}>
-              <span>El cliente aún no ha subido el comprobante</span>
+                {verified && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      background: 'rgba(22,163,74,0.15)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <MS name="check_circle" size={44} filled style={{ color: '#16A34A' }} />
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="tv-ph" style={{ width: '100%', height: 130, borderRadius: 10 }}>
+                <span>El cliente aún no ha subido el comprobante</span>
+              </div>
+            )}
+          </div>
+          {verified && (
+            <div style={{ marginTop: 8, fontSize: 12, color: '#15803D', fontWeight: 600, textAlign: 'center' }}>
+              Comprobante verificado · pago registrado
             </div>
           )}
         </div>
-        {!verified && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            <button
-              type="button"
-              onClick={onReject}
-              disabled={!proofUrl || busy}
-              className="tv-btn tv-btn-sm"
-              style={{ border: '1.5px solid #FCA5A5', background: '#FFF5F5', color: '#DC2626', opacity: (!proofUrl || busy) ? 0.5 : 1 }}
-            >
-              <MS name="cancel" size={14} /> Inválido
-            </button>
-            <button
-              type="button"
-              onClick={onVerify}
-              disabled={!proofUrl || busy}
-              className="tv-btn tv-btn-sm"
-              style={{ background: '#16A34A', color: '#fff', border: 'none', opacity: (!proofUrl || busy) ? 0.5 : 1 }}
-            >
-              <MS name="check_circle" size={14} /> Correcto
-            </button>
-          </div>
-        )}
-        {verified && (
-          <div style={{ fontSize: 12, color: '#15803D', fontWeight: 600, textAlign: 'center' }}>
-            Comprobante verificado · pago registrado
-          </div>
-        )}
       </div>
-    </div>
+    </>
   )
 }
 
@@ -346,6 +460,7 @@ function PaySectionMixed({ order, qrUrl }: { order: OrderVM; qrUrl: string | nul
         borderRadius: 12,
         padding: '12px 14px',
         border: '1px solid #FDE68A',
+        flexShrink: 0,
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
@@ -571,6 +686,134 @@ function ReasonModal({
   )
 }
 
+function PrepTimeModal({
+  order,
+  onClose,
+  onConfirm,
+}: {
+  order: OrderVM
+  onClose: () => void
+  onConfirm: (prep: number) => void
+}) {
+  const [sel, setSel] = useState(20)
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        inset: 0,
+        zIndex: 300,
+        background: 'rgba(0,0,0,0.5)',
+        display: 'flex',
+        alignItems: 'flex-end',
+        justifyContent: 'center',
+      }}
+    >
+      <div
+        style={{
+          background: '#fff',
+          borderRadius: '20px 20px 0 0',
+          padding: '20px 18px 28px',
+          width: '100%',
+          maxWidth: 440,
+          boxShadow: '0 -8px 40px rgba(0,0,0,0.15)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+          <div
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: 10,
+              flexShrink: 0,
+              background: 'var(--tv-brand-soft, #EEF2FF)',
+              color: 'var(--tv-brand, #4F46E5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <MS name="schedule" size={20} filled />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 16, fontWeight: 700 }}>Tiempo de preparación</div>
+            <div style={{ fontSize: 12, color: 'var(--tv-ink-muted)', marginTop: 1 }}>
+              #{order.id} · {order.customer ?? 'Cliente'}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              width: 30,
+              height: 30,
+              borderRadius: 8,
+              background: 'rgba(26,22,20,0.06)',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <MS name="close" size={16} />
+          </button>
+        </div>
+
+        <div
+          style={{
+            fontSize: 12,
+            fontWeight: 700,
+            color: 'var(--tv-ink-muted)',
+            marginBottom: 10,
+            textTransform: 'uppercase',
+            letterSpacing: '0.06em',
+          }}
+        >
+          Selecciona el tiempo estimado para cocinar
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 20 }}>
+          {PREP_PRESETS.map((m) => (
+            <button
+              type="button"
+              key={m}
+              onClick={() => setSel(m)}
+              style={{
+                border: m === sel ? 'none' : '1px solid var(--tv-border)',
+                background: m === sel ? 'var(--tv-ink)' : '#fff',
+                color: m === sel ? '#fff' : 'var(--tv-ink)',
+                fontFamily: "var(--font-jetbrains), 'Manrope', sans-serif",
+                fontWeight: 700,
+                fontSize: 14,
+                padding: '12px 0',
+                borderRadius: 12,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              {m} min
+            </button>
+          ))}
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 10 }}>
+          <button type="button" onClick={onClose} className="tv-btn tv-btn-ghost">
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={() => onConfirm(sel)}
+            className="tv-btn tv-btn-brand"
+            style={{ background: '#16A34A', color: '#fff', border: 'none' }}
+          >
+            Confirmar y empezar
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 const REJECT_REASONS_BASE: RejectReason[] = [
   { code: 'out_of_stock', label: 'Producto agotado' },
   { code: 'closed', label: 'Restaurante cerrado / fuera de horario' },
@@ -609,12 +852,23 @@ export function DetailScreen({
 }) {
   const [prep, setPrep] = useState(20)
   const [modal, setModal] = useState<null | 'reject' | 'cancel'>(null)
+  const [itemsOpen, setItemsOpen] = useState(order.status !== 'validando')
+  const [showPrepModal, setShowPrepModal] = useState(false)
+
+  useEffect(() => {
+    const origOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = origOverflow
+    }
+  }, [])
 
   const isPending = order.status === 'pending_acceptance' || order.status === 'awaiting_payment' || order.status === 'validando'
   const isPrepaid = order.payment === 'prepaid'
   const isOnline = order.source === 'web'
   const acceptDisabled = busy
-  const showPrepPicker = isPending
+  const isValidandoPrepaid = isPrepaid && order.status === 'validando'
+  const showPrepPicker = isPending && !isPrepaid
 
   const rejectReasons = isPrepaid
     ? [
@@ -630,8 +884,11 @@ export function DetailScreen({
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
+        maxHeight: '100%',
+        minHeight: 0,
         background: '#fff',
         position: 'relative',
+        overflow: 'hidden',
       }}
     >
       {modal === 'reject' && (
@@ -664,6 +921,16 @@ export function DetailScreen({
           }}
         />
       )}
+      {showPrepModal && (
+        <PrepTimeModal
+          order={order}
+          onClose={() => setShowPrepModal(false)}
+          onConfirm={(prepTime) => {
+            setShowPrepModal(false)
+            actions.onAccept(prepTime)
+          }}
+        />
+      )}
 
       {/* Header flotante/fijo */}
       <div
@@ -677,6 +944,7 @@ export function DetailScreen({
           display: 'flex',
           alignItems: 'center',
           gap: 10,
+          flexShrink: 0,
         }}
       >
         {mobile && (
@@ -780,6 +1048,7 @@ export function DetailScreen({
             display: 'flex',
             alignItems: 'center',
             gap: 10,
+            flexShrink: 0,
           }}
         >
           <MS name="check_circle" size={20} filled />
@@ -801,178 +1070,314 @@ export function DetailScreen({
 
       {/* Scroll content */}
       <div
+        className="tv-scroll"
         style={{
           flex: 1,
+          minHeight: 0,
           overflowY: 'auto',
-          padding: mobile ? '14px 14px 20px' : '16px 18px 24px',
+          WebkitOverflowScrolling: 'touch',
+          padding: mobile ? '14px 14px 28px' : '16px 18px 32px',
           display: 'flex',
           flexDirection: 'column',
           gap: 12,
         }}
       >
-        {/* Cliente */}
-        <div style={{ background: 'var(--tv-surface)', borderRadius: 12, padding: '12px 14px' }}>
+        {/* Sección de pago (al inicio si está validando prepago) */}
+        {isValidandoPrepaid && (
+          <PaySectionPrepaid
+            order={order}
+            proofUrl={proofUrl}
+            busy={busy}
+            onVerify={() => actions.onVerifyProof()}
+            onReject={() => actions.onRejectProof()}
+          />
+        )}
+
+        {/* Cliente y Dirección */}
+        {isValidandoPrepaid ? (
           <div
             style={{
-              fontSize: 10,
-              fontWeight: 700,
+              background: 'var(--tv-surface)',
+              borderRadius: 12,
+              padding: '8px 12px',
+              fontSize: 12,
               color: 'var(--tv-ink-muted)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.06em',
-              marginBottom: 7,
+              display: 'flex',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '4px 8px',
+              flexShrink: 0,
             }}
           >
-            Cliente
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <MS name="person" size={14} style={{ color: 'var(--tv-ink-muted)' }} />
+              <span style={{ fontWeight: 700, color: 'var(--tv-ink)' }}>
+                {order.customer ?? 'Cliente'}
+              </span>
+            </div>
+            {order.phone && (
+              <>
+                <span>·</span>
+                <a
+                  href={`tel:${order.phone}`}
+                  style={{
+                    color: 'var(--tv-brand)',
+                    textDecoration: 'none',
+                    fontWeight: 600,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 3,
+                  }}
+                >
+                  <MS name="call" size={12} filled /> {order.phone}
+                </a>
+              </>
+            )}
+            {order.addressRef && (
+              <>
+                <span>·</span>
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 3,
+                    minWidth: 0,
+                    textOverflow: 'ellipsis',
+                    overflow: 'hidden',
+                    whiteSpace: 'nowrap',
+                  }}
+                  title={order.addressRef}
+                >
+                  <MS name="location_on" size={12} style={{ color: 'var(--tv-brand)' }} />
+                  {order.addressRef}
+                </span>
+              </>
+            )}
           </div>
-          <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 5 }}>
-            {order.customer ?? 'Cliente'}
-          </div>
-          {order.phone && (
-            <a
-              href={`tel:${order.phone}`}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                fontSize: 13,
-                color: 'var(--tv-brand)',
-                textDecoration: 'none',
-                fontWeight: 600,
-              }}
-            >
-              <MS name="call" size={15} filled /> {order.phone}
-            </a>
-          )}
-        </div>
+        ) : (
+          <>
+            {/* Cliente */}
+            <div style={{ background: 'var(--tv-surface)', borderRadius: 12, padding: '12px 14px', flexShrink: 0 }}>
+              <div
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  color: 'var(--tv-ink-muted)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                  marginBottom: 7,
+                }}
+              >
+                Cliente
+              </div>
+              <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 5 }}>
+                {order.customer ?? 'Cliente'}
+              </div>
+              {order.phone && (
+                <a
+                  href={`tel:${order.phone}`}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    fontSize: 13,
+                    color: 'var(--tv-brand)',
+                    textDecoration: 'none',
+                    fontWeight: 600,
+                  }}
+                >
+                  <MS name="call" size={15} filled /> {order.phone}
+                </a>
+              )}
+            </div>
 
-        {/* Dirección */}
-        {order.addressRef && (
-          <div style={{ background: 'var(--tv-surface)', borderRadius: 12, padding: '12px 14px' }}>
-            <div
-              style={{
-                fontSize: 10,
-                fontWeight: 700,
-                color: 'var(--tv-ink-muted)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-                marginBottom: 7,
-              }}
-            >
-              Dirección
-            </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <MS
-                name="location_on"
-                size={16}
-                style={{ color: 'var(--tv-brand)', flexShrink: 0, marginTop: 2 }}
-              />
-              <div style={{ fontSize: 14, lineHeight: 1.5 }}>{order.addressRef}</div>
-            </div>
-          </div>
+            {/* Dirección */}
+            {order.addressRef && (
+              <div style={{ background: 'var(--tv-surface)', borderRadius: 12, padding: '12px 14px', flexShrink: 0 }}>
+                <div
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: 'var(--tv-ink-muted)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.06em',
+                    marginBottom: 7,
+                  }}
+                >
+                  Dirección
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <MS
+                    name="location_on"
+                    size={16}
+                    style={{ color: 'var(--tv-brand)', flexShrink: 0, marginTop: 2 }}
+                  />
+                  <div style={{ fontSize: 14, lineHeight: 1.5 }}>{order.addressRef}</div>
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         {/* Items (Online) o Cobro (Directo) */}
         {isOnline && items && items.length > 0 ? (
-          <div style={{ background: 'var(--tv-surface)', borderRadius: 12, padding: '12px 14px' }}>
-            <div
+          <details
+            open={itemsOpen}
+            onToggle={(e) => setItemsOpen(e.currentTarget.open)}
+            style={{
+              background: 'var(--tv-surface)',
+              borderRadius: 12,
+              padding: isValidandoPrepaid ? '10px 12px' : '12px 14px',
+              flexShrink: 0,
+            }}
+          >
+            <summary
               style={{
-                fontSize: 10,
+                cursor: 'pointer',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
                 fontWeight: 700,
-                color: 'var(--tv-ink-muted)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-                marginBottom: 7,
+                fontSize: 13,
+                userSelect: 'none',
+                listStyle: 'none',
               }}
             >
-              Pedido
-            </div>
-            {items.map((it, i) => (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <MS name="shopping_bag" size={16} />
+                <span>
+                  Pedido ({items.length} {items.length === 1 ? 'ítem' : 'ítems'})
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span className="tv-mono">{soles(order.total)}</span>
+                <MS
+                  name={itemsOpen ? 'expand_less' : 'expand_more'}
+                  size={18}
+                  style={{ color: 'var(--tv-ink-muted)' }}
+                />
+              </div>
+            </summary>
+            <div style={{ marginTop: 8, borderTop: '1px solid var(--tv-border)', paddingTop: 8 }}>
+              {items.map((it, i) => (
+                <div
+                  key={i}
+                  style={{
+                    padding: '5px 0',
+                    borderBottom: i < items.length - 1 ? '1px solid var(--tv-border)' : 'none',
+                  }}
+                >
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <span
+                      className="tv-mono"
+                      style={{
+                        color: 'var(--tv-ink-muted)',
+                        width: 22,
+                        flexShrink: 0,
+                        fontWeight: 700,
+                      }}
+                    >
+                      {it.qty}×
+                    </span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600 }}>{it.name}</div>
+                      {it.mods && (
+                        <div style={{ fontSize: 12, color: 'var(--tv-ink-muted)' }}>{it.mods}</div>
+                      )}
+                      {it.note && (
+                        <div style={{ fontSize: 12, color: '#B45309', marginTop: 2 }}>
+                          <MS name="info" size={11} /> {it.note}
+                        </div>
+                      )}
+                    </div>
+                    <span
+                      className="tv-mono"
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 600,
+                        flexShrink: 0,
+                        color: 'var(--tv-ink-muted)',
+                      }}
+                    >
+                      {soles(it.price)}
+                    </span>
+                  </div>
+                </div>
+              ))}
               <div
-                key={i}
                 style={{
-                  padding: '7px 0',
-                  borderBottom: i < items.length - 1 ? '1px solid var(--tv-border)' : 'none',
+                  marginTop: 10,
+                  padding: '8px 0 0',
+                  borderTop: '1px solid var(--tv-border)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 4,
                 }}
               >
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <span
-                    className="tv-mono"
-                    style={{
-                      color: 'var(--tv-ink-muted)',
-                      width: 22,
-                      flexShrink: 0,
-                      fontWeight: 700,
-                    }}
-                  >
-                    {it.qty}×
-                  </span>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 14, fontWeight: 600 }}>{it.name}</div>
-                    {it.mods && (
-                      <div style={{ fontSize: 12, color: 'var(--tv-ink-muted)' }}>{it.mods}</div>
-                    )}
-                    {it.note && (
-                      <div style={{ fontSize: 12, color: '#B45309', marginTop: 2 }}>
-                        <MS name="info" size={11} /> {it.note}
-                      </div>
-                    )}
-                  </div>
-                  <span
-                    className="tv-mono"
-                    style={{
-                      fontSize: 13,
-                      fontWeight: 600,
-                      flexShrink: 0,
-                      color: 'var(--tv-ink-muted)',
-                    }}
-                  >
-                    {soles(it.price)}
-                  </span>
-                </div>
+                <Row label="Subtotal" value={soles(order.subtotal)} mono />
+                <Row label="Delivery" value={soles(order.deliveryFee)} mono />
+                <Row label="Total" value={soles(order.total)} mono bold />
               </div>
-            ))}
+            </div>
+          </details>
+        ) : (
+          <details
+            open={itemsOpen}
+            onToggle={(e) => setItemsOpen(e.currentTarget.open)}
+            style={{
+              background: 'var(--tv-surface)',
+              borderRadius: 12,
+              padding: isValidandoPrepaid ? '10px 12px' : '12px 14px',
+              flexShrink: 0,
+            }}
+          >
+            <summary
+              style={{
+                cursor: 'pointer',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                fontWeight: 700,
+                fontSize: 13,
+                userSelect: 'none',
+                listStyle: 'none',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <MS name="payments" size={16} />
+                <span>Cobro</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span className="tv-mono">{soles(order.total)}</span>
+                <MS
+                  name={itemsOpen ? 'expand_less' : 'expand_more'}
+                  size={18}
+                  style={{ color: 'var(--tv-ink-muted)' }}
+                />
+              </div>
+            </summary>
             <div
               style={{
-                marginTop: 10,
-                padding: '8px 0 0',
+                marginTop: 8,
                 borderTop: '1px solid var(--tv-border)',
+                paddingTop: 8,
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 4,
+                gap: 5,
               }}
             >
-              <Row label="Subtotal" value={soles(order.subtotal)} mono />
-              <Row label="Delivery" value={soles(order.deliveryFee)} mono />
-              <Row label="Total" value={soles(order.total)} mono bold />
-            </div>
-          </div>
-        ) : (
-          <div style={{ background: 'var(--tv-surface)', borderRadius: 12, padding: '12px 14px' }}>
-            <div
-              style={{
-                fontSize: 10,
-                fontWeight: 700,
-                color: 'var(--tv-ink-muted)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-                marginBottom: 10,
-              }}
-            >
-              Cobro
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
               <Row label="Total del pedido" value={soles(order.amount)} mono />
               <Row label="Delivery" value={soles(order.deliveryFee)} mono />
               <div style={{ height: 1, background: 'var(--tv-border)', margin: '2px 0' }} />
               <Row label="Total a cobrar" value={soles(order.total)} mono bold />
             </div>
-          </div>
+          </details>
         )}
 
         {/* Sección de pago */}
         {order.payment === 'pending_cash' && <PaySectionCash order={order} />}
         {order.payment === 'pending_wallet' && <PaySectionWallet order={order} qrUrl={qrUrl} />}
-        {order.payment === 'prepaid' && (
+        {order.payment === 'prepaid' && !isValidandoPrepaid && (
           <>
             {/* 1. pending_acceptance: Nada de comprobante */}
             {/* 2. awaiting_payment: Banner de espera sin botones */}
@@ -983,6 +1388,7 @@ export function DetailScreen({
                   borderRadius: 12,
                   padding: '12px 14px',
                   border: '1px solid #FFEDD5',
+                  flexShrink: 0,
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
@@ -1025,7 +1431,7 @@ export function DetailScreen({
 
         {/* Prep picker (al aceptar) */}
         {showPrepPicker && (
-          <div style={{ background: 'var(--tv-surface)', borderRadius: 12, padding: '12px 14px' }}>
+          <div style={{ background: 'var(--tv-surface)', borderRadius: 12, padding: '12px 14px', flexShrink: 0 }}>
             <div className="tv-label" style={{ marginBottom: 8 }}>
               TIEMPO DE PREPARACIÓN
             </div>
@@ -1066,7 +1472,7 @@ export function DetailScreen({
 
         {/* Extensión de preparación */}
         {order.state === 'cooking' && !order.extensionUsed && (
-          <div style={{ background: 'var(--tv-surface)', borderRadius: 12, padding: '12px 14px' }}>
+          <div style={{ background: 'var(--tv-surface)', borderRadius: 12, padding: '12px 14px', flexShrink: 0 }}>
             <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>
               ¿Necesitas más tiempo?
             </div>
@@ -1091,6 +1497,7 @@ export function DetailScreen({
               fontWeight: 600,
               textAlign: 'center',
               padding: '4px 0',
+              flexShrink: 0,
             }}
           >
             Prórroga +{order.extensionMin}m usada · no se puede volver a extender
@@ -1103,7 +1510,7 @@ export function DetailScreen({
             type="button"
             onClick={actions.onCallDriver}
             className="tv-btn tv-btn-sm tv-btn-block"
-            style={{ background: 'var(--tv-danger)', color: '#fff', border: 'none' }}
+            style={{ background: 'var(--tv-danger)', color: '#fff', border: 'none', flexShrink: 0 }}
           >
             <MS name="call" size={15} /> Llamar a un motorizado manualmente
           </button>
@@ -1117,6 +1524,7 @@ export function DetailScreen({
               padding: '12px 14px',
               border: '1px solid var(--tv-border)',
               background: 'var(--tv-surface)',
+              flexShrink: 0,
             }}
           >
             <div
@@ -1159,6 +1567,7 @@ export function DetailScreen({
             display: 'flex',
             flexDirection: 'column',
             gap: 6,
+            flexShrink: 0,
           }}
         >
           {order.status === 'validando' && isPrepaid ? (
@@ -1174,7 +1583,7 @@ export function DetailScreen({
               </button>
               <button
                 type="button"
-                onClick={() => actions.onVerifyProof()}
+                onClick={() => setShowPrepModal(true)}
                 disabled={!proofUrl || busy}
                 className="tv-btn tv-btn-brand"
                 style={{ flex: 2, background: '#16A34A', opacity: (!proofUrl || busy) ? 0.5 : 1 }}
@@ -1214,7 +1623,7 @@ export function DetailScreen({
                 </button>
                 <button
                   type="button"
-                  onClick={() => actions.onAccept(prep)}
+                  onClick={() => actions.onAccept(order.status === 'pending_acceptance' && isPrepaid ? 20 : prep)}
                   disabled={acceptDisabled}
                   className="tv-btn tv-btn-brand"
                   style={{ flex: 2 }}
@@ -1243,6 +1652,7 @@ export function DetailScreen({
             borderTop: '1px solid var(--tv-border)',
             padding: '12px 14px 14px',
             boxShadow: '0 -6px 20px rgba(0,0,0,0.06)',
+            flexShrink: 0,
           }}
         >
           <button
@@ -1261,25 +1671,41 @@ export function DetailScreen({
 
   if (mobile) {
     return (
-      <div style={{ position: 'absolute', inset: 0, zIndex: 100, background: '#fff' }}>
+      <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: '#fff' }}>
         {content}
       </div>
     )
   }
+
   return (
     <div
+      onClick={actions.onClose}
       style={{
-        position: 'absolute',
-        right: 0,
-        top: 0,
-        bottom: 0,
-        zIndex: 90,
-        width: 380,
-        background: '#fff',
-        boxShadow: '-8px 0 32px rgba(0,0,0,0.1)',
+        position: 'fixed',
+        inset: 0,
+        zIndex: 200,
+        background: 'rgba(0, 0, 0, 0.45)',
+        backdropFilter: 'blur(2px)',
+        display: 'flex',
+        justifyContent: 'flex-end',
       }}
     >
-      {content}
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: 420,
+          maxWidth: '100vw',
+          height: '100vh',
+          maxHeight: '100vh',
+          background: '#fff',
+          boxShadow: '-12px 0 36px rgba(0, 0, 0, 0.2)',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+        }}
+      >
+        {content}
+      </div>
     </div>
   )
 }
