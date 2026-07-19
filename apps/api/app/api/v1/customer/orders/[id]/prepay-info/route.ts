@@ -24,7 +24,7 @@ export async function GET(
     const { data: order } = await service
       .from('orders')
       .select(
-        'order_amount,delivery_fee,business_id,customer_user_id,status,comprobante_prepago_url,proof_attempt',
+        'order_amount,delivery_fee,business_id,customer_user_id,status,comprobante_prepago_url,proof_attempt,updated_at',
       )
       .eq('id', id)
       .maybeSingle()
@@ -45,6 +45,7 @@ export async function GET(
         hasProof: Boolean(order.comprobante_prepago_url),
         proofAttempt: order.proof_attempt ?? 0,
         comprobantePrepagoUrl: order.comprobante_prepago_url ?? null,
+        awaitingPaymentAt: order.updated_at ?? null,
       },
       { headers: corsHeaders(req) },
     )

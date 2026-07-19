@@ -15,6 +15,7 @@ interface PrepayInfo {
   hasProof: boolean
   proofAttempt: number
   comprobantePrepagoUrl: string | null
+  awaitingPaymentAt?: string | null
 }
 
 interface Props {
@@ -45,13 +46,21 @@ export function PrepayProofSection({ orderId, proofAttempt, onProofUploaded }: P
     loadInfo()
   }, [loadInfo])
 
-  // Countdown timer de 10 min
+  // Countdown timer de 10 min basado en timestamp real de DB
   useEffect(() => {
-    const timer = setInterval(() => {
-      setSeconds((s) => (s > 0 ? s - 1 : 0))
-    }, 1000)
+    if (!info?.awaitingPaymentAt) return
+    const startMs = new Date(info.awaitingPaymentAt).getTime()
+    const deadlineMs = startMs + 10 * 60 * 1000
+
+    const updateTimer = () => {
+      const remaining = Math.max(0, Math.ceil((deadlineMs - Date.now()) / 1000))
+      setSeconds(remaining)
+    }
+
+    updateTimer()
+    const timer = setInterval(updateTimer, 1000)
     return () => clearInterval(timer)
-  }, [])
+  }, [info?.awaitingPaymentAt])
 
   function formatTime(sec: number) {
     const m = Math.floor(sec / 60)

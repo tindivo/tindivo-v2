@@ -32,6 +32,10 @@ export const orderAcceptanceTimeout: InngestFunction.Any = inngest.createFunctio
     id: 'order-acceptance-timeout',
     name: 'Auto-cancelar pedido no aceptado',
     triggers: [{ event: EVENT_ORDER_CREATED }],
+    cancelOn: [
+      { event: EVENT_ORDER_PAYMENT_TIMEOUT, match: 'data.orderId' },
+      { event: EVENT_ORDER_VALIDATION, match: 'data.orderId' },
+    ],
   },
   async ({ event, step }) => {
     const { orderId, sleepMs: override } = event.data as OrderCreatedData
@@ -105,6 +109,10 @@ export const orderValidationTimeout: InngestFunction.Any = inngest.createFunctio
     id: 'order-validation-timeout',
     name: 'Auto-cancelar pedido sin validar',
     triggers: [{ event: EVENT_ORDER_VALIDATION }],
+    cancelOn: [
+      { event: EVENT_ORDER_VALIDATION, match: 'data.orderId' },
+      { event: EVENT_ORDER_PAYMENT_TIMEOUT, match: 'data.orderId' },
+    ],
   },
   async ({ event, step }) => {
     const { orderId, sleepMs: override } = event.data as OrderValidationData
