@@ -81,7 +81,7 @@ BEGIN
 
   -- (C) Appealed-old: ventana expirada (26h), se inyectará la apelación directamente para simular que el cliente apeló a tiempo
   INSERT INTO public.orders (id, short_id, business_id, customer_user_id, status, payment_intent, order_amount, delivery_fee)
-  VALUES (v_order_id_appealed_old, 'APO22222', v_business_id, v_customer_id, 'validando', 'prepaid', 55.00, 5.00);
+  VALUES (v_order_id_appealed_old, 'APV22222', v_business_id, v_customer_id, 'validando', 'prepaid', 55.00, 5.00);
   UPDATE public.orders SET status = 'cancelled', cancel_reason = 'proof_rejected_final',
     cancelled_at = now() - interval '26 hours' WHERE id = v_order_id_appealed_old;
 
