@@ -37,7 +37,7 @@ BEGIN
     id, short_id, business_id, customer_user_id, status, payment_intent,
     cancel_reason, cancelled_at, order_amount, delivery_fee
   ) VALUES (
-    v_order_id_recent, 'REC00001', v_business_id, v_customer_id, 'cancelled', 'prepaid',
+    v_order_id_recent, 'REC22222', v_business_id, v_customer_id, 'cancelled', 'prepaid',
     'proof_rejected_final', now() - interval '2 hours', 40.00, 5.00
   );
 
@@ -46,7 +46,7 @@ BEGIN
     id, short_id, business_id, customer_user_id, status, payment_intent,
     cancel_reason, cancelled_at, order_amount, delivery_fee
   ) VALUES (
-    v_order_id_due, 'DUE00001', v_business_id, v_customer_id, 'cancelled', 'prepaid',
+    v_order_id_due, 'DUE22222', v_business_id, v_customer_id, 'cancelled', 'prepaid',
     'proof_rejected_final', now() - interval '26 hours', 50.00, 5.00
   );
 
@@ -55,7 +55,7 @@ BEGIN
     id, short_id, business_id, customer_user_id, status, payment_intent,
     cancel_reason, cancelled_at, order_amount, delivery_fee
   ) VALUES (
-    v_order_id_appealed, 'APP00001', v_business_id, v_customer_id, 'cancelled', 'prepaid',
+    v_order_id_appealed, 'APP22222', v_business_id, v_customer_id, 'cancelled', 'prepaid',
     'proof_rejected_final', now() - interval '26 hours', 60.00, 5.00
   );
 
