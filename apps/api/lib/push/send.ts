@@ -1,5 +1,5 @@
 import webpush from 'web-push'
-import { createServiceClient } from '@/lib/supabase/service'
+import { createServiceClient } from '../supabase/service'
 
 // VAPID configuration
 const vapidPublicKey = (process.env.VAPID_PUBLIC_KEY ?? '').replace(/"/g, '')

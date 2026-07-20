@@ -440,8 +440,8 @@
     "semantic_hash": "5de937b47a4ce3ab2a2bfd849cb41c01"
   },
   "apps/api/app/api/v1/business/orders/[id]/validate/route.ts": {
-    "mtime": 1784400065.6359887,
-    "ast_hash": "c69ecf3f64be466193c51fd87fa437ee",
+    "mtime": 1784577868.2160218,
+    "ast_hash": "d9e407a2844cb5467c71e4858cb72ece",
     "semantic_hash": ""
   },
   "apps/api/app/api/v1/business/orders/route.ts": {
@@ -595,13 +595,13 @@
     "semantic_hash": "2372066db797f54c7f357e6d1f97c41b"
   },
   "apps/api/lib/inngest/client.ts": {
-    "mtime": 1784399925.3914065,
-    "ast_hash": "013eafcd1e39e3b207b33c6674bb176b",
+    "mtime": 1784577966.7003548,
+    "ast_hash": "faa5b8ae8f7cbd0d7e420e3767766368",
     "semantic_hash": ""
   },
   "apps/api/lib/inngest/functions.ts": {
-    "mtime": 1784433382.9593096,
-    "ast_hash": "f61d2c6eddf57c56294e8d9998cce470",
+    "mtime": 1784577849.023003,
+    "ast_hash": "163ff22c99e640eff36067080ac12cf0",
     "semantic_hash": ""
   },
   "apps/api/lib/push/send.ts": {
@@ -1310,9 +1310,9 @@
     "semantic_hash": "a9f3281b3605081ea810498c0976191d"
   },
   "packages/contracts/src/index.ts": {
-    "mtime": 1783714445.0685234,
-    "ast_hash": "4d0d121337ba84972fef6a1b34bf9e67",
-    "semantic_hash": "4d0d121337ba84972fef6a1b34bf9e67"
+    "mtime": 1784577751.2321758,
+    "ast_hash": "5d5b15013f6908e4314a8e52c5450a77",
+    "semantic_hash": ""
   },
   "packages/contracts/src/order-status.ts": {
     "mtime": 1784327330.963619,
@@ -1420,12 +1420,12 @@
     "semantic_hash": "a86b175d32fbe39a67878eada4cb8aa2"
   },
   "packages/supabase/src/database.types.ts": {
-    "mtime": 1784483969.033674,
-    "ast_hash": "8aae77f37b7eab819ba139cf4d65c5a7",
+    "mtime": 1784577941.7892616,
+    "ast_hash": "495a6cca04ea70719e8d3576334d94f2",
     "semantic_hash": ""
   },
   "packages/supabase/src/index.ts": {
-    "mtime": 1783714444.7157726,
+    "mtime": 1784577881.923355,
     "ast_hash": "759d1360ac3b93dcfd4dd3412a0c15bd",
     "semantic_hash": "759d1360ac3b93dcfd4dd3412a0c15bd"
   },
@@ -2170,8 +2170,8 @@
     "semantic_hash": ""
   },
   "apps/api/app/api/v1/customer/orders/[id]/appeal/route.ts": {
-    "mtime": 1784577045.055867,
-    "ast_hash": "fb3b234d3f86a74c94ca9fb0227acc5f",
+    "mtime": 1784577971.8446953,
+    "ast_hash": "ebc86e840ec9a413bbf7e064eb37b655",
     "semantic_hash": ""
   },
   "supabase/migrations/0066_appeal_system.sql": {
@@ -2212,6 +2212,41 @@
   "supabase/migrations/0067_appeal_resolution_flow.sql": {
     "mtime": 1784577055.2153802,
     "ast_hash": "92e063e78128ddd8952f9d7ede561098",
+    "semantic_hash": ""
+  },
+  "apps/api/lib/inngest/__tests__/appeal-fallback.test.ts": {
+    "mtime": 1784577988.602182,
+    "ast_hash": "2904f37c5d3afaf11e2b0137c7c8bb5b",
+    "semantic_hash": ""
+  },
+  "apps/api/lib/mappers/appeal.ts": {
+    "mtime": 1784577886.637986,
+    "ast_hash": "e33f9036a6ed3cdbd0ba2b84e680c176",
+    "semantic_hash": ""
+  },
+  "apps/api/lib/outbox/processor.ts": {
+    "mtime": 1784577853.775882,
+    "ast_hash": "edc58ad491c329e9da6edf9c55a408e5",
+    "semantic_hash": ""
+  },
+  "packages/contracts/src/__tests__/appeal.test.ts": {
+    "mtime": 1784577769.765959,
+    "ast_hash": "c58349e007c45aa2f372fa253bee2409",
+    "semantic_hash": ""
+  },
+  "packages/contracts/src/appeal.ts": {
+    "mtime": 1784577744.117661,
+    "ast_hash": "35dd865beb713e8295647843ca5c5215",
+    "semantic_hash": ""
+  },
+  "scripts/rollback_0068.sql": {
+    "mtime": 1784577781.2614956,
+    "ast_hash": "22324a9a20026599c94b3a875d0957bc",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/0068_appeal_fallback_rpc.sql": {
+    "mtime": 1784577775.997994,
+    "ast_hash": "557a537e31e22ecd398c57fe674e95fd",
     "semantic_hash": ""
   }
 }
