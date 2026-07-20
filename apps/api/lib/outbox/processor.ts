@@ -3,6 +3,7 @@ import { sendOrderAppealCreated, sendOrderProofRejectedFinal } from '../inngest/
 
 export interface OutboxClaimedRow {
   out_id: string
+  out_event_id: string
   out_event_type: string
   out_payload: any
   out_attempts: number

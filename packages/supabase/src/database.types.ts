@@ -1817,9 +1817,11 @@ export type Database = {
         Row: {
           attempts: number
           created_at: string
+          event_id: string
           event_type: string
           id: string
           last_error: string | null
+          next_attempt_at: string | null
           payload: Json
           processed_at: string | null
           status: string
@@ -1827,9 +1829,11 @@ export type Database = {
         Insert: {
           attempts?: number
           created_at?: string
+          event_id: string
           event_type: string
           id?: string
           last_error?: string | null
+          next_attempt_at?: string | null
           payload: Json
           processed_at?: string | null
           status?: string
@@ -1837,9 +1841,11 @@ export type Database = {
         Update: {
           attempts?: number
           created_at?: string
+          event_id?: string
           event_type?: string
           id?: string
           last_error?: string | null
+          next_attempt_at?: string | null
           payload?: Json
           processed_at?: string | null
           status?: string

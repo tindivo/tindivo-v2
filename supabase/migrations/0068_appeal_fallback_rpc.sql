@@ -4,9 +4,10 @@
 -- Idempotente. SECURITY DEFINER con search_path=''.
 -- =============================================================================
 
--- 1. Tabla de Outbox Transactional para emisión garantizada de eventos
+-- 1. Tabla de Outbox Transactional con event_id UNIQUE determinista
 CREATE TABLE IF NOT EXISTS public.outbox_events (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id text NOT NULL UNIQUE,
   event_type text NOT NULL,
   payload jsonb NOT NULL,
   status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'delivered', 'failed')),
@@ -44,13 +45,94 @@ BEGIN
   END IF;
 END $$;
 
--- 3. Índice único parcial que garantiza exactamente 1 reporte de fallback por pedido
+-- 3. Índice único parcial que garantiza exactamente 1 reporte de fallback automático por pedido
 DROP INDEX IF EXISTS public.uidx_reports_order_fallback;
 CREATE UNIQUE INDEX uidx_reports_order_fallback
   ON public.reports (order_id)
   WHERE type = 'prepay_refund_review' AND created_by IS NULL;
 
--- 4. RPC idempotente create_fallback_appeal_review
+-- 4. Actualizar create_appeal_report para encolar outbox order/appeal.created dentro de la misma transacción SQL
+CREATE OR REPLACE FUNCTION public.create_appeal_report(
+  p_order_id uuid,
+  p_description text DEFAULT NULL
+) RETURNS jsonb
+  LANGUAGE plpgsql SECURITY DEFINER SET search_path = ''
+AS $$
+DECLARE
+  v_order public.orders;
+  v_customer_user_id uuid;
+  v_existing_id uuid;
+  v_deadline timestamptz;
+BEGIN
+  v_customer_user_id := auth.uid();
+  IF v_customer_user_id IS NULL THEN
+    RAISE EXCEPTION 'Usuario no autenticado' USING errcode = 'P0001';
+  END IF;
+
+  SELECT * INTO v_order FROM public.orders WHERE id = p_order_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Pedido no existe' USING errcode = 'P0002';
+  END IF;
+
+  IF v_order.customer_user_id <> v_customer_user_id THEN
+    RAISE EXCEPTION 'No autorizado para apelar este pedido' USING errcode = 'P0001';
+  END IF;
+
+  IF v_order.status <> 'cancelled' OR v_order.cancel_reason <> 'proof_rejected_final' THEN
+    RAISE EXCEPTION 'Solo se puede apelar pedidos cancelados por rechazo final de comprobante' USING errcode = 'P0001';
+  END IF;
+
+  IF v_order.cancelled_at IS NULL THEN
+    RAISE EXCEPTION 'El pedido no cuenta con fecha de cancelación registrada' USING errcode = 'P0001';
+  END IF;
+
+  v_deadline := v_order.cancelled_at + interval '24 hours';
+  IF now() >= v_deadline THEN
+    RAISE EXCEPTION 'La ventana de apelación de 24 horas ha expirado' USING errcode = 'P0001';
+  END IF;
+
+  SELECT id INTO v_existing_id
+  FROM public.reports
+  WHERE order_id = p_order_id
+    AND type = 'rejected_proof_disputed';
+
+  IF v_existing_id IS NOT NULL THEN
+    RETURN jsonb_build_object('ok', true, 'alreadyExisted', true, 'reportId', v_existing_id);
+  END IF;
+
+  INSERT INTO public.reports (
+    type, status, order_id, business_id, customer_user_id,
+    customer_phone, description, evidence_url, created_by,
+    appeal_status, appeal_deadline
+  ) VALUES (
+    'rejected_proof_disputed', 'open', p_order_id, v_order.business_id,
+    v_customer_user_id, v_order.customer_phone,
+    COALESCE(NULLIF(trim(p_description), ''), 'Cliente apela rechazo final de comprobante de pago'),
+    v_order.comprobante_prepago_url,
+    v_customer_user_id,
+    'pending', v_deadline
+  )
+  RETURNING id INTO v_existing_id;
+
+  INSERT INTO public.order_event_log (order_id, event_type, actor_role, actor_user_id, data)
+  VALUES (p_order_id, 'order.appeal_created', 'customer', v_customer_user_id,
+    jsonb_build_object('reportId', v_existing_id));
+
+  -- Encolar evento de outbox atómicamente con ID determinista de apelación
+  INSERT INTO public.outbox_events (event_id, event_type, payload, status)
+  VALUES (
+    'appeal-created-' || v_existing_id::text,
+    'order/appeal.created',
+    jsonb_build_object('orderId', p_order_id, 'reportId', v_existing_id),
+    'pending'
+  )
+  ON CONFLICT (event_id) DO NOTHING;
+
+  RETURN jsonb_build_object('ok', true, 'alreadyExisted', false, 'reportId', v_existing_id);
+END;
+$$;
+
+-- 5. RPC idempotente create_fallback_appeal_review
 CREATE OR REPLACE FUNCTION public.create_fallback_appeal_review(
   p_order_id uuid
 ) RETURNS jsonb
@@ -119,23 +201,31 @@ $$;
 REVOKE ALL ON FUNCTION public.create_fallback_appeal_review(uuid) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.create_fallback_appeal_review(uuid) TO service_role;
 
--- 5. Trigger en orders para encolar outbox atómicamente al cancelar por proof_rejected_final
+-- 6. Trigger en orders para encolar outbox atómicamente con event_id UNIQUE determinista
 CREATE OR REPLACE FUNCTION public.handle_orders_outbox_events()
   RETURNS trigger
   LANGUAGE plpgsql
   SECURITY DEFINER SET search_path = ''
 AS $$
+DECLARE
+  v_event_id text;
+  v_cancelled_at_iso text;
 BEGIN
   IF (old.status IS DISTINCT FROM 'cancelled' AND new.status = 'cancelled' AND new.cancel_reason = 'proof_rejected_final') THEN
-    INSERT INTO public.outbox_events (event_type, payload, status)
+    v_cancelled_at_iso := to_char(new.cancelled_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"');
+    v_event_id := 'proof-rejected-final-' || new.id::text || '-' || extract(epoch from new.cancelled_at)::bigint;
+
+    INSERT INTO public.outbox_events (event_id, event_type, payload, status)
     VALUES (
+      v_event_id,
       'order/proof-rejected-final',
       jsonb_build_object(
         'orderId', new.id,
-        'cancelledAt', to_char(new.cancelled_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+        'cancelledAt', v_cancelled_at_iso
       ),
       'pending'
-    );
+    )
+    ON CONFLICT (event_id) DO NOTHING;
   END IF;
 
   RETURN new;
@@ -151,11 +241,12 @@ CREATE TRIGGER trg_orders_outbox_events
 
 REVOKE ALL ON FUNCTION public.handle_orders_outbox_events() FROM PUBLIC, anon, authenticated;
 
--- 6. RPC atómica claim_outbox_events para reconciliación concurrente segura con FOR UPDATE SKIP LOCKED
+-- 7. RPC atómica claim_outbox_events para reconciliación concurrente segura con FOR UPDATE SKIP LOCKED
 CREATE OR REPLACE FUNCTION public.claim_outbox_events(
   p_limit int DEFAULT 20
 ) RETURNS TABLE (
   out_id uuid,
+  out_event_id text,
   out_event_type text,
   out_payload jsonb,
   out_attempts int
@@ -187,7 +278,7 @@ BEGIN
       attempts = u.attempts + 1
   FROM claimed c
   WHERE u.id = c.id
-  RETURNING u.id AS out_id, u.event_type AS out_event_type, u.payload AS out_payload, u.attempts AS out_attempts;
+  RETURNING u.id AS out_id, u.event_id AS out_event_id, u.event_type AS out_event_type, u.payload AS out_payload, u.attempts AS out_attempts;
 END;
 $$;
 
