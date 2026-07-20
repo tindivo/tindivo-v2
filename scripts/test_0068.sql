@@ -72,7 +72,7 @@ BEGIN
     order_amount, delivery_fee
   ) VALUES (
     v_order_id_recent, 'REC22222', v_business_id, v_customer_id,
-    'pending', 'prepaid', 40.00, 5.00
+    'validando', 'prepaid', 40.00, 5.00
   );
   UPDATE public.orders
   SET status = 'cancelled',
@@ -86,7 +86,7 @@ BEGIN
     order_amount, delivery_fee
   ) VALUES (
     v_order_id_due, 'DUE22222', v_business_id, v_customer_id,
-    'pending', 'prepaid', 50.00, 5.00
+    'validando', 'prepaid', 50.00, 5.00
   );
   UPDATE public.orders
   SET status = 'cancelled',
@@ -100,7 +100,7 @@ BEGIN
     order_amount, delivery_fee
   ) VALUES (
     v_order_id_appealed, 'APP22222', v_business_id, v_customer_id,
-    'pending', 'prepaid', 60.00, 5.00
+    'validando', 'prepaid', 60.00, 5.00
   );
   UPDATE public.orders
   SET status = 'cancelled',
