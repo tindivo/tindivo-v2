@@ -316,7 +316,7 @@
   "314": "1. Norte de la Fase 1",
   "315": "errors.ts",
   "316": "test",
-  "317": "page.tsx",
+  "317": "type-check",
   "318": "graphify.md",
   "319": "Design System (colores, tipografía, radios)",
   "320": "Primary Capability Model",
@@ -450,12 +450,7 @@
   "448": "short-id.ts",
   "449": "route.ts",
   "450": "route.ts",
-  "451": "phone-gate-modal.tsx",
   "452": "dev",
   "453": "route.ts",
-  "454": "Revisión UI: Botones y Contenido en Sidebar (`pedido-detail.tsx`)",
-  "455": "route.ts",
-  "456": "6. Elevación y sombras",
-  "457": "12. Pantalla · Prepago Yape",
-  "458": "test_concurrency_0067.ts"
+  "454": "Revisión UI: Botones y Contenido en Sidebar (`pedido-detail.tsx`)"
 }

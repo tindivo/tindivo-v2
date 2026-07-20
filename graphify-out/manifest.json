@@ -85,9 +85,9 @@
     "semantic_hash": "3d09e6ff094573503103a348c8ac9a1c"
   },
   "apps/admin/app/reportes/page.tsx": {
-    "mtime": 1783714444.4928083,
-    "ast_hash": "87270be5709e8c4eb3809826c24ca3c5",
-    "semantic_hash": "87270be5709e8c4eb3809826c24ca3c5"
+    "mtime": 1784483882.2555666,
+    "ast_hash": "ed05fcd8fc879df7d9c7f4312e41a09a",
+    "semantic_hash": ""
   },
   "apps/admin/app/strikes/page.tsx": {
     "mtime": 1783714444.4887688,
@@ -140,9 +140,9 @@
     "semantic_hash": "8f657607c37c377b3e6bfe99986fc20e"
   },
   "apps/admin/components/admin/icons.tsx": {
-    "mtime": 1783714444.5119872,
-    "ast_hash": "061ad31339153613ff67587306baa442",
-    "semantic_hash": "061ad31339153613ff67587306baa442"
+    "mtime": 1784483922.8985102,
+    "ast_hash": "fa387f36c54edd1b1ed5d21b9269c8a1",
+    "semantic_hash": ""
   },
   "apps/admin/components/admin/index.ts": {
     "mtime": 1783714444.5018666,
@@ -370,9 +370,9 @@
     "semantic_hash": "50279221a7af967c8930c5edf1d25508"
   },
   "apps/api/app/api/v1/admin/reports/[id]/resolve/route.ts": {
-    "mtime": 1783714444.5707688,
-    "ast_hash": "e9b924106535ad954ff922e87aa4d04e",
-    "semantic_hash": "e9b924106535ad954ff922e87aa4d04e"
+    "mtime": 1784483959.923935,
+    "ast_hash": "3c80741798e1b180bf50ec1cd27a1919",
+    "semantic_hash": ""
   },
   "apps/api/app/api/v1/admin/reports/route.ts": {
     "mtime": 1783714444.5702343,
@@ -465,8 +465,8 @@
     "semantic_hash": "e474010baf79514866de51fbb8cf9f50"
   },
   "apps/api/app/api/v1/customer/orders/[id]/prepay-info/route.ts": {
-    "mtime": 1784399865.4117117,
-    "ast_hash": "2815a80783ac1b2ef924bbf1a6afc657",
+    "mtime": 1784433356.9842987,
+    "ast_hash": "e078370c3b51f7e8e08c54aad3edca09",
     "semantic_hash": ""
   },
   "apps/api/app/api/v1/customer/orders/[id]/prepay-proof/route.ts": {
@@ -600,8 +600,8 @@
     "semantic_hash": ""
   },
   "apps/api/lib/inngest/functions.ts": {
-    "mtime": 1784400046.845363,
-    "ast_hash": "68fcac73e08bcdfd462a3633495729a9",
+    "mtime": 1784433382.9593096,
+    "ast_hash": "f61d2c6eddf57c56294e8d9998cce470",
     "semantic_hash": ""
   },
   "apps/api/lib/push/send.ts": {
@@ -680,8 +680,8 @@
     "semantic_hash": "a827e7da1aeb4f06a0bed830472215ed"
   },
   "apps/customer/app/pedido/[shortId]/page.tsx": {
-    "mtime": 1784407281.4217532,
-    "ast_hash": "ccf8f3c82dfd15647f12fc8e8000ac7f",
+    "mtime": 1784483778.8583272,
+    "ast_hash": "1ea5d340871c0c2c58d3877534832d46",
     "semantic_hash": ""
   },
   "apps/customer/app/pedidos/page.tsx": {
@@ -1170,8 +1170,8 @@
     "semantic_hash": "a0dd9d3754e84539ff450d2dfdcf8270"
   },
   "apps/negocios/components/dashboard/pedido-detail.tsx": {
-    "mtime": 1784431853.4155586,
-    "ast_hash": "9ab6178dcbbd8646fcb3ccccb86f18fe",
+    "mtime": 1784483854.7375329,
+    "ast_hash": "910f8f65feb3eb6d34d941592eaa82ed",
     "semantic_hash": ""
   },
   "apps/negocios/components/dashboard/pedidos-view.tsx": {
@@ -1420,8 +1420,8 @@
     "semantic_hash": "a86b175d32fbe39a67878eada4cb8aa2"
   },
   "packages/supabase/src/database.types.ts": {
-    "mtime": 1784327427.2526362,
-    "ast_hash": "2b104222109fb4143aae8e5808941a8b",
+    "mtime": 1784483969.033674,
+    "ast_hash": "8aae77f37b7eab819ba139cf4d65c5a7",
     "semantic_hash": ""
   },
   "packages/supabase/src/index.ts": {
@@ -2125,8 +2125,8 @@
     "semantic_hash": ""
   },
   "apps/customer/components/prepay-proof-section.tsx": {
-    "mtime": 1784400290.106925,
-    "ast_hash": "19590503cf33e25e8c5889417387a536",
+    "mtime": 1784433369.66564,
+    "ast_hash": "5a2d4e3009113aacd60a405ae0a758b3",
     "semantic_hash": ""
   },
   "supabase/migrations/0061_prepaid_timers_and_expire.sql": {
@@ -2162,6 +2162,56 @@
   "supabase/migrations/0064_create_point_in_coverage_polygon.sql": {
     "mtime": 1784412005.9901257,
     "ast_hash": "cca8c82f11f2f03c735a786179e31598",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/0065_prepaid_timers_cron_alignment.sql": {
+    "mtime": 1784433390.4964628,
+    "ast_hash": "71210fdc1b966b4ed5ba562a7669899c",
+    "semantic_hash": ""
+  },
+  "apps/api/app/api/v1/customer/orders/[id]/appeal/route.ts": {
+    "mtime": 1784576923.3399787,
+    "ast_hash": "02dcd9dd6699fc27e0182d0a33ce3804",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/0066_appeal_system.sql": {
+    "mtime": 1784483708.8882675,
+    "ast_hash": "a0c4f0dce338af698df03159404bfeb4",
+    "semantic_hash": ""
+  },
+  "Docs/context/inventario_tecnico_apelaciones_prepaid.md": {
+    "mtime": 1784570890.1688814,
+    "ast_hash": "63adfec0e416df43adca95c41df56d3a",
+    "semantic_hash": ""
+  },
+  "apps/api/lib/supabase/user.ts": {
+    "mtime": 1784576896.5582764,
+    "ast_hash": "c842cd4116c428369678d4d197f1d6d4",
+    "semantic_hash": ""
+  },
+  "scripts/resolve_duplicate_appeals.sql": {
+    "mtime": 1784576730.9803345,
+    "ast_hash": "558bb0707f4ef917a6e23f32b66a2f02",
+    "semantic_hash": ""
+  },
+  "scripts/rollback_0067.sql": {
+    "mtime": 1784576474.413448,
+    "ast_hash": "19f8ebdd1a52ec9afe3e7baeef59c061",
+    "semantic_hash": ""
+  },
+  "scripts/test_0067.sql": {
+    "mtime": 1784576264.9478548,
+    "ast_hash": "62a8ea54951c77aa297edc38a20dc9a5",
+    "semantic_hash": ""
+  },
+  "scripts/test_concurrency_0067.ts": {
+    "mtime": 1784576737.9950814,
+    "ast_hash": "bdc07f0fd3f2c979bdde86750db0690c",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/0067_appeal_resolution_flow.sql": {
+    "mtime": 1784576461.9509118,
+    "ast_hash": "a5d45a0a4ffec69b9b56b26044cb2ad9",
     "semantic_hash": ""
   }
 }

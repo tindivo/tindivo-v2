@@ -1,16 +1,16 @@
 # Graph Report - tindivo-v2  (2026-07-18)
 
 ## Corpus Check
-- 421 files · ~298,043 words
+- 422 files · ~298,336 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 3380 nodes · 5840 edges · 455 communities (256 shown, 199 thin omitted)
+- 3380 nodes · 5840 edges · 454 communities (255 shown, 199 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 23 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `b80cd46f`
+- Built from commit: `cd04327b`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -461,7 +461,6 @@
 - dev
 - route.ts
 - Revisión UI: Botones y Contenido en Sidebar (`pedido-detail.tsx`)
-- 17. Pantalla · Editor de direcciones
 
 ## God Nodes (most connected - your core abstractions)
 1. `createServiceClient()` - 130 edges
@@ -494,7 +493,7 @@
 - **Core Business Concepts** — concept_prepago, concept_contraentrega, concept_strikes, concept_fondo_contingencia, concept_banda, concept_equilibrio, concept_bandeja_reportes [INFERRED 0.85]
 - **Order Lifecycle Rules** — rule_umbral_prepago, rule_llamada_validacion, rule_timer_aceptacion, rule_timer_prepago, rule_timer_espera, rule_banda_dos [INFERRED 0.80]
 
-## Communities (455 total, 199 thin omitted)
+## Communities (454 total, 199 thin omitted)
 
 ### Community 0 - "ok"
 Cohesion: 0.08
@@ -521,12 +520,12 @@ Cohesion: 0.04
 Nodes (44): BUSINESS_PRIMARY_CAPABILITIES, BusinessPrimaryCapabilitySchema, CANCEL_REASONS, CancelReason, CancelReasonSchema, CASH_SETTLEMENT_STATUSES, CashSettlementStatus, CashSettlementStatusSchema (+36 more)
 
 ### Community 6 - "service.ts"
-Cohesion: 0.11
-Nodes (30): OPTIONS(), PUT(), Schema, CreateSchema, POST(), OPTIONS(), POST(), isBusinessPaused() (+22 more)
+Cohesion: 0.10
+Nodes (33): OPTIONS(), PUT(), Schema, OPTIONS(), PUT(), Schema, CreateSchema, POST() (+25 more)
 
 ### Community 7 - "handleOptions"
-Cohesion: 0.15
-Nodes (15): OPTIONS(), POST(), Schema, GET(), OPTIONS(), POST(), Schema, DELETE() (+7 more)
+Cohesion: 0.17
+Nodes (8): OPTIONS(), POST(), Schema, GET(), OPTIONS(), ORDER_COLUMNS, GET(), OPTIONS()
 
 ### Community 8 - "page.tsx"
 Cohesion: 0.10
@@ -614,7 +613,7 @@ Nodes (15): ActiveOrderCard(), RANGE_LABEL, BarMini(), Column, DataTable(), Donu
 
 ### Community 29 - "getRequestId"
 Cohesion: 0.08
-Nodes (30): OPTIONS(), OPTIONS(), POST(), Schema, OPTIONS(), POST(), Schema, OPTIONS() (+22 more)
+Nodes (32): OPTIONS(), OPTIONS(), POST(), Schema, OPTIONS(), POST(), Schema, OPTIONS() (+24 more)
 
 ### Community 30 - "index.ts"
 Cohesion: 0.17
@@ -642,7 +641,7 @@ Nodes (13): CashDeliverCard(), EfectivoPage(), HistoryRow, STATUS_CHIP, TodayRow
 
 ### Community 36 - "page.tsx"
 Cohesion: 0.10
-Nodes (29): GET(), GET(), money, OPTIONS(), PATCH(), Schema, GET(), OPTIONS() (+21 more)
+Nodes (49): GET(), GET(), money, OPTIONS(), PATCH(), Schema, GET(), OPTIONS() (+41 more)
 
 ### Community 37 - "getSupabaseBrowser"
 Cohesion: 0.13
@@ -753,8 +752,8 @@ Cohesion: 0.42
 Nodes (6): AccentColorPicker(), normalizeHexInput(), AccentColor, AccentColorSchema, BUSINESS_ACCENT_PALETTE, isPaletteAccentColor()
 
 ### Community 68 - "types.ts"
-Cohesion: 0.15
-Nodes (17): OPTIONS(), PATCH(), Schema, GET(), OPTIONS(), POST(), Schema, OPTIONS() (+9 more)
+Cohesion: 0.14
+Nodes (15): OPTIONS(), PATCH(), Schema, GET(), OPTIONS(), POST(), Schema, OPTIONS() (+7 more)
 
 ### Community 69 - "layout.tsx"
 Cohesion: 0.08
@@ -845,8 +844,8 @@ Cohesion: 0.50
 Nodes (4): buildNotes(), db, Note, unwrapAvailability()
 
 ### Community 92 - "corsHeaders"
-Cohesion: 0.50
-Nodes (3): OPTIONS(), PUT(), Schema
+Cohesion: 0.18
+Nodes (10): OPTIONS(), PATCH(), Schema, OPTIONS(), POST(), SendCodeSchema, OPTIONS(), POST() (+2 more)
 
 ### Community 93 - "handleError"
 Cohesion: 0.14
@@ -881,8 +880,8 @@ Cohesion: 0.15
 Nodes (12): 1. Mostrar la relación entre dos partes del proyecto (`graphify path`), 1. Variables de Entorno y API Key, 2. Explicar una funcionalidad o componente (`graphify explain` / `query`), 2. Instalación, 3. Comandos disponibles (via pnpm), 🔄 Actualización, 🛠️ Configuración y Generación del Grafo, 📊 Estado Actual del Grafo (+4 more)
 
 ### Community 174 - "soles"
-Cohesion: 0.15
-Nodes (16): OPTIONS(), POST(), Schema, GenerateSchema, GET(), OPTIONS(), POST(), GET() (+8 more)
+Cohesion: 0.21
+Nodes (14): GET(), OPTIONS(), POST(), Schema, GET(), OPTIONS(), DELETE(), DeleteSchema (+6 more)
 
 ### Community 175 - "DEPLOY.md — Runbook de go-live (Tindivo 2.0)"
 Cohesion: 0.15
@@ -906,7 +905,7 @@ Nodes (9): 1. Enum de estados (Database & TypeScript), 2. advance_order RPC (Bas
 
 ### Community 180 - "07 · Flujo del cliente final · tindivo.com"
 Cohesion: 0.18
-Nodes (10): 07 · Flujo del cliente final · tindivo.com, 10. Modal · Confirmación de entrega, 12. Pantalla · Prepago Yape, 18. Fix del bug `onPrepayUpload`, 1. Visión del flujo, 2. Mapa de pantallas, 3. Reglas de negocio centrales, Estado: `currentScreen = 'prepay'` (+2 more)
+Nodes (10): 07 · Flujo del cliente final · tindivo.com, 10. Modal · Confirmación de entrega, 17. Pantalla · Editor de direcciones, 18. Fix del bug `onPrepayUpload`, 1. Visión del flujo, 2. Mapa de pantallas, 3. Reglas de negocio centrales, Layout (+2 more)
 
 ### Community 181 - "FASE 1 · Tindivo — Documento de Orquestación"
 Cohesion: 0.18
@@ -949,8 +948,8 @@ Cohesion: 0.20
 Nodes (10): dependsOn, outputs, cache, cache, outputs, tasks, build, clean (+2 more)
 
 ### Community 191 - "layout.tsx"
-Cohesion: 0.11
-Nodes (21): GET(), OPTIONS(), CreateSchema, GET(), OPTIONS(), POST(), GET(), OPTIONS() (+13 more)
+Cohesion: 0.67
+Nodes (3): 12. Pantalla · Prepago Yape, Estado: `currentScreen = 'prepay'`, Layout
 
 ### Community 192 - "AUDITORÍA DEL SISTEMA ANTIFRAUDE ACTUAL — Tindivo 2.0"
 Cohesion: 0.22
@@ -1484,10 +1483,6 @@ Nodes (9): ButtonProps, Size, SIZES, Variant, VARIANTS, Card(), CardBody(), Card
 Cohesion: 0.25
 Nodes (7): 1. Botones de acción por estado (Footer fijo inferior), 2. Botón "Aceptar disponibilidad", 3. Flujo de botones al abrir un pedido prepago recién llegado (`pending_acceptance`), 4. Contenido que se corta y visibilidad, 5. Condiciones de renderizado del footer de acciones, Evaluación de integridad de botones:, Revisión UI: Botones y Contenido en Sidebar (`pedido-detail.tsx`)
 
-### Community 456 - "17. Pantalla · Editor de direcciones"
-Cohesion: 0.67
-Nodes (3): 17. Pantalla · Editor de direcciones, Layout, RFs vinculadas
-
 ## Knowledge Gaps
 - **1947 isolated node(s):** `AuditRow`, `ClaimRow`, `SettlementRow`, `Cfg`, `SaveFn` (+1942 more)
   These have ≤1 connection - possible missing edges or undocumented components.
@@ -1496,7 +1491,7 @@ Nodes (3): 17. Pantalla · Editor de direcciones, Layout, RFs vinculadas
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `handleOptions()` connect `getRequestId` to `ok`, `route.ts`, `page.tsx`, `types.ts`, `service.ts`, `handleOptions`, `soles`, `corsHeaders`, `type-check`, `layout.tsx`?**
+- **Why does `handleOptions()` connect `getRequestId` to `ok`, `route.ts`, `page.tsx`, `types.ts`, `service.ts`, `handleOptions`, `soles`, `corsHeaders`, `type-check`?**
   _High betweenness centrality (0.013) - this node is a cross-community bridge._
 - **Why does `Icon` connect `soles` to `errors.ts`, `getSupabaseBrowser`, `index.ts`, `page.tsx`, `page.tsx`, `order-card.tsx`, `page.tsx`, `page.tsx`, `page.tsx`, `short-id.ts`, `moment-picked-up.tsx`, `getOpenStatus`, `Icon`?**
   _High betweenness centrality (0.009) - this node is a cross-community bridge._

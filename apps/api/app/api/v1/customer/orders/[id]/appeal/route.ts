@@ -4,7 +4,7 @@ import { requireRole } from '@/lib/http/auth'
 import { corsHeaders, handleOptions } from '@/lib/http/cors'
 import { handleError, ok } from '@/lib/http/problem'
 import { getRequestId } from '@/lib/http/request-id'
-import { createServiceClient } from '@/lib/supabase/service'
+import { createUserClient } from '@/lib/supabase/user'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,15 +23,16 @@ export async function POST(
 ): Promise<Response> {
   const requestId = getRequestId(req)
   try {
-    const { user } = await requireRole(req, 'customer')
+    const { token } = await requireRole(req, 'customer')
     const { id } = await params
     const body = Schema.parse(await req.json().catch(() => ({})))
-    const service = createServiceClient()
-    const { data, error } = await service.rpc('create_appeal_report', {
+
+    // Invocación a la RPC canónica de 2 parámetros usando el token JWT del cliente
+    const client = createUserClient(token)
+    const { data, error } = await client.rpc('create_appeal_report', {
       p_order_id: id,
-      p_customer_user_id: user.id,
       p_description: body.description ?? undefined,
-    })
+    } as any)
 
     if (error) {
       if (error.code === 'P0002') throw new DomainError(error.message, 'not_found')
