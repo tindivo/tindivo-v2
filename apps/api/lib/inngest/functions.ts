@@ -1,14 +1,17 @@
 import type { InngestFunction } from 'inngest'
+import { processPendingOutboxEvents } from '../outbox/processor'
 import { sendPushToUser } from '../push/send'
 import { createServiceClient } from '../supabase/service'
 import {
   type CashDeliveredData,
   EVENT_CASH_DELIVERED,
+  EVENT_ORDER_APPEAL_CREATED,
   EVENT_ORDER_CREATED,
   EVENT_ORDER_NOTIFY_BUSINESS,
   EVENT_ORDER_PAYMENT_TIMEOUT,
   EVENT_ORDER_PREPAY,
   EVENT_ORDER_PREPAY_PROOF_UPLOADED,
+  EVENT_ORDER_PROOF_REJECTED_FINAL,
   EVENT_ORDER_VALIDATION,
   EVENT_TRANSFER_REQUESTED,
   inngest,
@@ -279,6 +282,60 @@ export const orderNotifyBusiness: InngestFunction.Any = inngest.createFunction(
   },
 )
 
+/**
+ * Fallback de revisión de prepago tras 24 horas sin apelación del cliente.
+ * Utiliza idempotencia por orderId+cancelledAt, sleepUntil con la fecha exacta
+ * de cancelled_at + 24h, e invocación a la RPC transaccional create_fallback_appeal_review.
+ */
+export const orderProofRejectedFallback: InngestFunction.Any = inngest.createFunction(
+  {
+    id: 'order-proof-rejected-fallback',
+    name: 'Fallback de revisión de prepago tras 24h sin apelación',
+    idempotency: 'event.data.orderId + "-" + event.data.cancelledAt',
+    triggers: [{ event: EVENT_ORDER_PROOF_REJECTED_FINAL }],
+    cancelOn: [
+      { event: EVENT_ORDER_APPEAL_CREATED, match: 'data.orderId' },
+    ],
+  },
+  async ({ event, step }) => {
+    const { orderId, cancelledAt } = event.data
+
+    const deadline = new Date(new Date(cancelledAt).getTime() + 24 * 60 * 60 * 1000)
+    await step.sleepUntil('wait-24h-appeal-deadline', deadline)
+
+    return await step.run('execute-fallback-rpc', async () => {
+      const svc = createServiceClient()
+      const { data, error } = await svc.rpc('create_fallback_appeal_review', {
+        p_order_id: orderId,
+      })
+
+      if (error) {
+        // Excepción explícita para forzar reintento del step en Inngest si la BD falla por red o sistema
+        throw new Error(`Inngest Fallback RPC Error [${error.code}]: ${error.message}`)
+      }
+
+      return data
+    })
+  },
+)
+
+/**
+ * Cron reconciliador de Transactional Outbox ejecutado cada 5 minutos.
+ */
+export const processOutboxEventsCron: InngestFunction.Any = inngest.createFunction(
+  {
+    id: 'process-outbox-events-cron',
+    name: 'Reconciliador de Transactional Outbox cada 5 min',
+    triggers: [{ cron: '*/5 * * * *' }],
+  },
+  async ({ step }) => {
+    return await step.run('process-pending-outbox-events', async () => {
+      const count = await processPendingOutboxEvents()
+      return { processed: count }
+    })
+  },
+)
+
 /** Registro de funciones servidas por el endpoint /api/inngest. */
 export const functions: InngestFunction.Any[] = [
   orderAcceptanceTimeout,
@@ -287,4 +344,6 @@ export const functions: InngestFunction.Any[] = [
   orderPrepayTimeout,
   transferRequestTimeout,
   orderNotifyBusiness,
+  orderProofRejectedFallback,
+  processOutboxEventsCron,
 ]

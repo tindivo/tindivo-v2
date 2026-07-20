@@ -170,6 +170,16 @@ BEGIN
   VALUES (p_order_id, 'order.appeal_created', 'customer', v_customer_user_id,
     jsonb_build_object('reportId', v_existing_id));
 
+  -- Encolar evento en outbox_events atómicamente si existe la tabla
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'outbox_events') THEN
+    INSERT INTO public.outbox_events (event_type, payload, status)
+    VALUES (
+      'order/appeal.created',
+      jsonb_build_object('orderId', p_order_id, 'reportId', v_existing_id),
+      'pending'
+    );
+  END IF;
+
   RETURN jsonb_build_object('ok', true, 'alreadyExisted', false, 'reportId', v_existing_id);
 END;
 $$;

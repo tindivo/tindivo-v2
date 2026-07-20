@@ -2170,8 +2170,8 @@
     "semantic_hash": ""
   },
   "apps/api/app/api/v1/customer/orders/[id]/appeal/route.ts": {
-    "mtime": 1784483717.1487794,
-    "ast_hash": "dce8f3cf180de5e86aa88ecd2f568bf3",
+    "mtime": 1784577045.055867,
+    "ast_hash": "fb3b234d3f86a74c94ca9fb0227acc5f",
     "semantic_hash": ""
   },
   "supabase/migrations/0066_appeal_system.sql": {
@@ -2182,6 +2182,36 @@
   "Docs/context/inventario_tecnico_apelaciones_prepaid.md": {
     "mtime": 1784570890.1688814,
     "ast_hash": "63adfec0e416df43adca95c41df56d3a",
+    "semantic_hash": ""
+  },
+  "apps/api/lib/supabase/user.ts": {
+    "mtime": 1784577039.976552,
+    "ast_hash": "7dc7cf80718e0c96e451f0d57e94430b",
+    "semantic_hash": ""
+  },
+  "scripts/resolve_duplicate_appeals.sql": {
+    "mtime": 1784576730.9803345,
+    "ast_hash": "558bb0707f4ef917a6e23f32b66a2f02",
+    "semantic_hash": ""
+  },
+  "scripts/rollback_0067.sql": {
+    "mtime": 1784577064.3498497,
+    "ast_hash": "18f10f9f8c5e882872ce15bf9c7bcd45",
+    "semantic_hash": ""
+  },
+  "scripts/test_0067.sql": {
+    "mtime": 1784576264.9478548,
+    "ast_hash": "62a8ea54951c77aa297edc38a20dc9a5",
+    "semantic_hash": ""
+  },
+  "scripts/test_concurrency_0067.ts": {
+    "mtime": 1784576737.9950814,
+    "ast_hash": "bdc07f0fd3f2c979bdde86750db0690c",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/0067_appeal_resolution_flow.sql": {
+    "mtime": 1784577055.2153802,
+    "ast_hash": "92e063e78128ddd8952f9d7ede561098",
     "semantic_hash": ""
   }
 }

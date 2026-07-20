@@ -4,6 +4,7 @@ import { requireRole } from '@/lib/http/auth'
 import { corsHeaders, handleOptions } from '@/lib/http/cors'
 import { handleError, ok } from '@/lib/http/problem'
 import { getRequestId } from '@/lib/http/request-id'
+import { processPendingOutboxEvents } from '@/lib/outbox/processor'
 import { createUserClient } from '@/lib/supabase/user'
 
 export const dynamic = 'force-dynamic'
@@ -28,6 +29,7 @@ export async function POST(
     const body = Schema.parse(await req.json().catch(() => ({})))
 
     // Invocación a la RPC canónica de 2 parámetros usando el token JWT del cliente
+    // El evento order/appeal.created se encola atómicamente en outbox_events dentro de la misma transacción SQL
     const client = createUserClient(token)
     const { data, error } = await client.rpc('create_appeal_report', {
       p_order_id: id,
@@ -39,6 +41,9 @@ export async function POST(
       if (error.code === 'P0001') throw new DomainError(error.message, 'validation_error')
       throw new Error(error.message)
     }
+
+    // Intentar despachar el outbox sin bloquear ni hacer fallar la respuesta HTTP del cliente
+    processPendingOutboxEvents().catch((err: any) => console.warn('Outbox dispatch warning:', err))
 
     return ok(data, { headers: corsHeaders(req) })
   } catch (err) {

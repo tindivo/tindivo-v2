@@ -116,7 +116,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_admin_app_cobros_page",
-      "community": 317,
+      "community": 27,
       "norm_label": "page.tsx"
     },
     {
@@ -126,7 +126,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "apps_admin_app_cobros_page_settlementrow",
-      "community": 317,
+      "community": 27,
       "norm_label": "settlementrow"
     },
     {
@@ -136,7 +136,7 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "apps_admin_app_cobros_page_defaultperiod",
-      "community": 317,
+      "community": 27,
       "norm_label": "defaultperiod()"
     },
     {
@@ -146,7 +146,7 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "apps_admin_app_cobros_page_cobrospage",
-      "community": 317,
+      "community": 27,
       "norm_label": "cobrospage()"
     },
     {
@@ -326,7 +326,7 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "apps_admin_app_efectivo_page_efectivopage",
-      "community": 23,
+      "community": 27,
       "norm_label": "efectivopage()"
     },
     {
@@ -576,7 +576,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_admin_app_negocios_nuevo_page",
-      "community": 27,
+      "community": 67,
       "norm_label": "page.tsx"
     },
     {
@@ -586,7 +586,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "apps_admin_app_negocios_nuevo_page_default_form",
-      "community": 27,
+      "community": 67,
       "norm_label": "default_form"
     },
     {
@@ -596,7 +596,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "apps_admin_app_negocios_nuevo_page_nuevonegociopage",
-      "community": 27,
+      "community": 67,
       "norm_label": "nuevonegociopage()"
     },
     {
@@ -686,7 +686,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_admin_app_page",
-      "community": 28,
+      "community": 23,
       "norm_label": "page.tsx"
     },
     {
@@ -696,7 +696,7 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "apps_admin_app_page_range_label",
-      "community": 28,
+      "community": 23,
       "norm_label": "range_label"
     },
     {
@@ -706,7 +706,7 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "apps_admin_app_page_legend",
-      "community": 28,
+      "community": 23,
       "norm_label": "legend()"
     },
     {
@@ -726,7 +726,7 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "apps_admin_app_page_dashboardskeleton",
-      "community": 28,
+      "community": 23,
       "norm_label": "dashboardskeleton()"
     },
     {
@@ -996,7 +996,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_admin_components_admin_empty_state",
-      "community": 27,
+      "community": 28,
       "norm_label": "empty-state.tsx"
     },
     {
@@ -1016,7 +1016,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_admin_components_admin_field",
-      "community": 317,
+      "community": 28,
       "norm_label": "field.tsx"
     },
     {
@@ -1026,7 +1026,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "apps_admin_components_admin_field_field",
-      "community": 317,
+      "community": 28,
       "norm_label": "field()"
     },
     {
@@ -1136,7 +1136,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_admin_components_admin_range_tabs",
-      "community": 453,
+      "community": 89,
       "norm_label": "range-tabs.tsx"
     },
     {
@@ -1146,7 +1146,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "apps_admin_components_admin_range_tabs_rangetabs",
-      "community": 23,
+      "community": 89,
       "norm_label": "rangetabs()"
     },
     {
@@ -1256,7 +1256,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "apps_admin_components_admin_status_badge_statusbadge",
-      "community": 89,
+      "community": 27,
       "norm_label": "statusbadge()"
     },
     {
@@ -1546,7 +1546,7 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "apps_admin_lib_labels_statement_status",
-      "community": 317,
+      "community": 89,
       "norm_label": "statement_status"
     },
     {
@@ -1576,7 +1576,7 @@
       "source_location": "L48",
       "_origin": "ast",
       "id": "apps_admin_lib_labels_incident_type_label",
-      "community": 27,
+      "community": 89,
       "norm_label": "incident_type_label"
     },
     {
@@ -1586,7 +1586,7 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "apps_admin_lib_labels_cancel_label",
-      "community": 89,
+      "community": 23,
       "norm_label": "cancel_label"
     },
     {
@@ -1606,7 +1606,7 @@
       "source_location": "L76",
       "_origin": "ast",
       "id": "apps_admin_lib_labels_weekdays",
-      "community": 89,
+      "community": 47,
       "norm_label": "weekdays"
     },
     {
@@ -1616,7 +1616,7 @@
       "source_location": "L86",
       "_origin": "ast",
       "id": "apps_admin_lib_labels_timer_fields",
-      "community": 89,
+      "community": 47,
       "norm_label": "timer_fields"
     },
     {
@@ -1626,7 +1626,7 @@
       "source_location": "L96",
       "_origin": "ast",
       "id": "apps_admin_lib_labels_ranges",
-      "community": 453,
+      "community": 89,
       "norm_label": "ranges"
     },
     {
@@ -1696,7 +1696,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_admin_lib_types",
-      "community": 28,
+      "community": 23,
       "norm_label": "types.ts"
     },
     {
@@ -1706,7 +1706,7 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "apps_admin_lib_types_metrics",
-      "community": 28,
+      "community": 23,
       "norm_label": "metrics"
     },
     {
@@ -1716,7 +1716,7 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "apps_admin_lib_types_orderrow",
-      "community": 28,
+      "community": 23,
       "norm_label": "orderrow"
     },
     {
@@ -2236,7 +2236,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_audit_route",
-      "community": 174,
+      "community": 7,
       "norm_label": "route.ts"
     },
     {
@@ -2246,7 +2246,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_audit_route_options",
-      "community": 174,
+      "community": 7,
       "norm_label": "options()"
     },
     {
@@ -2256,7 +2256,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_audit_route_get",
-      "community": 174,
+      "community": 0,
       "norm_label": "get()"
     },
     {
@@ -2266,7 +2266,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_businesses_id_block_route",
-      "community": 174,
+      "community": 7,
       "norm_label": "route.ts"
     },
     {
@@ -2276,7 +2276,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_businesses_id_block_route_schema",
-      "community": 174,
+      "community": 7,
       "norm_label": "schema"
     },
     {
@@ -2286,7 +2286,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_businesses_id_block_route_options",
-      "community": 174,
+      "community": 7,
       "norm_label": "options()"
     },
     {
@@ -2296,7 +2296,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_businesses_id_block_route_post",
-      "community": 174,
+      "community": 7,
       "norm_label": "post()"
     },
     {
@@ -2366,7 +2366,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_businesses_id_unblock_route",
-      "community": 0,
+      "community": 56,
       "norm_label": "route.ts"
     },
     {
@@ -2376,7 +2376,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_businesses_id_unblock_route_options",
-      "community": 0,
+      "community": 56,
       "norm_label": "options()"
     },
     {
@@ -2386,7 +2386,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_businesses_id_unblock_route_post",
-      "community": 0,
+      "community": 56,
       "norm_label": "post()"
     },
     {
@@ -2396,7 +2396,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_businesses_route",
-      "community": 7,
+      "community": 0,
       "norm_label": "route.ts"
     },
     {
@@ -2406,7 +2406,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_businesses_route_schema",
-      "community": 7,
+      "community": 0,
       "norm_label": "schema"
     },
     {
@@ -2416,7 +2416,7 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_businesses_route_options",
-      "community": 29,
+      "community": 0,
       "norm_label": "options()"
     },
     {
@@ -2426,7 +2426,7 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_businesses_route_get",
-      "community": 7,
+      "community": 0,
       "norm_label": "get()"
     },
     {
@@ -2436,7 +2436,7 @@
       "source_location": "L48",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_businesses_route_post",
-      "community": 7,
+      "community": 0,
       "norm_label": "post()"
     },
     {
@@ -2516,7 +2516,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_contingency_id_resolve_route",
-      "community": 0,
+      "community": 7,
       "norm_label": "route.ts"
     },
     {
@@ -2526,7 +2526,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_contingency_id_resolve_route_schema",
-      "community": 0,
+      "community": 7,
       "norm_label": "schema"
     },
     {
@@ -2536,7 +2536,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_contingency_id_resolve_route_options",
-      "community": 0,
+      "community": 7,
       "norm_label": "options()"
     },
     {
@@ -2546,7 +2546,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_contingency_id_resolve_route_post",
-      "community": 0,
+      "community": 7,
       "norm_label": "post()"
     },
     {
@@ -2556,7 +2556,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_contingency_route",
-      "community": 174,
+      "community": 0,
       "norm_label": "route.ts"
     },
     {
@@ -2566,7 +2566,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_contingency_route_createschema",
-      "community": 174,
+      "community": 0,
       "norm_label": "createschema"
     },
     {
@@ -2576,7 +2576,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_contingency_route_options",
-      "community": 174,
+      "community": 0,
       "norm_label": "options()"
     },
     {
@@ -2586,7 +2586,7 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_contingency_route_get",
-      "community": 174,
+      "community": 0,
       "norm_label": "get()"
     },
     {
@@ -2596,7 +2596,7 @@
       "source_location": "L55",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_contingency_route_post",
-      "community": 174,
+      "community": 0,
       "norm_label": "post()"
     },
     {
@@ -2606,7 +2606,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_drivers_id_route",
-      "community": 174,
+      "community": 36,
       "norm_label": "route.ts"
     },
     {
@@ -2616,7 +2616,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_drivers_id_route_schema",
-      "community": 174,
+      "community": 36,
       "norm_label": "schema"
     },
     {
@@ -2626,7 +2626,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_drivers_id_route_options",
-      "community": 174,
+      "community": 36,
       "norm_label": "options()"
     },
     {
@@ -2636,7 +2636,7 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_drivers_id_route_patch",
-      "community": 174,
+      "community": 36,
       "norm_label": "patch()"
     },
     {
@@ -2646,7 +2646,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_drivers_route",
-      "community": 174,
+      "community": 36,
       "norm_label": "route.ts"
     },
     {
@@ -2656,7 +2656,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_drivers_route_schema",
-      "community": 174,
+      "community": 36,
       "norm_label": "schema"
     },
     {
@@ -2666,7 +2666,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_drivers_route_options",
-      "community": 174,
+      "community": 36,
       "norm_label": "options()"
     },
     {
@@ -2676,7 +2676,7 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_drivers_route_get",
-      "community": 174,
+      "community": 36,
       "norm_label": "get()"
     },
     {
@@ -2686,7 +2686,7 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_drivers_route_post",
-      "community": 174,
+      "community": 36,
       "norm_label": "post()"
     },
     {
@@ -2696,7 +2696,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_fraud_claims_id_resolve_route",
-      "community": 29,
+      "community": 6,
       "norm_label": "route.ts"
     },
     {
@@ -2706,7 +2706,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_fraud_claims_id_resolve_route_schema",
-      "community": 29,
+      "community": 6,
       "norm_label": "schema"
     },
     {
@@ -2716,7 +2716,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_fraud_claims_id_resolve_route_options",
-      "community": 29,
+      "community": 7,
       "norm_label": "options()"
     },
     {
@@ -2726,7 +2726,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_fraud_claims_id_resolve_route_put",
-      "community": 29,
+      "community": 6,
       "norm_label": "put()"
     },
     {
@@ -2736,7 +2736,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_fraud_claims_route",
-      "community": 36,
+      "community": 56,
       "norm_label": "route.ts"
     },
     {
@@ -2746,7 +2746,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_fraud_claims_route_options",
-      "community": 36,
+      "community": 56,
       "norm_label": "options()"
     },
     {
@@ -2756,7 +2756,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_fraud_claims_route_get",
-      "community": 36,
+      "community": 56,
       "norm_label": "get()"
     },
     {
@@ -2816,7 +2816,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_incidents_id_review_route_options",
-      "community": 29,
+      "community": 7,
       "norm_label": "options()"
     },
     {
@@ -2836,7 +2836,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_incidents_route",
-      "community": 36,
+      "community": 7,
       "norm_label": "route.ts"
     },
     {
@@ -2846,7 +2846,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_incidents_route_options",
-      "community": 36,
+      "community": 7,
       "norm_label": "options()"
     },
     {
@@ -2856,7 +2856,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_incidents_route_get",
-      "community": 36,
+      "community": 7,
       "norm_label": "get()"
     },
     {
@@ -2866,7 +2866,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_metrics_route",
-      "community": 174,
+      "community": 56,
       "norm_label": "route.ts"
     },
     {
@@ -2876,7 +2876,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_metrics_route_options",
-      "community": 174,
+      "community": 56,
       "norm_label": "options()"
     },
     {
@@ -2886,7 +2886,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_metrics_route_resolverange",
-      "community": 174,
+      "community": 56,
       "norm_label": "resolverange()"
     },
     {
@@ -2896,7 +2896,7 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_metrics_route_get",
-      "community": 174,
+      "community": 56,
       "norm_label": "get()"
     },
     {
@@ -2946,7 +2946,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_orders_route",
-      "community": 36,
+      "community": 7,
       "norm_label": "route.ts"
     },
     {
@@ -2956,7 +2956,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_orders_route_options",
-      "community": 36,
+      "community": 7,
       "norm_label": "options()"
     },
     {
@@ -2966,7 +2966,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_orders_route_get",
-      "community": 36,
+      "community": 7,
       "norm_label": "get()"
     },
     {
@@ -2976,7 +2976,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_reports_id_resolve_route",
-      "community": 7,
+      "community": 36,
       "norm_label": "route.ts"
     },
     {
@@ -2986,7 +2986,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_reports_id_resolve_route_schema",
-      "community": 7,
+      "community": 36,
       "norm_label": "schema"
     },
     {
@@ -2996,7 +2996,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_reports_id_resolve_route_options",
-      "community": 7,
+      "community": 36,
       "norm_label": "options()"
     },
     {
@@ -3006,7 +3006,7 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_reports_id_resolve_route_post",
-      "community": 7,
+      "community": 36,
       "norm_label": "post()"
     },
     {
@@ -3016,7 +3016,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_reports_route",
-      "community": 36,
+      "community": 7,
       "norm_label": "route.ts"
     },
     {
@@ -3026,7 +3026,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_reports_route_options",
-      "community": 36,
+      "community": 7,
       "norm_label": "options()"
     },
     {
@@ -3036,7 +3036,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_reports_route_get",
-      "community": 36,
+      "community": 7,
       "norm_label": "get()"
     },
     {
@@ -3146,7 +3146,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_settlements_id_pay_route",
-      "community": 174,
+      "community": 0,
       "norm_label": "route.ts"
     },
     {
@@ -3156,7 +3156,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_settlements_id_pay_route_schema",
-      "community": 174,
+      "community": 0,
       "norm_label": "schema"
     },
     {
@@ -3166,7 +3166,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_settlements_id_pay_route_options",
-      "community": 174,
+      "community": 0,
       "norm_label": "options()"
     },
     {
@@ -3176,7 +3176,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_settlements_id_pay_route_post",
-      "community": 174,
+      "community": 0,
       "norm_label": "post()"
     },
     {
@@ -3206,7 +3206,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_settlements_route_options",
-      "community": 29,
+      "community": 36,
       "norm_label": "options()"
     },
     {
@@ -3266,7 +3266,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_business_cash_settlements_id_confirm_route",
-      "community": 0,
+      "community": 304,
       "norm_label": "route.ts"
     },
     {
@@ -3276,7 +3276,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_business_cash_settlements_id_confirm_route_schema",
-      "community": 0,
+      "community": 304,
       "norm_label": "schema"
     },
     {
@@ -3286,7 +3286,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_business_cash_settlements_id_confirm_route_options",
-      "community": 0,
+      "community": 304,
       "norm_label": "options()"
     },
     {
@@ -3296,7 +3296,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_business_cash_settlements_id_confirm_route_post",
-      "community": 0,
+      "community": 304,
       "norm_label": "post()"
     },
     {
@@ -3306,7 +3306,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_business_cash_settlements_id_dispute_route",
-      "community": 0,
+      "community": 174,
       "norm_label": "route.ts"
     },
     {
@@ -3316,7 +3316,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_business_cash_settlements_id_dispute_route_schema",
-      "community": 0,
+      "community": 174,
       "norm_label": "schema"
     },
     {
@@ -3326,7 +3326,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_business_cash_settlements_id_dispute_route_options",
-      "community": 0,
+      "community": 174,
       "norm_label": "options()"
     },
     {
@@ -3336,7 +3336,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_business_cash_settlements_id_dispute_route_post",
-      "community": 0,
+      "community": 174,
       "norm_label": "post()"
     },
     {
@@ -3346,7 +3346,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_business_contingency_id_dispute_route",
-      "community": 7,
+      "community": 56,
       "norm_label": "route.ts"
     },
     {
@@ -3356,7 +3356,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_business_contingency_id_dispute_route_schema",
-      "community": 7,
+      "community": 56,
       "norm_label": "schema"
     },
     {
@@ -3366,7 +3366,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_business_contingency_id_dispute_route_options",
-      "community": 7,
+      "community": 56,
       "norm_label": "options()"
     },
     {
@@ -3376,7 +3376,7 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_business_contingency_id_dispute_route_post",
-      "community": 7,
+      "community": 56,
       "norm_label": "post()"
     },
     {
@@ -3406,7 +3406,7 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_business_fraud_claims_route_options",
-      "community": 29,
+      "community": 7,
       "norm_label": "options()"
     },
     {
@@ -3426,7 +3426,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_business_orders_id_extend_prep_route",
-      "community": 0,
+      "community": 36,
       "norm_label": "route.ts"
     },
     {
@@ -3436,7 +3436,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_business_orders_id_extend_prep_route_options",
-      "community": 0,
+      "community": 36,
       "norm_label": "options()"
     },
     {
@@ -3446,7 +3446,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_business_orders_id_extend_prep_route_post",
-      "community": 0,
+      "community": 36,
       "norm_label": "post()"
     },
     {
@@ -3586,7 +3586,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_business_orders_route",
-      "community": 0,
+      "community": 92,
       "norm_label": "route.ts"
     },
     {
@@ -3596,7 +3596,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_business_orders_route_schema",
-      "community": 0,
+      "community": 92,
       "norm_label": "schema"
     },
     {
@@ -3606,7 +3606,7 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_business_orders_route_options",
-      "community": 0,
+      "community": 92,
       "norm_label": "options()"
     },
     {
@@ -3616,7 +3616,7 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_business_orders_route_post",
-      "community": 0,
+      "community": 92,
       "norm_label": "post()"
     },
     {
@@ -3716,7 +3716,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_customer_orders_id_appeal_route",
-      "community": 174,
+      "community": 0,
       "norm_label": "route.ts"
     },
     {
@@ -3726,7 +3726,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_customer_orders_id_appeal_route_schema",
-      "community": 174,
+      "community": 0,
       "norm_label": "schema"
     },
     {
@@ -3736,7 +3736,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_customer_orders_id_appeal_route_options",
-      "community": 174,
+      "community": 0,
       "norm_label": "options()"
     },
     {
@@ -3746,7 +3746,7 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_customer_orders_id_appeal_route_post",
-      "community": 174,
+      "community": 0,
       "norm_label": "post()"
     },
     {
@@ -3756,7 +3756,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_customer_orders_id_cancel_route",
-      "community": 7,
+      "community": 0,
       "norm_label": "route.ts"
     },
     {
@@ -3766,7 +3766,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_customer_orders_id_cancel_route_options",
-      "community": 7,
+      "community": 0,
       "norm_label": "options()"
     },
     {
@@ -3776,7 +3776,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_customer_orders_id_cancel_route_post",
-      "community": 7,
+      "community": 0,
       "norm_label": "post()"
     },
     {
@@ -3786,7 +3786,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_customer_orders_id_prepay_info_route",
-      "community": 0,
+      "community": 56,
       "norm_label": "route.ts"
     },
     {
@@ -3796,7 +3796,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_customer_orders_id_prepay_info_route_options",
-      "community": 0,
+      "community": 56,
       "norm_label": "options()"
     },
     {
@@ -3806,7 +3806,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_customer_orders_id_prepay_info_route_get",
-      "community": 0,
+      "community": 56,
       "norm_label": "get()"
     },
     {
@@ -3996,7 +3996,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_driver_availability_route_options",
-      "community": 29,
+      "community": 174,
       "norm_label": "options()"
     },
     {
@@ -4106,7 +4106,7 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_driver_incidents_route_options",
-      "community": 29,
+      "community": 7,
       "norm_label": "options()"
     },
     {
@@ -4126,7 +4126,7 @@
       "source_location": "L70",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_driver_incidents_route_get",
-      "community": 174,
+      "community": 36,
       "norm_label": "get()"
     },
     {
@@ -4136,7 +4136,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_driver_orders_id_route",
-      "community": 174,
+      "community": 0,
       "norm_label": "route.ts"
     },
     {
@@ -4146,7 +4146,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_driver_orders_id_route_options",
-      "community": 174,
+      "community": 0,
       "norm_label": "options()"
     },
     {
@@ -4156,7 +4156,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_driver_orders_id_route_order_columns",
-      "community": 174,
+      "community": 0,
       "norm_label": "order_columns"
     },
     {
@@ -4166,7 +4166,7 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_driver_orders_id_route_get",
-      "community": 174,
+      "community": 0,
       "norm_label": "get()"
     },
     {
@@ -4196,7 +4196,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_driver_orders_id_transfer_request_route_options",
-      "community": 29,
+      "community": 7,
       "norm_label": "options()"
     },
     {
@@ -4246,7 +4246,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_driver_team_route",
-      "community": 455,
+      "community": 0,
       "norm_label": "route.ts"
     },
     {
@@ -4256,7 +4256,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_driver_team_route_transferable",
-      "community": 455,
+      "community": 0,
       "norm_label": "transferable"
     },
     {
@@ -4266,7 +4266,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_driver_team_route_options",
-      "community": 455,
+      "community": 0,
       "norm_label": "options()"
     },
     {
@@ -4276,7 +4276,7 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_driver_team_route_get",
-      "community": 455,
+      "community": 0,
       "norm_label": "get()"
     },
     {
@@ -4356,7 +4356,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_public_businesses_id_route",
-      "community": 29,
+      "community": 7,
       "norm_label": "route.ts"
     },
     {
@@ -4366,7 +4366,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_public_businesses_id_route_options",
-      "community": 29,
+      "community": 7,
       "norm_label": "options()"
     },
     {
@@ -4376,7 +4376,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_public_businesses_id_route_get",
-      "community": 29,
+      "community": 36,
       "norm_label": "get()"
     },
     {
@@ -4386,7 +4386,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_public_businesses_route",
-      "community": 7,
+      "community": 92,
       "norm_label": "route.ts"
     },
     {
@@ -4396,7 +4396,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_public_businesses_route_options",
-      "community": 7,
+      "community": 92,
       "norm_label": "options()"
     },
     {
@@ -4406,7 +4406,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_public_businesses_route_get",
-      "community": 7,
+      "community": 92,
       "norm_label": "get()"
     },
     {
@@ -4416,7 +4416,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_public_orders_shortid_route",
-      "community": 36,
+      "community": 92,
       "norm_label": "route.ts"
     },
     {
@@ -4426,7 +4426,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_public_orders_shortid_route_options",
-      "community": 36,
+      "community": 92,
       "norm_label": "options()"
     },
     {
@@ -4436,7 +4436,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_public_orders_shortid_route_get",
-      "community": 36,
+      "community": 92,
       "norm_label": "get()"
     },
     {
@@ -4486,7 +4486,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_push_subscriptions_route",
-      "community": 0,
+      "community": 56,
       "norm_label": "route.ts"
     },
     {
@@ -4496,7 +4496,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_push_subscriptions_route_subschema",
-      "community": 0,
+      "community": 56,
       "norm_label": "subschema"
     },
     {
@@ -4506,7 +4506,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_push_subscriptions_route_deleteschema",
-      "community": 0,
+      "community": 56,
       "norm_label": "deleteschema"
     },
     {
@@ -4516,7 +4516,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_push_subscriptions_route_options",
-      "community": 29,
+      "community": 7,
       "norm_label": "options()"
     },
     {
@@ -4526,7 +4526,7 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_push_subscriptions_route_post",
-      "community": 0,
+      "community": 56,
       "norm_label": "post()"
     },
     {
@@ -4536,7 +4536,7 @@
       "source_location": "L48",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_push_subscriptions_route_delete",
-      "community": 0,
+      "community": 56,
       "norm_label": "delete()"
     },
     {
@@ -4596,7 +4596,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "apps_api_lib_http_auth_requireuser",
-      "community": 0,
+      "community": 56,
       "norm_label": "requireuser()"
     },
     {
@@ -4606,7 +4606,7 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "apps_api_lib_http_auth_requirerole",
-      "community": 174,
+      "community": 0,
       "norm_label": "requirerole()"
     },
     {
@@ -4616,7 +4616,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_lib_http_cors",
-      "community": 36,
+      "community": 29,
       "norm_label": "cors.ts"
     },
     {
@@ -4626,7 +4626,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "apps_api_lib_http_cors_default_origins",
-      "community": 36,
+      "community": 29,
       "norm_label": "default_origins"
     },
     {
@@ -4636,7 +4636,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "apps_api_lib_http_cors_extra_origins",
-      "community": 36,
+      "community": 29,
       "norm_label": "extra_origins"
     },
     {
@@ -4646,7 +4646,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "apps_api_lib_http_cors_allowed_origins",
-      "community": 36,
+      "community": 29,
       "norm_label": "allowed_origins"
     },
     {
@@ -4656,7 +4656,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "apps_api_lib_http_cors_isallowed",
-      "community": 36,
+      "community": 29,
       "norm_label": "isallowed()"
     },
     {
@@ -4676,7 +4676,7 @@
       "source_location": "L49",
       "_origin": "ast",
       "id": "apps_api_lib_http_cors_handleoptions",
-      "community": 29,
+      "community": 7,
       "norm_label": "handleoptions()"
     },
     {
@@ -4786,7 +4786,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_lib_http_problem",
-      "community": 36,
+      "community": 92,
       "norm_label": "problem.ts"
     },
     {
@@ -4816,7 +4816,7 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "apps_api_lib_http_problem_ok",
-      "community": 174,
+      "community": 36,
       "norm_label": "ok()"
     },
     {
@@ -4826,7 +4826,7 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "apps_api_lib_http_problem_raw",
-      "community": 36,
+      "community": 92,
       "norm_label": "raw()"
     },
     {
@@ -4846,7 +4846,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "apps_api_lib_http_problem_ts_docref_rfc_9457",
-      "community": 36,
+      "community": 92,
       "norm_label": "rfc-9457"
     },
     {
@@ -4866,7 +4866,7 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "apps_api_lib_http_request_id_getrequestid",
-      "community": 7,
+      "community": 6,
       "norm_label": "getrequestid()"
     },
     {
@@ -5326,7 +5326,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_lib_supabase_service",
-      "community": 0,
+      "community": 56,
       "norm_label": "service.ts"
     },
     {
@@ -5336,8 +5336,28 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "apps_api_lib_supabase_service_createserviceclient",
-      "community": 0,
+      "community": 56,
       "norm_label": "createserviceclient()"
+    },
+    {
+      "label": "user.ts",
+      "file_type": "code",
+      "source_file": "apps/api/lib/supabase/user.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "apps_api_lib_supabase_user",
+      "community": 1,
+      "norm_label": "user.ts"
+    },
+    {
+      "label": "createUserClient()",
+      "file_type": "code",
+      "source_file": "apps/api/lib/supabase/user.ts",
+      "source_location": "L9",
+      "_origin": "ast",
+      "id": "apps_api_lib_supabase_user_createuserclient",
+      "community": 1,
+      "norm_label": "createuserclient()"
     },
     {
       "label": "client.ts",
@@ -6216,7 +6236,7 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "apps_customer_app_negocio_id_page_businessdetail",
-      "community": 8,
+      "community": 24,
       "norm_label": "businessdetail"
     },
     {
@@ -7316,7 +7336,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_customer_components_otp_verification_sheet",
-      "community": 12,
+      "community": 17,
       "norm_label": "otp-verification-sheet.tsx"
     },
     {
@@ -7326,7 +7346,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "apps_customer_components_otp_verification_sheet_props",
-      "community": 12,
+      "community": 17,
       "norm_label": "props"
     },
     {
@@ -7336,7 +7356,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "apps_customer_components_otp_verification_sheet_otpverificationsheet",
-      "community": 12,
+      "community": 17,
       "norm_label": "otpverificationsheet()"
     },
     {
@@ -7446,7 +7466,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_customer_components_push_manager",
-      "community": 17,
+      "community": 68,
       "norm_label": "push-manager.tsx"
     },
     {
@@ -7536,7 +7556,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_customer_components_ui",
-      "community": 8,
+      "community": 17,
       "norm_label": "ui.tsx"
     },
     {
@@ -7546,7 +7566,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "apps_customer_components_ui_support_whatsapp",
-      "community": 8,
+      "community": 17,
       "norm_label": "support_whatsapp"
     },
     {
@@ -7556,7 +7576,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "apps_customer_components_ui_supportlink",
-      "community": 8,
+      "community": 17,
       "norm_label": "supportlink()"
     },
     {
@@ -7566,7 +7586,7 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "apps_customer_components_ui_productimage",
-      "community": 8,
+      "community": 17,
       "norm_label": "productimage()"
     },
     {
@@ -7576,7 +7596,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_customer_hooks_use_order_readiness",
-      "community": 8,
+      "community": 32,
       "norm_label": "use-order-readiness.ts"
     },
     {
@@ -7586,7 +7606,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "apps_customer_hooks_use_order_readiness_gatetype",
-      "community": 8,
+      "community": 32,
       "norm_label": "gatetype"
     },
     {
@@ -7596,7 +7616,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "apps_customer_hooks_use_order_readiness_orderreadiness",
-      "community": 8,
+      "community": 32,
       "norm_label": "orderreadiness"
     },
     {
@@ -7696,7 +7716,7 @@
       "source_location": "L56",
       "_origin": "ast",
       "id": "apps_customer_lib_business_ordering_usebusinessordering",
-      "community": 24,
+      "community": 8,
       "norm_label": "usebusinessordering()"
     },
     {
@@ -7786,7 +7806,7 @@
       "source_location": "L166",
       "_origin": "ast",
       "id": "apps_customer_lib_cart_carthydrator",
-      "community": 68,
+      "community": 8,
       "norm_label": "carthydrator()"
     },
     {
@@ -8136,7 +8156,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_customer_lib_supabase_client",
-      "community": 17,
+      "community": 81,
       "norm_label": "client.ts"
     },
     {
@@ -8796,7 +8816,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_motorizados_app_layout",
-      "community": 94,
+      "community": 65,
       "norm_label": "layout.tsx"
     },
     {
@@ -8806,7 +8826,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "apps_motorizados_app_layout_bricolage",
-      "community": 94,
+      "community": 65,
       "norm_label": "bricolage"
     },
     {
@@ -8816,7 +8836,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "apps_motorizados_app_layout_geist",
-      "community": 94,
+      "community": 65,
       "norm_label": "geist"
     },
     {
@@ -8826,7 +8846,7 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "apps_motorizados_app_layout_jetbrains",
-      "community": 94,
+      "community": 65,
       "norm_label": "jetbrains"
     },
     {
@@ -8836,7 +8856,7 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "apps_motorizados_app_layout_metadata",
-      "community": 94,
+      "community": 65,
       "norm_label": "metadata"
     },
     {
@@ -8846,7 +8866,7 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "apps_motorizados_app_layout_viewport",
-      "community": 94,
+      "community": 65,
       "norm_label": "viewport"
     },
     {
@@ -8856,7 +8876,7 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "apps_motorizados_app_layout_rootlayout",
-      "community": 94,
+      "community": 65,
       "norm_label": "rootlayout()"
     },
     {
@@ -8926,7 +8946,7 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "apps_motorizados_app_pedido_id_page_pedidopage",
-      "community": 65,
+      "community": 42,
       "norm_label": "pedidopage()"
     },
     {
@@ -8946,7 +8966,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_motorizados_components_home_availability_card",
-      "community": 35,
+      "community": 65,
       "norm_label": "availability-card.tsx"
     },
     {
@@ -8956,7 +8976,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "apps_motorizados_components_home_availability_card_availability",
-      "community": 35,
+      "community": 65,
       "norm_label": "availability"
     },
     {
@@ -8966,7 +8986,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "apps_motorizados_components_home_availability_card_availabilitycard",
-      "community": 35,
+      "community": 65,
       "norm_label": "availabilitycard()"
     },
     {
@@ -9036,7 +9056,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "apps_motorizados_components_home_mine_tab_minetab",
-      "community": 42,
+      "community": 65,
       "norm_label": "minetab()"
     },
     {
@@ -9436,7 +9456,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_motorizados_components_order_ready_prompt_sheet",
-      "community": 447,
+      "community": 453,
       "norm_label": "ready-prompt-sheet.tsx"
     },
     {
@@ -9446,7 +9466,7 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "apps_motorizados_components_order_ready_prompt_sheet_readypromptsheet",
-      "community": 447,
+      "community": 453,
       "norm_label": "readypromptsheet()"
     },
     {
@@ -9516,7 +9536,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_motorizados_components_push_manager",
-      "community": 94,
+      "community": 65,
       "norm_label": "push-manager.tsx"
     },
     {
@@ -9526,7 +9546,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "apps_motorizados_components_push_manager_pushmanager",
-      "community": 94,
+      "community": 65,
       "norm_label": "pushmanager()"
     },
     {
@@ -9536,7 +9556,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_motorizados_components_source_chip",
-      "community": 42,
+      "community": 35,
       "norm_label": "source-chip.tsx"
     },
     {
@@ -9546,7 +9566,7 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "apps_motorizados_components_source_chip_sourcechip",
-      "community": 42,
+      "community": 35,
       "norm_label": "sourcechip()"
     },
     {
@@ -9586,7 +9606,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_motorizados_components_transfers_transfer_watcher",
-      "community": 42,
+      "community": 65,
       "norm_label": "transfer-watcher.tsx"
     },
     {
@@ -9596,7 +9616,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "apps_motorizados_components_transfers_transfer_watcher_incomingbanner",
-      "community": 42,
+      "community": 65,
       "norm_label": "incomingbanner"
     },
     {
@@ -9616,7 +9636,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_motorizados_hooks_use_driver_orders",
-      "community": 65,
+      "community": 42,
       "norm_label": "use-driver-orders.ts"
     },
     {
@@ -9636,7 +9656,7 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "apps_motorizados_hooks_use_driver_orders_usedriverorders",
-      "community": 65,
+      "community": 42,
       "norm_label": "usedriverorders()"
     },
     {
@@ -9686,7 +9706,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_motorizados_lib_api",
-      "community": 35,
+      "community": 65,
       "norm_label": "api.ts"
     },
     {
@@ -9696,7 +9716,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "apps_motorizados_lib_api_api",
-      "community": 35,
+      "community": 65,
       "norm_label": "api"
     },
     {
@@ -9766,7 +9786,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_motorizados_lib_format",
-      "community": 35,
+      "community": 42,
       "norm_label": "format.ts"
     },
     {
@@ -9796,7 +9816,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "apps_motorizados_lib_format_minutesuntil",
-      "community": 35,
+      "community": 42,
       "norm_label": "minutesuntil()"
     },
     {
@@ -9806,7 +9826,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "apps_motorizados_lib_format_istoday",
-      "community": 65,
+      "community": 42,
       "norm_label": "istoday()"
     },
     {
@@ -9826,7 +9846,7 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "apps_motorizados_lib_format_hourof",
-      "community": 447,
+      "community": 42,
       "norm_label": "hourof()"
     },
     {
@@ -9936,7 +9956,7 @@
       "source_location": "L71",
       "_origin": "ast",
       "id": "apps_motorizados_lib_offline_queue_getoptimistic",
-      "community": 65,
+      "community": 42,
       "norm_label": "getoptimistic()"
     },
     {
@@ -10006,7 +10026,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_motorizados_lib_types",
-      "community": 42,
+      "community": 447,
       "norm_label": "types.ts"
     },
     {
@@ -10016,7 +10036,7 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "apps_motorizados_lib_types_driverorderstatus",
-      "community": 42,
+      "community": 447,
       "norm_label": "driverorderstatus"
     },
     {
@@ -10026,7 +10046,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "apps_motorizados_lib_types_paymentintent",
-      "community": 42,
+      "community": 447,
       "norm_label": "paymentintent"
     },
     {
@@ -10036,7 +10056,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "apps_motorizados_lib_types_ordersource",
-      "community": 42,
+      "community": 447,
       "norm_label": "ordersource"
     },
     {
@@ -10046,7 +10066,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "apps_motorizados_lib_types_transitionaction",
-      "community": 42,
+      "community": 447,
       "norm_label": "transitionaction"
     },
     {
@@ -10076,7 +10096,7 @@
       "source_location": "L111",
       "_origin": "ast",
       "id": "apps_motorizados_lib_types_teamresponse",
-      "community": 42,
+      "community": 35,
       "norm_label": "teamresponse"
     },
     {
@@ -10086,7 +10106,7 @@
       "source_location": "L145",
       "_origin": "ast",
       "id": "apps_motorizados_lib_types_transferrequestrow",
-      "community": 42,
+      "community": 447,
       "norm_label": "transferrequestrow"
     },
     {
@@ -10766,7 +10786,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_negocios_app_deuda_page",
-      "community": 37,
+      "community": 21,
       "norm_label": "page.tsx"
     },
     {
@@ -10776,7 +10796,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "apps_negocios_app_deuda_page_advance",
-      "community": 37,
+      "community": 21,
       "norm_label": "advance"
     },
     {
@@ -10786,7 +10806,7 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "apps_negocios_app_deuda_page_settlement",
-      "community": 37,
+      "community": 21,
       "norm_label": "settlement"
     },
     {
@@ -10796,7 +10816,7 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "apps_negocios_app_deuda_page_advance_state",
-      "community": 37,
+      "community": 21,
       "norm_label": "advance_state"
     },
     {
@@ -10806,7 +10826,7 @@
       "source_location": "L41",
       "_origin": "ast",
       "id": "apps_negocios_app_deuda_page_settlement_state",
-      "community": 37,
+      "community": 21,
       "norm_label": "settlement_state"
     },
     {
@@ -10816,7 +10836,7 @@
       "source_location": "L48",
       "_origin": "ast",
       "id": "apps_negocios_app_deuda_page_fmtdate",
-      "community": 37,
+      "community": 21,
       "norm_label": "fmtdate()"
     },
     {
@@ -10826,7 +10846,7 @@
       "source_location": "L56",
       "_origin": "ast",
       "id": "apps_negocios_app_deuda_page_advancecard",
-      "community": 37,
+      "community": 21,
       "norm_label": "advancecard()"
     },
     {
@@ -10836,7 +10856,7 @@
       "source_location": "L211",
       "_origin": "ast",
       "id": "apps_negocios_app_deuda_page_settlementrow",
-      "community": 37,
+      "community": 21,
       "norm_label": "settlementrow()"
     },
     {
@@ -10846,7 +10866,7 @@
       "source_location": "L245",
       "_origin": "ast",
       "id": "apps_negocios_app_deuda_page_sectionheader",
-      "community": 37,
+      "community": 21,
       "norm_label": "sectionheader()"
     },
     {
@@ -10856,7 +10876,7 @@
       "source_location": "L279",
       "_origin": "ast",
       "id": "apps_negocios_app_deuda_page_deudapage",
-      "community": 37,
+      "community": 21,
       "norm_label": "deudapage()"
     },
     {
@@ -10866,7 +10886,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_negocios_app_efectivo_page",
-      "community": 76,
+      "community": 55,
       "norm_label": "page.tsx"
     },
     {
@@ -10876,7 +10896,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "apps_negocios_app_efectivo_page_cashrow",
-      "community": 76,
+      "community": 55,
       "norm_label": "cashrow"
     },
     {
@@ -10886,7 +10906,7 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "apps_negocios_app_efectivo_page_kpitone",
-      "community": 76,
+      "community": 55,
       "norm_label": "kpitone"
     },
     {
@@ -10896,7 +10916,7 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "apps_negocios_app_efectivo_page_kpi_tone",
-      "community": 76,
+      "community": 55,
       "norm_label": "kpi_tone"
     },
     {
@@ -10906,7 +10926,7 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "apps_negocios_app_efectivo_page_kpicard",
-      "community": 76,
+      "community": 55,
       "norm_label": "kpicard()"
     },
     {
@@ -10916,7 +10936,7 @@
       "source_location": "L72",
       "_origin": "ast",
       "id": "apps_negocios_app_efectivo_page_settlementcard",
-      "community": 76,
+      "community": 55,
       "norm_label": "settlementcard()"
     },
     {
@@ -10926,7 +10946,7 @@
       "source_location": "L387",
       "_origin": "ast",
       "id": "apps_negocios_app_efectivo_page_summaryhero",
-      "community": 76,
+      "community": 55,
       "norm_label": "summaryhero()"
     },
     {
@@ -10946,7 +10966,7 @@
       "source_location": "L654",
       "_origin": "ast",
       "id": "apps_negocios_app_efectivo_page_negocioefectivopage",
-      "community": 76,
+      "community": 55,
       "norm_label": "negocioefectivopage()"
     },
     {
@@ -11486,7 +11506,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_negocios_app_menu_page",
-      "community": 56,
+      "community": 37,
       "norm_label": "page.tsx"
     },
     {
@@ -11496,7 +11516,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "apps_negocios_app_menu_page_modifieroption",
-      "community": 56,
+      "community": 37,
       "norm_label": "modifieroption"
     },
     {
@@ -11506,7 +11526,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "apps_negocios_app_menu_page_modifiergroup",
-      "community": 56,
+      "community": 37,
       "norm_label": "modifiergroup"
     },
     {
@@ -11516,7 +11536,7 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "apps_negocios_app_menu_page_menuitem",
-      "community": 56,
+      "community": 37,
       "norm_label": "menuitem"
     },
     {
@@ -11526,7 +11546,7 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "apps_negocios_app_menu_page_menucategory",
-      "community": 56,
+      "community": 37,
       "norm_label": "menucategory"
     },
     {
@@ -11536,7 +11556,7 @@
       "source_location": "L45",
       "_origin": "ast",
       "id": "apps_negocios_app_menu_page_itemminprice",
-      "community": 56,
+      "community": 37,
       "norm_label": "itemminprice()"
     },
     {
@@ -11546,7 +11566,7 @@
       "source_location": "L58",
       "_origin": "ast",
       "id": "apps_negocios_app_menu_page_itemmaxprice",
-      "community": 56,
+      "community": 37,
       "norm_label": "itemmaxprice()"
     },
     {
@@ -11556,7 +11576,7 @@
       "source_location": "L73",
       "_origin": "ast",
       "id": "apps_negocios_app_menu_page_itemrow",
-      "community": 56,
+      "community": 37,
       "norm_label": "itemrow()"
     },
     {
@@ -11566,7 +11586,7 @@
       "source_location": "L237",
       "_origin": "ast",
       "id": "apps_negocios_app_menu_page_categorysection",
-      "community": 56,
+      "community": 37,
       "norm_label": "categorysection()"
     },
     {
@@ -11576,7 +11596,7 @@
       "source_location": "L308",
       "_origin": "ast",
       "id": "apps_negocios_app_menu_page_emptystate",
-      "community": 56,
+      "community": 37,
       "norm_label": "emptystate()"
     },
     {
@@ -11586,7 +11606,7 @@
       "source_location": "L403",
       "_origin": "ast",
       "id": "apps_negocios_app_menu_page_desktopcategoryrail",
-      "community": 56,
+      "community": 37,
       "norm_label": "desktopcategoryrail()"
     },
     {
@@ -11596,7 +11616,7 @@
       "source_location": "L538",
       "_origin": "ast",
       "id": "apps_negocios_app_menu_page_catrow",
-      "community": 56,
+      "community": 37,
       "norm_label": "catrow"
     },
     {
@@ -11606,7 +11626,7 @@
       "source_location": "L547",
       "_origin": "ast",
       "id": "apps_negocios_app_menu_page_categorymanagermodal",
-      "community": 56,
+      "community": 37,
       "norm_label": "categorymanagermodal()"
     },
     {
@@ -11616,7 +11636,7 @@
       "source_location": "L933",
       "_origin": "ast",
       "id": "apps_negocios_app_menu_page_menupage",
-      "community": 56,
+      "community": 37,
       "norm_label": "menupage()"
     },
     {
@@ -11626,7 +11646,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_negocios_app_nuevo_page",
-      "community": 21,
+      "community": 76,
       "norm_label": "page.tsx"
     },
     {
@@ -11636,7 +11656,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "apps_negocios_app_nuevo_page_prep_presets",
-      "community": 21,
+      "community": 76,
       "norm_label": "prep_presets"
     },
     {
@@ -11646,7 +11666,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "apps_negocios_app_nuevo_page_payment",
-      "community": 21,
+      "community": 76,
       "norm_label": "payment"
     },
     {
@@ -11656,7 +11676,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "apps_negocios_app_nuevo_page_payments",
-      "community": 21,
+      "community": 76,
       "norm_label": "payments"
     },
     {
@@ -11666,7 +11686,7 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "apps_negocios_app_nuevo_page_num",
-      "community": 21,
+      "community": 76,
       "norm_label": "num()"
     },
     {
@@ -11676,7 +11696,7 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "apps_negocios_app_nuevo_page_nuevopedidopage",
-      "community": 21,
+      "community": 76,
       "norm_label": "nuevopedidopage()"
     },
     {
@@ -11686,7 +11706,7 @@
       "source_location": "L483",
       "_origin": "ast",
       "id": "apps_negocios_app_nuevo_page_card",
-      "community": 21,
+      "community": 76,
       "norm_label": "card"
     },
     {
@@ -11856,7 +11876,7 @@
       "source_location": "L48",
       "_origin": "ast",
       "id": "apps_negocios_components_dashboard_chrome_navid",
-      "community": 76,
+      "community": 55,
       "norm_label": "navid"
     },
     {
@@ -11936,7 +11956,7 @@
       "source_location": "L121",
       "_origin": "ast",
       "id": "apps_negocios_components_dashboard_chrome_login",
-      "community": 38,
+      "community": 37,
       "norm_label": "login()"
     },
     {
@@ -12176,7 +12196,7 @@
       "source_location": "L837",
       "_origin": "ast",
       "id": "apps_negocios_components_dashboard_pedido_detail_detailscreen",
-      "community": 4,
+      "community": 37,
       "norm_label": "detailscreen()"
     },
     {
@@ -12376,7 +12396,7 @@
       "source_location": "L99",
       "_origin": "ast",
       "id": "apps_negocios_components_dashboard_primitives_sourcebadgemini",
-      "community": 4,
+      "community": 44,
       "norm_label": "sourcebadgemini()"
     },
     {
@@ -12416,7 +12436,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_negocios_components_dashboard_shell",
-      "community": 76,
+      "community": 55,
       "norm_label": "shell.tsx"
     },
     {
@@ -12426,7 +12446,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "apps_negocios_components_dashboard_shell_dashboardsidebar",
-      "community": 76,
+      "community": 55,
       "norm_label": "dashboardsidebar()"
     },
     {
@@ -12436,7 +12456,7 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "apps_negocios_components_dashboard_shell_desktoptopbar",
-      "community": 76,
+      "community": 55,
       "norm_label": "desktoptopbar()"
     },
     {
@@ -12446,7 +12466,7 @@
       "source_location": "L64",
       "_origin": "ast",
       "id": "apps_negocios_components_dashboard_shell_mobiletopbar",
-      "community": 76,
+      "community": 55,
       "norm_label": "mobiletopbar()"
     },
     {
@@ -12456,7 +12476,7 @@
       "source_location": "L120",
       "_origin": "ast",
       "id": "apps_negocios_components_dashboard_shell_dashboardshell",
-      "community": 76,
+      "community": 55,
       "norm_label": "dashboardshell()"
     },
     {
@@ -12516,7 +12536,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_negocios_components_schedule_editor",
-      "community": 55,
+      "community": 453,
       "norm_label": "schedule-editor.tsx"
     },
     {
@@ -12526,7 +12546,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "apps_negocios_components_schedule_editor_days",
-      "community": 55,
+      "community": 453,
       "norm_label": "days"
     },
     {
@@ -12536,7 +12556,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "apps_negocios_components_schedule_editor_row",
-      "community": 55,
+      "community": 453,
       "norm_label": "row"
     },
     {
@@ -12666,7 +12686,7 @@
       "source_location": "L81",
       "_origin": "ast",
       "id": "apps_negocios_lib_orders_view_model_ordervm",
-      "community": 38,
+      "community": 4,
       "norm_label": "ordervm"
     },
     {
@@ -12716,7 +12736,7 @@
       "source_location": "L147",
       "_origin": "ast",
       "id": "apps_negocios_lib_orders_view_model_getcolumn",
-      "community": 37,
+      "community": 38,
       "norm_label": "getcolumn()"
     },
     {
@@ -14086,7 +14106,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "packages_api_client_src_index_apierror",
-      "community": 12,
+      "community": 76,
       "norm_label": "apierror"
     },
     {
@@ -14096,7 +14116,7 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "packages_api_client_src_index_apierror_constructor",
-      "community": 12,
+      "community": 76,
       "norm_label": ".constructor()"
     },
     {
@@ -14106,7 +14126,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "packages_api_client_src_index_apierror_code",
-      "community": 4,
+      "community": 37,
       "norm_label": ".code()"
     },
     {
@@ -14116,7 +14136,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "packages_api_client_src_index_apierror_status",
-      "community": 12,
+      "community": 76,
       "norm_label": ".status()"
     },
     {
@@ -14636,7 +14656,7 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "packages_contracts_src_enums_trackingstep",
-      "community": 17,
+      "community": 30,
       "norm_label": "trackingstep"
     },
     {
@@ -14726,7 +14746,7 @@
       "source_location": "L59",
       "_origin": "ast",
       "id": "packages_contracts_src_enums_paymentintent",
-      "community": 5,
+      "community": 12,
       "norm_label": "paymentintent"
     },
     {
@@ -14986,7 +15006,7 @@
       "source_location": "L140",
       "_origin": "ast",
       "id": "packages_contracts_src_enums_vehicletypeschema",
-      "community": 174,
+      "community": 36,
       "norm_label": "vehicletypeschema"
     },
     {
@@ -15176,7 +15196,7 @@
       "source_location": "L60",
       "_origin": "ast",
       "id": "packages_contracts_src_errors_problemdetails",
-      "community": 12,
+      "community": 76,
       "norm_label": "problemdetails"
     },
     {
@@ -15196,7 +15216,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "packages_contracts_src_index",
-      "community": 30,
+      "community": 92,
       "norm_label": "index.ts"
     },
     {
@@ -15266,7 +15286,7 @@
       "source_location": "L63",
       "_origin": "ast",
       "id": "packages_contracts_src_order_status_totrackingstep",
-      "community": 30,
+      "community": 17,
       "norm_label": "totrackingstep()"
     },
     {
@@ -16076,7 +16096,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "packages_core_src_order_tests_money_test",
-      "community": 82,
+      "community": 94,
       "norm_label": "money.test.ts"
     },
     {
@@ -16146,7 +16166,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "packages_core_src_order_money",
-      "community": 82,
+      "community": 94,
       "norm_label": "money.ts"
     },
     {
@@ -16156,7 +16176,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "packages_core_src_order_money_tocents",
-      "community": 82,
+      "community": 94,
       "norm_label": "tocents()"
     },
     {
@@ -16166,7 +16186,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "packages_core_src_order_money_fromcents",
-      "community": 82,
+      "community": 94,
       "norm_label": "fromcents()"
     },
     {
@@ -16176,7 +16196,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "packages_core_src_order_money_roundmoney",
-      "community": 82,
+      "community": 94,
       "norm_label": "roundmoney()"
     },
     {
@@ -16186,7 +16206,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "packages_core_src_order_money_addmoney",
-      "community": 82,
+      "community": 94,
       "norm_label": "addmoney()"
     },
     {
@@ -16196,7 +16216,7 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "packages_core_src_order_money_subtractmoney",
-      "community": 82,
+      "community": 94,
       "norm_label": "subtractmoney()"
     },
     {
@@ -16256,7 +16276,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "packages_core_src_order_transitions",
-      "community": 30,
+      "community": 82,
       "norm_label": "transitions.ts"
     },
     {
@@ -16276,7 +16296,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "packages_core_src_order_transitions_applydelivered",
-      "community": 30,
+      "community": 82,
       "norm_label": "applydelivered()"
     },
     {
@@ -16796,7 +16816,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "packages_supabase_src_service_client_typedsupabaseclient",
-      "community": 6,
+      "community": 1,
       "norm_label": "typedsupabaseclient"
     },
     {
@@ -16806,7 +16826,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "packages_supabase_src_service_client_createserviceroleclient",
-      "community": 0,
+      "community": 56,
       "norm_label": "createserviceroleclient()"
     },
     {
@@ -17856,7 +17876,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "packages_ui_src_components_screen_header_screenheader",
-      "community": 25,
+      "community": 447,
       "norm_label": "screenheader()"
     },
     {
@@ -17886,7 +17906,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "packages_ui_src_components_sheet",
-      "community": 447,
+      "community": 453,
       "norm_label": "sheet.tsx"
     },
     {
@@ -17896,7 +17916,7 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "packages_ui_src_components_sheet_bottomsheet",
-      "community": 447,
+      "community": 453,
       "norm_label": "bottomsheet()"
     },
     {
@@ -18038,6 +18058,26 @@
       "id": "packages_ui_tsconfig_exclude",
       "community": 102,
       "norm_label": "exclude"
+    },
+    {
+      "label": "test_concurrency_0067.ts",
+      "file_type": "code",
+      "source_file": "scripts/test_concurrency_0067.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "scripts_test_concurrency_0067",
+      "community": 458,
+      "norm_label": "test_concurrency_0067.ts"
+    },
+    {
+      "label": "runConcurrencyTest()",
+      "file_type": "code",
+      "source_file": "scripts/test_concurrency_0067.ts",
+      "source_location": "L4",
+      "_origin": "ast",
+      "id": "scripts_test_concurrency_0067_runconcurrencytest",
+      "community": 458,
+      "norm_label": "runconcurrencytest()"
     },
     {
       "label": "index.ts",
@@ -18466,7 +18506,7 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "turbo_tasks_dev",
-      "community": 190,
+      "community": 457,
       "norm_label": "dev"
     },
     {
@@ -18476,7 +18516,7 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "turbo_dev_cache",
-      "community": 190,
+      "community": 457,
       "norm_label": "cache"
     },
     {
@@ -18486,7 +18526,7 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "turbo_dev_persistent",
-      "community": 190,
+      "community": 457,
       "norm_label": "persistent"
     },
     {
@@ -23286,7 +23326,7 @@
       "source_location": "L255",
       "_origin": "ast",
       "id": "docs_06_ui_design_system_5_espaciado_y_border_radius",
-      "community": 304,
+      "community": 317,
       "norm_label": "5. espaciado y border-radius"
     },
     {
@@ -23296,7 +23336,7 @@
       "source_location": "L257",
       "_origin": "ast",
       "id": "docs_06_ui_design_system_sistema_de_espaciado_4px_base",
-      "community": 304,
+      "community": 317,
       "norm_label": "sistema de espaciado (4px base)"
     },
     {
@@ -23306,7 +23346,7 @@
       "source_location": "L272",
       "_origin": "ast",
       "id": "docs_06_ui_design_system_border_radius",
-      "community": 304,
+      "community": 317,
       "norm_label": "border-radius"
     },
     {
@@ -24196,7 +24236,7 @@
       "source_location": "L779",
       "_origin": "ast",
       "id": "docs_07_flujo_cliente_12_pantalla_prepago_yape",
-      "community": 457,
+      "community": 455,
       "norm_label": "12. pantalla \u00b7 prepago yape"
     },
     {
@@ -24206,7 +24246,7 @@
       "source_location": "L781",
       "_origin": "ast",
       "id": "docs_07_flujo_cliente_estado_currentscreen_prepay",
-      "community": 457,
+      "community": 455,
       "norm_label": "estado: `currentscreen = 'prepay'`"
     },
     {
@@ -24216,7 +24256,7 @@
       "source_location": "L783",
       "_origin": "ast",
       "id": "docs_07_flujo_cliente_layout_783",
-      "community": 457,
+      "community": 455,
       "norm_label": "layout"
     },
     {
@@ -51373,7 +51413,7 @@
       "source_location": "L7",
       "weight": 1.0,
       "source": "apps_api_app_api_v1_customer_orders_id_appeal_route",
-      "target": "apps_api_lib_supabase_service",
+      "target": "apps_api_lib_supabase_user",
       "confidence_score": 1.0
     },
     {
@@ -51384,7 +51424,7 @@
       "source_location": "L7",
       "weight": 1.0,
       "source": "apps_api_app_api_v1_customer_orders_id_appeal_route",
-      "target": "apps_api_lib_supabase_service_createserviceclient",
+      "target": "apps_api_lib_supabase_user_createuserclient",
       "confidence_score": 1.0
     },
     {
@@ -51437,7 +51477,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/api/app/api/v1/customer/orders/[id]/appeal/route.ts",
-      "source_location": "L42",
+      "source_location": "L43",
       "weight": 1.0,
       "source": "apps_api_app_api_v1_customer_orders_id_appeal_route_post",
       "target": "apps_api_lib_http_cors_corsheaders"
@@ -51448,7 +51488,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/api/app/api/v1/customer/orders/[id]/appeal/route.ts",
-      "source_location": "L44",
+      "source_location": "L45",
       "weight": 1.0,
       "source": "apps_api_app_api_v1_customer_orders_id_appeal_route_post",
       "target": "apps_api_lib_http_problem_handleerror"
@@ -51459,7 +51499,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/api/app/api/v1/customer/orders/[id]/appeal/route.ts",
-      "source_location": "L42",
+      "source_location": "L43",
       "weight": 1.0,
       "source": "apps_api_app_api_v1_customer_orders_id_appeal_route_post",
       "target": "apps_api_lib_http_problem_ok"
@@ -51481,10 +51521,10 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/api/app/api/v1/customer/orders/[id]/appeal/route.ts",
-      "source_location": "L29",
+      "source_location": "L31",
       "weight": 1.0,
       "source": "apps_api_app_api_v1_customer_orders_id_appeal_route_post",
-      "target": "apps_api_lib_supabase_service_createserviceclient"
+      "target": "apps_api_lib_supabase_user_createuserclient"
     },
     {
       "relation": "contains",
@@ -57213,6 +57253,17 @@
       "confidence_score": 1.0
     },
     {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/api/lib/supabase/user.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "apps_api_lib_supabase_user",
+      "target": "apps_api_lib_env",
+      "confidence_score": 1.0
+    },
+    {
       "relation": "references",
       "context": "call",
       "confidence": "EXTRACTED",
@@ -57265,6 +57316,28 @@
       "source_location": "L9",
       "weight": 1.0,
       "source": "apps_api_lib_supabase_service_createserviceclient",
+      "target": "apps_api_lib_env_serverenv"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/api/lib/supabase/user.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "apps_api_lib_supabase_user",
+      "target": "apps_api_lib_env_serverenv",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "apps/api/lib/supabase/user.ts",
+      "source_location": "L10",
+      "weight": 1.0,
+      "source": "apps_api_lib_supabase_user_createuserclient",
       "target": "apps_api_lib_env_serverenv"
     },
     {
@@ -58886,6 +58959,38 @@
       "weight": 1.0,
       "source": "apps_api_lib_supabase_service_createserviceclient",
       "target": "packages_supabase_src_service_client_createserviceroleclient"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/api/lib/supabase/user.ts",
+      "source_location": "L9",
+      "weight": 1.0,
+      "source": "apps_api_lib_supabase_user",
+      "target": "apps_api_lib_supabase_user_createuserclient",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/api/lib/supabase/user.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "apps_api_lib_supabase_user",
+      "target": "packages_supabase_src_index",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/api/lib/supabase/user.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "apps_api_lib_supabase_user",
+      "target": "packages_supabase_src_service_client_typedsupabaseclient",
+      "confidence_score": 1.0
     },
     {
       "relation": "rationale_for",
@@ -83184,6 +83289,16 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
+      "source_file": "scripts/test_concurrency_0067.ts",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "scripts_test_concurrency_0067",
+      "target": "scripts_test_concurrency_0067_runconcurrencytest",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
       "source_file": "supabase/functions/send-push/index.ts",
       "source_location": "L34",
       "weight": 1.0,
@@ -97268,5 +97383,5 @@
       "source_file": null
     }
   ],
-  "built_at_commit": "a329bd676f60409a68387e66b485bff95b9703cd"
+  "built_at_commit": "e8ed74a9bb90a00dcf0065146ce826a18c8ed28f"
 }

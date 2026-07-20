@@ -1,4 +1,5 @@
 export * from './accent-colors'
+export * from './appeal'
 export * from './enums'
 export * from './errors'
 export * from './order-status'

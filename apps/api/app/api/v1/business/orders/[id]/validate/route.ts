@@ -5,6 +5,7 @@ import { corsHeaders, handleOptions } from '@/lib/http/cors'
 import { handleError, ok } from '@/lib/http/problem'
 import { getRequestId } from '@/lib/http/request-id'
 import { sendOrderCreated } from '@/lib/inngest/client'
+import { processPendingOutboxEvents } from '@/lib/outbox/processor'
 import { createServiceClient } from '@/lib/supabase/service'
 
 export const dynamic = 'force-dynamic'
@@ -45,7 +46,7 @@ export async function POST(
       if (error.code === 'P0001') throw new DomainError(error.message, 'forbidden')
       throw new Error(error.message)
     }
-    // Al pasar la validación o rechazar (regreso a awaiting_payment), agendar timers.
+
     const result = data as { ok?: boolean; status?: string }
     if (result?.status === 'pending_acceptance') {
       try {
@@ -56,7 +57,11 @@ export async function POST(
         const { sendOrderPaymentTimeout } = await import('@/lib/inngest/client')
         await sendOrderPaymentTimeout({ orderId: id })
       } catch {}
+    } else if (result?.status === 'cancelled') {
+      // El trigger trg_orders_outbox_events ya encoló atómicamente el evento order/proof-rejected-final en outbox_events
+      processPendingOutboxEvents().catch((err: any) => console.warn('Outbox dispatch warning:', err))
     }
+
     return ok(data, { headers: corsHeaders(req) })
   } catch (err) {
     return handleError(err, requestId, req)

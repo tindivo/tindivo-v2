@@ -1813,6 +1813,39 @@ export type Database = {
           },
         ]
       }
+      outbox_events: {
+        Row: {
+          attempts: number
+          created_at: string
+          event_type: string
+          id: string
+          last_error: string | null
+          payload: Json
+          processed_at: string | null
+          status: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          event_type: string
+          id?: string
+          last_error?: string | null
+          payload: Json
+          processed_at?: string | null
+          status?: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          event_type?: string
+          id?: string
+          last_error?: string | null
+          payload?: Json
+          processed_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       push_delivery_log: {
         Row: {
           at: string
@@ -1903,6 +1936,8 @@ export type Database = {
       }
       reports: {
         Row: {
+          appeal_deadline: string | null
+          appeal_status: string | null
           business_id: string | null
           created_at: string
           created_by: string | null
@@ -1913,6 +1948,10 @@ export type Database = {
           evidence_url: string | null
           id: string
           order_id: string | null
+          refund_amount: number | null
+          refund_completed_at: string | null
+          refund_proof_path: string | null
+          refund_status: string | null
           resolution_note: string | null
           resolved_at: string | null
           resolved_by: string | null
@@ -1921,6 +1960,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          appeal_deadline?: string | null
+          appeal_status?: string | null
           business_id?: string | null
           created_at?: string
           created_by?: string | null
@@ -1931,6 +1972,10 @@ export type Database = {
           evidence_url?: string | null
           id?: string
           order_id?: string | null
+          refund_amount?: number | null
+          refund_completed_at?: string | null
+          refund_proof_path?: string | null
+          refund_status?: string | null
           resolution_note?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
@@ -1939,6 +1984,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          appeal_deadline?: string | null
+          appeal_status?: string | null
           business_id?: string | null
           created_at?: string
           created_by?: string | null
@@ -1949,6 +1996,10 @@ export type Database = {
           evidence_url?: string | null
           id?: string
           order_id?: string | null
+          refund_amount?: number | null
+          refund_completed_at?: string | null
+          refund_proof_path?: string | null
+          refund_status?: string | null
           resolution_note?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
@@ -2229,6 +2280,18 @@ export type Database = {
     }
     Functions: {
       admin_metrics: { Args: { p_from: string; p_to: string }; Returns: Json }
+      claim_outbox_events: {
+        Args: { p_limit?: number }
+        Returns: Json
+      }
+      create_fallback_appeal_review: {
+        Args: { p_order_id: string }
+        Returns: Json
+      }
+      enqueue_outbox_event: {
+        Args: { p_event_type: string; p_payload: Json }
+        Returns: string
+      }
       advance_order: {
         Args: {
           p_action: string
