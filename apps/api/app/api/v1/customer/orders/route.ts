@@ -213,8 +213,8 @@ export async function POST(req: Request): Promise<Response> {
           p_payment_intent: body.paymentIntent,
           p_customer_name: body.customerName,
           p_customer_phone: body.customerPhone,
-          p_delivery_address: body.deliveryAddress ?? undefined,
-          p_delivery_reference: body.deliveryReference ?? undefined,
+          p_delivery_address: body.deliveryAddress ?? '',
+          p_delivery_reference: body.deliveryReference ?? '',
           p_delivery_lat: body.coordinates?.lat ?? undefined,
           p_delivery_lng: body.coordinates?.lng ?? undefined,
           p_items: body.items.map((i) => ({

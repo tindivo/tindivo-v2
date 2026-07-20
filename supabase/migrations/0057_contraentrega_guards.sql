@@ -23,7 +23,7 @@ create or replace function public.create_customer_order(
   p_delivery_reference text,
   p_delivery_lat numeric default null::numeric,
   p_delivery_lng numeric default null::numeric,
-  p_source public.order_source default 'web'::public.order_source,
+  p_source public.order_source default 'customer_pwa'::public.order_source,
   p_client_pays_with numeric default null::numeric,
   p_customer_gps_lat double precision default null::double precision,
   p_customer_gps_lng double precision default null::double precision,
