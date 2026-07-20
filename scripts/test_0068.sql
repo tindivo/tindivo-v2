@@ -62,39 +62,53 @@ BEGIN
 
   -- ===========================
   -- 2. CREACIÓN DE FIXTURES DE PEDIDOS CANCELADOS
+  -- El trigger trg_orders_outbox_events dispara en AFTER UPDATE OF status,
+  -- por lo que se inserta primero en 'pending' y luego se actualiza a 'cancelled'.
   -- ===========================
 
   -- Pedido 1: Cancelado reciente (dentro de las 24h)
   INSERT INTO public.orders (
     id, short_id, business_id, customer_user_id, status, payment_intent,
-    cancel_reason, cancelled_at, order_amount, delivery_fee
+    order_amount, delivery_fee
   ) VALUES (
     v_order_id_recent, 'REC22222', v_business_id, v_customer_id,
-    'cancelled', 'prepaid', 'proof_rejected_final',
-    now() - interval '2 hours', 40.00, 5.00
+    'pending', 'prepaid', 40.00, 5.00
   );
+  UPDATE public.orders
+  SET status = 'cancelled',
+      cancel_reason = 'proof_rejected_final',
+      cancelled_at  = now() - interval '2 hours'
+  WHERE id = v_order_id_recent;
 
   -- Pedido 2: Cancelado hace más de 24h sin apelación
   INSERT INTO public.orders (
     id, short_id, business_id, customer_user_id, status, payment_intent,
-    cancel_reason, cancelled_at, order_amount, delivery_fee
+    order_amount, delivery_fee
   ) VALUES (
     v_order_id_due, 'DUE22222', v_business_id, v_customer_id,
-    'cancelled', 'prepaid', 'proof_rejected_final',
-    now() - interval '26 hours', 50.00, 5.00
+    'pending', 'prepaid', 50.00, 5.00
   );
+  UPDATE public.orders
+  SET status = 'cancelled',
+      cancel_reason = 'proof_rejected_final',
+      cancelled_at  = now() - interval '26 hours'
+  WHERE id = v_order_id_due;
 
   -- Pedido 3: Cancelado hace más de 24h — para probar apelación de cliente
   INSERT INTO public.orders (
     id, short_id, business_id, customer_user_id, status, payment_intent,
-    cancel_reason, cancelled_at, order_amount, delivery_fee
+    order_amount, delivery_fee
   ) VALUES (
     v_order_id_appealed, 'APP22222', v_business_id, v_customer_id,
-    'cancelled', 'prepaid', 'proof_rejected_final',
-    now() - interval '26 hours', 60.00, 5.00
+    'pending', 'prepaid', 60.00, 5.00
   );
+  UPDATE public.orders
+  SET status = 'cancelled',
+      cancel_reason = 'proof_rejected_final',
+      cancelled_at  = now() - interval '26 hours'
+  WHERE id = v_order_id_appealed;
 
-  RAISE NOTICE '[OK] Fixtures de pedidos cancelados creados.';
+  RAISE NOTICE '[OK] Fixtures de pedidos cancelados creados (via INSERT+UPDATE para disparar trigger).';
 
   -- ===========================
   -- 3. VERIFICACIÓN DE UNICIDAD Y ATOMICIDAD DEL OUTBOX POR PEDIDO
