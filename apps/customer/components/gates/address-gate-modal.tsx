@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { BottomSheet } from '@/components/ui'
-import { AddressStep } from '../auth-onboarding/steps/address-step'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
+import { AddressStep } from '../auth-onboarding/steps/address-step'
 
 type Props = {
   onComplete: () => void
@@ -29,13 +29,7 @@ export function AddressGateModal({ onComplete, onClose }: Props) {
         </p>
       </div>
       <div style={{ height: 'min(560px, 78dvh)' }}>
-        <AddressStep
-          active
-          mode="gate"
-          userId={userId}
-          onBack={onClose}
-          onDone={onComplete}
-        />
+        <AddressStep active mode="gate" userId={userId} onBack={onClose} onDone={onComplete} />
       </div>
     </BottomSheet>
   )

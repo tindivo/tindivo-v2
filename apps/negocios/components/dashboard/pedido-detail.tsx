@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { getSupabaseBrowser } from '@/lib/supabase/client'
 import type { OrderVM } from '@/lib/orders/view-model'
+import { getSupabaseBrowser } from '@/lib/supabase/client'
 import { MS, mmss, PayBadgeMini, SourceBadgeMini, soles } from './primitives'
 
 export interface DetailItem {
@@ -329,22 +329,46 @@ function PaySectionPrepaid({
               >
                 DATOS DE VALIDACIÓN
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.2fr', gap: 8, marginBottom: 6 }}>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr 1.2fr',
+                  gap: 8,
+                  marginBottom: 6,
+                }}
+              >
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontSize: 10, color: 'var(--tv-ink-muted)', marginBottom: 2 }}>Monto</span>
-                  <span className="tv-mono" style={{ fontWeight: 700, color: '#16A34A', fontSize: 13 }}>
+                  <span style={{ fontSize: 10, color: 'var(--tv-ink-muted)', marginBottom: 2 }}>
+                    Monto
+                  </span>
+                  <span
+                    className="tv-mono"
+                    style={{ fontWeight: 700, color: '#16A34A', fontSize: 13 }}
+                  >
                     {soles(order.total)}
                   </span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontSize: 10, color: 'var(--tv-ink-muted)', marginBottom: 2 }}>Hora pedido</span>
+                  <span style={{ fontSize: 10, color: 'var(--tv-ink-muted)', marginBottom: 2 }}>
+                    Hora pedido
+                  </span>
                   <span className="tv-mono" style={{ fontWeight: 700, fontSize: 13 }}>
                     {order.createdAtFormatted ?? '—'}
                   </span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                  <span style={{ fontSize: 10, color: 'var(--tv-ink-muted)', marginBottom: 2 }}>Cliente</span>
-                  <span style={{ fontWeight: 700, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <span style={{ fontSize: 10, color: 'var(--tv-ink-muted)', marginBottom: 2 }}>
+                    Cliente
+                  </span>
+                  <span
+                    style={{
+                      fontWeight: 700,
+                      fontSize: 13,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
                     {order.customer ?? 'Cliente'}
                   </span>
                 </div>
@@ -359,7 +383,9 @@ function PaySectionPrepaid({
                   lineHeight: 1.3,
                 }}
               >
-                Verifica pago posterior a <strong>{order.createdAtFormatted ?? 'la hora del pedido'}</strong> por <strong>{soles(order.total)}</strong>.
+                Verifica pago posterior a{' '}
+                <strong>{order.createdAtFormatted ?? 'la hora del pedido'}</strong> por{' '}
+                <strong>{soles(order.total)}</strong>.
               </div>
             </div>
           )}
@@ -443,7 +469,15 @@ function PaySectionPrepaid({
             )}
           </div>
           {verified && (
-            <div style={{ marginTop: 8, fontSize: 12, color: '#15803D', fontWeight: 600, textAlign: 'center' }}>
+            <div
+              style={{
+                marginTop: 8,
+                fontSize: 12,
+                color: '#15803D',
+                fontWeight: 600,
+                textAlign: 'center',
+              }}
+            >
               Comprobante verificado · pago registrado
             </div>
           )}
@@ -773,7 +807,14 @@ function PrepTimeModal({
           Selecciona el tiempo estimado para cocinar
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 20 }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: 8,
+            marginBottom: 20,
+          }}
+        >
           {PREP_PRESETS.map((m) => (
             <button
               type="button"
@@ -880,7 +921,10 @@ export function DetailScreen({
     }
   }, [order.rowId, order.status])
 
-  const isPending = order.status === 'pending_acceptance' || order.status === 'awaiting_payment' || order.status === 'validando'
+  const isPending =
+    order.status === 'pending_acceptance' ||
+    order.status === 'awaiting_payment' ||
+    order.status === 'validando'
   const isPrepaid = order.payment === 'prepaid'
   const isOnline = order.source === 'web'
   const acceptDisabled = busy
@@ -1100,27 +1144,30 @@ export function DetailScreen({
         }}
       >
         {/* Banner de apelación: solo para proof_rejected_final */}
-        {hasAppeal && order.status === 'cancelled' && order.cancelReasonCode === 'proof_rejected_final' && (
-          <div
-            style={{
-              background: '#FEF3C7',
-              border: '1px solid #FCD34D',
-              borderRadius: 12,
-              padding: '12px 14px',
-              flexShrink: 0,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
-              <MS name="gavel" size={18} filled style={{ color: '#D97706' }} />
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#92400E' }}>
-                El cliente apeló el rechazo de este pedido
+        {hasAppeal &&
+          order.status === 'cancelled' &&
+          order.cancelReasonCode === 'proof_rejected_final' && (
+            <div
+              style={{
+                background: '#FEF3C7',
+                border: '1px solid #FCD34D',
+                borderRadius: 12,
+                padding: '12px 14px',
+                flexShrink: 0,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
+                <MS name="gavel" size={18} filled style={{ color: '#D97706' }} />
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#92400E' }}>
+                  El cliente apeló el rechazo de este pedido
+                </div>
+              </div>
+              <div style={{ fontSize: 12, color: '#B45309', lineHeight: 1.4 }}>
+                Tindivo está revisando este caso. Te recomendamos verificar tu cuenta Yape/Plin por
+                si el pago sí ingresó.
               </div>
             </div>
-            <div style={{ fontSize: 12, color: '#B45309', lineHeight: 1.4 }}>
-              Tindivo está revisando este caso. Te recomendamos verificar tu cuenta Yape/Plin por si el pago sí ingresó.
-            </div>
-          </div>
-        )}
+          )}
 
         {/* Sección de pago (al inicio si está validando prepago) */}
         {isValidandoPrepaid && (
@@ -1197,7 +1244,14 @@ export function DetailScreen({
         ) : (
           <>
             {/* Cliente */}
-            <div style={{ background: 'var(--tv-surface)', borderRadius: 12, padding: '12px 14px', flexShrink: 0 }}>
+            <div
+              style={{
+                background: 'var(--tv-surface)',
+                borderRadius: 12,
+                padding: '12px 14px',
+                flexShrink: 0,
+              }}
+            >
               <div
                 style={{
                   fontSize: 10,
@@ -1233,7 +1287,14 @@ export function DetailScreen({
 
             {/* Dirección */}
             {order.addressRef && (
-              <div style={{ background: 'var(--tv-surface)', borderRadius: 12, padding: '12px 14px', flexShrink: 0 }}>
+              <div
+                style={{
+                  background: 'var(--tv-surface)',
+                  borderRadius: 12,
+                  padding: '12px 14px',
+                  flexShrink: 0,
+                }}
+              >
                 <div
                   style={{
                     fontSize: 10,
@@ -1438,7 +1499,8 @@ export function DetailScreen({
                   </div>
                 </div>
                 <div style={{ fontSize: 12, color: '#C2410C', lineHeight: 1.4 }}>
-                  Disponibilidad confirmada. El cliente tiene 10 minutos para realizar la transferencia por Yape/Plin y adjuntar el comprobante.
+                  Disponibilidad confirmada. El cliente tiene 10 minutos para realizar la
+                  transferencia por Yape/Plin y adjuntar el comprobante.
                 </div>
               </div>
             )}
@@ -1471,7 +1533,14 @@ export function DetailScreen({
 
         {/* Prep picker (al aceptar) */}
         {showPrepPicker && (
-          <div style={{ background: 'var(--tv-surface)', borderRadius: 12, padding: '12px 14px', flexShrink: 0 }}>
+          <div
+            style={{
+              background: 'var(--tv-surface)',
+              borderRadius: 12,
+              padding: '12px 14px',
+              flexShrink: 0,
+            }}
+          >
             <div className="tv-label" style={{ marginBottom: 8 }}>
               TIEMPO DE PREPARACIÓN
             </div>
@@ -1512,7 +1581,14 @@ export function DetailScreen({
 
         {/* Extensión de preparación */}
         {order.state === 'cooking' && !order.extensionUsed && (
-          <div style={{ background: 'var(--tv-surface)', borderRadius: 12, padding: '12px 14px', flexShrink: 0 }}>
+          <div
+            style={{
+              background: 'var(--tv-surface)',
+              borderRadius: 12,
+              padding: '12px 14px',
+              flexShrink: 0,
+            }}
+          >
             <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>
               ¿Necesitas más tiempo?
             </div>
@@ -1617,7 +1693,13 @@ export function DetailScreen({
                 onClick={() => actions.onRejectProof()}
                 disabled={!proofUrl || busy}
                 className="tv-btn tv-btn-ghost"
-                style={{ flex: 1, color: 'var(--tv-danger)', border: '1.5px solid #FCA5A5', background: '#FFF5F5', opacity: (!proofUrl || busy) ? 0.5 : 1 }}
+                style={{
+                  flex: 1,
+                  color: 'var(--tv-danger)',
+                  border: '1.5px solid #FCA5A5',
+                  background: '#FFF5F5',
+                  opacity: !proofUrl || busy ? 0.5 : 1,
+                }}
               >
                 <MS name="cancel" size={18} /> Inválido
               </button>
@@ -1626,7 +1708,7 @@ export function DetailScreen({
                 onClick={() => setShowPrepModal(true)}
                 disabled={!proofUrl || busy}
                 className="tv-btn tv-btn-brand"
-                style={{ flex: 2, background: '#16A34A', opacity: (!proofUrl || busy) ? 0.5 : 1 }}
+                style={{ flex: 2, background: '#16A34A', opacity: !proofUrl || busy ? 0.5 : 1 }}
               >
                 <MS name="check_circle" size={18} filled /> Confirmar pago
               </button>
@@ -1644,7 +1726,14 @@ export function DetailScreen({
               </button>
               <div
                 className="tv-btn"
-                style={{ flex: 2, background: '#F3F4F6', color: '#9CA3AF', cursor: 'not-allowed', justifyContent: 'center', pointerEvents: 'none' }}
+                style={{
+                  flex: 2,
+                  background: '#F3F4F6',
+                  color: '#9CA3AF',
+                  cursor: 'not-allowed',
+                  justifyContent: 'center',
+                  pointerEvents: 'none',
+                }}
               >
                 Esperando pago...
               </div>
@@ -1663,7 +1752,9 @@ export function DetailScreen({
                 </button>
                 <button
                   type="button"
-                  onClick={() => actions.onAccept(order.status === 'pending_acceptance' && isPrepaid ? 20 : prep)}
+                  onClick={() =>
+                    actions.onAccept(order.status === 'pending_acceptance' && isPrepaid ? 20 : prep)
+                  }
                   disabled={acceptDisabled}
                   className="tv-btn tv-btn-brand"
                   style={{ flex: 2 }}
@@ -1676,7 +1767,8 @@ export function DetailScreen({
               </div>
               {order.status === 'pending_acceptance' && isPrepaid && (
                 <div style={{ fontSize: 11, color: 'var(--tv-ink-muted)', textAlign: 'center' }}>
-                  Confirmas disponibilidad para preparar. El cliente procederá a realizar el pago por Yape/Plin.
+                  Confirmas disponibilidad para preparar. El cliente procederá a realizar el pago
+                  por Yape/Plin.
                 </div>
               )}
             </>
@@ -1711,9 +1803,7 @@ export function DetailScreen({
 
   if (mobile) {
     return (
-      <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: '#fff' }}>
-        {content}
-      </div>
+      <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: '#fff' }}>{content}</div>
     )
   }
 

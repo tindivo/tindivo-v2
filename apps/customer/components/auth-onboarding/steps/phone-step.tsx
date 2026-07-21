@@ -1,8 +1,8 @@
 'use client'
 
-import { type FormEvent, useEffect, useState, useRef } from 'react'
-import { api } from '@/lib/api'
 import { ApiError } from '@tindivo/api-client'
+import { type FormEvent, useEffect, useRef, useState } from 'react'
+import { api } from '@/lib/api'
 
 type PhoneStepPhase = 'input' | 'verify'
 
@@ -28,7 +28,7 @@ export function PhoneStep({
   const [cooldown, setCooldown] = useState(0)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  
+
   const cooldownTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   const isPhoneValid = /^9\d{8}$/.test(phone)
@@ -105,7 +105,9 @@ export function PhoneStep({
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 409) {
-          setError('Este número ya está registrado en otra cuenta. Si es tuyo, cierra sesión e inicia con esa cuenta.')
+          setError(
+            'Este número ya está registrado en otra cuenta. Si es tuyo, cierra sesión e inicia con esa cuenta.',
+          )
           setPhase('input')
           setCode('')
           return
@@ -120,10 +122,7 @@ export function PhoneStep({
     }
   }
 
-  const maskedPhone =
-    phone.length === 9
-      ? `${phone.slice(0, 3)} *** ${phone.slice(-3)}`
-      : phone
+  const maskedPhone = phone.length === 9 ? `${phone.slice(0, 3)} *** ${phone.slice(-3)}` : phone
 
   if (phase === 'input') {
     return (
@@ -151,7 +150,10 @@ export function PhoneStep({
                   </span>
                 </span>
                 {email && (
-                  <span className="block truncate text-[12px]" style={{ color: 'rgba(26,22,20,0.5)' }}>
+                  <span
+                    className="block truncate text-[12px]"
+                    style={{ color: 'rgba(26,22,20,0.5)' }}
+                  >
                     {email}
                   </span>
                 )}
@@ -160,7 +162,9 @@ export function PhoneStep({
           )}
 
           <h2 className="t-display mt-5 text-[24px] leading-[1.15]">
-            {mode === 'gate' ? 'Verifica tu celular\npara pedir' : '¿Cuál es tu número\nde celular?'}
+            {mode === 'gate'
+              ? 'Verifica tu celular\npara pedir'
+              : '¿Cuál es tu número\nde celular?'}
           </h2>
           <p className="mt-1.5 text-[14px]" style={{ color: 'rgba(26,22,20,0.6)' }}>
             Te enviaremos un código por SMS para confirmar tu número.
@@ -225,9 +229,7 @@ export function PhoneStep({
   return (
     <form onSubmit={handleVerifyCode} className="flex h-full flex-col">
       <div className="t-scroll flex-1 px-5 pt-2 pb-4">
-        <h2 className="t-display text-[24px] leading-[1.15]">
-          Ingresa el código
-        </h2>
+        <h2 className="t-display text-[24px] leading-[1.15]">Ingresa el código</h2>
         <p className="mt-1.5 text-[14px]" style={{ color: 'rgba(26,22,20,0.6)' }}>
           Enviamos un código de 6 dígitos por SMS a tu celular (+51 {maskedPhone})
         </p>

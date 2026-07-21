@@ -17,15 +17,17 @@ export async function GET(req: Request): Promise<Response> {
     await requireRole(req, 'admin')
     const url = new URL(req.url)
     const businessId = url.searchParams.get('business_id') || url.searchParams.get('businessId')
-    
+
     if (!businessId) {
       return ok([], { headers: corsHeaders(req) })
     }
 
     const service = createServiceClient()
-    const { data: charges, error } = await service
+    const { data: charges, error } = await (service as any)
       .from('business_charges')
-      .select('id, business_id, order_id, report_id, charge_type, amount, description, created_at, orders(short_id)')
+      .select(
+        'id, business_id, order_id, report_id, charge_type, amount, description, created_at, orders(short_id)',
+      )
       .eq('business_id', businessId)
       .eq('status', 'pending')
       .order('created_at', { ascending: true })
@@ -37,15 +39,18 @@ export async function GET(req: Request): Promise<Response> {
     }
 
     // Agrupar por unidad (order_id si existe, o id si es refund_charge sin order_id)
-    const groupedMap = new Map<string, {
-      orderId: string | null
-      shortId: string | null
-      reportId: string | null
-      date: string
-      createdAt: string
-      charges: Array<{ id: string; type: string; amount: number; description: string | null }>
-      subtotal: number
-    }>()
+    const groupedMap = new Map<
+      string,
+      {
+        orderId: string | null
+        shortId: string | null
+        reportId: string | null
+        date: string
+        createdAt: string
+        charges: Array<{ id: string; type: string; amount: number; description: string | null }>
+        subtotal: number
+      }
+    >()
 
     for (const c of charges) {
       const groupKey = c.order_id ? `order_${c.order_id}` : `charge_${c.id}`

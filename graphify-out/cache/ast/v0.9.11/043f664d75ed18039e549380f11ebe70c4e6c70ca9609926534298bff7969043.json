@@ -1,1 +1,255 @@
-{"nodes": [{"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_md", "label": "negocios.md", "file_type": "document", "source_file": "Docs/context/negocios.md", "source_location": "L1"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_apps_negocios_contexto_y_estado", "label": "`apps/negocios` \u2014 Contexto y estado", "file_type": "document", "source_file": "Docs/context/negocios.md", "source_location": "L1"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_actores_y_prop\u00f3sito", "label": "Actores y prop\u00f3sito", "file_type": "document", "source_file": "Docs/context/negocios.md", "source_location": "L8"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_flujo_principal_del_restaurante", "label": "Flujo principal del restaurante", "file_type": "document", "source_file": "Docs/context/negocios.md", "source_location": "L15"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_m\u00f3dulos_estado_completo_auditado", "label": "M\u00f3dulos \u2014 estado completo auditado", "file_type": "document", "source_file": "Docs/context/negocios.md", "source_location": "L45"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_dashboard_de_pedidos_page_tsx_pedidos_view_tsx_pedido_detail_tsx", "label": "\ud83d\udfe2 Dashboard de pedidos (`/` \u2192 `page.tsx` + `pedidos-view.tsx` + `pedido-detail.tsx`)", "file_type": "document", "source_file": "Docs/context/negocios.md", "source_location": "L47"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_pedido_directo_nuevo_nuevo_page_tsx", "label": "\ud83d\udfe2 Pedido directo (`/nuevo` \u2192 `nuevo/page.tsx`)", "file_type": "document", "source_file": "Docs/context/negocios.md", "source_location": "L88"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_men\u00fa_lista_menu_menu_page_tsx", "label": "\ud83d\udfe2 Men\u00fa \u2014 Lista (`/menu` \u2192 `menu/page.tsx`)", "file_type": "document", "source_file": "Docs/context/negocios.md", "source_location": "L100"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_men\u00fa_editor_de_item_menu_item_id_menu_item_id_page_tsx", "label": "\ud83d\udfe2 Men\u00fa \u2014 Editor de item (`/menu/item/[id]` \u2192 `menu/item/[id]/page.tsx`)", "file_type": "document", "source_file": "Docs/context/negocios.md", "source_location": "L114"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_configuraci\u00f3n_configuracion_configuracion_page_tsx", "label": "\ud83d\udfe2 Configuraci\u00f3n (`/configuracion` \u2192 `configuracion/page.tsx`)", "file_type": "document", "source_file": "Docs/context/negocios.md", "source_location": "L131"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_historial_historial_historial_page_tsx", "label": "\ud83d\udfe2 Historial (`/historial` \u2192 `historial/page.tsx`)", "file_type": "document", "source_file": "Docs/context/negocios.md", "source_location": "L147"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_deuda_deuda_deuda_page_tsx", "label": "\ud83d\udfe2 Deuda (`/deuda` \u2192 `deuda/page.tsx`)", "file_type": "document", "source_file": "Docs/context/negocios.md", "source_location": "L161"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_efectivo_efectivo_efectivo_page_tsx", "label": "\ud83d\udfe2 Efectivo (`/efectivo` \u2192 `efectivo/page.tsx`)", "file_type": "document", "source_file": "Docs/context/negocios.md", "source_location": "L177"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_componentes_de_soporte_auditados", "label": "Componentes de soporte \u2014 auditados", "file_type": "document", "source_file": "Docs/context/negocios.md", "source_location": "L209"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_deuda_t\u00e9cnica_confirmada_tabla_final", "label": "Deuda t\u00e9cnica confirmada \u2014 tabla final", "file_type": "document", "source_file": "Docs/context/negocios.md", "source_location": "L227"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_estado_general_auditor\u00eda_completa", "label": "Estado general \u2014 auditor\u00eda completa", "file_type": "document", "source_file": "Docs/context/negocios.md", "source_location": "L237"}], "edges": [{"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_md", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_apps_negocios_contexto_y_estado", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/negocios.md", "source_location": "L1", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_apps_negocios_contexto_y_estado", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_actores_y_prop\u00f3sito", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/negocios.md", "source_location": "L8", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_apps_negocios_contexto_y_estado", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_flujo_principal_del_restaurante", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/negocios.md", "source_location": "L15", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_apps_negocios_contexto_y_estado", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_m\u00f3dulos_estado_completo_auditado", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/negocios.md", "source_location": "L45", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_m\u00f3dulos_estado_completo_auditado", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_dashboard_de_pedidos_page_tsx_pedidos_view_tsx_pedido_detail_tsx", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/negocios.md", "source_location": "L47", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_m\u00f3dulos_estado_completo_auditado", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_pedido_directo_nuevo_nuevo_page_tsx", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/negocios.md", "source_location": "L88", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_m\u00f3dulos_estado_completo_auditado", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_men\u00fa_lista_menu_menu_page_tsx", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/negocios.md", "source_location": "L100", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_m\u00f3dulos_estado_completo_auditado", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_men\u00fa_editor_de_item_menu_item_id_menu_item_id_page_tsx", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/negocios.md", "source_location": "L114", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_m\u00f3dulos_estado_completo_auditado", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_configuraci\u00f3n_configuracion_configuracion_page_tsx", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/negocios.md", "source_location": "L131", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_m\u00f3dulos_estado_completo_auditado", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_historial_historial_historial_page_tsx", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/negocios.md", "source_location": "L147", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_m\u00f3dulos_estado_completo_auditado", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_deuda_deuda_deuda_page_tsx", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/negocios.md", "source_location": "L161", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_m\u00f3dulos_estado_completo_auditado", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_efectivo_efectivo_efectivo_page_tsx", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/negocios.md", "source_location": "L177", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_apps_negocios_contexto_y_estado", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_componentes_de_soporte_auditados", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/negocios.md", "source_location": "L209", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_apps_negocios_contexto_y_estado", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_deuda_t\u00e9cnica_confirmada_tabla_final", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/negocios.md", "source_location": "L227", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_apps_negocios_contexto_y_estado", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_estado_general_auditor\u00eda_completa", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/negocios.md", "source_location": "L237", "weight": 1.0}], "input_tokens": 0, "output_tokens": 0}
+{
+  "nodes": [
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_md",
+      "label": "negocios.md",
+      "file_type": "document",
+      "source_file": "Docs/context/negocios.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_apps_negocios_contexto_y_estado",
+      "label": "`apps/negocios` \u2014 Contexto y estado",
+      "file_type": "document",
+      "source_file": "Docs/context/negocios.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_actores_y_prop\u00f3sito",
+      "label": "Actores y prop\u00f3sito",
+      "file_type": "document",
+      "source_file": "Docs/context/negocios.md",
+      "source_location": "L8"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_flujo_principal_del_restaurante",
+      "label": "Flujo principal del restaurante",
+      "file_type": "document",
+      "source_file": "Docs/context/negocios.md",
+      "source_location": "L15"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_m\u00f3dulos_estado_completo_auditado",
+      "label": "M\u00f3dulos \u2014 estado completo auditado",
+      "file_type": "document",
+      "source_file": "Docs/context/negocios.md",
+      "source_location": "L45"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_dashboard_de_pedidos_page_tsx_pedidos_view_tsx_pedido_detail_tsx",
+      "label": "\ud83d\udfe2 Dashboard de pedidos (`/` \u2192 `page.tsx` + `pedidos-view.tsx` + `pedido-detail.tsx`)",
+      "file_type": "document",
+      "source_file": "Docs/context/negocios.md",
+      "source_location": "L47"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_pedido_directo_nuevo_nuevo_page_tsx",
+      "label": "\ud83d\udfe2 Pedido directo (`/nuevo` \u2192 `nuevo/page.tsx`)",
+      "file_type": "document",
+      "source_file": "Docs/context/negocios.md",
+      "source_location": "L88"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_men\u00fa_lista_menu_menu_page_tsx",
+      "label": "\ud83d\udfe2 Men\u00fa \u2014 Lista (`/menu` \u2192 `menu/page.tsx`)",
+      "file_type": "document",
+      "source_file": "Docs/context/negocios.md",
+      "source_location": "L100"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_men\u00fa_editor_de_item_menu_item_id_menu_item_id_page_tsx",
+      "label": "\ud83d\udfe2 Men\u00fa \u2014 Editor de item (`/menu/item/[id]` \u2192 `menu/item/[id]/page.tsx`)",
+      "file_type": "document",
+      "source_file": "Docs/context/negocios.md",
+      "source_location": "L114"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_configuraci\u00f3n_configuracion_configuracion_page_tsx",
+      "label": "\ud83d\udfe2 Configuraci\u00f3n (`/configuracion` \u2192 `configuracion/page.tsx`)",
+      "file_type": "document",
+      "source_file": "Docs/context/negocios.md",
+      "source_location": "L131"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_historial_historial_historial_page_tsx",
+      "label": "\ud83d\udfe2 Historial (`/historial` \u2192 `historial/page.tsx`)",
+      "file_type": "document",
+      "source_file": "Docs/context/negocios.md",
+      "source_location": "L147"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_deuda_deuda_deuda_page_tsx",
+      "label": "\ud83d\udfe2 Deuda (`/deuda` \u2192 `deuda/page.tsx`)",
+      "file_type": "document",
+      "source_file": "Docs/context/negocios.md",
+      "source_location": "L161"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_efectivo_efectivo_efectivo_page_tsx",
+      "label": "\ud83d\udfe2 Efectivo (`/efectivo` \u2192 `efectivo/page.tsx`)",
+      "file_type": "document",
+      "source_file": "Docs/context/negocios.md",
+      "source_location": "L177"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_componentes_de_soporte_auditados",
+      "label": "Componentes de soporte \u2014 auditados",
+      "file_type": "document",
+      "source_file": "Docs/context/negocios.md",
+      "source_location": "L209"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_deuda_t\u00e9cnica_confirmada_tabla_final",
+      "label": "Deuda t\u00e9cnica confirmada \u2014 tabla final",
+      "file_type": "document",
+      "source_file": "Docs/context/negocios.md",
+      "source_location": "L227"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_estado_general_auditor\u00eda_completa",
+      "label": "Estado general \u2014 auditor\u00eda completa",
+      "file_type": "document",
+      "source_file": "Docs/context/negocios.md",
+      "source_location": "L237"
+    }
+  ],
+  "edges": [
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_md",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_apps_negocios_contexto_y_estado",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/negocios.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_apps_negocios_contexto_y_estado",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_actores_y_prop\u00f3sito",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/negocios.md",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_apps_negocios_contexto_y_estado",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_flujo_principal_del_restaurante",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/negocios.md",
+      "source_location": "L15",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_apps_negocios_contexto_y_estado",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_m\u00f3dulos_estado_completo_auditado",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/negocios.md",
+      "source_location": "L45",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_m\u00f3dulos_estado_completo_auditado",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_dashboard_de_pedidos_page_tsx_pedidos_view_tsx_pedido_detail_tsx",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/negocios.md",
+      "source_location": "L47",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_m\u00f3dulos_estado_completo_auditado",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_pedido_directo_nuevo_nuevo_page_tsx",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/negocios.md",
+      "source_location": "L88",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_m\u00f3dulos_estado_completo_auditado",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_men\u00fa_lista_menu_menu_page_tsx",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/negocios.md",
+      "source_location": "L100",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_m\u00f3dulos_estado_completo_auditado",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_men\u00fa_editor_de_item_menu_item_id_menu_item_id_page_tsx",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/negocios.md",
+      "source_location": "L114",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_m\u00f3dulos_estado_completo_auditado",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_configuraci\u00f3n_configuracion_configuracion_page_tsx",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/negocios.md",
+      "source_location": "L131",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_m\u00f3dulos_estado_completo_auditado",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_historial_historial_historial_page_tsx",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/negocios.md",
+      "source_location": "L147",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_m\u00f3dulos_estado_completo_auditado",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_deuda_deuda_deuda_page_tsx",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/negocios.md",
+      "source_location": "L161",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_m\u00f3dulos_estado_completo_auditado",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_efectivo_efectivo_efectivo_page_tsx",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/negocios.md",
+      "source_location": "L177",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_apps_negocios_contexto_y_estado",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_componentes_de_soporte_auditados",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/negocios.md",
+      "source_location": "L209",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_apps_negocios_contexto_y_estado",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_deuda_t\u00e9cnica_confirmada_tabla_final",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/negocios.md",
+      "source_location": "L227",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_apps_negocios_contexto_y_estado",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_negocios_estado_general_auditor\u00eda_completa",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/negocios.md",
+      "source_location": "L237",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

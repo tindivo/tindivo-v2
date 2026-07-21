@@ -1,6 +1,6 @@
 'use client'
 
-import { extractStoragePaths, type AdminAppealDto } from '@tindivo/contracts'
+import { type AdminAppealDto, extractStoragePaths } from '@tindivo/contracts'
 import { Button } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { use, useCallback, useEffect, useRef, useState } from 'react'
@@ -185,7 +185,11 @@ function CollapsibleTimeline({ events }: { events: TimelineEvent[] }) {
                     {ev.actor_role ? ` · ${ev.actor_role}` : ''}
                   </span>
                   {/* Thumbnails de evidencias desde data (solo en eventos que introducen el archivo) */}
-                  {['order.prepay_proof_uploaded', 'order.proof_uploaded', 'order.refund_registered'].includes(ev.event_type) &&
+                  {[
+                    'order.prepay_proof_uploaded',
+                    'order.proof_uploaded',
+                    'order.refund_registered',
+                  ].includes(ev.event_type) &&
                     ev.proofUrls &&
                     ev.proofUrls.length > 0 && (
                       <div className="mt-2 space-y-1.5">
@@ -266,11 +270,7 @@ function RefundForm({
         {refundFile && previewUrl ? (
           /* ── Preview state ── */
           <div className="relative overflow-hidden rounded-[16px] border border-border bg-ink/[0.02]">
-            <img
-              src={previewUrl}
-              alt="Vista previa"
-              className="max-h-64 w-full object-contain"
-            />
+            <img src={previewUrl} alt="Vista previa" className="max-h-64 w-full object-contain" />
             <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between bg-black/60 px-3 py-2 backdrop-blur-sm">
               <span className="max-w-[200px] truncate text-[12px] text-white/90">
                 {refundFile.name}
@@ -292,7 +292,10 @@ function RefundForm({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+            onDragOver={(e) => {
+              e.preventDefault()
+              setDragOver(true)
+            }}
             onDragLeave={() => setDragOver(false)}
             onDrop={(e) => {
               e.preventDefault()
@@ -310,9 +313,7 @@ function RefundForm({
               📷
             </span>
             <div>
-              <p className="text-[14px] font-semibold text-ink">
-                Sube la captura del Yape
-              </p>
+              <p className="text-[14px] font-semibold text-ink">Sube la captura del Yape</p>
               <p className="mt-0.5 text-[12px] text-ink-subtle">
                 Arrastra aquí o{' '}
                 <span className="text-brand underline underline-offset-2">elige un archivo</span>
@@ -334,11 +335,7 @@ function RefundForm({
 
       {/* Actions */}
       <div className="flex gap-2 pt-1">
-        <Button
-          className="flex-1"
-          disabled={!refundFile || refundUploading}
-          onClick={onSubmit}
-        >
+        <Button className="flex-1" disabled={!refundFile || refundUploading} onClick={onSubmit}>
           {refundUploading ? (
             <span className="flex items-center gap-2">
               <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
@@ -358,11 +355,7 @@ function RefundForm({
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
-export default function ApelacionDetallePage({
-  params,
-}: {
-  params: Promise<{ id: string }>
-}) {
+export default function ApelacionDetallePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const router = useRouter()
   const [appeal, setAppeal] = useState<AdminAppealDto | null>(null)
@@ -563,10 +556,14 @@ export default function ApelacionDetallePage({
     try {
       const supabase = getSupabaseBrowser()
       const ts = Date.now()
-      const ext = refundFile.type === 'image/png' ? 'png'
-        : refundFile.type === 'image/jpeg' ? 'jpg'
-        : refundFile.type === 'image/webp' ? 'webp'
-        : 'jpg'
+      const ext =
+        refundFile.type === 'image/png'
+          ? 'png'
+          : refundFile.type === 'image/jpeg'
+            ? 'jpg'
+            : refundFile.type === 'image/webp'
+              ? 'webp'
+              : 'jpg'
       const path = `refunds/${id}_${ts}.${ext}`
       const { error: upErr } = await supabase.storage
         .from('payment-proofs')
@@ -612,8 +609,7 @@ export default function ApelacionDetallePage({
 
   const isPending = appeal.appealStatus === 'pending'
   const isInReview = appeal.appealStatus === 'in_review'
-  const isApprovedPending =
-    appeal.appealStatus === 'approved' && appeal.refundStatus === 'pending'
+  const isApprovedPending = appeal.appealStatus === 'approved' && appeal.refundStatus === 'pending'
   const isResolved =
     appeal.appealStatus === 'rejected' ||
     (appeal.appealStatus === 'approved' && appeal.refundStatus === 'completed')
@@ -637,7 +633,6 @@ export default function ApelacionDetallePage({
 
   return (
     <div className="mx-auto max-w-3xl">
-
       {/* ── NIVEL 1: HEADER ─────────────────────────────────────────── */}
       <div className="mb-5 flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={() => router.push('/apelaciones')}>
@@ -659,25 +654,23 @@ export default function ApelacionDetallePage({
           <InfoRow
             label="Yape / Plin destino"
             value={
-              appeal.yapeNumber ? (
-                <span className="font-mono">{appeal.yapeNumber}</span>
-              ) : null
+              appeal.yapeNumber ? <span className="font-mono">{appeal.yapeNumber}</span> : null
             }
           />
           <InfoRow
             label="Monto del pedido"
             value={<span className="font-mono font-bold">{soles(appeal.refundAmount)}</span>}
           />
-          <InfoRow label="Pedido" value={<span className="font-mono">#{appeal.orderShortId}</span>} />
-          <InfoRow label="Creado" value={appeal.orderCreatedAt ? formatDate(appeal.orderCreatedAt) : null} />
           <InfoRow
-            label="Apelación"
-            value={formatDate(appeal.createdAt)}
+            label="Pedido"
+            value={<span className="font-mono">#{appeal.orderShortId}</span>}
           />
           <InfoRow
-            label="Cliente"
-            value={appeal.customerName}
+            label="Creado"
+            value={appeal.orderCreatedAt ? formatDate(appeal.orderCreatedAt) : null}
           />
+          <InfoRow label="Apelación" value={formatDate(appeal.createdAt)} />
+          <InfoRow label="Cliente" value={appeal.customerName} />
           <InfoRow
             label="Teléfono"
             value={appeal.customerPhone ? `📞 ${appeal.customerPhone}` : null}
@@ -702,7 +695,8 @@ export default function ApelacionDetallePage({
           {appeal.rejectionReasonCode &&
             REJECTION_CODE_LABELS[appeal.rejectionReasonCode] !== appeal.rejectionReasonText && (
               <p className="mt-0.5 text-[11px] text-red-400">
-                Código: {REJECTION_CODE_LABELS[appeal.rejectionReasonCode] ?? appeal.rejectionReasonCode}
+                Código:{' '}
+                {REJECTION_CODE_LABELS[appeal.rejectionReasonCode] ?? appeal.rejectionReasonCode}
               </p>
             )}
         </div>
@@ -743,17 +737,20 @@ export default function ApelacionDetallePage({
           <div className="flex items-center gap-3 px-5 py-4">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-green-500 text-white shadow-sm">
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <path d="M4 10l4.5 4.5L16 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path
+                  d="M4 10l4.5 4.5L16 6"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               </svg>
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-[15px] font-bold text-green-800">¡Devolución completada!</p>
               <p className="text-[13px] text-green-600">
-                Se devolvió{' '}
-                <span className="font-bold">{soles(appeal.refundAmount)}</span>
-                {appeal.refundCompletedAt && (
-                  <> · {formatDate(appeal.refundCompletedAt)}</>
-                )}
+                Se devolvió <span className="font-bold">{soles(appeal.refundAmount)}</span>
+                {appeal.refundCompletedAt && <> · {formatDate(appeal.refundCompletedAt)}</>}
               </p>
             </div>
           </div>

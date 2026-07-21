@@ -160,8 +160,7 @@ export const orderPaymentTimeout: InngestFunction.Any = inngest.createFunction(
       if (typeof override === 'number') return override
       const svc = createServiceClient()
       const { data } = await svc.from('app_settings').select('value').eq('key', 'timers').single()
-      const minutes =
-        (data?.value as { paymentMinutes?: number } | null)?.paymentMinutes ?? 10
+      const minutes = (data?.value as { paymentMinutes?: number } | null)?.paymentMinutes ?? 10
       return minutes * 60_000
     })
     await step.sleep('payment-window', sleepMs)
@@ -293,9 +292,7 @@ export const orderProofRejectedFallback: InngestFunction.Any = inngest.createFun
     name: 'Fallback de revisión de prepago tras 24h sin apelación',
     idempotency: 'event.data.orderId + "-" + event.data.cancelledAt',
     triggers: [{ event: EVENT_ORDER_PROOF_REJECTED_FINAL }],
-    cancelOn: [
-      { event: EVENT_ORDER_APPEAL_CREATED, match: 'data.orderId' },
-    ],
+    cancelOn: [{ event: EVENT_ORDER_APPEAL_CREATED, match: 'data.orderId' }],
   },
   async ({ event, step }) => {
     const { orderId, cancelledAt } = event.data

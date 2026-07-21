@@ -1,7 +1,7 @@
 'use client'
 
-import type { AdminAppealDto } from '@tindivo/contracts'
 import type { ApiEnvelope } from '@tindivo/api-client'
+import type { AdminAppealDto } from '@tindivo/contracts'
 import { Button } from '@tindivo/ui'
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
@@ -59,14 +59,14 @@ function AppealCard({ a }: { a: AdminAppealDto }) {
           <div className="flex items-center gap-2 min-w-0">
             <StatusBadge label={statusLabel} tone={statusTone} />
             {a.businessName && (
-              <span className="text-[13px] font-semibold text-ink truncate">
-                {a.businessName}
-              </span>
+              <span className="text-[13px] font-semibold text-ink truncate">{a.businessName}</span>
             )}
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <span className="text-[11px] text-ink-subtle">{timeAgo(a.createdAt)}</span>
-            <span className="text-[12px] text-ink-subtle group-hover:text-brand transition-colors">→</span>
+            <span className="text-[12px] text-ink-subtle group-hover:text-brand transition-colors">
+              →
+            </span>
           </div>
         </div>
 
@@ -77,9 +77,7 @@ function AppealCard({ a }: { a: AdminAppealDto }) {
               #{a.orderShortId}
             </span>
           )}
-          {a.customerName && (
-            <span className="text-[12px] text-ink-subtle">{a.customerName}</span>
-          )}
+          {a.customerName && <span className="text-[12px] text-ink-subtle">{a.customerName}</span>}
           {a.customerPhone && (
             <span className="text-[12px] text-ink-subtle">📞 {a.customerPhone}</span>
           )}
@@ -128,7 +126,9 @@ export default function ApelacionesPage() {
         setAppeals(res.data.items)
       } else {
         const [a, r] = await Promise.all([
-          api.get<ApiEnvelope<AppealListData>>('/admin/appeals?appeal_status=approved&refund_status=completed'),
+          api.get<ApiEnvelope<AppealListData>>(
+            '/admin/appeals?appeal_status=approved&refund_status=completed',
+          ),
           api.get<ApiEnvelope<AppealListData>>('/admin/appeals?appeal_status=rejected'),
         ])
         setAppeals([...a.data.items, ...r.data.items])
@@ -143,7 +143,9 @@ export default function ApelacionesPage() {
       const [pending, inReview, refund] = await Promise.all([
         api.get<ApiEnvelope<AppealListData>>('/admin/appeals?appeal_status=pending&per_page=1'),
         api.get<ApiEnvelope<AppealListData>>('/admin/appeals?appeal_status=in_review&per_page=1'),
-        api.get<ApiEnvelope<AppealListData>>('/admin/appeals?appeal_status=approved&refund_status=pending&per_page=1'),
+        api.get<ApiEnvelope<AppealListData>>(
+          '/admin/appeals?appeal_status=approved&refund_status=pending&per_page=1',
+        ),
       ])
       setCounts({
         pending: pending.data.total + inReview.data.total,

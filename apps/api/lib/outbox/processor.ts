@@ -1,5 +1,5 @@
-import { createServiceClient } from '../supabase/service'
 import { sendOrderAppealCreated, sendOrderProofRejectedFinal } from '../inngest/client'
+import { createServiceClient } from '../supabase/service'
 
 export interface OutboxClaimedRow {
   out_id: string
@@ -47,13 +47,16 @@ export async function processPendingOutboxEvents(): Promise<number> {
 
       processedCount++
     } catch (err: any) {
-      console.warn(`Fallo al despachar evento de outbox ${eventRow.out_id} a Inngest (Intento ${eventRow.out_attempts}). Error:`, err?.message)
+      console.warn(
+        `Fallo al despachar evento de outbox ${eventRow.out_id} a Inngest (Intento ${eventRow.out_attempts}). Error:`,
+        err?.message,
+      )
       await svc
         .from('outbox_events')
         .update({
           status: 'failed',
           last_error: String(err?.message ?? err),
-          next_attempt_at: new Date(Date.now() + Math.pow(2, eventRow.out_attempts) * 60_000).toISOString(),
+          next_attempt_at: new Date(Date.now() + 2 ** eventRow.out_attempts * 60_000).toISOString(),
         } as any)
         .eq('id', eventRow.out_id)
     }

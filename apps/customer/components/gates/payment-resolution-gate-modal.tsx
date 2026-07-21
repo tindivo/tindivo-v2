@@ -1,8 +1,8 @@
 'use client'
 
 import { Button } from '@tindivo/ui'
-import { BottomSheet } from '@/components/ui'
 import { useRouter } from 'next/navigation'
+import { BottomSheet } from '@/components/ui'
 
 type Props = {
   shortId: string
@@ -19,15 +19,12 @@ export function PaymentResolutionGateModal({ shortId, onClose }: Props) {
           <span className="text-2xl">⚠️</span>
         </div>
 
-        <h2 className="text-[18px] font-bold text-ink">
-          Tienes un caso de pago pendiente
-        </h2>
+        <h2 className="text-[18px] font-bold text-ink">Tienes un caso de pago pendiente</h2>
 
         <p className="mt-2 text-[14px] text-ink-muted">
-          No puedes crear nuevos pedidos hasta que se resuelva tu caso de pago
-          del pedido{' '}
-          <span className="font-semibold">#{shortId}</span>. Puedes apelar si
-          realizaste el pago correctamente.
+          No puedes crear nuevos pedidos hasta que se resuelva tu caso de pago del pedido{' '}
+          <span className="font-semibold">#{shortId}</span>. Puedes apelar si realizaste el pago
+          correctamente.
         </p>
 
         <div className="mt-6 flex w-full flex-col gap-2">

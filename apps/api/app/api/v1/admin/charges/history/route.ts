@@ -17,20 +17,20 @@ export async function GET(req: Request): Promise<Response> {
     await requireRole(req, 'admin')
     const service = createServiceClient()
 
-    const { data: payments, error } = await service
+    const { data: payments, error } = await (service as any)
       .from('restaurant_payments')
-      .select('id, business_id, amount, payment_method, paid_at, note, businesses(name), business_charges(id, order_id)')
+      .select(
+        'id, business_id, amount, payment_method, paid_at, note, businesses(name), business_charges(id, order_id)',
+      )
       .order('paid_at', { ascending: false })
       .limit(100)
 
     if (error) throw new Error(error.message)
 
-    const result = (payments || []).map((p) => {
+    const result = (payments || []).map((p: any) => {
       const bizName = (p.businesses as unknown as { name: string } | null)?.name ?? '—'
       const charges = p.business_charges as Array<{ id: string; order_id: string | null }> | null
-      const uniqueOrderIds = new Set(
-        (charges || []).map((c) => c.order_id).filter(Boolean),
-      )
+      const uniqueOrderIds = new Set((charges || []).map((c) => c.order_id).filter(Boolean))
 
       return {
         id: p.id,

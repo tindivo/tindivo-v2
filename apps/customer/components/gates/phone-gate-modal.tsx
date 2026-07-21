@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { BottomSheet } from '@/components/ui'
-import { PhoneStep } from '../auth-onboarding/steps/phone-step'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
+import { PhoneStep } from '../auth-onboarding/steps/phone-step'
 
 type Props = {
   onComplete: () => void

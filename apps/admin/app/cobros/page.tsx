@@ -88,7 +88,8 @@ export default function CobrosPage() {
         </div>
         <div className="text-right">
           <span className="inline-flex items-center rounded-full bg-red-100 px-3 py-1 text-[13px] font-bold text-red-700">
-            {activeDebtBusinessCount} negocio{activeDebtBusinessCount === 1 ? '' : 's'} con deuda activa
+            {activeDebtBusinessCount} negocio{activeDebtBusinessCount === 1 ? '' : 's'} con deuda
+            activa
           </span>
         </div>
       </div>
@@ -107,7 +108,12 @@ export default function CobrosPage() {
           <DataTable
             rows={summaries}
             getRowKey={(r) => r.id}
-            empty={<EmptyState title="Sin deudas pendientes 🎉" hint="Todos los restaurantes están al día." />}
+            empty={
+              <EmptyState
+                title="Sin deudas pendientes 🎉"
+                hint="Todos los restaurantes están al día."
+              />
+            }
             columns={[
               {
                 key: 'name',
@@ -116,7 +122,9 @@ export default function CobrosPage() {
                   <div>
                     <span className="font-bold text-ink text-[14px]">{r.name}</span>
                     {r.yapeNumber && (
-                      <span className="block text-[11px] text-ink-subtle">Yape: {r.yapeNumber}</span>
+                      <span className="block text-[11px] text-ink-subtle">
+                        Yape: {r.yapeNumber}
+                      </span>
                     )}
                   </div>
                 ),
@@ -147,9 +155,7 @@ export default function CobrosPage() {
                 header: 'Total Deuda',
                 align: 'right',
                 mono: true,
-                render: (r) => (
-                  <span className="font-bold text-danger">{soles(r.balanceDue)}</span>
-                ),
+                render: (r) => <span className="font-bold text-danger">{soles(r.balanceDue)}</span>,
               },
               {
                 key: 'accion',
@@ -170,9 +176,7 @@ export default function CobrosPage() {
       {/* Historial de Pagos Registrados */}
       <div className="t-card">
         <div className="mb-3 flex items-center justify-between">
-          <p className="t-display text-[15px] text-ink font-bold">
-            Historial de Pagos Registrados
-          </p>
+          <p className="t-display text-[15px] text-ink font-bold">Historial de Pagos Registrados</p>
         </div>
 
         {!history ? (
@@ -181,7 +185,9 @@ export default function CobrosPage() {
           <DataTable
             rows={history}
             getRowKey={(h) => h.id}
-            empty={<EmptyState title="Sin pagos registrados" hint="No se han registrado pagos aún." />}
+            empty={
+              <EmptyState title="Sin pagos registrados" hint="No se han registrado pagos aún." />
+            }
             columns={[
               {
                 key: 'fecha',

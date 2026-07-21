@@ -1,7 +1,12 @@
 'use client'
 
 import { type ApiEnvelope, ApiError } from '@tindivo/api-client'
-import { ADDRESS_REFERENCE_MIN, ADDRESS_LINE_MIN, type DeliveryMethod, type PaymentIntent } from '@tindivo/contracts'
+import {
+  ADDRESS_LINE_MIN,
+  ADDRESS_REFERENCE_MIN,
+  type DeliveryMethod,
+  type PaymentIntent,
+} from '@tindivo/contracts'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -9,11 +14,12 @@ import {
   AddressFields,
   type AddressValue,
   EMPTY_ADDRESS,
-  labelEmoji,
-  isLineOk,
   getLineError,
+  isLineOk,
+  labelEmoji,
 } from '@/components/address-fields'
 import { saveAddress } from '@/components/auth-onboarding/persistence'
+import { OtpVerificationSheet } from '@/components/otp-verification-sheet'
 import { Icon, ScreenHeader, Segmented } from '@/components/ui'
 import { api } from '@/lib/api'
 import { useBusinessOrdering } from '@/lib/business-ordering'
@@ -22,7 +28,6 @@ import { getLocationValidation, haversineKm } from '@/lib/coverage'
 import { getCurrentPositionHA } from '@/lib/geolocation'
 import { useOnboarding } from '@/lib/onboarding-store'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
-import { OtpVerificationSheet } from '@/components/otp-verification-sheet'
 
 const soles = (n: number) => `S/ ${n.toFixed(2)}`
 const DEFAULT_PREPAY_THRESHOLD = 80
@@ -205,7 +210,7 @@ export default function CheckoutPage() {
         return
       }
       const profile = prof as CustomerProfile | null
-      
+
       // Guard de celular verificado: si no está verificado, redirige al inicio
       if (profile && !profile.phone_verified_at) {
         router.replace('/')
@@ -248,8 +253,7 @@ export default function CheckoutPage() {
   const selectedAddress = addresses.find((a) => a.id === addressId)
   const reference =
     deliveryMethod === 'delivery' ? (selectedAddress?.reference ?? manualAddr.reference) : ''
-  const line =
-    deliveryMethod === 'delivery' ? (selectedAddress?.line ?? manualAddr.line) : ''
+  const line = deliveryMethod === 'delivery' ? (selectedAddress?.line ?? manualAddr.line) : ''
 
   // "¿Con cuánto pagarás?" (solo efectivo): Exacto = total (vuelto 0).
   const cashAmount =
@@ -268,9 +272,7 @@ export default function CheckoutPage() {
     }
     if (deliveryMethod === 'delivery') {
       if (!line || line.trim().length < ADDRESS_LINE_MIN) {
-        setError(
-          `Elige o agrega una dirección de al menos ${ADDRESS_LINE_MIN} caracteres`,
-        )
+        setError(`Elige o agrega una dirección de al menos ${ADDRESS_LINE_MIN} caracteres`)
         return
       }
       if (!isLineOk(line)) {
@@ -464,8 +466,7 @@ export default function CheckoutPage() {
         }}
       />
     )
-  if (confirmed)
-    return <Confirmed result={confirmed} />
+  if (confirmed) return <Confirmed result={confirmed} />
   if (!authReady)
     return (
       <main className="mx-auto max-w-[768px] px-4 pt-16">
@@ -654,56 +655,63 @@ export default function CheckoutPage() {
                   desc: 'Paga ahora con Yape/Plin y sube tu comprobante',
                   logos: ['yape', 'plin'],
                 },
-              ].filter((opt) => !mustPrepay || opt.v === 'prepaid').map((opt) => {
-                const disabled = mustPrepay && opt.v !== 'prepaid'
-                const sel = payment === opt.v
-                return (
-                  <button
-                    key={opt.v}
-                    type="button"
-                    disabled={disabled}
-                    onClick={() => {
-                      setPayment(opt.v)
-                      if (opt.v !== 'pending_cash') {
-                        setCashChoice('exact')
-                        setCashCustom('')
-                      }
-                    }}
-                    className="flex items-center gap-3 rounded-[18px] bg-white p-4 text-left disabled:opacity-40"
-                    style={{ border: sel ? '2px solid #F97316' : '1px solid rgba(26,22,20,0.05)' }}
-                  >
-                    <span
-                      className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full"
-                      style={{ border: `2px solid ${sel ? '#F97316' : 'rgba(26,22,20,0.25)'}` }}
+              ]
+                .filter((opt) => !mustPrepay || opt.v === 'prepaid')
+                .map((opt) => {
+                  const disabled = mustPrepay && opt.v !== 'prepaid'
+                  const sel = payment === opt.v
+                  return (
+                    <button
+                      key={opt.v}
+                      type="button"
+                      disabled={disabled}
+                      onClick={() => {
+                        setPayment(opt.v)
+                        if (opt.v !== 'pending_cash') {
+                          setCashChoice('exact')
+                          setCashCustom('')
+                        }
+                      }}
+                      className="flex items-center gap-3 rounded-[18px] bg-white p-4 text-left disabled:opacity-40"
+                      style={{
+                        border: sel ? '2px solid #F97316' : '1px solid rgba(26,22,20,0.05)',
+                      }}
                     >
-                      {sel && (
-                        <span
-                          className="h-2.5 w-2.5 rounded-full"
-                          style={{ background: '#F97316' }}
-                        />
-                      )}
-                    </span>
-                    <span className="flex shrink-0 items-center gap-1">
-                      {opt.logos.map((logo) => (
-                        <img
-                          key={logo}
-                          src={`/pay/${logo}.svg`}
-                          alt={logo === 'cash' ? 'Efectivo' : logo === 'yape' ? 'Yape' : 'Plin'}
-                          width={34}
-                          height={34}
-                          className="rounded-[9px]"
-                        />
-                      ))}
-                    </span>
-                    <span className="flex-1">
-                      <span className="block font-semibold text-[15px]">{opt.label}</span>
-                      <span className="block text-[12px]" style={{ color: 'rgba(26,22,20,0.55)' }}>
-                        {opt.desc}
+                      <span
+                        className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full"
+                        style={{ border: `2px solid ${sel ? '#F97316' : 'rgba(26,22,20,0.25)'}` }}
+                      >
+                        {sel && (
+                          <span
+                            className="h-2.5 w-2.5 rounded-full"
+                            style={{ background: '#F97316' }}
+                          />
+                        )}
                       </span>
-                    </span>
-                  </button>
-                )
-              })}
+                      <span className="flex shrink-0 items-center gap-1">
+                        {opt.logos.map((logo) => (
+                          <img
+                            key={logo}
+                            src={`/pay/${logo}.svg`}
+                            alt={logo === 'cash' ? 'Efectivo' : logo === 'yape' ? 'Yape' : 'Plin'}
+                            width={34}
+                            height={34}
+                            className="rounded-[9px]"
+                          />
+                        ))}
+                      </span>
+                      <span className="flex-1">
+                        <span className="block font-semibold text-[15px]">{opt.label}</span>
+                        <span
+                          className="block text-[12px]"
+                          style={{ color: 'rgba(26,22,20,0.55)' }}
+                        >
+                          {opt.desc}
+                        </span>
+                      </span>
+                    </button>
+                  )
+                })}
             </div>
 
             {payment === 'pending_cash' && (

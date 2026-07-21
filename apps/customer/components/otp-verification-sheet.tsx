@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { ApiError } from '@tindivo/api-client'
+import { useEffect, useRef, useState } from 'react'
 import { BottomSheet } from '@/components/ui'
 import { api } from '@/lib/api'
-import { ApiError } from '@tindivo/api-client'
 
 type Props = {
   open: boolean
@@ -114,10 +114,7 @@ export function OtpVerificationSheet({ open, phone, onVerified, onClose }: Props
     }
   }
 
-  const maskedPhone =
-    phone.length === 9
-      ? `${phone.slice(0, 3)} *** ${phone.slice(-3)}`
-      : phone
+  const maskedPhone = phone.length === 9 ? `${phone.slice(0, 3)} *** ${phone.slice(-3)}` : phone
 
   return (
     <BottomSheet open={open} onClose={onClose}>
@@ -131,20 +128,14 @@ export function OtpVerificationSheet({ open, phone, onVerified, onClose }: Props
             </p>
             {error && <p className="mt-4 text-[13px] text-danger">{error}</p>}
             {error && (
-              <button
-                type="button"
-                className="t-btn t-btn-secondary mt-4"
-                onClick={sendCode}
-              >
+              <button type="button" className="t-btn t-btn-secondary mt-4" onClick={sendCode}>
                 Reintentar envío
               </button>
             )}
           </div>
         ) : (
           <div className="t-scroll flex-1 px-5 pt-4 pb-4">
-            <h2 className="t-display text-[24px] leading-[1.15]">
-              Verifica tu celular
-            </h2>
+            <h2 className="t-display text-[24px] leading-[1.15]">Verifica tu celular</h2>
             <p className="mt-1.5 text-[14px]" style={{ color: 'rgba(26,22,20,0.6)' }}>
               Enviamos un código de 6 dígitos por SMS a tu celular (+51 {maskedPhone})
             </p>

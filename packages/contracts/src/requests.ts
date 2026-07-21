@@ -1,10 +1,10 @@
 import { z } from 'zod'
 import { DeliveryMethodSchema, PaymentIntentSchema } from './enums'
 import {
-  ADDRESS_REFERENCE_MIN,
-  AddressReferenceSchema,
   ADDRESS_LINE_MIN,
+  ADDRESS_REFERENCE_MIN,
   AddressLineSchema,
+  AddressReferenceSchema,
   CoordinatesSchema,
   PhonePeSchema,
   UuidSchema,
@@ -58,8 +58,7 @@ export const CreateOrderRequestSchema = z
   })
   .refine(
     (d) =>
-      d.deliveryMethod === 'pickup' ||
-      (d.deliveryAddress?.trim().length ?? 0) >= ADDRESS_LINE_MIN,
+      d.deliveryMethod === 'pickup' || (d.deliveryAddress?.trim().length ?? 0) >= ADDRESS_LINE_MIN,
     {
       message: `La dirección es obligatoria para delivery (mínimo ${ADDRESS_LINE_MIN} caracteres)`,
       path: ['deliveryAddress'],

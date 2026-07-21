@@ -1,11 +1,11 @@
 import { PhonePeSchema } from '@tindivo/contracts'
+import { z } from 'zod'
 import { requireRole } from '@/lib/http/auth'
 import { corsHeaders, handleOptions } from '@/lib/http/cors'
 import { handleError, ok, problem } from '@/lib/http/problem'
 import { getRequestId } from '@/lib/http/request-id'
 import { createServiceClient } from '@/lib/supabase/service'
-import { VERIFY_SERVICE_SID, twilioClient } from '@/lib/twilio/client'
-import { z } from 'zod'
+import { twilioClient, VERIFY_SERVICE_SID } from '@/lib/twilio/client'
 
 export const dynamic = 'force-dynamic'
 
@@ -90,10 +90,7 @@ export async function POST(req: Request): Promise<Response> {
       throw new Error(error.message)
     }
 
-    return ok(
-      { verified: true, phone: fullPhone },
-      { status: 200, headers: corsHeaders(req) },
-    )
+    return ok({ verified: true, phone: fullPhone }, { status: 200, headers: corsHeaders(req) })
   } catch (err) {
     return handleError(err, requestId, req)
   }

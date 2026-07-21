@@ -1,13 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { getSupabaseBrowser } from '@/lib/supabase/client'
 import { pointInPolygon } from '@/lib/coverage'
-import {
-  checkPaymentBlock,
-  type AppealData,
-  type CancelledOrder,
-} from '@/lib/payment-block'
+import { type AppealData, type CancelledOrder, checkPaymentBlock } from '@/lib/payment-block'
+import { getSupabaseBrowser } from '@/lib/supabase/client'
 
 type GateType = 'phone' | 'address' | 'pending_payment_resolution'
 
@@ -35,7 +31,9 @@ export function useOrderReadiness(): OrderReadiness {
   async function fetchReadiness() {
     setLoading(true)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
       const user = session?.user
       if (!user) {
         setProfile(null)
@@ -95,7 +93,7 @@ export function useOrderReadiness(): OrderReadiness {
 
       // Precargar todas las apelaciones en una sola query
       const orderIds = (cancelledOrders ?? []).map((o) => o.id)
-      let appealsMap: Record<string, AppealData> = {}
+      const appealsMap: Record<string, AppealData> = {}
 
       if (orderIds.length > 0) {
         const { data: appeals } = await supabase

@@ -28,9 +28,7 @@ describe('Contratos de Apelaciones y Devoluciones', () => {
   })
 
   it('rechaza propiedades desconocidas (strict)', () => {
-    expect(() =>
-      CreateAppealSchema.parse({ description: 'test', extra: 'no-permitido' }),
-    ).toThrow()
+    expect(() => CreateAppealSchema.parse({ description: 'test', extra: 'no-permitido' })).toThrow()
   })
 
   // ── ResolveAppealSchema ────────────────────────────────────────────────
@@ -142,9 +140,7 @@ describe('Contratos de Apelaciones y Devoluciones', () => {
   })
 
   it('rechaza refundProofPath vacío', () => {
-    expect(() =>
-      RegisterRefundSchema.parse({ refundProofPath: '', amount: 25.5 }),
-    ).toThrow()
+    expect(() => RegisterRefundSchema.parse({ refundProofPath: '', amount: 25.5 })).toThrow()
   })
 
   it('rechaza monto negativo', () => {

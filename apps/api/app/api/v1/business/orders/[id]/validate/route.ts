@@ -59,7 +59,9 @@ export async function POST(
       } catch {}
     } else if (result?.status === 'cancelled') {
       // El trigger trg_orders_outbox_events ya encoló atómicamente el evento order/proof-rejected-final en outbox_events
-      processPendingOutboxEvents().catch((err: any) => console.warn('Outbox dispatch warning:', err))
+      processPendingOutboxEvents().catch((err: any) =>
+        console.warn('Outbox dispatch warning:', err),
+      )
     }
 
     return ok(data, { headers: corsHeaders(req) })

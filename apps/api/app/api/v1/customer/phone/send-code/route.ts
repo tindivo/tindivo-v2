@@ -1,11 +1,11 @@
 import { PhonePeSchema } from '@tindivo/contracts'
+import { z } from 'zod'
 import { requireRole } from '@/lib/http/auth'
 import { corsHeaders, handleOptions } from '@/lib/http/cors'
 import { handleError, ok, problem } from '@/lib/http/problem'
 import { getRequestId } from '@/lib/http/request-id'
 import { createServiceClient } from '@/lib/supabase/service'
-import { VERIFY_SERVICE_SID, twilioClient } from '@/lib/twilio/client'
-import { z } from 'zod'
+import { twilioClient, VERIFY_SERVICE_SID } from '@/lib/twilio/client'
 
 export const dynamic = 'force-dynamic'
 
@@ -44,7 +44,8 @@ export async function POST(req: Request): Promise<Response> {
     // desfase UTC vs Perú (UTC-5). Un intento a las 7:30pm hora local
     // no debe reiniciar el contador a las 7:00pm (medianoche UTC).
     const service = createServiceClient()
-    const { count } = await service.from('customer_otp_attempts')
+    const { count } = await service
+      .from('customer_otp_attempts')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', user.id)
       .gte('sent_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())

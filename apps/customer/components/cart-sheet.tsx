@@ -3,14 +3,14 @@
 import { getOpenStatus } from '@tindivo/contracts'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { AddressGateModal } from '@/components/gates/address-gate-modal'
+import { PaymentResolutionGateModal } from '@/components/gates/payment-resolution-gate-modal'
+import { PhoneGateModal } from '@/components/gates/phone-gate-modal'
 import { BottomSheet, Icon, ScreenHeader } from '@/components/ui'
+import { useOrderReadiness } from '@/hooks/use-order-readiness'
 import { useBusinessOrdering } from '@/lib/business-ordering'
 import { type CartLine, useCart, useCartHydrated } from '@/lib/cart'
 import { buildCartWhatsAppMessage, telLink, waOrderLink } from '@/lib/whatsapp'
-import { useOrderReadiness } from '@/hooks/use-order-readiness'
-import { PhoneGateModal } from '@/components/gates/phone-gate-modal'
-import { AddressGateModal } from '@/components/gates/address-gate-modal'
-import { PaymentResolutionGateModal } from '@/components/gates/payment-resolution-gate-modal'
 
 const soles = (n: number) => `S/ ${n.toFixed(2)}`
 
@@ -23,9 +23,15 @@ function CartCtas({ layout, onNavigate }: { layout: 'row' | 'block'; onNavigate?
   const router = useRouter()
   const cart = useCart()
   const { loading: bizLoading, info } = useBusinessOrdering(cart.businessId)
-  
+
   // Gates de preparación del pedido
-  const { ready, currentGate, blockedOrderShortId, refetch, loading: readinessLoading } = useOrderReadiness()
+  const {
+    ready,
+    currentGate,
+    blockedOrderShortId,
+    refetch,
+    loading: readinessLoading,
+  } = useOrderReadiness()
   const [showGate, setShowGate] = useState(false)
 
   const block = layout === 'block'
@@ -126,17 +132,11 @@ function CartCtas({ layout, onNavigate }: { layout: 'row' | 'block'; onNavigate?
       </div>
 
       {showGate && currentGate === 'phone' && (
-        <PhoneGateModal
-          onComplete={handleGateComplete}
-          onClose={() => setShowGate(false)}
-        />
+        <PhoneGateModal onComplete={handleGateComplete} onClose={() => setShowGate(false)} />
       )}
 
       {showGate && currentGate === 'address' && (
-        <AddressGateModal
-          onComplete={handleGateComplete}
-          onClose={() => setShowGate(false)}
-        />
+        <AddressGateModal onComplete={handleGateComplete} onClose={() => setShowGate(false)} />
       )}
 
       {showGate && currentGate === 'pending_payment_resolution' && blockedOrderShortId && (

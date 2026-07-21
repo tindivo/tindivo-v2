@@ -5,11 +5,11 @@ import { type OrderStatus, type TrackingStep, toTrackingStep } from '@tindivo/co
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { use, useCallback, useEffect, useState } from 'react'
+import { AppealSection } from '@/components/appeal-section'
+import { PrepayProofSection } from '@/components/prepay-proof-section'
 import { Icon, ScreenHeader, SupportLink } from '@/components/ui'
 import { api } from '@/lib/api'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
-import { PrepayProofSection } from '@/components/prepay-proof-section'
-import { AppealSection } from '@/components/appeal-section'
 
 const soles = (n: number | null | undefined) => (n == null ? '—' : `S/ ${Number(n).toFixed(2)}`)
 
@@ -103,7 +103,7 @@ function etaLabel(estimatedReadyAt: string | null): string {
   return '25–35 min'
 }
 
-function getStepSub(s: typeof STEPS[0], data: Tracking): string {
+function getStepSub(s: (typeof STEPS)[0], data: Tracking): string {
   if (s.key === 'received' && data.paymentIntent === 'prepaid') {
     if (data.status === 'pending_acceptance') return 'Esperando confirmación de disponibilidad'
     if (data.status === 'awaiting_payment') return 'Restaurante confirmó. Paga ahora'
@@ -262,19 +262,13 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
             style={{ border: '1px solid rgba(26,22,20,0.05)' }}
           >
             <div className="flex items-center gap-2">
-              <span className="font-mono text-[12px] text-ink-subtle">
-                #{data.shortId}
-              </span>
+              <span className="font-mono text-[12px] text-ink-subtle">#{data.shortId}</span>
               <span className="rounded-full bg-red-50 px-2.5 py-0.5 font-bold text-[10px] text-red-600 uppercase tracking-wider">
                 Pago no verificado
               </span>
             </div>
-            <p className="mt-1.5 text-[14px] font-semibold text-ink">
-              {data.businessName}
-            </p>
-            <p className="mt-0.5 text-[13px] text-ink-muted">
-              Total: {soles(data.total)}
-            </p>
+            <p className="mt-1.5 text-[14px] font-semibold text-ink">{data.businessName}</p>
+            <p className="mt-0.5 text-[13px] text-ink-muted">Total: {soles(data.total)}</p>
           </div>
 
           {/* Sección de apelación */}
@@ -374,13 +368,17 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
             <>
               {/* 1. pending_acceptance: Esperando confirmación */}
               {data.status === 'pending_acceptance' && (
-                <div className="mt-3.5 rounded-[22px] bg-orange-50/80 p-4 font-sans text-left text-orange-950" style={{ border: '1px solid #FFEDD5' }}>
+                <div
+                  className="mt-3.5 rounded-[22px] bg-orange-50/80 p-4 font-sans text-left text-orange-950"
+                  style={{ border: '1px solid #FFEDD5' }}
+                >
                   <div className="flex items-center gap-2 font-semibold text-[14px]">
                     <span className="h-2 w-2 rounded-full bg-orange-500 animate-pulse" />
                     Esperando confirmación del restaurante
                   </div>
                   <p className="mt-1 text-[13px] text-orange-800">
-                    El restaurante está verificando disponibilidad de tu pedido. Te avisaremos aquí para realizar el pago.
+                    El restaurante está verificando disponibilidad de tu pedido. Te avisaremos aquí
+                    para realizar el pago.
                   </p>
                 </div>
               )}
@@ -389,8 +387,12 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
               {data.status === 'awaiting_payment' && (
                 <div>
                   {data.proofAttempt === 1 && (
-                    <div className="mt-3.5 rounded-[18px] bg-red-50 p-3.5 text-left text-[13px] text-red-700" style={{ border: '1px solid #FCA5A5' }}>
-                      <strong>Tu comprobante no fue válido.</strong> Revisa e intenta de nuevo. Te queda 1 intento.
+                    <div
+                      className="mt-3.5 rounded-[18px] bg-red-50 p-3.5 text-left text-[13px] text-red-700"
+                      style={{ border: '1px solid #FCA5A5' }}
+                    >
+                      <strong>Tu comprobante no fue válido.</strong> Revisa e intenta de nuevo. Te
+                      queda 1 intento.
                     </div>
                   )}
                   <PrepayProofSection
@@ -403,13 +405,17 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
 
               {/* 3. validando: En revisión */}
               {data.status === 'validando' && (
-                <div className="mt-3.5 rounded-[22px] bg-blue-50/80 p-4 font-sans text-left text-blue-950" style={{ border: '1px solid #BFDBFE' }}>
+                <div
+                  className="mt-3.5 rounded-[22px] bg-blue-50/80 p-4 font-sans text-left text-blue-950"
+                  style={{ border: '1px solid #BFDBFE' }}
+                >
                   <div className="flex items-center gap-2 font-semibold text-[14px]">
                     <span className="h-2 w-2 rounded-full bg-blue-500 animate-ping" />
                     Verificando tu pago...
                   </div>
                   <p className="mt-1 text-[13px] text-blue-800">
-                    El restaurante está revisando tu comprobante de pago. Te notificaremos apenas sea verificado.
+                    El restaurante está revisando tu comprobante de pago. Te notificaremos apenas
+                    sea verificado.
                   </p>
                 </div>
               )}

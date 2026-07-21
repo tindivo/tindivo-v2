@@ -5,8 +5,8 @@ import {
   AddressFields,
   type AddressValue,
   EMPTY_ADDRESS,
-  isReferenceOk,
   isLineOk,
+  isReferenceOk,
 } from '@/components/address-fields'
 import { saveAddress } from '../persistence'
 
@@ -99,7 +99,11 @@ export function AddressStep({
           disabled={!valid || busy}
           tabIndex={active ? 0 : -1}
         >
-          {busy ? 'Guardando…' : mode === 'gate' ? 'Confirmar dirección' : 'Guardar y empezar a pedir'}
+          {busy
+            ? 'Guardando…'
+            : mode === 'gate'
+              ? 'Confirmar dirección'
+              : 'Guardar y empezar a pedir'}
         </button>
       </div>
     </form>

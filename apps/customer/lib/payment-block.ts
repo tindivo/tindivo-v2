@@ -44,18 +44,10 @@ export function isOrderBlocking(
   if (!appeal) return false
 
   // Apelación pendiente o en revisión → bloqueado
-  if (
-    appeal.appeal_status === 'pending' ||
-    appeal.appeal_status === 'in_review'
-  )
-    return true
+  if (appeal.appeal_status === 'pending' || appeal.appeal_status === 'in_review') return true
 
   // Aprobada pero devolución no completada → bloqueado
-  if (
-    appeal.appeal_status === 'approved' &&
-    appeal.refund_status === 'pending'
-  )
-    return true
+  if (appeal.appeal_status === 'approved' && appeal.refund_status === 'pending') return true
 
   // Aprobada con devolución completada → libre
   // Rechazada → libre

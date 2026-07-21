@@ -1,1 +1,414 @@
-{"nodes": [{"id": "at_tindivo_api_client", "label": "@tindivo/api-client", "file_type": "code", "source_file": "Docs\\context\\negocios.md", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "at_tindivo_contracts", "label": "@tindivo/contracts", "file_type": "code", "source_file": "Docs\\context\\negocios.md", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "at_tindivo_ui", "label": "@tindivo/ui", "file_type": "code", "source_file": "Docs\\context\\negocios.md", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "bug_item_max_price", "label": "Bug: itemMaxPrice Returns Base Price", "file_type": "concept", "source_file": "Docs\\context\\negocios.md", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "bug_on_call_driver", "label": "Bug: onCallDriver Not Passed in Actions", "file_type": "concept", "source_file": "Docs\\context\\negocios.md", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "docs_context_negocios", "label": "Context and State of apps/negocios", "file_type": "document", "source_file": "Docs\\context\\negocios.md", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "negocios_chrome_tsx", "label": "Chrome (Global Context)", "file_type": "code", "source_file": "Docs\\context\\negocios.md", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "negocios_configuracion", "label": "Configuraci\u00f3n", "file_type": "code", "source_file": "Docs\\context\\negocios.md", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "negocios_dashboard_pedidos", "label": "Dashboard de Pedidos", "file_type": "code", "source_file": "Docs\\context\\negocios.md", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "negocios_deuda", "label": "Deuda", "file_type": "code", "source_file": "Docs\\context\\negocios.md", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "negocios_efectivo", "label": "Efectivo", "file_type": "code", "source_file": "Docs\\context\\negocios.md", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "negocios_historial", "label": "Historial", "file_type": "code", "source_file": "Docs\\context\\negocios.md", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "negocios_menu_editor", "label": "Men\u00fa Editor de Item", "file_type": "code", "source_file": "Docs\\context\\negocios.md", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "negocios_menu_lista", "label": "Men\u00fa Lista", "file_type": "code", "source_file": "Docs\\context\\negocios.md", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "negocios_pedido_directo", "label": "Pedido Directo (Manual)", "file_type": "code", "source_file": "Docs\\context\\negocios.md", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "negocios_push_manager", "label": "Push Manager", "file_type": "code", "source_file": "Docs\\context\\negocios.md", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "negocios_schedule_editor", "label": "Schedule Editor", "file_type": "code", "source_file": "Docs\\context\\negocios.md", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}], "edges": [{"source": "docs_context_negocios", "target": "negocios_app", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs\\context\\negocios.md", "source_location": null, "weight": 1.0}, {"source": "docs_context_negocios", "target": "negocios_dashboard_pedidos", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs\\context\\negocios.md", "source_location": null, "weight": 1.0}, {"source": "docs_context_negocios", "target": "negocios_pedido_directo", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs\\context\\negocios.md", "source_location": null, "weight": 1.0}, {"source": "docs_context_negocios", "target": "negocios_menu_lista", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs\\context\\negocios.md", "source_location": null, "weight": 1.0}, {"source": "docs_context_negocios", "target": "negocios_menu_editor", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs\\context\\negocios.md", "source_location": null, "weight": 1.0}, {"source": "docs_context_negocios", "target": "negocios_configuracion", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs\\context\\negocios.md", "source_location": null, "weight": 1.0}, {"source": "docs_context_negocios", "target": "negocios_historial", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs\\context\\negocios.md", "source_location": null, "weight": 1.0}, {"source": "docs_context_negocios", "target": "negocios_deuda", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs\\context\\negocios.md", "source_location": null, "weight": 1.0}, {"source": "docs_context_negocios", "target": "negocios_efectivo", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs\\context\\negocios.md", "source_location": null, "weight": 1.0}, {"source": "docs_context_negocios", "target": "negocios_chrome_tsx", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs\\context\\negocios.md", "source_location": null, "weight": 1.0}, {"source": "docs_context_negocios", "target": "negocios_schedule_editor", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs\\context\\negocios.md", "source_location": null, "weight": 1.0}, {"source": "docs_context_negocios", "target": "negocios_push_manager", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs\\context\\negocios.md", "source_location": null, "weight": 1.0}, {"source": "docs_context_negocios", "target": "at_tindivo_ui", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs\\context\\negocios.md", "source_location": null, "weight": 1.0}, {"source": "docs_context_negocios", "target": "at_tindivo_api_client", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs\\context\\negocios.md", "source_location": null, "weight": 1.0}, {"source": "docs_context_negocios", "target": "at_tindivo_contracts", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs\\context\\negocios.md", "source_location": null, "weight": 1.0}, {"source": "docs_context_negocios", "target": "supabase_realtime", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs\\context\\negocios.md", "source_location": null, "weight": 1.0}, {"source": "docs_context_negocios", "target": "bug_item_max_price", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs\\context\\negocios.md", "source_location": null, "weight": 1.0}, {"source": "docs_context_negocios", "target": "bug_on_call_driver", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs\\context\\negocios.md", "source_location": null, "weight": 1.0}, {"source": "negocios_app", "target": "at_tindivo_ui", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs\\context\\negocios.md", "source_location": null, "weight": 1.0}, {"source": "negocios_app", "target": "at_tindivo_api_client", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs\\context\\negocios.md", "source_location": null, "weight": 1.0}, {"source": "negocios_app", "target": "at_tindivo_contracts", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs\\context\\negocios.md", "source_location": null, "weight": 1.0}, {"source": "negocios_app", "target": "supabase_realtime", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "Docs\\context\\negocios.md", "source_location": null, "weight": 1.0}], "hyperedges": []}
+{
+  "nodes": [
+    {
+      "id": "at_tindivo_api_client",
+      "label": "@tindivo/api-client",
+      "file_type": "code",
+      "source_file": "Docs\\context\\negocios.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "at_tindivo_contracts",
+      "label": "@tindivo/contracts",
+      "file_type": "code",
+      "source_file": "Docs\\context\\negocios.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "at_tindivo_ui",
+      "label": "@tindivo/ui",
+      "file_type": "code",
+      "source_file": "Docs\\context\\negocios.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "bug_item_max_price",
+      "label": "Bug: itemMaxPrice Returns Base Price",
+      "file_type": "concept",
+      "source_file": "Docs\\context\\negocios.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "bug_on_call_driver",
+      "label": "Bug: onCallDriver Not Passed in Actions",
+      "file_type": "concept",
+      "source_file": "Docs\\context\\negocios.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "docs_context_negocios",
+      "label": "Context and State of apps/negocios",
+      "file_type": "document",
+      "source_file": "Docs\\context\\negocios.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "negocios_chrome_tsx",
+      "label": "Chrome (Global Context)",
+      "file_type": "code",
+      "source_file": "Docs\\context\\negocios.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "negocios_configuracion",
+      "label": "Configuraci\u00f3n",
+      "file_type": "code",
+      "source_file": "Docs\\context\\negocios.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "negocios_dashboard_pedidos",
+      "label": "Dashboard de Pedidos",
+      "file_type": "code",
+      "source_file": "Docs\\context\\negocios.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "negocios_deuda",
+      "label": "Deuda",
+      "file_type": "code",
+      "source_file": "Docs\\context\\negocios.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "negocios_efectivo",
+      "label": "Efectivo",
+      "file_type": "code",
+      "source_file": "Docs\\context\\negocios.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "negocios_historial",
+      "label": "Historial",
+      "file_type": "code",
+      "source_file": "Docs\\context\\negocios.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "negocios_menu_editor",
+      "label": "Men\u00fa Editor de Item",
+      "file_type": "code",
+      "source_file": "Docs\\context\\negocios.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "negocios_menu_lista",
+      "label": "Men\u00fa Lista",
+      "file_type": "code",
+      "source_file": "Docs\\context\\negocios.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "negocios_pedido_directo",
+      "label": "Pedido Directo (Manual)",
+      "file_type": "code",
+      "source_file": "Docs\\context\\negocios.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "negocios_push_manager",
+      "label": "Push Manager",
+      "file_type": "code",
+      "source_file": "Docs\\context\\negocios.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "negocios_schedule_editor",
+      "label": "Schedule Editor",
+      "file_type": "code",
+      "source_file": "Docs\\context\\negocios.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    }
+  ],
+  "edges": [
+    {
+      "source": "docs_context_negocios",
+      "target": "negocios_app",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\context\\negocios.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_context_negocios",
+      "target": "negocios_dashboard_pedidos",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\context\\negocios.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_context_negocios",
+      "target": "negocios_pedido_directo",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\context\\negocios.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_context_negocios",
+      "target": "negocios_menu_lista",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\context\\negocios.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_context_negocios",
+      "target": "negocios_menu_editor",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\context\\negocios.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_context_negocios",
+      "target": "negocios_configuracion",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\context\\negocios.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_context_negocios",
+      "target": "negocios_historial",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\context\\negocios.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_context_negocios",
+      "target": "negocios_deuda",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\context\\negocios.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_context_negocios",
+      "target": "negocios_efectivo",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\context\\negocios.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_context_negocios",
+      "target": "negocios_chrome_tsx",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\context\\negocios.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_context_negocios",
+      "target": "negocios_schedule_editor",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\context\\negocios.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_context_negocios",
+      "target": "negocios_push_manager",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\context\\negocios.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_context_negocios",
+      "target": "at_tindivo_ui",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\context\\negocios.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_context_negocios",
+      "target": "at_tindivo_api_client",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\context\\negocios.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_context_negocios",
+      "target": "at_tindivo_contracts",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\context\\negocios.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_context_negocios",
+      "target": "supabase_realtime",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\context\\negocios.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_context_negocios",
+      "target": "bug_item_max_price",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\context\\negocios.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_context_negocios",
+      "target": "bug_on_call_driver",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\context\\negocios.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "negocios_app",
+      "target": "at_tindivo_ui",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\context\\negocios.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "negocios_app",
+      "target": "at_tindivo_api_client",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\context\\negocios.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "negocios_app",
+      "target": "at_tindivo_contracts",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\context\\negocios.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "negocios_app",
+      "target": "supabase_realtime",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\context\\negocios.md",
+      "source_location": null,
+      "weight": 1.0
+    }
+  ],
+  "hyperedges": []
+}

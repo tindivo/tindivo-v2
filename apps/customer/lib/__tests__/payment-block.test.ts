@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { checkPaymentBlock, isOrderBlocking } from '../payment-block'
 import type { AppealData, CancelledOrder } from '../payment-block'
+import { checkPaymentBlock, isOrderBlocking } from '../payment-block'
 
 function makeOrder(overrides: Partial<CancelledOrder> = {}): CancelledOrder {
   return {
@@ -27,57 +27,37 @@ describe('isOrderBlocking', () => {
 
   it('bloquea: dentro de ventana, apelación pending', () => {
     const order = makeOrder({ cancelled_at: hoursAgo(2) })
-    expect(
-      isOrderBlocking(
-        order,
-        { appeal_status: 'pending', refund_status: null },
-        NOW,
-      ),
-    ).toBe(true)
+    expect(isOrderBlocking(order, { appeal_status: 'pending', refund_status: null }, NOW)).toBe(
+      true,
+    )
   })
 
   it('bloquea: dentro de ventana, apelación in_review', () => {
     const order = makeOrder({ cancelled_at: hoursAgo(2) })
-    expect(
-      isOrderBlocking(
-        order,
-        { appeal_status: 'in_review', refund_status: null },
-        NOW,
-      ),
-    ).toBe(true)
+    expect(isOrderBlocking(order, { appeal_status: 'in_review', refund_status: null }, NOW)).toBe(
+      true,
+    )
   })
 
   it('bloquea: aprobada pero devolución pending', () => {
     const order = makeOrder({ cancelled_at: hoursAgo(2) })
     expect(
-      isOrderBlocking(
-        order,
-        { appeal_status: 'approved', refund_status: 'pending' },
-        NOW,
-      ),
+      isOrderBlocking(order, { appeal_status: 'approved', refund_status: 'pending' }, NOW),
     ).toBe(true)
   })
 
   it('NO bloquea: aprobada con devolución completed', () => {
     const order = makeOrder({ cancelled_at: hoursAgo(2) })
     expect(
-      isOrderBlocking(
-        order,
-        { appeal_status: 'approved', refund_status: 'completed' },
-        NOW,
-      ),
+      isOrderBlocking(order, { appeal_status: 'approved', refund_status: 'completed' }, NOW),
     ).toBe(false)
   })
 
   it('NO bloquea: rechazada (favor_restaurante)', () => {
     const order = makeOrder({ cancelled_at: hoursAgo(2) })
-    expect(
-      isOrderBlocking(
-        order,
-        { appeal_status: 'rejected', refund_status: null },
-        NOW,
-      ),
-    ).toBe(false)
+    expect(isOrderBlocking(order, { appeal_status: 'rejected', refund_status: null }, NOW)).toBe(
+      false,
+    )
   })
 
   // ── Fuera de ventana de 24h ────────────────────────────────────────
@@ -89,34 +69,22 @@ describe('isOrderBlocking', () => {
 
   it('bloquea: fuera de ventana pero apelación aún pending', () => {
     const order = makeOrder({ cancelled_at: hoursAgo(25) })
-    expect(
-      isOrderBlocking(
-        order,
-        { appeal_status: 'pending', refund_status: null },
-        NOW,
-      ),
-    ).toBe(true)
+    expect(isOrderBlocking(order, { appeal_status: 'pending', refund_status: null }, NOW)).toBe(
+      true,
+    )
   })
 
   it('bloquea: fuera de ventana pero apelación in_review', () => {
     const order = makeOrder({ cancelled_at: hoursAgo(30) })
-    expect(
-      isOrderBlocking(
-        order,
-        { appeal_status: 'in_review', refund_status: null },
-        NOW,
-      ),
-    ).toBe(true)
+    expect(isOrderBlocking(order, { appeal_status: 'in_review', refund_status: null }, NOW)).toBe(
+      true,
+    )
   })
 
   it('bloquea: fuera de ventana, aprobada pero refund pending', () => {
     const order = makeOrder({ cancelled_at: hoursAgo(48) })
     expect(
-      isOrderBlocking(
-        order,
-        { appeal_status: 'approved', refund_status: 'pending' },
-        NOW,
-      ),
+      isOrderBlocking(order, { appeal_status: 'approved', refund_status: 'pending' }, NOW),
     ).toBe(true)
   })
 

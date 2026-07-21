@@ -33,10 +33,7 @@ const VALIDATION_PATTERNS = [
  *   const { data, error } = await client.rpc('resolve_appeal', params)
  *   if (error) throwRpcError(error)
  */
-export function throwRpcError(error: {
-  code: string
-  message: string
-}): never {
+export function throwRpcError(error: { code: string; message: string }): never {
   // P0002: recurso no encontrado → 404
   if (error.code === 'P0002') {
     throw new DomainError(error.message, 'not_found')

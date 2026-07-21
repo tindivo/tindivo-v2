@@ -33,7 +33,7 @@ export async function GET(req: Request): Promise<Response> {
     const businessIds = businesses.map((b) => b.id)
 
     // 2. Obtener cargos pendientes para estos negocios
-    const { data: charges, error: chargeError } = await service
+    const { data: charges, error: chargeError } = await (service as any)
       .from('business_charges')
       .select('business_id, order_id, charge_type, amount')
       .in('business_id', businessIds)
@@ -43,8 +43,8 @@ export async function GET(req: Request): Promise<Response> {
 
     // 3. Agrupar cargos por negocio
     const result = businesses.map((b) => {
-      const bCharges = (charges || []).filter((c) => c.business_id === b.id)
-      
+      const bCharges = (charges || []).filter((c: any) => c.business_id === b.id)
+
       let totalCommissions = 0
       let totalDeliveryFees = 0
       let totalRefunds = 0

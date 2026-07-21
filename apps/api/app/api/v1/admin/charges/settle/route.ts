@@ -28,7 +28,7 @@ export async function POST(req: Request): Promise<Response> {
     const body = Schema.parse(await req.json())
     const service = createServiceClient()
 
-    const { data, error } = await service.rpc('settle_business_charges', {
+    const { data, error } = await (service as any).rpc('settle_business_charges', {
       p_business_id: body.business_id,
       p_charge_ids: body.charge_ids,
       p_total_amount: body.total_amount,

@@ -2083,12 +2083,7 @@
       "apps_customer_app_terminos_page_sections",
       "apps_customer_app_terminos_page_terminospage"
     ],
-    "98": [
-      "apps_motorizados",
-      "apps_negocios",
-      "supabase_realtime",
-      "vertical_slicing"
-    ],
+    "98": ["apps_motorizados", "apps_negocios", "supabase_realtime", "vertical_slicing"],
     "99": [
       "packages_contracts_tsconfig",
       "packages_contracts_tsconfig_exclude",
@@ -2118,246 +2113,79 @@
       "Docs_FASE_1_TINDIVO_audio_notification",
       "Docs_FASE_1_TINDIVO_fase1_orchestration"
     ],
-    "104": [
-      "_agents_how_to_use_graphify",
-      "deepseek",
-      "graphify_tool"
-    ],
+    "104": ["_agents_how_to_use_graphify", "deepseek", "graphify_tool"],
     "105": [
       "apps_motorizados_components_order_map_readonly_inner_mapreadonlyinner",
       "apps_motorizados_components_order_map_readonly_inner_pinicon",
       "apps_motorizados_components_order_map_readonly_inner_tsx_apps_motorizados_components_order_map_readonly_inner"
     ],
-    "106": [
-      "domain_driven_design_light",
-      "hexagonal_architecture",
-      "packages_core"
-    ],
-    "107": [
-      "glass_topbar_pattern",
-      "order_card_pattern",
-      "packages_ui"
-    ],
-    "108": [
-      "agents_rules_graphify",
-      "agents_workflows_graphify"
-    ],
-    "109": [
-      "apps_admin_app_manifest",
-      "apps_admin_app_manifest_manifest"
-    ],
-    "110": [
-      "apps_admin_next_config",
-      "apps_admin_next_config_config"
-    ],
-    "111": [
-      "apps_admin_next_env_d",
-      "apps_admin_next_env_d_rationale_5"
-    ],
-    "112": [
-      "apps_admin_postcss_config",
-      "apps_admin_postcss_config_config"
-    ],
-    "113": [
-      "apps_api_next_config",
-      "apps_api_next_config_config"
-    ],
-    "114": [
-      "apps_api_next_env_d",
-      "apps_api_next_env_d_rationale_5"
-    ],
-    "115": [
-      "apps_customer_app_manifest",
-      "apps_customer_app_manifest_manifest"
-    ],
-    "116": [
-      "apps_customer_next_config",
-      "apps_customer_next_config_config"
-    ],
-    "117": [
-      "apps_customer_next_env_d",
-      "apps_customer_next_env_d_rationale_5"
-    ],
-    "118": [
-      "apps_customer_postcss_config",
-      "apps_customer_postcss_config_config"
-    ],
-    "119": [
-      "apps_motorizados_app_manifest",
-      "apps_motorizados_app_manifest_manifest"
-    ],
-    "120": [
-      "apps_motorizados_next_config",
-      "apps_motorizados_next_config_config"
-    ],
-    "121": [
-      "apps_motorizados_next_env_d",
-      "apps_motorizados_next_env_d_rationale_5"
-    ],
-    "122": [
-      "apps_motorizados_postcss_config",
-      "apps_motorizados_postcss_config_config"
-    ],
-    "123": [
-      "apps_negocios_app_manifest",
-      "apps_negocios_app_manifest_manifest"
-    ],
-    "124": [
-      "apps_negocios_next_config",
-      "apps_negocios_next_config_config"
-    ],
-    "125": [
-      "apps_negocios_next_env_d",
-      "apps_negocios_next_env_d_rationale_5"
-    ],
-    "126": [
-      "apps_negocios_postcss_config",
-      "apps_negocios_postcss_config_config"
-    ],
-    "127": [
-      "autenticacion_jwt",
-      "supabase_auth"
-    ],
-    "128": [
-      "docs_00_vision_pt2",
-      "tindivo_menu_v2"
-    ],
-    "129": [
-      "github_workflows_ci",
-      "pnpm_workspace"
-    ],
-    "130": [
-      "idempotencia_stripe_style",
-      "table_idempotency_keys"
-    ],
-    "131": [
-      "next_js_16_app_router",
-      "react_19"
-    ],
-    "132": [
-      "outbox_pattern",
-      "table_domain_events"
-    ],
-    "133": [
-      "animations_motion"
-    ],
-    "134": [
-      "apps_admin_public_icon"
-    ],
-    "135": [
-      "apps_admin_public_sw"
-    ],
-    "136": [
-      "apps_customer_public_pay_cash"
-    ],
-    "137": [
-      "apps_customer_public_pay_plin"
-    ],
-    "138": [
-      "apps_customer_public_pay_yape"
-    ],
-    "139": [
-      "apps_customer_public_sw"
-    ],
-    "140": [
-      "apps_motorizados_public_icon"
-    ],
-    "141": [
-      "apps_motorizados_public_sw"
-    ],
-    "142": [
-      "apps_negocios_public_icon"
-    ],
-    "143": [
-      "apps_negocios_public_sw"
-    ],
-    "144": [
-      "decisions_pt2"
-    ],
-    "145": [
-      "docs_01_requerimientos_funcionales_pt2"
-    ],
-    "146": [
-      "enums"
-    ],
-    "147": [
-      "fetch_nativo"
-    ],
-    "148": [
-      "leaflet_react_leaflet"
-    ],
-    "149": [
-      "material_symbols_rounded"
-    ],
-    "150": [
-      "motion_ex_framer_v12"
-    ],
-    "151": [
-      "packages_api_client"
-    ],
-    "152": [
-      "packages_config"
-    ],
-    "153": [
-      "packages_contracts"
-    ],
-    "154": [
-      "packages_supabase"
-    ],
-    "155": [
-      "react_hook_form"
-    ],
-    "156": [
-      "row_level_security_rls"
-    ],
-    "157": [
-      "shadcn_primitives"
-    ],
-    "158": [
-      "supabase_edge_functions"
-    ],
-    "159": [
-      "supabase_storage"
-    ],
-    "160": [
-      "table_businesses"
-    ],
-    "161": [
-      "table_drivers"
-    ],
-    "162": [
-      "table_orders"
-    ],
-    "163": [
-      "table_push_subscriptions"
-    ],
-    "164": [
-      "tailwind_css_v4"
-    ],
-    "165": [
-      "tanstack_query_v5"
-    ],
-    "166": [
-      "turborepo_pnpm"
-    ],
-    "167": [
-      "typescript_5_8"
-    ],
-    "168": [
-      "typography_manrope"
-    ],
-    "169": [
-      "ui_colors"
-    ],
-    "170": [
-      "vercel"
-    ],
-    "171": [
-      "web_push_api_vapid"
-    ],
-    "172": [
-      "zustand_v5"
-    ]
+    "106": ["domain_driven_design_light", "hexagonal_architecture", "packages_core"],
+    "107": ["glass_topbar_pattern", "order_card_pattern", "packages_ui"],
+    "108": ["agents_rules_graphify", "agents_workflows_graphify"],
+    "109": ["apps_admin_app_manifest", "apps_admin_app_manifest_manifest"],
+    "110": ["apps_admin_next_config", "apps_admin_next_config_config"],
+    "111": ["apps_admin_next_env_d", "apps_admin_next_env_d_rationale_5"],
+    "112": ["apps_admin_postcss_config", "apps_admin_postcss_config_config"],
+    "113": ["apps_api_next_config", "apps_api_next_config_config"],
+    "114": ["apps_api_next_env_d", "apps_api_next_env_d_rationale_5"],
+    "115": ["apps_customer_app_manifest", "apps_customer_app_manifest_manifest"],
+    "116": ["apps_customer_next_config", "apps_customer_next_config_config"],
+    "117": ["apps_customer_next_env_d", "apps_customer_next_env_d_rationale_5"],
+    "118": ["apps_customer_postcss_config", "apps_customer_postcss_config_config"],
+    "119": ["apps_motorizados_app_manifest", "apps_motorizados_app_manifest_manifest"],
+    "120": ["apps_motorizados_next_config", "apps_motorizados_next_config_config"],
+    "121": ["apps_motorizados_next_env_d", "apps_motorizados_next_env_d_rationale_5"],
+    "122": ["apps_motorizados_postcss_config", "apps_motorizados_postcss_config_config"],
+    "123": ["apps_negocios_app_manifest", "apps_negocios_app_manifest_manifest"],
+    "124": ["apps_negocios_next_config", "apps_negocios_next_config_config"],
+    "125": ["apps_negocios_next_env_d", "apps_negocios_next_env_d_rationale_5"],
+    "126": ["apps_negocios_postcss_config", "apps_negocios_postcss_config_config"],
+    "127": ["autenticacion_jwt", "supabase_auth"],
+    "128": ["docs_00_vision_pt2", "tindivo_menu_v2"],
+    "129": ["github_workflows_ci", "pnpm_workspace"],
+    "130": ["idempotencia_stripe_style", "table_idempotency_keys"],
+    "131": ["next_js_16_app_router", "react_19"],
+    "132": ["outbox_pattern", "table_domain_events"],
+    "133": ["animations_motion"],
+    "134": ["apps_admin_public_icon"],
+    "135": ["apps_admin_public_sw"],
+    "136": ["apps_customer_public_pay_cash"],
+    "137": ["apps_customer_public_pay_plin"],
+    "138": ["apps_customer_public_pay_yape"],
+    "139": ["apps_customer_public_sw"],
+    "140": ["apps_motorizados_public_icon"],
+    "141": ["apps_motorizados_public_sw"],
+    "142": ["apps_negocios_public_icon"],
+    "143": ["apps_negocios_public_sw"],
+    "144": ["decisions_pt2"],
+    "145": ["docs_01_requerimientos_funcionales_pt2"],
+    "146": ["enums"],
+    "147": ["fetch_nativo"],
+    "148": ["leaflet_react_leaflet"],
+    "149": ["material_symbols_rounded"],
+    "150": ["motion_ex_framer_v12"],
+    "151": ["packages_api_client"],
+    "152": ["packages_config"],
+    "153": ["packages_contracts"],
+    "154": ["packages_supabase"],
+    "155": ["react_hook_form"],
+    "156": ["row_level_security_rls"],
+    "157": ["shadcn_primitives"],
+    "158": ["supabase_edge_functions"],
+    "159": ["supabase_storage"],
+    "160": ["table_businesses"],
+    "161": ["table_drivers"],
+    "162": ["table_orders"],
+    "163": ["table_push_subscriptions"],
+    "164": ["tailwind_css_v4"],
+    "165": ["tanstack_query_v5"],
+    "166": ["turborepo_pnpm"],
+    "167": ["typescript_5_8"],
+    "168": ["typography_manrope"],
+    "169": ["ui_colors"],
+    "170": ["vercel"],
+    "171": ["web_push_api_vapid"],
+    "172": ["zustand_v5"]
   },
   "cohesion": {
     "0": 0.11363636363636363,
@@ -2601,10 +2429,7 @@
     {
       "source": "Docs/00-visión.md – Part 1 (Vision)",
       "target": "Customer App Landing UI (screenshot)",
-      "source_files": [
-        "Docs/00-vision.md",
-        "tindivo-landing-v2.png"
-      ],
+      "source_files": ["Docs/00-vision.md", "tindivo-landing-v2.png"],
       "confidence": "INFERRED",
       "relation": "conceptually_related_to",
       "why": "inferred connection - not explicitly stated in source; crosses file types (doc ↔ image); connects across different repos/directories"
@@ -2612,10 +2437,7 @@
     {
       "source": "Customer App Menu UI (screenshot)",
       "target": "Docs/00-visión.md – Part 2 (Glossary)",
-      "source_files": [
-        "tindivo-menu-v2.png",
-        "Docs/00-vision.md"
-      ],
+      "source_files": ["tindivo-menu-v2.png", "Docs/00-vision.md"],
       "confidence": "INFERRED",
       "relation": "conceptually_related_to",
       "why": "inferred connection - not explicitly stated in source; crosses file types (doc ↔ image); connects across different repos/directories"
@@ -2623,10 +2445,7 @@
     {
       "source": "Customer App Landing UI (screenshot)",
       "target": "Customer App Icon (SVG)",
-      "source_files": [
-        "tindivo-landing-v2.png",
-        "apps/customer/public/icon.svg"
-      ],
+      "source_files": ["tindivo-landing-v2.png", "apps/customer/public/icon.svg"],
       "confidence": "INFERRED",
       "relation": "semantically_similar_to",
       "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; semantically similar concepts with no structural link"

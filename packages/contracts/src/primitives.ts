@@ -80,7 +80,7 @@ export function isGarbageText(val: string): boolean {
   const cleaned = val.trim().toLowerCase()
   if (/^\d+$/.test(cleaned)) return true
   if (/(.)\1{3,}/i.test(cleaned)) return true
-  
+
   const noSpaces = cleaned.replace(/\s+/g, '')
   if (noSpaces.length >= 4 && /^(.{2,})\1+$/.test(noSpaces)) return true
 
@@ -97,7 +97,8 @@ export const AddressReferenceSchema = z
     message: `La referencia no puede superar ${ADDRESS_REFERENCE_MAX} caracteres`,
   })
   .refine((v) => !isGarbageText(v), {
-    message: 'Ingresa una referencia válida y descriptiva (evita números solos o patrones repetitivos)',
+    message:
+      'Ingresa una referencia válida y descriptiva (evita números solos o patrones repetitivos)',
   })
 export type AddressReference = z.infer<typeof AddressReferenceSchema>
 

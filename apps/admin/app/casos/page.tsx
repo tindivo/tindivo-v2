@@ -45,13 +45,12 @@ export default function CasosPage() {
       {/* Tabs */}
       <div className="mb-4 flex gap-1 rounded-[14px] bg-ink/[0.04] p-1">
         {TABS.map((t) => (
-          <div
+          <button
+            type="button"
             key={t.key}
             onClick={() => setTab(t.key)}
             className={`flex-1 flex items-center justify-center gap-1.5 rounded-[10px] py-2 text-center text-[13px] font-semibold transition-colors cursor-pointer select-none ${
-              tab === t.key
-                ? 'bg-white text-ink shadow-sm'
-                : 'text-ink-muted hover:text-ink'
+              tab === t.key ? 'bg-white text-ink shadow-sm' : 'text-ink-muted hover:text-ink'
             }`}
           >
             <span>{t.label}</span>
@@ -71,7 +70,7 @@ export default function CasosPage() {
             >
               ℹ️
             </button>
-          </div>
+          </button>
         ))}
       </div>
 
@@ -89,10 +88,15 @@ export default function CasosPage() {
       {/* Modal de información de la pestaña */}
       {infoTab && (
         <div
+          role="dialog"
+          aria-modal="true"
+          tabIndex={-1}
+          onKeyDown={(e) => e.key === 'Escape' && setInfoTab(null)}
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-fade-in"
           onClick={() => setInfoTab(null)}
         >
           <div
+            role="document"
             className="w-full max-w-md rounded-[22px] bg-white p-6 shadow-2xl border border-border"
             onClick={(e) => e.stopPropagation()}
           >

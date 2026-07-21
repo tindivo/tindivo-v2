@@ -1,1 +1,159 @@
-{"nodes": [{"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_md", "label": "order-states-impact.md", "file_type": "document", "source_file": "Docs/context/order-states-impact.md", "source_location": "L1"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_evaluaci\u00f3n_impacto_de_agregar_el_estado_awaiting_payment", "label": "Evaluaci\u00f3n: Impacto de agregar el estado 'awaiting_payment'", "file_type": "document", "source_file": "Docs/context/order-states-impact.md", "source_location": "L1"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_1_enum_de_estados_database_typescript", "label": "1. Enum de estados (Database & TypeScript)", "file_type": "document", "source_file": "Docs/context/order-states-impact.md", "source_location": "L7"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_2_advance_order_rpc_base_de_datos", "label": "2. advance_order RPC (Base de Datos)", "file_type": "document", "source_file": "Docs/context/order-states-impact.md", "source_location": "L31"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_3_validate_order_rpc_base_de_datos", "label": "3. validate_order RPC (Base de Datos)", "file_type": "document", "source_file": "Docs/context/order-states-impact.md", "source_location": "L59"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_4_jobs_de_inngest_backend_scheduling", "label": "4. Jobs de Inngest (Backend & Scheduling)", "file_type": "document", "source_file": "Docs/context/order-states-impact.md", "source_location": "L68"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_5_frontend_customer_app", "label": "5. Frontend - Customer App", "file_type": "document", "source_file": "Docs/context/order-states-impact.md", "source_location": "L99"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_6_frontend_negocios_app", "label": "6. Frontend - Negocios App", "file_type": "document", "source_file": "Docs/context/order-states-impact.md", "source_location": "L112"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_7_frontend_motorizados_app", "label": "7. Frontend - Motorizados App", "file_type": "document", "source_file": "Docs/context/order-states-impact.md", "source_location": "L126"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_8_frontend_admin_app", "label": "8. Frontend - Admin App", "file_type": "document", "source_file": "Docs/context/order-states-impact.md", "source_location": "L139"}], "edges": [{"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_md", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_evaluaci\u00f3n_impacto_de_agregar_el_estado_awaiting_payment", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/order-states-impact.md", "source_location": "L1", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_evaluaci\u00f3n_impacto_de_agregar_el_estado_awaiting_payment", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_1_enum_de_estados_database_typescript", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/order-states-impact.md", "source_location": "L7", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_evaluaci\u00f3n_impacto_de_agregar_el_estado_awaiting_payment", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_2_advance_order_rpc_base_de_datos", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/order-states-impact.md", "source_location": "L31", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_evaluaci\u00f3n_impacto_de_agregar_el_estado_awaiting_payment", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_3_validate_order_rpc_base_de_datos", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/order-states-impact.md", "source_location": "L59", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_evaluaci\u00f3n_impacto_de_agregar_el_estado_awaiting_payment", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_4_jobs_de_inngest_backend_scheduling", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/order-states-impact.md", "source_location": "L68", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_evaluaci\u00f3n_impacto_de_agregar_el_estado_awaiting_payment", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_5_frontend_customer_app", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/order-states-impact.md", "source_location": "L99", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_evaluaci\u00f3n_impacto_de_agregar_el_estado_awaiting_payment", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_6_frontend_negocios_app", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/order-states-impact.md", "source_location": "L112", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_evaluaci\u00f3n_impacto_de_agregar_el_estado_awaiting_payment", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_7_frontend_motorizados_app", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/order-states-impact.md", "source_location": "L126", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_evaluaci\u00f3n_impacto_de_agregar_el_estado_awaiting_payment", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_8_frontend_admin_app", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/order-states-impact.md", "source_location": "L139", "weight": 1.0}], "input_tokens": 0, "output_tokens": 0}
+{
+  "nodes": [
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_md",
+      "label": "order-states-impact.md",
+      "file_type": "document",
+      "source_file": "Docs/context/order-states-impact.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_evaluaci\u00f3n_impacto_de_agregar_el_estado_awaiting_payment",
+      "label": "Evaluaci\u00f3n: Impacto de agregar el estado 'awaiting_payment'",
+      "file_type": "document",
+      "source_file": "Docs/context/order-states-impact.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_1_enum_de_estados_database_typescript",
+      "label": "1. Enum de estados (Database & TypeScript)",
+      "file_type": "document",
+      "source_file": "Docs/context/order-states-impact.md",
+      "source_location": "L7"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_2_advance_order_rpc_base_de_datos",
+      "label": "2. advance_order RPC (Base de Datos)",
+      "file_type": "document",
+      "source_file": "Docs/context/order-states-impact.md",
+      "source_location": "L31"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_3_validate_order_rpc_base_de_datos",
+      "label": "3. validate_order RPC (Base de Datos)",
+      "file_type": "document",
+      "source_file": "Docs/context/order-states-impact.md",
+      "source_location": "L59"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_4_jobs_de_inngest_backend_scheduling",
+      "label": "4. Jobs de Inngest (Backend & Scheduling)",
+      "file_type": "document",
+      "source_file": "Docs/context/order-states-impact.md",
+      "source_location": "L68"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_5_frontend_customer_app",
+      "label": "5. Frontend - Customer App",
+      "file_type": "document",
+      "source_file": "Docs/context/order-states-impact.md",
+      "source_location": "L99"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_6_frontend_negocios_app",
+      "label": "6. Frontend - Negocios App",
+      "file_type": "document",
+      "source_file": "Docs/context/order-states-impact.md",
+      "source_location": "L112"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_7_frontend_motorizados_app",
+      "label": "7. Frontend - Motorizados App",
+      "file_type": "document",
+      "source_file": "Docs/context/order-states-impact.md",
+      "source_location": "L126"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_8_frontend_admin_app",
+      "label": "8. Frontend - Admin App",
+      "file_type": "document",
+      "source_file": "Docs/context/order-states-impact.md",
+      "source_location": "L139"
+    }
+  ],
+  "edges": [
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_md",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_evaluaci\u00f3n_impacto_de_agregar_el_estado_awaiting_payment",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/order-states-impact.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_evaluaci\u00f3n_impacto_de_agregar_el_estado_awaiting_payment",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_1_enum_de_estados_database_typescript",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/order-states-impact.md",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_evaluaci\u00f3n_impacto_de_agregar_el_estado_awaiting_payment",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_2_advance_order_rpc_base_de_datos",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/order-states-impact.md",
+      "source_location": "L31",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_evaluaci\u00f3n_impacto_de_agregar_el_estado_awaiting_payment",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_3_validate_order_rpc_base_de_datos",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/order-states-impact.md",
+      "source_location": "L59",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_evaluaci\u00f3n_impacto_de_agregar_el_estado_awaiting_payment",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_4_jobs_de_inngest_backend_scheduling",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/order-states-impact.md",
+      "source_location": "L68",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_evaluaci\u00f3n_impacto_de_agregar_el_estado_awaiting_payment",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_5_frontend_customer_app",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/order-states-impact.md",
+      "source_location": "L99",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_evaluaci\u00f3n_impacto_de_agregar_el_estado_awaiting_payment",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_6_frontend_negocios_app",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/order-states-impact.md",
+      "source_location": "L112",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_evaluaci\u00f3n_impacto_de_agregar_el_estado_awaiting_payment",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_7_frontend_motorizados_app",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/order-states-impact.md",
+      "source_location": "L126",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_evaluaci\u00f3n_impacto_de_agregar_el_estado_awaiting_payment",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_states_impact_8_frontend_admin_app",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/order-states-impact.md",
+      "source_location": "L139",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

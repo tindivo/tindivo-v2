@@ -1,8 +1,8 @@
 import {
-  AppealStatusSchema,
-  RefundStatusSchema,
   type AdminAppealDto,
+  AppealStatusSchema,
   type CustomerAppealDto,
+  RefundStatusSchema,
 } from '@tindivo/contracts'
 import type { Tables } from '@tindivo/supabase'
 
@@ -71,9 +71,7 @@ function assertCustomerAppealFields(row: CustomerAppealRow): void {
   if (!row.order_id) missing.push('order_id')
   if (!row.appeal_status) missing.push('appeal_status')
   if (missing.length) {
-    throw new Error(
-      `Apelación de cliente incompleta ${row.id}: faltan ${missing.join(', ')}`,
-    )
+    throw new Error(`Apelación de cliente incompleta ${row.id}: faltan ${missing.join(', ')}`)
   }
 }
 
@@ -84,9 +82,7 @@ function assertAdminAppealFields(row: AdminAppealRow): void {
   if (!row.customer_user_id) missing.push('customer_user_id')
   if (!row.appeal_status) missing.push('appeal_status')
   if (missing.length) {
-    throw new Error(
-      `Apelación administrativa incompleta ${row.id}: faltan ${missing.join(', ')}`,
-    )
+    throw new Error(`Apelación administrativa incompleta ${row.id}: faltan ${missing.join(', ')}`)
   }
 }
 
@@ -98,9 +94,7 @@ export function toCustomerAppealDto(row: CustomerAppealRow): CustomerAppealDto {
     id: row.id,
     orderId: row.order_id!,
     appealStatus: AppealStatusSchema.parse(row.appeal_status),
-    refundStatus: row.refund_status
-      ? RefundStatusSchema.parse(row.refund_status)
-      : null,
+    refundStatus: row.refund_status ? RefundStatusSchema.parse(row.refund_status) : null,
     refundAmount:
       row.refund_amount !== null && row.refund_amount !== undefined
         ? Number(row.refund_amount)
@@ -130,9 +124,7 @@ export function toAdminAppealDto(row: AdminAppealRow): AdminAppealDto {
     description: row.description ?? null,
     evidenceUrl: row.evidence_url ?? null,
     appealStatus: AppealStatusSchema.parse(row.appeal_status),
-    refundStatus: row.refund_status
-      ? RefundStatusSchema.parse(row.refund_status)
-      : null,
+    refundStatus: row.refund_status ? RefundStatusSchema.parse(row.refund_status) : null,
     refundProofPath: row.refund_proof_path ?? null,
     refundAmount:
       row.refund_amount !== null && row.refund_amount !== undefined

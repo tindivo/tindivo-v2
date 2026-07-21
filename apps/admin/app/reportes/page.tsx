@@ -25,7 +25,9 @@ export default function ReportesPage() {
 
   const load = useCallback(() => {
     api
-      .get<ApiEnvelope<ReportRow[]>>('/admin/reports?status=open&exclude_type=rejected_proof_disputed')
+      .get<ApiEnvelope<ReportRow[]>>(
+        '/admin/reports?status=open&exclude_type=rejected_proof_disputed',
+      )
       .then((r) => setReports(r.data))
       .catch((e) => setError(errMsg(e)))
   }, [])
@@ -33,7 +35,11 @@ export default function ReportesPage() {
     load()
   }, [load])
 
-  async function resolve(id: string, status: 'resolved' | 'dismissed', action?: 'refund_customer' | 'none') {
+  async function resolve(
+    id: string,
+    status: 'resolved' | 'dismissed',
+    action?: 'refund_customer' | 'none',
+  ) {
     setBusyId(id)
     try {
       await api.post(`/admin/reports/${id}/resolve`, { status, resolutionAction: action })

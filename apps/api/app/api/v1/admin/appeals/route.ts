@@ -22,9 +22,7 @@ export async function GET(req: Request): Promise<Response> {
   try {
     const { token } = await requireRole(req, 'admin')
     const url = new URL(req.url)
-    const query = AppealListQuerySchema.parse(
-      Object.fromEntries(url.searchParams.entries()),
-    )
+    const query = AppealListQuerySchema.parse(Object.fromEntries(url.searchParams.entries()))
 
     const client = createUserClient(token)
     const offset = (query.page - 1) * query.per_page

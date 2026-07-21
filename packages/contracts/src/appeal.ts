@@ -2,12 +2,7 @@ import { z } from 'zod'
 
 // ── Enums ──────────────────────────────────────────────────────────────────
 
-export const AppealStatusSchema = z.enum([
-  'pending',
-  'in_review',
-  'approved',
-  'rejected',
-])
+export const AppealStatusSchema = z.enum(['pending', 'in_review', 'approved', 'rejected'])
 export type AppealStatus = z.infer<typeof AppealStatusSchema>
 
 export const RefundStatusSchema = z.enum(['pending', 'completed'])
@@ -46,10 +41,9 @@ export const RegisterRefundSchema = z
       .refine((value) => !value.includes('..') && !value.includes('\\'), {
         message: 'La ruta contiene segmentos inválidos',
       })
-      .refine(
-        (value) => /^[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)+$/.test(value),
-        { message: 'Ruta de Storage inválida — use formato carpeta/archivo.ext' },
-      ),
+      .refine((value) => /^[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)+$/.test(value), {
+        message: 'Ruta de Storage inválida — use formato carpeta/archivo.ext',
+      }),
     amount: z
       .number()
       .finite('El monto debe ser un número finito')
@@ -62,9 +56,7 @@ export type RegisterRefundPayload = z.infer<typeof RegisterRefundSchema>
 // ── Query & Response Schemas ───────────────────────────────────────────────
 
 export const AppealListQuerySchema = z.object({
-  appeal_status: z
-    .enum(['pending', 'in_review', 'approved', 'rejected'])
-    .optional(),
+  appeal_status: z.enum(['pending', 'in_review', 'approved', 'rejected']).optional(),
   refund_status: z.enum(['pending', 'completed']).optional(),
   page: z.coerce.number().int().min(1).default(1),
   per_page: z.coerce.number().int().min(1).max(100).default(50),

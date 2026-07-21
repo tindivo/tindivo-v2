@@ -1,6 +1,6 @@
 'use client'
 
-import { ADDRESS_REFERENCE_MAX, ADDRESS_REFERENCE_MIN, ADDRESS_LINE_MIN } from '@tindivo/contracts'
+import { ADDRESS_LINE_MIN, ADDRESS_REFERENCE_MAX, ADDRESS_REFERENCE_MIN } from '@tindivo/contracts'
 import { type LatLng, MapPicker } from '@/components/map-picker'
 
 /** Etiquetas de dirección (fuente única para onboarding, perfil y checkout). */
@@ -165,11 +165,7 @@ export function AddressFields({
         className="flex justify-between gap-3 text-[12px]"
         style={{ color: refOk ? 'rgba(26,22,20,0.5)' : '#C2410C' }}
       >
-        <span>
-          {refOk
-            ? 'Referencia suficiente'
-            : getReferenceError(value.reference)}
-        </span>
+        <span>{refOk ? 'Referencia suficiente' : getReferenceError(value.reference)}</span>
         <span className="tabular-nums" style={{ color: 'rgba(26,22,20,0.5)' }}>
           {value.reference.length}/{ADDRESS_REFERENCE_MAX}
         </span>

@@ -1,1 +1,351 @@
-{"nodes": [{"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_md", "label": "parte2-audit.md", "file_type": "document", "source_file": "Docs/context/parte2-audit.md", "source_location": "L1"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_auditor\u00eda_estado_actual_de_la_implementaci\u00f3n_de_la_parte_2", "label": "Auditor\u00eda: Estado Actual de la Implementaci\u00f3n de la Parte 2", "file_type": "document", "source_file": "Docs/context/parte2-audit.md", "source_location": "L1"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_a_checkout_apps_customer_app_checkout_page_tsx", "label": "A. Checkout (`apps/customer/app/checkout/page.tsx`)", "file_type": "document", "source_file": "Docs/context/parte2-audit.md", "source_location": "L7"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_1_qu\u00e9_ocurre_cuando_el_cliente_confirma_un_pedido_prepaid", "label": "1. \u00bfQu\u00e9 ocurre cuando el cliente confirma un pedido prepaid?", "file_type": "document", "source_file": "Docs/context/parte2-audit.md", "source_location": "L9"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_2_el_pedido_nace_en_pending_acceptance", "label": "2. \u00bfEl pedido nace en `pending_acceptance`?", "file_type": "document", "source_file": "Docs/context/parte2-audit.md", "source_location": "L17"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_b_tracking_del_cliente_apps_customer_app_pedido_shortid_page_tsx", "label": "B. Tracking del Cliente (`apps/customer/app/pedido/[shortId]/page.tsx`)", "file_type": "document", "source_file": "Docs/context/parte2-audit.md", "source_location": "L24"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_1_qu\u00e9_secciones_se_renderizan_en_pending_acceptance_con_payment_intent_prepaid", "label": "1. \u00bfQu\u00e9 secciones se renderizan en `pending_acceptance` con `payment_intent = 'prepaid'`?", "file_type": "document", "source_file": "Docs/context/parte2-audit.md", "source_location": "L26"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_2_se_eliminaron_o_condicionaron_las_secciones_viejas", "label": "2. \u00bfSe eliminaron o condicionaron las secciones viejas?", "file_type": "document", "source_file": "Docs/context/parte2-audit.md", "source_location": "L33"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_3_selecci\u00f3n_y_exclusividad_de_la_secci\u00f3n_de_pago", "label": "3. Selecci\u00f3n y exclusividad de la secci\u00f3n de pago", "file_type": "document", "source_file": "Docs/context/parte2-audit.md", "source_location": "L37"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_4_bloque_de_c\u00f3digo_en_page_tsx", "label": "4. Bloque de c\u00f3digo en `page.tsx`", "file_type": "document", "source_file": "Docs/context/parte2-audit.md", "source_location": "L45"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_c_app_negocios_apps_negocios_components_dashboard_pedido_detail_tsx", "label": "C. App Negocios (`apps/negocios/components/dashboard/pedido-detail.tsx`)", "file_type": "document", "source_file": "Docs/context/parte2-audit.md", "source_location": "L107"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_1_botones_y_secciones_en_pending_acceptance_para_payment_intent_prepaid", "label": "1. Botones y secciones en `pending_acceptance` para `payment_intent = 'prepaid'`", "file_type": "document", "source_file": "Docs/context/parte2-audit.md", "source_location": "L109"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_2_renderizado_de_verificar_comprobante_rechazar", "label": "2. Renderizado de \"Verificar comprobante\" / \"Rechazar\"", "file_type": "document", "source_file": "Docs/context/parte2-audit.md", "source_location": "L113"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_3_diferenciaci\u00f3n_de_botones", "label": "3. Diferenciaci\u00f3n de botones", "file_type": "document", "source_file": "Docs/context/parte2-audit.md", "source_location": "L122"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_d_endpoint_de_creaci\u00f3n_de_pedido_apps_api_app_api_v1_customer_orders_route_ts", "label": "D. Endpoint de Creaci\u00f3n de Pedido (`apps/api/app/api/v1/customer/orders/route.ts`)", "file_type": "document", "source_file": "Docs/context/parte2-audit.md", "source_location": "L128"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_1_eventos_de_inngest_emitidos_al_crear_un_pedido_prepaid", "label": "1. Eventos de Inngest emitidos al crear un pedido `prepaid`", "file_type": "document", "source_file": "Docs/context/parte2-audit.md", "source_location": "L130"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_2_confirmaci\u00f3n_de_estado_de_nacimiento", "label": "2. Confirmaci\u00f3n de estado de nacimiento", "file_type": "document", "source_file": "Docs/context/parte2-audit.md", "source_location": "L141"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_e_inngest_jobs_y_timers_apps_api_lib_inngest_functions_ts_y_client_ts", "label": "E. Inngest Jobs y Timers (`apps/api/lib/inngest/functions.ts` y `client.ts`)", "file_type": "document", "source_file": "Docs/context/parte2-audit.md", "source_location": "L146"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_1_job_orderpaymenttimeout", "label": "1. Job `orderPaymentTimeout`", "file_type": "document", "source_file": "Docs/context/parte2-audit.md", "source_location": "L148"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_2_emisi\u00f3n_de_event_order_payment_timeout", "label": "2. Emisi\u00f3n de `EVENT_ORDER_PAYMENT_TIMEOUT`", "file_type": "document", "source_file": "Docs/context/parte2-audit.md", "source_location": "L166"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_3_eliminaci\u00f3n_de_sendorderprepay_en_creaci\u00f3n", "label": "3. Eliminaci\u00f3n de `sendOrderPrepay` en creaci\u00f3n", "file_type": "document", "source_file": "Docs/context/parte2-audit.md", "source_location": "L175"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_conclusi\u00f3n_general_de_la_auditor\u00eda", "label": "Conclusi\u00f3n General de la Auditor\u00eda", "file_type": "document", "source_file": "Docs/context/parte2-audit.md", "source_location": "L180"}], "edges": [{"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_md", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_auditor\u00eda_estado_actual_de_la_implementaci\u00f3n_de_la_parte_2", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/parte2-audit.md", "source_location": "L1", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_auditor\u00eda_estado_actual_de_la_implementaci\u00f3n_de_la_parte_2", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_a_checkout_apps_customer_app_checkout_page_tsx", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/parte2-audit.md", "source_location": "L7", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_a_checkout_apps_customer_app_checkout_page_tsx", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_1_qu\u00e9_ocurre_cuando_el_cliente_confirma_un_pedido_prepaid", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/parte2-audit.md", "source_location": "L9", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_a_checkout_apps_customer_app_checkout_page_tsx", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_2_el_pedido_nace_en_pending_acceptance", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/parte2-audit.md", "source_location": "L17", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_auditor\u00eda_estado_actual_de_la_implementaci\u00f3n_de_la_parte_2", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_b_tracking_del_cliente_apps_customer_app_pedido_shortid_page_tsx", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/parte2-audit.md", "source_location": "L24", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_b_tracking_del_cliente_apps_customer_app_pedido_shortid_page_tsx", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_1_qu\u00e9_secciones_se_renderizan_en_pending_acceptance_con_payment_intent_prepaid", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/parte2-audit.md", "source_location": "L26", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_b_tracking_del_cliente_apps_customer_app_pedido_shortid_page_tsx", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_2_se_eliminaron_o_condicionaron_las_secciones_viejas", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/parte2-audit.md", "source_location": "L33", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_b_tracking_del_cliente_apps_customer_app_pedido_shortid_page_tsx", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_3_selecci\u00f3n_y_exclusividad_de_la_secci\u00f3n_de_pago", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/parte2-audit.md", "source_location": "L37", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_b_tracking_del_cliente_apps_customer_app_pedido_shortid_page_tsx", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_4_bloque_de_c\u00f3digo_en_page_tsx", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/parte2-audit.md", "source_location": "L45", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_auditor\u00eda_estado_actual_de_la_implementaci\u00f3n_de_la_parte_2", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_c_app_negocios_apps_negocios_components_dashboard_pedido_detail_tsx", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/parte2-audit.md", "source_location": "L107", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_c_app_negocios_apps_negocios_components_dashboard_pedido_detail_tsx", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_1_botones_y_secciones_en_pending_acceptance_para_payment_intent_prepaid", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/parte2-audit.md", "source_location": "L109", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_c_app_negocios_apps_negocios_components_dashboard_pedido_detail_tsx", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_2_renderizado_de_verificar_comprobante_rechazar", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/parte2-audit.md", "source_location": "L113", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_c_app_negocios_apps_negocios_components_dashboard_pedido_detail_tsx", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_3_diferenciaci\u00f3n_de_botones", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/parte2-audit.md", "source_location": "L122", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_auditor\u00eda_estado_actual_de_la_implementaci\u00f3n_de_la_parte_2", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_d_endpoint_de_creaci\u00f3n_de_pedido_apps_api_app_api_v1_customer_orders_route_ts", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/parte2-audit.md", "source_location": "L128", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_d_endpoint_de_creaci\u00f3n_de_pedido_apps_api_app_api_v1_customer_orders_route_ts", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_1_eventos_de_inngest_emitidos_al_crear_un_pedido_prepaid", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/parte2-audit.md", "source_location": "L130", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_d_endpoint_de_creaci\u00f3n_de_pedido_apps_api_app_api_v1_customer_orders_route_ts", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_2_confirmaci\u00f3n_de_estado_de_nacimiento", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/parte2-audit.md", "source_location": "L141", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_auditor\u00eda_estado_actual_de_la_implementaci\u00f3n_de_la_parte_2", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_e_inngest_jobs_y_timers_apps_api_lib_inngest_functions_ts_y_client_ts", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/parte2-audit.md", "source_location": "L146", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_e_inngest_jobs_y_timers_apps_api_lib_inngest_functions_ts_y_client_ts", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_1_job_orderpaymenttimeout", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/parte2-audit.md", "source_location": "L148", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_e_inngest_jobs_y_timers_apps_api_lib_inngest_functions_ts_y_client_ts", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_2_emisi\u00f3n_de_event_order_payment_timeout", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/parte2-audit.md", "source_location": "L166", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_e_inngest_jobs_y_timers_apps_api_lib_inngest_functions_ts_y_client_ts", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_3_eliminaci\u00f3n_de_sendorderprepay_en_creaci\u00f3n", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/parte2-audit.md", "source_location": "L175", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_auditor\u00eda_estado_actual_de_la_implementaci\u00f3n_de_la_parte_2", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_conclusi\u00f3n_general_de_la_auditor\u00eda", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/parte2-audit.md", "source_location": "L180", "weight": 1.0}], "input_tokens": 0, "output_tokens": 0}
+{
+  "nodes": [
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_md",
+      "label": "parte2-audit.md",
+      "file_type": "document",
+      "source_file": "Docs/context/parte2-audit.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_auditor\u00eda_estado_actual_de_la_implementaci\u00f3n_de_la_parte_2",
+      "label": "Auditor\u00eda: Estado Actual de la Implementaci\u00f3n de la Parte 2",
+      "file_type": "document",
+      "source_file": "Docs/context/parte2-audit.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_a_checkout_apps_customer_app_checkout_page_tsx",
+      "label": "A. Checkout (`apps/customer/app/checkout/page.tsx`)",
+      "file_type": "document",
+      "source_file": "Docs/context/parte2-audit.md",
+      "source_location": "L7"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_1_qu\u00e9_ocurre_cuando_el_cliente_confirma_un_pedido_prepaid",
+      "label": "1. \u00bfQu\u00e9 ocurre cuando el cliente confirma un pedido prepaid?",
+      "file_type": "document",
+      "source_file": "Docs/context/parte2-audit.md",
+      "source_location": "L9"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_2_el_pedido_nace_en_pending_acceptance",
+      "label": "2. \u00bfEl pedido nace en `pending_acceptance`?",
+      "file_type": "document",
+      "source_file": "Docs/context/parte2-audit.md",
+      "source_location": "L17"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_b_tracking_del_cliente_apps_customer_app_pedido_shortid_page_tsx",
+      "label": "B. Tracking del Cliente (`apps/customer/app/pedido/[shortId]/page.tsx`)",
+      "file_type": "document",
+      "source_file": "Docs/context/parte2-audit.md",
+      "source_location": "L24"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_1_qu\u00e9_secciones_se_renderizan_en_pending_acceptance_con_payment_intent_prepaid",
+      "label": "1. \u00bfQu\u00e9 secciones se renderizan en `pending_acceptance` con `payment_intent = 'prepaid'`?",
+      "file_type": "document",
+      "source_file": "Docs/context/parte2-audit.md",
+      "source_location": "L26"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_2_se_eliminaron_o_condicionaron_las_secciones_viejas",
+      "label": "2. \u00bfSe eliminaron o condicionaron las secciones viejas?",
+      "file_type": "document",
+      "source_file": "Docs/context/parte2-audit.md",
+      "source_location": "L33"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_3_selecci\u00f3n_y_exclusividad_de_la_secci\u00f3n_de_pago",
+      "label": "3. Selecci\u00f3n y exclusividad de la secci\u00f3n de pago",
+      "file_type": "document",
+      "source_file": "Docs/context/parte2-audit.md",
+      "source_location": "L37"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_4_bloque_de_c\u00f3digo_en_page_tsx",
+      "label": "4. Bloque de c\u00f3digo en `page.tsx`",
+      "file_type": "document",
+      "source_file": "Docs/context/parte2-audit.md",
+      "source_location": "L45"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_c_app_negocios_apps_negocios_components_dashboard_pedido_detail_tsx",
+      "label": "C. App Negocios (`apps/negocios/components/dashboard/pedido-detail.tsx`)",
+      "file_type": "document",
+      "source_file": "Docs/context/parte2-audit.md",
+      "source_location": "L107"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_1_botones_y_secciones_en_pending_acceptance_para_payment_intent_prepaid",
+      "label": "1. Botones y secciones en `pending_acceptance` para `payment_intent = 'prepaid'`",
+      "file_type": "document",
+      "source_file": "Docs/context/parte2-audit.md",
+      "source_location": "L109"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_2_renderizado_de_verificar_comprobante_rechazar",
+      "label": "2. Renderizado de \"Verificar comprobante\" / \"Rechazar\"",
+      "file_type": "document",
+      "source_file": "Docs/context/parte2-audit.md",
+      "source_location": "L113"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_3_diferenciaci\u00f3n_de_botones",
+      "label": "3. Diferenciaci\u00f3n de botones",
+      "file_type": "document",
+      "source_file": "Docs/context/parte2-audit.md",
+      "source_location": "L122"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_d_endpoint_de_creaci\u00f3n_de_pedido_apps_api_app_api_v1_customer_orders_route_ts",
+      "label": "D. Endpoint de Creaci\u00f3n de Pedido (`apps/api/app/api/v1/customer/orders/route.ts`)",
+      "file_type": "document",
+      "source_file": "Docs/context/parte2-audit.md",
+      "source_location": "L128"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_1_eventos_de_inngest_emitidos_al_crear_un_pedido_prepaid",
+      "label": "1. Eventos de Inngest emitidos al crear un pedido `prepaid`",
+      "file_type": "document",
+      "source_file": "Docs/context/parte2-audit.md",
+      "source_location": "L130"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_2_confirmaci\u00f3n_de_estado_de_nacimiento",
+      "label": "2. Confirmaci\u00f3n de estado de nacimiento",
+      "file_type": "document",
+      "source_file": "Docs/context/parte2-audit.md",
+      "source_location": "L141"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_e_inngest_jobs_y_timers_apps_api_lib_inngest_functions_ts_y_client_ts",
+      "label": "E. Inngest Jobs y Timers (`apps/api/lib/inngest/functions.ts` y `client.ts`)",
+      "file_type": "document",
+      "source_file": "Docs/context/parte2-audit.md",
+      "source_location": "L146"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_1_job_orderpaymenttimeout",
+      "label": "1. Job `orderPaymentTimeout`",
+      "file_type": "document",
+      "source_file": "Docs/context/parte2-audit.md",
+      "source_location": "L148"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_2_emisi\u00f3n_de_event_order_payment_timeout",
+      "label": "2. Emisi\u00f3n de `EVENT_ORDER_PAYMENT_TIMEOUT`",
+      "file_type": "document",
+      "source_file": "Docs/context/parte2-audit.md",
+      "source_location": "L166"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_3_eliminaci\u00f3n_de_sendorderprepay_en_creaci\u00f3n",
+      "label": "3. Eliminaci\u00f3n de `sendOrderPrepay` en creaci\u00f3n",
+      "file_type": "document",
+      "source_file": "Docs/context/parte2-audit.md",
+      "source_location": "L175"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_conclusi\u00f3n_general_de_la_auditor\u00eda",
+      "label": "Conclusi\u00f3n General de la Auditor\u00eda",
+      "file_type": "document",
+      "source_file": "Docs/context/parte2-audit.md",
+      "source_location": "L180"
+    }
+  ],
+  "edges": [
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_md",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_auditor\u00eda_estado_actual_de_la_implementaci\u00f3n_de_la_parte_2",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/parte2-audit.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_auditor\u00eda_estado_actual_de_la_implementaci\u00f3n_de_la_parte_2",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_a_checkout_apps_customer_app_checkout_page_tsx",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/parte2-audit.md",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_a_checkout_apps_customer_app_checkout_page_tsx",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_1_qu\u00e9_ocurre_cuando_el_cliente_confirma_un_pedido_prepaid",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/parte2-audit.md",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_a_checkout_apps_customer_app_checkout_page_tsx",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_2_el_pedido_nace_en_pending_acceptance",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/parte2-audit.md",
+      "source_location": "L17",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_auditor\u00eda_estado_actual_de_la_implementaci\u00f3n_de_la_parte_2",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_b_tracking_del_cliente_apps_customer_app_pedido_shortid_page_tsx",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/parte2-audit.md",
+      "source_location": "L24",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_b_tracking_del_cliente_apps_customer_app_pedido_shortid_page_tsx",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_1_qu\u00e9_secciones_se_renderizan_en_pending_acceptance_con_payment_intent_prepaid",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/parte2-audit.md",
+      "source_location": "L26",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_b_tracking_del_cliente_apps_customer_app_pedido_shortid_page_tsx",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_2_se_eliminaron_o_condicionaron_las_secciones_viejas",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/parte2-audit.md",
+      "source_location": "L33",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_b_tracking_del_cliente_apps_customer_app_pedido_shortid_page_tsx",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_3_selecci\u00f3n_y_exclusividad_de_la_secci\u00f3n_de_pago",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/parte2-audit.md",
+      "source_location": "L37",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_b_tracking_del_cliente_apps_customer_app_pedido_shortid_page_tsx",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_4_bloque_de_c\u00f3digo_en_page_tsx",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/parte2-audit.md",
+      "source_location": "L45",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_auditor\u00eda_estado_actual_de_la_implementaci\u00f3n_de_la_parte_2",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_c_app_negocios_apps_negocios_components_dashboard_pedido_detail_tsx",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/parte2-audit.md",
+      "source_location": "L107",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_c_app_negocios_apps_negocios_components_dashboard_pedido_detail_tsx",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_1_botones_y_secciones_en_pending_acceptance_para_payment_intent_prepaid",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/parte2-audit.md",
+      "source_location": "L109",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_c_app_negocios_apps_negocios_components_dashboard_pedido_detail_tsx",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_2_renderizado_de_verificar_comprobante_rechazar",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/parte2-audit.md",
+      "source_location": "L113",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_c_app_negocios_apps_negocios_components_dashboard_pedido_detail_tsx",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_3_diferenciaci\u00f3n_de_botones",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/parte2-audit.md",
+      "source_location": "L122",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_auditor\u00eda_estado_actual_de_la_implementaci\u00f3n_de_la_parte_2",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_d_endpoint_de_creaci\u00f3n_de_pedido_apps_api_app_api_v1_customer_orders_route_ts",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/parte2-audit.md",
+      "source_location": "L128",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_d_endpoint_de_creaci\u00f3n_de_pedido_apps_api_app_api_v1_customer_orders_route_ts",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_1_eventos_de_inngest_emitidos_al_crear_un_pedido_prepaid",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/parte2-audit.md",
+      "source_location": "L130",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_d_endpoint_de_creaci\u00f3n_de_pedido_apps_api_app_api_v1_customer_orders_route_ts",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_2_confirmaci\u00f3n_de_estado_de_nacimiento",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/parte2-audit.md",
+      "source_location": "L141",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_auditor\u00eda_estado_actual_de_la_implementaci\u00f3n_de_la_parte_2",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_e_inngest_jobs_y_timers_apps_api_lib_inngest_functions_ts_y_client_ts",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/parte2-audit.md",
+      "source_location": "L146",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_e_inngest_jobs_y_timers_apps_api_lib_inngest_functions_ts_y_client_ts",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_1_job_orderpaymenttimeout",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/parte2-audit.md",
+      "source_location": "L148",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_e_inngest_jobs_y_timers_apps_api_lib_inngest_functions_ts_y_client_ts",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_2_emisi\u00f3n_de_event_order_payment_timeout",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/parte2-audit.md",
+      "source_location": "L166",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_e_inngest_jobs_y_timers_apps_api_lib_inngest_functions_ts_y_client_ts",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_3_eliminaci\u00f3n_de_sendorderprepay_en_creaci\u00f3n",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/parte2-audit.md",
+      "source_location": "L175",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_auditor\u00eda_estado_actual_de_la_implementaci\u00f3n_de_la_parte_2",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_parte2_audit_conclusi\u00f3n_general_de_la_auditor\u00eda",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/parte2-audit.md",
+      "source_location": "L180",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

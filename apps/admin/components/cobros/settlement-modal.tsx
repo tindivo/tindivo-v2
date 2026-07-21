@@ -11,7 +11,12 @@ export interface PendingGroup {
   reportId: string | null
   date: string
   createdAt: string
-  charges: Array<{ id: string; type: string; amount: number; description: string | null }>
+  charges: Array<{
+    id: string
+    type: string
+    amount: number
+    description: string | null
+  }>
   subtotal: number
 }
 
@@ -70,7 +75,7 @@ export function SettlementModal({
     if (!groups || groups.length === 0) return []
 
     const numInput = Number.parseFloat(targetAmount.replace(',', '.'))
-    
+
     // Si no hay input numérico válido o se ingresa 0, ofrecer por defecto la opción completa
     if (isNaN(numInput) || numInput <= 0) {
       return [
@@ -101,12 +106,14 @@ export function SettlementModal({
     let upperGroupIndex = -1
 
     for (let i = 0; i < groups.length; i++) {
+      const g = groups[i]
+      if (!g) continue
       prevSum = runningSum
-      runningSum += groups[i].subtotal
+      runningSum += g.subtotal
 
       if (Math.abs(runningSum - numInput) < 0.005) {
         // Coincidencia exacta
-        const ids = groups.slice(0, i + 1).flatMap((g) => g.charges.map((c) => c.id))
+        const ids = groups.slice(0, i + 1).flatMap((item) => item.charges.map((c) => c.id))
         return [
           {
             chargeIds: ids,
@@ -155,8 +162,9 @@ export function SettlementModal({
 
   // Seleccionar automáticamente la primera opción calculada si la opción previa deja de ser válida
   useEffect(() => {
-    if (options.length > 0) {
-      setSelectedOption(options[0])
+    const firstOpt = options[0]
+    if (firstOpt) {
+      setSelectedOption(firstOpt)
     } else {
       setSelectedOption(null)
     }
@@ -183,10 +191,15 @@ export function SettlementModal({
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      tabIndex={-1}
+      onKeyDown={(e) => e.key === 'Escape' && onClose()}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-fade-in"
       onClick={onClose}
     >
       <div
+        role="document"
         className="w-full max-w-lg rounded-[22px] bg-white p-6 shadow-2xl border border-border max-h-[90vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
@@ -195,7 +208,8 @@ export function SettlementModal({
           <div>
             <h3 className="text-[16px] font-bold text-ink">Liquidar deuda — {businessName}</h3>
             <p className="text-[12px] text-ink-muted">
-              Deuda total acumulada: <span className="font-mono font-bold text-danger">{soles(balanceDue)}</span>
+              Deuda total acumulada:{' '}
+              <span className="font-mono font-bold text-danger">{soles(balanceDue)}</span>
             </p>
           </div>
           <button
@@ -230,7 +244,12 @@ export function SettlementModal({
                       </span>
                       <span className="ml-2 text-ink-subtle text-[11px]">{g.date}</span>
                       <div className="text-[11px] text-ink-muted">
-                        {g.charges.map((c) => `${c.type === 'commission' ? 'Comisión' : c.type === 'delivery_fee' ? 'Delivery' : 'Devolución'}: ${soles(c.amount)}`).join(' + ')}
+                        {g.charges
+                          .map(
+                            (c) =>
+                              `${c.type === 'commission' ? 'Comisión' : c.type === 'delivery_fee' ? 'Delivery' : 'Devolución'}: ${soles(c.amount)}`,
+                          )
+                          .join(' + ')}
                       </div>
                     </div>
                     <span className="font-mono font-semibold text-ink">{soles(g.subtotal)}</span>
@@ -272,7 +291,9 @@ export function SettlementModal({
                     Opciones de liquidación (FIFO):
                   </p>
                   {options.map((opt, i) => {
-                    const isSelected = selectedOption?.totalAmount === opt.totalAmount && selectedOption?.unitCount === opt.unitCount
+                    const isSelected =
+                      selectedOption?.totalAmount === opt.totalAmount &&
+                      selectedOption?.unitCount === opt.unitCount
                     return (
                       <label
                         key={i}
@@ -344,14 +365,8 @@ export function SettlementModal({
           <Button size="sm" variant="outline" type="button" onClick={onClose}>
             Cancelar
           </Button>
-          <Button
-            size="sm"
-            disabled={!selectedOption || busy}
-            onClick={handleSubmit}
-          >
-            {busy
-              ? 'Registrando…'
-              : `Registrar pago — ${soles(selectedOption?.totalAmount ?? 0)}`}
+          <Button size="sm" disabled={!selectedOption || busy} onClick={handleSubmit}>
+            {busy ? 'Registrando…' : `Registrar pago — ${soles(selectedOption?.totalAmount ?? 0)}`}
           </Button>
         </div>
       </div>

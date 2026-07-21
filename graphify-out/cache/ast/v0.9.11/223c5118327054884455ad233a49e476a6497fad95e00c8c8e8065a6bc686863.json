@@ -1,1 +1,207 @@
-{"nodes": [{"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_md", "label": "how-to-use-graphify.md", "file_type": "document", "source_file": ".agents/how-to-use-graphify.md", "source_location": "L1"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_gu\u00eda_de_uso_de_graphify_tindivo_project", "label": "Gu\u00eda de Uso de Graphify (Tindivo Project)", "file_type": "document", "source_file": ".agents/how-to-use-graphify.md", "source_location": "L1"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_estado_actual_del_grafo", "label": "\ud83d\udcca Estado Actual del Grafo", "file_type": "document", "source_file": ".agents/how-to-use-graphify.md", "source_location": "L7"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_configuraci\u00f3n_y_generaci\u00f3n_del_grafo", "label": "\ud83d\udee0\ufe0f Configuraci\u00f3n y Generaci\u00f3n del Grafo", "file_type": "document", "source_file": ".agents/how-to-use-graphify.md", "source_location": "L17"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_1_variables_de_entorno_y_api_key", "label": "1. Variables de Entorno y API Key", "file_type": "document", "source_file": ".agents/how-to-use-graphify.md", "source_location": "L19"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_2_instalaci\u00f3n", "label": "2. Instalaci\u00f3n", "file_type": "document", "source_file": ".agents/how-to-use-graphify.md", "source_location": "L28"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_3_comandos_disponibles_via_pnpm", "label": "3. Comandos disponibles (via pnpm)", "file_type": "document", "source_file": ".agents/how-to-use-graphify.md", "source_location": "L34"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_known_issue_graphify_label", "label": "\u26a0\ufe0f Known Issue: `graphify label`", "file_type": "document", "source_file": ".agents/how-to-use-graphify.md", "source_location": "L51"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_qu\u00e9_puedes_hacer_con_graphify", "label": "\ud83d\udd0d \u00bfQu\u00e9 puedes hacer con Graphify?", "file_type": "document", "source_file": ".agents/how-to-use-graphify.md", "source_location": "L56"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_1_mostrar_la_relaci\u00f3n_entre_dos_partes_del_proyecto_graphify_path", "label": "1. Mostrar la relaci\u00f3n entre dos partes del proyecto (`graphify path`)", "file_type": "document", "source_file": ".agents/how-to-use-graphify.md", "source_location": "L58"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_2_explicar_una_funcionalidad_o_componente_graphify_explain_query", "label": "2. Explicar una funcionalidad o componente (`graphify explain` / `query`)", "file_type": "document", "source_file": ".agents/how-to-use-graphify.md", "source_location": "L67"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_previsualizaci\u00f3n_del_grafo", "label": "\ud83d\udcca Previsualizaci\u00f3n del Grafo", "file_type": "document", "source_file": ".agents/how-to-use-graphify.md", "source_location": "L82"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_actualizaci\u00f3n", "label": "\ud83d\udd04 Actualizaci\u00f3n", "file_type": "document", "source_file": ".agents/how-to-use-graphify.md", "source_location": "L94"}], "edges": [{"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_md", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_gu\u00eda_de_uso_de_graphify_tindivo_project", "relation": "contains", "confidence": "EXTRACTED", "source_file": ".agents/how-to-use-graphify.md", "source_location": "L1", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_gu\u00eda_de_uso_de_graphify_tindivo_project", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_estado_actual_del_grafo", "relation": "contains", "confidence": "EXTRACTED", "source_file": ".agents/how-to-use-graphify.md", "source_location": "L7", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_gu\u00eda_de_uso_de_graphify_tindivo_project", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_configuraci\u00f3n_y_generaci\u00f3n_del_grafo", "relation": "contains", "confidence": "EXTRACTED", "source_file": ".agents/how-to-use-graphify.md", "source_location": "L17", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_configuraci\u00f3n_y_generaci\u00f3n_del_grafo", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_1_variables_de_entorno_y_api_key", "relation": "contains", "confidence": "EXTRACTED", "source_file": ".agents/how-to-use-graphify.md", "source_location": "L19", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_configuraci\u00f3n_y_generaci\u00f3n_del_grafo", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_2_instalaci\u00f3n", "relation": "contains", "confidence": "EXTRACTED", "source_file": ".agents/how-to-use-graphify.md", "source_location": "L28", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_configuraci\u00f3n_y_generaci\u00f3n_del_grafo", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_3_comandos_disponibles_via_pnpm", "relation": "contains", "confidence": "EXTRACTED", "source_file": ".agents/how-to-use-graphify.md", "source_location": "L34", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_configuraci\u00f3n_y_generaci\u00f3n_del_grafo", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_known_issue_graphify_label", "relation": "contains", "confidence": "EXTRACTED", "source_file": ".agents/how-to-use-graphify.md", "source_location": "L51", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_gu\u00eda_de_uso_de_graphify_tindivo_project", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_qu\u00e9_puedes_hacer_con_graphify", "relation": "contains", "confidence": "EXTRACTED", "source_file": ".agents/how-to-use-graphify.md", "source_location": "L56", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_qu\u00e9_puedes_hacer_con_graphify", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_1_mostrar_la_relaci\u00f3n_entre_dos_partes_del_proyecto_graphify_path", "relation": "contains", "confidence": "EXTRACTED", "source_file": ".agents/how-to-use-graphify.md", "source_location": "L58", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_qu\u00e9_puedes_hacer_con_graphify", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_2_explicar_una_funcionalidad_o_componente_graphify_explain_query", "relation": "contains", "confidence": "EXTRACTED", "source_file": ".agents/how-to-use-graphify.md", "source_location": "L67", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_gu\u00eda_de_uso_de_graphify_tindivo_project", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_previsualizaci\u00f3n_del_grafo", "relation": "contains", "confidence": "EXTRACTED", "source_file": ".agents/how-to-use-graphify.md", "source_location": "L82", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_gu\u00eda_de_uso_de_graphify_tindivo_project", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_actualizaci\u00f3n", "relation": "contains", "confidence": "EXTRACTED", "source_file": ".agents/how-to-use-graphify.md", "source_location": "L94", "weight": 1.0}], "input_tokens": 0, "output_tokens": 0}
+{
+  "nodes": [
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_md",
+      "label": "how-to-use-graphify.md",
+      "file_type": "document",
+      "source_file": ".agents/how-to-use-graphify.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_gu\u00eda_de_uso_de_graphify_tindivo_project",
+      "label": "Gu\u00eda de Uso de Graphify (Tindivo Project)",
+      "file_type": "document",
+      "source_file": ".agents/how-to-use-graphify.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_estado_actual_del_grafo",
+      "label": "\ud83d\udcca Estado Actual del Grafo",
+      "file_type": "document",
+      "source_file": ".agents/how-to-use-graphify.md",
+      "source_location": "L7"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_configuraci\u00f3n_y_generaci\u00f3n_del_grafo",
+      "label": "\ud83d\udee0\ufe0f Configuraci\u00f3n y Generaci\u00f3n del Grafo",
+      "file_type": "document",
+      "source_file": ".agents/how-to-use-graphify.md",
+      "source_location": "L17"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_1_variables_de_entorno_y_api_key",
+      "label": "1. Variables de Entorno y API Key",
+      "file_type": "document",
+      "source_file": ".agents/how-to-use-graphify.md",
+      "source_location": "L19"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_2_instalaci\u00f3n",
+      "label": "2. Instalaci\u00f3n",
+      "file_type": "document",
+      "source_file": ".agents/how-to-use-graphify.md",
+      "source_location": "L28"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_3_comandos_disponibles_via_pnpm",
+      "label": "3. Comandos disponibles (via pnpm)",
+      "file_type": "document",
+      "source_file": ".agents/how-to-use-graphify.md",
+      "source_location": "L34"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_known_issue_graphify_label",
+      "label": "\u26a0\ufe0f Known Issue: `graphify label`",
+      "file_type": "document",
+      "source_file": ".agents/how-to-use-graphify.md",
+      "source_location": "L51"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_qu\u00e9_puedes_hacer_con_graphify",
+      "label": "\ud83d\udd0d \u00bfQu\u00e9 puedes hacer con Graphify?",
+      "file_type": "document",
+      "source_file": ".agents/how-to-use-graphify.md",
+      "source_location": "L56"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_1_mostrar_la_relaci\u00f3n_entre_dos_partes_del_proyecto_graphify_path",
+      "label": "1. Mostrar la relaci\u00f3n entre dos partes del proyecto (`graphify path`)",
+      "file_type": "document",
+      "source_file": ".agents/how-to-use-graphify.md",
+      "source_location": "L58"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_2_explicar_una_funcionalidad_o_componente_graphify_explain_query",
+      "label": "2. Explicar una funcionalidad o componente (`graphify explain` / `query`)",
+      "file_type": "document",
+      "source_file": ".agents/how-to-use-graphify.md",
+      "source_location": "L67"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_previsualizaci\u00f3n_del_grafo",
+      "label": "\ud83d\udcca Previsualizaci\u00f3n del Grafo",
+      "file_type": "document",
+      "source_file": ".agents/how-to-use-graphify.md",
+      "source_location": "L82"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_actualizaci\u00f3n",
+      "label": "\ud83d\udd04 Actualizaci\u00f3n",
+      "file_type": "document",
+      "source_file": ".agents/how-to-use-graphify.md",
+      "source_location": "L94"
+    }
+  ],
+  "edges": [
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_md",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_gu\u00eda_de_uso_de_graphify_tindivo_project",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/how-to-use-graphify.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_gu\u00eda_de_uso_de_graphify_tindivo_project",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_estado_actual_del_grafo",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/how-to-use-graphify.md",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_gu\u00eda_de_uso_de_graphify_tindivo_project",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_configuraci\u00f3n_y_generaci\u00f3n_del_grafo",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/how-to-use-graphify.md",
+      "source_location": "L17",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_configuraci\u00f3n_y_generaci\u00f3n_del_grafo",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_1_variables_de_entorno_y_api_key",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/how-to-use-graphify.md",
+      "source_location": "L19",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_configuraci\u00f3n_y_generaci\u00f3n_del_grafo",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_2_instalaci\u00f3n",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/how-to-use-graphify.md",
+      "source_location": "L28",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_configuraci\u00f3n_y_generaci\u00f3n_del_grafo",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_3_comandos_disponibles_via_pnpm",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/how-to-use-graphify.md",
+      "source_location": "L34",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_configuraci\u00f3n_y_generaci\u00f3n_del_grafo",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_known_issue_graphify_label",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/how-to-use-graphify.md",
+      "source_location": "L51",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_gu\u00eda_de_uso_de_graphify_tindivo_project",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_qu\u00e9_puedes_hacer_con_graphify",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/how-to-use-graphify.md",
+      "source_location": "L56",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_qu\u00e9_puedes_hacer_con_graphify",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_1_mostrar_la_relaci\u00f3n_entre_dos_partes_del_proyecto_graphify_path",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/how-to-use-graphify.md",
+      "source_location": "L58",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_qu\u00e9_puedes_hacer_con_graphify",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_2_explicar_una_funcionalidad_o_componente_graphify_explain_query",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/how-to-use-graphify.md",
+      "source_location": "L67",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_gu\u00eda_de_uso_de_graphify_tindivo_project",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_previsualizaci\u00f3n_del_grafo",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/how-to-use-graphify.md",
+      "source_location": "L82",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_gu\u00eda_de_uso_de_graphify_tindivo_project",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_agents_how_to_use_graphify_actualizaci\u00f3n",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/how-to-use-graphify.md",
+      "source_location": "L94",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

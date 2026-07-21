@@ -94,12 +94,13 @@ export async function POST(req: Request): Promise<Response> {
         .select('id, base_price')
         .in('id', itemIds)
 
-      const { data: modifiersData } = modifierIds.length > 0
-        ? await service
-            .from('menu_modifier_options')
-            .select('id, additional_price')
-            .in('id', modifierIds)
-        : { data: [] }
+      const { data: modifiersData } =
+        modifierIds.length > 0
+          ? await service
+              .from('menu_modifier_options')
+              .select('id, additional_price')
+              .in('id', modifierIds)
+          : { data: [] }
 
       let calculatedSubtotal = 0
       for (const item of body.items) {
@@ -251,8 +252,7 @@ export async function POST(req: Request): Promise<Response> {
         try {
           // Agenda el timer según el estado: validación para contraentrega con strike (5m) · aceptación (5m).
           // El pago prepago se realiza en tracking tras la aceptación del negocio.
-          if (created.status === 'validando')
-            await sendOrderValidation({ orderId: created.id })
+          if (created.status === 'validando') await sendOrderValidation({ orderId: created.id })
           else await sendOrderCreated({ orderId: created.id })
 
           // Fallback / obtención de shortId

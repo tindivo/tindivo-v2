@@ -1,10 +1,10 @@
 'use client'
 
 import { ApiError } from '@tindivo/api-client'
-import { getSupabaseBrowser } from '@/lib/supabase/client'
-import { api } from '@/lib/api'
 import Image from 'next/image'
 import { useCallback, useEffect, useState } from 'react'
+import { api } from '@/lib/api'
+import { getSupabaseBrowser } from '@/lib/supabase/client'
 
 interface PrepayInfo {
   businessName: string
@@ -99,10 +99,14 @@ export function PrepayProofSection({ orderId, proofAttempt, onProofUploaded }: P
       }
       const attempt = proofAttempt + 1
       const ts = Date.now()
-      const ext = pendingFile.type === 'image/png' ? 'png'
-        : pendingFile.type === 'image/jpeg' ? 'jpg'
-        : pendingFile.type === 'image/webp' ? 'webp'
-        : 'jpg'
+      const ext =
+        pendingFile.type === 'image/png'
+          ? 'png'
+          : pendingFile.type === 'image/jpeg'
+            ? 'jpg'
+            : pendingFile.type === 'image/webp'
+              ? 'webp'
+              : 'jpg'
       const path = `${userId}/${orderId}/attempt-${attempt}-${ts}.${ext}`
       const { error: upErr } = await supabase.storage
         .from('payment-proofs')
@@ -237,12 +241,7 @@ export function PrepayProofSection({ orderId, proofAttempt, onProofUploaded }: P
               Adjuntar comprobante de pago
             </span>
             <span className="text-[11px] text-muted">Formatos JPG, PNG (Captura de pantalla)</span>
-            <input
-              type="file"
-              accept="image/*"
-              className="sr-only"
-              onChange={handleFileChange}
-            />
+            <input type="file" accept="image/*" className="sr-only" onChange={handleFileChange} />
           </label>
         )}
       </div>

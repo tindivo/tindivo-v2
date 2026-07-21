@@ -82,9 +82,7 @@ export const ORDER_EVENT_DATA_SCHEMAS: Record<string, z.ZodTypeAny> = {
  * archivos en Storage (proof_path, evidence_url, proofPath, etc.).
  * Útil para saber qué campos convertir a signed URLs.
  */
-export function extractStoragePaths(
-  data: Record<string, unknown> | null | undefined,
-): string[] {
+export function extractStoragePaths(data: Record<string, unknown> | null | undefined): string[] {
   if (!data) return []
   const paths: string[] = []
   const keys = ['proof_path', 'evidence_url', 'proofPath']

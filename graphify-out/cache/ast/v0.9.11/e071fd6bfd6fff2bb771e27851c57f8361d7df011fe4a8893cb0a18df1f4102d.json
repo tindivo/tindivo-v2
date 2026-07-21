@@ -1,1 +1,255 @@
-{"nodes": [{"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_md", "label": "sidebar-ui-audit.md", "file_type": "document", "source_file": "Docs/context/sidebar-ui-audit.md", "source_location": "L1"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_auditor\u00eda_ui_sidebar_de_detalle_de_pedido_en_app_negocios", "label": "Auditor\u00eda UI: Sidebar de detalle de pedido en App Negocios", "file_type": "document", "source_file": "Docs/context/sidebar-ui-audit.md", "source_location": "L1"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_1_estructura_y_scroll", "label": "1. Estructura y scroll", "file_type": "document", "source_file": "Docs/context/sidebar-ui-audit.md", "source_location": "L8"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_la_sidebar_tiene_overflow_y_scroll_o_auto_o_el_contenido_se_corta_si_excede_la_altura_de_la_pantalla", "label": "\u00bfLa sidebar tiene overflow-y scroll o auto? \u00bfO el contenido se corta si excede la altura de la pantalla?", "file_type": "document", "source_file": "Docs/context/sidebar-ui-audit.md", "source_location": "L10"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_qu\u00e9_componente_envuelve_la_sidebar_es_un_div_fijo_un_sheet_un_panel_lateral_muestra_las_clases_css_del_contenedor", "label": "\u00bfQu\u00e9 componente envuelve la sidebar? \u00bfEs un div fijo, un Sheet, un panel lateral? Muestra las clases CSS del contenedor.", "file_type": "document", "source_file": "Docs/context/sidebar-ui-audit.md", "source_location": "L15"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_2_secciones_que_se_renderizan_en_estado_validando", "label": "2. Secciones que se renderizan en estado 'validando'", "file_type": "document", "source_file": "Docs/context/sidebar-ui-audit.md", "source_location": "L55"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_lista_de_secciones_de_arriba_a_abajo_para_pedido_prepaid_en_validando", "label": "Lista de secciones de arriba a abajo para pedido prepaid en `validando`:", "file_type": "document", "source_file": "Docs/context/sidebar-ui-audit.md", "source_location": "L57"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_selector_de_tiempo_de_preparaci\u00f3n_deber\u00eda_mostrarse_en_validando_o_solo_en_confirmed", "label": "Selector de \"TIEMPO DE PREPARACI\u00d3N\": \u00bfDeber\u00eda mostrarse en 'validando' o solo en 'confirmed'?", "file_type": "document", "source_file": "Docs/context/sidebar-ui-audit.md", "source_location": "L69"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_3_datos_de_validaci\u00f3n_incompletos", "label": "3. Datos de validaci\u00f3n incompletos", "file_type": "document", "source_file": "Docs/context/sidebar-ui-audit.md", "source_location": "L74"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_renderizado_de_la_gu\u00eda_de_validaci\u00f3n", "label": "Renderizado de la gu\u00eda de validaci\u00f3n:", "file_type": "document", "source_file": "Docs/context/sidebar-ui-audit.md", "source_location": "L76"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_disponibilidad_de_datos_en_ordervm", "label": "Disponibilidad de datos en `OrderVM`:", "file_type": "document", "source_file": "Docs/context/sidebar-ui-audit.md", "source_location": "L99"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_4_imagen_del_comprobante", "label": "4. Imagen del comprobante", "file_type": "document", "source_file": "Docs/context/sidebar-ui-audit.md", "source_location": "L108"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_se_muestra_la_captura_subida_por_el_cliente", "label": "\u00bfSe muestra la captura subida por el cliente?", "file_type": "document", "source_file": "Docs/context/sidebar-ui-audit.md", "source_location": "L110"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_5_botones_de_acci\u00f3n", "label": "5. Botones de acci\u00f3n", "file_type": "document", "source_file": "Docs/context/sidebar-ui-audit.md", "source_location": "L129"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_posicionamiento_de_los_botones", "label": "Posicionamiento de los botones:", "file_type": "document", "source_file": "Docs/context/sidebar-ui-audit.md", "source_location": "L131"}, {"id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_etiqueta_del_bot\u00f3n_de_aprobaci\u00f3n", "label": "Etiqueta del bot\u00f3n de aprobaci\u00f3n:", "file_type": "document", "source_file": "Docs/context/sidebar-ui-audit.md", "source_location": "L148"}], "edges": [{"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_md", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_auditor\u00eda_ui_sidebar_de_detalle_de_pedido_en_app_negocios", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/sidebar-ui-audit.md", "source_location": "L1", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_auditor\u00eda_ui_sidebar_de_detalle_de_pedido_en_app_negocios", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_1_estructura_y_scroll", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/sidebar-ui-audit.md", "source_location": "L8", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_1_estructura_y_scroll", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_la_sidebar_tiene_overflow_y_scroll_o_auto_o_el_contenido_se_corta_si_excede_la_altura_de_la_pantalla", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/sidebar-ui-audit.md", "source_location": "L10", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_1_estructura_y_scroll", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_qu\u00e9_componente_envuelve_la_sidebar_es_un_div_fijo_un_sheet_un_panel_lateral_muestra_las_clases_css_del_contenedor", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/sidebar-ui-audit.md", "source_location": "L15", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_auditor\u00eda_ui_sidebar_de_detalle_de_pedido_en_app_negocios", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_2_secciones_que_se_renderizan_en_estado_validando", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/sidebar-ui-audit.md", "source_location": "L55", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_2_secciones_que_se_renderizan_en_estado_validando", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_lista_de_secciones_de_arriba_a_abajo_para_pedido_prepaid_en_validando", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/sidebar-ui-audit.md", "source_location": "L57", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_2_secciones_que_se_renderizan_en_estado_validando", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_selector_de_tiempo_de_preparaci\u00f3n_deber\u00eda_mostrarse_en_validando_o_solo_en_confirmed", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/sidebar-ui-audit.md", "source_location": "L69", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_auditor\u00eda_ui_sidebar_de_detalle_de_pedido_en_app_negocios", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_3_datos_de_validaci\u00f3n_incompletos", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/sidebar-ui-audit.md", "source_location": "L74", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_3_datos_de_validaci\u00f3n_incompletos", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_renderizado_de_la_gu\u00eda_de_validaci\u00f3n", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/sidebar-ui-audit.md", "source_location": "L76", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_3_datos_de_validaci\u00f3n_incompletos", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_disponibilidad_de_datos_en_ordervm", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/sidebar-ui-audit.md", "source_location": "L99", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_auditor\u00eda_ui_sidebar_de_detalle_de_pedido_en_app_negocios", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_4_imagen_del_comprobante", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/sidebar-ui-audit.md", "source_location": "L108", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_4_imagen_del_comprobante", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_se_muestra_la_captura_subida_por_el_cliente", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/sidebar-ui-audit.md", "source_location": "L110", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_auditor\u00eda_ui_sidebar_de_detalle_de_pedido_en_app_negocios", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_5_botones_de_acci\u00f3n", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/sidebar-ui-audit.md", "source_location": "L129", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_5_botones_de_acci\u00f3n", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_posicionamiento_de_los_botones", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/sidebar-ui-audit.md", "source_location": "L131", "weight": 1.0}, {"source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_5_botones_de_acci\u00f3n", "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_etiqueta_del_bot\u00f3n_de_aprobaci\u00f3n", "relation": "contains", "confidence": "EXTRACTED", "source_file": "Docs/context/sidebar-ui-audit.md", "source_location": "L148", "weight": 1.0}], "input_tokens": 0, "output_tokens": 0}
+{
+  "nodes": [
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_md",
+      "label": "sidebar-ui-audit.md",
+      "file_type": "document",
+      "source_file": "Docs/context/sidebar-ui-audit.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_auditor\u00eda_ui_sidebar_de_detalle_de_pedido_en_app_negocios",
+      "label": "Auditor\u00eda UI: Sidebar de detalle de pedido en App Negocios",
+      "file_type": "document",
+      "source_file": "Docs/context/sidebar-ui-audit.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_1_estructura_y_scroll",
+      "label": "1. Estructura y scroll",
+      "file_type": "document",
+      "source_file": "Docs/context/sidebar-ui-audit.md",
+      "source_location": "L8"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_la_sidebar_tiene_overflow_y_scroll_o_auto_o_el_contenido_se_corta_si_excede_la_altura_de_la_pantalla",
+      "label": "\u00bfLa sidebar tiene overflow-y scroll o auto? \u00bfO el contenido se corta si excede la altura de la pantalla?",
+      "file_type": "document",
+      "source_file": "Docs/context/sidebar-ui-audit.md",
+      "source_location": "L10"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_qu\u00e9_componente_envuelve_la_sidebar_es_un_div_fijo_un_sheet_un_panel_lateral_muestra_las_clases_css_del_contenedor",
+      "label": "\u00bfQu\u00e9 componente envuelve la sidebar? \u00bfEs un div fijo, un Sheet, un panel lateral? Muestra las clases CSS del contenedor.",
+      "file_type": "document",
+      "source_file": "Docs/context/sidebar-ui-audit.md",
+      "source_location": "L15"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_2_secciones_que_se_renderizan_en_estado_validando",
+      "label": "2. Secciones que se renderizan en estado 'validando'",
+      "file_type": "document",
+      "source_file": "Docs/context/sidebar-ui-audit.md",
+      "source_location": "L55"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_lista_de_secciones_de_arriba_a_abajo_para_pedido_prepaid_en_validando",
+      "label": "Lista de secciones de arriba a abajo para pedido prepaid en `validando`:",
+      "file_type": "document",
+      "source_file": "Docs/context/sidebar-ui-audit.md",
+      "source_location": "L57"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_selector_de_tiempo_de_preparaci\u00f3n_deber\u00eda_mostrarse_en_validando_o_solo_en_confirmed",
+      "label": "Selector de \"TIEMPO DE PREPARACI\u00d3N\": \u00bfDeber\u00eda mostrarse en 'validando' o solo en 'confirmed'?",
+      "file_type": "document",
+      "source_file": "Docs/context/sidebar-ui-audit.md",
+      "source_location": "L69"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_3_datos_de_validaci\u00f3n_incompletos",
+      "label": "3. Datos de validaci\u00f3n incompletos",
+      "file_type": "document",
+      "source_file": "Docs/context/sidebar-ui-audit.md",
+      "source_location": "L74"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_renderizado_de_la_gu\u00eda_de_validaci\u00f3n",
+      "label": "Renderizado de la gu\u00eda de validaci\u00f3n:",
+      "file_type": "document",
+      "source_file": "Docs/context/sidebar-ui-audit.md",
+      "source_location": "L76"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_disponibilidad_de_datos_en_ordervm",
+      "label": "Disponibilidad de datos en `OrderVM`:",
+      "file_type": "document",
+      "source_file": "Docs/context/sidebar-ui-audit.md",
+      "source_location": "L99"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_4_imagen_del_comprobante",
+      "label": "4. Imagen del comprobante",
+      "file_type": "document",
+      "source_file": "Docs/context/sidebar-ui-audit.md",
+      "source_location": "L108"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_se_muestra_la_captura_subida_por_el_cliente",
+      "label": "\u00bfSe muestra la captura subida por el cliente?",
+      "file_type": "document",
+      "source_file": "Docs/context/sidebar-ui-audit.md",
+      "source_location": "L110"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_5_botones_de_acci\u00f3n",
+      "label": "5. Botones de acci\u00f3n",
+      "file_type": "document",
+      "source_file": "Docs/context/sidebar-ui-audit.md",
+      "source_location": "L129"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_posicionamiento_de_los_botones",
+      "label": "Posicionamiento de los botones:",
+      "file_type": "document",
+      "source_file": "Docs/context/sidebar-ui-audit.md",
+      "source_location": "L131"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_etiqueta_del_bot\u00f3n_de_aprobaci\u00f3n",
+      "label": "Etiqueta del bot\u00f3n de aprobaci\u00f3n:",
+      "file_type": "document",
+      "source_file": "Docs/context/sidebar-ui-audit.md",
+      "source_location": "L148"
+    }
+  ],
+  "edges": [
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_md",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_auditor\u00eda_ui_sidebar_de_detalle_de_pedido_en_app_negocios",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/sidebar-ui-audit.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_auditor\u00eda_ui_sidebar_de_detalle_de_pedido_en_app_negocios",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_1_estructura_y_scroll",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/sidebar-ui-audit.md",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_1_estructura_y_scroll",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_la_sidebar_tiene_overflow_y_scroll_o_auto_o_el_contenido_se_corta_si_excede_la_altura_de_la_pantalla",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/sidebar-ui-audit.md",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_1_estructura_y_scroll",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_qu\u00e9_componente_envuelve_la_sidebar_es_un_div_fijo_un_sheet_un_panel_lateral_muestra_las_clases_css_del_contenedor",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/sidebar-ui-audit.md",
+      "source_location": "L15",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_auditor\u00eda_ui_sidebar_de_detalle_de_pedido_en_app_negocios",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_2_secciones_que_se_renderizan_en_estado_validando",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/sidebar-ui-audit.md",
+      "source_location": "L55",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_2_secciones_que_se_renderizan_en_estado_validando",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_lista_de_secciones_de_arriba_a_abajo_para_pedido_prepaid_en_validando",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/sidebar-ui-audit.md",
+      "source_location": "L57",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_2_secciones_que_se_renderizan_en_estado_validando",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_selector_de_tiempo_de_preparaci\u00f3n_deber\u00eda_mostrarse_en_validando_o_solo_en_confirmed",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/sidebar-ui-audit.md",
+      "source_location": "L69",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_auditor\u00eda_ui_sidebar_de_detalle_de_pedido_en_app_negocios",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_3_datos_de_validaci\u00f3n_incompletos",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/sidebar-ui-audit.md",
+      "source_location": "L74",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_3_datos_de_validaci\u00f3n_incompletos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_renderizado_de_la_gu\u00eda_de_validaci\u00f3n",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/sidebar-ui-audit.md",
+      "source_location": "L76",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_3_datos_de_validaci\u00f3n_incompletos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_disponibilidad_de_datos_en_ordervm",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/sidebar-ui-audit.md",
+      "source_location": "L99",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_auditor\u00eda_ui_sidebar_de_detalle_de_pedido_en_app_negocios",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_4_imagen_del_comprobante",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/sidebar-ui-audit.md",
+      "source_location": "L108",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_4_imagen_del_comprobante",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_se_muestra_la_captura_subida_por_el_cliente",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/sidebar-ui-audit.md",
+      "source_location": "L110",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_auditor\u00eda_ui_sidebar_de_detalle_de_pedido_en_app_negocios",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_5_botones_de_acci\u00f3n",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/sidebar-ui-audit.md",
+      "source_location": "L129",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_5_botones_de_acci\u00f3n",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_posicionamiento_de_los_botones",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/sidebar-ui-audit.md",
+      "source_location": "L131",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_5_botones_de_acci\u00f3n",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_ui_audit_etiqueta_del_bot\u00f3n_de_aprobaci\u00f3n",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/sidebar-ui-audit.md",
+      "source_location": "L148",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

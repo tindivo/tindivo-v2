@@ -40,7 +40,9 @@ try {
   }
 } catch {}
 
-const defaultUrl = tempRef ? `https://${tempRef}.supabase.co` : process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+const defaultUrl = tempRef
+  ? `https://${tempRef}.supabase.co`
+  : process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const SUPABASE_URL = (process.env.TEMP_SUPABASE_URL || defaultUrl).replace(/\/$/, '')
 const SERVICE_KEY = process.env.TEMP_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 
@@ -51,12 +53,12 @@ if (!SUPABASE_URL || !SERVICE_KEY) {
 
 const HEADERS = {
   'Content-Type': 'application/json',
-  'apikey': SERVICE_KEY,
-  'Authorization': `Bearer ${SERVICE_KEY}`,
-  'Prefer': 'return=representation',
+  apikey: SERVICE_KEY,
+  Authorization: `Bearer ${SERVICE_KEY}`,
+  Prefer: 'return=representation',
 }
 
-const SEED_COUNT = 10  // número de eventos a sembrar
+const SEED_COUNT = 10 // número de eventos a sembrar
 
 async function seedEvents(): Promise<string[]> {
   const events = Array.from({ length: SEED_COUNT }, (_, i) => ({
@@ -83,10 +85,10 @@ async function seedEvents(): Promise<string[]> {
 
 async function cleanupEvents(ids: string[]) {
   if (ids.length === 0) return
-  const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/outbox_events?id=in.(${ids.join(',')})`,
-    { method: 'DELETE', headers: HEADERS }
-  )
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/outbox_events?id=in.(${ids.join(',')})`, {
+    method: 'DELETE',
+    headers: HEADERS,
+  })
   if (!res.ok) {
     const t = await res.text()
     console.warn(`Advertencia al limpiar eventos sembrados (${res.status}): ${t}`)
@@ -115,7 +117,9 @@ async function runConcurrencyTest() {
   let seededIds: string[] = []
   try {
     seededIds = await seedEvents()
-    console.log(`[SETUP] Sembrados ${seededIds.length} eventos con IDs: ${seededIds.slice(0, 3).join(', ')}...`)
+    console.log(
+      `[SETUP] Sembrados ${seededIds.length} eventos con IDs: ${seededIds.slice(0, 3).join(', ')}...`,
+    )
   } catch (e: any) {
     console.error('[SETUP] Falló la siembra:', e.message)
     process.exit(1)
@@ -136,11 +140,17 @@ async function runConcurrencyTest() {
 
   console.log(`Worker 1 reclamó: ${claimed1.length} eventos`)
   if (claimed1.length > 0)
-    console.log('  IDs Worker 1:', claimed1.map((r) => r.out_event_id || r.out_id))
+    console.log(
+      '  IDs Worker 1:',
+      claimed1.map((r) => r.out_event_id || r.out_id),
+    )
 
   console.log(`Worker 2 reclamó: ${claimed2.length} eventos`)
   if (claimed2.length > 0)
-    console.log('  IDs Worker 2:', claimed2.map((r) => r.out_event_id || r.out_id))
+    console.log(
+      '  IDs Worker 2:',
+      claimed2.map((r) => r.out_event_id || r.out_id),
+    )
 
   const totalClaimed = claimed1.length + claimed2.length
   console.log(`\nTotal reclamados entre ambos workers: ${totalClaimed} / ${SEED_COUNT}`)
