@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { Icon, ScreenHeader } from "@/components/ui";
 import { api } from "@/lib/api";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
-
+import { TINDIVO_SUPPORT_WHATSAPP } from "@tindivo/core";
 interface OrderItem {
   item_name_snapshot: string;
   quantity: number;
@@ -224,7 +224,7 @@ export default function PedidosPage() {
                   </div>
                   {isCancelled && (
                     <a
-                      href={`https://wa.me/51906550166?text=${encodeURIComponent(`Hola, tengo un problema con mi pedido #TDV-${o.short_id}. Motivo: `)}`}
+                      href={`https://wa.me/${TINDIVO_SUPPORT_WHATSAPP}?text=${encodeURIComponent(`Hola, tengo un problema con mi pedido #TDV-${o.short_id}. Motivo: `)}`}
                       target="_blank"
                       rel="noreferrer"
                       className="mt-1.5 flex items-center justify-center gap-1 text-[11px] text-ink-subtle hover:underline"

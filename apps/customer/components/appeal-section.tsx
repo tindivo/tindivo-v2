@@ -1,6 +1,7 @@
 ﻿'use client'
 
 import { ApiError } from '@tindivo/api-client'
+import { TINDIVO_SUPPORT_WHATSAPP } from '@tindivo/core'
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '@/lib/api'
 
@@ -85,7 +86,7 @@ export function AppealSection({
     }
   }
 
-  const whatsappUrl = `https://wa.me/51999999999?text=${encodeURIComponent(
+  const whatsappUrl = `https://wa.me/${TINDIVO_SUPPORT_WHATSAPP}?text=${encodeURIComponent(
     `Hola, tengo un problema con mi pedido #TDV-${shortId}. Motivo: `,
   )}`
 

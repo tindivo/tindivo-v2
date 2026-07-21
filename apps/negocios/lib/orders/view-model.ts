@@ -26,7 +26,7 @@ export const ORDER_SELECT =
   'prep_time_minutes,estimated_ready_at,prep_extension_count,client_pays_with,change_to_give,' +
   'yape_amount,cash_amount,requires_validation,validation_reason_code,risk_flags,' +
   'driver_id,created_at,pending_acceptance_at,validating_at,' +
-  'waiting_driver_at,picked_up_at,delivered_at,cancelled_at,cancel_note,driver:drivers(full_name)'
+  'waiting_driver_at,picked_up_at,delivered_at,cancelled_at,cancel_note,cancel_reason,driver:drivers(full_name)'
 
 const limaTime = new Intl.DateTimeFormat('es-PE', {
   hour: '2-digit',
@@ -75,6 +75,7 @@ export interface OrderRow {
   delivered_at: string | null
   cancelled_at: string | null
   cancel_note: string | null
+  cancel_reason: string | null
   driver?: { full_name: string | null } | null
 }
 
@@ -114,6 +115,7 @@ export interface OrderVM {
   createdAtFormatted: string | null
   closedAt: string | null
   cancelReason: string | null
+  cancelReasonCode: string | null
 }
 
 // Timeouts canónicos (DECISIONS.md §10). Configurables en app_settings.timers;
@@ -259,6 +261,7 @@ export function toOrderVM(row: OrderRow, now: number = Date.now()): OrderVM {
     createdAtFormatted: fmtTime(row.created_at),
     closedAt: fmtTime(row.delivered_at ?? row.cancelled_at),
     cancelReason: row.status === 'cancelled' ? row.cancel_note : null,
+    cancelReasonCode: row.status === 'cancelled' ? row.cancel_reason : null,
   }
 }
 

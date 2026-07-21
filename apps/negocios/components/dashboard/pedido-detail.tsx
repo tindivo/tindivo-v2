@@ -1099,8 +1099,8 @@ export function DetailScreen({
           gap: 12,
         }}
       >
-        {/* Banner de apelación en revisión */}
-        {hasAppeal && (
+        {/* Banner de apelación: solo para proof_rejected_final */}
+        {hasAppeal && order.status === 'cancelled' && order.cancelReasonCode === 'proof_rejected_final' && (
           <div
             style={{
               background: '#FEF3C7',

@@ -113,6 +113,9 @@ importers:
       '@tindivo/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@tindivo/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@tindivo/supabase':
         specifier: workspace:*
         version: link:../../packages/supabase
@@ -247,6 +250,9 @@ importers:
       '@tindivo/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@tindivo/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@tindivo/supabase':
         specifier: workspace:*
         version: link:../../packages/supabase
@@ -314,6 +320,9 @@ importers:
       '@tindivo/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@tindivo/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@tindivo/supabase':
         specifier: workspace:*
         version: link:../../packages/supabase
@@ -375,6 +384,9 @@ importers:
       '@tindivo/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@tindivo/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@tindivo/supabase':
         specifier: workspace:*
         version: link:../../packages/supabase
