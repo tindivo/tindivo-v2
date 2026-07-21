@@ -2215,8 +2215,8 @@
     "semantic_hash": ""
   },
   "apps/api/lib/mappers/appeal.ts": {
-    "mtime": 1784587861.3390615,
-    "ast_hash": "1c699403fe85621d0fc30a406faa84d5",
+    "mtime": 1784612368.6966171,
+    "ast_hash": "8c7a26781d61e892a8e822fbe90dad2d",
     "semantic_hash": ""
   },
   "apps/api/lib/outbox/processor.ts": {
@@ -2225,13 +2225,13 @@
     "semantic_hash": ""
   },
   "packages/contracts/src/__tests__/appeal.test.ts": {
-    "mtime": 1784587808.0450482,
-    "ast_hash": "4a57b4b3ede2f6a953b43bc9294c1533",
+    "mtime": 1784612607.24723,
+    "ast_hash": "f320473350dd38a7c669b72af0fe089a",
     "semantic_hash": ""
   },
   "packages/contracts/src/appeal.ts": {
-    "mtime": 1784587682.5582519,
-    "ast_hash": "92cef5542982bb211ccd8b5059d959bb",
+    "mtime": 1784612343.8240428,
+    "ast_hash": "d0b593d187dbcb039840fedecd12b3a1",
     "semantic_hash": ""
   },
   "scripts/rollback_0068.sql": {
@@ -2280,8 +2280,8 @@
     "semantic_hash": ""
   },
   "apps/api/app/api/v1/admin/appeals/route.ts": {
-    "mtime": 1784588383.4106371,
-    "ast_hash": "1825e446da44488157189579639e073e",
+    "mtime": 1784612385.3799648,
+    "ast_hash": "6afbcbe413cbf985f1362d0dc871289d",
     "semantic_hash": ""
   },
   "apps/api/lib/inngest/__tests__/appeal-fallback.test.ts": {
@@ -2330,8 +2330,8 @@
     "semantic_hash": ""
   },
   "apps/admin/app/apelaciones/page.tsx": {
-    "mtime": 1784609729.4641478,
-    "ast_hash": "8c2ec0d694b97f14f149089b4f575614",
+    "mtime": 1784612425.6655421,
+    "ast_hash": "76f25104913929a12df484bac6a371bc",
     "semantic_hash": ""
   },
   "packages/core/src/constants.ts": {
@@ -2365,8 +2365,8 @@
     "semantic_hash": ""
   },
   "apps/admin/app/apelaciones/[id]/page.tsx": {
-    "mtime": 1784610785.1696863,
-    "ast_hash": "a8949f0eed08c2a3bd6248a8789b98ee",
+    "mtime": 1784613269.1303394,
+    "ast_hash": "623249cad86416ee08cb5d1d08af9a57",
     "semantic_hash": ""
   }
 }
