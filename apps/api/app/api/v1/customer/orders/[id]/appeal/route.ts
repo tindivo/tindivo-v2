@@ -4,6 +4,7 @@ import { requireRole } from '@/lib/http/auth'
 import { corsHeaders, handleOptions } from '@/lib/http/cors'
 import { handleError, ok } from '@/lib/http/problem'
 import { getRequestId } from '@/lib/http/request-id'
+import { toCustomerAppealDto } from '@/lib/mappers/appeal'
 import { processPendingOutboxEvents } from '@/lib/outbox/processor'
 import { createUserClient } from '@/lib/supabase/user'
 
@@ -13,8 +14,45 @@ const Schema = z.object({
   description: z.string().trim().max(500).optional(),
 })
 
+const OrderIdSchema = z.string().uuid()
+
 export function OPTIONS(req: Request): Response {
   return handleOptions(req)
+}
+
+/**
+ * GET: consulta el estado de la apelación del cliente.
+ * Usa createUserClient(token) (RLS activa) + filtro explícito de customer_user_id
+ * como doble barrera. Solo devuelve campos del CustomerAppealDto.
+ */
+export async function GET(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> },
+): Promise<Response> {
+  const requestId = getRequestId(req)
+  try {
+    const { token, user } = await requireRole(req, 'customer')
+    const { id } = await params
+    const orderId = OrderIdSchema.parse(id)
+
+    const client = createUserClient(token)
+    const { data, error } = await client
+      .from('reports')
+      .select(
+        'id, order_id, appeal_status, refund_status, refund_amount, refund_completed_at, appeal_deadline, description, status, created_at, updated_at',
+      )
+      .eq('order_id', orderId)
+      .eq('type', 'rejected_proof_disputed')
+      .eq('customer_user_id', user.id)
+      .maybeSingle()
+
+    if (error) throw new Error(error.message)
+    if (!data) throw new DomainError('Apelación no encontrada', 'not_found')
+
+    return ok(toCustomerAppealDto(data), { headers: corsHeaders(req) })
+  } catch (err) {
+    return handleError(err, requestId, req)
+  }
 }
 
 /** El cliente apela el rechazo final de su comprobante de pago prepago. */

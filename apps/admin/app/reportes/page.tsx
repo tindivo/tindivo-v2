@@ -45,6 +45,18 @@ export default function ReportesPage() {
     }
   }
 
+  async function resolveAppeal(id: string, resolution: 'favor_cliente' | 'favor_restaurante') {
+    setBusyId(id)
+    try {
+      await api.post(`/admin/appeals/${id}/resolve`, { resolution })
+      load()
+    } catch (e) {
+      setError(errMsg(e))
+    } finally {
+      setBusyId(null)
+    }
+  }
+
   return (
     <div className="mx-auto max-w-3xl">
       <SectionHeader
@@ -109,17 +121,17 @@ export default function ReportesPage() {
                       <Button
                         size="sm"
                         disabled={busyId === r.id}
-                        onClick={() => resolve(r.id, 'resolved', 'refund_customer')}
+                        onClick={() => resolveAppeal(r.id, 'favor_cliente')}
                       >
-                        Reembolsar cliente
+                        A favor del cliente
                       </Button>
                       <Button
                         size="sm"
                         variant="ghost"
                         disabled={busyId === r.id}
-                        onClick={() => resolve(r.id, 'dismissed')}
+                        onClick={() => resolveAppeal(r.id, 'favor_restaurante')}
                       >
-                        Descartar
+                        A favor del restaurante
                       </Button>
                     </>
                   ) : (
