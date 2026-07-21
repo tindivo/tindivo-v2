@@ -3,8 +3,13 @@
 import { useEffect, useState } from 'react'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import { pointInPolygon } from '@/lib/coverage'
+import {
+  checkPaymentBlock,
+  type AppealData,
+  type CancelledOrder,
+} from '@/lib/payment-block'
 
-type GateType = 'phone' | 'address'
+type GateType = 'phone' | 'address' | 'pending_payment_resolution'
 
 type OrderReadiness = {
   ready: boolean
@@ -12,6 +17,7 @@ type OrderReadiness = {
   missingSteps: GateType[]
   loading: boolean
   refetch: () => Promise<void>
+  blockedOrderShortId: string | null
 }
 
 export function useOrderReadiness(): OrderReadiness {
@@ -20,6 +26,8 @@ export function useOrderReadiness(): OrderReadiness {
     phone_verified_at: string | null
   } | null>(null)
   const [hasValidAddress, setHasValidAddress] = useState(false)
+  const [isPaymentBlocked, setIsPaymentBlocked] = useState(false)
+  const [blockedOrderShortId, setBlockedOrderShortId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   const supabase = getSupabaseBrowser()
@@ -32,6 +40,8 @@ export function useOrderReadiness(): OrderReadiness {
       if (!user) {
         setProfile(null)
         setHasValidAddress(false)
+        setIsPaymentBlocked(false)
+        setBlockedOrderShortId(null)
         return
       }
 
@@ -74,6 +84,40 @@ export function useOrderReadiness(): OrderReadiness {
       } else {
         setHasValidAddress(false)
       }
+
+      // 3. Verificar pedidos con proof_rejected_final sin resolver
+      const { data: cancelledOrders } = await supabase
+        .from('orders')
+        .select('id, short_id, cancelled_at')
+        .eq('customer_user_id', user.id)
+        .eq('status', 'cancelled')
+        .eq('cancel_reason', 'proof_rejected_final')
+
+      // Precargar todas las apelaciones en una sola query
+      const orderIds = (cancelledOrders ?? []).map((o) => o.id)
+      let appealsMap: Record<string, AppealData> = {}
+
+      if (orderIds.length > 0) {
+        const { data: appeals } = await supabase
+          .from('reports')
+          .select('order_id, appeal_status, refund_status')
+          .in('order_id', orderIds)
+          .eq('type', 'rejected_proof_disputed')
+
+        if (appeals) {
+          for (const a of appeals) {
+            if (a.order_id) appealsMap[a.order_id] = a
+          }
+        }
+      }
+
+      const blockResult = checkPaymentBlock(
+        (cancelledOrders ?? []) as CancelledOrder[],
+        (orderId) => appealsMap[orderId] ?? null,
+      )
+
+      setIsPaymentBlocked(blockResult.blocked)
+      setBlockedOrderShortId(blockResult.blockedOrderShortId)
     } catch (err) {
       console.error('[useOrderReadiness] Error fetching readiness:', err)
     } finally {
@@ -95,11 +139,16 @@ export function useOrderReadiness(): OrderReadiness {
     missingSteps.push('address')
   }
 
+  if (isPaymentBlocked) {
+    missingSteps.push('pending_payment_resolution')
+  }
+
   return {
     ready: !loading && missingSteps.length === 0,
     currentGate: missingSteps[0] ?? null,
     missingSteps,
     loading,
     refetch: fetchReadiness,
+    blockedOrderShortId,
   }
 }

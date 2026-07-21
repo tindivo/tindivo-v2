@@ -10,6 +10,7 @@ import { buildCartWhatsAppMessage, telLink, waOrderLink } from '@/lib/whatsapp'
 import { useOrderReadiness } from '@/hooks/use-order-readiness'
 import { PhoneGateModal } from '@/components/gates/phone-gate-modal'
 import { AddressGateModal } from '@/components/gates/address-gate-modal'
+import { PaymentResolutionGateModal } from '@/components/gates/payment-resolution-gate-modal'
 
 const soles = (n: number) => `S/ ${n.toFixed(2)}`
 
@@ -24,7 +25,7 @@ function CartCtas({ layout, onNavigate }: { layout: 'row' | 'block'; onNavigate?
   const { loading: bizLoading, info } = useBusinessOrdering(cart.businessId)
   
   // Gates de preparación del pedido
-  const { ready, currentGate, refetch, loading: readinessLoading } = useOrderReadiness()
+  const { ready, currentGate, blockedOrderShortId, refetch, loading: readinessLoading } = useOrderReadiness()
   const [showGate, setShowGate] = useState(false)
 
   const block = layout === 'block'
@@ -135,6 +136,16 @@ function CartCtas({ layout, onNavigate }: { layout: 'row' | 'block'; onNavigate?
         <AddressGateModal
           onComplete={handleGateComplete}
           onClose={() => setShowGate(false)}
+        />
+      )}
+
+      {showGate && currentGate === 'pending_payment_resolution' && blockedOrderShortId && (
+        <PaymentResolutionGateModal
+          shortId={blockedOrderShortId}
+          onClose={() => {
+            setShowGate(false)
+            refetch()
+          }}
         />
       )}
     </>

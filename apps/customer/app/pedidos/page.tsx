@@ -21,6 +21,7 @@ interface OrderRow {
   delivery_method: string
   created_at: string
   business_id: string
+  cancel_reason: string | null
   customer_order_items: OrderItem[]
 }
 
@@ -83,7 +84,7 @@ export default function PedidosPage() {
       const { data: rows } = await supabase
         .from('orders')
         .select(
-          'id,short_id,status,order_amount,delivery_fee,delivery_method,created_at,business_id,customer_order_items(item_name_snapshot,quantity)',
+          'id,short_id,status,order_amount,delivery_fee,delivery_method,created_at,business_id,cancel_reason,customer_order_items(item_name_snapshot,quantity)',
         )
         .order('created_at', { ascending: false })
         .limit(40)
@@ -176,14 +177,35 @@ export default function PedidosPage() {
                         Ver seguimiento
                       </Link>
                     )}
-                    <Link
-                      href={`/negocio/${o.business_id}`}
-                      className="flex-1 rounded-[12px] py-2.5 text-center font-semibold text-[13px]"
-                      style={{ background: 'rgba(26,22,20,0.06)', color: '#1A1614' }}
-                    >
-                      Volver a pedir
-                    </Link>
+                    {isCancelled && o.cancel_reason === 'proof_rejected_final' && (
+                      <Link
+                        href={`/pedido/${o.short_id}`}
+                        className="flex-1 rounded-[12px] py-2.5 text-center font-semibold text-[13px] text-white"
+                        style={{ background: '#DC2626' }}
+                      >
+                        Ver caso de pago
+                      </Link>
+                    )}
+                    {(!isCancelled || o.cancel_reason !== 'proof_rejected_final') && (
+                      <Link
+                        href={`/negocio/${o.business_id}`}
+                        className="flex-1 rounded-[12px] py-2.5 text-center font-semibold text-[13px]"
+                        style={{ background: 'rgba(26,22,20,0.06)', color: '#1A1614' }}
+                      >
+                        Volver a pedir
+                      </Link>
+                    )}
                   </div>
+                  {isCancelled && (
+                    <a
+                      href={`https://wa.me/51999999999?text=${encodeURIComponent(`Hola, tengo un problema con mi pedido #TDV-${o.short_id}. Motivo: `)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-1.5 flex items-center justify-center gap-1 text-[11px] text-ink-subtle hover:underline"
+                    >
+                      <span>💬</span> ¿Problema con este pedido?
+                    </a>
+                  )}
                 </div>
               )
             })}

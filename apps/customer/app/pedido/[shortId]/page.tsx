@@ -9,6 +9,7 @@ import { Icon, ScreenHeader, SupportLink } from '@/components/ui'
 import { api } from '@/lib/api'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import { PrepayProofSection } from '@/components/prepay-proof-section'
+import { AppealSection } from '@/components/appeal-section'
 
 const soles = (n: number | null | undefined) => (n == null ? '—' : `S/ ${Number(n).toFixed(2)}`)
 
@@ -40,6 +41,10 @@ interface Tracking {
   paymentIntent: string
   cancelReason: string | null
   hasAppeal?: boolean
+  appealStatus?: string | null
+  refundStatus?: string | null
+  refundAmount?: number | null
+  cancelledAt?: string | null
   /** Efectivo: con cuánto paga el cliente y su vuelto (migración 0042). */
   paysWith?: number | null
   changeToGive?: number | null
@@ -181,20 +186,6 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
     }
   }
 
-  const [appealing, setAppealing] = useState(false)
-  async function doAppeal() {
-    if (!ownedId) return
-    setAppealing(true)
-    try {
-      await api.post(`/customer/orders/${ownedId}/appeal`, {})
-      await load()
-    } catch (e) {
-      setError(e instanceof ApiError ? (e.problem.detail ?? e.message) : 'Error al apelar')
-    } finally {
-      setAppealing(false)
-    }
-  }
-
   if (error && !data) {
     return (
       <main className="mx-auto max-w-[768px] px-4 pt-16 text-center">
@@ -213,8 +204,8 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
     )
   }
 
-  // ── Pantalla de cancelado (terminal) ──────────────────────────────────
-  if (data.status === 'cancelled') {
+  // ── Pantalla de cancelado (terminal, excepto proof_rejected_final) ───
+  if (data.status === 'cancelled' && data.cancelReason !== 'proof_rejected_final') {
     const c = cancelledCopy(data.cancelReason)
     return (
       <main className="mx-auto flex min-h-dvh max-w-[768px] flex-col bg-surface px-6">
@@ -253,6 +244,53 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
           <div className="mt-2.5 flex justify-center">
             <SupportLink orderShortId={data.shortId} />
           </div>
+        </div>
+      </main>
+    )
+  }
+
+  // ── Pantalla dedicada: proof_rejected_final ──────────────────────────
+  if (data.status === 'cancelled' && data.cancelReason === 'proof_rejected_final') {
+    return (
+      <main className="mx-auto flex min-h-dvh max-w-[768px] flex-col bg-surface">
+        <ScreenHeader title="Tu pedido" onBack={() => router.back()} />
+
+        <div className="flex-1 px-4 pt-4">
+          {/* Header del pedido */}
+          <div
+            className="rounded-[22px] bg-white p-5"
+            style={{ border: '1px solid rgba(26,22,20,0.05)' }}
+          >
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-[12px] text-ink-subtle">
+                #{data.shortId}
+              </span>
+              <span className="rounded-full bg-red-50 px-2.5 py-0.5 font-bold text-[10px] text-red-600 uppercase tracking-wider">
+                Pago no verificado
+              </span>
+            </div>
+            <p className="mt-1.5 text-[14px] font-semibold text-ink">
+              {data.businessName}
+            </p>
+            <p className="mt-0.5 text-[13px] text-ink-muted">
+              Total: {soles(data.total)}
+            </p>
+          </div>
+
+          {/* Sección de apelación */}
+          <AppealSection
+            orderId={ownedId}
+            shortId={data.shortId}
+            hasAppeal={data.hasAppeal ?? false}
+            total={data.total}
+            onAppealCreated={load}
+          />
+        </div>
+
+        <div className="px-4 pt-4 pb-6">
+          <Link href="/" className="t-btn t-btn-ghost t-btn-block">
+            ← Volver al inicio
+          </Link>
         </div>
       </main>
     )
@@ -376,32 +414,7 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
                 </div>
               )}
 
-              {/* 5. cancelled por rechazo final */}
-              {data.status === 'cancelled' && data.cancelReason === 'proof_rejected_final' && (
-                <div
-                  className="mt-3.5 rounded-[22px] bg-red-50 p-4 font-sans text-left text-red-950"
-                  style={{ border: '1px solid #FECDD3' }}
-                >
-                  <div className="font-semibold text-[14px] text-red-900">
-                    {data.hasAppeal ? 'Apelación en revisión' : 'Pedido cancelado'}
-                  </div>
-                  <p className="mt-1 text-[13px] text-red-800">
-                    {data.hasAppeal
-                      ? 'Apelación enviada. Tindivo revisará tu pago en un máximo de 24 horas y te contactará por WhatsApp.'
-                      : 'El comprobante de pago no pudo validarse tras 2 intentos. Si realizaste el pago, puedes solicitar una revisión.'}
-                  </p>
-                  {!data.hasAppeal && ownedId && (
-                    <button
-                      type="button"
-                      onClick={doAppeal}
-                      disabled={appealing}
-                      className="mt-3 inline-flex items-center gap-1.5 rounded-xl border border-red-300 bg-white px-3.5 py-1.5 font-sans font-semibold text-[13px] text-red-700 shadow-sm transition-opacity hover:opacity-90 disabled:opacity-50"
-                    >
-                      {appealing ? 'Enviando...' : 'Apelar rechazo'}
-                    </button>
-                  )}
-                </div>
-              )}
+              {/* 5. proof_rejected_final se maneja en pantalla dedicada (arriba) */}
             </>
           )}
 
