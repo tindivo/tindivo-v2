@@ -1,16 +1,16 @@
 # Graph Report - tindivo-v2  (2026-07-20)
 
 ## Corpus Check
-- 441 files · ~344,060 words
+- 454 files · ~353,911 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 3455 nodes · 5955 edges · 461 communities (261 shown, 200 thin omitted)
+- 3554 nodes · 6189 edges · 464 communities (264 shown, 200 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 23 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `686d3642`
+- Built from commit: `71a00921`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -458,21 +458,24 @@
 - short-id.ts
 - route.ts
 - route.ts
+- phone-gate-modal.tsx
 - route.ts
 - Revisión UI: Botones y Contenido en Sidebar (`pedido-detail.tsx`)
 - route.ts
 - 6. Elevación y sombras
 - 12. Pantalla · Prepago Yape
+- index.ts
 - 17. Pantalla · Editor de direcciones
+- 6. CI/CD con GitHub Actions
 
 ## God Nodes (most connected - your core abstractions)
-1. `createServiceClient()` - 132 edges
-2. `corsHeaders()` - 130 edges
-3. `handleError()` - 126 edges
-4. `getRequestId()` - 124 edges
-5. `ok()` - 122 edges
-6. `handleOptions()` - 118 edges
-7. `requireRole()` - 115 edges
+1. `corsHeaders()` - 139 edges
+2. `handleError()` - 135 edges
+3. `getRequestId()` - 133 edges
+4. `createServiceClient()` - 132 edges
+5. `ok()` - 131 edges
+6. `handleOptions()` - 126 edges
+7. `requireRole()` - 124 edges
 8. `DomainError` - 44 edges
 9. `getSupabaseBrowser()` - 43 edges
 10. `soles()` - 36 edges
@@ -496,15 +499,15 @@
 - **Core Business Concepts** — concept_prepago, concept_contraentrega, concept_strikes, concept_fondo_contingencia, concept_banda, concept_equilibrio, concept_bandeja_reportes [INFERRED 0.85]
 - **Order Lifecycle Rules** — rule_umbral_prepago, rule_llamada_validacion, rule_timer_aceptacion, rule_timer_prepago, rule_timer_espera, rule_banda_dos [INFERRED 0.80]
 
-## Communities (461 total, 200 thin omitted)
+## Communities (464 total, 200 thin omitted)
 
 ### Community 0 - "ok"
 Cohesion: 0.09
-Nodes (53): GET(), OPTIONS(), OPTIONS(), POST(), Schema, OPTIONS(), POST(), GET() (+45 more)
+Nodes (34): CreateSchema, GET(), OPTIONS(), POST(), GET(), OPTIONS(), GET(), OPTIONS() (+26 more)
 
 ### Community 1 - "enum-drift.ts"
-Cohesion: 0.05
-Nodes (41): serverEnv, ServerEnvSchema, createServerSupabase(), createUserClient(), AppealReportDto, AppealStatus, AppealStatusSchema, CreateAppealPayload (+33 more)
+Cohesion: 0.09
+Nodes (21): DOMAIN_ENUMS, Assert, _business_primary_capability, _cancel_reason, _cash_settlement_status, _contingency_actor_charged, _contingency_advance_status, _delivery_method (+13 more)
 
 ### Community 2 - "scripts"
 Cohesion: 0.12
@@ -515,24 +518,24 @@ Cohesion: 0.05
 Nodes (43): 10. COMPONENTES DE UI — App Negocios (restaurante), 11. INNGEST JOBS, 12. TIPOS DE TYPESCRIPT, 13. EVALUACIÓN Y RECOMENDACIÓN TÉCNICA: SECCIONES DE AUDITORÍA EN ADMIN, 1. Bandeja de Reportes: `ReportesPage`, 1. ESTRUCTURA DEL MONOREPO, 1. Hook Gate de Checkout: `useOrderReadiness`, 1. Pantalla de Subida de Comprobante: `PrepayProofSection` (+35 more)
 
 ### Community 4 - "soles"
-Cohesion: 0.08
-Nodes (31): cardHover, CardProps, clickProps(), CocinaCard(), COOKING_STATE_STYLE, CookingStatusLine(), NuevoCard(), RepartoCard() (+23 more)
+Cohesion: 0.09
+Nodes (20): CANCEL_REASONS, DetailActions, DetailItem, DetailScreen(), PausarModal(), PAUSE_OPTS, PaySectionCash(), PaySectionMixed() (+12 more)
 
 ### Community 5 - "enums.ts"
 Cohesion: 0.04
-Nodes (44): BUSINESS_PRIMARY_CAPABILITIES, BusinessPrimaryCapabilitySchema, CANCEL_REASONS, CancelReason, CancelReasonSchema, CASH_SETTLEMENT_STATUSES, CashSettlementStatus, CashSettlementStatusSchema (+36 more)
+Nodes (45): BUSINESS_PRIMARY_CAPABILITIES, BusinessPrimaryCapabilitySchema, CANCEL_REASONS, CancelReason, CancelReasonSchema, CASH_SETTLEMENT_STATUSES, CashSettlementStatus, CashSettlementStatusSchema (+37 more)
 
 ### Community 6 - "service.ts"
-Cohesion: 0.10
-Nodes (32): OPTIONS(), PUT(), Schema, PUT(), Schema, CreateSchema, POST(), OPTIONS() (+24 more)
+Cohesion: 0.11
+Nodes (30): CreateSchema, POST(), isBusinessPaused(), OPTIONS(), POST(), CreateSchema, INCIDENT_TYPES, POST() (+22 more)
 
 ### Community 7 - "handleOptions"
 Cohesion: 0.15
-Nodes (11): Advance, ADVANCE_STATE, AdvanceCard(), DeudaPage(), fmtDate(), Settlement, SETTLEMENT_STATE, SettlementRow() (+3 more)
+Nodes (8): CashRow, KPI_TONE, KpiTone, SettlementCard(), SummaryHero(), NavId, DashboardShell(), DashboardSidebar()
 
 ### Community 8 - "page.tsx"
-Cohesion: 0.09
-Nodes (35): CheckoutPage(), bricolage, geist, jetbrains, metadata, viewport, Category, MenuItem (+27 more)
+Cohesion: 0.10
+Nodes (26): CheckoutPage(), bricolage, geist, jetbrains, metadata, viewport, CartButton(), CartCtas() (+18 more)
 
 ### Community 9 - "dependencies"
 Cohesion: 0.06
@@ -547,8 +550,8 @@ Cohesion: 0.06
 Nodes (34): source, assist, actions, enabled, files, ignoreUnknown, includes, formatter (+26 more)
 
 ### Community 12 - "page.tsx"
-Cohesion: 0.09
-Nodes (29): Address, CASH_CHIPS, CashChoice, CustomerProfile, GeoBlockKind, GpsValidationPayload, OrderDetail(), OrderResult (+21 more)
+Cohesion: 0.08
+Nodes (34): Address, CASH_CHIPS, CashChoice, CustomerProfile, GeoBlockKind, GpsValidationPayload, OrderDetail(), OrderResult (+26 more)
 
 ### Community 13 - "auth.ts"
 Cohesion: 0.06
@@ -556,7 +559,7 @@ Nodes (32): 1. Timeout de confirmación, 2. Cancelación del cliente, 3. Método
 
 ### Community 14 - "dependencies"
 Cohesion: 0.06
-Nodes (32): dependencies, leaflet, next, react, react-dom, react-leaflet, @supabase/ssr, @supabase/supabase-js (+24 more)
+Nodes (34): dependencies, leaflet, next, react, react-dom, react-leaflet, @supabase/ssr, @supabase/supabase-js (+26 more)
 
 ### Community 15 - "home.tsx"
 Cohesion: 0.09
@@ -567,8 +570,8 @@ Cohesion: 0.06
 Nodes (31): dependencies, leaflet, next, react, react-dom, react-leaflet, @supabase/ssr, @supabase/supabase-js (+23 more)
 
 ### Community 17 - "page.tsx"
-Cohesion: 0.09
-Nodes (29): ACTIVE_STATUSES, DishResultCard(), Home(), PublicBusiness, soles(), TRACKING_LABEL, cancelledCopy(), etaLabel() (+21 more)
+Cohesion: 0.07
+Nodes (38): ACTIVE_STATUSES, DishResultCard(), Home(), PublicBusiness, soles(), TRACKING_LABEL, cancelledCopy(), etaLabel() (+30 more)
 
 ### Community 18 - "page.tsx"
 Cohesion: 0.08
@@ -583,8 +586,8 @@ Cohesion: 0.06
 Nodes (44): { GET, POST, PUT }, CashDeliveredData, EVENT_CASH_DELIVERED, EVENT_ORDER_APPEAL_CREATED, EVENT_ORDER_CREATED, EVENT_ORDER_NOTIFY_BUSINESS, EVENT_ORDER_PAYMENT_TIMEOUT, EVENT_ORDER_PREPAY (+36 more)
 
 ### Community 21 - "page.tsx"
-Cohesion: 0.15
-Nodes (12): ClaimModal(), DesktopTable(), fmtTime(), HistDisplay, HistFilter, HistorialView(), HistRow, limaFmt (+4 more)
+Cohesion: 0.13
+Nodes (18): ClaimModal(), DesktopTable(), fmtTime(), HistDisplay, HistFilter, HistorialView(), HistRow, limaFmt (+10 more)
 
 ### Community 22 - "dependencies"
 Cohesion: 0.07
@@ -595,12 +598,12 @@ Cohesion: 0.12
 Nodes (15): ActiveOrderCard(), RANGE_LABEL, BarMini(), Column, DataTable(), DonutMini(), Field(), Hero() (+7 more)
 
 ### Community 24 - "getOpenStatus"
-Cohesion: 0.11
-Nodes (23): BusinessDetail, DAY_NAMES, limaDayIdx(), ScheduleRow(), Shift, shiftLabel(), shiftsOf(), BusinessOrderingInfo (+15 more)
+Cohesion: 0.07
+Nodes (37): BusinessDetail, Category, MenuItem, NegocioPage(), soles(), ModGroupData, ModOption, ProductItem (+29 more)
 
 ### Community 25 - "Icon"
-Cohesion: 0.11
-Nodes (25): AuthCallbackPage(), CuentaPage(), EntrarContent(), Addr, AddressBar(), labelEmoji(), AuthOnboardingHost(), resumeOnboardingIfPending() (+17 more)
+Cohesion: 0.05
+Nodes (39): 10. Tests Ampliados, 1. `@tindivo/contracts` — Correcciones de Contratos, 1a. Validación real de `refundProofPath`, 1b. DTOs separados: `CustomerAppealDto` + `AdminAppealDto`, 1c. Schemas Zod para ambos DTOs (derivar tipos), 1d. `.strict()` en todos los schemas de entrada, 1e. Query params Zod para `GET /admin/appeals`, 2. `apps/api/lib/mappers/appeal.ts` — Mapper (ampliar) (+31 more)
 
 ### Community 26 - "compilerOptions"
 Cohesion: 0.07
@@ -616,19 +619,19 @@ Nodes (28): AuditoriaPage(), AuditRow, CobrosPage(), defaultPeriod(), Settlement
 
 ### Community 29 - "getRequestId"
 Cohesion: 0.09
-Nodes (29): OPTIONS(), POST(), Schema, OPTIONS(), OPTIONS(), OPTIONS(), POST(), Schema (+21 more)
+Nodes (28): GET(), OPTIONS(), OPTIONS(), OPTIONS(), PUT(), Schema, GET(), OPTIONS() (+20 more)
 
 ### Community 30 - "index.ts"
-Cohesion: 0.17
-Nodes (8): OPTIONS(), POST(), Schema, OPTIONS(), POST(), Schema, GET(), OPTIONS()
+Cohesion: 0.10
+Nodes (24): OPTIONS(), POST(), ReportIdSchema, OPTIONS(), POST(), ReportIdSchema, OPTIONS(), POST() (+16 more)
 
 ### Community 31 - "compilerOptions"
 Cohesion: 0.08
 Nodes (25): compilerOptions, declaration, declarationMap, esModuleInterop, forceConsistentCasingInFileNames, incremental, isolatedModules, lib (+17 more)
 
 ### Community 32 - "coverage.ts"
-Cohesion: 0.11
-Nodes (23): MapInner, MapPicker(), GateType, OrderReadiness, Coverage, CoveragePolygon, FALLBACK, fetchCoverage() (+15 more)
+Cohesion: 0.13
+Nodes (22): MapInner, MapPicker(), Coverage, CoveragePolygon, FALLBACK, fetchCoverage(), fetchCoveragePolygon(), fetchLocationValidation() (+14 more)
 
 ### Community 33 - "FASE-1 TINDIVO"
 Cohesion: 0.22
@@ -639,16 +642,16 @@ Cohesion: 0.11
 Nodes (18): 10. Multi-tenant (replicar a otros pueblos), 11. Rol de soporte, 12. Verificación de teléfono por SMS, 13. Internacionalización (i18n), 14. Calificaciones y reviews, 14 · Roadmap y fuera de alcance del MVP, 15. Programa de fidelización del cliente, 16. Roadmap propuesto en fases (+10 more)
 
 ### Community 35 - "index.ts"
-Cohesion: 0.10
-Nodes (20): bricolage, geist, jetbrains, metadata, viewport, Availability, AvailabilityCard(), STATUS_LABEL (+12 more)
+Cohesion: 0.13
+Nodes (19): bricolage, geist, jetbrains, metadata, viewport, MotorizadoPage(), Availability, AvailabilityCard() (+11 more)
 
 ### Community 36 - "page.tsx"
-Cohesion: 0.14
-Nodes (15): OPTIONS(), PATCH(), Schema, GET(), OPTIONS(), POST(), Schema, OPTIONS() (+7 more)
+Cohesion: 0.15
+Nodes (16): AdminAppealDto, AdminAppealDtoSchema, AppealListQuery, AppealListQuerySchema, AppealListResponse, AppealListResponseSchema, AppealStatus, CreateAppealPayload (+8 more)
 
 ### Community 37 - "getSupabaseBrowser"
-Cohesion: 0.12
-Nodes (16): getCurrentPositionHA(), CashRow, KPI_TONE, KpiTone, SettlementCard(), SummaryHero(), jetbrains, manropeBody (+8 more)
+Cohesion: 0.13
+Nodes (18): Advance, ADVANCE_STATE, AdvanceCard(), DeudaPage(), fmtDate(), Settlement, SETTLEMENT_STATE, SettlementRow() (+10 more)
 
 ### Community 38 - "chrome.tsx"
 Cohesion: 0.10
@@ -663,16 +666,16 @@ Cohesion: 0.10
 Nodes (20): dependencies, clsx, tailwind-merge, devDependencies, react, @tindivo/tsconfig, @types/react, typescript (+12 more)
 
 ### Community 42 - "order-card.tsx"
-Cohesion: 0.16
-Nodes (16): AvailableTab(), MineTab(), MINE_STEPS, OrderCard(), PreviewSection(), SourceChip(), DriverBoard, PAYMENT_LABEL (+8 more)
+Cohesion: 0.20
+Nodes (14): AvailableTab(), MineTab(), MINE_STEPS, OrderCard(), DriverBoard, PAYMENT_LABEL, BoardOrder, DriverOrderStatus (+6 more)
 
 ### Community 43 - "requests.ts"
-Cohesion: 0.10
-Nodes (20): DeliveryMethodSchema, PaymentIntentSchema, AddressLine, AddressLineSchema, AddressReference, AddressReferenceSchema, Coordinates, CoordinatesSchema (+12 more)
+Cohesion: 0.09
+Nodes (22): DeliveryMethodSchema, PaymentIntentSchema, AddressLine, AddressLineSchema, AddressReference, AddressReferenceSchema, Coordinates, CoordinatesSchema (+14 more)
 
 ### Community 44 - "page.tsx"
-Cohesion: 0.12
-Nodes (14): card, NuevoPedidoPage(), num(), Payment, PAYMENTS, PREP_PRESETS, COOKING_STATE_STYLE, MS() (+6 more)
+Cohesion: 0.11
+Nodes (17): cardHover, CardProps, clickProps(), CocinaCard(), COOKING_STATE_STYLE, CookingStatusLine(), NuevoCard(), RepartoCard() (+9 more)
 
 ### Community 45 - "offline-queue.ts"
 Cohesion: 0.31
@@ -696,7 +699,7 @@ Nodes (44): 10 · Flujo del motorizado · motorizados.tindivo.com, 10. Transfere
 
 ### Community 50 - "moment-picked-up.tsx"
 Cohesion: 0.20
-Nodes (14): BusinessCard(), CollectCard(), CustomerCard(), MapReadonly(), Inner, MomentPickedUp(), mapsDirToCoords(), mapsSearchAddress() (+6 more)
+Nodes (13): BusinessCard(), CollectCard(), CustomerCard(), MapReadonly(), Inner, MomentPickedUp(), mapsDirToCoords(), mapsSearchAddress() (+5 more)
 
 ### Community 51 - "package.json"
 Cohesion: 0.12
@@ -712,11 +715,11 @@ Nodes (32): 0. Las cuatro apps a construir, 10. Lo que queda fuera del piloto, 1
 
 ### Community 55 - "page.tsx"
 Cohesion: 0.10
-Nodes (18): CAPABILITY_LABELS, capabilityLabel(), ConfiguracionPage(), ConfigView(), Form, isWaInvalid(), ProfileImageUploader(), QrUploader() (+10 more)
+Nodes (20): CAPABILITY_LABELS, capabilityLabel(), ConfiguracionPage(), ConfigView(), Form, isWaInvalid(), ProfileImageUploader(), QrUploader() (+12 more)
 
 ### Community 56 - "page.tsx"
-Cohesion: 0.38
-Nodes (4): ShortId, ShortIdSchema, ShortId, InvalidShortIdError
+Cohesion: 0.48
+Nodes (3): ShortId, InvalidShortIdError, RFC-9457
 
 ### Community 57 - "compilerOptions"
 Cohesion: 0.14
@@ -739,8 +742,8 @@ Cohesion: 0.22
 Nodes (9): AppSettingValue, EDITABLE, GET(), hhmm, minutes, money, OPTIONS(), PATCH() (+1 more)
 
 ### Community 65 - "errors.ts"
-Cohesion: 0.22
-Nodes (13): MotorizadoPage(), Mode, PedidoPage(), Home(), Tab, TeamTab(), Login(), ReadyPromptSheet() (+5 more)
+Cohesion: 0.13
+Nodes (15): Mode, PedidoPage(), DeliverSheet(), PaymentReal, INCIDENT_TYPES, IncidentSheet(), PickupSheet(), SLOT_OPTIONS (+7 more)
 
 ### Community 66 - "pedidos-view.tsx"
 Cohesion: 0.07
@@ -751,8 +754,8 @@ Cohesion: 0.42
 Nodes (6): AccentColorPicker(), normalizeHexInput(), AccentColor, AccentColorSchema, BUSINESS_ACCENT_PALETTE, isPaletteAccentColor()
 
 ### Community 68 - "types.ts"
-Cohesion: 0.17
-Nodes (13): CashDeliverCard(), EfectivoPage(), HistoryRow, STATUS_CHIP, TodayRow, DeliveredScreen(), OrderDetail(), MOMENTS (+5 more)
+Cohesion: 0.14
+Nodes (18): CashDeliverCard(), EfectivoPage(), HistoryRow, STATUS_CHIP, TodayRow, STATUS_LABEL, TeamTab(), DeliveredScreen() (+10 more)
 
 ### Community 69 - "layout.tsx"
 Cohesion: 0.08
@@ -783,8 +786,8 @@ Cohesion: 0.29
 Nodes (6): compilerOptions, paths, exclude, extends, include, @/*
 
 ### Community 76 - "map-picker-inner.tsx"
-Cohesion: 0.22
-Nodes (10): OPTIONS(), POST(), Schema, DELETE(), DeleteSchema, OPTIONS(), POST(), SubSchema (+2 more)
+Cohesion: 0.16
+Nodes (15): GET(), OPTIONS(), GET(), OPTIONS(), GET(), OPTIONS(), GET(), OPTIONS() (+7 more)
 
 ### Community 77 - "tsconfig.json"
 Cohesion: 0.29
@@ -803,12 +806,12 @@ Cohesion: 0.29
 Nodes (6): compilerOptions, paths, exclude, extends, include, @/*
 
 ### Community 81 - "short-id.ts"
-Cohesion: 0.16
-Nodes (18): AuthOnboardingSheet(), PANEL_ORDER, SKIPPABLE, acceptTerms(), authErrorMessage(), isDuplicateKeyError(), ProfileStatus, saveGoogleName() (+10 more)
+Cohesion: 0.11
+Nodes (32): AuthCallbackPage(), EntrarContent(), AuthOnboardingSheet(), PANEL_ORDER, SKIPPABLE, AuthOnboardingHost(), resumeOnboardingIfPending(), acceptTerms() (+24 more)
 
 ### Community 82 - "money.ts"
-Cohesion: 0.17
-Nodes (16): DeliveryMethod, DistanceBand, OrderStatus, canTransition(), CommissionConfig, CommissionOverrides, computeCommission(), assertCustomerCanCancel() (+8 more)
+Cohesion: 0.30
+Nodes (8): DeliveryMethod, DistanceBand, CommissionConfig, CommissionOverrides, computeCommission(), config, applyDelivered(), CommissionConfigError
 
 ### Community 83 - "ports.ts"
 Cohesion: 0.29
@@ -843,8 +846,8 @@ Cohesion: 0.50
 Nodes (4): buildNotes(), db, Note, unwrapAvailability()
 
 ### Community 92 - "corsHeaders"
-Cohesion: 0.14
-Nodes (17): GET(), money, OPTIONS(), PATCH(), Schema, OPTIONS(), PATCH(), Schema (+9 more)
+Cohesion: 0.12
+Nodes (17): OPTIONS(), GET(), money, OPTIONS(), PATCH(), Schema, OPTIONS(), PATCH() (+9 more)
 
 ### Community 93 - "handleError"
 Cohesion: 0.14
@@ -928,7 +931,7 @@ Nodes (10): 8. Animaciones, Bottom sheet (auth, carrito, payment selection), Lib
 
 ### Community 186 - "13 · Deploy y DevOps"
 Cohesion: 0.20
-Nodes (9): 11. Monitoring y alertas, 13 · Deploy y DevOps, 1. Arquitectura de deploy, 6. CI/CD con GitHub Actions, Alertas críticas, Deploy automático, Stack de observabilidad, Tabla de contenidos (+1 more)
+Nodes (9): 11. Monitoring y alertas, 13 · Deploy y DevOps, 1. Arquitectura de deploy, 9. Crons, Alertas críticas, En Supabase (pg_cron), Lista completa de crons, Stack de observabilidad (+1 more)
 
 ### Community 187 - "FLUJO TINDIVO — Documentación Exhaustiva (v2)"
 Cohesion: 0.20
@@ -1399,8 +1402,8 @@ Cohesion: 0.67
 Nodes (3): Naming, Schemas Zod completos, Validación
 
 ### Community 304 - "5. Espaciado y border-radius"
-Cohesion: 0.40
-Nodes (5): TrackingStep, isTerminal(), ORDER_TRANSITIONS, STATUS_TO_TRACKING, TERMINAL_STATUSES
+Cohesion: 0.19
+Nodes (12): OrderStatus, TrackingStep, canTransition(), isTerminal(), ORDER_TRANSITIONS, STATUS_TO_TRACKING, TERMINAL_STATUSES, assertCustomerCanCancel() (+4 more)
 
 ### Community 305 - "6. Elevación y sombras"
 Cohesion: 0.20
@@ -1455,12 +1458,12 @@ Cohesion: 0.67
 Nodes (3): 5. Espaciado y border-radius, Border-radius, Sistema de espaciado (4px base)
 
 ### Community 447 - "soles"
-Cohesion: 0.50
-Nodes (3): OPTIONS(), POST(), Schema
+Cohesion: 0.26
+Nodes (8): GateType, OrderReadiness, AppealData, BlockCheckResult, CancelledOrder, checkPaymentBlock(), isOrderBlocking(), NOW
 
 ### Community 448 - "short-id.ts"
-Cohesion: 0.67
-Nodes (3): 9. Crons, En Supabase (pg_cron), Lista completa de crons
+Cohesion: 0.39
+Nodes (8): AdminAppealRow, assertAdminAppealFields(), assertCustomerAppealFields(), CustomerAppealRow, toAdminAppealDto(), toCustomerAppealDto(), AppealStatusSchema, RefundStatusSchema
 
 ### Community 449 - "route.ts"
 Cohesion: 0.16
@@ -1470,17 +1473,21 @@ Nodes (10): CategoryManagerModal(), CatRow, itemMaxPrice(), itemMinPrice(), Item
 Cohesion: 0.67
 Nodes (3): type-check, dependsOn, outputs
 
+### Community 451 - "phone-gate-modal.tsx"
+Cohesion: 0.43
+Nodes (6): claimRPC(), cleanupEvents(), HEADERS, runConcurrencyTest(), seedEvents(), SUPABASE_URL
+
 ### Community 453 - "route.ts"
-Cohesion: 0.12
-Nodes (21): DeliverSheet(), PaymentReal, PickupSheet(), SLOT_OPTIONS, ButtonProps, Size, SIZES, Variant (+13 more)
+Cohesion: 0.18
+Nodes (16): ButtonProps, Size, SIZES, Variant, VARIANTS, Card(), CardBody(), CardProps (+8 more)
 
 ### Community 454 - "Revisión UI: Botones y Contenido en Sidebar (`pedido-detail.tsx`)"
 Cohesion: 0.25
 Nodes (7): 1. Botones de acción por estado (Footer fijo inferior), 2. Botón "Aceptar disponibilidad", 3. Flujo de botones al abrir un pedido prepago recién llegado (`pending_acceptance`), 4. Contenido que se corta y visibilidad, 5. Condiciones de renderizado del footer de acciones, Evaluación de integridad de botones:, Revisión UI: Botones y Contenido en Sidebar (`pedido-detail.tsx`)
 
 ### Community 455 - "route.ts"
-Cohesion: 0.09
-Nodes (25): OPTIONS(), POST(), Schema, OPTIONS(), POST(), Schema, OPTIONS(), POST() (+17 more)
+Cohesion: 0.07
+Nodes (63): OPTIONS(), POST(), Schema, OPTIONS(), POST(), GET(), OPTIONS(), POST() (+55 more)
 
 ### Community 456 - "6. Elevación y sombras"
 Cohesion: 0.67
@@ -1490,29 +1497,37 @@ Nodes (3): 6. Elevación y sombras, Reglas, Sistema de sombras
 Cohesion: 0.67
 Nodes (3): cache, persistent, dev
 
+### Community 460 - "index.ts"
+Cohesion: 0.39
+Nodes (5): createServiceRoleClient(), Enums, Tables, TablesInsert, TablesUpdate
+
 ### Community 461 - "17. Pantalla · Editor de direcciones"
 Cohesion: 0.67
 Nodes (3): 17. Pantalla · Editor de direcciones, Layout, RFs vinculadas
 
+### Community 462 - "6. CI/CD con GitHub Actions"
+Cohesion: 0.67
+Nodes (3): 6. CI/CD con GitHub Actions, Deploy automático, Workflow principal
+
 ## Knowledge Gaps
-- **1984 isolated node(s):** `AuditRow`, `ClaimRow`, `SettlementRow`, `Cfg`, `SaveFn` (+1979 more)
+- **2024 isolated node(s):** `AuditRow`, `ClaimRow`, `SettlementRow`, `Cfg`, `SaveFn` (+2019 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **200 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `handleOptions()` connect `getRequestId` to `ok`, `route.ts`, `page.tsx`, `service.ts`, `route.ts`, `map-picker-inner.tsx`, `soles`, `6. CI/CD con GitHub Actions`, `corsHeaders`, `index.ts`, `soles`?**
+- **Why does `handleOptions()` connect `getRequestId` to `ok`, `route.ts`, `service.ts`, `route.ts`, `map-picker-inner.tsx`, `soles`, `6. CI/CD con GitHub Actions`, `corsHeaders`, `index.ts`?**
   _High betweenness centrality (0.012) - this node is a cross-community bridge._
-- **Why does `Icon` connect `moment-picked-up.tsx` to `errors.ts`, `index.ts`, `types.ts`, `route.ts`, `page.tsx`, `order-card.tsx`, `page.tsx`, `page.tsx`, `short-id.ts`, `getOpenStatus`, `Icon`, `layout.tsx`?**
-  _High betweenness centrality (0.009) - this node is a cross-community bridge._
-- **Why does `ApiError` connect `index.ts` to `errors.ts`, `types.ts`, `getSupabaseBrowser`, `handleOptions`, `page.tsx`, `page.tsx`, `offline-queue.ts`, `page.tsx`, `page.tsx`, `page.tsx`, `page.tsx`, `Icon`, `index.ts`?**
-  _High betweenness centrality (0.006) - this node is a cross-community bridge._
+- **Why does `ApiError` connect `page.tsx` to `errors.ts`, `index.ts`, `types.ts`, `getSupabaseBrowser`, `soles`, `handleOptions`, `page.tsx`, `offline-queue.ts`, `page.tsx`, `page.tsx`, `getOpenStatus`, `index.ts`?**
+  _High betweenness centrality (0.008) - this node is a cross-community bridge._
+- **Why does `createServiceClient()` connect `map-picker-inner.tsx` to `ok`, `route.ts`, `service.ts`, `route.ts`, `index.ts`, `soles`, `functions.ts`, `6. CI/CD con GitHub Actions`, `corsHeaders`, `getRequestId`, `index.ts`?**
+  _High betweenness centrality (0.005) - this node is a cross-community bridge._
 - **What connects `AuditRow`, `ClaimRow`, `SettlementRow` to the rest of the system?**
-  _1989 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _2029 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `ok` be split into smaller, more focused modules?**
-  _Cohesion score 0.08985507246376812 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.08879492600422834 - nodes in this community are weakly interconnected._
 - **Should `enum-drift.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.05297532656023222 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.09090909090909091 - nodes in this community are weakly interconnected._
 - **Should `scripts` be split into smaller, more focused modules?**
   _Cohesion score 0.11764705882352941 - nodes in this community are weakly interconnected._

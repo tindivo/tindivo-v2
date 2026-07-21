@@ -459,5 +459,8 @@
   "457": "12. Pantalla · Prepago Yape",
   "458": "test_concurrency_0067.ts",
   "459": "index.ts",
-  "461": "17. Pantalla · Editor de direcciones"
+  "460": "index.ts",
+  "461": "17. Pantalla · Editor de direcciones",
+  "462": "6. CI/CD con GitHub Actions",
+  "463": "outbox-processor.test.ts"
 }

@@ -16,9 +16,11 @@ export async function GET(req: Request): Promise<Response> {
   try {
     await requireRole(req, 'admin')
     const VALID = ['open', 'resolved', 'dismissed'] as const
-    const raw = new URL(req.url).searchParams.get('status') ?? 'open'
+    const url = new URL(req.url)
+    const raw = url.searchParams.get('status') ?? 'open'
     const status =
       raw === 'all' ? 'all' : VALID.includes(raw as (typeof VALID)[number]) ? raw : 'open'
+    const excludeType = url.searchParams.get('exclude_type') ?? null
     const service = createServiceClient()
     let query = service
       .from('reports')
@@ -28,6 +30,7 @@ export async function GET(req: Request): Promise<Response> {
       .order('created_at', { ascending: false })
       .limit(100)
     if (status !== 'all') query = query.eq('status', status as (typeof VALID)[number])
+    if (excludeType) query = query.neq('type', excludeType as any)
     const { data, error } = await query
     if (error) throw new Error(error.message)
     return ok(data, { headers: corsHeaders(req) })

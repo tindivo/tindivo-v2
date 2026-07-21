@@ -25,7 +25,7 @@ export default function ReportesPage() {
 
   const load = useCallback(() => {
     api
-      .get<ApiEnvelope<ReportRow[]>>('/admin/reports?status=open')
+      .get<ApiEnvelope<ReportRow[]>>('/admin/reports?status=open&exclude_type=rejected_proof_disputed')
       .then((r) => setReports(r.data))
       .catch((e) => setError(errMsg(e)))
   }, [])
@@ -37,18 +37,6 @@ export default function ReportesPage() {
     setBusyId(id)
     try {
       await api.post(`/admin/reports/${id}/resolve`, { status, resolutionAction: action })
-      load()
-    } catch (e) {
-      setError(errMsg(e))
-    } finally {
-      setBusyId(null)
-    }
-  }
-
-  async function resolveAppeal(id: string, resolution: 'favor_cliente' | 'favor_restaurante') {
-    setBusyId(id)
-    try {
-      await api.post(`/admin/appeals/${id}/resolve`, { resolution })
       load()
     } catch (e) {
       setError(errMsg(e))
@@ -116,43 +104,21 @@ export default function ReportesPage() {
                   )}
                 </div>
                 <div className="flex shrink-0 flex-col gap-1.5">
-                  {r.type === 'rejected_proof_disputed' ? (
-                    <>
-                      <Button
-                        size="sm"
-                        disabled={busyId === r.id}
-                        onClick={() => resolveAppeal(r.id, 'favor_cliente')}
-                      >
-                        A favor del cliente
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        disabled={busyId === r.id}
-                        onClick={() => resolveAppeal(r.id, 'favor_restaurante')}
-                      >
-                        A favor del restaurante
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <Button
-                        size="sm"
-                        disabled={busyId === r.id}
-                        onClick={() => resolve(r.id, 'resolved')}
-                      >
-                        Resolver
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        disabled={busyId === r.id}
-                        onClick={() => resolve(r.id, 'dismissed')}
-                      >
-                        Descartar
-                      </Button>
-                    </>
-                  )}
+                  <Button
+                    size="sm"
+                    disabled={busyId === r.id}
+                    onClick={() => resolve(r.id, 'resolved')}
+                  >
+                    Resolver
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={busyId === r.id}
+                    onClick={() => resolve(r.id, 'dismissed')}
+                  >
+                    Descartar
+                  </Button>
                 </div>
               </div>
             </li>
