@@ -56,7 +56,10 @@ export async function POST(
       event_type: 'order.prepay_proof_uploaded',
       actor_role: 'cliente',
       actor_user_id: user.id,
-      data: {},
+      data: {
+        proof_path: body.path,
+        attempt: order.proof_attempt + 1,
+      },
     })
 
     try {

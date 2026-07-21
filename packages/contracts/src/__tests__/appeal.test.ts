@@ -7,6 +7,14 @@ import {
   RegisterRefundSchema,
   ResolveAppealSchema,
 } from '../appeal'
+import {
+  AppealCreatedData,
+  extractStoragePaths,
+  PrepayProofUploadedData,
+  RefundRegisteredData,
+  ValidationFailedData,
+  ValidationFailedRetryData,
+} from '../order-events'
 
 describe('Contratos de Apelaciones y Devoluciones', () => {
   // ── CreateAppealSchema ─────────────────────────────────────────────────
@@ -371,5 +379,128 @@ describe('Contratos de Apelaciones y Devoluciones', () => {
 
   it('rechaza per_page=101', () => {
     expect(() => AppealListQuerySchema.parse({ per_page: '101' })).toThrow()
+  })
+})
+
+// ── Order Event Data Schemas ─────────────────────────────────────────────
+
+describe('Schemas de order_event_log.data', () => {
+  it('PrepayProofUploadedData acepta data completo', () => {
+    const parsed = PrepayProofUploadedData.parse({
+      proof_path: 'user-uuid/order-uuid/attempt-2-1234567890.jpg',
+      attempt: 2,
+    })
+    expect(parsed.proof_path).toBe('user-uuid/order-uuid/attempt-2-1234567890.jpg')
+    expect(parsed.attempt).toBe(2)
+  })
+
+  it('PrepayProofUploadedData tolera data vacío (eventos legados)', () => {
+    const parsed = PrepayProofUploadedData.parse({})
+    expect(parsed.proof_path).toBeUndefined()
+    expect(parsed.attempt).toBeUndefined()
+  })
+
+  it('PrepayProofUploadedData ignora campos desconocidos (passthrough)', () => {
+    const parsed = PrepayProofUploadedData.parse({
+      proof_path: 'path.jpg',
+      attempt: 1,
+      futuro: 'no-rompe',
+    })
+    expect(parsed.proof_path).toBe('path.jpg')
+  })
+
+  it('ValidationFailedRetryData acepta data completo con proof_path', () => {
+    const parsed = ValidationFailedRetryData.parse({
+      reason: 'Monto no coincide',
+      reasonCode: 'invalid_proof',
+      attempt: 1,
+      proof_path: 'user-uuid/order-uuid/attempt-1-1234567890.jpg',
+    })
+    expect(parsed.reason).toBe('Monto no coincide')
+    expect(parsed.proof_path).toBe('user-uuid/order-uuid/attempt-1-1234567890.jpg')
+  })
+
+  it('ValidationFailedRetryData tolera data sin proof_path (legado)', () => {
+    const parsed = ValidationFailedRetryData.parse({
+      reason: 'Monto no coincide',
+      reasonCode: 'invalid_proof',
+      attempt: 1,
+    })
+    expect(parsed.proof_path).toBeUndefined()
+  })
+
+  it('ValidationFailedData acepta data completo con proof_path', () => {
+    const parsed = ValidationFailedData.parse({
+      reason: 'Legibilidad',
+      reasonCode: 'invalid_proof',
+      proof_path: 'path.jpg',
+    })
+    expect(parsed.reason).toBe('Legibilidad')
+    expect(parsed.proof_path).toBe('path.jpg')
+  })
+
+  it('ValidationFailedData tolera data vacío', () => {
+    const parsed = ValidationFailedData.parse({})
+    expect(parsed.reason).toBeUndefined()
+  })
+
+  it('AppealCreatedData acepta data con evidence_url y description', () => {
+    const parsed = AppealCreatedData.parse({
+      reportId: '11111111-1111-4111-8111-111111111111',
+      evidence_url: 'path/to/proof.jpg',
+      description: 'Cliente apela rechazo final',
+    })
+    expect(parsed.reportId).toBe('11111111-1111-4111-8111-111111111111')
+    expect(parsed.evidence_url).toBe('path/to/proof.jpg')
+    expect(parsed.description).toBe('Cliente apela rechazo final')
+  })
+
+  it('AppealCreatedData tolera data solo con reportId (legado)', () => {
+    const parsed = AppealCreatedData.parse({
+      reportId: '11111111-1111-4111-8111-111111111111',
+    })
+    expect(parsed.reportId).toBe('11111111-1111-4111-8111-111111111111')
+    expect(parsed.evidence_url).toBeUndefined()
+  })
+
+  it('RefundRegisteredData acepta data completo', () => {
+    const parsed = RefundRegisteredData.parse({
+      reportId: '11111111-1111-4111-8111-111111111111',
+      amount: 25.5,
+      proofPath: 'refunds/report-id_1234567890.jpg',
+    })
+    expect(parsed.amount).toBe(25.5)
+    expect(parsed.proofPath).toBe('refunds/report-id_1234567890.jpg')
+  })
+
+  it('RefundRegisteredData tolera data vacío', () => {
+    const parsed = RefundRegisteredData.parse({})
+    expect(parsed.amount).toBeUndefined()
+  })
+
+  // ── extractStoragePaths ──────────────────────────────────────────────
+
+  it('extractStoragePaths extrae proof_path, evidence_url y proofPath', () => {
+    const paths = extractStoragePaths({
+      proof_path: 'a/b.jpg',
+      evidence_url: 'c/d.png',
+      proofPath: 'e/f.webp',
+      other: 'ignored',
+    })
+    expect(paths).toEqual(['a/b.jpg', 'c/d.png', 'e/f.webp'])
+  })
+
+  it('extractStoragePaths ignora valores no-string', () => {
+    const paths = extractStoragePaths({
+      proof_path: 123,
+      evidence_url: null,
+      proofPath: '',
+    })
+    expect(paths).toEqual([])
+  })
+
+  it('extractStoragePaths retorna [] para data null/undefined', () => {
+    expect(extractStoragePaths(null)).toEqual([])
+    expect(extractStoragePaths(undefined)).toEqual([])
   })
 })

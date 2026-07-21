@@ -97,10 +97,16 @@ export function PrepayProofSection({ orderId, proofAttempt, onProofUploaded }: P
         setUploading(false)
         return
       }
-      const path = `${userId}/${orderId}`
+      const attempt = proofAttempt + 1
+      const ts = Date.now()
+      const ext = pendingFile.type === 'image/png' ? 'png'
+        : pendingFile.type === 'image/jpeg' ? 'jpg'
+        : pendingFile.type === 'image/webp' ? 'webp'
+        : 'jpg'
+      const path = `${userId}/${orderId}/attempt-${attempt}-${ts}.${ext}`
       const { error: upErr } = await supabase.storage
         .from('payment-proofs')
-        .upload(path, pendingFile, { upsert: true, contentType: pendingFile.type })
+        .upload(path, pendingFile, { contentType: pendingFile.type })
 
       if (upErr) throw upErr
 
