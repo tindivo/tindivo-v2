@@ -96,6 +96,15 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   )
 }
 
+const REJECTION_CODE_LABELS: Record<string, string> = {
+  invalid_proof: 'Comprobante de pago inválido',
+  out_of_stock: 'Sin stock / Productos no disponibles',
+  closed: 'Local/Restaurante cerrado',
+  out_of_zone: 'Dirección fuera de zona de entrega',
+  no_answer: 'Cliente no responde al contacto',
+  other: 'Otro motivo de rechazo',
+}
+
 // ── CollapsibleTimeline ───────────────────────────────────────────────────────
 
 const EVENT_LABELS: Record<string, string> = {
@@ -690,11 +699,12 @@ export default function ApelacionDetallePage({
           <p className="mt-1.5 text-[14px] font-semibold text-red-800">
             {appeal.rejectionReasonText ?? 'Sin detalle registrado'}
           </p>
-          {appeal.rejectionReasonCode && (
-            <p className="mt-0.5 text-[11px] text-red-400">
-              Código interno: {appeal.rejectionReasonCode}
-            </p>
-          )}
+          {appeal.rejectionReasonCode &&
+            REJECTION_CODE_LABELS[appeal.rejectionReasonCode] !== appeal.rejectionReasonText && (
+              <p className="mt-0.5 text-[11px] text-red-400">
+                Código: {REJECTION_CODE_LABELS[appeal.rejectionReasonCode] ?? appeal.rejectionReasonCode}
+              </p>
+            )}
         </div>
 
         {/* Argumento del cliente */}
