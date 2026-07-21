@@ -358,6 +358,7 @@ export default function ApelacionDetallePage({
   const router = useRouter()
   const [appeal, setAppeal] = useState<AdminAppealDto | null>(null)
   const [timeline, setTimeline] = useState<TimelineEvent[]>([])
+  const [evidenceProofUrl, setEvidenceProofUrl] = useState<string | null>(null)
   const [refundProofUrl, setRefundProofUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busyAction, setBusyAction] = useState<string | null>(null)
@@ -479,6 +480,11 @@ export default function ApelacionDetallePage({
       } as AdminAppealDto)
 
       setRefundAmount(orderAmount)
+
+      if (report.evidence_url) {
+        const url = await getSignedUrl(report.evidence_url)
+        setEvidenceProofUrl(url)
+      }
 
       if (report.refund_proof_path) {
         const url = await getSignedUrl(report.refund_proof_path)
@@ -701,11 +707,21 @@ export default function ApelacionDetallePage({
           </div>
         )}
 
+        {/* Comprobante en disputa */}
+        {evidenceProofUrl && (
+          <div>
+            <p className="mb-2 text-[12px] font-semibold text-ink-muted">
+              Comprobante en disputa (último intento)
+            </p>
+            <ProofThumbnail url={evidenceProofUrl} label="Comprobante en disputa" />
+          </div>
+        )}
+
         {/* Intento actual de comprobante (referencia rápida) */}
         {appeal.proofAttempt != null && (
-          <p className="text-[12px] text-ink-subtle">
+          <p className="text-[12px] text-ink-subtle/80 italic leading-relaxed">
             El cliente realizó {appeal.proofAttempt} intento{appeal.proofAttempt > 1 ? 's' : ''} de
-            comprobante. Las capturas de cada intento se muestran en el historial inferior.
+            comprobante. El historial completo se muestra al final de la página.
           </p>
         )}
       </div>
