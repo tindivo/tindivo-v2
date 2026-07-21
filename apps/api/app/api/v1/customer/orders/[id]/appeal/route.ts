@@ -6,6 +6,7 @@ import { handleError, ok } from '@/lib/http/problem'
 import { getRequestId } from '@/lib/http/request-id'
 import { toCustomerAppealDto } from '@/lib/mappers/appeal'
 import { processPendingOutboxEvents } from '@/lib/outbox/processor'
+import { createServiceClient } from '@/lib/supabase/service'
 import { createUserClient } from '@/lib/supabase/user'
 
 export const dynamic = 'force-dynamic'
@@ -49,10 +50,13 @@ export async function GET(
     if (error) throw new Error(error.message)
     if (!data) throw new DomainError('Apelación no encontrada', 'not_found')
 
-    // Generar URL firmada del comprobante de devolución si existe
+    // Generar URL firmada del comprobante de devolución si existe.
+    // Se usa el cliente service-role porque el RLS de Storage no permite
+    // que el cliente genere signed URLs directamente.
     let refundProofUrl: string | null = null
     if (data.refund_proof_path) {
-      const { data: signed } = await client.storage
+      const service = createServiceClient()
+      const { data: signed } = await service.storage
         .from('payment-proofs')
         .createSignedUrl(data.refund_proof_path, 3600)
       refundProofUrl = signed?.signedUrl ?? null
