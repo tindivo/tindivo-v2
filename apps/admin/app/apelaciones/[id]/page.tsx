@@ -1,10 +1,10 @@
 'use client'
 
-import type { AdminAppealDto } from '@tindivo/contracts'
+import { extractStoragePaths, type AdminAppealDto } from '@tindivo/contracts'
 import { Button } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { use, useCallback, useEffect, useRef, useState } from 'react'
-import { Ico, SectionHeader, StatusBadge } from '@/components/admin'
+import { SectionHeader, StatusBadge } from '@/components/admin'
 import { api, errMsg } from '@/lib/api'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
@@ -104,6 +104,9 @@ const EVENT_LABELS: Record<string, string> = {
   'order.prepay_proof_uploaded': 'Comprobante subido por cliente',
   'order.proof_uploaded': 'Comprobante subido por cliente',
   'order.proof_rejected': 'Restaurante rechazó el comprobante',
+  'order.validation_failed_retry': 'Restaurante rechazó el comprobante',
+  'order.validation_failed': 'Rechazo definitivo — pedido cancelado',
+  'order.validation_passed': 'Comprobante confirmado',
   'order.proof_confirmed': 'Comprobante confirmado',
   'order.cancelled': 'Pedido cancelado',
   'order.appeal_created': 'Cliente inició apelación',
@@ -118,6 +121,7 @@ interface TimelineEvent {
   actor_role: string | null
   created_at: string
   data: Record<string, unknown>
+  proofUrls?: { url: string; label: string }[]
 }
 
 function CollapsibleTimeline({ events }: { events: TimelineEvent[] }) {
@@ -138,7 +142,12 @@ function CollapsibleTimeline({ events }: { events: TimelineEvent[] }) {
       {open && (
         <div className="mt-3 space-y-3 border-t border-border pt-3">
           {events.map((ev, i) => {
-            const label = EVENT_LABELS[ev.event_type] ?? ev.event_type.replace('order.', '')
+            let label = EVENT_LABELS[ev.event_type] ?? ev.event_type.replace('order.', '')
+            // Enriquecer label con número de intento si está disponible en data
+            const attempt = ev.data?.attempt as number | undefined
+            if (attempt != null && ev.event_type === 'order.prepay_proof_uploaded') {
+              label = `Comprobante subido (intento ${attempt})`
+            }
             const resolution = ev.data?.resolution as string | undefined
             const isLast = i === events.length - 1
             return (
@@ -166,6 +175,16 @@ function CollapsibleTimeline({ events }: { events: TimelineEvent[] }) {
                     {formatDate(ev.created_at)}
                     {ev.actor_role ? ` · ${ev.actor_role}` : ''}
                   </span>
+                  {/* Thumbnails de evidencias desde data (solo en eventos que introducen el archivo) */}
+                  {['order.prepay_proof_uploaded', 'order.proof_uploaded', 'order.refund_registered'].includes(ev.event_type) &&
+                    ev.proofUrls &&
+                    ev.proofUrls.length > 0 && (
+                      <div className="mt-2 space-y-1.5">
+                        {ev.proofUrls.map((p, j) => (
+                          <ProofThumbnail key={j} url={p.url} label={p.label} />
+                        ))}
+                      </div>
+                    )}
                 </div>
               </div>
             )
@@ -339,8 +358,6 @@ export default function ApelacionDetallePage({
   const router = useRouter()
   const [appeal, setAppeal] = useState<AdminAppealDto | null>(null)
   const [timeline, setTimeline] = useState<TimelineEvent[]>([])
-  const [orderProofUrl, setOrderProofUrl] = useState<string | null>(null)
-  const [appealProofUrl, setAppealProofUrl] = useState<string | null>(null)
   const [refundProofUrl, setRefundProofUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busyAction, setBusyAction] = useState<string | null>(null)
@@ -417,11 +434,6 @@ export default function ApelacionDetallePage({
           proofAttempt = order.proof_attempt ?? null
           customerName = order.customer_name ?? null
 
-          if (order.comprobante_prepago_url) {
-            const url = await getSignedUrl(order.comprobante_prepago_url)
-            setOrderProofUrl(url)
-          }
-
           // Query 3: negocio con número de Yape/Plin
           const { data: biz } = await supabase
             .from('businesses')
@@ -468,11 +480,6 @@ export default function ApelacionDetallePage({
 
       setRefundAmount(orderAmount)
 
-      if (report.evidence_url) {
-        const url = await getSignedUrl(report.evidence_url)
-        setAppealProofUrl(url)
-      }
-
       if (report.refund_proof_path) {
         const url = await getSignedUrl(report.refund_proof_path)
         setRefundProofUrl(url)
@@ -484,7 +491,23 @@ export default function ApelacionDetallePage({
           .select('event_type, actor_role, created_at, data')
           .eq('order_id', report.order_id)
           .order('created_at', { ascending: true })
-        setTimeline((events ?? []) as TimelineEvent[])
+
+        // Generar signed URLs para paths de Storage en el data de cada evento
+        const enriched: TimelineEvent[] = await Promise.all(
+          (events ?? []).map(async (ev) => {
+            const paths = extractStoragePaths(ev.data as Record<string, unknown>)
+            const proofUrls = (
+              await Promise.all(
+                paths.map(async (p) => {
+                  const url = await getSignedUrl(p)
+                  return url ? { url, label: 'Ver captura' } : null
+                }),
+              )
+            ).filter((x): x is { url: string; label: string } => x !== null)
+            return { ...ev, proofUrls } as TimelineEvent
+          }),
+        )
+        setTimeline(enriched)
       }
     } catch (e) {
       setError(errMsg(e))
@@ -524,11 +547,15 @@ export default function ApelacionDetallePage({
     setRefundUploading(true)
     try {
       const supabase = getSupabaseBrowser()
-      const ext = refundFile.name.split('.').pop() || 'jpg'
-      const path = `refunds/${id}.${ext}`
+      const ts = Date.now()
+      const ext = refundFile.type === 'image/png' ? 'png'
+        : refundFile.type === 'image/jpeg' ? 'jpg'
+        : refundFile.type === 'image/webp' ? 'webp'
+        : 'jpg'
+      const path = `refunds/${id}_${ts}.${ext}`
       const { error: upErr } = await supabase.storage
         .from('payment-proofs')
-        .upload(path, refundFile, { upsert: true })
+        .upload(path, refundFile)
       if (upErr) throw new Error(upErr.message)
       await api.post(`/admin/appeals/${id}/refund`, {
         refundProofPath: path,
@@ -649,23 +676,6 @@ export default function ApelacionDetallePage({
           El conflicto
         </p>
 
-        {/* Comprobante de pago */}
-        <div>
-          <p className="mb-2 text-[12px] font-semibold text-ink-muted">
-            Comprobante del cliente
-            {appeal.proofAttempt != null && appeal.proofAttempt > 1 && (
-              <span className="ml-2 text-[11px] font-normal text-ink-subtle">
-                (intento {appeal.proofAttempt} de {appeal.proofAttempt} — solo se guarda el último)
-              </span>
-            )}
-          </p>
-          {orderProofUrl ? (
-            <ProofThumbnail url={orderProofUrl} label="Comprobante Yape / Plin" />
-          ) : (
-            <p className="text-[13px] text-ink-muted">Sin comprobante disponible</p>
-          )}
-        </div>
-
         {/* Motivo de rechazo del restaurante */}
         <div className="rounded-[14px] border border-red-200 bg-red-50 p-4">
           <p className="text-[11px] font-semibold uppercase tracking-widest text-red-600">
@@ -691,14 +701,12 @@ export default function ApelacionDetallePage({
           </div>
         )}
 
-        {/* Evidencia adicional del cliente */}
-        {appealProofUrl && (
-          <div>
-            <p className="mb-2 text-[12px] font-semibold text-ink-muted">
-              Evidencia adicional del cliente
-            </p>
-            <ProofThumbnail url={appealProofUrl} label="Evidencia adicional" />
-          </div>
+        {/* Intento actual de comprobante (referencia rápida) */}
+        {appeal.proofAttempt != null && (
+          <p className="text-[12px] text-ink-subtle">
+            El cliente realizó {appeal.proofAttempt} intento{appeal.proofAttempt > 1 ? 's' : ''} de
+            comprobante. Las capturas de cada intento se muestran en el historial inferior.
+          </p>
         )}
       </div>
 
