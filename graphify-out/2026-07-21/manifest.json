@@ -470,8 +470,8 @@
     "semantic_hash": ""
   },
   "apps/api/app/api/v1/customer/orders/[id]/prepay-proof/route.ts": {
-    "mtime": 1784400072.2240644,
-    "ast_hash": "972d142f5d607b2238c81614b77cacd6",
+    "mtime": 1784617109.7087302,
+    "ast_hash": "5559f895c1376007057ca90d36364648",
     "semantic_hash": ""
   },
   "apps/api/app/api/v1/customer/orders/route.ts": {
@@ -1310,8 +1310,8 @@
     "semantic_hash": "a9f3281b3605081ea810498c0976191d"
   },
   "packages/contracts/src/index.ts": {
-    "mtime": 1784577751.2321758,
-    "ast_hash": "5d5b15013f6908e4314a8e52c5450a77",
+    "mtime": 1784617028.7712429,
+    "ast_hash": "9ddf6f64cbba697b8abffa2706123716",
     "semantic_hash": ""
   },
   "packages/contracts/src/order-status.ts": {
@@ -2125,8 +2125,8 @@
     "semantic_hash": ""
   },
   "apps/customer/components/prepay-proof-section.tsx": {
-    "mtime": 1784433369.66564,
-    "ast_hash": "5a2d4e3009113aacd60a405ae0a758b3",
+    "mtime": 1784617040.800353,
+    "ast_hash": "2a10e8182fdcc28c9b5596f87caded7c",
     "semantic_hash": ""
   },
   "supabase/migrations/0061_prepaid_timers_and_expire.sql": {
@@ -2170,8 +2170,8 @@
     "semantic_hash": ""
   },
   "apps/api/app/api/v1/customer/orders/[id]/appeal/route.ts": {
-    "mtime": 1784588402.7816868,
-    "ast_hash": "0207d9190a18f5d1240bfa1f81c85785",
+    "mtime": 1784614582.5271947,
+    "ast_hash": "d722e8ae8cabc7c11dd21c386a3ce0db",
     "semantic_hash": ""
   },
   "supabase/migrations/0066_appeal_system.sql": {
@@ -2215,8 +2215,8 @@
     "semantic_hash": ""
   },
   "apps/api/lib/mappers/appeal.ts": {
-    "mtime": 1784612368.6966171,
-    "ast_hash": "8c7a26781d61e892a8e822fbe90dad2d",
+    "mtime": 1784613974.6693313,
+    "ast_hash": "c06f21d75f2305320707bf33617af553",
     "semantic_hash": ""
   },
   "apps/api/lib/outbox/processor.ts": {
@@ -2225,13 +2225,13 @@
     "semantic_hash": ""
   },
   "packages/contracts/src/__tests__/appeal.test.ts": {
-    "mtime": 1784612607.24723,
-    "ast_hash": "f320473350dd38a7c669b72af0fe089a",
+    "mtime": 1784617263.5248792,
+    "ast_hash": "d8ca80e05b93d1bdf808f2978bf389bf",
     "semantic_hash": ""
   },
   "packages/contracts/src/appeal.ts": {
-    "mtime": 1784612343.8240428,
-    "ast_hash": "d0b593d187dbcb039840fedecd12b3a1",
+    "mtime": 1784613953.7949462,
+    "ast_hash": "fece1cdc0da9b8ec6c9e01308df70571",
     "semantic_hash": ""
   },
   "scripts/rollback_0068.sql": {
@@ -2295,8 +2295,8 @@
     "semantic_hash": ""
   },
   "apps/customer/components/appeal-section.tsx": {
-    "mtime": 1784597075.412959,
-    "ast_hash": "4200855b0f0dbb98ac70ba0e7d46968a",
+    "mtime": 1784614021.256891,
+    "ast_hash": "1a77bde174eb07c15b72917b8d710195",
     "semantic_hash": ""
   },
   "apps/customer/components/gates/payment-resolution-gate-modal.tsx": {
@@ -2312,11 +2312,6 @@
   "apps/customer/lib/payment-block.ts": {
     "mtime": 1784593439.516485,
     "ast_hash": "73fd623a6f2ecd181da68070c1736c80",
-    "semantic_hash": ""
-  },
-  "supabase/migrations/0069_appeal_strike_on_dismiss.sql": {
-    "mtime": 1784591736.7177784,
-    "ast_hash": "016f87000c8a528729d760f9656ce330",
     "semantic_hash": ""
   },
   "supabase/migrations/0070_tracking_appeal_fields.sql": {
@@ -2340,8 +2335,8 @@
     "semantic_hash": ""
   },
   "apps/admin/app/casos/page.tsx": {
-    "mtime": 1784598233.6446025,
-    "ast_hash": "97d0d6b02580a2b0286c488fb5d876ca",
+    "mtime": 1784654749.3853111,
+    "ast_hash": "585685109581c635825d325ceeff4b3a",
     "semantic_hash": ""
   },
   "apps/admin/components/casos/tab-claims.tsx": {
@@ -2365,8 +2360,28 @@
     "semantic_hash": ""
   },
   "apps/admin/app/apelaciones/[id]/page.tsx": {
-    "mtime": 1784613269.1303394,
-    "ast_hash": "623249cad86416ee08cb5d1d08af9a57",
+    "mtime": 1784651629.045376,
+    "ast_hash": "20ba135122c0ba8d4608757a88acf6f0",
+    "semantic_hash": ""
+  },
+  "packages/contracts/src/order-events.ts": {
+    "mtime": 1784617024.6480103,
+    "ast_hash": "5a7f8893096cac705dc3726427cc16d7",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/0069_enrich_order_event_log_data.sql": {
+    "mtime": 1784619441.1789036,
+    "ast_hash": "1743abdcbd560c31d5c4142fa2264873",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/0071_appeal_strike_on_dismiss.sql": {
+    "mtime": 1784591736.7177784,
+    "ast_hash": "016f87000c8a528729d760f9656ce330",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/0072_fix_strike_report_trigger.sql": {
+    "mtime": 1784651912.620735,
+    "ast_hash": "525781f9c18e5cd785ebc33d7f94f505",
     "semantic_hash": ""
   }
 }
