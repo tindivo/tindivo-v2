@@ -110,6 +110,7 @@ export const AdminAppealDtoSchema = z
     businessId: z.string().uuid(),
     customerUserId: z.string().uuid(),
     customerPhone: z.string().nullable(),
+    customerName: z.string().nullable(),
     description: z.string().nullable(),
     evidenceUrl: z.string().nullable(),
     appealStatus: AppealStatusSchema,
@@ -126,6 +127,13 @@ export const AdminAppealDtoSchema = z
     status: z.string(),
     createdAt: z.string().datetime(),
     updatedAt: z.string().datetime(),
+    // Campos enriquecidos del pedido y negocio
+    orderCreatedAt: z.string().datetime().nullable(),
+    businessName: z.string().nullable(),
+    yapeNumber: z.string().nullable(),
+    rejectionReasonCode: z.string().nullable(),
+    rejectionReasonText: z.string().nullable(),
+    proofAttempt: z.number().int().min(0).nullable(),
   })
   .strict()
 export type AdminAppealDto = z.infer<typeof AdminAppealDtoSchema>

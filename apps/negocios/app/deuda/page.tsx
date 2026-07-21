@@ -533,7 +533,7 @@ export default function DeudaPage() {
   return (
     <DashboardShell
       active="deuda"
-      title="Deuda con Tindivo"
+      title="Mi cuenta"
       subtitle="Comisiones acumuladas y fondo de contingencia"
       headerRight={
         /* Desktop header CTA */

@@ -448,6 +448,7 @@
   "446": "Vertical slicing",
   "447": "soles",
   "448": "short-id.ts",
+  "449": "use-order-readiness.ts",
   "450": "route.ts",
   "451": "phone-gate-modal.tsx",
   "452": "dev",
@@ -458,11 +459,9 @@
   "457": "12. Pantalla · Prepago Yape",
   "458": "test_concurrency_0067.ts",
   "459": "index.ts",
-  "460": "index.ts",
   "462": "6. CI/CD con GitHub Actions",
   "463": "outbox-processor.test.ts",
   "464": "ApiError",
-  "465": "layout.tsx",
   "466": "phone-gate-modal.tsx",
   "468": "ApiError"
 }

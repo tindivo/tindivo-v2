@@ -2365,8 +2365,8 @@
     "semantic_hash": ""
   },
   "apps/admin/app/apelaciones/[id]/page.tsx": {
-    "mtime": 1784610785.1696863,
-    "ast_hash": "a8949f0eed08c2a3bd6248a8789b98ee",
+    "mtime": 1784610671.0542045,
+    "ast_hash": "ec31f1d2598d14e70a5b12427aa78717",
     "semantic_hash": ""
   }
 }

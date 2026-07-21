@@ -36,7 +36,7 @@ export async function GET(req: Request): Promise<Response> {
         description, evidence_url, appeal_status, refund_status, refund_amount,
         refund_proof_path, refund_completed_at, appeal_deadline,
         resolved_by, resolved_at, resolution_note, created_by, created_at, updated_at,
-        orders(short_id)`,
+        orders(short_id, customer_name, created_at, rejection_reason_code, rejection_reason_text, proof_attempt, businesses(name, yape_number, plin_number))`,
         { count: 'exact' },
       )
       .eq('type', 'rejected_proof_disputed')

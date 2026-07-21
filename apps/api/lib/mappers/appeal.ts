@@ -48,7 +48,17 @@ export type AdminAppealRow = Pick<
   | 'status'
   | 'created_at'
   | 'updated_at'
-> & { orders: { short_id: string } | null }
+> & {
+  orders: {
+    short_id: string
+    customer_name: string | null
+    created_at: string
+    rejection_reason_code: string | null
+    rejection_reason_text: string | null
+    proof_attempt: number | null
+    businesses: { name: string; yape_number: string | null; plin_number: string | null } | null
+  } | null
+}
 
 // ── Validaciones separadas según el contexto ────────────────────────────────
 
@@ -102,13 +112,16 @@ export function toCustomerAppealDto(row: CustomerAppealRow): CustomerAppealDto {
 
 export function toAdminAppealDto(row: AdminAppealRow): AdminAppealDto {
   assertAdminAppealFields(row)
+  const order = row.orders
+  const biz = order?.businesses
   return {
     id: row.id,
     orderId: row.order_id!,
-    orderShortId: row.orders?.short_id ?? null,
+    orderShortId: order?.short_id ?? null,
     businessId: row.business_id!,
     customerUserId: row.customer_user_id!,
     customerPhone: row.customer_phone ?? null,
+    customerName: order?.customer_name ?? null,
     description: row.description ?? null,
     evidenceUrl: row.evidence_url ?? null,
     appealStatus: AppealStatusSchema.parse(row.appeal_status),
@@ -130,6 +143,12 @@ export function toAdminAppealDto(row: AdminAppealRow): AdminAppealDto {
     status: row.status,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    orderCreatedAt: order?.created_at ?? null,
+    businessName: biz?.name ?? null,
+    yapeNumber: biz?.yape_number ?? biz?.plin_number ?? null,
+    rejectionReasonCode: order?.rejection_reason_code ?? null,
+    rejectionReasonText: order?.rejection_reason_text ?? null,
+    proofAttempt: order?.proof_attempt ?? null,
   }
 }
 

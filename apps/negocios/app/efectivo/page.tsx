@@ -655,7 +655,7 @@ export default function NegocioEfectivoPage() {
   return (
     <DashboardShell
       active="efectivo"
-      title="Efectivo"
+      title="Liquidaciones"
       subtitle="Liquidación diaria · cuenta el dinero antes de confirmar"
     >
       <EfectivoView />

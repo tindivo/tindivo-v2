@@ -2,8 +2,9 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { type ReactNode, useState } from 'react'
-import { NAV } from '@/lib/nav'
+import { type ReactNode, useCallback, useEffect, useState } from 'react'
+import { api } from '@/lib/api'
+import { NAV_SECTIONS } from '@/lib/nav'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import { AlertsBell } from './admin/alerts-bell'
 import { Ico } from './admin/icons'
@@ -27,27 +28,69 @@ function Brand() {
 }
 
 function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
+  const [counts, setCounts] = useState<Record<string, number>>({})
+
+  const loadCounts = useCallback(async () => {
+    const itemsWithCounts = NAV_SECTIONS.flatMap((s) => s.items).filter((it) => it.countEndpoint)
+    const results = await Promise.allSettled(
+      itemsWithCounts.map(async (it) => {
+        try {
+          const res = await api.get<any>(it.countEndpoint!)
+          return { href: it.href, count: res?.data?.total ?? 0 }
+        } catch {
+          return { href: it.href, count: 0 }
+        }
+      }),
+    )
+    const newCounts: Record<string, number> = {}
+    for (const r of results) {
+      if (r.status === 'fulfilled') {
+        newCounts[r.value.href] = r.value.count
+      }
+    }
+    setCounts(newCounts)
+  }, [])
+
+  useEffect(() => {
+    loadCounts()
+    const interval = setInterval(loadCounts, 30000)
+    return () => clearInterval(interval)
+  }, [loadCounts])
+
   return (
-    <nav className="flex flex-col gap-1">
-      {NAV.map((it) => {
-        const active = isActive(pathname, it.href)
-        const Icon = it.icon
-        return (
-          <Link
-            key={it.href}
-            href={it.href}
-            onClick={onNavigate}
-            className={`flex items-center gap-3 rounded-[14px] px-3 py-2.5 text-[14px] transition-colors ${
-              active
-                ? 'bg-brand-light font-semibold text-brand-dark shadow-glow-brand'
-                : 'text-ink-muted hover:bg-ink/[0.04] hover:text-ink'
-            }`}
-          >
-            <Icon className="h-[18px] w-[18px] shrink-0" />
-            {it.label}
-          </Link>
-        )
-      })}
+    <nav className="flex flex-col gap-4">
+      {NAV_SECTIONS.map((section) => (
+        <div key={section.title} className="flex flex-col gap-1">
+          <div className="px-3 text-[10px] font-bold uppercase tracking-[0.12em] text-ink-subtle/60">
+            {section.title}
+          </div>
+          {section.items.map((it) => {
+            const active = isActive(pathname, it.href)
+            const Icon = it.icon
+            const count = counts[it.href] ?? 0
+            return (
+              <Link
+                key={it.href}
+                href={it.href}
+                onClick={onNavigate}
+                className={`flex items-center gap-3 rounded-[14px] px-3 py-2.5 text-[14px] transition-colors ${
+                  active
+                    ? 'bg-brand-light font-semibold text-brand-dark shadow-glow-brand'
+                    : 'text-ink-muted hover:bg-ink/[0.04] hover:text-ink'
+                }`}
+              >
+                <Icon className="h-[18px] w-[18px] shrink-0" />
+                <span className="flex-1">{it.label}</span>
+                {count > 0 && (
+                  <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
+                    {count}
+                  </span>
+                )}
+              </Link>
+            )
+          })}
+        </div>
+      ))}
     </nav>
   )
 }

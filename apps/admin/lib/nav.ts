@@ -5,6 +5,7 @@ export interface NavItem {
   href: string
   label: string
   icon: ComponentType<SVGProps<SVGSVGElement>>
+  countEndpoint?: string
 }
 
 export interface NavSection {
@@ -24,7 +25,12 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     title: 'Casos',
     items: [
-      { href: '/apelaciones', label: 'Apelaciones', icon: Ico.shield },
+      {
+        href: '/apelaciones',
+        label: 'Apelaciones',
+        icon: Ico.shield,
+        countEndpoint: '/admin/appeals?appeal_status=pending&per_page=1',
+      },
       { href: '/casos', label: 'Casos', icon: Ico.reports },
     ],
   },

@@ -243,6 +243,7 @@ describe('Contratos de Apelaciones y Devoluciones', () => {
       businessId: '33333333-3333-4333-8333-333333333333',
       customerUserId: '44444444-4444-4444-9444-444444444444',
       customerPhone: '+51999888777',
+      customerName: 'Juan Pérez',
       description: 'Apelación de prueba',
       evidenceUrl: 'https://storage/evidence.png',
       appealStatus: 'in_review',
@@ -259,6 +260,12 @@ describe('Contratos de Apelaciones y Devoluciones', () => {
       status: 'open',
       createdAt: '2026-07-20T00:00:00.000Z',
       updatedAt: '2026-07-20T00:00:00.000Z',
+      orderCreatedAt: '2026-07-20T00:00:00.000Z',
+      businessName: 'Don Pepito',
+      yapeNumber: '987654321',
+      rejectionReasonCode: null,
+      rejectionReasonText: null,
+      proofAttempt: 1,
     }
     const parsed = AdminAppealDtoSchema.parse(dto)
     expect(parsed.orderShortId).toBe('ABC12345')
@@ -273,6 +280,7 @@ describe('Contratos de Apelaciones y Devoluciones', () => {
       businessId: '33333333-3333-4333-8333-333333333333',
       customerUserId: '44444444-4444-4444-9444-444444444444',
       customerPhone: null,
+      customerName: null,
       description: null,
       evidenceUrl: null,
       appealStatus: 'pending',
@@ -289,6 +297,12 @@ describe('Contratos de Apelaciones y Devoluciones', () => {
       status: 'open',
       createdAt: '2026-07-20T00:00:00.000Z',
       updatedAt: '2026-07-20T00:00:00.000Z',
+      orderCreatedAt: null,
+      businessName: null,
+      yapeNumber: null,
+      rejectionReasonCode: null,
+      rejectionReasonText: null,
+      proofAttempt: null,
     }
     const parsed = AdminAppealDtoSchema.parse(dto)
     expect(parsed.orderShortId).toBeNull()
@@ -302,6 +316,7 @@ describe('Contratos de Apelaciones y Devoluciones', () => {
       businessId: '33333333-3333-4333-8333-333333333333',
       customerUserId: '44444444-4444-4444-9444-444444444444',
       customerPhone: null,
+      customerName: null,
       description: null,
       evidenceUrl: null,
       appealStatus: 'pending',
@@ -318,6 +333,12 @@ describe('Contratos de Apelaciones y Devoluciones', () => {
       status: 'open',
       createdAt: '2026-07-20T00:00:00.000Z',
       updatedAt: '2026-07-20T00:00:00.000Z',
+      orderCreatedAt: null,
+      businessName: null,
+      yapeNumber: null,
+      rejectionReasonCode: null,
+      rejectionReasonText: null,
+      proofAttempt: null,
       extra: 'no-permitido',
     }
     expect(() => AdminAppealDtoSchema.parse(dto)).toThrow()

@@ -15,6 +15,7 @@
     "@supabase/supabase-js": "catalog:",
     "@tindivo/api-client": "workspace:*",
     "@tindivo/contracts": "workspace:*",
+    "@tindivo/core": "workspace:*",
     "@tindivo/supabase": "workspace:*",
     "@tindivo/ui": "workspace:*",
     "next": "catalog:",

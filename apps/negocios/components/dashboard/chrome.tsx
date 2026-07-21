@@ -51,9 +51,9 @@ const NAV_ITEMS: { id: NavId; label: string; icon: string; href: string }[] = [
   { id: 'pedidos', label: 'Pedidos', icon: 'receipt_long', href: '/' },
   { id: 'menu', label: 'Menú', icon: 'restaurant_menu', href: '/menu' },
   { id: 'add', label: 'Pedir moto', icon: 'two_wheeler', href: '/nuevo' },
-  { id: 'efectivo', label: 'Efectivo', icon: 'payments', href: '/efectivo' },
+  { id: 'efectivo', label: 'Liquidaciones', icon: 'payments', href: '/efectivo' },
   { id: 'historial', label: 'Historial', icon: 'history', href: '/historial' },
-  { id: 'deuda', label: 'Deuda', icon: 'account_balance_wallet', href: '/deuda' },
+  { id: 'deuda', label: 'Mi cuenta', icon: 'account_balance_wallet', href: '/deuda' },
   { id: 'config', label: 'Config', icon: 'settings', href: '/configuracion' },
 ]
 
