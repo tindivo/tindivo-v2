@@ -18,12 +18,16 @@ export type CustomerAppealRow = Pick<
   | 'refund_status'
   | 'refund_amount'
   | 'refund_completed_at'
+  | 'refund_proof_path'
   | 'appeal_deadline'
   | 'description'
   | 'status'
   | 'created_at'
   | 'updated_at'
->
+> & {
+  /** URL firmada generada por la API antes de llamar al mapper. */
+  refundProofUrl?: string | null
+}
 
 export type AdminAppealRow = Pick<
   Tables<'reports'>,
@@ -107,6 +111,7 @@ export function toCustomerAppealDto(row: CustomerAppealRow): CustomerAppealDto {
     status: row.status,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    refundProofUrl: row.refundProofUrl ?? null,
   }
 }
 

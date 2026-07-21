@@ -76,7 +76,8 @@ export type AppealListQuery = z.infer<typeof AppealListQuerySchema>
 /**
  * DTO que recibe el cliente dueño de la apelación.
  * Solo incluye información relevante para su caso.
- * NO expone UUIDs internos de admin, createdBy, refundProofPath ni campos operativos.
+ * NO expone UUIDs internos de admin, createdBy ni refundProofPath (Storage path).
+ * Sí incluye refundProofUrl (URL firmada temporal) cuando la devolución está completada.
  */
 export const CustomerAppealDtoSchema = z
   .object({
@@ -91,6 +92,8 @@ export const CustomerAppealDtoSchema = z
     status: z.string(),
     createdAt: z.string().datetime(),
     updatedAt: z.string().datetime(),
+    /** URL firmada (Supabase Storage) del comprobante Yape de devolución. Null si no aplica. */
+    refundProofUrl: z.string().url().nullable(),
   })
   .strict()
 export type CustomerAppealDto = z.infer<typeof CustomerAppealDtoSchema>

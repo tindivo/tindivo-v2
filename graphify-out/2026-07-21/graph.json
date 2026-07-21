@@ -46,47 +46,47 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_admin_app_apelaciones_id_page",
-      "community": 12,
+      "community": 448,
       "norm_label": "page.tsx"
     },
     {
       "label": "soles()",
       "file_type": "code",
       "source_file": "apps/admin/app/apelaciones/[id]/page.tsx",
-      "source_location": "L10",
+      "source_location": "L11",
       "_origin": "ast",
       "id": "apps_admin_app_apelaciones_id_page_soles",
-      "community": 12,
+      "community": 448,
       "norm_label": "soles()"
     },
     {
       "label": "EVENT_LABELS",
       "file_type": "code",
       "source_file": "apps/admin/app/apelaciones/[id]/page.tsx",
-      "source_location": "L12",
+      "source_location": "L13",
       "_origin": "ast",
       "id": "apps_admin_app_apelaciones_id_page_event_labels",
-      "community": 12,
+      "community": 448,
       "norm_label": "event_labels"
     },
     {
       "label": "TimelineEvent",
       "file_type": "code",
       "source_file": "apps/admin/app/apelaciones/[id]/page.tsx",
-      "source_location": "L26",
+      "source_location": "L27",
       "_origin": "ast",
       "id": "apps_admin_app_apelaciones_id_page_timelineevent",
-      "community": 12,
+      "community": 448,
       "norm_label": "timelineevent"
     },
     {
       "label": "ApelacionDetallePage()",
       "file_type": "code",
       "source_file": "apps/admin/app/apelaciones/[id]/page.tsx",
-      "source_location": "L33",
+      "source_location": "L34",
       "_origin": "ast",
       "id": "apps_admin_app_apelaciones_id_page_apelaciondetallepage",
-      "community": 12,
+      "community": 448,
       "norm_label": "apelaciondetallepage()"
     },
     {
@@ -186,7 +186,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_admin_app_casos_page",
-      "community": 27,
+      "community": 92,
       "norm_label": "page.tsx"
     },
     {
@@ -196,7 +196,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "apps_admin_app_casos_page_tab",
-      "community": 27,
+      "community": 92,
       "norm_label": "tab"
     },
     {
@@ -206,7 +206,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "apps_admin_app_casos_page_tabs",
-      "community": 27,
+      "community": 92,
       "norm_label": "tabs"
     },
     {
@@ -216,7 +216,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "apps_admin_app_casos_page_casospage",
-      "community": 27,
+      "community": 92,
       "norm_label": "casospage()"
     },
     {
@@ -266,7 +266,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_admin_app_cobros_page",
-      "community": 23,
+      "community": 89,
       "norm_label": "page.tsx"
     },
     {
@@ -276,7 +276,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "apps_admin_app_cobros_page_settlementrow",
-      "community": 23,
+      "community": 89,
       "norm_label": "settlementrow"
     },
     {
@@ -286,7 +286,7 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "apps_admin_app_cobros_page_defaultperiod",
-      "community": 23,
+      "community": 89,
       "norm_label": "defaultperiod()"
     },
     {
@@ -296,7 +296,7 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "apps_admin_app_cobros_page_cobrospage",
-      "community": 23,
+      "community": 89,
       "norm_label": "cobrospage()"
     },
     {
@@ -486,7 +486,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_admin_app_incidentes_page",
-      "community": 89,
+      "community": 92,
       "norm_label": "page.tsx"
     },
     {
@@ -496,7 +496,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "apps_admin_app_incidentes_page_incidentrow",
-      "community": 89,
+      "community": 92,
       "norm_label": "incidentrow"
     },
     {
@@ -506,7 +506,7 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "apps_admin_app_incidentes_page_incidentespage",
-      "community": 89,
+      "community": 92,
       "norm_label": "incidentespage()"
     },
     {
@@ -516,7 +516,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_admin_app_layout",
-      "community": 19,
+      "community": 448,
       "norm_label": "layout.tsx"
     },
     {
@@ -526,7 +526,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "apps_admin_app_layout_bricolage",
-      "community": 19,
+      "community": 448,
       "norm_label": "bricolage"
     },
     {
@@ -536,7 +536,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "apps_admin_app_layout_geist",
-      "community": 19,
+      "community": 448,
       "norm_label": "geist"
     },
     {
@@ -546,7 +546,7 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "apps_admin_app_layout_jetbrains",
-      "community": 19,
+      "community": 448,
       "norm_label": "jetbrains"
     },
     {
@@ -556,7 +556,7 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "apps_admin_app_layout_metadata",
-      "community": 19,
+      "community": 448,
       "norm_label": "metadata"
     },
     {
@@ -566,7 +566,7 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "apps_admin_app_layout_rootlayout",
-      "community": 19,
+      "community": 448,
       "norm_label": "rootlayout()"
     },
     {
@@ -726,7 +726,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_admin_app_negocios_nuevo_page",
-      "community": 67,
+      "community": 27,
       "norm_label": "page.tsx"
     },
     {
@@ -736,7 +736,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "apps_admin_app_negocios_nuevo_page_default_form",
-      "community": 67,
+      "community": 27,
       "norm_label": "default_form"
     },
     {
@@ -746,7 +746,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "apps_admin_app_negocios_nuevo_page_nuevonegociopage",
-      "community": 67,
+      "community": 27,
       "norm_label": "nuevonegociopage()"
     },
     {
@@ -896,7 +896,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_admin_app_reportes_page",
-      "community": 27,
+      "community": 92,
       "norm_label": "page.tsx"
     },
     {
@@ -906,7 +906,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "apps_admin_app_reportes_page_reportrow",
-      "community": 27,
+      "community": 92,
       "norm_label": "reportrow"
     },
     {
@@ -916,7 +916,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "apps_admin_app_reportes_page_reportespage",
-      "community": 27,
+      "community": 92,
       "norm_label": "reportespage()"
     },
     {
@@ -926,7 +926,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_admin_app_strikes_page",
-      "community": 27,
+      "community": 92,
       "norm_label": "page.tsx"
     },
     {
@@ -936,7 +936,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "apps_admin_app_strikes_page_strikerow",
-      "community": 27,
+      "community": 92,
       "norm_label": "strikerow"
     },
     {
@@ -946,7 +946,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "apps_admin_app_strikes_page_strikespage",
-      "community": 27,
+      "community": 92,
       "norm_label": "strikespage()"
     },
     {
@@ -1006,7 +1006,7 @@
       "source_location": "L111",
       "_origin": "ast",
       "id": "apps_admin_components_admin_shell_adminshell",
-      "community": 19,
+      "community": 448,
       "norm_label": "adminshell()"
     },
     {
@@ -1146,7 +1146,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_admin_components_admin_empty_state",
-      "community": 27,
+      "community": 92,
       "norm_label": "empty-state.tsx"
     },
     {
@@ -1156,7 +1156,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "apps_admin_components_admin_empty_state_emptystate",
-      "community": 27,
+      "community": 92,
       "norm_label": "emptystate()"
     },
     {
@@ -1346,7 +1346,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_admin_components_admin_section_header",
-      "community": 12,
+      "community": 27,
       "norm_label": "section-header.tsx"
     },
     {
@@ -1356,7 +1356,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "apps_admin_components_admin_section_header_sectionheader",
-      "community": 12,
+      "community": 27,
       "norm_label": "sectionheader()"
     },
     {
@@ -1416,7 +1416,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_admin_components_auth_gate",
-      "community": 19,
+      "community": 448,
       "norm_label": "auth-gate.tsx"
     },
     {
@@ -1426,7 +1426,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "apps_admin_components_auth_gate_authgate",
-      "community": 19,
+      "community": 448,
       "norm_label": "authgate()"
     },
     {
@@ -1436,7 +1436,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_admin_components_casos_tab_claims",
-      "community": 27,
+      "community": 92,
       "norm_label": "tab-claims.tsx"
     },
     {
@@ -1446,7 +1446,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "apps_admin_components_casos_tab_claims_soles",
-      "community": 27,
+      "community": 92,
       "norm_label": "soles()"
     },
     {
@@ -1456,7 +1456,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "apps_admin_components_casos_tab_claims_claimrow",
-      "community": 27,
+      "community": 92,
       "norm_label": "claimrow"
     },
     {
@@ -1466,7 +1466,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "apps_admin_components_casos_tab_claims_tabclaimsprops",
-      "community": 27,
+      "community": 92,
       "norm_label": "tabclaimsprops"
     },
     {
@@ -1476,7 +1476,7 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "apps_admin_components_casos_tab_claims_tabclaims",
-      "community": 27,
+      "community": 92,
       "norm_label": "tabclaims()"
     },
     {
@@ -1486,7 +1486,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_admin_components_casos_tab_incidentes",
-      "community": 27,
+      "community": 92,
       "norm_label": "tab-incidentes.tsx"
     },
     {
@@ -1496,7 +1496,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "apps_admin_components_casos_tab_incidentes_incidentrow",
-      "community": 27,
+      "community": 92,
       "norm_label": "incidentrow"
     },
     {
@@ -1506,7 +1506,7 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "apps_admin_components_casos_tab_incidentes_tabincidentesprops",
-      "community": 27,
+      "community": 92,
       "norm_label": "tabincidentesprops"
     },
     {
@@ -1516,7 +1516,7 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "apps_admin_components_casos_tab_incidentes_tabincidentes",
-      "community": 27,
+      "community": 92,
       "norm_label": "tabincidentes()"
     },
     {
@@ -1526,7 +1526,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_admin_components_casos_tab_reportes",
-      "community": 27,
+      "community": 92,
       "norm_label": "tab-reportes.tsx"
     },
     {
@@ -1536,7 +1536,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "apps_admin_components_casos_tab_reportes_reportrow",
-      "community": 27,
+      "community": 92,
       "norm_label": "reportrow"
     },
     {
@@ -1546,7 +1546,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "apps_admin_components_casos_tab_reportes_tabreportesprops",
-      "community": 27,
+      "community": 92,
       "norm_label": "tabreportesprops"
     },
     {
@@ -1556,7 +1556,7 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "apps_admin_components_casos_tab_reportes_tabreportes",
-      "community": 27,
+      "community": 92,
       "norm_label": "tabreportes()"
     },
     {
@@ -1656,7 +1656,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_admin_components_login",
-      "community": 19,
+      "community": 448,
       "norm_label": "login.tsx"
     },
     {
@@ -1666,7 +1666,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "apps_admin_components_login_login",
-      "community": 19,
+      "community": 448,
       "norm_label": "login()"
     },
     {
@@ -1676,7 +1676,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_admin_components_push_manager",
-      "community": 19,
+      "community": 448,
       "norm_label": "push-manager.tsx"
     },
     {
@@ -1686,7 +1686,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "apps_admin_components_push_manager_pushmanager",
-      "community": 19,
+      "community": 448,
       "norm_label": "pushmanager()"
     },
     {
@@ -1716,7 +1716,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "apps_admin_lib_api_errmsg",
-      "community": 27,
+      "community": 92,
       "norm_label": "errmsg()"
     },
     {
@@ -1826,7 +1826,7 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "apps_admin_lib_labels_statement_status",
-      "community": 23,
+      "community": 89,
       "norm_label": "statement_status"
     },
     {
@@ -1846,7 +1846,7 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "apps_admin_lib_labels_report_type_label",
-      "community": 27,
+      "community": 92,
       "norm_label": "report_type_label"
     },
     {
@@ -1856,7 +1856,7 @@
       "source_location": "L48",
       "_origin": "ast",
       "id": "apps_admin_lib_labels_incident_type_label",
-      "community": 89,
+      "community": 92,
       "norm_label": "incident_type_label"
     },
     {
@@ -1976,7 +1976,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_admin_lib_supabase_client",
-      "community": 19,
+      "community": 448,
       "norm_label": "client.ts"
     },
     {
@@ -1986,7 +1986,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "apps_admin_lib_supabase_client_getsupabasebrowser",
-      "community": 19,
+      "community": 448,
       "norm_label": "getsupabasebrowser()"
     },
     {
@@ -2696,7 +2696,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_audit_route",
-      "community": 92,
+      "community": 56,
       "norm_label": "route.ts"
     },
     {
@@ -2706,7 +2706,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_audit_route_options",
-      "community": 92,
+      "community": 56,
       "norm_label": "options()"
     },
     {
@@ -2716,7 +2716,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_audit_route_get",
-      "community": 92,
+      "community": 56,
       "norm_label": "get()"
     },
     {
@@ -2726,7 +2726,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_businesses_id_block_route",
-      "community": 0,
+      "community": 455,
       "norm_label": "route.ts"
     },
     {
@@ -2736,7 +2736,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_businesses_id_block_route_schema",
-      "community": 0,
+      "community": 455,
       "norm_label": "schema"
     },
     {
@@ -2746,7 +2746,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_businesses_id_block_route_options",
-      "community": 0,
+      "community": 455,
       "norm_label": "options()"
     },
     {
@@ -2756,7 +2756,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_businesses_id_block_route_post",
-      "community": 0,
+      "community": 455,
       "norm_label": "post()"
     },
     {
@@ -2766,7 +2766,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_businesses_id_route",
-      "community": 76,
+      "community": 56,
       "norm_label": "route.ts"
     },
     {
@@ -2776,7 +2776,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_businesses_id_route_money",
-      "community": 76,
+      "community": 56,
       "norm_label": "money"
     },
     {
@@ -2786,7 +2786,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_businesses_id_route_schema",
-      "community": 76,
+      "community": 56,
       "norm_label": "schema"
     },
     {
@@ -2796,7 +2796,7 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_businesses_id_route_options",
-      "community": 76,
+      "community": 56,
       "norm_label": "options()"
     },
     {
@@ -2806,7 +2806,7 @@
       "source_location": "L40",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_businesses_id_route_get",
-      "community": 76,
+      "community": 56,
       "norm_label": "get()"
     },
     {
@@ -2816,7 +2816,7 @@
       "source_location": "L65",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_businesses_id_route_patch",
-      "community": 76,
+      "community": 56,
       "norm_label": "patch()"
     },
     {
@@ -2856,7 +2856,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_businesses_route",
-      "community": 0,
+      "community": 56,
       "norm_label": "route.ts"
     },
     {
@@ -2866,7 +2866,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_businesses_route_schema",
-      "community": 0,
+      "community": 56,
       "norm_label": "schema"
     },
     {
@@ -2876,7 +2876,7 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_businesses_route_options",
-      "community": 464,
+      "community": 36,
       "norm_label": "options()"
     },
     {
@@ -2886,7 +2886,7 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_businesses_route_get",
-      "community": 0,
+      "community": 56,
       "norm_label": "get()"
     },
     {
@@ -2896,7 +2896,7 @@
       "source_location": "L48",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_businesses_route_post",
-      "community": 0,
+      "community": 56,
       "norm_label": "post()"
     },
     {
@@ -2946,7 +2946,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_cash_settlements_route",
-      "community": 92,
+      "community": 36,
       "norm_label": "route.ts"
     },
     {
@@ -2956,7 +2956,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_cash_settlements_route_options",
-      "community": 92,
+      "community": 36,
       "norm_label": "options()"
     },
     {
@@ -2966,7 +2966,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_cash_settlements_route_get",
-      "community": 92,
+      "community": 36,
       "norm_label": "get()"
     },
     {
@@ -2976,7 +2976,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_contingency_id_resolve_route",
-      "community": 0,
+      "community": 56,
       "norm_label": "route.ts"
     },
     {
@@ -2986,7 +2986,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_contingency_id_resolve_route_schema",
-      "community": 0,
+      "community": 56,
       "norm_label": "schema"
     },
     {
@@ -2996,7 +2996,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_contingency_id_resolve_route_options",
-      "community": 0,
+      "community": 56,
       "norm_label": "options()"
     },
     {
@@ -3006,7 +3006,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_contingency_id_resolve_route_post",
-      "community": 0,
+      "community": 56,
       "norm_label": "post()"
     },
     {
@@ -3016,7 +3016,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_contingency_route",
-      "community": 36,
+      "community": 56,
       "norm_label": "route.ts"
     },
     {
@@ -3026,7 +3026,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_contingency_route_createschema",
-      "community": 36,
+      "community": 56,
       "norm_label": "createschema"
     },
     {
@@ -3036,7 +3036,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_contingency_route_options",
-      "community": 464,
+      "community": 36,
       "norm_label": "options()"
     },
     {
@@ -3046,7 +3046,7 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_contingency_route_get",
-      "community": 36,
+      "community": 56,
       "norm_label": "get()"
     },
     {
@@ -3056,7 +3056,7 @@
       "source_location": "L55",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_contingency_route_post",
-      "community": 36,
+      "community": 56,
       "norm_label": "post()"
     },
     {
@@ -3156,7 +3156,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_fraud_claims_id_resolve_route",
-      "community": 464,
+      "community": 56,
       "norm_label": "route.ts"
     },
     {
@@ -3166,7 +3166,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_fraud_claims_id_resolve_route_schema",
-      "community": 464,
+      "community": 56,
       "norm_label": "schema"
     },
     {
@@ -3176,7 +3176,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_fraud_claims_id_resolve_route_options",
-      "community": 464,
+      "community": 56,
       "norm_label": "options()"
     },
     {
@@ -3186,7 +3186,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_fraud_claims_id_resolve_route_put",
-      "community": 464,
+      "community": 56,
       "norm_label": "put()"
     },
     {
@@ -3196,7 +3196,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_fraud_claims_route",
-      "community": 92,
+      "community": 56,
       "norm_label": "route.ts"
     },
     {
@@ -3206,7 +3206,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_fraud_claims_route_options",
-      "community": 92,
+      "community": 56,
       "norm_label": "options()"
     },
     {
@@ -3216,7 +3216,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_fraud_claims_route_get",
-      "community": 92,
+      "community": 56,
       "norm_label": "get()"
     },
     {
@@ -3256,7 +3256,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_incidents_id_review_route",
-      "community": 464,
+      "community": 455,
       "norm_label": "route.ts"
     },
     {
@@ -3266,7 +3266,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_incidents_id_review_route_schema",
-      "community": 464,
+      "community": 455,
       "norm_label": "schema"
     },
     {
@@ -3276,7 +3276,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_incidents_id_review_route_options",
-      "community": 464,
+      "community": 455,
       "norm_label": "options()"
     },
     {
@@ -3286,7 +3286,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_incidents_id_review_route_put",
-      "community": 464,
+      "community": 455,
       "norm_label": "put()"
     },
     {
@@ -3296,7 +3296,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_incidents_route",
-      "community": 36,
+      "community": 56,
       "norm_label": "route.ts"
     },
     {
@@ -3306,7 +3306,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_incidents_route_options",
-      "community": 36,
+      "community": 56,
       "norm_label": "options()"
     },
     {
@@ -3316,7 +3316,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_incidents_route_get",
-      "community": 36,
+      "community": 56,
       "norm_label": "get()"
     },
     {
@@ -3406,7 +3406,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_orders_route",
-      "community": 92,
+      "community": 56,
       "norm_label": "route.ts"
     },
     {
@@ -3416,7 +3416,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_orders_route_options",
-      "community": 92,
+      "community": 56,
       "norm_label": "options()"
     },
     {
@@ -3426,7 +3426,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_orders_route_get",
-      "community": 92,
+      "community": 56,
       "norm_label": "get()"
     },
     {
@@ -3476,7 +3476,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_reports_route",
-      "community": 92,
+      "community": 455,
       "norm_label": "route.ts"
     },
     {
@@ -3486,7 +3486,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_reports_route_options",
-      "community": 92,
+      "community": 455,
       "norm_label": "options()"
     },
     {
@@ -3496,7 +3496,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_reports_route_get",
-      "community": 92,
+      "community": 455,
       "norm_label": "get()"
     },
     {
@@ -3606,7 +3606,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_settlements_id_pay_route",
-      "community": 0,
+      "community": 36,
       "norm_label": "route.ts"
     },
     {
@@ -3616,7 +3616,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_settlements_id_pay_route_schema",
-      "community": 0,
+      "community": 36,
       "norm_label": "schema"
     },
     {
@@ -3626,7 +3626,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_settlements_id_pay_route_options",
-      "community": 0,
+      "community": 36,
       "norm_label": "options()"
     },
     {
@@ -3636,7 +3636,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_settlements_id_pay_route_post",
-      "community": 0,
+      "community": 36,
       "norm_label": "post()"
     },
     {
@@ -3696,7 +3696,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_strikes_route",
-      "community": 36,
+      "community": 455,
       "norm_label": "route.ts"
     },
     {
@@ -3706,7 +3706,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_strikes_route_options",
-      "community": 36,
+      "community": 455,
       "norm_label": "options()"
     },
     {
@@ -3716,7 +3716,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_admin_strikes_route_get",
-      "community": 36,
+      "community": 455,
       "norm_label": "get()"
     },
     {
@@ -3726,7 +3726,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_business_cash_settlements_id_confirm_route",
-      "community": 56,
+      "community": 455,
       "norm_label": "route.ts"
     },
     {
@@ -3736,7 +3736,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_business_cash_settlements_id_confirm_route_schema",
-      "community": 56,
+      "community": 455,
       "norm_label": "schema"
     },
     {
@@ -3746,7 +3746,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_business_cash_settlements_id_confirm_route_options",
-      "community": 56,
+      "community": 455,
       "norm_label": "options()"
     },
     {
@@ -3756,7 +3756,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_business_cash_settlements_id_confirm_route_post",
-      "community": 56,
+      "community": 455,
       "norm_label": "post()"
     },
     {
@@ -3806,7 +3806,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_business_contingency_id_dispute_route",
-      "community": 455,
+      "community": 56,
       "norm_label": "route.ts"
     },
     {
@@ -3816,7 +3816,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_business_contingency_id_dispute_route_schema",
-      "community": 455,
+      "community": 56,
       "norm_label": "schema"
     },
     {
@@ -3826,7 +3826,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_business_contingency_id_dispute_route_options",
-      "community": 455,
+      "community": 56,
       "norm_label": "options()"
     },
     {
@@ -3836,7 +3836,7 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_business_contingency_id_dispute_route_post",
-      "community": 455,
+      "community": 56,
       "norm_label": "post()"
     },
     {
@@ -3866,7 +3866,7 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_business_fraud_claims_route_options",
-      "community": 6,
+      "community": 36,
       "norm_label": "options()"
     },
     {
@@ -3916,7 +3916,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_business_orders_id_prepay_proof_route",
-      "community": 464,
+      "community": 0,
       "norm_label": "route.ts"
     },
     {
@@ -3926,7 +3926,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_business_orders_id_prepay_proof_route_options",
-      "community": 464,
+      "community": 0,
       "norm_label": "options()"
     },
     {
@@ -3936,7 +3936,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_business_orders_id_prepay_proof_route_get",
-      "community": 455,
+      "community": 0,
       "norm_label": "get()"
     },
     {
@@ -3946,7 +3946,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_business_orders_id_request_validation_route",
-      "community": 464,
+      "community": 6,
       "norm_label": "route.ts"
     },
     {
@@ -3956,7 +3956,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_business_orders_id_request_validation_route_options",
-      "community": 464,
+      "community": 6,
       "norm_label": "options()"
     },
     {
@@ -3966,7 +3966,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_business_orders_id_request_validation_route_post",
-      "community": 464,
+      "community": 6,
       "norm_label": "post()"
     },
     {
@@ -4086,7 +4086,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_business_pause_route",
-      "community": 455,
+      "community": 56,
       "norm_label": "route.ts"
     },
     {
@@ -4096,7 +4096,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_business_pause_route_pauseschema",
-      "community": 455,
+      "community": 56,
       "norm_label": "pauseschema"
     },
     {
@@ -4106,7 +4106,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_business_pause_route_options",
-      "community": 455,
+      "community": 56,
       "norm_label": "options()"
     },
     {
@@ -4116,7 +4116,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_business_pause_route_post",
-      "community": 455,
+      "community": 56,
       "norm_label": "post()"
     },
     {
@@ -4126,7 +4126,7 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_business_pause_route_delete",
-      "community": 455,
+      "community": 56,
       "norm_label": "delete()"
     },
     {
@@ -4176,7 +4176,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_customer_orders_id_appeal_route",
-      "community": 94,
+      "community": 30,
       "norm_label": "route.ts"
     },
     {
@@ -4186,7 +4186,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_customer_orders_id_appeal_route_schema",
-      "community": 94,
+      "community": 30,
       "norm_label": "schema"
     },
     {
@@ -4196,7 +4196,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_customer_orders_id_appeal_route_orderidschema",
-      "community": 94,
+      "community": 30,
       "norm_label": "orderidschema"
     },
     {
@@ -4206,7 +4206,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_customer_orders_id_appeal_route_options",
-      "community": 94,
+      "community": 30,
       "norm_label": "options()"
     },
     {
@@ -4216,7 +4216,7 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_customer_orders_id_appeal_route_get",
-      "community": 94,
+      "community": 30,
       "norm_label": "get()"
     },
     {
@@ -4226,7 +4226,7 @@
       "source_location": "L59",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_customer_orders_id_appeal_route_post",
-      "community": 94,
+      "community": 30,
       "norm_label": "post()"
     },
     {
@@ -4296,7 +4296,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_customer_orders_id_prepay_proof_route",
-      "community": 0,
+      "community": 455,
       "norm_label": "route.ts"
     },
     {
@@ -4306,7 +4306,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_customer_orders_id_prepay_proof_route_schema",
-      "community": 0,
+      "community": 455,
       "norm_label": "schema"
     },
     {
@@ -4316,7 +4316,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_customer_orders_id_prepay_proof_route_options",
-      "community": 0,
+      "community": 455,
       "norm_label": "options()"
     },
     {
@@ -4326,7 +4326,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_customer_orders_id_prepay_proof_route_post",
-      "community": 0,
+      "community": 455,
       "norm_label": "post()"
     },
     {
@@ -4396,7 +4396,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_customer_phone_send_code_route_options",
-      "community": 464,
+      "community": 76,
       "norm_label": "options()"
     },
     {
@@ -4586,7 +4586,7 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_driver_incidents_route_options",
-      "community": 6,
+      "community": 36,
       "norm_label": "options()"
     },
     {
@@ -4596,7 +4596,7 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_driver_incidents_route_post",
-      "community": 76,
+      "community": 6,
       "norm_label": "post()"
     },
     {
@@ -4606,7 +4606,7 @@
       "source_location": "L70",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_driver_incidents_route_get",
-      "community": 6,
+      "community": 455,
       "norm_label": "get()"
     },
     {
@@ -4616,7 +4616,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_driver_orders_id_route",
-      "community": 455,
+      "community": 0,
       "norm_label": "route.ts"
     },
     {
@@ -4626,7 +4626,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_driver_orders_id_route_options",
-      "community": 455,
+      "community": 0,
       "norm_label": "options()"
     },
     {
@@ -4636,7 +4636,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_driver_orders_id_route_order_columns",
-      "community": 455,
+      "community": 0,
       "norm_label": "order_columns"
     },
     {
@@ -4646,7 +4646,7 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_driver_orders_id_route_get",
-      "community": 455,
+      "community": 0,
       "norm_label": "get()"
     },
     {
@@ -4676,7 +4676,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_driver_orders_id_transfer_request_route_options",
-      "community": 6,
+      "community": 36,
       "norm_label": "options()"
     },
     {
@@ -4726,7 +4726,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_driver_team_route",
-      "community": 36,
+      "community": 56,
       "norm_label": "route.ts"
     },
     {
@@ -4736,7 +4736,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_driver_team_route_transferable",
-      "community": 36,
+      "community": 56,
       "norm_label": "transferable"
     },
     {
@@ -4746,7 +4746,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_driver_team_route_options",
-      "community": 36,
+      "community": 56,
       "norm_label": "options()"
     },
     {
@@ -4756,7 +4756,7 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_driver_team_route_get",
-      "community": 36,
+      "community": 56,
       "norm_label": "get()"
     },
     {
@@ -4766,7 +4766,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_driver_transfers_id_respond_route",
-      "community": 464,
+      "community": 56,
       "norm_label": "route.ts"
     },
     {
@@ -4776,7 +4776,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_driver_transfers_id_respond_route_schema",
-      "community": 464,
+      "community": 56,
       "norm_label": "schema"
     },
     {
@@ -4786,7 +4786,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_driver_transfers_id_respond_route_options",
-      "community": 464,
+      "community": 56,
       "norm_label": "options()"
     },
     {
@@ -4796,7 +4796,7 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_driver_transfers_id_respond_route_post",
-      "community": 464,
+      "community": 56,
       "norm_label": "post()"
     },
     {
@@ -4816,7 +4816,7 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_health_route_options",
-      "community": 455,
+      "community": 36,
       "norm_label": "options()"
     },
     {
@@ -4836,7 +4836,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_public_businesses_id_route",
-      "community": 76,
+      "community": 36,
       "norm_label": "route.ts"
     },
     {
@@ -4846,7 +4846,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_public_businesses_id_route_options",
-      "community": 464,
+      "community": 36,
       "norm_label": "options()"
     },
     {
@@ -4856,7 +4856,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_public_businesses_id_route_get",
-      "community": 76,
+      "community": 455,
       "norm_label": "get()"
     },
     {
@@ -4866,7 +4866,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_public_businesses_route",
-      "community": 36,
+      "community": 455,
       "norm_label": "route.ts"
     },
     {
@@ -4886,7 +4886,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_public_businesses_route_get",
-      "community": 36,
+      "community": 455,
       "norm_label": "get()"
     },
     {
@@ -4896,7 +4896,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_public_orders_shortid_route",
-      "community": 76,
+      "community": 0,
       "norm_label": "route.ts"
     },
     {
@@ -4906,7 +4906,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_public_orders_shortid_route_options",
-      "community": 76,
+      "community": 0,
       "norm_label": "options()"
     },
     {
@@ -4916,7 +4916,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_public_orders_shortid_route_get",
-      "community": 76,
+      "community": 0,
       "norm_label": "get()"
     },
     {
@@ -4966,7 +4966,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_push_subscriptions_route",
-      "community": 92,
+      "community": 56,
       "norm_label": "route.ts"
     },
     {
@@ -4976,7 +4976,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_push_subscriptions_route_subschema",
-      "community": 92,
+      "community": 56,
       "norm_label": "subschema"
     },
     {
@@ -4986,7 +4986,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_push_subscriptions_route_deleteschema",
-      "community": 92,
+      "community": 56,
       "norm_label": "deleteschema"
     },
     {
@@ -4996,7 +4996,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_push_subscriptions_route_options",
-      "community": 464,
+      "community": 36,
       "norm_label": "options()"
     },
     {
@@ -5006,7 +5006,7 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_push_subscriptions_route_post",
-      "community": 92,
+      "community": 56,
       "norm_label": "post()"
     },
     {
@@ -5016,7 +5016,7 @@
       "source_location": "L48",
       "_origin": "ast",
       "id": "apps_api_app_api_v1_push_subscriptions_route_delete",
-      "community": 92,
+      "community": 56,
       "norm_label": "delete()"
     },
     {
@@ -5026,7 +5026,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_lib_env",
-      "community": 92,
+      "community": 76,
       "norm_label": "env.ts"
     },
     {
@@ -5036,7 +5036,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "apps_api_lib_env_serverenvschema",
-      "community": 92,
+      "community": 76,
       "norm_label": "serverenvschema"
     },
     {
@@ -5046,7 +5046,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "apps_api_lib_env_serverenv",
-      "community": 92,
+      "community": 76,
       "norm_label": "serverenv"
     },
     {
@@ -5076,7 +5076,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "apps_api_lib_http_auth_requireuser",
-      "community": 92,
+      "community": 56,
       "norm_label": "requireuser()"
     },
     {
@@ -5086,7 +5086,7 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "apps_api_lib_http_auth_requirerole",
-      "community": 0,
+      "community": 56,
       "norm_label": "requirerole()"
     },
     {
@@ -5146,7 +5146,7 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "apps_api_lib_http_cors_corsheaders",
-      "community": 56,
+      "community": 455,
       "norm_label": "corsheaders()"
     },
     {
@@ -5156,7 +5156,7 @@
       "source_location": "L50",
       "_origin": "ast",
       "id": "apps_api_lib_http_cors_handleoptions",
-      "community": 464,
+      "community": 36,
       "norm_label": "handleoptions()"
     },
     {
@@ -5266,7 +5266,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_lib_http_problem",
-      "community": 76,
+      "community": 0,
       "norm_label": "problem.ts"
     },
     {
@@ -5286,7 +5286,7 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "apps_api_lib_http_problem_problem",
-      "community": 76,
+      "community": 6,
       "norm_label": "problem()"
     },
     {
@@ -5306,7 +5306,7 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "apps_api_lib_http_problem_raw",
-      "community": 76,
+      "community": 0,
       "norm_label": "raw()"
     },
     {
@@ -5316,7 +5316,7 @@
       "source_location": "L48",
       "_origin": "ast",
       "id": "apps_api_lib_http_problem_handleerror",
-      "community": 76,
+      "community": 56,
       "norm_label": "handleerror()"
     },
     {
@@ -5326,7 +5326,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "apps_api_lib_http_problem_ts_docref_rfc_9457",
-      "community": 76,
+      "community": 0,
       "norm_label": "rfc-9457"
     },
     {
@@ -5336,7 +5336,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_lib_http_request_id",
-      "community": 36,
+      "community": 30,
       "norm_label": "request-id.ts"
     },
     {
@@ -5346,7 +5346,7 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "apps_api_lib_http_request_id_getrequestid",
-      "community": 36,
+      "community": 56,
       "norm_label": "getrequestid()"
     },
     {
@@ -5726,7 +5726,7 @@
       "source_location": "L124",
       "_origin": "ast",
       "id": "apps_api_lib_inngest_client_sendorderproofrejectedfinal",
-      "community": 94,
+      "community": 20,
       "norm_label": "sendorderproofrejectedfinal()"
     },
     {
@@ -5736,7 +5736,7 @@
       "source_location": "L134",
       "_origin": "ast",
       "id": "apps_api_lib_inngest_client_sendorderappealcreated",
-      "community": 94,
+      "community": 20,
       "norm_label": "sendorderappealcreated()"
     },
     {
@@ -5936,7 +5936,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_lib_outbox_processor",
-      "community": 94,
+      "community": 20,
       "norm_label": "processor.ts"
     },
     {
@@ -5946,7 +5946,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "apps_api_lib_outbox_processor_outboxclaimedrow",
-      "community": 94,
+      "community": 20,
       "norm_label": "outboxclaimedrow"
     },
     {
@@ -5956,7 +5956,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "apps_api_lib_outbox_processor_processpendingoutboxevents",
-      "community": 94,
+      "community": 20,
       "norm_label": "processpendingoutboxevents()"
     },
     {
@@ -6016,7 +6016,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_lib_supabase_server",
-      "community": 92,
+      "community": 76,
       "norm_label": "server.ts"
     },
     {
@@ -6026,7 +6026,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "apps_api_lib_supabase_server_createserversupabase",
-      "community": 92,
+      "community": 76,
       "norm_label": "createserversupabase()"
     },
     {
@@ -6036,7 +6036,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_lib_supabase_service",
-      "community": 92,
+      "community": 76,
       "norm_label": "service.ts"
     },
     {
@@ -6046,7 +6046,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "apps_api_lib_supabase_service_createserviceclient",
-      "community": 92,
+      "community": 56,
       "norm_label": "createserviceclient()"
     },
     {
@@ -6466,7 +6466,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_proxy",
-      "community": 56,
+      "community": 455,
       "norm_label": "proxy.ts"
     },
     {
@@ -6476,7 +6476,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "apps_api_proxy_proxy",
-      "community": 56,
+      "community": 455,
       "norm_label": "proxy()"
     },
     {
@@ -6486,7 +6486,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "apps_api_proxy_config",
-      "community": 56,
+      "community": 455,
       "norm_label": "config"
     },
     {
@@ -7026,7 +7026,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_customer_app_page",
-      "community": 82,
+      "community": 17,
       "norm_label": "page.tsx"
     },
     {
@@ -7036,7 +7036,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "apps_customer_app_page_soles",
-      "community": 82,
+      "community": 17,
       "norm_label": "soles()"
     },
     {
@@ -7046,7 +7046,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "apps_customer_app_page_publicbusiness",
-      "community": 82,
+      "community": 17,
       "norm_label": "publicbusiness"
     },
     {
@@ -7056,7 +7056,7 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "apps_customer_app_page_active_statuses",
-      "community": 82,
+      "community": 17,
       "norm_label": "active_statuses"
     },
     {
@@ -7066,7 +7066,7 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "apps_customer_app_page_tracking_label",
-      "community": 82,
+      "community": 17,
       "norm_label": "tracking_label"
     },
     {
@@ -7076,7 +7076,7 @@
       "source_location": "L51",
       "_origin": "ast",
       "id": "apps_customer_app_page_home",
-      "community": 82,
+      "community": 17,
       "norm_label": "home()"
     },
     {
@@ -7086,7 +7086,7 @@
       "source_location": "L407",
       "_origin": "ast",
       "id": "apps_customer_app_page_restaurantcard",
-      "community": 82,
+      "community": 17,
       "norm_label": "restaurantcard()"
     },
     {
@@ -7096,7 +7096,7 @@
       "source_location": "L469",
       "_origin": "ast",
       "id": "apps_customer_app_page_dishresultcard",
-      "community": 82,
+      "community": 17,
       "norm_label": "dishresultcard()"
     },
     {
@@ -7726,7 +7726,7 @@
       "source_location": "L187",
       "_origin": "ast",
       "id": "apps_customer_components_auth_onboarding_persistence_saveaddress",
-      "community": 81,
+      "community": 7,
       "norm_label": "saveaddress()"
     },
     {
@@ -7866,7 +7866,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_customer_components_auth_onboarding_steps_phone_step",
-      "community": 8,
+      "community": 17,
       "norm_label": "phone-step.tsx"
     },
     {
@@ -7876,7 +7876,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "apps_customer_components_auth_onboarding_steps_phone_step_phonestepphase",
-      "community": 8,
+      "community": 17,
       "norm_label": "phonestepphase"
     },
     {
@@ -7886,7 +7886,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "apps_customer_components_auth_onboarding_steps_phone_step_phonestep",
-      "community": 8,
+      "community": 17,
       "norm_label": "phonestep()"
     },
     {
@@ -8036,7 +8036,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_customer_components_gates_phone_gate_modal",
-      "community": 8,
+      "community": 17,
       "norm_label": "phone-gate-modal.tsx"
     },
     {
@@ -8046,7 +8046,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "apps_customer_components_gates_phone_gate_modal_props",
-      "community": 8,
+      "community": 17,
       "norm_label": "props"
     },
     {
@@ -8056,7 +8056,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "apps_customer_components_gates_phone_gate_modal_phonegatemodal",
-      "community": 8,
+      "community": 17,
       "norm_label": "phonegatemodal()"
     },
     {
@@ -8516,7 +8516,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_customer_lib_api",
-      "community": 82,
+      "community": 17,
       "norm_label": "api.ts"
     },
     {
@@ -8526,7 +8526,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "apps_customer_lib_api_api",
-      "community": 82,
+      "community": 17,
       "norm_label": "api"
     },
     {
@@ -8686,7 +8686,7 @@
       "source_location": "L166",
       "_origin": "ast",
       "id": "apps_customer_lib_cart_carthydrator",
-      "community": 8,
+      "community": 82,
       "norm_label": "carthydrator()"
     },
     {
@@ -9116,7 +9116,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_customer_lib_use_search",
-      "community": 82,
+      "community": 17,
       "norm_label": "use-search.ts"
     },
     {
@@ -9126,7 +9126,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "apps_customer_lib_use_search_searchbusiness",
-      "community": 82,
+      "community": 17,
       "norm_label": "searchbusiness"
     },
     {
@@ -9136,7 +9136,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "apps_customer_lib_use_search_searchitem",
-      "community": 82,
+      "community": 17,
       "norm_label": "searchitem"
     },
     {
@@ -9146,7 +9146,7 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "apps_customer_lib_use_search_searchresults",
-      "community": 82,
+      "community": 17,
       "norm_label": "searchresults"
     },
     {
@@ -9156,7 +9156,7 @@
       "source_location": "L42",
       "_origin": "ast",
       "id": "apps_customer_lib_use_search_usecatalogsearch",
-      "community": 82,
+      "community": 17,
       "norm_label": "usecatalogsearch()"
     },
     {
@@ -12626,7 +12626,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_negocios_app_nuevo_page",
-      "community": 21,
+      "community": 44,
       "norm_label": "page.tsx"
     },
     {
@@ -12636,7 +12636,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "apps_negocios_app_nuevo_page_prep_presets",
-      "community": 21,
+      "community": 44,
       "norm_label": "prep_presets"
     },
     {
@@ -12646,7 +12646,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "apps_negocios_app_nuevo_page_payment",
-      "community": 21,
+      "community": 44,
       "norm_label": "payment"
     },
     {
@@ -12656,7 +12656,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "apps_negocios_app_nuevo_page_payments",
-      "community": 21,
+      "community": 44,
       "norm_label": "payments"
     },
     {
@@ -12666,7 +12666,7 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "apps_negocios_app_nuevo_page_num",
-      "community": 21,
+      "community": 44,
       "norm_label": "num()"
     },
     {
@@ -12676,7 +12676,7 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "apps_negocios_app_nuevo_page_nuevopedidopage",
-      "community": 21,
+      "community": 44,
       "norm_label": "nuevopedidopage()"
     },
     {
@@ -12686,7 +12686,7 @@
       "source_location": "L483",
       "_origin": "ast",
       "id": "apps_negocios_app_nuevo_page_card",
-      "community": 21,
+      "community": 44,
       "norm_label": "card"
     },
     {
@@ -12716,7 +12716,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_negocios_components_dashboard_cards",
-      "community": 44,
+      "community": 4,
       "norm_label": "cards.tsx"
     },
     {
@@ -12726,7 +12726,7 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "apps_negocios_components_dashboard_cards_cardprops",
-      "community": 44,
+      "community": 4,
       "norm_label": "cardprops"
     },
     {
@@ -12736,7 +12736,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "apps_negocios_components_dashboard_cards_cooking_state_style",
-      "community": 44,
+      "community": 4,
       "norm_label": "cooking_state_style"
     },
     {
@@ -12746,7 +12746,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "apps_negocios_components_dashboard_cards_risk_reason_label",
-      "community": 44,
+      "community": 4,
       "norm_label": "risk_reason_label"
     },
     {
@@ -12756,7 +12756,7 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "apps_negocios_components_dashboard_cards_riskbadge",
-      "community": 44,
+      "community": 4,
       "norm_label": "riskbadge()"
     },
     {
@@ -12766,7 +12766,7 @@
       "source_location": "L50",
       "_origin": "ast",
       "id": "apps_negocios_components_dashboard_cards_cookingstatusline",
-      "community": 44,
+      "community": 4,
       "norm_label": "cookingstatusline()"
     },
     {
@@ -12776,7 +12776,7 @@
       "source_location": "L150",
       "_origin": "ast",
       "id": "apps_negocios_components_dashboard_cards_cardhover",
-      "community": 44,
+      "community": 4,
       "norm_label": "cardhover"
     },
     {
@@ -12786,7 +12786,7 @@
       "source_location": "L159",
       "_origin": "ast",
       "id": "apps_negocios_components_dashboard_cards_clickprops",
-      "community": 44,
+      "community": 4,
       "norm_label": "clickprops()"
     },
     {
@@ -12796,7 +12796,7 @@
       "source_location": "L173",
       "_origin": "ast",
       "id": "apps_negocios_components_dashboard_cards_idaddress",
-      "community": 44,
+      "community": 4,
       "norm_label": "idaddress()"
     },
     {
@@ -12806,7 +12806,7 @@
       "source_location": "L195",
       "_origin": "ast",
       "id": "apps_negocios_components_dashboard_cards_cocinacard",
-      "community": 44,
+      "community": 4,
       "norm_label": "cocinacard()"
     },
     {
@@ -12816,7 +12816,7 @@
       "source_location": "L256",
       "_origin": "ast",
       "id": "apps_negocios_components_dashboard_cards_nuevocard",
-      "community": 44,
+      "community": 4,
       "norm_label": "nuevocard()"
     },
     {
@@ -12826,7 +12826,7 @@
       "source_location": "L339",
       "_origin": "ast",
       "id": "apps_negocios_components_dashboard_cards_repartocard",
-      "community": 44,
+      "community": 4,
       "norm_label": "repartocard()"
     },
     {
@@ -13296,7 +13296,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "apps_negocios_components_dashboard_primitives_ms",
-      "community": 55,
+      "community": 44,
       "norm_label": "ms()"
     },
     {
@@ -13326,7 +13326,7 @@
       "source_location": "L41",
       "_origin": "ast",
       "id": "apps_negocios_components_dashboard_primitives_mmss",
-      "community": 44,
+      "community": 4,
       "norm_label": "mmss()"
     },
     {
@@ -13386,7 +13386,7 @@
       "source_location": "L122",
       "_origin": "ast",
       "id": "apps_negocios_components_dashboard_primitives_paybadgemini",
-      "community": 44,
+      "community": 4,
       "norm_label": "paybadgemini()"
     },
     {
@@ -13466,7 +13466,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_negocios_components_dashboard_toast",
-      "community": 55,
+      "community": 44,
       "norm_label": "toast.tsx"
     },
     {
@@ -13486,7 +13486,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "apps_negocios_components_dashboard_toast_successtoasthost",
-      "community": 55,
+      "community": 44,
       "norm_label": "successtoasthost()"
     },
     {
@@ -16536,7 +16536,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "packages_contracts_src_primitives_shortidschema",
-      "community": 43,
+      "community": 460,
       "norm_label": "shortidschema"
     },
     {
@@ -16546,7 +16546,7 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "packages_contracts_src_primitives_shortid",
-      "community": 43,
+      "community": 460,
       "norm_label": "shortid"
     },
     {
@@ -17326,7 +17326,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "packages_core_src_order_tests_short_id_test",
-      "community": 304,
+      "community": 460,
       "norm_label": "short-id.test.ts"
     },
     {
@@ -17446,7 +17446,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "packages_core_src_order_short_id",
-      "community": 304,
+      "community": 460,
       "norm_label": "short-id.ts"
     },
     {
@@ -17456,7 +17456,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "packages_core_src_order_short_id_shortid",
-      "community": 304,
+      "community": 460,
       "norm_label": "shortid"
     },
     {
@@ -17596,7 +17596,7 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "packages_core_src_shared_errors_invalidshortiderror",
-      "community": 304,
+      "community": 460,
       "norm_label": "invalidshortiderror"
     },
     {
@@ -17606,7 +17606,7 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "packages_core_src_shared_errors_invalidshortiderror_constructor",
-      "community": 304,
+      "community": 460,
       "norm_label": ".constructor()"
     },
     {
@@ -17946,7 +17946,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "packages_supabase_src_service_client_createserviceroleclient",
-      "community": 92,
+      "community": 1,
       "norm_label": "createserviceroleclient()"
     },
     {
@@ -18916,7 +18916,7 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "packages_ui_src_components_button_button",
-      "community": 27,
+      "community": 92,
       "norm_label": "button()"
     },
     {
@@ -19726,7 +19726,7 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "turbo_tasks_type_check",
-      "community": 190,
+      "community": 464,
       "norm_label": "type-check"
     },
     {
@@ -19736,7 +19736,7 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "turbo_type_check_dependson",
-      "community": 190,
+      "community": 464,
       "norm_label": "dependson"
     },
     {
@@ -19746,7 +19746,7 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "turbo_type_check_outputs",
-      "community": 190,
+      "community": 464,
       "norm_label": "outputs"
     },
     {
@@ -25426,7 +25426,7 @@
       "source_location": "L779",
       "_origin": "ast",
       "id": "docs_07_flujo_cliente_12_pantalla_prepago_yape",
-      "community": 180,
+      "community": 461,
       "norm_label": "12. pantalla \u00b7 prepago yape"
     },
     {
@@ -25436,7 +25436,7 @@
       "source_location": "L781",
       "_origin": "ast",
       "id": "docs_07_flujo_cliente_estado_currentscreen_prepay",
-      "community": 180,
+      "community": 461,
       "norm_label": "estado: `currentscreen = 'prepay'`"
     },
     {
@@ -25446,7 +25446,7 @@
       "source_location": "L783",
       "_origin": "ast",
       "id": "docs_07_flujo_cliente_layout_783",
-      "community": 180,
+      "community": 461,
       "norm_label": "layout"
     },
     {
@@ -25636,7 +25636,7 @@
       "source_location": "L1061",
       "_origin": "ast",
       "id": "docs_07_flujo_cliente_17_pantalla_editor_de_direcciones",
-      "community": 448,
+      "community": 180,
       "norm_label": "17. pantalla \u00b7 editor de direcciones"
     },
     {
@@ -25646,7 +25646,7 @@
       "source_location": "L1063",
       "_origin": "ast",
       "id": "docs_07_flujo_cliente_layout_1063",
-      "community": 448,
+      "community": 180,
       "norm_label": "layout"
     },
     {
@@ -25656,7 +25656,7 @@
       "source_location": "L1100",
       "_origin": "ast",
       "id": "docs_07_flujo_cliente_rfs_vinculadas_1100",
-      "community": 448,
+      "community": 180,
       "norm_label": "rfs vinculadas"
     },
     {
@@ -33986,7 +33986,7 @@
       "source_location": "L70",
       "_origin": "ast",
       "id": "apps_api_lib_http_rpc_error_rpcerror",
-      "community": 464,
+      "community": 6,
       "norm_label": "rpcerror"
     },
     {
@@ -36753,7 +36753,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/admin/app/apelaciones/[id]/page.tsx",
-      "source_location": "L33",
+      "source_location": "L34",
       "weight": 1.0,
       "source": "apps_admin_app_apelaciones_id_page",
       "target": "apps_admin_app_apelaciones_id_page_apelaciondetallepage",
@@ -36763,7 +36763,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/admin/app/apelaciones/[id]/page.tsx",
-      "source_location": "L12",
+      "source_location": "L13",
       "weight": 1.0,
       "source": "apps_admin_app_apelaciones_id_page",
       "target": "apps_admin_app_apelaciones_id_page_event_labels",
@@ -36773,7 +36773,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/admin/app/apelaciones/[id]/page.tsx",
-      "source_location": "L10",
+      "source_location": "L11",
       "weight": 1.0,
       "source": "apps_admin_app_apelaciones_id_page",
       "target": "apps_admin_app_apelaciones_id_page_soles",
@@ -36783,7 +36783,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/admin/app/apelaciones/[id]/page.tsx",
-      "source_location": "L26",
+      "source_location": "L27",
       "weight": 1.0,
       "source": "apps_admin_app_apelaciones_id_page",
       "target": "apps_admin_app_apelaciones_id_page_timelineevent",
@@ -36867,6 +36867,28 @@
       "confidence_score": 1.0
     },
     {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/admin/app/apelaciones/[id]/page.tsx",
+      "source_location": "L9",
+      "weight": 1.0,
+      "source": "apps_admin_app_apelaciones_id_page",
+      "target": "apps_admin_lib_supabase_client",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/admin/app/apelaciones/[id]/page.tsx",
+      "source_location": "L9",
+      "weight": 1.0,
+      "source": "apps_admin_app_apelaciones_id_page",
+      "target": "apps_admin_lib_supabase_client_getsupabasebrowser",
+      "confidence_score": 1.0
+    },
+    {
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
@@ -36915,7 +36937,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/admin/app/apelaciones/[id]/page.tsx",
-      "source_location": "L294",
+      "source_location": "L287",
       "weight": 1.0,
       "source": "apps_admin_app_apelaciones_id_page_apelaciondetallepage",
       "target": "apps_admin_app_apelaciones_id_page_soles",
@@ -36927,10 +36949,21 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/admin/app/apelaciones/[id]/page.tsx",
-      "source_location": "L155",
+      "source_location": "L152",
       "weight": 1.0,
       "source": "apps_admin_app_apelaciones_id_page_apelaciondetallepage",
       "target": "apps_admin_lib_api_errmsg"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "apps/admin/app/apelaciones/[id]/page.tsx",
+      "source_location": "L55",
+      "weight": 1.0,
+      "source": "apps_admin_app_apelaciones_id_page_apelaciondetallepage",
+      "target": "apps_admin_lib_supabase_client_getsupabasebrowser"
     },
     {
       "relation": "contains",

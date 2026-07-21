@@ -10,6 +10,7 @@ interface AppealStatus {
   refundStatus: string | null
   refundAmount: number | null
   appealDeadline: string | null
+  refundProofUrl: string | null
 }
 
 interface AppealSectionProps {
@@ -137,6 +138,7 @@ export function AppealSection({
   const status = appealData?.appealStatus ?? 'pending'
   const refundStatus = appealData?.refundStatus
   const refundAmount = appealData?.refundAmount
+  const refundProofUrl = appealData?.refundProofUrl ?? null
 
   let currentStepIndex = 0
   if (status === 'in_review') currentStepIndex = 1
@@ -230,6 +232,28 @@ export function AppealSection({
                         </p>
                       </div>
                     </div>
+                    {refundProofUrl && (
+                      <a
+                        href={refundProofUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block border-t"
+                        style={{ borderColor: '#bbf7d0' }}
+                      >
+                        <img
+                          src={refundProofUrl}
+                          alt="Captura del Yape de devolución"
+                          className="w-full object-cover"
+                          style={{ maxHeight: 200 }}
+                        />
+                        <p
+                          className="py-2 text-center text-[11px] font-semibold"
+                          style={{ color: '#166534', background: 'rgba(255,255,255,0.5)' }}
+                        >
+                          Toca para ampliar la captura
+                        </p>
+                      </a>
+                    )}
                     <div
                       className="px-4 py-2.5 text-[11px] leading-relaxed"
                       style={{ background: 'rgba(255,255,255,0.5)', color: '#166534', borderTop: '1px solid #bbf7d0' }}

@@ -39,7 +39,7 @@ export async function GET(
     const { data, error } = await client
       .from('reports')
       .select(
-        'id, order_id, appeal_status, refund_status, refund_amount, refund_completed_at, appeal_deadline, description, status, created_at, updated_at',
+        'id, order_id, appeal_status, refund_status, refund_amount, refund_completed_at, appeal_deadline, description, status, created_at, updated_at, refund_proof_path',
       )
       .eq('order_id', orderId)
       .eq('type', 'rejected_proof_disputed')
@@ -49,7 +49,16 @@ export async function GET(
     if (error) throw new Error(error.message)
     if (!data) throw new DomainError('Apelación no encontrada', 'not_found')
 
-    return ok(toCustomerAppealDto(data), { headers: corsHeaders(req) })
+    // Generar URL firmada del comprobante de devolución si existe
+    let refundProofUrl: string | null = null
+    if (data.refund_proof_path) {
+      const { data: signed } = await client.storage
+        .from('payment-proofs')
+        .createSignedUrl(data.refund_proof_path, 3600)
+      refundProofUrl = signed?.signedUrl ?? null
+    }
+
+    return ok(toCustomerAppealDto({ ...data, refundProofUrl }), { headers: corsHeaders(req) })
   } catch (err) {
     return handleError(err, requestId, req)
   }
