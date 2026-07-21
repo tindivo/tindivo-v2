@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { ApiError } from '@tindivo/api-client'
 import { TINDIVO_SUPPORT_WHATSAPP } from '@tindivo/core'
@@ -143,13 +143,13 @@ export function AppealSection({
   if (status === 'approved' || status === 'rejected') currentStepIndex = 2
 
   let resolvedDescription = ''
-  if (status === 'approved' && refundStatus === 'completed') {
-    resolvedDescription = `A tu favor: devolución de ${soles(refundAmount ?? total)} realizada`
-  } else if (status === 'approved' && refundStatus === 'pending') {
+  if (status === 'approved' && refundStatus === 'pending') {
     resolvedDescription = 'Aprobado. Tu devolución está en proceso.'
   } else if (status === 'rejected') {
     resolvedDescription = 'Caso cerrado: el pago no fue verificado por el restaurante'
   }
+
+  const isRefundCompleted = status === 'approved' && refundStatus === 'completed'
 
   return (
     <div
@@ -172,7 +172,7 @@ export function AppealSection({
           const dotColor = done
             ? '#1A8050'
             : active
-              ? status === 'rejected' ? '#DC2626' : '#F97316'
+              ? status === 'rejected' ? '#DC2626' : isRefundCompleted ? '#1A8050' : '#F97316'
               : 'rgba(26,22,20,0.15)'
 
           const hideConnector = last || (isResolved && active)
@@ -189,10 +189,10 @@ export function AppealSection({
                 className="z-[1] flex h-6 w-6 shrink-0 items-center justify-center rounded-full"
                 style={{
                   background: dotColor,
-                  boxShadow: active ? `0 0 0 4px ${status === 'rejected' ? 'rgba(220,38,38,0.15)' : 'rgba(249,115,22,0.15)'}` : 'none',
+                  boxShadow: active ? `0 0 0 4px ${status === 'rejected' ? 'rgba(220,38,38,0.15)' : isRefundCompleted ? 'rgba(26,128,80,0.15)' : 'rgba(249,115,22,0.15)'}` : 'none',
                 }}
               >
-                {done ? (
+                {done || isRefundCompleted ? (
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
                     <path d="M5 12l5 5L19 7" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
@@ -204,11 +204,44 @@ export function AppealSection({
                 <div className="text-[14px]" style={{ fontWeight: active ? 600 : 500, color: done || active ? '#1A1614' : 'rgba(26,22,20,0.4)' }}>
                   {step.label}
                 </div>
-                {(active || done) && description && (
+                {/* ── Estado: devolución completada ── */}
+                {isResolved && isRefundCompleted ? (
+                  <div
+                    className="mt-2 overflow-hidden rounded-[16px]"
+                    style={{ background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)', border: '1px solid #bbf7d0' }}
+                  >
+                    <div className="flex items-center gap-3 px-4 py-3.5">
+                      <div
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                        style={{ background: '#16a34a' }}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+                          <path d="M4 10l4.5 4.5L16 6" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="font-bold text-[14px]" style={{ color: '#14532d' }}>
+                          ¡Devolución realizada!
+                        </p>
+                        <p className="text-[12px] mt-0.5" style={{ color: '#166534' }}>
+                          Te devolvimos{' '}
+                          <span className="font-bold">{soles(refundAmount ?? total)}</span>{' '}
+                          por Yape
+                        </p>
+                      </div>
+                    </div>
+                    <div
+                      className="px-4 py-2.5 text-[11px] leading-relaxed"
+                      style={{ background: 'rgba(255,255,255,0.5)', color: '#166534', borderTop: '1px solid #bbf7d0' }}
+                    >
+                      Si no lo recibiste, escríbenos por WhatsApp y lo revisamos.
+                    </div>
+                  </div>
+                ) : (active || done) && description ? (
                   <p className="mt-0.5 text-[12px] leading-relaxed" style={{ color: active ? (status === 'rejected' ? '#DC2626' : '#F97316') : 'rgba(26,22,20,0.5)' }}>
                     {description}
                   </p>
-                )}
+                ) : null}
               </div>
             </div>
           )
