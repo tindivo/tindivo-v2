@@ -14,7 +14,7 @@ export function OPTIONS(req: Request): Response {
 /**
  * Resumen de cuenta del restaurante (Mi Cuenta):
  * - Saldo deudor actual (balance_due)
- * - Desglose de cargos pendientes por tipo
+ * - Desglose de cargos pendientes por tipo (commission, delivery_fee, refund_charge)
  * - Detalle itemizado de business_charges en status 'pending' (created_at DESC)
  * - Historial de pagos confirmados en restaurant_payments
  */
@@ -43,25 +43,42 @@ export async function GET(req: Request): Promise<Response> {
 
     const supportPhone = supportCfg?.value ? String(supportCfg.value).replace(/"/g, '') : null
 
-    // 3. Obtener cargos pendientes (created_at DESC) con ordenes y reportes asociados
+    // 3. Obtener cargos pendientes (created_at DESC)
     const { data: rawCharges, error: chargeError } = await (service as any)
       .from('business_charges')
-      .select(`
-        id, order_id, report_id, charge_type, amount, description, created_at,
-        orders ( short_id ),
-        reports ( id, type, reason, resolution_notes, evidence_urls, data )
-      `)
+      .select('id, order_id, report_id, charge_type, amount, description, created_at')
       .eq('business_id', biz.id)
       .eq('status', 'pending')
       .order('created_at', { ascending: false })
 
     if (chargeError) throw new Error(chargeError.message)
 
+    const charges = rawCharges || []
+
+    // 4. Cargar pedidos y reportes asociados en paralelo usando columnas existentes en public.reports
+    const orderIds = Array.from(new Set(charges.map((c: any) => c.order_id).filter(Boolean))) as string[]
+    const reportIds = Array.from(new Set(charges.map((c: any) => c.report_id).filter(Boolean))) as string[]
+
+    const [{ data: rawOrders }, { data: rawReports }] = await Promise.all([
+      orderIds.length > 0
+        ? service.from('orders').select('id, short_id').in('id', orderIds)
+        : Promise.resolve({ data: [] }),
+      reportIds.length > 0
+        ? (service as any)
+            .from('reports')
+            .select('id, type, description, resolution_note, refund_proof_path, refund_amount, appeal_status, evidence_url, data')
+            .in('id', reportIds)
+        : Promise.resolve({ data: [] }),
+    ])
+
+    const ordersMap = new Map((rawOrders || []).map((o) => [o.id, o.short_id]))
+    const reportsMap = new Map((rawReports || []).map((r: any) => [r.id, r]))
+
     let totalCommissions = 0
     let totalDeliveryFees = 0
     let totalRefunds = 0
 
-    const pendingCharges = (rawCharges || []).map((c: any) => {
+    const pendingCharges = charges.map((c: any) => {
       const amt = Number(c.amount) || 0
 
       if (c.charge_type === 'commission') {
@@ -72,8 +89,19 @@ export async function GET(req: Request): Promise<Response> {
         totalRefunds += amt
       }
 
-      const shortId = c.orders?.short_id ?? null
-      const r = c.reports
+      const shortId = c.order_id ? ordersMap.get(c.order_id) ?? null : null
+      const r = (c.report_id ? reportsMap.get(c.report_id) ?? null : null) as any
+
+      const evidenceUrls: string[] = []
+      if (r) {
+        if (r.refund_proof_path) evidenceUrls.push(r.refund_proof_path)
+        if (r.evidence_url && !evidenceUrls.includes(r.evidence_url)) evidenceUrls.push(r.evidence_url)
+        if (r.data && Array.isArray((r.data as Record<string, unknown>).evidenceUrls)) {
+          for (const u of (r.data as Record<string, unknown>).evidenceUrls as string[]) {
+            if (u && !evidenceUrls.includes(u)) evidenceUrls.push(u)
+          }
+        }
+      }
 
       return {
         id: c.id,
@@ -88,31 +116,49 @@ export async function GET(req: Request): Promise<Response> {
           ? {
               id: r.id,
               type: r.type,
-              reason: r.reason,
-              resolutionNotes: r.resolution_notes,
-              evidenceUrls: Array.isArray(r.evidence_urls) ? r.evidence_urls : [],
+              reason: r.description || r.type,
+              resolutionNotes: r.resolution_note,
+              refundAmount: r.refund_amount ? Number(r.refund_amount) : null,
+              evidenceUrls,
               data: r.data,
             }
           : null,
       }
     })
 
-    // 4. Obtener historial de pagos confirmados desde restaurant_payments
+    // 5. Obtener historial de pagos confirmados desde restaurant_payments
     const { data: rawPayments, error: payError } = await (service as any)
       .from('restaurant_payments')
-      .select(`
-        id, amount, payment_method, paid_at, note,
-        business_charges ( id, order_id )
-      `)
+      .select('id, amount, payment_method, paid_at, note')
       .eq('business_id', biz.id)
       .order('paid_at', { ascending: false })
       .limit(50)
 
     if (payError) throw new Error(payError.message)
 
-    const paymentHistory = (rawPayments || []).map((p: any) => {
-      const charges = p.business_charges as Array<{ id: string; order_id: string | null }> | null
-      const uniqueOrderIds = new Set((charges || []).map((ch) => ch.order_id).filter(Boolean))
+    const payments = rawPayments || []
+    const paymentIds = payments.map((p: any) => p.id)
+
+    // Cargar los cargos liquidados asociados a estos pagos (payment_id)
+    const { data: settledCharges } = paymentIds.length > 0
+      ? await (service as any)
+          .from('business_charges')
+          .select('id, payment_id, order_id')
+          .in('payment_id', paymentIds)
+      : { data: [] }
+
+    const settledByPaymentMap = new Map<string, Array<{ id: string; order_id: string | null }>>()
+    for (const sc of settledCharges || []) {
+      if (!sc.payment_id) continue
+      if (!settledByPaymentMap.has(sc.payment_id)) {
+        settledByPaymentMap.set(sc.payment_id, [])
+      }
+      settledByPaymentMap.get(sc.payment_id)!.push({ id: sc.id, order_id: sc.order_id })
+    }
+
+    const paymentHistory = payments.map((p: any) => {
+      const pCharges = settledByPaymentMap.get(p.id) || []
+      const uniqueOrderIds = new Set(pCharges.map((ch) => ch.order_id).filter(Boolean))
 
       return {
         id: p.id,
@@ -120,7 +166,7 @@ export async function GET(req: Request): Promise<Response> {
         paymentMethod: p.payment_method,
         paidAt: p.paid_at,
         note: p.note,
-        settledChargeCount: charges?.length ?? 0,
+        settledChargeCount: pCharges.length,
         orderCount: uniqueOrderIds.size,
       }
     })
