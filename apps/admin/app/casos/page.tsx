@@ -59,17 +59,24 @@ export default function CasosPage() {
                 {counts[t.key]}
               </span>
             )}
-            <button
-              type="button"
+            <span
+              role="button"
+              tabIndex={0}
               onClick={(e) => {
                 e.stopPropagation()
                 setInfoTab(t.key)
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.stopPropagation()
+                  setInfoTab(t.key)
+                }
               }}
               className="flex h-4.5 w-4.5 items-center justify-center rounded-full bg-ink/[0.05] text-[10px] text-ink-subtle hover:bg-ink/10 hover:text-ink transition-colors"
               title="Información"
             >
               ℹ️
-            </button>
+            </span>
           </button>
         ))}
       </div>
