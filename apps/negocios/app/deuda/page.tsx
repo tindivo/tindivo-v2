@@ -1,6 +1,7 @@
 'use client'
 
 import { ApiError } from '@tindivo/api-client'
+import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { MS, soles } from '@/components/dashboard/primitives'
 import { DashboardShell } from '@/components/dashboard/shell'
@@ -617,7 +618,6 @@ export default function DeudaPage() {
   const [error, setError] = useState<string | null>(null)
   const [mainTab, setMainTab] = useState<'pending' | 'history'>('pending')
   const [typeFilter, setTypeFilter] = useState<'all' | 'orders' | 'refunds'>('all')
-  const [selectedRefund, setSelectedRefund] = useState<PendingCharge | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -1143,19 +1143,19 @@ export default function DeudaPage() {
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           {rf && (
-                            <button
-                              type="button"
-                              onClick={() => setSelectedRefund(rf)}
+                            <Link
+                              href={`/deuda/devoluciones/${rf.reportId || rf.id}`}
                               className="tv-btn tv-btn-sm"
                               style={{
                                 fontSize: 11,
                                 padding: '3px 8px',
                                 background: 'var(--tv-surface)',
                                 color: 'var(--tv-ink)',
+                                textDecoration: 'none',
                               }}
                             >
                               Ver detalle
-                            </button>
+                            </Link>
                           )}
                           <div
                             className="tv-mono"
@@ -1251,11 +1251,6 @@ export default function DeudaPage() {
             </div>
           )}
         </div>
-      )}
-
-      {/* Modal de Detalle de Devolución */}
-      {selectedRefund && (
-        <RefundDetailModal charge={selectedRefund} onClose={() => setSelectedRefund(null)} />
       )}
     </DashboardShell>
   )
