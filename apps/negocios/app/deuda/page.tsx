@@ -83,79 +83,106 @@ function RefundDetailModal({
       aria-modal="true"
       tabIndex={-1}
       onKeyDown={(e) => e.key === 'Escape' && onClose()}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-fade-in"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 100,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'rgba(0, 0, 0, 0.45)',
+        padding: 16,
+      }}
       onClick={onClose}
     >
       <div
         role="document"
-        className="w-full max-w-lg rounded-[22px] bg-white p-6 shadow-2xl border border-tv-border max-h-[90vh] flex flex-col"
+        style={{
+          position: 'relative',
+          background: '#fff',
+          borderRadius: 16,
+          width: '100%',
+          maxWidth: 480,
+          padding: '18px 20px',
+          border: '1px solid #eae7e2',
+          boxShadow: '0 8px 30px rgba(0,0,0,0.12)',
+          maxHeight: '90vh',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b pb-3 mb-4">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #eae7e2', paddingBottom: 12, marginBottom: 14 }}>
           <div>
-            <h3 className="text-[16px] font-bold text-tv-ink flex items-center gap-2">
+            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--tv-ink)', display: 'flex', alignItems: 'center', gap: 6 }}>
               <span>↩️</span> Detalle de Devolución
-            </h3>
+            </div>
             {charge.shortId && (
-              <p className="text-[12px] text-tv-ink-muted">
-                Pedido <span className="tv-mono font-bold">#{charge.shortId}</span>
-              </p>
+              <div style={{ fontSize: 12, color: 'var(--tv-ink-muted)', marginTop: 2 }}>
+                Pedido <span className="tv-mono" style={{ fontWeight: 700, color: 'var(--tv-brand)' }}>#{charge.shortId}</span>
+              </div>
             )}
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="text-[18px] text-tv-ink-subtle hover:text-tv-ink"
+            style={{
+              background: 'none',
+              border: 'none',
+              fontSize: 18,
+              cursor: 'pointer',
+              color: 'var(--tv-ink-subtle)',
+            }}
           >
             ✕
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto space-y-4 pr-1 text-[13px]">
-          <div className="rounded-xl bg-tv-surface p-3 border border-tv-border">
-            <p className="text-[11px] font-semibold text-tv-ink-muted uppercase">Concepto:</p>
-            <p className="font-semibold text-tv-ink mt-0.5">{charge.description || 'Cargo por devolución al cliente'}</p>
-            <p className="tv-mono font-bold text-tv-danger text-[16px] mt-1">{soles(charge.amount)}</p>
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ background: '#fff4ec', borderRadius: 12, padding: 12, border: '1px solid #fed7aa' }}>
+            <div className="tv-label" style={{ fontSize: 10, color: 'var(--tv-brand-dark)' }}>CONCEPTO DEL CARGO</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--tv-ink)', marginTop: 2 }}>{charge.description || 'Cargo por devolución al cliente'}</div>
+            <div className="tv-mono" style={{ fontSize: 18, fontWeight: 700, color: 'var(--tv-danger)', marginTop: 4 }}>{soles(charge.amount)}</div>
           </div>
 
           {r && (
-            <div className="space-y-3">
-              <div>
-                <p className="text-[11px] font-semibold text-tv-ink-muted uppercase">Razón del reclamo / apelación:</p>
-                <p className="font-medium text-tv-ink mt-0.5">{r.reason || r.type}</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ background: 'var(--tv-surface)', borderRadius: 12, padding: 12, border: '1px solid #eae7e2' }}>
+                <div className="tv-label" style={{ fontSize: 10 }}>MOTIVO DE LA APELACIÓN</div>
+                <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--tv-ink)', marginTop: 4, lineHeight: 1.5 }}>{r.reason || r.type}</div>
               </div>
 
               {r.resolutionNotes && (
-                <div>
-                  <p className="text-[11px] font-semibold text-tv-ink-muted uppercase">Resolución de administración:</p>
-                  <p className="text-tv-ink-muted bg-amber-50 border border-amber-200 p-2.5 rounded-lg mt-0.5">
-                    {r.resolutionNotes}
-                  </p>
+                <div style={{ background: '#fef3c7', borderRadius: 12, padding: 12, border: '1px solid #fde68a', color: '#92400e' }}>
+                  <div className="tv-label" style={{ fontSize: 10, color: '#b45309' }}>RESOLUCIÓN DE ADMINISTRACIÓN</div>
+                  <div style={{ fontSize: 13, marginTop: 4, lineHeight: 1.5 }}>{r.resolutionNotes}</div>
                 </div>
               )}
 
               {r.evidenceUrls && r.evidenceUrls.length > 0 && (
                 <div>
-                  <p className="text-[11px] font-semibold text-tv-ink-muted uppercase mb-1.5">
-                    Evidencias / Comprobantes adjuntos ({r.evidenceUrls.length}):
-                  </p>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="tv-label" style={{ fontSize: 10, marginBottom: 6 }}>COMPROBANTES ADJUNTOS ({r.evidenceUrls.length})</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                     {r.evidenceUrls.map((url, i) => (
                       <a
                         key={i}
                         href={url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="group relative overflow-hidden rounded-xl border border-tv-border bg-tv-surface"
+                        style={{
+                          display: 'block',
+                          borderRadius: 10,
+                          overflow: 'hidden',
+                          border: '1px solid #eae7e2',
+                          background: 'var(--tv-surface)',
+                          textDecoration: 'none',
+                        }}
                       >
                         <img
                           src={url}
                           alt={`Evidencia ${i + 1}`}
-                          className="h-28 w-full object-cover transition-transform group-hover:scale-105"
+                          style={{ width: '100%', height: 110, objectFit: 'cover' }}
                         />
-                        <span className="absolute bottom-1 right-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white">
-                          Ver original ↗
-                        </span>
                       </a>
                     ))}
                   </div>
@@ -165,8 +192,13 @@ function RefundDetailModal({
           )}
         </div>
 
-        <div className="mt-4 border-t pt-3 flex justify-end">
-          <button type="button" className="tv-btn tv-btn-secondary tv-btn-sm" onClick={onClose}>
+        <div style={{ marginTop: 14, paddingTop: 10, borderTop: '1px solid #eae7e2', display: 'flex', justifyContent: 'flex-end' }}>
+          <button
+            type="button"
+            className="tv-btn tv-btn-sm"
+            style={{ background: 'var(--tv-ink)', color: '#fff' }}
+            onClick={onClose}
+          >
             Cerrar
           </button>
         </div>
@@ -233,74 +265,148 @@ export default function DeudaPage() {
     >
       {/* Banner de Suspensión por deuda */}
       {data?.isBlocked && (
-        <div className="mb-4 flex items-center gap-2.5 rounded-xl bg-red-100 p-3.5 text-[14px] font-semibold text-red-700">
-          <MS name="block" size={20} filled className="shrink-0" />
-          Tu cuenta está suspendida por deuda acumula. Coordina tu pago para reactivar el servicio.
+        <div
+          style={{
+            background: 'var(--tv-danger-soft)',
+            borderRadius: 12,
+            padding: '10px 14px',
+            marginBottom: 14,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            color: 'var(--tv-danger)',
+            fontSize: 14,
+            fontWeight: 600,
+            border: '1px solid #fee2e2',
+          }}
+        >
+          <MS name="block" size={18} filled style={{ flexShrink: 0 }} />
+          Tu cuenta está suspendida por deuda acumulada. Coordina tu pago para reactivar el servicio.
         </div>
       )}
 
-      {error && <p className="mb-4 text-[14px] text-tv-danger">{error}</p>}
+      {error && <p style={{ fontSize: 13, color: 'var(--tv-danger)', marginBottom: 12 }}>{error}</p>}
 
       {loading || !data ? (
-        <div className="space-y-4">
-          <div className="h-44 animate-pulse rounded-2xl bg-tv-surface" />
-          <div className="h-28 animate-pulse rounded-2xl bg-tv-surface" />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ height: 140, borderRadius: 12, background: 'var(--tv-surface)' }} className="animate-pulse" />
+          <div style={{ height: 200, borderRadius: 12, background: 'var(--tv-surface)' }} className="animate-pulse" />
         </div>
       ) : (
-        <div className="space-y-6">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {/* Hero de Deuda Acumulada */}
-          <div className="rounded-[22px] bg-gradient-to-br from-[#1A1614] to-[#2A2422] p-5 text-white shadow-lg lg:p-6">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-white/60">
+          <div
+            style={{
+              background: 'linear-gradient(135deg, #1A1614 0%, #2A2422 100%)',
+              color: '#fff',
+              borderRadius: 16,
+              padding: '20px 18px',
+            }}
+          >
+            <div className="tv-label" style={{ color: 'rgba(255,255,255,0.6)' }}>
               DEBES AHORA
-            </p>
-            <p className="tv-mono my-2 text-[42px] font-bold leading-none lg:text-[52px]">
+            </div>
+            <div
+              className="tv-mono"
+              style={{
+                fontSize: 44,
+                fontWeight: 700,
+                lineHeight: 1,
+                margin: '6px 0 14px',
+              }}
+            >
               {soles(balance)}
-            </p>
+            </div>
 
             {/* Barra de límite de suspensión */}
-            <div className="mt-4">
-              <div className="mb-1 flex justify-between text-[11px] text-white/70">
+            <div>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  fontSize: 11,
+                  color: 'rgba(255,255,255,0.7)',
+                  marginBottom: 4,
+                }}
+              >
                 <span>0</span>
                 <span>Suspensión a {soles(BLOCK_THRESHOLD)}</span>
               </div>
-              <div className="h-2 w-full overflow-hidden rounded-full bg-white/12">
+              <div
+                style={{
+                  height: 6,
+                  background: 'rgba(255,255,255,0.12)',
+                  borderRadius: 999,
+                  overflow: 'hidden',
+                }}
+              >
                 <div
-                  className={`h-full transition-all duration-500 ${
-                    pct >= 80 ? 'bg-tv-danger' : 'bg-tv-brand'
-                  }`}
-                  style={{ width: `${pct}%` }}
+                  style={{
+                    width: `${pct}%`,
+                    height: '100%',
+                    background: pct >= 80 ? 'var(--tv-danger)' : 'var(--tv-brand)',
+                    transition: 'width 600ms ease',
+                  }}
                 />
               </div>
             </div>
           </div>
 
-          {/* Desglose Transparente por Tipo de Cargo */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-tv-border bg-white p-4 shadow-2xs">
-              <div className="flex items-center gap-2 text-tv-ink-muted text-[12px] font-semibold">
-                <span className="text-[16px]">📦</span> Comisiones Tindivo
+          {/* Desglose Transparente por Tipo de Cargo (Tarjetas con 1px solid #eae7e2 como en Historial) */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+            <div
+              style={{
+                background: '#fff',
+                borderRadius: 12,
+                padding: '10px 12px',
+                border: '1px solid #eae7e2',
+              }}
+            >
+              <div className="tv-label" style={{ fontSize: 9, marginBottom: 4 }}>
+                📦 COMISIONES TINDIVO
               </div>
-              <p className="tv-mono font-bold text-tv-ink text-[22px] mt-2">
+              <div className="tv-mono" style={{ fontSize: 18, fontWeight: 700 }}>
                 {soles(data.summary.totalCommissions)}
-              </p>
+              </div>
             </div>
 
-            <div className="rounded-2xl border border-tv-border bg-white p-4 shadow-2xs">
-              <div className="flex items-center gap-2 text-tv-ink-muted text-[12px] font-semibold">
-                <span className="text-[16px]">🛵</span> Delivery Fees
+            <div
+              style={{
+                background: '#fff',
+                borderRadius: 12,
+                padding: '10px 12px',
+                border: '1px solid #eae7e2',
+              }}
+            >
+              <div className="tv-label" style={{ fontSize: 9, marginBottom: 4 }}>
+                🛵 DELIVERY FEES
               </div>
-              <p className="tv-mono font-bold text-tv-ink text-[22px] mt-2">
+              <div className="tv-mono" style={{ fontSize: 18, fontWeight: 700 }}>
                 {soles(data.summary.totalDeliveryFees)}
-              </p>
+              </div>
             </div>
 
-            <div className="rounded-2xl border border-tv-border bg-white p-4 shadow-2xs">
-              <div className="flex items-center gap-2 text-tv-ink-muted text-[12px] font-semibold">
-                <span className="text-[16px]">↩️</span> Devoluciones
+            <div
+              style={{
+                background: '#fff',
+                borderRadius: 12,
+                padding: '10px 12px',
+                border: '1px solid #eae7e2',
+              }}
+            >
+              <div className="tv-label" style={{ fontSize: 9, marginBottom: 4 }}>
+                ↩️ DEVOLUCIONES
               </div>
-              <p className="tv-mono font-bold text-tv-danger text-[22px] mt-2">
+              <div
+                className="tv-mono"
+                style={{
+                  fontSize: 18,
+                  fontWeight: 700,
+                  color: data.summary.totalRefunds > 0 ? 'var(--tv-danger)' : 'var(--tv-ink)',
+                }}
+              >
                 {soles(data.summary.totalRefunds)}
-              </p>
+              </div>
             </div>
           </div>
 
@@ -318,17 +424,23 @@ export default function DeudaPage() {
           </div>
 
           {/* Sección Cargos Pendientes */}
-          <div className="rounded-2xl border border-tv-border bg-white p-5 shadow-2xs">
-            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b pb-3">
-              <div>
-                <h3 className="text-[16px] font-bold text-tv-ink">Cargos pendientes</h3>
-                <p className="text-[12px] text-tv-ink-muted">
-                  Detalle itemizado de cobros acumulados ({data.pendingCharges.length} cargos)
-                </p>
+          <div>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: 10,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <MS name="receipt_long" size={20} style={{ color: 'var(--tv-ink-muted)' }} />
+                <div style={{ fontSize: 16, fontWeight: 700 }}>Cargos pendientes</div>
+                <span className="tv-chip" style={{ fontSize: 11 }}>{data.pendingCharges.length}</span>
               </div>
 
               {/* Filtro por Tipo */}
-              <div className="flex flex-wrap gap-1 rounded-xl bg-tv-surface p-1 text-[12px]">
+              <div style={{ display: 'flex', gap: 4 }}>
                 {(
                   [
                     { key: 'all', label: 'Todos' },
@@ -341,11 +453,16 @@ export default function DeudaPage() {
                     key={f.key}
                     type="button"
                     onClick={() => setTypeFilter(f.key)}
-                    className={`rounded-lg px-2.5 py-1 font-semibold transition-colors ${
-                      typeFilter === f.key
-                        ? 'bg-white text-tv-ink shadow-2xs'
-                        : 'text-tv-ink-muted hover:text-tv-ink'
-                    }`}
+                    style={{
+                      padding: '4px 8px',
+                      borderRadius: 8,
+                      fontSize: 11,
+                      fontWeight: 600,
+                      border: 'none',
+                      cursor: 'pointer',
+                      background: typeFilter === f.key ? 'var(--tv-ink)' : 'var(--tv-surface)',
+                      color: typeFilter === f.key ? '#fff' : 'var(--tv-ink-muted)',
+                    }}
                   >
                     {f.label}
                   </button>
@@ -354,57 +471,76 @@ export default function DeudaPage() {
             </div>
 
             {filteredCharges.length === 0 ? (
-              <p className="py-8 text-center text-[13px] text-tv-ink-subtle">
+              <div
+                style={{
+                  textAlign: 'center',
+                  padding: '24px 16px',
+                  color: 'var(--tv-ink-subtle)',
+                  fontSize: 13,
+                  background: '#fff',
+                  borderRadius: 12,
+                  border: '1px solid #eae7e2',
+                }}
+              >
                 No hay cargos pendientes en este filtro.
-              </p>
+              </div>
             ) : (
-              <div className="space-y-2">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {filteredCharges.map((c) => (
                   <div
                     key={c.id}
-                    className="flex flex-col gap-2 rounded-xl border border-tv-border/80 bg-white p-3 sm:flex-row sm:items-center sm:justify-between shadow-2xs hover:bg-tv-surface/40 transition-colors"
+                    style={{
+                      background: '#fff',
+                      borderRadius: 12,
+                      padding: '10px 12px',
+                      border: '1px solid #eae7e2',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                    }}
                   >
-                    <div className="flex items-start gap-3">
-                      <div className="mt-0.5 text-[18px]">
-                        {c.chargeType === 'commission'
-                          ? '📦'
-                          : c.chargeType === 'delivery_fee'
-                            ? '🛵'
-                            : '↩️'}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-tv-ink text-[13px]">
-                            {c.chargeType === 'commission'
-                              ? 'Comisión Tindivo'
-                              : c.chargeType === 'delivery_fee'
-                                ? 'Delivery Fee'
-                                : 'Devolución al Cliente'}
+                    <div style={{ fontSize: 16 }}>
+                      {c.chargeType === 'commission'
+                        ? '📦'
+                        : c.chargeType === 'delivery_fee'
+                          ? '🛵'
+                          : '↩️'}
+                    </div>
+
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--tv-ink)' }}>
+                          {c.chargeType === 'commission'
+                            ? 'Comisión Tindivo'
+                            : c.chargeType === 'delivery_fee'
+                              ? 'Delivery Fee'
+                              : 'Devolución al Cliente'}
+                        </span>
+                        {c.shortId && (
+                          <span className="tv-mono" style={{ fontSize: 11, fontWeight: 700, color: 'var(--tv-brand)' }}>
+                            #{c.shortId}
                           </span>
-                          {c.shortId && (
-                            <span className="tv-mono text-[12px] font-bold text-tv-brand">
-                              #{c.shortId}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[12px] text-tv-ink-muted mt-0.5">{c.description}</p>
-                        <p className="text-[11px] text-tv-ink-subtle mt-0.5">{fmtDate(c.createdAt)}</p>
+                        )}
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--tv-ink-muted)', marginTop: 2 }}>
+                        {c.description} · {fmtDate(c.createdAt)}
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between gap-3 sm:justify-end">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       {c.chargeType === 'refund_charge' && (
                         <button
                           type="button"
                           onClick={() => setSelectedRefund(c)}
-                          className="rounded-lg bg-tv-surface px-2.5 py-1 text-[11px] font-semibold text-tv-ink hover:bg-tv-ink/10 transition-colors"
+                          className="tv-btn tv-btn-sm"
+                          style={{ fontSize: 11, padding: '3px 8px', background: 'var(--tv-surface)', color: 'var(--tv-ink)' }}
                         >
                           Ver detalle
                         </button>
                       )}
-                      <span className="tv-mono font-bold text-[15px] text-tv-ink">
+                      <div className="tv-mono" style={{ fontSize: 14, fontWeight: 700, color: 'var(--tv-ink)' }}>
                         {soles(c.amount)}
-                      </span>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -413,39 +549,64 @@ export default function DeudaPage() {
           </div>
 
           {/* Historial de Pagos Realizados */}
-          <div className="rounded-2xl border border-tv-border bg-white p-5 shadow-2xs">
-            <h3 className="text-[16px] font-bold text-tv-ink mb-1">Historial de pagos</h3>
-            <p className="text-[12px] text-tv-ink-muted mb-4">
-              Pagos confirmados por administración ({data.paymentHistory.length} registrados)
-            </p>
+          <div>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                marginBottom: 10,
+              }}
+            >
+              <MS name="history" size={20} style={{ color: 'var(--tv-ink-muted)' }} />
+              <div style={{ fontSize: 16, fontWeight: 700 }}>Historial de pagos</div>
+            </div>
 
             {data.paymentHistory.length === 0 ? (
-              <p className="py-8 text-center text-[13px] text-tv-ink-subtle">
+              <div
+                style={{
+                  textAlign: 'center',
+                  padding: '24px 16px',
+                  color: 'var(--tv-ink-subtle)',
+                  fontSize: 13,
+                  background: '#fff',
+                  borderRadius: 12,
+                  border: '1px solid #eae7e2',
+                }}
+              >
                 Aún no hay pagos registrados en tu historial.
-              </p>
+              </div>
             ) : (
-              <div className="space-y-2">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {data.paymentHistory.map((p) => (
                   <div
                     key={p.id}
-                    className="flex flex-col gap-2 rounded-xl border border-tv-border bg-white p-3 sm:flex-row sm:items-center sm:justify-between"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      padding: '10px 12px',
+                      background: '#fff',
+                      borderRadius: 12,
+                      border: '1px solid #eae7e2',
+                    }}
                   >
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="inline-flex rounded-full bg-tv-surface px-2.5 py-0.5 text-[11px] font-bold uppercase text-tv-ink">
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span className="tv-chip tv-chip-success" style={{ fontSize: 10, textTransform: 'uppercase' }}>
                           {p.paymentMethod}
                         </span>
-                        <span className="text-[12px] text-tv-ink-muted">{fmtDate(p.paidAt)}</span>
+                        <span style={{ fontSize: 12, color: 'var(--tv-ink-muted)' }}>{fmtDate(p.paidAt)}</span>
                       </div>
-                      <p className="text-[12px] text-tv-ink-subtle mt-1">
+                      <div style={{ fontSize: 11, color: 'var(--tv-ink-muted)', marginTop: 4 }}>
                         Saldó {p.settledChargeCount} cargos ({p.orderCount} pedidos)
                         {p.note && ` · ${p.note}`}
-                      </p>
+                      </div>
                     </div>
 
-                    <span className="tv-mono font-bold text-[16px] text-tv-success">
+                    <div className="tv-mono" style={{ fontSize: 14, fontWeight: 700, color: 'var(--tv-success)' }}>
                       {soles(p.amount)}
-                    </span>
+                    </div>
                   </div>
                 ))}
               </div>
