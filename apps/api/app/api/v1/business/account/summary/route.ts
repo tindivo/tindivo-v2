@@ -92,16 +92,23 @@ export async function GET(req: Request): Promise<Response> {
       const shortId = c.order_id ? ordersMap.get(c.order_id) ?? null : null
       const r = (c.report_id ? reportsMap.get(c.report_id) ?? null : null) as any
 
-      const evidenceUrls: string[] = []
+      const rawEvidenceUrls: string[] = []
       if (r) {
-        if (r.refund_proof_path) evidenceUrls.push(r.refund_proof_path)
-        if (r.evidence_url && !evidenceUrls.includes(r.evidence_url)) evidenceUrls.push(r.evidence_url)
+        if (r.refund_proof_path) rawEvidenceUrls.push(r.refund_proof_path)
+        if (r.evidence_url && !rawEvidenceUrls.includes(r.evidence_url)) rawEvidenceUrls.push(r.evidence_url)
         if (r.data && Array.isArray((r.data as Record<string, unknown>).evidenceUrls)) {
           for (const u of (r.data as Record<string, unknown>).evidenceUrls as string[]) {
-            if (u && !evidenceUrls.includes(u)) evidenceUrls.push(u)
+            if (u && !rawEvidenceUrls.includes(u)) rawEvidenceUrls.push(u)
           }
         }
       }
+
+      const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://psjigdoinfpgrnedxeyf.supabase.co'
+      const evidenceUrls = rawEvidenceUrls.map((path) =>
+        path.startsWith('http://') || path.startsWith('https://')
+          ? path
+          : `${baseUrl}/storage/v1/object/public/order-proofs/${path}`,
+      )
 
       return {
         id: c.id,
