@@ -61,12 +61,16 @@ export async function GET(
     if (repError) throw new Error(repError.message)
     if (!report) throw new DomainError('Detalle de devolución no encontrado', 'not_found')
 
-    const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://psjigdoinfpgrnedxeyf.supabase.co'
-    const toPublicUrl = (path: string | null | undefined) => {
-      if (!path) return null
-      return path.startsWith('http://') || path.startsWith('https://')
-        ? path
-        : `${baseUrl}/storage/v1/object/public/order-proofs/${path}`
+    const getSignedUrl = async (pathOrUrl: string | null | undefined): Promise<string | null> => {
+      if (!pathOrUrl) return null
+      if (pathOrUrl.startsWith('http://') || pathOrUrl.startsWith('https://')) return pathOrUrl
+      try {
+        const { data, error } = await service.storage.from('payment-proofs').createSignedUrl(pathOrUrl, 3600)
+        if (error || !data?.signedUrl) return null
+        return data.signedUrl
+      } catch {
+        return null
+      }
     }
 
     // 4. Buscar información del pedido si existe
@@ -102,32 +106,43 @@ export async function GET(
           }
         : null
 
-      events = (rawLogs || []).map((log: any) => {
-        const proofUrls: { url: string; label: string }[] = []
-        const d = log.data || {}
-        if (d.proof_path) proofUrls.push({ url: toPublicUrl(d.proof_path)!, label: 'Comprobante' })
-        if (d.proofPath) proofUrls.push({ url: toPublicUrl(d.proofPath)!, label: 'Comprobante de Devolución' })
-        if (d.evidence_url) proofUrls.push({ url: toPublicUrl(d.evidence_url)!, label: 'Evidencia en Disputa' })
+      events = await Promise.all(
+        (rawLogs || []).map(async (log: any) => {
+          const proofUrls: { url: string; label: string }[] = []
+          const d = log.data || {}
 
-        return {
-          eventType: log.event_type,
-          actorRole: log.actor_role,
-          createdAt: log.created_at,
-          data: d,
-          proofUrls,
-        }
-      })
+          if (d.proof_path) {
+            const url = await getSignedUrl(d.proof_path)
+            if (url) proofUrls.push({ url, label: 'Comprobante' })
+          }
+          if (d.proofPath) {
+            const url = await getSignedUrl(d.proofPath)
+            if (url) proofUrls.push({ url, label: 'Comprobante de Devolución' })
+          }
+          if (d.evidence_url) {
+            const url = await getSignedUrl(d.evidence_url)
+            if (url) proofUrls.push({ url, label: 'Evidencia en Disputa' })
+          }
+
+          return {
+            eventType: log.event_type,
+            actorRole: log.actor_role,
+            createdAt: log.created_at,
+            data: d,
+            proofUrls,
+          }
+        }),
+      )
     }
 
-    const rawEvidenceUrls: string[] = []
-    if (report.refund_proof_path) rawEvidenceUrls.push(report.refund_proof_path)
-    if (report.evidence_url && !rawEvidenceUrls.includes(report.evidence_url)) {
-      rawEvidenceUrls.push(report.evidence_url)
-    }
+    const [refundProofUrl, disputeProofUrl] = await Promise.all([
+      getSignedUrl(report.refund_proof_path),
+      getSignedUrl(report.evidence_url),
+    ])
 
-    const evidenceUrls = rawEvidenceUrls
-      .map((p) => toPublicUrl(p))
-      .filter((u): u is string => Boolean(u))
+    const evidenceUrls: string[] = []
+    if (refundProofUrl) evidenceUrls.push(refundProofUrl)
+    if (disputeProofUrl && !evidenceUrls.includes(disputeProofUrl)) evidenceUrls.push(disputeProofUrl)
 
     return ok(
       {
@@ -138,8 +153,8 @@ export async function GET(
         refundAmount: report.refund_amount ? Number(report.refund_amount) : charge?.amount ?? 0,
         appealStatus: report.appeal_status,
         createdAt: report.created_at,
-        refundProofUrl: toPublicUrl(report.refund_proof_path),
-        disputeProofUrl: toPublicUrl(report.evidence_url),
+        refundProofUrl,
+        disputeProofUrl,
         evidenceUrls,
         chargeAmount: charge ? Number(charge.amount) : Number(report.refund_amount) || 0,
         chargeDescription: charge?.description || 'Cargo por devolución al cliente',
