@@ -28,15 +28,11 @@ export function AlertsBell() {
         return 0
       }
     }
-    const [reports, cash, conting, settle, biz, orders] = await Promise.all([
+    const [reports, cash, settle, biz, orders] = await Promise.all([
       safe(api.get<ApiEnvelope<unknown[]>>('/admin/reports?status=open'), (d) => d.length),
       safe(
         api.get<ApiEnvelope<unknown[]>>('/admin/cash-settlements?status=disputed'),
         (d) => d.length,
-      ),
-      safe(
-        api.get<ApiEnvelope<{ advances: { status: string }[] }>>('/admin/contingency'),
-        (d) => d.advances.filter((a) => a.status === 'disputado').length,
       ),
       safe(
         api.get<ApiEnvelope<{ status: string }[]>>('/admin/settlements'),
@@ -54,7 +50,6 @@ export function AlertsBell() {
     setSignals([
       { label: 'Reportes abiertos', count: reports, href: '/reportes' },
       { label: 'Disputas de efectivo', count: cash, href: '/efectivo' },
-      { label: 'Adelantos en disputa', count: conting, href: '/contingencia' },
       { label: 'Liquidaciones vencidas', count: settle, href: '/cobros' },
       { label: 'Negocios bloqueados', count: biz, href: '/negocios' },
       { label: 'Pedidos sin motorizado', count: orders, href: '/orders' },

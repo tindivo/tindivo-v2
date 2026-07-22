@@ -17,7 +17,7 @@ export function OPTIONS(req: Request): Response {
   return handleOptions(req)
 }
 
-/** El admin aprueba (genera adelanto del fondo) o rechaza un claim. Idempotente en el RPC. */
+/** El admin aprueba o rechaza un claim de fraude. Idempotente en el RPC. */
 export async function PUT(
   req: Request,
   { params }: { params: Promise<{ id: string }> },

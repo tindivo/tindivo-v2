@@ -38,7 +38,6 @@ export const NAV_SECTIONS: NavSection[] = [
     title: 'Finanzas',
     items: [
       { href: '/efectivo', label: 'Efectivo', icon: Ico.cash },
-      { href: '/contingencia', label: 'Contingencia', icon: Ico.shield },
       { href: '/cobros', label: 'Cobros', icon: Ico.wallet },
     ],
   },
