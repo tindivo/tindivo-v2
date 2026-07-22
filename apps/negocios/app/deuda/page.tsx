@@ -14,13 +14,38 @@ function errMsg(e: unknown): string {
 
 const BLOCK_THRESHOLD = 300
 
+interface ReportOrder {
+  id: string
+  shortId: string
+  orderAmount: number
+  createdAt: string
+  rejectionReasonCode: string | null
+  rejectionReasonText: string | null
+  customerName: string | null
+  customerPhone: string | null
+}
+
+interface ReportTimelineEvent {
+  eventType: string
+  actorRole: string | null
+  createdAt: string
+  data: Record<string, unknown>
+  proofUrls?: { url: string; label: string }[]
+}
+
 interface ReportDetail {
   id: string
   type: string
   reason: string
   resolutionNotes: string | null
+  refundAmount: number | null
+  appealStatus: string | null
+  createdAt: string
+  refundProofUrl: string | null
+  disputeProofUrl: string | null
   evidenceUrls: string[]
-  data: Record<string, unknown> | null
+  order: ReportOrder | null
+  events: ReportTimelineEvent[]
 }
 
 interface PendingCharge {
@@ -78,6 +103,134 @@ function fmtDate(iso: string): string {
   })
 }
 
+const REJECTION_LABELS: Record<string, string> = {
+  invalid_proof: 'Comprobante de pago inválido',
+  out_of_stock: 'Sin stock / Productos no disponibles',
+  closed: 'Local/Restaurante cerrado',
+  out_of_zone: 'Dirección fuera de zona de entrega',
+  no_answer: 'Cliente no responde al contacto',
+  other: 'Otro motivo de rechazo',
+}
+
+const EVENT_LABELS: Record<string, string> = {
+  'order.created': 'Pedido creado',
+  'order.status_changed': 'Estado cambiado',
+  'order.prepay_proof_uploaded': 'Comprobante subido por cliente',
+  'order.proof_uploaded': 'Comprobante subido por cliente',
+  'order.proof_rejected': 'Restaurante rechazó el comprobante',
+  'order.validation_failed_retry': 'Restaurante rechazó el comprobante',
+  'order.validation_failed': 'Rechazo definitivo — pedido cancelado',
+  'order.validation_passed': 'Comprobante confirmado',
+  'order.proof_confirmed': 'Comprobante confirmado',
+  'order.cancelled': 'Pedido cancelado',
+  'order.appeal_created': 'Cliente inició apelación',
+  'order.appeal_in_review': 'Admin marcó en revisión',
+  'order.appeal_resolved': 'Apelación resuelta',
+  'order.refund_registered': 'Devolución registrada',
+  'order.contingency_advance': 'Devolución registrada',
+  'order.fallback_review_created': 'Revisión automática (sin apelación 24h)',
+}
+
+// ── Lightbox ──────────────────────────────────────────────────────────────────
+function ImageLightbox({ src, alt, onClose }: { src: string; alt: string; onClose: () => void }) {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onClose])
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 110,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'rgba(0, 0, 0, 0.85)',
+        padding: 16,
+        backdropFilter: 'blur(4px)',
+      }}
+      onClick={onClose}
+    >
+      <button
+        type="button"
+        style={{
+          position: 'absolute',
+          top: 16,
+          right: 16,
+          width: 36,
+          height: 36,
+          borderRadius: 99,
+          background: 'rgba(255, 255, 255, 0.2)',
+          color: '#fff',
+          border: 'none',
+          fontSize: 18,
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+        onClick={onClose}
+      >
+        ✕
+      </button>
+      <img
+        src={src}
+        alt={alt}
+        style={{
+          maxHeight: '90vh',
+          maxWidth: '90vw',
+          borderRadius: 16,
+          boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+          objectFit: 'contain',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      />
+    </div>
+  )
+}
+
+function ProofThumbnailCard({ url, label }: { url: string; label: string }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          borderRadius: 12,
+          border: '1px solid #eae7e2',
+          background: 'var(--tv-surface)',
+          padding: 8,
+          textAlign: 'left',
+          width: '100%',
+          cursor: 'pointer',
+        }}
+      >
+        <img
+          src={url}
+          alt={label}
+          style={{ width: 64, height: 64, borderRadius: 8, objectFit: 'cover', border: '1px solid #eae7e2' }}
+        />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--tv-ink)' }}>{label}</div>
+          <div style={{ fontSize: 11, color: 'var(--tv-brand)', textDecoration: 'underline', marginTop: 2 }}>
+            Toca para ampliar →
+          </div>
+        </div>
+      </button>
+      {open && <ImageLightbox src={url} alt={label} onClose={() => setOpen(false)} />}
+    </>
+  )
+}
+
 // ── RefundDetailModal ────────────────────────────────────────────────────────
 function RefundDetailModal({
   charge,
@@ -87,6 +240,14 @@ function RefundDetailModal({
   onClose: () => void
 }) {
   const r = charge.report
+  const order = r?.order
+  const [timelineOpen, setTimelineOpen] = useState(false)
+
+  const rejectionText =
+    order?.rejectionReasonCode && REJECTION_LABELS[order.rejectionReasonCode]
+      ? REJECTION_LABELS[order.rejectionReasonCode]
+      : order?.rejectionReasonText || 'Comprobante no válido'
+
   return (
     <div
       role="dialog"
@@ -110,43 +271,56 @@ function RefundDetailModal({
         style={{
           position: 'relative',
           background: '#fff',
-          borderRadius: 16,
+          borderRadius: 20,
           width: '100%',
-          maxWidth: 480,
-          padding: '18px 20px',
+          maxWidth: 540,
+          padding: '20px 22px',
           border: '1px solid #eae7e2',
-          boxShadow: '0 8px 30px rgba(0,0,0,0.12)',
-          maxHeight: '90vh',
+          boxShadow: '0 12px 36px rgba(0,0,0,0.16)',
+          maxHeight: '92vh',
           display: 'flex',
           flexDirection: 'column',
         }}
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Modal Header */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             borderBottom: '1px solid #eae7e2',
-            paddingBottom: 12,
-            marginBottom: 14,
+            paddingBottom: 14,
+            marginBottom: 16,
           }}
         >
           <div>
             <div
               style={{
-                fontSize: 16,
+                fontSize: 17,
                 fontWeight: 700,
                 color: 'var(--tv-ink)',
                 display: 'flex',
                 alignItems: 'center',
-                gap: 6,
+                gap: 8,
               }}
             >
               <span>↩️</span> Detalle de Devolución
+              <span
+                style={{
+                  background: '#dcfce7',
+                  color: '#15803d',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  padding: '2px 8px',
+                  borderRadius: 99,
+                }}
+              >
+                Devuelto
+              </span>
             </div>
             {charge.shortId && (
-              <div style={{ fontSize: 12, color: 'var(--tv-ink-muted)', marginTop: 2 }}>
+              <div style={{ fontSize: 12, color: 'var(--tv-ink-muted)', marginTop: 3 }}>
                 Pedido{' '}
                 <span className="tv-mono" style={{ fontWeight: 700, color: 'var(--tv-brand)' }}>
                   #{charge.shortId}
@@ -160,7 +334,7 @@ function RefundDetailModal({
             style={{
               background: 'none',
               border: 'none',
-              fontSize: 18,
+              fontSize: 20,
               cursor: 'pointer',
               color: 'var(--tv-ink-subtle)',
             }}
@@ -169,126 +343,254 @@ function RefundDetailModal({
           </button>
         </div>
 
+        {/* Modal Body */}
         <div
           style={{
             flex: 1,
             overflowY: 'auto',
             display: 'flex',
             flexDirection: 'column',
-            gap: 12,
+            gap: 14,
+            paddingRight: 2,
           }}
         >
+          {/* CONTEXTO DEL CASO */}
           <div
             style={{
-              background: '#fff4ec',
-              borderRadius: 12,
-              padding: 12,
-              border: '1px solid #fed7aa',
+              background: 'var(--tv-surface)',
+              borderRadius: 14,
+              padding: 14,
+              border: '1px solid #eae7e2',
             }}
           >
-            <div className="tv-label" style={{ fontSize: 10, color: 'var(--tv-brand-dark)' }}>
-              CONCEPTO DEL CARGO
+            <div className="tv-label" style={{ fontSize: 10, color: 'var(--tv-ink-subtle)', marginBottom: 10 }}>
+              CONTEXTO DEL CASO
             </div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--tv-ink)', marginTop: 2 }}>
-              {charge.description || 'Cargo por devolución al cliente'}
-            </div>
-            <div
-              className="tv-mono"
-              style={{
-                fontSize: 18,
-                fontWeight: 700,
-                color: 'var(--tv-danger)',
-                marginTop: 4,
-              }}
-            >
-              {soles(charge.amount)}
-            </div>
-          </div>
 
-          {r && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div
-                style={{
-                  background: 'var(--tv-surface)',
-                  borderRadius: 12,
-                  padding: 12,
-                  border: '1px solid #eae7e2',
-                }}
-              >
-                <div className="tv-label" style={{ fontSize: 10 }}>
-                  MOTIVO DE LA APELACIÓN
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div>
+                <div style={{ fontSize: 10, color: 'var(--tv-ink-subtle)', textTransform: 'uppercase' }}>
+                  Pedido
                 </div>
-                <div
-                  style={{
-                    fontSize: 13,
-                    fontWeight: 500,
-                    color: 'var(--tv-ink)',
-                    marginTop: 4,
-                    lineHeight: 1.5,
-                  }}
-                >
-                  {r.reason || r.type}
+                <div className="tv-mono" style={{ fontSize: 13, fontWeight: 700, color: 'var(--tv-brand)' }}>
+                  #{charge.shortId || order?.shortId || '—'}
                 </div>
               </div>
 
-              {r.resolutionNotes && (
-                <div
-                  style={{
-                    background: '#fef3c7',
-                    borderRadius: 12,
-                    padding: 12,
-                    border: '1px solid #fde68a',
-                    color: '#92400e',
-                  }}
-                >
-                  <div className="tv-label" style={{ fontSize: 10, color: '#b45309' }}>
-                    RESOLUCIÓN DE ADMINISTRACIÓN
+              <div>
+                <div style={{ fontSize: 10, color: 'var(--tv-ink-subtle)', textTransform: 'uppercase' }}>
+                  Monto del Pedido
+                </div>
+                <div className="tv-mono" style={{ fontSize: 13, fontWeight: 700, color: 'var(--tv-ink)' }}>
+                  {order?.orderAmount ? soles(order.orderAmount) : soles(charge.amount)}
+                </div>
+              </div>
+
+              {order?.customerName && (
+                <div>
+                  <div style={{ fontSize: 10, color: 'var(--tv-ink-subtle)', textTransform: 'uppercase' }}>
+                    Cliente
                   </div>
-                  <div style={{ fontSize: 13, marginTop: 4, lineHeight: 1.5 }}>
-                    {r.resolutionNotes}
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--tv-ink)' }}>
+                    {order.customerName}
                   </div>
                 </div>
               )}
 
-              {r.evidenceUrls && r.evidenceUrls.length > 0 && (
+              {order?.createdAt && (
                 <div>
-                  <div className="tv-label" style={{ fontSize: 10, marginBottom: 6 }}>
-                    COMPROBANTES ADJUNTOS ({r.evidenceUrls.length})
+                  <div style={{ fontSize: 10, color: 'var(--tv-ink-subtle)', textTransform: 'uppercase' }}>
+                    Creado
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                    {r.evidenceUrls.map((url, i) => (
-                      <a
-                        key={i}
-                        href={url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          display: 'block',
-                          borderRadius: 10,
-                          overflow: 'hidden',
-                          border: '1px solid #eae7e2',
-                          background: 'var(--tv-surface)',
-                          textDecoration: 'none',
-                        }}
-                      >
-                        <img
-                          src={url}
-                          alt={`Evidencia ${i + 1}`}
-                          style={{ width: '100%', height: 110, objectFit: 'cover' }}
+                  <div style={{ fontSize: 12, color: 'var(--tv-ink-muted)' }}>
+                    {fmtDate(order.createdAt)}
+                  </div>
+                </div>
+              )}
+
+              {r?.createdAt && (
+                <div>
+                  <div style={{ fontSize: 10, color: 'var(--tv-ink-subtle)', textTransform: 'uppercase' }}>
+                    Apelación
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--tv-ink-muted)' }}>
+                    {fmtDate(r.createdAt)}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* EL CONFLICTO */}
+          <div
+            style={{
+              background: '#fff5f5',
+              borderRadius: 14,
+              padding: 14,
+              border: '1px solid #fed7d7',
+            }}
+          >
+            <div className="tv-label" style={{ fontSize: 10, color: '#c53030', marginBottom: 6 }}>
+              EL CONFLICTO
+            </div>
+
+            {/* Motivo de rechazo del restaurante */}
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#9b2c2c' }}>
+                MOTIVO DE RECHAZO DEL RESTAURANTE
+              </div>
+              <div style={{ fontSize: 13, color: '#742a2a', marginTop: 2, fontWeight: 500 }}>
+                {rejectionText}
+              </div>
+            </div>
+
+            {/* Argumento del cliente al apelar */}
+            {r?.reason && (
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#9b2c2c' }}>
+                  ARGUMENTO DEL CLIENTE AL APELAR
+                </div>
+                <div style={{ fontSize: 13, color: '#4a5568', fontStyle: 'italic', marginTop: 2 }}>
+                  "{r.reason}"
+                </div>
+              </div>
+            )}
+
+            {/* Comprobante en disputa (último intento) */}
+            {r?.disputeProofUrl && (
+              <div style={{ marginTop: 8 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#9b2c2c', marginBottom: 6 }}>
+                  COMPROBANTE EN DISPUTA
+                </div>
+                <ProofThumbnailCard url={r.disputeProofUrl} label="Comprobante en disputa" />
+              </div>
+            )}
+          </div>
+
+          {/* DEVOLUCIÓN COMPLETADA */}
+          <div
+            style={{
+              background: '#f0fdf4',
+              borderRadius: 14,
+              padding: 14,
+              border: '1px solid #bbf7d0',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: 6,
+              }}
+            >
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#166534', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span>✓</span> ¡Devolución completada!
+              </div>
+              <div className="tv-mono" style={{ fontSize: 16, fontWeight: 700, color: 'var(--tv-danger)' }}>
+                Se devolvió {soles(charge.amount)}
+              </div>
+            </div>
+
+            {/* Captura del Yape de devolución enviado por el admin */}
+            {r?.refundProofUrl && (
+              <div style={{ marginTop: 10 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#15803d', marginBottom: 6 }}>
+                  CAPTURA DEL YAPE / PLIN ENVIADO AL CLIENTE
+                </div>
+                <ProofThumbnailCard url={r.refundProofUrl} label="Yape de devolución al cliente" />
+              </div>
+            )}
+
+            {/* Nota de resolución */}
+            {r?.resolutionNotes && (
+              <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid #dcfce7' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#166534' }}>
+                  NOTA DE RESOLUCIÓN DE ADMINISTRACIÓN
+                </div>
+                <div style={{ fontSize: 13, color: '#14532d', marginTop: 2, fontWeight: 500 }}>
+                  {r.resolutionNotes}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* HISTORIAL DEL PEDIDO (Collapsible Timeline) */}
+          {r?.events && r.events.length > 0 && (
+            <div
+              style={{
+                background: '#fff',
+                borderRadius: 14,
+                border: '1px solid #eae7e2',
+                overflow: 'hidden',
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setTimelineOpen((v) => !v)}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  background: 'var(--tv-surface)',
+                  border: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                <span className="tv-label" style={{ fontSize: 10, color: 'var(--tv-ink-subtle)' }}>
+                  HISTORIAL DEL PEDIDO
+                </span>
+                <span style={{ fontSize: 12, color: 'var(--tv-ink-muted)' }}>
+                  {timelineOpen ? '▲' : '▼'}
+                </span>
+              </button>
+
+              {timelineOpen && (
+                <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {r.events.map((ev, i) => {
+                    const label = EVENT_LABELS[ev.eventType] || ev.eventType
+                    return (
+                      <div key={i} style={{ display: 'flex', gap: 10, fontSize: 12 }}>
+                        <div
+                          style={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: 99,
+                            background: 'var(--tv-brand)',
+                            marginTop: 4,
+                            flexShrink: 0,
+                          }}
                         />
-                      </a>
-                    ))}
-                  </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: 600, color: 'var(--tv-ink)' }}>{label}</div>
+                          <div style={{ fontSize: 11, color: 'var(--tv-ink-subtle)' }}>
+                            {fmtDate(ev.createdAt)} · {ev.actorRole || 'sistema'}
+                          </div>
+
+                          {ev.proofUrls && ev.proofUrls.length > 0 && (
+                            <div style={{ marginTop: 6, display: 'flex', gap: 6 }}>
+                              {ev.proofUrls.map((p, pIdx) => (
+                                <ProofThumbnailCard key={pIdx} url={p.url} label={p.label} />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
               )}
             </div>
           )}
         </div>
 
+        {/* Modal Footer */}
         <div
           style={{
-            marginTop: 14,
-            paddingTop: 10,
+            marginTop: 16,
+            paddingTop: 12,
             borderTop: '1px solid #eae7e2',
             display: 'flex',
             justifyContent: 'flex-end',
@@ -297,10 +599,10 @@ function RefundDetailModal({
           <button
             type="button"
             className="tv-btn tv-btn-sm"
-            style={{ background: 'var(--tv-ink)', color: '#fff' }}
+            style={{ background: 'var(--tv-ink)', color: '#fff', padding: '6px 16px', borderRadius: 10 }}
             onClick={onClose}
           >
-            Cerrar
+            Entendido
           </button>
         </div>
       </div>

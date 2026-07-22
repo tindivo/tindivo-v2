@@ -55,24 +55,63 @@ export async function GET(req: Request): Promise<Response> {
 
     const charges = rawCharges || []
 
-    // 4. Cargar pedidos y reportes asociados en paralelo usando columnas existentes en public.reports
+    // 4. Cargar pedidos, reportes y timeline de eventos asociados
     const orderIds = Array.from(new Set(charges.map((c: any) => c.order_id).filter(Boolean))) as string[]
     const reportIds = Array.from(new Set(charges.map((c: any) => c.report_id).filter(Boolean))) as string[]
 
-    const [{ data: rawOrders }, { data: rawReports }] = await Promise.all([
+    const [{ data: rawOrders }, { data: rawReports }, { data: rawLogs }] = await Promise.all([
       orderIds.length > 0
-        ? service.from('orders').select('id, short_id').in('id', orderIds)
+        ? service
+            .from('orders')
+            .select('id, short_id, order_amount, created_at, rejection_reason_code, rejection_reason_text, customer_name, customer_phone')
+            .in('id', orderIds)
         : Promise.resolve({ data: [] }),
       reportIds.length > 0
         ? (service as any)
             .from('reports')
-            .select('id, type, description, resolution_note, refund_proof_path, refund_amount, appeal_status, evidence_url, data')
+            .select('id, type, description, resolution_note, refund_proof_path, refund_amount, appeal_status, evidence_url, created_at, order_id')
             .in('id', reportIds)
+        : Promise.resolve({ data: [] }),
+      orderIds.length > 0
+        ? (service as any)
+            .from('order_event_log')
+            .select('order_id, event_type, actor_role, created_at, data')
+            .in('order_id', orderIds)
+            .order('created_at', { ascending: true })
         : Promise.resolve({ data: [] }),
     ])
 
-    const ordersMap = new Map((rawOrders || []).map((o) => [o.id, o.short_id]))
+    const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://psjigdoinfpgrnedxeyf.supabase.co'
+    const toPublicUrl = (path: string | null | undefined) => {
+      if (!path) return null
+      return path.startsWith('http://') || path.startsWith('https://')
+        ? path
+        : `${baseUrl}/storage/v1/object/public/order-proofs/${path}`
+    }
+
+    const ordersMap = new Map((rawOrders || []).map((o: any) => [o.id, o]))
     const reportsMap = new Map((rawReports || []).map((r: any) => [r.id, r]))
+
+    const eventsByOrderMap = new Map<string, any[]>()
+    for (const log of rawLogs || []) {
+      if (!log.order_id) continue
+      const list = eventsByOrderMap.get(log.order_id) ?? []
+
+      const proofUrls: { url: string; label: string }[] = []
+      const d = log.data || {}
+      if (d.proof_path) proofUrls.push({ url: toPublicUrl(d.proof_path)!, label: 'Comprobante' })
+      if (d.proofPath) proofUrls.push({ url: toPublicUrl(d.proofPath)!, label: 'Comprobante de Devolución' })
+      if (d.evidence_url) proofUrls.push({ url: toPublicUrl(d.evidence_url)!, label: 'Evidencia en Disputa' })
+
+      list.push({
+        eventType: log.event_type,
+        actorRole: log.actor_role,
+        createdAt: log.created_at,
+        data: d,
+        proofUrls,
+      })
+      eventsByOrderMap.set(log.order_id, list)
+    }
 
     let totalCommissions = 0
     let totalDeliveryFees = 0
@@ -89,26 +128,21 @@ export async function GET(req: Request): Promise<Response> {
         totalRefunds += amt
       }
 
-      const shortId = c.order_id ? ordersMap.get(c.order_id) ?? null : null
+      const orderObj = c.order_id ? ordersMap.get(c.order_id) ?? null : null
+      const shortId = orderObj?.short_id ?? null
       const r = (c.report_id ? reportsMap.get(c.report_id) ?? null : null) as any
 
       const rawEvidenceUrls: string[] = []
       if (r) {
         if (r.refund_proof_path) rawEvidenceUrls.push(r.refund_proof_path)
         if (r.evidence_url && !rawEvidenceUrls.includes(r.evidence_url)) rawEvidenceUrls.push(r.evidence_url)
-        if (r.data && Array.isArray((r.data as Record<string, unknown>).evidenceUrls)) {
-          for (const u of (r.data as Record<string, unknown>).evidenceUrls as string[]) {
-            if (u && !rawEvidenceUrls.includes(u)) rawEvidenceUrls.push(u)
-          }
-        }
       }
 
-      const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://psjigdoinfpgrnedxeyf.supabase.co'
-      const evidenceUrls = rawEvidenceUrls.map((path) =>
-        path.startsWith('http://') || path.startsWith('https://')
-          ? path
-          : `${baseUrl}/storage/v1/object/public/order-proofs/${path}`,
-      )
+      const evidenceUrls = rawEvidenceUrls
+        .map((path) => toPublicUrl(path))
+        .filter((u): u is string => Boolean(u))
+
+      const events = c.order_id ? eventsByOrderMap.get(c.order_id) ?? [] : []
 
       return {
         id: c.id,
@@ -126,8 +160,24 @@ export async function GET(req: Request): Promise<Response> {
               reason: r.description || r.type,
               resolutionNotes: r.resolution_note,
               refundAmount: r.refund_amount ? Number(r.refund_amount) : null,
+              appealStatus: r.appeal_status,
+              createdAt: r.created_at,
+              refundProofUrl: toPublicUrl(r.refund_proof_path),
+              disputeProofUrl: toPublicUrl(r.evidence_url),
               evidenceUrls,
-              data: r.data,
+              order: orderObj
+                ? {
+                    id: orderObj.id,
+                    shortId: orderObj.short_id,
+                    orderAmount: Number(orderObj.order_amount) || 0,
+                    createdAt: orderObj.created_at,
+                    rejectionReasonCode: orderObj.rejection_reason_code,
+                    rejectionReasonText: orderObj.rejection_reason_text,
+                    customerName: orderObj.customer_name,
+                    customerPhone: orderObj.customer_phone,
+                  }
+                : null,
+              events,
             }
           : null,
       }
