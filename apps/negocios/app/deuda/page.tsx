@@ -5,746 +5,462 @@ import { useCallback, useEffect, useState } from 'react'
 import { MS, soles } from '@/components/dashboard/primitives'
 import { DashboardShell } from '@/components/dashboard/shell'
 import { api } from '@/lib/api'
-import { getSupabaseBrowser } from '@/lib/supabase/client'
 
-const DISPUTE_WINDOW_MS = 48 * 3600 * 1000
+function errMsg(e: unknown): string {
+  if (e instanceof ApiError) return e.problem.detail ?? e.message
+  if (e instanceof Error) return e.message
+  return 'Ocurrió un error inesperado'
+}
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-interface Advance {
+const BLOCK_THRESHOLD = 300
+
+interface ReportDetail {
+  id: string
+  type: string
+  reason: string
+  resolutionNotes: string | null
+  evidenceUrls: string[]
+  data: Record<string, unknown> | null
+}
+
+interface PendingCharge {
+  id: string
+  chargeType: 'commission' | 'delivery_fee' | 'refund_charge'
+  amount: number
+  description: string | null
+  createdAt: string
+  orderId: string | null
+  shortId: string | null
+  reportId: string | null
+  report: ReportDetail | null
+}
+
+interface PaymentHistoryItem {
   id: string
   amount: number
-  reason: string
-  actor_charged: string
-  status: string
-  created_at: string
-  orders: { short_id: string } | null
+  paymentMethod: string
+  paidAt: string
+  note: string | null
+  settledChargeCount: number
+  orderCount: number
 }
 
-interface Settlement {
-  id: string
-  period_start: string
-  period_end: string
-  order_count: number
-  total_amount: number
-  status: string
-  due_date: string
-  paid_at: string | null
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-const ADVANCE_STATE: Record<string, { chipCls: string; label: string }> = {
-  activo: { chipCls: 'tv-chip-warning', label: 'Activo' },
-  disputado: { chipCls: 'tv-chip-info', label: 'En disputa' },
-  cancelado: { chipCls: 'tv-chip-success', label: 'Anulado' },
-}
-
-const SETTLEMENT_STATE: Record<string, { chipCls: string; label: string }> = {
-  paid: { chipCls: 'tv-chip-success', label: 'Pagado' },
-  pending: { chipCls: 'tv-chip-warning', label: 'Por pagar' },
-  overdue: { chipCls: 'tv-chip-danger', label: 'Vencido' },
-  cancelled: { chipCls: '', label: 'Cancelado' },
+interface AccountSummaryData {
+  balanceDue: number
+  isBlocked: boolean
+  blockedForDebt: boolean
+  supportPhone: string | null
+  summary: {
+    totalCommissions: number
+    totalDeliveryFees: number
+    totalRefunds: number
+  }
+  pendingCharges: PendingCharge[]
+  paymentHistory: PaymentHistoryItem[]
 }
 
 function fmtDate(iso: string): string {
   return new Date(iso).toLocaleDateString('es-PE', {
     day: '2-digit',
     month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
   })
 }
 
-// ── AdvanceCard ───────────────────────────────────────────────────────────────
-function AdvanceCard({
-  a,
-  disputeId,
-  disputeNote,
-  busy,
-  err,
-  onStartDispute,
-  onNoteChange,
-  onSubmitDispute,
-  onCancelDispute,
+// ── RefundDetailModal ────────────────────────────────────────────────────────
+function RefundDetailModal({
+  charge,
+  onClose,
 }: {
-  a: Advance
-  disputeId: string | null
-  disputeNote: string
-  busy: boolean
-  err: string | null
-  onStartDispute: (id: string) => void
-  onNoteChange: (v: string) => void
-  onSubmitDispute: (id: string) => void
-  onCancelDispute: () => void
+  charge: PendingCharge
+  onClose: () => void
 }) {
-  const stateMeta = ADVANCE_STATE[a.status] ?? { chipCls: '', label: a.status }
-  const canDispute =
-    a.actor_charged === 'restaurante' &&
-    a.status === 'activo' &&
-    Date.now() - new Date(a.created_at).getTime() < DISPUTE_WINDOW_MS
-  const windowExpired = !canDispute && a.status === 'activo' && a.actor_charged === 'restaurante'
-  const hoursLeft = Math.max(
-    0,
-    Math.floor((DISPUTE_WINDOW_MS - (Date.now() - new Date(a.created_at).getTime())) / 3600000),
-  )
-
+  const r = charge.report
   return (
     <div
-      style={{
-        background: '#fff',
-        borderRadius: 14,
-        padding: 12,
-        border: '1px solid var(--tv-border)',
-        boxShadow: 'var(--tv-elev-1)',
-      }}
+      role="dialog"
+      aria-modal="true"
+      tabIndex={-1}
+      onKeyDown={(e) => e.key === 'Escape' && onClose()}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-fade-in"
+      onClick={onClose}
     >
-      {/* Header row */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 8 }}>
-        <div className="tv-mono" style={{ fontSize: 18, fontWeight: 700, color: 'var(--tv-ink)' }}>
-          − {soles(a.amount)}
+      <div
+        role="document"
+        className="w-full max-w-lg rounded-[22px] bg-white p-6 shadow-2xl border border-tv-border max-h-[90vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b pb-3 mb-4">
+          <div>
+            <h3 className="text-[16px] font-bold text-tv-ink flex items-center gap-2">
+              <span>↩️</span> Detalle de Devolución
+            </h3>
+            {charge.shortId && (
+              <p className="text-[12px] text-tv-ink-muted">
+                Pedido <span className="tv-mono font-bold">#{charge.shortId}</span>
+              </p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-[18px] text-tv-ink-subtle hover:text-tv-ink"
+          >
+            ✕
+          </button>
         </div>
-        <div style={{ flex: 1 }} />
-        <span className={`tv-chip ${stateMeta.chipCls}`}>{stateMeta.label}</span>
-      </div>
 
-      {/* Reason */}
-      <div
-        style={{
-          fontSize: 13,
-          lineHeight: 1.4,
-          marginBottom: 8,
-          color: 'var(--tv-ink)',
-        }}
-      >
-        {a.reason}
-      </div>
+        <div className="flex-1 overflow-y-auto space-y-4 pr-1 text-[13px]">
+          <div className="rounded-xl bg-tv-surface p-3 border border-tv-border">
+            <p className="text-[11px] font-semibold text-tv-ink-muted uppercase">Concepto:</p>
+            <p className="font-semibold text-tv-ink mt-0.5">{charge.description || 'Cargo por devolución al cliente'}</p>
+            <p className="tv-mono font-bold text-tv-danger text-[16px] mt-1">{soles(charge.amount)}</p>
+          </div>
 
-      {/* Meta row */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          fontSize: 11,
-          color: 'var(--tv-ink-muted)',
-        }}
-      >
-        <MS name="receipt_long" size={12} />
-        {a.orders?.short_id && <span className="tv-mono">#{a.orders.short_id}</span>}
-        {a.orders?.short_id && <span>·</span>}
-        <span>{fmtDate(a.created_at)}</span>
-      </div>
-
-      {/* Dispute zone — only for activo */}
-      {a.status === 'activo' && (
-        <div
-          style={{
-            marginTop: 10,
-            paddingTop: 10,
-            borderTop: '1px solid var(--tv-border)',
-          }}
-        >
-          {canDispute && disputeId !== a.id && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{ flex: 1, fontSize: 11, color: 'var(--tv-ink-muted)' }}>
-                Ventana de disputa: <strong style={{ color: 'var(--tv-ink)' }}>{hoursLeft}h</strong>{' '}
-                restantes
+          {r && (
+            <div className="space-y-3">
+              <div>
+                <p className="text-[11px] font-semibold text-tv-ink-muted uppercase">Razón del reclamo / apelación:</p>
+                <p className="font-medium text-tv-ink mt-0.5">{r.reason || r.type}</p>
               </div>
-              <button
-                type="button"
-                className="tv-btn tv-btn-dark tv-btn-sm"
-                onClick={() => onStartDispute(a.id)}
-              >
-                <MS name="gavel" size={14} /> Disputar
-              </button>
-            </div>
-          )}
-          {canDispute && disputeId === a.id && (
-            <div>
-              {err && (
-                <p style={{ fontSize: 12, color: 'var(--tv-danger)', marginBottom: 6 }}>{err}</p>
+
+              {r.resolutionNotes && (
+                <div>
+                  <p className="text-[11px] font-semibold text-tv-ink-muted uppercase">Resolución de administración:</p>
+                  <p className="text-tv-ink-muted bg-amber-50 border border-amber-200 p-2.5 rounded-lg mt-0.5">
+                    {r.resolutionNotes}
+                  </p>
+                </div>
               )}
-              <textarea
-                className="tv-input"
-                style={{ minHeight: 76, resize: 'vertical', fontSize: 13 }}
-                placeholder="¿Por qué no corresponde este adelanto?"
-                value={disputeNote}
-                onChange={(e) => onNoteChange(e.target.value)}
-              />
-              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                <button
-                  type="button"
-                  className="tv-btn tv-btn-danger tv-btn-sm"
-                  disabled={busy}
-                  onClick={() => onSubmitDispute(a.id)}
-                >
-                  {busy ? 'Enviando…' : 'Enviar disputa'}
-                </button>
-                <button
-                  type="button"
-                  className="tv-btn tv-btn-ghost tv-btn-sm"
-                  onClick={onCancelDispute}
-                >
-                  Cancelar
-                </button>
-              </div>
-            </div>
-          )}
-          {windowExpired && (
-            <div
-              style={{
-                fontSize: 11,
-                color: 'var(--tv-ink-subtle)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-              }}
-            >
-              <MS name="lock" size={12} />
-              Ventana de disputa (48 h) vencida
+
+              {r.evidenceUrls && r.evidenceUrls.length > 0 && (
+                <div>
+                  <p className="text-[11px] font-semibold text-tv-ink-muted uppercase mb-1.5">
+                    Evidencias / Comprobantes adjuntos ({r.evidenceUrls.length}):
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {r.evidenceUrls.map((url, i) => (
+                      <a
+                        key={i}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group relative overflow-hidden rounded-xl border border-tv-border bg-tv-surface"
+                      >
+                        <img
+                          src={url}
+                          alt={`Evidencia ${i + 1}`}
+                          className="h-28 w-full object-cover transition-transform group-hover:scale-105"
+                        />
+                        <span className="absolute bottom-1 right-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                          Ver original ↗
+                        </span>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
-      )}
-    </div>
-  )
-}
 
-// ── SettlementRow ─────────────────────────────────────────────────────────────
-function SettlementRow({ s }: { s: Settlement }) {
-  const stateMeta = SETTLEMENT_STATE[s.status] ?? { chipCls: '', label: s.status }
-  return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 10,
-        padding: '12px 14px',
-        background: '#fff',
-        borderRadius: 12,
-        border: '1px solid var(--tv-border)',
-      }}
-    >
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--tv-ink)' }}>
-          {fmtDate(s.period_start)} – {fmtDate(s.period_end)}
-        </div>
-        <div style={{ fontSize: 11, color: 'var(--tv-ink-muted)', marginTop: 2 }}>
-          {s.order_count} pedidos
-          {s.paid_at ? ` · pagado el ${fmtDate(s.paid_at)}` : ''}
+        <div className="mt-4 border-t pt-3 flex justify-end">
+          <button type="button" className="tv-btn tv-btn-secondary tv-btn-sm" onClick={onClose}>
+            Cerrar
+          </button>
         </div>
       </div>
-      <div className="tv-mono" style={{ fontSize: 14, fontWeight: 700 }}>
-        {soles(s.total_amount)}
-      </div>
-      <span className={`tv-chip ${stateMeta.chipCls}`} style={{ fontSize: 11 }}>
-        {stateMeta.label}
-      </span>
     </div>
   )
 }
 
-// ── SectionHeader ─────────────────────────────────────────────────────────────
-function SectionHeader({
-  icon,
-  title,
-  badge,
-  hint,
-}: {
-  icon: string
-  title: string
-  badge?: number
-  hint?: string
-}) {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 10,
-        marginBottom: 10,
-      }}
-    >
-      <MS name={icon} size={20} filled style={{ color: 'var(--tv-warning)' }} />
-      <div style={{ fontSize: 16, fontWeight: 700 }}>{title}</div>
-      {badge != null && <span className="tv-chip">{badge}</span>}
-      {hint && (
-        <>
-          <div style={{ flex: 1 }} />
-          <div style={{ fontSize: 12, color: 'var(--tv-ink-muted)' }}>{hint}</div>
-        </>
-      )}
-    </div>
-  )
-}
-
-// ── Main page ─────────────────────────────────────────────────────────────────
+// ── Main DeudaPage ───────────────────────────────────────────────────────────
 export default function DeudaPage() {
-  const BLOCK_THRESHOLD = 300
-
-  const [balance, setBalance] = useState<number>(0)
-  const [blocked, setBlocked] = useState(false)
-  const [yape, setYape] = useState<string | null>(null)
-  const [settlements, setSettlements] = useState<Settlement[]>([])
-  const [advances, setAdvances] = useState<Advance[]>([])
-  const [disputeId, setDisputeId] = useState<string | null>(null)
-  const [disputeNote, setDisputeNote] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [err, setErr] = useState<string | null>(null)
+  const [data, setData] = useState<AccountSummaryData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [typeFilter, setTypeFilter] = useState<'all' | 'commission' | 'delivery_fee' | 'refund_charge'>('all')
+  const [selectedRefund, setSelectedRefund] = useState<PendingCharge | null>(null)
 
   const load = useCallback(async () => {
-    const supabase = getSupabaseBrowser()
-    const [{ data: biz }, { data: stl }, { data: adv }, { data: cfg }] = await Promise.all([
-      supabase.from('businesses').select('balance_due,is_blocked,blocked_for_debt').maybeSingle(),
-      supabase
-        .from('settlements')
-        .select('id,period_start,period_end,order_count,total_amount,status,due_date,paid_at')
-        .order('period_end', { ascending: false })
-        .limit(50),
-      supabase
-        .from('contingency_advances')
-        .select('id,amount,reason,actor_charged,status,created_at,orders(short_id)')
-        .order('created_at', { ascending: false })
-        .limit(50),
-      supabase.from('app_settings').select('value').eq('key', 'support_whatsapp').maybeSingle(),
-    ])
-    if (biz) {
-      setBalance(Number(biz.balance_due))
-      setBlocked(Boolean(biz.is_blocked))
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await api.get<{ data: AccountSummaryData }>('/business/account/summary')
+      setData(res.data)
+    } catch (e) {
+      setError(errMsg(e))
+    } finally {
+      setLoading(false)
     }
-    setSettlements((stl ?? []) as Settlement[])
-    setAdvances((adv ?? []) as Advance[])
-    if (cfg?.value) setYape(String(cfg.value).replace(/"/g, ''))
   }, [])
 
   useEffect(() => {
     load()
   }, [load])
 
-  async function dispute(id: string) {
-    const note = disputeNote.trim()
-    if (note.length < 5) {
-      setErr('Explica brevemente por qué disputas (mín. 5 caracteres).')
-      return
-    }
-    setBusy(true)
-    setErr(null)
-    try {
-      await api.post(`/business/contingency/${id}/dispute`, { note })
-      setDisputeId(null)
-      setDisputeNote('')
-      await load()
-    } catch (e) {
-      setErr(e instanceof ApiError ? (e.problem.detail ?? e.message) : 'No se pudo disputar')
-    } finally {
-      setBusy(false)
-    }
-  }
-
+  const balance = data?.balanceDue ?? 0
   const pct = Math.min(balance / BLOCK_THRESHOLD, 1) * 100
-  const whatsappHref = yape
-    ? `https://wa.me/${yape.replace(/\D/g, '')}?text=${encodeURIComponent('Hola Tindivo, quiero coordinar el pago de mi deuda.')}`
+  const whatsappNumber = data?.supportPhone ? data.supportPhone.replace(/\D/g, '') : ''
+  const whatsappHref = whatsappNumber
+    ? `https://wa.me/${whatsappNumber}?text=${encodeURIComponent('Hola Tindivo, quiero coordinar el pago de mi deuda.')}`
     : '#'
 
-  // ── WhatsApp CTA (shared between mobile and desktop header) ──────────────────
-  const WhatsAppBtn = ({ size = 'normal' }: { size?: 'normal' | 'sm' }) => (
-    <a
-      href={whatsappHref}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={`tv-btn tv-btn-brand${size === 'sm' ? ' tv-btn-sm' : ''}`}
-      style={{ textDecoration: 'none' }}
-    >
-      <MS name="chat" size={size === 'sm' ? 14 : 18} />
-      {size === 'sm' ? 'Abrir' : 'WhatsApp a Tindivo'}
-    </a>
-  )
-
-  // ── Hero negro (balance + progress) ──────────────────────────────────────────
-  const BalanceHero = ({ large = false }: { large?: boolean }) => (
-    <div
-      style={{
-        background: 'linear-gradient(135deg, #1A1614 0%, #2A2422 100%)',
-        color: '#fff',
-        borderRadius: 20,
-        padding: large ? 22 : '20px 18px',
-      }}
-    >
-      <div className="tv-label" style={{ color: 'rgba(255,255,255,0.6)' }}>
-        DEBES AHORA
-      </div>
-      <div
-        className="tv-mono"
-        style={{
-          fontSize: large ? 54 : 40,
-          fontWeight: 700,
-          lineHeight: 1,
-          margin: `${large ? 8 : 6}px 0 ${large ? 16 : 14}px`,
-        }}
-      >
-        {soles(balance)}
-      </div>
-
-      {/* Progress bar */}
-      <div style={{ marginBottom: large ? 12 : 10 }}>
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            fontSize: 11,
-            color: 'rgba(255,255,255,0.7)',
-            marginBottom: large ? 6 : 4,
-          }}
-        >
-          <span>0</span>
-          <span>Suspensión a {soles(BLOCK_THRESHOLD)}</span>
-        </div>
-        <div
-          style={{
-            height: large ? 8 : 6,
-            background: 'rgba(255,255,255,0.12)',
-            borderRadius: 999,
-            overflow: 'hidden',
-          }}
-        >
-          <div
-            style={{
-              width: `${pct}%`,
-              height: '100%',
-              background: pct >= 80 ? 'var(--tv-danger)' : 'var(--tv-brand)',
-              transition: 'width 600ms ease',
-            }}
-          />
-        </div>
-      </div>
-
-      {large ? (
-        // Desktop info strip
-        <div style={{ display: 'flex', gap: 10, fontSize: 13 }}>
-          <div
-            style={{
-              background: 'rgba(255,255,255,0.06)',
-              padding: '8px 12px',
-              borderRadius: 10,
-              flex: 1,
-            }}
-          >
-            <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11 }}>RIESGO DE SUSPENSIÓN</div>
-            <div style={{ marginTop: 2, fontWeight: 600 }}>{Math.round(pct)}% del límite</div>
-          </div>
-          <div
-            style={{
-              background: 'rgba(255,255,255,0.06)',
-              padding: '8px 12px',
-              borderRadius: 10,
-              flex: 1,
-            }}
-          >
-            <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11 }}>ADELANTOS ACTIVOS</div>
-            <div style={{ marginTop: 2, fontWeight: 600 }}>
-              {advances.filter((a) => a.status === 'activo').length} adelantos
-            </div>
-          </div>
-        </div>
-      ) : (
-        // Mobile info strip
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            background: 'rgba(255,255,255,0.06)',
-            borderRadius: 10,
-            padding: '8px 10px',
-            fontSize: 12,
-          }}
-        >
-          <MS name="info" size={14} />
-          <span>Suspensión automática al llegar a {soles(BLOCK_THRESHOLD)}</span>
-        </div>
-      )}
-    </div>
-  )
-
-  // ── Cómo pagar card ───────────────────────────────────────────────────────────
-  const HowToPayCard = () => (
-    <div
-      style={{
-        background: '#fff',
-        borderRadius: 20,
-        padding: 22,
-        border: '1px solid var(--tv-border)',
-      }}
-    >
-      <div className="tv-label">CÓMO PAGAR</div>
-      <div
-        style={{
-          marginTop: 10,
-          fontSize: 14,
-          lineHeight: 1.6,
-          color: 'var(--tv-ink-muted)',
-        }}
-      >
-        Coordina el pago con Tindivo a través de WhatsApp. Una vez confirmado, tu saldo se actualiza
-        en segundos.
-      </div>
-      <div
-        style={{
-          background: 'var(--tv-surface)',
-          borderRadius: 12,
-          padding: '12px 14px',
-          marginTop: 12,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-        }}
-      >
-        <MS name="chat" size={20} style={{ color: 'var(--tv-success)', flexShrink: 0 }} />
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 13, fontWeight: 600 }}>Soporte Tindivo</div>
-          {yape && (
-            <div className="tv-mono" style={{ fontSize: 12, color: 'var(--tv-ink-muted)' }}>
-              {yape}
-            </div>
-          )}
-        </div>
-        <WhatsAppBtn size="sm" />
-      </div>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          marginTop: 12,
-          fontSize: 12,
-          color: 'var(--tv-ink-muted)',
-        }}
-      >
-        <MS name="info" size={14} />
-        {`Si tu deuda llega a ${soles(BLOCK_THRESHOLD)}, tu cuenta queda suspendida automáticamente.`}
-      </div>
-    </div>
-  )
-
-  const disputeableCount = advances.filter(
-    (a) =>
-      a.actor_charged === 'restaurante' &&
-      a.status === 'activo' &&
-      Date.now() - new Date(a.created_at).getTime() < DISPUTE_WINDOW_MS,
-  ).length
+  const filteredCharges = (data?.pendingCharges || []).filter((c) => {
+    if (typeFilter === 'all') return true
+    return c.chargeType === typeFilter
+  })
 
   return (
     <DashboardShell
       active="deuda"
       title="Mi cuenta"
-      subtitle="Comisiones acumuladas y fondo de contingencia"
+      subtitle="Cuenta y cargos pendientes"
       headerRight={
-        /* Desktop header CTA */
         <div className="hidden lg:block">
-          <WhatsAppBtn />
+          <a
+            href={whatsappHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="tv-btn tv-btn-brand"
+            style={{ textDecoration: 'none' }}
+          >
+            <MS name="chat" size={18} /> WhatsApp a Tindivo
+          </a>
         </div>
       }
     >
-      {/* Suspended banner */}
-      {blocked && (
-        <div
-          style={{
-            background: 'var(--tv-danger-soft)',
-            borderRadius: 12,
-            padding: '10px 14px',
-            marginBottom: 14,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            color: 'var(--tv-danger)',
-            fontSize: 14,
-            fontWeight: 600,
-          }}
-        >
-          <MS name="block" size={18} filled style={{ flexShrink: 0 }} />
-          Tu cuenta está suspendida por deuda. Regulariza para reactivarla.
+      {/* Banner de Suspensión por deuda */}
+      {data?.isBlocked && (
+        <div className="mb-4 flex items-center gap-2.5 rounded-xl bg-red-100 p-3.5 text-[14px] font-semibold text-red-700">
+          <MS name="block" size={20} filled className="shrink-0" />
+          Tu cuenta está suspendida por deuda acumula. Coordina tu pago para reactivar el servicio.
         </div>
       )}
 
-      {/* ── MOBILE layout ─────────────────────────────────────────────────── */}
-      <div className="lg:hidden flex flex-col" style={{ gap: 14 }}>
-        <BalanceHero large={false} />
+      {error && <p className="mb-4 text-[14px] text-tv-danger">{error}</p>}
 
-        <a
-          href={whatsappHref}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="tv-btn tv-btn-brand tv-btn-block tv-btn-lg"
-          style={{ textDecoration: 'none' }}
-        >
-          <MS name="chat" size={18} /> Pagar por WhatsApp a Tindivo
-        </a>
+      {loading || !data ? (
+        <div className="space-y-4">
+          <div className="h-44 animate-pulse rounded-2xl bg-tv-surface" />
+          <div className="h-28 animate-pulse rounded-2xl bg-tv-surface" />
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {/* Hero de Deuda Acumulada */}
+          <div className="rounded-[22px] bg-gradient-to-br from-[#1A1614] to-[#2A2422] p-5 text-white shadow-lg lg:p-6">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-white/60">
+              DEBES AHORA
+            </p>
+            <p className="tv-mono my-2 text-[42px] font-bold leading-none lg:text-[52px]">
+              {soles(balance)}
+            </p>
 
-        {advances.length > 0 && (
-          <div>
-            <SectionHeader
-              icon="report_problem"
-              title="Adelantos del fondo"
-              badge={advances.length}
-              hint="48h para disputar"
-            />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {advances.map((a) => (
-                <AdvanceCard
-                  key={a.id}
-                  a={a}
-                  disputeId={disputeId}
-                  disputeNote={disputeNote}
-                  busy={busy}
-                  err={disputeId === a.id ? err : null}
-                  onStartDispute={(id) => {
-                    setDisputeId(id)
-                    setDisputeNote('')
-                    setErr(null)
-                  }}
-                  onNoteChange={setDisputeNote}
-                  onSubmitDispute={dispute}
-                  onCancelDispute={() => setDisputeId(null)}
+            {/* Barra de límite de suspensión */}
+            <div className="mt-4">
+              <div className="mb-1 flex justify-between text-[11px] text-white/70">
+                <span>0</span>
+                <span>Suspensión a {soles(BLOCK_THRESHOLD)}</span>
+              </div>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-white/12">
+                <div
+                  className={`h-full transition-all duration-500 ${
+                    pct >= 80 ? 'bg-tv-danger' : 'bg-tv-brand'
+                  }`}
+                  style={{ width: `${pct}%` }}
                 />
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              marginBottom: 10,
-            }}
-          >
-            <MS name="history" size={20} style={{ color: 'var(--tv-ink-muted)' }} />
-            <div style={{ fontSize: 16, fontWeight: 700 }}>Liquidaciones semanales</div>
-          </div>
-          {settlements.length === 0 ? (
-            <div
-              style={{
-                textAlign: 'center',
-                padding: '24px 16px',
-                color: 'var(--tv-ink-subtle)',
-                fontSize: 14,
-              }}
-            >
-              Aún no hay liquidaciones generadas.
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {settlements.map((s) => (
-                <SettlementRow key={s.id} s={s} />
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── DESKTOP layout ────────────────────────────────────────────────── */}
-      <div className="hidden lg:block">
-        {/* Top row: balance hero + cómo pagar */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '1.2fr 1fr',
-            gap: 16,
-            marginBottom: 18,
-          }}
-        >
-          <BalanceHero large />
-          <HowToPayCard />
-        </div>
-
-        {/* Bottom row: advances + settlements */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 16 }}>
-          {/* Advances */}
-          <div>
-            <SectionHeader
-              icon="report_problem"
-              title="Adelantos del fondo"
-              badge={advances.length}
-              hint={
-                disputeableCount > 0
-                  ? `${disputeableCount} disputable${disputeableCount > 1 ? 's' : ''}`
-                  : 'Tienes 48h para disputar después del cobro'
-              }
-            />
-            {advances.length === 0 ? (
-              <div
-                style={{
-                  padding: '24px 16px',
-                  textAlign: 'center',
-                  color: 'var(--tv-ink-subtle)',
-                  fontSize: 14,
-                  background: '#fff',
-                  borderRadius: 14,
-                  border: '1px solid var(--tv-border)',
-                }}
-              >
-                Sin adelantos registrados.
               </div>
+            </div>
+          </div>
+
+          {/* Desglose Transparente por Tipo de Cargo */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-tv-border bg-white p-4 shadow-2xs">
+              <div className="flex items-center gap-2 text-tv-ink-muted text-[12px] font-semibold">
+                <span className="text-[16px]">📦</span> Comisiones Tindivo
+              </div>
+              <p className="tv-mono font-bold text-tv-ink text-[22px] mt-2">
+                {soles(data.summary.totalCommissions)}
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-tv-border bg-white p-4 shadow-2xs">
+              <div className="flex items-center gap-2 text-tv-ink-muted text-[12px] font-semibold">
+                <span className="text-[16px]">🛵</span> Delivery Fees
+              </div>
+              <p className="tv-mono font-bold text-tv-ink text-[22px] mt-2">
+                {soles(data.summary.totalDeliveryFees)}
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-tv-border bg-white p-4 shadow-2xs">
+              <div className="flex items-center gap-2 text-tv-ink-muted text-[12px] font-semibold">
+                <span className="text-[16px]">↩️</span> Devoluciones
+              </div>
+              <p className="tv-mono font-bold text-tv-danger text-[22px] mt-2">
+                {soles(data.summary.totalRefunds)}
+              </p>
+            </div>
+          </div>
+
+          {/* Botón WhatsApp Mobile */}
+          <div className="lg:hidden">
+            <a
+              href={whatsappHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="tv-btn tv-btn-brand tv-btn-block tv-btn-lg"
+              style={{ textDecoration: 'none' }}
+            >
+              <MS name="chat" size={18} /> Pagar por WhatsApp a Tindivo
+            </a>
+          </div>
+
+          {/* Sección Cargos Pendientes */}
+          <div className="rounded-2xl border border-tv-border bg-white p-5 shadow-2xs">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b pb-3">
+              <div>
+                <h3 className="text-[16px] font-bold text-tv-ink">Cargos pendientes</h3>
+                <p className="text-[12px] text-tv-ink-muted">
+                  Detalle itemizado de cobros acumulados ({data.pendingCharges.length} cargos)
+                </p>
+              </div>
+
+              {/* Filtro por Tipo */}
+              <div className="flex flex-wrap gap-1 rounded-xl bg-tv-surface p-1 text-[12px]">
+                {(
+                  [
+                    { key: 'all', label: 'Todos' },
+                    { key: 'commission', label: 'Comisiones' },
+                    { key: 'delivery_fee', label: 'Delivery' },
+                    { key: 'refund_charge', label: 'Devoluciones' },
+                  ] as const
+                ).map((f) => (
+                  <button
+                    key={f.key}
+                    type="button"
+                    onClick={() => setTypeFilter(f.key)}
+                    className={`rounded-lg px-2.5 py-1 font-semibold transition-colors ${
+                      typeFilter === f.key
+                        ? 'bg-white text-tv-ink shadow-2xs'
+                        : 'text-tv-ink-muted hover:text-tv-ink'
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {filteredCharges.length === 0 ? (
+              <p className="py-8 text-center text-[13px] text-tv-ink-subtle">
+                No hay cargos pendientes en este filtro.
+              </p>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10 }}>
-                {advances.map((a) => (
-                  <AdvanceCard
-                    key={a.id}
-                    a={a}
-                    disputeId={disputeId}
-                    disputeNote={disputeNote}
-                    busy={busy}
-                    err={disputeId === a.id ? err : null}
-                    onStartDispute={(id) => {
-                      setDisputeId(id)
-                      setDisputeNote('')
-                      setErr(null)
-                    }}
-                    onNoteChange={setDisputeNote}
-                    onSubmitDispute={dispute}
-                    onCancelDispute={() => setDisputeId(null)}
-                  />
+              <div className="space-y-2">
+                {filteredCharges.map((c) => (
+                  <div
+                    key={c.id}
+                    className="flex flex-col gap-2 rounded-xl border border-tv-border/80 bg-white p-3 sm:flex-row sm:items-center sm:justify-between shadow-2xs hover:bg-tv-surface/40 transition-colors"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 text-[18px]">
+                        {c.chargeType === 'commission'
+                          ? '📦'
+                          : c.chargeType === 'delivery_fee'
+                            ? '🛵'
+                            : '↩️'}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-tv-ink text-[13px]">
+                            {c.chargeType === 'commission'
+                              ? 'Comisión Tindivo'
+                              : c.chargeType === 'delivery_fee'
+                                ? 'Delivery Fee'
+                                : 'Devolución al Cliente'}
+                          </span>
+                          {c.shortId && (
+                            <span className="tv-mono text-[12px] font-bold text-tv-brand">
+                              #{c.shortId}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[12px] text-tv-ink-muted mt-0.5">{c.description}</p>
+                        <p className="text-[11px] text-tv-ink-subtle mt-0.5">{fmtDate(c.createdAt)}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3 sm:justify-end">
+                      {c.chargeType === 'refund_charge' && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedRefund(c)}
+                          className="rounded-lg bg-tv-surface px-2.5 py-1 text-[11px] font-semibold text-tv-ink hover:bg-tv-ink/10 transition-colors"
+                        >
+                          Ver detalle
+                        </button>
+                      )}
+                      <span className="tv-mono font-bold text-[15px] text-tv-ink">
+                        {soles(c.amount)}
+                      </span>
+                    </div>
+                  </div>
                 ))}
               </div>
             )}
           </div>
 
-          {/* Settlements */}
-          <div>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                marginBottom: 10,
-              }}
-            >
-              <MS name="history" size={20} style={{ color: 'var(--tv-ink-muted)' }} />
-              <div style={{ fontSize: 16, fontWeight: 700 }}>Liquidaciones semanales</div>
-            </div>
-            {settlements.length === 0 ? (
-              <div
-                style={{
-                  padding: '24px 16px',
-                  textAlign: 'center',
-                  color: 'var(--tv-ink-subtle)',
-                  fontSize: 14,
-                  background: '#fff',
-                  borderRadius: 14,
-                  border: '1px solid var(--tv-border)',
-                }}
-              >
-                Aún no hay liquidaciones generadas.
-              </div>
+          {/* Historial de Pagos Realizados */}
+          <div className="rounded-2xl border border-tv-border bg-white p-5 shadow-2xs">
+            <h3 className="text-[16px] font-bold text-tv-ink mb-1">Historial de pagos</h3>
+            <p className="text-[12px] text-tv-ink-muted mb-4">
+              Pagos confirmados por administración ({data.paymentHistory.length} registrados)
+            </p>
+
+            {data.paymentHistory.length === 0 ? (
+              <p className="py-8 text-center text-[13px] text-tv-ink-subtle">
+                Aún no hay pagos registrados en tu historial.
+              </p>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {settlements.map((s) => (
-                  <SettlementRow key={s.id} s={s} />
+              <div className="space-y-2">
+                {data.paymentHistory.map((p) => (
+                  <div
+                    key={p.id}
+                    className="flex flex-col gap-2 rounded-xl border border-tv-border bg-white p-3 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex rounded-full bg-tv-surface px-2.5 py-0.5 text-[11px] font-bold uppercase text-tv-ink">
+                          {p.paymentMethod}
+                        </span>
+                        <span className="text-[12px] text-tv-ink-muted">{fmtDate(p.paidAt)}</span>
+                      </div>
+                      <p className="text-[12px] text-tv-ink-subtle mt-1">
+                        Saldó {p.settledChargeCount} cargos ({p.orderCount} pedidos)
+                        {p.note && ` · ${p.note}`}
+                      </p>
+                    </div>
+
+                    <span className="tv-mono font-bold text-[16px] text-tv-success">
+                      {soles(p.amount)}
+                    </span>
+                  </div>
                 ))}
               </div>
             )}
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Modal de Detalle de Devolución */}
+      {selectedRefund && (
+        <RefundDetailModal
+          charge={selectedRefund}
+          onClose={() => setSelectedRefund(null)}
+        />
+      )}
     </DashboardShell>
   )
 }
