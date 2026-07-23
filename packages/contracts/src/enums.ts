@@ -135,6 +135,19 @@ export const CANCEL_REASONS = [
 export const CancelReasonSchema = z.enum(CANCEL_REASONS)
 export type CancelReason = z.infer<typeof CancelReasonSchema>
 
+// --- Detalle granular de razón de cancelación manual de negocio ---
+export const CANCEL_REASON_DETAILS = [
+  'out_of_stock',
+  'closed',
+  'out_of_zone',
+  'no_answer',
+  'customer_request',
+  'duplicate',
+  'other',
+] as const
+export const CancelReasonDetailSchema = z.enum(CANCEL_REASON_DETAILS)
+export type CancelReasonDetail = z.infer<typeof CancelReasonDetailSchema>
+
 // --- Vehículo del motorizado ---
 export const VEHICLE_TYPES = ['moto', 'bici', 'pie', 'auto'] as const
 export const VehicleTypeSchema = z.enum(VEHICLE_TYPES)
@@ -175,6 +188,7 @@ export const DOMAIN_ENUMS = {
   report_type: REPORT_TYPES,
   report_status: REPORT_STATUSES,
   cancel_reason: CANCEL_REASONS,
+  cancel_reason_detail: CANCEL_REASON_DETAILS,
   vehicle_type: VEHICLE_TYPES,
   contingency_advance_status: CONTINGENCY_ADVANCE_STATUSES,
   contingency_actor_charged: CONTINGENCY_ACTORS_CHARGED,

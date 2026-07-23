@@ -26,6 +26,8 @@ import {
 } from '@/lib/orders/view-model'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import { speak, unlockAudio, useDashboardSounds } from '@/lib/use-audio-alert'
+import { getBackoffDelayMs, useChannelHealth } from '@/hooks/use-channel-health'
+import { usePolledQuery } from '@/hooks/use-polled-query'
 import { MS } from './primitives'
 import { SuccessToastHost } from './toast'
 
@@ -706,14 +708,25 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
     }
   }, [])
 
-  const refetchOrders = useCallback(async () => {
+  const { setChannelState, refetchIntervalMs, healthStatus } = useChannelHealth()
+
+  const fetchOrdersQuery = useCallback(async () => {
     const { data } = await getSupabaseBrowser()
       .from('orders')
       .select(ORDER_SELECT)
       .order('created_at', { ascending: false })
       .limit(100)
-    setRows((data ?? []) as unknown as OrderRow[])
+    const fetched = (data ?? []) as unknown as OrderRow[]
+    setRows(fetched)
+    return fetched
   }, [])
+
+  const { refetch: refetchOrders } = usePolledQuery({
+    queryKey: `biz-orders-${bizId ?? 'none'}`,
+    queryFn: fetchOrdersQuery,
+    refetchInterval: refetchIntervalMs,
+    enabled: !!bizId,
+  })
 
   const debouncedRefetchOrders = useDebouncedCallback(refetchOrders, 500)
   const debouncedRefetchBiz = useDebouncedCallback(refetchBiz, 500)
@@ -723,46 +736,81 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
     Promise.all([refetchBiz(), refetchOrders()]).finally(() => setReady(true))
   }, [refetchBiz, refetchOrders])
 
-  // Suscripción Realtime ÚNICA (filtrada por bizId).
+  // Suscripción Realtime ÚNICA (filtrada por bizId) con auto-reconstrucción de canal quemado y backoff exponencial.
   useEffect(() => {
     if (!bizId) return
     const supabase = getSupabaseBrowser()
-    const channel = supabase
-      .channel(`biz-orders-${bizId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'orders',
-          filter: `business_id=eq.${bizId}`,
-        },
-        () => debouncedRefetchOrders(),
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'businesses',
-          filter: `id=eq.${bizId}`,
-        },
-        () => debouncedRefetchBiz(),
-      )
-      .subscribe((status, err) => {
+    let activeChannel: any = null
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null
+    let retryAttempt = 0
+    let destroyed = false
+
+    function subscribeChannel() {
+      if (destroyed) return
+      if (activeChannel) {
+        supabase.removeChannel(activeChannel)
+        activeChannel = null
+      }
+
+      const channel = supabase
+        .channel(`biz-orders-${bizId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'orders',
+            filter: `business_id=eq.${bizId}`,
+          },
+          () => debouncedRefetchOrders(),
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'businesses',
+            filter: `id=eq.${bizId}`,
+          },
+          () => debouncedRefetchBiz(),
+        )
+
+      channel.subscribe((status, err) => {
+        if (destroyed) return
+        setChannelState(status)
         if (status === 'SUBSCRIBED') {
-          console.log('[realtime] suscrito a', `biz-orders-${bizId}`)
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error('[realtime] error de canal:', err)
-        } else if (status === 'CLOSED') {
-          console.warn('[realtime] canal cerrado:', `biz-orders-${bizId}`)
+          retryAttempt = 0 // Reset de contador al conectar exitosamente
+          console.log('[realtime] suscrito a', `biz-orders-${bizId}`, 'Salud:', 'healthy (90s polling)')
+        } else if (status === 'CHANNEL_ERROR' || status === 'CLOSED' || status === 'TIMED_OUT') {
+          const delayMs = getBackoffDelayMs(retryAttempt)
+          retryAttempt++
+          console.warn(
+            `[realtime] estado degradado: ${status} (intento ${retryAttempt}). Re-creando en ${delayMs / 1000}s...`,
+            err,
+          )
+          // Destruir canal quemado y solicitar instancia limpia con backoff exponencial
+          if (reconnectTimer) clearTimeout(reconnectTimer)
+          reconnectTimer = setTimeout(() => {
+            if (!destroyed) subscribeChannel()
+          }, delayMs)
         }
       })
 
-    return () => {
-      supabase.removeChannel(channel)
+      activeChannel = channel
     }
-  }, [bizId, debouncedRefetchOrders, debouncedRefetchBiz])
+
+    subscribeChannel()
+
+    return () => {
+      destroyed = true
+      if (reconnectTimer) clearTimeout(reconnectTimer)
+      if (activeChannel) {
+        supabase.removeChannel(activeChannel)
+        activeChannel = null
+      }
+      setChannelState('CLOSED')
+    }
+  }, [bizId, debouncedRefetchOrders, debouncedRefetchBiz, setChannelState])
 
   const vms = useMemo(() => rows.map((r) => toOrderVM(r, now)), [rows, now])
   const counts = useMemo(() => {
