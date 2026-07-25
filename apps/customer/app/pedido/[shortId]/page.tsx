@@ -105,9 +105,11 @@ function etaLabel(estimatedReadyAt: string | null): string {
 
 function getStepSub(s: (typeof STEPS)[0], data: Tracking): string {
   if (s.key === 'received' && data.paymentIntent === 'prepaid') {
-    if (data.status === 'pending_acceptance') return 'Esperando confirmación de disponibilidad'
+    if (data.status === 'pending_acceptance' || (data.status === 'validando' && !data.proofUrl)) {
+      return 'Esperando confirmación de disponibilidad'
+    }
     if (data.status === 'awaiting_payment') return 'Restaurante confirmó. Paga ahora'
-    if (data.status === 'validando') return 'Verificando tu comprobante de pago'
+    if (data.status === 'validando' && data.proofUrl) return 'Verificando tu comprobante de pago'
     if (data.status === 'confirmed') return 'Pago verificado. En preparación'
   }
   return s.sub
@@ -366,8 +368,8 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
           {/* Sección de pago prepago según estado */}
           {data.paymentIntent === 'prepaid' && (
             <>
-              {/* 1. pending_acceptance: Esperando confirmación */}
-              {data.status === 'pending_acceptance' && (
+              {/* 1. pending_acceptance o validando SIN comprobante: Esperando confirmación */}
+              {(data.status === 'pending_acceptance' || (data.status === 'validando' && !data.proofUrl)) && (
                 <div
                   className="mt-3.5 rounded-[22px] bg-orange-50/80 p-4 font-sans text-left text-orange-950"
                   style={{ border: '1px solid #FFEDD5' }}
@@ -403,8 +405,8 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
                 </div>
               )}
 
-              {/* 3. validando: En revisión */}
-              {data.status === 'validando' && (
+              {/* 3. validando CON comprobante subido: En revisión */}
+              {data.status === 'validando' && Boolean(data.proofUrl) && (
                 <div
                   className="mt-3.5 rounded-[22px] bg-blue-50/80 p-4 font-sans text-left text-blue-950"
                   style={{ border: '1px solid #BFDBFE' }}
@@ -603,11 +605,11 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
                     {current === 'delivered'
                       ? '¡Tu pedido fue entregado! Buen provecho.'
                       : data.paymentIntent === 'prepaid'
-                        ? data.status === 'pending_acceptance'
+                        ? data.status === 'pending_acceptance' || (data.status === 'validando' && !data.proofUrl)
                           ? 'El restaurante confirmará disponibilidad para que puedas realizar el pago.'
                           : data.status === 'awaiting_payment'
                             ? 'Realiza tu pago por Yape/Plin y sube tu comprobante para iniciar la preparación.'
-                            : data.status === 'validando'
+                            : data.status === 'validando' && Boolean(data.proofUrl)
                               ? 'Tu comprobante está en revisión por el restaurante.'
                               : 'Tu pedido ya está en preparación y no puede cancelarse.'
                         : 'Tu pedido ya está en preparación y no puede cancelarse.'}

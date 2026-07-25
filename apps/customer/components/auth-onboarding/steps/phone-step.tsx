@@ -128,7 +128,7 @@ export function PhoneStep({
     return (
       <form onSubmit={handleSendCode} className="flex h-full flex-col">
         <div className="t-scroll flex-1 px-5 pt-2 pb-4">
-          {mode === 'onboarding' && (
+          {(mode === 'onboarding' || fullName || email) && (
             <div
               className="flex items-center gap-3 rounded-[18px] bg-white p-3.5"
               style={{ border: '1px solid rgba(26,22,20,0.06)' }}

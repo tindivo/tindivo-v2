@@ -12,13 +12,29 @@ type Props = {
 
 export function PhoneGateModal({ onComplete, onClose }: Props) {
   const [userId, setUserId] = useState<string | null>(null)
+  const [profile, setProfile] = useState<{ fullName: string | null; email: string | null } | null>(null)
 
   useEffect(() => {
-    getSupabaseBrowser()
-      .auth.getUser()
-      .then(({ data }) => {
-        setUserId(data.user?.id ?? null)
-      })
+    const supabase = getSupabaseBrowser()
+    supabase.auth.getUser().then(({ data }) => {
+      const u = data.user
+      if (!u) return
+      setUserId(u.id)
+      const emailStr = u.email ?? null
+      const metaName = u.user_metadata?.full_name ?? u.user_metadata?.name ?? null
+      if (metaName) {
+        setProfile({ fullName: metaName, email: emailStr })
+      } else {
+        supabase
+          .from('customer_profiles')
+          .select('full_name')
+          .eq('user_id', u.id)
+          .maybeSingle()
+          .then(({ data: p }) => {
+            setProfile({ fullName: p?.full_name ?? emailStr ?? 'usuario', email: emailStr })
+          })
+      }
+    })
   }, [])
 
   return (
@@ -32,8 +48,8 @@ export function PhoneGateModal({ onComplete, onClose }: Props) {
         <PhoneStep
           active
           mode="gate"
-          fullName={null}
-          email={null}
+          fullName={profile?.fullName ?? null}
+          email={profile?.email ?? null}
           userId={userId}
           onDone={onComplete}
         />

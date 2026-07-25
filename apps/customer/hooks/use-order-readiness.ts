@@ -5,7 +5,7 @@ import { pointInPolygon } from '@/lib/coverage'
 import { type AppealData, type CancelledOrder, checkPaymentBlock } from '@/lib/payment-block'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
-type GateType = 'phone' | 'address' | 'pending_payment_resolution'
+type GateType = 'auth' | 'phone' | 'address' | 'pending_payment_resolution'
 
 type OrderReadiness = {
   ready: boolean
@@ -25,6 +25,7 @@ export function useOrderReadiness(): OrderReadiness {
   const [isPaymentBlocked, setIsPaymentBlocked] = useState(false)
   const [blockedOrderShortId, setBlockedOrderShortId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
 
   const supabase = getSupabaseBrowser()
 
@@ -36,12 +37,15 @@ export function useOrderReadiness(): OrderReadiness {
       } = await supabase.auth.getSession()
       const user = session?.user
       if (!user) {
+        setIsAuthenticated(false)
         setProfile(null)
         setHasValidAddress(false)
         setIsPaymentBlocked(false)
         setBlockedOrderShortId(null)
         return
       }
+
+      setIsAuthenticated(true)
 
       // 1. Verificar teléfono
       const { data: prof } = await supabase
@@ -129,16 +133,22 @@ export function useOrderReadiness(): OrderReadiness {
 
   const missingSteps: GateType[] = []
 
-  if (!profile?.phone_verified_at) {
-    missingSteps.push('phone')
-  }
+  if (!loading) {
+    if (!isAuthenticated) {
+      missingSteps.push('auth')
+    } else {
+      if (!profile?.phone_verified_at) {
+        missingSteps.push('phone')
+      }
 
-  if (!hasValidAddress) {
-    missingSteps.push('address')
-  }
+      if (!hasValidAddress) {
+        missingSteps.push('address')
+      }
 
-  if (isPaymentBlocked) {
-    missingSteps.push('pending_payment_resolution')
+      if (isPaymentBlocked) {
+        missingSteps.push('pending_payment_resolution')
+      }
+    }
   }
 
   return {

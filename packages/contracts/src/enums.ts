@@ -148,6 +148,19 @@ export const CANCEL_REASON_DETAILS = [
 export const CancelReasonDetailSchema = z.enum(CANCEL_REASON_DETAILS)
 export type CancelReasonDetail = z.infer<typeof CancelReasonDetailSchema>
 
+// --- Teléfonos de prueba bloqueados (Blacklist canónica) ---
+export const BLACKLISTED_PHONES = [
+  '999999999',
+  '987654321',
+  '912345678',
+  '955555555',
+  '900000000',
+  '911111111',
+  '123456789',
+] as const
+export const BlacklistedPhoneSchema = z.enum(BLACKLISTED_PHONES)
+export type BlacklistedPhone = z.infer<typeof BlacklistedPhoneSchema>
+
 // --- Vehículo del motorizado ---
 export const VEHICLE_TYPES = ['moto', 'bici', 'pie', 'auto'] as const
 export const VehicleTypeSchema = z.enum(VEHICLE_TYPES)

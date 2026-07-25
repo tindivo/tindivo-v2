@@ -190,6 +190,7 @@ describe('Contratos de Apelaciones y Devoluciones', () => {
       refundStatus: null,
       refundAmount: null,
       refundCompletedAt: null,
+      refundProofUrl: null,
       appealDeadline: '2026-07-27T00:00:00.000Z',
       description: 'Mi comprobante fue rechazado',
       status: 'open',

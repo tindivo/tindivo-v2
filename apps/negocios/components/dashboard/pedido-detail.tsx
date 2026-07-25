@@ -881,6 +881,7 @@ export function DetailScreen({
   proofUrl,
   qrUrl,
   busy,
+  isLoadingActions = false,
   mobile = false,
   actions,
 }: {
@@ -889,6 +890,7 @@ export function DetailScreen({
   proofUrl: string | null
   qrUrl: string | null
   busy: boolean
+  isLoadingActions?: boolean
   mobile?: boolean
   actions: DetailActions
 }) {
@@ -922,13 +924,19 @@ export function DetailScreen({
   }, [order.rowId, order.status])
 
   const isPending =
-    order.status === 'pending_acceptance' ||
-    order.status === 'awaiting_payment' ||
-    order.status === 'validando'
+    !isLoadingActions &&
+    (order.status === 'pending_acceptance' ||
+      order.status === 'awaiting_payment' ||
+      order.status === 'validando')
   const isPrepaid = order.payment === 'prepaid'
   const isOnline = order.source === 'web'
-  const acceptDisabled = busy
-  const isValidandoPrepaid = isPrepaid && order.status === 'validando'
+  const acceptDisabled = busy || isLoadingActions
+  const isPrepaidAwaitingProof =
+    isPrepaid &&
+    !proofUrl &&
+    !isLoadingActions &&
+    (order.status === 'pending_acceptance' || order.status === 'validando')
+  const isValidandoPrepaid = isPrepaid && Boolean(proofUrl) && !isLoadingActions
   const showPrepPicker = isPending && !isPrepaid
 
   const rejectReasons = isPrepaid
@@ -1047,7 +1055,12 @@ export function DetailScreen({
             {isPending && (
               <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                 <span style={{ fontSize: 11, color: 'var(--tv-ink-muted)' }}>
-                  · acepta antes de
+                  ·{' '}
+                  {order.status === 'awaiting_payment'
+                    ? 'paga antes de'
+                    : order.status === 'validando'
+                      ? 'revisa antes de'
+                      : 'acepta antes de'}
                 </span>
                 <span
                   className="tv-mono"
@@ -1168,17 +1181,6 @@ export function DetailScreen({
               </div>
             </div>
           )}
-
-        {/* Sección de pago (al inicio si está validando prepago) */}
-        {isValidandoPrepaid && (
-          <PaySectionPrepaid
-            order={order}
-            proofUrl={proofUrl}
-            busy={busy}
-            onVerify={() => actions.onVerifyProof()}
-            onReject={() => actions.onRejectProof()}
-          />
-        )}
 
         {/* Cliente y Dirección */}
         {isValidandoPrepaid ? (
@@ -1478,55 +1480,78 @@ export function DetailScreen({
         {/* Sección de pago */}
         {order.payment === 'pending_cash' && <PaySectionCash order={order} />}
         {order.payment === 'pending_wallet' && <PaySectionWallet order={order} qrUrl={qrUrl} />}
-        {order.payment === 'prepaid' && !isValidandoPrepaid && (
+        {order.payment === 'prepaid' && (
           <>
-            {/* 1. pending_acceptance: Nada de comprobante */}
-            {/* 2. awaiting_payment: Banner de espera sin botones */}
-            {order.status === 'awaiting_payment' && (
+            {isLoadingActions ? (
               <div
                 style={{
-                  background: '#FFF7ED',
+                  background: 'var(--tv-surface-muted, #F3F4F6)',
                   borderRadius: 12,
                   padding: '12px 14px',
-                  border: '1px solid #FFEDD5',
-                  flexShrink: 0,
+                  height: 64,
+                  border: '1px solid var(--tv-border, #E5E7EB)',
                 }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
-                  <MS name="schedule" size={18} filled style={{ color: '#C2410C' }} />
-                  <div style={{ fontSize: 13, fontWeight: 700, color: '#9A3412' }}>
-                    Esperando pago del cliente
-                  </div>
-                </div>
-                <div style={{ fontSize: 12, color: '#C2410C', lineHeight: 1.4 }}>
-                  Disponibilidad confirmada. El cliente tiene 10 minutos para realizar la
-                  transferencia por Yape/Plin y adjuntar el comprobante.
-                </div>
-              </div>
-            )}
-            {/* 3. validando: Guía de validación + comprobante + botones */}
-            {order.status === 'validando' && (
-              <PaySectionPrepaid
-                order={order}
-                proofUrl={proofUrl}
-                busy={busy}
-                onVerify={() => actions.onVerifyProof()}
-                onReject={() => actions.onRejectProof()}
+                className="animate-pulse"
               />
+            ) : (
+              <>
+                {/* 1. Esperando comprobante del cliente (pending_acceptance o validando sin comprobante aún) */}
+                {isPrepaidAwaitingProof && (
+                  <div
+                    style={{
+                      background: '#FFF7ED',
+                      borderRadius: 12,
+                      padding: '12px 14px',
+                      border: '1px solid #FFEDD5',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
+                      <MS name="qr_code_2" size={18} filled style={{ color: '#C2410C' }} />
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#9A3412' }}>
+                        Pago por Yape / Plin
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 12, color: '#C2410C', lineHeight: 1.4 }}>
+                      Confirma la disponibilidad de insumos para este pedido. Una vez aceptado, el cliente tendrá 10 minutos para transferir por Yape/Plin y adjuntar el comprobante.
+                    </div>
+                  </div>
+                )}
+                {/* 2. awaiting_payment: Banner de espera tras haber aceptado disponibilidad */}
+                {order.status === 'awaiting_payment' && (
+                  <div
+                    style={{
+                      background: '#FFF7ED',
+                      borderRadius: 12,
+                      padding: '12px 14px',
+                      border: '1px solid #FFEDD5',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
+                      <MS name="schedule" size={18} filled style={{ color: '#C2410C' }} />
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#9A3412' }}>
+                        Esperando pago del cliente
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 12, color: '#C2410C', lineHeight: 1.4 }}>
+                      Disponibilidad confirmada. El cliente tiene 10 minutos para realizar la
+                      transferencia por Yape/Plin y adjuntar el comprobante.
+                    </div>
+                  </div>
+                )}
+                {/* 3. Con comprobante subido: Guía de validación + comprobante + botones */}
+                {isValidandoPrepaid && (
+                  <PaySectionPrepaid
+                    order={order}
+                    proofUrl={proofUrl}
+                    busy={busy}
+                    onVerify={() => actions.onVerifyProof()}
+                    onReject={() => actions.onRejectProof()}
+                  />
+                )}
+              </>
             )}
-            {/* 4. confirmed / otros con comprobante verificado */}
-            {order.status !== 'pending_acceptance' &&
-              order.status !== 'awaiting_payment' &&
-              order.status !== 'validando' &&
-              proofUrl && (
-                <PaySectionPrepaid
-                  order={order}
-                  proofUrl={proofUrl}
-                  busy={busy}
-                  onVerify={() => actions.onVerifyProof()}
-                  onReject={() => actions.onRejectProof()}
-                />
-              )}
           </>
         )}
         {order.payment === 'pending_mixed' && <PaySectionMixed order={order} qrUrl={qrUrl} />}
@@ -1673,7 +1698,7 @@ export function DetailScreen({
       </div>
 
       {/* Footer de acciones (pendiente) */}
-      {isPending && (
+      {(isPending || isLoadingActions) && (
         <div
           style={{
             background: '#fff',
@@ -1686,19 +1711,37 @@ export function DetailScreen({
             flexShrink: 0,
           }}
         >
-          {order.status === 'validando' && isPrepaid ? (
+          {isLoadingActions ? (
+            <div style={{ display: 'flex', gap: 10, opacity: 0.7 }} className="animate-pulse">
+              <div
+                style={{
+                  flex: 1,
+                  height: 44,
+                  borderRadius: 12,
+                  background: 'var(--tv-surface-muted, #E5E7EB)',
+                }}
+              />
+              <div
+                style={{
+                  flex: 2,
+                  height: 44,
+                  borderRadius: 12,
+                  background: 'var(--tv-surface-muted, #E5E7EB)',
+                }}
+              />
+            </div>
+          ) : isValidandoPrepaid ? (
             <div style={{ display: 'flex', gap: 10 }}>
               <button
                 type="button"
                 onClick={() => actions.onRejectProof()}
-                disabled={!proofUrl || busy}
+                disabled={busy}
                 className="tv-btn tv-btn-ghost"
                 style={{
                   flex: 1,
                   color: 'var(--tv-danger)',
                   border: '1.5px solid #FCA5A5',
                   background: '#FFF5F5',
-                  opacity: !proofUrl || busy ? 0.5 : 1,
                 }}
               >
                 <MS name="cancel" size={18} /> Inválido
@@ -1706,9 +1749,9 @@ export function DetailScreen({
               <button
                 type="button"
                 onClick={() => setShowPrepModal(true)}
-                disabled={!proofUrl || busy}
+                disabled={busy}
                 className="tv-btn tv-btn-brand"
-                style={{ flex: 2, background: '#16A34A', opacity: !proofUrl || busy ? 0.5 : 1 }}
+                style={{ flex: 2, background: '#16A34A' }}
               >
                 <MS name="check_circle" size={18} filled /> Confirmar pago
               </button>
@@ -1753,22 +1796,21 @@ export function DetailScreen({
                 <button
                   type="button"
                   onClick={() =>
-                    actions.onAccept(order.status === 'pending_acceptance' && isPrepaid ? 20 : prep)
+                    actions.onAccept(isPrepaid ? 20 : prep)
                   }
                   disabled={acceptDisabled}
                   className="tv-btn tv-btn-brand"
                   style={{ flex: 2 }}
                 >
                   <MS name="check" size={18} filled />
-                  {order.status === 'pending_acceptance' && isPrepaid
+                  {isPrepaid
                     ? 'Aceptar disponibilidad'
                     : `Aceptar · ${prep}m`}
                 </button>
               </div>
-              {order.status === 'pending_acceptance' && isPrepaid && (
+              {isPrepaid && (
                 <div style={{ fontSize: 11, color: 'var(--tv-ink-muted)', textAlign: 'center' }}>
-                  Confirmas disponibilidad para preparar. El cliente procederá a realizar el pago
-                  por Yape/Plin.
+                  Confirmas disponibilidad para preparar. El cliente procederá a realizar el pago por Yape/Plin.
                 </div>
               )}
             </>

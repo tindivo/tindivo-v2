@@ -827,11 +827,13 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
 
   // Tick inteligente: solo si hay countdowns o buffer activos.
   const needsTickRef = useRef(false)
+  const lastExpireTriggerRef = useRef<number>(0)
 
   useEffect(() => {
     const hasTicking = vms.some(
       (v) =>
         v.status === 'pending_acceptance' ||
+        v.status === 'awaiting_payment' ||
         v.status === 'validando' ||
         v.state === 'cooking' ||
         v.state === 'buffer_p1' ||
@@ -848,6 +850,30 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
     }, 1000)
     return () => clearInterval(t)
   }, [])
+
+  // Auto-expiración instantánea cuando el contador llega a 0:00
+  useEffect(() => {
+    const hasExpired = vms.some(
+      (v) =>
+        (v.status === 'pending_acceptance' ||
+          v.status === 'awaiting_payment' ||
+          v.status === 'validando') &&
+        v.countdownSec <= 0,
+    )
+
+    if (hasExpired && Date.now() - lastExpireTriggerRef.current > 5000) {
+      lastExpireTriggerRef.current = Date.now()
+      const supabase = getSupabaseBrowser()
+      ;(supabase as any)
+        .rpc('cancel_expired_prepay_orders')
+        .then(() => {
+          debouncedRefetchOrders()
+        })
+        .catch(() => {
+          debouncedRefetchOrders()
+        })
+    }
+  }, [vms, debouncedRefetchOrders])
 
   const paused = isBusinessPaused(biz.until, now)
   const pauseMin = pauseMinutesLeft(biz.until, now)

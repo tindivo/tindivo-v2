@@ -25,7 +25,7 @@ export const ORDER_SELECT =
   'order_amount,delivery_fee,payment_intent,payment_proof_status,comprobante_prepago_url,proof_attempt,' +
   'prep_time_minutes,estimated_ready_at,prep_extension_count,client_pays_with,change_to_give,' +
   'yape_amount,cash_amount,requires_validation,validation_reason_code,risk_flags,' +
-  'driver_id,created_at,pending_acceptance_at,validating_at,' +
+  'driver_id,created_at,pending_acceptance_at,awaiting_payment_at,validating_at,' +
   'waiting_driver_at,picked_up_at,delivered_at,cancelled_at,cancel_note,cancel_reason,driver:drivers(full_name)'
 
 const limaTime = new Intl.DateTimeFormat('es-PE', {
@@ -69,6 +69,7 @@ export interface OrderRow {
   driver_id: string | null
   created_at: string
   pending_acceptance_at: string | null
+  awaiting_payment_at: string | null
   validating_at: string | null
   waiting_driver_at: string | null
   picked_up_at: string | null
@@ -200,7 +201,7 @@ export function toOrderVM(row: OrderRow, now: number = Date.now()): OrderVM {
     row.status === 'pending_acceptance'
       ? secondsUntil(row.pending_acceptance_at ?? row.created_at, ACCEPT_SEC, now)
       : row.status === 'awaiting_payment'
-        ? secondsUntil(row.validating_at ?? row.created_at, PREPAY_SEC, now)
+        ? secondsUntil(row.awaiting_payment_at ?? row.validating_at ?? row.created_at, PREPAY_SEC, now)
         : row.status === 'validando'
           ? secondsUntil(
               row.validating_at ?? row.created_at,

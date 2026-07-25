@@ -75,8 +75,11 @@ function AddedToast({ name }: { name: string }) {
   )
 }
 
+import { usePlatformSchedule } from '@/hooks/use-platform-schedule'
+
 export default function NegocioPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
+  const { intakeStatus } = usePlatformSchedule()
   const [data, setData] = useState<BusinessDetail | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [active, setActive] = useState<string>('')

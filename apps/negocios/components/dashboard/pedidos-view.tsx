@@ -28,6 +28,7 @@ export interface PedidosViewProps {
   detailProofUrl: string | null
   qrUrl: string | null
   detailBusy: boolean
+  detailLoadingActions?: boolean
   actions: DetailActions
   showPauseModal: boolean
   onClosePause: () => void
@@ -206,6 +207,7 @@ export function PedidosMobile(p: PedidosViewProps) {
           proofUrl={p.detailProofUrl}
           qrUrl={p.qrUrl}
           busy={p.detailBusy}
+          isLoadingActions={p.detailLoadingActions}
           mobile
           actions={p.actions}
         />
@@ -794,6 +796,7 @@ export function PedidosDesktop(p: PedidosViewProps) {
           proofUrl={p.detailProofUrl}
           qrUrl={p.qrUrl}
           busy={p.detailBusy}
+          isLoadingActions={p.detailLoadingActions}
           actions={p.actions}
         />
       )}

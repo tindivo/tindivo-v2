@@ -1,13 +1,22 @@
 'use client'
 
 import { ApiError } from '@tindivo/api-client'
+import { BLACKLISTED_PHONES } from '@tindivo/contracts'
 import { useRouter } from 'next/navigation'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { MS, soles } from '@/components/dashboard/primitives'
 import { api } from '@/lib/api'
 
 const PREP_PRESETS = [10, 15, 20, 25, 30, 35, 40, 45, 50]
 type Payment = 'pending_cash' | 'pending_wallet' | 'prepaid' | 'pending_mixed'
+
+interface IntakeStatus {
+  isOpen: boolean
+  cutoff: string
+  startTime?: string
+  serverTimeLima: string
+  message: string | null
+}
 
 const PAYMENTS: { id: Payment; icon: string; label: string; sub: string }[] = [
   {
@@ -41,8 +50,70 @@ function num(v: string): number {
   return Number.isFinite(n) ? n : 0
 }
 
+function getOrCreateIdempotencyKey(): string {
+  if (typeof window === 'undefined') return ''
+  let key = sessionStorage.getItem('tindivo:new-order-key')
+  if (!key) {
+    key =
+      typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `key-${Date.now()}-${Math.random()}`
+    sessionStorage.setItem('tindivo:new-order-key', key)
+  }
+  return key
+}
+
+function clearIdempotencyKey(): void {
+  if (typeof window !== 'undefined') {
+    sessionStorage.removeItem('tindivo:new-order-key')
+  }
+}
+
+function regenerateIdempotencyKey(): string {
+  clearIdempotencyKey()
+  return getOrCreateIdempotencyKey()
+}
+
+function isReferenceValid(reference: string, deliveryMethod: string): boolean {
+  if (deliveryMethod !== 'delivery') return true
+  return reference.trim().length >= 5
+}
+
+function mapFormError(err: unknown): string {
+  if (!(err instanceof ApiError)) {
+    if (err instanceof Error && (err.message.includes('fetch') || err.message.includes('network'))) {
+      return 'Error de conexión con el servidor. Tu borrador se mantiene intacto. Vuelve a intentar.'
+    }
+    return 'No se pudo crear el pedido. Intenta nuevamente.'
+  }
+
+  const detail = (err.problem?.detail ?? err.message ?? '').toLowerCase()
+
+  if (detail.includes('suspendida') || detail.includes('is_blocked')) {
+    return 'Cuenta de negocio suspendida. Contacta a soporte de Tindivo.'
+  }
+  if (detail.includes('inactivo') || detail.includes('is_active')) {
+    return 'Tu negocio no está activo en este momento.'
+  }
+  if (detail.includes('prueba') || detail.includes('blacklisted')) {
+    return 'Número de teléfono de prueba no permitido.'
+  }
+  if (detail.includes('bloqueado') || detail.includes('customer_is_blocked')) {
+    return 'El cliente se encuentra bloqueado por políticas de seguridad.'
+  }
+  if (detail.includes('anticipado') || detail.includes('prepayment')) {
+    return 'Este cliente requiere pago por adelantado (prepago).'
+  }
+  if (detail.includes('cerrado') || detail.includes('horario') || detail.includes('plataforma') || detail.includes('22:30') || detail.includes('reciben pedidos')) {
+    return err.problem?.detail ?? 'Ya no se reciben pedidos. El horario de atención ha finalizado.'
+  }
+
+  return err.problem?.detail ?? 'No se pudo procesar la solicitud.'
+}
+
 export default function NuevoPedidoPage() {
   const router = useRouter()
+  const submittingRef = useRef(false)
 
   const [prep, setPrep] = useState(20)
   const [name, setName] = useState('')
@@ -55,8 +126,42 @@ export default function NuevoPedidoPage() {
   const [cashPart, setCashPart] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [intakeStatus, setIntakeStatus] = useState<IntakeStatus | null>(null)
 
+  useEffect(() => {
+    let unmounted = false
+    api.get<IntakeStatus>('/public/schedule')
+      .then((data) => {
+        if (!unmounted && data) setIntakeStatus(data)
+      })
+      .catch(() => {})
+    return () => { unmounted = true }
+  }, [])
+
+  const deliveryMethod = 'delivery'
   const amountN = num(amount)
+  const cleanPhone = phone.replace(/\D/g, '')
+
+  const isIntakeOpen = intakeStatus?.isOpen ?? true
+  const startTime = intakeStatus?.startTime ?? '18:00'
+  const cutoffTime = intakeStatus?.cutoff ?? '22:30'
+  const cutoffBannerMessage = intakeStatus?.message ?? `Recibimos pedidos de ${startTime} a ${cutoffTime}. Vuelve dentro del horario.`
+
+  // 1. Blacklist check
+  const isPhoneBlacklisted =
+    cleanPhone.length > 0 && BLACKLISTED_PHONES.includes(cleanPhone as any)
+  const phoneFormatOk = cleanPhone === '' || /^9\d{8}$/.test(cleanPhone)
+  const phoneOk = phoneFormatOk && !isPhoneBlacklisted
+
+  // 2. Reference validation (conditional to deliveryMethod)
+  const referenceOk = isReferenceValid(reference, deliveryMethod)
+
+  // 3. Mixed payment integer cents validation
+  const centsTotal = Math.round(amountN * 100)
+  const centsWallet = Math.round(num(walletPart) * 100)
+  const centsCash = Math.round(num(cashPart) * 100)
+  const mixedOk = payment !== 'pending_mixed' || centsWallet + centsCash === centsTotal
+
   const isCashish = payment === 'pending_cash' || payment === 'pending_mixed'
   const cashTarget = payment === 'pending_mixed' ? num(cashPart) : amountN
   const change = useMemo(() => {
@@ -65,36 +170,62 @@ export default function NuevoPedidoPage() {
     return c > 0 ? c : 0
   }, [isCashish, paysWith, cashTarget])
 
-  const mixedOk =
-    payment !== 'pending_mixed' || Math.abs(num(walletPart) + num(cashPart) - amountN) < 0.005
-  const phoneOk = phone.trim() === '' || /^9\d{8}$/.test(phone.replace(/\D/g, ''))
-  const canSubmit = amountN > 0 && mixedOk && phoneOk && !busy
+  const canSubmit = amountN > 0 && mixedOk && phoneOk && referenceOk && !busy
 
   async function submit() {
-    if (!canSubmit) return
+    if (submittingRef.current || !canSubmit) return
+    submittingRef.current = true
     setBusy(true)
     setError(null)
+
+    const idempotencyKey = getOrCreateIdempotencyKey()
+    const orderPayload = {
+      deliveryMethod,
+      paymentIntent: payment === 'pending_wallet' ? 'pending_yape' : payment,
+      customerName: name.trim() || undefined,
+      customerPhone: cleanPhone || undefined,
+      deliveryReference: reference.trim() || undefined,
+      prepTimeMinutes: prep,
+      orderAmount: amountN,
+      clientPaysWith: isCashish && num(paysWith) > 0 ? num(paysWith) : undefined,
+      yapeAmount: payment === 'pending_mixed' ? num(walletPart) : undefined,
+      cashAmount: payment === 'pending_mixed' ? num(cashPart) : undefined,
+    }
+
     try {
-      await api.post('/business/orders', {
-        deliveryMethod: 'delivery',
-        paymentIntent: payment,
-        customerName: name.trim() || undefined,
-        customerPhone: phone.trim() ? phone.replace(/\D/g, '') : undefined,
-        deliveryReference: reference.trim() || undefined,
-        prepTimeMinutes: prep,
-        orderAmount: amountN,
-        clientPaysWith: isCashish && num(paysWith) > 0 ? num(paysWith) : undefined,
-        yapeAmount: payment === 'pending_mixed' ? num(walletPart) : undefined,
-        cashAmount: payment === 'pending_mixed' ? num(cashPart) : undefined,
-      })
+      await api.post('/business/orders', orderPayload, idempotencyKey)
+      clearIdempotencyKey()
       router.replace('/')
     } catch (err) {
-      setError(
-        err instanceof ApiError
-          ? (err.problem.detail ?? err.message)
-          : 'No se pudo crear el pedido',
-      )
+      if (err instanceof ApiError) {
+        if (
+          err.code === 'idempotency_conflict' ||
+          (err.status === 409 && err.message.toLowerCase().includes('idempotency'))
+        ) {
+          const freshKey = regenerateIdempotencyKey()
+          try {
+            await api.post('/business/orders', orderPayload, freshKey)
+            clearIdempotencyKey()
+            router.replace('/')
+            return
+          } catch (retryErr) {
+            if (retryErr instanceof ApiError && retryErr.status >= 400 && retryErr.status < 500) {
+              regenerateIdempotencyKey()
+            }
+            setError(mapFormError(retryErr))
+            setBusy(false)
+            submittingRef.current = false
+            return
+          }
+        }
+        if (err.status >= 400 && err.status < 500) {
+          // 4xx error (400, 403, 409 validation, 422) -> regenerar clave (el servidor no creó nada)
+          regenerateIdempotencyKey()
+        }
+      }
+      setError(mapFormError(err))
       setBusy(false)
+      submittingRef.current = false
     }
   }
 
@@ -159,6 +290,7 @@ export default function NuevoPedidoPage() {
           margin: '0 auto',
         }}
       >
+
         {/* 1 · Prep */}
         <div style={card}>
           <div className="tv-label-input">TIEMPO DE PREPARACIÓN</div>
@@ -194,9 +326,6 @@ export default function NuevoPedidoPage() {
               </button>
             ))}
           </div>
-          <div style={{ fontSize: 11, color: 'var(--tv-ink-muted)', marginTop: 2 }}>
-            El motorizado llegará ~{prep + 5}–{prep + 15} min desde ahora.
-          </div>
         </div>
 
         {/* 2 · Cliente */}
@@ -222,7 +351,12 @@ export default function NuevoPedidoPage() {
               placeholder="987 654 321"
               inputMode="numeric"
             />
-            {!phoneOk && (
+            {isPhoneBlacklisted && (
+              <div style={{ fontSize: 11, color: 'var(--tv-danger)', marginTop: 4 }}>
+                Número de teléfono de prueba no permitido.
+              </div>
+            )}
+            {!phoneFormatOk && !isPhoneBlacklisted && (
               <div style={{ fontSize: 11, color: 'var(--tv-danger)', marginTop: 4 }}>
                 Debe tener 9 dígitos y empezar por 9.
               </div>
@@ -248,6 +382,11 @@ export default function NuevoPedidoPage() {
             onChange={(e) => setReference(e.target.value)}
             placeholder="Jr. San Martín 245 — Casa azul, al lado de la bodega Lucy"
           />
+          {deliveryMethod === 'delivery' && reference.trim().length > 0 && reference.trim().length < 5 && (
+            <div style={{ fontSize: 11, color: 'var(--tv-danger)', marginTop: 4 }}>
+              La referencia debe tener al menos 5 caracteres.
+            </div>
+          )}
           <div style={{ fontSize: 11, color: 'var(--tv-ink-muted)', marginTop: 4 }}>
             El motorizado verá este texto en su app al recoger el pedido.
           </div>
@@ -394,17 +533,14 @@ export default function NuevoPedidoPage() {
                 }}
               >
                 <MS
-                  name="shopping_bag"
+                  name="payments"
                   size={22}
                   filled
                   style={{ color: '#16A34A', flexShrink: 0, marginTop: 2 }}
                 />
                 <div>
-                  <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 2 }}>
-                    Vuelto a entregar: <span className="tv-mono">{soles(change)}</span>
-                  </div>
-                  <div style={{ fontSize: 12, color: '#166534' }}>
-                    Prepáralo en efectivo y mételo en la bolsa antes de que llegue el motorizado.
+                  <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 2 }}>
+                    Entrega <span className="tv-mono">{soles(change)}</span> de vuelto al motorizado junto con el pedido
                   </div>
                 </div>
               </div>
@@ -430,8 +566,23 @@ export default function NuevoPedidoPage() {
         )}
 
         {error && (
-          <div style={{ color: 'var(--tv-danger)', fontSize: 13, marginTop: 4, fontWeight: 600 }}>
-            {error}
+          <div
+            style={{
+              background: '#FEE2E2',
+              color: '#991B1B',
+              borderRadius: 12,
+              padding: '12px 14px',
+              fontSize: 13,
+              fontWeight: 600,
+              marginTop: 8,
+              marginBottom: 12,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+            }}
+          >
+            <MS name="error" size={18} filled style={{ color: '#DC2626' }} />
+            <span>{error}</span>
           </div>
         )}
       </div>
@@ -462,7 +613,7 @@ export default function NuevoPedidoPage() {
             >
               <MS name="payments" size={16} filled style={{ color: '#16A34A' }} />
               <span style={{ fontSize: 13, fontWeight: 600, color: '#166534' }}>
-                Prepara vuelto de {soles(change)}
+                Entrega {soles(change)} de vuelto al motorizado junto con el pedido
               </span>
             </div>
           )}

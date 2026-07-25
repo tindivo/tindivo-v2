@@ -1,4 +1,8 @@
-import { DeliveryMethodSchema, PaymentIntentSchema } from '@tindivo/contracts'
+import {
+  BLACKLISTED_PHONES,
+  DeliveryMethodSchema,
+  PaymentIntentSchema,
+} from '@tindivo/contracts'
 import { DomainError } from '@tindivo/core'
 import { z } from 'zod'
 import { requireRole } from '@/lib/http/auth'
@@ -15,7 +19,14 @@ const Schema = z.object({
   deliveryMethod: DeliveryMethodSchema,
   paymentIntent: PaymentIntentSchema,
   customerName: z.string().trim().max(120).optional(),
-  customerPhone: z.string().trim().max(20).optional(),
+  customerPhone: z
+    .string()
+    .trim()
+    .max(20)
+    .refine((val) => !val || !BLACKLISTED_PHONES.includes(val.replace(/\D/g, '') as any), {
+      message: 'Número de teléfono de prueba no permitido',
+    })
+    .optional(),
   deliveryReference: z.string().trim().max(500).optional(),
   notes: z.string().trim().max(500).optional(),
   prepTimeMinutes: z.number().int().min(1).max(120).default(20),

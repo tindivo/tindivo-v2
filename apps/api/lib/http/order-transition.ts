@@ -1,7 +1,9 @@
 import {
+  CANCEL_REASON_DETAILS,
   CancelReasonDetailSchema,
   DistanceBandSchema,
   PaymentRealSchema,
+  type CancelReasonDetail,
   type UserRole,
 } from '@tindivo/contracts'
 import { DomainError } from '@tindivo/core'
@@ -33,6 +35,21 @@ const TransitionSchema = z
     cancelReasonDetail: CancelReasonDetailSchema.optional(),
     reasonCode: z.enum(REJECTION_CODES).optional(),
     reasonText: z.string().max(300).optional(),
+  })
+  .transform((val) => {
+    if (val.action === 'cancel') {
+      let detail = val.cancelReasonDetail
+      if (!detail && val.reasonCode) {
+        if ((CANCEL_REASON_DETAILS as readonly string[]).includes(val.reasonCode)) {
+          detail = val.reasonCode as CancelReasonDetail
+        }
+      }
+      if (!detail) {
+        detail = 'other'
+      }
+      return { ...val, cancelReasonDetail: detail }
+    }
+    return val
   })
   .superRefine((val, ctx) => {
     if (val.action === 'cancel' && (val.reason === 'business_cancelled' || !val.reason)) {

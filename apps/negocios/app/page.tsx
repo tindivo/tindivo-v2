@@ -30,6 +30,15 @@ export default function NegocioPedidosPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [detailItems, setDetailItems] = useState<DetailItem[] | null>(null)
   const [detailProofUrl, setDetailProofUrl] = useState<string | null>(null)
+  const [freshOrder, setFreshOrder] = useState<{
+    id: string
+    status: string
+    payment_proof_status: string | null
+    proof_attempt: number | null
+    comprobante_prepago_url: string | null
+    validation_context: string | null
+  } | null>(null)
+  const [isFreshLoading, setIsFreshLoading] = useState(false)
   const [busy, setBusy] = useState(false)
   const [showPause, setShowPause] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -52,16 +61,65 @@ export default function NegocioPedidosPage() {
   // Datos derivados del pedido seleccionado (para deps honestas del efecto).
   const selRow = selectedId ? (rows.find((r) => r.id === selectedId) ?? null) : null
   const selSource = selRow?.source ?? null
+  const selPaymentIntent = selRow?.payment_intent ?? null
   const selProofPath = selRow?.comprobante_prepago_url ?? null
 
-  // Detalle: carga lazy de items (Online) + comprobante firmado (prepago).
+  // Detalle: carga ligera de frescura de estado + items (Online) + comprobante firmado (prepago).
   useEffect(() => {
     let cancel = false
     setDetailItems(null)
     setDetailProofUrl(null)
-    if (!selectedId) return
+    setFreshOrder(null)
+
+    if (!selectedId) {
+      setIsFreshLoading(false)
+      return
+    }
+
+    const isPrepaid = selPaymentIntent === 'prepaid'
+    setIsFreshLoading(isPrepaid)
+
     const supabase = getSupabaseBrowser()
     void (async () => {
+      let freshPath: string | null = selProofPath
+
+      // Guard 2 — Frescura del estado para pedidos prepagados:
+      // Fetch ligero del estado actual en DB para prevenir botones de estado viejo si la lista está stale.
+      if (isPrepaid) {
+        try {
+          const { data } = await (supabase
+            .from('orders')
+            .select('id, status, payment_proof_status, proof_attempt, comprobante_prepago_url, validation_context') as any)
+            .eq('id', selectedId)
+            .maybeSingle()
+
+          if (!cancel && data) {
+            const typedData = data as {
+              id: string
+              status: string
+              payment_proof_status: string | null
+              proof_attempt: number | null
+              comprobante_prepago_url: string | null
+              validation_context: string | null
+            }
+            setFreshOrder({
+              id: String(typedData.id),
+              status: String(typedData.status),
+              payment_proof_status: typedData.payment_proof_status ?? null,
+              proof_attempt: typedData.proof_attempt != null ? Number(typedData.proof_attempt) : null,
+              comprobante_prepago_url: typedData.comprobante_prepago_url ?? null,
+              validation_context: typedData.validation_context ?? null,
+            })
+            freshPath = typedData.comprobante_prepago_url ?? freshPath
+          }
+        } catch {
+          /* fail-open: continuar con datos en memoria si la red falla */
+        } finally {
+          if (!cancel) setIsFreshLoading(false)
+        }
+      }
+
+      // Carga de items del pedido (Customer PWA)
       if (selSource === 'customer_pwa') {
         const { data } = await supabase
           .from('customer_order_items')
@@ -87,7 +145,9 @@ export default function NegocioPedidosPage() {
             }),
           )
       }
-      if (selProofPath) {
+
+      // Guard 1 — Fetch de la URL firmada del comprobante de prepago
+      if (freshPath) {
         try {
           const r = await api.get<{ data: { url: string | null } }>(
             `/business/orders/${selectedId}/prepay-proof`,
@@ -98,10 +158,11 @@ export default function NegocioPedidosPage() {
         }
       }
     })()
+
     return () => {
       cancel = true
     }
-  }, [selectedId, selSource, selProofPath])
+  }, [selectedId, selSource, selPaymentIntent, selProofPath])
 
   const newOrders = useMemo(() => vms.filter((v) => getColumn(v.status) === 'nuevos'), [vms])
   const cookingOrders = useMemo(() => vms.filter((v) => getColumn(v.status) === 'cocina'), [vms])
@@ -110,7 +171,24 @@ export default function NegocioPedidosPage() {
     () => vms.filter((v) => getColumn(v.status) === 'entregados').slice(0, 40),
     [vms],
   )
-  const selected = selectedId ? (vms.find((v) => v.rowId === selectedId) ?? null) : null
+  const selectedBase = selectedId ? (vms.find((v) => v.rowId === selectedId) ?? null) : null
+  const selected = useMemo(() => {
+    if (!selectedBase) return null
+    if (!freshOrder || freshOrder.id !== selectedBase.rowId) return selectedBase
+    return {
+      ...selectedBase,
+      status: freshOrder.status,
+      proofStatus: freshOrder.payment_proof_status,
+      proofAttempt: freshOrder.proof_attempt ?? selectedBase.proofAttempt,
+    }
+  }, [selectedBase, freshOrder])
+
+  // Cómputo de la guardia doble para el detalle
+  const activeProofPath = freshOrder ? freshOrder.comprobante_prepago_url : selProofPath
+  const isPrepaidSelected = selected?.payment === 'prepaid'
+  const isResolvingProof = isPrepaidSelected && activeProofPath !== null && detailProofUrl === null
+  const isLoadingActions = isFreshLoading || isResolvingProof
+
 
   const run = useCallback(async (fn: () => Promise<void>) => {
     setBusy(true)
@@ -132,9 +210,33 @@ export default function NegocioPedidosPage() {
       run(async () => {
         if (!selected) return
         const id = selected.rowId
-        if (selected.status === 'validando')
-          await post(`/business/orders/${id}/validate`, { pass: true })
-        await post(`/business/orders/${id}/transition`, { action: 'accept' })
+        const isPrepaid = selected.payment === 'prepaid'
+
+        if (selected.status === 'validando') {
+          // Antifraude: la cajera ya llamó y validó. validate_order ramifica por
+          // payment_intent: prepaid → pending_acceptance, contraentrega → confirmed.
+          const res = (await post(`/business/orders/${id}/validate`, { pass: true })) as {
+            status?: string
+          }
+          if (res?.status === 'pending_acceptance' || isPrepaid) {
+            // Prepago: accept → awaiting_payment. El cliente debe pagar antes de preparar.
+            await post(`/business/orders/${id}/transition`, { action: 'accept' })
+            setSelectedId(null)
+            await refetchOrders()
+            return
+          }
+          // Contraentrega: el pedido ya está en confirmed. Saltar accept, ir a preparar.
+        } else {
+          await post(`/business/orders/${id}/transition`, { action: 'accept' })
+          if (isPrepaid) {
+            // Prepago: accept transiciona a awaiting_payment. NO llamar a preparing (debe esperar el voucher).
+            setSelectedId(null)
+            await refetchOrders()
+            return
+          }
+        }
+
+        // Contraentrega: accept transiciona a confirmed → ahora pasar a preparing con tiempo estimado.
         await post(`/business/orders/${id}/transition`, {
           action: 'preparing',
           prepTimeMinutes: prep,
@@ -146,7 +248,11 @@ export default function NegocioPedidosPage() {
       run(async () => {
         if (!selected) return
         const id = selected.rowId
-        if (selected.status === 'validando')
+        // Discriminar por presencia de comprobante, NO por status.
+        // proofAttempt >= 1 significa que el cliente ya subió un voucher → rechazo de COMPROBANTE.
+        // proofAttempt = 0 significa que no hay comprobante → rechazo de DISPONIBILIDAD.
+        const hasProof = selected.proofAttempt >= 1
+        if (hasProof)
           await post(`/business/orders/${id}/validate`, {
             pass: false,
             reason: text,
@@ -158,6 +264,7 @@ export default function NegocioPedidosPage() {
             reason: 'business_cancelled',
             reasonCode: code,
             reasonText: text,
+            cancelReasonDetail: code,
           })
         setSelectedId(null)
         await refetchOrders()
@@ -200,6 +307,7 @@ export default function NegocioPedidosPage() {
           reason: 'business_cancelled',
           reasonCode: code,
           reasonText: text,
+          cancelReasonDetail: code,
         })
         setSelectedId(null)
         await refetchOrders()
@@ -246,6 +354,7 @@ export default function NegocioPedidosPage() {
     detailProofUrl,
     qrUrl,
     detailBusy: busy,
+    detailLoadingActions: isLoadingActions,
     actions,
     showPauseModal: showPause,
     onClosePause: () => setShowPause(false),

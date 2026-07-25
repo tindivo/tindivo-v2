@@ -77,12 +77,27 @@ const CASH_CHIPS: { value: CashChoice; label: string; amount: number | null }[] 
   { value: '100', label: 'S/ 100', amount: 100 },
 ]
 
+import { usePlatformSchedule } from '@/hooks/use-platform-schedule'
+
 export default function CheckoutPage() {
   const router = useRouter()
   const cart = useCart()
   const cartHydrated = useCartHydrated()
+  const { intakeStatus } = usePlatformSchedule()
   const [authReady, setAuthReady] = useState(false)
-  const [idempotencyKey] = useState(() => crypto.randomUUID())
+  const idempotencyKeyRef = useRef<string>(crypto.randomUUID())
+
+  function getIdempotencyKey(): string {
+    if (!idempotencyKeyRef.current) {
+      idempotencyKeyRef.current = crypto.randomUUID()
+    }
+    return idempotencyKeyRef.current
+  }
+
+  function regenerateIdempotencyKey(): string {
+    idempotencyKeyRef.current = crypto.randomUUID()
+    return idempotencyKeyRef.current
+  }
 
   const [step, setStep] = useState<'delivery' | 'payment'>('delivery')
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('delivery')
@@ -400,47 +415,91 @@ export default function CheckoutPage() {
       }
     }
 
+    const orderPayload = {
+      businessId: cart.businessId,
+      deliveryMethod,
+      paymentIntent: selectedPayment,
+      customerName: name.trim() || 'Cliente',
+      customerPhone: phone,
+      cashPayingWith:
+        selectedPayment === 'pending_cash' ? Math.round(cashAmount * 100) / 100 : undefined,
+      deliveryAddress: selectedAddress?.line ?? (manualAddr.line.trim() || undefined),
+      deliveryReference: deliveryMethod === 'delivery' ? reference : undefined,
+      coordinates:
+        deliveryMethod !== 'delivery'
+          ? undefined
+          : selectedAddress?.coordinates_lat != null
+            ? {
+                lat: Number(selectedAddress.coordinates_lat),
+                lng: Number(selectedAddress.coordinates_lng),
+              }
+            : manualAddr.coords
+              ? { lat: manualAddr.coords.lat, lng: manualAddr.coords.lng }
+              : undefined,
+      gpsValidation: gpsPayload,
+      items: cart.lines.map((l) => ({
+        menuItemId: l.itemId,
+        quantity: l.quantity,
+        note: l.note ?? undefined,
+        modifiers: l.modifiers.map((m) => m.optionId),
+      })),
+    }
+
+    const currentKey = getIdempotencyKey()
+
     try {
       const res = await api.post<{ data: OrderResult }>(
         '/customer/orders',
-        {
-          businessId: cart.businessId,
-          deliveryMethod,
-          paymentIntent: selectedPayment,
-          customerName: name.trim() || 'Cliente',
-          customerPhone: phone,
-          cashPayingWith:
-            selectedPayment === 'pending_cash' ? Math.round(cashAmount * 100) / 100 : undefined,
-          deliveryAddress: selectedAddress?.line ?? (manualAddr.line.trim() || undefined),
-          deliveryReference: deliveryMethod === 'delivery' ? reference : undefined,
-          coordinates:
-            deliveryMethod !== 'delivery'
-              ? undefined
-              : selectedAddress?.coordinates_lat != null
-                ? {
-                    lat: Number(selectedAddress.coordinates_lat),
-                    lng: Number(selectedAddress.coordinates_lng),
-                  }
-                : manualAddr.coords
-                  ? { lat: manualAddr.coords.lat, lng: manualAddr.coords.lng }
-                  : undefined,
-          gpsValidation: gpsPayload,
-          items: cart.lines.map((l) => ({
-            menuItemId: l.itemId,
-            quantity: l.quantity,
-            note: l.note ?? undefined,
-            modifiers: l.modifiers.map((m) => m.optionId),
-          })),
-        },
-        idempotencyKey,
+        orderPayload,
+        currentKey,
       )
       setConfirmed(res.data)
       cart.clear()
+      regenerateIdempotencyKey()
     } catch (err) {
-      if (err instanceof ApiError && /bloquead/i.test(err.problem.detail ?? '')) {
-        setBlocked(true)
-        return
+      if (err instanceof ApiError) {
+        if (
+          err.code === 'idempotency_conflict' ||
+          (err.status === 409 && err.message.toLowerCase().includes('idempotency'))
+        ) {
+          const freshKey = regenerateIdempotencyKey()
+          try {
+            const res = await api.post<{ data: OrderResult }>(
+              '/customer/orders',
+              orderPayload,
+              freshKey,
+            )
+            setConfirmed(res.data)
+            cart.clear()
+            regenerateIdempotencyKey()
+            return
+          } catch (retryErr) {
+            if (retryErr instanceof ApiError && retryErr.status >= 400 && retryErr.status < 500) {
+              regenerateIdempotencyKey()
+            }
+            if (retryErr instanceof ApiError && /bloquead/i.test(retryErr.problem.detail ?? '')) {
+              setBlocked(true)
+              return
+            }
+            setError(
+              retryErr instanceof ApiError
+                ? (retryErr.problem.detail ?? retryErr.message)
+                : 'No se pudo crear el pedido',
+            )
+            setLoading(false)
+            return
+          }
+        }
+        if (err.status >= 400 && err.status < 500) {
+          // 4xx error (400, 403, 409 validation, 422) -> regenerar clave porque el servidor no creó nada
+          regenerateIdempotencyKey()
+        }
+        if (/bloquead/i.test(err.problem.detail ?? '')) {
+          setBlocked(true)
+          return
+        }
       }
+      // 5xx / error de red -> conservar la clave (resultado desconocido)
       setError(
         err instanceof ApiError
           ? (err.problem.detail ?? err.message)

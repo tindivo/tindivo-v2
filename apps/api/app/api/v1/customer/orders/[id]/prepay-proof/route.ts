@@ -46,10 +46,11 @@ export async function POST(
       .from('orders')
       .update({
         status: 'validando',
+        validation_context: 'proof',
         comprobante_prepago_url: body.path,
         payment_proof_status: 'pending',
         proof_attempt: order.proof_attempt + 1,
-      })
+      } as any)
       .eq('id', id)
     await service.from('order_event_log').insert({
       order_id: id,

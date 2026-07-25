@@ -10,7 +10,10 @@ import { BottomSheet, Icon, ScreenHeader } from '@/components/ui'
 import { useOrderReadiness } from '@/hooks/use-order-readiness'
 import { useBusinessOrdering } from '@/lib/business-ordering'
 import { type CartLine, useCart, useCartHydrated } from '@/lib/cart'
+import { useOnboarding } from '@/lib/onboarding-store'
 import { buildCartWhatsAppMessage, telLink, waOrderLink } from '@/lib/whatsapp'
+
+import { usePlatformSchedule } from '@/hooks/use-platform-schedule'
 
 const soles = (n: number) => `S/ ${n.toFixed(2)}`
 
@@ -23,6 +26,7 @@ function CartCtas({ layout, onNavigate }: { layout: 'row' | 'block'; onNavigate?
   const router = useRouter()
   const cart = useCart()
   const { loading: bizLoading, info } = useBusinessOrdering(cart.businessId)
+  const { intakeStatus } = usePlatformSchedule()
 
   // Gates de preparación del pedido
   const {
@@ -99,6 +103,10 @@ function CartCtas({ layout, onNavigate }: { layout: 'row' | 'block'; onNavigate?
     if (ready) {
       onNavigate?.()
       router.push('/checkout')
+      return
+    }
+    if (currentGate === 'auth') {
+      useOnboarding.getState().openSheet({ next: '/checkout' })
       return
     }
     setShowGate(true)

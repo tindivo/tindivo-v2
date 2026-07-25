@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev --port 3000",
+    "dev": "cross-env NODE_OPTIONS=--max-http-header-size=32768 next dev --port 3000",
     "build": "next build",
     "start": "next start --port 3000",
     "type-check": "tsc --noEmit",
