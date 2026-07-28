@@ -9,7 +9,16 @@
  * these tests serve as the regression gate against re-introducing the
  * inverted-condition bug (typeof window === 'undefined' vs !==).
  */
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+interface Storage {
+  getItem(key: string): string | null
+  setItem(key: string, value: string): void
+  removeItem(key: string): void
+  clear(): void
+  readonly length: number
+  key(index: number): string | null
+}
 
 /* ---------- helpers under test (copied from apps/negocios/app/nuevo/page.tsx) ---------- */
 
@@ -34,10 +43,16 @@ function createMockStorage(): Storage {
   const store = new Map<string, string>()
   return {
     getItem: (k: string) => store.get(k) ?? null,
-    setItem: (k: string, v: string) => { store.set(k, v) },
-    removeItem: (k: string) => { store.delete(k) },
+    setItem: (k: string, v: string) => {
+      store.set(k, v)
+    },
+    removeItem: (k: string) => {
+      store.delete(k)
+    },
     clear: () => store.clear(),
-    get length() { return store.size },
+    get length() {
+      return store.size
+    },
     key: (i: number) => [...store.keys()][i] ?? null,
   }
 }

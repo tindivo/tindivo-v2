@@ -8,6 +8,7 @@ import { CartButton, CartSheet, CartSidebar } from '@/components/cart-sheet'
 import { type ProductItem, ProductModal } from '@/components/product-modal'
 import { ScheduleRow } from '@/components/schedule-row'
 import { BottomSheet, Icon, ProductImage } from '@/components/ui'
+import { usePlatformSchedule } from '@/hooks/use-platform-schedule'
 import { api } from '@/lib/api'
 import { type CartLine, useCart } from '@/lib/cart'
 
@@ -74,8 +75,6 @@ function AddedToast({ name }: { name: string }) {
     </div>
   )
 }
-
-import { usePlatformSchedule } from '@/hooks/use-platform-schedule'
 
 export default function NegocioPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)

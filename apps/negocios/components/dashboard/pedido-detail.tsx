@@ -1513,7 +1513,9 @@ export function DetailScreen({
                       </div>
                     </div>
                     <div style={{ fontSize: 12, color: '#C2410C', lineHeight: 1.4 }}>
-                      Confirma la disponibilidad de insumos para este pedido. Una vez aceptado, el cliente tendrá 10 minutos para transferir por Yape/Plin y adjuntar el comprobante.
+                      Confirma la disponibilidad de insumos para este pedido. Una vez aceptado, el
+                      cliente tendrá 10 minutos para transferir por Yape/Plin y adjuntar el
+                      comprobante.
                     </div>
                   </div>
                 )}
@@ -1795,22 +1797,19 @@ export function DetailScreen({
                 </button>
                 <button
                   type="button"
-                  onClick={() =>
-                    actions.onAccept(isPrepaid ? 20 : prep)
-                  }
+                  onClick={() => actions.onAccept(isPrepaid ? 20 : prep)}
                   disabled={acceptDisabled}
                   className="tv-btn tv-btn-brand"
                   style={{ flex: 2 }}
                 >
                   <MS name="check" size={18} filled />
-                  {isPrepaid
-                    ? 'Aceptar disponibilidad'
-                    : `Aceptar · ${prep}m`}
+                  {isPrepaid ? 'Aceptar disponibilidad' : `Aceptar · ${prep}m`}
                 </button>
               </div>
               {isPrepaid && (
                 <div style={{ fontSize: 11, color: 'var(--tv-ink-muted)', textAlign: 'center' }}>
-                  Confirmas disponibilidad para preparar. El cliente procederá a realizar el pago por Yape/Plin.
+                  Confirmas disponibilidad para preparar. El cliente procederá a realizar el pago
+                  por Yape/Plin.
                 </div>
               )}
             </>

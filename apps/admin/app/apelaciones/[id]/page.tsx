@@ -235,7 +235,7 @@ function RefundForm({
 
   function handleFiles(files: FileList | null) {
     const file = files?.[0] ?? null
-    if (file && file.type.startsWith('image/')) setRefundFile(file)
+    if (file?.type.startsWith('image/')) setRefundFile(file)
   }
 
   return (

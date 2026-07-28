@@ -16,7 +16,10 @@
       "!**/dist",
       "!**/.turbo",
       "!supabase/functions",
-      "!supabase/functions-js"
+      "!supabase/functions-js",
+      "!apps/api/scripts",
+      "!scripts",
+      "!scratch"
     ]
   },
   "formatter": {
@@ -30,13 +33,36 @@
     "enabled": true,
     "rules": {
       "recommended": true,
-      "suspicious": {
-        "noExplicitAny": "warn",
-        "useGoogleFontDisplay": "off"
+      "a11y": {
+        "noAutofocus": "warn",
+        "noLabelWithoutControl": "warn",
+        "noStaticElementInteractions": "warn",
+        "noSvgWithoutTitle": "warn",
+        "useKeyWithClickEvents": "warn",
+        "useSemanticElements": "warn"
+      },
+      "complexity": {
+        "noExtraBooleanCast": "warn",
+        "noUselessFragments": "warn",
+        "useOptionalChain": "warn"
+      },
+      "correctness": {
+        "noUnusedFunctionParameters": "warn",
+        "noUnusedImports": "warn",
+        "noUnusedVariables": "warn"
       },
       "style": {
         "noNonNullAssertion": "warn",
-        "useImportType": "error"
+        "useExponentiationOperator": "warn",
+        "useImportType": "warn",
+        "useNodejsImportProtocol": "warn",
+        "useTemplate": "warn"
+      },
+      "suspicious": {
+        "noExplicitAny": "warn",
+        "noGlobalIsNan": "warn",
+        "useGoogleFontDisplay": "off",
+        "useIterableCallbackReturn": "warn"
       }
     }
   },

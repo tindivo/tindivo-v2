@@ -8,12 +8,11 @@ import { PaymentResolutionGateModal } from '@/components/gates/payment-resolutio
 import { PhoneGateModal } from '@/components/gates/phone-gate-modal'
 import { BottomSheet, Icon, ScreenHeader } from '@/components/ui'
 import { useOrderReadiness } from '@/hooks/use-order-readiness'
+import { usePlatformSchedule } from '@/hooks/use-platform-schedule'
 import { useBusinessOrdering } from '@/lib/business-ordering'
 import { type CartLine, useCart, useCartHydrated } from '@/lib/cart'
 import { useOnboarding } from '@/lib/onboarding-store'
 import { buildCartWhatsAppMessage, telLink, waOrderLink } from '@/lib/whatsapp'
-
-import { usePlatformSchedule } from '@/hooks/use-platform-schedule'
 
 const soles = (n: number) => `S/ ${n.toFixed(2)}`
 

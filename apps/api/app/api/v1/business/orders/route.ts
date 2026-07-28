@@ -1,8 +1,4 @@
-import {
-  BLACKLISTED_PHONES,
-  DeliveryMethodSchema,
-  PaymentIntentSchema,
-} from '@tindivo/contracts'
+import { BLACKLISTED_PHONES, DeliveryMethodSchema, PaymentIntentSchema } from '@tindivo/contracts'
 import { DomainError } from '@tindivo/core'
 import { z } from 'zod'
 import { requireRole } from '@/lib/http/auth'

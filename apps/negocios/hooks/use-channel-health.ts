@@ -1,6 +1,6 @@
 'use client'
 
-import { type RealtimeChannel, REALTIME_LISTEN_TYPES } from '@supabase/supabase-js'
+import type { REALTIME_LISTEN_TYPES, RealtimeChannel } from '@supabase/supabase-js'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
@@ -57,7 +57,7 @@ export function useChannelHealth(
  * 1s -> 2s -> 4s -> 8s -> 16s -> 30s (máximo)
  */
 export function getBackoffDelayMs(attempt: number, maxDelayMs: number = 30000): number {
-  const delay = 1000 * Math.pow(2, attempt)
+  const delay = 1000 * 2 ** attempt
   return Math.min(maxDelayMs, delay)
 }
 

@@ -81,7 +81,10 @@ function isReferenceValid(reference: string, deliveryMethod: string): boolean {
 
 function mapFormError(err: unknown): string {
   if (!(err instanceof ApiError)) {
-    if (err instanceof Error && (err.message.includes('fetch') || err.message.includes('network'))) {
+    if (
+      err instanceof Error &&
+      (err.message.includes('fetch') || err.message.includes('network'))
+    ) {
       return 'Error de conexión con el servidor. Tu borrador se mantiene intacto. Vuelve a intentar.'
     }
     return 'No se pudo crear el pedido. Intenta nuevamente.'
@@ -104,7 +107,13 @@ function mapFormError(err: unknown): string {
   if (detail.includes('anticipado') || detail.includes('prepayment')) {
     return 'Este cliente requiere pago por adelantado (prepago).'
   }
-  if (detail.includes('cerrado') || detail.includes('horario') || detail.includes('plataforma') || detail.includes('22:30') || detail.includes('reciben pedidos')) {
+  if (
+    detail.includes('cerrado') ||
+    detail.includes('horario') ||
+    detail.includes('plataforma') ||
+    detail.includes('22:30') ||
+    detail.includes('reciben pedidos')
+  ) {
     return err.problem?.detail ?? 'Ya no se reciben pedidos. El horario de atención ha finalizado.'
   }
 
@@ -130,12 +139,15 @@ export default function NuevoPedidoPage() {
 
   useEffect(() => {
     let unmounted = false
-    api.get<IntakeStatus>('/public/schedule')
+    api
+      .get<IntakeStatus>('/public/schedule')
       .then((data) => {
         if (!unmounted && data) setIntakeStatus(data)
       })
       .catch(() => {})
-    return () => { unmounted = true }
+    return () => {
+      unmounted = true
+    }
   }, [])
 
   const deliveryMethod = 'delivery'
@@ -145,11 +157,12 @@ export default function NuevoPedidoPage() {
   const isIntakeOpen = intakeStatus?.isOpen ?? true
   const startTime = intakeStatus?.startTime ?? '18:00'
   const cutoffTime = intakeStatus?.cutoff ?? '22:30'
-  const cutoffBannerMessage = intakeStatus?.message ?? `Recibimos pedidos de ${startTime} a ${cutoffTime}. Vuelve dentro del horario.`
+  const cutoffBannerMessage =
+    intakeStatus?.message ??
+    `Recibimos pedidos de ${startTime} a ${cutoffTime}. Vuelve dentro del horario.`
 
   // 1. Blacklist check
-  const isPhoneBlacklisted =
-    cleanPhone.length > 0 && BLACKLISTED_PHONES.includes(cleanPhone as any)
+  const isPhoneBlacklisted = cleanPhone.length > 0 && BLACKLISTED_PHONES.includes(cleanPhone as any)
   const phoneFormatOk = cleanPhone === '' || /^9\d{8}$/.test(cleanPhone)
   const phoneOk = phoneFormatOk && !isPhoneBlacklisted
 
@@ -290,7 +303,6 @@ export default function NuevoPedidoPage() {
           margin: '0 auto',
         }}
       >
-
         {/* 1 · Prep */}
         <div style={card}>
           <div className="tv-label-input">TIEMPO DE PREPARACIÓN</div>
@@ -382,11 +394,13 @@ export default function NuevoPedidoPage() {
             onChange={(e) => setReference(e.target.value)}
             placeholder="Jr. San Martín 245 — Casa azul, al lado de la bodega Lucy"
           />
-          {deliveryMethod === 'delivery' && reference.trim().length > 0 && reference.trim().length < 5 && (
-            <div style={{ fontSize: 11, color: 'var(--tv-danger)', marginTop: 4 }}>
-              La referencia debe tener al menos 5 caracteres.
-            </div>
-          )}
+          {deliveryMethod === 'delivery' &&
+            reference.trim().length > 0 &&
+            reference.trim().length < 5 && (
+              <div style={{ fontSize: 11, color: 'var(--tv-danger)', marginTop: 4 }}>
+                La referencia debe tener al menos 5 caracteres.
+              </div>
+            )}
           <div style={{ fontSize: 11, color: 'var(--tv-ink-muted)', marginTop: 4 }}>
             El motorizado verá este texto en su app al recoger el pedido.
           </div>
@@ -540,7 +554,8 @@ export default function NuevoPedidoPage() {
                 />
                 <div>
                   <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 2 }}>
-                    Entrega <span className="tv-mono">{soles(change)}</span> de vuelto al motorizado junto con el pedido
+                    Entrega <span className="tv-mono">{soles(change)}</span> de vuelto al motorizado
+                    junto con el pedido
                   </div>
                 </div>
               </div>

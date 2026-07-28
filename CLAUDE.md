@@ -18,7 +18,7 @@ v1 (`C:\Users\mauri\Documents\Tindivo`), que tenía deuda técnica.
 - **Sin Server Actions ni BFFs** (Capacitor-ready). **Sin Prisma/Drizzle** (RLS).
 - `packages/core` puro: hexagonal solo en `orders`; services+repos para el resto.
 - `packages/contracts`: Zod canónico (primitivas, enums, máquina de estados, errores).
-- Supabase "Web v2" (ref `psjigdoinfpgrnedxeyf`), Postgres 17. **Independiente del v1.**
+- Supabase "Web v2" (ref `zpnipajgwfthxhdtzhly`), Postgres 17. **Independiente del v1.**
 
 ## Convenciones
 
@@ -56,7 +56,7 @@ pnpm graphify:hooks     # instala post-commit git hook para auto-actualizar
 ## Supabase
 
 - No hay CLI local: aplicar migraciones y generar tipos vía **MCP de Supabase**
-  sobre el proyecto **"Web v2"** (`psjigdoinfpgrnedxeyf`). Las migraciones se
+  sobre el proyecto **"Web v2"** (`zpnipajgwfthxhdtzhly`). Las migraciones se
   versionan en `supabase/migrations/`.
 - Tras cada migración: regenerar `database.types.ts` y revisar `get_advisors`.
 

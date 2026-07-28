@@ -56,11 +56,14 @@ export async function GET(req: Request): Promise<Response> {
     const charges = rawCharges || []
 
     // 4. Cargar sólo short_id de pedidos asociados (ligero)
-    const orderIds = Array.from(new Set(charges.map((c: any) => c.order_id).filter(Boolean))) as string[]
+    const orderIds = Array.from(
+      new Set(charges.map((c: any) => c.order_id).filter(Boolean)),
+    ) as string[]
 
-    const { data: rawOrders } = orderIds.length > 0
-      ? await service.from('orders').select('id, short_id').in('id', orderIds)
-      : { data: [] }
+    const { data: rawOrders } =
+      orderIds.length > 0
+        ? await service.from('orders').select('id, short_id').in('id', orderIds)
+        : { data: [] }
 
     const ordersMap = new Map((rawOrders || []).map((o: any) => [o.id, o.short_id]))
 
@@ -86,7 +89,7 @@ export async function GET(req: Request): Promise<Response> {
         description: c.description,
         createdAt: c.created_at,
         orderId: c.order_id,
-        shortId: c.order_id ? ordersMap.get(c.order_id) ?? null : null,
+        shortId: c.order_id ? (ordersMap.get(c.order_id) ?? null) : null,
         reportId: c.report_id,
       }
     })
@@ -105,12 +108,13 @@ export async function GET(req: Request): Promise<Response> {
     const paymentIds = payments.map((p: any) => p.id)
 
     // Cargar los cargos liquidados asociados a estos pagos (payment_id)
-    const { data: settledCharges } = paymentIds.length > 0
-      ? await (service as any)
-          .from('business_charges')
-          .select('id, payment_id, order_id')
-          .in('payment_id', paymentIds)
-      : { data: [] }
+    const { data: settledCharges } =
+      paymentIds.length > 0
+        ? await (service as any)
+            .from('business_charges')
+            .select('id, payment_id, order_id')
+            .in('payment_id', paymentIds)
+        : { data: [] }
 
     const settledByPaymentMap = new Map<string, Array<{ id: string; order_id: string | null }>>()
     for (const sc of settledCharges || []) {

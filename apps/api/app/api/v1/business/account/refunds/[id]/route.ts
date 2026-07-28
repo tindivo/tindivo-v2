@@ -90,7 +90,9 @@ export async function GET(
       if (!pathOrUrl) return null
       if (pathOrUrl.startsWith('http://') || pathOrUrl.startsWith('https://')) return pathOrUrl
       try {
-        const { data, error } = await service.storage.from('payment-proofs').createSignedUrl(pathOrUrl, 3600)
+        const { data, error } = await service.storage
+          .from('payment-proofs')
+          .createSignedUrl(pathOrUrl, 3600)
         if (error || !data?.signedUrl) return null
         return data.signedUrl
       } catch {
@@ -167,13 +169,19 @@ export async function GET(
 
     const evidenceUrls: string[] = []
     if (refundProofUrl) evidenceUrls.push(refundProofUrl)
-    if (disputeProofUrl && !evidenceUrls.includes(disputeProofUrl)) evidenceUrls.push(disputeProofUrl)
+    if (disputeProofUrl && !evidenceUrls.includes(disputeProofUrl))
+      evidenceUrls.push(disputeProofUrl)
 
     return ok(
       {
         id: report?.id ?? charge?.id ?? advance?.id ?? id,
         type: report?.type ?? 'prepay_cancellation',
-        reason: report?.description || report?.type || charge?.description || advance?.reason || 'Devolución al cliente',
+        reason:
+          report?.description ||
+          report?.type ||
+          charge?.description ||
+          advance?.reason ||
+          'Devolución al cliente',
         resolutionNotes: report?.resolution_note ?? null,
         refundAmount: report?.refund_amount
           ? Number(report.refund_amount)
@@ -183,12 +191,19 @@ export async function GET(
               ? Number(advance.amount)
               : 0,
         appealStatus: report?.appeal_status ?? 'resolved',
-        createdAt: report?.created_at ?? charge?.created_at ?? advance?.created_at ?? new Date().toISOString(),
+        createdAt:
+          report?.created_at ??
+          charge?.created_at ??
+          advance?.created_at ??
+          new Date().toISOString(),
         refundProofUrl,
         disputeProofUrl,
         evidenceUrls,
-        chargeAmount: charge ? Number(charge.amount) : Number(report?.refund_amount) || Number(advance?.amount) || 0,
-        chargeDescription: charge?.description || advance?.reason || 'Cargo por devolución al cliente',
+        chargeAmount: charge
+          ? Number(charge.amount)
+          : Number(report?.refund_amount) || Number(advance?.amount) || 0,
+        chargeDescription:
+          charge?.description || advance?.reason || 'Cargo por devolución al cliente',
         order,
         events,
       },

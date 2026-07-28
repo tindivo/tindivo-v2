@@ -1,9 +1,9 @@
 import {
   CANCEL_REASON_DETAILS,
+  type CancelReasonDetail,
   CancelReasonDetailSchema,
   DistanceBandSchema,
   PaymentRealSchema,
-  type CancelReasonDetail,
   type UserRole,
 } from '@tindivo/contracts'
 import { DomainError } from '@tindivo/core'

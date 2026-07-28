@@ -53,7 +53,7 @@ jobs:
     # Se mapea a env y un step-guard condiciona los pasos siguientes.
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      SUPABASE_PROJECT_ID: psjigdoinfpgrnedxeyf
+      SUPABASE_PROJECT_ID: zpnipajgwfthxhdtzhly
     steps:
       - uses: actions/checkout@v4
       - name: Guard — ¿hay token de Supabase configurado?

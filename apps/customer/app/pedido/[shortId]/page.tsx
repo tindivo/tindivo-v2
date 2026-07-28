@@ -369,7 +369,8 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
           {data.paymentIntent === 'prepaid' && (
             <>
               {/* 1. pending_acceptance o validando SIN comprobante: Esperando confirmación */}
-              {(data.status === 'pending_acceptance' || (data.status === 'validando' && !data.proofUrl)) && (
+              {(data.status === 'pending_acceptance' ||
+                (data.status === 'validando' && !data.proofUrl)) && (
                 <div
                   className="mt-3.5 rounded-[22px] bg-orange-50/80 p-4 font-sans text-left text-orange-950"
                   style={{ border: '1px solid #FFEDD5' }}
@@ -605,11 +606,12 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
                     {current === 'delivered'
                       ? '¡Tu pedido fue entregado! Buen provecho.'
                       : data.paymentIntent === 'prepaid'
-                        ? data.status === 'pending_acceptance' || (data.status === 'validando' && !data.proofUrl)
+                        ? data.status === 'pending_acceptance' ||
+                          (data.status === 'validando' && !data.proofUrl)
                           ? 'El restaurante confirmará disponibilidad para que puedas realizar el pago.'
                           : data.status === 'awaiting_payment'
                             ? 'Realiza tu pago por Yape/Plin y sube tu comprobante para iniciar la preparación.'
-                            : data.status === 'validando' && Boolean(data.proofUrl)
+                            : data.status === 'validando' && data.proofUrl
                               ? 'Tu comprobante está en revisión por el restaurante.'
                               : 'Tu pedido ya está en preparación y no puede cancelarse.'
                         : 'Tu pedido ya está en preparación y no puede cancelarse.'}

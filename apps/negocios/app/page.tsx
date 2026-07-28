@@ -87,9 +87,13 @@ export default function NegocioPedidosPage() {
       // Fetch ligero del estado actual en DB para prevenir botones de estado viejo si la lista está stale.
       if (isPrepaid) {
         try {
-          const { data } = await (supabase
-            .from('orders')
-            .select('id, status, payment_proof_status, proof_attempt, comprobante_prepago_url, validation_context') as any)
+          const { data } = await (
+            supabase
+              .from('orders')
+              .select(
+                'id, status, payment_proof_status, proof_attempt, comprobante_prepago_url, validation_context',
+              ) as any
+          )
             .eq('id', selectedId)
             .maybeSingle()
 
@@ -106,7 +110,8 @@ export default function NegocioPedidosPage() {
               id: String(typedData.id),
               status: String(typedData.status),
               payment_proof_status: typedData.payment_proof_status ?? null,
-              proof_attempt: typedData.proof_attempt != null ? Number(typedData.proof_attempt) : null,
+              proof_attempt:
+                typedData.proof_attempt != null ? Number(typedData.proof_attempt) : null,
               comprobante_prepago_url: typedData.comprobante_prepago_url ?? null,
               validation_context: typedData.validation_context ?? null,
             })
@@ -188,7 +193,6 @@ export default function NegocioPedidosPage() {
   const isPrepaidSelected = selected?.payment === 'prepaid'
   const isResolvingProof = isPrepaidSelected && activeProofPath !== null && detailProofUrl === null
   const isLoadingActions = isFreshLoading || isResolvingProof
-
 
   const run = useCallback(async (fn: () => Promise<void>) => {
     setBusy(true)

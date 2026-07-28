@@ -201,7 +201,11 @@ export function toOrderVM(row: OrderRow, now: number = Date.now()): OrderVM {
     row.status === 'pending_acceptance'
       ? secondsUntil(row.pending_acceptance_at ?? row.created_at, ACCEPT_SEC, now)
       : row.status === 'awaiting_payment'
-        ? secondsUntil(row.awaiting_payment_at ?? row.validating_at ?? row.created_at, PREPAY_SEC, now)
+        ? secondsUntil(
+            row.awaiting_payment_at ?? row.validating_at ?? row.created_at,
+            PREPAY_SEC,
+            now,
+          )
         : row.status === 'validando'
           ? secondsUntil(
               row.validating_at ?? row.created_at,

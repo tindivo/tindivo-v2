@@ -168,11 +168,24 @@ function ProofThumbnailCard({ url, label }: { url: string; label: string }) {
         <img
           src={url}
           alt={label}
-          style={{ width: 68, height: 68, borderRadius: 10, objectFit: 'cover', border: '1px solid #eae7e2' }}
+          style={{
+            width: 68,
+            height: 68,
+            borderRadius: 10,
+            objectFit: 'cover',
+            border: '1px solid #eae7e2',
+          }}
         />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--tv-ink)' }}>{label}</div>
-          <div style={{ fontSize: 12, color: 'var(--tv-brand)', textDecoration: 'underline', marginTop: 3 }}>
+          <div
+            style={{
+              fontSize: 12,
+              color: 'var(--tv-brand)',
+              textDecoration: 'underline',
+              marginTop: 3,
+            }}
+          >
             Toca para ampliar →
           </div>
         </div>
@@ -182,11 +195,7 @@ function ProofThumbnailCard({ url, label }: { url: string; label: string }) {
   )
 }
 
-export default function DevolucionDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>
-}) {
+export default function DevolucionDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const [data, setData] = useState<RefundDetail | null>(null)
   const [loading, setLoading] = useState(true)
@@ -222,9 +231,19 @@ export default function DevolucionDetailPage({
     <DashboardShell
       active="deuda"
       title="Detalle de Devolución"
-      subtitle={data?.order?.shortId ? `Pedido #${data.order.shortId}` : 'Información y transparencia'}
+      subtitle={
+        data?.order?.shortId ? `Pedido #${data.order.shortId}` : 'Información y transparencia'
+      }
     >
-      <div style={{ maxWidth: 640, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div
+        style={{
+          maxWidth: 640,
+          margin: '0 auto',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 16,
+        }}
+      >
         {/* Volver */}
         <div>
           <Link
@@ -303,7 +322,10 @@ export default function DevolucionDetailPage({
                 <div className="tv-label" style={{ fontSize: 10, color: 'var(--tv-ink-subtle)' }}>
                   MONTO DEBITADO
                 </div>
-                <div className="tv-mono" style={{ fontSize: 22, fontWeight: 700, color: 'var(--tv-danger)' }}>
+                <div
+                  className="tv-mono"
+                  style={{ fontSize: 22, fontWeight: 700, color: 'var(--tv-danger)' }}
+                >
                   {soles(data.chargeAmount)}
                 </div>
               </div>
@@ -319,32 +341,59 @@ export default function DevolucionDetailPage({
                 boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
               }}
             >
-              <div className="tv-label" style={{ fontSize: 10, color: 'var(--tv-ink-subtle)', marginBottom: 12 }}>
+              <div
+                className="tv-label"
+                style={{ fontSize: 10, color: 'var(--tv-ink-subtle)', marginBottom: 12 }}
+              >
                 CONTEXTO DEL CASO
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <div>
-                  <div style={{ fontSize: 11, color: 'var(--tv-ink-subtle)', textTransform: 'uppercase' }}>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: 'var(--tv-ink-subtle)',
+                      textTransform: 'uppercase',
+                    }}
+                  >
                     Pedido
                   </div>
-                  <div className="tv-mono" style={{ fontSize: 14, fontWeight: 700, color: 'var(--tv-brand)' }}>
+                  <div
+                    className="tv-mono"
+                    style={{ fontSize: 14, fontWeight: 700, color: 'var(--tv-brand)' }}
+                  >
                     #{order?.shortId || '—'}
                   </div>
                 </div>
 
                 <div>
-                  <div style={{ fontSize: 11, color: 'var(--tv-ink-subtle)', textTransform: 'uppercase' }}>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: 'var(--tv-ink-subtle)',
+                      textTransform: 'uppercase',
+                    }}
+                  >
                     Monto del Pedido
                   </div>
-                  <div className="tv-mono" style={{ fontSize: 14, fontWeight: 700, color: 'var(--tv-ink)' }}>
+                  <div
+                    className="tv-mono"
+                    style={{ fontSize: 14, fontWeight: 700, color: 'var(--tv-ink)' }}
+                  >
                     {order?.orderAmount ? soles(order.orderAmount) : soles(data.chargeAmount)}
                   </div>
                 </div>
 
                 {order?.customerName && (
                   <div>
-                    <div style={{ fontSize: 11, color: 'var(--tv-ink-subtle)', textTransform: 'uppercase' }}>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: 'var(--tv-ink-subtle)',
+                        textTransform: 'uppercase',
+                      }}
+                    >
                       Cliente
                     </div>
                     <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--tv-ink)' }}>
@@ -355,7 +404,13 @@ export default function DevolucionDetailPage({
 
                 {order?.createdAt && (
                   <div>
-                    <div style={{ fontSize: 11, color: 'var(--tv-ink-subtle)', textTransform: 'uppercase' }}>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: 'var(--tv-ink-subtle)',
+                        textTransform: 'uppercase',
+                      }}
+                    >
                       Creado
                     </div>
                     <div style={{ fontSize: 13, color: 'var(--tv-ink-muted)' }}>
@@ -366,7 +421,13 @@ export default function DevolucionDetailPage({
 
                 {data.createdAt && (
                   <div>
-                    <div style={{ fontSize: 11, color: 'var(--tv-ink-subtle)', textTransform: 'uppercase' }}>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: 'var(--tv-ink-subtle)',
+                        textTransform: 'uppercase',
+                      }}
+                    >
                       Apelación
                     </div>
                     <div style={{ fontSize: 13, color: 'var(--tv-ink-muted)' }}>
@@ -386,13 +447,23 @@ export default function DevolucionDetailPage({
                 border: '1px solid #fed7d7',
               }}
             >
-              <div className="tv-label" style={{ fontSize: 10, color: '#c53030', marginBottom: 10 }}>
+              <div
+                className="tv-label"
+                style={{ fontSize: 10, color: '#c53030', marginBottom: 10 }}
+              >
                 EL CONFLICTO
               </div>
 
               {/* Motivo de rechazo del restaurante */}
               <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#9b2c2c', textTransform: 'uppercase' }}>
+                <div
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: '#9b2c2c',
+                    textTransform: 'uppercase',
+                  }}
+                >
                   Motivo de rechazo del restaurante
                 </div>
                 <div style={{ fontSize: 14, color: '#742a2a', marginTop: 2, fontWeight: 600 }}>
@@ -403,10 +474,19 @@ export default function DevolucionDetailPage({
               {/* Argumento del cliente al apelar */}
               {data.reason && (
                 <div style={{ marginBottom: 12 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#9b2c2c', textTransform: 'uppercase' }}>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: '#9b2c2c',
+                      textTransform: 'uppercase',
+                    }}
+                  >
                     Argumento del cliente al apelar
                   </div>
-                  <div style={{ fontSize: 13, color: '#4a5568', fontStyle: 'italic', marginTop: 3 }}>
+                  <div
+                    style={{ fontSize: 13, color: '#4a5568', fontStyle: 'italic', marginTop: 3 }}
+                  >
                     "{data.reason}"
                   </div>
                 </div>
@@ -415,10 +495,21 @@ export default function DevolucionDetailPage({
               {/* Comprobante en disputa (último intento) */}
               {data.disputeProofUrl && (
                 <div style={{ marginTop: 10 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#9b2c2c', marginBottom: 6, textTransform: 'uppercase' }}>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: '#9b2c2c',
+                      marginBottom: 6,
+                      textTransform: 'uppercase',
+                    }}
+                  >
                     Comprobante en disputa (último intento)
                   </div>
-                  <ProofThumbnailCard url={data.disputeProofUrl} label="Comprobante subido por el cliente" />
+                  <ProofThumbnailCard
+                    url={data.disputeProofUrl}
+                    label="Comprobante subido por el cliente"
+                  />
                 </div>
               )}
             </div>
@@ -440,10 +531,22 @@ export default function DevolucionDetailPage({
                   marginBottom: 8,
                 }}
               >
-                <div style={{ fontSize: 15, fontWeight: 700, color: '#166534', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div
+                  style={{
+                    fontSize: 15,
+                    fontWeight: 700,
+                    color: '#166534',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                  }}
+                >
                   <span>✓</span> ¡Devolución completada!
                 </div>
-                <div className="tv-mono" style={{ fontSize: 18, fontWeight: 700, color: 'var(--tv-danger)' }}>
+                <div
+                  className="tv-mono"
+                  style={{ fontSize: 18, fontWeight: 700, color: 'var(--tv-danger)' }}
+                >
                   Se devolvió {soles(data.refundAmount)}
                 </div>
               </div>
@@ -451,17 +554,35 @@ export default function DevolucionDetailPage({
               {/* Captura del Yape de devolución enviado por el admin */}
               {data.refundProofUrl && (
                 <div style={{ marginTop: 12 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#15803d', marginBottom: 6, textTransform: 'uppercase' }}>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: '#15803d',
+                      marginBottom: 6,
+                      textTransform: 'uppercase',
+                    }}
+                  >
                     Captura del Yape / Plin enviado al cliente
                   </div>
-                  <ProofThumbnailCard url={data.refundProofUrl} label="Comprobante de devolución del Admin" />
+                  <ProofThumbnailCard
+                    url={data.refundProofUrl}
+                    label="Comprobante de devolución del Admin"
+                  />
                 </div>
               )}
 
               {/* Nota de resolución */}
               {data.resolutionNotes && (
                 <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid #dcfce7' }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#166534', textTransform: 'uppercase' }}>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: '#166534',
+                      textTransform: 'uppercase',
+                    }}
+                  >
                     Nota de resolución de Administración
                   </div>
                   <div style={{ fontSize: 13, color: '#14532d', marginTop: 3, fontWeight: 500 }}>
@@ -496,7 +617,10 @@ export default function DevolucionDetailPage({
                     cursor: 'pointer',
                   }}
                 >
-                  <span className="tv-label" style={{ fontSize: 11, color: 'var(--tv-ink-subtle)' }}>
+                  <span
+                    className="tv-label"
+                    style={{ fontSize: 11, color: 'var(--tv-ink-subtle)' }}
+                  >
                     HISTORIAL DEL PEDIDO ({data.events.length} EVENTOS)
                   </span>
                   <span style={{ fontSize: 13, color: 'var(--tv-ink-muted)' }}>
@@ -505,7 +629,14 @@ export default function DevolucionDetailPage({
                 </button>
 
                 {timelineOpen && (
-                  <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <div
+                    style={{
+                      padding: '16px 18px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 14,
+                    }}
+                  >
                     {data.events.map((ev, i) => {
                       const label = EVENT_LABELS[ev.eventType] || ev.eventType
                       return (
@@ -522,12 +653,21 @@ export default function DevolucionDetailPage({
                           />
                           <div style={{ flex: 1 }}>
                             <div style={{ fontWeight: 600, color: 'var(--tv-ink)' }}>{label}</div>
-                            <div style={{ fontSize: 11, color: 'var(--tv-ink-subtle)', marginTop: 2 }}>
+                            <div
+                              style={{ fontSize: 11, color: 'var(--tv-ink-subtle)', marginTop: 2 }}
+                            >
                               {fmtDate(ev.createdAt)} · {ev.actorRole || 'sistema'}
                             </div>
 
                             {ev.proofUrls && ev.proofUrls.length > 0 && (
-                              <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                              <div
+                                style={{
+                                  marginTop: 8,
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: 8,
+                                }}
+                              >
                                 {ev.proofUrls.map((p, pIdx) => (
                                   <ProofThumbnailCard key={pIdx} url={p.url} label={p.label} />
                                 ))}

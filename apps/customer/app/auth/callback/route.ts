@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
+import type { Database } from '@tindivo/supabase'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
-import type { Database } from '@tindivo/supabase'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
@@ -20,16 +20,16 @@ export async function GET(request: Request) {
           },
           setAll(cookiesToSet) {
             try {
-              cookiesToSet.forEach(({ name, value, options }) =>
+              cookiesToSet.forEach(({ name, value, options }) => {
                 cookieStore.set(name, value, options)
-              )
+              })
             } catch {
               // Ignore cookie errors
             }
           },
         },
         auth: { storageKey: 'tindivo-customer-auth' },
-      }
+      },
     )
 
     const { error } = await supabase.auth.exchangeCodeForSession(code)

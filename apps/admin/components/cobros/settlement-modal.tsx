@@ -77,7 +77,7 @@ export function SettlementModal({
     const numInput = Number.parseFloat(targetAmount.replace(',', '.'))
 
     // Si no hay input numérico válido o se ingresa 0, ofrecer por defecto la opción completa
-    if (isNaN(numInput) || numInput <= 0) {
+    if (Number.isNaN(numInput) || numInput <= 0) {
       return [
         {
           chargeIds: allChargeIds,

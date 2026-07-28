@@ -15,6 +15,8 @@ import {
   useRef,
   useState,
 } from 'react'
+import { getBackoffDelayMs, useChannelHealth } from '@/hooks/use-channel-health'
+import { usePolledQuery } from '@/hooks/use-polled-query'
 import {
   getColumn,
   isBusinessPaused,
@@ -26,8 +28,6 @@ import {
 } from '@/lib/orders/view-model'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import { speak, unlockAudio, useDashboardSounds } from '@/lib/use-audio-alert'
-import { getBackoffDelayMs, useChannelHealth } from '@/hooks/use-channel-health'
-import { usePolledQuery } from '@/hooks/use-polled-query'
 import { MS } from './primitives'
 import { SuccessToastHost } from './toast'
 
@@ -780,7 +780,12 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
         setChannelState(status)
         if (status === 'SUBSCRIBED') {
           retryAttempt = 0 // Reset de contador al conectar exitosamente
-          console.log('[realtime] suscrito a', `biz-orders-${bizId}`, 'Salud:', 'healthy (90s polling)')
+          console.log(
+            '[realtime] suscrito a',
+            `biz-orders-${bizId}`,
+            'Salud:',
+            'healthy (90s polling)',
+          )
         } else if (status === 'CHANNEL_ERROR' || status === 'CLOSED' || status === 'TIMED_OUT') {
           const delayMs = getBackoffDelayMs(retryAttempt)
           retryAttempt++

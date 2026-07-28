@@ -12,7 +12,9 @@ type Props = {
 
 export function PhoneGateModal({ onComplete, onClose }: Props) {
   const [userId, setUserId] = useState<string | null>(null)
-  const [profile, setProfile] = useState<{ fullName: string | null; email: string | null } | null>(null)
+  const [profile, setProfile] = useState<{ fullName: string | null; email: string | null } | null>(
+    null,
+  )
 
   useEffect(() => {
     const supabase = getSupabaseBrowser()

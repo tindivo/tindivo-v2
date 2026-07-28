@@ -218,11 +218,24 @@ function ProofThumbnailCard({ url, label }: { url: string; label: string }) {
         <img
           src={url}
           alt={label}
-          style={{ width: 64, height: 64, borderRadius: 8, objectFit: 'cover', border: '1px solid #eae7e2' }}
+          style={{
+            width: 64,
+            height: 64,
+            borderRadius: 8,
+            objectFit: 'cover',
+            border: '1px solid #eae7e2',
+          }}
         />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--tv-ink)' }}>{label}</div>
-          <div style={{ fontSize: 11, color: 'var(--tv-brand)', textDecoration: 'underline', marginTop: 2 }}>
+          <div
+            style={{
+              fontSize: 11,
+              color: 'var(--tv-brand)',
+              textDecoration: 'underline',
+              marginTop: 2,
+            }}
+          >
             Toca para ampliar →
           </div>
         </div>
@@ -233,13 +246,7 @@ function ProofThumbnailCard({ url, label }: { url: string; label: string }) {
 }
 
 // ── RefundDetailModal ────────────────────────────────────────────────────────
-function RefundDetailModal({
-  charge,
-  onClose,
-}: {
-  charge: PendingCharge
-  onClose: () => void
-}) {
+function RefundDetailModal({ charge, onClose }: { charge: PendingCharge; onClose: () => void }) {
   const r = charge.report
   const order = r?.order
   const [timelineOpen, setTimelineOpen] = useState(false)
@@ -364,32 +371,59 @@ function RefundDetailModal({
               border: '1px solid #eae7e2',
             }}
           >
-            <div className="tv-label" style={{ fontSize: 10, color: 'var(--tv-ink-subtle)', marginBottom: 10 }}>
+            <div
+              className="tv-label"
+              style={{ fontSize: 10, color: 'var(--tv-ink-subtle)', marginBottom: 10 }}
+            >
               CONTEXTO DEL CASO
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <div>
-                <div style={{ fontSize: 10, color: 'var(--tv-ink-subtle)', textTransform: 'uppercase' }}>
+                <div
+                  style={{
+                    fontSize: 10,
+                    color: 'var(--tv-ink-subtle)',
+                    textTransform: 'uppercase',
+                  }}
+                >
                   Pedido
                 </div>
-                <div className="tv-mono" style={{ fontSize: 13, fontWeight: 700, color: 'var(--tv-brand)' }}>
+                <div
+                  className="tv-mono"
+                  style={{ fontSize: 13, fontWeight: 700, color: 'var(--tv-brand)' }}
+                >
                   #{charge.shortId || order?.shortId || '—'}
                 </div>
               </div>
 
               <div>
-                <div style={{ fontSize: 10, color: 'var(--tv-ink-subtle)', textTransform: 'uppercase' }}>
+                <div
+                  style={{
+                    fontSize: 10,
+                    color: 'var(--tv-ink-subtle)',
+                    textTransform: 'uppercase',
+                  }}
+                >
                   Monto del Pedido
                 </div>
-                <div className="tv-mono" style={{ fontSize: 13, fontWeight: 700, color: 'var(--tv-ink)' }}>
+                <div
+                  className="tv-mono"
+                  style={{ fontSize: 13, fontWeight: 700, color: 'var(--tv-ink)' }}
+                >
                   {order?.orderAmount ? soles(order.orderAmount) : soles(charge.amount)}
                 </div>
               </div>
 
               {order?.customerName && (
                 <div>
-                  <div style={{ fontSize: 10, color: 'var(--tv-ink-subtle)', textTransform: 'uppercase' }}>
+                  <div
+                    style={{
+                      fontSize: 10,
+                      color: 'var(--tv-ink-subtle)',
+                      textTransform: 'uppercase',
+                    }}
+                  >
                     Cliente
                   </div>
                   <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--tv-ink)' }}>
@@ -400,7 +434,13 @@ function RefundDetailModal({
 
               {order?.createdAt && (
                 <div>
-                  <div style={{ fontSize: 10, color: 'var(--tv-ink-subtle)', textTransform: 'uppercase' }}>
+                  <div
+                    style={{
+                      fontSize: 10,
+                      color: 'var(--tv-ink-subtle)',
+                      textTransform: 'uppercase',
+                    }}
+                  >
                     Creado
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--tv-ink-muted)' }}>
@@ -411,7 +451,13 @@ function RefundDetailModal({
 
               {r?.createdAt && (
                 <div>
-                  <div style={{ fontSize: 10, color: 'var(--tv-ink-subtle)', textTransform: 'uppercase' }}>
+                  <div
+                    style={{
+                      fontSize: 10,
+                      color: 'var(--tv-ink-subtle)',
+                      textTransform: 'uppercase',
+                    }}
+                  >
                     Apelación
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--tv-ink-muted)' }}>
@@ -485,10 +531,22 @@ function RefundDetailModal({
                 marginBottom: 6,
               }}
             >
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#166534', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: '#166534',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+              >
                 <span>✓</span> ¡Devolución completada!
               </div>
-              <div className="tv-mono" style={{ fontSize: 16, fontWeight: 700, color: 'var(--tv-danger)' }}>
+              <div
+                className="tv-mono"
+                style={{ fontSize: 16, fontWeight: 700, color: 'var(--tv-danger)' }}
+              >
                 Se devolvió {soles(charge.amount)}
               </div>
             </div>
@@ -600,7 +658,12 @@ function RefundDetailModal({
           <button
             type="button"
             className="tv-btn tv-btn-sm"
-            style={{ background: 'var(--tv-ink)', color: '#fff', padding: '6px 16px', borderRadius: 10 }}
+            style={{
+              background: 'var(--tv-ink)',
+              color: '#fff',
+              padding: '6px 16px',
+              borderRadius: 10,
+            }}
             onClick={onClose}
           >
             Entendido
@@ -731,11 +794,14 @@ export default function DeudaPage() {
           }}
         >
           <MS name="block" size={18} filled style={{ flexShrink: 0 }} />
-          Tu cuenta está suspendida por deuda acumulada. Coordina tu pago para reactivar el servicio.
+          Tu cuenta está suspendida por deuda acumulada. Coordina tu pago para reactivar el
+          servicio.
         </div>
       )}
 
-      {error && <p style={{ fontSize: 13, color: 'var(--tv-danger)', marginBottom: 12 }}>{error}</p>}
+      {error && (
+        <p style={{ fontSize: 13, color: 'var(--tv-danger)', marginBottom: 12 }}>{error}</p>
+      )}
 
       {loading || !data ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
