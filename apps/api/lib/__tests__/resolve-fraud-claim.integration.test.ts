@@ -8,20 +8,32 @@
  * Asserts:
  *   (A) contingency_advances tiene 1 fila con actor_charged = 'restaurante'  ← FALLA HOY
  *   (B) business_charges tiene 1 fila con charge_type = 'refund_charge', amount correcto
- *   (C) balance_due DESPUÉS = balance_due ANTES + amount (sube exactamente una vez)
+ *   (C) balance_due DESPUÉS = balance_due ANTES + amount  [campo DEPRECADO]
+ *   (D) deuda agregada del ledger DESPUÉS = ANTES + amount  ← fuente de verdad (§2.2)
+ *
+ * (C) y (D) miden lo mismo por dos vías distintas mientras `balance_due` siga
+ * existiendo. (D) es el que sobrevive cuando se retire el campo deprecado.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { cleanup, localClient, seedFraudClaim, type SeedResult } from './helpers/local-db'
+import {
+  cleanup,
+  localClient,
+  seedFraudClaim,
+  sumPendingLedgerDebt,
+  type SeedResult,
+} from './helpers/local-db'
 
 describe('resolve_fraud_claim — invariante contable (integración)', () => {
   let seed: SeedResult
   let balanceBefore: number
+  let ledgerDebtBefore: number
+  let ledgerDebtAfter: number
 
   beforeAll(async () => {
     // Seed: business + order + claim pending (monto 20.00)
     seed = await seedFraudClaim(20.0)
 
-    // Capturar balance_due ANTES de aprobar
+    // Capturar balance_due ANTES de aprobar (campo deprecado, ver assert C)
     const { data: bizBefore, error: bizErr } = await localClient
       .from('businesses')
       .select('balance_due')
@@ -29,6 +41,9 @@ describe('resolve_fraud_claim — invariante contable (integración)', () => {
       .single()
     if (bizErr) throw new Error(`read balance_due before: ${bizErr.message}`)
     balanceBefore = Number(bizBefore.balance_due)
+
+    // Capturar la deuda agregada desde el LEDGER ANTES de aprobar (fuente de verdad)
+    ledgerDebtBefore = await sumPendingLedgerDebt(seed.businessId)
 
     // Aprobar el claim via RPC
     const { error: rpcErr } = await localClient.rpc('resolve_fraud_claim', {
@@ -38,6 +53,9 @@ describe('resolve_fraud_claim — invariante contable (integración)', () => {
       p_note: 'Aprobado en test de integración',
     })
     if (rpcErr) throw new Error(`resolve_fraud_claim RPC failed: ${rpcErr.message}`)
+
+    // Recalcular la deuda agregada DESPUÉS de aprobar
+    ledgerDebtAfter = await sumPendingLedgerDebt(seed.businessId)
   })
 
   afterAll(async () => {
@@ -76,7 +94,12 @@ describe('resolve_fraud_claim — invariante contable (integración)', () => {
   })
 
   // ── Assert (C): balance_due subió exactamente una vez ───────────────────────
-  it('(C) balance_due sube exactamente en el monto del claim', async () => {
+  // ⚠️  `balance_due` está DEPRECADO (AGENTS.md §2.2): la fuente de verdad de la
+  //     deuda es el ledger `business_charges`, no este campo. Se mantiene el assert
+  //     mientras la columna siga viva y la RPC siga escribiéndola, para que una
+  //     regresión no pase inadvertida. El invariante real lo cubre el assert (D):
+  //     si algún día se retira `balance_due`, este assert se borra y (D) se queda.
+  it('(C) balance_due sube exactamente en el monto del claim [campo deprecado]', async () => {
     const { data: bizAfter, error } = await localClient
       .from('businesses')
       .select('balance_due')
@@ -86,5 +109,14 @@ describe('resolve_fraud_claim — invariante contable (integración)', () => {
     expect(error).toBeNull()
     const balanceAfter = Number(bizAfter!.balance_due)
     expect(balanceAfter).toBe(balanceBefore + seed.amount)
+  })
+
+  // ── Assert (D): la deuda agregada del LEDGER subió exactamente el monto ─────
+  // Fuente de verdad según AGENTS.md §2.2. Mide la deuda como la mide
+  // `settle_business_charges`: sum(amount) sobre business_charges del negocio con
+  // status='pending' (sin filtrar por charge_type). Es el invariante que sobrevive
+  // aunque `balance_due` desaparezca.
+  it('(D) la deuda agregada del ledger sube exactamente en el monto del claim', () => {
+    expect(ledgerDebtAfter).toBe(ledgerDebtBefore + seed.amount)
   })
 })
