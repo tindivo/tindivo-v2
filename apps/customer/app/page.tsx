@@ -2,9 +2,10 @@
 
 import { ActiveOrderBanner } from '@/features/catalog/components/active-order-banner'
 import { BusinessGrid } from '@/features/catalog/components/business-grid'
-import { CategoryStrip } from '@/features/catalog/components/category-strip'
+import { CategoryCircles } from '@/features/catalog/components/category-circles'
+import { FeaturedProducts } from '@/features/catalog/components/featured-products'
 import { HomeHeader } from '@/features/catalog/components/home-header'
-import { HomeHero } from '@/features/catalog/components/home-hero'
+import { PromoCarousel } from '@/features/catalog/components/promo-carousel'
 import { SearchBar } from '@/features/catalog/components/search-bar'
 import { SearchResults } from '@/features/catalog/components/search-results'
 import { useHomeData } from '@/features/catalog/hooks/use-home-data'
@@ -45,8 +46,9 @@ export default function Home() {
 
       {!search.active && (
         <>
-          <HomeHero />
-          <CategoryStrip />
+          <PromoCarousel />
+          <CategoryCircles />
+          <FeaturedProducts />
           <BusinessGrid businesses={items} error={error} />
         </>
       )}
