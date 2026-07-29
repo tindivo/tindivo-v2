@@ -47,9 +47,9 @@ export default function NegocioPage({ params }: { params: Promise<{ id: string }
 
   if (error) {
     return (
-      <main className="mx-auto max-w-[768px] px-4 pt-16 text-center md:max-w-[860px]">
-        <p className="t-muted">{error}</p>
-        <Link href="/" className="mt-3 inline-block text-sm text-brand underline">
+      <main className="mx-auto flex min-h-dvh max-w-[768px] flex-col items-center justify-center px-4 text-center md:max-w-[860px]">
+        <p className="text-ink-muted">{error}</p>
+        <Link href="/" className="mt-3 inline-block text-sm font-semibold text-brand underline">
           Volver al inicio
         </Link>
       </main>
@@ -58,7 +58,7 @@ export default function NegocioPage({ params }: { params: Promise<{ id: string }
   if (!data) {
     return (
       <main className="mx-auto max-w-[768px] px-4 pt-10 md:max-w-[860px]">
-        <div className="h-[280px] animate-pulse rounded-2xl bg-white" />
+        <div className="h-[280px] animate-pulse rounded-2xl bg-card" />
       </main>
     )
   }
@@ -101,7 +101,7 @@ export default function NegocioPage({ params }: { params: Promise<{ id: string }
         <button
           type="button"
           onClick={() => setCartOpen(true)}
-          className="fixed right-4 bottom-7 left-4 z-30 mx-auto flex max-w-[736px] items-center justify-between rounded-[18px] bg-brand px-[18px] py-3.5 font-semibold text-[16px] text-white shadow-[0_12px_28px_-10px_rgba(249,115,22,0.6),0_2px_8px_rgba(0,0,0,0.1)] lg:hidden"
+          className="fixed right-4 bottom-7 left-4 z-30 mx-auto flex max-w-[736px] items-center justify-between rounded-[18px] bg-brand px-[18px] py-3.5 font-semibold text-[16px] text-white shadow-glow-brand-lg lg:hidden"
         >
           <span className="flex items-center gap-3">
             <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-white/[0.22] font-bold text-[13px]">
