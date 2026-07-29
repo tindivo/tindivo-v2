@@ -1,0 +1,108 @@
+'use client'
+
+import { Icon } from '@tindivo/ui'
+import { soles } from '@/features/cart/lib/format'
+import { type CartLine, useCart } from '@/lib/cart'
+
+interface CartLineItemProps {
+  line: CartLine
+  isFirst: boolean
+}
+
+export function CartLineList({ lines }: { lines: CartLine[] }) {
+  return (
+    <div className="flex flex-col">
+      {lines.map((line, index) => (
+        <CartLineItem key={line.key} line={line} isFirst={index === 0} />
+      ))}
+    </div>
+  )
+}
+
+export function CartLineItem({ line, isFirst }: CartLineItemProps) {
+  const cart = useCart()
+
+  return (
+    <div
+      className={`flex items-start gap-3 pt-3.5 ${!isFirst ? 'mt-3.5 border-t border-ink/5' : ''}`}
+    >
+      {line.imageUrl ? (
+        <img
+          src={line.imageUrl}
+          alt={line.name}
+          className="h-12 w-12 shrink-0 rounded-xl object-cover"
+        />
+      ) : (
+        <span
+          aria-hidden
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl font-bold text-[18px]"
+          style={{
+            background: `oklch(0.92 0.04 ${line.hue})`,
+            color: `oklch(0.42 0.12 ${line.hue})`,
+          }}
+        >
+          {line.name.charAt(0).toUpperCase()}
+        </span>
+      )}
+
+      <div className="min-w-0 flex-1">
+        <div className="flex items-start justify-between gap-3">
+          <div className="font-semibold text-[14px] leading-snug">
+            <span className="tabular-nums">{line.quantity}×</span> {line.name}
+          </div>
+          <div className="shrink-0 font-semibold text-[14px] tabular-nums">
+            {soles(line.unitPrice * line.quantity)}
+          </div>
+        </div>
+
+        {line.modifiers.length > 0 && (
+          <div className="mt-1 flex flex-col gap-0.5">
+            {line.modifiers.map((m) => (
+              <div key={`${line.key}-${m.optionId}`} className="text-[12px] text-ink/60">
+                <span className="text-ink/40">{m.groupName}: </span>
+                {m.optionName}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {line.note && (
+          <div className="mt-1.5 rounded-lg bg-brand/7 px-2.5 py-1.5 text-[12px] text-brand-dark">
+            <span className="font-semibold">Nota: </span>
+            {line.note}
+          </div>
+        )}
+
+        <div className="mt-2.5 flex items-center justify-between">
+          <div className="origin-left scale-90">
+            <div className="t-qty">
+              <button
+                type="button"
+                onClick={() => cart.setQty(line.key, line.quantity - 1)}
+                disabled={line.quantity <= 1}
+                aria-label="Menos"
+              >
+                <Icon.Minus />
+              </button>
+              <span className="val">{line.quantity}</span>
+              <button
+                type="button"
+                onClick={() => cart.setQty(line.key, line.quantity + 1)}
+                aria-label="Más"
+              >
+                <Icon.Plus />
+              </button>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => cart.remove(line.key)}
+            className="rounded-lg bg-danger/6 px-2.5 py-1.5 font-medium text-[12px] text-danger"
+          >
+            Eliminar
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}

@@ -4,7 +4,6 @@ import { getOpenStatus, type ScheduleDayRow } from '@tindivo/contracts'
 import { useState } from 'react'
 import { Icon } from '@/components/ui'
 
-// Mismo orden e índices que el editor del panel de negocios (0=Lunes..6=Domingo).
 const DAY_NAMES = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 
 interface Shift {
@@ -12,8 +11,6 @@ interface Shift {
   end: string
 }
 
-/** Turnos válidos del día, ordenados por hora de inicio (el editor guarda el 2º turno
- *  del mediodía DESPUÉS del turno 1 de la noche). */
 function shiftsOf(row: ScheduleDayRow | undefined): Shift[] {
   if (!row?.is_open) return []
   const out: Shift[] = []
@@ -25,7 +22,6 @@ function shiftsOf(row: ScheduleDayRow | undefined): Shift[] {
 const shiftLabel = (shifts: Shift[]): string =>
   shifts.map((s) => `${s.start} – ${s.end}`).join(' y ')
 
-/** Día actual con la convención del horario (0=Lunes), en America/Lima. */
 function limaDayIdx(now: Date): number {
   const weekday = new Intl.DateTimeFormat('en-US', {
     timeZone: 'America/Lima',
@@ -35,13 +31,12 @@ function limaDayIdx(now: Date): number {
   return idx === -1 ? 0 : idx
 }
 
-/**
- * Fila de horario de atención: colapsada muestra el horario de HOY + chip
- * Abierto/Cerrado; expandida lista los 7 días. Sin horario configurado no
- * renderiza nada (= siempre abierto). En modo catálogo (WhatsApp) es SOLO
- * informativa: nunca gatilla estados deshabilitados.
- */
-export function ScheduleRow({ schedule, now }: { schedule: ScheduleDayRow[]; now: Date }) {
+interface ScheduleRowProps {
+  schedule: ScheduleDayRow[]
+  now: Date
+}
+
+export function ScheduleRow({ schedule, now }: ScheduleRowProps) {
   const [expanded, setExpanded] = useState(false)
   const status = getOpenStatus(schedule, now)
   if (status.kind === 'no_schedule') return null
@@ -50,8 +45,6 @@ export function ScheduleRow({ schedule, now }: { schedule: ScheduleDayRow[]; now
   const byDay = new Map(schedule.map((d) => [d.day_of_week, d]))
   const todayShifts = shiftsOf(byDay.get(todayIdx))
   const open = status.kind === 'open'
-  // Coherencia con el chip: si estamos abiertos por el cruce de medianoche de
-  // AYER y hoy no tiene turnos propios, "Hoy: Cerrado" contradiría al chip.
   const todayLabel =
     todayShifts.length > 0
       ? shiftLabel(todayShifts)
@@ -66,44 +59,37 @@ export function ScheduleRow({ schedule, now }: { schedule: ScheduleDayRow[]; now
           type="button"
           onClick={() => setExpanded((e) => !e)}
           aria-expanded={expanded}
+          data-expanded={expanded}
           className="flex min-h-[44px] w-full items-center gap-2.5 px-4 py-3 text-left"
         >
-          <span style={{ color: 'rgba(26,22,20,0.45)' }}>
+          <span className="text-black/45">
             <Icon.Clock />
           </span>
           <span className="min-w-0 flex-1 truncate text-[13px]">
-            <span style={{ color: 'rgba(26,22,20,0.55)' }}>Hoy: </span>
+            <span className="text-black/55">Hoy: </span>
             <span className="font-semibold">{todayLabel}</span>
           </span>
           <span
-            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-semibold text-[11px]"
-            style={
-              open
-                ? { background: 'rgba(22,163,74,0.1)', color: '#15803D' }
-                : { background: 'rgba(220,38,38,0.08)', color: '#DC2626' }
-            }
+            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-semibold text-[11px] ${
+              open ? 'bg-success/10 text-success' : 'bg-danger/8 text-danger'
+            }`}
           >
             <span
               aria-hidden
-              className="h-1.5 w-1.5 rounded-full"
-              style={{ background: open ? '#16A34A' : '#DC2626' }}
+              className={`h-1.5 w-1.5 rounded-full ${open ? 'bg-success' : 'bg-danger'}`}
             />
             {open ? 'Abierto' : 'Cerrado'}
           </span>
           <span
-            aria-hidden
-            style={{
-              color: 'rgba(26,22,20,0.45)',
-              transform: expanded ? 'rotate(180deg)' : 'none',
-              transition: 'transform 160ms ease',
-            }}
+            data-expanded={expanded}
+            className="text-black/45 transition-transform duration-160 ease-out data-[expanded=true]:rotate-180"
           >
             <Icon.ChevronDown />
           </span>
         </button>
 
         {expanded && (
-          <div className="border-border border-t px-4 py-3">
+          <div className="border-t border-border px-4 py-3">
             <div className="flex flex-col gap-1.5">
               {DAY_NAMES.map((name, idx) => {
                 const shifts = shiftsOf(byDay.get(idx))
@@ -111,10 +97,9 @@ export function ScheduleRow({ schedule, now }: { schedule: ScheduleDayRow[]; now
                 return (
                   <div
                     key={name}
-                    className={`flex items-baseline justify-between gap-3 text-[13px]${
-                      isToday ? ' font-bold' : ''
+                    className={`flex items-baseline justify-between gap-3 text-[13px] ${
+                      isToday ? 'font-bold' : 'text-black/65'
                     }`}
-                    style={isToday ? undefined : { color: 'rgba(26,22,20,0.65)' }}
                   >
                     <span>{name}</span>
                     <span className="tabular-nums">

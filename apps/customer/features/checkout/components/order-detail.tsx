@@ -1,0 +1,126 @@
+'use client'
+
+import { Icon } from '@tindivo/ui'
+import { useState } from 'react'
+import { soles } from '@/features/checkout/lib/format'
+import { useCart } from '@/lib/cart'
+
+export function OrderDetail() {
+  const cart = useCart()
+  const [open, setOpen] = useState(true)
+  const count = cart.count()
+  if (count === 0) return null
+
+  return (
+    <div className="mt-5 overflow-hidden rounded-[22px] border border-ink/5 bg-white">
+      <button
+        type="button"
+        className="flex w-full items-center gap-3 p-4 text-left"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+      >
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-ink/[0.05]">
+          <Icon.Bag />
+        </span>
+        <span className="flex-1">
+          <span className="block font-semibold text-[15px]">Detalle del pedido</span>
+          <span className="block text-[12px] text-ink/55">
+            {cart.businessName ? `${cart.businessName} · ` : ''}
+            {count} {count === 1 ? 'producto' : 'productos'}
+          </span>
+        </span>
+        <span
+          aria-hidden
+          className={`inline-flex text-ink/40 transition-transform duration-200 ${
+            open ? 'rotate-90' : '-rotate-90'
+          }`}
+        >
+          <Icon.Back />
+        </span>
+      </button>
+
+      {open && (
+        <div className="border-t border-ink/[0.06] px-4 pb-4">
+          {cart.lines.map((line) => (
+            <div
+              key={line.key}
+              className="flex items-start gap-3 border-t border-ink/5 pt-3.5 first:border-t-0 first:pt-0"
+            >
+              {/* Placeholder de color por `hue` (mismo estándar visual que el modal de producto). */}
+              <span
+                aria-hidden
+                className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[oklch(0.92_0.04_${line.hue})] text-[oklch(0.42_0.12_${line.hue})] text-[18px] font-bold`}
+              >
+                {line.name.charAt(0).toUpperCase()}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="font-semibold text-[14px] leading-snug">
+                    <span className="tabular-nums">{line.quantity}×</span> {line.name}
+                  </div>
+                  <div className="shrink-0 font-semibold text-[14px] tabular-nums">
+                    {soles(line.unitPrice * line.quantity)}
+                  </div>
+                </div>
+
+                {line.modifiers.length > 0 && (
+                  <div className="mt-1 flex flex-col gap-0.5">
+                    {line.modifiers.map((m) => (
+                      <div
+                        key={`${line.key}-${m.optionId}`}
+                        className="flex justify-between gap-2 text-[12px] text-ink/60"
+                      >
+                        <span className="min-w-0">
+                          <span className="text-ink/40">{m.groupName}: </span>
+                          {m.optionName}
+                        </span>
+                        {m.price > 0 && (
+                          <span className="shrink-0 tabular-nums">+{soles(m.price)}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {line.note && (
+                  <div className="mt-1.5 rounded-lg bg-brand/10 px-2.5 py-1.5 text-[12px] text-brand-dark">
+                    <span className="font-semibold">Nota: </span>
+                    {line.note}
+                  </div>
+                )}
+
+                <div className="mt-2.5 flex items-center justify-between">
+                  <div className="t-qty origin-left scale-90">
+                    <button
+                      type="button"
+                      onClick={() => cart.setQty(line.key, line.quantity - 1)}
+                      disabled={line.quantity <= 1}
+                      aria-label="Menos"
+                    >
+                      <Icon.Minus />
+                    </button>
+                    <span className="val">{line.quantity}</span>
+                    <button
+                      type="button"
+                      onClick={() => cart.setQty(line.key, line.quantity + 1)}
+                      aria-label="Más"
+                    >
+                      <Icon.Plus />
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => cart.remove(line.key)}
+                    className="rounded-lg bg-danger/10 px-2.5 py-1.5 font-medium text-[12px] text-danger"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}

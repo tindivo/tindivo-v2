@@ -1,0 +1,105 @@
+'use client'
+
+import { type ApiEnvelope, ApiError } from '@tindivo/api-client'
+import type { OrderStatus } from '@tindivo/contracts'
+import { useEffect, useState } from 'react'
+import type { ActiveOrder, CatalogUser, PublicBusiness } from '@/features/catalog/types'
+import { api } from '@/lib/api'
+import { getSupabaseBrowser } from '@/lib/supabase/client'
+
+const ACTIVE_STATUSES: OrderStatus[] = [
+  'validando',
+  'pending_acceptance',
+  'confirmed',
+  'preparing',
+  'waiting_driver',
+  'heading_to_restaurant',
+  'waiting_at_restaurant',
+  'picked_up',
+]
+
+export function useHomeData() {
+  const [items, setItems] = useState<PublicBusiness[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [user, setUser] = useState<CatalogUser>({
+    signedIn: false,
+    name: '',
+    userId: null,
+  })
+  const [activeOrder, setActiveOrder] = useState<ActiveOrder | null>(null)
+
+  useEffect(() => {
+    let active = true
+    api
+      .get<ApiEnvelope<PublicBusiness[]>>('/public/businesses')
+      .then((res) => active && setItems(res.data))
+      .catch(
+        (e) =>
+          active &&
+          setError(e instanceof ApiError ? (e.problem.detail ?? e.message) : 'No se pudo cargar'),
+      )
+
+    const supabase = getSupabaseBrowser()
+    const applySession = (
+      session: { user: { id: string; user_metadata: unknown; email?: string } } | null,
+    ) => {
+      if (!active) return
+      if (!session) {
+        setUser({ signedIn: false, name: '', userId: null })
+        return
+      }
+      const meta = session.user.user_metadata as { full_name?: string } | undefined
+      setUser({
+        signedIn: true,
+        name: meta?.full_name ?? session.user.email ?? '',
+        userId: session.user.id,
+      })
+    }
+    supabase.auth.getSession().then(({ data }) => applySession(data.session))
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) =>
+      applySession(session),
+    )
+    return () => {
+      active = false
+      sub.subscription.unsubscribe()
+    }
+  }, [])
+
+  useEffect(() => {
+    const uid = user.userId
+    if (!uid) {
+      setActiveOrder(null)
+      return
+    }
+    let active = true
+    const supabase = getSupabaseBrowser()
+    const loadActive = () => {
+      supabase
+        .from('orders')
+        .select('short_id,status')
+        .in('status', ACTIVE_STATUSES)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .then(({ data }) => {
+          if (!active) return
+          const o = data?.[0]
+          setActiveOrder(o ? { shortId: o.short_id, status: o.status } : null)
+        })
+    }
+    loadActive()
+    const channel = supabase
+      .channel(`home-orders-${uid}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders', filter: `customer_user_id=eq.${uid}` },
+        () => loadActive(),
+      )
+      .subscribe()
+    return () => {
+      active = false
+      supabase.removeChannel(channel)
+    }
+  }, [user.userId])
+
+  return { items, error, user, activeOrder }
+}

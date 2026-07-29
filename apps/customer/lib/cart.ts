@@ -26,7 +26,7 @@ export interface CartLine {
   imageUrl: string | null
 }
 
-interface CartState {
+export interface CartState {
   businessId: string | null
   businessName: string | null
   lines: CartLine[]
