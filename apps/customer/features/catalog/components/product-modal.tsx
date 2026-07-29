@@ -1,5 +1,3 @@
-'use client'
-
 import { BottomSheet, Icon } from '@/components/ui'
 import { useProductOptions } from '@/features/catalog/hooks/use-product-options'
 import { soles } from '@/features/catalog/lib/format'
@@ -55,10 +53,10 @@ export function ProductModal({ item, onClose, onAdd }: ProductModalProps) {
         <button
           type="button"
           onClick={onClose}
-          className="absolute top-3.5 right-3.5 flex h-9 w-9 items-center justify-center rounded-full border-none bg-white/95 shadow-[0_2px_8px_rgba(0,0,0,0.12)]"
+          className="t-glass absolute top-3.5 right-3.5 flex h-9 w-9 items-center justify-center rounded-full text-ink"
           aria-label="Cerrar"
         >
-          <Icon name="close" size={20} />
+          <Icon name="close" size={18} />
         </button>
       </div>
 
@@ -66,9 +64,9 @@ export function ProductModal({ item, onClose, onAdd }: ProductModalProps) {
         <div className="px-5 pt-5 pb-1.5">
           <div className="t-display text-[26px] leading-[1.1]">{item.name}</div>
           {item.description && (
-            <div className="mt-2 text-[14px] leading-[1.45] text-black/65">{item.description}</div>
+            <div className="mt-2 text-[14px] leading-[1.45] text-ink-muted">{item.description}</div>
           )}
-          <div className="mt-3 font-semibold text-[18px]">Desde {soles(item.base_price)}</div>
+          <div className="mt-3 font-extrabold text-[18px] text-brand">Desde {soles(item.base_price)}</div>
         </div>
 
         <div className="px-5 pt-3">
@@ -91,12 +89,12 @@ export function ProductModal({ item, onClose, onAdd }: ProductModalProps) {
               maxLength={140}
               onChange={(e) => setNote(e.target.value)}
             />
-            <div className="mt-1 text-right text-[11px] text-black/40">{note.length}/140</div>
+            <div className="mt-1 text-right text-[11px] text-ink-subtle">{note.length}/140</div>
           </div>
         </div>
       </div>
 
-      <div className="flex items-center gap-3 border-t border-border bg-surface px-4 pt-3.5 pb-6">
+      <div className="t-glass-strong flex items-center gap-3 border-t border-ink/[0.04] px-4 pt-3.5 pb-6">
         <div className="t-qty">
           <button
             type="button"
