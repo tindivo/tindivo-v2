@@ -1,24 +1,24 @@
 /* =========================================================================
    Sistema visual Tindivo — clases .t-* compartidas por todas las apps
    (cliente + paneles). Paleta/fuentes vienen de theme.css
-   (brand #F97316, surface #FAF6F1, fuentes --font-bricolage/jetbrains…).
+   (brand #F26241, surface #FBFAF7, fuente --font-manrope…).
    CSS plano (sin @apply) → independiente del pipeline Tailwind de cada app.
    ========================================================================= */
 .t-display {
-  font-family: var(--font-bricolage), -apple-system, system-ui, sans-serif;
-  font-weight: 700;
+  font-family: var(--font-display), -apple-system, system-ui, sans-serif;
+  font-weight: 800;
   letter-spacing: -0.02em;
 }
 .t-eyebrow {
-  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-family: var(--font-mono), ui-monospace, monospace;
   font-size: 11px;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  font-weight: 600;
-  color: rgba(26, 22, 20, 0.55);
+  font-weight: 700;
+  color: rgba(23, 32, 28, 0.55);
 }
 .t-muted {
-  color: rgba(26, 22, 20, 0.55);
+  color: rgba(23, 32, 28, 0.55);
 }
 
 /* Botones */
@@ -27,39 +27,45 @@
   border: none;
   cursor: pointer;
   font-family: inherit;
-  font-weight: 600;
-  font-size: 17px;
+  font-weight: 700;
+  font-size: 15px;
   letter-spacing: -0.01em;
-  border-radius: 18px;
-  padding: 18px 22px;
+  border-radius: 999px;
+  padding: 14px 22px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  transition: transform 80ms ease, opacity 120ms ease, background 120ms ease;
+  gap: 8px;
+  transition: transform var(--duration-fast) ease, box-shadow var(--duration-normal) ease, background var(--duration-normal) ease;
 }
 .t-btn:active {
-  transform: scale(0.98);
+  transform: scale(0.97);
 }
 .t-btn:disabled {
   opacity: 0.42;
   cursor: not-allowed;
 }
 .t-btn-primary {
-  background: #f97316;
+  background: linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%);
   color: #fff;
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06), 0 8px 22px -8px rgba(249, 115, 22, 0.55);
+  box-shadow: 0 8px 24px rgba(242, 98, 65, 0.22);
 }
 .t-btn-primary:hover:not(:disabled) {
-  background: #ea580c;
+  box-shadow: 0 12px 40px rgba(255, 107, 53, 0.32);
 }
 .t-btn-secondary {
-  background: #1a1614;
+  background: #17201c;
   color: #fff;
 }
+.t-btn-secondary:hover:not(:disabled) {
+  background: #2a3630;
+}
 .t-btn-ghost {
-  background: rgba(26, 22, 20, 0.06);
-  color: #1a1614;
+  background: rgba(23, 32, 28, 0.06);
+  color: #17201c;
+}
+.t-btn-ghost:hover:not(:disabled) {
+  background: rgba(23, 32, 28, 0.10);
 }
 .t-btn-block {
   width: 100%;
@@ -68,9 +74,10 @@
 /* Cards / chips / campos */
 .t-card {
   background: #fff;
-  border-radius: 22px;
+  border-radius: 20px;
   padding: 14px;
-  border: 1px solid rgba(26, 22, 20, 0.05);
+  border: 1px solid rgba(23, 32, 28, 0.04);
+  box-shadow: 0 4px 20px rgba(171, 53, 0, 0.04);
 }
 .t-chip {
   display: inline-flex;
@@ -78,32 +85,47 @@
   gap: 6px;
   padding: 8px 14px;
   border-radius: 999px;
-  font-size: 14px;
-  font-weight: 500;
-  background: #fff;
-  color: #1a1614;
-  border: 1px solid rgba(26, 22, 20, 0.08);
+  font-size: 13px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.68);
+  color: #17201c;
+  border: 1px solid rgba(23, 32, 28, 0.06);
   white-space: nowrap;
   cursor: pointer;
+  backdrop-filter: blur(12px);
+  transition: all var(--duration-normal) ease;
+}
+.t-chip:hover:not(.active) {
+  border-color: rgba(242, 98, 65, 0.35);
+  color: #b43c1f;
 }
 .t-chip.active {
-  background: #1a1614;
+  background: linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%);
   color: #fff;
-  border-color: #1a1614;
+  border-color: transparent;
+  box-shadow: 0 8px 24px rgba(242, 98, 65, 0.22);
 }
 .t-field {
-  background: #fff;
+  background: rgba(255, 255, 255, 0.74);
   border-radius: 16px;
   padding: 14px 16px;
-  border: 1px solid rgba(26, 22, 20, 0.06);
+  border: 1px solid rgba(156, 91, 60, 0.16);
   font-family: inherit;
-  font-size: 16px;
+  font-size: 15px;
+  font-weight: 500;
   width: 100%;
   outline: none;
-  color: #1a1614;
+  color: #17201c;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+  transition: border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
 }
 .t-field:focus {
-  border-color: #1a1614;
+  border-color: rgba(242, 98, 65, 0.42);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 0 0 4px rgba(242, 98, 65, 0.10);
+}
+.t-field::placeholder {
+  color: rgba(83, 96, 92, 0.6);
 }
 textarea.t-field {
   resize: none;
@@ -111,11 +133,11 @@ textarea.t-field {
 }
 .t-field-label {
   display: block;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: rgba(26, 22, 20, 0.55);
+  color: rgba(23, 32, 28, 0.55);
   margin-bottom: 8px;
 }
 
@@ -123,24 +145,36 @@ textarea.t-field {
 .t-qty {
   display: inline-flex;
   align-items: center;
-  background: rgba(26, 22, 20, 0.06);
+  background: #f4f3ef;
   border-radius: 999px;
   padding: 4px;
+  border: 1px solid rgba(23, 32, 28, 0.06);
 }
 .t-qty button {
   width: 32px;
   height: 32px;
   border: none;
-  background: transparent;
-  font-size: 20px;
-  color: #1a1614;
+  background: #fff;
+  font-size: 18px;
+  font-weight: 700;
+  color: #17201c;
   cursor: pointer;
   border-radius: 999px;
+  border: 1px solid rgba(23, 32, 28, 0.06);
+  transition: background 120ms ease, transform 80ms ease;
+}
+.t-qty button:hover {
+  background: #ffe1d5;
+  border-color: rgba(242, 98, 65, 0.35);
+  color: #b43c1f;
+}
+.t-qty button:active {
+  transform: scale(0.92);
 }
 .t-qty .val {
   min-width: 28px;
   text-align: center;
-  font-weight: 600;
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
 
@@ -160,8 +194,8 @@ textarea.t-field {
     45deg,
     transparent 0,
     transparent 9px,
-    rgba(26, 22, 20, 0.045) 9px,
-    rgba(26, 22, 20, 0.045) 10px
+    rgba(23, 32, 28, 0.04) 9px,
+    rgba(23, 32, 28, 0.04) 10px
   );
 }
 
@@ -170,15 +204,15 @@ textarea.t-field {
   position: sticky;
   top: 0;
   z-index: 6;
-  background: rgba(250, 246, 241, 0.92);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  background: rgba(251, 250, 247, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   padding: 10px 16px;
   display: flex;
   gap: 8px;
   overflow-x: auto;
   scrollbar-width: none;
-  border-bottom: 1px solid rgba(26, 22, 20, 0.05);
+  border-bottom: 1px solid rgba(23, 32, 28, 0.04);
 }
 .t-section-tabs::-webkit-scrollbar {
   display: none;
@@ -189,9 +223,9 @@ textarea.t-field {
   padding: 12px 16px 20px;
   background: linear-gradient(
     180deg,
-    rgba(250, 246, 241, 0) 0%,
-    rgba(250, 246, 241, 0.95) 30%,
-    #faf6f1 100%
+    rgba(251, 250, 247, 0) 0%,
+    rgba(251, 250, 247, 0.95) 30%,
+    #fbfaf7 100%
   );
   position: sticky;
   bottom: 0;
@@ -202,7 +236,9 @@ textarea.t-field {
 .t-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(23, 32, 28, 0.34);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -212,16 +248,15 @@ textarea.t-field {
 .t-modal-sheet {
   width: 100%;
   max-width: 768px;
-  background: #faf6f1;
-  /* Color de texto base propio: el sheet usa position:fixed pero hereda `color` por el
-     árbol DOM. Si su trigger está en un contexto `text-white` (p.ej. el hero del menú),
-     sin esto el contenido heredaría blanco sobre fondo claro (ilegible). */
-  color: #1a1614;
-  border-radius: 28px 28px 0 0;
+  background: linear-gradient(180deg, rgba(255, 252, 249, 0.98), rgba(255, 250, 246, 0.96)),
+    linear-gradient(135deg, rgba(255, 107, 53, 0.06), rgba(5, 150, 105, 0.04));
+  color: #17201c;
+  border-radius: 36px 36px 0 0;
   max-height: 90%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  box-shadow: 0 -28px 90px -54px rgba(0, 0, 0, 0.72);
   animation: t-slide-up 280ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 @keyframes t-fade-in {
@@ -261,4 +296,44 @@ textarea.t-field {
   to {
     transform: translateX(0);
   }
+}
+
+/* =========================================================================
+   Utilidades nuevas del UI Kit v3
+   ========================================================================= */
+
+/* Glass panels */
+.t-glass {
+  background: rgba(255, 255, 255, 0.74);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  border: 1px solid rgba(180, 60, 31, 0.10);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72), 0 8px 28px rgba(18, 38, 32, 0.08);
+}
+.t-glass-strong {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(30px) saturate(180%);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  border: 1px solid rgba(180, 60, 31, 0.10);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72), 0 16px 48px rgba(18, 38, 32, 0.10);
+}
+
+/* Glows */
+.t-glow-brand {
+  box-shadow: 0 8px 24px rgba(242, 98, 65, 0.22);
+}
+.t-glow-brand-lg {
+  box-shadow: 0 12px 40px rgba(255, 107, 53, 0.32);
+}
+
+/* Lift hover */
+.t-lift {
+  transition: transform var(--duration-fast) ease, box-shadow var(--duration-normal) ease, border-color var(--duration-normal) ease;
+}
+.t-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 48px rgba(18, 38, 32, 0.10);
+}
+.t-lift:active {
+  transform: translateY(0) scale(0.985);
 }

@@ -1,52 +1,74 @@
 /**
- * Design System Tindivo (Tailwind v4 @theme). Fuente: 06-ui-design-system.md +
- * DECISIONS §16. Light mode siempre. Naranja protagonista. Las apps importan
- * este archivo después de `@import "tailwindcss";`.
+ * Design System Tindivo (Tailwind v4 @theme). Fuente: Docs/ui-kit-v3.html +
+ * aprendizajes del design system anterior de tindivo-delivery.
+ * Light mode siempre. Naranja cálido protagonista. Las apps importan este
+ * archivo después de `@import "tailwindcss";`.
  *
- * Tipografía única de la plataforma: Manrope (con variación de peso por rol),
- * cargada por cada app vía next/font y expuesta en estas variables
- * (--font-bricolage, --font-geist, --font-jetbrains).
+ * Tipografía única de la plataforma: Manrope, cargada por cada app vía
+ * next/font y expuesta como --font-display, --font-sans y --font-mono.
  */
 @theme {
-  /* Marca */
-  --color-brand: #f97316;
-  --color-brand-dark: #c2410c;
-  --color-brand-light: #fed7aa;
+  /* ── Marca ── */
+  --color-brand: #f26241;
+  --color-brand-dark: #b43c1f;
+  --color-brand-light: #ffe1d5;
+  --color-brand-soft: #fff3ef;
 
-  /* Tinta (texto) */
-  --color-ink: #1a1614;
-  --color-ink-muted: #57534e;
-  --color-ink-subtle: #a8a29e;
+  /* ── Tinta (texto) ── */
+  --color-ink: #17201c;
+  --color-ink-muted: #53605c;
+  --color-ink-subtle: #8b9692;
 
-  /* Superficies */
-  --color-surface: #faf6f1;
+  /* ── Superficies ── */
+  --color-surface: #fbfaf7;
+  --color-surface-low: #f4f3ef;
   --color-card: #ffffff;
-  --color-border: #eae7e2;
+  --color-border: #d9ded7;
 
-  /* Semánticos */
-  --color-success: #16a34a;
-  --color-warning: #f59e0b;
-  --color-danger: #dc2626;
+  /* ── Semánticos ── */
+  --color-success: #059669;
+  --color-success-soft: #d1fae5;
+  --color-warning: #eab308;
+  --color-warning-soft: #fef3c7;
+  --color-danger: #ba1a1a;
+  --color-danger-soft: #fee2e2;
   --color-info: #0ea5e9;
 
-  /* Tipografía */
-  --font-display: var(--font-bricolage), system-ui, sans-serif;
-  --font-sans: var(--font-geist), system-ui, sans-serif;
-  --font-mono: var(--font-jetbrains), 'Manrope', ui-monospace, sans-serif;
+  /* ── Tipografía ── */
+  --font-display: var(--font-manrope), system-ui, sans-serif;
+  --font-sans: var(--font-manrope), system-ui, sans-serif;
+  --font-mono: var(--font-manrope), ui-monospace, sans-serif;
 
-  /* Radios (muy redondeados) */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
+  /* ── Radios ── */
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 20px;
   --radius-xl: 24px;
-  --radius-2xl: 32px;
-  --radius-3xl: 48px;
+  --radius-2xl: 28px;
+  --radius-3xl: 36px;
 
-  /* Sombras (elevación sutil) */
-  --shadow-elev-1: 0 1px 2px rgb(26 22 20 / 0.06);
-  --shadow-elev-2: 0 2px 8px rgb(26 22 20 / 0.08);
-  --shadow-elev-3: 0 8px 24px rgb(26 22 20 / 0.1);
-  --shadow-elev-4: 0 16px 48px rgb(26 22 20 / 0.12);
-  --shadow-glow-brand: 0 0 0 4px rgb(249 115 22 / 0.18);
-  --shadow-glow-danger: 0 0 0 4px rgb(220 38 38 / 0.18);
+  /* ── Sombras estratificadas (tintadas, nunca grises puros) ── */
+  --shadow-elev-1: 0 4px 20px rgba(171, 53, 0, 0.04);
+  --shadow-elev-2: 0 8px 28px rgba(18, 38, 32, 0.08);
+  --shadow-elev-3: 0 16px 48px rgba(18, 38, 32, 0.10);
+  --shadow-elev-4: 0 28px 80px rgba(18, 38, 32, 0.14);
+  --shadow-glow-brand: 0 8px 24px rgba(242, 98, 65, 0.22);
+  --shadow-glow-brand-lg: 0 12px 40px rgba(255, 107, 53, 0.32);
+  --shadow-glow-success: 0 4px 20px rgba(16, 185, 129, 0.12);
+  --shadow-glow-warning: 0 4px 20px rgba(234, 179, 8, 0.12);
+  --shadow-glow-danger: 0 4px 20px rgba(186, 26, 26, 0.12);
+  --shadow-focus-ring: 0 0 0 4px rgba(242, 98, 65, 0.14);
+
+  /* ── Glass ── */
+  --glass-bg: rgba(255, 255, 255, 0.74);
+  --glass-bg-strong: rgba(255, 255, 255, 0.88);
+  --glass-border: rgba(180, 60, 31, 0.10);
+  --glass-border-light: rgba(255, 255, 255, 0.72);
+
+  /* ── Motion ── */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 400ms;
 }

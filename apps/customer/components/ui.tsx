@@ -75,7 +75,7 @@ export function ProductImage({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontFamily: 'var(--font-jetbrains), monospace',
+            fontFamily: 'var(--font-manrope), monospace',
             fontSize: 10,
             color: `oklch(0.35 0.1 ${hue})`,
             letterSpacing: '0.05em',

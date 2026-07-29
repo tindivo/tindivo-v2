@@ -38,7 +38,12 @@ export default function NegocioPedidosPage() {
     comprobante_prepago_url: string | null
     validation_context: string | null
   } | null>(null)
-  const [isFreshLoading, setIsFreshLoading] = useState(false)
+  // Marca QUÉ pedido ya resolvió su fetch de frescura (con éxito o con error).
+  // No es un booleano de "cargando": guardar la identidad permite derivar el flag de
+  // carga en cada render comparándola con la selección actual, de modo que sea correcto
+  // ya en el PRIMER render —antes de que corra el efecto—. Un booleano almacenado no
+  // puede lograrlo, porque solo se activa dentro del efecto, que corre tras el paint.
+  const [freshSettledFor, setFreshSettledFor] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [showPause, setShowPause] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -71,13 +76,9 @@ export default function NegocioPedidosPage() {
     setDetailProofUrl(null)
     setFreshOrder(null)
 
-    if (!selectedId) {
-      setIsFreshLoading(false)
-      return
-    }
+    if (!selectedId) return
 
     const isPrepaid = selPaymentIntent === 'prepaid'
-    setIsFreshLoading(isPrepaid)
 
     const supabase = getSupabaseBrowser()
     void (async () => {
@@ -120,7 +121,10 @@ export default function NegocioPedidosPage() {
         } catch {
           /* fail-open: continuar con datos en memoria si la red falla */
         } finally {
-          if (!cancel) setIsFreshLoading(false)
+          // Se marca como resuelto TAMBIÉN cuando el fetch falla: eso preserva el
+          // fail-open de arriba. Si solo se derivara de `freshOrder`, un error de red
+          // dejaría la guarda armada para siempre y los botones no aparecerían nunca.
+          if (!cancel) setFreshSettledFor(selectedId)
         }
       }
 
@@ -191,6 +195,11 @@ export default function NegocioPedidosPage() {
   // Cómputo de la guardia doble para el detalle
   const activeProofPath = freshOrder ? freshOrder.comprobante_prepago_url : selProofPath
   const isPrepaidSelected = selected?.payment === 'prepaid'
+  // DERIVADO, no almacenado: hay carga de frescura pendiente mientras el pedido prepago
+  // seleccionado no coincida con el último que resolvió su fetch. En el primer render tras
+  // abrir el detalle, `freshSettledFor` ya fue puesto a null por `onOpen` en el mismo lote
+  // que `setSelectedId`, así que esto vale true SIN depender de que el efecto haya corrido.
+  const isFreshLoading = isPrepaidSelected && freshSettledFor !== selectedId
   const isResolvingProof = isPrepaidSelected && activeProofPath !== null && detailProofUrl === null
   const isLoadingActions = isFreshLoading || isResolvingProof
 
@@ -352,7 +361,13 @@ export default function NegocioPedidosPage() {
     cookingOrders,
     routeOrders,
     history,
-    onOpen: (o: { rowId: string }) => setSelectedId(o.rowId),
+    // Ambos setState caen en el mismo lote de React, así que el primer render tras abrir
+    // ya ve `freshSettledFor === null`. El reset es imprescindible para reabrir el MISMO
+    // pedido: sin él, la marca seguiría coincidiendo y la guarda nacería caída.
+    onOpen: (o: { rowId: string }) => {
+      setFreshSettledFor(null)
+      setSelectedId(o.rowId)
+    },
     selected,
     detailItems,
     detailProofUrl,

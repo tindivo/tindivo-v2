@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tindivo UI Kit — Propuesta A+ Refinada</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">
+  <style>
+    /* ───────────────────────────────────────────────────────────
+       TOKENS A+ REFINADA (inspirada en tindivo-delivery)
+       ─────────────────────────────────────────────────────────── */
+    :root {
+      /* Surfaces */
+      --surface: #fbfaf7;
+      --surface-container-lowest: #ffffff;
+      --surface-container-low: #f4f3ef;
+      --surface-container: #eeece7;
+      --surface-container-high: #e7e4dd;
+
+      /* Primary (naranja Tindivo refinado) */
+      --primary: #b43c1f;
+      --on-primary: #ffffff;
+      --primary-container: #f26241;
+      --on-primary-container: #ffffff;
+      --primary-fixed: #ffe1d5;
+      --inverse-primary: #ffb59d;
+
+      /* Secondary / neutrals */
+      --secondary: #5f5e5e;
+      --on-secondary: #ffffff;
+      --secondary-container: #e2dfde;
+      --on-secondary-container: #636262;
+
+      /* Tertiary */
+      --tertiary: #b45309;
+      --on-tertiary: #ffffff;
+      --tertiary-container: #f59e0b;
+
+      /* On-surface */
+      --on-surface: #17201c;
+      --on-surface-variant: #53605c;
+      --on-background: #1a1c1b;
+
+      /* Outlines */
+      --outline: #7a857f;
+      --outline-variant: #d9ded7;
+
+      /* Estados */
+      --success: #059669;
+      --warning: #eab308;
+      --danger: #ba1a1a;
+      --info: #3b82f6;
+
+      /* Sombras tintadas (nunca grises puros) */
+      --shadow-1: 0 4px 20px rgba(171, 53, 0, 0.04);
+      --shadow-2: 0 10px 40px rgba(0, 0, 0, 0.06);
+      --shadow-3: 0 20px 60px rgba(0, 0, 0, 0.08);
+      --shadow-primary: 0 4px 20px rgba(171, 53, 0, 0.2);
+      --shadow-primary-hover: 0 10px 40px rgba(255, 107, 53, 0.3);
+
+      /* Glass */
+      --glass-bg: rgba(255, 255, 255, 0.72);
+      --glass-border: rgba(180, 60, 31, 0.12);
+
+      /* Motion */
+      --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+      --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: 'Manrope', system-ui, sans-serif;
+      background: var(--surface);
+      color: var(--on-surface);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .material { font-family: 'Material Symbols Rounded'; font-weight: normal; font-style: normal; font-size: 20px; line-height: 1; }
+
+    .page { max-width: 1200px; margin: 0 auto; padding: 40px 24px; }
+    h1 { font-size: 44px; font-weight: 800; letter-spacing: -0.035em; margin: 0 0 8px; }
+    h2 { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; margin: 56px 0 20px; }
+    h3 { font-size: 18px; font-weight: 700; margin: 32px 0 12px; }
+    p.lead { font-size: 17px; color: var(--on-surface-variant); margin: 0 0 32px; max-width: 720px; }
+
+    .intro {
+      background: var(--surface-container-lowest);
+      border-radius: 28px;
+      padding: 32px;
+      border: 1px solid var(--outline-variant);
+      box-shadow: var(--shadow-1);
+      margin-bottom: 48px;
+    }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--on-surface-variant);
+      margin: 40px 0 14px;
+    }
+
+    .row { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
+    .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; }
+
+    .swatch {
+      width: 76px; height: 76px; border-radius: 18px;
+      display: flex; flex-direction: column; justify-content: flex-end; padding: 8px;
+      font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.95);
+      box-shadow: var(--shadow-1);
+    }
+    .swatch.light { color: var(--on-surface); border: 1px solid var(--outline-variant); }
+
+    /* ── Componentes A+ ── */
+
+    /* Button */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      font-family: inherit; font-weight: 700; font-size: 15px; letter-spacing: 0.01em;
+      border: none; cursor: pointer;
+      transition: all 200ms var(--ease-out);
+    }
+    .btn:active { transform: scale(0.96); }
+    .btn-primary {
+      background: linear-gradient(135deg, #ff6b35 0%, #f26241 100%);
+      color: var(--on-primary);
+      box-shadow: var(--shadow-primary);
+    }
+    .btn-primary:hover { box-shadow: var(--shadow-primary-hover); transform: translateY(-1px); }
+    .btn-secondary {
+      background: var(--surface-container-lowest);
+      color: var(--on-surface);
+      border: 1px solid var(--outline-variant);
+      box-shadow: var(--shadow-1);
+    }
+    .btn-secondary:hover { box-shadow: var(--shadow-2); }
+    .btn-ghost { background: transparent; color: var(--primary); }
+    .btn-ghost:hover { background: var(--primary-fixed); }
+    .btn-md { height: 48px; padding: 0 24px; border-radius: 16px; }
+    .btn-lg { height: 56px; padding: 0 28px; border-radius: 18px; font-size: 16px; }
+    .btn-icon { width: 44px; height: 44px; border-radius: 14px; padding: 0; }
+
+    /* Input */
+    .input {
+      width: 100%; height: 52px;
+      border: 1.5px solid var(--outline-variant); border-radius: 16px;
+      background: var(--surface-container-lowest);
+      padding: 0 16px;
+      font-family: inherit; font-size: 15px; color: var(--on-surface);
+      transition: all 200ms var(--ease-out);
+    }
+    .input::placeholder { color: var(--on-surface-variant); opacity: 0.6; }
+    .input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(180, 60, 31, 0.1);
+    }
+
+    /* Card */
+    .card {
+      background: var(--surface-container-lowest);
+      border: 1px solid rgba(217, 222, 215, 0.6);
+      border-radius: 24px;
+      box-shadow: var(--shadow-1);
+      transition: all 300ms var(--ease-out);
+    }
+    .card:hover { box-shadow: var(--shadow-2); transform: translateY(-2px); }
+    .card-body { padding: 20px; }
+
+    /* Badge */
+    .badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 12px; border-radius: 999px;
+      font-size: 12px; font-weight: 700; letter-spacing: 0.01em;
+    }
+    .badge-brand { background: var(--primary-fixed); color: var(--primary); }
+    .badge-success { background: #DCFCE7; color: #166534; }
+    .badge-warning { background: #FEF3C7; color: #92400E; }
+    .badge-danger { background: #FEE2E2; color: #991B1B; }
+
+    /* Status chip */
+    .status-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 10px; border-radius: 999px;
+      font-size: 12px; font-weight: 700;
+      border: 1px solid var(--outline-variant);
+      background: var(--surface-container-lowest);
+      color: var(--on-surface-variant);
+    }
+    .status-dot { width: 7px; height: 7px; border-radius: 999px; }
+
+    /* Phone mockup */
+    .phone {
+      width: 380px;
+      background: var(--surface);
+      border-radius: 40px;
+      padding: 24px;
+      box-shadow: var(--shadow-3);
+      margin: 24px auto 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Glass top bar */
+    .glass-bar {
+      position: absolute; top: 0; left: 0; right: 0; z-index: 10;
+      height: 72px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.78) 100%);
+      backdrop-filter: blur(24px) saturate(160%);
+      -webkit-backdrop-filter: blur(24px) saturate(160%);
+      border-bottom: 1px solid var(--glass-border);
+      border-bottom-left-radius: 24px;
+      border-bottom-right-radius: 24px;
+      box-shadow: 0 8px 28px -10px rgba(18, 38, 32, 0.12), 0 4px 12px -4px rgba(18, 38, 32, 0.06);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 20px;
+    }
+    .glass-bar-title {
+      font-size: 20px; font-weight: 800; color: var(--primary);
+      text-shadow: 0 1px 0 rgba(255,255,255,0.6), 0 2px 14px rgba(242,98,65,0.15);
+    }
+    .glass-bar-dot {
+      width: 7px; height: 7px; border-radius: 999px;
+      background: linear-gradient(135deg, #F26241 0%, #FF9B63 100%);
+      box-shadow: 0 0 0 3px rgba(242, 98, 65, 0.16), 0 2px 8px rgba(242, 98, 65, 0.35);
+      animation: pulse 2.5s ease-in-out infinite;
+    }
+
+    /* Business card */
+    .biz-card {
+      display: flex; align-items: center; gap: 16px;
+      background: var(--surface-container-lowest);
+      border-radius: 24px;
+      padding: 16px;
+      border: 1px solid rgba(217, 222, 215, 0.6);
+      box-shadow: var(--shadow-1);
+      transition: all 300ms var(--ease-out);
+      cursor: pointer;
+    }
+    .biz-card:hover { box-shadow: var(--shadow-2); transform: translateY(-2px); }
+    .biz-img {
+      width: 72px; height: 72px; border-radius: 20px;
+      background: linear-gradient(135deg, #ff6b35 0%, #1a1614 130%);
+      display: grid; place-items: center; color: white; font-size: 28px;
+      box-shadow: var(--shadow-1);
+    }
+
+    /* Menu item */
+    .menu-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 16px; gap: 12px;
+      background: var(--surface-container-lowest);
+      border: 1px solid rgba(217, 222, 215, 0.5);
+      border-radius: 20px;
+      box-shadow: var(--shadow-1);
+    }
+    .menu-thumb {
+      width: 56px; height: 56px; border-radius: 16px;
+      background: #f4f3ef; display: grid; place-items: center;
+      color: var(--primary); font-size: 22px;
+    }
+
+    /* Floating CTA */
+    .fab-cta {
+      position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+      display: flex; align-items: center; gap: 12px;
+      height: 56px; padding: 0 24px;
+      background: linear-gradient(135deg, #ff6b35 0%, #f26241 100%);
+      color: white; border-radius: 999px;
+      font-weight: 700; font-size: 16px;
+      box-shadow: 0 12px 32px rgba(255, 107, 53, 0.35), 0 4px 12px rgba(171, 53, 0, 0.15);
+      border: none; cursor: pointer;
+      transition: all 200ms var(--ease-out);
+    }
+    .fab-cta:active { transform: translateX(-50%) scale(0.96); }
+
+    /* Animations */
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(242, 98, 65, 0.35); }
+      50% { box-shadow: 0 0 0 10px rgba(242, 98, 65, 0); }
+    }
+    @keyframes reveal {
+      from { opacity: 0; transform: translateY(10px) scale(0.985); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .reveal { animation: reveal 320ms var(--ease-out); }
+
+    .note {
+      font-size: 13px; color: var(--on-surface-variant);
+      margin-top: 32px; padding: 18px;
+      background: var(--surface-container-low);
+      border-radius: 18px; border: 1px solid var(--outline-variant);
+    }
+    code { font-family: ui-monospace, monospace; font-size: 13px; background: var(--surface-container); padding: 2px 6px; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>Tindivo UI Kit</h1>
+    <p class="lead">Propuesta A+ Refinada: mantiene la calidez de barrio de Tindivo e incorpora lo mejor del design system anterior — sombras tintadas, glassmorphism, Material Symbols, animaciones con propósito y gradientes naranja.</p>
+
+    <div class="intro">
+      <h3>Tokens refinados</h3>
+      <div class="row">
+        <div class="swatch" style="background:#f26241">primary-container</div>
+        <div class="swatch" style="background:#b43c1f">primary</div>
+        <div class="swatch" style="background:#ffe1d5;color:#b43c1f">primary-fixed</div>
+        <div class="swatch light" style="background:#fbfaf7">surface</div>
+        <div class="swatch light" style="background:#ffffff">surface-lowest</div>
+        <div class="swatch light" style="background:#f4f3ef">surface-low</div>
+        <div class="swatch" style="background:#17201c">on-surface</div>
+        <div class="swatch" style="background:#059669">success</div>
+      </div>
+    </div>
+
+    <h2>1. Tipografía</h2>
+    <div class="intro" style="margin-bottom:24px">
+      <div style="font-size:40px;font-weight:800;letter-spacing:-0.035em;line-height:1.05">Buenas noches,<br>María 🍕</div>
+      <div style="font-size:24px;font-weight:700;letter-spacing:-0.02em;margin-top:16px">Títulos de sección</div>
+      <div style="font-size:17px;font-weight:400;color:var(--on-surface-variant);margin-top:8px">Body default con buen espaciado y legibilidad.</div>
+      <div style="font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--on-surface-variant);margin-top:16px">Label uppercase</div>
+      <div style="font-family:ui-monospace,monospace;font-size:14px;font-weight:600;margin-top:8px">#TND-1234 · S/ 42.00</div>
+    </div>
+
+    <h2>2. Botones</h2>
+    <div class="intro" style="margin-bottom:24px">
+      <div class="row">
+        <button class="btn btn-primary btn-md"><span class="material">shopping_bag</span> Primary md</button>
+        <button class="btn btn-primary btn-lg">Primary lg</button>
+        <button class="btn btn-secondary btn-md">Secondary</button>
+        <button class="btn btn-ghost btn-md">Ghost</button>
+        <button class="btn btn-primary btn-icon"><span class="material">arrow_forward</span></button>
+      </div>
+    </div>
+
+    <h2>3. Inputs & Badges</h2>
+    <div class="intro" style="margin-bottom:24px">
+      <input class="input" placeholder="Tu dirección de entrega" style="max-width:360px">
+      <div class="row" style="margin-top:16px">
+        <span class="badge badge-brand"><span class="material">schedule</span> 25-35 min</span>
+        <span class="badge badge-success"><span class="material">check_circle</span> Abierto</span>
+        <span class="badge badge-warning"><span class="material">warning</span> Demorado</span>
+        <span class="badge badge-danger"><span class="material">priority_high</span> Urgente</span>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <span class="status-chip"><span class="status-dot" style="background:var(--success)"></span> En camino</span>
+        <span class="status-chip"><span class="status-dot" style="background:var(--warning)"></span> Preparando</span>
+        <span class="status-chip"><span class="status-dot" style="background:var(--danger)"></span> Cancelado</span>
+      </div>
+    </div>
+
+    <h2>4. Cards</h2>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-body">
+          <div style="font-size:13px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--on-surface-variant);margin-bottom:8px">Negocio destacado</div>
+          <div style="font-size:20px;font-weight:800;margin-bottom:4px">Pollería El Sabor</div>
+          <div style="font-size:14px;color:var(--on-surface-variant)">Pollo a la brasa · Delivery 25 min</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-body">
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,#ff6b35,#f26241);display:grid;place-items:center;color:white"><span class="material">restaurant</span></div>
+            <div>
+              <div style="font-weight:800">Pedido #TND-1234</div>
+              <div style="font-size:13px;color:var(--on-surface-variant)">En preparación · Llega ~20 min</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2>5. Vista móvil ejemplo</h2>
+    <div class="phone">
+      <div class="glass-bar">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="material" style="color:var(--on-surface-variant)">arrow_back</span>
+          <span class="glass-bar-title">Tindivo</span>
+          <span class="glass-bar-dot"></span>
+        </div>
+        <span class="material" style="color:var(--on-surface-variant)">person</span>
+      </div>
+
+      <div style="padding-top:88px">
+        <div style="font-size:36px;font-weight:800;letter-spacing:-0.035em;line-height:1.05;margin-bottom:24px" class="reveal">Buenas noches,<br>María 🍕</div>
+
+        <div class="biz-card reveal" style="animation-delay:60ms">
+          <div class="biz-img"><span class="material">storefront</span></div>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:800;font-size:17px">Pollería El Sabor</div>
+            <div style="font-size:13px;color:var(--on-surface-variant);margin-top:2px">Pollo a la brasa · 25 min</div>
+          </div>
+          <span class="badge badge-success">Abierto</span>
+        </div>
+
+        <div style="margin-top:20px">
+          <div style="font-size:15px;font-weight:700;margin-bottom:12px">Menú destacado</div>
+          <div class="menu-item reveal" style="margin-bottom:10px;animation-delay:120ms">
+            <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0">
+              <div class="menu-thumb"><span class="material">lunch_dining</span></div>
+              <div>
+                <div style="font-weight:800;font-size:15px">1/2 Pollo + papas</div>
+                <div style="font-size:12px;color:var(--on-surface-variant)">Con ensalada y cremas</div>
+              </div>
+            </div>
+            <div style="font-weight:800;white-space:nowrap">S/ 42.00</div>
+          </div>
+          <div class="menu-item reveal" style="animation-delay:180ms">
+            <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0">
+              <div class="menu-thumb"><span class="material">local_pizza</span></div>
+              <div>
+                <div style="font-weight:800;font-size:15px">Salchipapa familiar</div>
+                <div style="font-size:12px;color:var(--on-surface-variant)">Para 3 personas</div>
+              </div>
+            </div>
+            <div style="font-weight:800;white-space:nowrap">S/ 28.00</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2>6. Estados & feedback</h2>
+    <div class="intro" style="margin-bottom:24px">
+      <div class="row">
+        <div style="width:56px;height:56px;border-radius:999px;background:linear-gradient(135deg,#ff6b35,#f26241);display:grid;place-items:center;color:white;box-shadow:0 0 0 4px rgba(242,98,65,0.2);animation:pulse 2.2s ease-in-out infinite"><span class="material">two_wheeler</span></div>
+        <div style="width:56px;height:56px;border-radius:999px;background:var(--surface-container-lowest);display:grid;place-items:center;color:var(--primary);box-shadow:var(--shadow-1);transition:all 200ms var(--ease-out)" onmousedown="this.style.transform='scale(0.92)'" onmouseup="this.style.transform='scale(1)'" onmouseleave="this.style.transform='scale(1)'"><span class="material">add</span></div>
+        <div class="card" style="width:180px;padding:16px;display:flex;align-items:center;gap:10px">
+          <span class="material" style="color:var(--success)">check_circle</span>
+          <span style="font-weight:700;font-size:14px">Añadido al carrito</span>
+        </div>
+      </div>
+    </div>
+
+    <h2>7. Glass & elevación</h2>
+    <div class="intro" style="margin-bottom:24px;background:linear-gradient(135deg,#f4f3ef 0%,#eeece7 100%)">
+      <div style="padding:20px;border-radius:24px;background:rgba(255,255,255,0.72);backdrop-filter:blur(24px) saturate(160%);border:1px solid var(--glass-border);box-shadow:var(--shadow-1)">
+        <div style="font-weight:800">Glass panel</div>
+        <div style="font-size:13px;color:var(--on-surface-variant)">Usado en top-bars, bottom-sheets y modales.</div>
+      </div>
+    </div>
+
+    <div class="note">
+      <strong>Próximo paso:</strong> implementar estos tokens en <code>packages/ui/src/theme.css</code>, actualizar los componentes atómicos de <code>@tindivo/ui</code> (Button, Card, Input, Badge, Toast) y aplicar el nuevo estilo en todas las páginas de <code>apps/customer</code>. El icon set se migra de SVGs inline a Material Symbols Rounded vía font.
+    </div>
+  </div>
+</body>
+</html>
