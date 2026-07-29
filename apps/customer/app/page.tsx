@@ -53,7 +53,7 @@ export default function Home() {
         </>
       )}
 
-      <div className="px-5 pt-6 pb-10 text-center">
+      <div className="px-5 pt-6 pb-24 text-center">
         <div className="t-eyebrow text-[10px] tracking-[0.2em] opacity-70">tindivo · piloto</div>
         <div className="mt-1 text-[11px] text-ink-subtle">
           Pedidos directos desde San Jacinto. Hecho en Áncash.

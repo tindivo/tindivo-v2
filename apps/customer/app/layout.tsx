@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Bricolage_Grotesque, Geist, JetBrains_Mono } from 'next/font/google'
 import type { ReactNode } from 'react'
 import { AuthOnboardingHost } from '@/components/auth-onboarding/host'
+import { BottomNav } from '@/components/bottom-nav'
 import { PushManager } from '@/components/push-manager'
 import { CartHydrator } from '@/lib/cart'
 import './globals.css'
@@ -50,11 +51,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           rel="stylesheet"
         />
       </head>
-      <body className="min-h-dvh bg-surface font-sans text-ink antialiased">
+      <body className="min-h-dvh bg-surface pb-16 font-sans text-ink antialiased lg:pb-0">
         {children}
         <CartHydrator />
         <PushManager />
         <AuthOnboardingHost />
+        <BottomNav />
       </body>
     </html>
   )

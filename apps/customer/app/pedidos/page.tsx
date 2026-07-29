@@ -116,7 +116,7 @@ export default function PedidosPage() {
 
   if (!ready) {
     return (
-      <main className="mx-auto min-h-dvh max-w-[768px] bg-surface pb-16">
+      <main className="mx-auto min-h-dvh max-w-[768px] bg-surface pb-4">
         <ScreenHeader title="Historial de pedidos" onBack={() => router.push('/cuenta')} />
         <div className="px-4 pt-4">
           <div className="h-40 animate-pulse rounded-[20px] bg-card" />

@@ -140,3 +140,18 @@ export const AppealListResponseSchema = z.object({
   perPage: z.number().int().min(1).max(100),
 })
 export type AppealListResponse = z.infer<typeof AppealListResponseSchema>
+
+/**
+ * DTO para el listado de apelaciones del cliente autenticado.
+ * Incluye el short_id del pedido para poder linkear al detalle sin joins extra en el cliente.
+ */
+export const CustomerAppealListItemDtoSchema = CustomerAppealDtoSchema.extend({
+  orderShortId: z.string().nullable(),
+})
+export type CustomerAppealListItemDto = z.infer<typeof CustomerAppealListItemDtoSchema>
+
+export const CustomerAppealListResponseSchema = z.object({
+  items: z.array(CustomerAppealListItemDtoSchema),
+  total: z.number().int().min(0),
+})
+export type CustomerAppealListResponse = z.infer<typeof CustomerAppealListResponseSchema>
