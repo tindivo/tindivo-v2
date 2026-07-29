@@ -24,7 +24,7 @@ export function CartLineItem({ line, isFirst }: CartLineItemProps) {
 
   return (
     <div
-      className={`flex items-start gap-3 pt-3.5 ${!isFirst ? 'mt-3.5 border-t border-ink/5' : ''}`}
+      className={`flex items-start gap-3 pt-3.5 ${!isFirst ? 'mt-3.5 border-t border-ink/[0.04]' : ''}`}
     >
       {line.imageUrl ? (
         <img
@@ -58,8 +58,8 @@ export function CartLineItem({ line, isFirst }: CartLineItemProps) {
         {line.modifiers.length > 0 && (
           <div className="mt-1 flex flex-col gap-0.5">
             {line.modifiers.map((m) => (
-              <div key={`${line.key}-${m.optionId}`} className="text-[12px] text-ink/60">
-                <span className="text-ink/40">{m.groupName}: </span>
+              <div key={`${line.key}-${m.optionId}`} className="text-[12px] text-ink-muted">
+                <span className="text-ink-subtle">{m.groupName}: </span>
                 {m.optionName}
               </div>
             ))}
@@ -67,7 +67,7 @@ export function CartLineItem({ line, isFirst }: CartLineItemProps) {
         )}
 
         {line.note && (
-          <div className="mt-1.5 rounded-lg bg-brand/7 px-2.5 py-1.5 text-[12px] text-brand-dark">
+          <div className="mt-1.5 rounded-lg bg-brand-soft px-2.5 py-1.5 text-[12px] text-brand-dark">
             <span className="font-semibold">Nota: </span>
             {line.note}
           </div>
@@ -97,9 +97,9 @@ export function CartLineItem({ line, isFirst }: CartLineItemProps) {
           <button
             type="button"
             onClick={() => cart.remove(line.key)}
-            className="rounded-lg bg-danger/6 px-2.5 py-1.5 font-medium text-[12px] text-danger"
+            className="inline-flex items-center gap-1 rounded-full bg-danger-soft px-3 py-1.5 font-semibold text-[12px] text-danger transition-colors hover:bg-danger/10"
           >
-            Eliminar
+            <Icon name="delete" size={14} /> Eliminar
           </button>
         </div>
       </div>

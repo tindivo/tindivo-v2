@@ -86,7 +86,7 @@ export function CartCtas({ layout, onNavigate }: CartCtasProps) {
           {readinessLoading ? 'Cargando…' : 'Ir a pagar'}
         </button>
         {closed && (
-          <p className={`text-[12px] text-ink/55 ${block ? 'mt-1.5' : ''}`}>
+          <p className={`text-[12px] text-ink-muted ${block ? 'mt-1.5' : ''}`}>
             El restaurante está cerrado ahora.
           </p>
         )}
