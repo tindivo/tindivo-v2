@@ -2,53 +2,51 @@ import { Icon } from '@tindivo/ui'
 
 export function HomeHero() {
   return (
-    <section className="px-4 pt-2 pb-4">
-      {/* Banner principal con imagen de placeholder para destacar una promo o valor */}
-      <div className="relative overflow-hidden rounded-[22px] bg-gradient-to-br from-brand via-brand-dark to-ink px-5 pt-5 pb-5 text-white shadow-glow-brand-lg lg:px-8 lg:pt-8 lg:pb-8">
-        <div className="pointer-events-none absolute -right-10 -top-10 h-[180px] w-[180px] rounded-full bg-white/10 blur-3xl" />
+    <section className="w-full bg-surface px-5 pt-2 pb-4">
+      {/* Banner con gradiente negro-naranja cálido */}
+      <div className="relative overflow-hidden rounded-[22px] bg-gradient-to-br from-brand via-[#c2410c] to-[#2a1205] px-5 pt-6 pb-6 text-white shadow-glow-brand-lg lg:px-8 lg:pt-8 lg:pb-8">
+        <div className="pointer-events-none absolute -right-6 -top-6 h-[160px] w-[160px] rounded-full bg-white/10 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-10 -left-10 h-[140px] w-[140px] rounded-full bg-brand/20 blur-3xl" />
 
         <div className="relative flex items-center gap-5">
           <div className="min-w-0 flex-1">
-            <div className="mb-2 inline-block rounded-full border border-white/10 bg-white/15 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.12em] backdrop-blur-sm">
+            <div className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/10 px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.12em] backdrop-blur-sm">
+              <span className="h-1.5 w-1.5 rounded-full bg-white" />
               Solo en Tindivo
             </div>
-            <h2 className="t-display text-[22px] leading-[1.1] lg:text-[26px]">
+            <h2 className="t-display text-[24px] leading-[1.05] lg:text-[30px]">
               Tu comida favorita,
               <br />
               en minutos.
             </h2>
-            <p className="mt-2 text-[13px] text-white/80">
+            <p className="mt-2 max-w-[280px] text-[13px] leading-relaxed text-white/80">
               Paga al recibir o con Yape/Plin. Sin complicaciones.
             </p>
           </div>
 
-          {/* Placeholder visual: aquí puedes poner una imagen real de promo/comida */}
+          {/* Placeholder de imagen promo */}
           <div className="hidden shrink-0 sm:block">
-            <div className="t-ph-image relative h-[110px] w-[110px] rounded-[18px] lg:h-[130px] lg:w-[130px]">
+            <div className="relative h-[110px] w-[110px] overflow-hidden rounded-[18px] bg-white/15 ring-1 ring-inset ring-white/20 lg:h-[130px] lg:w-[130px]">
               <div className="absolute inset-0 flex items-center justify-center">
-                <Icon name="local_dining" size={48} className="text-ink/20" />
+                <Icon name="local_dining" size={48} className="text-white/40" />
               </div>
-              <span className="ph-label absolute bottom-2 left-2">Imagen promo</span>
+              <span className="absolute bottom-2 left-2 rounded bg-white/80 px-1.5 py-0.5 font-mono text-[9px] font-medium uppercase tracking-wider text-ink-subtle">
+                Imagen promo
+              </span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Chips de valor: dan contexto y llenan visualmente el home */}
-      <div className="mt-3 flex flex-wrap gap-2">
-        <ValuePill icon="schedule" label="Rápido" />
-        <ValuePill icon="payments" label="Paga como quieras" />
-        <ValuePill icon="storefront" label="Negocios locales" />
+      {/* Línea de confianza minimalista */}
+      <div className="mt-3 flex items-center gap-4 text-[12px] font-medium text-ink-muted">
+        <span className="inline-flex items-center gap-1">
+          <Icon name="schedule" size={14} className="text-brand" /> Rápido
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <Icon name="payments" size={14} className="text-brand" /> Paga como quieras
+        </span>
       </div>
     </section>
-  )
-}
-
-function ValuePill({ icon, label }: { icon: string; label: string }) {
-  return (
-    <div className="inline-flex items-center gap-1.5 rounded-full border border-ink/[0.06] bg-card px-3 py-1.5 text-[13px] font-medium text-ink shadow-elev-1">
-      <Icon name={icon} size={16} className="text-brand" />
-      {label}
-    </div>
   )
 }
