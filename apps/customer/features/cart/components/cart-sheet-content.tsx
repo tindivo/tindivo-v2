@@ -3,6 +3,7 @@ import { BottomSheet } from '@/components/ui'
 import { CartCtas } from '@/features/cart/components/cart-ctas'
 import { CartEmpty } from '@/features/cart/components/cart-empty'
 import { CartLineList } from '@/features/cart/components/cart-line-item'
+import { CartValidationBanner } from '@/features/cart/components/cart-validation-banner'
 import { soles } from '@/features/cart/lib/format'
 import { useCart } from '@/lib/cart'
 
@@ -29,6 +30,7 @@ export function CartSheetContent({ onClose }: CartSheetContentProps) {
                 <Icon name="store" size={18} /> {cart.businessName}
               </div>
             )}
+            <CartValidationBanner />
             <CartLineList lines={lines} />
           </>
         )}

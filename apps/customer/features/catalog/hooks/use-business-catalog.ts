@@ -4,6 +4,7 @@ import { type ApiEnvelope, ApiError } from '@tindivo/api-client'
 import { useEffect, useState } from 'react'
 import type { BusinessDetail } from '@/features/catalog/types'
 import { api } from '@/lib/api'
+import { useCart } from '@/lib/cart'
 
 export function useBusinessCatalog(id: string) {
   const [data, setData] = useState<BusinessDetail | null>(null)
@@ -16,6 +17,11 @@ export function useBusinessCatalog(id: string) {
       .then((res) => {
         if (!on) return
         setData(res.data)
+        // Valida el carrito persistido contra el catálogo recién cargado.
+        const cart = useCart.getState()
+        if (cart.businessId === res.data.business.id && cart.lines.length > 0) {
+          cart.validateAgainst(res.data)
+        }
       })
       .catch(
         (e) =>

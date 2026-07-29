@@ -27,6 +27,8 @@ export function useCheckoutValidation(checkout: CheckoutViewModel): UseCheckoutV
     total,
     cashChoice,
     cashCustom,
+    cart,
+    validating,
   } = checkout
 
   const cashAmount = useMemo(
@@ -45,6 +47,16 @@ export function useCheckoutValidation(checkout: CheckoutViewModel): UseCheckoutV
 
   const validate = useCallback(() => {
     setError(null)
+    if (cart.hasInvalidLines()) {
+      setError(
+        'Tu bolsa tiene productos que ya no están disponibles o cambiaron de precio. Revisa antes de continuar.',
+      )
+      return false
+    }
+    if (validating) {
+      setError('Estamos verificando tu bolsa con el menú actual. Espera un momento.')
+      return false
+    }
     if (name.trim().length === 0) {
       setError('Ingresa tu nombre')
       return false
@@ -82,6 +94,8 @@ export function useCheckoutValidation(checkout: CheckoutViewModel): UseCheckoutV
     return true
   }, [
     setError,
+    cart,
+    validating,
     name,
     deliveryMethod,
     line,

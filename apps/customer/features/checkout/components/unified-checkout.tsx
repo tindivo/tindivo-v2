@@ -4,6 +4,7 @@ import type { PaymentIntent } from '@tindivo/contracts'
 import { cn, Icon } from '@tindivo/ui'
 import { useState } from 'react'
 import { OtpVerificationSheet } from '@/components/otp-verification-sheet'
+import { CartValidationBanner } from '@/features/cart/components/cart-validation-banner'
 import { CashSelector } from '@/features/checkout/components/cash-selector'
 import { OrderDetail } from '@/features/checkout/components/order-detail'
 import type { CheckoutViewModel } from '@/features/checkout/hooks/use-checkout'
@@ -51,6 +52,7 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
     selectedAddress,
     cartHydrated,
     reloadAddresses,
+    validating,
   } = checkout
 
   const { cashAmount, cashChange, validate } = validation
@@ -59,12 +61,22 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
   const [showAddressSelector, setShowAddressSelector] = useState(false)
   const [showOrderDetail, setShowOrderDetail] = useState(false)
 
-  const ctaDisabled = loading || locating || !cartHydrated || cart.count() === 0
+  const ctaDisabled =
+    loading ||
+    locating ||
+    !cartHydrated ||
+    cart.count() === 0 ||
+    cart.hasInvalidLines() ||
+    validating
   const ctaLabel = locating
     ? 'Verificando ubicación…'
-    : loading
-      ? 'Enviando…'
-      : `Confirmar pedido · ${soles(total)}`
+    : validating
+      ? 'Verificando menú…'
+      : loading
+        ? 'Enviando…'
+        : cart.hasInvalidLines()
+          ? 'Revisa tu bolsa'
+          : `Confirmar pedido · ${soles(total)}`
 
   function handlePaymentSelect(value: PaymentIntent) {
     setPayment(value)
@@ -81,6 +93,7 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
       </div>
 
       <div className="px-4 pt-3">
+        <CartValidationBanner />
         {/* Método de entrega */}
         <Section title="Entrega">
           {PICKUP_ENABLED && (
