@@ -35,11 +35,11 @@ import {
   backdateTimestamp,
   cleanup,
   localClient,
+  type OrderTimestamps,
   readOrderTimestamps,
+  type SeededOrder,
   seedPrepaidOrder,
   setOrderStatus,
-  type OrderTimestamps,
-  type SeededOrder,
 } from './helpers/local-db'
 
 const MINUTES_BACK = 10

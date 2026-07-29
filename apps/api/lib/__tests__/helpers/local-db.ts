@@ -214,7 +214,9 @@ export async function backdateTimestamp(
   fromDbTimestamp: string,
   minutesBack: number,
 ): Promise<string> {
-  const backdated = new Date(new Date(fromDbTimestamp).getTime() - minutesBack * 60_000).toISOString()
+  const backdated = new Date(
+    new Date(fromDbTimestamp).getTime() - minutesBack * 60_000,
+  ).toISOString()
   const { error } = await localClient
     .from('orders')
     .update({ [column]: backdated })
@@ -225,10 +227,7 @@ export async function backdateTimestamp(
 
 // ── Cambiar el status de un pedido (dispara el trigger) ───────────────────────
 export async function setOrderStatus(orderId: string, status: string): Promise<void> {
-  const { error } = await localClient
-    .from('orders')
-    .update({ status })
-    .eq('id', orderId)
+  const { error } = await localClient.from('orders').update({ status }).eq('id', orderId)
   if (error) throw new Error(`setOrderStatus(${status}) failed: ${error.message}`)
 }
 

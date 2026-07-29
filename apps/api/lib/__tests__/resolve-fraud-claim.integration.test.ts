@@ -18,9 +18,9 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import {
   cleanup,
   localClient,
+  type SeedResult,
   seedFraudClaim,
   sumPendingLedgerDebt,
-  type SeedResult,
 } from './helpers/local-db'
 
 describe('resolve_fraud_claim — invariante contable (integración)', () => {
