@@ -24,7 +24,7 @@ export function SupportLink({ orderShortId }: { orderShortId?: string }) {
       className="inline-flex items-center gap-1.5 text-[13px] text-ink-muted"
     >
       <span aria-hidden="true">💬</span>
-      ¿Algún problema? <span className="font-semibold text-[#1A8050] underline">Escríbenos</span>
+      ¿Algún problema? <span className="font-semibold text-success underline">Escríbenos</span>
     </a>
   )
 }

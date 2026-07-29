@@ -9,7 +9,7 @@ interface TrackingTimelineProps {
 
 export function TrackingTimeline({ data, currentIdx }: TrackingTimelineProps) {
   return (
-    <div className="mt-3.5 rounded-[22px] border border-ink/[0.04] bg-white px-[18px] py-5 shadow-elev-1">
+    <div className="mt-3.5 rounded-[22px] border border-ink/[0.04] bg-card px-[18px] py-5 shadow-elev-1">
       {STEPS.map((s, i) => {
         const done = i < currentIdx
         const active = i === currentIdx
@@ -27,7 +27,7 @@ export function TrackingTimeline({ data, currentIdx }: TrackingTimelineProps) {
             <div
               className={`z-[1] flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-white ${
                 done || active ? 'bg-brand' : 'bg-ink/[0.06]'
-              } ${active ? 'shadow-[0_0_0_5px_rgba(242,98,65,0.18)]' : ''}`}
+              } ${active ? 'shadow-focus-ring' : ''}`}
             >
               {done ? (
                 <Icon name="check" size={16} filled />

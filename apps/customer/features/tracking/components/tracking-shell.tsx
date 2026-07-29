@@ -27,7 +27,7 @@ export function TrackingShell({ title, onBack, error, data, children }: Tracking
   if (!data) {
     return (
       <main className="mx-auto max-w-[768px] px-4 pt-12">
-        <div className="h-48 animate-pulse rounded-[22px] bg-white" />
+        <div className="h-48 animate-pulse rounded-[22px] bg-card" />
       </main>
     )
   }

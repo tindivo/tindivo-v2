@@ -11,7 +11,7 @@ export function TrackingItems({ data }: TrackingItemsProps) {
   const itemCount = data.items.length
 
   return (
-    <div className="mt-3.5 rounded-[22px] border border-[rgba(26,22,20,0.05)] bg-white px-[18px] py-4 lg:mt-0">
+    <div className="mt-3.5 rounded-[22px] border border-ink/[0.04] bg-card px-[18px] py-4 lg:mt-0">
       <div className="mb-3 flex items-center justify-between">
         <div className="t-eyebrow">Detalle</div>
         <div className="text-[12px] text-ink-subtle">
@@ -31,7 +31,7 @@ export function TrackingItems({ data }: TrackingItemsProps) {
           {(it.modifiers ?? []).map((m, mi) => (
             <div
               key={`item-${idx}-mod-${mi}-${m.name}`}
-              className="mt-0.5 flex justify-between pl-5 text-[12px] text-[rgba(26,22,20,0.5)]"
+              className="mt-0.5 flex justify-between pl-5 text-[12px] text-ink-subtle"
             >
               <span>{m.name}</span>
               {Number(m.price) > 0 && (
@@ -42,7 +42,7 @@ export function TrackingItems({ data }: TrackingItemsProps) {
         </div>
       ))}
 
-      <div className="my-2.5 h-px bg-[rgba(26,22,20,0.08)]" />
+      <div className="my-2.5 h-px bg-ink/[0.08]" />
 
       {data.driverName && (
         <div className="flex justify-between py-1 text-[13px] text-ink-muted">
