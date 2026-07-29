@@ -1,4 +1,4 @@
-import { Icon } from '@tindivo/ui'
+import { Badge, Icon } from '@tindivo/ui'
 import { labelEmoji } from '@/components/address-fields'
 import type { Address } from '@/features/account/types'
 
@@ -66,9 +66,9 @@ function AddressCard({
         <div className="flex items-center gap-1.5">
           <span className="font-semibold text-[14px] text-ink">{address.label}</span>
           {address.is_default && (
-            <span className="rounded-[5px] bg-brand-soft px-1.5 py-0.5 text-[9px] font-bold uppercase text-brand">
+            <Badge variant="brand" size="sm" className="uppercase tracking-wide">
               Por defecto
-            </span>
+            </Badge>
           )}
         </div>
         {address.line && <div className="text-[13px] font-medium text-ink">{address.line}</div>}

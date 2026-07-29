@@ -85,11 +85,11 @@ export function AddressSheet({ address, onClose, onSaved, onDelete }: AddressShe
         <button
           type="button"
           onClick={() => setIsDefault((d) => !d)}
-          className="flex w-full items-center gap-3 rounded-[14px] border border-border bg-white p-3.5 text-left"
+          className="flex w-full items-center gap-3 rounded-[14px] border border-border bg-card p-3.5 text-left"
         >
           <span
             className={`relative h-[22px] w-[38px] shrink-0 rounded-full transition-colors ${
-              isDefault ? 'bg-[#F97316]' : 'bg-black/15'
+              isDefault ? 'bg-brand' : 'bg-ink/[0.15]'
             }`}
           >
             <span
@@ -109,7 +109,7 @@ export function AddressSheet({ address, onClose, onSaved, onDelete }: AddressShe
           <button
             type="button"
             onClick={onDelete}
-            className="mt-3.5 w-full rounded-[14px] bg-[rgba(220,38,38,0.06)] px-4 py-3.5 font-semibold text-[14px] text-[#DC2626]"
+            className="mt-3.5 w-full rounded-[14px] bg-danger-soft px-4 py-3.5 font-semibold text-[14px] text-danger transition-colors hover:bg-danger/10"
           >
             Eliminar dirección
           </button>
