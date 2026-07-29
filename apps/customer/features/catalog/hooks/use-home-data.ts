@@ -76,14 +76,23 @@ export function useHomeData() {
     const loadActive = () => {
       supabase
         .from('orders')
-        .select('short_id,status')
+        .select('short_id,status,business_id,created_at')
         .in('status', ACTIVE_STATUSES)
         .order('created_at', { ascending: false })
         .limit(1)
         .then(({ data }) => {
           if (!active) return
           const o = data?.[0]
-          setActiveOrder(o ? { shortId: o.short_id, status: o.status } : null)
+          setActiveOrder(
+            o
+              ? {
+                  shortId: o.short_id,
+                  status: o.status,
+                  businessId: o.business_id,
+                  createdAt: o.created_at,
+                }
+              : null,
+          )
         })
     }
     loadActive()

@@ -79,4 +79,6 @@ export interface CatalogUser {
 export interface ActiveOrder {
   shortId: string
   status: string
+  businessId: string
+  createdAt: string
 }

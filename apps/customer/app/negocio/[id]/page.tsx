@@ -4,6 +4,7 @@ import { getOpenStatus } from '@tindivo/contracts'
 import Link from 'next/link'
 import { use, useEffect, useRef, useState } from 'react'
 import { CartSheet, CartSidebar } from '@/components/cart-sheet'
+import { ActiveOrderBlockBanner } from '@/features/catalog/components/active-order-block-banner'
 import { AddedToast } from '@/features/catalog/components/added-toast'
 import { BusinessHero } from '@/features/catalog/components/business-hero'
 import { CartReplaceSheet } from '@/features/catalog/components/cart-replace-sheet'
@@ -12,6 +13,7 @@ import { ClosedBanner } from '@/features/catalog/components/closed-banner'
 import { MenuSection } from '@/features/catalog/components/menu-section'
 import { ProductModal } from '@/features/catalog/components/product-modal'
 import { ScheduleRow } from '@/features/catalog/components/schedule-row'
+import { useActiveOrder } from '@/features/catalog/hooks/use-active-order'
 import { useBusinessCatalog } from '@/features/catalog/hooks/use-business-catalog'
 import { useCatalogCart } from '@/features/catalog/hooks/use-catalog-cart'
 import { useCatalogNow } from '@/features/catalog/hooks/use-catalog-now'
@@ -21,6 +23,7 @@ export default function NegocioPage({ params }: { params: Promise<{ id: string }
   const { id } = use(params)
   const now = useCatalogNow()
   const { data, error } = useBusinessCatalog(id)
+  const activeOrder = useActiveOrder()
   const [active, setActive] = useState('')
   const [cartOpen, setCartOpen] = useState(false)
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({})
@@ -34,6 +37,7 @@ export default function NegocioPage({ params }: { params: Promise<{ id: string }
     handleAdd,
     confirmReplace,
   } = useCatalogCart(data?.business.id, data?.business.name)
+  const isBlockedByActiveOrder = activeOrder?.businessId === id
 
   useEffect(() => {
     if (data && !active) setActive(data.categories[0]?.id ?? '')
@@ -72,6 +76,9 @@ export default function NegocioPage({ params }: { params: Promise<{ id: string }
   return (
     <main className="mx-auto min-h-dvh max-w-[768px] bg-surface pb-32 md:max-w-[860px] lg:grid lg:max-w-7xl lg:grid-cols-[1fr_380px] lg:items-start lg:gap-8 lg:px-6 lg:pt-6">
       <div className="lg:min-w-0">
+        {isBlockedByActiveOrder && (
+          <ActiveOrderBlockBanner order={activeOrder} businessName={business.name} />
+        )}
         <BusinessHero business={business} schedule={schedule} now={now} />
         <ScheduleRow schedule={schedule} now={now} />
         {closedForOrders && <ClosedBanner schedule={schedule} now={now} />}
@@ -83,7 +90,7 @@ export default function NegocioPage({ params }: { params: Promise<{ id: string }
             <MenuSection
               key={sec.id}
               category={sec}
-              disabled={closedForOrders}
+              disabled={closedForOrders || isBlockedByActiveOrder}
               sectionRef={(el) => {
                 sectionRefs.current[sec.id] = el
               }}
@@ -97,7 +104,7 @@ export default function NegocioPage({ params }: { params: Promise<{ id: string }
         <CartSidebar businessId={business.id} businessName={business.name} />
       </aside>
 
-      {count > 0 && (
+      {count > 0 && !isBlockedByActiveOrder && (
         <button
           type="button"
           onClick={() => setCartOpen(true)}
