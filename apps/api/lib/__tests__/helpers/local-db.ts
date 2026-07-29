@@ -258,6 +258,10 @@ export async function cleanup(seed: SeededOrder): Promise<void> {
   await localClient.from('business_charges').delete().eq('order_id', seed.orderId)
   await localClient.from('contingency_advances').delete().eq('order_id', seed.orderId)
   await localClient.from('fraud_coverage_claims').delete().eq('order_id', seed.orderId)
+  // `domain_events` referencia el pedido por `aggregate_id`, SIN foreign key, así que no
+  // cae por cascada al borrar la orden: hay que borrarlo explícitamente o cada corrida
+  // deja eventos huérfanos acumulándose (medido: 4 tras dos corridas de la suite).
+  await localClient.from('domain_events').delete().eq('aggregate_id', seed.orderId)
   await localClient.from('orders').delete().eq('id', seed.orderId)
   await localClient.from('businesses').delete().eq('id', seed.businessId)
   // `public.users` NO tiene FK hacia `auth.users` (verificado en pg_constraint), así que
