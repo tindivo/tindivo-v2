@@ -26,7 +26,7 @@ export function BusinessHero({ business, schedule, now }: BusinessHeroProps) {
         <div
           className="absolute inset-0"
           style={{
-            background: `linear-gradient(135deg, #${business.accent_color} 0%, #17201c 130%)`,
+            background: `linear-gradient(135deg, #${business.accent_color} 0%, #1a1614 130%)`,
           }}
         />
       )}

@@ -1,17 +1,30 @@
 import type { Metadata, Viewport } from 'next'
-import { Manrope } from 'next/font/google'
+import { Bricolage_Grotesque, Geist, JetBrains_Mono } from 'next/font/google'
 import type { ReactNode } from 'react'
 import { AuthOnboardingHost } from '@/components/auth-onboarding/host'
 import { PushManager } from '@/components/push-manager'
 import { CartHydrator } from '@/lib/cart'
 import './globals.css'
 
-// Tipografía única de la plataforma: Manrope con todos los pesos.
-// Se exponen tres variables para no romper los call sites existentes.
-const manrope = Manrope({
+// Sistema tipográfico del demo: Bricolage Grotesque para titulares,
+// Geist para cuerpo y JetBrains Mono para etiquetas/eyebrows.
+const bricolage = Bricolage_Grotesque({
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
-  variable: '--font-manrope',
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-bricolage',
+  display: 'swap',
+})
+
+const geist = Geist({
+  subsets: ['latin'],
+  variable: '--font-geist',
+  display: 'swap',
+})
+
+const jetbrains = JetBrains_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-jetbrains',
   display: 'swap',
 })
 
@@ -21,14 +34,14 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#f26241',
+  themeColor: '#f97316',
   width: 'device-width',
   initialScale: 1,
 }
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="es" className={manrope.variable}>
+    <html lang="es" className={`${bricolage.variable} ${geist.variable} ${jetbrains.variable}`}>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

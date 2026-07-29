@@ -142,7 +142,7 @@ export function MapPicker({
           style={{
             letterSpacing: '0.1em',
             zIndex: 1000,
-            fontFamily: 'var(--font-manrope), monospace',
+            fontFamily: 'var(--font-jetbrains), ui-monospace, monospace',
           }}
         >
           Arrastra para ajustar
