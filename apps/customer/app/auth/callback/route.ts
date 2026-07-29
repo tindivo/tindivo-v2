@@ -9,28 +9,30 @@ export async function GET(request: Request) {
   const next = searchParams.get('next') ?? '/'
 
   if (code) {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (!url || !key) {
+      console.error('[auth/callback] Missing Supabase environment variables')
+      return NextResponse.redirect(`${origin}/`)
+    }
     const cookieStore = await cookies()
-    const supabase = createServerClient<Database>(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
-          setAll(cookiesToSet) {
-            try {
-              cookiesToSet.forEach(({ name, value, options }) => {
-                cookieStore.set(name, value, options)
-              })
-            } catch {
-              // Ignore cookie errors
-            }
-          },
+    const supabase = createServerClient<Database>(url, key, {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
         },
-        auth: { storageKey: 'tindivo-customer-auth' },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set(name, value, options)
+            })
+          } catch {
+            // Ignore cookie errors
+          }
+        },
       },
-    )
+      auth: { storageKey: 'tindivo-customer-auth' },
+    })
 
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {

@@ -11,7 +11,7 @@ export function PhoneStep({
   active,
   fullName,
   email,
-  userId,
+  userId: _userId,
   onDone,
   mode = 'onboarding',
 }: {
@@ -141,9 +141,7 @@ export function PhoneStep({
                   </span>
                 </span>
                 {email && (
-                  <span className="block truncate text-[12px] text-ink-muted">
-                    {email}
-                  </span>
+                  <span className="block truncate text-[12px] text-ink-muted">{email}</span>
                 )}
               </span>
             </div>
@@ -173,9 +171,7 @@ export function PhoneStep({
               tabIndex={active ? 0 : -1}
             />
           </div>
-          <p className="mt-1.5 text-[12px] text-ink-muted">
-            Debe empezar con 9 y tener 9 dígitos.
-          </p>
+          <p className="mt-1.5 text-[12px] text-ink-muted">Debe empezar con 9 y tener 9 dígitos.</p>
 
           <div className="mt-4 flex items-start gap-2.5 rounded-[14px] bg-success-soft px-3.5 py-3">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -228,6 +224,7 @@ export function PhoneStep({
             maxLength={6}
             onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
             tabIndex={active ? 0 : -1}
+            // biome-ignore lint/a11y/noAutofocus: OTP input inside active onboarding panel
             autoFocus
           />
         </div>

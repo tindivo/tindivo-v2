@@ -148,6 +148,7 @@ export function OtpVerificationSheet({ open, phone, onVerified, onClose }: Props
                 value={code}
                 maxLength={6}
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+                // biome-ignore lint/a11y/noAutofocus: OTP input inside active verification sheet
                 autoFocus
               />
             </div>

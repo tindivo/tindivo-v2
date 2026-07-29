@@ -87,7 +87,6 @@ export function AddressFields({
   showLabelPicker?: boolean
   mapHeightPx?: number
 }) {
-  const refLen = value.reference.trim().length
   const refError = getReferenceError(value.reference)
   const refOk = refError === null
 
