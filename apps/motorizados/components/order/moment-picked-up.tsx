@@ -48,7 +48,7 @@ export function MomentPickedUp({
               style={{ padding: '12px 16px', fontSize: 15 }}
             >
               <span className="mr-1.5 inline-flex align-middle">
-                <Icon.Pin />
+                <Icon name="location_on" size={20} />
               </span>
               Cómo llegar
             </a>

@@ -27,7 +27,7 @@ export function TrackingActions({ data, current, cancellable, cancel }: Tracking
               onClick={() => setConfirmCancel(true)}
               className="flex w-full items-center justify-center gap-2 rounded-[14px] border border-[rgba(220,38,38,0.18)] bg-[rgba(220,38,38,0.06)] py-3.5 text-[14px] font-semibold text-danger"
             >
-              <Icon.Error className="h-4 w-4" />
+              <Icon name="error" size={16} />
               Cancelar pedido
             </button>
             <p className="mt-2 text-center text-[11px] leading-relaxed text-ink-subtle">
@@ -37,7 +37,7 @@ export function TrackingActions({ data, current, cancellable, cancel }: Tracking
         ) : (
           <div className="flex items-start gap-2.5 rounded-[14px] border border-[rgba(26,22,20,0.06)] bg-white px-3.5 py-3">
             <div className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-[rgba(26,150,80,0.1)] text-success">
-              <Icon.Check className="h-3.5 w-3.5" />
+              <Icon name="check" size={14} />
             </div>
             <div className="flex-1">
               <div className="text-[13px] font-semibold leading-snug">

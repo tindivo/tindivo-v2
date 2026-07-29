@@ -19,7 +19,7 @@ export function AddressesList({ addresses, onEdit, onAdd, onSetDefault }: Addres
           onClick={onAdd}
           className="inline-flex items-center gap-1 font-semibold text-[13px] text-brand"
         >
-          <Icon.Plus className="h-3.5 w-3.5" /> Añadir
+          <Icon name="add" size={14} /> Añadir
         </button>
       </div>
       <div className="mt-2 flex flex-col gap-2.5 lg:grid lg:grid-cols-2 lg:gap-3">
@@ -29,7 +29,7 @@ export function AddressesList({ addresses, onEdit, onAdd, onSetDefault }: Addres
             onClick={onAdd}
             className="flex flex-col items-center gap-1.5 rounded-[18px] border-[1.5px] border-dashed border-[rgba(249,115,22,0.35)] bg-[rgba(249,115,22,0.04)] px-4 py-6 text-[#C2410C] lg:col-span-2"
           >
-            <Icon.Plus className="h-[22px] w-[22px]" />
+            <Icon name="add" size={22} />
             <span className="font-semibold text-[14px]">Añade tu primera dirección</span>
             <span className="text-[11px] text-ink/55">Guárdala una vez, úsala siempre.</span>
           </button>

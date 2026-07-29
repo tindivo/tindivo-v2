@@ -65,7 +65,7 @@ export function ModifierGroup({ group, selected, missing, onToggle }: ModifierGr
               >
                 {isSingle
                   ? sel && <span className="h-2.5 w-2.5 rounded-full bg-brand" />
-                  : sel && <Icon.Check />}
+                  : sel && <Icon name="check" size={20} />}
               </span>
               <span className="flex-1">
                 <span className="block font-medium text-[15px]">{opt.name}</span>

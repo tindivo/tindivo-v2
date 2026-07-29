@@ -9,7 +9,7 @@ export function Skeleton({ className, ref, ...props }: SkeletonProps) {
   return (
     <div
       ref={ref}
-      className={cn('animate-pulse rounded-xl bg-surface', className)}
+      className={cn('animate-pulse rounded-xl bg-surface-low', className)}
       {...props}
     />
   )

@@ -3,28 +3,27 @@ import { cn } from '../lib/cn'
 import { Icon } from './icon'
 
 type ToastVariant = 'success' | 'info' | 'warning' | 'danger'
-type IconName = keyof typeof Icon
 
-const VARIANTS: Record<ToastVariant, { icon: IconName; container: string; accent: string }> = {
+const VARIANTS: Record<ToastVariant, { icon: string; container: string; accent: string }> = {
   success: {
-    icon: 'Check',
-    container: 'border-green-200 bg-white',
-    accent: 'bg-green-100 text-green-700',
+    icon: 'check',
+    container: 'border-success/20 bg-white',
+    accent: 'bg-success/10 text-success',
   },
   info: {
-    icon: 'Info',
-    container: 'border-sky-200 bg-white',
-    accent: 'bg-sky-100 text-sky-700',
+    icon: 'info',
+    container: 'border-info/20 bg-white',
+    accent: 'bg-info/10 text-info',
   },
   warning: {
-    icon: 'Warning',
-    container: 'border-amber-200 bg-white',
-    accent: 'bg-amber-100 text-amber-700',
+    icon: 'warning',
+    container: 'border-warning/20 bg-white',
+    accent: 'bg-warning/10 text-warning',
   },
   danger: {
-    icon: 'Error',
-    container: 'border-red-200 bg-white',
-    accent: 'bg-red-100 text-red-700',
+    icon: 'error',
+    container: 'border-danger/20 bg-white',
+    accent: 'bg-danger/10 text-danger',
   },
 }
 
@@ -43,7 +42,6 @@ export function Toast({
   ref,
   ...props
 }: ToastProps) {
-  const IconComponent = Icon[VARIANTS[variant].icon]
   return (
     <div
       ref={ref}
@@ -65,13 +63,11 @@ export function Toast({
             VARIANTS[variant].accent,
           )}
         >
-          <IconComponent width={18} height={18} />
+          <Icon name={VARIANTS[variant].icon} size={18} filled />
         </span>
         <div className="min-w-0">
           {heading && <div className="font-semibold text-sm leading-tight">{heading}</div>}
-          {description && (
-            <div className="truncate text-xs text-ink-muted">{description}</div>
-          )}
+          {description && <div className="truncate text-xs text-ink-muted">{description}</div>}
         </div>
       </div>
     </div>

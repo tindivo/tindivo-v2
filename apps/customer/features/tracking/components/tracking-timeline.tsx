@@ -32,7 +32,7 @@ export function TrackingTimeline({ data, currentIdx }: TrackingTimelineProps) {
               } ${active ? 'shadow-[0_0_0_5px_rgba(249,115,22,0.18)]' : ''}`}
             >
               {done ? (
-                <Icon.Check />
+                <Icon name="check" size={20} />
               ) : (
                 <span
                   className={`h-2 w-2 rounded-full ${

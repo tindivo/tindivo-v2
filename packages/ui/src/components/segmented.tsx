@@ -1,5 +1,3 @@
-'use client'
-
 import type { ReactNode } from 'react'
 
 /** Toggle pill (Delivery/Recojo, rangos de fecha, sub-tabs, etc.). */
@@ -21,8 +19,10 @@ export function Segmented<T extends string>({
             key={o.value}
             type="button"
             onClick={() => onChange(o.value)}
-            className={`flex flex-1 items-center justify-center gap-2 rounded-[10px] px-4 py-3 text-[14px] transition-colors ${
-              active ? 'bg-white font-semibold shadow-[0_1px_2px_rgba(0,0,0,0.08)]' : 'font-medium'
+            className={`flex flex-1 items-center justify-center gap-2 rounded-[10px] px-4 py-3 text-[14px] font-semibold transition-all ${
+              active
+                ? 'bg-white text-ink shadow-[0_2px_8px_rgba(18,38,32,0.08)]'
+                : 'text-ink-muted hover:text-ink'
             }`}
           >
             {o.icon}

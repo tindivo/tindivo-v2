@@ -63,7 +63,7 @@ export function ScheduleRow({ schedule, now }: ScheduleRowProps) {
           className="flex min-h-[44px] w-full items-center gap-2.5 px-4 py-3 text-left"
         >
           <span className="text-black/45">
-            <Icon.Clock />
+            <Icon name="schedule" size={20} />
           </span>
           <span className="min-w-0 flex-1 truncate text-[13px]">
             <span className="text-black/55">Hoy: </span>
@@ -84,7 +84,7 @@ export function ScheduleRow({ schedule, now }: ScheduleRowProps) {
             data-expanded={expanded}
             className="text-black/45 transition-transform duration-160 ease-out data-[expanded=true]:rotate-180"
           >
-            <Icon.ChevronDown />
+            <Icon name="expand_more" size={20} />
           </span>
         </button>
 

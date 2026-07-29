@@ -28,7 +28,7 @@ export function CartSheetContent({ onClose }: CartSheetContentProps) {
           <>
             {cart.businessName && (
               <div className="mb-1 flex items-center gap-2 pt-1 pb-2 font-semibold text-[13px] text-ink/60">
-                <Icon.Store /> {cart.businessName}
+                <Icon name="store" size={20} /> {cart.businessName}
               </div>
             )}
             <CartLineList lines={lines} />

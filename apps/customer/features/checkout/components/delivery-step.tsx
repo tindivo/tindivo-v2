@@ -37,8 +37,8 @@ export function DeliveryStep({ checkout }: { checkout: CheckoutViewModel }) {
           value={deliveryMethod}
           onChange={setDeliveryMethod}
           options={[
-            { value: 'delivery' as DeliveryMethod, label: 'Delivery', icon: <Icon.Truck /> },
-            { value: 'pickup' as DeliveryMethod, label: 'Recojo', icon: <Icon.Store /> },
+            { value: 'delivery' as DeliveryMethod, label: 'Delivery', icon: <Icon name="local_shipping" size={20} /> },
+            { value: 'pickup' as DeliveryMethod, label: 'Recojo', icon: <Icon name="store" size={20} /> },
           ]}
         />
       )}
@@ -80,7 +80,7 @@ export function DeliveryStep({ checkout }: { checkout: CheckoutViewModel }) {
                   </div>
                   {sel && (
                     <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full bg-brand text-white">
-                      <Icon.Check />
+                      <Icon name="check" size={20} />
                     </span>
                   )}
                 </button>
@@ -96,7 +96,7 @@ export function DeliveryStep({ checkout }: { checkout: CheckoutViewModel }) {
           </div>
           <p className="mt-2.5 flex items-start gap-2 text-[12px] text-ink/55">
             <span className="mt-0.5 shrink-0">
-              <Icon.Pin />
+              <Icon name="location_on" size={20} />
             </span>
             Solo entregamos en la cobertura de San Jacinto. Las direcciones se validan al confirmar.
           </p>

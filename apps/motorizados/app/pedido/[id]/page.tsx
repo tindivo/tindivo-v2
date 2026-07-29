@@ -350,7 +350,7 @@ function LostScreen({ title, body }: { title: string; body: string }) {
         className="flex h-20 w-20 items-center justify-center rounded-full"
         style={{ background: 'rgba(26,22,20,0.08)', color: 'rgba(26,22,20,0.5)' }}
       >
-        <Icon.Close style={{ width: 30, height: 30 }} />
+        <Icon name="close" size={30} />
       </span>
       <h1 className="t-display mt-5 text-[24px]">{title}</h1>
       <p className="t-muted mt-2 text-[14px]">{body}</p>

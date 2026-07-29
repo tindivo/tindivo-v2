@@ -20,7 +20,7 @@ export function OrderDetail() {
         aria-expanded={open}
       >
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-ink/[0.05]">
-          <Icon.Bag />
+          <Icon name="shopping_basket" size={20} />
         </span>
         <span className="flex-1">
           <span className="block font-semibold text-[15px]">Detalle del pedido</span>
@@ -35,7 +35,7 @@ export function OrderDetail() {
             open ? 'rotate-90' : '-rotate-90'
           }`}
         >
-          <Icon.Back />
+          <Icon name="arrow_back" size={20} />
         </span>
       </button>
 
@@ -97,7 +97,7 @@ export function OrderDetail() {
                       disabled={line.quantity <= 1}
                       aria-label="Menos"
                     >
-                      <Icon.Minus />
+                      <Icon name="remove" size={20} />
                     </button>
                     <span className="val">{line.quantity}</span>
                     <button
@@ -105,7 +105,7 @@ export function OrderDetail() {
                       onClick={() => cart.setQty(line.key, line.quantity + 1)}
                       aria-label="Más"
                     >
-                      <Icon.Plus />
+                      <Icon name="add" size={20} />
                     </button>
                   </div>
                   <button

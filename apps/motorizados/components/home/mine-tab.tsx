@@ -28,7 +28,7 @@ export function MineTab({
       {mine.length === 0 && (
         <div className="py-14 text-center">
           <span className="inline-block text-ink-subtle">
-            <Icon.Truck style={{ width: 28, height: 28 }} />
+            <Icon name="local_shipping" size={28} />
           </span>
           <p className="t-muted mt-2 text-[14px]">
             No tienes pedidos activos. Toma uno en Disponibles.
@@ -54,7 +54,7 @@ export function MineTab({
                 transition: 'transform 200ms ease',
               }}
             >
-              <Icon.Back />
+              <Icon name="arrow_back" size={20} />
             </span>
           </button>
           {historyOpen && (

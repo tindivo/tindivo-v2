@@ -5,11 +5,11 @@ type BadgeVariant = 'default' | 'brand' | 'success' | 'warning' | 'danger' | 'in
 type BadgeSize = 'sm' | 'md'
 
 const VARIANTS: Record<BadgeVariant, string> = {
-  default: 'bg-surface text-ink-muted border-border',
+  default: 'bg-surface text-ink-muted border-ink/[0.06]',
   brand: 'bg-brand-light text-brand-dark border-brand-light',
-  success: 'bg-green-100 text-green-800 border-green-200',
-  warning: 'bg-amber-100 text-amber-800 border-amber-200',
-  danger: 'bg-red-100 text-red-800 border-red-200',
+  success: 'bg-success-soft text-success border-success/15',
+  warning: 'bg-warning-soft text-amber-900 border-warning/20',
+  danger: 'bg-danger-soft text-danger border-danger/15',
   info: 'bg-sky-100 text-sky-800 border-sky-200',
 }
 
@@ -35,7 +35,7 @@ export function Badge({
     <span
       ref={ref}
       className={cn(
-        'inline-flex items-center justify-center rounded-full border font-medium',
+        'inline-flex items-center justify-center rounded-full border font-semibold tracking-wide',
         VARIANTS[variant],
         SIZES[size],
         className,

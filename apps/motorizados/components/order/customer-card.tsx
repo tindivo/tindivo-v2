@@ -13,7 +13,7 @@ export function CustomerCard({ order }: { order: OrderDetailResponse['order'] })
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
           style={{ background: 'rgba(26,22,20,0.06)' }}
         >
-          <Icon.Person />
+          <Icon name="person" size={20} />
         </span>
         <div className="min-w-0 flex-1">
           <p className="font-semibold text-[16px]">{order.customerName ?? 'Cliente'}</p>
@@ -32,7 +32,7 @@ export function CustomerCard({ order }: { order: OrderDetailResponse['order'] })
             style={{ padding: '12px 16px', fontSize: 14 }}
           >
             <span className="mr-1.5 inline-flex align-middle">
-              <Icon.Phone />
+              <Icon name="phone" size={20} />
             </span>
             Llamar
           </a>

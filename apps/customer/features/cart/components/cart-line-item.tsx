@@ -82,7 +82,7 @@ export function CartLineItem({ line, isFirst }: CartLineItemProps) {
                 disabled={line.quantity <= 1}
                 aria-label="Menos"
               >
-                <Icon.Minus />
+                <Icon name="remove" size={20} />
               </button>
               <span className="val">{line.quantity}</span>
               <button
@@ -90,7 +90,7 @@ export function CartLineItem({ line, isFirst }: CartLineItemProps) {
                 onClick={() => cart.setQty(line.key, line.quantity + 1)}
                 aria-label="Más"
               >
-                <Icon.Plus />
+                <Icon name="add" size={20} />
               </button>
             </div>
           </div>

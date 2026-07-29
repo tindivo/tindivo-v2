@@ -26,7 +26,7 @@ export function DeliveredScreen({
             className="flex h-20 w-20 items-center justify-center rounded-full text-white"
             style={{ background: '#1A8050' }}
           >
-            <Icon.Check style={{ width: 36, height: 36 }} />
+            <Icon name="check" size={36} />
           </span>
           <p className="t-eyebrow mt-5 text-success" style={{ marginBottom: 0 }}>
             Pedido #{order.shortId}
@@ -55,7 +55,7 @@ export function DeliveredScreen({
           className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-white"
           style={{ background: '#1A8050' }}
         >
-          <Icon.Check />
+          <Icon name="check" size={20} />
         </span>
         <div>
           <p className="font-semibold text-[16px]">Entregado</p>

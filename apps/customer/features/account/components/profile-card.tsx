@@ -20,7 +20,7 @@ export function ProfileCard({ name, email, phone }: ProfileCardProps) {
         <div className="mt-0.5 text-[12px] opacity-85">{email}</div>
         {phone && (
           <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-white/[0.18] px-2.5 py-[3px] text-[11px]">
-            <Icon.Phone className="h-3 w-3" /> {phone}
+            <Icon name="phone" size={12} /> {phone}
           </div>
         )}
       </div>

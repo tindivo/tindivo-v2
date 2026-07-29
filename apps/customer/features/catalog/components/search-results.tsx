@@ -64,7 +64,7 @@ export function SearchResults({ search, businesses }: SearchResultsProps) {
           {search.results.businesses.length === 0 && search.results.items.length === 0 && (
             <div className="px-5 py-10 text-center">
               <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-black/5 text-black/40">
-                <Icon.Search />
+                <Icon name="search" size={20} />
               </span>
               <p className="mt-3 font-semibold text-[15px]">
                 Sin resultados para “{search.query.trim()}”

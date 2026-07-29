@@ -111,7 +111,7 @@ export function AuthOnboardingSheet() {
             style={{ background: 'rgba(26,22,20,0.06)' }}
             aria-label={isBack ? 'Atrás' : 'Cerrar'}
           >
-            {isBack ? <Icon.Back /> : <Icon.Close />}
+            {isBack ? <Icon name="arrow_back" size={20} /> : <Icon name="close" size={20} />}
           </button>
           {skippable && (
             <span className="text-[12px]" style={{ color: 'rgba(26,22,20,0.5)' }}>

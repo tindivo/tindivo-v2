@@ -40,7 +40,7 @@ export function HomeHeader({ user }: HomeHeaderProps) {
             className="flex h-[42px] w-[42px] items-center justify-center rounded-full bg-black/[0.06] font-bold text-[14px] text-ink"
             aria-label="Ingresar"
           >
-            <Icon.Person />
+            <Icon name="person" size={20} />
           </button>
         )}
       </div>

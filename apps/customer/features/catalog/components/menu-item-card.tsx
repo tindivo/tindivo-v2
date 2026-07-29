@@ -55,7 +55,7 @@ export function MenuItemCard({ item, disabled, onClick }: MenuItemCardProps) {
       <div className="relative shrink-0">
         <ProductImage label={item.name} hue={item.image_hue ?? 14} size={92} src={item.image_url} />
         <span className="absolute -right-1.5 -bottom-1.5 flex h-8 w-8 items-center justify-center rounded-full bg-brand text-white shadow-[0_4px_12px_-2px_rgba(249,115,22,0.55)]">
-          <Icon.Plus />
+          <Icon name="add" size={20} />
         </span>
       </div>
     </button>

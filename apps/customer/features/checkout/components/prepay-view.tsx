@@ -93,7 +93,7 @@ export function PrepayView({ result }: { result: OrderResult }) {
       {sent ? (
         <div className="mt-6 rounded-[18px] border border-ink/5 bg-white p-5 text-center">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-success text-white">
-            <Icon.Check />
+            <Icon name="check" size={20} />
           </div>
           <p className="t-display mt-3 text-[18px]">Comprobante enviado</p>
           <p className="t-muted mt-1 text-[14px]">

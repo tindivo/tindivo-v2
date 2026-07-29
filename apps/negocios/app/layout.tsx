@@ -7,21 +7,23 @@ import './globals.css'
 
 // Tipografía única de la plataforma (DECISIONS.md §16): Manrope cubre display
 // (--font-bricolage), cuerpo (--font-geist) y mono/tabular (--font-jetbrains).
+// Tipografía única de la plataforma: Manrope con todos los pesos.
+// Se exponen tres variables para no romper los call sites existentes.
 const manropeDisplay = Manrope({
   subsets: ['latin'],
-  weight: ['600', '700', '800'],
+  weight: ['400', '500', '600', '700', '800'],
   variable: '--font-bricolage',
   display: 'swap',
 })
 const manropeBody = Manrope({
   subsets: ['latin'],
-  weight: ['400', '500', '600'],
+  weight: ['400', '500', '600', '700', '800'],
   variable: '--font-geist',
   display: 'swap',
 })
 const jetbrains = Manrope({
   subsets: ['latin'],
-  weight: ['500', '600', '700'],
+  weight: ['400', '500', '600', '700', '800'],
   variable: '--font-jetbrains',
   display: 'swap',
 })

@@ -42,7 +42,7 @@ export function OrderDetail({
               transition: 'transform 200ms ease',
             }}
           >
-            <Icon.Back />
+            <Icon name="arrow_back" size={20} />
           </span>
         </span>
       </button>

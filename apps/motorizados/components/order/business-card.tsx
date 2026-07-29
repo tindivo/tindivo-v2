@@ -21,7 +21,7 @@ export function BusinessCard({ business }: { business: OrderDetailResponse['busi
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
           style={{ background: 'rgba(249,115,22,0.1)', color: '#C2410C' }}
         >
-          <Icon.Store />
+          <Icon name="store" size={20} />
         </span>
         <div className="min-w-0 flex-1">
           <p className="font-semibold text-[16px]">{business.name}</p>
@@ -40,7 +40,7 @@ export function BusinessCard({ business }: { business: OrderDetailResponse['busi
             style={{ padding: '12px 16px', fontSize: 14 }}
           >
             <span className="mr-1.5 inline-flex align-middle">
-              <Icon.Phone />
+              <Icon name="phone" size={20} />
             </span>
             Llamar
           </a>
@@ -56,7 +56,7 @@ export function BusinessCard({ business }: { business: OrderDetailResponse['busi
             style={{ padding: '12px 16px', fontSize: 14 }}
           >
             <span className="mr-1.5 inline-flex align-middle">
-              <Icon.Pin />
+              <Icon name="location_on" size={20} />
             </span>
             Abrir en Maps
           </a>

@@ -12,7 +12,7 @@ export function SearchBar({ query, onChange }: SearchBarProps) {
     <div className="px-4 pb-2">
       <div className="flex items-center gap-2.5 rounded-2xl border border-border bg-white px-4 py-3.5">
         <span className="text-black/40">
-          <Icon.Search />
+          <Icon name="search" size={20} />
         </span>
         <input
           type="text"
@@ -34,7 +34,7 @@ export function SearchBar({ query, onChange }: SearchBarProps) {
             aria-label="Limpiar búsqueda"
             className="-m-2.5 flex h-11 w-11 shrink-0 items-center justify-center text-black/45"
           >
-            <Icon.Close />
+            <Icon name="close" size={20} />
           </button>
         )}
       </div>

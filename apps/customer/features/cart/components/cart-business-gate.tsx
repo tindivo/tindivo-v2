@@ -46,7 +46,7 @@ export function CartBusinessGate({ info, layout }: CartBusinessGateProps) {
         href={telLink(info.whatsappNumber)}
         aria-label="Llamar al negocio"
       >
-        <Icon.Phone />
+        <Icon name="phone" size={20} />
         {layout === 'block' && <span>Llamar</span>}
       </a>
     </div>

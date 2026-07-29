@@ -85,7 +85,7 @@ export function TeamTab({ onCount }: { onCount: (n: number) => void }) {
       {[...byDriver.entries()].map(([driverId, group]) => (
         <div key={driverId} className="mb-4">
           <p className="flex items-center gap-2 font-semibold text-[15px]">
-            <Icon.Person /> {group.name}
+            <Icon name="person" size={20} /> {group.name}
             <span className="t-muted font-normal text-[12px]">
               {group.orders.length} {group.orders.length === 1 ? 'activo' : 'activos'}
             </span>
@@ -132,7 +132,7 @@ export function TeamTab({ onCount }: { onCount: (n: number) => void }) {
       {team.teamOrders.length === 0 && (
         <div className="py-14 text-center">
           <span className="inline-block text-ink-subtle">
-            <Icon.Person style={{ width: 28, height: 28 }} />
+            <Icon name="person" size={28} />
           </span>
           <p className="t-muted mt-2 text-[14px]">Tu equipo no tiene pedidos activos.</p>
         </div>

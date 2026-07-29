@@ -101,7 +101,7 @@ export function AddressBar() {
         aria-label="Cambiar dirección de entrega"
       >
         <span className="shrink-0" style={{ color: '#F97316' }}>
-          <Icon.Pin />
+          <Icon name="location_on" size={20} />
         </span>
         <span className="min-w-0 flex-1">
           <span className="t-eyebrow block" style={{ fontSize: 9, letterSpacing: '0.16em' }}>
@@ -162,7 +162,7 @@ export function AddressBar() {
                   </div>
                   {a.is_default && (
                     <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full bg-brand text-white">
-                      <Icon.Check />
+                      <Icon name="check" size={20} />
                     </span>
                   )}
                 </button>
@@ -172,7 +172,7 @@ export function AddressBar() {
               href="/cuenta"
               className="mt-3 inline-flex items-center gap-1.5 font-semibold text-[13px] text-brand"
             >
-              <Icon.Plus style={{ width: 14, height: 14 }} /> Gestionar direcciones
+              <Icon name="add" size={14} /> Gestionar direcciones
             </Link>
           </div>
         </BottomSheet>

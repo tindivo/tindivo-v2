@@ -58,7 +58,7 @@ export function ProductModal({ item, onClose, onAdd }: ProductModalProps) {
           className="absolute top-3.5 right-3.5 flex h-9 w-9 items-center justify-center rounded-full border-none bg-white/95 shadow-[0_2px_8px_rgba(0,0,0,0.12)]"
           aria-label="Cerrar"
         >
-          <Icon.Close />
+          <Icon name="close" size={20} />
         </button>
       </div>
 
@@ -103,11 +103,11 @@ export function ProductModal({ item, onClose, onAdd }: ProductModalProps) {
             onClick={() => setQty((q) => Math.max(1, q - 1))}
             aria-label="Menos"
           >
-            <Icon.Minus />
+            <Icon name="remove" size={20} />
           </button>
           <span className="val">{qty}</span>
           <button type="button" onClick={() => setQty((q) => q + 1)} aria-label="Más">
-            <Icon.Plus />
+            <Icon name="add" size={20} />
           </button>
         </div>
         <button

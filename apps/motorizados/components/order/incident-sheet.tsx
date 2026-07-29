@@ -47,7 +47,7 @@ export function IncidentSheet({ orderId, onClose }: { orderId: string; onClose: 
               className="mx-auto flex h-14 w-14 items-center justify-center rounded-full text-white"
               style={{ background: '#1A8050' }}
             >
-              <Icon.Check />
+              <Icon name="check" size={20} />
             </span>
             <p className="t-display mt-3 text-[18px]">Reporte enviado</p>
             <p className="t-muted mt-1 text-[14px]">El equipo de Tindivo lo revisará.</p>

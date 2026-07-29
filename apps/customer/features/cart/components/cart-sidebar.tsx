@@ -31,7 +31,7 @@ export function CartSidebar({ businessId, businessName }: CartSidebarProps) {
         )}
       </div>
       <div className="mt-1 flex items-center gap-2 font-semibold text-[13px] text-ink/60">
-        <Icon.Store /> {businessName}
+        <Icon name="store" size={20} /> {businessName}
       </div>
 
       {showCart ? (

@@ -49,7 +49,7 @@ export function AvailableTab({
           className="mb-3 flex items-start gap-2.5 rounded-[18px] px-4 py-3.5"
           style={{ background: 'rgba(26,22,20,0.04)' }}
         >
-          <Icon.Bag style={{ flexShrink: 0, marginTop: 2 }} />
+          <Icon name="shopping_basket" size={20} />
           <p className="font-semibold text-[14px]">
             Mochila llena (3/3). Entrega un pedido para tomar otro.
           </p>
@@ -77,7 +77,7 @@ export function AvailableTab({
       {sorted.length === 0 && (
         <div className="py-14 text-center">
           <span className="inline-block text-ink-subtle">
-            <Icon.Truck style={{ width: 28, height: 28 }} />
+            <Icon name="local_shipping" size={28} />
           </span>
           <p className="t-muted mt-2 text-[14px]">Sin pedidos disponibles ahora.</p>
         </div>
@@ -101,7 +101,7 @@ export function AvailableTab({
                 transition: 'transform 200ms ease',
               }}
             >
-              <Icon.Back />
+              <Icon name="arrow_back" size={20} />
             </span>
           </button>
           {upcomingOpen && (

@@ -40,7 +40,7 @@ export function BusinessHero({ business, schedule, now }: BusinessHeroProps) {
           className="flex h-[38px] w-[38px] items-center justify-center rounded-full border border-white/15 bg-black/45 text-white backdrop-blur"
           aria-label="Volver"
         >
-          <Icon.Back />
+          <Icon name="arrow_back" size={20} />
         </Link>
         <CartButton tone="dark" />
       </div>
@@ -53,16 +53,16 @@ export function BusinessHero({ business, schedule, now }: BusinessHeroProps) {
         <div className="mt-3 flex gap-3.5 text-[13px]">
           {isCatalogOnly ? (
             <span className="t-text-shadow-lg inline-flex items-center gap-1.5">
-              <Icon.Chat /> Pedidos por WhatsApp
+              <Icon name="chat" size={20} /> Pedidos por WhatsApp
             </span>
           ) : (
             <>
               <span className="t-text-shadow-lg inline-flex items-center gap-1.5">
-                <Icon.Clock /> {business.estimated_eta_min}–{business.estimated_eta_max} min
+                <Icon name="schedule" size={20} /> {business.estimated_eta_min}–{business.estimated_eta_max} min
               </span>
               <span className="w-px bg-white/30" />
               <span className="t-text-shadow-lg inline-flex items-center gap-1.5">
-                <Icon.Truck /> Delivery
+                <Icon name="local_shipping" size={20} /> Delivery
               </span>
               {openStatus.kind !== 'no_schedule' && (
                 <>

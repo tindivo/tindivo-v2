@@ -19,7 +19,7 @@ export function CancelledView({ data }: CancelledViewProps) {
     <main className="mx-auto flex min-h-dvh max-w-[768px] flex-col bg-surface px-6">
       <div className="flex flex-1 flex-col items-center justify-center pt-10 text-center">
         <div className="mb-1 flex h-24 w-24 items-center justify-center rounded-full border-[3px] border-danger bg-white text-danger">
-          {isMutual ? <Icon.Error className="h-11 w-11" /> : <Icon.Clock className="h-11 w-11" />}
+          {isMutual ? <Icon name="error" size={44} /> : <Icon name="schedule" size={44} />}
         </div>
         <p className="mt-[18px] font-mono text-[10px] uppercase tracking-[0.2em] text-danger">
           {c.eyebrow}

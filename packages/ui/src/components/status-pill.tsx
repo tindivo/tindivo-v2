@@ -10,11 +10,11 @@ export interface StatusPillProps extends HTMLAttributes<HTMLSpanElement> {
 }
 
 const TONE_CLASSES: Record<StatusTone, { dot: string; pill: string }> = {
-  neutral: { dot: 'bg-ink-muted', pill: 'bg-surface text-ink-muted border-border' },
+  neutral: { dot: 'bg-ink-muted', pill: 'bg-surface text-ink-muted border-ink/[0.06]' },
   brand: { dot: 'bg-brand', pill: 'bg-brand-light text-brand-dark border-brand-light' },
-  success: { dot: 'bg-success', pill: 'bg-green-100 text-green-800 border-green-200' },
-  warning: { dot: 'bg-warning', pill: 'bg-amber-100 text-amber-800 border-amber-200' },
-  danger: { dot: 'bg-danger', pill: 'bg-red-100 text-red-800 border-red-200' },
+  success: { dot: 'bg-success', pill: 'bg-success-soft text-success border-success/15' },
+  warning: { dot: 'bg-warning', pill: 'bg-warning-soft text-amber-900 border-warning/20' },
+  danger: { dot: 'bg-danger', pill: 'bg-danger-soft text-danger border-danger/15' },
   info: { dot: 'bg-info', pill: 'bg-sky-100 text-sky-800 border-sky-200' },
 }
 
@@ -30,7 +30,7 @@ export function StatusPill({
     <span
       ref={ref}
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium',
+        'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold',
         TONE_CLASSES[tone].pill,
         className,
       )}

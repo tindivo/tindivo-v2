@@ -12,7 +12,7 @@ export function CollectCard({ detail }: { detail: OrderDetailResponse }) {
   if (order.paymentIntent === 'prepaid') {
     return (
       <div className="mt-3 flex items-center gap-2.5 rounded-[18px] bg-success/10 px-4 py-3.5 text-success">
-        <Icon.Check />
+        <Icon name="check" size={20} />
         <span className="font-semibold text-[14px]">Pedido ya pagado. No cobres nada.</span>
       </div>
     )

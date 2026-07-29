@@ -115,7 +115,7 @@ export default function PedidosPage() {
         {orders.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-16 text-center">
             <span style={{ color: 'rgba(26,22,20,0.3)' }}>
-              <Icon.Bag />
+              <Icon name="shopping_basket" size={20} />
             </span>
             <p className="font-semibold text-[15px]">Aún no tienes pedidos</p>
             <Link href="/" className="text-[13px] text-brand underline">

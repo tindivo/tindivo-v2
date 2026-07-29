@@ -27,7 +27,7 @@ export function BusinessCard({ business }: BusinessCardProps) {
           style={{ background: `#${b.accent_color}1a` }}
         >
           <span className="relative z-[1]" style={{ color: `#${b.accent_color}` }}>
-            <Icon.Store />
+            <Icon name="store" size={20} />
           </span>
         </div>
       )}
@@ -39,7 +39,7 @@ export function BusinessCard({ business }: BusinessCardProps) {
         <div className="mt-2 flex gap-2.5 text-[12px] text-black/70">
           {b.primary_capability === 'catalog_only' ? (
             <span className="inline-flex items-center gap-1">
-              <Icon.Chat /> Pedidos por WhatsApp
+              <Icon name="chat" size={20} /> Pedidos por WhatsApp
             </span>
           ) : (
             <>
@@ -49,10 +49,10 @@ export function BusinessCard({ business }: BusinessCardProps) {
                 </span>
               )}
               <span className="inline-flex items-center gap-1">
-                <Icon.Clock /> {b.estimated_eta_min}–{b.estimated_eta_max} min
+                <Icon name="schedule" size={20} /> {b.estimated_eta_min}–{b.estimated_eta_max} min
               </span>
               <span className="inline-flex items-center gap-1">
-                <Icon.Truck /> Delivery
+                <Icon name="local_shipping" size={20} /> Delivery
               </span>
             </>
           )}

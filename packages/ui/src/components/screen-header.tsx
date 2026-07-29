@@ -22,7 +22,7 @@ export function ScreenHeader({
           className="flex h-10 w-10 items-center justify-center rounded-full bg-ink/[0.06] text-ink"
           aria-label="Volver"
         >
-          <Icon.Back />
+          <Icon name="arrow_back" size={22} />
         </button>
       )}
       <div className="t-display flex-1 text-[22px]">{title}</div>

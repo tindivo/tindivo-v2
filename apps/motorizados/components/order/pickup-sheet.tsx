@@ -48,7 +48,7 @@ export function PickupSheet({
             style={{ background: 'rgba(245,158,11,0.12)', color: '#92400E' }}
           >
             <span className="mt-0.5 shrink-0">
-              <Icon.Clock />
+              <Icon name="schedule" size={20} />
             </span>
             Aún faltan {minutesEarly} min para la hora estimada. Confirma con el local que es tu
             pedido.

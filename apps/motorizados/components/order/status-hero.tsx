@@ -21,7 +21,7 @@ function Stepper({ current }: { current: number }) {
             >
               {i < current ? (
                 <span className="text-white">
-                  <Icon.Check />
+                  <Icon name="check" size={20} />
                 </span>
               ) : (
                 <span

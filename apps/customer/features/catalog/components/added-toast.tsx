@@ -21,7 +21,7 @@ export function AddedToast({ name }: AddedToastProps) {
     >
       <div className="flex max-w-[92%] items-center gap-3 rounded-2xl border border-border bg-white px-4 py-3 shadow-[0_12px_32px_-10px_rgba(0,0,0,0.28)]">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-success/12 text-success">
-          <Icon.Check />
+          <Icon name="check" size={20} />
         </span>
         <div className="min-w-0">
           <div className="font-semibold text-[14px] leading-tight">Añadido al carrito</div>

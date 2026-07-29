@@ -50,7 +50,7 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
             style={{ background: 'rgba(26,22,20,0.06)' }}
             aria-label="Efectivo"
           >
-            <Icon.Bag />
+            <Icon name="shopping_basket" size={20} />
           </Link>
           <button
             type="button"
@@ -62,7 +62,7 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
             style={{ background: 'rgba(26,22,20,0.06)' }}
             aria-label="Salir"
           >
-            <Icon.Close />
+            <Icon name="close" size={20} />
           </button>
         </div>
       </header>
