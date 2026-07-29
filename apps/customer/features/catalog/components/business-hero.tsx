@@ -1,5 +1,3 @@
-'use client'
-
 import { getOpenStatus } from '@tindivo/contracts'
 import Link from 'next/link'
 import { CartButton } from '@/components/cart-sheet'
@@ -28,7 +26,7 @@ export function BusinessHero({ business, schedule, now }: BusinessHeroProps) {
         <div
           className="absolute inset-0"
           style={{
-            background: `linear-gradient(135deg, #${business.accent_color} 0%, #1A1614 130%)`,
+            background: `linear-gradient(135deg, #${business.accent_color} 0%, #17201c 130%)`,
           }}
         />
       )}
@@ -50,19 +48,19 @@ export function BusinessHero({ business, schedule, now }: BusinessHeroProps) {
         {business.tagline && (
           <div className="t-text-shadow-sm mt-1.5 text-[13px] opacity-90">{business.tagline}</div>
         )}
-        <div className="mt-3 flex gap-3.5 text-[13px]">
+        <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1.5 text-[13px]">
           {isCatalogOnly ? (
             <span className="t-text-shadow-lg inline-flex items-center gap-1.5">
-              <Icon name="chat" size={20} /> Pedidos por WhatsApp
+              <Icon name="chat" size={18} /> Pedidos por WhatsApp
             </span>
           ) : (
             <>
               <span className="t-text-shadow-lg inline-flex items-center gap-1.5">
-                <Icon name="schedule" size={20} /> {business.estimated_eta_min}–{business.estimated_eta_max} min
+                <Icon name="schedule" size={18} /> {business.estimated_eta_min}–{business.estimated_eta_max} min
               </span>
               <span className="w-px bg-white/30" />
               <span className="t-text-shadow-lg inline-flex items-center gap-1.5">
-                <Icon name="local_shipping" size={20} /> Delivery
+                <Icon name="local_shipping" size={18} /> Delivery
               </span>
               {openStatus.kind !== 'no_schedule' && (
                 <>

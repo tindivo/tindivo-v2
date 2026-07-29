@@ -3,7 +3,7 @@
 // Componentes visuales compartidos (Icon, sheet, header, toggle) movidos a
 // @tindivo/ui para reutilizarlos en los paneles. Se re-exportan aquí para que
 // los imports existentes `@/components/ui` sigan funcionando sin cambios.
-export { BottomSheet, Icon, ScreenHeader, Segmented } from '@tindivo/ui'
+export { BottomSheet, Icon, ScreenHeader, Segmented, Skeleton } from '@tindivo/ui'
 
 const SUPPORT_WHATSAPP = (process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP ?? '+51987654321').replace(
   /\D/g,

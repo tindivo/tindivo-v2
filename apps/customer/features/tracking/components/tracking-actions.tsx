@@ -1,7 +1,5 @@
-'use client'
-
 import type { TrackingStep } from '@tindivo/contracts'
-import { Icon } from '@tindivo/ui'
+import { Button, Icon } from '@tindivo/ui'
 import Link from 'next/link'
 import { SupportLink } from '@/components/ui'
 import { getStatusMessage } from '@/features/tracking/lib/format'
@@ -19,13 +17,13 @@ export function TrackingActions({ data, current, cancellable, cancel }: Tracking
 
   return (
     <>
-      <div className="mt-5 border-t border-[rgba(26,22,20,0.06)] pt-4">
+      <div className="mt-5 border-t border-ink/[0.06] pt-4">
         {cancellable ? (
           <>
             <button
               type="button"
               onClick={() => setConfirmCancel(true)}
-              className="flex w-full items-center justify-center gap-2 rounded-[14px] border border-[rgba(220,38,38,0.18)] bg-[rgba(220,38,38,0.06)] py-3.5 text-[14px] font-semibold text-danger"
+              className="flex w-full items-center justify-center gap-2 rounded-[14px] border border-danger/20 bg-danger/5 py-3.5 text-[14px] font-semibold text-danger transition-colors hover:bg-danger/10"
             >
               <Icon name="error" size={16} />
               Cancelar pedido
@@ -35,9 +33,9 @@ export function TrackingActions({ data, current, cancellable, cancel }: Tracking
             </p>
           </>
         ) : (
-          <div className="flex items-start gap-2.5 rounded-[14px] border border-[rgba(26,22,20,0.06)] bg-white px-3.5 py-3">
-            <div className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-[rgba(26,150,80,0.1)] text-success">
-              <Icon name="check" size={14} />
+          <div className="flex items-start gap-2.5 rounded-[14px] border border-ink/[0.04] bg-white px-3.5 py-3 shadow-elev-1">
+            <div className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-success/10 text-success">
+              <Icon name="check" size={14} filled />
             </div>
             <div className="flex-1">
               <div className="text-[13px] font-semibold leading-snug">
@@ -83,21 +81,21 @@ export function TrackingActions({ data, current, cancellable, cancel }: Tracking
               Esta acción no se puede deshacer. Si ya pagaste por Yape, te lo devolveremos.
             </p>
             <div className="mt-5 flex flex-col gap-2.5">
-              <button
-                type="button"
+              <Button
+                variant="danger"
+                className="w-full"
                 onClick={doCancel}
                 disabled={cancelling}
-                className="t-btn t-btn-block bg-danger font-semibold text-white hover:bg-red-700"
               >
                 {cancelling ? 'Cancelando…' : 'Sí, cancelar pedido'}
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="ghost"
+                className="w-full"
                 onClick={() => setConfirmCancel(false)}
-                className="t-btn t-btn-ghost t-btn-block"
               >
                 No, mantener pedido
-              </button>
+              </Button>
             </div>
           </div>
         </div>

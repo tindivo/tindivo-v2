@@ -1,5 +1,3 @@
-'use client'
-
 import { Icon } from '@/components/ui'
 
 interface SearchBarProps {
@@ -10,13 +8,13 @@ interface SearchBarProps {
 export function SearchBar({ query, onChange }: SearchBarProps) {
   return (
     <div className="px-4 pb-2">
-      <div className="flex items-center gap-2.5 rounded-2xl border border-border bg-white px-4 py-3.5">
-        <span className="text-black/40">
+      <div className="t-glass flex items-center gap-2.5 rounded-full px-4 py-3">
+        <span className="text-ink-subtle">
           <Icon name="search" size={20} />
         </span>
         <input
           type="text"
-          className="min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none"
+          className="min-w-0 flex-1 bg-transparent text-[15px] font-medium text-ink outline-none placeholder:text-ink-subtle"
           placeholder="Buscar pizza, hamburguesa, bebida…"
           aria-label="Buscar negocios y platos"
           autoComplete="off"
@@ -32,9 +30,9 @@ export function SearchBar({ query, onChange }: SearchBarProps) {
             type="button"
             onClick={() => onChange('')}
             aria-label="Limpiar búsqueda"
-            className="-m-2.5 flex h-11 w-11 shrink-0 items-center justify-center text-black/45"
+            className="-m-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-muted transition-colors hover:bg-ink/[0.06]"
           >
-            <Icon name="close" size={20} />
+            <Icon name="close" size={18} />
           </button>
         )}
       </div>

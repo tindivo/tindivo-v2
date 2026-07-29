@@ -1,5 +1,3 @@
-'use client'
-
 import type { DeliveryMethod } from '@tindivo/contracts'
 import { Icon, Segmented } from '@tindivo/ui'
 import Link from 'next/link'
@@ -59,8 +57,10 @@ export function DeliveryStep({ checkout }: { checkout: CheckoutViewModel }) {
                   key={a.id}
                   type="button"
                   onClick={() => setAddressId(a.id)}
-                  className={`flex items-start gap-3 rounded-[18px] bg-white p-3.5 text-left ${
-                    sel ? 'border-2 border-brand' : 'border border-ink/5'
+                  className={`flex items-start gap-3 rounded-[18px] bg-white p-3.5 text-left transition-all ${
+                    sel
+                      ? 'border-2 border-brand shadow-[0_0_0_4px_rgba(242,98,65,0.10)]'
+                      : 'border border-ink/[0.04] shadow-elev-1 hover:shadow-elev-2'
                   }`}
                 >
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-[18px]">
@@ -80,7 +80,7 @@ export function DeliveryStep({ checkout }: { checkout: CheckoutViewModel }) {
                   </div>
                   {sel && (
                     <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full bg-brand text-white">
-                      <Icon name="check" size={20} />
+                      <Icon name="check" size={16} filled />
                     </span>
                   )}
                 </button>
@@ -95,8 +95,8 @@ export function DeliveryStep({ checkout }: { checkout: CheckoutViewModel }) {
             )}
           </div>
           <p className="mt-2.5 flex items-start gap-2 text-[12px] text-ink/55">
-            <span className="mt-0.5 shrink-0">
-              <Icon name="location_on" size={20} />
+            <span className="mt-0.5 shrink-0 text-brand">
+              <Icon name="location_on" size={18} />
             </span>
             Solo entregamos en la cobertura de San Jacinto. Las direcciones se validan al confirmar.
           </p>
@@ -159,7 +159,7 @@ function Summary({
   count: number
 }) {
   return (
-    <div className="mt-5 rounded-[22px] border border-ink/5 bg-white p-4">
+    <div className="mt-5 rounded-[22px] border border-ink/[0.04] bg-white p-4 shadow-elev-1">
       <div className="t-eyebrow mb-2.5">Resumen</div>
       <div className="flex justify-between py-1 text-[14px] font-medium text-ink/70 tabular-nums">
         <span>Productos ({count})</span>
