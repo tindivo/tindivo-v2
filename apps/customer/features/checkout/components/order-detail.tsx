@@ -20,7 +20,7 @@ export function OrderDetail() {
         aria-expanded={open}
       >
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-surface-low">
-          <Icon name="shopping_basket" size={20} />
+          <Icon name="shopping_bag" size={20} />
         </span>
         <span className="flex-1">
           <span className="block font-semibold text-[15px] text-ink">Detalle del pedido</span>
@@ -32,10 +32,10 @@ export function OrderDetail() {
         <span
           aria-hidden
           className={`inline-flex text-ink-subtle transition-transform duration-200 ${
-            open ? 'rotate-90' : '-rotate-90'
+            open ? 'rotate-180' : ''
           }`}
         >
-          <Icon name="arrow_back" size={20} />
+          <Icon name="expand_more" size={20} />
         </span>
       </button>
 

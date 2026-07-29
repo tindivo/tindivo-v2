@@ -58,7 +58,7 @@ export default function CheckoutPage() {
     )
 
   return (
-    <main className="mx-auto min-h-dvh max-w-[768px] bg-surface pb-28 lg:grid lg:max-w-6xl lg:grid-cols-[1fr_380px] lg:items-start lg:gap-8 lg:px-6 lg:pt-1">
+    <main className="mx-auto min-h-dvh max-w-[768px] bg-surface pb-32 lg:grid lg:max-w-6xl lg:grid-cols-[1fr_380px] lg:items-start lg:gap-8 lg:px-6 lg:pt-1">
       <div className="lg:col-span-2">
         <ScreenHeader
           title={step === 'delivery' ? 'Datos de entrega' : 'Método de pago'}
@@ -66,11 +66,13 @@ export default function CheckoutPage() {
         />
       </div>
 
-      {step === 'delivery' ? (
-        <DeliveryStep checkout={checkout} />
-      ) : (
-        <PaymentStep checkout={checkout} validation={validation} />
-      )}
+      <div className="pt-1 pb-6 lg:pb-0">
+        {step === 'delivery' ? (
+          <DeliveryStep checkout={checkout} />
+        ) : (
+          <PaymentStep checkout={checkout} validation={validation} />
+        )}
+      </div>
 
       <CheckoutSummary checkout={checkout} validation={validation} />
 

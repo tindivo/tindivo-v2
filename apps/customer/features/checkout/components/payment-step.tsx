@@ -80,7 +80,7 @@ export function PaymentStep({
               onClick={() => handleSelect(opt)}
               className={cn(
                 'flex items-center gap-3 rounded-[18px] border bg-card p-4 text-left transition-shadow disabled:opacity-40',
-                sel ? 'border-2 border-brand shadow-elev-1' : 'border-ink/[0.04]',
+                sel ? 'border-brand shadow-focus-ring' : 'border-ink/[0.04]',
               )}
             >
               <span

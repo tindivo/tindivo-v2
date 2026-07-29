@@ -1,5 +1,5 @@
 import type { DeliveryMethod } from '@tindivo/contracts'
-import { Icon, Segmented } from '@tindivo/ui'
+import { Badge, Icon, Segmented } from '@tindivo/ui'
 import Link from 'next/link'
 import { AddressFields, labelEmoji } from '@/components/address-fields'
 import { OrderDetail } from '@/features/checkout/components/order-detail'
@@ -65,9 +65,9 @@ export function DeliveryStep({ checkout }: { checkout: CheckoutViewModel }) {
                   key={a.id}
                   type="button"
                   onClick={() => setAddressId(a.id)}
-                  className={`flex items-start gap-3 rounded-[18px] bg-white p-3.5 text-left transition-all ${
+                  className={`flex items-start gap-3 rounded-[18px] bg-card p-3.5 text-left transition-all ${
                     sel
-                      ? 'border-2 border-brand shadow-[0_0_0_4px_rgba(242,98,65,0.10)]'
+                      ? 'border border-brand shadow-focus-ring'
                       : 'border border-ink/[0.04] shadow-elev-1 hover:shadow-elev-2'
                   }`}
                 >
@@ -78,9 +78,9 @@ export function DeliveryStep({ checkout }: { checkout: CheckoutViewModel }) {
                     <div className="flex items-center gap-1.5">
                       <span className="font-semibold text-[14px]">{a.label}</span>
                       {a.is_default && (
-                        <span className="rounded-[5px] bg-brand/10 px-1.5 py-0.5 text-[9px] font-bold uppercase text-brand">
+                        <Badge variant="brand" size="sm" className="uppercase tracking-wide">
                           Por defecto
-                        </span>
+                        </Badge>
                       )}
                     </div>
                     {a.line && <div className="text-[13px] text-ink/70">{a.line}</div>}
