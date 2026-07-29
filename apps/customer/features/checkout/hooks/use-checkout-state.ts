@@ -2,7 +2,7 @@
 
 import type { DeliveryMethod, PaymentIntent } from '@tindivo/contracts'
 import { useRouter } from 'next/navigation'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { AddressValue } from '@/components/address-fields'
 import { EMPTY_ADDRESS } from '@/components/address-fields'
 import {
@@ -87,6 +87,7 @@ export interface CheckoutState {
   selectedAddress: Address | undefined
   reference: string
   line: string
+  reloadAddresses: () => Promise<void>
 }
 
 export function useCheckoutState(): CheckoutState {
@@ -172,6 +173,15 @@ export function useCheckoutState(): CheckoutState {
     deliveryMethod === 'delivery' ? (selectedAddress?.reference ?? manualAddr.reference) : ''
   const line = deliveryMethod === 'delivery' ? (selectedAddress?.line ?? manualAddr.line) : ''
 
+  const reloadAddresses = useCallback(async () => {
+    const { data: addrs } = await getSupabaseBrowser()
+      .from('customer_addresses')
+      .select('id,label,line,reference,is_default,coordinates_lat,coordinates_lng')
+      .order('is_default', { ascending: false })
+    setAddresses((addrs ?? []) as CheckoutState['addresses'])
+    setAddressId((prev) => prev ?? addrs?.find((a) => a.is_default)?.id ?? addrs?.[0]?.id ?? null)
+  }, [])
+
   return {
     router,
     cart,
@@ -235,5 +245,6 @@ export function useCheckoutState(): CheckoutState {
     selectedAddress,
     reference,
     line,
+    reloadAddresses,
   }
 }

@@ -64,3 +64,24 @@ export interface PaymentOption {
   desc: string
   logos: string[]
 }
+
+export const PAYMENT_OPTIONS: PaymentOption[] = [
+  {
+    value: 'pending_cash',
+    label: 'Efectivo al recibir',
+    desc: 'Paga en efectivo al motorizado',
+    logos: ['cash'],
+  },
+  {
+    value: 'pending_yape',
+    label: 'Billetera digital al recibir',
+    desc: 'Yape o Plin al recibir tu pedido',
+    logos: ['yape', 'plin'],
+  },
+  {
+    value: 'prepaid',
+    label: 'Prepago con billetera digital',
+    desc: 'Paga ahora con Yape/Plin y sube tu comprobante',
+    logos: ['yape', 'plin'],
+  },
+]

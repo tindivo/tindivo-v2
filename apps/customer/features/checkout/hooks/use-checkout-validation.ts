@@ -9,6 +9,7 @@ export interface UseCheckoutValidationReturn {
   cashAmount: number
   cashChange: number
   goToPayment: () => void
+  validate: () => boolean
 }
 
 export function useCheckoutValidation(checkout: CheckoutViewModel): UseCheckoutValidationReturn {
@@ -42,44 +43,43 @@ export function useCheckoutValidation(checkout: CheckoutViewModel): UseCheckoutV
     [cashAmount, total],
   )
 
-  const goToPayment = useCallback(() => {
+  const validate = useCallback(() => {
     setError(null)
     if (name.trim().length === 0) {
       setError('Ingresa tu nombre')
-      return
+      return false
     }
     if (deliveryMethod === 'delivery') {
       if (!line || line.trim().length < ADDRESS_LINE_MIN) {
         setError(`Elige o agrega una dirección de al menos ${ADDRESS_LINE_MIN} caracteres`)
-        return
+        return false
       }
       if (!isLineOk(line)) {
         setError(getLineError(line) ?? 'Ingresa una dirección válida')
-        return
+        return false
       }
       if (reference.trim().length < ADDRESS_REFERENCE_MIN) {
         setError(
           `Elige o agrega una dirección con referencia de al menos ${ADDRESS_REFERENCE_MIN} caracteres`,
         )
-        return
+        return false
       }
-      // Sin dirección guardada: exigir ubicación en el mapa dentro de la zona.
       if (!selectedAddress) {
         if (!manualAddr.coords) {
           setError('Marca tu ubicación en el mapa')
-          return
+          return false
         }
         if (!manualInside) {
           setError('Esa ubicación está fuera de nuestra zona de reparto en San Jacinto')
-          return
+          return false
         }
       }
     }
     if (!/^9\d{8}$/.test(phone)) {
       setError('Ingresa un celular válido (9 dígitos, empieza con 9)')
-      return
+      return false
     }
-    setStep('payment')
+    return true
   }, [
     setError,
     name,
@@ -90,8 +90,13 @@ export function useCheckoutValidation(checkout: CheckoutViewModel): UseCheckoutV
     manualAddr,
     manualInside,
     phone,
-    setStep,
   ])
 
-  return { cashAmount, cashChange, goToPayment }
+  const goToPayment = useCallback(() => {
+    if (validate()) {
+      setStep('payment')
+    }
+  }, [validate, setStep])
+
+  return { cashAmount, cashChange, goToPayment, validate }
 }
