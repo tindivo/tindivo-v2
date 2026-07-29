@@ -1,5 +1,3 @@
-'use client'
-
 import { Icon, ScreenHeader } from '@tindivo/ui'
 import { BottomSheet } from '@/components/ui'
 import { CartCtas } from '@/features/cart/components/cart-ctas'
@@ -27,8 +25,8 @@ export function CartSheetContent({ onClose }: CartSheetContentProps) {
         ) : (
           <>
             {cart.businessName && (
-              <div className="mb-1 flex items-center gap-2 pt-1 pb-2 font-semibold text-[13px] text-ink/60">
-                <Icon name="store" size={20} /> {cart.businessName}
+              <div className="mb-1 flex items-center gap-2 pt-1 pb-2 font-semibold text-[13px] text-ink-muted">
+                <Icon name="store" size={18} /> {cart.businessName}
               </div>
             )}
             <CartLineList lines={lines} />
@@ -37,10 +35,10 @@ export function CartSheetContent({ onClose }: CartSheetContentProps) {
       </div>
 
       {count > 0 && (
-        <div className="flex items-center gap-3 border-t border-border bg-surface px-4 pt-3.5 pb-6">
+        <div className="t-glass-strong flex items-center gap-3 border-t border-ink/[0.04] px-4 pt-3.5 pb-6">
           <div>
-            <div className="text-[11px] text-ink/55">Subtotal</div>
-            <div className="font-bold text-[18px] tabular-nums">{soles(subtotal)}</div>
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">Subtotal</div>
+            <div className="font-extrabold text-[18px] tabular-nums">{soles(subtotal)}</div>
           </div>
           <CartCtas layout="row" onNavigate={onClose} />
         </div>
