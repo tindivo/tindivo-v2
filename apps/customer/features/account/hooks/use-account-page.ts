@@ -64,6 +64,16 @@ export function useAccountPage() {
     await loadData()
   }
 
+  async function updateName(name: string) {
+    const supabase = getSupabaseBrowser()
+    const { data: session } = await supabase.auth.getSession()
+    const userId = session.session?.user.id
+    if (!userId) return
+    await supabase.from('customer_profiles').upsert({ user_id: userId, full_name: name })
+    await supabase.auth.updateUser({ data: { full_name: name } })
+    setProfile((p) => ({ ...p, name }))
+  }
+
   async function signOut() {
     await getSupabaseBrowser().auth.signOut({ scope: 'local' })
     clearOnboardingResume()
@@ -78,6 +88,7 @@ export function useAccountPage() {
     loadData,
     setDefault,
     remove,
+    updateName,
     signOut,
   }
 }
