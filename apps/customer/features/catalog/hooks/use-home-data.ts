@@ -26,7 +26,7 @@ export function useHomeData() {
     name: '',
     userId: null,
   })
-  const [activeOrder, setActiveOrder] = useState<ActiveOrder | null>(null)
+  const [activeOrders, setActiveOrders] = useState<ActiveOrder[]>([])
 
   useEffect(() => {
     let active = true
@@ -68,7 +68,7 @@ export function useHomeData() {
   useEffect(() => {
     const uid = user.userId
     if (!uid) {
-      setActiveOrder(null)
+      setActiveOrders([])
       return
     }
     let active = true
@@ -79,19 +79,15 @@ export function useHomeData() {
         .select('short_id,status,business_id,created_at')
         .in('status', ACTIVE_STATUSES)
         .order('created_at', { ascending: false })
-        .limit(1)
         .then(({ data }) => {
           if (!active) return
-          const o = data?.[0]
-          setActiveOrder(
-            o
-              ? {
-                  shortId: o.short_id,
-                  status: o.status,
-                  businessId: o.business_id,
-                  createdAt: o.created_at,
-                }
-              : null,
+          setActiveOrders(
+            (data ?? []).map((o) => ({
+              shortId: o.short_id,
+              status: o.status,
+              businessId: o.business_id,
+              createdAt: o.created_at,
+            })),
           )
         })
     }
@@ -110,5 +106,5 @@ export function useHomeData() {
     }
   }, [user.userId])
 
-  return { items, error, user, activeOrder }
+  return { items, error, user, activeOrders }
 }

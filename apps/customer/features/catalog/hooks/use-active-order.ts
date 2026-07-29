@@ -16,8 +16,8 @@ const ACTIVE_STATUSES: OrderStatus[] = [
   'picked_up',
 ]
 
-export function useActiveOrder() {
-  const [order, setOrder] = useState<ActiveOrder | null>(null)
+export function useActiveOrders() {
+  const [orders, setOrders] = useState<ActiveOrder[]>([])
 
   useEffect(() => {
     const supabase = getSupabaseBrowser()
@@ -32,19 +32,15 @@ export function useActiveOrder() {
           .in('status', ACTIVE_STATUSES)
           .eq('customer_user_id', data.session.user.id)
           .order('created_at', { ascending: false })
-          .limit(1)
           .then(({ data: rows }) => {
             if (!active) return
-            const o = rows?.[0]
-            setOrder(
-              o
-                ? {
-                    shortId: o.short_id,
-                    status: o.status,
-                    businessId: o.business_id,
-                    createdAt: o.created_at,
-                  }
-                : null,
+            setOrders(
+              (rows ?? []).map((o) => ({
+                shortId: o.short_id,
+                status: o.status,
+                businessId: o.business_id,
+                createdAt: o.created_at,
+              })),
             )
           })
       })
@@ -56,5 +52,5 @@ export function useActiveOrder() {
     }
   }, [])
 
-  return order
+  return orders
 }

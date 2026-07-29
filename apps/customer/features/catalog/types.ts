@@ -82,3 +82,5 @@ export interface ActiveOrder {
   businessId: string
   createdAt: string
 }
+
+export type ActiveOrders = ActiveOrder[]

@@ -13,7 +13,7 @@ import { firstName } from '@/features/catalog/lib/format'
 import { useCatalogSearch } from '@/lib/use-search'
 
 export default function Home() {
-  const { items, error, user, activeOrder } = useHomeData()
+  const { items, error, user, activeOrders } = useHomeData()
   const search = useCatalogSearch()
   const greetingName = firstName(user.name)
 
@@ -39,7 +39,7 @@ export default function Home() {
         </h1>
       </div>
 
-      {user.signedIn && activeOrder && <ActiveOrderBanner order={activeOrder} />}
+      {user.signedIn && activeOrders.length > 0 && <ActiveOrderBanner orders={activeOrders} />}
 
       <SearchBar query={search.query} onChange={search.setQuery} />
       <SearchResults search={search} businesses={items} />

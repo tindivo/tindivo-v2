@@ -13,7 +13,7 @@ import { ClosedBanner } from '@/features/catalog/components/closed-banner'
 import { MenuSection } from '@/features/catalog/components/menu-section'
 import { ProductModal } from '@/features/catalog/components/product-modal'
 import { ScheduleRow } from '@/features/catalog/components/schedule-row'
-import { useActiveOrder } from '@/features/catalog/hooks/use-active-order'
+import { useActiveOrders } from '@/features/catalog/hooks/use-active-order'
 import { useBusinessCatalog } from '@/features/catalog/hooks/use-business-catalog'
 import { useCatalogCart } from '@/features/catalog/hooks/use-catalog-cart'
 import { useCatalogNow } from '@/features/catalog/hooks/use-catalog-now'
@@ -23,7 +23,7 @@ export default function NegocioPage({ params }: { params: Promise<{ id: string }
   const { id } = use(params)
   const now = useCatalogNow()
   const { data, error } = useBusinessCatalog(id)
-  const activeOrder = useActiveOrder()
+  const activeOrders = useActiveOrders()
   const [active, setActive] = useState('')
   const [cartOpen, setCartOpen] = useState(false)
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({})
@@ -37,7 +37,7 @@ export default function NegocioPage({ params }: { params: Promise<{ id: string }
     handleAdd,
     confirmReplace,
   } = useCatalogCart(data?.business.id, data?.business.name)
-  const isBlockedByActiveOrder = activeOrder?.businessId === id
+  const isBlockedByActiveOrder = activeOrders.some((o) => o.businessId === id)
 
   useEffect(() => {
     if (data && !active) setActive(data.categories[0]?.id ?? '')
@@ -77,7 +77,10 @@ export default function NegocioPage({ params }: { params: Promise<{ id: string }
     <main className="mx-auto min-h-dvh max-w-[768px] bg-surface pb-32 md:max-w-[860px] lg:grid lg:max-w-7xl lg:grid-cols-[1fr_380px] lg:items-start lg:gap-8 lg:px-6 lg:pt-6">
       <div className="lg:min-w-0">
         {isBlockedByActiveOrder && (
-          <ActiveOrderBlockBanner order={activeOrder} businessName={business.name} />
+          <ActiveOrderBlockBanner
+            orders={activeOrders.filter((o) => o.businessId === id)}
+            businessName={business.name}
+          />
         )}
         <BusinessHero business={business} schedule={schedule} now={now} />
         <ScheduleRow schedule={schedule} now={now} />
