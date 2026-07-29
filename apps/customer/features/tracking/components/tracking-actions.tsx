@@ -81,19 +81,10 @@ export function TrackingActions({ data, current, cancellable, cancel }: Tracking
               Esta acción no se puede deshacer. Si ya pagaste por Yape, te lo devolveremos.
             </p>
             <div className="mt-5 flex flex-col gap-2.5">
-              <Button
-                variant="danger"
-                className="w-full"
-                onClick={doCancel}
-                disabled={cancelling}
-              >
+              <Button variant="danger" className="w-full" onClick={doCancel} disabled={cancelling}>
                 {cancelling ? 'Cancelando…' : 'Sí, cancelar pedido'}
               </Button>
-              <Button
-                variant="ghost"
-                className="w-full"
-                onClick={() => setConfirmCancel(false)}
-              >
+              <Button variant="ghost" className="w-full" onClick={() => setConfirmCancel(false)}>
                 No, mantener pedido
               </Button>
             </div>

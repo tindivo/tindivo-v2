@@ -31,7 +31,10 @@ export function Icon({
   const label = ariaLabel ?? name.replace(/_/g, ' ')
   return (
     <span
-      className={cn('material-symbols-rounded inline-flex select-none items-center justify-center leading-none', className)}
+      className={cn(
+        'material-symbols-rounded inline-flex select-none items-center justify-center leading-none',
+        className,
+      )}
       style={{
         fontSize: `${size}px`,
         lineHeight: `${size}px`,

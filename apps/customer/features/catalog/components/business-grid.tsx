@@ -18,9 +18,7 @@ export function BusinessGrid({ businesses, error }: BusinessGridProps) {
 
       <div className="flex flex-col gap-3 px-4 pt-1 md:grid md:grid-cols-2 md:gap-4 lg:grid-cols-3 lg:gap-5">
         {businesses === null && !error
-          ? [0, 1, 2].map((i) => (
-              <Skeleton key={i} className="h-[112px] rounded-[20px]" />
-            ))
+          ? [0, 1, 2].map((i) => <Skeleton key={i} className="h-[112px] rounded-[20px]" />)
           : businesses?.map((b) => <BusinessCard key={b.id} business={b} />)}
         {businesses && businesses.length === 0 && (
           <p className="t-muted py-8 text-center text-[14px] md:col-span-2 lg:col-span-3">

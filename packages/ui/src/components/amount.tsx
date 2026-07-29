@@ -7,20 +7,10 @@ export interface AmountProps extends HTMLAttributes<HTMLSpanElement> {
   ref?: Ref<HTMLSpanElement>
 }
 
-export function Amount({
-  className,
-  amount,
-  currency = 'S/',
-  ref,
-  ...props
-}: AmountProps) {
+export function Amount({ className, amount, currency = 'S/', ref, ...props }: AmountProps) {
   const value = amount == null || Number.isNaN(amount) ? null : Number(amount).toFixed(2)
   return (
-    <span
-      ref={ref}
-      className={cn('font-mono tabular-nums', className)}
-      {...props}
-    >
+    <span ref={ref} className={cn('font-mono tabular-nums', className)} {...props}>
       {value == null ? '—' : `${currency} ${value}`}
     </span>
   )

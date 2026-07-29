@@ -56,7 +56,8 @@ export function BusinessHero({ business, schedule, now }: BusinessHeroProps) {
           ) : (
             <>
               <span className="t-text-shadow-lg inline-flex items-center gap-1.5">
-                <Icon name="schedule" size={18} /> {business.estimated_eta_min}–{business.estimated_eta_max} min
+                <Icon name="schedule" size={18} /> {business.estimated_eta_min}–
+                {business.estimated_eta_max} min
               </span>
               <span className="w-px bg-white/30" />
               <span className="t-text-shadow-lg inline-flex items-center gap-1.5">

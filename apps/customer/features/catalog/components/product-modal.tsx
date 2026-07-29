@@ -66,7 +66,9 @@ export function ProductModal({ item, onClose, onAdd }: ProductModalProps) {
           {item.description && (
             <div className="mt-2 text-[14px] leading-[1.45] text-ink-muted">{item.description}</div>
           )}
-          <div className="mt-3 font-extrabold text-[18px] text-brand">Desde {soles(item.base_price)}</div>
+          <div className="mt-3 font-extrabold text-[18px] text-brand">
+            Desde {soles(item.base_price)}
+          </div>
         </div>
 
         <div className="px-5 pt-3">

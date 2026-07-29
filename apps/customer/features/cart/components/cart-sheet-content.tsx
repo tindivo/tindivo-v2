@@ -37,7 +37,9 @@ export function CartSheetContent({ onClose }: CartSheetContentProps) {
       {count > 0 && (
         <div className="t-glass-strong flex items-center gap-3 border-t border-ink/[0.04] px-4 pt-3.5 pb-6">
           <div>
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">Subtotal</div>
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">
+              Subtotal
+            </div>
             <div className="font-extrabold text-[18px] tabular-nums">{soles(subtotal)}</div>
           </div>
           <CartCtas layout="row" onNavigate={onClose} />

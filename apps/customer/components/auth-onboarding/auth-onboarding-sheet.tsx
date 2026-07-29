@@ -1,8 +1,8 @@
 'use client'
 
+import { BottomSheet, Icon } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { BottomSheet, Icon } from '@tindivo/ui'
 import {
   clearOnboardingResume,
   type OnboardingStep,
@@ -113,9 +113,7 @@ export function AuthOnboardingSheet() {
             {isBack ? <Icon name="arrow_back" size={20} /> : <Icon name="close" size={20} />}
           </button>
           {skippable && (
-            <span className="text-[12px] text-ink-muted">
-              Puedes completar esto después
-            </span>
+            <span className="text-[12px] text-ink-muted">Puedes completar esto después</span>
           )}
         </div>
         {chip ? (

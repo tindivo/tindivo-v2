@@ -9,10 +9,7 @@ interface BusinessCardProps {
 export function BusinessCard({ business }: BusinessCardProps) {
   const b = business
   return (
-    <Link
-      href={`/negocio/${b.id}`}
-      className="t-card t-lift flex items-stretch gap-3.5"
-    >
+    <Link href={`/negocio/${b.id}`} className="t-card t-lift flex items-stretch gap-3.5">
       {b.logo_url ? (
         <img
           src={b.logo_url}

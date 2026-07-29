@@ -87,8 +87,23 @@ export function MethodStep({
           className="mt-3 flex w-full items-center gap-3.5 rounded-[18px] border border-ink/[0.06] bg-surface-low p-4 text-left transition-colors hover:bg-ink/[0.06]"
         >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <rect x="3" y="5" width="18" height="14" rx="2.5" stroke="currentColor" className="text-ink" strokeWidth="1.8" />
-            <path d="M3.5 7l8.5 6 8.5-6" stroke="currentColor" className="text-ink" strokeWidth="1.8" strokeLinecap="round" />
+            <rect
+              x="3"
+              y="5"
+              width="18"
+              height="14"
+              rx="2.5"
+              stroke="currentColor"
+              className="text-ink"
+              strokeWidth="1.8"
+            />
+            <path
+              d="M3.5 7l8.5 6 8.5-6"
+              stroke="currentColor"
+              className="text-ink"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+            />
           </svg>
           <span className="flex-1">
             <span className="block font-semibold text-[15px] text-ink">Ingresar con correo</span>

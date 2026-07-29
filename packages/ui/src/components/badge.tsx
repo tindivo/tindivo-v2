@@ -24,13 +24,7 @@ export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   ref?: Ref<HTMLSpanElement>
 }
 
-export function Badge({
-  className,
-  variant = 'default',
-  size = 'md',
-  ref,
-  ...props
-}: BadgeProps) {
+export function Badge({ className, variant = 'default', size = 'md', ref, ...props }: BadgeProps) {
   return (
     <span
       ref={ref}

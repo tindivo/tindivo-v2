@@ -47,11 +47,7 @@ export function TrackingTimeline({ data, currentIdx }: TrackingTimelineProps) {
               >
                 {s.label}
               </div>
-              <div
-                className={`mt-0.5 text-[12px] ${
-                  active ? 'text-brand' : 'text-ink-subtle'
-                }`}
-              >
+              <div className={`mt-0.5 text-[12px] ${active ? 'text-brand' : 'text-ink-subtle'}`}>
                 {active
                   ? `${getStepSub(s, data)} · ahora`
                   : done

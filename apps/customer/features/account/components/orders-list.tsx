@@ -1,5 +1,5 @@
-import Link from 'next/link'
 import { Icon } from '@tindivo/ui'
+import Link from 'next/link'
 import type { OrderRow } from '@/features/account/types'
 
 interface OrdersListProps {
@@ -8,10 +8,7 @@ interface OrdersListProps {
 
 export function OrdersList({ orders }: OrdersListProps) {
   return (
-    <Link
-      href="/pedidos"
-      className="t-card t-lift mt-6 flex items-center gap-3 px-4 py-3.5"
-    >
+    <Link href="/pedidos" className="t-card t-lift mt-6 flex items-center gap-3 px-4 py-3.5">
       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-brand">
         <Icon name="schedule" size={20} />
       </div>

@@ -48,9 +48,7 @@ export function GoogleNameStep({
     <form onSubmit={onSubmit} className="flex h-full flex-col">
       <div className="t-scroll flex-1 px-5 pt-2 pb-4">
         <h2 className="t-display text-[24px] leading-[1.1] text-ink">¿Cómo te llamamos?</h2>
-        <p className="mt-1.5 text-[14px] text-ink-muted">
-          Este nombre aparecerá en tu pedido.
-        </p>
+        <p className="mt-1.5 text-[14px] text-ink-muted">Este nombre aparecerá en tu pedido.</p>
 
         <label className="mt-5 block">
           <span className="t-field-label">

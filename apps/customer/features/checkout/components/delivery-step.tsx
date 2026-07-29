@@ -35,8 +35,16 @@ export function DeliveryStep({ checkout }: { checkout: CheckoutViewModel }) {
           value={deliveryMethod}
           onChange={setDeliveryMethod}
           options={[
-            { value: 'delivery' as DeliveryMethod, label: 'Delivery', icon: <Icon name="local_shipping" size={20} /> },
-            { value: 'pickup' as DeliveryMethod, label: 'Recojo', icon: <Icon name="store" size={20} /> },
+            {
+              value: 'delivery' as DeliveryMethod,
+              label: 'Delivery',
+              icon: <Icon name="local_shipping" size={20} />,
+            },
+            {
+              value: 'pickup' as DeliveryMethod,
+              label: 'Recojo',
+              icon: <Icon name="store" size={20} />,
+            },
           ]}
         />
       )}

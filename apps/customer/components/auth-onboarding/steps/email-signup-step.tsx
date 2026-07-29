@@ -51,9 +51,7 @@ export function EmailSignupStep({
     <form onSubmit={onSubmit} className="flex h-full flex-col">
       <div className="t-scroll flex-1 px-5 pt-2 pb-4">
         <h2 className="t-display text-[24px] leading-[1.1] text-ink">Crea tu cuenta</h2>
-        <p className="mt-1.5 text-[14px] text-ink-muted">
-          Sin verificación. Tres campos y listo.
-        </p>
+        <p className="mt-1.5 text-[14px] text-ink-muted">Sin verificación. Tres campos y listo.</p>
 
         <label className="mt-5 block">
           <span className="t-field-label">
@@ -104,9 +102,7 @@ export function EmailSignupStep({
             tabIndex={active ? 0 : -1}
           />
         </label>
-        <p className="mt-1.5 text-[12px] text-ink-muted">
-          Mínimo 6 caracteres.
-        </p>
+        <p className="mt-1.5 text-[12px] text-ink-muted">Mínimo 6 caracteres.</p>
 
         {error && <p className="mt-3 text-[13px] text-danger">{error}</p>}
         {duplicate && (

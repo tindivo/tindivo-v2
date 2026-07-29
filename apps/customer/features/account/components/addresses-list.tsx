@@ -1,5 +1,5 @@
-import { labelEmoji } from '@/components/address-fields'
 import { Icon } from '@tindivo/ui'
+import { labelEmoji } from '@/components/address-fields'
 import type { Address } from '@/features/account/types'
 
 interface AddressesListProps {
