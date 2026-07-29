@@ -2,10 +2,11 @@
 
 import type { ApiEnvelope } from '@tindivo/api-client'
 import { TINDIVO_SUPPORT_WHATSAPP } from '@tindivo/core'
+import { Button, Card, CardBody, EmptyState, StatusPill } from '@tindivo/ui'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { Icon, ScreenHeader } from '@/components/ui'
+import { ScreenHeader } from '@/components/ui'
 import { api } from '@/lib/api'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
@@ -52,6 +53,13 @@ const STATUS_LABEL: Record<string, string> = {
   picked_up: 'En camino',
   delivered: 'Entregado',
   cancelled: 'Cancelado',
+}
+
+function statusTone(status: string) {
+  if (status === 'cancelled') return 'danger'
+  if (status === 'delivered') return 'success'
+  if (ACTIVE_STATUSES.has(status)) return 'brand'
+  return 'neutral'
 }
 
 function relativeDate(iso: string): string {
@@ -106,24 +114,37 @@ export default function PedidosPage() {
     })
   }, [router])
 
-  if (!ready) return <div className="p-10 text-ink-muted">Cargando…</div>
+  if (!ready) {
+    return (
+      <main className="mx-auto min-h-dvh max-w-[768px] bg-surface pb-16">
+        <ScreenHeader title="Historial de pedidos" onBack={() => router.push('/cuenta')} />
+        <div className="px-4 pt-4">
+          <div className="h-40 animate-pulse rounded-[20px] bg-card" />
+        </div>
+      </main>
+    )
+  }
 
   return (
-    <main className="mx-auto min-h-dvh max-w-[768px] bg-surface pb-16 md:max-w-3xl lg:max-w-6xl">
+    <main className="mx-auto min-h-dvh max-w-[768px] bg-surface pb-16">
       <ScreenHeader title="Historial de pedidos" onBack={() => router.push('/cuenta')} />
-      <div className="px-4 pt-2">
+
+      <div className="px-4 pt-3">
         {orders.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 py-16 text-center">
-            <span style={{ color: 'rgba(26,22,20,0.3)' }}>
-              <Icon name="shopping_basket" size={20} />
-            </span>
-            <p className="font-semibold text-[15px]">Aún no tienes pedidos</p>
-            <Link href="/" className="text-[13px] text-brand underline">
-              Explorar restaurantes
-            </Link>
-          </div>
+          <EmptyState
+            icon="receipt_long"
+            heading="Aún no tienes pedidos"
+            description="Cuando hagas tu primera compra aparecerá aquí para que la revises cuando quieras."
+            action={
+              <Link href="/">
+                <Button variant="brand" size="md">
+                  Explorar restaurantes
+                </Button>
+              </Link>
+            }
+          />
         ) : (
-          <div className="flex flex-col gap-2.5 md:grid md:grid-cols-2 md:gap-3 lg:grid-cols-3">
+          <div className="flex flex-col gap-3 md:grid md:grid-cols-2 lg:grid-cols-3">
             {orders.map((o) => {
               const items = o.customer_order_items ?? []
               const summary = items.map((i) => `${i.quantity}× ${i.item_name_snapshot}`).join(' · ')
@@ -131,89 +152,68 @@ export default function PedidosPage() {
               const isCancelled = o.status === 'cancelled'
               const total = Number(o.order_amount) + Number(o.delivery_fee)
               return (
-                <div key={o.id} className="rounded-[18px] border border-border bg-white p-4">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-semibold text-[14px]">
-                      {bizNames[o.business_id] ?? 'Restaurante'}
-                    </span>
-                    <span
-                      className="rounded-full px-2.5 py-1 font-bold text-[10px] uppercase"
-                      style={{
-                        letterSpacing: '0.04em',
-                        color: isCancelled ? '#DC2626' : isActive ? '#C2410C' : '#1A8050',
-                        background: isCancelled
-                          ? 'rgba(220,38,38,0.08)'
-                          : isActive
-                            ? 'rgba(249,115,22,0.1)'
-                            : 'rgba(26,150,80,0.1)',
-                      }}
-                    >
-                      {STATUS_LABEL[o.status] ?? o.status}
-                    </span>
-                  </div>
-                  {summary && (
-                    <div
-                      className="mt-1.5 text-[13px] leading-snug"
-                      style={{ color: 'rgba(26,22,20,0.7)' }}
-                    >
-                      {summary}
+                <Card key={o.id} className="overflow-hidden">
+                  <CardBody className="flex flex-col gap-3 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="min-w-0 font-semibold text-[15px] text-ink">
+                        {bizNames[o.business_id] ?? 'Restaurante'}
+                      </span>
+                      <StatusPill tone={statusTone(o.status)} dot={isActive}>
+                        {STATUS_LABEL[o.status] ?? o.status}
+                      </StatusPill>
                     </div>
-                  )}
-                  <div
-                    className="mt-2 flex items-center gap-2 text-[12px]"
-                    style={{ color: 'rgba(26,22,20,0.5)' }}
-                  >
-                    <span className="font-mono">#{o.short_id}</span>
-                    <span>·</span>
-                    <span>{relativeDate(o.created_at)}</span>
-                    <span>·</span>
-                    <span className="font-semibold tabular-nums" style={{ color: '#1A1614' }}>
-                      {soles(total)}
-                    </span>
-                  </div>
-                  <div className="mt-3 flex gap-2">
-                    {isActive && (
-                      <Link
-                        href={`/pedido/${o.short_id}`}
-                        className="flex-1 rounded-[12px] py-2.5 text-center font-semibold text-[13px] text-white"
-                        style={{ background: '#F97316' }}
-                      >
-                        Ver seguimiento
-                      </Link>
+
+                    {summary && (
+                      <p className="line-clamp-2 text-[13px] leading-snug text-ink-muted">
+                        {summary}
+                      </p>
                     )}
-                    {isCancelled && o.cancel_reason === 'proof_rejected_final' && (
-                      <Link
-                        href={`/pedido/${o.short_id}`}
-                        className="flex-1 rounded-[12px] py-2.5 text-center font-semibold text-[13px] text-white"
-                        style={{ background: '#DC2626' }}
+
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-ink-subtle">
+                      <span className="font-mono">#{o.short_id}</span>
+                      <span>·</span>
+                      <span>{relativeDate(o.created_at)}</span>
+                      <span>·</span>
+                      <span className="font-semibold tabular-nums text-ink">{soles(total)}</span>
+                    </div>
+
+                    <div className="flex gap-2">
+                      {isActive && (
+                        <Link href={`/pedido/${o.short_id}`} className="flex-1">
+                          <Button variant="brand" size="sm" className="w-full">
+                            Ver seguimiento
+                          </Button>
+                        </Link>
+                      )}
+                      {isCancelled && o.cancel_reason === 'proof_rejected_final' && (
+                        <Link href={`/pedido/${o.short_id}`} className="flex-1">
+                          <Button variant="danger" size="sm" className="w-full">
+                            Ver caso de pago
+                          </Button>
+                        </Link>
+                      )}
+                      {(!isCancelled || o.cancel_reason !== 'proof_rejected_final') && (
+                        <Link href={`/negocio/${o.business_id}`} className="flex-1">
+                          <Button variant="outline" size="sm" className="w-full">
+                            Volver a pedir
+                          </Button>
+                        </Link>
+                      )}
+                    </div>
+
+                    {isCancelled && (
+                      <a
+                        href={`https://wa.me/${TINDIVO_SUPPORT_WHATSAPP}?text=${encodeURIComponent(`Hola, tengo un problema con mi pedido #TDV-${o.short_id}. Motivo: `)}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center justify-center gap-1.5 text-[12px] text-ink-subtle hover:text-ink hover:underline"
                       >
-                        Ver caso de pago
-                      </Link>
+                        <span aria-hidden>💬</span>
+                        ¿Problema con este pedido?
+                      </a>
                     )}
-                    {(!isCancelled || o.cancel_reason !== 'proof_rejected_final') && (
-                      <Link
-                        href={`/negocio/${o.business_id}`}
-                        className="flex-1 rounded-[12px] py-2.5 text-center font-semibold text-[13px]"
-                        style={{
-                          background: 'rgba(26,22,20,0.06)',
-                          color: '#1A1614',
-                        }}
-                      >
-                        Volver a pedir
-                      </Link>
-                    )}
-                  </div>
-                  {isCancelled && (
-                    <a
-                      href={`https://wa.me/${TINDIVO_SUPPORT_WHATSAPP}?text=${encodeURIComponent(`Hola, tengo un problema con mi pedido #TDV-${o.short_id}. Motivo: `)}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="mt-1.5 flex items-center justify-center gap-1 text-[11px] text-ink-subtle hover:underline"
-                    >
-                      <span>💬</span> ¿Problema con este pedido?
-                    </a>
-                  )}
-                </div>
+                  </CardBody>
+                </Card>
               )
             })}
           </div>
