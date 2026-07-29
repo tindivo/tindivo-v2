@@ -37,10 +37,14 @@ export const localClient: SupabaseClient<Database> = createClient<Database>(
 )
 
 // ── Tipos de retorno del seed ─────────────────────────────────────────────────
-export interface SeedResult {
+// `SeededOrder` es el mínimo que `cleanup()` necesita para borrar lo sembrado.
+export interface SeededOrder {
   userId: string
   businessId: string
   orderId: string
+}
+
+export interface SeedResult extends SeededOrder {
   claimId: string
   amount: number
 }
@@ -122,6 +126,112 @@ export async function seedFraudClaim(amount = 20.0): Promise<SeedResult> {
   }
 }
 
+// ── Seed de pedido PREPAGO para probar los timers de estado ───────────────────
+// Crea usuario + negocio + un pedido `prepaid` en el estado pedido. Reusa el mismo
+// cliente service_role y el guard anti-producción de arriba.
+//
+// Valores de enum confirmados contra pg_enum / constraints:
+//   payment_intent     -> prepaid | pending_yape | pending_cash | pending_mixed
+//   order_status       -> validando | pending_acceptance | ... | awaiting_payment
+//   validation_context -> CHECK (validation_context IN ('antifraud','proof'))
+export interface SeedOrderOptions {
+  status?: 'pending_acceptance' | 'awaiting_payment'
+  validationContext?: 'antifraud' | 'proof'
+  proofAttempt?: number
+}
+
+export async function seedPrepaidOrder(opts: SeedOrderOptions = {}): Promise<SeededOrder> {
+  const { status = 'pending_acceptance', validationContext = 'antifraud', proofAttempt = 0 } = opts
+
+  const { data: authUser, error: authErr } = await localClient.auth.admin.createUser({
+    email: `prepay-${crypto.randomUUID().slice(0, 8)}@integration.local`,
+    password: 'test-password-12345',
+    email_confirm: true,
+    user_metadata: { full_name: 'Test Business Owner' },
+  })
+  if (authErr) throw new Error(`seed auth.users failed: ${authErr.message}`)
+  const userId = authUser.user.id
+
+  const { data: biz, error: bizErr } = await localClient
+    .from('businesses')
+    .insert({ user_id: userId, name: 'La Florencia (timer test)', balance_due: 0 })
+    .select('id')
+    .single()
+  if (bizErr) throw new Error(`seed businesses failed: ${bizErr.message}`)
+
+  const charset = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  let shortId = ''
+  for (let i = 0; i < 8; i++) shortId += charset[Math.floor(Math.random() * charset.length)]
+
+  // El trigger `orders_before_write` sella el timestamp del estado en el INSERT.
+  const { data: order, error: orderErr } = await localClient
+    .from('orders')
+    .insert({
+      business_id: biz.id,
+      short_id: shortId,
+      customer_phone: '+51999000222',
+      order_amount: 50.0,
+      delivery_fee: 3.0,
+      payment_intent: 'prepaid',
+      status,
+      validation_context: validationContext,
+      proof_attempt: proofAttempt,
+    })
+    .select('id')
+    .single()
+  if (orderErr) throw new Error(`seed orders failed: ${orderErr.message}`)
+
+  return { userId, businessId: biz.id, orderId: order.id }
+}
+
+// ── Lectura de los timestamps de estado de un pedido ──────────────────────────
+export interface OrderTimestamps {
+  status: string
+  pending_acceptance_at: string | null
+  validating_at: string | null
+  awaiting_payment_at: string | null
+}
+
+export async function readOrderTimestamps(orderId: string): Promise<OrderTimestamps> {
+  const { data, error } = await localClient
+    .from('orders')
+    .select('status, pending_acceptance_at, validating_at, awaiting_payment_at')
+    .eq('id', orderId)
+    .single()
+  if (error) throw new Error(`readOrderTimestamps failed: ${error.message}`)
+  return data as unknown as OrderTimestamps
+}
+
+// ── Retroceder un timestamp SIN cambiar el status ─────────────────────────────
+// Clave para que el test sea determinista y sin sleeps: el trigger solo toca los
+// timestamps cuando `tg_op='INSERT' OR new.status IS DISTINCT FROM old.status`, así
+// que un UPDATE que no altera el status no interfiere con el valor que escribimos.
+// El valor se calcula a partir de un timestamp que YA generó la DB, no del reloj del
+// host, para que no haya deriva entre el contenedor y la máquina que corre el test.
+export async function backdateTimestamp(
+  orderId: string,
+  column: 'pending_acceptance_at' | 'awaiting_payment_at',
+  fromDbTimestamp: string,
+  minutesBack: number,
+): Promise<string> {
+  const backdated = new Date(new Date(fromDbTimestamp).getTime() - minutesBack * 60_000).toISOString()
+  const { error } = await localClient
+    .from('orders')
+    .update({ [column]: backdated })
+    .eq('id', orderId)
+  if (error) throw new Error(`backdateTimestamp failed: ${error.message}`)
+  return backdated
+}
+
+// ── Cambiar el status de un pedido (dispara el trigger) ───────────────────────
+export async function setOrderStatus(orderId: string, status: string): Promise<void> {
+  const { error } = await localClient
+    .from('orders')
+    .update({ status })
+    .eq('id', orderId)
+  if (error) throw new Error(`setOrderStatus(${status}) failed: ${error.message}`)
+}
+
 // ── Deuda agregada desde el LEDGER (fuente de verdad, AGENTS.md §2.2) ─────────
 // Replica EXACTAMENTE el criterio de settle_business_charges:
 //   FROM business_charges WHERE business_id = X AND status = 'pending' -> sum(amount)
@@ -145,12 +255,16 @@ export async function sumPendingLedgerDebt(businessId: string): Promise<number> 
 
 // ── Cleanup: borra todo lo sembrado por el test ───────────────────────────────
 // Orden: claims → orders → businesses → auth.users (cascade limpia el resto).
-export async function cleanup(seed: SeedResult): Promise<void> {
+export async function cleanup(seed: SeededOrder): Promise<void> {
   await localClient.from('business_charges').delete().eq('order_id', seed.orderId)
   await localClient.from('contingency_advances').delete().eq('order_id', seed.orderId)
   await localClient.from('fraud_coverage_claims').delete().eq('order_id', seed.orderId)
   await localClient.from('orders').delete().eq('id', seed.orderId)
   await localClient.from('businesses').delete().eq('id', seed.businessId)
-  // Auth user cleanup (esto cascadea a public.users via FK ON DELETE CASCADE)
+  // `public.users` NO tiene FK hacia `auth.users` (verificado en pg_constraint), así que
+  // borrar el usuario de auth NO lo cascadea: hay que borrarlo explícitamente o quedan
+  // filas huérfanas acumulándose entre corridas. Va después de `businesses`, que sí
+  // referencia a `users` con ON DELETE CASCADE.
+  await localClient.from('users').delete().eq('id', seed.userId)
   await localClient.auth.admin.deleteUser(seed.userId)
 }
