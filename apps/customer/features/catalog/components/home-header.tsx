@@ -15,14 +15,18 @@ export function HomeHeader({ user }: HomeHeaderProps) {
 
   return (
     <header className="t-glass sticky top-0 z-30 flex items-center justify-between gap-3 px-4 pt-3 pb-3">
-      <div className="flex min-w-0 flex-1 items-center gap-3">
-        <div className="t-display shrink-0 text-[26px] leading-none tracking-tight text-brand-dark">
-          Tindivo
-        </div>
-        <div className="min-w-0 flex-1 border-l border-ink/[0.08] pl-3">
-          <AddressBar />
-        </div>
+      <Link
+        href="/"
+        className="t-display shrink-0 text-[24px] leading-none tracking-tight text-brand-dark"
+        aria-label="Tindivo"
+      >
+        Tindivo
+      </Link>
+
+      <div className="min-w-0 flex-1 px-2">
+        <AddressBar />
       </div>
+
       <div className="flex shrink-0 items-center gap-2">
         <CartButton />
         {user.signedIn ? (

@@ -2,6 +2,7 @@
 
 import { ActiveOrderBanner } from '@/features/catalog/components/active-order-banner'
 import { BusinessGrid } from '@/features/catalog/components/business-grid'
+import { CategoryStrip } from '@/features/catalog/components/category-strip'
 import { HomeHeader } from '@/features/catalog/components/home-header'
 import { HomeHero } from '@/features/catalog/components/home-hero'
 import { SearchBar } from '@/features/catalog/components/search-bar'
@@ -45,13 +46,14 @@ export default function Home() {
       {!search.active && (
         <>
           <HomeHero />
+          <CategoryStrip />
           <BusinessGrid businesses={items} error={error} />
         </>
       )}
 
       <div className="px-5 pt-6 pb-10 text-center">
         <div className="t-eyebrow text-[10px] tracking-[0.2em] opacity-70">tindivo · piloto</div>
-        <div className="mt-1 text-[11px] text-black/40">
+        <div className="mt-1 text-[11px] text-ink-subtle">
           Pedidos directos desde San Jacinto. Hecho en Áncash.
         </div>
       </div>

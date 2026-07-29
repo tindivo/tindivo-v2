@@ -100,18 +100,16 @@ export function AddressBar() {
         className="flex w-full min-w-0 items-center gap-1.5 text-left"
         aria-label="Cambiar dirección de entrega"
       >
-        <span className="shrink-0" style={{ color: '#F97316' }}>
+        <span className="shrink-0 text-brand">
           <Icon name="location_on" size={20} />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="t-eyebrow block" style={{ fontSize: 9, letterSpacing: '0.16em' }}>
-            Entregar en
-          </span>
-          <span className="flex min-w-0 items-center gap-1 font-semibold text-[13px] leading-tight">
+          <span className="t-eyebrow block text-[9px] tracking-[0.16em]">Entregar en</span>
+          <span className="flex min-w-0 items-center gap-1 font-semibold text-[13px] leading-tight text-ink">
             <span className="truncate">
               {labelEmoji(selected.label)} {selected.line || selected.reference}
             </span>
-            <span aria-hidden className="shrink-0" style={{ color: 'rgba(26,22,20,0.45)' }}>
+            <span aria-hidden className="shrink-0 text-ink-subtle">
               ⌄
             </span>
           </span>
@@ -128,37 +126,24 @@ export function AddressBar() {
                   key={a.id}
                   type="button"
                   onClick={() => choose(a.id)}
-                  className="flex items-start gap-3 rounded-[18px] bg-white p-3.5 text-left"
-                  style={{
-                    border: a.is_default ? '2px solid #F97316' : '1px solid rgba(26,22,20,0.05)',
-                  }}
+                  className={`flex items-start gap-3 rounded-[18px] bg-card p-3.5 text-left ${
+                    a.is_default ? 'border-2 border-brand' : 'border border-ink/[0.04]'
+                  }`}
                 >
-                  <div
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[18px]"
-                    style={{ background: 'rgba(249,115,22,0.1)' }}
-                  >
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-[18px]">
                     {labelEmoji(a.label)}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
-                      <span className="font-semibold text-[14px]">{a.label}</span>
+                      <span className="font-semibold text-[14px] text-ink">{a.label}</span>
                       {a.is_default && (
-                        <span
-                          className="rounded-[5px] px-1.5 py-0.5 font-bold text-[9px] uppercase"
-                          style={{ color: '#F97316', background: 'rgba(249,115,22,0.1)' }}
-                        >
+                        <span className="rounded-[5px] bg-brand-soft px-1.5 py-0.5 font-bold text-[9px] uppercase text-brand">
                           Por defecto
                         </span>
                       )}
                     </div>
-                    {a.line && (
-                      <div className="text-[13px]" style={{ color: 'rgba(26,22,20,0.7)' }}>
-                        {a.line}
-                      </div>
-                    )}
-                    <div className="mt-0.5 text-[12px]" style={{ color: 'rgba(26,22,20,0.55)' }}>
-                      {a.reference}
-                    </div>
+                    {a.line && <div className="text-[13px] text-ink-muted">{a.line}</div>}
+                    <div className="mt-0.5 text-[12px] text-ink-muted">{a.reference}</div>
                   </div>
                   {a.is_default && (
                     <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full bg-brand text-white">

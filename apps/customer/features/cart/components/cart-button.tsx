@@ -27,7 +27,7 @@ export function CartButton({ tone = 'light' }: CartButtonProps) {
         }`}
         aria-label={badge > 0 ? `Mi bolsa, ${badge} ítems` : 'Mi bolsa'}
       >
-        <Icon name="shopping_basket" size={20} />
+        <Icon name="shopping_bag" size={20} />
         {badge > 0 && (
           <span className="absolute -top-0.5 -right-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-brand px-1 font-bold text-[10px] text-white tabular-nums shadow-glow-brand">
             {badge}

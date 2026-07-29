@@ -188,6 +188,17 @@ textarea.t-field {
     rgba(26, 22, 20, 0.04) 10px
   );
 }
+.ph-label {
+  letter-spacing: 0.04em;
+  color: rgba(26, 22, 20, 0.5);
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 4px;
+  padding: 3px 6px;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 9px;
+  font-weight: 500;
+}
 
 /* Tabs de categoría sticky */
 .t-section-tabs {
