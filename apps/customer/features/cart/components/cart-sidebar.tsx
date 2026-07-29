@@ -21,7 +21,7 @@ export function CartSidebar({ businessId, businessName }: CartSidebarProps) {
   const showCart = hydrated && ownLines.length > 0
 
   return (
-    <div className="rounded-[28px] border border-border bg-white p-5 shadow-elev-2">
+    <div className="rounded-[28px] border border-border bg-card p-5 shadow-elev-2">
       <div className="flex items-center justify-between gap-2">
         <span className="t-display text-[18px]">Mi bolsa</span>
         {showCart && (
