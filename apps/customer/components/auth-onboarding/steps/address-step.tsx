@@ -61,12 +61,12 @@ export function AddressStep({
   return (
     <form onSubmit={onSubmit} className="flex h-full flex-col">
       <div className="t-scroll flex-1 px-5 pt-2 pb-4">
-        <h2 className="t-display text-[24px] leading-[1.15]">
+        <h2 className="t-display text-[24px] leading-[1.15] text-ink">
           Tu dirección
           <br />
           de entrega
         </h2>
-        <p className="mt-1.5 text-[14px]" style={{ color: 'rgba(26,22,20,0.6)' }}>
+        <p className="mt-1.5 text-[14px] text-ink-muted">
           Elige una etiqueta y marca tu casa en el mapa, o toca "Usar mi ubicación".
         </p>
 
@@ -80,15 +80,11 @@ export function AddressStep({
         {error && <p className="mt-3 text-[13px] text-danger">{error}</p>}
       </div>
 
-      <div
-        className="flex gap-2.5 border-t px-4 pt-3.5 pb-6"
-        style={{ borderColor: 'rgba(26,22,20,0.06)' }}
-      >
+      <div className="flex gap-2.5 border-t border-ink/[0.04] px-4 pt-3.5 pb-6">
         <button
           type="button"
           onClick={onBack}
-          className="rounded-[14px] px-5 font-semibold text-[15px]"
-          style={{ background: 'rgba(26,22,20,0.06)' }}
+          className="rounded-[14px] bg-ink/[0.06] px-5 font-semibold text-[15px] text-ink transition-colors hover:bg-ink/[0.10]"
           tabIndex={active ? 0 : -1}
         >
           {mode === 'gate' ? 'Cancelar' : 'Atrás'}

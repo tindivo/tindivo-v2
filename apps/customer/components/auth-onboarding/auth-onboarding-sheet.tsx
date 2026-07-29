@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { BottomSheet, Icon } from '@/components/ui'
+import { BottomSheet, Icon } from '@tindivo/ui'
 import {
   clearOnboardingResume,
   type OnboardingStep,
@@ -107,23 +107,19 @@ export function AuthOnboardingSheet() {
           <button
             type="button"
             onClick={onHeaderLeading}
-            className="flex h-9 w-9 items-center justify-center rounded-full"
-            style={{ background: 'rgba(26,22,20,0.06)' }}
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-ink/[0.06] transition-colors hover:bg-ink/[0.10]"
             aria-label={isBack ? 'Atrás' : 'Cerrar'}
           >
             {isBack ? <Icon name="arrow_back" size={20} /> : <Icon name="close" size={20} />}
           </button>
           {skippable && (
-            <span className="text-[12px]" style={{ color: 'rgba(26,22,20,0.5)' }}>
+            <span className="text-[12px] text-ink-muted">
               Puedes completar esto después
             </span>
           )}
         </div>
         {chip ? (
-          <span
-            className="rounded-full px-2.5 py-1 font-semibold text-[11px]"
-            style={{ background: 'rgba(249,115,22,0.12)', color: '#C2410C' }}
-          >
+          <span className="rounded-full bg-brand-soft px-2.5 py-1 font-semibold text-[11px] text-brand-dark">
             Paso {chip} de {totalSteps}
           </span>
         ) : headerLabel ? (

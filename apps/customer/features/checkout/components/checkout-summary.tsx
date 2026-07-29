@@ -66,13 +66,13 @@ function Summary({
   count: number
 }) {
   return (
-    <div className="mt-5 rounded-[22px] border border-ink/5 bg-white p-4">
+    <div className="t-card mt-5 p-4">
       <div className="t-eyebrow mb-2.5">Resumen</div>
-      <div className="flex justify-between py-1 text-[14px] font-medium text-ink/70 tabular-nums">
+      <div className="flex justify-between py-1 text-[14px] font-medium text-ink-muted tabular-nums">
         <span>Productos ({count})</span>
         <span>{soles(subtotal)}</span>
       </div>
-      <div className="flex justify-between py-1 text-[14px] font-medium text-ink/70 tabular-nums">
+      <div className="flex justify-between py-1 text-[14px] font-medium text-ink-muted tabular-nums">
         <span>Delivery</span>
         <span>{soles(deliveryFee)}</span>
       </div>

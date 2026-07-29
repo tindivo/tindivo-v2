@@ -129,31 +129,19 @@ export function PhoneStep({
       <form onSubmit={handleSendCode} className="flex h-full flex-col">
         <div className="t-scroll flex-1 px-5 pt-2 pb-4">
           {(mode === 'onboarding' || fullName || email) && (
-            <div
-              className="flex items-center gap-3 rounded-[18px] bg-white p-3.5"
-              style={{ border: '1px solid rgba(26,22,20,0.06)' }}
-            >
-              <span
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-bold text-[16px] text-white"
-                style={{ background: '#F97316' }}
-              >
+            <div className="t-card flex items-center gap-3 p-3.5">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand font-bold text-[16px] text-white">
                 {firstName[0]?.toUpperCase() ?? 'T'}
               </span>
               <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-2">
-                  <span className="font-semibold text-[14px]">¡Hola, {firstName}!</span>
-                  <span
-                    className="rounded-[5px] px-1.5 py-0.5 font-bold text-[9px] uppercase"
-                    style={{ background: 'rgba(26,150,80,0.12)', color: '#1A8050' }}
-                  >
+                  <span className="font-semibold text-[14px] text-ink">¡Hola, {firstName}!</span>
+                  <span className="rounded-[5px] bg-success-soft px-1.5 py-0.5 font-bold text-[9px] uppercase text-success">
                     Cuenta lista
                   </span>
                 </span>
                 {email && (
-                  <span
-                    className="block truncate text-[12px]"
-                    style={{ color: 'rgba(26,22,20,0.5)' }}
-                  >
+                  <span className="block truncate text-[12px] text-ink-muted">
                     {email}
                   </span>
                 )}
@@ -161,22 +149,22 @@ export function PhoneStep({
             </div>
           )}
 
-          <h2 className="t-display mt-5 text-[24px] leading-[1.15]">
+          <h2 className="t-display mt-5 text-[24px] leading-[1.15] text-ink">
             {mode === 'gate'
               ? 'Verifica tu celular\npara pedir'
               : '¿Cuál es tu número\nde celular?'}
           </h2>
-          <p className="mt-1.5 text-[14px]" style={{ color: 'rgba(26,22,20,0.6)' }}>
+          <p className="mt-1.5 text-[14px] text-ink-muted">
             Te enviaremos un código por SMS para confirmar tu número.
           </p>
 
-          <div className="mt-5 flex items-center gap-2.5 rounded-2xl border border-border bg-white px-3.5 py-1">
-            <span className="flex items-center gap-1.5 font-mono font-semibold text-[15px]">
+          <div className="mt-5 flex items-center gap-2.5 rounded-2xl border border-ink/[0.08] bg-card px-3.5 py-1">
+            <span className="flex items-center gap-1.5 font-mono font-semibold text-[15px] text-ink">
               <span aria-hidden>🇵🇪</span> +51
             </span>
-            <span className="h-6 w-px" style={{ background: 'rgba(26,22,20,0.12)' }} />
+            <span className="h-6 w-px bg-ink/[0.12]" />
             <input
-              className="h-12 w-full bg-transparent font-mono text-[17px] tracking-[0.12em] outline-none"
+              className="h-12 w-full bg-transparent font-mono text-[17px] tracking-[0.12em] text-ink outline-none placeholder:text-ink-subtle"
               placeholder="9 — — — — — — — —"
               inputMode="numeric"
               value={phone}
@@ -185,16 +173,13 @@ export function PhoneStep({
               tabIndex={active ? 0 : -1}
             />
           </div>
-          <p className="mt-1.5 text-[12px]" style={{ color: 'rgba(26,22,20,0.5)' }}>
+          <p className="mt-1.5 text-[12px] text-ink-muted">
             Debe empezar con 9 y tener 9 dígitos.
           </p>
 
-          <div
-            className="mt-4 flex items-start gap-2.5 rounded-[14px] px-3.5 py-3"
-            style={{ background: 'rgba(26,150,80,0.08)' }}
-          >
+          <div className="mt-4 flex items-start gap-2.5 rounded-[14px] bg-success-soft px-3.5 py-3">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <circle cx="12" cy="12" r="10" fill="#1A8050" />
+              <circle cx="12" cy="12" r="10" className="fill-success" />
               <path
                 d="M8 12.5l2.6 2.6L16 9.5"
                 stroke="#fff"
@@ -203,7 +188,7 @@ export function PhoneStep({
                 strokeLinejoin="round"
               />
             </svg>
-            <p className="text-[12px] leading-[1.45]" style={{ color: '#14532D' }}>
+            <p className="text-[12px] leading-[1.45] text-success">
               Nunca compartimos tu número. Solo lo usa el motorizado del pedido en curso.
             </p>
           </div>
@@ -211,7 +196,7 @@ export function PhoneStep({
           {error && <p className="mt-3 text-[13px] text-danger">{error}</p>}
         </div>
 
-        <div className="border-t px-4 pt-3.5 pb-6" style={{ borderColor: 'rgba(26,22,20,0.06)' }}>
+        <div className="border-t border-ink/[0.04] px-4 pt-3.5 pb-6">
           <button
             type="submit"
             className="t-btn t-btn-primary t-btn-block"
@@ -229,14 +214,14 @@ export function PhoneStep({
   return (
     <form onSubmit={handleVerifyCode} className="flex h-full flex-col">
       <div className="t-scroll flex-1 px-5 pt-2 pb-4">
-        <h2 className="t-display text-[24px] leading-[1.15]">Ingresa el código</h2>
-        <p className="mt-1.5 text-[14px]" style={{ color: 'rgba(26,22,20,0.6)' }}>
+        <h2 className="t-display text-[24px] leading-[1.15] text-ink">Ingresa el código</h2>
+        <p className="mt-1.5 text-[14px] text-ink-muted">
           Enviamos un código de 6 dígitos por SMS a tu celular (+51 {maskedPhone})
         </p>
 
-        <div className="mt-5 flex items-center gap-2.5 rounded-2xl border border-border bg-white px-3.5 py-1">
+        <div className="mt-5 flex items-center gap-2.5 rounded-2xl border border-ink/[0.08] bg-card px-3.5 py-1">
           <input
-            className="h-12 w-full bg-transparent font-mono text-[17px] text-center tracking-[0.25em] outline-none"
+            className="h-12 w-full bg-transparent font-mono text-[17px] text-center tracking-[0.25em] text-ink outline-none placeholder:text-ink-subtle"
             placeholder="— — — — — —"
             inputMode="numeric"
             value={code}
@@ -250,7 +235,7 @@ export function PhoneStep({
         <div className="mt-4 flex items-center justify-between text-[13px]">
           <button
             type="button"
-            className="font-semibold text-brand underline"
+            className="font-semibold text-brand underline transition-colors hover:text-brand-dark"
             onClick={() => {
               setPhase('input')
               setCode('')
@@ -262,11 +247,11 @@ export function PhoneStep({
           </button>
 
           {cooldown > 0 ? (
-            <span style={{ color: 'rgba(26,22,20,0.5)' }}>Reenviar en {cooldown}s</span>
+            <span className="text-ink-muted">Reenviar en {cooldown}s</span>
           ) : (
             <button
               type="button"
-              className="font-semibold text-brand underline"
+              className="font-semibold text-brand underline transition-colors hover:text-brand-dark"
               onClick={() => handleSendCode()}
               tabIndex={active ? 0 : -1}
             >
@@ -278,7 +263,7 @@ export function PhoneStep({
         {error && <p className="mt-4 text-[13px] text-danger">{error}</p>}
       </div>
 
-      <div className="border-t px-4 pt-3.5 pb-6" style={{ borderColor: 'rgba(26,22,20,0.06)' }}>
+      <div className="border-t border-ink/[0.04] px-4 pt-3.5 pb-6">
         <button
           type="submit"
           className="t-btn t-btn-primary t-btn-block"

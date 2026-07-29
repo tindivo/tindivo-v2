@@ -50,14 +50,14 @@ export function EmailSignupStep({
   return (
     <form onSubmit={onSubmit} className="flex h-full flex-col">
       <div className="t-scroll flex-1 px-5 pt-2 pb-4">
-        <h2 className="t-display text-[24px] leading-[1.1]">Crea tu cuenta</h2>
-        <p className="mt-1.5 text-[14px]" style={{ color: 'rgba(26,22,20,0.6)' }}>
+        <h2 className="t-display text-[24px] leading-[1.1] text-ink">Crea tu cuenta</h2>
+        <p className="mt-1.5 text-[14px] text-ink-muted">
           Sin verificación. Tres campos y listo.
         </p>
 
         <label className="mt-5 block">
           <span className="t-field-label">
-            Nombre completo <span style={{ color: '#F97316' }}>*</span>
+            Nombre completo <span className="text-brand">*</span>
           </span>
           <input
             className="t-field"
@@ -72,7 +72,7 @@ export function EmailSignupStep({
 
         <label className="mt-3.5 block">
           <span className="t-field-label">
-            Correo <span style={{ color: '#F97316' }}>*</span>
+            Correo <span className="text-brand">*</span>
           </span>
           <input
             type="email"
@@ -91,7 +91,7 @@ export function EmailSignupStep({
 
         <label className="mt-3.5 block">
           <span className="t-field-label">
-            Contraseña <span style={{ color: '#F97316' }}>*</span>
+            Contraseña <span className="text-brand">*</span>
           </span>
           <input
             type="password"
@@ -104,7 +104,7 @@ export function EmailSignupStep({
             tabIndex={active ? 0 : -1}
           />
         </label>
-        <p className="mt-1.5 text-[12px]" style={{ color: 'rgba(26,22,20,0.5)' }}>
+        <p className="mt-1.5 text-[12px] text-ink-muted">
           Mínimo 6 caracteres.
         </p>
 
@@ -113,8 +113,7 @@ export function EmailSignupStep({
           <button
             type="button"
             onClick={() => onGoToLogin(email.trim())}
-            className="t-btn t-btn-block mt-3 font-semibold"
-            style={{ background: 'rgba(249,115,22,0.12)', color: '#C2410C' }}
+            className="t-btn t-btn-block mt-3 bg-brand-soft font-semibold text-brand-dark"
             tabIndex={active ? 0 : -1}
           >
             Iniciar sesión con este correo
@@ -122,7 +121,7 @@ export function EmailSignupStep({
         )}
       </div>
 
-      <div className="border-t px-4 pt-3.5 pb-6" style={{ borderColor: 'rgba(26,22,20,0.06)' }}>
+      <div className="border-t border-ink/[0.04] px-4 pt-3.5 pb-6">
         <button
           type="submit"
           className="t-btn t-btn-primary t-btn-block"

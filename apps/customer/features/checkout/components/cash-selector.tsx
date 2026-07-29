@@ -21,9 +21,9 @@ export function CashSelector({
   cashChange,
 }: CashSelectorProps) {
   return (
-    <div className="mt-3 rounded-[18px] border border-ink/5 bg-white p-4">
-      <div className="font-semibold text-[15px]">¿Con cuánto pagarás?</div>
-      <p className="mt-0.5 text-[12px] text-ink/55">Así el motorizado lleva tu vuelto exacto.</p>
+    <div className="t-card mt-3 p-4">
+      <div className="font-semibold text-[15px] text-ink">¿Con cuánto pagarás?</div>
+      <p className="mt-0.5 text-[12px] text-ink-muted">Así el motorizado lleva tu vuelto exacto.</p>
       <div className="mt-3 flex flex-wrap gap-1.5">
         {CASH_CHIPS.filter((c) => c.amount === null || c.amount >= total).map((c) => {
           const sel = cashChoice === c.value
@@ -32,8 +32,10 @@ export function CashSelector({
               key={c.value}
               type="button"
               onClick={() => setCashChoice(c.value)}
-              className={`rounded-full px-3.5 py-2 font-semibold text-[13px] ${
-                sel ? 'bg-brand text-white' : 'border border-ink/8 bg-ink/[0.04] text-ink'
+              className={`rounded-full px-3.5 py-2 font-semibold text-[13px] transition-colors ${
+                sel
+                  ? 'bg-brand text-white'
+                  : 'border border-ink/[0.08] bg-surface-low text-ink hover:bg-ink/[0.06]'
               }`}
             >
               {c.label}
@@ -43,10 +45,10 @@ export function CashSelector({
         <button
           type="button"
           onClick={() => setCashChoice('custom')}
-          className={`rounded-full px-3.5 py-2 font-semibold text-[13px] ${
+          className={`rounded-full px-3.5 py-2 font-semibold text-[13px] transition-colors ${
             cashChoice === 'custom'
               ? 'bg-brand text-white'
-              : 'border border-ink/8 bg-ink/[0.04] text-ink'
+              : 'border border-ink/[0.08] bg-surface-low text-ink hover:bg-ink/[0.06]'
           }`}
         >
           Otro monto
@@ -54,7 +56,7 @@ export function CashSelector({
       </div>
       {cashChoice === 'custom' && (
         <div className="mt-3 flex items-center gap-2">
-          <span className="rounded-2xl border border-border bg-white px-3 py-3.5 font-mono text-[15px] text-ink/60">
+          <span className="rounded-2xl border border-ink/[0.08] bg-card px-3 py-3.5 font-mono text-[15px] text-ink-muted">
             S/
           </span>
           <input

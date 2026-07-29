@@ -12,26 +12,26 @@ export function OrderDetail() {
   if (count === 0) return null
 
   return (
-    <div className="mt-5 overflow-hidden rounded-[22px] border border-ink/5 bg-white">
+    <div className="t-card mt-5 overflow-hidden p-0">
       <button
         type="button"
         className="flex w-full items-center gap-3 p-4 text-left"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
       >
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-ink/[0.05]">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-surface-low">
           <Icon name="shopping_basket" size={20} />
         </span>
         <span className="flex-1">
-          <span className="block font-semibold text-[15px]">Detalle del pedido</span>
-          <span className="block text-[12px] text-ink/55">
+          <span className="block font-semibold text-[15px] text-ink">Detalle del pedido</span>
+          <span className="block text-[12px] text-ink-muted">
             {cart.businessName ? `${cart.businessName} · ` : ''}
             {count} {count === 1 ? 'producto' : 'productos'}
           </span>
         </span>
         <span
           aria-hidden
-          className={`inline-flex text-ink/40 transition-transform duration-200 ${
+          className={`inline-flex text-ink-subtle transition-transform duration-200 ${
             open ? 'rotate-90' : '-rotate-90'
           }`}
         >
@@ -40,11 +40,11 @@ export function OrderDetail() {
       </button>
 
       {open && (
-        <div className="border-t border-ink/[0.06] px-4 pb-4">
+        <div className="border-t border-ink/[0.04] px-4 pb-4">
           {cart.lines.map((line) => (
             <div
               key={line.key}
-              className="flex items-start gap-3 border-t border-ink/5 pt-3.5 first:border-t-0 first:pt-0"
+              className="flex items-start gap-3 border-t border-ink/[0.04] pt-3.5 first:border-t-0 first:pt-0"
             >
               {/* Placeholder de color por `hue` (mismo estándar visual que el modal de producto). */}
               <span
@@ -68,10 +68,10 @@ export function OrderDetail() {
                     {line.modifiers.map((m) => (
                       <div
                         key={`${line.key}-${m.optionId}`}
-                        className="flex justify-between gap-2 text-[12px] text-ink/60"
+                        className="flex justify-between gap-2 text-[12px] text-ink-muted"
                       >
                         <span className="min-w-0">
-                          <span className="text-ink/40">{m.groupName}: </span>
+                          <span className="text-ink-subtle">{m.groupName}: </span>
                           {m.optionName}
                         </span>
                         {m.price > 0 && (
@@ -83,7 +83,7 @@ export function OrderDetail() {
                 )}
 
                 {line.note && (
-                  <div className="mt-1.5 rounded-lg bg-brand/10 px-2.5 py-1.5 text-[12px] text-brand-dark">
+                  <div className="mt-1.5 rounded-lg bg-brand-soft px-2.5 py-1.5 text-[12px] text-brand-dark">
                     <span className="font-semibold">Nota: </span>
                     {line.note}
                   </div>
@@ -111,9 +111,9 @@ export function OrderDetail() {
                   <button
                     type="button"
                     onClick={() => cart.remove(line.key)}
-                    className="rounded-lg bg-danger/10 px-2.5 py-1.5 font-medium text-[12px] text-danger"
+                    className="inline-flex items-center gap-1 rounded-full bg-danger-soft px-3 py-1.5 font-semibold text-[12px] text-danger transition-colors hover:bg-danger/10"
                   >
-                    Eliminar
+                    <Icon name="delete" size={14} /> Eliminar
                   </button>
                 </div>
               </div>

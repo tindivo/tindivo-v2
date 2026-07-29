@@ -1,5 +1,6 @@
 'use client'
 
+import { cn } from '@tindivo/ui'
 import { CashSelector } from '@/features/checkout/components/cash-selector'
 import { OrderDetail } from '@/features/checkout/components/order-detail'
 import type { CheckoutViewModel } from '@/features/checkout/hooks/use-checkout'
@@ -63,7 +64,7 @@ export function PaymentStep({
   return (
     <div className="px-4 pt-3 lg:px-0">
       {prepayReason && (
-        <p className="rounded-xl bg-brand/10 px-3 py-2.5 text-[13px] text-brand-dark">
+        <p className="rounded-xl bg-brand-soft px-3 py-2.5 text-[13px] text-brand-dark">
           {prepayReason}
         </p>
       )}
@@ -77,14 +78,16 @@ export function PaymentStep({
               type="button"
               disabled={disabled}
               onClick={() => handleSelect(opt)}
-              className={`flex items-center gap-3 rounded-[18px] bg-white p-4 text-left disabled:opacity-40 ${
-                sel ? 'border-2 border-brand' : 'border border-ink/5'
-              }`}
+              className={cn(
+                'flex items-center gap-3 rounded-[18px] border bg-card p-4 text-left transition-shadow disabled:opacity-40',
+                sel ? 'border-2 border-brand shadow-elev-1' : 'border-ink/[0.04]',
+              )}
             >
               <span
-                className={`flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-2 ${
-                  sel ? 'border-brand' : 'border-ink/25'
-                }`}
+                className={cn(
+                  'flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-2',
+                  sel ? 'border-brand' : 'border-ink-subtle',
+                )}
               >
                 {sel && <span className="h-2.5 w-2.5 rounded-full bg-brand" />}
               </span>
@@ -101,8 +104,8 @@ export function PaymentStep({
                 ))}
               </span>
               <span className="flex-1">
-                <span className="block font-semibold text-[15px]">{opt.label}</span>
-                <span className="block text-[12px] text-ink/55">{opt.desc}</span>
+                <span className="block font-semibold text-[15px] text-ink">{opt.label}</span>
+                <span className="block text-[12px] text-ink-muted">{opt.desc}</span>
               </span>
             </button>
           )
@@ -143,13 +146,13 @@ function Summary({
   count: number
 }) {
   return (
-    <div className="mt-5 rounded-[22px] border border-ink/5 bg-white p-4">
+    <div className="t-card mt-5 p-4">
       <div className="t-eyebrow mb-2.5">Resumen</div>
-      <div className="flex justify-between py-1 text-[14px] font-medium text-ink/70 tabular-nums">
+      <div className="flex justify-between py-1 text-[14px] font-medium text-ink-muted tabular-nums">
         <span>Productos ({count})</span>
         <span>{soles(subtotal)}</span>
       </div>
-      <div className="flex justify-between py-1 text-[14px] font-medium text-ink/70 tabular-nums">
+      <div className="flex justify-between py-1 text-[14px] font-medium text-ink-muted tabular-nums">
         <span>Delivery</span>
         <span>{soles(deliveryFee)}</span>
       </div>

@@ -45,14 +45,14 @@ export function LoginStep({
   return (
     <form onSubmit={onSubmit} className="flex h-full flex-col">
       <div className="t-scroll flex-1 px-5 pt-2 pb-4">
-        <h2 className="t-display text-[24px] leading-[1.1]">Hola de nuevo</h2>
-        <p className="mt-1.5 text-[14px]" style={{ color: 'rgba(26,22,20,0.6)' }}>
+        <h2 className="t-display text-[24px] leading-[1.1] text-ink">Hola de nuevo</h2>
+        <p className="mt-1.5 text-[14px] text-ink-muted">
           Entra con tu correo y contraseña.
         </p>
 
         <label className="mt-5 block">
           <span className="t-field-label">
-            Correo <span style={{ color: '#F97316' }}>*</span>
+            Correo <span className="text-brand">*</span>
           </span>
           <input
             type="email"
@@ -68,7 +68,7 @@ export function LoginStep({
 
         <label className="mt-3.5 block">
           <span className="t-field-label">
-            Contraseña <span style={{ color: '#F97316' }}>*</span>
+            Contraseña <span className="text-brand">*</span>
           </span>
           <input
             type="password"
@@ -86,15 +86,14 @@ export function LoginStep({
         <button
           type="button"
           onClick={onSignup}
-          className="mt-5 w-full text-center text-[14px]"
-          style={{ color: 'rgba(26,22,20,0.6)' }}
+          className="mt-5 w-full text-center text-[14px] text-ink-muted"
           tabIndex={active ? 0 : -1}
         >
           ¿No tienes cuenta? <span className="font-semibold text-brand">Crear cuenta</span>
         </button>
       </div>
 
-      <div className="border-t px-4 pt-3.5 pb-6" style={{ borderColor: 'rgba(26,22,20,0.06)' }}>
+      <div className="border-t border-ink/[0.04] px-4 pt-3.5 pb-6">
         <button
           type="submit"
           className="t-btn t-btn-primary t-btn-block"
