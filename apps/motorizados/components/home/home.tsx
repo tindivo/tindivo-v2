@@ -1,7 +1,6 @@
 'use client'
 
-import { GlassTopBar, Segmented } from '@tindivo/ui'
-import Link from 'next/link'
+import { Segmented } from '@tindivo/ui'
 import { useEffect, useState } from 'react'
 import { useDriverOrders } from '@/hooks/use-driver-orders'
 import { useNow } from '@/hooks/use-now'
@@ -14,7 +13,7 @@ import { TeamTab } from './team-tab'
 type Tab = 'available' | 'mine' | 'team'
 
 /** Board principal del motorizado: disponibilidad + tabs + bandejas. */
-export function Home({ onSignOut }: { onSignOut: () => void }) {
+export function Home() {
   const now = useNow()
   const board = useDriverOrders(now)
   const [tab, setTab] = useState<Tab>('available')
@@ -32,64 +31,41 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
   const firstName = driverName?.split(' ')[0]
 
   return (
-    <div className="mx-auto min-h-dvh max-w-[480px] bg-surface">
-      <GlassTopBar
-        title="Tindivo · Motorizado"
-        subtitle={firstName ? `Hola, ${firstName}` : 'Mis entregas'}
-        right={
-          <>
-            <Link
-              href="/efectivo"
-              aria-label="Efectivo"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-ink/[0.06] text-ink transition-colors hover:bg-ink/[0.1] active:scale-[0.97]"
-            >
-              <span className="material-symbols-rounded text-[20px]">shopping_basket</span>
-            </Link>
-            <button
-              type="button"
-              aria-label="Salir"
-              onClick={async () => {
-                await getSupabaseBrowser().auth.signOut()
-                onSignOut()
-              }}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-ink/[0.06] text-ink transition-colors hover:bg-ink/[0.1] active:scale-[0.97]"
-            >
-              <span className="material-symbols-rounded text-[20px]">close</span>
-            </button>
-          </>
-        }
-      />
+    <main className="mx-auto max-w-[480px] px-4 pt-20 pb-10">
+      {firstName && (
+        <p className="t-eyebrow mb-3">
+          Hola, <span className="text-ink">{firstName}</span>
+        </p>
+      )}
 
-      <main className="px-4 pt-20 pb-10">
-        <AvailabilityCard />
+      <AvailabilityCard />
 
-        <div className="mb-4">
-          <Segmented<Tab>
-            value={tab}
-            onChange={setTab}
-            options={[
-              { value: 'available', label: `Disponibles (${board.available.length})` },
-              { value: 'mine', label: `Míos (${board.mine.length})` },
-              { value: 'team', label: teamCount > 0 ? `Equipo (${teamCount})` : 'Equipo' },
-            ]}
-          />
-        </div>
+      <div className="mb-4">
+        <Segmented<Tab>
+          value={tab}
+          onChange={setTab}
+          options={[
+            { value: 'available', label: `Disponibles (${board.available.length})` },
+            { value: 'mine', label: `Míos (${board.mine.length})` },
+            { value: 'team', label: teamCount > 0 ? `Equipo (${teamCount})` : 'Equipo' },
+          ]}
+        />
+      </div>
 
-        {tab === 'available' && (
-          <AvailableTab
-            available={board.available}
-            upcoming={board.upcoming}
-            mySlots={board.mySlots}
-            hasOverdueAvailable={board.hasOverdueAvailable}
-            lastSyncOk={board.lastSyncOk}
-            now={now}
-          />
-        )}
-        {tab === 'mine' && (
-          <MineTab mine={board.mine} deliveredToday={board.deliveredToday} now={now} />
-        )}
-        {tab === 'team' && <TeamTab onCount={setTeamCount} />}
-      </main>
-    </div>
+      {tab === 'available' && (
+        <AvailableTab
+          available={board.available}
+          upcoming={board.upcoming}
+          mySlots={board.mySlots}
+          hasOverdueAvailable={board.hasOverdueAvailable}
+          lastSyncOk={board.lastSyncOk}
+          now={now}
+        />
+      )}
+      {tab === 'mine' && (
+        <MineTab mine={board.mine} deliveredToday={board.deliveredToday} now={now} />
+      )}
+      {tab === 'team' && <TeamTab onCount={setTeamCount} />}
+    </main>
   )
 }

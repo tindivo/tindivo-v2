@@ -1,9 +1,9 @@
 'use client'
 
 import { type ApiEnvelope, ApiError } from '@tindivo/api-client'
-import { Badge, Button, Card, ScreenHeader } from '@tindivo/ui'
-import { useRouter } from 'next/navigation'
+import { Badge, Button, Card } from '@tindivo/ui'
 import { type FormEvent, useCallback, useEffect, useState } from 'react'
+import { DriverShell } from '@/components/driver-shell'
 import { api } from '@/lib/api'
 import { soles } from '@/lib/format'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
@@ -38,7 +38,6 @@ interface HistoryRow {
 }
 
 export default function EfectivoPage() {
-  const router = useRouter()
   const [today, setToday] = useState<TodayRow[]>([])
   const [history, setHistory] = useState<HistoryRow[]>([])
   const [ready, setReady] = useState(false)
@@ -58,24 +57,19 @@ export default function EfectivoPage() {
     getSupabaseBrowser()
       .auth.getSession()
       .then(({ data }) => {
-        if (!data.session) {
-          router.replace('/')
-          return
-        }
+        if (!data.session) return
         load()
         setReady(true)
       })
-  }, [router, load])
+  }, [load])
 
   if (!ready) return <div className="p-10 text-ink-muted">Cargando…</div>
 
   const pending = today.filter((t) => t.status == null || t.status === 'pending_confirmation')
 
   return (
-    <main className="mx-auto min-h-dvh max-w-[480px] bg-surface pb-10">
-      <ScreenHeader title="Efectivo del turno" onBack={() => router.push('/')} />
-
-      <div className="px-4">
+    <DriverShell>
+      <main className="mx-auto max-w-[480px] px-4 pt-20 pb-10">
         {error && <p className="mt-3 text-[13px] text-danger">{error}</p>}
 
         <h2 className="t-eyebrow mt-4 mb-2">A entregar hoy</h2>
@@ -126,8 +120,8 @@ export default function EfectivoPage() {
             })}
           </Card>
         )}
-      </div>
-    </main>
+      </main>
+    </DriverShell>
   )
 }
 
