@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { isToday } from '@/lib/format'
 import { getOptimistic } from '@/lib/offline-queue'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
@@ -28,6 +28,7 @@ export function useDriverOrders(now: number): DriverBoard {
   const [orders, setOrders] = useState<BoardOrder[]>([])
   const [myDriverId, setMyDriverId] = useState<string | null>(null)
   const [lastSyncOk, setLastSyncOk] = useState(true)
+  const channelNameRef = useRef(`drv-orders-${crypto.randomUUID()}`)
 
   const refetch = useCallback(async () => {
     const supabase = getSupabaseBrowser()
@@ -61,7 +62,7 @@ export function useDriverOrders(now: number): DriverBoard {
       .then(({ data }) => setMyDriverId(data?.id ?? null))
     void refetch()
     const channel = supabase
-      .channel('drv-orders')
+      .channel(channelNameRef.current)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
         void refetch()
       })
