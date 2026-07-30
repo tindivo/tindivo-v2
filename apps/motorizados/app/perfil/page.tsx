@@ -4,6 +4,7 @@ import { Button, Card, Icon, Skeleton } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { DriverShell } from '@/components/driver-shell'
+import { ToggleSwitch } from '@/components/toggle-switch'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
 interface DriverProfile {
@@ -16,6 +17,8 @@ export default function PerfilPage() {
   const router = useRouter()
   const [profile, setProfile] = useState<DriverProfile | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isAvailable, setIsAvailable] = useState(false)
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -81,6 +84,27 @@ export default function PerfilPage() {
                   <Row icon="phone" label="Teléfono" value={`+51 ${profile.phone}`} />
                 )}
               </dl>
+            </Card>
+
+            <Card className="p-5">
+              <p className="t-eyebrow mb-4">Preferencias</p>
+              <div className="space-y-5">
+                <ToggleSwitch
+                  checked={isAvailable}
+                  onChange={setIsAvailable}
+                  label="Disponible"
+                  description="Recibir pedidos nuevos"
+                  icon={<Icon name="toggle_on" size={22} />}
+                />
+                <div className="h-px bg-ink/[0.06]" />
+                <ToggleSwitch
+                  checked={notificationsEnabled}
+                  onChange={setNotificationsEnabled}
+                  label="Notificaciones"
+                  description="Alertas de pedidos y novedades"
+                  icon={<Icon name="notifications" size={22} />}
+                />
+              </div>
             </Card>
 
             <Button variant="secondary" size="lg" className="w-full" onClick={handleLogout}>
