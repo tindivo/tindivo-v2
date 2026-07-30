@@ -58,3 +58,8 @@ graphify-out/
 
 # QA credentials (test-only, never commit)
 Docs/QA-CATALOGO-CREDENCIALES.md
+
+# Playwright e2e: salida de corridas, nunca se commitea
+/test-results/
+/playwright-report/
+/blob-report/
