@@ -1,7 +1,7 @@
-import type { ButtonHTMLAttributes, Ref } from 'react'
+import type { AnchorHTMLAttributes, ButtonHTMLAttributes, Ref } from 'react'
 import { cn } from '../lib/cn'
 
-type Variant = 'brand' | 'outline' | 'ghost' | 'danger'
+type Variant = 'brand' | 'outline' | 'ghost' | 'danger' | 'secondary'
 type Size = 'sm' | 'md' | 'lg'
 
 const VARIANTS: Record<Variant, string> = {
@@ -10,6 +10,7 @@ const VARIANTS: Record<Variant, string> = {
   outline: 'border border-ink/[0.08] bg-card text-ink hover:bg-surface',
   ghost: 'text-ink hover:bg-ink/[0.05]',
   danger: 'bg-danger text-white hover:bg-danger/90',
+  secondary: 'bg-ink text-white hover:bg-ink/90',
 }
 
 const SIZES: Record<Size, string> = {
@@ -21,23 +22,35 @@ const SIZES: Record<Size, string> = {
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant
   size?: Size
-  ref?: Ref<HTMLButtonElement>
+  as?: 'button' | 'a'
+  ref?: Ref<HTMLButtonElement | HTMLAnchorElement>
 }
 
-export function Button({ className, variant = 'brand', size = 'md', ref, ...props }: ButtonProps) {
-  return (
-    <button
-      ref={ref}
-      className={cn(
-        'inline-flex items-center justify-center gap-2 rounded-full font-sans font-bold transition-all',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40',
-        'disabled:pointer-events-none disabled:opacity-50',
-        'active:scale-[0.97]',
-        VARIANTS[variant],
-        SIZES[size],
-        className,
-      )}
-      {...props}
-    />
+export function Button({
+  as = 'button',
+  className,
+  variant = 'brand',
+  size = 'md',
+  ref,
+  ...props
+}: ButtonProps & AnchorHTMLAttributes<HTMLAnchorElement>) {
+  const classes = cn(
+    'inline-flex items-center justify-center gap-2 rounded-full font-sans font-bold transition-all',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40',
+    'disabled:pointer-events-none disabled:opacity-50',
+    'active:scale-[0.97]',
+    VARIANTS[variant],
+    SIZES[size],
+    className,
   )
+  if (as === 'a') {
+    return (
+      <a
+        ref={ref as Ref<HTMLAnchorElement>}
+        className={classes}
+        {...(props as AnchorHTMLAttributes<HTMLAnchorElement>)}
+      />
+    )
+  }
+  return <button ref={ref as Ref<HTMLButtonElement>} className={classes} {...props} />
 }

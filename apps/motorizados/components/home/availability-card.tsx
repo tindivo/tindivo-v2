@@ -1,6 +1,7 @@
 'use client'
 
 import { ApiError } from '@tindivo/api-client'
+import { ColorDot } from '@tindivo/ui'
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '@/lib/api'
 
@@ -41,10 +42,11 @@ export function AvailabilityCard() {
   }
 
   if (!avail) {
-    return <div className="mb-4 h-[58px] animate-pulse rounded-[22px] bg-white" />
+    return <div className="mb-4 h-[72px] animate-pulse rounded-2xl bg-surface-low" />
   }
 
   const blocked = !avail.available && !avail.withinSchedule
+  const active = avail.available
 
   return (
     <div className="mb-4">
@@ -52,32 +54,33 @@ export function AvailabilityCard() {
         type="button"
         onClick={toggle}
         disabled={busy || blocked}
-        className={`flex w-full items-center justify-between rounded-[22px] px-4 py-3.5 ${
-          avail.available
-            ? 'border border-success/20 bg-success/10'
-            : 'border border-ink/5 bg-white'
-        } disabled:opacity-70`}
+        className={`block w-full rounded-2xl border p-4 text-left transition-all active:scale-[0.99] disabled:opacity-70 ${
+          active
+            ? 'border-success/20 bg-success/10 shadow-elev-2'
+            : 'border-ink/[0.04] bg-card shadow-elev-1'
+        }`}
       >
-        <span className="flex items-center gap-2.5">
-          <span
-            className={`h-2.5 w-2.5 rounded-full ${
-              avail.available ? 'animate-pulse bg-success' : 'bg-ink-subtle'
-            }`}
-          />
-          <span className="font-semibold text-[15px]">
-            {avail.available ? 'Estás disponible' : 'No disponible'}
+        <div className="flex items-center justify-between">
+          <span className="flex items-center gap-2.5">
+            <ColorDot
+              color={active ? '#059669' : blocked ? '#9c958e' : '#6b655e'}
+              size={10}
+              className={active ? 'animate-pulse' : ''}
+            />
+            <span className="font-semibold text-[15px]">
+              {active ? 'Estás disponible' : 'No disponible'}
+            </span>
           </span>
-        </span>
-        <span
-          className="text-[12px]"
-          style={{ color: blocked ? '#92400E' : 'rgba(26,22,20,0.55)' }}
-        >
-          {avail.available
-            ? 'Tocar para descansar'
-            : blocked
-              ? 'Fuera de horario'
-              : 'Tocar para recibir pedidos'}
-        </span>
+          <span
+            className={`text-[12px] ${blocked ? 'font-medium text-warning' : 'text-ink-subtle'}`}
+          >
+            {active
+              ? 'Tocar para descansar'
+              : blocked
+                ? 'Fuera de horario'
+                : 'Tocar para recibir pedidos'}
+          </span>
+        </div>
       </button>
       {error && <p className="mt-2 px-1 text-[13px] text-danger">{error}</p>}
     </div>

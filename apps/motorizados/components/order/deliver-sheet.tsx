@@ -1,6 +1,6 @@
 'use client'
 
-import { BottomSheet } from '@tindivo/ui'
+import { BottomSheet, Button } from '@tindivo/ui'
 import { useState } from 'react'
 import type { OrderDetailResponse } from '@/lib/types'
 
@@ -53,36 +53,32 @@ export function DeliverSheet({
                 key={p.value}
                 type="button"
                 onClick={() => setPayment(p.value)}
-                className="rounded-[18px] p-4 text-left"
-                style={
+                className={`rounded-[18px] p-4 text-left transition-colors ${
                   payment === p.value
-                    ? { border: '2px solid #F97316', background: 'rgba(249,115,22,0.05)' }
-                    : { border: '1px solid rgba(26,22,20,0.1)', background: '#fff' }
-                }
+                    ? 'border-2 border-brand bg-brand/5'
+                    : 'border border-ink/10 bg-card hover:bg-surface'
+                }`}
               >
-                <p className="font-semibold text-[15px]">{p.label}</p>
-                <p className="mt-0.5 text-[12px]" style={{ color: 'rgba(26,22,20,0.55)' }}>
-                  {p.desc}
-                </p>
+                <p className="font-semibold text-[15px] text-ink">{p.label}</p>
+                <p className="mt-0.5 text-[12px] text-ink-muted">{p.desc}</p>
               </button>
             ))}
           </div>
         )}
 
-        <button
-          type="button"
-          className="t-btn t-btn-primary t-btn-block mt-5"
+        <Button
+          className="mt-5 w-full"
           disabled={!payment || busy}
           onClick={() => payment && onConfirm(payment)}
         >
           {busy ? 'Confirmando…' : 'Confirmar entrega'}
-        </button>
+        </Button>
 
-        <div className="mt-5 border-ink/10 border-t pt-4">
+        <div className="mt-5 border-t border-ink/10 pt-4">
           {!noShowArmed ? (
             <button
               type="button"
-              className="text-[13px] text-danger underline"
+              className="text-[13px] text-danger underline transition-colors hover:text-danger/80"
               onClick={() => setNoShowArmed(true)}
             >
               El cliente no apareció
@@ -93,23 +89,12 @@ export function DeliverSheet({
                 Espera 5 min e intenta contactar. Reportar genera un strike al cliente.
               </p>
               <div className="mt-2 flex gap-2">
-                <button
-                  type="button"
-                  className="t-btn flex-1 text-white"
-                  style={{ background: '#DC2626', padding: '12px 16px', fontSize: 14 }}
-                  disabled={busy}
-                  onClick={onNoShow}
-                >
+                <Button variant="danger" className="flex-1" disabled={busy} onClick={onNoShow}>
                   Sí, reportar no-show
-                </button>
-                <button
-                  type="button"
-                  className="t-btn t-btn-ghost"
-                  style={{ padding: '12px 16px', fontSize: 14 }}
-                  onClick={() => setNoShowArmed(false)}
-                >
+                </Button>
+                <Button variant="outline" className="flex-1" onClick={() => setNoShowArmed(false)}>
                   Cancelar
-                </button>
+                </Button>
               </div>
             </div>
           )}

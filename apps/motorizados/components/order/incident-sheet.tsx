@@ -1,7 +1,7 @@
 'use client'
 
 import { ApiError } from '@tindivo/api-client'
-import { BottomSheet, Icon } from '@tindivo/ui'
+import { BottomSheet, Button, Icon } from '@tindivo/ui'
 import { useState } from 'react'
 import { api } from '@/lib/api'
 
@@ -43,17 +43,14 @@ export function IncidentSheet({ orderId, onClose }: { orderId: string; onClose: 
       <div className="p-5 pb-7">
         {done ? (
           <div className="py-4 text-center">
-            <span
-              className="mx-auto flex h-14 w-14 items-center justify-center rounded-full text-white"
-              style={{ background: '#1A8050' }}
-            >
+            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-success text-white">
               <Icon name="check" size={20} />
             </span>
             <p className="t-display mt-3 text-[18px]">Reporte enviado</p>
             <p className="t-muted mt-1 text-[14px]">El equipo de Tindivo lo revisará.</p>
-            <button type="button" className="t-btn t-btn-ghost t-btn-block mt-4" onClick={onClose}>
+            <Button variant="outline" className="mt-4 w-full" onClick={onClose}>
               Cerrar
-            </button>
+            </Button>
           </div>
         ) : (
           <>
@@ -64,15 +61,11 @@ export function IncidentSheet({ orderId, onClose }: { orderId: string; onClose: 
                   key={t.value}
                   type="button"
                   onClick={() => setType(t.value)}
-                  className="rounded-full px-3.5 py-2 font-semibold text-[13px]"
-                  style={
+                  className={`rounded-full px-3.5 py-2 text-[13px] font-semibold transition-colors ${
                     type === t.value
-                      ? { background: '#F97316', color: '#fff' }
-                      : {
-                          background: 'rgba(26,22,20,0.04)',
-                          border: '1px solid rgba(26,22,20,0.08)',
-                        }
-                  }
+                      ? 'bg-brand text-white'
+                      : 'border border-ink/[0.08] bg-ink/[0.04] text-ink hover:bg-ink/[0.08]'
+                  }`}
                 >
                   {t.label}
                 </button>
@@ -86,15 +79,14 @@ export function IncidentSheet({ orderId, onClose }: { orderId: string; onClose: 
               onChange={(e) => setDesc(e.target.value)}
             />
             {error && <p className="mt-2 text-[13px] text-danger">{error}</p>}
-            <button
-              type="button"
-              className="t-btn t-btn-block mt-4 text-white"
-              style={{ background: '#DC2626' }}
+            <Button
+              variant="danger"
+              className="mt-4 w-full"
               disabled={busy || !type}
               onClick={submit}
             >
               {busy ? 'Enviando…' : 'Enviar reporte'}
-            </button>
+            </Button>
           </>
         )}
       </div>

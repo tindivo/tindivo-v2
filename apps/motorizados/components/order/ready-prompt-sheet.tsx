@@ -1,6 +1,6 @@
 'use client'
 
-import { BottomSheet } from '@tindivo/ui'
+import { BottomSheet, Button } from '@tindivo/ui'
 
 /** Al llegar al local: ¿el pedido ya salió de cocina? (HU-D-020). */
 export function ReadyPromptSheet({
@@ -16,12 +16,12 @@ export function ReadyPromptSheet({
         <h2 className="t-display text-[20px]">¿El pedido ya está listo?</h2>
         <p className="t-muted mt-1.5 text-[14px]">Pregunta en el mostrador antes de marcar.</p>
         <div className="mt-4 grid grid-cols-2 gap-2.5">
-          <button type="button" className="t-btn t-btn-primary" onClick={onReady}>
+          <Button className="w-full" onClick={onReady}>
             Sí, está listo
-          </button>
-          <button type="button" className="t-btn t-btn-ghost" onClick={onWaiting}>
+          </Button>
+          <Button variant="outline" className="w-full" onClick={onWaiting}>
             Aún no
-          </button>
+          </Button>
         </div>
       </div>
     </BottomSheet>

@@ -1,6 +1,6 @@
 'use client'
 
-import { Icon } from '@tindivo/ui'
+import { Card, Icon } from '@tindivo/ui'
 import { useState } from 'react'
 import { soles } from '@/lib/format'
 import type { OrderDetailResponse } from '@/lib/types'
@@ -22,25 +22,21 @@ export function OrderDetail({
   const total = order.orderAmount + order.deliveryFee
 
   return (
-    <div className="mt-3.5 rounded-[22px] border border-ink/5 bg-white">
+    <Card className="mt-3.5 overflow-hidden">
       <button
         type="button"
         className="flex w-full items-center justify-between px-[18px] py-4"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
       >
-        <span className="t-eyebrow" style={{ marginBottom: 0 }}>
-          Detalle del pedido
-        </span>
+        <span className="t-eyebrow">Detalle del pedido</span>
         <span className="flex items-center gap-2 text-[12px] text-ink-subtle">
           {count} {count === 1 ? 'producto' : 'productos'}
           <span
             aria-hidden
-            className="inline-flex"
-            style={{
-              transform: open ? 'rotate(90deg)' : 'rotate(-90deg)',
-              transition: 'transform 200ms ease',
-            }}
+            className={`inline-flex transition-transform duration-200 ${
+              open ? 'rotate-90' : '-rotate-90'
+            }`}
           >
             <Icon name="arrow_back" size={20} />
           </span>
@@ -60,8 +56,7 @@ export function OrderDetail({
               {item.modifiers.map((m) => (
                 <div
                   key={`${item.id}-${m.option}`}
-                  className="mt-0.5 flex justify-between pl-5 text-[12px]"
-                  style={{ color: 'rgba(26,22,20,0.5)' }}
+                  className="mt-0.5 flex justify-between pl-5 text-[12px] text-ink-subtle"
                 >
                   <span>{m.option}</span>
                   {m.additionalPrice > 0 && (
@@ -71,39 +66,28 @@ export function OrderDetail({
               ))}
               {/* En manuales el item sintético duplica business_notes: prima el panel. */}
               {item.note && item.note !== order.businessNotes && (
-                <p
-                  className="mt-0.5 pl-5 text-[12px] italic"
-                  style={{ color: 'rgba(26,22,20,0.45)' }}
-                >
-                  “{item.note}”
-                </p>
+                <p className="mt-0.5 pl-5 text-[12px] italic text-ink-subtle">“{item.note}”</p>
               )}
             </div>
           ))}
 
           {order.customerNotes && (
-            <div
-              className="mt-2 rounded-[12px] px-3 py-2 text-[13px]"
-              style={{ background: 'rgba(26,22,20,0.04)' }}
-            >
+            <div className="mt-2 rounded-[12px] bg-ink/[0.04] px-3 py-2 text-[13px]">
               Nota del cliente: {order.customerNotes}
             </div>
           )}
           {order.isManual && order.businessNotes && (
-            <div
-              className="mt-2 rounded-[14px] px-3.5 py-3 font-medium text-[14px]"
-              style={{ background: 'rgba(249,115,22,0.08)', color: '#7C2D12' }}
-            >
+            <div className="mt-2 rounded-[14px] bg-brand/10 px-3.5 py-3 text-[14px] font-medium text-brand-dark">
               {order.businessNotes}
             </div>
           )}
 
-          <div className="my-2.5 h-px" style={{ background: 'rgba(26,22,20,0.08)' }} />
-          <div className="flex justify-between py-0.5 text-[13px] text-ink-muted tabular-nums">
+          <div className="my-2.5 h-px bg-ink/[0.08]" />
+          <div className="flex justify-between py-0.5 text-[13px] tabular-nums text-ink-muted">
             <span>Productos</span>
             <span>{soles(order.orderAmount)}</span>
           </div>
-          <div className="flex justify-between py-0.5 text-[13px] text-ink-muted tabular-nums">
+          <div className="flex justify-between py-0.5 text-[13px] tabular-nums text-ink-muted">
             <span>Delivery</span>
             <span>{soles(order.deliveryFee)}</span>
           </div>
@@ -113,6 +97,6 @@ export function OrderDetail({
           </div>
         </div>
       )}
-    </div>
+    </Card>
   )
 }

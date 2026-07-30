@@ -1,5 +1,6 @@
 'use client'
 
+import { Badge, Card } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { SourceChip } from '@/components/source-chip'
 import { hourOf, PAYMENT_LABEL, soles } from '@/lib/format'
@@ -26,45 +27,44 @@ export function OrderCard({
 }) {
   const router = useRouter()
   const urgency = variant === 'available' ? orderUrgency(order, now) : 'normal'
-  const cardCls = variant === 'available' ? URGENCY_CARD[urgency] : 'border border-ink/5 bg-white'
   const total = order.order_amount + order.delivery_fee
   const step = MINE_STEPS[order.status]
 
   return (
-    <button
+    <Card
+      as="button"
       type="button"
       onClick={() => router.push(`/pedido/${order.id}`)}
-      className={`block w-full rounded-[22px] p-4 text-left transition-transform active:scale-[0.99] ${cardCls} ${
-        dimmed || variant === 'upcoming' ? 'opacity-60' : ''
-      } ${variant === 'delivered' ? 'opacity-80' : ''}`}
+      className={`block w-full p-4 text-left transition-transform active:scale-[0.99] ${
+        URGENCY_CARD[urgency]
+      } ${dimmed || variant === 'upcoming' ? 'opacity-60' : ''} ${
+        variant === 'delivered' ? 'opacity-80' : ''
+      }`}
     >
       <div className="flex items-center justify-between">
-        <span className="font-mono font-semibold text-[12px] text-ink">#{order.short_id}</span>
+        <span className="font-mono text-[12px] font-semibold text-ink">#{order.short_id}</span>
         <span className="flex items-center gap-1.5">
           <SourceChip source={order.source} />
           {variant === 'available' && urgency === 'overdue' && (
-            <span className="rounded-md bg-danger px-2 py-0.5 font-bold font-mono text-[10px] text-white uppercase">
+            <Badge variant="danger" size="sm">
               Vencido
-            </span>
+            </Badge>
           )}
           {variant === 'available' && urgency === 'ready' && (
-            <span
-              className="rounded-md px-2 py-0.5 font-bold font-mono text-[10px] uppercase"
-              style={{ background: 'rgba(245,158,11,0.15)', color: '#92400E' }}
-            >
+            <Badge variant="warning" size="sm">
               Listo
-            </span>
+            </Badge>
           )}
           {variant === 'delivered' && (
-            <span className="rounded-md bg-success/10 px-2 py-0.5 font-bold font-mono text-[10px] text-success uppercase">
+            <Badge variant="success" size="sm">
               Entregado
-            </span>
+            </Badge>
           )}
         </span>
       </div>
 
-      <p className="mt-1.5 font-semibold text-[16px]">{order.businesses?.name ?? 'Restaurante'}</p>
-      <p className="truncate text-[13px]" style={{ color: 'rgba(26,22,20,0.55)' }}>
+      <p className="mt-1.5 text-[16px] font-semibold">{order.businesses?.name ?? 'Restaurante'}</p>
+      <p className="truncate text-[13px] text-ink-muted">
         {order.customer_name ?? 'Cliente'}
         {(order.delivery_reference ?? order.delivery_address) &&
           ` · ${order.delivery_reference ?? order.delivery_address}`}
@@ -72,12 +72,12 @@ export function OrderCard({
 
       <div className="mt-2.5 flex items-center justify-between">
         <span className="t-display text-[18px] tabular-nums">{soles(total)}</span>
-        <span className="font-medium text-[12px]" style={{ color: 'rgba(26,22,20,0.6)' }}>
+        <span className="text-[12px] font-medium text-ink-muted">
           {PAYMENT_LABEL[order.payment_intent] ?? order.payment_intent}
           {order.payment_intent === 'pending_cash' &&
             order.change_to_give != null &&
             order.change_to_give > 0 && (
-              <span style={{ color: '#C2410C' }}> · vuelto {soles(order.change_to_give)}</span>
+              <span className="text-brand-dark"> · vuelto {soles(order.change_to_give)}</span>
             )}
         </span>
       </div>
@@ -88,14 +88,11 @@ export function OrderCard({
             {[0, 1, 2].map((i) => (
               <span
                 key={i}
-                className="h-1 flex-1 rounded-full"
-                style={{ background: i <= step.idx ? '#F97316' : 'rgba(26,22,20,0.1)' }}
+                className={`h-1 flex-1 rounded-full ${i <= step.idx ? 'bg-brand' : 'bg-ink/10'}`}
               />
             ))}
           </div>
-          <p className="mt-1 text-[11px]" style={{ color: 'rgba(26,22,20,0.55)' }}>
-            {step.label}
-          </p>
+          <p className="mt-1 text-[11px] text-ink-muted">{step.label}</p>
         </div>
       )}
 
@@ -109,6 +106,6 @@ export function OrderCard({
       {variant === 'delivered' && order.delivered_at && (
         <p className="mt-2 font-mono text-[11px] text-ink-subtle">{hourOf(order.delivered_at)}</p>
       )}
-    </button>
+    </Card>
   )
 }

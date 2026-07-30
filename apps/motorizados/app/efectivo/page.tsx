@@ -1,27 +1,22 @@
 'use client'
 
 import { type ApiEnvelope, ApiError } from '@tindivo/api-client'
-import { ScreenHeader } from '@tindivo/ui'
+import { Badge, Button, Card, ScreenHeader } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { type FormEvent, useCallback, useEffect, useState } from 'react'
 import { api } from '@/lib/api'
 import { soles } from '@/lib/format'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
-const STATUS_CHIP: Record<string, { label: string; bg: string; color: string }> = {
-  pending_confirmation: {
-    label: 'Por confirmar',
-    bg: 'rgba(245,158,11,0.15)',
-    color: '#92400E',
-  },
-  confirmed: { label: 'Confirmado', bg: 'rgba(22,163,74,0.1)', color: '#16a34a' },
-  auto_assumed_confirmed: {
-    label: 'Confirmado (auto)',
-    bg: 'rgba(22,163,74,0.1)',
-    color: '#16a34a',
-  },
-  disputed: { label: 'En disputa', bg: 'rgba(220,38,38,0.1)', color: '#DC2626' },
-  resolved: { label: 'Resuelto', bg: 'rgba(26,22,20,0.06)', color: '#57534E' },
+const STATUS_VARIANT: Record<
+  string,
+  { label: string; variant: 'warning' | 'success' | 'danger' | 'default' }
+> = {
+  pending_confirmation: { label: 'Por confirmar', variant: 'warning' },
+  confirmed: { label: 'Confirmado', variant: 'success' },
+  auto_assumed_confirmed: { label: 'Confirmado (auto)', variant: 'success' },
+  disputed: { label: 'En disputa', variant: 'danger' },
+  resolved: { label: 'Resuelto', variant: 'default' },
 }
 
 interface TodayRow {
@@ -83,9 +78,7 @@ export default function EfectivoPage() {
       <div className="px-4">
         {error && <p className="mt-3 text-[13px] text-danger">{error}</p>}
 
-        <h2 className="t-eyebrow mt-4 mb-2" style={{ marginBottom: 8 }}>
-          A entregar hoy
-        </h2>
+        <h2 className="t-eyebrow mt-4 mb-2">A entregar hoy</h2>
         {today.length === 0 ? (
           <p className="t-muted text-[14px]">No recolectaste efectivo hoy.</p>
         ) : (
@@ -97,44 +90,41 @@ export default function EfectivoPage() {
         )}
 
         {pending.length === 0 && today.length > 0 && (
-          <div className="mt-3 rounded-[18px] bg-success/10 px-4 py-3 font-semibold text-[14px] text-success">
-            Todo el efectivo de hoy fue entregado 🎉
-          </div>
+          <Card className="mt-3 border-none bg-success-soft p-4 text-success shadow-none">
+            <p className="font-semibold text-[14px]">Todo el efectivo de hoy fue entregado 🎉</p>
+          </Card>
         )}
 
-        <h2 className="t-eyebrow mt-6" style={{ marginBottom: 8 }}>
-          Historial
-        </h2>
+        <h2 className="t-eyebrow mt-6 mb-2">Historial</h2>
         {history.length === 0 ? (
           <p className="t-muted text-[14px]">Sin entregas anteriores.</p>
         ) : (
-          <div className="overflow-hidden rounded-[18px] border border-ink/5 bg-white">
+          <Card className="overflow-hidden p-0">
             {history.map((h, i) => {
-              const chip = STATUS_CHIP[h.status]
+              const chip = STATUS_VARIANT[h.status]
               return (
                 <div
                   key={h.id}
-                  className="flex items-center justify-between px-4 py-3"
-                  style={{
-                    borderTop: i > 0 ? '1px solid rgba(26,22,20,0.06)' : 'none',
-                  }}
+                  className={`flex items-center justify-between px-4 py-3 ${
+                    i > 0 ? 'border-t border-ink/[0.06]' : ''
+                  }`}
                 >
                   <div className="min-w-0">
-                    <p className="truncate font-medium text-[14px]">{h.businesses?.name ?? '—'}</p>
+                    <p className="truncate text-[14px] font-medium">{h.businesses?.name ?? '—'}</p>
                     <p className="font-mono text-[11px] text-ink-subtle">{h.settlement_date}</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-semibold text-[14px] tabular-nums">
+                    <p className="text-[14px] font-semibold tabular-nums">
                       {soles(h.delivered_amount)}
                     </p>
-                    <p className="text-[11px]" style={{ color: chip?.color ?? '#57534E' }}>
+                    <Badge variant={chip?.variant ?? 'default'} size="sm" className="mt-0.5">
                       {chip?.label ?? h.status}
-                    </p>
+                    </Badge>
                   </div>
                 </div>
               )
             })}
-          </div>
+          </Card>
         )}
       </div>
     </main>
@@ -153,7 +143,7 @@ function CashDeliverCard({
   const [amount, setAmount] = useState(String(row.expected.toFixed(2)))
   const [busy, setBusy] = useState(false)
   const settled = row.status != null
-  const chip = settled ? STATUS_CHIP[row.status as string] : null
+  const chip = settled ? STATUS_VARIANT[row.status as string] : null
 
   async function submit(e: FormEvent) {
     e.preventDefault()
@@ -173,21 +163,18 @@ function CashDeliverCard({
   }
 
   return (
-    <div className="rounded-[22px] border border-ink/5 bg-white p-[18px]">
+    <Card className="p-[18px]">
       <div className="flex items-start justify-between">
         <div>
           <p className="font-semibold text-[16px]">{row.businessName}</p>
-          <p className="mt-0.5 text-[13px]" style={{ color: 'rgba(26,22,20,0.55)' }}>
+          <p className="mt-0.5 text-[13px] text-ink-muted">
             {row.orderCount} pedido{row.orderCount === 1 ? '' : 's'} en efectivo
           </p>
         </div>
         {chip && (
-          <span
-            className="rounded-md px-2 py-1 font-bold font-mono text-[10px] uppercase"
-            style={{ letterSpacing: '0.08em', background: chip.bg, color: chip.color }}
-          >
+          <Badge variant={chip.variant} size="sm">
             {chip.label}
-          </span>
+          </Badge>
         )}
       </div>
 
@@ -195,29 +182,20 @@ function CashDeliverCard({
 
       {!settled && (
         <form onSubmit={submit} className="mt-3 flex items-center gap-2">
-          <span
-            className="rounded-2xl border border-border bg-white px-3 py-3 font-mono text-[15px]"
-            style={{ color: 'rgba(26,22,20,0.6)' }}
-          >
+          <span className="rounded-2xl border border-border bg-card px-3 py-3 font-mono text-[15px] text-ink-muted">
             S/
           </span>
           <input
-            className="t-field text-center font-mono"
-            style={{ flex: 1 }}
+            className="t-field flex-1 text-center font-mono"
             inputMode="decimal"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
           />
-          <button
-            type="submit"
-            className="t-btn t-btn-primary"
-            style={{ padding: '12px 20px', fontSize: 14 }}
-            disabled={busy}
-          >
+          <Button size="sm" className="px-5" disabled={busy}>
             {busy ? '…' : 'Entregar'}
-          </button>
+          </Button>
         </form>
       )}
-    </div>
+    </Card>
   )
 }

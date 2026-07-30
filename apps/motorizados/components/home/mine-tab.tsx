@@ -1,6 +1,6 @@
 'use client'
 
-import { Icon } from '@tindivo/ui'
+import { EmptyState, Icon } from '@tindivo/ui'
 import { useState } from 'react'
 import type { BoardOrder } from '@/lib/types'
 import { OrderCard } from './order-card'
@@ -26,14 +26,11 @@ export function MineTab({
       </div>
 
       {mine.length === 0 && (
-        <div className="py-14 text-center">
-          <span className="inline-block text-ink-subtle">
-            <Icon name="local_shipping" size={28} />
-          </span>
-          <p className="t-muted mt-2 text-[14px]">
-            No tienes pedidos activos. Toma uno en Disponibles.
-          </p>
-        </div>
+        <EmptyState
+          icon="local_shipping"
+          heading="No tienes pedidos activos"
+          description="Toma uno de la bandeja Disponibles para empezar a repartir."
+        />
       )}
 
       {deliveredToday.length > 0 && (
@@ -43,16 +40,12 @@ export function MineTab({
             className="flex w-full items-center justify-between"
             onClick={() => setHistoryOpen((v) => !v)}
           >
-            <span className="t-eyebrow" style={{ marginBottom: 0 }}>
-              Entregados hoy ({deliveredToday.length})
-            </span>
+            <span className="t-eyebrow">Entregados hoy ({deliveredToday.length})</span>
             <span
               aria-hidden
-              className="inline-flex text-ink-subtle"
-              style={{
-                transform: historyOpen ? 'rotate(90deg)' : 'rotate(-90deg)',
-                transition: 'transform 200ms ease',
-              }}
+              className={`inline-flex text-ink-subtle transition-transform duration-200 ${
+                historyOpen ? 'rotate-90' : '-rotate-90'
+              }`}
             >
               <Icon name="arrow_back" size={20} />
             </span>

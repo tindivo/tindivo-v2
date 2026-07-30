@@ -1,5 +1,6 @@
 'use client'
 
+import { Button, Card } from '@tindivo/ui'
 import { type FormEvent, useState } from 'react'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
@@ -23,15 +24,11 @@ export function Login({ onAuthed }: { onAuthed: () => void }) {
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-[420px] flex-col justify-center px-6">
-      <div
-        className="flex h-12 w-12 items-center justify-center rounded-2xl font-bold text-[22px] text-white"
-        style={{ background: '#F97316', boxShadow: '0 8px 20px -6px rgba(249,115,22,0.55)' }}
-      >
-        T
-      </div>
-      <p className="t-eyebrow mt-5" style={{ marginBottom: 0 }}>
-        Tindivo · Motorizados
-      </p>
+      <Card className="flex h-12 w-12 items-center justify-center rounded-2xl border-none bg-brand shadow-glow-brand">
+        <span className="font-display text-[22px] font-bold text-white">T</span>
+      </Card>
+
+      <p className="t-eyebrow mt-5">Tindivo · Motorizados</p>
       <h1 className="t-display mt-1 text-[28px]">Hola de nuevo</h1>
       <p className="t-muted mt-1 text-[14px]">Entra con la cuenta que te dio Tindivo.</p>
 
@@ -59,9 +56,9 @@ export function Login({ onAuthed }: { onAuthed: () => void }) {
           />
         </label>
         {error && <p className="text-[13px] text-danger">{error}</p>}
-        <button type="submit" className="t-btn t-btn-primary t-btn-block" disabled={loading}>
+        <Button type="submit" className="w-full" size="lg" disabled={loading}>
           {loading ? 'Entrando…' : 'Entrar'}
-        </button>
+        </Button>
       </form>
     </main>
   )

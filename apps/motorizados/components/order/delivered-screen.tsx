@@ -1,7 +1,6 @@
 'use client'
 
-import { Icon } from '@tindivo/ui'
-import Link from 'next/link'
+import { Button, Card, Icon } from '@tindivo/ui'
 import { hourOf, soles } from '@/lib/format'
 import type { OrderDetailResponse } from '@/lib/types'
 import { OrderDetail } from './order-detail'
@@ -22,15 +21,10 @@ export function DeliveredScreen({
     return (
       <main className="mx-auto flex min-h-dvh max-w-[480px] flex-col px-6">
         <div className="flex flex-1 flex-col items-center justify-center text-center">
-          <span
-            className="flex h-20 w-20 items-center justify-center rounded-full text-white"
-            style={{ background: '#1A8050' }}
-          >
+          <span className="flex h-20 w-20 items-center justify-center rounded-full bg-success text-white">
             <Icon name="check" size={36} />
           </span>
-          <p className="t-eyebrow mt-5 text-success" style={{ marginBottom: 0 }}>
-            Pedido #{order.shortId}
-          </p>
+          <p className="t-eyebrow mt-5 text-success">Pedido #{order.shortId}</p>
           <h1 className="t-display mt-1.5 text-[26px]">¡Entregado!</h1>
           <p className="t-muted mt-2 max-w-[300px] text-[14px]">
             {cash
@@ -39,9 +33,9 @@ export function DeliveredScreen({
           </p>
         </div>
         <div className="pb-8">
-          <Link href="/" className="t-btn t-btn-primary t-btn-block">
+          <Button size="lg" className="w-full" as="a" href="/">
             Volver al inicio
-          </Link>
+          </Button>
         </div>
       </main>
     )
@@ -50,16 +44,13 @@ export function DeliveredScreen({
   // Modo lectura (desde el historial del turno).
   return (
     <div className="pb-6">
-      <div className="mt-2 flex items-center gap-3 rounded-[22px] border border-ink/5 bg-white p-[18px]">
-        <span
-          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-white"
-          style={{ background: '#1A8050' }}
-        >
+      <Card className="mt-2 flex items-center gap-3 p-[18px]">
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-success text-white">
           <Icon name="check" size={20} />
         </span>
         <div>
           <p className="font-semibold text-[16px]">Entregado</p>
-          <p className="text-[13px]" style={{ color: 'rgba(26,22,20,0.55)' }}>
+          <p className="text-[13px] text-ink-muted">
             {order.deliveredAt ? `Hoy a las ${hourOf(order.deliveredAt)}` : 'Completado'} ·{' '}
             {order.paymentReal === 'paid_cash'
               ? 'cobrado en efectivo'
@@ -68,7 +59,7 @@ export function DeliveredScreen({
                 : 'pagado'}
           </p>
         </div>
-      </div>
+      </Card>
       <OrderDetail detail={detail} defaultOpen />
     </div>
   )

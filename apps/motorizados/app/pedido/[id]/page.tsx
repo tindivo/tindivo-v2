@@ -1,7 +1,7 @@
 'use client'
 
 import { ApiError } from '@tindivo/api-client'
-import { Icon, ScreenHeader } from '@tindivo/ui'
+import { BottomActionBar, Button, Icon, ScreenHeader } from '@tindivo/ui'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { use, useCallback, useEffect, useState } from 'react'
@@ -157,8 +157,8 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
   if (mode === 'loading') {
     return (
       <main className="mx-auto max-w-[480px] px-4 pt-6">
-        <div className="h-[180px] animate-pulse rounded-[22px] bg-white" />
-        <div className="mt-3.5 h-[120px] animate-pulse rounded-[22px] bg-white" />
+        <div className="h-[180px] animate-pulse rounded-2xl bg-surface-low" />
+        <div className="mt-3.5 h-[120px] animate-pulse rounded-2xl bg-surface-low" />
       </main>
     )
   }
@@ -201,7 +201,7 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
   const blockedByCapacity = mode === 'preview' && board.mySlots >= 3
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-[480px] flex-col bg-surface pb-4">
+    <main className="mx-auto flex min-h-dvh max-w-[480px] flex-col bg-surface pb-28">
       <ScreenHeader title={`Pedido #${detail.order.shortId}`} onBack={() => router.push('/')} />
 
       <div className="flex-1 px-4 pt-1.5">
@@ -236,77 +236,57 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
         {actionError && <p className="mt-3 px-1 text-[13px] text-danger">{actionError}</p>}
       </div>
 
-      <div className="t-sticky-cta mx-auto w-full max-w-[480px]">
+      <BottomActionBar>
         {mode === 'preview' &&
           (blockedByCapacity ? (
             <>
-              <button type="button" className="t-btn t-btn-primary t-btn-block" disabled>
+              <Button className="w-full" disabled>
                 Tomar pedido
-              </button>
-              <p className="mt-2 text-center text-[12px] text-danger">Mochila llena (3/3)</p>
+              </Button>
+              <p className="text-center text-[12px] text-danger">Mochila llena (3/3)</p>
             </>
           ) : blockedByOverdue ? (
             <>
-              <button type="button" className="t-btn t-btn-primary t-btn-block" disabled>
+              <Button className="w-full" disabled>
                 Tomar pedido
-              </button>
-              <p className="mt-2 text-center text-[12px] text-danger">
+              </Button>
+              <p className="text-center text-[12px] text-danger">
                 Hay pedidos vencidos con prioridad
               </p>
             </>
           ) : isUpcoming ? (
-            <button type="button" className="t-btn t-btn-primary t-btn-block" disabled>
+            <Button className="w-full" disabled>
               Disponible en ~
               {Math.max(
                 1,
                 Math.round((Date.parse(detail.order.appearsInQueueAt as string) - now) / 60_000),
               )}{' '}
               min
-            </button>
+            </Button>
           ) : (
-            <button
-              type="button"
-              className="t-btn t-btn-primary t-btn-block"
-              disabled={busy}
-              onClick={() => run('take')}
-            >
+            <Button className="w-full" disabled={busy} onClick={() => run('take')}>
               {busy ? 'Tomando…' : 'Tomar pedido'}
-            </button>
+            </Button>
           ))}
 
         {mode === 'heading' && (
-          <button
-            type="button"
-            className="t-btn t-btn-primary t-btn-block"
-            disabled={busy}
-            onClick={() => run('arrived')}
-          >
+          <Button className="w-full" disabled={busy} onClick={() => run('arrived')}>
             {busy ? 'Un momento…' : 'Llegué al local'}
-          </button>
+          </Button>
         )}
 
         {mode === 'waiting' && (
-          <button
-            type="button"
-            className="t-btn t-btn-primary t-btn-block"
-            disabled={busy}
-            onClick={() => setPickupOpen(true)}
-          >
+          <Button className="w-full" disabled={busy} onClick={() => setPickupOpen(true)}>
             Ya recogí el pedido
-          </button>
+          </Button>
         )}
 
         {mode === 'picked_up' && (
-          <button
-            type="button"
-            className="t-btn t-btn-primary t-btn-block"
-            disabled={busy}
-            onClick={() => setDeliverOpen(true)}
-          >
+          <Button className="w-full" disabled={busy} onClick={() => setDeliverOpen(true)}>
             Pedido entregado
-          </button>
+          </Button>
         )}
-      </div>
+      </BottomActionBar>
 
       {readyPromptOpen && mode === 'waiting' && (
         <ReadyPromptSheet
@@ -346,10 +326,7 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
 function LostScreen({ title, body }: { title: string; body: string }) {
   return (
     <main className="mx-auto flex min-h-dvh max-w-[480px] flex-col items-center justify-center px-6 text-center">
-      <span
-        className="flex h-20 w-20 items-center justify-center rounded-full"
-        style={{ background: 'rgba(26,22,20,0.08)', color: 'rgba(26,22,20,0.5)' }}
-      >
+      <span className="flex h-20 w-20 items-center justify-center rounded-full bg-ink/[0.08] text-ink-subtle">
         <Icon name="close" size={30} />
       </span>
       <h1 className="t-display mt-5 text-[24px]">{title}</h1>

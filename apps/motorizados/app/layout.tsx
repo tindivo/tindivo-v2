@@ -1,28 +1,27 @@
 import type { Metadata, Viewport } from 'next'
-import { Manrope } from 'next/font/google'
+import { Bricolage_Grotesque, Geist, JetBrains_Mono } from 'next/font/google'
 import type { ReactNode } from 'react'
 import { OfflineBanner } from '@/components/offline-banner'
 import { PushManager } from '@/components/push-manager'
 import { TransferWatcher } from '@/components/transfers/transfer-watcher'
 import './globals.css'
 
-// Tipografía única de la plataforma: Manrope con todos los pesos.
-// Se exponen tres variables para no romper los call sites existentes.
-const bricolage = Manrope({
+// Sistema tipográfico unificado con el resto de Tindivo:
+// Bricolage Grotesque para titulares, Geist para cuerpo, JetBrains Mono para etiquetas.
+const bricolage = Bricolage_Grotesque({
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
+  weight: ['400', '500', '600', '700'],
   variable: '--font-bricolage',
   display: 'swap',
 })
-const geist = Manrope({
+const geist = Geist({
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
   variable: '--font-geist',
   display: 'swap',
 })
-const jetbrains = Manrope({
+const jetbrains = JetBrains_Mono({
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
+  weight: ['400', '500', '600', '700'],
   variable: '--font-jetbrains',
   display: 'swap',
 })

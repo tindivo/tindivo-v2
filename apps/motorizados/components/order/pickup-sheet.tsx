@@ -1,6 +1,6 @@
 'use client'
 
-import { BottomSheet, Icon } from '@tindivo/ui'
+import { BottomSheet, Button, Icon } from '@tindivo/ui'
 import { useState } from 'react'
 import type { OrderDetailResponse } from '@/lib/types'
 
@@ -43,10 +43,7 @@ export function PickupSheet({
 
       <div className="t-scroll flex-1 px-5">
         {premature && (
-          <div
-            className="mb-4 flex items-start gap-2 rounded-[14px] px-3.5 py-2.5 text-[13px]"
-            style={{ background: 'rgba(245,158,11,0.12)', color: '#92400E' }}
-          >
+          <div className="mb-4 flex items-start gap-2 rounded-[14px] bg-warning-soft px-3.5 py-2.5 text-[13px] text-amber-900">
             <span className="mt-0.5 shrink-0">
               <Icon name="schedule" size={20} />
             </span>
@@ -62,20 +59,11 @@ export function PickupSheet({
               key={s.value}
               type="button"
               onClick={() => setSlots(s.value)}
-              className="flex-1 rounded-[16px] py-3 text-center font-semibold text-[14px]"
-              style={
+              className={`flex-1 rounded-2xl border py-3 text-center text-[14px] font-semibold transition-colors ${
                 slots === s.value
-                  ? {
-                      border: '2px solid #F97316',
-                      background: 'rgba(249,115,22,0.05)',
-                      color: '#C2410C',
-                    }
-                  : {
-                      border: '1px solid rgba(26,22,20,0.1)',
-                      background: '#fff',
-                      color: 'rgba(26,22,20,0.6)',
-                    }
-              }
+                  ? 'border-2 border-brand bg-brand/5 text-brand-dark'
+                  : 'border-ink/10 bg-card text-ink-muted hover:bg-surface'
+              }`}
             >
               {s.label}
             </button>
@@ -94,31 +82,27 @@ export function PickupSheet({
               key={b.value}
               type="button"
               onClick={() => setBand(b.value)}
-              className="rounded-[18px] p-4 text-left"
-              style={
+              className={`rounded-[18px] p-4 text-left transition-colors ${
                 band === b.value
-                  ? { border: '2px solid #F97316', background: 'rgba(249,115,22,0.05)' }
-                  : { border: '1px solid rgba(26,22,20,0.1)', background: '#fff' }
-              }
+                  ? 'border-2 border-brand bg-brand/5'
+                  : 'border border-ink/10 bg-card hover:bg-surface'
+              }`}
             >
-              <p className="font-semibold text-[15px]">{b.label}</p>
-              <p className="mt-0.5 text-[12px]" style={{ color: 'rgba(26,22,20,0.55)' }}>
-                {b.desc}
-              </p>
+              <p className="font-semibold text-[15px] text-ink">{b.label}</p>
+              <p className="mt-0.5 text-[12px] text-ink-muted">{b.desc}</p>
             </button>
           ))}
         </div>
       </div>
 
-      <div className="border-ink/5 border-t px-5 pt-3.5 pb-6">
-        <button
-          type="button"
-          className="t-btn t-btn-primary t-btn-block"
+      <div className="border-t border-ink/5 px-5 pt-3.5 pb-6">
+        <Button
+          className="w-full"
           disabled={!band || busy}
           onClick={() => band && onConfirm({ band, slots })}
         >
           {busy ? 'Confirmando…' : 'Confirmar recogida'}
-        </button>
+        </Button>
       </div>
     </BottomSheet>
   )
