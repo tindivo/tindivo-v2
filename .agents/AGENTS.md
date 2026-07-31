@@ -46,6 +46,28 @@ D:\Tinkuy Creativo\Proyectos\Tindivo\Code\tindivo-delivery
   fechadas en docs se dejan como están; instrucciones/comandos vivos apuntan solo al activo.
 - Tras cada migración: regenerar `database.types.ts` (`pnpm db:types`) y revisar advisors.
 
+### 2.1-bis Las migraciones se aplican SOLO con el CLI de Supabase
+
+- **Local:** `supabase migration up` o `supabase db reset`
+- **Remoto:** `supabase db push`
+
+**NUNCA** por `apply_migration` del MCP, por el editor SQL del panel, ni por
+`docker cp` + `psql -f`. Cada una de esas tres vías ya causó un problema distinto:
+
+| Vía | Qué rompió |
+|---|---|
+| MCP `apply_migration` | Registra la migración con versión por **timestamp** (`20260731022151`) en vez del número del repo. El CLI la ve fuera de orden y luego exige `--include-all`. |
+| Editor SQL del panel | Aplica el código pero **no registra nada** en `schema_migrations`. La base queda con la lógica nueva y el historial mintiendo. |
+| `docker cp` + `psql -f` | **Corrompe los caracteres acentuados**: `dirección` acabó como `direcci??n` (dos `?` literales) en 54 sitios, dentro de mensajes de error que ve el cliente. |
+
+Antes de crear una migración, `supabase migration list` para ver el primer número
+libre. No confíes en lo que diga un plan escrito: se desactualiza en cuanto se
+aplica algo.
+
+Para comparar dos bases, normaliza comentarios y espacios antes de hashear
+(`regexp_replace(prosrc, '--[^\n]*', '', 'g')` y `'\s+' -> ' '`). Sin eso, una
+diferencia de comentarios da un falso positivo de divergencia.
+
 ### 2.2 Dinero: una sola fuente de verdad
 
 - `business_charges` es el ledger y la ÚNICA fuente de verdad de la deuda de restaurantes.

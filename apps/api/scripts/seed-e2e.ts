@@ -68,7 +68,9 @@ async function main(): Promise<void> {
   // ── 2. Usuarios (auth primero: todo lo demás tiene FK a public.users) ───────
   console.log('\nusuarios')
   await ensureAuthUser(E2E.BUSINESS_USER_ID, E2E.BUSINESS_EMAIL, 'Dueño E2E')
+  await ensureAuthUser(E2E.BUSINESS_2_USER_ID, E2E.BUSINESS_2_EMAIL, 'Dueño 2 E2E')
   await ensureAuthUser(E2E.DRIVER_USER_ID, E2E.DRIVER_EMAIL, 'Motorizado E2E')
+  await ensureAuthUser(E2E.DRIVER_2_USER_ID, E2E.DRIVER_2_EMAIL, 'Motorizado 2 E2E')
   for (const c of E2E.CUSTOMERS) {
     await ensureAuthUser(c.userId, c.email, c.fullName)
   }
@@ -85,9 +87,21 @@ async function main(): Promise<void> {
         primary_role: 'business',
       },
       {
+        id: E2E.BUSINESS_2_USER_ID,
+        email: E2E.BUSINESS_2_EMAIL,
+        full_name: 'Dueño 2 E2E',
+        primary_role: 'business',
+      },
+      {
         id: E2E.DRIVER_USER_ID,
         email: E2E.DRIVER_EMAIL,
         full_name: 'Motorizado E2E',
+        primary_role: 'driver',
+      },
+      {
+        id: E2E.DRIVER_2_USER_ID,
+        email: E2E.DRIVER_2_EMAIL,
+        full_name: 'Motorizado 2 E2E',
         primary_role: 'driver',
       },
       ...E2E.CUSTOMERS.map((c) => ({
@@ -104,7 +118,9 @@ async function main(): Promise<void> {
     'user_roles',
     [
       { user_id: E2E.BUSINESS_USER_ID, role: 'business' },
+      { user_id: E2E.BUSINESS_2_USER_ID, role: 'business' },
       { user_id: E2E.DRIVER_USER_ID, role: 'driver' },
+      { user_id: E2E.DRIVER_2_USER_ID, role: 'driver' },
       ...E2E.CUSTOMERS.map((c) => ({ user_id: c.userId, role: 'customer' })),
     ],
     'user_id,role',
@@ -136,6 +152,29 @@ async function main(): Promise<void> {
         coordinates_lat: E2E.BUSINESS_LAT,
         coordinates_lng: E2E.BUSINESS_LNG,
       },
+      // Segundo negocio: SIN motorizados asignados, a propósito. Sirve para
+      // probar que la RLS del motorizado filtra por `driver_restaurants`.
+      {
+        id: E2E.BUSINESS_2_ID,
+        user_id: E2E.BUSINESS_2_USER_ID,
+        name: E2E.BUSINESS_2_NAME,
+        tagline: 'Menú del día',
+        phone: '+51900000011',
+        yape_number: '900000011',
+        accent_color: '2563eb',
+        delivery_fee: 2.0,
+        estimated_eta_min: 25,
+        estimated_eta_max: 35,
+        is_active: true,
+        is_blocked: false,
+        blocked_for_debt: false,
+        publishes_catalog: true,
+        accepts_web_pickup: true,
+        accepts_web_delivery: true,
+        uses_tindivo_drivers: true,
+        coordinates_lat: E2E.BUSINESS_LAT,
+        coordinates_lng: E2E.BUSINESS_LNG,
+      },
     ],
     'id',
   )
@@ -143,15 +182,26 @@ async function main(): Promise<void> {
   // Abierto los 7 días, 24h: el e2e no depende de la hora a la que se ejecute.
   await upsert(
     'business_schedule',
-    [0, 1, 2, 3, 4, 5, 6].map((day) => ({
-      id: E2E.SCHEDULE_IDS[day],
-      business_id: E2E.BUSINESS_ID,
-      day_of_week: day,
-      is_open: true,
-      shift1_start: '00:00',
-      shift1_end: '23:59',
-      crosses_midnight: false,
-    })),
+    [0, 1, 2, 3, 4, 5, 6].flatMap((day) => [
+      {
+        id: E2E.SCHEDULE_IDS[day],
+        business_id: E2E.BUSINESS_ID,
+        day_of_week: day,
+        is_open: true,
+        shift1_start: '00:00',
+        shift1_end: '23:59',
+        crosses_midnight: false,
+      },
+      {
+        id: E2E.BUSINESS_2_SCHEDULE_IDS[day],
+        business_id: E2E.BUSINESS_2_ID,
+        day_of_week: day,
+        is_open: true,
+        shift1_start: '00:00',
+        shift1_end: '23:59',
+        crosses_midnight: false,
+      },
+    ]),
     'id',
   )
 
@@ -280,19 +330,39 @@ async function main(): Promise<void> {
         shift_end: '23:59',
         is_active: true,
       },
+      {
+        id: E2E.DRIVER_2_ID,
+        user_id: E2E.DRIVER_2_USER_ID,
+        full_name: 'Motorizado 2 E2E',
+        phone: '900000012',
+        vehicle_type: 'moto',
+        operating_days: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
+        shift_start: '00:00',
+        shift_end: '23:59',
+        is_active: true,
+      },
     ],
     'id',
   )
 
   await upsert(
     'driver_availability',
-    [{ driver_id: E2E.DRIVER_ID, is_available: true, shift_started_at: new Date().toISOString() }],
+    [
+      { driver_id: E2E.DRIVER_ID, is_available: true, shift_started_at: new Date().toISOString() },
+      { driver_id: E2E.DRIVER_2_ID, is_available: true, shift_started_at: new Date().toISOString() },
+    ],
     'driver_id',
   )
 
+  // Los DOS motorizados sirven a La Florencia: eso permite probar concurrencia
+  // sobre el mismo pool. `Otro Negocio E2E` queda deliberadamente sin ninguno,
+  // para poder probar el filtro por restaurante de la RLS.
   await upsert(
     'driver_restaurants',
-    [{ driver_id: E2E.DRIVER_ID, business_id: E2E.BUSINESS_ID }],
+    [
+      { driver_id: E2E.DRIVER_ID, business_id: E2E.BUSINESS_ID },
+      { driver_id: E2E.DRIVER_2_ID, business_id: E2E.BUSINESS_ID },
+    ],
     'driver_id,business_id',
   )
 

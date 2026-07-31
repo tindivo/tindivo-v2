@@ -26,6 +26,28 @@ export const E2E = {
   BUSINESS_NAME: 'La Florencia E2E',
   BUSINESS_LAT: -9.1465,
   BUSINESS_LNG: -78.2779,
+
+  /**
+   * Segundo negocio, deliberadamente SIN motorizados asignados.
+   *
+   * Existe para probar el aislamiento de la RLS: un pedido suyo no debe ser
+   * visible para ningún motorizado de La Florencia, por muy abierta que tenga
+   * la ventana de cola. Sin este negocio no hay forma de distinguir "la policy
+   * filtra bien" de "solo hay un negocio y por eso todo cuadra".
+   */
+  BUSINESS_2_USER_ID: 'e2e00000-0000-4000-8000-0000000000a1',
+  BUSINESS_2_EMAIL: 'negocio2@e2e.local',
+  BUSINESS_2_ID: 'e2e00000-0000-4000-8000-0000000000b1',
+  BUSINESS_2_NAME: 'Otro Negocio E2E',
+  BUSINESS_2_SCHEDULE_IDS: [
+    'e2e00000-0000-4000-8000-0000000000c0',
+    'e2e00000-0000-4000-8000-0000000000c1',
+    'e2e00000-0000-4000-8000-0000000000c2',
+    'e2e00000-0000-4000-8000-0000000000c3',
+    'e2e00000-0000-4000-8000-0000000000c4',
+    'e2e00000-0000-4000-8000-0000000000c5',
+    'e2e00000-0000-4000-8000-0000000000c6',
+  ],
   /** Un horario por día de la semana (0=domingo … 6=sábado). */
   SCHEDULE_IDS: [
     'e2e00000-0000-4000-8000-000000000020',
@@ -52,6 +74,19 @@ export const E2E = {
 
   // ── Motorizado ────────────────────────────────────────────────────────────
   DRIVER_ID: 'e2e00000-0000-4000-8000-000000000050',
+
+  /**
+   * Segundo motorizado, asignado al MISMO negocio que el primero.
+   *
+   * Habilita dos cosas que con un solo motorizado no se pueden probar:
+   *   - Concurrencia real sobre el pool: dos motorizados compitiendo por el
+   *     mismo pedido, que es lo que cubre el FOR UPDATE de advance_order.
+   *   - Aislamiento por `driver_id`: un pedido ya tomado por este no debe
+   *     aparecerle al otro.
+   */
+  DRIVER_2_USER_ID: 'e2e00000-0000-4000-8000-0000000000a2',
+  DRIVER_2_EMAIL: 'motorizado2@e2e.local',
+  DRIVER_2_ID: 'e2e00000-0000-4000-8000-0000000000d2',
 
   // ── Cliente ───────────────────────────────────────────────────────────────
   ADDRESS_ID: 'e2e00000-0000-4000-8000-000000000060',

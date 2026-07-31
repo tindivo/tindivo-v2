@@ -55,10 +55,22 @@ pnpm graphify:hooks     # instala post-commit git hook para auto-actualizar
 
 ## Supabase
 
-- No hay CLI local: aplicar migraciones y generar tipos vía **MCP de Supabase**
-  sobre el proyecto **"Web v2"** (`zpnipajgwfthxhdtzhly`). Las migraciones se
-  versionan en `supabase/migrations/`.
-- Tras cada migración: regenerar `database.types.ts` y revisar `get_advisors`.
+- **Dos bases.** Local en `127.0.0.1:54321` (Postgres en `54322`), que es donde
+  apuntan todos los `.env.local` y donde corren las apps. Remota
+  `zpnipajgwfthxhdtzhly`, cuyo nombre real es **`tindivo-prod`** (el viejo
+  "Web v2" es `psjigdoinfpgrnedxeyf`, ABANDONADO). Los contenedores locales se
+  llaman `supabase_db_zpnipajgwfthxhdtzhly`, con el ref del remoto: eso confunde.
+  Antes de sacar conclusiones de una consulta, declara contra cuál la ejecutaste.
+- **Sí hay CLI** (`supabase`, v2.109+), y las migraciones se aplican SOLO con él:
+  `supabase db reset` / `migration up` en local, `supabase db push` en remoto.
+  Nunca por MCP `apply_migration`, editor SQL del panel, ni `docker cp` + `psql`.
+  El detalle de qué rompió cada vía está en `.agents/AGENTS.md §2.1-bis`.
+- El MCP de Supabase sirve para **leer** el remoto (consultas, advisors), no para
+  aplicar migraciones.
+- Las migraciones se versionan en `supabase/migrations/` con numeración `NNNN_`.
+  Antes de crear una, `supabase migration list` para ver el primer número libre.
+- Tras cada migración: `pnpm db:types` (apunta al remoto, así que **después** del
+  push) y revisar `get_advisors`.
 
 ## Reglas de proceso (del sistema multi-agente de Mauri)
 
