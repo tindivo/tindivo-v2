@@ -2,7 +2,6 @@ import { Inngest } from 'inngest'
 import { z } from 'zod'
 
 export const EVENT_ORDER_CREATED = 'order/created' as const
-export const EVENT_CASH_DELIVERED = 'cash/delivered' as const
 export const EVENT_ORDER_VALIDATION = 'order/validation' as const
 export const EVENT_TRANSFER_REQUESTED = 'transfer/requested' as const
 export const EVENT_ORDER_PREPAY = 'order/prepay' as const
@@ -40,18 +39,6 @@ export type OrderCreatedData = {
 /** Envío tipado del evento `order/created`. */
 export function sendOrderCreated(data: OrderCreatedData) {
   return inngest.send({ name: EVENT_ORDER_CREATED, data })
-}
-
-/** Datos del evento que agenda la auto-confirmación de efectivo a las 24h. */
-export type CashDeliveredData = {
-  cashSettlementId: string
-  /** Override del deadline en ms — SOLO para tests locales. */
-  sleepMs?: number
-}
-
-/** Envío tipado del evento `cash/delivered`. */
-export function sendCashDelivered(data: CashDeliveredData) {
-  return inngest.send({ name: EVENT_CASH_DELIVERED, data })
 }
 
 /** Datos del evento que agenda el timeout de validación por llamada. */

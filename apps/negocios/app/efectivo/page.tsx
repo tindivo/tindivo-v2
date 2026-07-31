@@ -18,6 +18,22 @@ interface CashRow {
   status: string
 }
 
+/** Efectivo que el motorizado ya cobró al cliente pero todavía no ha rendido. */
+interface PendingCashRow {
+  driver_id: string
+  order_amount: number
+  delivery_fee: number
+  drivers: { full_name: string | null; phone: string | null } | null
+}
+
+interface PendingByDriver {
+  driverId: string
+  name: string
+  phone: string | null
+  total: number
+  orders: number
+}
+
 // ── KPI card ──────────────────────────────────────────────────────────────────
 type KpiTone = 'brand' | 'warning' | 'danger' | 'neutral'
 
@@ -158,7 +174,6 @@ function SettlementCard({
         >
           <MS name="payments" size={14} filled />
           <span style={{ flex: 1 }}>Cuenta el efectivo físicamente antes de confirmar</span>
-          <span style={{ fontSize: 10, opacity: 0.75 }}>24h máx</span>
         </div>
       )}
       {isDisputed && (
@@ -435,10 +450,12 @@ function SummaryHero({
 function EfectivoView() {
   const { bizId } = useDashboard()
   const [rows, setRows] = useState<CashRow[]>([])
+  const [pendingCash, setPendingCash] = useState<PendingByDriver[]>([])
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
-    const { data, error: e } = await getSupabaseBrowser()
+    const supabase = getSupabaseBrowser()
+    const { data, error: e } = await supabase
       .from('cash_settlements')
       .select(
         'id,settlement_date,total_cash,delivered_amount,confirmed_amount,reported_amount,status',
@@ -447,6 +464,33 @@ function EfectivoView() {
       .limit(50)
     if (e) setError(e.message)
     else setRows((data ?? []) as CashRow[])
+
+    // Efectivo cobrado y NO rendido. `cash_settlement_id is null` es lo que lo
+    // define, posible desde 0111: antes no había forma de distinguir un pedido
+    // ya liquidado de uno pendiente.
+    const { data: pend } = await supabase
+      .from('orders')
+      .select('driver_id,order_amount,delivery_fee,drivers(full_name,phone)')
+      .eq('status', 'delivered')
+      .eq('payment_real', 'paid_cash')
+      .is('cash_settlement_id', null)
+      .not('driver_id', 'is', null)
+
+    const porMotorizado = new Map<string, PendingByDriver>()
+    for (const o of (pend ?? []) as unknown as PendingCashRow[]) {
+      if (!o.driver_id) continue
+      const acc = porMotorizado.get(o.driver_id) ?? {
+        driverId: o.driver_id,
+        name: o.drivers?.full_name ?? 'Motorizado',
+        phone: o.drivers?.phone ?? null,
+        total: 0,
+        orders: 0,
+      }
+      acc.total += Number(o.order_amount ?? 0) + Number(o.delivery_fee ?? 0)
+      acc.orders += 1
+      porMotorizado.set(o.driver_id, acc)
+    }
+    setPendingCash([...porMotorizado.values()].sort((a, b) => b.total - a.total))
   }, [])
 
   // Suppress unused warning — bizId required by contract, may be used for
@@ -460,6 +504,9 @@ function EfectivoView() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'cash_settlements' }, () =>
         load(),
       )
+      // "Pendiente del motorizado" se calcula sobre `orders`, así que también
+      // tiene que refrescar cuando un pedido se entrega o se enlaza a un ciclo.
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => load())
       .subscribe()
     return () => {
       getSupabaseBrowser().removeChannel(channel)
@@ -561,7 +608,7 @@ function EfectivoView() {
       )}
 
       {/* Empty state */}
-      {rows.length === 0 && (
+      {rows.length === 0 && pendingCash.length === 0 && (
         <div
           style={{
             background: '#fff',
@@ -583,6 +630,59 @@ function EfectivoView() {
         </div>
       )}
 
+      {/* Pendiente del motorizado: efectivo ya cobrado al cliente que todavía
+          no ha llegado al local. Es lo que la cajera debería tener en la cabeza
+          antes de cuadrar la noche. */}
+      {pendingCash.length > 0 && (
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <MS name="two_wheeler" size={20} style={{ color: 'var(--tv-ink-muted)' }} />
+            <div style={{ fontSize: 16, fontWeight: 700 }}>Pendiente del motorizado</div>
+            <div style={{ flex: 1 }} />
+            <div className="tv-mono" style={{ fontSize: 15, fontWeight: 700 }}>
+              {soles(pendingCash.reduce((s, d) => s + d.total, 0))}
+            </div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {pendingCash.map((d) => (
+              <div
+                key={d.driverId}
+                style={{
+                  background: '#fff',
+                  borderRadius: 14,
+                  border: '1px solid var(--tv-border)',
+                  borderLeft: '4px solid var(--tv-ink-subtle)',
+                  padding: '12px 14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14 }}>{d.name}</div>
+                  <div style={{ fontSize: 12, color: 'var(--tv-ink-muted)', marginTop: 2 }}>
+                    {d.orders} {d.orders === 1 ? 'pedido cobrado' : 'pedidos cobrados'} · aún no
+                    entregado
+                  </div>
+                </div>
+                <div className="tv-mono" style={{ fontSize: 16, fontWeight: 700, flexShrink: 0 }}>
+                  {soles(d.total)}
+                </div>
+                {d.phone && (
+                  <a
+                    href={`tel:+51${d.phone.replace(/\D/g, '')}`}
+                    className="tv-btn tv-btn-sm"
+                    style={{ flexShrink: 0, textDecoration: 'none' }}
+                  >
+                    <MS name="call" size={15} /> Llamar
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Pending block — first */}
       {pending.length > 0 && (
         <div style={{ marginBottom: 24 }}>
@@ -599,7 +699,7 @@ function EfectivoView() {
             <span className="tv-chip tv-chip-warning">{pending.length}</span>
             <div style={{ flex: 1 }} />
             <div style={{ fontSize: 12, color: 'var(--tv-ink-muted)' }}>
-              Después de 24h se confirman automáticamente
+              Cuenta el efectivo y confirma. No se confirman solas.
             </div>
           </div>
           {/* Mobile: single column; desktop: two columns via grid */}

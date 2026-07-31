@@ -4,7 +4,6 @@ import { requireRole } from '@/lib/http/auth'
 import { corsHeaders, handleOptions } from '@/lib/http/cors'
 import { handleError, ok } from '@/lib/http/problem'
 import { getRequestId } from '@/lib/http/request-id'
-import { sendCashDelivered } from '@/lib/inngest/client'
 import { createServiceClient } from '@/lib/supabase/service'
 
 export const dynamic = 'force-dynamic'
@@ -45,6 +44,10 @@ export async function GET(req: Request): Promise<Response> {
       .eq('driver_id', drv.id)
       .eq('status', 'delivered')
       .eq('payment_real', 'paid_cash')
+      // Solo lo que AÚN no ha rendido. Antes sumaba todo lo cobrado hoy, así
+      // que tras la primera rendición seguía mostrando el total del día y
+      // pre-rellenaba el formulario con dinero que ya había entregado.
+      .is('cash_settlement_id', null)
       .gte('delivered_at', startUtc.toISOString())
       .lt('delivered_at', endUtc.toISOString())
 
@@ -74,11 +77,20 @@ export async function GET(req: Request): Promise<Response> {
       .order('settlement_date', { ascending: false })
       .limit(60)
 
+    // Desde 0111 puede haber VARIOS ciclos por negocio y día. El que le importa
+    // al motorizado es el abierto; si no hay, ninguno. Un `new Map` sobre todos
+    // se quedaba con uno arbitrario.
+    const abiertos = ['pending_confirmation', 'disputed']
     const todayMap = new Map(
       (settlements ?? [])
-        .filter((s) => s.settlement_date === limaDate)
+        .filter((s) => s.settlement_date === limaDate && abiertos.includes(s.status))
         .map((s) => [s.business_id, s]),
     )
+    // `today` = negocios con efectivo por rendir UNIDOS a los que tienen un
+    // ciclo abierto esperando confirmación. Sin la segunda mitad, un ciclo ya
+    // entregado pero sin confirmar desaparecía de la pantalla en cuanto no
+    // quedaban pedidos pendientes: el motorizado dejaba de ver que aún le
+    // deben una confirmación.
     const today = [...byBiz.values()].map((b) => {
       const s = todayMap.get(b.businessId)
       return {
@@ -88,7 +100,23 @@ export async function GET(req: Request): Promise<Response> {
         deliveredAmount: s?.delivered_amount ?? null,
       }
     })
-    const history = (settlements ?? []).filter((s) => s.settlement_date !== limaDate)
+    for (const [businessId, s] of todayMap) {
+      if (byBiz.has(businessId)) continue
+      today.push({
+        businessId,
+        businessName: (s.businesses as { name?: string } | null)?.name ?? '—',
+        expected: 0,
+        orderCount: 0,
+        settlementId: s.id,
+        status: s.status,
+        deliveredAmount: s.delivered_amount,
+      })
+    }
+    // Los ciclos de hoy ya cerrados también van al historial: si no, con varias
+    // rendiciones por noche los confirmados desaparecían de las dos listas.
+    const history = (settlements ?? []).filter(
+      (s) => s.settlement_date !== limaDate || !abiertos.includes(s.status),
+    )
     return ok({ today, history }, { headers: corsHeaders(req) })
   } catch (err) {
     return handleError(err, requestId, req)
@@ -114,13 +142,8 @@ export async function POST(req: Request): Promise<Response> {
       if (error.code === 'P0001') throw new DomainError(error.message, 'validation_error')
       throw new Error(error.message)
     }
-    const created = data as { id?: string }
-    if (created?.id) {
-      // Best-effort: agenda la auto-confirmación a 24h.
-      try {
-        await sendCashDelivered({ cashSettlementId: created.id })
-      } catch {}
-    }
+    // La confirmación es SIEMPRE humana: la cajera cuenta el dinero. Ya no se
+    // agenda auto-confirmación a las 24h (0112).
     return ok(data, { status: 201, headers: corsHeaders(req) })
   } catch (err) {
     return handleError(err, requestId, req)

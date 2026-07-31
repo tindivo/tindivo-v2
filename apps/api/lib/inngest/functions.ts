@@ -3,8 +3,6 @@ import { processPendingOutboxEvents } from '../outbox/processor'
 import { sendPushToUser } from '../push/send'
 import { createServiceClient } from '../supabase/service'
 import {
-  type CashDeliveredData,
-  EVENT_CASH_DELIVERED,
   EVENT_ORDER_APPEAL_CREATED,
   EVENT_ORDER_CREATED,
   EVENT_ORDER_NOTIFY_BUSINESS,
@@ -65,48 +63,6 @@ export const orderAcceptanceTimeout: InngestFunction.Any = inngest.createFunctio
   },
 )
 
-/**
- * Auto-confirmación de efectivo: si el negocio no confirma la entrega del
- * motorizado dentro de `timers.cashAutoConfirmHours` (24h), se asume confirmada
- * (evita que el driver quede en limbo — Documento §6). Idempotente: solo afecta
- * si sigue en `pending_confirmation`.
- */
-export const cashSettlementAutoConfirm: InngestFunction.Any = inngest.createFunction(
-  {
-    id: 'cash-settlement-auto-confirm',
-    name: 'Auto-confirmar efectivo a las 24h',
-    triggers: [{ event: EVENT_CASH_DELIVERED }],
-  },
-  async ({ event, step }) => {
-    const { cashSettlementId, sleepMs: override } = event.data as CashDeliveredData
-
-    const sleepMs = await step.run('resolve-deadline', async () => {
-      if (typeof override === 'number') return override
-      const svc = createServiceClient()
-      const { data } = await svc.from('app_settings').select('value').eq('key', 'timers').single()
-      const hours =
-        (data?.value as { cashAutoConfirmHours?: number } | null)?.cashAutoConfirmHours ?? 24
-      return hours * 3_600_000
-    })
-
-    await step.sleep('cash-confirm-window', sleepMs)
-
-    return await step.run('auto-confirm', async () => {
-      const svc = createServiceClient()
-      const { data, error } = await svc.rpc('auto_confirm_cash_settlement', {
-        p_id: cashSettlementId,
-      })
-      if (error) throw new Error(error.message)
-      return data
-    })
-  },
-)
-
-/**
- * Timeout de validación: si la cajera no valida un pedido en `validando` dentro
- * de `timers.validationMinutes` (5 min), se auto-cancela. `expire_order` re-chequea
- * el estado bajo FOR UPDATE (idempotente: no cancela si ya pasó la validación).
- */
 export const orderValidationTimeout: InngestFunction.Any = inngest.createFunction(
   {
     id: 'order-validation-timeout',
@@ -336,7 +292,6 @@ export const processOutboxEventsCron: InngestFunction.Any = inngest.createFuncti
 /** Registro de funciones servidas por el endpoint /api/inngest. */
 export const functions: InngestFunction.Any[] = [
   orderAcceptanceTimeout,
-  cashSettlementAutoConfirm,
   orderValidationTimeout,
   orderPrepayTimeout,
   transferRequestTimeout,

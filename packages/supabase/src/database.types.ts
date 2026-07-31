@@ -1599,6 +1599,7 @@ export type Database = {
           cancelled_by: string | null
           cash_amount: number | null
           cash_owed_at_delivery: number | null
+          cash_settlement_id: string | null
           change_to_give: number | null
           client_pays_with: number | null
           commission_amount: number | null
@@ -1688,6 +1689,7 @@ export type Database = {
           cancelled_by?: string | null
           cash_amount?: number | null
           cash_owed_at_delivery?: number | null
+          cash_settlement_id?: string | null
           change_to_give?: number | null
           client_pays_with?: number | null
           commission_amount?: number | null
@@ -1777,6 +1779,7 @@ export type Database = {
           cancelled_by?: string | null
           cash_amount?: number | null
           cash_owed_at_delivery?: number | null
+          cash_settlement_id?: string | null
           change_to_give?: number | null
           client_pays_with?: number | null
           commission_amount?: number | null
@@ -1866,6 +1869,13 @@ export type Database = {
             columns: ["cancelled_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_cash_settlement_id_fkey"
+            columns: ["cash_settlement_id"]
+            isOneToOne: false
+            referencedRelation: "cash_settlements"
             referencedColumns: ["id"]
           },
           {
@@ -2402,7 +2412,6 @@ export type Database = {
         }
         Returns: undefined
       }
-      auto_confirm_cash_settlement: { Args: { p_id: string }; Returns: Json }
       block_business: {
         Args: { p_by: string; p_id: string; p_reason: string }
         Returns: Json
@@ -2719,6 +2728,7 @@ export type Database = {
           cancelled_by: string | null
           cash_amount: number | null
           cash_owed_at_delivery: number | null
+          cash_settlement_id: string | null
           change_to_give: number | null
           client_pays_with: number | null
           commission_amount: number | null
