@@ -4,7 +4,14 @@ import { BottomSheet, Button } from '@tindivo/ui'
 import { useState } from 'react'
 import type { OrderDetailResponse } from '@/lib/types'
 
-type PaymentReal = 'paid_cash' | 'paid_yape'
+/**
+ * Cómo pagó el cliente REALMENTE. `paid_prepaid` no se elige: se deduce de que
+ * el pedido ya venía pagado. Registrarlo importa — si un prepago entregado se
+ * guardara como `paid_yape`, sería indistinguible de un Yape cobrado en la
+ * puerta, y ese es justo el número que hace falta para saber si la regla de
+ * "primer pedido obligatoriamente prepago" está costando clientes.
+ */
+type PaymentReal = 'paid_prepaid' | 'paid_cash' | 'paid_yape'
 
 /** Confirmación de entrega: cómo pagó el cliente + no-show en 2 pasos (HU-D-029). */
 export function DeliverSheet({
@@ -24,7 +31,7 @@ export function DeliverSheet({
   const prepaid = order.paymentIntent === 'prepaid'
   const [payment, setPayment] = useState<PaymentReal | null>(
     prepaid
-      ? 'paid_yape'
+      ? 'paid_prepaid'
       : order.paymentIntent === 'pending_cash'
         ? 'paid_cash'
         : order.paymentIntent === 'pending_yape'
