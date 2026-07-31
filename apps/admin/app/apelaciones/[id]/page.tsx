@@ -1,6 +1,6 @@
 'use client'
 
-import { type AdminAppealDto, extractStoragePaths } from '@tindivo/contracts'
+import { type AdminAppealDto, type AppealStatus, type RefundStatus, extractStoragePaths } from '@tindivo/contracts'
 import { Button } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { use, useCallback, useEffect, useRef, useState } from 'react'
