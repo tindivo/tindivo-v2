@@ -3,7 +3,21 @@ import type { PaymentIntent } from '@tindivo/contracts'
 export const DEFAULT_PREPAY_THRESHOLD = 80
 export const NEAR_DELIVERY_FEE = 2.0
 
-// Pickup disabled for the pilot (DECISIONS.md: "pickup inactivo; post-piloto").
+/**
+ * Recojo en tienda, desactivado para el piloto (DECISIONS.md: "pickup inactivo;
+ * post-piloto"). Mientras esta bandera sea `false`, `unified-checkout` no
+ * renderiza el selector y `deliveryMethod` se queda en 'delivery'.
+ *
+ * NO activarla sin recorrer el flujo entero primero. El backend lo soporta
+ * (`delivery_fee = 0`, comisión de pickup configurada en 1.00) pero nunca se ha
+ * ejercitado de punta a punta, y tiene un modo de fallo identificado:
+ *
+ *   Todas las transiciones intermedias las escribe el MOTORIZADO — 'take',
+ *   'arrived', 'pickup', 'deliver'. En un recojo en tienda no hay motorizado,
+ *   así que no está claro quién lleva el pedido a 'delivered'. Un pickup que se
+ *   quede atascado además bloquea al cliente para volver a pedir de ese mismo
+ *   restaurante, por el guard de pedido activo de 0105.
+ */
 export const PICKUP_ENABLED = false as boolean
 
 export interface Address {

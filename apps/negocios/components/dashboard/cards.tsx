@@ -96,14 +96,17 @@ export function CookingStatusLine({ order }: { order: OrderVM }) {
     )
   }
 
+  // p1 ya no es un estado de tránsito normal: si el pedido está aquí es que la
+  // comida está lista y nadie la ha tomado. El copy avisa desde el primer minuto.
   if (s === 'buffer_p1')
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
         <span
           style={{ width: 7, height: 7, borderRadius: 999, background: '#EAB308', flexShrink: 0 }}
         />
-        <span style={{ fontSize: 11, color: '#B45309', fontWeight: 500 }}>
-          Listo · Esperando motorizado · <span className="tv-mono">{order.bufferMinutes}m</span>
+        <span style={{ fontSize: 11, color: '#B45309', fontWeight: 600 }}>
+          Comida lista · nadie la ha tomado ·{' '}
+          <span className="tv-mono">{order.bufferMinutes}m</span>
         </span>
       </div>
     )

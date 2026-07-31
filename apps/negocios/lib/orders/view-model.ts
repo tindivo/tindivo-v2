@@ -143,9 +143,18 @@ function secondsUntil(iso: string | null, addSec: number, now: number): number {
   return Math.max(0, Math.round((Date.parse(iso) + addSec * 1000 - now) / 1000))
 }
 
+/**
+ * Escalado de alarma para un pedido en `waiting_driver` sin motorizado.
+ *
+ * `waiting_driver` cambió de significado. Antes era el estado normal de
+ * tránsito y un escalado suave tenía sentido. Ahora el flujo normal va
+ * `preparing` → `heading_to_restaurant`, saltándoselo: si un pedido cae aquí
+ * es que la comida está lista y nadie la ha tomado. Es la excepción, y a los
+ * 5 minutos ya es demasiado tarde — por eso el rojo entra antes que antes.
+ */
 function bufferPhase(mins: number): UiState {
-  if (mins < 3) return 'buffer_p1'
-  if (mins < 5) return 'buffer_p2'
+  if (mins < 2) return 'buffer_p1'
+  if (mins < 4) return 'buffer_p2'
   return 'buffer_p3'
 }
 

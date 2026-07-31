@@ -38,6 +38,20 @@ v1 (`C:\Users\mauri\Documents\Tindivo`), que tenía deuda técnica.
 5. **Tag de push** = `${event_type}-${shortId}` (no solo `shortId`).
 6. **Migraciones idempotentes** y versionadas (`DROP IF EXISTS`/`CREATE OR REPLACE`).
 7. **Multi-rol desde el día 1** (`users` + `user_roles` + JWT claims).
+8. **`delivered` es terminal. No hay vuelta atrás, y conviene que siga así.**
+   Verificado contra las 8 funciones que escriben `orders.status`
+   (`advance_order`, `expire_order`, `apply_order_transfer`,
+   `cancel_customer_order`, `cancel_expired_prepay_orders`, `extend_order_prep`,
+   `validate_order`, `create_customer_order`) y contra el único `.update()`
+   directo del API (`prepay-proof/route.ts`, que exige `awaiting_payment`):
+   **ninguna puede sacar un pedido de `delivered`.**
+   Consecuencia: la rama de reversión de `generate_delivery_charges`
+   (`0074:262-271`) es **código inalcanzable**. Contiene un defecto latente —
+   borra los cargos con `status = 'pending'` pero decrementa `balance_due` por
+   el monto COMPLETO, así que si los cargos ya estaban liquidados el saldo baja
+   sin contrapartida. Hoy no puede dispararse.
+   **Si alguna vez se añade un camino para revertir una entrega, ese defecto se
+   activa con él: corrígelo ANTES de abrir el camino, no después.**
 
 ## Comandos
 
