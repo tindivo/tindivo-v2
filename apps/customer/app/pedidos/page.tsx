@@ -1,6 +1,7 @@
 'use client'
 
 import type { ApiEnvelope } from '@tindivo/api-client'
+import { ACTIVE_ORDER_STATUSES } from '@tindivo/contracts'
 import { TINDIVO_SUPPORT_WHATSAPP } from '@tindivo/core'
 import { Button, Card, CardBody, EmptyState, StatusPill } from '@tindivo/ui'
 import Link from 'next/link'
@@ -30,16 +31,7 @@ interface OrderRow {
 const soles = (n: number) => `S/ ${n.toFixed(2)}`
 
 // Estados internos que aún están "en curso" (no terminales).
-const ACTIVE_STATUSES = new Set([
-  'validando',
-  'pending_acceptance',
-  'confirmed',
-  'preparing',
-  'waiting_driver',
-  'heading_to_restaurant',
-  'waiting_at_restaurant',
-  'picked_up',
-])
+const ACTIVE_STATUSES: ReadonlySet<string> = new Set(ACTIVE_ORDER_STATUSES)
 
 // Etiqueta corta para el cliente (Etapa 5 unificará la proyección a 4 estados).
 const STATUS_LABEL: Record<string, string> = {

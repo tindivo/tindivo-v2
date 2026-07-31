@@ -69,7 +69,9 @@ async function main(): Promise<void> {
   console.log('\nusuarios')
   await ensureAuthUser(E2E.BUSINESS_USER_ID, E2E.BUSINESS_EMAIL, 'Dueño E2E')
   await ensureAuthUser(E2E.DRIVER_USER_ID, E2E.DRIVER_EMAIL, 'Motorizado E2E')
-  await ensureAuthUser(E2E.CUSTOMER_USER_ID, E2E.CUSTOMER_EMAIL, 'Cliente E2E')
+  for (const c of E2E.CUSTOMERS) {
+    await ensureAuthUser(c.userId, c.email, c.fullName)
+  }
 
   // El trigger handle_new_user ya creó las filas en public.users; el upsert fija
   // el primary_role, que el trigger deja siempre en 'customer'.
@@ -88,12 +90,12 @@ async function main(): Promise<void> {
         full_name: 'Motorizado E2E',
         primary_role: 'driver',
       },
-      {
-        id: E2E.CUSTOMER_USER_ID,
-        email: E2E.CUSTOMER_EMAIL,
-        full_name: 'Cliente E2E',
+      ...E2E.CUSTOMERS.map((c) => ({
+        id: c.userId,
+        email: c.email,
+        full_name: c.fullName,
         primary_role: 'customer',
-      },
+      })),
     ],
     'id',
   )
@@ -103,7 +105,7 @@ async function main(): Promise<void> {
     [
       { user_id: E2E.BUSINESS_USER_ID, role: 'business' },
       { user_id: E2E.DRIVER_USER_ID, role: 'driver' },
-      { user_id: E2E.CUSTOMER_USER_ID, role: 'customer' },
+      ...E2E.CUSTOMERS.map((c) => ({ user_id: c.userId, role: 'customer' })),
     ],
     'user_id,role',
   )
@@ -299,37 +301,34 @@ async function main(): Promise<void> {
   console.log('\ncliente')
   await upsert(
     'customer_profiles',
-    [
-      {
-        user_id: E2E.CUSTOMER_USER_ID,
-        full_name: 'Cliente E2E',
-        phone: E2E.CUSTOMER_PHONE,
-        phone_verified_at: new Date().toISOString(),
-        default_address: E2E.CUSTOMER_ADDRESS,
-        default_reference: E2E.CUSTOMER_REFERENCE,
-        default_coordinates_lat: E2E.CUSTOMER_LAT,
-        default_coordinates_lng: E2E.CUSTOMER_LNG,
-        strikes: 0,
-        contraentrega_blocked: false,
-      },
-    ],
+    E2E.CUSTOMERS.map((c) => ({
+      user_id: c.userId,
+      full_name: c.fullName,
+      phone: c.phone,
+      // Sin esto, create_customer_order rechaza el pedido: exige teléfono verificado.
+      phone_verified_at: new Date().toISOString(),
+      default_address: E2E.CUSTOMER_ADDRESS,
+      default_reference: E2E.CUSTOMER_REFERENCE,
+      default_coordinates_lat: E2E.CUSTOMER_LAT,
+      default_coordinates_lng: E2E.CUSTOMER_LNG,
+      strikes: 0,
+      contraentrega_blocked: false,
+    })),
     'user_id',
   )
 
   await upsert(
     'customer_addresses',
-    [
-      {
-        id: E2E.ADDRESS_ID,
-        user_id: E2E.CUSTOMER_USER_ID,
-        label: 'Casa',
-        line: E2E.CUSTOMER_ADDRESS,
-        reference: E2E.CUSTOMER_REFERENCE,
-        coordinates_lat: E2E.CUSTOMER_LAT,
-        coordinates_lng: E2E.CUSTOMER_LNG,
-        is_default: true,
-      },
-    ],
+    E2E.CUSTOMERS.map((c) => ({
+      id: c.addressId,
+      user_id: c.userId,
+      label: 'Casa',
+      line: E2E.CUSTOMER_ADDRESS,
+      reference: E2E.CUSTOMER_REFERENCE,
+      coordinates_lat: E2E.CUSTOMER_LAT,
+      coordinates_lng: E2E.CUSTOMER_LNG,
+      is_default: true,
+    })),
     'id',
   )
 

@@ -235,6 +235,32 @@ export async function POST(req: Request): Promise<Response> {
           p_customer_gps_method: body.gpsValidation?.method,
         })
         if (error) {
+          // El guard de pedido activo no puede dejar su propio rastro: el RAISE
+          // revierte la transacción. Viaja en `details` y se registra aquí, contra
+          // el pedido que bloqueó. Sirve para decidir con datos si hace falta un
+          // "agregar a mi pedido": si salta tres veces al mes se deja así; si
+          // salta veinte, se construye.
+          const blocked = /^active_order_block:([^:]+):([^:]+):(.+)$/.exec(error.details ?? '')
+          if (blocked?.[1] && blocked[2] && blocked[3]) {
+            const [, blockingOrderId, blockingShortId, blockingStatus] = blocked
+            await service
+              .from('order_event_log')
+              .insert({
+                order_id: blockingOrderId,
+                event_type: 'order.active_order_block',
+                actor_role: 'cliente',
+                actor_user_id: user.id,
+                data: {
+                  blockingShortId,
+                  blockingStatus,
+                  businessId: body.businessId,
+                  attemptedPaymentIntent: body.paymentIntent,
+                },
+              })
+              .then(undefined, () => {
+                /* el registro es best-effort: nunca debe tapar el error real */
+              })
+          }
           if (error.code === 'P0002') throw new DomainError(error.message, 'not_found')
           if (error.code === 'P0001') throw new DomainError(error.message, 'validation_error')
           throw new Error(error.message)

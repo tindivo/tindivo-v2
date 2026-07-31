@@ -1,20 +1,9 @@
 'use client'
 
-import type { OrderStatus } from '@tindivo/contracts'
+import { ACTIVE_ORDER_STATUSES } from '@tindivo/contracts'
 import { useEffect, useState } from 'react'
 import type { ActiveOrder } from '@/features/catalog/types'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
-
-const ACTIVE_STATUSES: OrderStatus[] = [
-  'validando',
-  'pending_acceptance',
-  'confirmed',
-  'preparing',
-  'waiting_driver',
-  'heading_to_restaurant',
-  'waiting_at_restaurant',
-  'picked_up',
-]
 
 export function useActiveOrders() {
   const [orders, setOrders] = useState<ActiveOrder[]>([])
@@ -29,7 +18,7 @@ export function useActiveOrders() {
         supabase
           .from('orders')
           .select('short_id,status,business_id,created_at')
-          .in('status', ACTIVE_STATUSES)
+          .in('status', [...ACTIVE_ORDER_STATUSES])
           .eq('customer_user_id', data.session.user.id)
           .order('created_at', { ascending: false })
           .then(({ data: rows }) => {

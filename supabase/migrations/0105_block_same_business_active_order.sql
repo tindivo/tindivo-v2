@@ -12,8 +12,19 @@
 -- garantiza la regla de negocio a nivel de base de datos.
 --
 -- ESTADOS CONSIDERADOS ACTIVOS
--- Mismo conjunto que usa el frontend: desde 'validando' hasta 'picked_up'.
--- 'delivered' y 'cancelled' son terminales, por lo que no bloquean.
+-- Espejo SQL de ACTIVE_ORDER_STATUSES (packages/contracts/src/enums.ts), que es
+-- la fuente única. Son los 9 no terminales: 'delivered' y 'cancelled' quedan
+-- fuera porque no bloquean.
+--
+-- Incluye 'awaiting_payment'. Las tres copias manuales de esta lista que había
+-- en el repo lo omitían, así que un prepago esperando pago no contaba como
+-- activo: el cliente podía apilar pedidos en el mismo restaurante durante toda
+-- la ventana de pago.
+--
+-- NOTA SOBRE 'awaiting_payment': el cliente no puede autocancelar desde ahí
+-- (cancel_customer_order de 0046 solo admite 'validando' y 'pending_acceptance',
+-- y además rechaza todo prepago). Queda sin salida propia hasta que expire el
+-- timeout de 10 min de 0098. Es acotado, pero conviene saberlo.
 
 -- El drop es necesario porque CREATE OR REPLACE no permite cambiar el cuerpo
 -- si la firma es idéntica; en la práctica funciona, pero lo dejamos explícito
@@ -96,23 +107,40 @@ declare
   v_spike_days int;
   v_spike_multiplier numeric;
   v_spike_min int;
+
+  -- Guard de pedido activo (instrumentación del bloqueo)
+  v_active_id uuid;
+  v_active_short_id text;
+  v_active_status public.order_status;
 begin
   if jsonb_typeof(p_items) <> 'array' or jsonb_array_length(p_items) = 0 then
     raise exception 'El pedido no tiene items' using errcode = 'P0001';
   end if;
 
   -- GUARD: un solo pedido activo por cliente + negocio.
-  if exists (
-    select 1 from public.orders
-    where customer_user_id = p_customer_user_id
-      and business_id = p_business_id
-      and status in (
-        'validando', 'pending_acceptance', 'confirmed', 'preparing',
-        'waiting_driver', 'heading_to_restaurant', 'waiting_at_restaurant', 'picked_up'
-      )
-  ) then
+  -- Solo aplica a este RPC (canal B2C). Los pedidos manuales de la cajera pasan
+  -- por create_business_manual_order, que no lleva guard: ella ve la situación
+  -- completa del cliente y decide.
+  select o.id, o.short_id, o.status into v_active_id, v_active_short_id, v_active_status
+  from public.orders o
+  where o.customer_user_id = p_customer_user_id
+    and o.business_id = p_business_id
+    and o.status in (
+      'validando', 'pending_acceptance', 'awaiting_payment', 'confirmed', 'preparing',
+      'waiting_driver', 'heading_to_restaurant', 'waiting_at_restaurant', 'picked_up'
+    )
+  order by o.created_at desc
+  limit 1;
+
+  if v_active_short_id is not null then
+    -- El DETAIL viaja al API (supabase-js lo expone como `error.details`), que
+    -- registra el bloqueo. No se puede insertar el log aquí: el RAISE revierte
+    -- la transacción, incluidas sus propias escrituras, y esta instalación no
+    -- tiene dblink ni transacciones autónomas.
     raise exception 'Ya tienes un pedido activo en este restaurante. Espera a que termine antes de hacer uno nuevo.'
-      using errcode = 'P0001';
+      using errcode = 'P0001',
+            detail = 'active_order_block:' || v_active_id::text || ':' || v_active_short_id
+                     || ':' || v_active_status::text;
   end if;
 
   select * into v_business from public.businesses where id = p_business_id;

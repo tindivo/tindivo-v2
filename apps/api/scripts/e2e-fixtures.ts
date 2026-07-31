@@ -65,7 +65,48 @@ export const E2E = {
    */
   CUSTOMER_LAT: -9.151,
   CUSTOMER_LNG: -78.28,
+
+  /**
+   * Los tres clientes de prueba, en orden. El primero es el histórico
+   * (`CUSTOMER_USER_ID`); los otros dos existen para poder correr recorridos en
+   * paralelo contra el mismo negocio.
+   *
+   * `create_customer_order` bloquea un segundo pedido ACTIVO del mismo cliente
+   * en el mismo negocio. Con un solo cliente, los recorridos de prueba tendrían
+   * que encadenarse: terminar uno hasta `delivered` antes de empezar el
+   * siguiente, y cualquier pedido atascado dejaría la suite bloqueada.
+   *
+   * Comparten dirección y coordenadas con el principal — verificadas dentro del
+   * polígono de cobertura. Solo cambian id, email, teléfono y el id de la
+   * dirección.
+   */
+  CUSTOMERS: [
+    {
+      userId: 'e2e00000-0000-4000-8000-000000000003',
+      email: 'cliente@e2e.local',
+      fullName: 'Cliente E2E',
+      phone: '+51900000003',
+      addressId: 'e2e00000-0000-4000-8000-000000000060',
+    },
+    {
+      userId: 'e2e00000-0000-4000-8000-000000000004',
+      email: 'cliente2@e2e.local',
+      fullName: 'Cliente E2E 2',
+      phone: '+51900000004',
+      addressId: 'e2e00000-0000-4000-8000-000000000061',
+    },
+    {
+      userId: 'e2e00000-0000-4000-8000-000000000005',
+      email: 'cliente3@e2e.local',
+      fullName: 'Cliente E2E 3',
+      phone: '+51900000005',
+      addressId: 'e2e00000-0000-4000-8000-000000000062',
+    },
+  ],
 } as const
+
+/** Ids de los tres clientes de prueba. Marcador de limpieza de transaccionales. */
+export const E2E_CUSTOMER_USER_IDS: readonly string[] = E2E.CUSTOMERS.map((c) => c.userId)
 
 /**
  * Ajustes que el seed SOBRESCRIBE en local para que el e2e sea determinista.

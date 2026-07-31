@@ -32,6 +32,37 @@ export const ORDER_STATUSES = [
 export const OrderStatusSchema = z.enum(ORDER_STATUSES)
 export type OrderStatus = z.infer<typeof OrderStatusSchema>
 
+/**
+ * Estados en los que un pedido sigue vivo: no es terminal y todavía consume
+ * atención del cliente, la cajera o el motorizado. Complemento exacto de
+ * `delivered` y `cancelled`.
+ *
+ * Fuente única. La replicaban a mano el guard de `create_customer_order`, el
+ * hook que bloquea el catálogo y la lista de "Mis pedidos"; las tres copias
+ * omitían `awaiting_payment`, así que un prepago esperando pago no contaba
+ * como activo en ninguna de ellas.
+ *
+ * El equivalente SQL vive en `create_customer_order`. Si cambias esta lista,
+ * cambia también la migración correspondiente.
+ */
+export const ACTIVE_ORDER_STATUSES = [
+  'validando',
+  'pending_acceptance',
+  'awaiting_payment',
+  'confirmed',
+  'preparing',
+  'waiting_driver',
+  'heading_to_restaurant',
+  'waiting_at_restaurant',
+  'picked_up',
+] as const satisfies readonly OrderStatus[]
+export type ActiveOrderStatus = (typeof ACTIVE_ORDER_STATUSES)[number]
+
+/** `true` si el pedido sigue vivo (ni entregado ni cancelado). */
+export function isActiveOrderStatus(status: string): status is ActiveOrderStatus {
+  return (ACTIVE_ORDER_STATUSES as readonly string[]).includes(status)
+}
+
 // --- Pedido: pasos del tracking que ve el CLIENTE (proyección a 4 pasos + cancelado) ---
 export const TRACKING_STEPS = [
   'received',

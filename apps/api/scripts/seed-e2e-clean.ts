@@ -6,16 +6,17 @@
  * motorizado, cliente, settings): tras correr esto, el e2e puede volver a
  * ejecutarse sin re-sembrar.
  *
- * MARCADOR: `orders.customer_user_id = E2E.CUSTOMER_USER_ID`.
- * Es un id fijo y exclusivo del cliente de prueba, así que no puede arrastrar
- * pedidos reales por accidente. Se prefiere a heurísticas por texto o por fecha.
+ * MARCADOR: `orders.customer_user_id IN E2E_CUSTOMER_USER_IDS`.
+ * Son ids fijos y exclusivos de los clientes de prueba, así que no pueden
+ * arrastrar pedidos reales por accidente. Se prefiere a heurísticas por texto
+ * o por fecha.
  *
  * GUARD ANTI-PRODUCCIÓN: heredado de `local-db.ts` (aborta si no es 127.0.0.1).
  *
  * Uso:  pnpm db:seed:e2e:clean
  */
 import { localClient as db } from '../lib/__tests__/helpers/local-db.ts'
-import { E2E } from './e2e-fixtures.ts'
+import { E2E_CUSTOMER_USER_IDS } from './e2e-fixtures.ts'
 
 // biome-ignore lint/suspicious/noExplicitAny: database.types.ts está desactualizado
 const raw = db as any
@@ -23,11 +24,11 @@ const raw = db as any
 async function main(): Promise<void> {
   console.log('\nLimpieza e2e — solo transaccionales\n')
 
-  // 1. Localizar los pedidos del cliente de prueba (el marcador).
+  // 1. Localizar los pedidos de los clientes de prueba (el marcador).
   const { data: orders, error: selErr } = await raw
     .from('orders')
     .select('id, short_id')
-    .eq('customer_user_id', E2E.CUSTOMER_USER_ID)
+    .in('customer_user_id', E2E_CUSTOMER_USER_IDS)
   if (selErr) throw new Error(`leer orders falló: ${selErr.message}`)
 
   const orderIds: string[] = (orders ?? []).map((o: { id: string }) => o.id)
