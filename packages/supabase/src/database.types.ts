@@ -1648,6 +1648,7 @@ export type Database = {
           prep_time_minutes: number | null
           preparing_at: string | null
           proof_attempt: number
+          ready_early_at: string | null
           ready_early_used: boolean
           rejected_at: string | null
           rejected_by: string | null
@@ -1736,6 +1737,7 @@ export type Database = {
           prep_time_minutes?: number | null
           preparing_at?: string | null
           proof_attempt?: number
+          ready_early_at?: string | null
           ready_early_used?: boolean
           rejected_at?: string | null
           rejected_by?: string | null
@@ -1824,6 +1826,7 @@ export type Database = {
           prep_time_minutes?: number | null
           preparing_at?: string | null
           proof_attempt?: number
+          ready_early_at?: string | null
           ready_early_used?: boolean
           rejected_at?: string | null
           rejected_by?: string | null
@@ -2765,6 +2768,7 @@ export type Database = {
           prep_time_minutes: number | null
           preparing_at: string | null
           proof_attempt: number
+          ready_early_at: string | null
           ready_early_used: boolean
           rejected_at: string | null
           rejected_by: string | null
