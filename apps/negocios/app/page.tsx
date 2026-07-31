@@ -225,35 +225,34 @@ export default function NegocioPedidosPage() {
         const id = selected.rowId
         const isPrepaid = selected.payment === 'prepaid'
 
+        // El tiempo de cocción viaja en TODAS las ramas. En prepago se guarda sin
+        // arrancar el reloj; en contraentrega arranca de inmediato. Una sola
+        // llamada por rama: antes eran dos POST secuenciales sin transacción y un
+        // fallo entre ambos dejaba el pedido huérfano en `confirmed`.
         if (selected.status === 'validando') {
           // Antifraude: la cajera ya llamó y validó. validate_order ramifica por
-          // payment_intent: prepaid → pending_acceptance, contraentrega → confirmed.
-          const res = (await post(`/business/orders/${id}/validate`, { pass: true })) as {
-            status?: string
-          }
+          // payment_intent: prepaid → pending_acceptance, contraentrega → preparing.
+          const res = (await post(`/business/orders/${id}/validate`, {
+            pass: true,
+            prepTimeMinutes: prep,
+          })) as { status?: string }
           if (res?.status === 'pending_acceptance' || isPrepaid) {
             // Prepago: accept → awaiting_payment. El cliente debe pagar antes de preparar.
-            await post(`/business/orders/${id}/transition`, { action: 'accept' })
-            setSelectedId(null)
-            await refetchOrders()
-            return
+            await post(`/business/orders/${id}/transition`, {
+              action: 'accept',
+              prepTimeMinutes: prep,
+            })
           }
-          // Contraentrega: el pedido ya está en confirmed. Saltar accept, ir a preparar.
+          // Contraentrega: validate ya lo dejó en preparing. Nada más que hacer.
         } else {
-          await post(`/business/orders/${id}/transition`, { action: 'accept' })
-          if (isPrepaid) {
-            // Prepago: accept transiciona a awaiting_payment. NO llamar a preparing (debe esperar el voucher).
-            setSelectedId(null)
-            await refetchOrders()
-            return
-          }
+          // accept lleva a awaiting_payment (prepago) o directo a preparing
+          // (contraentrega), resolviendo los tres campos de tiempo en el backend.
+          await post(`/business/orders/${id}/transition`, {
+            action: 'accept',
+            prepTimeMinutes: prep,
+          })
         }
 
-        // Contraentrega: accept transiciona a confirmed → ahora pasar a preparing con tiempo estimado.
-        await post(`/business/orders/${id}/transition`, {
-          action: 'preparing',
-          prepTimeMinutes: prep,
-        })
         setSelectedId(null)
         await refetchOrders()
       }),

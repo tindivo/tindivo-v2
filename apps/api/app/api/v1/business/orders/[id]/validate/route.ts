@@ -16,6 +16,13 @@ const Schema = z.object({
   reasonCode: z
     .enum(['out_of_stock', 'closed', 'out_of_zone', 'invalid_proof', 'no_answer', 'other'])
     .optional(),
+  /**
+   * Tiempo de cocción elegido por la cajera. Lo usa `validate_order` cuando la
+   * aprobación deja el pedido en `preparing`: comprobante verificado, o
+   * aprobación telefónica de un contraentrega. Mismo rango que en
+   * `order-transition.ts`.
+   */
+  prepTimeMinutes: z.number().int().min(1).max(120).optional(),
 })
 
 export function OPTIONS(req: Request): Response {
@@ -40,6 +47,7 @@ export async function POST(
       p_pass: body.pass,
       p_reason: body.reason ?? undefined,
       p_reason_code: body.reasonCode ?? undefined,
+      p_prep_time_minutes: body.prepTimeMinutes ?? undefined,
     })
     if (error) {
       if (error.code === 'P0002') throw new DomainError(error.message, 'not_found')
