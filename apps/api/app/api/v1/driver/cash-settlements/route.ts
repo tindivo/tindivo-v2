@@ -71,7 +71,7 @@ export async function GET(req: Request): Promise<Response> {
     const { data: settlements } = await service
       .from('cash_settlements')
       .select(
-        'id, business_id, settlement_date, status, delivered_amount, total_cash, businesses(name)',
+        'id, business_id, settlement_date, status, delivered_amount, total_cash, order_count, businesses(name)',
       )
       .eq('driver_id', drv.id)
       .order('settlement_date', { ascending: false })
@@ -86,32 +86,34 @@ export async function GET(req: Request): Promise<Response> {
         .filter((s) => s.settlement_date === limaDate && abiertos.includes(s.status))
         .map((s) => [s.business_id, s]),
     )
-    // `today` = negocios con efectivo por rendir UNIDOS a los que tienen un
-    // ciclo abierto esperando confirmación. Sin la segunda mitad, un ciclo ya
-    // entregado pero sin confirmar desaparecía de la pantalla en cuanto no
-    // quedaban pedidos pendientes: el motorizado dejaba de ver que aún le
-    // deben una confirmación.
-    const today = [...byBiz.values()].map((b) => {
-      const s = todayMap.get(b.businessId)
-      return {
+    // Dos buckets distintos, como en producción — un negocio puede aparecer en
+    // los dos a la vez y son cosas diferentes:
+    //
+    //   'pending'  -> efectivo cobrado y aún no entregado. Lleva botón.
+    //   'awaiting' -> ya entregado, esperando que la cajera lo confirme. Solo
+    //                 informativo; ese dinero ya no lo tiene el motorizado.
+    //
+    // Fusionarlos en una sola fila hacía desaparecer el botón en cuanto había
+    // un ciclo sin confirmar, y el motorizado no podía rendir lo nuevo.
+    const today = [
+      ...[...byBiz.values()].map((b) => ({
         ...b,
-        settlementId: s?.id ?? null,
-        status: s?.status ?? null,
-        deliveredAmount: s?.delivered_amount ?? null,
-      }
-    })
-    for (const [businessId, s] of todayMap) {
-      if (byBiz.has(businessId)) continue
-      today.push({
-        businessId,
+        kind: 'pending' as const,
+        settlementId: null as string | null,
+        status: null as string | null,
+        deliveredAmount: null as number | null,
+      })),
+      ...[...todayMap.values()].map((s) => ({
+        businessId: s.business_id,
         businessName: (s.businesses as { name?: string } | null)?.name ?? '—',
-        expected: 0,
-        orderCount: 0,
-        settlementId: s.id,
-        status: s.status,
-        deliveredAmount: s.delivered_amount,
-      })
-    }
+        expected: Number(s.total_cash ?? 0),
+        orderCount: s.order_count ?? 0,
+        kind: 'awaiting' as const,
+        settlementId: s.id as string | null,
+        status: s.status as string | null,
+        deliveredAmount: s.delivered_amount as number | null,
+      })),
+    ]
     // Los ciclos de hoy ya cerrados también van al historial: si no, con varias
     // rendiciones por noche los confirmados desaparecían de las dos listas.
     const history = (settlements ?? []).filter(

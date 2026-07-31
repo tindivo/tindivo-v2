@@ -24,6 +24,12 @@ interface TodayRow {
   businessName: string
   expected: number
   orderCount: number
+  /**
+   * `pending`  — efectivo cobrado que todavía llevas encima. Se puede entregar.
+   * `awaiting` — ya lo entregaste; falta que el local lo confirme. Informativo.
+   * Un mismo negocio puede salir en los dos a la vez.
+   */
+  kind: 'pending' | 'awaiting'
   settlementId: string | null
   status: string | null
   deliveredAmount: number | null
@@ -65,28 +71,55 @@ export default function EfectivoPage() {
 
   if (!ready) return <div className="p-10 text-ink-muted">Cargando…</div>
 
-  const pending = today.filter((t) => t.status == null || t.status === 'pending_confirmation')
+  const porEntregar = today.filter((t) => t.kind === 'pending')
+  const esperandoConfirmar = today.filter((t) => t.kind === 'awaiting')
+  const totalPorEntregar = porEntregar.reduce((s, t) => s + t.expected, 0)
+  const totalPedidos = porEntregar.reduce((s, t) => s + t.orderCount, 0)
 
   return (
     <DriverShell>
       <main className="mx-auto max-w-[480px] px-4 pt-20 pb-10">
         {error && <p className="mt-3 text-[13px] text-danger">{error}</p>}
 
-        <h2 className="t-eyebrow mt-4 mb-2">A entregar hoy</h2>
-        {today.length === 0 ? (
-          <p className="t-muted text-[14px]">No recolectaste efectivo hoy.</p>
+        {/* Total que el motorizado lleva encima ahora mismo. Es el número que
+            tiene que cuadrar con el fajo de su bolsillo. */}
+        {porEntregar.length > 0 && (
+          <Card className="mt-4 border-none bg-brand p-5 text-white shadow-none">
+            <p className="t-eyebrow text-white/80">Efectivo por entregar</p>
+            <p className="t-display mt-1 text-[38px] leading-none tabular-nums">
+              {soles(totalPorEntregar)}
+            </p>
+            <p className="mt-2 text-[12px] text-white/85">
+              {totalPedidos} {totalPedidos === 1 ? 'pedido' : 'pedidos'} · {porEntregar.length}{' '}
+              {porEntregar.length === 1 ? 'restaurante' : 'restaurantes'}
+            </p>
+          </Card>
+        )}
+
+        <h2 className="t-eyebrow mt-6 mb-2">A entregar</h2>
+        {porEntregar.length === 0 ? (
+          <p className="t-muted text-[14px]">
+            {esperandoConfirmar.length > 0
+              ? 'Ya entregaste todo el efectivo que tenías.'
+              : 'No has cobrado efectivo pendiente de entregar.'}
+          </p>
         ) : (
           <div className="flex flex-col gap-2.5">
-            {today.map((t) => (
+            {porEntregar.map((t) => (
               <CashDeliverCard key={t.businessId} row={t} onDone={load} setError={setError} />
             ))}
           </div>
         )}
 
-        {pending.length === 0 && today.length > 0 && (
-          <Card className="mt-3 border-none bg-success-soft p-4 text-success shadow-none">
-            <p className="font-semibold text-[14px]">Todo el efectivo de hoy fue entregado 🎉</p>
-          </Card>
+        {esperandoConfirmar.length > 0 && (
+          <>
+            <h2 className="t-eyebrow mt-6 mb-2">Esperando confirmación del local</h2>
+            <div className="flex flex-col gap-2.5">
+              {esperandoConfirmar.map((t) => (
+                <AwaitingCard key={t.settlementId} row={t} />
+              ))}
+            </div>
+          </>
         )}
 
         <h2 className="t-eyebrow mt-6 mb-2">Historial</h2>
@@ -136,8 +169,6 @@ function CashDeliverCard({
 }) {
   const [amount, setAmount] = useState(String(row.expected.toFixed(2)))
   const [busy, setBusy] = useState(false)
-  const settled = row.status != null
-  const chip = settled ? STATUS_VARIANT[row.status as string] : null
 
   async function submit(e: FormEvent) {
     e.preventDefault()
@@ -165,31 +196,53 @@ function CashDeliverCard({
             {row.orderCount} pedido{row.orderCount === 1 ? '' : 's'} en efectivo
           </p>
         </div>
-        {chip && (
-          <Badge variant={chip.variant} size="sm">
-            {chip.label}
-          </Badge>
-        )}
       </div>
 
       <p className="t-display mt-2 text-[24px] tabular-nums">{soles(row.expected)}</p>
 
-      {!settled && (
-        <form onSubmit={submit} className="mt-3 flex items-center gap-2">
-          <span className="rounded-2xl border border-border bg-card px-3 py-3 font-mono text-[15px] text-ink-muted">
-            S/
-          </span>
-          <input
-            className="t-field flex-1 text-center font-mono"
-            inputMode="decimal"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-          />
-          <Button size="sm" className="px-5" disabled={busy}>
-            {busy ? '…' : 'Entregar'}
-          </Button>
-        </form>
-      )}
+      <form onSubmit={submit} className="mt-3 flex items-center gap-2">
+        <span className="rounded-2xl border border-border bg-card px-3 py-3 font-mono text-[15px] text-ink-muted">
+          S/
+        </span>
+        <input
+          className="t-field flex-1 text-center font-mono"
+          inputMode="decimal"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+        />
+        <Button size="sm" className="px-5" disabled={busy}>
+          {busy ? '…' : 'Entregar'}
+        </Button>
+      </form>
+    </Card>
+  )
+}
+
+/** Dinero ya entregado al local, a la espera de que lo cuenten y lo confirmen.
+ *  Sin acción: el motorizado ya hizo su parte. */
+function AwaitingCard({ row }: { row: TodayRow }) {
+  const disputada = row.status === 'disputed'
+  return (
+    <Card className="p-[18px]">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="truncate font-semibold text-[16px]">{row.businessName}</p>
+          <p className="mt-0.5 text-[13px] text-ink-muted">
+            {row.orderCount} pedido{row.orderCount === 1 ? '' : 's'} entregados
+          </p>
+        </div>
+        <Badge variant={disputada ? 'danger' : 'warning'} size="sm">
+          {disputada ? 'Diferencia' : 'Por confirmar'}
+        </Badge>
+      </div>
+
+      <p className="t-display mt-2 text-[24px] tabular-nums">{soles(row.deliveredAmount ?? 0)}</p>
+
+      <p className="mt-2 text-[12px] text-ink-muted">
+        {disputada
+          ? 'El local reportó una diferencia. Tindivo lo está revisando.'
+          : 'Esperando que el local cuente el efectivo y lo confirme.'}
+      </p>
     </Card>
   )
 }
