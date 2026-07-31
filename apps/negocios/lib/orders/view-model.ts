@@ -23,7 +23,8 @@ export type OrderColumn = 'nuevos' | 'cocina' | 'reparto' | 'entregados'
 export const ORDER_SELECT =
   'id,short_id,status,source,customer_name,customer_phone,delivery_reference,delivery_method,' +
   'order_amount,delivery_fee,payment_intent,payment_proof_status,comprobante_prepago_url,proof_attempt,' +
-  'prep_time_minutes,estimated_ready_at,prep_extension_count,ready_early_used,' +
+  'prep_time_minutes,estimated_ready_at,prep_extension_count,' +
+  'ready_early_used,ready_early_at,' +
   'client_pays_with,change_to_give,' +
   'yape_amount,cash_amount,requires_validation,validation_reason_code,risk_flags,' +
   'driver_id,created_at,pending_acceptance_at,awaiting_payment_at,validating_at,' +
@@ -61,6 +62,7 @@ export interface OrderRow {
   estimated_ready_at: string | null
   prep_extension_count: number | null
   ready_early_used: boolean | null
+  ready_early_at: string | null
   client_pays_with: number | null
   change_to_give: number | null
   yape_amount: number | null
@@ -112,6 +114,10 @@ export interface OrderVM {
   riskFlags: Record<string, unknown>
   extensionUsed: boolean
   extensionMin: number | null
+  /** La cajera ya declaró la comida lista. Oculta el botón y el cronómetro. */
+  readyEarly: boolean
+  /** `true` si "Marcar listo" tiene sentido: la comida puede seguir en cocina. */
+  canMarkReady: boolean
   proofStatus: string | null
   proofUrl: string | null
   proofAttempt: number
@@ -277,6 +283,13 @@ export function toOrderVM(row: OrderRow, now: number = Date.now()): OrderVM {
     riskFlags: row.risk_flags ?? {},
     extensionUsed: extCount > 0,
     extensionMin: extCount > 0 ? extCount * 10 : null,
+    readyEarly: Boolean(row.ready_early_used),
+    // Los mismos cuatro estados que acepta advance_order('ready').
+    canMarkReady:
+      !row.ready_early_used &&
+      ['preparing', 'waiting_driver', 'heading_to_restaurant', 'waiting_at_restaurant'].includes(
+        row.status,
+      ),
     proofStatus: row.payment_proof_status,
     proofUrl: row.comprobante_prepago_url,
     proofAttempt: row.proof_attempt ?? 0,

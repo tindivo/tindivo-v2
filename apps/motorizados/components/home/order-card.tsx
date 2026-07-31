@@ -62,6 +62,13 @@ export function OrderCard({
               Listo
             </Badge>
           )}
+          {/* La cajera confirmó que la comida ya salió de cocina. Pesa más que
+              el resto de distintivos: es la diferencia entre ir y esperar. */}
+          {variant !== 'delivered' && order.ready_early_used && (
+            <Badge variant="success" size="sm">
+              Comida lista
+            </Badge>
+          )}
           {variant === 'delivered' && (
             <Badge variant="success" size="sm">
               Entregado

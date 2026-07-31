@@ -899,6 +899,10 @@ export function DetailScreen({
   const [itemsOpen, setItemsOpen] = useState(order.status !== 'validando')
   const [showPrepModal, setShowPrepModal] = useState(false)
   const [hasAppeal, setHasAppeal] = useState(false)
+  // Confirmación en dos pasos antes de declarar la comida lista, como en prod:
+  // avisar al motorizado de que entre a recoger y que no esté lista se paga en
+  // minutos de moto parada.
+  const [confirmReady, setConfirmReady] = useState(false)
 
   useEffect(() => {
     const origOverflow = document.body.style.overflow
@@ -1817,8 +1821,12 @@ export function DetailScreen({
         </div>
       )}
 
-      {/* Footer cocina: marcar listo para el motorizado */}
-      {order.status === 'preparing' && (
+      {/* Footer cocina: declarar la comida lista.
+          Visible en los cuatro estados en los que la comida puede seguir en
+          cocina, no solo en `preparing`: desde que el motorizado toma el pedido
+          con 10 minutos por delante, el caso normal es que llegue antes de que
+          la comida salga. */}
+      {(order.canMarkReady || order.readyEarly) && (
         <div
           style={{
             background: '#fff',
@@ -1828,15 +1836,58 @@ export function DetailScreen({
             flexShrink: 0,
           }}
         >
-          <button
-            type="button"
-            onClick={() => actions.onReady()}
-            disabled={busy}
-            className="tv-btn tv-btn-block"
-            style={{ background: 'var(--tv-success)', color: '#fff' }}
-          >
-            <MS name="inventory_2" size={18} filled /> Listo — llamar moto
-          </button>
+          {order.readyEarly ? (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: '12px 14px',
+                borderRadius: 14,
+                background: 'var(--tv-success-soft)',
+                border: '1px solid var(--tv-success)',
+              }}
+            >
+              <MS name="check_circle" size={20} filled style={{ color: 'var(--tv-success)' }} />
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#15803D' }}>
+                Comida lista. El motorizado ya lo sabe.
+              </span>
+            </div>
+          ) : confirmReady ? (
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                type="button"
+                onClick={() => setConfirmReady(false)}
+                disabled={busy}
+                className="tv-btn"
+                style={{ flex: 1 }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  await actions.onReady()
+                  setConfirmReady(false)
+                }}
+                disabled={busy}
+                className="tv-btn"
+                style={{ flex: 1, background: 'var(--tv-success)', color: '#fff' }}
+              >
+                <MS name="check_circle" size={18} filled /> Sí, está lista
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmReady(true)}
+              disabled={busy}
+              className="tv-btn tv-btn-block"
+              style={{ background: 'var(--tv-success)', color: '#fff' }}
+            >
+              <MS name="inventory_2" size={18} filled /> Listo — llamar moto
+            </button>
+          )}
         </div>
       )}
     </div>

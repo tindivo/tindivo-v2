@@ -29,6 +29,9 @@ export interface BoardOrder {
   driver_id: string | null
   created_at: string
   estimated_ready_at: string | null
+  /** La cajera declaró la comida lista. Se muestra como distintivo en la tarjeta. */
+  ready_early_used: boolean | null
+  ready_early_at: string | null
   urgent_since: string | null
   appears_in_queue_at: string | null
   occupancy_slots: number
