@@ -36,8 +36,13 @@ function Lightbox({ src, alt, onClose }: { src: string; alt: string; onClose: ()
 
   return (
     <div
+      role="button"
+      tabIndex={0}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
       onClick={onClose}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') onClose()
+      }}
     >
       <button
         type="button"
@@ -459,8 +464,8 @@ export default function ApelacionDetallePage({ params }: { params: Promise<{ id:
         customerName,
         description: report.description ?? null,
         evidenceUrl: report.evidence_url ?? null,
-        appealStatus: report.appeal_status as any,
-        refundStatus: (report.refund_status as any) ?? null,
+        appealStatus: report.appeal_status as unknown as AppealStatus,
+        refundStatus: (report.refund_status as unknown as RefundStatus) ?? null,
         refundProofPath: report.refund_proof_path ?? null,
         refundAmount: report.refund_amount ? Number(report.refund_amount) : orderAmount || null,
         refundCompletedAt: report.refund_completed_at ?? null,
@@ -737,6 +742,7 @@ export default function ApelacionDetallePage({ params }: { params: Promise<{ id:
           <div className="flex items-center gap-3 px-5 py-4">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-green-500 text-white shadow-sm">
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <title>Aprobado</title>
                 <path
                   d="M4 10l4.5 4.5L16 6"
                   stroke="currentColor"

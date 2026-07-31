@@ -123,10 +123,9 @@ test.describe('camino feliz — cliente hasta el punto de pago', () => {
       confirmar.click(),
     ])
     const cuerpoCrear = await respCrear.text().catch(() => '?')
-    expect(
-      respCrear.ok(),
-      `POST de creación devolvió ${respCrear.status()}: ${cuerpoCrear}`,
-    ).toBe(true)
+    expect(respCrear.ok(), `POST de creación devolvió ${respCrear.status()}: ${cuerpoCrear}`).toBe(
+      true,
+    )
 
     // El pedido existe cuando aparece en la DB. Se espera por la fila en vez de
     // por un elemento de UI: es el hecho que importa y no depende del render.
@@ -142,7 +141,8 @@ test.describe('camino feliz — cliente hasta el punto de pago', () => {
         },
         {
           timeout: 20_000,
-          message: () => `el pedido no apareció en la DB. Fallos de API: ${fallosApi.join(' | ') || '(ninguno)'}`,
+          message: () =>
+            `el pedido no apareció en la DB. Fallos de API: ${fallosApi.join(' | ') || '(ninguno)'}`,
         },
       )
       .not.toBeNull()
@@ -166,7 +166,9 @@ test.describe('camino feliz — cliente hasta el punto de pago', () => {
     // ASSERT de los items: el producto Y su modificador viajaron a la DB.
     const { data: items } = await db
       .from('customer_order_items')
-      .select('item_name_snapshot, quantity, line_total, customer_order_item_modifiers(option_name_snapshot)')
+      .select(
+        'item_name_snapshot, quantity, line_total, customer_order_item_modifiers(option_name_snapshot)',
+      )
       .eq('order_id', order.id)
 
     expect(items).toHaveLength(1)

@@ -23,7 +23,8 @@ export type OrderColumn = 'nuevos' | 'cocina' | 'reparto' | 'entregados'
 export const ORDER_SELECT =
   'id,short_id,status,source,customer_name,customer_phone,delivery_reference,delivery_method,' +
   'order_amount,delivery_fee,payment_intent,payment_proof_status,comprobante_prepago_url,proof_attempt,' +
-  'prep_time_minutes,estimated_ready_at,prep_extension_count,client_pays_with,change_to_give,' +
+  'prep_time_minutes,estimated_ready_at,prep_extension_count,ready_early_used,' +
+  'client_pays_with,change_to_give,' +
   'yape_amount,cash_amount,requires_validation,validation_reason_code,risk_flags,' +
   'driver_id,created_at,pending_acceptance_at,awaiting_payment_at,validating_at,' +
   'waiting_driver_at,picked_up_at,delivered_at,cancelled_at,cancel_note,cancel_reason,driver:drivers(full_name)'
@@ -59,6 +60,7 @@ export interface OrderRow {
   prep_time_minutes: number | null
   estimated_ready_at: string | null
   prep_extension_count: number | null
+  ready_early_used: boolean | null
   client_pays_with: number | null
   change_to_give: number | null
   yape_amount: number | null
@@ -214,12 +216,27 @@ export function toOrderVM(row: OrderRow, now: number = Date.now()): OrderVM {
             )
           : 0
 
+  // Minutos que faltan para que la comida esté lista.
+  //
+  // Se calcula también en `heading` y `waiting`, no solo en `cooking`: bajo el
+  // diseño actual el motorizado toma el pedido con 10 minutos de cocción
+  // restantes, así que el solapamiento "moto asignada + comida cocinándose" es
+  // el caso normal de todos los pedidos, no una excepción. La cajera necesita
+  // seguir viendo el reloj justo cuando el motorizado va en camino.
+  //
+  // En esos dos estados solo se muestra si la comida sigue cocinándose: si
+  // `estimated_ready_at` ya pasó, o si se marcó listo antes de tiempo, no hay
+  // nada que contar.
+  const readyAtMs = row.estimated_ready_at ? Date.parse(row.estimated_ready_at) : null
+  const stillCooking = readyAtMs != null && readyAtMs > now && !row.ready_early_used
   const minutesLeft =
     state === 'cooking'
-      ? row.estimated_ready_at
-        ? Math.max(0, Math.ceil((Date.parse(row.estimated_ready_at) - now) / 60000))
+      ? readyAtMs != null
+        ? Math.max(0, Math.ceil((readyAtMs - now) / 60000))
         : (row.prep_time_minutes ?? null)
-      : null
+      : (state === 'heading' || state === 'waiting') && stillCooking
+        ? Math.max(0, Math.ceil((readyAtMs - now) / 60000))
+        : null
 
   const extCount = row.prep_extension_count ?? 0
 

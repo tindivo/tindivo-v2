@@ -46,6 +46,29 @@ function RiskBadge({ order }: { order: OrderVM }) {
   )
 }
 
+/** Minutos que faltan para que la comida esté lista. Se muestra junto al
+ *  motorizado cuando el pedido ya fue tomado pero la cocina sigue trabajando. */
+function CookingCountdown({ minutesLeft }: { minutesLeft: number }) {
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 3,
+        fontSize: 11,
+        color: '#C2410C',
+        fontWeight: 600,
+      }}
+    >
+      <MS name="timer" size={12} style={{ color: '#C2410C' }} />
+      <span className="tv-mono" style={{ fontWeight: 700 }}>
+        {minutesLeft}m
+      </span>{' '}
+      en cocina
+    </span>
+  )
+}
+
 // ── Status line dentro de "En cocina" ─────────────────────────────────────────
 export function CookingStatusLine({ order }: { order: OrderVM }) {
   const s = order.state
@@ -111,22 +134,28 @@ export function CookingStatusLine({ order }: { order: OrderVM }) {
 
   if (s === 'heading')
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
         <MS name="two_wheeler" size={13} style={{ color: '#6D28D9', flexShrink: 0 }} />
         <span style={{ fontSize: 11, color: '#6D28D9', fontWeight: 500 }}>
           {d?.name ?? 'Motorizado'} viene a recoger
         </span>
+        {/* El motorizado toma el pedido con ~10 min de cocción restantes, así que
+            aquí la comida casi siempre sigue en la cocina. Sin este contador la
+            cajera se quedaba ciega justo cuando más lo necesita. */}
+        {order.minutesLeft != null && <CookingCountdown minutesLeft={order.minutesLeft} />}
       </div>
     )
 
   if (s === 'waiting')
     return (
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
           <MS name="check_circle" size={13} filled style={{ color: '#16A34A', flexShrink: 0 }} />
           <span style={{ fontSize: 12, color: '#15803D', fontWeight: 700 }}>
             {d?.name ?? 'Motorizado'} llegó · Entregar pedido
           </span>
+          {/* Puede haber llegado antes de que la comida salga de cocina. */}
+          {order.minutesLeft != null && <CookingCountdown minutesLeft={order.minutesLeft} />}
         </div>
         {order.cashChange != null && order.cashChange > 0 && (
           <div

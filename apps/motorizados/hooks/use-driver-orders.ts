@@ -88,18 +88,29 @@ export function useDriverOrders(now: number): DriverBoard {
   }, [orders])
 
   const derived = useMemo(() => {
+    // VISIBLE lo decide la RLS (preparing + waiting_driver, sin motorizado).
+    // TOMABLE lo decide este filtro:
+    //   - waiting_driver: SIEMPRE, sin condición de tiempo. La comida ya está
+    //     lista; esconderla porque appears_in_queue_at siga en el futuro dejaba
+    //     el pedido enfriándose sin que nadie pudiera verlo.
+    //   - preparing: solo con la ventana abierta, o sea cuando quedan 10
+    //     minutos o menos para que esté listo.
     const available = effective.filter(
       (o) =>
-        o.status === 'waiting_driver' &&
         o.driver_id == null &&
-        (o.appears_in_queue_at == null || Date.parse(o.appears_in_queue_at) <= now),
+        (o.status === 'waiting_driver' ||
+          (o.status === 'preparing' &&
+            o.appears_in_queue_at != null &&
+            Date.parse(o.appears_in_queue_at) <= now)),
     )
+    // Visible pero todavía no tomable. `appears_in_queue_at` nulo cae aquí a
+    // propósito: es el lado conservador. Antes contaba como tomable, que es
+    // justo la interpretación equivocada si el reloj no llegó a arrancar.
     const upcoming = effective.filter(
       (o) =>
         o.driver_id == null &&
         o.status === 'preparing' &&
-        o.appears_in_queue_at != null &&
-        Date.parse(o.appears_in_queue_at) > now,
+        (o.appears_in_queue_at == null || Date.parse(o.appears_in_queue_at) > now),
     )
     const mine = effective.filter(
       (o) =>

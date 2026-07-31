@@ -22,8 +22,6 @@
     "db:seed:e2e": "node apps/api/scripts/seed-e2e.ts",
     "db:seed:e2e:clean": "node apps/api/scripts/seed-e2e-clean.ts",
     "test:e2e": "playwright test",
-    "db:seed:e2e": "node apps/api/scripts/seed-e2e.ts",
-    "db:seed:e2e:clean": "node apps/api/scripts/seed-e2e-clean.ts",
     "graphify:update": "graphify update .",
     "graphify:cluster": "graphify cluster-only .",
     "graphify:query": "graphify query",

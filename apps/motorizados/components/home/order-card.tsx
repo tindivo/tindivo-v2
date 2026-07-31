@@ -29,15 +29,22 @@ export function OrderCard({
   const urgency = variant === 'available' ? orderUrgency(order, now) : 'normal'
   const total = order.order_amount + order.delivery_fee
   const step = MINE_STEPS[order.status]
+  // Un pedido en cocción todavía no es accionable: la tarjeta no navega ni
+  // responde al toque, como en producción. La señal de "aún no" tiene que ser
+  // evidente antes de tocar, no después.
+  const isUpcoming = variant === 'upcoming'
 
   return (
     <Card
-      as="button"
-      type="button"
-      onClick={() => router.push(`/pedido/${order.id}`)}
-      className={`block w-full p-4 text-left transition-transform active:scale-[0.99] ${
-        URGENCY_CARD[urgency]
-      } ${dimmed || variant === 'upcoming' ? 'opacity-60' : ''} ${
+      as={isUpcoming ? 'div' : 'button'}
+      {...(isUpcoming ? { 'aria-disabled': true } : { type: 'button' as const })}
+      onClick={isUpcoming ? undefined : () => router.push(`/pedido/${order.id}`)}
+      className={`block w-full p-4 text-left ${
+        isUpcoming ? 'cursor-default' : 'transition-transform active:scale-[0.99]'
+      } ${URGENCY_CARD[urgency]} ${
+        // Acento gris, no el del restaurante: señal de "no accionable aún".
+        isUpcoming ? 'border-l-4 border-l-ink/20 opacity-60' : ''
+      } ${dimmed && !isUpcoming ? 'opacity-60' : ''} ${
         variant === 'delivered' ? 'opacity-80' : ''
       }`}
     >
@@ -96,11 +103,20 @@ export function OrderCard({
         </div>
       )}
 
-      {variant === 'upcoming' && order.appears_in_queue_at && (
-        <p className="mt-2 font-mono text-[11px] text-ink-subtle">
-          Entra a la cola en ~
-          {Math.max(1, Math.round((Date.parse(order.appears_in_queue_at) - now) / 60_000))} min
-        </p>
+      {isUpcoming && (
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <span className="font-mono text-[11px] text-ink-subtle">
+            {order.estimated_ready_at
+              ? `En preparación · listo en ~${Math.max(
+                  1,
+                  Math.round((Date.parse(order.estimated_ready_at) - now) / 60_000),
+                )} min`
+              : 'En preparación'}
+          </span>
+          <span className="shrink-0 text-[11px] font-semibold text-ink-subtle">
+            No aceptable aún
+          </span>
+        </div>
       )}
 
       {variant === 'delivered' && order.delivered_at && (

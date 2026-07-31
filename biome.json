@@ -19,7 +19,9 @@
       "!supabase/functions-js",
       "!apps/api/scripts",
       "!scripts",
-      "!scratch"
+      "!scratch",
+      "!Docs",
+      "!**/.claude"
     ]
   },
   "formatter": {
