@@ -39,7 +39,10 @@ D:\Tinkuy Creativo\Proyectos\Tindivo\Code\tindivo-delivery
 - **NUNCA** edites un archivo de migración ya aplicado. Jamás.
 - Todo cambio de esquema = una migración NUEVA en `supabase/migrations/`.
 - Si crees que una migración aplicada está mal, PARA y repórtalo. No la toques.
-- Las migraciones se aplican vía el **MCP de Supabase** (no hay CLI local).
+- Las migraciones se aplican **SOLO con el CLI de Supabase** (`supabase migration up`
+  en local, `supabase db push` en remoto). Ver §2.1-bis: el MCP, el editor SQL del
+  panel y `docker cp` + `psql` ya rompieron el historial o los datos, cada uno a su
+  manera.
 - **Proyecto activo:** `zpnipajgwfthxhdtzhly` (nombre real: `tindivo-prod`).
   El proyecto `psjigdoinfpgrnedxeyf` (viejo "Web v2") está ABANDONADO — nunca lo
   target-ees en ningún comando, script, env o config. Referencias históricas
