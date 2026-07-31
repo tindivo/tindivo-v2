@@ -10,18 +10,34 @@ export const STEPS: { key: TrackingStep; label: string; sub: string }[] = [
   { key: 'delivered', label: 'Entregado', sub: '¡Buen provecho!' },
 ]
 
-/** Copy de la pantalla de cancelado según el motivo (DECISIONS §estados / prototipo). */
-export function cancelledCopy(reason: string | null): {
+/**
+ * Copy de la pantalla de cancelado (DECISIONS §estados / prototipo).
+ *
+ * Ramifica por método de pago además de por motivo: para un prepago con
+ * comprobante subido, "no se te cobró nada" es falso — el dinero ya salió a la
+ * cuenta del restaurante. Ninguno de estos textos promete ni niega una
+ * devolución: la política está sin decidir, y prometer de más es peor que no
+ * decir nada.
+ */
+export function cancelledCopy(
+  reason: string | null,
+  opts?: { paymentIntent?: string; proofUrl?: string | null },
+): {
   eyebrow: string
   title: string
   body: string
 } {
+  // Pagó de verdad: prepago con comprobante subido.
+  const yaPago = opts?.paymentIntent === 'prepaid' && Boolean(opts?.proofUrl)
+
   switch (reason) {
     case 'customer_cancelled':
       return {
         eyebrow: 'Pedido cancelado',
         title: 'Cancelaste tu pedido',
-        body: 'Tu pedido fue cancelado sin costo porque aún no estaba confirmado por el restaurante. Puedes volver a pedir cuando quieras.',
+        body: yaPago
+          ? 'Cancelaste tu pedido. Como ya habías enviado tu pago, escríbenos por WhatsApp para coordinarlo.'
+          : 'Tu pedido fue cancelado sin costo porque aún no estaba confirmado por el restaurante. Puedes volver a pedir cuando quieras.',
       }
     case 'prepay_timeout':
       return {
@@ -34,13 +50,40 @@ export function cancelledCopy(reason: string | null): {
       return {
         eyebrow: 'Pedido cancelado',
         title: 'No pudimos confirmar tu pedido',
-        body: 'El restaurante no respondió a tiempo, así que cancelamos tu pedido sin costo. Puedes intentarlo de nuevo.',
+        body: yaPago
+          ? 'El restaurante no respondió a tiempo, así que cancelamos tu pedido. Como ya habías enviado tu pago, escríbenos por WhatsApp para coordinarlo.'
+          : 'El restaurante no respondió a tiempo, así que cancelamos tu pedido sin costo. Puedes intentarlo de nuevo.',
       }
     case 'business_cancelled':
       return {
         eyebrow: 'Pedido cancelado',
         title: 'El restaurante canceló tu pedido',
-        body: 'Lamentablemente el restaurante no pudo tomar tu pedido. No se te cobró nada. Puedes pedir en otro momento.',
+        body: yaPago
+          ? 'Lamentablemente el restaurante no pudo tomar tu pedido. Como ya habías enviado tu pago, escríbenos por WhatsApp para coordinarlo.'
+          : 'Lamentablemente el restaurante no pudo tomar tu pedido. No se te cobró nada. Puedes pedir en otro momento.',
+      }
+    case 'admin_cancelled':
+      return {
+        eyebrow: 'Pedido cancelado',
+        title: 'Cancelamos tu pedido',
+        body: yaPago
+          ? 'Tuvimos que cancelar tu pedido. Como ya habías enviado tu pago, escríbenos por WhatsApp para coordinarlo.'
+          : 'Tuvimos que cancelar tu pedido. Si quieres saber qué pasó, escríbenos por WhatsApp.',
+      }
+    case 'proof_rejected_final':
+      return {
+        eyebrow: 'Pedido cancelado',
+        title: 'No pudimos verificar tu pago',
+        body: 'El restaurante no pudo confirmar el comprobante que enviaste. Si crees que hubo un error, escríbenos por WhatsApp.',
+      }
+    case 'no_show':
+      // Sin acusar: el motorizado pudo no dar con la puerta, y el cliente pudo
+      // no oír la llamada. Tampoco se menciona el dinero — la política está en
+      // backlog y prometer una devolución que no está decidida sería peor.
+      return {
+        eyebrow: 'Pedido cancelado',
+        title: 'No pudimos entregarte el pedido',
+        body: 'El motorizado llegó a la dirección y no logró encontrarte. El pedido volvió al restaurante. Escríbenos por WhatsApp y lo vemos contigo.',
       }
     default:
       return {
@@ -86,6 +129,17 @@ export function getStatusMessage(data: Tracking, current: TrackingStep | null): 
       return 'Tu comprobante está en revisión por el restaurante.'
     }
     return 'Tu pedido ya está en preparación y no puede cancelarse.'
+  }
+
+  // Contraentrega en revisión. Antes caía al mensaje genérico de abajo, que
+  // afirmaba dos cosas falsas: que estaba en preparación (está en `validando`)
+  // y que no podía cancelarse (cancel_customer_order SÍ admite `validando`
+  // para no-prepago, 0046:25-27).
+  if (data.status === 'validando') {
+    return 'El restaurante te llamará para confirmar tu pedido antes de prepararlo. Aún puedes cancelarlo.'
+  }
+  if (data.status === 'pending_acceptance') {
+    return 'El restaurante está confirmando tu pedido. Aún puedes cancelarlo.'
   }
 
   return 'Tu pedido ya está en preparación y no puede cancelarse.'

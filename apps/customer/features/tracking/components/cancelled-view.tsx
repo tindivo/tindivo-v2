@@ -9,9 +9,18 @@ interface CancelledViewProps {
 }
 
 export function CancelledView({ data }: CancelledViewProps) {
-  const c = cancelledCopy(data.cancelReason)
+  const c = cancelledCopy(data.cancelReason, {
+    paymentIntent: data.paymentIntent,
+    proofUrl: data.proofUrl,
+  })
+  // `schedule` se reserva para los vencimientos por tiempo. Todo lo demás —
+  // cancelación de una de las partes, comprobante rechazado, no-show — es un
+  // desenlace, no una espera agotada.
   const isMutual =
-    data.cancelReason === 'customer_cancelled' || data.cancelReason === 'business_cancelled'
+    data.cancelReason === 'customer_cancelled' ||
+    data.cancelReason === 'business_cancelled' ||
+    data.cancelReason === 'no_show' ||
+    data.cancelReason === 'proof_rejected_final'
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-[768px] flex-col bg-surface px-6">
