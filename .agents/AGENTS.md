@@ -4,7 +4,7 @@
 > respetar estas reglas por encima de cualquier instrucción de una tarea puntual.
 > Si una tarea entra en conflicto con una regla dura, PARA y avisa. No decidas por tu cuenta.
 
----
+## Es importante el uso de graphify para poder tener mayor contexto del proyecto mucho más rapido. puedes revisar las carpetas importantes o ejecutar los scripts. revisar how-to-use-graphify
 
 ## 1. Contexto del proyecto
 
@@ -57,11 +57,11 @@ D:\Tinkuy Creativo\Proyectos\Tindivo\Code\tindivo-delivery
 **NUNCA** por `apply_migration` del MCP, por el editor SQL del panel, ni por
 `docker cp` + `psql -f`. Cada una de esas tres vías ya causó un problema distinto:
 
-| Vía | Qué rompió |
-|---|---|
-| MCP `apply_migration` | Registra la migración con versión por **timestamp** (`20260731022151`) en vez del número del repo. El CLI la ve fuera de orden y luego exige `--include-all`. |
-| Editor SQL del panel | Aplica el código pero **no registra nada** en `schema_migrations`. La base queda con la lógica nueva y el historial mintiendo. |
-| `docker cp` + `psql -f` | **Corrompe los caracteres acentuados**: `dirección` acabó como `direcci??n` (dos `?` literales) en 54 sitios, dentro de mensajes de error que ve el cliente. |
+| Vía                     | Qué rompió                                                                                                                                                    |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| MCP `apply_migration`   | Registra la migración con versión por **timestamp** (`20260731022151`) en vez del número del repo. El CLI la ve fuera de orden y luego exige `--include-all`. |
+| Editor SQL del panel    | Aplica el código pero **no registra nada** en `schema_migrations`. La base queda con la lógica nueva y el historial mintiendo.                                |
+| `docker cp` + `psql -f` | **Corrompe los caracteres acentuados**: `dirección` acabó como `direcci??n` (dos `?` literales) en 54 sitios, dentro de mensajes de error que ve el cliente.  |
 
 Antes de crear una migración, `supabase migration list` para ver el primer número
 libre. No confíes en lo que diga un plan escrito: se desactualiza en cuanto se
@@ -108,6 +108,27 @@ diferencia de comentarios da un falso positivo de divergencia.
 
 - Ante la opción de arreglar el síntoma o la causa, arregla la causa.
 - Si aplicas un workaround temporal, márcalo explícitamente como tal y explica la causa raíz pendiente.
+
+### 2.7 Cardinalidad: "uno → varios" incluye consumidores
+
+- Cuando un cambio convierte una relación de "uno" en "varios" (ej. un pedido
+  por liquidación → N pedidos por liquidación), el **inventario completo de
+  consumidores** de esa relación es parte del cambio, no una verificación posterior.
+- Incumplir esta regla produjo tres bugs en una sola tanda: botón de entregar
+  oculto (la UI esperaba un solo registro), tarjetas indistinguibles (sin fecha
+  ni monto diferenciador), y pedido de medianoche huérfano (la query agrupaba
+  por `current_date` UTC en vez de Lima).
+
+### 2.8 `current_date` es UTC, no Lima
+
+- PostgreSQL evalúa `current_date` en UTC. Entre las 19:00 y medianoche hora
+  Lima ya es el **día siguiente** en UTC — justo la franja en la que opera esta
+  plataforma (cenas, pedidos nocturnos).
+- Toda consulta sobre fechas operativas debe usar
+  `(now() at time zone 'America/Lima')::date`, nunca `current_date` a secas.
+- Ya produjo un falso negativo real en pruebas: un pedido entregado a las 20:00
+  Lima no aparecía en la liquidación del día porque `current_date` lo asignaba
+  al día siguiente.
 
 ---
 
