@@ -5,7 +5,13 @@ import { telLink, waLink } from '@/lib/deeplinks'
 import type { OrderDetailResponse } from '@/lib/types'
 
 /** Card del cliente: llamar + WhatsApp con mensaje precargado (Momento 3). */
-export function CustomerCard({ order }: { order: OrderDetailResponse['order'] }) {
+export function CustomerCard({
+  order,
+  businessName,
+}: {
+  order: OrderDetailResponse['order']
+  businessName?: string
+}) {
   return (
     <Card className="mt-3.5 p-[18px]">
       <div className="flex items-start gap-3">
@@ -35,7 +41,7 @@ export function CustomerCard({ order }: { order: OrderDetailResponse['order'] })
             size="sm"
             className="w-full bg-[#25D366] text-white hover:bg-[#1ebd5a]"
             as="a"
-            href={waLink(order.customerPhone, order.shortId)}
+            href={waLink(order.customerPhone, order.shortId, businessName)}
             target="_blank"
             rel="noopener noreferrer"
           >

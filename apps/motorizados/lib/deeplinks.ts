@@ -13,7 +13,9 @@ export const mapsSearchAddress = (address: string) =>
 
 export const telLink = (phone: string) => `tel:+${peDigits(phone)}`
 
-export const waLink = (phone: string, shortId: string) =>
+export const waLink = (phone: string, shortId: string, businessName?: string) =>
   `https://wa.me/${peDigits(phone)}?text=${encodeURIComponent(
-    `Hola, soy el motorizado de tu pedido #${shortId}, estoy en camino 🛵`,
+    businessName
+      ? `Hola, soy el motorizado de Tindivo con tu pedido de ${businessName} (#${shortId}), estoy en camino 🛵`
+      : `Hola, soy el motorizado de Tindivo con tu pedido #${shortId}, estoy en camino 🛵`,
   )}`

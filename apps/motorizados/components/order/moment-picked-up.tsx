@@ -42,7 +42,7 @@ export function MomentPickedUp({
 
   return (
     <div>
-      <CustomerCard order={order} />
+      <CustomerCard order={order} businessName={detail.business?.name} />
 
       {order.arrivedAtCustomerAt && (
         <Card className="mt-3 border-amber-200 bg-amber-50 p-4">

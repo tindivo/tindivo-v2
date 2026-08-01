@@ -17,7 +17,7 @@ export function TrackingActions({ data, current, cancellable, cancel }: Tracking
 
   const driverWhatsappUrl = data.driverPhone
     ? `https://wa.me/${data.driverPhone.replace(/\D/g, '')}?text=${encodeURIComponent(
-        `Hola, te escribo por mi pedido #${data.shortId}. Estás en mi domicilio.`,
+        `Hola, te escribo por mi pedido de ${data.businessName} (#${data.shortId}). Estás en mi domicilio.`,
       )}`
     : null
 
