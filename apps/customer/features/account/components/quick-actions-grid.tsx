@@ -3,8 +3,8 @@ import { TINDIVO_SUPPORT_WHATSAPP } from '@tindivo/core'
 import { Icon } from '@tindivo/ui'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { getSupportWhatsapp } from '@/lib/support'
 import type { AccountStats } from '@/features/account/hooks/use-account-page'
+import { getSupportWhatsapp } from '@/lib/support'
 
 interface QuickActionsGridProps {
   stats: AccountStats

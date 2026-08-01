@@ -295,7 +295,11 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
                 onClick={async () => {
                   setBusy(true)
                   setActionError(null)
-                  let coords: { lat: number | null; lng: number | null; accuracy_m: number | null } = {
+                  let coords: {
+                    lat: number | null
+                    lng: number | null
+                    accuracy_m: number | null
+                  } = {
                     lat: null,
                     lng: null,
                     accuracy_m: null,

@@ -31,7 +31,8 @@ export function TrackingActions({ data, current, cancellable, cancel }: Tracking
               ¡El motorizado llegó a tu domicilio!
             </div>
             <p className="mt-1 text-[13px] leading-relaxed text-amber-800">
-              {data.driverName ?? 'El motorizado'} se encuentra en la puerta y no logra ubicarte. Escríbele por WhatsApp:
+              {data.driverName ?? 'El motorizado'} se encuentra en la puerta y no logra ubicarte.
+              Escríbele por WhatsApp:
             </p>
             <Button
               size="sm"

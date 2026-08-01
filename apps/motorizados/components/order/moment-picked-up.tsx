@@ -1,14 +1,12 @@
 'use client'
 
 import { Button, Card, Icon } from '@tindivo/ui'
+import { useEffect, useState } from 'react'
 import { mapsDirToCoords } from '@/lib/deeplinks'
 import type { OrderDetailResponse } from '@/lib/types'
 import { CollectCard } from './collect-card'
 import { CustomerCard } from './customer-card'
 import { MapReadonly } from './map-readonly'
-
-/** Momento 3 (picked_up): destino + cliente + cobro. Online = mapa; manual = referencia. */
-import { useState, useEffect } from 'react'
 
 /** Momento 3 (picked_up): destino + cliente + cobro. Online = mapa; manual = referencia. */
 export function MomentPickedUp({

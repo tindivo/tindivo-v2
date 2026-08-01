@@ -11,7 +11,13 @@ export type DriverOrderStatus =
 
 export type PaymentIntent = 'prepaid' | 'pending_yape' | 'pending_cash' | 'pending_mixed'
 export type OrderSource = 'customer_pwa' | 'business_manual'
-export type TransitionAction = 'take' | 'arrived' | 'pickup' | 'arrived_customer' | 'deliver' | 'no_show'
+export type TransitionAction =
+  | 'take'
+  | 'arrived'
+  | 'pickup'
+  | 'arrived_customer'
+  | 'deliver'
+  | 'no_show'
 
 /** Fila del board (lectura directa de supabase con RLS del driver). */
 export interface BoardOrder {

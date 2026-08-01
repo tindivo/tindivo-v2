@@ -9,8 +9,8 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { ScreenHeader } from '@/components/ui'
 import { api } from '@/lib/api'
-import { getSupportWhatsapp } from '@/lib/support'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
+import { getSupportWhatsapp } from '@/lib/support'
 
 interface OrderItem {
   item_name_snapshot: string
