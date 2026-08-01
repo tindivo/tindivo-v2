@@ -29,14 +29,32 @@ const jetbrains = JetBrains_Mono({
 export const metadata: Metadata = {
   title: 'Tindivo · Motorizado',
   description: 'Panel del motorizado en Tindivo',
+  manifest: '/manifest.webmanifest',
+  applicationName: 'Tindivo Moto',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
     title: 'Tindivo Moto',
   },
+  icons: {
+    icon: [
+      { url: '/favicon-16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/favicon-32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+  },
+  formatDetection: { telephone: false },
 }
 
-export const viewport: Viewport = { themeColor: '#f26241', width: 'device-width', initialScale: 1 }
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: 'cover',
+  themeColor: '#F97316',
+}
 
 import { EnvBanner } from '@tindivo/ui'
 
@@ -44,6 +62,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="es" className={`${bricolage.variable} ${geist.variable} ${jetbrains.variable}`}>
       <head>
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-title" content="Tindivo Moto" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
