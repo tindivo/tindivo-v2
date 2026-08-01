@@ -29,6 +29,11 @@ const jetbrains = JetBrains_Mono({
 export const metadata: Metadata = {
   title: 'Tindivo · Motorizado',
   description: 'Panel del motorizado en Tindivo',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Tindivo Moto',
+  },
 }
 
 export const viewport: Viewport = { themeColor: '#f26241', width: 'device-width', initialScale: 1 }
