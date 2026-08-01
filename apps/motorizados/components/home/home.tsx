@@ -5,14 +5,14 @@ import { useEffect, useState } from 'react'
 import { useDriverOrders } from '@/hooks/use-driver-orders'
 import { useNow } from '@/hooks/use-now'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
-import { AvailabilityCard } from './availability-card'
 import { AvailableTab } from './available-tab'
 import { MineTab } from './mine-tab'
+import { StatusIndicators } from './status-indicators'
 import { TeamTab } from './team-tab'
 
 type Tab = 'available' | 'mine' | 'team'
 
-/** Board principal del motorizado: disponibilidad + tabs + bandejas. */
+/** Board principal del motorizado: estado + tabs + bandejas. */
 export function Home() {
   const now = useNow()
   const board = useDriverOrders(now)
@@ -38,7 +38,7 @@ export function Home() {
         </p>
       )}
 
-      <AvailabilityCard />
+      <StatusIndicators />
 
       <div className="mb-4">
         <Segmented<Tab>

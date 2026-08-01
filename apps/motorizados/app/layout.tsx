@@ -2,7 +2,8 @@ import type { Metadata, Viewport } from 'next'
 import { Bricolage_Grotesque, Geist, JetBrains_Mono } from 'next/font/google'
 import type { ReactNode } from 'react'
 import { OfflineBanner } from '@/components/offline-banner'
-import { PushManager } from '@/components/push-manager'
+import { InstallBanner } from '@/components/pwa/install-banner'
+import { RegisterSW } from '@/components/pwa/register-sw'
 import { TransferWatcher } from '@/components/transfers/transfer-watcher'
 import './globals.css'
 
@@ -73,11 +74,14 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         />
       </head>
       <body className="min-h-dvh bg-surface font-sans text-ink antialiased">
+        {/* Primero el service worker: push, avisos e instalación dependen de
+            que esté registrado. */}
+        <RegisterSW />
         <EnvBanner />
         <OfflineBanner />
         <TransferWatcher />
         {children}
-        <PushManager />
+        <InstallBanner />
       </body>
     </html>
   )
