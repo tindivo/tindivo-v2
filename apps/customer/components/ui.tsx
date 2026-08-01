@@ -5,17 +5,22 @@
 // los imports existentes `@/components/ui` sigan funcionando sin cambios.
 export { BottomSheet, Icon, ScreenHeader, Segmented, Skeleton } from '@tindivo/ui'
 
-const SUPPORT_WHATSAPP = (process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP ?? '+51987654321').replace(
-  /\D/g,
-  '',
-)
+import { TINDIVO_SUPPORT_WHATSAPP } from '@tindivo/core'
+import { useEffect, useState } from 'react'
+import { getSupportWhatsapp } from '@/lib/support'
 
 /** Enlace de soporte por WhatsApp con contexto opcional del pedido (específico del cliente). */
 export function SupportLink({ orderShortId }: { orderShortId?: string }) {
+  const [wa, setWa] = useState(TINDIVO_SUPPORT_WHATSAPP)
+
+  useEffect(() => {
+    getSupportWhatsapp().then(setWa)
+  }, [])
+
   const text = orderShortId
     ? `Hola, necesito ayuda con mi pedido #${orderShortId}`
     : 'Hola, necesito ayuda con la app de Tindivo'
-  const href = `https://wa.me/${SUPPORT_WHATSAPP}?text=${encodeURIComponent(text)}`
+  const href = `https://wa.me/${wa}?text=${encodeURIComponent(text)}`
   return (
     <a
       href={href}

@@ -23,7 +23,6 @@ const EDITABLE: Record<string, z.ZodTypeAny> = {
   prepay_threshold: z.number().positive().max(10000),
   validation: z.object({ amountThreshold: money }),
   support_whatsapp: z.string().trim().min(7).max(20),
-  support_phone: z.string().trim().min(7).max(20),
   timers: z.object({
     acceptanceMinutes: minutes,
     validationMinutes: minutes,

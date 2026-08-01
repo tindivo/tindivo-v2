@@ -326,7 +326,7 @@ export default function NegocioPedidosPage() {
       }),
     onCallDriver: () => {
       if (!selected) return
-      const phone = supportWhatsapp || '51900000000'
+      const phone = supportWhatsapp || '51906550166'
       const msg = encodeURIComponent(
         `Hola Tindivo, necesito un motorizado urgente para el pedido #${selected.id}. Lleva ${selected.bufferMinutes ?? '?'}min esperando.`,
       )

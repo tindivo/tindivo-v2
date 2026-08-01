@@ -1,10 +1,18 @@
+'use client'
+
+import { TINDIVO_SUPPORT_WHATSAPP } from '@tindivo/core'
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
+import { getSupportWhatsapp } from '@/lib/support'
 
 export function BlockedView() {
-  const wa = process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP
-  const href = wa
-    ? `https://wa.me/${wa.replace(/\D/g, '')}?text=${encodeURIComponent('Hola, mi cuenta aparece pausada y quiero regularizarla.')}`
-    : undefined
+  const [wa, setWa] = useState(TINDIVO_SUPPORT_WHATSAPP)
+
+  useEffect(() => {
+    getSupportWhatsapp().then(setWa)
+  }, [])
+
+  const href = `https://wa.me/${wa}?text=${encodeURIComponent('Hola, mi cuenta aparece pausada y quiero regularizarla.')}`
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-[480px] flex-col items-center justify-center px-6 text-center">

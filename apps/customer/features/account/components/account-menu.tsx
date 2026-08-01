@@ -1,13 +1,21 @@
 import { TINDIVO_SUPPORT_WHATSAPP } from '@tindivo/core'
 import { Icon } from '@tindivo/ui'
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
+import { getSupportWhatsapp } from '@/lib/support'
 
 interface AccountMenuProps {
   onSignOut: () => void
 }
 
 export function AccountMenu({ onSignOut }: AccountMenuProps) {
-  const whatsappUrl = `https://wa.me/${TINDIVO_SUPPORT_WHATSAPP}?text=${encodeURIComponent('Hola Tindivo, tengo una consulta sobre mi cuenta. ')}`
+  const [wa, setWa] = useState(TINDIVO_SUPPORT_WHATSAPP)
+
+  useEffect(() => {
+    getSupportWhatsapp().then(setWa)
+  }, [])
+
+  const whatsappUrl = `https://wa.me/${wa}?text=${encodeURIComponent('Hola Tindivo, tengo una consulta sobre mi cuenta. ')}`
 
   return (
     <div className="mt-5">

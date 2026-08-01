@@ -32,6 +32,8 @@ export const metadata: Metadata = {
   description: 'Sala de control de Tindivo',
 }
 
+import { EnvBanner } from '@tindivo/ui'
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="es" className={`${bricolage.variable} ${geist.variable} ${jetbrains.variable}`}>
@@ -44,6 +46,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         />
       </head>
       <body className="min-h-dvh bg-surface font-sans text-ink antialiased">
+        <EnvBanner />
         <AuthGate>
           <AdminShell>{children}</AdminShell>
         </AuthGate>

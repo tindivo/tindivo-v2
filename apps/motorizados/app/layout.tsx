@@ -33,6 +33,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = { themeColor: '#f26241', width: 'device-width', initialScale: 1 }
 
+import { EnvBanner } from '@tindivo/ui'
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="es" className={`${bricolage.variable} ${geist.variable} ${jetbrains.variable}`}>
@@ -45,6 +47,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         />
       </head>
       <body className="min-h-dvh bg-surface font-sans text-ink antialiased">
+        <EnvBanner />
         <OfflineBanner />
         <TransferWatcher />
         {children}

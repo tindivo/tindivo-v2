@@ -33,6 +33,8 @@ export const metadata: Metadata = {
   description: 'Panel del negocio en Tindivo',
 }
 
+import { EnvBanner } from '@tindivo/ui'
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
@@ -50,6 +52,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         />
       </head>
       <body className="min-h-dvh bg-surface font-sans text-ink antialiased">
+        <EnvBanner />
         <DashboardChrome>{children}</DashboardChrome>
         <PushManager />
       </body>

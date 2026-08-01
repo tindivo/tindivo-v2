@@ -1,4 +1,6 @@
 import { TINDIVO_SUPPORT_WHATSAPP } from '@tindivo/core'
+import { useEffect, useState } from 'react'
+import { getSupportWhatsapp } from '@/lib/support'
 import { AppealStepTracker } from './appeal-step-tracker'
 import type { AppealStatus } from './types'
 
@@ -15,7 +17,13 @@ export function AppealProgressView({
   appealData,
   total,
 }: AppealProgressViewProps) {
-  const whatsappUrl = `https://wa.me/${TINDIVO_SUPPORT_WHATSAPP}?text=${encodeURIComponent(
+  const [wa, setWa] = useState(TINDIVO_SUPPORT_WHATSAPP)
+
+  useEffect(() => {
+    getSupportWhatsapp().then(setWa)
+  }, [])
+
+  const whatsappUrl = `https://wa.me/${wa}?text=${encodeURIComponent(
     `Hola, tengo un problema con mi pedido #TDV-${shortId}. Motivo: `,
   )}`
 

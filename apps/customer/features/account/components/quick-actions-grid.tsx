@@ -2,6 +2,8 @@ import type { CustomerAppealListItemDto } from '@tindivo/contracts'
 import { TINDIVO_SUPPORT_WHATSAPP } from '@tindivo/core'
 import { Icon } from '@tindivo/ui'
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
+import { getSupportWhatsapp } from '@/lib/support'
 import type { AccountStats } from '@/features/account/hooks/use-account-page'
 
 interface QuickActionsGridProps {
@@ -10,7 +12,13 @@ interface QuickActionsGridProps {
 }
 
 export function QuickActionsGrid({ stats, appeals }: QuickActionsGridProps) {
-  const whatsappUrl = `https://wa.me/${TINDIVO_SUPPORT_WHATSAPP}?text=${encodeURIComponent('Hola Tindivo, necesito ayuda con mi cuenta. ')}`
+  const [wa, setWa] = useState(TINDIVO_SUPPORT_WHATSAPP)
+
+  useEffect(() => {
+    getSupportWhatsapp().then(setWa)
+  }, [])
+
+  const whatsappUrl = `https://wa.me/${wa}?text=${encodeURIComponent('Hola Tindivo, necesito ayuda con mi cuenta. ')}`
   const firstPendingAppeal = appeals.find(
     (a) => a.appealStatus === 'pending' || a.appealStatus === 'in_review',
   )

@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { ScreenHeader } from '@/components/ui'
 import { api } from '@/lib/api'
+import { getSupportWhatsapp } from '@/lib/support'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
 interface OrderItem {
@@ -76,6 +77,11 @@ export default function PedidosPage() {
   const [ready, setReady] = useState(false)
   const [orders, setOrders] = useState<OrderRow[]>([])
   const [bizNames, setBizNames] = useState<Record<string, string>>({})
+  const [wa, setWa] = useState(TINDIVO_SUPPORT_WHATSAPP)
+
+  useEffect(() => {
+    getSupportWhatsapp().then(setWa)
+  }, [])
 
   useEffect(() => {
     const supabase = getSupabaseBrowser()
@@ -195,7 +201,7 @@ export default function PedidosPage() {
 
                     {isCancelled && (
                       <a
-                        href={`https://wa.me/${TINDIVO_SUPPORT_WHATSAPP}?text=${encodeURIComponent(`Hola, tengo un problema con mi pedido #TDV-${o.short_id}. Motivo: `)}`}
+                        href={`https://wa.me/${wa}?text=${encodeURIComponent(`Hola, tengo un problema con mi pedido #TDV-${o.short_id}. Motivo: `)}`}
                         target="_blank"
                         rel="noreferrer"
                         className="flex items-center justify-center gap-1.5 text-[12px] text-ink-subtle hover:text-ink hover:underline"

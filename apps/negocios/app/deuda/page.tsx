@@ -752,10 +752,8 @@ export default function DeudaPage() {
 
   const balance = data?.balanceDue ?? 0
   const pct = Math.min(balance / BLOCK_THRESHOLD, 1) * 100
-  const whatsappNumber = data?.supportPhone ? data.supportPhone.replace(/\D/g, '') : ''
-  const whatsappHref = whatsappNumber
-    ? `https://wa.me/${whatsappNumber}?text=${encodeURIComponent('Hola Tindivo, quiero coordinar el pago de mi deuda.')}`
-    : '#'
+  const whatsappNumber = data?.supportPhone ? data.supportPhone.replace(/\D/g, '') : '51906550166'
+  const whatsappHref = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent('Hola Tindivo, quiero coordinar el pago de mi deuda.')}`
 
   return (
     <DashboardShell
