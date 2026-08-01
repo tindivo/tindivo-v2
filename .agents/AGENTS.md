@@ -130,6 +130,29 @@ diferencia de comentarios da un falso positivo de divergencia.
   Lima no aparecía en la liquidación del día porque `current_date` lo asignaba
   al día siguiente.
 
+### 2.9 Redefinir una función: comprobar que reemplaza, no que duplica
+
+Toda migración que redefina una función debe verificar, ANTES de aplicarla al remoto:
+
+- **a) Una sola fila.**
+
+  ```sql
+  select oid, pg_get_function_arguments(oid) from pg_proc where proname = '<nombre>';
+  ```
+
+  Debe devolver **UNA** sola fila. Si devuelve más, se creó una sobrecarga en vez
+  de un reemplazo: los parámetros no coinciden en orden, nombre o tipo con la
+  firma viva.
+
+- **b) Al menos una llamada real POR HTTP**, no por RPC directa. PostgREST resuelve
+  la sobrecarga por nombres de parámetro y falla con **PGRST203** donde una llamada
+  directa con `p_action` explícito funciona. Un type-check verde y los tests
+  unitarios en verde **no detectan esto**.
+
+**Precedente:** 0114 duplicó `advance_order` en local y en producción. PostgREST
+dejó de resolver toda transición de pedido. Se descubrió al verificar el
+comportamiento, no al aplicar la migración.
+
 ---
 
 ## 3. Flujo de trabajo obligatorio
