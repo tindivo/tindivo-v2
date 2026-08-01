@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start --port 3001",
     "type-check": "tsc --noEmit",
-    "test": "node ../../packages/contracts/node_modules/vitest/vitest.mjs run --passWithNoTests",
+    "test": "vitest run",
     "lint": "biome check ."
   },
   "dependencies": {
@@ -33,6 +33,7 @@
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@types/web-push": "^3.6.4",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }
