@@ -21,6 +21,16 @@ export const PAYMENT_INTENT_LABEL: Record<string, string> = {
   pending_mixed: 'Mixto',
 }
 
+/** Método de pago REAL con el que se cerró el pedido (enum `payment_real`). */
+export const PAYMENT_REAL_LABEL: Record<string, string> = {
+  paid_prepaid: 'Prepago (Yape/Plin)',
+  paid_cash: 'Efectivo',
+  paid_yape: 'Yape al recibir',
+  paid_mixed: 'Mixto',
+  refunded: 'Devuelto',
+  unpaid: 'Sin cobrar',
+}
+
 export const STATEMENT_STATUS: Record<string, { label: string; tone: Tone }> = {
   pending: { label: 'Por cobrar', tone: 'warning' },
   paid: { label: 'Pagado', tone: 'success' },

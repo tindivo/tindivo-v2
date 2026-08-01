@@ -14,11 +14,11 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { EmptyState, KpiCard, RangeTabs, SectionHeader } from '@/components/admin'
+import { DonutMini, EmptyState, KpiCard, RangeTabs, SectionHeader } from '@/components/admin'
 import { SalesChart } from '@/components/admin/sales-chart'
 import { api, errMsg } from '@/lib/api'
-import { num, soles } from '@/lib/format'
-import { CANCEL_LABEL } from '@/lib/labels'
+import { num, sharePcts, soles } from '@/lib/format'
+import { CANCEL_LABEL, PAYMENT_REAL_LABEL } from '@/lib/labels'
 import type { Metrics } from '@/lib/types'
 
 type SubTab = 'ventas' | 'negocios' | 'motorizados' | 'cancelaciones'
@@ -71,6 +71,17 @@ export default function MetricasPage() {
   }, [load])
 
   const series = m?.series ?? []
+  // Los métodos sin pedidos en el rango ya no vienen de la RPC (`group by`), así
+  // que no hay ceros que filtrar aquí. Los porcentajes se reparten por resto
+  // mayor para que sumen 100 exacto.
+  const payRows = m?.byPaymentReal ?? []
+  const payPcts = sharePcts(payRows.map((r) => r.count))
+  const payData = payRows.map((r, i) => ({
+    label: PAYMENT_REAL_LABEL[r.method] ?? r.method,
+    count: r.count,
+    pct: payPcts[i] ?? 0,
+  }))
+  const funnel = m?.prepayFunnel ?? null
   const cancelData = (m?.byCancelReason ?? []).map((c) => ({
     label: CANCEL_LABEL[c.reason] ?? c.reason,
     count: c.count,
@@ -152,6 +163,90 @@ export default function MetricasPage() {
                   </div>
                 )}
               </ChartCard>
+
+              <ChartCard title="Cómo se pagó (pedidos entregados)">
+                {payData.length === 0 ? (
+                  <EmptyState title="Sin pedidos entregados en el rango" />
+                ) : (
+                  <div className="flex flex-col items-center gap-4 sm:flex-row">
+                    <div className="h-56 w-full sm:w-1/2">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={payData}
+                            dataKey="count"
+                            nameKey="label"
+                            innerRadius={50}
+                            outerRadius={82}
+                            paddingAngle={2}
+                            stroke="none"
+                            isAnimationActive={false}
+                          >
+                            {payData.map((p, i) => (
+                              <Cell key={p.label} fill={PIE[i % PIE.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip contentStyle={tooltipStyle} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <ul className="w-full space-y-1.5 sm:w-1/2">
+                      {payData.map((p, i) => (
+                        <li
+                          key={p.label}
+                          className="flex items-center justify-between gap-3 text-[13px]"
+                        >
+                          <span className="flex items-center gap-2 text-ink-muted">
+                            <span
+                              className="h-2.5 w-2.5 rounded-full"
+                              style={{ background: PIE[i % PIE.length] }}
+                            />
+                            {p.label}
+                          </span>
+                          <span className="font-mono text-ink tabular-nums">
+                            {p.count} · {p.pct}%
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </ChartCard>
+
+              {funnel && funnel.customers > 0 && (
+                <ChartCard title="Primer pedido: ¿cuántos completan el prepago?">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                    <DonutMini
+                      pct={funnel.conversionPct}
+                      label={`${num(funnel.customersConverted)} de ${num(funnel.customers)} clientes nuevos`}
+                      sublabel={`${num(funnel.attempts)} intento(s) de primer pedido`}
+                    />
+                    <ul className="w-full space-y-1.5 text-[13px] sm:w-1/2">
+                      {(
+                        [
+                          ['Completó y recibió', funnel.delivered],
+                          ['No envió comprobante a tiempo', funnel.prepayTimeout],
+                          ['El negocio no validó a tiempo', funnel.validationTimeout],
+                          ['Comprobante rechazado', funnel.proofRejected],
+                          ['Otra cancelación', funnel.otherCancelled],
+                          ['Todavía en curso', funnel.inProgress],
+                        ] as [string, number][]
+                      )
+                        .filter(([, v]) => v > 0)
+                        .map(([label, v]) => (
+                          <li key={label} className="flex items-center justify-between gap-3">
+                            <span className="text-ink-muted">{label}</span>
+                            <span className="font-mono text-ink tabular-nums">{num(v)}</span>
+                          </li>
+                        ))}
+                    </ul>
+                  </div>
+                  <p className="mt-3 text-[12px] leading-snug text-ink-subtle">
+                    Solo cuenta a quien llegó a crear el pedido. Quien vio “el pago es adelantado” y
+                    cerró la app no deja rastro en la base — ese abandono no está medido.
+                  </p>
+                </ChartCard>
+              )}
             </>
           )}
 

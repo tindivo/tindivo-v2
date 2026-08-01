@@ -8,3 +8,32 @@ export const num = (n: number | null | undefined) =>
 
 /** Fecha-hora local PE corta. */
 export const dateTime = (iso: string) => new Date(iso).toLocaleString('es-PE')
+
+/**
+ * Reparte 100 puntos porcentuales entre los conteos, por resto mayor.
+ *
+ * Redondear cada parte por separado no suma 100: tres tercios dan 33+33+33=99,
+ * y un desglose que no cierra en 100 hace dudar del dato entero. Este reparte
+ * los enteros y luego da el punto sobrante a quien tenga el mayor decimal
+ * pendiente, así que la suma es exactamente 100 salvo que el total sea 0.
+ */
+export function sharePcts(counts: number[]): number[] {
+  const total = counts.reduce((a, b) => a + b, 0)
+  if (total <= 0) return counts.map(() => 0)
+
+  const exact = counts.map((c) => (100 * c) / total)
+  const floors = exact.map(Math.floor)
+  let resto = 100 - floors.reduce((a, b) => a + b, 0)
+
+  const orden = exact
+    .map((e, i) => ({ i, frac: e - Math.floor(e) }))
+    .sort((a, b) => b.frac - a.frac)
+
+  const out = [...floors]
+  for (const { i } of orden) {
+    if (resto <= 0) break
+    out[i] = (out[i] ?? 0) + 1
+    resto -= 1
+  }
+  return out
+}
