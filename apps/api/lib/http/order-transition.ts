@@ -35,9 +35,13 @@ const TransitionSchema = z
     cancelReasonDetail: CancelReasonDetailSchema.optional(),
     reasonCode: z.enum(REJECTION_CODES).optional(),
     reasonText: z.string().max(300).optional(),
-    lat: z.number().optional(),
-    lng: z.number().optional(),
-    accuracy_m: z.number().optional(),
+    // Nullable, no solo opcional: cuando el motorizado deniega el permiso de
+    // GPS o el fix tarda más de 5s, el front manda `null` explícito (no omite
+    // la clave). Con `.optional()` a secas eso era un 422 y la llegada no se
+    // registraba — que es justo el caso en el que más falta hace.
+    lat: z.number().nullable().optional(),
+    lng: z.number().nullable().optional(),
+    accuracy_m: z.number().nullable().optional(),
   })
   .transform((val) => {
     if (val.action === 'cancel') {
