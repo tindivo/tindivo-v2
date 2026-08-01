@@ -11,11 +11,17 @@ import { getSupabaseBrowser } from '@/lib/supabase/client'
 interface CashRow {
   id: string
   settlement_date: string
+  /** Hora de la entrega. Desde 0111 puede haber varias el mismo día: la fecha
+   *  sola ya no distingue una liquidación de otra. */
+  delivered_at_ts: string | null
   total_cash: number
+  order_count: number | null
   delivered_amount: number | null
   confirmed_amount: number | null
   reported_amount: number | null
   status: string
+  driver_id: string | null
+  drivers: { full_name: string | null } | null
 }
 
 /** Efectivo que el motorizado ya cobró al cliente pero todavía no ha rendido. */
@@ -33,6 +39,14 @@ interface PendingByDriver {
   total: number
   orders: number
 }
+
+const horaLima = new Intl.DateTimeFormat('es-PE', {
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+  timeZone: 'America/Lima',
+})
+const horaDe = (iso: string) => horaLima.format(Date.parse(iso))
 
 // ── KPI card ──────────────────────────────────────────────────────────────────
 type KpiTone = 'brand' | 'warning' | 'danger' | 'neutral'
@@ -215,7 +229,9 @@ function SettlementCard({
             <MS name="delivery_dining" size={22} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 15, fontWeight: 700 }}>Motorizado</div>
+            <div style={{ fontSize: 15, fontWeight: 700 }}>
+              {row.drivers?.full_name ?? 'Motorizado'}
+            </div>
             <div
               style={{
                 display: 'flex',
@@ -225,7 +241,18 @@ function SettlementCard({
                 color: 'var(--tv-ink-muted)',
               }}
             >
-              <span style={{ fontFamily: FONT_MONO }}>{row.settlement_date}</span>
+              {/* Fecha Y hora: con varias entregas por noche la fecha sola no
+                  distingue una tarjeta de otra, y la cajera tiene que saber
+                  cuál está confirmando. */}
+              <span style={{ fontFamily: FONT_MONO }}>
+                {row.settlement_date}
+                {row.delivered_at_ts ? ` · ${horaDe(row.delivered_at_ts)}` : ''}
+              </span>
+              {row.order_count != null && (
+                <span>
+                  · {row.order_count} pedido{row.order_count === 1 ? '' : 's'}
+                </span>
+              )}
             </div>
           </div>
           {isConfirmed && (
@@ -458,7 +485,7 @@ function EfectivoView() {
     const { data, error: e } = await supabase
       .from('cash_settlements')
       .select(
-        'id,settlement_date,total_cash,delivered_amount,confirmed_amount,reported_amount,status',
+        'id,settlement_date,delivered_at_ts,total_cash,order_count,delivered_amount,confirmed_amount,reported_amount,status,driver_id,drivers(full_name)',
       )
       .order('created_at', { ascending: false })
       .limit(50)
