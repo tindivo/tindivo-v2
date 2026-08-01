@@ -39,6 +39,7 @@ export async function GET(
     let reportId = id
     let targetOrderId: string | null = null
 
+    // biome-ignore lint/suspicious/noExplicitAny: business_charges table
     const { data: charge } = await (service as any)
       .from('business_charges')
       .select('id, order_id, report_id, amount, description, created_at')
@@ -54,6 +55,7 @@ export async function GET(
     }
 
     // 3. Buscar el reporte si existe
+    // biome-ignore lint/suspicious/noExplicitAny: reports table
     const { data: report, error: repError } = await (service as any)
       .from('reports')
       .select(
@@ -72,6 +74,7 @@ export async function GET(
     // Fallback: si no hay reporte ni cargo, buscar en contingency_advances
     let advance: any = null
     if (!report && !charge) {
+      // biome-ignore lint/suspicious/noExplicitAny: contingency_advances table
       const { data: rawAdv } = await (service as any)
         .from('contingency_advances')
         .select('id, order_id, amount, reason, created_at')
@@ -113,6 +116,7 @@ export async function GET(
           )
           .eq('id', targetOrderId)
           .maybeSingle(),
+        // biome-ignore lint/suspicious/noExplicitAny: order_event_log table
         (service as any)
           .from('order_event_log')
           .select('event_type, actor_role, created_at, data')

@@ -33,6 +33,7 @@ export async function GET(req: Request): Promise<Response> {
     const businessIds = businesses.map((b) => b.id)
 
     // 2. Obtener cargos pendientes para estos negocios
+    // biome-ignore lint/suspicious/noExplicitAny: business_charges table
     const { data: charges, error: chargeError } = await (service as any)
       .from('business_charges')
       .select('business_id, order_id, charge_type, amount')

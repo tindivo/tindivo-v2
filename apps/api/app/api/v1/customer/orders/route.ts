@@ -9,7 +9,6 @@ import { getRequestId } from '@/lib/http/request-id'
 import {
   sendOrderCreated,
   sendOrderNotifyBusiness,
-  sendOrderPrepay,
   sendOrderValidation,
 } from '@/lib/inngest/client'
 import { createServiceClient } from '@/lib/supabase/service'

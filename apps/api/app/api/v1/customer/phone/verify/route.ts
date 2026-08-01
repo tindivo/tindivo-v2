@@ -50,7 +50,7 @@ export async function POST(req: Request): Promise<Response> {
           code,
         })
       check = result
-    } catch (twilioError) {
+    } catch (_twilioError) {
       // Código incorrecto, expirado, o teléfono no tiene verificación pendiente.
       return problem('validation_error', {
         detail: 'Código incorrecto o expirado. Solicita uno nuevo.',

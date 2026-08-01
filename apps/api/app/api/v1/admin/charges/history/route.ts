@@ -17,6 +17,7 @@ export async function GET(req: Request): Promise<Response> {
     await requireRole(req, 'admin')
     const service = createServiceClient()
 
+    // biome-ignore lint/suspicious/noExplicitAny: restaurant_payments table added in migration
     const { data: payments, error } = await (service as any)
       .from('restaurant_payments')
       .select(
@@ -27,19 +28,19 @@ export async function GET(req: Request): Promise<Response> {
 
     if (error) throw new Error(error.message)
 
-    const result = (payments || []).map((p: any) => {
+    const result = (payments || []).map((p: Record<string, unknown>) => {
       const bizName = (p.businesses as unknown as { name: string } | null)?.name ?? '—'
       const charges = p.business_charges as Array<{ id: string; order_id: string | null }> | null
       const uniqueOrderIds = new Set((charges || []).map((c) => c.order_id).filter(Boolean))
 
       return {
-        id: p.id,
-        businessId: p.business_id,
+        id: String(p.id ?? ''),
+        businessId: String(p.business_id ?? ''),
         businessName: bizName,
         amount: Number(p.amount) || 0,
-        paymentMethod: p.payment_method,
-        paidAt: p.paid_at,
-        note: p.note,
+        paymentMethod: String(p.payment_method ?? ''),
+        paidAt: String(p.paid_at ?? ''),
+        note: (p.note as string | null) ?? null,
         settledChargeCount: charges?.length ?? 0,
         orderCount: uniqueOrderIds.size,
       }

@@ -184,6 +184,61 @@ export async function seedPrepaidOrder(opts: SeedOrderOptions = {}): Promise<See
   return { userId, businessId: biz.id, orderId: order.id }
 }
 
+export const E2E = {
+  BUSINESS_ID: 'e2e00000-0000-4000-8000-000000000010',
+  BUSINESS_USER_ID: 'e2e00000-0000-4000-8000-000000000001',
+  DRIVER_USER_ID: 'e2e00000-0000-4000-8000-000000000002',
+  DRIVER_ID: 'e2e00000-0000-4000-8000-000000000050',
+  DRIVER_2_USER_ID: 'e2e00000-0000-4000-8000-0000000000a2',
+  DRIVER_2_ID: 'e2e00000-0000-4000-8000-0000000000d2',
+}
+
+export async function seedContraentregaOrder(targetBusinessId?: string): Promise<SeededOrder> {
+  let userId = E2E.BUSINESS_USER_ID
+  let bizId = targetBusinessId ?? ''
+
+  if (!targetBusinessId) {
+    const { data: authUser, error: authErr } = await localClient.auth.admin.createUser({
+      email: `cash-${crypto.randomUUID().slice(0, 8)}@integration.local`,
+      password: 'test-password-12345',
+      email_confirm: true,
+      user_metadata: { full_name: 'Test Business Owner' },
+    })
+    if (authErr) throw new Error(`seed auth.users failed: ${authErr.message}`)
+    userId = authUser.user.id
+
+    const { data: biz, error: bizErr } = await localClient
+      .from('businesses')
+      .insert({ user_id: userId, name: 'La Florencia (cash test)', balance_due: 0 })
+      .select('id')
+      .single()
+    if (bizErr) throw new Error(`seed businesses failed: ${bizErr.message}`)
+    bizId = biz.id
+  }
+
+  const charset = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  let shortId = ''
+  for (let i = 0; i < 8; i++) shortId += charset[Math.floor(Math.random() * charset.length)]
+
+  const { data: order, error: orderErr } = await localClient
+    .from('orders')
+    .insert({
+      business_id: bizId,
+      short_id: shortId,
+      customer_phone: '+51999000222',
+      order_amount: 50.0,
+      delivery_fee: 2.0,
+      payment_intent: 'pending_cash',
+      status: 'waiting_driver',
+      appears_in_queue_at: new Date().toISOString(),
+    })
+    .select('id')
+    .single()
+  if (orderErr) throw new Error(`seed orders failed: ${orderErr.message}`)
+
+  return { userId, businessId: bizId, orderId: order.id }
+}
+
 // ── Lectura de los timestamps de estado de un pedido ──────────────────────────
 export interface OrderTimestamps {
   status: string
@@ -263,11 +318,11 @@ export async function cleanup(seed: SeededOrder): Promise<void> {
   // deja eventos huérfanos acumulándose (medido: 4 tras dos corridas de la suite).
   await localClient.from('domain_events').delete().eq('aggregate_id', seed.orderId)
   await localClient.from('orders').delete().eq('id', seed.orderId)
-  await localClient.from('businesses').delete().eq('id', seed.businessId)
-  // `public.users` NO tiene FK hacia `auth.users` (verificado en pg_constraint), así que
-  // borrar el usuario de auth NO lo cascadea: hay que borrarlo explícitamente o quedan
-  // filas huérfanas acumulándose entre corridas. Va después de `businesses`, que sí
-  // referencia a `users` con ON DELETE CASCADE.
-  await localClient.from('users').delete().eq('id', seed.userId)
-  await localClient.auth.admin.deleteUser(seed.userId)
+  if (seed.businessId !== E2E.BUSINESS_ID) {
+    await localClient.from('businesses').delete().eq('id', seed.businessId)
+  }
+  if (seed.userId !== E2E.BUSINESS_USER_ID) {
+    await localClient.from('users').delete().eq('id', seed.userId)
+    await localClient.auth.admin.deleteUser(seed.userId)
+  }
 }

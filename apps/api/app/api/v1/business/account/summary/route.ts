@@ -44,6 +44,7 @@ export async function GET(req: Request): Promise<Response> {
     const supportPhone = supportCfg?.value ? String(supportCfg.value).replace(/"/g, '') : null
 
     // 3. Obtener cargos pendientes (created_at DESC)
+    // biome-ignore lint/suspicious/noExplicitAny: business_charges table
     const { data: rawCharges, error: chargeError } = await (service as any)
       .from('business_charges')
       .select('id, order_id, report_id, charge_type, amount, description, created_at')
@@ -95,6 +96,7 @@ export async function GET(req: Request): Promise<Response> {
     })
 
     // 5. Obtener historial de pagos confirmados desde restaurant_payments
+    // biome-ignore lint/suspicious/noExplicitAny: restaurant_payments table
     const { data: rawPayments, error: payError } = await (service as any)
       .from('restaurant_payments')
       .select('id, amount, payment_method, paid_at, note')
@@ -110,7 +112,8 @@ export async function GET(req: Request): Promise<Response> {
     // Cargar los cargos liquidados asociados a estos pagos (payment_id)
     const { data: settledCharges } =
       paymentIds.length > 0
-        ? await (service as any)
+        ? // biome-ignore lint/suspicious/noExplicitAny: business_charges table
+          await (service as any)
             .from('business_charges')
             .select('id, payment_id, order_id')
             .in('payment_id', paymentIds)

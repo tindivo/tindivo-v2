@@ -101,14 +101,12 @@ export function SettlementModal({
     }
 
     let runningSum = 0
-    let prevSum = 0
     let lowerGroupIndex = -1
     let upperGroupIndex = -1
 
     for (let i = 0; i < groups.length; i++) {
       const g = groups[i]
       if (!g) continue
-      prevSum = runningSum
       runningSum += g.subtotal
 
       if (Math.abs(runningSum - numInput) < 0.005) {

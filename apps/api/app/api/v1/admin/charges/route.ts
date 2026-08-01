@@ -23,6 +23,7 @@ export async function GET(req: Request): Promise<Response> {
     }
 
     const service = createServiceClient()
+    // biome-ignore lint/suspicious/noExplicitAny: business_charges table added in migration
     const { data: charges, error } = await (service as any)
       .from('business_charges')
       .select(

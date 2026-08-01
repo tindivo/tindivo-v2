@@ -53,7 +53,9 @@ export async function GET(req: Request): Promise<Response> {
 
     if (error) throw new Error(error.message)
 
-    const items = (data ?? []).map((row) => toAdminAppealDto(row as any))
+    const items = (data ?? []).map((row) =>
+      toAdminAppealDto(row as Parameters<typeof toAdminAppealDto>[0]),
+    )
 
     return ok(
       {

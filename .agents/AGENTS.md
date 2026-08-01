@@ -153,6 +153,12 @@ Toda migración que redefina una función debe verificar, ANTES de aplicarla al 
 dejó de resolver toda transición de pedido. Se descubrió al verificar el
 comportamiento, no al aplicar la migración.
 
+### 2.10 Cambios de comportamiento en endpoints vs. corrección de lint
+
+- Un cambio que altera el **comportamiento o semántica de un endpoint** NO es una "corrección de lint", aunque la necesidad de modificar el archivo se descubra persiguiendo advertencias de linter/tipos.
+- Todo cambio semántico o funcional debe reportarse y documentarse **por separado** de las correcciones cosméticas de tipos o imports, sin importar el alcance principal de la sesión.
+- **Precedente:** En la 0119, el cambio de semántica del PATCH en `settings/route.ts` (introducción de `MERGED_KEYS` para fusionar y preservar claves no editadas por el panel en la BD) quedó erróneamente agrupado junto a doce cambios de tipos e imports.
+
 ---
 
 ## 3. Flujo de trabajo obligatorio

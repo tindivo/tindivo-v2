@@ -1,3 +1,4 @@
+import type { ReportType } from '@tindivo/contracts'
 import { requireRole } from '@/lib/http/auth'
 import { corsHeaders, handleOptions } from '@/lib/http/cors'
 import { handleError, ok } from '@/lib/http/problem'
@@ -30,7 +31,7 @@ export async function GET(req: Request): Promise<Response> {
       .order('created_at', { ascending: false })
       .limit(100)
     if (status !== 'all') query = query.eq('status', status as (typeof VALID)[number])
-    if (excludeType) query = query.neq('type', excludeType as any)
+    if (excludeType) query = query.neq('type', excludeType as ReportType)
     const { data, error } = await query
     if (error) throw new Error(error.message)
     return ok(data, { headers: corsHeaders(req) })
