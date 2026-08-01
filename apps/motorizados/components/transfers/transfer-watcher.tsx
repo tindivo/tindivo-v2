@@ -83,7 +83,7 @@ export function TransferWatcher() {
     ? Math.max(0, Math.round((Date.parse(banner.expiresAt) - now) / 1000))
     : 0
   const danger = remaining <= 10
-  const pct = Math.min(100, (remaining / 30) * 100)
+  const pct = Math.min(100, (remaining / 60) * 100)
 
   async function respond(accept: boolean) {
     if (!banner) return
@@ -160,7 +160,7 @@ export function TransferWatcher() {
               className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"
               style={{ borderColor: '#FDBA74', borderTopColor: 'transparent' }}
             />
-            Transferencia automática…
+            Solicitud caducada
           </p>
         )}
       </div>

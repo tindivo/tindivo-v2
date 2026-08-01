@@ -2,15 +2,22 @@
 
 import { BottomSheet, Button, Icon } from '@tindivo/ui'
 import { useState } from 'react'
+import { soles } from '@/lib/format'
 import type { OrderDetailResponse } from '@/lib/types'
 
 const SLOT_OPTIONS = [
-  { value: 1, label: '1 · Pequeño' },
-  { value: 2, label: '2 · Mediano' },
-  { value: 3, label: '3 · Grande' },
+  { value: 1, label: '1 · Pequeño', hint: 'Una bolsa' },
+  { value: 2, label: '2 · Mediano', hint: 'Dos bolsas' },
+  { value: 3, label: '3 · Grande', hint: 'Llena la mochila' },
 ] as const
 
-/** Confirmación de recogida: slots de mochila + banda de distancia (HU-D-024/025). */
+/**
+ * Confirmación de recogida: solo el espacio que ocupa en la mochila (HU-D-024).
+ *
+ * La banda cerca/lejos ya no se pregunta (0120): no es un dato que el
+ * motorizado decida —sale de la ubicación en los pedidos web y de la cajera en
+ * los manuales— y desde la 0110 tampoco cambia lo que se cobra.
+ */
 export function PickupSheet({
   detail,
   now,
@@ -21,16 +28,17 @@ export function PickupSheet({
   detail: OrderDetailResponse
   now: number
   busy: boolean
-  onConfirm: (opts: { band: 'near' | 'far'; slots: number }) => void
+  onConfirm: (opts: { slots: number }) => void
   onClose: () => void
 }) {
   const [slots, setSlots] = useState(1)
-  const [band, setBand] = useState<'near' | 'far' | null>(null)
   const { order, business } = detail
   const premature = order.estimatedReadyAt != null && Date.parse(order.estimatedReadyAt) > now
   const minutesEarly = premature
     ? Math.max(1, Math.round((Date.parse(order.estimatedReadyAt as string) - now) / 60_000))
     : 0
+  const total = order.orderAmount + order.deliveryFee
+  const cobra = order.paymentIntent !== 'prepaid'
 
   return (
     <BottomSheet open onClose={onClose}>
@@ -52,6 +60,17 @@ export function PickupSheet({
           </div>
         )}
 
+        {/* Recordatorio del dinero justo antes de salir del local: es el último
+            momento en que el motorizado puede preguntar sin volver. */}
+        <div className="mb-4 flex items-center justify-between rounded-[14px] bg-surface px-3.5 py-3">
+          <span className="text-[13px] text-ink-muted">
+            {cobra ? 'Cobras al entregar' : 'Ya está pagado'}
+          </span>
+          <span className={`t-display text-[18px] ${cobra ? 'text-ink' : 'text-success'}`}>
+            {cobra ? soles(total) : 'No cobrar'}
+          </span>
+        </div>
+
         <span className="t-field-label">¿Cuánto espacio ocupa en la mochila?</span>
         <div className="flex gap-2">
           {SLOT_OPTIONS.map((s) => (
@@ -59,48 +78,21 @@ export function PickupSheet({
               key={s.value}
               type="button"
               onClick={() => setSlots(s.value)}
-              className={`flex-1 rounded-2xl border py-3 text-center text-[14px] font-semibold transition-colors ${
+              className={`flex-1 rounded-2xl border py-3 text-center transition-colors ${
                 slots === s.value
                   ? 'border-2 border-brand bg-brand/5 text-brand-dark'
                   : 'border-ink/10 bg-card text-ink-muted hover:bg-surface'
               }`}
             >
-              {s.label}
-            </button>
-          ))}
-        </div>
-
-        <span className="t-field-label mt-5 block">¿Qué tan lejos queda la entrega?</span>
-        <div className="grid grid-cols-2 gap-2">
-          {(
-            [
-              { value: 'near', label: 'Cerca', desc: 'Dentro de la zona' },
-              { value: 'far', label: 'Lejos', desc: 'Fuera de la zona / +1 km' },
-            ] as const
-          ).map((b) => (
-            <button
-              key={b.value}
-              type="button"
-              onClick={() => setBand(b.value)}
-              className={`rounded-[18px] p-4 text-left transition-colors ${
-                band === b.value
-                  ? 'border-2 border-brand bg-brand/5'
-                  : 'border border-ink/10 bg-card hover:bg-surface'
-              }`}
-            >
-              <p className="font-semibold text-[15px] text-ink">{b.label}</p>
-              <p className="mt-0.5 text-[12px] text-ink-muted">{b.desc}</p>
+              <span className="block text-[14px] font-semibold">{s.label}</span>
+              <span className="mt-0.5 block text-[11px] opacity-70">{s.hint}</span>
             </button>
           ))}
         </div>
       </div>
 
       <div className="border-t border-ink/5 px-5 pt-3.5 pb-6">
-        <Button
-          className="w-full"
-          disabled={!band || busy}
-          onClick={() => band && onConfirm({ band, slots })}
-        >
+        <Button className="w-full" disabled={busy} onClick={() => onConfirm({ slots })}>
           {busy ? 'Confirmando…' : 'Confirmar recogida'}
         </Button>
       </div>

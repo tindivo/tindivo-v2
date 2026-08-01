@@ -2636,6 +2636,18 @@ export type Database = {
         }
         Returns: Json
       }
+      driver_businesses: {
+        Args: never
+        Returns: {
+          accent_color: string
+          address: string
+          coordinates_lat: number
+          coordinates_lng: number
+          id: string
+          name: string
+          phone: string
+        }[]
+      }
       expire_order: {
         Args: {
           p_order_id: string

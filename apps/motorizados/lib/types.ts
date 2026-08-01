@@ -46,7 +46,23 @@ export interface BoardOrder {
   client_pays_with: number | null
   change_to_give: number | null
   business_id: string
-  businesses: { name: string } | null
+  /**
+   * Local resuelto desde `driver_businesses()` (0120), no desde un embed: las
+   * policies de `businesses` no dejan al motorizado leer la tabla, así que
+   * `businesses(name)` volvía NULL y todas las tarjetas decían "Restaurante".
+   */
+  business: DriverBusiness | null
+}
+
+/** Local asignado al motorizado, con lo justo para trabajar (0120). */
+export interface DriverBusiness {
+  id: string
+  name: string
+  phone: string | null
+  address: string | null
+  accent_color: string | null
+  coordinates_lat: number | null
+  coordinates_lng: number | null
 }
 
 /** Respuesta de GET /driver/orders/[id]. */

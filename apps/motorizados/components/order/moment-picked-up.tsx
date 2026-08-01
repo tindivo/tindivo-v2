@@ -80,7 +80,9 @@ export function MomentPickedUp({
           />
           <div className="p-4">
             <p className="t-eyebrow">Entregar en</p>
-            {order.deliveryAddress && <p className="mt-1 text-[14px]">{order.deliveryAddress}</p>}
+            {!order.isManual && order.deliveryAddress && (
+              <p className="mt-1 text-[14px]">{order.deliveryAddress}</p>
+            )}
             {order.deliveryReference && (
               <p className="mt-0.5 text-[13px] text-ink-muted">{order.deliveryReference}</p>
             )}
@@ -106,7 +108,8 @@ export function MomentPickedUp({
           <p className="mt-2 text-[17px] font-semibold leading-snug">
             {order.deliveryReference ?? 'Sin referencia — llama al cliente'}
           </p>
-          {order.deliveryAddress && (
+          {/* En los manuales la direccion es el relleno 'Pedido manual'. */}
+          {!order.isManual && order.deliveryAddress && (
             <p className="mt-1 text-[14px] text-ink-muted">{order.deliveryAddress}</p>
           )}
         </Card>

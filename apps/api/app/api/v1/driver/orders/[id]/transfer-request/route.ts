@@ -21,7 +21,9 @@ export function OPTIONS(req: Request): Response {
 
 /**
  * El motorizado (receptor) solicita absorber el pedido activo de un compañero.
- * TTL ~30s con timeout-as-accept (lo resuelve el backend). Requiere Idempotency-Key.
+ * El TTL sale de `timers.transferTtlSeconds` y lo resuelve el backend: si el
+ * dueño no responde, la solicitud caduca y el pedido NO cambia de manos (0119).
+ * Requiere Idempotency-Key.
  */
 export async function POST(
   req: Request,

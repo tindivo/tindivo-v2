@@ -69,7 +69,7 @@ export function TeamTab({ onCount }: { onCount: (n: number) => void }) {
               {mmss(remaining)}
             </span>
             <p className="mt-0.5 text-[12px] text-ink-muted">
-              Si no responde, el pedido pasará a ti.
+              Si no responde, la solicitud caducará.
             </p>
           </Card>
         )

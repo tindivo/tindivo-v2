@@ -32,7 +32,7 @@ export default function HistorialPage() {
                   <span className="text-[12px] text-success font-semibold">Entregado</span>
                 </div>
                 <p className="mt-1 text-[15px] font-semibold">
-                  {o.businesses?.name ?? 'Restaurante'}
+                  {o.business?.name ?? 'Restaurante'}
                 </p>
                 <p className="text-[13px] text-ink-muted">
                   {o.customer_name ?? 'Cliente'} · {hourOf(o.delivered_at ?? o.created_at)}

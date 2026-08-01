@@ -15,15 +15,19 @@ export function BusinessCard({ business }: { business: OrderDetailResponse['busi
         : null
 
   return (
-    <Card className="mt-3.5 p-[18px]">
-      <div className="flex items-start gap-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand-dark">
-          <Icon name="store" size={20} />
+    <Card className="mt-3.5 overflow-hidden p-[18px]">
+      <span className="t-eyebrow">Recoges en</span>
+      <div className="mt-1.5 flex items-start gap-3">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand-dark">
+          <Icon name="storefront" size={22} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="font-semibold text-[16px]">{business.name}</p>
+          <p className="text-[17px] font-semibold leading-tight">{business.name}</p>
           {business.address && (
-            <p className="mt-0.5 text-[13px] text-ink-muted">{business.address}</p>
+            <p className="mt-0.5 text-[13px] leading-snug text-ink-muted">{business.address}</p>
+          )}
+          {business.phone && (
+            <p className="mt-0.5 font-mono text-[12.5px] text-ink-subtle">{business.phone}</p>
           )}
         </div>
       </div>

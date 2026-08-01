@@ -8,12 +8,15 @@ import { use, useCallback, useEffect, useState } from 'react'
 import { BusinessCard } from '@/components/order/business-card'
 import { DeliverSheet } from '@/components/order/deliver-sheet'
 import { DeliveredScreen } from '@/components/order/delivered-screen'
+import { DestinationCard } from '@/components/order/destination-card'
 import { IncidentSheet } from '@/components/order/incident-sheet'
 import { MomentPickedUp } from '@/components/order/moment-picked-up'
+import { MoneyCard } from '@/components/order/money-card'
 import { OrderDetail } from '@/components/order/order-detail'
 import { PickupSheet } from '@/components/order/pickup-sheet'
 import { PreviewSection } from '@/components/order/preview-section'
 import { ReadyPromptSheet } from '@/components/order/ready-prompt-sheet'
+import { ReleaseSheet } from '@/components/order/release-sheet'
 import { StatusHero } from '@/components/order/status-hero'
 import { WaitTimer } from '@/components/order/wait-timer'
 import { useDriverOrders } from '@/hooks/use-driver-orders'
@@ -51,6 +54,7 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
   const [pickupOpen, setPickupOpen] = useState(false)
   const [deliverOpen, setDeliverOpen] = useState(false)
   const [incidentOpen, setIncidentOpen] = useState(false)
+  const [releaseOpen, setReleaseOpen] = useState(false)
 
   const load = useCallback(async () => {
     try {
@@ -211,6 +215,8 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
           <>
             <StatusHero detail={detail} moment={0} />
             <BusinessCard business={detail.business} />
+            <MoneyCard detail={detail} />
+            <DestinationCard detail={detail} />
           </>
         )}
 
@@ -221,6 +227,8 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
               <WaitTimer since={detail.order.waitingAtRestaurantAt} now={now} />
             )}
             <BusinessCard business={detail.business} />
+            <MoneyCard detail={detail} />
+            <DestinationCard detail={detail} />
           </>
         )}
 
@@ -275,15 +283,35 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
           ))}
 
         {mode === 'heading' && (
-          <Button className="w-full" disabled={busy} onClick={() => run('arrived')}>
-            {busy ? 'Un momento…' : 'Llegué al local'}
-          </Button>
+          <div className="flex flex-col gap-2 w-full">
+            <Button className="w-full" disabled={busy} onClick={() => run('arrived')}>
+              {busy ? 'Un momento…' : 'Llegué al local'}
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full text-danger border-danger/30 hover:bg-danger/10"
+              disabled={busy}
+              onClick={() => setReleaseOpen(true)}
+            >
+              Soltar pedido
+            </Button>
+          </div>
         )}
 
         {mode === 'waiting' && (
-          <Button className="w-full" disabled={busy} onClick={() => setPickupOpen(true)}>
-            Ya recogí el pedido
-          </Button>
+          <div className="flex flex-col gap-2 w-full">
+            <Button className="w-full" disabled={busy} onClick={() => setPickupOpen(true)}>
+              Ya recogí el pedido
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full text-danger border-danger/30 hover:bg-danger/10"
+              disabled={busy}
+              onClick={() => setReleaseOpen(true)}
+            >
+              Soltar pedido
+            </Button>
+          </div>
         )}
 
         {mode === 'picked_up' && (
@@ -357,7 +385,7 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
           detail={detail}
           now={now}
           busy={busy}
-          onConfirm={({ band, slots }) => run('pickup', { band, slots })}
+          onConfirm={({ slots }) => run('pickup', { slots })}
           onClose={() => setPickupOpen(false)}
         />
       )}
@@ -373,6 +401,17 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
       )}
 
       {incidentOpen && <IncidentSheet orderId={id} onClose={() => setIncidentOpen(false)} />}
+
+      {releaseOpen && (
+        <ReleaseSheet
+          busy={busy}
+          onConfirm={async (reason, note) => {
+            await run('release', { reason, note })
+            setReleaseOpen(false)
+          }}
+          onClose={() => setReleaseOpen(false)}
+        />
+      )}
     </main>
   )
 }

@@ -167,14 +167,14 @@ export const orderPrepayTimeout: InngestFunction.Any = inngest.createFunction(
 
 /**
  * Timeout de transferencia entre motorizados: si el dueño no responde dentro de
- * `timers.transferTtlSeconds` (30s), el silencio acepta (spec v1). El barrido
- * `expire_order_transfers` es idempotente y re-chequea bajo FOR UPDATE, así que
- * convive con el cron failsafe de 1 min y con la expiración perezosa de respond.
+ * `timers.transferTtlSeconds` (60s), la solicitud caduca y el pedido se queda
+ * con su motorizado original. El barrido `expire_order_transfers` es idempotente
+ * y re-chequea bajo FOR UPDATE, así que convive con el cron failsafe de 1 min.
  */
 export const transferRequestTimeout: InngestFunction.Any = inngest.createFunction(
   {
     id: 'transfer-request-timeout',
-    name: 'Timeout-as-accept de transferencia',
+    name: 'Expiración de solicitud de traspaso',
     triggers: [{ event: EVENT_TRANSFER_REQUESTED }],
   },
   async ({ event, step }) => {

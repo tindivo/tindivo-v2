@@ -31,7 +31,12 @@ export function OrderDetail({
       >
         <span className="t-eyebrow">Detalle del pedido</span>
         <span className="flex items-center gap-2 text-[12px] text-ink-subtle">
-          {count} {count === 1 ? 'producto' : 'productos'}
+          {/* Los manuales no traen líneas: "0 productos" sonaba a pedido vacío. */}
+          {count === 0
+            ? order.isManual
+              ? 'Pedido por teléfono'
+              : 'Sin detalle'
+            : `${count} ${count === 1 ? 'producto' : 'productos'}`}
           <span
             aria-hidden
             className={`inline-flex transition-transform duration-200 ${

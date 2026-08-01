@@ -60,7 +60,8 @@ export type TransferRequestedData = {
   sleepMs?: number
 }
 
-/** Envío tipado del evento `transfer/requested` (TTL ~30s, timeout-as-accept). */
+/** Envío tipado del evento `transfer/requested` (TTL de `timers.transferTtlSeconds`;
+ *  al vencer la solicitud caduca y el pedido se queda con su dueño, 0119). */
 export function sendTransferRequested(data: TransferRequestedData) {
   return inngest.send({ name: EVENT_TRANSFER_REQUESTED, data })
 }

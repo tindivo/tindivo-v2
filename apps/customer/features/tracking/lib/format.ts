@@ -116,13 +116,13 @@ export function etaView(data: Tracking, now: number = Date.now()): EtaView {
   if (data.arrivedAtCustomerAt) return { kind: 'none' }
   if (data.status === 'delivered' || data.status === 'cancelled') return { kind: 'none' }
 
-  // 2. La cajera marcó listo antes de tiempo. `estimated_ready_at` no se toca
-  //    (Parte 3), así que el rango calculado desde él anunciaría minutos de
-  //    cocción que ya no existen. Y calcularlo desde `ready_early_at` sería
-  //    peor: ese estado se da justo cuando NADIE ha tomado el pedido todavía,
-  //    así que el número saldría optimista de forma sistemática — el error que
-  //    más caro sale. Se dice lo único que se sabe con certeza.
-  if (data.readyEarlyUsed) return { kind: 'ready' }
+  // 2. La cajera marcó listo antes de tiempo. Desde la 0120 eso RECORTA
+  //    `estimated_ready_at` al lead de cola (10 min) en vez de dejarlo con la
+  //    hora vieja, así que el reloj ya no anuncia cocción que no existe y el
+  //    rango se puede calcular igual que en cualquier otro pedido: la comida
+  //    está hecha, pero la entrega todavía necesita que un motorizado pase por
+  //    el local. Solo cuando ese margen ya venció se dice "listo" sin número.
+  if (data.readyEarlyUsed && !data.estimatedReadyAt) return { kind: 'ready' }
 
   // 3. Sin reloj de cocción no hay nada que calcular. Pasa en
   //    `awaiting_payment`: el reloj no arranca hasta verificar el comprobante.

@@ -44,8 +44,8 @@ export function RequestTransferSheet({
       <div className="p-5 pb-7">
         <h2 className="t-display text-[20px]">¿Pedirle este pedido a {target.driverName}?</h2>
         <p className="t-muted mt-2 text-[14px] leading-relaxed">
-          Le llegará una solicitud. Si no responde en 30 segundos, el pedido pasará a ti
-          automáticamente.
+          Le llegará una solicitud. Si no responde en 60 segundos, la solicitud caducará y el pedido
+          continuará con su motorizado.
         </p>
 
         <Card className="mt-4 p-4">
