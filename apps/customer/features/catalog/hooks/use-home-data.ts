@@ -1,22 +1,11 @@
 'use client'
 
 import { type ApiEnvelope, ApiError } from '@tindivo/api-client'
-import type { OrderStatus } from '@tindivo/contracts'
+import { ACTIVE_ORDER_STATUSES } from '@tindivo/contracts'
 import { useEffect, useState } from 'react'
 import type { ActiveOrder, CatalogUser, PublicBusiness } from '@/features/catalog/types'
 import { api } from '@/lib/api'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
-
-const ACTIVE_STATUSES: OrderStatus[] = [
-  'validando',
-  'pending_acceptance',
-  'confirmed',
-  'preparing',
-  'waiting_driver',
-  'heading_to_restaurant',
-  'waiting_at_restaurant',
-  'picked_up',
-]
 
 export function useHomeData() {
   const [items, setItems] = useState<PublicBusiness[] | null>(null)
@@ -77,7 +66,7 @@ export function useHomeData() {
       supabase
         .from('orders')
         .select('short_id,status,business_id,created_at')
-        .in('status', ACTIVE_STATUSES)
+        .in('status', [...ACTIVE_ORDER_STATUSES])
         .order('created_at', { ascending: false })
         .then(({ data }) => {
           if (!active) return

@@ -1,24 +1,13 @@
 'use client'
 
 import type { ApiEnvelope } from '@tindivo/api-client'
-import type { CustomerAppealListResponse, OrderStatus } from '@tindivo/contracts'
+import { ACTIVE_ORDER_STATUSES, type CustomerAppealListResponse } from '@tindivo/contracts'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Address, OrderRow, Profile } from '@/features/account/types'
 import { api } from '@/lib/api'
 import { clearOnboardingResume } from '@/lib/onboarding-store'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
-
-const ACTIVE_STATUSES: OrderStatus[] = [
-  'validando',
-  'pending_acceptance',
-  'confirmed',
-  'preparing',
-  'waiting_driver',
-  'heading_to_restaurant',
-  'waiting_at_restaurant',
-  'picked_up',
-]
 
 export interface AccountStats {
   activeOrdersCount: number
@@ -63,7 +52,7 @@ export function useAccountPage() {
         .from('orders')
         .select('id', { count: 'exact', head: true })
         .eq('customer_user_id', userId)
-        .in('status', ACTIVE_STATUSES),
+        .in('status', [...ACTIVE_ORDER_STATUSES]),
       api.get<ApiEnvelope<CustomerAppealListResponse>>('/customer/appeals').catch(() => null),
     ])
 
