@@ -1588,6 +1588,10 @@ export type Database = {
       orders: {
         Row: {
           appears_in_queue_at: string | null
+          arrived_at_customer_accuracy_m: number | null
+          arrived_at_customer_at: string | null
+          arrived_at_customer_lat: number | null
+          arrived_at_customer_lng: number | null
           assigned_at: string | null
           awaiting_payment_at: string | null
           business_id: string
@@ -1678,6 +1682,10 @@ export type Database = {
         }
         Insert: {
           appears_in_queue_at?: string | null
+          arrived_at_customer_accuracy_m?: number | null
+          arrived_at_customer_at?: string | null
+          arrived_at_customer_lat?: number | null
+          arrived_at_customer_lng?: number | null
           assigned_at?: string | null
           awaiting_payment_at?: string | null
           business_id: string
@@ -1768,6 +1776,10 @@ export type Database = {
         }
         Update: {
           appears_in_queue_at?: string | null
+          arrived_at_customer_accuracy_m?: number | null
+          arrived_at_customer_at?: string | null
+          arrived_at_customer_lat?: number | null
+          arrived_at_customer_lng?: number | null
           assigned_at?: string | null
           awaiting_payment_at?: string | null
           business_id?: string
@@ -2395,16 +2407,27 @@ export type Database = {
     }
     Functions: {
       admin_metrics: { Args: { p_from: string; p_to: string }; Returns: Json }
-      advance_order: {
-        Args: {
-          p_action: string
-          p_actor_role: Database["public"]["Enums"]["user_role"]
-          p_actor_user_id: string
-          p_order_id: string
-          p_params?: Json
-        }
-        Returns: Json
-      }
+      advance_order:
+        | {
+            Args: {
+              p_action: string
+              p_actor_role: string
+              p_actor_user_id: string
+              p_order_id: string
+              p_params?: Json
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_action: string
+              p_actor_role: Database["public"]["Enums"]["user_role"]
+              p_actor_user_id: string
+              p_order_id: string
+              p_params?: Json
+            }
+            Returns: Json
+          }
       apply_order_transfer: {
         Args: {
           p_final: Database["public"]["Enums"]["transfer_request_status"]
@@ -2717,6 +2740,10 @@ export type Database = {
         Args: { p_business_user_id: string; p_order_id: string }
         Returns: {
           appears_in_queue_at: string | null
+          arrived_at_customer_accuracy_m: number | null
+          arrived_at_customer_at: string | null
+          arrived_at_customer_lat: number | null
+          arrived_at_customer_lng: number | null
           assigned_at: string | null
           awaiting_payment_at: string | null
           business_id: string

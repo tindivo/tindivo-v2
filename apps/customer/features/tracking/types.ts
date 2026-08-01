@@ -30,6 +30,8 @@ export interface Tracking {
   changeToGive?: number | null
   estimatedReadyAt: string | null
   driverName: string | null
+  arrivedAtCustomerAt?: string | null
+  driverPhone?: string | null
   amount: number
   deliveryFee: number
   total: number

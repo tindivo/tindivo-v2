@@ -15,9 +15,37 @@ interface TrackingActionsProps {
 export function TrackingActions({ data, current, cancellable, cancel }: TrackingActionsProps) {
   const { confirmCancel, setConfirmCancel, cancelling, doCancel } = cancel
 
+  const driverWhatsappUrl = data.driverPhone
+    ? `https://wa.me/${data.driverPhone.replace(/\D/g, '')}?text=${encodeURIComponent(
+        `Hola, te escribo por mi pedido #${data.shortId}. Estás en mi domicilio.`,
+      )}`
+    : null
+
   return (
     <>
       <div className="mt-5 border-t border-ink/[0.06] pt-4">
+        {driverWhatsappUrl && (
+          <div className="mb-4 rounded-[16px] border border-amber-200 bg-amber-50 p-4 text-left">
+            <div className="flex items-center gap-2 font-semibold text-[14px] text-amber-900">
+              <Icon name="person_pin_circle" size={20} className="text-amber-600" />
+              ¡El motorizado llegó a tu domicilio!
+            </div>
+            <p className="mt-1 text-[13px] leading-relaxed text-amber-800">
+              {data.driverName ?? 'El motorizado'} se encuentra en la puerta y no logra ubicarte. Escríbele por WhatsApp:
+            </p>
+            <Button
+              size="sm"
+              as="a"
+              href={driverWhatsappUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 w-full border border-amber-300 bg-emerald-600 text-white hover:bg-emerald-700"
+            >
+              <Icon name="chat" size={18} />
+              Escribir al motorizado por WhatsApp
+            </Button>
+          </div>
+        )}
         {cancellable ? (
           <>
             <button

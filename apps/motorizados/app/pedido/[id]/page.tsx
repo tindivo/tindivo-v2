@@ -227,7 +227,12 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
         {mode === 'picked_up' && (
           <>
             <StatusHero detail={detail} moment={2} />
-            <MomentPickedUp detail={detail} onReport={() => setIncidentOpen(true)} />
+            <MomentPickedUp
+              detail={detail}
+              busy={busy}
+              onReport={() => setIncidentOpen(true)}
+              onNoShow={() => run('no_show')}
+            />
           </>
         )}
 
@@ -282,9 +287,54 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
         )}
 
         {mode === 'picked_up' && (
-          <Button className="w-full" disabled={busy} onClick={() => setDeliverOpen(true)}>
-            Pedido entregado
-          </Button>
+          <div className="flex flex-col gap-2 w-full">
+            {!detail.order.arrivedAtCustomerAt ? (
+              <Button
+                className="w-full"
+                disabled={busy}
+                onClick={async () => {
+                  setBusy(true)
+                  setActionError(null)
+                  let coords: { lat: number | null; lng: number | null; accuracy_m: number | null } = {
+                    lat: null,
+                    lng: null,
+                    accuracy_m: null,
+                  }
+                  if (typeof window !== 'undefined' && 'geolocation' in navigator) {
+                    try {
+                      const posPromise = new Promise<GeolocationPosition>((resolve, reject) => {
+                        navigator.geolocation.getCurrentPosition(resolve, reject, {
+                          enableHighAccuracy: true,
+                          timeout: 5000,
+                          maximumAge: 0,
+                        })
+                      })
+                      const timeoutPromise = new Promise<null>((resolve) =>
+                        setTimeout(() => resolve(null), 5000),
+                      )
+                      const res = await Promise.race([posPromise, timeoutPromise])
+                      if (res && 'coords' in res) {
+                        coords = {
+                          lat: res.coords.latitude,
+                          lng: res.coords.longitude,
+                          accuracy_m: res.coords.accuracy,
+                        }
+                      }
+                    } catch {
+                      // Ignorar silenciosamente errores de GPS (G1)
+                    }
+                  }
+                  await run('arrived_customer', coords)
+                }}
+              >
+                {busy ? 'Registrando llegada…' : '¡He llegado al domicilio!'}
+              </Button>
+            ) : (
+              <Button className="w-full" disabled={busy} onClick={() => setDeliverOpen(true)}>
+                Pedido entregado
+              </Button>
+            )}
+          </div>
         )}
       </BottomActionBar>
 

@@ -35,6 +35,9 @@ const TransitionSchema = z
     cancelReasonDetail: CancelReasonDetailSchema.optional(),
     reasonCode: z.enum(REJECTION_CODES).optional(),
     reasonText: z.string().max(300).optional(),
+    lat: z.number().optional(),
+    lng: z.number().optional(),
+    accuracy_m: z.number().optional(),
   })
   .transform((val) => {
     if (val.action === 'cancel') {
@@ -88,6 +91,9 @@ export async function handleOrderTransition(
         cancelReasonDetail: body.cancelReasonDetail,
         reasonCode: body.reasonCode,
         reasonText: body.reasonText,
+        lat: body.lat,
+        lng: body.lng,
+        accuracy_m: body.accuracy_m,
       },
     })
     if (error) {

@@ -883,12 +883,16 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
   const paused = isBusinessPaused(biz.until, now)
   const pauseMin = pauseMinutesLeft(biz.until, now)
   const hasWaiting = vms.some((o) => o.state === 'waiting')
-  const hasBufferP3 = vms.some((o) => o.state === 'buffer_p3')
+  const hasBufferP3 = vms.some((o) => o.state === 'buffer_p2' || o.state === 'buffer_p3')
+  const actionRequiredCount = useMemo(
+    () => vms.filter((o) => o.status === 'pending_acceptance' || o.status === 'validando').length,
+    [vms],
+  )
 
   // Sonido persistente (corre en el chrome → suena en cualquier sección).
   useDashboardSounds({
-    hasPending: counts.new > 0,
-    pendingCount: counts.new,
+    hasPending: actionRequiredCount > 0,
+    pendingCount: actionRequiredCount,
     hasWaiting,
     hasBufferP3,
     soundOn,
