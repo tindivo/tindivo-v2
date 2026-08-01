@@ -280,6 +280,30 @@ export function usePushSubscription() {
   }, [checkStatus])
 
   /**
+   * Reacción al login. Sin esto, el motorizado que acaba de entrar espera hasta
+   * un minuto —el tick del polling— antes de quedar suscrito, y un pedido que
+   * entre en ese hueco no le suena.
+   *
+   * `SIGNED_IN` usa `forceRefresh` porque un cambio de cuenta tiene que validar
+   * la propiedad del endpoint YA: si el device era de otro motorizado, el
+   * debounce de 60s dejaría los avisos yendo a quien no toca.
+   *
+   * Los tres guards no son defensivos de más: sin ellos esto arrancaría el
+   * flujo de suscripción en quien nunca concedió permiso, que es justo lo que
+   * el diseño evita (el permiso se pide en el gesto, desde /perfil).
+   */
+  useEffect(() => {
+    const { data } = getSupabaseBrowser().auth.onAuthStateChange((event, session) => {
+      if (!session) return
+      if (typeof Notification === 'undefined') return
+      if (Notification.permission !== 'granted') return
+      if (event === 'SIGNED_IN') void forceRefresh()
+      else void checkStatus()
+    })
+    return () => data.subscription.unsubscribe()
+  }, [checkStatus, forceRefresh])
+
+  /**
    * Registra en PushManager y envía el endpoint al backend.
    *
    * ASUME que el permiso ya es `granted`: quien llama debe invocar

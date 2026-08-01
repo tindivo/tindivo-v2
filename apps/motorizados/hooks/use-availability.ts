@@ -1,12 +1,23 @@
 'use client'
 
 import { ApiError } from '@tindivo/api-client'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '@/lib/api'
+import { getSupabaseBrowser } from '@/lib/supabase/client'
 
 export type AvailabilityState = {
   available: boolean
   withinSchedule: boolean
+}
+
+/**
+ * Indica si hay sesión Supabase activa. Mismo guard que usa
+ * `use-push-subscription`: sin sesión, la request sale sin Bearer y el endpoint
+ * responde 401. `getSession()` resuelve desde memoria/cookies sin hit de red.
+ */
+async function hasActiveSession(): Promise<boolean> {
+  const { data } = await getSupabaseBrowser().auth.getSession()
+  return Boolean(data.session)
 }
 
 /**
@@ -23,8 +34,21 @@ export function useAvailability() {
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  /** Id del usuario para el que ya se cargó, y así no repetir por cada evento. */
+  const loadedForRef = useRef<string | null>(null)
 
   const load = useCallback(async () => {
+    // En arranque en frío la sesión todavía no está hidratada cuando el hook
+    // monta. Sin este guard la request salía sin token, el 401 dejaba `state`
+    // en null y la UI pintaba "No disponible" a un motorizado que en la BD SÍ
+    // lo está — y el error se quedaba puesto hasta que mandara la app a
+    // background y volviera, porque el único reintento era `visibilitychange`.
+    //
+    // Deliberadamente NO se apaga `loading`: la UI sigue en skeleton, que es
+    // "todavía no sé", en vez de afirmar algo falso. El efecto de
+    // `onAuthStateChange` reintenta en cuanto la sesión aparece.
+    if (!(await hasActiveSession())) return
+
     try {
       const r = await api.get<{ data: AvailabilityState }>('/driver/availability')
       setState(r.data)
@@ -41,6 +65,28 @@ export function useAvailability() {
 
   useEffect(() => {
     void load()
+  }, [load])
+
+  // La sesión puede hidratarse (o renovarse, o llegar tras el login) después de
+  // montar. Este es el reintento que convierte el skeleton en estado real.
+  //
+  // El ref evita recargar por cada evento: Supabase emite varios seguidos con
+  // la misma sesión (`INITIAL_SESSION` y compañía), y cada uno disparaba un GET
+  // idéntico. Se recuerda para QUÉ usuario ya se cargó y se ignora el resto.
+  useEffect(() => {
+    const { data } = getSupabaseBrowser().auth.onAuthStateChange((_event, session) => {
+      if (!session) {
+        // Sin reset, un logout seguido de login del MISMO motorizado no
+        // recargaría: la clave seguiría coincidiendo.
+        loadedForRef.current = null
+        return
+      }
+      const key = session.user.id
+      if (loadedForRef.current === key) return
+      loadedForRef.current = key
+      void load()
+    })
+    return () => data.subscription.unsubscribe()
   }, [load])
 
   // Revalidar al volver a primer plano: el cron `close_drivers_outside_schedule`
@@ -60,6 +106,12 @@ export function useAvailability() {
       setBusy(true)
       setError(null)
       try {
+        // Aquí el motorizado SÍ pidió algo, así que la falta de sesión se dice
+        // en voz alta en vez de fallar con un 401 genérico.
+        if (!(await hasActiveSession())) {
+          setError('Tu sesión expiró. Vuelve a iniciar sesión.')
+          return false
+        }
         await api.post('/driver/availability', { available: next })
         await load()
         return true
