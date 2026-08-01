@@ -2695,6 +2695,7 @@ export type Database = {
         Args: { p_lat: number; p_lng: number }
         Returns: boolean
       }
+      queue_lead_minutes: { Args: never; Returns: number }
       refresh_customer_profile_risk: {
         Args: { p_phone: string; p_user_id: string }
         Returns: undefined

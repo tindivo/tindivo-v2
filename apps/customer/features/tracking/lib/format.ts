@@ -94,12 +94,59 @@ export function cancelledCopy(
   }
 }
 
-export function etaLabel(estimatedReadyAt: string | null): string {
-  if (estimatedReadyAt) {
-    const mins = Math.round((new Date(estimatedReadyAt).getTime() - Date.now()) / 60000)
-    if (mins > 0) return `~${mins} min`
-  }
-  return '25–35 min'
+/**
+ * Qué se le enseña al cliente sobre cuándo llega su pedido.
+ *
+ * Lo que había antes contaba los minutos hasta `estimated_ready_at` —cuándo la
+ * comida está LISTA, no cuándo llega— y, si ese campo venía nulo, devolvía un
+ * "25–35 min" inventado. Las dos cosas eran mentira en direcciones opuestas.
+ *
+ * Ahora: ETA = estimated_ready_at + rango de trayecto, y si no hay base para
+ * calcularlo no se enseña nada. Nunca una hora exacta: siempre un rango.
+ */
+export type EtaView =
+  | { kind: 'none' }
+  | { kind: 'ready' }
+  | { kind: 'imminent' }
+  | { kind: 'range'; min: number; max: number }
+
+export function etaView(data: Tracking, now: number = Date.now()): EtaView {
+  // 1. El motorizado ya está en la puerta. La tarjeta de llegada con el
+  //    WhatsApp ocupa ese sitio; dos mensajes compitiendo confunden.
+  if (data.arrivedAtCustomerAt) return { kind: 'none' }
+  if (data.status === 'delivered' || data.status === 'cancelled') return { kind: 'none' }
+
+  // 2. La cajera marcó listo antes de tiempo. `estimated_ready_at` no se toca
+  //    (Parte 3), así que el rango calculado desde él anunciaría minutos de
+  //    cocción que ya no existen. Y calcularlo desde `ready_early_at` sería
+  //    peor: ese estado se da justo cuando NADIE ha tomado el pedido todavía,
+  //    así que el número saldría optimista de forma sistemática — el error que
+  //    más caro sale. Se dice lo único que se sabe con certeza.
+  if (data.readyEarlyUsed) return { kind: 'ready' }
+
+  // 3. Sin reloj de cocción no hay nada que calcular. Pasa en
+  //    `awaiting_payment`: el reloj no arranca hasta verificar el comprobante.
+  if (!data.estimatedReadyAt) return { kind: 'none' }
+
+  const ready = Date.parse(data.estimatedReadyAt)
+  if (!Number.isFinite(ready)) return { kind: 'none' }
+
+  const travel = data.travelMinutes ?? { min: 20, max: 25 }
+  const min = Math.ceil((ready + travel.min * 60_000 - now) / 60_000)
+  const max = Math.ceil((ready + travel.max * 60_000 - now) / 60_000)
+
+  // Dentro de la ventana o pasada: un rango negativo no dice nada.
+  if (min <= 0) return { kind: 'imminent' }
+  return { kind: 'range', min, max }
+}
+
+/** El texto del ETA, o `null` si no hay nada que enseñar. */
+export function etaLabel(data: Tracking, now: number = Date.now()): string | null {
+  const v = etaView(data, now)
+  if (v.kind === 'none') return null
+  if (v.kind === 'ready') return 'Ya está listo'
+  if (v.kind === 'imminent') return 'En cualquier momento'
+  return `${v.min}–${v.max} min`
 }
 
 export function getStepSub(s: (typeof STEPS)[0], data: Tracking): string {

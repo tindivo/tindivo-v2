@@ -14,6 +14,8 @@ interface TrackingHeroProps {
 
 export function TrackingHero({ data, step, currentIdx, progress }: TrackingHeroProps) {
   const isDelivered = step.key === 'delivered'
+  // `null` = no hay base para dar un número. Antes se inventaba uno.
+  const eta = etaLabel(data)
 
   return (
     <div className="relative overflow-hidden rounded-[22px] bg-ink px-5 py-[22px] text-white">
@@ -36,8 +38,10 @@ export function TrackingHero({ data, step, currentIdx, progress }: TrackingHeroP
         </div>
         <div className="mt-2 flex justify-between text-[12px] text-white/60">
           <span>Paso {currentIdx + 1} de 4</span>
-          {!isDelivered && (
-            <span className="tabular-nums">ETA {etaLabel(data.estimatedReadyAt)}</span>
+          {!isDelivered && eta && (
+            <span className="tabular-nums">
+              {eta === 'Ya está listo' || eta === 'En cualquier momento' ? eta : `Llega en ${eta}`}
+            </span>
           )}
         </div>
       </div>
