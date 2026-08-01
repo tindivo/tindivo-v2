@@ -2,6 +2,7 @@
 
 import type { ApiEnvelope } from '@tindivo/api-client'
 import { Button } from '@tindivo/ui'
+import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import { DataTable, EmptyState, fieldSm, Ico, SectionHeader, StatusBadge } from '@/components/admin'
 import { api, errMsg } from '@/lib/api'
@@ -92,7 +93,16 @@ export default function OrdersPage() {
               <EmptyState icon={<Ico.orders className="h-5 w-5" />} title="Aún no hay pedidos" />
             }
             columns={[
-              { key: 'short', header: 'Código', mono: true, render: (o) => `#${o.short_id}` },
+              {
+                key: 'short',
+                header: 'Código',
+                mono: true,
+                render: (o) => (
+                  <Link href={`/orders/${o.id}`} className="text-brand-dark hover:underline">
+                    #{o.short_id}
+                  </Link>
+                ),
+              },
               { key: 'cliente', header: 'Cliente', render: (o) => o.customer_name ?? '—' },
               {
                 key: 'estado',

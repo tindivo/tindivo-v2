@@ -37,3 +37,36 @@ export function sharePcts(counts: number[]): number[] {
   }
   return out
 }
+
+/** Fecha-hora en hora de Lima, corta. San Jacinto opera de noche: leer un
+ *  timestamp en UTC hace dudar de la hora justo cuando importa. */
+export const limaTime = (iso: string) =>
+  new Intl.DateTimeFormat('es-PE', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+    timeZone: 'America/Lima',
+  }).format(new Date(iso))
+
+export const limaDateTime = (iso: string) =>
+  new Intl.DateTimeFormat('es-PE', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: 'America/Lima',
+  }).format(new Date(iso))
+
+/** Duración legible: "45s", "3m 20s", "1h 12m". */
+export function duracion(seconds: number | null | undefined): string | null {
+  if (seconds == null || !Number.isFinite(seconds)) return null
+  const abs = Math.abs(Math.round(seconds))
+  const h = Math.floor(abs / 3600)
+  const m = Math.floor((abs % 3600) / 60)
+  const s = abs % 60
+  if (h > 0) return `${h}h ${m}m`
+  if (m > 0) return `${m}m ${s}s`
+  return `${s}s`
+}

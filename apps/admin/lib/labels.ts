@@ -74,6 +74,38 @@ export const CANCEL_LABEL: Record<string, string> = {
   no_show: 'No-show',
 }
 
+/**
+ * Eventos de `order_event_log` que SÍ salen en la línea de tiempo: los que no
+ * mueven el estado y por tanto no deja rastro `order_status_history`. Sin
+ * ellos, un pedido donde la cajera marcó listo se lee como un hueco entre dos
+ * estados. Lo que no esté aquí se pinta con su código crudo, no se esconde.
+ */
+export const TIMELINE_EVENT_LABEL: Record<string, string> = {
+  'order.ready': 'La cajera marcó la comida lista',
+  'order.arrived_customer': 'El motorizado llegó al domicilio',
+  'order.prep_extended': 'El negocio extendió la preparación',
+  'order.prepay_proof_uploaded': 'El cliente subió su comprobante',
+  'order.proof_verified': 'Comprobante verificado',
+  'order.validation_failed_retry': 'Comprobante rechazado · puede reintentar',
+  'order.active_order_block': 'Intentó otro pedido en el mismo negocio',
+  'order.transfer_requested': 'Traspaso solicitado',
+  'order.transfer_rejected': 'Traspaso rechazado',
+  'order.appeal_created': 'Apelación abierta',
+  'order.appeal_in_review': 'Apelación en revisión',
+  'order.appeal_resolved': 'Apelación resuelta',
+  'order.refund_registered': 'Devolución registrada',
+  'order.contingency_advance': 'Adelanto de contingencia',
+  'order.dispute_filed': 'Disputa presentada',
+  'order.advance_resolved': 'Adelanto resuelto',
+  'order.fallback_review_created': 'Revisión de respaldo creada',
+}
+
+export const CHARGE_TYPE_LABEL: Record<string, string> = {
+  commission: 'Comisión',
+  delivery_fee: 'Envío',
+  refund_charge: 'Cargo por devolución',
+}
+
 export const ADVANCE_REASONS: { reason: string; actor: 'restaurante' | 'tindivo' }[] = [
   { reason: 'Prepago: el restaurante no aceptó en 5 min', actor: 'restaurante' },
   { reason: 'Prepago: el restaurante rechazó la captura sin razón válida', actor: 'restaurante' },
