@@ -26,7 +26,9 @@ export interface DetailActions {
   onExtend: () => void | Promise<void>
   onReady: () => void | Promise<void>
   onCancel: (code: string, text: string) => void | Promise<void>
-  onCallDriver?: () => void
+  /** Escala a Tindivo por WhatsApp. Recibe el pedido: también lo llama la
+   *  tarjeta del tablero, donde no hay ningún detalle abierto. */
+  onCallDriver?: (o: OrderVM) => void
 }
 
 function Row({
@@ -1655,7 +1657,7 @@ export function DetailScreen({
         {order.state === 'buffer_p3' && actions.onCallDriver && (
           <button
             type="button"
-            onClick={actions.onCallDriver}
+            onClick={() => actions.onCallDriver?.(order)}
             className="tv-btn tv-btn-sm tv-btn-block"
             style={{ background: 'var(--tv-danger)', color: '#fff', border: 'none', flexShrink: 0 }}
           >

@@ -6,8 +6,10 @@ import type { DetailActions, DetailItem } from '@/components/dashboard/pedido-de
 import { PedidosDesktop, PedidosMobile } from '@/components/dashboard/pedidos-view'
 import { useDashboard } from '@/components/dashboard/shell'
 import { api } from '@/lib/api'
+import type { OrderVM } from '@/lib/orders/view-model'
 import { getColumn } from '@/lib/orders/view-model'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
+import { normalizeSupportPhone, supportWhatsappUrl, urgentDriverMessage } from '@/lib/support'
 
 export default function NegocioPedidosPage() {
   const {
@@ -62,6 +64,11 @@ export default function NegocioPedidosPage() {
         }
       })
   }, [])
+
+  // Una sola lectura del número, compartida por la tarjeta y el detalle. `null`
+  // = no hay número usable, y ambos enseñan el estado alternativo en vez de
+  // abrir un enlace que no lleva a nadie.
+  const supportPhone = normalizeSupportPhone(supportWhatsapp)
 
   // Datos derivados del pedido seleccionado (para deps honestas del efecto).
   const selRow = selectedId ? (rows.find((r) => r.id === selectedId) ?? null) : null
@@ -324,14 +331,28 @@ export default function NegocioPedidosPage() {
         setSelectedId(null)
         await refetchOrders()
       }),
-    onCallDriver: () => {
-      if (!selected) return
-      const phone = supportWhatsapp || '51906550166'
-      const msg = encodeURIComponent(
-        `Hola Tindivo, necesito un motorizado urgente para el pedido #${selected.id}. Lleva ${selected.bufferMinutes ?? '?'}min esperando.`,
-      )
-      window.open(`https://wa.me/${phone.replace(/\D/g, '')}?text=${msg}`, '_blank')
-    },
+    // Lo llaman la tarjeta del tablero (buffer_p2/p3) y el detalle. Recibe el
+    // pedido en vez de leer `selected`: desde la tarjeta no hay nada abierto.
+    //
+    // Sin número usable queda `undefined`, y ambos consumidores lo notan: el
+    // detalle esconde el botón (ya estaba condicionado a que exista el handler)
+    // y la tarjeta enseña el estado alternativo. Antes había un número
+    // hardcodeado detrás, así que una configuración rota abría WhatsApp igual y
+    // nadie se enteraba.
+    onCallDriver: supportPhone
+      ? (o: OrderVM) => {
+          const url = supportWhatsappUrl(
+            supportPhone,
+            urgentDriverMessage({
+              bizName,
+              shortId: o.id,
+              minutesWaiting: o.bufferMinutes,
+              addressRef: o.addressRef,
+            }),
+          )
+          window.open(url, '_blank', 'noopener,noreferrer')
+        }
+      : undefined,
   }
 
   const onConfirmPause = (min: number | null) =>
@@ -367,6 +388,8 @@ export default function NegocioPedidosPage() {
       setFreshSettledFor(null)
       setSelectedId(o.rowId)
     },
+    supportPhone,
+    onCallDriver: actions.onCallDriver,
     selected,
     detailItems,
     detailProofUrl,

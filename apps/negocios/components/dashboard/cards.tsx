@@ -1,9 +1,17 @@
 'use client'
 
 import type { OrderVM } from '@/lib/orders/view-model'
+import { formatSupportPhone, normalizeSupportPhone } from '@/lib/support'
 import { MS, mmss, PayBadgeMini, SourceBadgeMini, soles } from './primitives'
 
 type CardProps = { order: OrderVM; onOpen?: (o: OrderVM) => void; compact?: boolean }
+
+type CocinaCardProps = CardProps & {
+  /** El número de soporte tal cual sale de `app_settings`. La tarjeta lo valida
+   *  por su cuenta: no se fía de que llegue ya normalizado. */
+  supportPhone?: string | null
+  onCallDriver?: (o: OrderVM) => void
+}
 
 const COOKING_STATE_STYLE: Record<string, { border: string; borderW: string; bg: string }> = {
   cooking: { border: 'var(--tv-border)', borderW: '1px', bg: '#fff' },
@@ -223,8 +231,90 @@ function IdAddress({ order }: { order: OrderVM }) {
   )
 }
 
+/**
+ * Escalamiento a Tindivo desde la propia tarjeta del tablero.
+ *
+ * `buffer_p2`/`p3` significan que la comida está lista y nadie la ha tomado —
+ * el único camino de escalamiento que existe. El botón vivía solo dentro del
+ * detalle: la cajera veía el rojo en la tarjeta y tenía que abrir el pedido
+ * para encontrarlo. Ahora está a un toque, donde salta la alarma.
+ *
+ * Sin número usable se enseña el estado alternativo de prod: el aviso se ve,
+ * pero no hay enlace que lleve a ninguna parte.
+ */
+function UrgentDriverButton({
+  order,
+  supportPhone,
+  onCallDriver,
+}: {
+  order: OrderVM
+  supportPhone?: string | null
+  onCallDriver?: (o: OrderVM) => void
+}) {
+  if (order.state !== 'buffer_p2' && order.state !== 'buffer_p3') return null
+
+  const alarma = order.state === 'buffer_p3'
+  // Se revalida aquí aunque la página ya lo haga. Un comentario que dice "esto
+  // llega validado" no impide que mañana alguien pase el valor crudo: medido
+  // renderizando con '123', el botón salía anunciando "Pedir motorizado YA · 123".
+  const phone = normalizeSupportPhone(supportPhone)
+
+  // El estado alternativo va ANTES de la guarda del handler: sin número, la
+  // página deja `onCallDriver` en `undefined`, y salir por ahí se tragaría el
+  // aviso. La cajera tiene que ver que el escalamiento no está disponible.
+  if (!phone || !onCallDriver) {
+    return (
+      <div
+        style={{
+          marginTop: 7,
+          borderRadius: 9,
+          border: '1px dashed var(--tv-border)',
+          padding: '7px 9px',
+          fontSize: 11,
+          fontWeight: 600,
+          color: 'var(--tv-ink-muted)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 5,
+        }}
+      >
+        <MS name="phone_disabled" size={13} />
+        Sin número de soporte configurado
+      </div>
+    )
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        // La tarjeta entera abre el detalle: sin esto, escalar también lo abriría.
+        e.stopPropagation()
+        onCallDriver(order)
+      }}
+      className={`tv-btn tv-btn-sm tv-btn-block${alarma ? ' tv-pulse' : ''}`}
+      style={{
+        marginTop: 7,
+        flexShrink: 0,
+        ...(alarma
+          ? { background: 'var(--tv-danger)', color: '#fff', border: 'none' }
+          : { background: '#fff', color: '#C2410C', border: '1px solid #FDBA74' }),
+      }}
+    >
+      <MS name="call" size={14} filled={alarma} />
+      {alarma ? 'Pedir motorizado YA' : 'Pedir motorizado'} · {formatSupportPhone(phone)}
+    </button>
+  )
+}
+
 // ── Card: En cocina ───────────────────────────────────────────────────────────
-export function CocinaCard({ order, onOpen, compact = false }: CardProps) {
+export function CocinaCard({
+  order,
+  onOpen,
+  compact = false,
+  supportPhone,
+  onCallDriver,
+}: CocinaCardProps) {
   const ss = COOKING_STATE_STYLE[order.state] ?? {
     border: 'var(--tv-border)',
     borderW: '1px',
@@ -280,6 +370,8 @@ export function CocinaCard({ order, onOpen, compact = false }: CardProps) {
       )}
 
       <CookingStatusLine order={order} />
+
+      <UrgentDriverButton order={order} supportPhone={supportPhone} onCallDriver={onCallDriver} />
     </div>
   )
 }

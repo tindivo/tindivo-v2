@@ -23,6 +23,10 @@ export interface PedidosViewProps {
   routeOrders: OrderVM[]
   history: OrderVM[]
   onOpen: (o: OrderVM) => void
+  /** Dígitos internacionales del soporte, o `null` si no hay número usable. */
+  supportPhone: string | null
+  /** Escalar a Tindivo desde la tarjeta (buffer_p2/p3) y desde el detalle. */
+  onCallDriver?: (o: OrderVM) => void
   selected: OrderVM | null
   detailItems: DetailItem[] | null
   detailProofUrl: string | null
@@ -438,7 +442,15 @@ export function PedidosMobile(p: PedidosViewProps) {
           ))}
         {tab === 'cooking' &&
           (cooking.length > 0 ? (
-            cooking.map((o) => <CocinaCard key={o.rowId} order={o} onOpen={p.onOpen} />)
+            cooking.map((o) => (
+              <CocinaCard
+                key={o.rowId}
+                order={o}
+                onOpen={p.onOpen}
+                supportPhone={p.supportPhone}
+                onCallDriver={p.onCallDriver}
+              />
+            ))
           ) : (
             <ColEmpty tab="cooking" />
           ))}
@@ -748,7 +760,16 @@ export function PedidosDesktop(p: PedidosViewProps) {
           subtitle="Cocinando + esperando moto"
         >
           {cooking.length > 0 ? (
-            cooking.map((o) => <CocinaCard key={o.rowId} order={o} compact onOpen={p.onOpen} />)
+            cooking.map((o) => (
+              <CocinaCard
+                key={o.rowId}
+                order={o}
+                compact
+                onOpen={p.onOpen}
+                supportPhone={p.supportPhone}
+                onCallDriver={p.onCallDriver}
+              />
+            ))
           ) : (
             <div
               style={{
