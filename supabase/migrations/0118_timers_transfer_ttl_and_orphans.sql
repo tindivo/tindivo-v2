@@ -1,0 +1,45 @@
+-- =============================================================================
+-- 0118 · Limpieza de app_settings.timers: entra transferTtlSeconds, salen dos
+--        claves huérfanas
+-- =============================================================================
+--
+-- POR QUÉ
+--
+-- 1) `transferTtlSeconds` tiene DOS lectores vivos y no existe en la tabla:
+--      · `public.request_order_transfer` (0043:272), que calcula el
+--        `expires_at` de la solicitud de traspaso.
+--      · el timer de Inngest `transfer-request-timeout`
+--        (apps/api/lib/inngest/functions.ts:187), que duerme TTL+2s antes de
+--        llamar a `expire_order_transfers`.
+--    Ambos caen al default de 30 segundos escrito en el código, así que el TTL
+--    NO es ajustable sin desplegar, que es justo lo contrario de lo que la
+--    0043 pretendía.
+--
+--    La clave sí llegó a existir: la 0043:32 la insertó con `||`. La 0065
+--    reconstruyó `timers` entero con `jsonb_build_object(...)` y, al no
+--    incluirla en la lista, la borró sin ruido. Por eso aquí se usa
+--    `jsonb_build_object(...) || value` (mismo patrón que la 0117): si alguien
+--    ya ajustó el valor, se respeta.
+--
+-- 2) Dos claves editables que no lee nadie:
+--      · `cashAutoConfirmHours` (24) — perdió su lector en la 0112, cuando se
+--        retiró la auto-confirmación de efectivo. Seguía en el formulario de
+--        /admin/configuracion prometiendo un comportamiento que ya no existe:
+--        la cajera confirma a mano y no hay plazo automático.
+--      · `proofValidationMinutes` (5) — la introdujo la 0065 y nunca tuvo
+--        lector, ni en SQL ni en TypeScript.
+--    Se eliminan de la tabla; en el mismo commit salen del formulario
+--    (apps/admin/lib/labels.ts) y del schema Zod del endpoint de settings.
+--
+-- QUÉ NO CAMBIA
+-- El comportamiento del traspaso. El TTL efectivo sigue siendo 30 s: lo que
+-- cambia es de dónde sale. Recordatorio de qué pasa al vencer: el silencio
+-- ACEPTA (`apply_order_transfer(..., 'expired')`), el pedido pasa al motorizado
+-- que lo pidió; no se cancela ni vuelve al pool.
+-- =============================================================================
+
+update public.app_settings
+   set value = (jsonb_build_object('transferTtlSeconds', 30) || value)
+               - 'cashAutoConfirmHours'
+               - 'proofValidationMinutes'
+ where key = 'timers';

@@ -132,7 +132,7 @@ export const TIMER_FIELDS: [string, string][] = [
   ['prepExtensionMinutes', 'Prórroga prep. (min)'],
   ['maxPrepExtensions', 'Máx. prórrogas'],
   ['noShowWaitMinutes', 'Espera no-show (min)'],
-  ['cashAutoConfirmHours', 'Auto-confirma efectivo (h)'],
+  ['transferTtlSeconds', 'TTL traspaso (s)'],
 ]
 
 export const RANGES: [string, string][] = [

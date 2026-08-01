@@ -30,7 +30,7 @@ const EDITABLE: Record<string, z.ZodTypeAny> = {
     prepExtensionMinutes: minutes,
     maxPrepExtensions: z.number().int().nonnegative().max(10),
     noShowWaitMinutes: minutes,
-    cashAutoConfirmHours: z.number().int().positive().max(168),
+    transferTtlSeconds: z.number().int().min(5).max(300),
   }),
   platform_schedule: z.object({
     days: z.array(z.enum(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'])).max(7),
@@ -46,6 +46,15 @@ const EDITABLE: Record<string, z.ZodTypeAny> = {
       .max(200),
   }),
 }
+
+/**
+ * Ajustes cuyo objeto en la BD tiene MÁS claves que las que edita el panel: el
+ * PATCH fusiona sobre el valor actual en vez de reemplazarlo. `timers` guarda
+ * cuatro claves que el formulario no envía (`paymentMinutes`,
+ * `queueLeadMinutes`, `travelMinutesMin`, `travelMinutesMax`) y, como
+ * `z.object` descarta lo desconocido, un "Guardar tiempos" las borraba.
+ */
+const MERGED_KEYS = new Set(['timers'])
 
 const PatchSchema = z.object({ key: z.string(), value: z.unknown() })
 
@@ -75,8 +84,19 @@ export async function PATCH(req: Request): Promise<Response> {
     const body = PatchSchema.parse(await req.json())
     const validator = EDITABLE[body.key]
     if (!validator) throw new DomainError('Ese ajuste no es editable', 'forbidden')
-    const value = validator.parse(body.value) as AppSettingValue
+    const parsed = validator.parse(body.value)
     const service = createServiceClient()
+    let value = parsed as AppSettingValue
+    if (MERGED_KEYS.has(body.key)) {
+      const { data: current, error: readError } = await service
+        .from('app_settings')
+        .select('value')
+        .eq('key', body.key)
+        .single()
+      if (readError) throw new Error(readError.message)
+      const base = (current.value ?? {}) as Record<string, unknown>
+      value = { ...base, ...(parsed as Record<string, unknown>) } as AppSettingValue
+    }
     const { data, error } = await service
       .from('app_settings')
       .update({ value, updated_by: user.id })
