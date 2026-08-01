@@ -15,7 +15,7 @@ import {
   PAYMENT_INTENT_LABEL,
   PAYMENT_REAL_LABEL,
 } from '@/lib/labels'
-import { entryLabel, type OrderDetailResponse } from '@/lib/order-detail'
+import { entryLabel, type OrderDetailResponse, PROOF_STATUS } from '@/lib/order-detail'
 
 function Card({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -44,6 +44,7 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
   const { id } = use(params)
   const [d, setD] = useState<OrderDetailResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [proofUrl, setProofUrl] = useState<string | null>(null)
 
   const load = useCallback(() => {
     api
@@ -55,6 +56,22 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
   useEffect(() => {
     load()
   }, [load])
+
+  // La URL firmada caduca a los 120s (el TTL del patrón existente), así que se
+  // pide aparte del detalle y se vuelve a pedir en cada refresco: si Yolvi deja
+  // la pestaña abierta, la imagen se recarga en vez de romperse.
+  const tieneComprobante =
+    d?.order.payment_intent === 'prepaid' && Boolean(d?.order.comprobante_prepago_url)
+  useEffect(() => {
+    if (!tieneComprobante) {
+      setProofUrl(null)
+      return
+    }
+    api
+      .get<ApiEnvelope<{ url: string | null }>>(`/admin/orders/${id}/prepay-proof`)
+      .then((r) => setProofUrl(r.data.url))
+      .catch(() => setProofUrl(null))
+  }, [tieneComprobante, id])
 
   // Un pedido vivo cambia mientras Yolvi lo mira. Se refresca solo cada 15s
   // mientras esté activo y se detiene al cerrarse: un pedido entregado ya no
@@ -181,6 +198,51 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
             />
           )}
         </Card>
+
+        {tieneComprobante && (
+          <Card title="Comprobante de prepago">
+            <Row
+              label="Estado"
+              value={(() => {
+                const ps = PROOF_STATUS[str(o.payment_proof_status) ?? '']
+                return ps ? (
+                  <StatusBadge label={ps.label} tone={ps.tone} />
+                ) : (
+                  (str(o.payment_proof_status) ?? 'Sin revisar')
+                )
+              })()}
+            />
+            <Row
+              label="Intentos"
+              value={o.proof_attempt != null ? num(Number(o.proof_attempt)) : null}
+            />
+            <Row
+              label="Verificado"
+              value={
+                iso(o.payment_verified_at)
+                  ? limaDateTime(iso(o.payment_verified_at) as string)
+                  : null
+              }
+            />
+            <Row
+              label="Por"
+              value={d.verifiedBy ? (d.verifiedBy.full_name ?? d.verifiedBy.email) : null}
+            />
+            {proofUrl ? (
+              <a href={proofUrl} target="_blank" rel="noreferrer noopener" className="mt-2 block">
+                {/* <img> y no next/image: la URL es firmada y caduca a los 120s, así que
+                    el optimizador la revalidaría contra un host que ya no existe. */}
+                <img
+                  src={proofUrl}
+                  alt="Comprobante de pago enviado por el cliente"
+                  className="max-h-80 w-full rounded-xl border border-ink/10 object-contain"
+                />
+              </a>
+            ) : (
+              <p className="mt-2 text-[12px] text-ink-subtle">Cargando la imagen…</p>
+            )}
+          </Card>
+        )}
 
         {o.drivers && (
           <Card title="Motorizado">

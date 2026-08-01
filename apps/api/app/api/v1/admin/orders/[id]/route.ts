@@ -144,9 +144,24 @@ export async function GET(
       }
     }
 
+    // Quién verificó el comprobante. `payment_verified_by` es un uuid y a las
+    // 22:40 un uuid no dice nada; se resuelve aquí para no obligar al front a
+    // una segunda llamada. Se consulta solo si hay a quién resolver.
+    let verifiedBy: { full_name: string | null; email: string } | null = null
+    const verifierId = (order as { payment_verified_by?: string | null }).payment_verified_by
+    if (verifierId) {
+      const { data } = await service
+        .from('users')
+        .select('full_name, email')
+        .eq('id', verifierId)
+        .maybeSingle()
+      verifiedBy = data ?? null
+    }
+
     return ok(
       {
         order,
+        verifiedBy,
         items: items.data ?? [],
         charges: charges.data ?? [],
         strikes: strikes.data ?? [],

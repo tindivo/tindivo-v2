@@ -52,6 +52,8 @@ export interface OrderDetailRow {
 
 export interface OrderDetailResponse {
   order: OrderDetailRow
+  /** Quién verificó el comprobante de prepago, ya resuelto por el endpoint. */
+  verifiedBy: { full_name: string | null; email: string } | null
   items: OrderDetailItem[]
   charges: OrderCharge[]
   strikes: OrderStrike[]
@@ -71,4 +73,13 @@ export function entryLabel(e: TimelineEntry): { label: string; tone: Tone } {
     return { label: s?.label ?? e.code, tone: s?.tone ?? 'neutral' }
   }
   return { label: TIMELINE_EVENT_LABEL[e.code] ?? e.code, tone: 'brand' }
+}
+
+/** Estado del comprobante de prepago. `payment_proof_status` es `text` en la
+ *  base, no un enum: los tres valores salen de `validate_order` (verified,
+ *  rejected) y de la subida del cliente (pending). */
+export const PROOF_STATUS: Record<string, { label: string; tone: Tone }> = {
+  pending: { label: 'Sin revisar', tone: 'warning' },
+  verified: { label: 'Verificado', tone: 'success' },
+  rejected: { label: 'Rechazado', tone: 'danger' },
 }
