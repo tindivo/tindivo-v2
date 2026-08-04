@@ -14,6 +14,74 @@ export type Database = {
   }
   public: {
     Tables: {
+      address_directory: {
+        Row: {
+          accuracy_m: number | null
+          created_at: string
+          customer_name: string | null
+          id: string
+          imported_at: string | null
+          is_default: boolean
+          last_used_at: string | null
+          lat: number | null
+          legacy_address_id: string | null
+          legacy_created_at: string | null
+          lng: number | null
+          phone: string
+          reference: string
+          source: Database["public"]["Enums"]["address_source"]
+          times_used: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          accuracy_m?: number | null
+          created_at?: string
+          customer_name?: string | null
+          id?: string
+          imported_at?: string | null
+          is_default?: boolean
+          last_used_at?: string | null
+          lat?: number | null
+          legacy_address_id?: string | null
+          legacy_created_at?: string | null
+          lng?: number | null
+          phone: string
+          reference: string
+          source: Database["public"]["Enums"]["address_source"]
+          times_used?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          accuracy_m?: number | null
+          created_at?: string
+          customer_name?: string | null
+          id?: string
+          imported_at?: string | null
+          is_default?: boolean
+          last_used_at?: string | null
+          lat?: number | null
+          legacy_address_id?: string | null
+          legacy_created_at?: string | null
+          lng?: number | null
+          phone?: string
+          reference?: string
+          source?: Database["public"]["Enums"]["address_source"]
+          times_used?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "address_directory_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_alerts: {
         Row: {
           created_at: string
@@ -1587,6 +1655,7 @@ export type Database = {
       }
       orders: {
         Row: {
+          address_directory_id: string | null
           appears_in_queue_at: string | null
           arrived_at_customer_accuracy_m: number | null
           arrived_at_customer_at: string | null
@@ -1629,6 +1698,7 @@ export type Database = {
             | null
           delivery_fee: number
           delivery_fee_charged: number | null
+          delivery_fee_source: string | null
           delivery_maps_url: string | null
           delivery_method: Database["public"]["Enums"]["delivery_method"]
           delivery_reference: string | null
@@ -1681,6 +1751,7 @@ export type Database = {
           yape_confirmed: boolean
         }
         Insert: {
+          address_directory_id?: string | null
           appears_in_queue_at?: string | null
           arrived_at_customer_accuracy_m?: number | null
           arrived_at_customer_at?: string | null
@@ -1723,6 +1794,7 @@ export type Database = {
             | null
           delivery_fee: number
           delivery_fee_charged?: number | null
+          delivery_fee_source?: string | null
           delivery_maps_url?: string | null
           delivery_method?: Database["public"]["Enums"]["delivery_method"]
           delivery_reference?: string | null
@@ -1775,6 +1847,7 @@ export type Database = {
           yape_confirmed?: boolean
         }
         Update: {
+          address_directory_id?: string | null
           appears_in_queue_at?: string | null
           arrived_at_customer_accuracy_m?: number | null
           arrived_at_customer_at?: string | null
@@ -1817,6 +1890,7 @@ export type Database = {
             | null
           delivery_fee?: number
           delivery_fee_charged?: number | null
+          delivery_fee_source?: string | null
           delivery_maps_url?: string | null
           delivery_method?: Database["public"]["Enums"]["delivery_method"]
           delivery_reference?: string | null
@@ -1869,6 +1943,13 @@ export type Database = {
           yape_confirmed?: boolean
         }
         Relationships: [
+          {
+            foreignKeyName: "orders_address_directory_id_fkey"
+            columns: ["address_directory_id"]
+            isOneToOne: false
+            referencedRelation: "address_directory"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "orders_business_id_fkey"
             columns: ["business_id"]
@@ -2741,6 +2822,7 @@ export type Database = {
       request_order_validation: {
         Args: { p_business_user_id: string; p_order_id: string }
         Returns: {
+          address_directory_id: string | null
           appears_in_queue_at: string | null
           arrived_at_customer_accuracy_m: number | null
           arrived_at_customer_at: string | null
@@ -2783,6 +2865,7 @@ export type Database = {
             | null
           delivery_fee: number
           delivery_fee_charged: number | null
+          delivery_fee_source: string | null
           delivery_maps_url: string | null
           delivery_method: Database["public"]["Enums"]["delivery_method"]
           delivery_reference: string | null
@@ -2964,6 +3047,7 @@ export type Database = {
       }
     }
     Enums: {
+      address_source: "backfill" | "driver_verified" | "admin_curated"
       business_primary_capability:
         | "drivers_only"
         | "catalog_pickup"
@@ -3170,6 +3254,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      address_source: ["backfill", "driver_verified", "admin_curated"],
       business_primary_capability: [
         "drivers_only",
         "catalog_pickup",
