@@ -57,7 +57,7 @@ Entre las vivas están los dos triggers que sostienen la operación diaria.
 | 8 | `pay_settlement` | `0026_contingency_fund_key_fix.sql` | `= greatest(0, balance_due - v_repl)` | ✅ (ver R-L2) |
 | 9 | `update_business_balance` | `0009_function_grants.sql` | `+= tindivo_commission` / `-=` | ❌ huérfana (ver M-1) |
 | 10 | `handle_prepaid_cancel_auto_debt` | `0077_decouple_contingency_advances.sql` | `+= order_amount + delivery_fee` | ❌ huérfana |
-| 11 | `register_appeal_refund(uuid,numeric,text,uuid)` | `0073_business_charges_table_and_triggers.sql` | `+= p_amount` | ❌ sobrecarga muerta (ver R-L3) |
+| 11 | `register_appeal_refund(uuid,numeric,text,uuid)` | `0077_decouple_contingency_advances.sql` (creada en `0073`) | `+= p_amount` | ❌ sobrecarga muerta (ver R-L3) |
 
 Lecturas de `balance_due` en la UI, que por tanto muestran el campo deprecado y
 no el ledger:
@@ -226,12 +226,32 @@ muerta.
 
 | firma | qué hace con el dinero | origen | ¿la llaman? |
 |---|---|---|---|
-| `(uuid, text, numeric)`<br>`p_report_id, p_refund_proof_path, p_amount` | `PERFORM public.create_contingency_advance(… 'restaurante' …)` → descuenta el fondo y sube `balance_due`. **No escribe `business_charges`** | creada en `0067_appeal_resolution_flow.sql:401`, redefinida en `0077_decouple_contingency_advances.sql:12` | ✅ `apps/api/app/api/v1/admin/appeals/[id]/refund/route.ts:30-34` |
+| `(uuid, text, numeric)`<br>`p_report_id, p_refund_proof_path, p_amount` | `PERFORM public.create_contingency_advance(… 'restaurante' …)` → intenta descontar el fondo y sube `balance_due`. **No escribe `business_charges`** | creada en `0067_appeal_resolution_flow.sql:401` y **nunca modificada desde entonces** | ✅ `apps/api/app/api/v1/admin/appeals/[id]/refund/route.ts:30-34` |
 | `(uuid, numeric, text, uuid)`<br>`p_report_id, p_amount, p_refund_proof_path, p_admin_user_id` | `INSERT INTO business_charges (… report_id …, 'refund_charge' …)` + `balance_due +=` | `0073_business_charges_table_and_triggers.sql:140` | ❌ nadie |
 
-La secuencia histórica es legible en las migraciones: **`0073` puso los appeals
-en el ledger, y `0077` sacó de ahí a la sobrecarga viva** para pasarla por
-contingencia. Nunca se borró la anterior.
+> **CORRECCIÓN (2026-08-04).** La primera versión de este documento decía que
+> "`0073` puso los appeals en el ledger y `0077` sacó de ahí a la sobrecarga
+> viva". **Es falso y está al revés.** La secuencia real, verificada firma por
+> firma, es la siguiente.
+
+| migración | qué definió | efecto real |
+| --- | --- | --- |
+| `0067_appeal_resolution_flow.sql:401` | la de **3 argumentos**, que llama a `create_contingency_advance` | quedó viva desde el día uno y **nunca se modificó** |
+| `0073_business_charges_table_and_triggers.sql:140` | una de **4 argumentos** que escribe en `business_charges` | intento 1 de moverlo al ledger |
+| `0077_decouple_contingency_advances.sql:12` | **la misma de 4 argumentos**, bajo el título *"register_appeal_refund (Desacoplado de contingency_advances)"* | intento 2 |
+
+**Los dos intentos fallaron por la misma razón: `CREATE OR REPLACE FUNCTION` con
+una firma distinta no reemplaza nada — crea una función nueva.** La de 3
+argumentos sobrevivió intacta a las dos migraciones, y
+`apps/api/app/api/v1/admin/appeals/[id]/refund/route.ts:30-34` nunca se repuntó.
+`grep` de `DROP FUNCTION … register_appeal_refund` sobre todas las migraciones
+devuelve **cero resultados**.
+
+Es decir: **el desacoplamiento que la cabecera de `0077` declara como hecho
+nunca surtió efecto.** No hubo una decisión de volver a contingencia; hubo dos
+refactors dados por terminados sin verificar que el camino vivo hubiera
+cambiado. Eso agrava el riesgo en vez de atenuarlo: el mismo error puede
+repetirse en cualquier RPC que se "reemplace" cambiándole la firma.
 
 `.agents/AGENTS.md:78-79`:
 
