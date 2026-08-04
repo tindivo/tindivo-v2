@@ -6,7 +6,7 @@
 ejecutó y se vio; nada aquí es estimación.
 
 Este documento **no arregla nada**. Registra cuatro riesgos estructurales y
-cuatro hallazgos menores para que la decisión sea explícita y con fecha, en vez
+cinco hallazgos menores para que la decisión sea explícita y con fecha, en vez
 de que alguien los redescubra dentro de seis meses leyendo un `UPDATE` suelto.
 
 Rige `.agents/AGENTS.md §2.2`: *"Gate humano obligatorio: cualquier cambio que
@@ -408,6 +408,96 @@ El `FIX #5` ya está aplicado en la función viva
 (`0102_fix_fraud_claim_actor_charged.sql`), que inserta `'restaurante'`. El test
 debería estar verde y su cabecera afirma lo contrario. Quien lo lea va a
 concluir que el bug sigue abierto.
+
+### M-5 · 🔴 `register_appeal_refund` de 4 argumentos es ejecutable por `anon`
+
+Descubierto el 2026-08-04 al preparar `0126`. ACL medida:
+
+```
+register_appeal_refund(uuid,numeric,text,uuid)
+  {=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,…}
+   ↑ el "=X" inicial es PUBLIC
+```
+
+| firma | service_role | authenticated | anon |
+| --- | --- | --- | --- |
+| `(uuid,numeric,text,uuid)` | ✅ | ✅ | **✅** |
+| `(uuid,text,numeric)` | ✅ | ✅ | ❌ |
+| `resolve_fraud_claim` (referencia sana) | ✅ | ❌ | ❌ |
+
+Ni `0073` ni `0077` emitieron `REVOKE`/`GRANT` para esa firma, así que heredó el
+default de PostgreSQL, que concede `EXECUTE` a `PUBLIC`. **Y a diferencia de la
+de 3 argumentos, no comprueba el rol admin por dentro**: la de 3 tiene
+`IF NOT public.current_user_has_role('admin') THEN RAISE`, la de 4 no.
+
+Es una función `SECURITY DEFINER` que inserta en el ledger y sube `balance_due`,
+invocable desde el PostgREST con la anon key. La explotación exige conocer un
+`report_id` válido —un uuid no adivinable—, así que el riesgo práctico es bajo.
+Pero es una función de dinero abierta a `anon` y hay que cerrarla.
+
+### La misma causa raíz, por tercera vez
+
+`CREATE OR REPLACE FUNCTION` con una firma distinta **no reemplaza: crea una
+función nueva**, con ACL por defecto y sin heredar nada de la anterior. En este
+repo ya mordió tres veces:
+
+1. **`0073`** creó la sobrecarga de 4 argumentos de `register_appeal_refund`
+   creyendo reemplazar la de 3. No la reemplazó, y no emitió grants.
+2. **`0077`** repitió el intento sobre la misma firma, con el mismo resultado, y
+   tampoco emitió grants. El desacoplamiento que declara nunca ocurrió (R-L3).
+3. **Hoy** se descubre que la función así creada quedó ejecutable por `anon`
+   (M-5), porque nadie revocó el default de PostgreSQL.
+
+Las migraciones `0031`, `0032` y `0033` sí lo hacen bien, y por eso
+`create_business_manual_order` está sana: las tres repiten el bloque
+`revoke … from public, anon, authenticated; grant … to service_role` cada vez
+que cambian la firma.
+
+> ## REGLA
+>
+> **Toda migración que cambie la firma de una función emite `REVOKE` + `GRANT`
+> en el mismo archivo, sin excepción.**
+>
+> Con firma explícita y completa, nunca `DROP FUNCTION nombre` a secas. Y si la
+> intención es sustituir una versión anterior, el `DROP FUNCTION` de la firma
+> vieja va en la misma migración — si no, quedan las dos vivas y el llamador
+> sigue apuntando a la que ya se daba por muerta.
+>
+> Verificación de cierre, obligatoria tras cualquier cambio de firma:
+>
+> ```sql
+> SELECT p.oid::regprocedure::text,
+>        has_function_privilege('anon', p.oid, 'EXECUTE')          AS anon,
+>        has_function_privilege('authenticated', p.oid, 'EXECUTE') AS authenticated,
+>        has_function_privilege('service_role', p.oid, 'EXECUTE')  AS service_role
+> FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+> WHERE n.nspname = 'public' AND p.proname = '<la función>';
+> ```
+>
+> Debe devolver **una sola fila**, y con los privilegios esperados. Más de una
+> fila significa que quedaron sobrecargas conviviendo.
+
+---
+
+## Qué cierra la migración 0126
+
+Spec en `Docs/spec/spec-0126-eliminar-contingencia.md`. Alcance decidido por
+Jesús el 2026-08-04: **eliminar contingencia por completo**.
+
+| riesgo | ¿lo cierra? | cómo |
+| --- | --- | --- |
+| **R-L4** · ledger paralelo | ✅ **completo** | desaparece la tabla `contingency_advances`, sus dos enums y las tres funciones de `0077`. Sin ledger paralelo, `SUM(business_charges)` vuelve a ser una medida completa de la deuda |
+| **R-L2** · `pay_settlement` | ⚠️ **la mitad** | se le quita el bloque de reposición del fondo, que era **el segundo decremento**. Queda pendiente que marque los cargos como `settled`, que es la otra mitad |
+| **R-L3** · sobrecargas invertidas | ✅ **por obligación** | la de 3 argumentos llama a `create_contingency_advance`: **no puede sobrevivir al borrado**. El endpoint se repunta a la de 4 y la vieja se borra con firma explícita |
+| **M-2** · funciones muertas | ✅ | `handle_prepaid_cancel_auto_debt` y la sobrecarga de 4 argumentos dejan de estar duplicadas |
+| **M-1** · `update_business_balance` | ✅ | entra en el mismo `DROP` |
+| **M-4** · comentario obsoleto | ✅ | el test se toca igual para quitar el assert (A) |
+| **M-5** · `anon` puede ejecutar | ✅ | `REVOKE` + `GRANT` a `service_role` y comprobación de rol interna, en la misma migración |
+| **R-L1** · `balance_due` deprecado | ❌ **no lo toca** | sigue siendo el rediseño mayor. Pero al eliminar contingencia, `balance_due` **pasa a ser reconstruible**: era contingencia lo único que lo movía sin dejar rastro en el ledger. 0126 no lo resuelve, lo **habilita** |
+
+Ese último renglón es el que más importa: la opción "`balance_due` es un cache
+reconstruible" no estaba disponible mientras contingencia existiera. Después de
+0126, sí.
 
 ---
 
