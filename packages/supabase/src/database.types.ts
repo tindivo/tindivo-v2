@@ -7,10 +7,30 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -502,95 +522,6 @@ export type Database = {
           },
           {
             foreignKeyName: "cash_settlements_resolved_by_fkey"
-            columns: ["resolved_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      contingency_advances: {
-        Row: {
-          actor_charged: Database["public"]["Enums"]["contingency_actor_charged"]
-          amount: number
-          created_at: string
-          customer_phone: string | null
-          customer_user_id: string | null
-          dispute_note: string | null
-          disputed_at: string | null
-          id: string
-          operator: string | null
-          order_id: string
-          proof_url: string | null
-          reason: string
-          replenished_at: string | null
-          resolved_at: string | null
-          resolved_by: string | null
-          status: Database["public"]["Enums"]["contingency_advance_status"]
-          updated_at: string
-        }
-        Insert: {
-          actor_charged: Database["public"]["Enums"]["contingency_actor_charged"]
-          amount: number
-          created_at?: string
-          customer_phone?: string | null
-          customer_user_id?: string | null
-          dispute_note?: string | null
-          disputed_at?: string | null
-          id?: string
-          operator?: string | null
-          order_id: string
-          proof_url?: string | null
-          reason: string
-          replenished_at?: string | null
-          resolved_at?: string | null
-          resolved_by?: string | null
-          status?: Database["public"]["Enums"]["contingency_advance_status"]
-          updated_at?: string
-        }
-        Update: {
-          actor_charged?: Database["public"]["Enums"]["contingency_actor_charged"]
-          amount?: number
-          created_at?: string
-          customer_phone?: string | null
-          customer_user_id?: string | null
-          dispute_note?: string | null
-          disputed_at?: string | null
-          id?: string
-          operator?: string | null
-          order_id?: string
-          proof_url?: string | null
-          reason?: string
-          replenished_at?: string | null
-          resolved_at?: string | null
-          resolved_by?: string | null
-          status?: Database["public"]["Enums"]["contingency_advance_status"]
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "contingency_advances_customer_user_id_fkey"
-            columns: ["customer_user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "contingency_advances_operator_fkey"
-            columns: ["operator"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "contingency_advances_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "contingency_advances_resolved_by_fkey"
             columns: ["resolved_by"]
             isOneToOne: false
             referencedRelation: "users"
@@ -2572,17 +2503,6 @@ export type Database = {
         }
         Returns: Json
       }
-      create_contingency_advance: {
-        Args: {
-          p_actor_charged: Database["public"]["Enums"]["contingency_actor_charged"]
-          p_amount: number
-          p_operator: string
-          p_order_id: string
-          p_proof_url?: string
-          p_reason: string
-        }
-        Returns: Json
-      }
       create_customer_incident: {
         Args: {
           p_description?: string
@@ -2709,14 +2629,6 @@ export type Database = {
         }
         Returns: Json
       }
-      dispute_contingency_advance: {
-        Args: {
-          p_advance_id: string
-          p_business_user_id: string
-          p_note: string
-        }
-        Returns: Json
-      }
       driver_businesses: {
         Args: never
         Returns: {
@@ -2793,24 +2705,15 @@ export type Database = {
         Args: { p_phone: string; p_user_id: string }
         Returns: undefined
       }
-      register_appeal_refund:
-        | {
-            Args: {
-              p_admin_user_id: string
-              p_amount: number
-              p_refund_proof_path: string
-              p_report_id: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_amount: number
-              p_refund_proof_path: string
-              p_report_id: string
-            }
-            Returns: Json
-          }
+      register_appeal_refund: {
+        Args: {
+          p_admin_user_id: string
+          p_amount: number
+          p_refund_proof_path: string
+          p_report_id: string
+        }
+        Returns: Json
+      }
       request_order_transfer: {
         Args: {
           p_order_id: string
@@ -2934,15 +2837,6 @@ export type Database = {
           p_id: string
           p_note: string
           p_resolved_amount: number
-        }
-        Returns: Json
-      }
-      resolve_contingency_advance: {
-        Args: {
-          p_advance_id: string
-          p_note: string
-          p_resolved_amount: number
-          p_resolved_by: string
         }
         Returns: Json
       }
@@ -3071,8 +2965,6 @@ export type Database = {
         | "disputed"
         | "resolved"
         | "auto_assumed_confirmed"
-      contingency_actor_charged: "restaurante" | "tindivo"
-      contingency_advance_status: "activo" | "disputado" | "cancelado"
       delivery_method: "delivery" | "pickup"
       distance_band: "near" | "far"
       fraud_claim_status: "pending" | "approved" | "rejected"
@@ -3252,6 +3144,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       address_source: ["backfill", "driver_verified", "admin_curated"],
@@ -3281,8 +3176,6 @@ export const Constants = {
         "resolved",
         "auto_assumed_confirmed",
       ],
-      contingency_actor_charged: ["restaurante", "tindivo"],
-      contingency_advance_status: ["activo", "disputado", "cancelado"],
       delivery_method: ["delivery", "pickup"],
       distance_band: ["near", "far"],
       fraud_claim_status: ["pending", "approved", "rejected"],
@@ -3346,3 +3239,4 @@ export const Constants = {
     },
   },
 } as const
+
