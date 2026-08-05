@@ -94,9 +94,6 @@ export const TIMELINE_EVENT_LABEL: Record<string, string> = {
   'order.appeal_in_review': 'Apelación en revisión',
   'order.appeal_resolved': 'Apelación resuelta',
   'order.refund_registered': 'Devolución registrada',
-  'order.contingency_advance': 'Adelanto de contingencia',
-  'order.dispute_filed': 'Disputa presentada',
-  'order.advance_resolved': 'Adelanto resuelto',
   'order.fallback_review_created': 'Revisión de respaldo creada',
 }
 

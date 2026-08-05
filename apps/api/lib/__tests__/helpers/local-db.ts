@@ -311,7 +311,6 @@ export async function sumPendingLedgerDebt(businessId: string): Promise<number> 
 // Orden: claims → orders → businesses → auth.users (cascade limpia el resto).
 export async function cleanup(seed: SeededOrder): Promise<void> {
   await localClient.from('business_charges').delete().eq('order_id', seed.orderId)
-  await localClient.from('contingency_advances').delete().eq('order_id', seed.orderId)
   await localClient.from('fraud_coverage_claims').delete().eq('order_id', seed.orderId)
   // `domain_events` referencia el pedido por `aggregate_id`, SIN foreign key, así que no
   // cae por cascada al borrar la orden: hay que borrarlo explícitamente o cada corrida

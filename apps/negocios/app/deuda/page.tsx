@@ -128,7 +128,6 @@ const EVENT_LABELS: Record<string, string> = {
   'order.appeal_in_review': 'Admin marcó en revisión',
   'order.appeal_resolved': 'Apelación resuelta',
   'order.refund_registered': 'Devolución registrada',
-  'order.contingency_advance': 'Devolución registrada',
   'order.fallback_review_created': 'Revisión automática (sin apelación 24h)',
 }
 

@@ -197,14 +197,8 @@ export const VEHICLE_TYPES = ['moto', 'bici', 'pie', 'auto'] as const
 export const VehicleTypeSchema = z.enum(VEHICLE_TYPES)
 export type VehicleType = z.infer<typeof VehicleTypeSchema>
 
-// --- Adelanto del fondo de contingencia ---
-export const CONTINGENCY_ADVANCE_STATUSES = ['activo', 'disputado', 'cancelado'] as const
-export const ContingencyAdvanceStatusSchema = z.enum(CONTINGENCY_ADVANCE_STATUSES)
-export type ContingencyAdvanceStatus = z.infer<typeof ContingencyAdvanceStatusSchema>
-
-export const CONTINGENCY_ACTORS_CHARGED = ['restaurante', 'tindivo'] as const
-export const ContingencyActorChargedSchema = z.enum(CONTINGENCY_ACTORS_CHARGED)
-export type ContingencyActorCharged = z.infer<typeof ContingencyActorChargedSchema>
+// Los enums del fondo de contingencia se eliminaron en la migración 0123 junto
+// con la tabla y sus tres RPC. Ver Docs/spec/spec-0123-eliminar-contingencia.md.
 
 // --- Transferencia entre motorizados (modelado; UI fuera de Fase 1) ---
 export const TRANSFER_REQUEST_STATUSES = [
@@ -234,7 +228,5 @@ export const DOMAIN_ENUMS = {
   cancel_reason: CANCEL_REASONS,
   cancel_reason_detail: CANCEL_REASON_DETAILS,
   vehicle_type: VEHICLE_TYPES,
-  contingency_advance_status: CONTINGENCY_ADVANCE_STATUSES,
-  contingency_actor_charged: CONTINGENCY_ACTORS_CHARGED,
   transfer_request_status: TRANSFER_REQUEST_STATUSES,
 } as const

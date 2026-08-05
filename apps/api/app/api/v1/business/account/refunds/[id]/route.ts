@@ -71,22 +71,10 @@ export async function GET(
       targetOrderId = report.order_id
     }
 
-    // Fallback: si no hay reporte ni cargo, buscar en contingency_advances
-    let advance: any = null
+    // El fallback a contingency_advances desapareció con la migración 0123: esa
+    // tabla ya no existe y toda devolución vive en business_charges.
     if (!report && !charge) {
-      // biome-ignore lint/suspicious/noExplicitAny: contingency_advances table
-      const { data: rawAdv } = await (service as any)
-        .from('contingency_advances')
-        .select('id, order_id, amount, reason, created_at')
-        .eq('id', id)
-        .maybeSingle()
-
-      if (rawAdv) {
-        advance = rawAdv
-        targetOrderId = rawAdv.order_id
-      } else {
-        throw new DomainError('Detalle de devolución no encontrado', 'not_found')
-      }
+      throw new DomainError('Detalle de devolución no encontrado', 'not_found')
     }
 
     const getSignedUrl = async (pathOrUrl: string | null | undefined): Promise<string | null> => {
@@ -178,36 +166,23 @@ export async function GET(
 
     return ok(
       {
-        id: report?.id ?? charge?.id ?? advance?.id ?? id,
+        id: report?.id ?? charge?.id ?? id,
         type: report?.type ?? 'prepay_cancellation',
         reason:
-          report?.description ||
-          report?.type ||
-          charge?.description ||
-          advance?.reason ||
-          'Devolución al cliente',
+          report?.description || report?.type || charge?.description || 'Devolución al cliente',
         resolutionNotes: report?.resolution_note ?? null,
         refundAmount: report?.refund_amount
           ? Number(report.refund_amount)
           : charge
             ? Number(charge.amount)
-            : advance
-              ? Number(advance.amount)
-              : 0,
+            : 0,
         appealStatus: report?.appeal_status ?? 'resolved',
-        createdAt:
-          report?.created_at ??
-          charge?.created_at ??
-          advance?.created_at ??
-          new Date().toISOString(),
+        createdAt: report?.created_at ?? charge?.created_at ?? new Date().toISOString(),
         refundProofUrl,
         disputeProofUrl,
         evidenceUrls,
-        chargeAmount: charge
-          ? Number(charge.amount)
-          : Number(report?.refund_amount) || Number(advance?.amount) || 0,
-        chargeDescription:
-          charge?.description || advance?.reason || 'Cargo por devolución al cliente',
+        chargeAmount: charge ? Number(charge.amount) : Number(report?.refund_amount) || 0,
+        chargeDescription: charge?.description || 'Cargo por devolución al cliente',
         order,
         events,
       },

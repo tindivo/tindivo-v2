@@ -40,7 +40,7 @@ async function main(): Promise<void> {
   console.log(`  Pedidos a borrar: ${orderIds.length}`)
 
   // 2. Hijos SIN cascada desde orders. El resto (customer_order_items y sus
-  //    modificadores, order_event_log, order_status_history, contingency_advances,
+  //    modificadores, order_event_log, order_status_history,
   //    order_assignment_rejections, order_transfer_requests) cae por ON DELETE
   //    CASCADE al borrar el pedido.
   //    - business_charges: FK sin acción -> bloquearía el DELETE.

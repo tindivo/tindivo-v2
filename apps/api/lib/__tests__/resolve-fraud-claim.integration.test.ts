@@ -2,11 +2,14 @@
  * Test de INTEGRACIÓN: invariante contable de resolve_fraud_claim.
  *
  * Corre contra la DB LOCAL de Supabase (127.0.0.1:54321).
- * DEBE SALIR ROJO con el código actual: la RPC inserta contingency_advances
- * con actor_charged='tindivo', pero el invariante correcto es 'restaurante'.
+ *
+ * El assert (A) —que `contingency_advances` registrara actor_charged =
+ * 'restaurante'— se eliminó en la migración 0123: esa tabla ya no existe y
+ * `resolve_fraud_claim` escribe solo en el ledger. Con él se va la nota de
+ * "DEBE SALIR ROJO", que además llevaba obsoleta desde 0102 (el FIX #5 ya
+ * estaba aplicado y el test pasaba en verde). Ver M-4 en Docs/RIESGOS-LEDGER.md.
  *
  * Asserts:
- *   (A) contingency_advances tiene 1 fila con actor_charged = 'restaurante'  ← FALLA HOY
  *   (B) business_charges tiene 1 fila con charge_type = 'refund_charge', amount correcto
  *   (C) balance_due DESPUÉS = balance_due ANTES + amount  [campo DEPRECADO]
  *   (D) deuda agregada del ledger DESPUÉS = ANTES + amount  ← fuente de verdad (§2.2)
@@ -60,21 +63,6 @@ describe('resolve_fraud_claim — invariante contable (integración)', () => {
 
   afterAll(async () => {
     if (seed) await cleanup(seed)
-  })
-
-  // ── Assert (A): contingency_advances usa actor_charged = 'restaurante' ──────
-  // ESTE TEST DEBE FALLAR con el código actual (inserta 'tindivo').
-  it('(A) contingency_advances registra actor_charged = restaurante', async () => {
-    const { data, error } = await localClient
-      .from('contingency_advances')
-      .select('actor_charged, amount, status')
-      .eq('order_id', seed.orderId)
-
-    expect(error).toBeNull()
-    expect(data).toHaveLength(1)
-    expect(data![0].actor_charged).toBe('restaurante')
-    expect(Number(data![0].amount)).toBe(seed.amount)
-    expect(data![0].status).toBe('activo')
   })
 
   // ── Assert (B): business_charges tiene el refund_charge correcto ────────────
