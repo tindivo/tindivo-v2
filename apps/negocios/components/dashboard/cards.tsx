@@ -1,7 +1,6 @@
 'use client'
 
 import { Icon } from '@tindivo/ui'
-
 import type { OrderVM } from '@/lib/orders/view-model'
 import { formatSupportPhone, normalizeSupportPhone } from '@/lib/support'
 import { mmss, PayBadgeMini, SourceBadgeMini, soles } from './primitives'
@@ -16,11 +15,11 @@ type CocinaCardProps = CardProps & {
 }
 
 const COOKING_STATE_STYLE: Record<string, { border: string; borderW: string; bg: string }> = {
-  cooking: { border: 'var(--tv-border)', borderW: '1px', bg: '#fff' },
-  buffer_p1: { border: 'var(--tv-border)', borderW: '1px', bg: '#fff' },
+  cooking: { border: '#EAE7E2', borderW: '1px', bg: '#fff' },
+  buffer_p1: { border: '#EAE7E2', borderW: '1px', bg: '#fff' },
   buffer_p2: { border: '#FDBA74', borderW: '1px', bg: '#fff' },
   buffer_p3: { border: '#FCA5A5', borderW: '1px', bg: '#fff' },
-  heading: { border: 'var(--tv-border)', borderW: '1px', bg: '#fff' },
+  heading: { border: '#EAE7E2', borderW: '1px', bg: '#fff' },
   waiting: { border: '#4ADE80', borderW: '2px', bg: 'rgba(22,163,74,0.025)' },
 }
 
@@ -36,21 +35,8 @@ const RISK_REASON_LABEL: Record<string, string> = {
 function RiskBadge({ order }: { order: OrderVM }) {
   if (!order.requiresValidation) return null
   return (
-    <div
-      style={{
-        marginTop: 7,
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 5,
-        borderRadius: 999,
-        background: '#FFF7ED',
-        color: '#C2410C',
-        padding: '4px 8px',
-        fontSize: 11,
-        fontWeight: 700,
-      }}
-    >
-      <Icon weight={500} name="shield" size={13} filled />
+    <div className="mt-1.5 inline-flex items-center gap-[5px] rounded-full bg-warning-soft px-2 py-1 text-[11px] font-bold text-orange-700">
+      <Icon name="shield" size={13} weight={500} filled />
       {RISK_REASON_LABEL[order.validationReasonCode ?? ''] ?? 'Validar antes de cocinar'}
     </div>
   )
@@ -60,21 +46,9 @@ function RiskBadge({ order }: { order: OrderVM }) {
  *  motorizado cuando el pedido ya fue tomado pero la cocina sigue trabajando. */
 function CookingCountdown({ minutesLeft }: { minutesLeft: number }) {
   return (
-    <span
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 3,
-        fontSize: 11,
-        color: '#C2410C',
-        fontWeight: 600,
-      }}
-    >
-      <Icon weight={500} name="timer" size={12} className="text-orange-700" />
-      <span className="tv-mono" style={{ fontWeight: 700 }}>
-        {minutesLeft}m
-      </span>{' '}
-      en cocina
+    <span className="inline-flex items-center gap-[3px] text-[11px] font-semibold text-orange-700">
+      <Icon name="timer" size={12} weight={500} className="text-orange-700" />
+      <span className="font-mono font-bold">{minutesLeft}m</span> en cocina
     </span>
   )
 }
@@ -90,16 +64,12 @@ export function CookingStatusLine({ order }: { order: OrderVM }) {
     const pct = prep > 0 ? left / prep : 1
     const timerClass = pct < 0.15 ? 'text-orange-700' : 'text-ink-subtle'
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-        <Icon weight={500} name="timer" size={12} className={timerClass} />
-        <span className={timerClass} style={{ fontSize: 11, fontWeight: 500 }}>
-          Cocinando ·{' '}
-          <span className="tv-mono" style={{ fontWeight: 700 }}>
-            {left}m
-          </span>{' '}
-          restantes
+      <div className="flex items-center gap-[5px]">
+        <Icon name="timer" size={12} weight={500} className={timerClass} />
+        <span className={`text-[11px] font-medium ${timerClass}`}>
+          Cocinando · <span className="font-mono font-bold">{left}m</span> restantes
           {order.extensionUsed && (
-            <span style={{ color: '#B45309', marginLeft: 5 }}>+{order.extensionMin}m</span>
+            <span className="ml-1 text-amber-700">+{order.extensionMin}m</span>
           )}
         </span>
       </div>
@@ -110,46 +80,40 @@ export function CookingStatusLine({ order }: { order: OrderVM }) {
   // comida está lista y nadie la ha tomado. El copy avisa desde el primer minuto.
   if (s === 'buffer_p1')
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-        <span
-          style={{ width: 7, height: 7, borderRadius: 999, background: '#EAB308', flexShrink: 0 }}
-        />
-        <span style={{ fontSize: 11, color: '#B45309', fontWeight: 600 }}>
+      <div className="flex items-center gap-[5px]">
+        <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-yellow-500" />
+        <span className="text-[11px] font-semibold text-amber-700">
           Comida lista · nadie la ha tomado ·{' '}
-          <span className="tv-mono">{order.bufferMinutes}m</span>
+          <span className="font-mono">{order.bufferMinutes}m</span>
         </span>
       </div>
     )
 
   if (s === 'buffer_p2')
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-        <span
-          style={{ width: 7, height: 7, borderRadius: 999, background: '#F97316', flexShrink: 0 }}
-        />
-        <span style={{ fontSize: 11, color: '#C2410C', fontWeight: 600 }}>
-          Sin motorizado · <span className="tv-mono">{order.bufferMinutes}m</span>
+      <div className="flex items-center gap-[5px]">
+        <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-brand" />
+        <span className="text-[11px] font-semibold text-orange-700">
+          Sin motorizado · <span className="font-mono">{order.bufferMinutes}m</span>
         </span>
       </div>
     )
 
   if (s === 'buffer_p3')
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-        <span
-          style={{ width: 7, height: 7, borderRadius: 999, background: '#EF4444', flexShrink: 0 }}
-        />
-        <span style={{ fontSize: 11, color: '#DC2626', fontWeight: 700 }}>
-          Sin motorizado hace <span className="tv-mono">{order.bufferMinutes}m</span>
+      <div className="flex items-center gap-[5px]">
+        <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-danger" />
+        <span className="text-[11px] font-bold text-danger">
+          Sin motorizado hace <span className="font-mono">{order.bufferMinutes}m</span>
         </span>
       </div>
     )
 
   if (s === 'heading')
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
-        <Icon weight={500} name="two_wheeler" size={13} className="shrink-0 text-violet-700" />
-        <span style={{ fontSize: 11, color: '#6D28D9', fontWeight: 500 }}>
+      <div className="flex flex-wrap items-center gap-[5px]">
+        <Icon name="two_wheeler" size={13} weight={500} className="shrink-0 text-violet-700" />
+        <span className="text-[11px] font-medium text-violet-700">
           {d?.name ?? 'Motorizado'} viene a recoger
         </span>
         {/* El motorizado toma el pedido con ~10 min de cocción restantes, así que
@@ -162,46 +126,29 @@ export function CookingStatusLine({ order }: { order: OrderVM }) {
   if (s === 'waiting')
     return (
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+        <div className="flex flex-wrap items-center gap-[5px]">
           <Icon
-            weight={500}
             name="check_circle"
             size={13}
+            weight={500}
             filled
-            className="shrink-0 text-green-600"
+            className="shrink-0 text-success"
           />
-          <span style={{ fontSize: 12, color: '#15803D', fontWeight: 700 }}>
+          <span className="text-[12px] font-bold text-green-700">
             {d?.name ?? 'Motorizado'} llegó · Entregar pedido
           </span>
           {/* Puede haber llegado antes de que la comida salga de cocina. */}
           {order.minutesLeft != null && <CookingCountdown minutesLeft={order.minutesLeft} />}
         </div>
         {order.cashChange != null && order.cashChange > 0 && (
-          <div
-            style={{
-              fontSize: 11,
-              color: '#15803D',
-              fontWeight: 600,
-              marginTop: 3,
-              marginLeft: 18,
-            }}
-          >
-            Vuelto a preparar: <span className="tv-mono">{soles(order.cashChange)}</span>
+          <div className="ml-[18px] mt-[3px] text-[11px] font-semibold text-green-700">
+            Vuelto a preparar: <span className="font-mono">{soles(order.cashChange)}</span>
           </div>
         )}
       </div>
     )
 
   return null
-}
-
-const cardHover = {
-  onMouseEnter: (e: React.MouseEvent<HTMLElement>) => {
-    e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.08)'
-  },
-  onMouseLeave: (e: React.MouseEvent<HTMLElement>) => {
-    e.currentTarget.style.boxShadow = 'none'
-  },
 }
 
 function clickProps(order: OrderVM, onOpen?: (o: OrderVM) => void) {
@@ -221,20 +168,9 @@ function clickProps(order: OrderVM, onOpen?: (o: OrderVM) => void) {
 function IdAddress({ order }: { order: OrderVM }) {
   if (!order.addressRef) return null
   return (
-    <div
-      style={{
-        display: 'flex',
-        gap: 4,
-        alignItems: 'flex-start',
-        fontSize: 11,
-        color: 'var(--tv-ink-muted)',
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap',
-      }}
-    >
-      <Icon weight={500} name="location_on" size={11} className="mt-px shrink-0" />
-      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{order.addressRef}</span>
+    <div className="flex items-start gap-1 overflow-hidden text-ellipsis whitespace-nowrap text-[11px] text-ink-muted">
+      <Icon name="location_on" size={11} weight={500} className="mt-px shrink-0" />
+      <span className="overflow-hidden text-ellipsis">{order.addressRef}</span>
     </div>
   )
 }
@@ -272,21 +208,8 @@ function UrgentDriverButton({
   // aviso. La cajera tiene que ver que el escalamiento no está disponible.
   if (!phone || !onCallDriver) {
     return (
-      <div
-        style={{
-          marginTop: 7,
-          borderRadius: 9,
-          border: '1px dashed var(--tv-border)',
-          padding: '7px 9px',
-          fontSize: 11,
-          fontWeight: 600,
-          color: 'var(--tv-ink-muted)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 5,
-        }}
-      >
-        <Icon weight={500} name="phone_disabled" size={13} />
+      <div className="mt-1.5 flex items-center gap-[5px] rounded-lg border border-dashed border-border px-2 py-1.5 text-[11px] font-semibold text-ink-muted">
+        <Icon name="phone_disabled" size={13} weight={500} />
         Sin número de soporte configurado
       </div>
     )
@@ -300,16 +223,13 @@ function UrgentDriverButton({
         e.stopPropagation()
         onCallDriver(order)
       }}
-      className={`tv-btn tv-btn-sm tv-btn-block${alarma ? ' tv-pulse' : ''}`}
-      style={{
-        marginTop: 7,
-        flexShrink: 0,
-        ...(alarma
-          ? { background: 'var(--tv-danger)', color: '#fff', border: 'none' }
-          : { background: '#fff', color: '#C2410C', border: '1px solid #FDBA74' }),
-      }}
+      className={`mt-1.5 inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-xl px-4 py-2 text-[13px] font-semibold transition-transform active:scale-[0.98] ${
+        alarma
+          ? 'animate-pulse bg-danger text-white'
+          : 'border border-orange-300 bg-white text-orange-700'
+      }`}
     >
-      <Icon weight={500} name="call" size={14} filled={alarma} />
+      <Icon name="call" size={14} weight={500} filled={alarma} />
       {alarma ? 'Pedir motorizado YA' : 'Pedir motorizado'} · {formatSupportPhone(phone)}
     </button>
   )
@@ -323,56 +243,31 @@ export function CocinaCard({
   supportPhone,
   onCallDriver,
 }: CocinaCardProps) {
-  const ss = COOKING_STATE_STYLE[order.state] ?? {
-    border: 'var(--tv-border)',
-    borderW: '1px',
-    bg: '#fff',
-  }
+  const ss = COOKING_STATE_STYLE[order.state] ?? { border: '#EAE7E2', borderW: '1px', bg: '#fff' }
   return (
     <div
       {...clickProps(order, onOpen)}
-      {...cardHover}
-      style={{
-        background: ss.bg,
-        borderRadius: 12,
-        border: `${ss.borderW} solid ${ss.border}`,
-        padding: compact ? '9px 11px' : '11px 13px',
-        cursor: 'pointer',
-        transition: 'box-shadow 120ms',
-      }}
+      className={`cursor-pointer rounded-xl bg-white shadow-none transition-shadow duration-150 hover:shadow-[0_2px_12px_rgba(0,0,0,0.08)] ${compact ? 'px-2.5 py-2' : 'px-3 py-2.5'}`}
+      style={{ border: `${ss.borderW} solid ${ss.border}`, background: ss.bg }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 4 }}>
-        <span
-          className="tv-mono"
-          style={{ fontSize: 10, color: 'var(--tv-ink-muted)', fontWeight: 700 }}
-        >
-          #{order.id}
-        </span>
+      <div className="mb-1 flex items-center gap-[5px]">
+        <span className="font-mono text-[10px] font-bold text-ink-muted">#{order.id}</span>
         <SourceBadgeMini source={order.source} />
-        <div style={{ flex: 1 }} />
-        <span className="tv-mono" style={{ fontSize: compact ? 13 : 14, fontWeight: 700 }}>
+        <div className="flex-1" />
+        <span className="font-mono font-bold" style={{ fontSize: compact ? 13 : 14 }}>
           {soles(order.total)}
         </span>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-        <span
-          style={{
-            fontSize: compact ? 13 : 14,
-            fontWeight: 600,
-            flex: 1,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}
-        >
+      <div className="mb-1 flex items-center gap-1.5">
+        <span className="flex-1 truncate font-semibold" style={{ fontSize: compact ? 13 : 14 }}>
           {order.customer ?? 'Cliente'}
         </span>
         <PayBadgeMini payment={order.payment} />
       </div>
 
       {order.addressRef && (
-        <div style={{ marginBottom: 6 }}>
+        <div className="mb-1.5">
           <IdAddress order={order} />
         </div>
       )}
@@ -388,94 +283,43 @@ export function CocinaCard({
 export function NuevoCard({ order, onOpen, compact = false }: CardProps) {
   const isUrgent = order.countdownSec < 60
   const borderColor = isUrgent ? '#FCA5A5' : '#FDBA74'
+  const urgencyClass = isUrgent ? 'text-danger' : 'text-brand'
 
   return (
     <div
       {...clickProps(order, onOpen)}
-      {...cardHover}
-      style={{
-        background: '#fff',
-        borderRadius: 12,
-        border: `1px solid ${borderColor}`,
-        padding: compact ? '9px 11px' : '11px 13px',
-        cursor: 'pointer',
-        transition: 'box-shadow 120ms',
-      }}
+      className={`cursor-pointer rounded-xl bg-white shadow-none transition-shadow duration-150 hover:shadow-[0_2px_12px_rgba(0,0,0,0.08)] ${compact ? 'px-2.5 py-2' : 'px-3 py-2.5'}`}
+      style={{ border: `1px solid ${borderColor}` }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 4 }}>
-        <span
-          className="tv-mono"
-          style={{ fontSize: 10, color: 'var(--tv-ink-muted)', fontWeight: 700 }}
-        >
-          #{order.id}
-        </span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-          <Icon
-            weight={500}
-            name="timer"
-            size={11}
-            className={`shrink-0 ${isUrgent ? 'text-danger' : 'text-brand'}`}
-          />
-          <span
-            className={`tv-mono ${isUrgent ? 'text-danger' : 'text-brand'}`}
-            style={{
-              fontSize: 11,
-              fontWeight: 700,
-            }}
-          >
+      <div className="mb-1 flex items-center gap-[5px]">
+        <span className="font-mono text-[10px] font-bold text-ink-muted">#{order.id}</span>
+        <div className="flex items-center gap-[3px]">
+          <Icon name="timer" size={11} weight={500} className={`shrink-0 ${urgencyClass}`} />
+          <span className={`font-mono text-[11px] font-bold ${urgencyClass}`}>
             {mmss(order.countdownSec)}
           </span>
         </div>
-        <div style={{ flex: 1 }} />
+        <div className="flex-1" />
         {order.status === 'awaiting_payment' && (
-          <span
-            style={{
-              fontSize: 10,
-              fontWeight: 700,
-              background: '#FFF7ED',
-              color: '#C2410C',
-              padding: '2px 6px',
-              borderRadius: 6,
-              border: '1px solid #FFEDD5',
-            }}
-          >
+          <span className="rounded-md border border-orange-100 bg-warning-soft px-1.5 py-0.5 text-[10px] font-bold text-orange-700">
             Esperando pago
           </span>
         )}
         {order.status === 'validando' && (
-          <span
-            style={{
-              fontSize: 10,
-              fontWeight: 700,
-              background: '#EFF6FF',
-              color: '#1D4ED8',
-              padding: '2px 6px',
-              borderRadius: 6,
-              border: '1px solid #BFDBFE',
-            }}
-          >
+          <span className="rounded-md border border-blue-100 bg-sky-50 px-1.5 py-0.5 text-[10px] font-bold text-blue-700">
             Validando
           </span>
         )}
         <SourceBadgeMini source={order.source} />
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-        <span
-          style={{
-            fontSize: compact ? 13 : 14,
-            fontWeight: 600,
-            flex: 1,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}
-        >
+      <div className="mb-1 flex items-center gap-1.5">
+        <span className="flex-1 truncate font-semibold" style={{ fontSize: compact ? 13 : 14 }}>
           {order.customer ?? 'Cliente'}
         </span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+        <div className="flex shrink-0 items-center gap-[5px]">
           <PayBadgeMini payment={order.payment} />
-          <span className="tv-mono" style={{ fontSize: compact ? 13 : 14, fontWeight: 700 }}>
+          <span className="font-mono font-bold" style={{ fontSize: compact ? 13 : 14 }}>
             {soles(order.total)}
           </span>
         </div>
@@ -492,10 +336,11 @@ export function RepartoCard({ order, onOpen, compact = false }: CardProps) {
   const mAgo = order.pickupMinAgo ?? 0
   const isMed = mAgo >= 30 && mAgo < 45
   const isHigh = mAgo >= 45
-  const border = isHigh ? '#FDBA74' : isMed ? '#FDE68A' : 'var(--tv-border)'
+  const border = isHigh ? '#FDBA74' : isMed ? '#FDE68A' : '#EAE7E2'
 
   const driverName = order.driver?.name ?? 'Motorizado'
   const statusDot = isHigh ? '#F97316' : isMed ? '#EAB308' : null
+  const statusClass = isHigh ? 'text-orange-700' : isMed ? 'text-amber-700' : 'text-violet-700'
   const statusText = isHigh
     ? `Reparto demorado · hace ${mAgo}m`
     : isMed
@@ -505,77 +350,45 @@ export function RepartoCard({ order, onOpen, compact = false }: CardProps) {
   return (
     <div
       {...clickProps(order, onOpen)}
-      {...cardHover}
-      style={{
-        background: '#fff',
-        borderRadius: 12,
-        border: `1px solid ${border}`,
-        padding: compact ? '9px 11px' : '11px 13px',
-        cursor: 'pointer',
-        transition: 'box-shadow 120ms',
-      }}
+      className={`cursor-pointer rounded-xl bg-white shadow-none transition-shadow duration-150 hover:shadow-[0_2px_12px_rgba(0,0,0,0.08)] ${compact ? 'px-2.5 py-2' : 'px-3 py-2.5'}`}
+      style={{ border: `1px solid ${border}` }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 4 }}>
-        <span
-          className="tv-mono"
-          style={{ fontSize: 10, color: 'var(--tv-ink-muted)', fontWeight: 700 }}
-        >
-          #{order.id}
-        </span>
+      <div className="mb-1 flex items-center gap-[5px]">
+        <span className="font-mono text-[10px] font-bold text-ink-muted">#{order.id}</span>
         <SourceBadgeMini source={order.source} />
-        <div style={{ flex: 1 }} />
-        <span className="tv-mono" style={{ fontSize: compact ? 13 : 14, fontWeight: 700 }}>
+        <div className="flex-1" />
+        <span className="font-mono font-bold" style={{ fontSize: compact ? 13 : 14 }}>
           {soles(order.total)}
         </span>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-        <span
-          style={{
-            fontSize: compact ? 13 : 14,
-            fontWeight: 600,
-            flex: 1,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}
-        >
+      <div className="mb-1 flex items-center gap-1.5">
+        <span className="flex-1 truncate font-semibold" style={{ fontSize: compact ? 13 : 14 }}>
           {order.customer ?? 'Cliente'}
         </span>
         <PayBadgeMini payment={order.payment} />
       </div>
 
       {order.addressRef && (
-        <div
-          style={{
-            fontSize: 11,
-            color: 'var(--tv-ink-muted)',
-            marginBottom: 6,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {order.addressRef}
-        </div>
+        <div className="mb-1.5 truncate text-[11px] text-ink-muted">{order.addressRef}</div>
       )}
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+      <div className="flex items-center gap-[5px]">
         {statusDot ? (
           <span
-            style={{ width: 7, height: 7, borderRadius: 999, background: statusDot, flexShrink: 0 }}
+            className="h-[7px] w-[7px] shrink-0 rounded-full"
+            style={{ background: statusDot }}
           />
         ) : (
           <Icon
-            weight={500}
             name="delivery_dining"
             size={13}
-            className={`shrink-0 ${isHigh ? 'text-orange-700' : isMed ? 'text-amber-700' : 'text-violet-700'}`}
+            weight={500}
+            className={`shrink-0 ${statusClass}`}
           />
         )}
         <span
-          className={isHigh ? 'text-orange-700' : isMed ? 'text-amber-700' : 'text-violet-700'}
-          style={{ fontSize: 11, fontWeight: isMed || isHigh ? 600 : 500 }}
+          className={`text-[11px] ${isMed || isHigh ? 'font-semibold' : 'font-medium'} ${statusClass}`}
         >
           {statusText}
         </span>

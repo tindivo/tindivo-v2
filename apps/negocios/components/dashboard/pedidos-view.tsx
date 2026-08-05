@@ -1,7 +1,6 @@
 'use client'
 
 import { Icon } from '@tindivo/ui'
-
 import Link from 'next/link'
 import { useState } from 'react'
 import type { OrderVM } from '@/lib/orders/view-model'
@@ -50,20 +49,9 @@ const ACCENT = '#F472B6'
 // ── Banner de alertas desactivadas ────────────────────────────────────────────
 function SoundOffWarning() {
   return (
-    <div
-      style={{
-        background: '#DC2626',
-        color: '#fff',
-        padding: '10px 16px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 10,
-        fontSize: 13,
-        fontWeight: 600,
-      }}
-    >
-      <Icon weight={500} name="warning" size={18} filled />
-      <span style={{ flex: 1 }}>
+    <div className="flex items-center gap-2.5 bg-danger px-4 py-2.5 text-[13px] font-semibold text-white">
+      <Icon name="warning" size={18} weight={500} filled />
+      <span className="flex-1">
         Alertas desactivadas — podrías perder pedidos. Los pedidos se cancelan automáticamente en 5
         minutos si no los atiendes.
       </span>
@@ -97,21 +85,10 @@ function ColEmpty({ tab }: { tab: 'new' | 'cooking' | 'route' | 'today' }) {
   }
   const m = msgs[tab]
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        padding: '32px 20px',
-        textAlign: 'center',
-        background: '#fff',
-        borderRadius: 16,
-        border: '1px solid var(--tv-border)',
-      }}
-    >
-      <Icon weight={500} name={m.icon} size={32} className="mb-2.5 text-ink-subtle" />
-      <div style={{ fontWeight: 700, fontSize: 15 }}>{m.title}</div>
-      <div style={{ fontSize: 13, color: 'var(--tv-ink-muted)', marginTop: 4 }}>{m.sub}</div>
+    <div className="flex flex-col items-center rounded-2xl border border-border bg-white px-5 py-8 text-center">
+      <Icon name={m.icon} size={32} weight={500} className="mb-2.5 text-ink-subtle" />
+      <div className="text-[15px] font-bold">{m.title}</div>
+      <div className="mt-1 text-[13px] text-ink-muted">{m.sub}</div>
     </div>
   )
 }
@@ -119,53 +96,40 @@ function ColEmpty({ tab }: { tab: 'new' | 'cooking' | 'route' | 'today' }) {
 function HistoryList({ history }: { history: OrderVM[] }) {
   if (history.length === 0) return <ColEmpty tab="today" />
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <div className="flex flex-col gap-2">
       {history.map((h) => {
         const cancelled = h.status === 'cancelled'
         return (
           <div
             key={h.rowId}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              padding: '10px 12px',
-              background: '#fff',
-              borderRadius: 12,
-              border: '1px solid var(--tv-border)',
-              opacity: cancelled ? 0.65 : 1,
-            }}
+            className="flex items-center gap-2.5 rounded-xl border border-border bg-white px-3 py-2.5"
+            style={{ opacity: cancelled ? 0.65 : 1 }}
           >
             <Icon
-              weight={500}
               name={cancelled ? 'cancel' : 'check_circle'}
               size={18}
+              weight={500}
               filled
               className={`shrink-0 ${cancelled ? 'text-ink-subtle' : 'text-success'}`}
             />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div
-                style={{ fontSize: 13, fontWeight: 600, display: 'flex', gap: 5, flexWrap: 'wrap' }}
-              >
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap gap-[5px] text-[13px] font-semibold">
                 {h.customer ?? 'Cliente'}
                 <SourceBadgeMini source={h.source} />
               </div>
-              <div className="tv-mono" style={{ fontSize: 11, color: 'var(--tv-ink-muted)' }}>
+              <div className="font-mono text-[11px] text-ink-muted">
                 #{h.id}
                 {h.closedAt ? ` · ${h.closedAt}` : ''}
                 {cancelled && h.cancelReason && (
-                  <span style={{ color: 'var(--tv-danger)' }}> · {h.cancelReason}</span>
+                  <span className="text-danger"> · {h.cancelReason}</span>
                 )}
               </div>
             </div>
             <div
-              className="tv-mono"
+              className="shrink-0 font-mono text-[14px] font-bold"
               style={{
-                fontSize: 14,
-                fontWeight: 700,
-                color: cancelled ? 'var(--tv-ink-subtle)' : 'var(--tv-ink)',
+                color: cancelled ? '#a8a29e' : '#1a1614',
                 textDecoration: cancelled ? 'line-through' : 'none',
-                flexShrink: 0,
               }}
             >
               {soles(h.total)}
@@ -191,16 +155,7 @@ export function PedidosMobile(p: PedidosViewProps) {
   ]
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        flex: 1,
-        minHeight: 0,
-        background: 'var(--tv-surface)',
-        position: 'relative',
-      }}
-    >
+    <div className="relative flex min-h-0 flex-1 flex-col bg-surface">
       {p.showPauseModal && (
         <PausarModal busy={p.detailBusy} onClose={p.onClosePause} onConfirm={p.onConfirmPause} />
       )}
@@ -219,33 +174,13 @@ export function PedidosMobile(p: PedidosViewProps) {
 
       {/* Banners */}
       {p.paused && (
-        <div
-          style={{
-            background: '#FDE68A',
-            color: '#78350F',
-            padding: '8px 14px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            fontSize: 13,
-            fontWeight: 700,
-          }}
-        >
-          <Icon weight={500} name="pause_circle" size={18} filled />
-          <span style={{ flex: 1 }}>PAUSADO{p.pauseMinLeft ? ` · ${p.pauseMinLeft}m` : ''}</span>
+        <div className="flex items-center gap-2.5 bg-warning-soft px-3.5 py-2 text-[13px] font-bold text-amber-800">
+          <Icon name="pause_circle" size={18} weight={500} filled />
+          <span className="flex-1">PAUSADO{p.pauseMinLeft ? ` · ${p.pauseMinLeft}m` : ''}</span>
           <button
             type="button"
             onClick={p.onResume}
-            style={{
-              background: '#1A1614',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 8,
-              padding: '4px 10px',
-              fontSize: 12,
-              fontWeight: 700,
-              cursor: 'pointer',
-            }}
+            className="rounded-lg bg-ink px-2.5 py-1 text-[12px] font-bold text-white"
           >
             Reanudar
           </button>
@@ -253,58 +188,26 @@ export function PedidosMobile(p: PedidosViewProps) {
       )}
       {!p.soundOn && <SoundOffWarning />}
       {hasWaiting && !p.paused && (
-        <div
-          style={{
-            background: '#16A34A',
-            color: '#fff',
-            padding: '8px 14px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            fontSize: 13,
-            fontWeight: 700,
-          }}
-        >
-          <Icon weight={500} name="two_wheeler" size={18} filled />
+        <div className="flex items-center gap-2.5 bg-success px-3.5 py-2 text-[13px] font-bold text-white">
+          <Icon name="two_wheeler" size={18} weight={500} filled />
           Motorizado en el local · entrégale el pedido
         </div>
       )}
 
       {/* Header */}
-      <div className="tv-glass" style={{ padding: '10px 14px 0' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+      <div className="border-b border-ink/[0.06] bg-white/82 px-3.5 pt-2.5 backdrop-blur-md">
+        <div className="mb-2 flex items-center gap-2.5">
           <div
-            style={{
-              width: 34,
-              height: 34,
-              borderRadius: 10,
-              background: p.accent || ACCENT,
-              color: '#fff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: 700,
-              fontSize: 15,
-              fontFamily: "var(--font-bricolage), 'Manrope', sans-serif",
-              flexShrink: 0,
-            }}
+            className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[10px] text-[15px] font-bold text-white"
+            style={{ background: p.accent || ACCENT }}
           >
             {p.bizName[0] ?? 'T'}
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div
-              className="tv-display"
-              style={{
-                fontSize: 16,
-                fontWeight: 700,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
+          <div className="min-w-0 flex-1">
+            <div className="truncate font-display text-base font-bold leading-tight tracking-tight">
               {p.bizName}
             </div>
-            <div style={{ fontSize: 11, color: 'var(--tv-ink-muted)', marginTop: 1 }}>
+            <div className="mt-0.5 text-[11px] text-ink-muted">
               {p.counts.new + p.counts.cooking + p.counts.route} activos · {p.counts.today}{' '}
               entregados hoy
             </div>
@@ -312,66 +215,48 @@ export function PedidosMobile(p: PedidosViewProps) {
           <button
             type="button"
             onClick={p.onToggleSound}
-            className={`tv-btn tv-btn-sm ${p.soundOn ? 'tv-btn-brand' : 'tv-btn-ghost'} ${p.counts.new > 0 && p.soundOn ? 'tv-pulse-brand' : ''}`}
-            style={{ padding: '7px 10px', flexShrink: 0 }}
+            className={`shrink-0 rounded-xl px-2.5 py-1.5 text-[13px] font-semibold transition-transform active:scale-[0.98] ${
+              p.soundOn ? 'bg-brand text-white' : 'bg-ink/[0.06] text-ink'
+            } ${p.counts.new > 0 && p.soundOn ? 'animate-pulse' : ''}`}
           >
             <Icon
-              weight={500}
               name={p.soundOn ? 'notifications_active' : 'notifications_off'}
               size={17}
+              weight={500}
               filled={p.soundOn}
             />
           </button>
           <button
             type="button"
             onClick={p.paused ? p.onResume : p.onOpenPause}
+            className="flex shrink-0 items-center rounded-xl p-1.5"
             style={{
               background: p.paused ? '#FDE68A' : 'rgba(26,22,20,0.08)',
-              border: 'none',
-              borderRadius: 10,
-              padding: '7px 10px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              color: p.paused ? '#78350F' : 'var(--tv-ink)',
-              flexShrink: 0,
+              color: p.paused ? '#78350F' : '#1a1614',
             }}
           >
-            <Icon weight={500} name={p.paused ? 'play_circle' : 'pause_circle'} size={17} />
+            <Icon name={p.paused ? 'play_circle' : 'pause_circle'} size={17} weight={500} />
           </button>
         </div>
-        <div style={{ display: 'flex', gap: 6, paddingBottom: 10 }}>
+        <div className="flex gap-1.5 pb-2.5">
           <button
             type="button"
             onClick={() => setTab('today')}
-            className="tv-btn tv-btn-ghost tv-btn-sm"
-            style={{ flex: 1 }}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-ink/[0.06] px-3 py-2 text-[13px] font-semibold text-ink transition-transform active:scale-[0.98]"
           >
-            <Icon weight={500} name="history" size={14} /> Historial
+            <Icon name="history" size={14} weight={500} /> Historial
           </button>
           <Link
             href="/nuevo"
-            className="tv-btn tv-btn-dark tv-btn-sm"
-            style={{ flex: 1, textDecoration: 'none' }}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-ink px-3 py-2 text-[13px] font-semibold text-white transition-transform active:scale-[0.98]"
           >
-            <Icon weight={500} name="add" size={14} /> Pedido directo
+            <Icon name="add" size={14} weight={500} /> Pedido directo
           </Link>
         </div>
       </div>
 
       {/* Tabs */}
-      <div
-        style={{
-          display: 'flex',
-          gap: 5,
-          padding: '8px 14px',
-          overflowX: 'auto',
-          scrollbarWidth: 'none',
-          background: 'rgba(250,246,241,0.96)',
-          backdropFilter: 'blur(14px)',
-          borderBottom: '1px solid var(--tv-border)',
-        }}
-      >
+      <div className="flex gap-[5px] overflow-x-auto border-b border-border bg-surface/95 px-3.5 py-2 backdrop-blur-sm scrollbar-hide">
         {tabs.map(
           (t) =>
             (t.id !== 'new' || t.count > 0) && (
@@ -379,42 +264,20 @@ export function PedidosMobile(p: PedidosViewProps) {
                 type="button"
                 key={t.id}
                 onClick={() => setTab(t.id)}
-                style={{
-                  flexShrink: 0,
-                  background: tab === t.id ? 'var(--tv-ink)' : '#fff',
-                  color: tab === t.id ? '#fff' : 'var(--tv-ink)',
-                  border: tab === t.id ? 'none' : '1px solid var(--tv-border)',
-                  padding: '8px 11px',
-                  borderRadius: 999,
-                  fontFamily: 'inherit',
-                  fontSize: 13,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 5,
-                }}
+                className={`inline-flex shrink-0 items-center gap-[5px] rounded-full px-2.5 py-2 text-[13px] font-semibold transition-colors ${
+                  tab === t.id ? 'bg-ink text-white' : 'border border-border bg-white text-ink'
+                }`}
               >
                 {t.label}
                 {t.count > 0 && (
                   <span
-                    style={{
-                      minWidth: 17,
-                      height: 17,
-                      padding: '0 4px',
-                      borderRadius: 999,
-                      background: t.alert
-                        ? '#DC2626'
+                    className={`inline-flex min-h-[17px] min-w-[17px] items-center justify-center rounded-full px-1 text-[10px] font-black ${
+                      t.alert
+                        ? 'bg-danger text-white'
                         : tab === t.id
-                          ? 'rgba(255,255,255,0.2)'
-                          : 'rgba(26,22,20,0.08)',
-                      color: t.alert ? '#fff' : tab === t.id ? '#fff' : 'var(--tv-ink)',
-                      fontSize: 10,
-                      fontWeight: 700,
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
+                          ? 'bg-white/20 text-white'
+                          : 'bg-ink/[0.08] text-ink'
+                    }`}
                   >
                     {t.count}
                   </span>
@@ -425,16 +288,7 @@ export function PedidosMobile(p: PedidosViewProps) {
       </div>
 
       {/* List */}
-      <div
-        style={{
-          flex: 1,
-          overflowY: 'auto',
-          padding: '12px 14px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 10,
-        }}
-      >
+      <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-3.5 py-3">
         {tab === 'new' &&
           (p.newOrders.length > 0 ? (
             p.newOrders.map((o) => <NuevoCard key={o.rowId} order={o} onOpen={p.onOpen} />)
@@ -484,62 +338,24 @@ function KanbanCol({
   children: React.ReactNode
 }) {
   return (
-    <div
-      style={{
-        minWidth: 0,
-        display: 'flex',
-        flexDirection: 'column',
-        background: 'var(--tv-surface)',
-        borderRadius: 16,
-        border: '1px solid var(--tv-border)',
-      }}
-    >
-      <div
-        style={{
-          padding: '10px 12px',
-          borderBottom: '1px solid var(--tv-border)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-        }}
-      >
-        <span
-          style={{ width: 8, height: 8, borderRadius: 999, background: accentColor, flexShrink: 0 }}
-        />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 700, fontSize: 13 }}>{title}</div>
-          <div style={{ fontSize: 10, color: 'var(--tv-ink-muted)', marginTop: 1 }}>{subtitle}</div>
+    <div className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-surface">
+      <div className="flex items-center gap-2 border-b border-border px-3 py-2.5">
+        <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: accentColor }} />
+        <div className="min-w-0 flex-1">
+          <div className="text-[13px] font-bold">{title}</div>
+          <div className="mt-px text-[10px] text-ink-muted">{subtitle}</div>
         </div>
         <span
+          className="inline-flex min-h-[22px] items-center justify-center rounded-full px-1.5 text-[11px] font-bold"
           style={{
-            minWidth: 22,
-            height: 22,
-            padding: '0 6px',
-            borderRadius: 999,
             background: count > 0 && alertColor ? alertColor : 'rgba(26,22,20,0.08)',
-            color: count > 0 && alertColor ? '#fff' : 'var(--tv-ink)',
-            fontSize: 11,
-            fontWeight: 700,
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            color: count > 0 && alertColor ? '#fff' : '#1a1614',
           }}
         >
           {count}
         </span>
       </div>
-      <div
-        style={{
-          flex: 1,
-          padding: 10,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 8,
-          overflowY: 'auto',
-        }}
-      >
-        {children}
-      </div>
+      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-2.5">{children}</div>
     </div>
   )
 }
@@ -549,89 +365,50 @@ export function PedidosDesktop(p: PedidosViewProps) {
   const hasWaiting = p.cookingOrders.some((o) => o.state === 'waiting')
 
   return (
-    <div
-      style={{
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        minWidth: 0,
-        position: 'relative',
-        background: 'var(--tv-surface)',
-      }}
-    >
+    <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden bg-surface">
       {p.showPauseModal && (
         <PausarModal busy={p.detailBusy} onClose={p.onClosePause} onConfirm={p.onConfirmPause} />
       )}
 
       {/* Banners */}
       {p.paused && (
-        <div
-          style={{
-            background: '#FDE68A',
-            color: '#78350F',
-            padding: '9px 24px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 14,
-          }}
-        >
-          <Icon weight={500} name="pause_circle" size={20} filled />
-          <div style={{ flex: 1, fontSize: 14, fontWeight: 700 }}>
+        <div className="flex items-center gap-3.5 bg-warning-soft px-6 py-2 text-amber-800">
+          <Icon name="pause_circle" size={20} weight={500} filled />
+          <div className="flex-1 text-[14px] font-bold">
             PEDIDOS PAUSADOS{p.pauseMinLeft ? ` · Reactiva en ${p.pauseMinLeft}m` : ''}
           </div>
-          <button type="button" onClick={p.onResume} className="tv-btn tv-btn-dark tv-btn-sm">
-            <Icon weight={500} name="play_circle" size={16} filled /> Reanudar ahora
+          <button
+            type="button"
+            onClick={p.onResume}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-ink px-3 py-1.5 text-[13px] font-semibold text-white transition-transform active:scale-[0.98]"
+          >
+            <Icon name="play_circle" size={16} weight={500} filled /> Reanudar ahora
           </button>
         </div>
       )}
       {!p.soundOn && <SoundOffWarning />}
       {hasWaiting && (
-        <div
-          style={{
-            background: '#16A34A',
-            color: '#fff',
-            padding: '9px 24px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 14,
-          }}
-        >
-          <Icon weight={500} name="two_wheeler" size={20} filled />
-          <div style={{ flex: 1, fontSize: 14, fontWeight: 700 }}>
-            Motorizado en el local — entrégale el pedido
-          </div>
+        <div className="flex items-center gap-3.5 bg-success px-6 py-2 text-[14px] font-bold text-white">
+          <Icon name="two_wheeler" size={20} weight={500} filled />
+          <div className="flex-1">Motorizado en el local — entrégale el pedido</div>
         </div>
       )}
 
       {/* Header */}
-      <div
-        className="tv-glass"
-        style={{ padding: '11px 24px', display: 'flex', alignItems: 'center', gap: 16 }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <header className="flex items-center gap-4 border-b border-ink/[0.06] bg-white/82 px-6 py-3 backdrop-blur-md">
+        <div className="flex items-center gap-2.5">
           <div
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 10,
-              background: p.accent || ACCENT,
-              color: '#fff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: 700,
-              fontSize: 16,
-              fontFamily: "var(--font-bricolage), 'Manrope', sans-serif",
-            }}
+            className="flex h-9 w-9 items-center justify-center rounded-[10px] text-base font-bold text-white"
+            style={{ background: p.accent || ACCENT }}
           >
             {p.bizName[0] ?? 'T'}
           </div>
           <div>
-            <div className="tv-display" style={{ fontSize: 17, lineHeight: 1.1 }}>
+            <div className="font-display text-[17px] font-bold leading-tight tracking-tight">
               {p.bizName}
             </div>
-            <div style={{ fontSize: 11, color: 'var(--tv-ink-muted)', marginTop: 2 }}>
-              <span style={{ color: p.paused ? '#B45309' : '#16A34A', fontWeight: 700 }}>
+            <div className="mt-0.5 text-[11px] text-ink-muted">
+              <span className="font-bold" style={{ color: p.paused ? '#B45309' : '#16A34A' }}>
                 {p.paused ? '⏸ Pausado' : '● Abierto'}
               </span>
               {' · '}
@@ -640,79 +417,60 @@ export function PedidosDesktop(p: PedidosViewProps) {
             </div>
           </div>
         </div>
-        <div style={{ flex: 1 }} />
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div className="flex-1" />
+        <div className="flex items-center gap-2">
           <Link
             href="/nuevo"
-            className="tv-btn tv-btn-dark tv-btn-sm"
-            style={{ textDecoration: 'none' }}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-ink px-3 py-2 text-[13px] font-semibold text-white transition-transform active:scale-[0.98]"
           >
-            <Icon weight={500} name="add" size={15} /> Pedido directo
+            <Icon name="add" size={15} weight={500} /> Pedido directo
           </Link>
           <button
             type="button"
             onClick={p.paused ? p.onResume : p.onOpenPause}
+            className="inline-flex items-center gap-1.5 rounded-xl border-0 px-3 py-2 text-[13px] font-semibold transition-transform active:scale-[0.98]"
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              padding: '8px 12px',
-              borderRadius: 10,
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-              fontSize: 13,
-              fontWeight: 600,
-              border: 'none',
               background: p.paused ? '#FDE68A' : 'rgba(26,22,20,0.08)',
-              color: p.paused ? '#78350F' : 'var(--tv-ink)',
+              color: p.paused ? '#78350F' : '#1a1614',
             }}
           >
-            <Icon weight={500} name={p.paused ? 'play_circle' : 'pause_circle'} size={16} filled />
+            <Icon name={p.paused ? 'play_circle' : 'pause_circle'} size={16} weight={500} filled />
             {p.paused ? 'Reanudar' : 'Pausar pedidos'}
           </button>
           <button
             type="button"
             onClick={p.onToggleSound}
-            className={`tv-btn tv-btn-sm ${p.soundOn ? 'tv-btn-brand' : 'tv-btn-ghost'} ${p.counts.new > 0 && p.soundOn ? 'tv-pulse-brand' : ''}`}
+            className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-[13px] font-semibold transition-transform active:scale-[0.98] ${
+              p.soundOn ? 'bg-brand text-white' : 'bg-ink/[0.06] text-ink'
+            } ${p.counts.new > 0 && p.soundOn ? 'animate-pulse' : ''}`}
           >
             <Icon
-              weight={500}
               name={p.soundOn ? 'notifications_active' : 'notifications_off'}
               size={15}
+              weight={500}
               filled={p.soundOn}
             />
             Alertas {p.soundOn ? 'ON' : 'OFF'}
           </button>
         </div>
-      </div>
+      </header>
 
       {/* Urgent bar */}
       {p.counts.new > 0 && (
-        <div
-          style={{
-            margin: '10px 20px 0',
-            background: '#fff',
-            borderRadius: 12,
-            border: '1.5px solid #FCA5A5',
-            padding: '9px 16px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-          }}
-        >
+        <div className="mx-5 mt-2.5 flex items-center gap-3 rounded-xl border border-danger/30 bg-white px-4 py-2">
           <Icon
-            weight={500}
             name="notifications_active"
             size={20}
+            weight={500}
             filled
             className="shrink-0 text-danger"
           />
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 14, fontWeight: 700 }}>
+          <div className="flex-1">
+            <div className="text-[14px] font-bold">
               {p.counts.new}{' '}
               {p.counts.new === 1 ? 'pedido nuevo requiere' : 'pedidos nuevos requieren'} revisión
             </div>
-            <div style={{ fontSize: 12, color: 'var(--tv-ink-muted)' }}>
+            <div className="text-[12px] text-ink-muted">
               Toca cada card para ver el detalle y aceptar o rechazar. Se cancelan automáticamente
               en 5 min.
             </div>
@@ -721,18 +479,7 @@ export function PedidosDesktop(p: PedidosViewProps) {
       )}
 
       {/* Kanban 3 columnas */}
-      <div
-        style={{
-          flex: 1,
-          padding: '12px 20px 20px',
-          display: 'grid',
-          gridTemplateColumns: '1fr 1.4fr 0.9fr',
-          gap: 12,
-          alignItems: 'stretch',
-          minHeight: 0,
-          overflow: 'hidden',
-        }}
-      >
+      <div className="grid min-h-0 flex-1 grid-cols-[1fr_1.4fr_0.9fr] gap-3 overflow-hidden p-5">
         <KanbanCol
           title="Nuevos"
           count={p.counts.new}
@@ -743,14 +490,7 @@ export function PedidosDesktop(p: PedidosViewProps) {
           {p.newOrders.length > 0 ? (
             p.newOrders.map((o) => <NuevoCard key={o.rowId} order={o} compact onOpen={p.onOpen} />)
           ) : (
-            <div
-              style={{
-                padding: '20px 10px',
-                textAlign: 'center',
-                color: 'var(--tv-ink-subtle)',
-                fontSize: 12,
-              }}
-            >
+            <div className="px-2 py-5 text-center text-[12px] text-ink-subtle">
               Sin pedidos nuevos · te avisaremos cuando lleguen
             </div>
           )}
@@ -774,14 +514,7 @@ export function PedidosDesktop(p: PedidosViewProps) {
               />
             ))
           ) : (
-            <div
-              style={{
-                padding: '20px 10px',
-                textAlign: 'center',
-                color: 'var(--tv-ink-subtle)',
-                fontSize: 12,
-              }}
-            >
+            <div className="px-2 py-5 text-center text-[12px] text-ink-subtle">
               Nada en preparación
             </div>
           )}
@@ -798,14 +531,7 @@ export function PedidosDesktop(p: PedidosViewProps) {
               <RepartoCard key={o.rowId} order={o} compact onOpen={p.onOpen} />
             ))
           ) : (
-            <div
-              style={{
-                padding: '20px 10px',
-                textAlign: 'center',
-                color: 'var(--tv-ink-subtle)',
-                fontSize: 12,
-              }}
-            >
+            <div className="px-2 py-5 text-center text-[12px] text-ink-subtle">
               Sin pedidos en camino
             </div>
           )}
