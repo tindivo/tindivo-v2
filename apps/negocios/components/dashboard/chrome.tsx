@@ -63,7 +63,7 @@ const NAV_ITEMS: { id: NavId; label: string; icon: string; href: string }[] = [
 // así que su panel se reduce a gestionar el menú y la configuración.
 const CATALOG_ONLY_NAV: NavId[] = ['menu', 'config']
 
-const ACCENT_DEFAULT = '#F472B6'
+const ACCENT_DEFAULT = 'var(--color-brand)'
 
 function activeIdFor(pathname: string): NavId {
   if (pathname === '/') return 'pedidos'
@@ -185,33 +185,11 @@ function Sidebar({ active, onSignOut }: { active: NavId; onSignOut: () => void }
   const catalogNav: NavId[] = hasActiveOrders ? ['pedidos', ...CATALOG_ONLY_NAV] : CATALOG_ONLY_NAV
   const navItems = catalogOnly ? NAV_ITEMS.filter((it) => catalogNav.includes(it.id)) : NAV_ITEMS
   return (
-    <aside
-      style={{
-        width: 240,
-        flexShrink: 0,
-        background: '#fff',
-        borderRight: '1px solid #EAE7E2',
-        display: 'flex',
-        flexDirection: 'column',
-        padding: '20px 14px 16px',
-        height: '100dvh',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 6px 18px' }}>
+    <aside className="flex h-dvh w-[240px] shrink-0 flex-col border-r border-border bg-white px-3.5 py-5 pb-4">
+      <div className="flex items-center gap-2.5 px-1.5 pb-[18px]">
         <div
-          style={{
-            width: 38,
-            height: 38,
-            borderRadius: 12,
-            background: accent || ACCENT_DEFAULT,
-            color: '#fff',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontWeight: 700,
-            fontSize: 17,
-            fontFamily: 'var(--font-geist), system-ui, sans-serif',
-          }}
+          className="flex h-[38px] w-[38px] items-center justify-center rounded-xl text-[17px] font-bold text-white"
+          style={{ background: accent || ACCENT_DEFAULT }}
         >
           {bizName[0] ?? 'T'}
         </div>
@@ -235,37 +213,17 @@ function Sidebar({ active, onSignOut }: { active: NavId; onSignOut: () => void }
             <Link
               key={it.id}
               href={it.href}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                padding: '10px 12px',
-                borderRadius: 12,
-                background: on ? '#1a1614' : 'transparent',
-                color: on ? '#fff' : '#1a1614',
-                textDecoration: 'none',
-                fontFamily: 'inherit',
-                fontSize: 14,
-                fontWeight: 500,
-              }}
+              className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[14px] font-medium no-underline ${
+                on ? 'bg-ink text-white' : 'bg-transparent text-ink'
+              }`}
             >
               <Icon name={it.icon} size={20} filled={on} />
-              <span style={{ flex: 1 }}>{it.label}</span>
+              <span className="flex-1">{it.label}</span>
               {badge != null && badge > 0 && (
                 <span
-                  style={{
-                    minWidth: 22,
-                    height: 22,
-                    borderRadius: 999,
-                    background: on ? '#f97316' : '#dc2626',
-                    color: '#fff',
-                    fontSize: 11,
-                    fontWeight: 700,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '0 6px',
-                  }}
+                  className={`inline-flex min-h-[22px] items-center justify-center rounded-full px-1.5 text-[11px] font-bold text-white ${
+                    on ? 'bg-brand' : 'bg-danger'
+                  }`}
                 >
                   {badge}
                 </span>
@@ -290,10 +248,7 @@ function Sidebar({ active, onSignOut }: { active: NavId; onSignOut: () => void }
         />
         Alertas {soundOn ? 'ON' : 'OFF'}
       </button>
-      <div
-        className="mb-2.5 rounded-2xl bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
-        style={{ padding: 12, background: '#FFF4EC', boxShadow: 'none' }}
-      >
+      <div className="mb-2.5 rounded-2xl bg-brand-soft p-3">
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Icon
             name="circle"
@@ -313,46 +268,18 @@ function Sidebar({ active, onSignOut }: { active: NavId; onSignOut: () => void }
               : 'RECIBIENDO PEDIDOS'}
         </div>
       </div>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          padding: '8px 6px',
-          borderTop: '1px solid #EAE7E2',
-        }}
-      >
-        <div
-          style={{
-            width: 32,
-            height: 32,
-            borderRadius: 999,
-            background: '#fff7ed',
-            color: '#c2410c',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontWeight: 700,
-            fontSize: 13,
-          }}
-        >
+      <div className="flex items-center gap-2.5 border-t border-border px-1.5 py-2">
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-soft text-[13px] font-bold text-brand-dark">
           {bizName[0] ?? 'T'}
         </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 600 }}>Caja</div>
+        <div className="min-w-0 flex-1">
+          <div className="text-[13px] font-semibold text-ink">Caja</div>
         </div>
         <button
           type="button"
           onClick={onSignOut}
           title="Salir"
-          style={{
-            width: 32,
-            height: 32,
-            borderRadius: 8,
-            background: 'rgba(26,22,20,0.06)',
-            border: 'none',
-            cursor: 'pointer',
-          }}
+          className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border-none bg-ink/[0.06] transition-colors hover:bg-ink/[0.10]"
         >
           <Icon name="logout" size={18} />
         </button>
@@ -482,18 +409,7 @@ function NewOrderToast({ count }: { count: number }) {
 function CatalogOnlyGate() {
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
-      <span
-        style={{
-          width: 64,
-          height: 64,
-          borderRadius: 999,
-          background: '#fff7ed',
-          color: '#c2410c',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
+      <span className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-soft text-brand-dark">
         <Icon name="chat" size={30} filled />
       </span>
       <h1 className="font-display font-semibold text-[22px] text-ink">Modo catálogo activo</h1>
@@ -521,67 +437,21 @@ function CatalogOnlyGate() {
 
 function NotificationGate({ onActivate }: { onActivate: () => void }) {
   return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 9999,
-        background: 'rgba(0,0,0,0.85)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 20,
-      }}
-    >
-      <div
-        style={{
-          background: '#fff',
-          borderRadius: 24,
-          padding: '32px 28px',
-          maxWidth: 420,
-          width: '100%',
-          textAlign: 'center',
-        }}
-      >
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/85 p-5">
+      <div className="w-full max-w-[420px] rounded-3xl bg-white p-8 px-7 text-center">
         {/* Icono grande de campana */}
-        <div
-          style={{
-            width: 72,
-            height: 72,
-            borderRadius: 20,
-            background: '#fff7ed',
-            color: '#f97316',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            margin: '0 auto 16px',
-          }}
-        >
+        <div className="mx-auto mb-4 flex h-[72px] w-[72px] items-center justify-center rounded-[20px] bg-brand-soft text-brand">
           <Icon name="notifications_active" size={36} filled />
         </div>
 
-        <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>
-          Activa las notificaciones
-        </div>
+        <h2 className="mb-2 text-[22px] font-bold text-ink">Activa las notificaciones</h2>
 
-        <div style={{ fontSize: 15, color: '#57534e', lineHeight: 1.6, marginBottom: 8 }}>
+        <div className="mb-2 text-[15px] leading-relaxed text-ink-muted">
           Para recibir pedidos necesitas activar las alertas de sonido y notificaciones del
           navegador.
         </div>
 
-        <div
-          style={{
-            background: '#fef3c7',
-            borderRadius: 12,
-            padding: '12px 16px',
-            marginBottom: 24,
-            fontSize: 13,
-            color: '#92400E',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-          }}
-        >
+        <div className="mb-6 flex items-center gap-2 rounded-xl bg-warning-soft px-4 py-3 text-[13px] text-amber-800">
           <Icon name="warning" size={16} filled />
           Sin notificaciones activas, los pedidos pueden perderse y cancelarse automáticamente.
         </div>
@@ -595,7 +465,7 @@ function NotificationGate({ onActivate }: { onActivate: () => void }) {
           Activar notificaciones
         </button>
 
-        <div style={{ fontSize: 11, color: '#57534e', marginTop: 12 }}>
+        <div className="mt-3 text-[11px] text-ink-muted">
           Puedes ajustar el volumen desde la configuración del navegador
         </div>
       </div>
@@ -821,6 +691,8 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
         v.status === 'awaiting_payment' ||
         v.status === 'validando' ||
         v.state === 'cooking' ||
+        v.state === 'heading' ||
+        v.state === 'waiting' ||
         v.state === 'buffer_p1' ||
         v.state === 'buffer_p2' ||
         v.state === 'buffer_p3' ||
@@ -938,24 +810,13 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
   return (
     <Ctx.Provider value={value}>
       {gateShown && <NotificationGate onActivate={handleActivateNotifications} />}
-      <div className="flex" style={{ height: '100dvh', background: '#faf6f1' }}>
+      <div className="flex h-dvh bg-surface">
         <div className="hidden shrink-0 lg:block">
           <Sidebar active={active} onSignOut={onSignOut} />
         </div>
-        <div className="flex flex-col" style={{ flex: 1, minWidth: 0, height: '100dvh' }}>
+        <div className="flex min-w-0 flex-1 flex-col h-dvh">
           {catalogOnly && legacyOrdersVisible && (
-            <div
-              style={{
-                background: '#FEF3C7',
-                color: '#92400E',
-                padding: '8px 16px',
-                fontSize: 13,
-                fontWeight: 600,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-              }}
-            >
+            <div className="flex items-center gap-2 bg-warning-soft px-4 py-2 text-[13px] font-semibold text-amber-800">
               <Icon name="info" size={16} filled />
               Modo catálogo activo: estos pedidos son del modo delivery anterior.
             </div>
