@@ -3,6 +3,7 @@
 import { ApiError } from '@tindivo/api-client'
 import Link from 'next/link'
 import { use, useCallback, useEffect, useState } from 'react'
+import { LoadingState } from '@tindivo/ui'
 import { MS, soles } from '@/components/dashboard/primitives'
 import { DashboardShell } from '@/components/dashboard/shell'
 import { api } from '@/lib/api'
@@ -262,9 +263,12 @@ export default function DevolucionDetailPage({ params }: { params: Promise<{ id:
         </div>
 
         {loading ? (
-          <div style={{ padding: 40, textAlign: 'center', color: 'var(--tv-ink-muted)' }}>
-            Cargando detalle de la devolución...
-          </div>
+          <LoadingState
+            variant="card"
+            label="Cargando detalle de la devolución…"
+            icon="receipt_long"
+            className="my-6"
+          />
         ) : error || !data ? (
           <div
             style={{

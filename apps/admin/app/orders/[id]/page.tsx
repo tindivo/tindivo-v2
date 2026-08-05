@@ -1,7 +1,7 @@
 'use client'
 
 import type { ApiEnvelope } from '@tindivo/api-client'
-import { Button } from '@tindivo/ui'
+import { Button, Spinner } from '@tindivo/ui'
 import Link from 'next/link'
 import { type ReactNode, use, useCallback, useEffect, useState } from 'react'
 import { EmptyState, SectionHeader, StatusBadge } from '@/components/admin'
@@ -239,7 +239,10 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                 />
               </a>
             ) : (
-              <p className="mt-2 text-[12px] text-ink-subtle">Cargando la imagen…</p>
+              <div className="mt-2 flex items-center gap-2 text-[12px] text-ink-muted">
+                <Spinner size="xs" variant="muted" />
+                <span>Cargando la imagen…</span>
+              </div>
             )}
           </Card>
         )}

@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic'
 import { useEffect, useMemo, useState } from 'react'
+import { Spinner } from '@tindivo/ui'
 import { getCoverage, getCoveragePolygon, haversineKm, pointInPolygon } from '@/lib/coverage'
 import {
   type GeoFix,
@@ -156,15 +157,19 @@ export function MapPicker({
             locateError || !inside ? 'bg-danger' : 'bg-brand'
           }`}
         />
-        {locateError
-          ? locateError
-          : !pos
-            ? 'Cargando mapa…'
-            : !inside
-              ? 'Fuera de la zona de reparto de San Jacinto'
-              : accuracyM != null
-                ? `Ubicación obtenida · precisión ±${accuracyM} m`
-                : `${pos.lat.toFixed(4)}, ${pos.lng.toFixed(4)} · San Jacinto, Áncash`}
+        {locateError ? (
+          locateError
+        ) : !pos ? (
+          <span className="inline-flex items-center gap-1.5">
+            <Spinner size="xs" variant="brand" /> Cargando mapa…
+          </span>
+        ) : !inside ? (
+          'Fuera de la zona de reparto de San Jacinto'
+        ) : accuracyM != null ? (
+          `Ubicación obtenida · precisión ±${accuracyM} m`
+        ) : (
+          `${pos.lat.toFixed(4)}, ${pos.lng.toFixed(4)} · San Jacinto, Áncash`
+        )}
       </div>
     </div>
   )

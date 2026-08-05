@@ -3,6 +3,7 @@
 import { ApiError } from '@tindivo/api-client'
 import { PhonePeSchema } from '@tindivo/contracts'
 import { type FormEvent, useEffect, useRef, useState } from 'react'
+import { LoadingState } from '@tindivo/ui'
 import { FONT_DISPLAY, MS } from '@/components/dashboard/primitives'
 import { DashboardShell, useDashboard } from '@/components/dashboard/shell'
 import { notifySuccess } from '@/components/dashboard/toast'
@@ -1257,9 +1258,12 @@ export default function ConfiguracionPage() {
       }
     >
       {!form ? (
-        <div style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--tv-ink-muted)' }}>
-          Cargando configuración…
-        </div>
+        <LoadingState
+          variant="card"
+          label="Cargando configuración del local…"
+          icon="settings"
+          className="my-8"
+        />
       ) : (
         <div data-config-form="">
           <ConfigView

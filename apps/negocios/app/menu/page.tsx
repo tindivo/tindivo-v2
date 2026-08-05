@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
+import { LoadingState } from '@tindivo/ui'
 import { MS, soles } from '@/components/dashboard/primitives'
 import { DashboardShell } from '@/components/dashboard/shell'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
@@ -760,7 +761,7 @@ function CategoryManagerModal({
             <div style={{ fontSize: 12, color: 'var(--tv-danger)', fontWeight: 600 }}>{error}</div>
           )}
           {loading ? (
-            <div style={{ color: 'var(--tv-ink-muted)', fontSize: 14 }}>Cargando…</div>
+            <LoadingState variant="inline" label="Cargando categorías…" />
           ) : rows.length === 0 ? (
             <div style={{ color: 'var(--tv-ink-muted)', fontSize: 14 }}>
               Aún no tenés categorías. Agregá la primera para empezar tu menú.
@@ -1082,9 +1083,12 @@ export default function MenuPage() {
   return (
     <DashboardShell active="menu" title="Menú" subtitle={subtitle} headerRight={headerRight}>
       {!ready ? (
-        <div style={{ color: 'var(--tv-ink-muted)', fontSize: 14, padding: '20px 0' }}>
-          Cargando…
-        </div>
+        <LoadingState
+          variant="card"
+          label="Cargando menú del restaurante…"
+          icon="restaurant_menu"
+          className="my-8"
+        />
       ) : cats.length === 0 ? (
         <EmptyState onCreateCategory={() => setCatManagerOpen(true)} />
       ) : (

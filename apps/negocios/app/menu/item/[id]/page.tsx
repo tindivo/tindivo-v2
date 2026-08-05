@@ -2,6 +2,7 @@
 
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
+import { LoadingState } from '@tindivo/ui'
 import { MS, soles } from '@/components/dashboard/primitives'
 import { DashboardSidebar } from '@/components/dashboard/shell'
 import { notifySuccess } from '@/components/dashboard/toast'
@@ -2507,18 +2508,12 @@ export default function MenuItemEditorPage() {
 
   if (!ready) {
     return (
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100dvh',
-          color: 'var(--tv-ink-muted)',
-          fontSize: 14,
-        }}
-      >
-        Cargando…
-      </div>
+      <LoadingState
+        variant="fullscreen"
+        label="Cargando información del plato…"
+        description="Menú Tindivo"
+        icon="fastfood"
+      />
     )
   }
 

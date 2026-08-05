@@ -1,7 +1,7 @@
 'use client'
 
 import { getOpenStatus } from '@tindivo/contracts'
-import { Button } from '@tindivo/ui'
+import { Button, Spinner } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { AddressGateModal } from '@/components/gates/address-gate-modal'
@@ -85,7 +85,14 @@ export function CartCtas({ layout, onNavigate }: CartCtasProps) {
           disabled={loading || closed}
           onClick={handleCheckout}
         >
-          {readinessLoading ? 'Cargando…' : 'Ir a pagar'}
+          {readinessLoading ? (
+            <>
+              <Spinner size="sm" variant="white" />
+              <span>Cargando…</span>
+            </>
+          ) : (
+            'Ir a pagar'
+          )}
         </Button>
         {closed && (
           <p className={`text-[12px] text-ink-muted ${block ? 'mt-1.5' : ''}`}>
