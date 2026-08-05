@@ -1,7 +1,7 @@
 'use client'
 
 import { getOpenStatus } from '@tindivo/contracts'
-import { Icon } from '@/components/ui'
+import { Icon } from '@tindivo/ui'
 import type { BusinessDetail } from '@/features/catalog/types'
 
 interface ClosedBannerProps {
@@ -18,7 +18,7 @@ export function ClosedBanner({ schedule, now }: ClosedBannerProps) {
 
   return (
     <div className="px-4 pt-3">
-      <div className="t-warning-banner flex items-start gap-2.5 rounded-[16px] px-4 py-3 text-[13px]">
+      <div className="flex items-start gap-2.5 rounded-[16px] bg-warning-soft px-4 py-3 text-[13px] text-amber-900">
         <span className="mt-0.5 shrink-0">
           <Icon name="schedule" size={20} />
         </span>

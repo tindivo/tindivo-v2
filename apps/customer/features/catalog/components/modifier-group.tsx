@@ -1,6 +1,6 @@
 'use client'
 
-import { Icon } from '@/components/ui'
+import { Icon } from '@tindivo/ui'
 import { soles } from '@/features/catalog/lib/format'
 import type { ModGroupData, ModOption } from '@/features/catalog/types'
 
@@ -18,11 +18,11 @@ export function ModifierGroup({ group, selected, missing, onToggle }: ModifierGr
   return (
     <div
       className={`mt-3.5 rounded-[18px] bg-white p-4 ${
-        missing ? 'border border-brand' : 'border border-black/5'
+        missing ? 'border border-brand' : 'border border-ink/5'
       }`}
     >
       <div className="mb-1 flex items-center justify-between">
-        <div className="t-display text-[17px]">{group.name}</div>
+        <div className="font-display text-[17px] font-bold tracking-tight">{group.name}</div>
         {group.is_required ? (
           <span
             className={`rounded-md px-2 py-1 font-bold text-[10px] uppercase ${
@@ -32,12 +32,12 @@ export function ModifierGroup({ group, selected, missing, onToggle }: ModifierGr
             {count > 0 ? 'Listo' : 'Obligatorio'}
           </span>
         ) : !isSingle ? (
-          <span className="text-[12px] text-black/50">
+          <span className="text-[12px] text-ink/50">
             {count}/{group.max_selections ?? '∞'}
           </span>
         ) : null}
       </div>
-      <div className="mb-3 text-[12px] text-black/50">
+      <div className="mb-3 text-[12px] text-ink/50">
         {isSingle ? 'Elige una opción' : `Hasta ${group.max_selections ?? '∞'}`}
       </div>
       <div className="flex flex-col gap-1.5">
@@ -61,7 +61,7 @@ export function ModifierGroup({ group, selected, missing, onToggle }: ModifierGr
               <span
                 className={`flex h-[22px] w-[22px] shrink-0 items-center justify-center border-2 ${
                   isSingle ? 'rounded-full' : 'rounded-[7px]'
-                } ${sel ? 'border-brand' : 'border-black/25'} ${!isSingle && sel ? 'bg-brand text-white' : 'bg-transparent'}`}
+                } ${sel ? 'border-brand' : 'border-ink/25'} ${!isSingle && sel ? 'bg-brand text-white' : 'bg-transparent'}`}
               >
                 {isSingle
                   ? sel && <span className="h-2.5 w-2.5 rounded-full bg-brand" />
@@ -70,12 +70,12 @@ export function ModifierGroup({ group, selected, missing, onToggle }: ModifierGr
               <span className="flex-1">
                 <span className="block font-medium text-[15px]">{opt.name}</span>
                 {opt.description && (
-                  <span className="block text-[12px] text-black/55">{opt.description}</span>
+                  <span className="block text-[12px] text-ink/55">{opt.description}</span>
                 )}
               </span>
               <span
                 className={`font-medium text-[14px] ${
-                  Number(opt.additional_price) > 0 ? 'text-ink' : 'text-black/45'
+                  Number(opt.additional_price) > 0 ? 'text-ink' : 'text-ink/45'
                 }`}
               >
                 {Number(opt.additional_price) > 0

@@ -2,7 +2,7 @@
 
 import type { ApiEnvelope } from '@tindivo/api-client'
 import { ApiError } from '@tindivo/api-client'
-import { Icon } from '@tindivo/ui'
+import { Button, Icon } from '@tindivo/ui'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { mmss, soles } from '@/features/checkout/lib/format'
@@ -87,21 +87,25 @@ export function PrepayView({ result }: { result: OrderResult }) {
 
   return (
     <main className="mx-auto min-h-dvh max-w-[480px] px-4 pt-10 pb-12">
-      <h1 className="t-display text-[26px]">Paga con billetera digital</h1>
-      <p className="t-muted mt-1 text-[14px]">Pedido #{result.shortId}</p>
+      <h1 className="font-display text-[26px] font-bold tracking-tight">
+        Paga con billetera digital
+      </h1>
+      <p className="mt-1 text-[14px] text-ink-muted">Pedido #{result.shortId}</p>
 
       {sent ? (
         <div className="mt-6 rounded-[18px] border border-ink/5 bg-white p-5 text-center">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-success text-white">
             <Icon name="check" size={20} />
           </div>
-          <p className="t-display mt-3 text-[18px]">Comprobante enviado</p>
-          <p className="t-muted mt-1 text-[14px]">
+          <p className="mt-3 font-display text-[18px] font-bold tracking-tight">
+            Comprobante enviado
+          </p>
+          <p className="mt-1 text-[14px] text-ink-muted">
             El restaurante validará tu pago y confirmará el pedido.
           </p>
-          <Link href={`/pedido/${result.shortId}`} className="t-btn t-btn-primary t-btn-block mt-5">
+          <Button as="a" href={`/pedido/${result.shortId}`} variant="brand" className="mt-5 w-full">
             Ver seguimiento
-          </Link>
+          </Button>
         </div>
       ) : (
         <>
@@ -115,7 +119,9 @@ export function PrepayView({ result }: { result: OrderResult }) {
           </div>
 
           <div className="mt-4 rounded-[18px] border border-ink/5 bg-white p-5">
-            <p className="t-eyebrow">Paga a {info?.businessName ?? 'el restaurante'}</p>
+            <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-muted">
+              Paga a {info?.businessName ?? 'el restaurante'}
+            </p>
             {info?.qrUrl && (
               <div className="mt-3 flex justify-center">
                 <img
@@ -143,7 +149,9 @@ export function PrepayView({ result }: { result: OrderResult }) {
 
           {previewUrl ? (
             <div className="mt-5 rounded-[18px] border border-ink/5 bg-white p-4">
-              <p className="t-eyebrow">Tu comprobante</p>
+              <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-muted">
+                Tu comprobante
+              </p>
               <img
                 src={previewUrl}
                 alt="Vista previa del comprobante"
@@ -160,18 +168,19 @@ export function PrepayView({ result }: { result: OrderResult }) {
                     disabled={uploading || expired}
                   />
                 </label>
-                <button
+                <Button
                   type="button"
-                  className="t-btn t-btn-primary flex-1"
+                  variant="brand"
+                  className="flex-1"
                   disabled={uploading || expired}
                   onClick={submitProof}
                 >
                   {uploading ? 'Enviando…' : 'Enviar comprobante'}
-                </button>
+                </Button>
               </div>
             </div>
           ) : (
-            <label className="t-btn t-btn-primary t-btn-block mt-5 cursor-pointer">
+            <label className="mt-5 inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-gradient-to-br from-[#ff6b35] to-[#ff8c42] px-6 py-3 font-sans text-base font-bold text-white shadow-[0_8px_24px_rgba(242,98,65,0.22)] transition-all hover:shadow-[0_12px_40px_rgba(255,107,53,0.32)] active:scale-[0.97]">
               Subir comprobante
               <input
                 type="file"

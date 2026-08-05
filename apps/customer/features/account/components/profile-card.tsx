@@ -17,7 +17,9 @@ export function ProfileCard({ name, email, phone, onEdit }: ProfileCardProps) {
         {initial}
       </div>
       <div className="relative min-w-0 flex-1">
-        <div className="t-display truncate text-[20px] leading-[1.1]">{name || 'Usuario'}</div>
+        <div className="font-display font-bold tracking-tight truncate text-[20px] leading-[1.1]">
+          {name || 'Usuario'}
+        </div>
         <div className="mt-0.5 truncate text-[12px] text-white/85">{email}</div>
         {phone && (
           <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-white/[0.18] px-2.5 py-[3px] text-[11px] backdrop-blur-sm">

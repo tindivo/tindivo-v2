@@ -1,6 +1,6 @@
 'use client'
 
-import { BottomSheet } from '@/components/ui'
+import { BottomSheet, Button } from '@tindivo/ui'
 import type { CartLine } from '@/lib/cart'
 
 interface CartReplaceSheetProps {
@@ -21,27 +21,26 @@ export function CartReplaceSheet({
   return (
     <BottomSheet open onClose={onClose}>
       <div className="px-5 pt-6 pb-7">
-        <div className="t-display text-[20px] leading-[1.15]">¿Empezar una bolsa nueva?</div>
-        <p className="mt-2 text-[14px] text-black/65">
+        <div className="font-display text-[20px] font-bold leading-[1.15] tracking-tight">
+          ¿Empezar una bolsa nueva?
+        </div>
+        <p className="mt-2 text-[14px] text-ink/65">
           Tu bolsa tiene productos de <span className="font-semibold">{currentBusinessName}</span>.
           Solo puedes pedir de un restaurante a la vez. Si continúas, vaciaremos tu bolsa para
           empezar en <span className="font-semibold">{newBusinessName}</span>.
         </p>
         <div className="mt-5 flex gap-2.5">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 rounded-[14px] bg-black/[0.06] py-3.5 font-semibold text-[15px]"
-          >
+          <Button type="button" variant="secondary" className="flex-1" onClick={onClose}>
             Mantener
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="brand"
+            className="flex-1"
             onClick={() => onConfirm(pending)}
-            className="t-btn t-btn-primary flex-1"
           >
             Vaciar y empezar
-          </button>
+          </Button>
         </div>
       </div>
     </BottomSheet>

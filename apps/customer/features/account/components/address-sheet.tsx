@@ -1,9 +1,9 @@
 'use client'
 
+import { BottomSheet, Button, ScreenHeader } from '@tindivo/ui'
 import type { FormEvent } from 'react'
 import { useState } from 'react'
 import { AddressFields, type AddressValue, isReferenceOk } from '@/components/address-fields'
-import { BottomSheet, ScreenHeader } from '@/components/ui'
 import type { Address } from '@/features/account/types'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
@@ -72,7 +72,7 @@ export function AddressSheet({ address, onClose, onSaved, onDelete }: AddressShe
   return (
     <BottomSheet open onClose={onClose}>
       <ScreenHeader title={address ? 'Editar dirección' : 'Nueva dirección'} onBack={onClose} />
-      <form onSubmit={save} className="t-scroll flex-1 px-4 pt-2 pb-6">
+      <form onSubmit={save} className="flex-1 overflow-y-auto scrollbar-hide px-4 pt-2 pb-6">
         <div className="mb-4">
           <AddressFields
             value={addr}
@@ -114,13 +114,9 @@ export function AddressSheet({ address, onClose, onSaved, onDelete }: AddressShe
             Eliminar dirección
           </button>
         )}
-        <button
-          type="submit"
-          className="t-btn t-btn-primary t-btn-block mt-4"
-          disabled={!canSave || busy}
-        >
+        <Button type="submit" variant="brand" className="mt-4 w-full" disabled={!canSave || busy}>
           {busy ? 'Guardando…' : address ? 'Guardar cambios' : 'Guardar dirección'}
-        </button>
+        </Button>
       </form>
     </BottomSheet>
   )

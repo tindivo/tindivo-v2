@@ -121,14 +121,14 @@ export function AuthOnboardingSheet() {
             Paso {chip} de {totalSteps}
           </span>
         ) : headerLabel ? (
-          <span className="t-eyebrow" style={{ marginBottom: 0 }}>
+          <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-muted">
             {headerLabel}
           </span>
         ) : null}
       </div>
 
       {/* Carrusel horizontal: todos los pasos montados, translate al activo. */}
-      <div className="overflow-hidden" style={{ height: 'min(560px, 78dvh)' }}>
+      <div className="h-[min(560px,78dvh)] overflow-hidden">
         <div
           className="flex h-full"
           style={{

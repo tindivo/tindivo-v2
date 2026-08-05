@@ -1,5 +1,6 @@
 'use client'
 
+import { Button } from '@tindivo/ui'
 import Link from 'next/link'
 import { AppealSection } from '@/features/tracking/components/appeal-section'
 import { soles } from '@/features/tracking/lib/format'
@@ -34,8 +35,10 @@ export function TrackingAppealView({ data, ownedId, onAppealCreated }: TrackingA
       />
 
       <div className="px-4 pb-6 pt-4">
-        <Link href="/" className="t-btn t-btn-ghost t-btn-block">
-          ← Volver al inicio
+        <Link href="/" className="block w-full">
+          <Button variant="ghost" className="w-full">
+            ← Volver al inicio
+          </Button>
         </Link>
       </div>
     </div>

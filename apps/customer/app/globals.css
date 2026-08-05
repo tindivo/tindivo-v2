@@ -1,6 +1,5 @@
 @import "tailwindcss";
 @import "../../../packages/ui/src/theme.css";
-@import "../../../packages/ui/src/components.css";
 
 /* Escanea las clases usadas en el paquete de UI compartido. */
 @source '../../../packages/ui/src';
@@ -8,22 +7,6 @@
 /* Base: light mode siempre, mobile-first. */
 html {
   -webkit-text-size-adjust: 100%;
-}
-
-/* Utilidades de sombra de texto usadas por el catálogo. */
-.t-text-shadow-sm {
-  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.4);
-}
-.t-text-shadow-md {
-  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
-}
-.t-text-shadow-lg {
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
-}
-
-.t-warning-banner {
-  background: #fef3c7;
-  color: #92400e;
 }
 
 .scrollbar-hide {

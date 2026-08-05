@@ -1,7 +1,7 @@
 'use client'
 
+import { BottomSheet } from '@tindivo/ui'
 import { useEffect, useState } from 'react'
-import { BottomSheet } from '@/components/ui'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import { AddressStep } from '../auth-onboarding/steps/address-step'
 
@@ -24,11 +24,9 @@ export function AddressGateModal({ onComplete, onClose }: Props) {
   return (
     <BottomSheet open onClose={onClose}>
       <div className="px-5 pt-4 pb-1">
-        <p className="text-[13px]" style={{ color: 'rgba(26,22,20,0.5)' }}>
-          ¿Dónde te lo llevamos?
-        </p>
+        <p className="text-[13px] text-ink/50">¿Dónde te lo llevamos?</p>
       </div>
-      <div style={{ height: 'min(560px, 78dvh)' }}>
+      <div className="h-[min(560px,78dvh)]">
         <AddressStep active mode="gate" userId={userId} onBack={onClose} onDone={onComplete} />
       </div>
     </BottomSheet>

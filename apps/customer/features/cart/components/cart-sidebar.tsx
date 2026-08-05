@@ -23,7 +23,7 @@ export function CartSidebar({ businessId, businessName }: CartSidebarProps) {
   return (
     <div className="rounded-[28px] border border-border bg-card p-5 shadow-elev-2">
       <div className="flex items-center justify-between gap-2">
-        <span className="t-display text-[18px]">Mi bolsa</span>
+        <span className="font-display text-[18px] font-bold tracking-tight">Mi bolsa</span>
         {showCart && (
           <span className="inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-brand px-1.5 font-bold text-[12px] text-white tabular-nums">
             {count}

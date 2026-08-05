@@ -1,4 +1,4 @@
-import { Icon } from '@/components/ui'
+import { Icon } from '@tindivo/ui'
 
 interface SearchBarProps {
   query: string
@@ -8,7 +8,7 @@ interface SearchBarProps {
 export function SearchBar({ query, onChange }: SearchBarProps) {
   return (
     <div className="px-4 pb-2">
-      <div className="t-glass flex items-center gap-2.5 rounded-full px-4 py-3">
+      <div className="flex items-center gap-2.5 rounded-full border border-white/[0.08] bg-white/[0.78] px-4 py-3 shadow-elev-2 backdrop-blur-2xl">
         <span className="text-ink-subtle">
           <Icon name="search" size={20} />
         </span>

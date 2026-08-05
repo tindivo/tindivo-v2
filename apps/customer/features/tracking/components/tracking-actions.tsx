@@ -1,7 +1,7 @@
 import type { TrackingStep } from '@tindivo/contracts'
 import { Button, Icon } from '@tindivo/ui'
 import Link from 'next/link'
-import { SupportLink } from '@/components/ui'
+import { SupportLink } from '@/components/support-link'
 import { getStatusMessage } from '@/features/tracking/lib/format'
 import type { CancelState, Tracking } from '@/features/tracking/types'
 
@@ -91,7 +91,7 @@ export function TrackingActions({ data, current, cancellable, cancel }: Tracking
       {confirmCancel && (
         // biome-ignore lint/a11y/noStaticElementInteractions: backdrop de modal que cierra al click fuera
         <div
-          className="t-modal-backdrop items-center"
+          className="fixed inset-0 z-80 flex items-center justify-center bg-black/50 animate-[t-fade-in_200ms_ease] backdrop-blur-sm"
           role="presentation"
           onClick={(e) => {
             if (e.target === e.currentTarget) setConfirmCancel(false)
@@ -105,7 +105,9 @@ export function TrackingActions({ data, current, cancellable, cancel }: Tracking
             role="dialog"
             aria-modal="true"
           >
-            <h2 className="t-display text-[20px]">¿Cancelar tu pedido?</h2>
+            <h2 className="font-display text-[20px] font-bold tracking-tight">
+              ¿Cancelar tu pedido?
+            </h2>
             <p className="mt-2 text-[14px] leading-relaxed text-ink-muted">
               Esta acción no se puede deshacer. Si ya pagaste por Yape, te lo devolveremos.
             </p>

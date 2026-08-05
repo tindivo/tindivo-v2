@@ -1,3 +1,4 @@
+import { Button, Card } from '@tindivo/ui'
 import { OrderDetail } from '@/features/checkout/components/order-detail'
 import type { CheckoutViewModel } from '@/features/checkout/hooks/use-checkout'
 import type { UseCheckoutValidationReturn } from '@/features/checkout/hooks/use-checkout-validation'
@@ -30,25 +31,27 @@ export function CheckoutSummary({
       <aside className="hidden lg:sticky lg:top-6 lg:block">
         <OrderDetail />
         <Summary subtotal={subtotal} deliveryFee={deliveryFee} total={total} count={cart.count()} />
-        <button
+        <Button
           type="button"
-          className="t-btn t-btn-primary t-btn-block mt-4"
+          variant="brand"
+          className="mt-4 w-full"
           disabled={ctaDisabled}
           onClick={ctaAction}
         >
           {ctaLabel}
-        </button>
+        </Button>
       </aside>
 
-      <div className="t-sticky-cta mx-auto max-w-[768px] lg:hidden">
-        <button
+      <div className="sticky bottom-0 z-10 mx-auto max-w-[768px] bg-gradient-to-t from-surface via-surface/95 to-transparent px-4 pt-3 pb-5 lg:hidden">
+        <Button
           type="button"
-          className="t-btn t-btn-primary t-btn-block"
+          variant="brand"
+          className="w-full"
           disabled={ctaDisabled}
           onClick={ctaAction}
         >
           {ctaLabel}
-        </button>
+        </Button>
       </div>
     </>
   )
@@ -66,8 +69,10 @@ function Summary({
   count: number
 }) {
   return (
-    <div className="t-card mt-5 p-4">
-      <div className="t-eyebrow mb-2.5">Resumen</div>
+    <Card className="mt-5 p-4">
+      <div className="mb-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-muted">
+        Resumen
+      </div>
       <div className="flex justify-between py-1 text-[14px] font-medium text-ink-muted tabular-nums">
         <span>Productos ({count})</span>
         <span>{soles(subtotal)}</span>
@@ -81,6 +86,6 @@ function Summary({
         <span>Total a pagar</span>
         <span>{soles(total)}</span>
       </div>
-    </div>
+    </Card>
   )
 }

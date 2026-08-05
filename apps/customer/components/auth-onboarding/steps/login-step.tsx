@@ -1,5 +1,6 @@
 'use client'
 
+import { Button } from '@tindivo/ui'
 import { type FormEvent, useEffect, useState } from 'react'
 import { signInWithEmail } from '../persistence'
 
@@ -44,17 +45,19 @@ export function LoginStep({
 
   return (
     <form onSubmit={onSubmit} className="flex h-full flex-col">
-      <div className="t-scroll flex-1 px-5 pt-2 pb-4">
-        <h2 className="t-display text-[24px] leading-[1.1] text-ink">Hola de nuevo</h2>
+      <div className="flex-1 overflow-y-auto px-5 pt-2 pb-4 scrollbar-hide">
+        <h2 className="font-display text-[24px] font-bold leading-[1.1] tracking-tight text-ink">
+          Hola de nuevo
+        </h2>
         <p className="mt-1.5 text-[14px] text-ink-muted">Entra con tu correo y contraseña.</p>
 
         <label className="mt-5 block">
-          <span className="t-field-label">
+          <span className="mb-2 block font-mono text-[12px] font-semibold uppercase tracking-wide text-ink-muted">
             Correo <span className="text-brand">*</span>
           </span>
           <input
             type="email"
-            className="t-field"
+            className="w-full rounded-2xl border border-ink/[0.06] bg-card px-4 py-3.5 text-[16px] font-medium text-ink outline-none transition-colors placeholder:text-ink-subtle focus:border-ink focus:ring-4 focus:ring-ink/[0.08]"
             placeholder="tu@correo.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -65,12 +68,12 @@ export function LoginStep({
         </label>
 
         <label className="mt-3.5 block">
-          <span className="t-field-label">
+          <span className="mb-2 block font-mono text-[12px] font-semibold uppercase tracking-wide text-ink-muted">
             Contraseña <span className="text-brand">*</span>
           </span>
           <input
             type="password"
-            className="t-field"
+            className="w-full rounded-2xl border border-ink/[0.06] bg-card px-4 py-3.5 text-[16px] font-medium text-ink outline-none transition-colors placeholder:text-ink-subtle focus:border-ink focus:ring-4 focus:ring-ink/[0.08]"
             placeholder="Tu contraseña"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -92,14 +95,14 @@ export function LoginStep({
       </div>
 
       <div className="border-t border-ink/[0.04] px-4 pt-3.5 pb-6">
-        <button
+        <Button
           type="submit"
-          className="t-btn t-btn-primary t-btn-block"
+          className="w-full"
           disabled={!valid || busy}
           tabIndex={active ? 0 : -1}
         >
           {busy ? 'Un momento…' : 'Entrar'}
-        </button>
+        </Button>
       </div>
     </form>
   )

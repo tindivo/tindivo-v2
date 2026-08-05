@@ -1,6 +1,7 @@
 'use client'
 
 import { getOpenStatus } from '@tindivo/contracts'
+import { Button } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { AddressGateModal } from '@/components/gates/address-gate-modal'
@@ -77,14 +78,15 @@ export function CartCtas({ layout, onNavigate }: CartCtasProps) {
   return (
     <>
       <div className={block ? 'mt-3' : 'flex flex-1 flex-col gap-1.5'}>
-        <button
+        <Button
           type="button"
-          className={`t-btn t-btn-primary ${block ? 't-btn-block' : 'w-full'}`}
+          variant="brand"
+          className="w-full"
           disabled={loading || closed}
           onClick={handleCheckout}
         >
           {readinessLoading ? 'Cargando…' : 'Ir a pagar'}
-        </button>
+        </Button>
         {closed && (
           <p className={`text-[12px] text-ink-muted ${block ? 'mt-1.5' : ''}`}>
             El restaurante está cerrado ahora.

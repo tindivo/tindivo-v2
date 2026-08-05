@@ -28,7 +28,9 @@ export function TrackingHero({ data, step, currentIdx, progress }: TrackingHeroP
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-brand-light" />
           Pedido #{data.shortId}
         </div>
-        <div className="t-display mt-3 text-[30px] leading-tight">{step.label}</div>
+        <div className="mt-3 font-display text-[30px] font-bold leading-tight tracking-tight">
+          {step.label}
+        </div>
         <div className="mt-1 text-[14px] text-white/70">{getStepSub(step, data)}</div>
         <div className="mt-[18px] h-2 overflow-hidden rounded-full bg-white/15">
           <div

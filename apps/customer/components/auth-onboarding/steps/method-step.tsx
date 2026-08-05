@@ -1,5 +1,6 @@
 'use client'
 
+import { Card } from '@tindivo/ui'
 import Link from 'next/link'
 import { useState } from 'react'
 
@@ -41,14 +42,11 @@ export function MethodStep({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="t-scroll flex-1 px-5 pt-2 pb-4">
-        <div
-          className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand font-bold text-[24px] text-white shadow-glow-brand"
-          style={{ fontFamily: 'var(--font-display, inherit)' }}
-        >
+      <div className="flex-1 overflow-y-auto px-5 pt-2 pb-4 scrollbar-hide">
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand font-display font-bold text-[24px] text-white shadow-glow-brand">
           T
         </div>
-        <h2 className="t-display mt-4 text-[26px] leading-[1.1] text-ink">
+        <h2 className="mt-4 font-display text-[26px] font-bold leading-[1.1] tracking-tight text-ink">
           Crea tu cuenta
           <br />
           en Tindivo
@@ -57,8 +55,8 @@ export function MethodStep({
           Sin verificación de correo. Empiezas a pedir al instante.
         </p>
 
-        <button
-          type="button"
+        <Card
+          as="button"
           disabled={googleBusy}
           onClick={async () => {
             setError(null)
@@ -70,7 +68,7 @@ export function MethodStep({
               setGoogleBusy(false)
             }
           }}
-          className="t-card t-lift mt-6 flex w-full items-center gap-3.5 p-4 text-left disabled:opacity-60"
+          className="mt-6 flex w-full items-center gap-3.5 p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-elev-3 active:translate-y-0 active:scale-[0.985] disabled:opacity-60"
         >
           <GoogleLogo />
           <span className="flex-1">
@@ -79,7 +77,7 @@ export function MethodStep({
             </span>
             <span className="block text-[12px] text-ink-muted">Recomendado · 1 toque</span>
           </span>
-        </button>
+        </Card>
 
         <button
           type="button"
@@ -115,7 +113,7 @@ export function MethodStep({
 
         <div className="mt-6 flex items-center gap-3">
           <span className="h-px flex-1 bg-ink/[0.10]" />
-          <span className="t-eyebrow" style={{ marginBottom: 0 }}>
+          <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-muted">
             ¿Ya tienes cuenta?
           </span>
           <span className="h-px flex-1 bg-ink/[0.10]" />

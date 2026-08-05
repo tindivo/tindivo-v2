@@ -1,3 +1,4 @@
+import { Button } from '@tindivo/ui'
 import Link from 'next/link'
 import type { GeoBlockKind } from '@/features/checkout/types'
 
@@ -46,14 +47,14 @@ export function GeoBlockView({
           <circle cx="12" cy="10" r="2.5" stroke="currentColor" strokeWidth="2" />
         </svg>
       </div>
-      <h1 className="t-display mt-5 text-[26px]">{copy.title}</h1>
-      <p className="t-muted mt-2 text-[15px]">{copy.body}</p>
-      <button type="button" onClick={onPrepay} className="t-btn t-btn-primary t-btn-block mt-6">
+      <h1 className="mt-5 font-display text-[26px] font-bold tracking-tight">{copy.title}</h1>
+      <p className="mt-2 text-[15px] text-ink-muted">{copy.body}</p>
+      <Button type="button" variant="brand" onClick={onPrepay} className="mt-6 w-full">
         Pagar por adelantado
-      </button>
-      <button type="button" onClick={onRetry} className="t-btn t-btn-ghost t-btn-block mt-3">
+      </Button>
+      <Button type="button" variant="ghost" onClick={onRetry} className="mt-3 w-full">
         Volver a intentar
-      </button>
+      </Button>
       <Link href="/" className="mt-3 text-[14px] text-brand">
         Volver al inicio
       </Link>

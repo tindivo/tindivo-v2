@@ -1,8 +1,8 @@
 'use client'
 
 import { ApiError } from '@tindivo/api-client'
+import { BottomSheet, Button } from '@tindivo/ui'
 import { useEffect, useRef, useState } from 'react'
-import { BottomSheet } from '@/components/ui'
 import { api } from '@/lib/api'
 
 type Props = {
@@ -118,25 +118,25 @@ export function OtpVerificationSheet({ open, phone, onVerified, onClose }: Props
 
   return (
     <BottomSheet open={open} onClose={onClose}>
-      <div className="flex flex-col" style={{ height: 'min(450px, 60dvh)' }}>
+      <div className="flex h-[min(450px,60dvh)] flex-col">
         {phase === 'sending' ? (
           <div className="flex flex-1 flex-col items-center justify-center p-6 text-center">
             <div className="h-10 w-10 animate-spin rounded-full border-4 border-brand border-t-transparent" />
             <p className="mt-4 text-[15px] font-semibold">Enviando código de verificación…</p>
-            <p className="mt-1 text-[13px]" style={{ color: 'rgba(26,22,20,0.5)' }}>
-              Espera un momento, por favor.
-            </p>
+            <p className="mt-1 text-[13px] text-ink/50">Espera un momento, por favor.</p>
             {error && <p className="mt-4 text-[13px] text-danger">{error}</p>}
             {error && (
-              <button type="button" className="t-btn t-btn-secondary mt-4" onClick={sendCode}>
+              <Button type="button" variant="secondary" className="mt-4 w-full" onClick={sendCode}>
                 Reintentar envío
-              </button>
+              </Button>
             )}
           </div>
         ) : (
-          <div className="t-scroll flex-1 px-5 pt-4 pb-4">
-            <h2 className="t-display text-[24px] leading-[1.15]">Verifica tu celular</h2>
-            <p className="mt-1.5 text-[14px]" style={{ color: 'rgba(26,22,20,0.6)' }}>
+          <div className="flex-1 overflow-y-auto px-5 pt-4 pb-4 scrollbar-hide">
+            <h2 className="font-display text-[24px] font-bold leading-[1.15] tracking-tight">
+              Verifica tu celular
+            </h2>
+            <p className="mt-1.5 text-[14px] text-ink/60">
               Enviamos un código de 6 dígitos por SMS a tu celular (+51 {maskedPhone})
             </p>
 
@@ -163,7 +163,7 @@ export function OtpVerificationSheet({ open, phone, onVerified, onClose }: Props
               </button>
 
               {cooldown > 0 ? (
-                <span style={{ color: 'rgba(26,22,20,0.5)' }}>Reenviar en {cooldown}s</span>
+                <span className="text-ink/50">Reenviar en {cooldown}s</span>
               ) : (
                 <button
                   type="button"
@@ -178,14 +178,15 @@ export function OtpVerificationSheet({ open, phone, onVerified, onClose }: Props
             {error && <p className="mt-4 text-[13px] text-danger">{error}</p>}
 
             <div className="mt-auto pt-6">
-              <button
+              <Button
                 type="button"
-                className="t-btn t-btn-primary t-btn-block"
+                variant="brand"
+                className="w-full"
                 disabled={!isCodeValid || busy}
                 onClick={() => verifyCode()}
               >
                 {busy ? 'Verificando…' : 'Confirmar código'}
-              </button>
+              </Button>
             </div>
           </div>
         )}

@@ -1,4 +1,4 @@
-import { Icon } from '@tindivo/ui'
+import { Card, Icon } from '@tindivo/ui'
 import Link from 'next/link'
 import type { OrderRow } from '@/features/account/types'
 
@@ -12,7 +12,9 @@ export function RecentOrdersPreview({ orders }: RecentOrdersPreviewProps) {
   return (
     <div className="mt-5">
       <div className="mb-2 flex items-baseline justify-between">
-        <div className="t-display text-[17px] text-ink">Pedidos recientes</div>
+        <div className="font-display font-bold tracking-tight text-[17px] text-ink">
+          Pedidos recientes
+        </div>
         <Link
           href="/pedidos"
           className="text-[12px] font-semibold text-brand hover:text-brand-dark"
@@ -22,21 +24,19 @@ export function RecentOrdersPreview({ orders }: RecentOrdersPreviewProps) {
       </div>
       <div className="flex flex-col gap-2.5">
         {orders.slice(0, 2).map((o) => (
-          <Link
-            key={o.id}
-            href={`/pedido/${o.short_id}`}
-            className="t-card t-lift flex items-center gap-3 px-3.5 py-3"
-          >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-brand">
-              <Icon name="receipt" size={20} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="font-semibold text-[14px] text-ink">Pedido #{o.short_id}</div>
-              <div className="text-[12px] text-ink-muted">
-                {statusLabel(o.status)} · {soles(Number(o.order_amount))}
+          <Link key={o.id} href={`/pedido/${o.short_id}`} className="block">
+            <Card className="flex items-center gap-3 px-3.5 py-3 transition-all hover:-translate-y-0.5 hover:shadow-elev-3 active:translate-y-0 active:scale-[0.985]">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-brand">
+                <Icon name="receipt" size={20} />
               </div>
-            </div>
-            <Icon name="chevron_right" size={20} className="text-ink-subtle" />
+              <div className="min-w-0 flex-1">
+                <div className="font-semibold text-[14px] text-ink">Pedido #{o.short_id}</div>
+                <div className="text-[12px] text-ink-muted">
+                  {statusLabel(o.status)} · {soles(Number(o.order_amount))}
+                </div>
+              </div>
+              <Icon name="chevron_right" size={20} className="text-ink-subtle" />
+            </Card>
           </Link>
         ))}
       </div>

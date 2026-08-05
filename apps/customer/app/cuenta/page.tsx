@@ -1,8 +1,8 @@
 'use client'
 
+import { ScreenHeader } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { ScreenHeader } from '@/components/ui'
 import { AccountMenu } from '@/features/account/components/account-menu'
 import { AccountSkeleton } from '@/features/account/components/account-skeleton'
 import { AccountToast } from '@/features/account/components/account-toast'

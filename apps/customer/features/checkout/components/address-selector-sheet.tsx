@@ -1,6 +1,6 @@
 'use client'
 
-import { Icon, ScreenHeader } from '@tindivo/ui'
+import { BottomSheet, Button, Icon, ScreenHeader } from '@tindivo/ui'
 import { useState } from 'react'
 import {
   AddressFields,
@@ -8,7 +8,6 @@ import {
   EMPTY_ADDRESS,
   labelEmoji,
 } from '@/components/address-fields'
-import { BottomSheet } from '@/components/ui'
 import type { Address } from '@/features/checkout/types'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
@@ -70,7 +69,7 @@ export function AddressSelectorSheet({
   return (
     <BottomSheet open onClose={onClose}>
       <ScreenHeader title="Entregar en" onBack={onClose} />
-      <div className="t-scroll flex-1 px-4 pt-2 pb-6">
+      <div className="flex-1 overflow-y-auto px-4 pt-2 pb-6 scrollbar-hide">
         {!adding ? (
           <div className="flex flex-col gap-2.5">
             {addresses.map((a) => {
@@ -84,7 +83,7 @@ export function AddressSelectorSheet({
                     onClose()
                   }}
                   className={`flex items-start gap-3 rounded-[18px] border bg-card p-3.5 text-left transition-all ${
-                    sel ? 'border-brand shadow-focus-ring' : 'border-ink/[0.04] shadow-elev-1'
+                    sel ? 'border-brand ring-2 ring-brand/30' : 'border-ink/[0.04] shadow-elev-1'
                   }`}
                 >
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-[18px]">
@@ -113,7 +112,7 @@ export function AddressSelectorSheet({
             <button
               type="button"
               onClick={() => setAdding(true)}
-              className="t-lift flex flex-col items-center gap-1.5 rounded-[18px] border-[1.5px] border-dashed border-brand/35 bg-brand-soft px-4 py-5 text-brand-dark"
+              className="flex flex-col items-center gap-1.5 rounded-[18px] border-[1.5px] border-dashed border-brand/35 bg-brand-soft px-4 py-5 text-brand-dark transition-all hover:-translate-y-0.5 hover:shadow-elev-3 active:translate-y-0 active:scale-[0.985]"
             >
               <Icon name="add_location_alt" size={22} />
               <span className="font-semibold text-[14px]">Agregar nueva dirección</span>
@@ -127,23 +126,25 @@ export function AddressSelectorSheet({
               onValidityChange={setManualInside}
             />
             <div className="flex gap-2">
-              <button
+              <Button
                 type="button"
+                variant="ghost"
                 onClick={() => setAdding(false)}
-                className="t-btn t-btn-ghost flex-1"
+                className="flex-1"
               >
                 Cancelar
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="brand"
                 onClick={saveNew}
                 disabled={
                   busy || !manualAddr.line.trim() || !manualAddr.reference.trim() || !manualInside
                 }
-                className="t-btn t-btn-primary flex-1"
+                className="flex-1"
               >
                 {busy ? 'Guardando…' : 'Guardar dirección'}
-              </button>
+              </Button>
             </div>
           </div>
         )}

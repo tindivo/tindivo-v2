@@ -1,4 +1,4 @@
-import { Icon } from '@tindivo/ui'
+import { Card, Icon } from '@tindivo/ui'
 
 interface Product {
   id: string
@@ -53,13 +53,18 @@ export function FeaturedProducts({ products = SAMPLE_PRODUCTS }: { products?: Pr
   return (
     <section className="w-full bg-surface px-5 pt-2 pb-4">
       <div className="mb-3 flex items-baseline justify-between">
-        <h2 className="t-display text-[18px] text-ink">Lo más pedido</h2>
+        <h2 className="font-display text-[18px] font-bold tracking-tight text-ink">
+          Lo más pedido
+        </h2>
         <span className="text-[13px] font-semibold text-brand">Ver todo</span>
       </div>
 
       <div className="-mx-5 grid grid-cols-2 gap-3 px-5">
         {products.map((p) => (
-          <div key={p.id} className="t-card t-lift overflow-hidden p-0">
+          <Card
+            key={p.id}
+            className="overflow-hidden p-0 transition-all hover:-translate-y-0.5 hover:shadow-elev-3 active:translate-y-0 active:scale-[0.985]"
+          >
             {/* Imagen */}
             <div className="relative h-[110px] w-full overflow-hidden bg-surface-low">
               {p.imageUrl ? (
@@ -105,7 +110,7 @@ export function FeaturedProducts({ products = SAMPLE_PRODUCTS }: { products?: Pr
                 </button>
               </div>
             </div>
-          </div>
+          </Card>
         ))}
       </div>
     </section>

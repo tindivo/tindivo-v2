@@ -52,7 +52,9 @@ export function DeliveryStep({ checkout }: { checkout: CheckoutViewModel }) {
       {deliveryMethod === 'delivery' && (
         <div className="mt-5">
           <div className="flex items-center justify-between">
-            <span className="t-field-label mb-0">Entregar en</span>
+            <span className="mb-0 block font-mono text-[12px] font-semibold uppercase tracking-wide text-ink-muted">
+              Entregar en
+            </span>
             <Link href="/cuenta" className="font-semibold text-[13px] text-brand">
               + Añadir nueva
             </Link>
@@ -67,7 +69,7 @@ export function DeliveryStep({ checkout }: { checkout: CheckoutViewModel }) {
                   onClick={() => setAddressId(a.id)}
                   className={`flex items-start gap-3 rounded-[18px] bg-card p-3.5 text-left transition-all ${
                     sel
-                      ? 'border border-brand shadow-focus-ring'
+                      ? 'border border-brand ring-2 ring-brand/30'
                       : 'border border-ink/[0.04] shadow-elev-1 hover:shadow-elev-2'
                   }`}
                 >
@@ -113,11 +115,11 @@ export function DeliveryStep({ checkout }: { checkout: CheckoutViewModel }) {
 
       {/* Datos del usuario: precargados del onboarding, editables aquí. */}
       <label className="mt-5 block">
-        <span className="t-field-label">
+        <span className="block font-mono text-[12px] font-semibold uppercase tracking-wide text-ink-muted">
           Nombre <span className="text-brand">*</span>
         </span>
         <input
-          className="t-field"
+          className="w-full rounded-2xl border border-ink/[0.06] bg-card px-4 py-3.5 text-[16px] font-medium text-ink outline-none transition-colors placeholder:text-ink-subtle focus:border-ink focus:ring-4 focus:ring-ink/[0.08]"
           placeholder="Tu nombre"
           value={name}
           maxLength={120}
@@ -127,7 +129,7 @@ export function DeliveryStep({ checkout }: { checkout: CheckoutViewModel }) {
       </label>
 
       <label className="mt-4 block">
-        <span className="t-field-label">
+        <span className="block font-mono text-[12px] font-semibold uppercase tracking-wide text-ink-muted">
           Teléfono de contacto <span className="text-brand">*</span>
         </span>
         <div className="flex items-center gap-2">
@@ -135,7 +137,7 @@ export function DeliveryStep({ checkout }: { checkout: CheckoutViewModel }) {
             +51
           </span>
           <input
-            className="t-field"
+            className="w-full rounded-2xl border border-ink/[0.06] bg-card px-4 py-3.5 text-[16px] font-medium text-ink outline-none transition-colors placeholder:text-ink-subtle focus:border-ink focus:ring-4 focus:ring-ink/[0.08]"
             inputMode="numeric"
             placeholder="987654321"
             value={phone}
@@ -168,7 +170,9 @@ function Summary({
 }) {
   return (
     <div className="mt-5 rounded-[22px] border border-ink/[0.04] bg-white p-4 shadow-elev-1">
-      <div className="t-eyebrow mb-2.5">Resumen</div>
+      <div className="mb-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-muted">
+        Resumen
+      </div>
       <div className="flex justify-between py-1 text-[14px] font-medium text-ink/70 tabular-nums">
         <span>Productos ({count})</span>
         <span>{soles(subtotal)}</span>

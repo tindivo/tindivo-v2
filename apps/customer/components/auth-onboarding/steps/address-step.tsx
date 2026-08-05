@@ -1,5 +1,6 @@
 'use client'
 
+import { Button } from '@tindivo/ui'
 import { type FormEvent, useState } from 'react'
 import {
   AddressFields,
@@ -60,8 +61,8 @@ export function AddressStep({
 
   return (
     <form onSubmit={onSubmit} className="flex h-full flex-col">
-      <div className="t-scroll flex-1 px-5 pt-2 pb-4">
-        <h2 className="t-display text-[24px] leading-[1.15] text-ink">
+      <div className="flex-1 overflow-y-auto px-5 pt-2 pb-4 scrollbar-hide">
+        <h2 className="font-display text-[24px] font-bold leading-[1.15] tracking-tight text-ink">
           Tu dirección
           <br />
           de entrega
@@ -81,17 +82,18 @@ export function AddressStep({
       </div>
 
       <div className="flex gap-2.5 border-t border-ink/[0.04] px-4 pt-3.5 pb-6">
-        <button
+        <Button
           type="button"
+          variant="ghost"
           onClick={onBack}
-          className="rounded-[14px] bg-ink/[0.06] px-5 font-semibold text-[15px] text-ink transition-colors hover:bg-ink/[0.10]"
+          className="rounded-[14px]"
           tabIndex={active ? 0 : -1}
         >
           {mode === 'gate' ? 'Cancelar' : 'Atrás'}
-        </button>
-        <button
+        </Button>
+        <Button
           type="submit"
-          className="t-btn t-btn-primary flex-1"
+          className="flex-1"
           disabled={!valid || busy}
           tabIndex={active ? 0 : -1}
         >
@@ -100,7 +102,7 @@ export function AddressStep({
             : mode === 'gate'
               ? 'Confirmar dirección'
               : 'Guardar y empezar a pedir'}
-        </button>
+        </Button>
       </div>
     </form>
   )

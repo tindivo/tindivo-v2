@@ -1,4 +1,5 @@
-import { Icon, ProductImage } from '@/components/ui'
+import { Icon } from '@tindivo/ui'
+import { ProductImage } from '@/components/product-image'
 import { soles } from '@/features/catalog/lib/format'
 import type { MenuItem } from '@/features/catalog/types'
 
@@ -18,7 +19,7 @@ export function MenuItemCard({ item, disabled, onClick }: MenuItemCardProps) {
       type="button"
       disabled={disabled || !item.is_available}
       onClick={() => onClick(item)}
-      className="t-card t-lift flex items-stretch gap-3.5 text-left disabled:opacity-50"
+      className="flex items-stretch gap-3.5 rounded-[20px] border border-ink/[0.04] bg-card p-4 text-left shadow-elev-1 transition-all hover:-translate-y-0.5 hover:shadow-elev-3 active:translate-y-0 active:scale-[0.985] disabled:opacity-50"
     >
       <div className="flex min-w-0 flex-1 flex-col justify-between">
         <div>
@@ -36,7 +37,7 @@ export function MenuItemCard({ item, disabled, onClick }: MenuItemCardProps) {
               )}
             </span>
           )}
-          <div className="t-display mb-1 text-[16px]">{item.name}</div>
+          <div className="mb-1 font-display text-[16px] font-bold tracking-tight">{item.name}</div>
           {item.description && (
             <div className="line-clamp-2 text-[12px] leading-[1.4] text-ink-muted">
               {item.description}

@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { ProductImage } from '@/components/ui'
+import { ProductImage } from '@/components/product-image'
 import { soles } from '@/features/catalog/lib/format'
 import type { SearchItem } from '@/lib/use-search'
 
@@ -17,9 +17,11 @@ export function DishResultCard({ item }: DishResultCardProps) {
     >
       <ProductImage label={item.name} hue={item.image_hue ?? 14} size={64} src={item.image_url} />
       <div className="min-w-0 flex-1">
-        <div className="t-display text-[16px] leading-tight">{item.name}</div>
+        <div className="font-display text-[16px] font-bold leading-tight tracking-tight">
+          {item.name}
+        </div>
         {item.description && (
-          <div className="mt-0.5 line-clamp-2 text-[12px] leading-[1.4] text-black/55">
+          <div className="mt-0.5 line-clamp-2 text-[12px] leading-[1.4] text-ink/55">
             {item.description}
           </div>
         )}
@@ -27,7 +29,7 @@ export function DishResultCard({ item }: DishResultCardProps) {
           <span className="font-semibold text-[14px] tabular-nums">
             {soles(Number(item.base_price))}
           </span>
-          <span className="truncate text-[11px] text-black/50">{item.business_name}</span>
+          <span className="truncate text-[11px] text-ink/50">{item.business_name}</span>
         </div>
       </div>
     </Link>

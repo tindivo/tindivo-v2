@@ -1,7 +1,7 @@
 'use client'
 
+import { Icon } from '@tindivo/ui'
 import { useEffect, useState } from 'react'
-import { Icon } from '@/components/ui'
 
 interface AddedToastProps {
   name: string
@@ -25,7 +25,7 @@ export function AddedToast({ name }: AddedToastProps) {
         </span>
         <div className="min-w-0">
           <div className="font-semibold text-[14px] leading-tight">Añadido al carrito</div>
-          <div className="truncate text-[12px] text-black/55">{name}</div>
+          <div className="truncate text-[12px] text-ink/55">{name}</div>
         </div>
       </div>
     </div>

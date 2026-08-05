@@ -1,4 +1,4 @@
-import { Icon } from '@tindivo/ui'
+import { Card, Icon } from '@tindivo/ui'
 import { useState } from 'react'
 
 interface Promo {
@@ -42,15 +42,17 @@ export function PromoCarousel({ promos = SAMPLE_PROMOS }: { promos?: Promo[] }) 
   return (
     <section className="w-full bg-surface px-5 pt-2 pb-4">
       <div className="mb-2.5 flex items-baseline justify-between">
-        <h2 className="t-display text-[18px] text-ink">Promos del día</h2>
+        <h2 className="font-display text-[18px] font-bold tracking-tight text-ink">
+          Promos del día
+        </h2>
         <span className="text-[13px] font-semibold text-brand">Ver todas</span>
       </div>
 
       <div className="-mx-5 flex gap-3 overflow-x-auto px-5 pb-1 scrollbar-hide snap-x snap-mandatory">
         {promos.map((promo) => (
-          <div
+          <Card
             key={promo.id}
-            className="t-card relative w-[calc(100%-0.75rem)] shrink-0 snap-start overflow-hidden p-0 sm:w-[320px]"
+            className="relative w-[calc(100%-0.75rem)] shrink-0 snap-start overflow-hidden p-0 sm:w-[320px]"
           >
             {promo.badge && (
               <span className="absolute top-3 left-3 z-10 rounded-full bg-brand px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-white">
@@ -87,7 +89,7 @@ export function PromoCarousel({ promos = SAMPLE_PROMOS }: { promos?: Promo[] }) 
                 </button>
               </div>
             </div>
-          </div>
+          </Card>
         ))}
       </div>
 

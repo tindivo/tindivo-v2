@@ -1,5 +1,4 @@
-import Link from 'next/link'
-import { Icon } from '@/components/ui'
+import { Card, Icon } from '@tindivo/ui'
 import type { PublicBusiness } from '@/features/catalog/types'
 
 interface BusinessCardProps {
@@ -9,7 +8,11 @@ interface BusinessCardProps {
 export function BusinessCard({ business }: BusinessCardProps) {
   const b = business
   return (
-    <Link href={`/negocio/${b.id}`} className="t-card t-lift flex items-stretch gap-3.5">
+    <Card
+      as="a"
+      href={`/negocio/${b.id}`}
+      className="flex items-stretch gap-3.5 transition-all hover:-translate-y-0.5 hover:shadow-elev-3 active:translate-y-0 active:scale-[0.985]"
+    >
       {b.logo_url ? (
         <img
           src={b.logo_url}
@@ -18,7 +21,7 @@ export function BusinessCard({ business }: BusinessCardProps) {
         />
       ) : (
         <div
-          className="t-ph-image flex h-[88px] w-[88px] items-center justify-center"
+          className="flex h-[88px] w-[88px] items-center justify-center rounded-[16px]"
           style={{ background: `#${b.accent_color}1a` }}
         >
           <span className="relative z-[1]" style={{ color: `#${b.accent_color}` }}>
@@ -28,7 +31,9 @@ export function BusinessCard({ business }: BusinessCardProps) {
       )}
       <div className="flex min-w-0 flex-1 flex-col justify-between">
         <div>
-          <div className="t-display text-[18px] leading-tight">{b.name}</div>
+          <div className="font-display text-[18px] font-bold leading-tight tracking-tight">
+            {b.name}
+          </div>
           {b.tagline && <div className="mt-0.5 text-[12px] text-ink-muted">{b.tagline}</div>}
         </div>
         <div className="mt-2 flex flex-wrap items-center gap-2 text-[12px] text-ink-muted">
@@ -53,6 +58,6 @@ export function BusinessCard({ business }: BusinessCardProps) {
           )}
         </div>
       </div>
-    </Link>
+    </Card>
   )
 }

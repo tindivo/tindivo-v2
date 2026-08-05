@@ -1,6 +1,7 @@
 'use client'
 
 import { TINDIVO_SUPPORT_WHATSAPP } from '@tindivo/core'
+import { Button } from '@tindivo/ui'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { getSupportWhatsapp } from '@/lib/support'
@@ -28,20 +29,22 @@ export function BlockedView() {
           />
         </svg>
       </div>
-      <h1 className="t-display mt-5 text-[26px]">Cuenta en pausa</h1>
-      <p className="t-muted mt-2 text-[15px]">
+      <h1 className="mt-5 font-display text-[26px] font-bold tracking-tight">Cuenta en pausa</h1>
+      <p className="mt-2 text-[15px] text-ink-muted">
         Tu cuenta está temporalmente pausada por incidentes reiterados en las entregas. Escríbenos
         para regularizar tu situación y reactivarla.
       </p>
       {href && (
-        <a
+        <Button
+          as="a"
           href={href}
           target="_blank"
           rel="noreferrer"
-          className="t-btn t-btn-primary t-btn-block mt-6"
+          variant="brand"
+          className="mt-6 w-full"
         >
           Escribir por WhatsApp
-        </a>
+        </Button>
       )}
       <Link href="/" className="mt-3 text-[14px] text-brand">
         Volver al inicio

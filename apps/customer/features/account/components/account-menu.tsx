@@ -20,7 +20,9 @@ export function AccountMenu({ onSignOut }: AccountMenuProps) {
   return (
     <div className="mt-5">
       <div className="mb-2">
-        <div className="t-display text-[17px] text-ink">Más opciones</div>
+        <div className="font-display font-bold tracking-tight text-[17px] text-ink">
+          Más opciones
+        </div>
       </div>
       <div className="overflow-hidden rounded-[18px] border border-border bg-card">
         <MenuItem href="/pedidos" icon="schedule" label="Historial completo" />

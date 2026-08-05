@@ -1,6 +1,7 @@
 'use client'
 
 import { ApiError } from '@tindivo/api-client'
+import { Button } from '@tindivo/ui'
 import Image from 'next/image'
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '@/lib/api'
@@ -130,54 +131,42 @@ export function PrepayProofSection({ orderId, proofAttempt, onProofUploaded }: P
   }
 
   return (
-    <div
-      className="mt-4 rounded-[22px] bg-white p-5 text-left"
-      style={{ border: '1px solid rgba(249,115,22,0.2)', boxShadow: '0 4px 20px rgba(0,0,0,0.04)' }}
-    >
+    <div className="mt-4 rounded-[22px] border border-brand/20 bg-white p-5 text-left shadow-[0_4px_20px_rgba(0,0,0,0.04)]">
       <div className="flex items-center justify-between">
-        <span
-          className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-mono text-[11px] font-medium"
-          style={{ background: '#FFF7ED', color: '#C2410C' }}
-        >
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-soft px-3 py-1 font-mono text-[11px] font-medium text-brand-dark">
           <span className="h-2 w-2 animate-ping rounded-full bg-orange-500" />
           Tiempo para pagar: {formatTime(seconds)}
         </span>
         {proofAttempt === 1 && (
-          <span
-            className="rounded-full px-2.5 py-0.5 font-sans font-bold text-[11px]"
-            style={{ background: '#FEF2F2', color: '#DC2626' }}
-          >
+          <span className="rounded-full bg-danger-soft px-2.5 py-0.5 font-sans text-[11px] font-bold text-danger">
             Reintento final (1/2)
           </span>
         )}
       </div>
 
-      <h3 className="t-display mt-3 text-[18px]">Paga tu pedido</h3>
-      <p className="t-muted text-[13px]">
-        El restaurante <strong className="text-foreground">{info?.businessName ?? 'local'}</strong>{' '}
+      <h3 className="mt-3 font-display text-[18px] font-bold tracking-tight">Paga tu pedido</h3>
+      <p className="text-[13px] text-ink-muted">
+        El restaurante <strong className="text-ink">{info?.businessName ?? 'local'}</strong>{' '}
         confirmó disponibilidad. Paga el monto exacto y sube tu comprobante.
       </p>
 
       {/* Monto y Yape */}
-      <div
-        className="mt-3.5 flex items-center justify-between rounded-[16px] bg-surface p-3.5"
-        style={{ border: '1px solid rgba(26,22,20,0.06)' }}
-      >
+      <div className="mt-3.5 flex items-center justify-between rounded-[16px] border border-ink/[0.06] bg-surface p-3.5">
         <div>
-          <div className="text-[11px] uppercase tracking-wider text-muted">Monto total</div>
-          <div className="font-mono font-bold text-[22px] text-foreground">
+          <div className="text-[11px] uppercase tracking-wider text-ink-muted">Monto total</div>
+          <div className="font-mono text-[22px] font-bold text-ink">
             S/ {info?.total ? info.total.toFixed(2) : '0.00'}
           </div>
         </div>
         {info?.yapeNumber && (
           <div className="text-right">
-            <div className="text-[11px] uppercase tracking-wider text-muted">Yape / Plin</div>
+            <div className="text-[11px] uppercase tracking-wider text-ink-muted">Yape / Plin</div>
             <div className="flex items-center gap-1.5">
-              <span className="font-mono font-bold text-[16px] text-brand">{info.yapeNumber}</span>
+              <span className="font-mono text-[16px] font-bold text-brand">{info.yapeNumber}</span>
               <button
                 type="button"
                 onClick={copyYape}
-                className="rounded-md bg-white px-2 py-0.5 font-sans text-[11px] font-medium text-foreground shadow-sm"
+                className="rounded-md bg-white px-2 py-0.5 font-sans text-[11px] font-medium text-ink shadow-sm"
               >
                 {copied ? '¡Copiado!' : 'Copiar'}
               </button>
@@ -192,15 +181,12 @@ export function PrepayProofSection({ orderId, proofAttempt, onProofUploaded }: P
           <div className="relative h-36 w-36 overflow-hidden rounded-lg">
             <Image src={info.qrUrl} alt="QR Yape/Plin" fill className="object-contain" />
           </div>
-          <span className="mt-1 text-[11px] text-muted">Escanea para pagar</span>
+          <span className="mt-1 text-[11px] text-ink-muted">Escanea para pagar</span>
         </div>
       )}
 
       {/* Regla de comprobante visible */}
-      <div
-        className="mt-3.5 rounded-xl p-3 text-[12px] leading-relaxed"
-        style={{ background: '#EFF6FF', color: '#1E40AF', border: '1px solid #BFDBFE' }}
-      >
+      <div className="mt-3.5 rounded-xl border border-sky-200 bg-sky-50 p-3 text-[12px] leading-relaxed text-sky-800">
         📌 <strong>Regla de validación:</strong> Tu comprobante debe ser posterior a la hora del
         pedido y debe mostrar tu nombre visible.
       </div>
@@ -256,14 +242,15 @@ export function PrepayProofSection({ orderId, proofAttempt, onProofUploaded }: P
       )}
 
       {/* Botón enviar */}
-      <button
+      <Button
         type="button"
+        variant="brand"
         disabled={!pendingFile || uploading}
         onClick={submitProof}
-        className="t-btn t-btn-primary t-btn-block mt-4"
+        className="mt-4 w-full"
       >
         {uploading ? 'Enviando comprobante...' : 'Enviar comprobante'}
-      </button>
+      </Button>
     </div>
   )
 }

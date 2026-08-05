@@ -1,6 +1,6 @@
 'use client'
 
-import { Icon } from '@/components/ui'
+import { Icon } from '@tindivo/ui'
 import type { PublicBusiness } from '@/features/catalog/types'
 import type { SearchResults as SearchResultsData } from '@/lib/use-search'
 import { BusinessCard } from './business-card'
@@ -39,7 +39,9 @@ export function SearchResults({ search, businesses }: SearchResultsProps) {
           {search.results.businesses.length > 0 && (
             <>
               <div className="px-5 pt-3 pb-2">
-                <div className="t-display text-[22px]">Restaurantes</div>
+                <div className="font-display text-[22px] font-bold tracking-tight">
+                  Restaurantes
+                </div>
               </div>
               <div className="flex flex-col gap-2.5 px-4 pt-1 md:grid md:grid-cols-2 md:gap-4 lg:grid-cols-3 lg:gap-5">
                 {search.results.businesses.map((b) => {
@@ -52,7 +54,7 @@ export function SearchResults({ search, businesses }: SearchResultsProps) {
           {search.results.items.length > 0 && (
             <>
               <div className="px-5 pt-4 pb-2">
-                <div className="t-display text-[22px]">Platos</div>
+                <div className="font-display text-[22px] font-bold tracking-tight">Platos</div>
               </div>
               <div className="flex flex-col gap-2.5 px-4 pt-1 md:grid md:grid-cols-2 md:gap-4 lg:grid-cols-3 lg:gap-5">
                 {search.results.items.map((it) => (
@@ -63,13 +65,13 @@ export function SearchResults({ search, businesses }: SearchResultsProps) {
           )}
           {search.results.businesses.length === 0 && search.results.items.length === 0 && (
             <div className="px-5 py-10 text-center">
-              <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-black/5 text-black/40">
+              <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-ink/5 text-ink/40">
                 <Icon name="search" size={20} />
               </span>
               <p className="mt-3 font-semibold text-[15px]">
                 Sin resultados para “{search.query.trim()}”
               </p>
-              <p className="mt-1 text-[13px] text-black/55">
+              <p className="mt-1 text-[13px] text-ink/55">
                 Prueba con otro nombre de plato o restaurante.
               </p>
             </div>

@@ -40,22 +40,25 @@ const SECTIONS: { h: string; p: string }[] = [
 export default function TerminosPage() {
   return (
     <main className="mx-auto min-h-dvh max-w-[768px] bg-surface px-5 pt-12 pb-16">
-      <Link href="/entrar" className="t-eyebrow" style={{ letterSpacing: '0.14em' }}>
+      <Link
+        href="/entrar"
+        className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-muted"
+      >
         ← Volver
       </Link>
-      <h1 className="t-display mt-3 text-[28px]">Términos y Condiciones</h1>
-      <p className="t-muted mt-1 text-[13px]">Versión 2026-05 · San Jacinto, Áncash</p>
+      <h1 className="mt-3 font-display text-[28px] font-bold tracking-tight">
+        Términos y Condiciones
+      </h1>
+      <p className="mt-1 text-[13px] text-ink-muted">Versión 2026-05 · San Jacinto, Áncash</p>
       <div className="mt-6 space-y-5">
         {SECTIONS.map((s) => (
           <section key={s.h}>
-            <h2 className="t-display text-[17px]">{s.h}</h2>
-            <p className="mt-1 text-[14px] leading-[1.55]" style={{ color: 'rgba(26,22,20,0.75)' }}>
-              {s.p}
-            </p>
+            <h2 className="font-display text-[17px] font-bold tracking-tight">{s.h}</h2>
+            <p className="mt-1 text-[14px] leading-[1.55] text-ink/75">{s.p}</p>
           </section>
         ))}
       </div>
-      <p className="t-muted mt-8 text-[12px]">
+      <p className="mt-8 text-[12px] text-ink-muted">
         Lee también nuestra{' '}
         <Link href="/privacidad" className="text-brand underline">
           Política de Privacidad

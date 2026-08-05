@@ -1,6 +1,6 @@
 'use client'
 
-import { cn } from '@tindivo/ui'
+import { Card, cn } from '@tindivo/ui'
 import { CashSelector } from '@/features/checkout/components/cash-selector'
 import { OrderDetail } from '@/features/checkout/components/order-detail'
 import type { CheckoutViewModel } from '@/features/checkout/hooks/use-checkout'
@@ -59,7 +59,7 @@ export function PaymentStep({
               onClick={() => handleSelect(opt)}
               className={cn(
                 'flex items-center gap-3 rounded-[18px] border bg-card p-4 text-left transition-shadow disabled:opacity-40',
-                sel ? 'border-brand shadow-focus-ring' : 'border-ink/[0.04]',
+                sel ? 'border-brand ring-2 ring-brand/30' : 'border-ink/[0.04]',
               )}
             >
               <span
@@ -125,8 +125,10 @@ function Summary({
   count: number
 }) {
   return (
-    <div className="t-card mt-5 p-4">
-      <div className="t-eyebrow mb-2.5">Resumen</div>
+    <Card className="mt-5 p-4">
+      <div className="mb-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-muted">
+        Resumen
+      </div>
       <div className="flex justify-between py-1 text-[14px] font-medium text-ink-muted tabular-nums">
         <span>Productos ({count})</span>
         <span>{soles(subtotal)}</span>
@@ -140,6 +142,6 @@ function Summary({
         <span>Total a pagar</span>
         <span>{soles(total)}</span>
       </div>
-    </div>
+    </Card>
   )
 }

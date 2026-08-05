@@ -1,7 +1,7 @@
 'use client'
 
 import type { PaymentIntent } from '@tindivo/contracts'
-import { cn, Icon } from '@tindivo/ui'
+import { Button, cn, Icon } from '@tindivo/ui'
 import { useState } from 'react'
 import { OtpVerificationSheet } from '@/components/otp-verification-sheet'
 import { CartValidationBanner } from '@/features/cart/components/cart-validation-banner'
@@ -89,7 +89,7 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
   return (
     <main className="mx-auto min-h-dvh max-w-[768px] bg-surface pb-36 lg:max-w-6xl">
       <div className="border-b border-border bg-surface px-4 pt-3.5 pb-3">
-        <div className="t-display text-[22px]">Confirmar pedido</div>
+        <div className="font-display text-[22px] font-bold tracking-tight">Confirmar pedido</div>
       </div>
 
       <div className="px-4 pt-3">
@@ -200,7 +200,7 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
                   onClick={() => handlePaymentSelect(opt.value)}
                   className={cn(
                     'flex items-center gap-3 rounded-[18px] border bg-card p-4 text-left transition-shadow disabled:opacity-40',
-                    sel ? 'border-brand shadow-focus-ring' : 'border-ink/[0.04]',
+                    sel ? 'border-brand ring-2 ring-brand/30' : 'border-ink/[0.04]',
                   )}
                 >
                   <span
@@ -301,10 +301,11 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
       </div>
 
       {/* CTA sticky */}
-      <div className="t-sticky-cta mx-auto max-w-[768px]">
-        <button
+      <div className="sticky bottom-0 z-10 mx-auto max-w-[768px] bg-gradient-to-t from-surface via-surface/95 to-transparent px-4 pt-3 pb-5">
+        <Button
           type="button"
-          className="t-btn t-btn-primary t-btn-block"
+          variant="brand"
+          className="w-full"
           disabled={ctaDisabled}
           onClick={() => {
             if (!validate()) return
@@ -312,7 +313,7 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
           }}
         >
           {ctaLabel}
-        </button>
+        </Button>
       </div>
 
       <NameEditSheet
@@ -353,7 +354,7 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="mb-5">
-      <h2 className="mb-2.5 t-display text-[17px] text-ink">{title}</h2>
+      <h2 className="mb-2.5 font-display text-[17px] font-bold tracking-tight text-ink">{title}</h2>
       {children}
     </section>
   )

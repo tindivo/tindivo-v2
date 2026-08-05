@@ -19,7 +19,7 @@ export function CategoryCircles({ categories = CATEGORIES }: { categories?: Cate
   return (
     <section className="w-full bg-surface px-5 pt-2 pb-4">
       <div className="mb-3 flex items-baseline justify-between">
-        <h2 className="t-display text-[18px] text-ink">Categorías</h2>
+        <h2 className="font-display text-[18px] font-bold tracking-tight text-ink">Categorías</h2>
         <span className="text-[13px] font-semibold text-brand">Ver todas</span>
       </div>
 

@@ -1,8 +1,7 @@
 'use client'
 
-import { Button } from '@tindivo/ui'
+import { BottomSheet, Button } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
-import { BottomSheet } from '@/components/ui'
 
 type Props = {
   shortId: string

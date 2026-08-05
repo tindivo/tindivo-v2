@@ -22,7 +22,7 @@ export default function Home() {
       <HomeHeader user={user} />
 
       <div className="px-5 pt-1 pb-4">
-        <h1 className="t-display text-[32px] leading-[1.05] tracking-[-0.03em] lg:text-[40px]">
+        <h1 className="font-display text-[32px] font-bold leading-[1.05] tracking-[-0.03em] lg:text-[40px]">
           {user.signedIn ? (
             <>
               Buenas noches,
@@ -54,7 +54,9 @@ export default function Home() {
       )}
 
       <div className="px-5 pt-6 pb-24 text-center">
-        <div className="t-eyebrow text-[10px] tracking-[0.2em] opacity-70">tindivo · piloto</div>
+        <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-ink-muted">
+          tindivo · piloto
+        </div>
         <div className="mt-1 text-[11px] text-ink-subtle">
           Pedidos directos desde San Jacinto. Hecho en Áncash.
         </div>

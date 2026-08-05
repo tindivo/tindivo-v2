@@ -1,8 +1,8 @@
 'use client'
 
 import { getOpenStatus, type ScheduleDayRow } from '@tindivo/contracts'
+import { Icon } from '@tindivo/ui'
 import { useState } from 'react'
-import { Icon } from '@/components/ui'
 
 const DAY_NAMES = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 
@@ -62,11 +62,11 @@ export function ScheduleRow({ schedule, now }: ScheduleRowProps) {
           data-expanded={expanded}
           className="flex min-h-[44px] w-full items-center gap-2.5 px-4 py-3 text-left"
         >
-          <span className="text-black/45">
+          <span className="text-ink/45">
             <Icon name="schedule" size={20} />
           </span>
           <span className="min-w-0 flex-1 truncate text-[13px]">
-            <span className="text-black/55">Hoy: </span>
+            <span className="text-ink/55">Hoy: </span>
             <span className="font-semibold">{todayLabel}</span>
           </span>
           <span
@@ -82,7 +82,7 @@ export function ScheduleRow({ schedule, now }: ScheduleRowProps) {
           </span>
           <span
             data-expanded={expanded}
-            className="text-black/45 transition-transform duration-160 ease-out data-[expanded=true]:rotate-180"
+            className="text-ink/45 transition-transform duration-160 ease-out data-[expanded=true]:rotate-180"
           >
             <Icon name="expand_more" size={20} />
           </span>
@@ -98,7 +98,7 @@ export function ScheduleRow({ schedule, now }: ScheduleRowProps) {
                   <div
                     key={name}
                     className={`flex items-baseline justify-between gap-3 text-[13px] ${
-                      isToday ? 'font-bold' : 'text-black/65'
+                      isToday ? 'font-bold' : 'text-ink/65'
                     }`}
                   >
                     <span>{name}</span>

@@ -1,3 +1,4 @@
+import { Card } from '@tindivo/ui'
 import { soles } from '@/features/checkout/lib/format'
 import { CASH_CHIPS, type CashChoice } from '@/features/checkout/types'
 
@@ -21,7 +22,7 @@ export function CashSelector({
   cashChange,
 }: CashSelectorProps) {
   return (
-    <div className="t-card mt-3 p-4">
+    <Card className="mt-3 p-4">
       <div className="font-semibold text-[15px] text-ink">¿Con cuánto pagarás?</div>
       <p className="mt-0.5 text-[12px] text-ink-muted">Así el motorizado lleva tu vuelto exacto.</p>
       <div className="mt-3 flex flex-wrap gap-1.5">
@@ -60,7 +61,7 @@ export function CashSelector({
             S/
           </span>
           <input
-            className="t-field"
+            className="w-full rounded-2xl border border-ink/[0.06] bg-card px-4 py-3.5 text-[16px] font-medium text-ink outline-none transition-colors placeholder:text-ink-subtle focus:border-ink focus:ring-4 focus:ring-ink/[0.08]"
             inputMode="decimal"
             placeholder={total.toFixed(2)}
             value={cashCustom}
@@ -80,6 +81,6 @@ export function CashSelector({
             : 'Pago exacto, sin vuelto.'
           : `El monto debe cubrir el total (${soles(total)})`}
       </p>
-    </div>
+    </Card>
   )
 }

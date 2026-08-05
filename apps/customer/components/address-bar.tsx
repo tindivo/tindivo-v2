@@ -1,9 +1,9 @@
 'use client'
 
+import { BottomSheet, Icon, ScreenHeader } from '@tindivo/ui'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { labelEmoji } from '@/components/address-fields'
-import { BottomSheet, Icon, ScreenHeader } from '@/components/ui'
 import { useOnboarding } from '@/lib/onboarding-store'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
@@ -86,7 +86,7 @@ export function AddressBar() {
 
   if (!userId || !selected) {
     return (
-      <div className="t-eyebrow" style={{ fontSize: 10, letterSpacing: '0.2em' }}>
+      <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-ink-muted">
         {CITY}
       </div>
     )
@@ -104,7 +104,9 @@ export function AddressBar() {
           <Icon name="location_on" size={20} />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="t-eyebrow block text-[9px] tracking-[0.16em]">Entregar en</span>
+          <span className="block font-mono text-[9px] font-semibold uppercase tracking-[0.16em] text-ink-muted">
+            Entregar en
+          </span>
           <span className="flex min-w-0 items-center gap-1 font-semibold text-[13px] leading-tight text-ink">
             <span className="truncate">
               {labelEmoji(selected.label)} {selected.line || selected.reference}
@@ -119,7 +121,7 @@ export function AddressBar() {
       {open && (
         <BottomSheet open onClose={() => setOpen(false)}>
           <ScreenHeader title="Entregar en" onBack={() => setOpen(false)} />
-          <div className="t-scroll flex-1 px-4 pt-1 pb-6">
+          <div className="flex-1 overflow-y-auto px-4 pt-1 pb-6 scrollbar-hide">
             <div className="flex flex-col gap-2.5">
               {addresses.map((a) => (
                 <button

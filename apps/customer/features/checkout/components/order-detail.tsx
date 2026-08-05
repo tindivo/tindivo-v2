@@ -1,6 +1,6 @@
 'use client'
 
-import { Icon } from '@tindivo/ui'
+import { Card, Icon } from '@tindivo/ui'
 import { useState } from 'react'
 import { soles } from '@/features/checkout/lib/format'
 import { useCart } from '@/lib/cart'
@@ -12,7 +12,7 @@ export function OrderDetail() {
   if (count === 0) return null
 
   return (
-    <div className="t-card mt-5 overflow-hidden p-0">
+    <Card className="mt-5 overflow-hidden">
       <button
         type="button"
         className="flex w-full items-center gap-3 p-4 text-left"
@@ -90,20 +90,24 @@ export function OrderDetail() {
                 )}
 
                 <div className="mt-2.5 flex items-center justify-between">
-                  <div className="t-qty origin-left scale-90">
+                  <div className="inline-flex origin-left scale-90 items-center rounded-full bg-ink/[0.06] p-1">
                     <button
                       type="button"
                       onClick={() => cart.setQty(line.key, line.quantity - 1)}
                       disabled={line.quantity <= 1}
                       aria-label="Menos"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[20px] font-semibold text-ink transition-colors hover:bg-ink/[0.08] active:scale-95 disabled:opacity-50"
                     >
                       <Icon name="remove" size={20} />
                     </button>
-                    <span className="val">{line.quantity}</span>
+                    <span className="min-w-7 text-center font-semibold tabular-nums">
+                      {line.quantity}
+                    </span>
                     <button
                       type="button"
                       onClick={() => cart.setQty(line.key, line.quantity + 1)}
                       aria-label="Más"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[20px] font-semibold text-ink transition-colors hover:bg-ink/[0.08] active:scale-95"
                     >
                       <Icon name="add" size={20} />
                     </button>
@@ -121,6 +125,6 @@ export function OrderDetail() {
           ))}
         </div>
       )}
-    </div>
+    </Card>
   )
 }

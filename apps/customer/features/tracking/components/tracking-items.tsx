@@ -13,7 +13,9 @@ export function TrackingItems({ data }: TrackingItemsProps) {
   return (
     <div className="mt-3.5 rounded-[22px] border border-ink/[0.04] bg-card px-[18px] py-4 lg:mt-0">
       <div className="mb-3 flex items-center justify-between">
-        <div className="t-eyebrow">Detalle</div>
+        <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-muted">
+          Detalle
+        </div>
         <div className="text-[12px] text-ink-subtle">
           {data.deliveryMethod === 'delivery' ? 'Delivery' : 'Recojo'} · {itemCount}{' '}
           {itemCount === 1 ? 'producto' : 'productos'}
@@ -67,7 +69,9 @@ export function TrackingItems({ data }: TrackingItemsProps) {
         <span className="text-[16px] font-semibold text-ink">
           {data.paymentIntent === 'prepaid' ? 'Total pagado' : 'Total'}
         </span>
-        <span className="t-display text-[18px] tabular-nums">{soles(data.total)}</span>
+        <span className="font-display text-[18px] font-bold tracking-tight tabular-nums">
+          {soles(data.total)}
+        </span>
       </div>
     </div>
   )

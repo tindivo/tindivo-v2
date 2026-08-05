@@ -17,7 +17,7 @@ export function CategoryStrip() {
           <button
             key={c.label}
             type="button"
-            className="t-chip inline-flex shrink-0 items-center gap-1.5"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-ink/[0.08] bg-card px-3.5 py-2 text-[14px] font-medium text-ink transition-colors hover:bg-ink/[0.04]"
           >
             <Icon name={c.icon} size={18} />
             {c.label}

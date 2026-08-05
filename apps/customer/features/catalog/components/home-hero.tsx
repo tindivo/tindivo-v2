@@ -14,7 +14,7 @@ export function HomeHero() {
               <span className="h-1.5 w-1.5 rounded-full bg-white" />
               Solo en Tindivo
             </div>
-            <h2 className="t-display text-[24px] leading-[1.05] lg:text-[30px]">
+            <h2 className="font-display text-[24px] font-bold leading-[1.05] tracking-tight lg:text-[30px]">
               Tu comida favorita,
               <br />
               en minutos.

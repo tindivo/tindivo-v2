@@ -1,7 +1,7 @@
+import { Icon } from '@tindivo/ui'
 import Link from 'next/link'
 import { AddressBar } from '@/components/address-bar'
 import { CartButton } from '@/components/cart-sheet'
-import { Icon } from '@/components/ui'
 import { firstName } from '@/features/catalog/lib/format'
 import type { CatalogUser } from '@/features/catalog/types'
 import { useOnboarding } from '@/lib/onboarding-store'
@@ -18,7 +18,7 @@ export function HomeHeader({ user }: HomeHeaderProps) {
       <div className="flex items-center justify-between gap-3">
         <Link
           href="/"
-          className="t-display shrink-0 text-[24px] leading-none tracking-tight text-brand-dark"
+          className="shrink-0 font-display text-[24px] font-bold leading-none tracking-tight text-brand-dark"
           aria-label="Tindivo"
         >
           Tindivo

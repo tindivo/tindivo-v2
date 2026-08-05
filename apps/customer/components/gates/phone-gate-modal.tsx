@@ -1,7 +1,7 @@
 'use client'
 
+import { BottomSheet } from '@tindivo/ui'
 import { useEffect, useState } from 'react'
-import { BottomSheet } from '@/components/ui'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import { PhoneStep } from '../auth-onboarding/steps/phone-step'
 
@@ -42,11 +42,11 @@ export function PhoneGateModal({ onComplete, onClose }: Props) {
   return (
     <BottomSheet open onClose={onClose}>
       <div className="px-5 pt-4 pb-1">
-        <p className="text-[13px]" style={{ color: 'rgba(26,22,20,0.5)' }}>
+        <p className="text-[13px] text-ink/50">
           Para hacer tu pedido, necesitamos verificar tu celular
         </p>
       </div>
-      <div style={{ height: 'min(500px, 70dvh)' }}>
+      <div className="h-[min(500px,70dvh)]">
         <PhoneStep
           active
           mode="gate"

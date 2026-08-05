@@ -1,7 +1,7 @@
 'use client'
 
+import { BottomSheet, Button, ScreenHeader } from '@tindivo/ui'
 import { useState } from 'react'
-import { BottomSheet, ScreenHeader } from '@/components/ui'
 
 interface NameEditSheetProps {
   name: string
@@ -25,11 +25,16 @@ export function NameEditSheet({ name, open, onClose, onSave }: NameEditSheetProp
   return (
     <BottomSheet open onClose={onClose}>
       <ScreenHeader title="Editar nombre" onBack={onClose} />
-      <form onSubmit={handleSubmit} className="t-scroll flex-1 px-4 pt-2 pb-6">
+      <form
+        onSubmit={handleSubmit}
+        className="flex-1 overflow-y-auto px-4 pt-2 pb-6 scrollbar-hide"
+      >
         <label className="block">
-          <span className="t-field-label">Nombre</span>
+          <span className="block font-mono text-[12px] font-semibold uppercase tracking-wide text-ink-muted">
+            Nombre
+          </span>
           <input
-            className="t-field"
+            className="w-full rounded-2xl border border-ink/[0.06] bg-card px-4 py-3.5 text-[16px] font-medium text-ink outline-none transition-colors placeholder:text-ink-subtle focus:border-ink focus:ring-4 focus:ring-ink/[0.08]"
             placeholder="Tu nombre"
             value={value}
             maxLength={120}
@@ -37,13 +42,14 @@ export function NameEditSheet({ name, open, onClose, onSave }: NameEditSheetProp
             onChange={(e) => setValue(e.target.value)}
           />
         </label>
-        <button
+        <Button
           type="submit"
-          className="t-btn t-btn-primary t-btn-block mt-5"
+          variant="brand"
+          className="mt-5 w-full"
           disabled={!value.trim() || value.trim() === name}
         >
           Guardar
-        </button>
+        </Button>
       </form>
     </BottomSheet>
   )

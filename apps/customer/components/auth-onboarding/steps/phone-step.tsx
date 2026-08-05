@@ -1,6 +1,7 @@
 'use client'
 
 import { ApiError } from '@tindivo/api-client'
+import { Button, Card } from '@tindivo/ui'
 import { type FormEvent, useEffect, useRef, useState } from 'react'
 import { api } from '@/lib/api'
 
@@ -127,9 +128,9 @@ export function PhoneStep({
   if (phase === 'input') {
     return (
       <form onSubmit={handleSendCode} className="flex h-full flex-col">
-        <div className="t-scroll flex-1 px-5 pt-2 pb-4">
+        <div className="flex-1 overflow-y-auto px-5 pt-2 pb-4 scrollbar-hide">
           {(mode === 'onboarding' || fullName || email) && (
-            <div className="t-card flex items-center gap-3 p-3.5">
+            <Card className="flex items-center gap-3 p-3.5">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand font-bold text-[16px] text-white">
                 {firstName[0]?.toUpperCase() ?? 'T'}
               </span>
@@ -144,10 +145,10 @@ export function PhoneStep({
                   <span className="block truncate text-[12px] text-ink-muted">{email}</span>
                 )}
               </span>
-            </div>
+            </Card>
           )}
 
-          <h2 className="t-display mt-5 text-[24px] leading-[1.15] text-ink">
+          <h2 className="mt-5 font-display text-[24px] font-bold leading-[1.15] tracking-tight text-ink">
             {mode === 'gate'
               ? 'Verifica tu celular\npara pedir'
               : '¿Cuál es tu número\nde celular?'}
@@ -193,14 +194,14 @@ export function PhoneStep({
         </div>
 
         <div className="border-t border-ink/[0.04] px-4 pt-3.5 pb-6">
-          <button
+          <Button
             type="submit"
-            className="t-btn t-btn-primary t-btn-block"
+            className="w-full"
             disabled={!isPhoneValid || busy}
             tabIndex={active ? 0 : -1}
           >
             {busy ? 'Enviando código…' : 'Enviar código por SMS'}
-          </button>
+          </Button>
         </div>
       </form>
     )
@@ -209,8 +210,10 @@ export function PhoneStep({
   // Phase: verify
   return (
     <form onSubmit={handleVerifyCode} className="flex h-full flex-col">
-      <div className="t-scroll flex-1 px-5 pt-2 pb-4">
-        <h2 className="t-display text-[24px] leading-[1.15] text-ink">Ingresa el código</h2>
+      <div className="flex-1 overflow-y-auto px-5 pt-2 pb-4 scrollbar-hide">
+        <h2 className="font-display text-[24px] font-bold leading-[1.15] tracking-tight text-ink">
+          Ingresa el código
+        </h2>
         <p className="mt-1.5 text-[14px] text-ink-muted">
           Enviamos un código de 6 dígitos por SMS a tu celular (+51 {maskedPhone})
         </p>
@@ -261,14 +264,14 @@ export function PhoneStep({
       </div>
 
       <div className="border-t border-ink/[0.04] px-4 pt-3.5 pb-6">
-        <button
+        <Button
           type="submit"
-          className="t-btn t-btn-primary t-btn-block"
+          className="w-full"
           disabled={!isCodeValid || busy}
           tabIndex={active ? 0 : -1}
         >
           {busy ? 'Verificando…' : 'Confirmar código'}
-        </button>
+        </Button>
       </div>
     </form>
   )

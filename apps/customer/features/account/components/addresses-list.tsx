@@ -1,4 +1,4 @@
-import { Badge, Icon } from '@tindivo/ui'
+import { Badge, Card, Icon } from '@tindivo/ui'
 import { labelEmoji } from '@/components/address-fields'
 import type { Address } from '@/features/account/types'
 
@@ -13,7 +13,9 @@ export function AddressesList({ addresses, onEdit, onAdd, onSetDefault }: Addres
   return (
     <>
       <div className="mt-6 flex items-baseline justify-between">
-        <div className="t-display text-[19px] text-ink">Mis direcciones</div>
+        <div className="font-display font-bold tracking-tight text-[19px] text-ink">
+          Mis direcciones
+        </div>
         <button
           type="button"
           onClick={onAdd}
@@ -27,7 +29,7 @@ export function AddressesList({ addresses, onEdit, onAdd, onSetDefault }: Addres
           <button
             type="button"
             onClick={onAdd}
-            className="t-lift flex flex-col items-center gap-1.5 rounded-[18px] border-[1.5px] border-dashed border-brand/35 bg-brand-soft px-4 py-6 text-brand-dark lg:col-span-2"
+            className="flex flex-col items-center gap-1.5 rounded-[18px] border-[1.5px] border-dashed border-brand/35 bg-brand-soft px-4 py-6 text-brand-dark transition-all hover:-translate-y-0.5 hover:shadow-elev-3 active:translate-y-0 active:scale-[0.985] lg:col-span-2"
           >
             <Icon name="add_location_alt" size={22} />
             <span className="font-semibold text-[14px]">Añade tu primera dirección</span>
@@ -58,7 +60,7 @@ function AddressCard({
   onSetDefault: () => void
 }) {
   return (
-    <div className="t-card t-lift flex items-start gap-3 p-3.5">
+    <Card className="flex items-start gap-3 p-3.5 transition-all hover:-translate-y-0.5 hover:shadow-elev-3 active:translate-y-0 active:scale-[0.985]">
       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-[18px]">
         {labelEmoji(address.label)}
       </div>
@@ -92,6 +94,6 @@ function AddressCard({
           )}
         </div>
       </div>
-    </div>
+    </Card>
   )
 }

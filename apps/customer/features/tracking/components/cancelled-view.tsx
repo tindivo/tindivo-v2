@@ -1,6 +1,6 @@
 import { Button, EmptyState } from '@tindivo/ui'
 import Link from 'next/link'
-import { SupportLink } from '@/components/ui'
+import { SupportLink } from '@/components/support-link'
 import { cancelledCopy } from '@/features/tracking/lib/format'
 import type { Tracking } from '@/features/tracking/types'
 
