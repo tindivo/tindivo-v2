@@ -460,29 +460,68 @@ Las migraciones `0031`, `0032` y `0033` sí lo hacen bien, y por eso
 `revoke … from public, anon, authenticated; grant … to service_role` cada vez
 que cambian la firma.
 
-> ## REGLA
+### La regla ya existía: `.agents/AGENTS.md §2.9`
+
+**Esto no es un hallazgo.** La norma está escrita desde antes, y dice
+exactamente lo que hacía falta:
+
+> ### 2.9 Redefinir una función: comprobar que reemplaza, no que duplica
 >
-> **Toda migración que cambie la firma de una función emite `REVOKE` + `GRANT`
-> en el mismo archivo, sin excepción.**
+> Toda migración que redefina una función debe verificar, ANTES de aplicarla al remoto:
 >
-> Con firma explícita y completa, nunca `DROP FUNCTION nombre` a secas. Y si la
-> intención es sustituir una versión anterior, el `DROP FUNCTION` de la firma
-> vieja va en la misma migración — si no, quedan las dos vivas y el llamador
-> sigue apuntando a la que ya se daba por muerta.
+> - **a) Una sola fila.** `select oid, pg_get_function_arguments(oid) from pg_proc where proname = '<nombre>';`
+>   Debe devolver **UNA** sola fila. Si devuelve más, se creó una sobrecarga en vez
+>   de un reemplazo […]
+> - **b) Al menos una llamada real POR HTTP**, no por RPC directa […] Un type-check
+>   verde y los tests unitarios en verde **no detectan esto**.
 >
-> Verificación de cierre, obligatoria tras cualquier cambio de firma:
+> **Precedente:** 0114 duplicó `advance_order` en local y en producción. PostgREST
+> dejó de resolver toda transición de pedido. Se descubrió al verificar el
+> comportamiento, no al aplicar la migración.
+
+### La lección, con la cronología medida
+
+Fechas verificadas contra `git log`:
+
+| | fecha |
+| --- | --- |
+| `0073` duplica `register_appeal_refund` | 2026-07-21 |
+| `0077` lo repite | 2026-07-22 |
+| `0114` duplica `advance_order` y rompe PostgREST | 2026-07-31 |
+| **§2.9 se escribe** | **2026-07-31** |
+
+**§2.9 nació nueve días después de `0077`.** Así que `0073` y `0077` no
+incumplieron una norma vigente: son las **dos primeras ocurrencias** del fallo
+que, al repetirse en `0114` y romper algo visible, hizo que se escribiera la
+regla.
+
+Y ahí está el problema real, que es peor que el incumplimiento:
+
+**§2.9 solo mira hacia adelante. Nadie barrió hacia atrás.** Cuando `0114` dolió,
+se escribió la norma para que no volviera a pasar — pero no se auditó si
+migraciones anteriores ya habían dejado sobrecargas conviviendo en la base. Las
+de `0073` y `0077` llevaban diez días ahí, calladas, y siguieron otras dos
+semanas. Sus tres consecuencias —las sobrecargas invertidas de R-L3, la función
+abierta a `anon` (M-5), y `register_appeal_refund` que nunca funcionó (M-6)— son
+daño anterior a la regla que la regla no podía descubrir.
+
+**Lo que sí funcionó.** §2.9 no se cumplió leyéndolo: se cumplió **ejecutando el
+PASO 2 del runbook**, que corre su misma consulta y exige una sola fila. La
+verificación lo hizo cumplir; la regla escrita, por sí sola, no — ni para lo que
+vino después de ella, ni mucho menos para lo que ya estaba dentro.
+
+> ## PROPUESTA — verificación automatizada post-migración
 >
-> ```sql
-> SELECT p.oid::regprocedure::text,
->        has_function_privilege('anon', p.oid, 'EXECUTE')          AS anon,
->        has_function_privilege('authenticated', p.oid, 'EXECUTE') AS authenticated,
->        has_function_privilege('service_role', p.oid, 'EXECUTE')  AS service_role
-> FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-> WHERE n.nspname = 'public' AND p.proname = '<la función>';
-> ```
+> Un script que, tras cada `db push`, cuente sobrecargas de toda función
+> redefinida y falle si hay más de una. Haría cumplir §2.9 sin depender de la
+> memoria de nadie.
 >
-> Debe devolver **una sola fila**, y con los privilegios esperados. Más de una
-> fila significa que quedaron sobrecargas conviviendo.
+> **Alcance por definir.** La pregunta que decide su valor: ¿mira solo las
+> funciones que la migración toca, o barre las de todo el esquema? Lo segundo es
+> lo que habría encontrado el daño de `0073`/`0077` sin esperar dos semanas a
+> que alguien fuera a mirar.
+>
+> No implementado.
 
 ### M-6 · 🔴 La sobrecarga de 4 argumentos nunca funcionó
 
