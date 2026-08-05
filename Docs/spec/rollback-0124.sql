@@ -28,7 +28,7 @@
 -- los tests. Si el repo se queda en el estado post-0124 y la base vuelve atrás,
 -- quedan una tabla y dos RPC que nadie puede invocar, y el panel sin su alerta.
 --
---   git revert <commit de 0124>
+--   git revert 177dc07728f78a44a39e701e5d823942cca8a177
 --   pnpm db:types
 --   pnpm type-check && pnpm test
 --
