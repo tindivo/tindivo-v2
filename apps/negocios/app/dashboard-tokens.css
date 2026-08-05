@@ -38,8 +38,8 @@
   --tv-glow-danger: 0 0 0 4px rgba(220, 38, 38, 0.18);
 
   /* Font stacks (next/font first, literal fallback) */
-  --tv-font-display: var(--font-bricolage), 'Manrope', system-ui, sans-serif;
-  --tv-font-mono: var(--font-jetbrains), 'Manrope', ui-monospace, sans-serif;
+  --tv-font-display: var(--font-bricolage), system-ui, sans-serif;
+  --tv-font-mono: var(--font-jetbrains), ui-monospace, monospace;
 }
 
 /* Typography */

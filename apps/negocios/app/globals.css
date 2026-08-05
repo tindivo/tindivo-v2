@@ -3,3 +3,11 @@
 @import './dashboard-tokens.css';
 
 @source '../../../packages/ui/src';
+
+/* Alias de tipografía: mantenemos --font-bricolage por compatibilidad con
+   los call sites del dashboard, pero apuntan al design system unificado. */
+:root {
+  --font-bricolage: var(--font-geist), system-ui, sans-serif;
+  --font-geist: var(--font-geist), system-ui, sans-serif;
+  --font-jetbrains: var(--font-jetbrains), ui-monospace, monospace;
+}

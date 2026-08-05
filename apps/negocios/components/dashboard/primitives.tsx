@@ -22,10 +22,12 @@ export function MS({
 }) {
   return (
     <span
-      className={`material-symbols-rounded ${className}`}
+      className={`material-symbols-rounded inline-flex items-center justify-center leading-none ${className}`}
       aria-hidden
       style={{
         fontSize: size,
+        width: size,
+        height: size,
         fontVariationSettings: `'FILL' ${filled ? 1 : 0}, 'wght' 500`,
         ...style,
       }}

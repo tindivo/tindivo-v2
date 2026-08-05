@@ -1,29 +1,22 @@
+import { EnvBanner } from '@tindivo/ui'
 import type { Metadata } from 'next'
-import { Manrope } from 'next/font/google'
+import { Geist, JetBrains_Mono } from 'next/font/google'
 import type { ReactNode } from 'react'
 import { DashboardChrome } from '@/components/dashboard/chrome'
 import { PushManager } from '@/components/push-manager'
 import './globals.css'
 
-// Tipografía única de la plataforma (DECISIONS.md §16): Manrope cubre display
-// (--font-bricolage), cuerpo (--font-geist) y mono/tabular (--font-jetbrains).
-// Tipografía única de la plataforma: Manrope con todos los pesos.
-// Se exponen tres variables para no romper los call sites existentes.
-const manropeDisplay = Manrope({
+// Tipografía unificada del design system Tindivo (igual que motorizados):
+// - Geist para display, body y labels.
+// - JetBrains Mono solo para datos técnicos (IDs, precios, tiempos).
+const geist = Geist({
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
-  variable: '--font-bricolage',
-  display: 'swap',
-})
-const manropeBody = Manrope({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
   variable: '--font-geist',
   display: 'swap',
 })
-const jetbrains = Manrope({
+const jetbrains = JetBrains_Mono({
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
+  weight: ['400', '500', '600', '700'],
   variable: '--font-jetbrains',
   display: 'swap',
 })
@@ -33,22 +26,22 @@ export const metadata: Metadata = {
   description: 'Panel del negocio en Tindivo',
 }
 
-import { EnvBanner } from '@tindivo/ui'
-
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html
-      lang="es"
-      className={`${manropeDisplay.variable} ${manropeBody.variable} ${jetbrains.variable}`}
-    >
+    <html lang="es" className={`${geist.variable} ${jetbrains.variable}`}>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         {/* Material Symbols Rounded — set de iconos canónico (DECISIONS.md §16).
-            display=block es intencional para iconos (regla useGoogleFontDisplay off en biome.json). */}
+            display=swap evita que los iconos desaparezcan mientras carga la fuente. */}
+        <link
+          rel="preload"
+          as="style"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap"
+        />
         <link
           rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap"
         />
       </head>
       <body className="min-h-dvh bg-surface font-sans text-ink antialiased">

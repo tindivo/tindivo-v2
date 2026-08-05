@@ -1,7 +1,7 @@
 'use client'
 
 import type { BusinessPrimaryCapability } from '@tindivo/contracts'
-import { Button, Card, CardBody } from '@tindivo/ui'
+import { Button, Card, CardBody, Icon } from '@tindivo/ui'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -28,7 +28,7 @@ import {
 } from '@/lib/orders/view-model'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import { speak, unlockAudio, useDashboardSounds } from '@/lib/use-audio-alert'
-import { MS } from './primitives'
+import { DashboardSkeleton } from './dashboard-skeleton'
 import { SuccessToastHost } from './toast'
 
 // ── Debounce hook ─────────────────────────────────────────────────────────────
@@ -246,7 +246,7 @@ function Sidebar({ active, onSignOut }: { active: NavId; onSignOut: () => void }
                 fontWeight: 500,
               }}
             >
-              <MS name={it.icon} size={20} filled={on} />
+              <Icon name={it.icon} size={20} filled={on} />
               <span style={{ flex: 1 }}>{it.label}</span>
               {badge != null && badge > 0 && (
                 <span
@@ -279,7 +279,7 @@ function Sidebar({ active, onSignOut }: { active: NavId; onSignOut: () => void }
         className={`tv-btn tv-btn-sm ${soundOn ? 'tv-btn-brand' : 'tv-btn-ghost'} ${counts.new > 0 && soundOn ? 'tv-pulse-brand' : ''}`}
         style={{ marginBottom: 10, width: '100%' }}
       >
-        <MS
+        <Icon
           name={soundOn ? 'notifications_active' : 'notifications_off'}
           size={16}
           filled={soundOn}
@@ -291,11 +291,11 @@ function Sidebar({ active, onSignOut }: { active: NavId; onSignOut: () => void }
         style={{ padding: 12, marginBottom: 10, background: '#FFF4EC', boxShadow: 'none' }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <MS
+          <Icon
             name="circle"
             size={10}
             filled
-            style={{ color: catalogOnly ? '#16A34A' : paused ? '#B45309' : '#16A34A' }}
+            className={catalogOnly ? 'text-success' : paused ? 'text-amber-700' : 'text-success'}
           />
           <div style={{ fontSize: 13, fontWeight: 600 }}>
             {catalogOnly ? 'Pedidos por WhatsApp' : paused ? 'Pausado' : 'Plataforma abierta'}
@@ -350,7 +350,7 @@ function Sidebar({ active, onSignOut }: { active: NavId; onSignOut: () => void }
             cursor: 'pointer',
           }}
         >
-          <MS name="logout" size={18} />
+          <Icon name="logout" size={18} />
         </button>
       </div>
     </aside>
@@ -393,7 +393,7 @@ function BottomNav({ active }: { active: NavId }) {
             className={active === 'pedidos' ? 'active' : ''}
             style={navBtnStyle(active === 'pedidos')}
           >
-            <MS name="receipt_long" size={22} filled={active === 'pedidos'} />
+            <Icon name="receipt_long" size={22} filled={active === 'pedidos'} />
             <span>Pedidos</span>
           </Link>
         )}
@@ -402,7 +402,7 @@ function BottomNav({ active }: { active: NavId }) {
           className={active === 'menu' ? 'active' : ''}
           style={navBtnStyle(active === 'menu')}
         >
-          <MS name="restaurant_menu" size={22} filled={active === 'menu'} />
+          <Icon name="restaurant_menu" size={22} filled={active === 'menu'} />
           <span>Menú</span>
         </Link>
         <Link
@@ -410,7 +410,7 @@ function BottomNav({ active }: { active: NavId }) {
           className={active === 'config' ? 'active' : ''}
           style={navBtnStyle(active === 'config')}
         >
-          <MS name="settings" size={22} filled={active === 'config'} />
+          <Icon name="settings" size={22} filled={active === 'config'} />
           <span>Config</span>
         </Link>
       </div>
@@ -424,7 +424,7 @@ function BottomNav({ active }: { active: NavId }) {
         className={active === 'pedidos' ? 'active' : ''}
         style={navBtnStyle(active === 'pedidos')}
       >
-        <MS name="receipt_long" size={22} filled={active === 'pedidos'} />
+        <Icon name="receipt_long" size={22} filled={active === 'pedidos'} />
         <span>Pedidos</span>
       </Link>
       <Link
@@ -432,22 +432,22 @@ function BottomNav({ active }: { active: NavId }) {
         className={active === 'menu' ? 'active' : ''}
         style={navBtnStyle(active === 'menu')}
       >
-        <MS name="restaurant_menu" size={22} filled={active === 'menu'} />
+        <Icon name="restaurant_menu" size={22} filled={active === 'menu'} />
         <span>Menú</span>
       </Link>
       <Link href="/nuevo" className="fab">
-        <MS name="add" size={28} filled />
+        <Icon name="add" size={28} filled />
       </Link>
       <Link
         href="/efectivo"
         className={active === 'efectivo' ? 'active' : ''}
         style={navBtnStyle(active === 'efectivo')}
       >
-        <MS name="payments" size={22} filled={active === 'efectivo'} />
+        <Icon name="payments" size={22} filled={active === 'efectivo'} />
         <span>Efectivo</span>
       </Link>
       <Link href="/configuracion" className={mas ? 'active' : ''} style={navBtnStyle(mas)}>
-        <MS name="more_horiz" size={22} filled={mas} />
+        <Icon name="more_horiz" size={22} filled={mas} />
         <span>Más</span>
       </Link>
     </div>
@@ -495,7 +495,7 @@ function NewOrderToast({ count }: { count: number }) {
         boxShadow: '0 8px 24px -6px rgba(249,115,22,0.6)',
       }}
     >
-      <MS name="notifications_active" size={18} filled />
+      <Icon name="notifications_active" size={18} filled />
       {n === 1 ? 'Nuevo pedido' : `${n} pedidos nuevos`} · ver
     </Link>
   )
@@ -519,7 +519,7 @@ function CatalogOnlyGate() {
           justifyContent: 'center',
         }}
       >
-        <MS name="chat" size={30} filled />
+        <Icon name="chat" size={30} filled />
       </span>
       <h1 className="font-display font-semibold text-[22px] text-ink">Modo catálogo activo</h1>
       <p className="max-w-[420px] text-[14px] text-ink-muted">
@@ -528,10 +528,10 @@ function CatalogOnlyGate() {
       </p>
       <div className="mt-2 flex gap-2">
         <Link href="/menu" className="tv-btn tv-btn-brand">
-          <MS name="restaurant_menu" size={16} /> Mi menú
+          <Icon name="restaurant_menu" size={16} /> Mi menú
         </Link>
         <Link href="/configuracion" className="tv-btn tv-btn-ghost">
-          <MS name="settings" size={16} /> Configuración
+          <Icon name="settings" size={16} /> Configuración
         </Link>
       </div>
     </main>
@@ -576,7 +576,7 @@ function NotificationGate({ onActivate }: { onActivate: () => void }) {
             margin: '0 auto 16px',
           }}
         >
-          <MS name="notifications_active" size={36} filled />
+          <Icon name="notifications_active" size={36} filled />
         </div>
 
         <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>
@@ -603,7 +603,7 @@ function NotificationGate({ onActivate }: { onActivate: () => void }) {
             gap: 8,
           }}
         >
-          <MS name="warning" size={16} filled />
+          <Icon name="warning" size={16} filled />
           Sin notificaciones activas, los pedidos pueden perderse y cancelarse automáticamente.
         </div>
 
@@ -612,7 +612,7 @@ function NotificationGate({ onActivate }: { onActivate: () => void }) {
           onClick={onActivate}
           className="tv-btn tv-btn-brand tv-btn-block tv-btn-xl"
         >
-          <MS name="notifications_active" size={22} filled />
+          <Icon name="notifications_active" size={22} filled />
           Activar notificaciones
         </button>
 
@@ -731,10 +731,11 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
   const debouncedRefetchOrders = useDebouncedCallback(refetchOrders, 500)
   const debouncedRefetchBiz = useDebouncedCallback(refetchBiz, 500)
 
-  // Carga inicial (persiste en toda sección).
+  // Carga inicial: solo esperamos el negocio para pintar el shell.
+  // Los pedidos se cargan vía usePolledQuery una vez que bizId está disponible.
   useEffect(() => {
-    Promise.all([refetchBiz(), refetchOrders()]).finally(() => setReady(true))
-  }, [refetchBiz, refetchOrders])
+    refetchBiz().finally(() => setReady(true))
+  }, [refetchBiz])
 
   // Suscripción Realtime ÚNICA (filtrada por bizId) con auto-reconstrucción de canal quemado y backoff exponencial.
   useEffect(() => {
@@ -945,7 +946,7 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
     refetchBiz,
   ])
 
-  if (!ready || !value) return <div className="p-10 text-ink-muted">Cargando…</div>
+  if (!ready || !value) return <DashboardSkeleton />
 
   // Gate del modo catálogo: solo Menú y Config son operables. Excepción: si aún
   // hay pedidos delivery en vuelo (de antes del cambio de modo), la sección de
@@ -976,7 +977,7 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
                 gap: 8,
               }}
             >
-              <MS name="info" size={16} filled />
+              <Icon name="info" size={16} filled />
               Modo catálogo activo: estos pedidos son del modo delivery anterior.
             </div>
           )}
@@ -1009,7 +1010,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
     return () => sub.subscription.unsubscribe()
   }, [])
 
-  if (!ready) return <div className="p-10 text-ink-muted">Cargando…</div>
+  if (!ready) return <DashboardSkeleton />
   if (!authed) return <Login onAuthed={() => setAuthed(true)} />
   return (
     <AuthedChrome
