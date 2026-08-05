@@ -1,12 +1,14 @@
 'use client'
 
+import { Icon } from '@tindivo/ui'
+
 import Link from 'next/link'
 import { useState } from 'react'
 import type { OrderVM } from '@/lib/orders/view-model'
 import { sortCooking } from '@/lib/orders/view-model'
 import { CocinaCard, NuevoCard, RepartoCard } from './cards'
 import { type DetailActions, type DetailItem, DetailScreen, PausarModal } from './pedido-detail'
-import { MS, SourceBadgeMini, soles } from './primitives'
+import { SourceBadgeMini, soles } from './primitives'
 
 export interface PedidosViewProps {
   bizName: string
@@ -60,7 +62,7 @@ function SoundOffWarning() {
         fontWeight: 600,
       }}
     >
-      <MS name="warning" size={18} filled />
+      <Icon weight={500} name="warning" size={18} filled />
       <span style={{ flex: 1 }}>
         Alertas desactivadas — podrías perder pedidos. Los pedidos se cancelan automáticamente en 5
         minutos si no los atiendes.
@@ -107,7 +109,7 @@ function ColEmpty({ tab }: { tab: 'new' | 'cooking' | 'route' | 'today' }) {
         border: '1px solid var(--tv-border)',
       }}
     >
-      <MS name={m.icon} size={32} style={{ color: 'var(--tv-ink-subtle)', marginBottom: 10 }} />
+      <Icon weight={500} name={m.icon} size={32} className="mb-2.5 text-ink-subtle" />
       <div style={{ fontWeight: 700, fontSize: 15 }}>{m.title}</div>
       <div style={{ fontSize: 13, color: 'var(--tv-ink-muted)', marginTop: 4 }}>{m.sub}</div>
     </div>
@@ -134,14 +136,12 @@ function HistoryList({ history }: { history: OrderVM[] }) {
               opacity: cancelled ? 0.65 : 1,
             }}
           >
-            <MS
+            <Icon
+              weight={500}
               name={cancelled ? 'cancel' : 'check_circle'}
               size={18}
               filled
-              style={{
-                color: cancelled ? 'var(--tv-ink-subtle)' : 'var(--tv-success)',
-                flexShrink: 0,
-              }}
+              className={`shrink-0 ${cancelled ? 'text-ink-subtle' : 'text-success'}`}
             />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div
@@ -231,7 +231,7 @@ export function PedidosMobile(p: PedidosViewProps) {
             fontWeight: 700,
           }}
         >
-          <MS name="pause_circle" size={18} filled />
+          <Icon weight={500} name="pause_circle" size={18} filled />
           <span style={{ flex: 1 }}>PAUSADO{p.pauseMinLeft ? ` · ${p.pauseMinLeft}m` : ''}</span>
           <button
             type="button"
@@ -265,7 +265,7 @@ export function PedidosMobile(p: PedidosViewProps) {
             fontWeight: 700,
           }}
         >
-          <MS name="two_wheeler" size={18} filled />
+          <Icon weight={500} name="two_wheeler" size={18} filled />
           Motorizado en el local · entrégale el pedido
         </div>
       )}
@@ -315,7 +315,8 @@ export function PedidosMobile(p: PedidosViewProps) {
             className={`tv-btn tv-btn-sm ${p.soundOn ? 'tv-btn-brand' : 'tv-btn-ghost'} ${p.counts.new > 0 && p.soundOn ? 'tv-pulse-brand' : ''}`}
             style={{ padding: '7px 10px', flexShrink: 0 }}
           >
-            <MS
+            <Icon
+              weight={500}
               name={p.soundOn ? 'notifications_active' : 'notifications_off'}
               size={17}
               filled={p.soundOn}
@@ -336,7 +337,7 @@ export function PedidosMobile(p: PedidosViewProps) {
               flexShrink: 0,
             }}
           >
-            <MS name={p.paused ? 'play_circle' : 'pause_circle'} size={17} />
+            <Icon weight={500} name={p.paused ? 'play_circle' : 'pause_circle'} size={17} />
           </button>
         </div>
         <div style={{ display: 'flex', gap: 6, paddingBottom: 10 }}>
@@ -346,14 +347,14 @@ export function PedidosMobile(p: PedidosViewProps) {
             className="tv-btn tv-btn-ghost tv-btn-sm"
             style={{ flex: 1 }}
           >
-            <MS name="history" size={14} /> Historial
+            <Icon weight={500} name="history" size={14} /> Historial
           </button>
           <Link
             href="/nuevo"
             className="tv-btn tv-btn-dark tv-btn-sm"
             style={{ flex: 1, textDecoration: 'none' }}
           >
-            <MS name="add" size={14} /> Pedido directo
+            <Icon weight={500} name="add" size={14} /> Pedido directo
           </Link>
         </div>
       </div>
@@ -574,12 +575,12 @@ export function PedidosDesktop(p: PedidosViewProps) {
             gap: 14,
           }}
         >
-          <MS name="pause_circle" size={20} filled />
+          <Icon weight={500} name="pause_circle" size={20} filled />
           <div style={{ flex: 1, fontSize: 14, fontWeight: 700 }}>
             PEDIDOS PAUSADOS{p.pauseMinLeft ? ` · Reactiva en ${p.pauseMinLeft}m` : ''}
           </div>
           <button type="button" onClick={p.onResume} className="tv-btn tv-btn-dark tv-btn-sm">
-            <MS name="play_circle" size={16} filled /> Reanudar ahora
+            <Icon weight={500} name="play_circle" size={16} filled /> Reanudar ahora
           </button>
         </div>
       )}
@@ -595,7 +596,7 @@ export function PedidosDesktop(p: PedidosViewProps) {
             gap: 14,
           }}
         >
-          <MS name="two_wheeler" size={20} filled />
+          <Icon weight={500} name="two_wheeler" size={20} filled />
           <div style={{ flex: 1, fontSize: 14, fontWeight: 700 }}>
             Motorizado en el local — entrégale el pedido
           </div>
@@ -646,7 +647,7 @@ export function PedidosDesktop(p: PedidosViewProps) {
             className="tv-btn tv-btn-dark tv-btn-sm"
             style={{ textDecoration: 'none' }}
           >
-            <MS name="add" size={15} /> Pedido directo
+            <Icon weight={500} name="add" size={15} /> Pedido directo
           </Link>
           <button
             type="button"
@@ -666,7 +667,7 @@ export function PedidosDesktop(p: PedidosViewProps) {
               color: p.paused ? '#78350F' : 'var(--tv-ink)',
             }}
           >
-            <MS name={p.paused ? 'play_circle' : 'pause_circle'} size={16} filled />
+            <Icon weight={500} name={p.paused ? 'play_circle' : 'pause_circle'} size={16} filled />
             {p.paused ? 'Reanudar' : 'Pausar pedidos'}
           </button>
           <button
@@ -674,7 +675,8 @@ export function PedidosDesktop(p: PedidosViewProps) {
             onClick={p.onToggleSound}
             className={`tv-btn tv-btn-sm ${p.soundOn ? 'tv-btn-brand' : 'tv-btn-ghost'} ${p.counts.new > 0 && p.soundOn ? 'tv-pulse-brand' : ''}`}
           >
-            <MS
+            <Icon
+              weight={500}
               name={p.soundOn ? 'notifications_active' : 'notifications_off'}
               size={15}
               filled={p.soundOn}
@@ -698,11 +700,12 @@ export function PedidosDesktop(p: PedidosViewProps) {
             gap: 12,
           }}
         >
-          <MS
+          <Icon
+            weight={500}
             name="notifications_active"
             size={20}
             filled
-            style={{ color: 'var(--tv-danger)', flexShrink: 0 }}
+            className="shrink-0 text-danger"
           />
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 14, fontWeight: 700 }}>

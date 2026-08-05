@@ -1,8 +1,10 @@
 'use client'
 
+import { Icon } from '@tindivo/ui'
+
 import type { OrderVM } from '@/lib/orders/view-model'
 import { formatSupportPhone, normalizeSupportPhone } from '@/lib/support'
-import { MS, mmss, PayBadgeMini, SourceBadgeMini, soles } from './primitives'
+import { mmss, PayBadgeMini, SourceBadgeMini, soles } from './primitives'
 
 type CardProps = { order: OrderVM; onOpen?: (o: OrderVM) => void; compact?: boolean }
 
@@ -48,7 +50,7 @@ function RiskBadge({ order }: { order: OrderVM }) {
         fontWeight: 700,
       }}
     >
-      <MS name="shield" size={13} filled />
+      <Icon weight={500} name="shield" size={13} filled />
       {RISK_REASON_LABEL[order.validationReasonCode ?? ''] ?? 'Validar antes de cocinar'}
     </div>
   )
@@ -68,7 +70,7 @@ function CookingCountdown({ minutesLeft }: { minutesLeft: number }) {
         fontWeight: 600,
       }}
     >
-      <MS name="timer" size={12} style={{ color: '#C2410C' }} />
+      <Icon weight={500} name="timer" size={12} className="text-orange-700" />
       <span className="tv-mono" style={{ fontWeight: 700 }}>
         {minutesLeft}m
       </span>{' '}
@@ -86,11 +88,11 @@ export function CookingStatusLine({ order }: { order: OrderVM }) {
     const left = order.minutesLeft ?? order.prepMinutes ?? 0
     const prep = order.prepMinutes ?? 0
     const pct = prep > 0 ? left / prep : 1
-    const textColor = pct < 0.15 ? '#C2410C' : '#57534E'
+    const timerClass = pct < 0.15 ? 'text-orange-700' : 'text-ink-subtle'
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-        <MS name="timer" size={12} style={{ color: textColor }} />
-        <span style={{ fontSize: 11, color: textColor, fontWeight: 500 }}>
+        <Icon weight={500} name="timer" size={12} className={timerClass} />
+        <span className={timerClass} style={{ fontSize: 11, fontWeight: 500 }}>
           Cocinando ·{' '}
           <span className="tv-mono" style={{ fontWeight: 700 }}>
             {left}m
@@ -146,7 +148,7 @@ export function CookingStatusLine({ order }: { order: OrderVM }) {
   if (s === 'heading')
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
-        <MS name="two_wheeler" size={13} style={{ color: '#6D28D9', flexShrink: 0 }} />
+        <Icon weight={500} name="two_wheeler" size={13} className="shrink-0 text-violet-700" />
         <span style={{ fontSize: 11, color: '#6D28D9', fontWeight: 500 }}>
           {d?.name ?? 'Motorizado'} viene a recoger
         </span>
@@ -161,7 +163,13 @@ export function CookingStatusLine({ order }: { order: OrderVM }) {
     return (
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
-          <MS name="check_circle" size={13} filled style={{ color: '#16A34A', flexShrink: 0 }} />
+          <Icon
+            weight={500}
+            name="check_circle"
+            size={13}
+            filled
+            className="shrink-0 text-green-600"
+          />
           <span style={{ fontSize: 12, color: '#15803D', fontWeight: 700 }}>
             {d?.name ?? 'Motorizado'} llegó · Entregar pedido
           </span>
@@ -225,7 +233,7 @@ function IdAddress({ order }: { order: OrderVM }) {
         whiteSpace: 'nowrap',
       }}
     >
-      <MS name="location_on" size={11} style={{ flexShrink: 0, marginTop: 1 }} />
+      <Icon weight={500} name="location_on" size={11} className="mt-px shrink-0" />
       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{order.addressRef}</span>
     </div>
   )
@@ -278,7 +286,7 @@ function UrgentDriverButton({
           gap: 5,
         }}
       >
-        <MS name="phone_disabled" size={13} />
+        <Icon weight={500} name="phone_disabled" size={13} />
         Sin número de soporte configurado
       </div>
     )
@@ -301,7 +309,7 @@ function UrgentDriverButton({
           : { background: '#fff', color: '#C2410C', border: '1px solid #FDBA74' }),
       }}
     >
-      <MS name="call" size={14} filled={alarma} />
+      <Icon weight={500} name="call" size={14} filled={alarma} />
       {alarma ? 'Pedir motorizado YA' : 'Pedir motorizado'} · {formatSupportPhone(phone)}
     </button>
   )
@@ -402,17 +410,17 @@ export function NuevoCard({ order, onOpen, compact = false }: CardProps) {
           #{order.id}
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-          <MS
+          <Icon
+            weight={500}
             name="timer"
             size={11}
-            style={{ color: isUrgent ? 'var(--tv-danger)' : 'var(--tv-brand)', flexShrink: 0 }}
+            className={`shrink-0 ${isUrgent ? 'text-danger' : 'text-brand'}`}
           />
           <span
-            className="tv-mono"
+            className={`tv-mono ${isUrgent ? 'text-danger' : 'text-brand'}`}
             style={{
               fontSize: 11,
               fontWeight: 700,
-              color: isUrgent ? 'var(--tv-danger)' : 'var(--tv-brand)',
             }}
           >
             {mmss(order.countdownSec)}
@@ -488,7 +496,6 @@ export function RepartoCard({ order, onOpen, compact = false }: CardProps) {
 
   const driverName = order.driver?.name ?? 'Motorizado'
   const statusDot = isHigh ? '#F97316' : isMed ? '#EAB308' : null
-  const statusColor = isHigh ? '#C2410C' : isMed ? '#B45309' : '#6D28D9'
   const statusText = isHigh
     ? `Reparto demorado · hace ${mAgo}m`
     : isMed
@@ -559,9 +566,17 @@ export function RepartoCard({ order, onOpen, compact = false }: CardProps) {
             style={{ width: 7, height: 7, borderRadius: 999, background: statusDot, flexShrink: 0 }}
           />
         ) : (
-          <MS name="delivery_dining" size={13} style={{ color: statusColor, flexShrink: 0 }} />
+          <Icon
+            weight={500}
+            name="delivery_dining"
+            size={13}
+            className={`shrink-0 ${isHigh ? 'text-orange-700' : isMed ? 'text-amber-700' : 'text-violet-700'}`}
+          />
         )}
-        <span style={{ fontSize: 11, color: statusColor, fontWeight: isMed || isHigh ? 600 : 500 }}>
+        <span
+          className={isHigh ? 'text-orange-700' : isMed ? 'text-amber-700' : 'text-violet-700'}
+          style={{ fontSize: 11, fontWeight: isMed || isHigh ? 600 : 500 }}
+        >
           {statusText}
         </span>
       </div>

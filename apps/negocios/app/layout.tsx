@@ -30,19 +30,15 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="es" className={`${geist.variable} ${jetbrains.variable}`}>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        {/* Material Symbols Rounded — set de iconos canónico (DECISIONS.md §16).
-            display=swap evita que los iconos desaparezcan mientras carga la fuente. */}
-        <link
-          rel="preload"
-          as="style"
-          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap"
-        />
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap"
-        />
+        {/* Material Symbols Rounded — self-hosted subset
+            (opsz 24, wght 400..700, FILL 0..1, GRAD 0).
+            Preload the font files so icons render without the broken-glyph flash. */}
+        <link rel="preload" as="style" href="/fonts/material-symbols.css" />
+        <link rel="preload" as="font" type="font/ttf" crossOrigin="anonymous" href="/fonts/material-symbols-rounded-400.ttf" />
+        <link rel="preload" as="font" type="font/ttf" crossOrigin="anonymous" href="/fonts/material-symbols-rounded-500.ttf" />
+        <link rel="preload" as="font" type="font/ttf" crossOrigin="anonymous" href="/fonts/material-symbols-rounded-600.ttf" />
+        <link rel="preload" as="font" type="font/ttf" crossOrigin="anonymous" href="/fonts/material-symbols-rounded-700.ttf" />
+        <link rel="stylesheet" href="/fonts/material-symbols.css" />
       </head>
       <body className="min-h-dvh bg-surface font-sans text-ink antialiased">
         <EnvBanner />

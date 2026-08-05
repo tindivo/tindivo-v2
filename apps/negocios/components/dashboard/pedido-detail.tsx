@@ -1,9 +1,11 @@
 'use client'
 
+import { Icon } from '@tindivo/ui'
+
 import { useEffect, useState } from 'react'
 import type { OrderVM } from '@/lib/orders/view-model'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
-import { MS, mmss, PayBadgeMini, SourceBadgeMini, soles } from './primitives'
+import { mmss, PayBadgeMini, SourceBadgeMini, soles } from './primitives'
 
 export interface DetailItem {
   qty: number
@@ -72,7 +74,7 @@ function PaySectionCash({ order }: { order: OrderVM }) {
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
-        <MS name="payments" size={18} filled style={{ color: '#16A34A' }} />
+        <Icon weight={500} name="payments" size={18} filled className="text-green-600" />
         <div style={{ fontSize: 13, fontWeight: 700, color: '#166534' }}>Pago en efectivo</div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
@@ -117,7 +119,7 @@ function PaySectionWallet({ order, qrUrl }: { order: OrderVM; qrUrl: string | nu
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
-        <MS name="qr_code_2" size={18} filled style={{ color: '#7C3AED' }} />
+        <Icon weight={500} name="qr_code_2" size={18} filled className="text-violet-600" />
         <div style={{ fontSize: 13, fontWeight: 700, color: '#5B21B6' }}>
           Cobrar con billetera digital
         </div>
@@ -230,7 +232,7 @@ function PaySectionPrepaid({
               boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
             }}
           >
-            <MS name="close" size={24} />
+            <Icon weight={500} name="close" size={24} />
           </button>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -274,11 +276,14 @@ function PaySectionPrepaid({
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <MS
+            <Icon
+              weight={500}
               name={verified ? 'verified' : 'schedule'}
               size={18}
               filled
-              style={{ color: verified ? '#16A34A' : isSecondAttempt ? '#DC2626' : '#0284C7' }}
+              className={
+                verified ? 'text-green-600' : isSecondAttempt ? 'text-danger' : 'text-sky-600'
+              }
             />
             <div
               style={{
@@ -447,7 +452,7 @@ function PaySectionPrepaid({
                     boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
                   }}
                 >
-                  <MS name="zoom_in" size={15} /> Ampliar comprobante
+                  <Icon weight={500} name="zoom_in" size={15} /> Ampliar comprobante
                 </div>
                 {verified && (
                   <div
@@ -460,7 +465,13 @@ function PaySectionPrepaid({
                       justifyContent: 'center',
                     }}
                   >
-                    <MS name="check_circle" size={44} filled style={{ color: '#16A34A' }} />
+                    <Icon
+                      weight={500}
+                      name="check_circle"
+                      size={44}
+                      filled
+                      className="text-green-600"
+                    />
                   </div>
                 )}
               </div>
@@ -501,7 +512,7 @@ function PaySectionMixed({ order, qrUrl }: { order: OrderVM; qrUrl: string | nul
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
-        <MS name="shuffle" size={18} filled style={{ color: '#B45309' }} />
+        <Icon weight={500} name="shuffle" size={18} filled className="text-amber-700" />
         <div style={{ fontSize: 13, fontWeight: 700, color: '#92400E' }}>Pago combinado</div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
@@ -618,7 +629,7 @@ function ReasonModal({
               justifyContent: 'center',
             }}
           >
-            <MS name="cancel" size={20} filled />
+            <Icon weight={500} name="cancel" size={20} filled />
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 16, fontWeight: 700 }}>{title}</div>
@@ -641,7 +652,7 @@ function ReasonModal({
               justifyContent: 'center',
             }}
           >
-            <MS name="close" size={16} />
+            <Icon weight={500} name="close" size={16} />
           </button>
         </div>
 
@@ -769,7 +780,7 @@ function PrepTimeModal({
               justifyContent: 'center',
             }}
           >
-            <MS name="schedule" size={20} filled />
+            <Icon weight={500} name="schedule" size={20} filled />
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 16, fontWeight: 700 }}>Tiempo de preparación</div>
@@ -792,7 +803,7 @@ function PrepTimeModal({
               justifyContent: 'center',
             }}
           >
-            <MS name="close" size={16} />
+            <Icon weight={500} name="close" size={16} />
           </button>
         </div>
 
@@ -1039,7 +1050,7 @@ export function DetailScreen({
               flexShrink: 0,
             }}
           >
-            <MS name="arrow_back" size={20} />
+            <Icon weight={500} name="arrow_back" size={20} />
           </button>
         )}
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -1113,7 +1124,7 @@ export function DetailScreen({
               justifyContent: 'center',
             }}
           >
-            <MS name="close" size={18} />
+            <Icon weight={500} name="close" size={18} />
           </button>
         )}
       </div>
@@ -1131,7 +1142,7 @@ export function DetailScreen({
             flexShrink: 0,
           }}
         >
-          <MS name="check_circle" size={20} filled />
+          <Icon weight={500} name="check_circle" size={20} filled />
           <div>
             <div style={{ fontSize: 14, fontWeight: 700 }}>
               {order.driver?.name ?? 'El motorizado'} llegó al local · Entregar pedido
@@ -1176,7 +1187,7 @@ export function DetailScreen({
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
-                <MS name="gavel" size={18} filled style={{ color: '#D97706' }} />
+                <Icon weight={500} name="gavel" size={18} filled className="text-amber-600" />
                 <div style={{ fontSize: 13, fontWeight: 700, color: '#92400E' }}>
                   El cliente apeló el rechazo de este pedido
                 </div>
@@ -1205,7 +1216,7 @@ export function DetailScreen({
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <MS name="person" size={14} style={{ color: 'var(--tv-ink-muted)' }} />
+              <Icon weight={500} name="person" size={14} className="text-ink-muted" />
               <span style={{ fontWeight: 700, color: 'var(--tv-ink)' }}>
                 {order.customer ?? 'Cliente'}
               </span>
@@ -1224,7 +1235,7 @@ export function DetailScreen({
                     gap: 3,
                   }}
                 >
-                  <MS name="call" size={12} filled /> {order.phone}
+                  <Icon weight={500} name="call" size={12} filled /> {order.phone}
                 </a>
               </>
             )}
@@ -1243,7 +1254,7 @@ export function DetailScreen({
                   }}
                   title={order.addressRef}
                 >
-                  <MS name="location_on" size={12} style={{ color: 'var(--tv-brand)' }} />
+                  <Icon weight={500} name="location_on" size={12} className="text-brand" />
                   {order.addressRef}
                 </span>
               </>
@@ -1288,7 +1299,7 @@ export function DetailScreen({
                     fontWeight: 600,
                   }}
                 >
-                  <MS name="call" size={15} filled /> {order.phone}
+                  <Icon weight={500} name="call" size={15} filled /> {order.phone}
                 </a>
               )}
             </div>
@@ -1316,10 +1327,11 @@ export function DetailScreen({
                   Dirección
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <MS
+                  <Icon
+                    weight={500}
                     name="location_on"
                     size={16}
-                    style={{ color: 'var(--tv-brand)', flexShrink: 0, marginTop: 2 }}
+                    className="mt-0.5 shrink-0 text-brand"
                   />
                   <div style={{ fontSize: 14, lineHeight: 1.5 }}>{order.addressRef}</div>
                 </div>
@@ -1353,17 +1365,18 @@ export function DetailScreen({
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <MS name="shopping_bag" size={16} />
+                <Icon weight={500} name="shopping_bag" size={16} />
                 <span>
                   Pedido ({items.length} {items.length === 1 ? 'ítem' : 'ítems'})
                 </span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                 <span className="tv-mono">{soles(order.total)}</span>
-                <MS
+                <Icon
+                  weight={500}
                   name={itemsOpen ? 'expand_less' : 'expand_more'}
                   size={18}
-                  style={{ color: 'var(--tv-ink-muted)' }}
+                  className="text-ink-muted"
                 />
               </div>
             </summary>
@@ -1395,7 +1408,7 @@ export function DetailScreen({
                       )}
                       {it.note && (
                         <div style={{ fontSize: 12, color: '#B45309', marginTop: 2 }}>
-                          <MS name="info" size={11} /> {it.note}
+                          <Icon weight={500} name="info" size={11} /> {it.note}
                         </div>
                       )}
                     </div>
@@ -1453,15 +1466,16 @@ export function DetailScreen({
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <MS name="payments" size={16} />
+                <Icon weight={500} name="payments" size={16} />
                 <span>Cobro</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                 <span className="tv-mono">{soles(order.total)}</span>
-                <MS
+                <Icon
+                  weight={500}
                   name={itemsOpen ? 'expand_less' : 'expand_more'}
                   size={18}
-                  style={{ color: 'var(--tv-ink-muted)' }}
+                  className="text-ink-muted"
                 />
               </div>
             </summary>
@@ -1513,7 +1527,13 @@ export function DetailScreen({
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
-                      <MS name="qr_code_2" size={18} filled style={{ color: '#C2410C' }} />
+                      <Icon
+                        weight={500}
+                        name="qr_code_2"
+                        size={18}
+                        filled
+                        className="text-orange-700"
+                      />
                       <div style={{ fontSize: 13, fontWeight: 700, color: '#9A3412' }}>
                         Pago por Yape / Plin
                       </div>
@@ -1537,7 +1557,13 @@ export function DetailScreen({
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
-                      <MS name="schedule" size={18} filled style={{ color: '#C2410C' }} />
+                      <Icon
+                        weight={500}
+                        name="schedule"
+                        size={18}
+                        filled
+                        className="text-orange-700"
+                      />
                       <div style={{ fontSize: 13, fontWeight: 700, color: '#9A3412' }}>
                         Esperando pago del cliente
                       </div>
@@ -1631,7 +1657,7 @@ export function DetailScreen({
               disabled={busy}
               className="tv-btn tv-btn-ghost tv-btn-sm tv-btn-block"
             >
-              <MS name="add" size={14} /> +10 min
+              <Icon weight={500} name="add" size={14} /> +10 min
             </button>
             <div style={{ fontSize: 11, color: 'var(--tv-ink-muted)', marginTop: 6 }}>
               Solo disponible una vez y antes de que llegue el motorizado.
@@ -1661,7 +1687,7 @@ export function DetailScreen({
             className="tv-btn tv-btn-sm tv-btn-block"
             style={{ background: 'var(--tv-danger)', color: '#fff', border: 'none', flexShrink: 0 }}
           >
-            <MS name="call" size={15} /> Llamar a un motorizado manualmente
+            <Icon weight={500} name="call" size={15} /> Llamar a un motorizado manualmente
           </button>
         )}
 
@@ -1699,7 +1725,7 @@ export function DetailScreen({
                 color: 'var(--tv-danger)',
               }}
             >
-              <MS name="cancel" size={14} /> Cancelar este pedido
+              <Icon weight={500} name="cancel" size={14} /> Cancelar este pedido
             </button>
           </div>
         )}
@@ -1752,7 +1778,7 @@ export function DetailScreen({
                   background: '#FFF5F5',
                 }}
               >
-                <MS name="cancel" size={18} /> Inválido
+                <Icon weight={500} name="cancel" size={18} /> Inválido
               </button>
               <button
                 type="button"
@@ -1761,7 +1787,7 @@ export function DetailScreen({
                 className="tv-btn tv-btn-brand"
                 style={{ flex: 2, background: '#16A34A' }}
               >
-                <MS name="check_circle" size={18} filled /> Confirmar pago
+                <Icon weight={500} name="check_circle" size={18} filled /> Confirmar pago
               </button>
             </div>
           ) : order.status === 'awaiting_payment' && isPrepaid ? (
@@ -1773,7 +1799,7 @@ export function DetailScreen({
                 className="tv-btn tv-btn-ghost"
                 style={{ flex: 1, color: 'var(--tv-danger)' }}
               >
-                <MS name="close" size={18} /> Cancelar
+                <Icon weight={500} name="close" size={18} /> Cancelar
               </button>
               <div
                 className="tv-btn"
@@ -1799,7 +1825,7 @@ export function DetailScreen({
                   className="tv-btn tv-btn-ghost"
                   style={{ flex: 1, color: 'var(--tv-danger)' }}
                 >
-                  <MS name="close" size={18} /> Rechazar
+                  <Icon weight={500} name="close" size={18} /> Rechazar
                 </button>
                 <button
                   type="button"
@@ -1808,7 +1834,7 @@ export function DetailScreen({
                   className="tv-btn tv-btn-brand"
                   style={{ flex: 2 }}
                 >
-                  <MS name="check" size={18} filled />
+                  <Icon weight={500} name="check" size={18} filled />
                   {isPrepaid ? 'Aceptar disponibilidad' : `Aceptar · ${prep}m`}
                 </button>
               </div>
@@ -1850,7 +1876,7 @@ export function DetailScreen({
                 border: '1px solid var(--tv-success)',
               }}
             >
-              <MS name="check_circle" size={20} filled style={{ color: 'var(--tv-success)' }} />
+              <Icon weight={500} name="check_circle" size={20} filled className="text-success" />
               <span style={{ fontSize: 13, fontWeight: 600, color: '#15803D' }}>
                 Comida lista. El motorizado ya lo sabe.
               </span>
@@ -1876,7 +1902,7 @@ export function DetailScreen({
                 className="tv-btn"
                 style={{ flex: 1, background: 'var(--tv-success)', color: '#fff' }}
               >
-                <MS name="check_circle" size={18} filled /> Sí, está lista
+                <Icon weight={500} name="check_circle" size={18} filled /> Sí, está lista
               </button>
             </div>
           ) : (
@@ -1887,7 +1913,7 @@ export function DetailScreen({
               className="tv-btn tv-btn-block"
               style={{ background: 'var(--tv-success)', color: '#fff' }}
             >
-              <MS name="inventory_2" size={18} filled /> Listo — llamar moto
+              <Icon weight={500} name="inventory_2" size={18} filled /> Listo — llamar moto
             </button>
           )}
         </div>
@@ -1990,7 +2016,7 @@ export function PausarModal({
               justifyContent: 'center',
             }}
           >
-            <MS name="pause_circle" size={22} filled />
+            <Icon weight={500} name="pause_circle" size={22} filled />
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 16, fontWeight: 700 }}>Pausar pedidos</div>
@@ -2013,7 +2039,7 @@ export function PausarModal({
               justifyContent: 'center',
             }}
           >
-            <MS name="close" size={16} />
+            <Icon weight={500} name="close" size={16} />
           </button>
         </div>
 
@@ -2041,7 +2067,7 @@ export function PausarModal({
                 <div style={{ fontSize: 13, fontWeight: 600 }}>{o.label}</div>
                 <div style={{ fontSize: 11, opacity: 0.65 }}>{o.sub}</div>
               </div>
-              {i === sel && <MS name="check" size={16} />}
+              {i === sel && <Icon weight={500} name="check" size={16} />}
             </button>
           ))}
         </div>

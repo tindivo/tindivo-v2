@@ -1,8 +1,8 @@
 'use client'
 
+import { Icon } from '@tindivo/ui'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
-import { MS } from './primitives'
 
 // El chrome (sidebar + bottom-nav + auth + contexto + realtime + sonido) vive ahora
 // en el layout (components/dashboard/chrome.tsx) y persiste entre secciones. Este
@@ -36,28 +36,13 @@ function DesktopTopBar({
   right?: ReactNode
 }) {
   return (
-    <div
-      className="tv-glass"
-      style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 8,
-        padding: '14px 24px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 16,
-      }}
-    >
-      <div style={{ flex: 1 }}>
-        <div className="tv-display" style={{ fontSize: 22, lineHeight: 1.1 }}>
-          {title}
-        </div>
-        {subtitle && (
-          <div style={{ fontSize: 13, color: 'var(--tv-ink-muted)', marginTop: 2 }}>{subtitle}</div>
-        )}
+    <header className="sticky top-0 z-8 flex items-center gap-4 border-b border-ink/[0.06] bg-white/82 px-6 py-3.5 backdrop-blur-md">
+      <div className="flex-1">
+        <h1 className="font-display text-[22px] font-bold leading-tight tracking-tight">{title}</h1>
+        {subtitle && <p className="mt-0.5 text-[13px] text-ink-muted">{subtitle}</p>}
       </div>
       {right}
-    </div>
+    </header>
   )
 }
 
@@ -71,46 +56,24 @@ function MobileTopBar({
   right?: ReactNode
 }) {
   return (
-    <div
-      className="tv-glass"
-      style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 10,
-        padding: '12px 14px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 10,
-      }}
-    >
+    <header className="sticky top-0 z-10 flex items-center gap-2.5 border-b border-ink/[0.06] bg-white/82 px-3.5 py-3 backdrop-blur-md">
       <Link
         href="/"
-        style={{
-          width: 36,
-          height: 36,
-          borderRadius: 10,
-          background: 'rgba(26,22,20,0.06)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0,
-          color: 'var(--tv-ink)',
-        }}
+        className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-[10px] bg-ink/[0.06] text-ink"
+        aria-label="Volver"
       >
-        <MS name="arrow_back" size={20} />
+        <Icon name="arrow_back" size={20} />
       </Link>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div className="tv-display" style={{ fontSize: 18, lineHeight: 1.1 }}>
-          {title}
-        </div>
+      <div className="min-w-0 flex-1">
+        <h1 className="font-display text-lg font-bold leading-tight tracking-tight">{title}</h1>
         {subtitle && (
-          <div className="tv-label" style={{ marginTop: 2 }}>
+          <p className="font-mono text-[11px] font-semibold uppercase tracking-wide text-ink-muted">
             {subtitle}
-          </div>
+          </p>
         )}
       </div>
       {right}
-    </div>
+    </header>
   )
 }
 
@@ -131,16 +94,14 @@ export function DashboardShell({
   children: ReactNode
 }) {
   return (
-    <div className="flex flex-col" style={{ flex: 1, minHeight: 0 }}>
+    <div className="flex min-h-0 flex-1 flex-col">
       <div className="hidden lg:block">
         <DesktopTopBar title={title} subtitle={subtitle} right={headerRight} />
       </div>
       <div className="lg:hidden">
         <MobileTopBar title={title} subtitle={subtitle} right={headerRight} />
       </div>
-      <div className="tv-scroll p-3.5 lg:px-6 lg:py-5" style={{ flex: 1, overflowY: 'auto' }}>
-        {children}
-      </div>
+      <main className="flex-1 overflow-y-auto p-3.5 lg:px-6 lg:py-5">{children}</main>
     </div>
   )
 }
