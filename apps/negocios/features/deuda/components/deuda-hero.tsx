@@ -32,7 +32,7 @@ export function DeudaHero({ balance, isBlocked }: { balance: number; isBlocked: 
             className="h-full transition-[width] duration-500 ease-out"
             style={{
               width: `${pct}%`,
-              background: pct >= 80 ? 'var(--tv-danger)' : 'var(--tv-brand)',
+              background: pct >= 80 ? '#dc2626' : '#f97316',
             }}
           />
         </div>

@@ -34,10 +34,34 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             (opsz 24, wght 400..700, FILL 0..1, GRAD 0).
             Preload the font files so icons render without the broken-glyph flash. */}
         <link rel="preload" as="style" href="/fonts/material-symbols.css" />
-        <link rel="preload" as="font" type="font/ttf" crossOrigin="anonymous" href="/fonts/material-symbols-rounded-400.ttf" />
-        <link rel="preload" as="font" type="font/ttf" crossOrigin="anonymous" href="/fonts/material-symbols-rounded-500.ttf" />
-        <link rel="preload" as="font" type="font/ttf" crossOrigin="anonymous" href="/fonts/material-symbols-rounded-600.ttf" />
-        <link rel="preload" as="font" type="font/ttf" crossOrigin="anonymous" href="/fonts/material-symbols-rounded-700.ttf" />
+        <link
+          rel="preload"
+          as="font"
+          type="font/ttf"
+          crossOrigin="anonymous"
+          href="/fonts/material-symbols-rounded-400.ttf"
+        />
+        <link
+          rel="preload"
+          as="font"
+          type="font/ttf"
+          crossOrigin="anonymous"
+          href="/fonts/material-symbols-rounded-500.ttf"
+        />
+        <link
+          rel="preload"
+          as="font"
+          type="font/ttf"
+          crossOrigin="anonymous"
+          href="/fonts/material-symbols-rounded-600.ttf"
+        />
+        <link
+          rel="preload"
+          as="font"
+          type="font/ttf"
+          crossOrigin="anonymous"
+          href="/fonts/material-symbols-rounded-700.ttf"
+        />
         <link rel="stylesheet" href="/fonts/material-symbols.css" />
       </head>
       <body className="min-h-dvh bg-surface font-sans text-ink antialiased">

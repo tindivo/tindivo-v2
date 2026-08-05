@@ -4,7 +4,7 @@ import { Skeleton } from '@tindivo/ui'
 
 export function DashboardSkeleton() {
   return (
-    <div className="flex" style={{ height: '100dvh', background: 'var(--tv-surface)' }}>
+    <div className="flex bg-surface" style={{ height: '100dvh' }}>
       {/* Desktop sidebar skeleton */}
       <div
         className="hidden shrink-0 flex-col border-r border-ink/[0.04] bg-card lg:flex"
@@ -33,7 +33,7 @@ export function DashboardSkeleton() {
         </div>
 
         {/* Content skeleton */}
-        <div className="tv-scroll flex-1 p-3.5 lg:px-6 lg:py-5">
+        <div className="flex-1 overflow-y-auto p-3.5 lg:px-6 lg:py-5">
           <Skeleton className="mb-4 h-8 w-48 rounded-md" />
           <Skeleton className="mb-6 h-32 w-full rounded-2xl" />
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
