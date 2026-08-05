@@ -16,7 +16,9 @@ export function BusinessCard({ business }: { business: OrderDetailResponse['busi
 
   return (
     <Card className="mt-3.5 overflow-hidden p-[18px]">
-      <span className="t-eyebrow">Recoges en</span>
+      <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/55">
+        Recoges en
+      </span>
       <div className="mt-1.5 flex items-start gap-3">
         <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand-dark">
           <Icon name="storefront" size={22} />

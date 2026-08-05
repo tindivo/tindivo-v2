@@ -29,7 +29,9 @@ export function OrderDetail({
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
       >
-        <span className="t-eyebrow">Detalle del pedido</span>
+        <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/55">
+          Detalle del pedido
+        </span>
         <span className="flex items-center gap-2 text-[12px] text-ink-subtle">
           {/* Los manuales no traen líneas: "0 productos" sonaba a pedido vacío. */}
           {count === 0
@@ -98,7 +100,9 @@ export function OrderDetail({
           </div>
           <div className="flex items-center justify-between pt-1.5">
             <span className="font-semibold text-[16px]">Total</span>
-            <span className="t-display text-[18px] tabular-nums">{soles(total)}</span>
+            <span className="font-display text-[18px] font-bold tracking-tight tabular-nums">
+              {soles(total)}
+            </span>
           </div>
         </div>
       )}

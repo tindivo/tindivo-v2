@@ -43,13 +43,13 @@ export function PickupSheet({
   return (
     <BottomSheet open onClose={onClose}>
       <div className="p-5 pb-2">
-        <h2 className="t-display text-[20px]">Confirmar recogida</h2>
-        <p className="t-muted mt-0.5 text-[13px]">
+        <h2 className="font-display text-[20px] font-bold tracking-tight">Confirmar recogida</h2>
+        <p className="mt-0.5 text-[13px] text-ink/55">
           #{order.shortId} · {business?.name ?? 'Restaurante'}
         </p>
       </div>
 
-      <div className="t-scroll flex-1 px-5">
+      <div className="flex-1 overflow-y-auto px-5">
         {premature && (
           <div className="mb-4 flex items-start gap-2 rounded-[14px] bg-warning-soft px-3.5 py-2.5 text-[13px] text-amber-900">
             <span className="mt-0.5 shrink-0">
@@ -66,12 +66,16 @@ export function PickupSheet({
           <span className="text-[13px] text-ink-muted">
             {cobra ? 'Cobras al entregar' : 'Ya está pagado'}
           </span>
-          <span className={`t-display text-[18px] ${cobra ? 'text-ink' : 'text-success'}`}>
+          <span
+            className={`font-display text-[18px] font-bold tracking-tight ${cobra ? 'text-ink' : 'text-success'}`}
+          >
             {cobra ? soles(total) : 'No cobrar'}
           </span>
         </div>
 
-        <span className="t-field-label">¿Cuánto espacio ocupa en la mochila?</span>
+        <span className="mb-2 block font-mono text-xs font-semibold uppercase tracking-wide text-ink/55">
+          ¿Cuánto espacio ocupa en la mochila?
+        </span>
         <div className="flex gap-2">
           {SLOT_OPTIONS.map((s) => (
             <button

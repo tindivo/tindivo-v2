@@ -33,7 +33,7 @@ export function Home() {
   return (
     <main className="mx-auto max-w-[480px] px-4 pt-20 pb-10">
       {firstName && (
-        <p className="t-eyebrow mb-3">
+        <p className="mb-3 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/55">
           Hola, <span className="text-ink">{firstName}</span>
         </p>
       )}

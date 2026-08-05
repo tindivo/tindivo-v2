@@ -78,10 +78,9 @@ export function StatusHero({ detail, moment }: { detail: OrderDetailResponse; mo
   return (
     <div className="relative overflow-hidden rounded-[22px] bg-gradient-to-br from-ink via-ink to-brand-dark px-5 py-[22px] text-white shadow-elev-3">
       <div
-        className={`pointer-events-none absolute top-0 right-0 h-[160px] w-[160px] rounded-full opacity-60 blur-3xl ${
+        className={`pointer-events-none absolute top-0 right-0 h-[160px] w-[160px] translate-x-10 -translate-y-10 rounded-full opacity-60 blur-3xl ${
           moment === 2 ? 'bg-success/40' : 'bg-brand/40'
         }`}
-        style={{ transform: 'translate(40px, -40px)' }}
       />
       <span
         className={`relative inline-flex items-center gap-1.5 rounded-full px-2.5 py-[5px] font-mono text-[10px] uppercase tracking-[0.2em] ${
@@ -102,15 +101,17 @@ export function StatusHero({ detail, moment }: { detail: OrderDetailResponse; mo
             {collecting ? 'Cobrar al entregar' : 'Pedido pagado'}
           </p>
           {collecting ? (
-            <p className="t-display mt-1 text-[36px] tabular-nums">{soles(total)}</p>
+            <p className="mt-1 font-display text-[36px] font-bold tracking-tight tabular-nums">
+              {soles(total)}
+            </p>
           ) : (
-            <p className="t-display mt-1 text-[28px]">Ya está pagado</p>
+            <p className="mt-1 font-display text-[28px] font-bold tracking-tight">Ya está pagado</p>
           )}
           <p className="mt-1 text-[14px] text-white/70">{sub}</p>
         </div>
       ) : (
         <div className="relative mt-3">
-          <p className="t-display text-[28px]">{title}</p>
+          <p className="font-display text-[28px] font-bold tracking-tight">{title}</p>
           <p className="mt-1 text-[14px] text-white/70">{sub}</p>
         </div>
       )}

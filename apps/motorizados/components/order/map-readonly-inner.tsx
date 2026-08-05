@@ -23,7 +23,7 @@ export default function MapReadonlyInner({ lat, lng }: { lat: number; lng: numbe
       zoom={16}
       zoomControl={false}
       scrollWheelZoom={false}
-      style={{ width: '100%', height: '100%' }}
+      className="h-full w-full"
     >
       <TileLayer
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

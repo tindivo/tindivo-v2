@@ -1,20 +1,16 @@
 import type { Metadata, Viewport } from 'next'
-import { Bricolage_Grotesque, Geist, JetBrains_Mono } from 'next/font/google'
+import { Geist, JetBrains_Mono } from 'next/font/google'
 import type { ReactNode } from 'react'
+import { EnvBanner } from '@tindivo/ui'
 import { OfflineBanner } from '@/components/offline-banner'
 import { InstallBanner } from '@/components/pwa/install-banner'
 import { RegisterSW } from '@/components/pwa/register-sw'
 import { TransferWatcher } from '@/components/transfers/transfer-watcher'
 import './globals.css'
 
-// Sistema tipográfico unificado con el resto de Tindivo:
-// Bricolage Grotesque para titulares, Geist para cuerpo, JetBrains Mono para etiquetas.
-const bricolage = Bricolage_Grotesque({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-bricolage',
-  display: 'swap',
-})
+// Tipografía unificada del design system Tindivo:
+// - Geist para display, body y labels (única familia de interfaz).
+// - JetBrains Mono solo para datos técnicos (IDs, precios, tiempos).
 const geist = Geist({
   subsets: ['latin'],
   variable: '--font-geist',
@@ -57,11 +53,9 @@ export const viewport: Viewport = {
   themeColor: '#F97316',
 }
 
-import { EnvBanner } from '@tindivo/ui'
-
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="es" className={`${bricolage.variable} ${geist.variable} ${jetbrains.variable}`}>
+    <html lang="es" className={`${geist.variable} ${jetbrains.variable}`}>
       <head>
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />

@@ -42,8 +42,10 @@ export function RequestTransferSheet({
   return (
     <BottomSheet open onClose={onClose}>
       <div className="p-5 pb-7">
-        <h2 className="t-display text-[20px]">¿Pedirle este pedido a {target.driverName}?</h2>
-        <p className="t-muted mt-2 text-[14px] leading-relaxed">
+        <h2 className="font-display font-bold tracking-tight text-[20px]">
+          ¿Pedirle este pedido a {target.driverName}?
+        </h2>
+        <p className="mt-2 text-[14px] leading-relaxed text-ink/55">
           Le llegará una solicitud. Si no responde en 60 segundos, la solicitud caducará y el pedido
           continuará con su motorizado.
         </p>
@@ -51,7 +53,9 @@ export function RequestTransferSheet({
         <Card className="mt-4 p-4">
           <div className="flex items-center justify-between">
             <span className="font-mono text-[13px] font-semibold">#{target.shortId}</span>
-            <span className="t-display text-[16px] tabular-nums">{soles(target.total)}</span>
+            <span className="font-display font-bold tracking-tight text-[16px] tabular-nums">
+              {soles(target.total)}
+            </span>
           </div>
           {target.businessName && (
             <p className="mt-0.5 text-[13px] text-ink-muted">{target.businessName}</p>

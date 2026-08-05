@@ -30,7 +30,7 @@ export function CapacityIndicator() {
       className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-bold ${palette.bg} ${palette.text}`}
     >
       <Icon name={palette.icon} size={16} filled />
-      <span className="font-mono tabular-nums leading-none" style={{ letterSpacing: '-0.01em' }}>
+      <span className="font-mono tabular-nums leading-none tracking-[-0.01em]">
         {mySlots}/{MAX_SLOTS}
       </span>
     </div>

@@ -2,7 +2,6 @@
 
 import { ApiError } from '@tindivo/api-client'
 import { BottomActionBar, Button, Icon, ScreenHeader } from '@tindivo/ui'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { use, useCallback, useEffect, useState } from 'react'
 import { BusinessCard } from '@/components/order/business-card'
@@ -422,11 +421,11 @@ function LostScreen({ title, body }: { title: string; body: string }) {
       <span className="flex h-20 w-20 items-center justify-center rounded-full bg-ink/[0.08] text-ink-subtle">
         <Icon name="close" size={30} />
       </span>
-      <h1 className="t-display mt-5 text-[24px]">{title}</h1>
-      <p className="t-muted mt-2 text-[14px]">{body}</p>
-      <Link href="/" className="t-btn t-btn-primary t-btn-block mt-6">
+      <h1 className="mt-5 font-display text-[24px] font-bold tracking-tight">{title}</h1>
+      <p className="mt-2 text-[14px] text-ink/55">{body}</p>
+      <Button as="a" href="/" variant="brand" className="mt-6 w-full">
         Volver al inicio
-      </Link>
+      </Button>
     </main>
   )
 }

@@ -24,9 +24,11 @@ export function DeliveredScreen({
           <span className="flex h-20 w-20 items-center justify-center rounded-full bg-success text-white">
             <Icon name="check" size={36} />
           </span>
-          <p className="t-eyebrow mt-5 text-success">Pedido #{order.shortId}</p>
-          <h1 className="t-display mt-1.5 text-[26px]">¡Entregado!</h1>
-          <p className="t-muted mt-2 max-w-[300px] text-[14px]">
+          <p className="mt-5 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-success">
+            Pedido #{order.shortId}
+          </p>
+          <h1 className="mt-1.5 font-display text-[26px] font-bold tracking-tight">¡Entregado!</h1>
+          <p className="mt-2 max-w-[300px] text-[14px] text-ink/55">
             {cash
               ? `Recuerda: llevas ${soles(total)} en efectivo para liquidar hoy.`
               : 'Buen trabajo. Vuelve al inicio para tomar otro pedido.'}

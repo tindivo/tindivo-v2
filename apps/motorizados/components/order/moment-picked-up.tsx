@@ -79,7 +79,9 @@ export function MomentPickedUp({
             heightPx={180}
           />
           <div className="p-4">
-            <p className="t-eyebrow">Entregar en</p>
+            <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/55">
+              Entregar en
+            </p>
             {!order.isManual && order.deliveryAddress && (
               <p className="mt-1 text-[14px]">{order.deliveryAddress}</p>
             )}
@@ -104,7 +106,9 @@ export function MomentPickedUp({
         </Card>
       ) : (
         <Card className="mt-3 p-[18px]">
-          <p className="t-eyebrow">Referencia del cliente</p>
+          <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/55">
+            Referencia del cliente
+          </p>
           <p className="mt-2 text-[17px] font-semibold leading-snug">
             {order.deliveryReference ?? 'Sin referencia — llama al cliente'}
           </p>

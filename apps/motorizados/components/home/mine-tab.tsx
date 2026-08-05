@@ -40,7 +40,9 @@ export function MineTab({
             className="flex w-full items-center justify-between"
             onClick={() => setHistoryOpen((v) => !v)}
           >
-            <span className="t-eyebrow">Entregados hoy ({deliveredToday.length})</span>
+            <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/55">
+              Entregados hoy ({deliveredToday.length})
+            </span>
             <span
               aria-hidden
               className={`inline-flex text-ink-subtle transition-transform duration-200 ${

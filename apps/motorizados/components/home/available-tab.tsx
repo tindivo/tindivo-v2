@@ -86,7 +86,9 @@ export function AvailableTab({
             className="flex w-full items-center justify-between"
             onClick={() => setUpcomingOpen((v) => !v)}
           >
-            <span className="t-eyebrow">Próximos ({upcoming.length})</span>
+            <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/55">
+              Próximos ({upcoming.length})
+            </span>
             <span
               aria-hidden
               className={`inline-flex text-ink-subtle transition-transform duration-200 ${

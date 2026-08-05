@@ -1,6 +1,7 @@
 'use client'
 
 import { ApiError } from '@tindivo/api-client'
+import { Button, Card, cn } from '@tindivo/ui'
 import { useCallback, useEffect, useState } from 'react'
 import { useNow } from '@/hooks/use-now'
 import { api } from '@/lib/api'
@@ -98,20 +99,16 @@ export function TransferWatcher() {
 
   return (
     <div className="fixed inset-x-0 top-0 z-[85] mx-auto max-w-[480px] p-3">
-      <div
-        className="rounded-[22px] p-4 text-white"
-        style={{ background: '#1A1614', boxShadow: '0 16px 48px rgba(26,22,20,0.35)' }}
-      >
+      <Card className="rounded-[22px] bg-ink p-4 text-white shadow-elev-4">
         <div className="flex items-center justify-between">
-          <span
-            className="font-mono text-[10px] uppercase"
-            style={{ letterSpacing: '0.2em', color: '#FED7AA' }}
-          >
+          <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-brand-light">
             Solicitud de traspaso
           </span>
           <span
-            className="font-bold font-mono text-[22px] tabular-nums"
-            style={{ color: danger ? '#F87171' : '#FDBA74' }}
+            className={cn(
+              'font-mono text-[22px] font-bold tabular-nums',
+              danger ? 'text-danger' : 'text-warning',
+            )}
           >
             {`0:${String(remaining).padStart(2, '0')}`}
           </span>
@@ -121,49 +118,35 @@ export function TransferWatcher() {
           {banner.shortId ? ` #${banner.shortId}` : ''}
           {banner.total != null ? ` · ${soles(banner.total)}` : ''}
         </p>
-        <div className="mt-3 h-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.1)' }}>
+        <div className="mt-3 h-1.5 rounded-full bg-white/10">
           <div
-            className="h-1.5 rounded-full transition-[width] duration-1000 ease-linear"
-            style={{ width: `${pct}%`, background: danger ? '#DC2626' : '#F97316' }}
+            className={cn(
+              'h-1.5 rounded-full transition-[width] duration-1000 ease-linear',
+              danger ? 'bg-danger' : 'bg-brand',
+            )}
+            style={{ width: `${pct}%` }}
           />
         </div>
         {remaining > 0 ? (
           <div className="mt-3 grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              className="t-btn t-btn-primary"
-              style={{ padding: '12px 16px', fontSize: 15 }}
-              onClick={() => respond(true)}
-            >
+            <Button className="w-full" onClick={() => respond(true)}>
               Aceptar
-            </button>
-            <button
-              type="button"
-              className="t-btn"
-              style={{
-                padding: '12px 16px',
-                fontSize: 15,
-                background: 'rgba(255,255,255,0.1)',
-                color: '#fff',
-              }}
+            </Button>
+            <Button
+              variant="ghost"
+              className="w-full bg-white/10 text-white hover:bg-white/15 hover:text-white"
               onClick={() => respond(false)}
             >
               Rechazar
-            </button>
+            </Button>
           </div>
         ) : (
-          <p
-            className="mt-3 flex items-center gap-2 font-semibold text-[14px]"
-            style={{ color: '#FDBA74' }}
-          >
-            <span
-              className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"
-              style={{ borderColor: '#FDBA74', borderTopColor: 'transparent' }}
-            />
+          <p className="mt-3 flex items-center gap-2 font-semibold text-[14px] text-warning">
+            <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-warning border-t-transparent" />
             Solicitud caducada
           </p>
         )}
-      </div>
+      </Card>
     </div>
   )
 }

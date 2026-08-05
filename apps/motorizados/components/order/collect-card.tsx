@@ -21,7 +21,9 @@ export function CollectCard({ detail }: { detail: OrderDetailResponse }) {
   if (order.paymentIntent === 'pending_cash') {
     return (
       <Card className="mt-3 p-[18px]">
-        <p className="t-eyebrow">Cobro en efectivo</p>
+        <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/55">
+          Cobro en efectivo
+        </p>
         <div className="mt-2 flex justify-between py-1 text-[14px] tabular-nums text-ink-muted">
           <span>Cobrar</span>
           <span className="font-semibold text-ink">{soles(total)}</span>
@@ -47,14 +49,15 @@ export function CollectCard({ detail }: { detail: OrderDetailResponse }) {
   // pending_yape | pending_mixed: el cliente paga al Yape del restaurante.
   return (
     <Card className="mt-3 p-[18px]">
-      <p className="t-eyebrow">El cliente paga al Yape del restaurante</p>
+      <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/55">
+        El cliente paga al Yape del restaurante
+      </p>
       {business?.qrUrl && (
         <div className="mt-3 flex justify-center">
           <img
             src={business.qrUrl}
             alt={`QR de Yape de ${business.name}`}
-            className="rounded-2xl border border-ink/[0.08] bg-card object-contain"
-            style={{ width: 180, height: 180 }}
+            className="h-[180px] w-[180px] rounded-2xl border border-ink/[0.08] bg-card object-contain"
           />
         </div>
       )}

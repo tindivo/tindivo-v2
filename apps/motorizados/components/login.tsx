@@ -28,16 +28,20 @@ export function Login({ onAuthed }: { onAuthed: () => void }) {
         <span className="font-display text-[22px] font-bold text-white">T</span>
       </Card>
 
-      <p className="t-eyebrow mt-5">Tindivo · Motorizados</p>
-      <h1 className="t-display mt-1 text-[28px]">Hola de nuevo</h1>
-      <p className="t-muted mt-1 text-[14px]">Entra con la cuenta que te dio Tindivo.</p>
+      <p className="mt-5 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/55">
+        Tindivo · Motorizados
+      </p>
+      <h1 className="mt-1 font-display text-[28px] font-bold tracking-tight">Hola de nuevo</h1>
+      <p className="mt-1 text-[14px] text-ink/55">Entra con la cuenta que te dio Tindivo.</p>
 
       <form onSubmit={submit} className="mt-6 space-y-4">
         <label className="block">
-          <span className="t-field-label">Correo</span>
+          <span className="mb-2 block font-mono text-xs font-semibold uppercase tracking-wide text-ink/55">
+            Correo
+          </span>
           <input
             type="email"
-            className="t-field"
+            className="w-full rounded-2xl border border-ink/[0.06] bg-card px-4 py-3.5 text-base font-medium text-ink outline-none transition-all placeholder:text-ink/45 focus:border-ink focus:ring-4 focus:ring-ink/8"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="email"
@@ -45,10 +49,12 @@ export function Login({ onAuthed }: { onAuthed: () => void }) {
           />
         </label>
         <label className="block">
-          <span className="t-field-label">Contraseña</span>
+          <span className="mb-2 block font-mono text-xs font-semibold uppercase tracking-wide text-ink/55">
+            Contraseña
+          </span>
           <input
             type="password"
-            className="t-field"
+            className="w-full rounded-2xl border border-ink/[0.06] bg-card px-4 py-3.5 text-base font-medium text-ink outline-none transition-all placeholder:text-ink/45 focus:border-ink focus:ring-4 focus:ring-ink/8"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="current-password"

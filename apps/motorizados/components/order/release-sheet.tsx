@@ -39,8 +39,10 @@ export function ReleaseSheet({
   return (
     <BottomSheet open onClose={onClose}>
       <div className="p-5 pb-7">
-        <h2 className="t-display text-[20px] text-danger">¿Soltar este pedido?</h2>
-        <p className="t-muted mt-1.5 text-[14px] leading-relaxed">
+        <h2 className="font-display text-[20px] font-bold tracking-tight text-danger">
+          ¿Soltar este pedido?
+        </h2>
+        <p className="mt-1.5 text-[14px] leading-relaxed text-ink/55">
           El pedido volverá al pool para que lo tome otro motorizado. Selecciona el motivo
           obligatorio:
         </p>
@@ -63,7 +65,7 @@ export function ReleaseSheet({
         </div>
 
         <textarea
-          className="t-field mt-4"
+          className="mt-4 w-full rounded-2xl border border-ink/[0.06] bg-card px-4 py-3.5 text-base font-medium text-ink outline-none transition-all placeholder:text-ink/45 focus:border-ink focus:ring-4 focus:ring-ink/8"
           placeholder="Nota adicional (opcional)"
           value={note}
           maxLength={300}

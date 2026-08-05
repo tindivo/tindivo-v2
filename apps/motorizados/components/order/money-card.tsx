@@ -1,6 +1,6 @@
 'use client'
 
-import { Badge, Card, Icon } from '@tindivo/ui'
+import { Badge, Card, cn, Icon } from '@tindivo/ui'
 import { soles } from '@/lib/format'
 import type { OrderDetailResponse } from '@/lib/types'
 
@@ -18,18 +18,18 @@ export function MoneyCard({ detail }: { detail: OrderDetailResponse }) {
 
   return (
     <Card
-      className="mt-3.5 overflow-hidden p-[18px]"
-      style={
-        prepaid
-          ? undefined
-          : { backgroundImage: 'linear-gradient(135deg, #ffffff 0%, #fff8f3 100%)' }
-      }
+      className={cn(
+        'mt-3.5 overflow-hidden p-[18px]',
+        !prepaid && 'bg-[linear-gradient(135deg,#ffffff_0%,#fff8f3_100%)]',
+      )}
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <span className="t-eyebrow">{prepaid ? 'Ya pagado' : 'Cobras al entregar'}</span>
+          <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/55">
+            {prepaid ? 'Ya pagado' : 'Cobras al entregar'}
+          </span>
           <p
-            className={`t-display mt-1 text-[28px] leading-none tabular-nums ${
+            className={`mt-1 font-display text-[28px] font-bold tracking-tight leading-none tabular-nums ${
               prepaid ? 'text-success' : 'text-ink'
             }`}
           >
@@ -79,7 +79,7 @@ export function MoneyCard({ detail }: { detail: OrderDetailResponse }) {
             <Icon name="currency_exchange" size={18} />
             Paga con {soles(order.clientPaysWith)} · lleva vuelto
           </span>
-          <span className="t-display text-[17px] tabular-nums text-amber-900">
+          <span className="font-display text-[17px] font-bold tracking-tight tabular-nums text-amber-900">
             {soles(order.changeToGive)}
           </span>
         </div>

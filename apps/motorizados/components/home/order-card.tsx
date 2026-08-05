@@ -1,6 +1,6 @@
 'use client'
 
-import { Badge, Card, Icon } from '@tindivo/ui'
+import { Badge, Card, cn, Icon } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { SourceChip } from '@/components/source-chip'
 import { hourOf, mmss, PAYMENT_LABEL, soles } from '@/lib/format'
@@ -73,32 +73,28 @@ export function OrderCard({
       as={isUpcoming ? 'div' : 'button'}
       {...(isUpcoming ? { 'aria-disabled': true } : { type: 'button' as const })}
       onClick={isUpcoming ? undefined : () => router.push(`/pedido/${order.id}`)}
-      style={
-        isUpcoming
-          ? undefined
-          : { backgroundImage: 'linear-gradient(135deg, #ffffff 0%, #fdfbf9 100%)' }
-      }
-      className={`relative block w-full overflow-hidden py-3.5 pl-[18px] pr-4 text-left transition-all duration-300 ${
+      className={cn(
+        'relative block w-full overflow-hidden bg-gradient-to-br from-white to-surface py-3.5 pl-[18px] pr-4 text-left transition-all duration-300',
         isUpcoming
           ? 'cursor-default opacity-70'
-          : 'hover:-translate-y-0.5 hover:shadow-elev-2 active:translate-y-0 active:scale-[0.99]'
-      } ${URGENCY_CARD[urgency]} ${dimmed && !isUpcoming ? 'opacity-60' : ''} ${
-        variant === 'delivered' ? 'opacity-85' : ''
-      }`}
+          : 'hover:-translate-y-0.5 hover:shadow-elev-2 active:translate-y-0 active:scale-[0.99]',
+        URGENCY_CARD[urgency],
+        dimmed && !isUpcoming && 'opacity-60',
+        variant === 'delivered' && 'opacity-85',
+      )}
     >
       {/* Franja del restaurante: identifica el local antes de leer nada. */}
       <span
         aria-hidden
-        className="absolute inset-y-0 left-0 w-1.5"
-        style={{
-          backgroundColor: isUpcoming ? 'rgba(0,0,0,0.12)' : accent,
-          boxShadow: isUpcoming ? undefined : `0 0 14px ${accent}55`,
-        }}
+        className={cn('absolute inset-y-0 left-0 w-1.5', isUpcoming && 'bg-black/[0.12]')}
+        style={
+          isUpcoming ? undefined : { backgroundColor: accent, boxShadow: `0 0 14px ${accent}55` }
+        }
       />
 
       <div className="flex items-start justify-between gap-2">
         <span className="min-w-0 flex-1">
-          <span className="t-eyebrow block truncate text-[10px] tracking-[0.16em]">
+          <span className="block truncate font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-ink/55">
             {order.business?.name ?? 'Restaurante'}
           </span>
           <span className="mt-0.5 block truncate text-[17px] font-semibold leading-tight text-ink">
@@ -139,7 +135,7 @@ export function OrderCard({
 
       <div className="mt-2.5 flex items-end justify-between gap-2">
         <span>
-          <span className="t-display block text-[20px] leading-none tabular-nums">
+          <span className="block font-display text-[20px] font-bold tracking-tight leading-none tabular-nums">
             {soles(total)}
           </span>
           <span className="mt-1 block text-[11.5px] font-medium text-ink-muted">

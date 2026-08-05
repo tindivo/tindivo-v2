@@ -13,7 +13,7 @@ export default function HistorialPage() {
   return (
     <DriverShell>
       <main className="mx-auto max-w-[480px] px-4 pt-20 pb-10">
-        <h1 className="t-display mb-4 text-[24px]">Entregas de hoy</h1>
+        <h1 className="font-display mb-4 text-[24px] font-bold tracking-tight">Entregas de hoy</h1>
 
         {deliveredToday.length === 0 ? (
           <EmptyState
@@ -41,7 +41,7 @@ export default function HistorialPage() {
                   <span className="text-ink-muted">
                     {PAYMENT_LABEL[o.payment_intent] ?? o.payment_intent}
                   </span>
-                  <span className="t-display text-[16px] tabular-nums">
+                  <span className="font-display text-[16px] font-bold tracking-tight tabular-nums">
                     {soles(o.order_amount + o.delivery_fee)}
                   </span>
                 </div>

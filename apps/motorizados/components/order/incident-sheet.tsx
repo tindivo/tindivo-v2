@@ -46,15 +46,19 @@ export function IncidentSheet({ orderId, onClose }: { orderId: string; onClose: 
             <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-success text-white">
               <Icon name="check" size={20} />
             </span>
-            <p className="t-display mt-3 text-[18px]">Reporte enviado</p>
-            <p className="t-muted mt-1 text-[14px]">El equipo de Tindivo lo revisará.</p>
+            <p className="mt-3 font-display text-[18px] font-bold tracking-tight">
+              Reporte enviado
+            </p>
+            <p className="mt-1 text-[14px] text-ink/55">El equipo de Tindivo lo revisará.</p>
             <Button variant="outline" className="mt-4 w-full" onClick={onClose}>
               Cerrar
             </Button>
           </div>
         ) : (
           <>
-            <h2 className="t-display text-[20px]">¿Qué problema hubo?</h2>
+            <h2 className="font-display text-[20px] font-bold tracking-tight">
+              ¿Qué problema hubo?
+            </h2>
             <div className="mt-4 flex flex-wrap gap-2">
               {INCIDENT_TYPES.map((t) => (
                 <button
@@ -72,7 +76,7 @@ export function IncidentSheet({ orderId, onClose }: { orderId: string; onClose: 
               ))}
             </div>
             <textarea
-              className="t-field mt-4"
+              className="mt-4 w-full rounded-2xl border border-ink/[0.06] bg-card px-4 py-3.5 text-base font-medium text-ink outline-none transition-all placeholder:text-ink/45 focus:border-ink focus:ring-4 focus:ring-ink/8"
               placeholder="Detalle (opcional)"
               value={desc}
               maxLength={500}

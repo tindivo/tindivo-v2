@@ -4,12 +4,11 @@ import { ColorDot } from '@tindivo/ui'
 import { useAvailability } from '@/hooks/use-availability'
 import { usePushSubscription } from '@/hooks/use-push-subscription'
 
-// Hex directos porque `ColorDot` recibe color, no clases. Son los mismos
-// valores que los tokens de theme.css (--color-success / --color-warning /
-// --color-ink-subtle).
-const GREEN = '#059669'
-const AMBER = '#eab308'
-const GREY = '#9c958e'
+// ColorDot recibe un color, no clases, así que usamos los valores hex de los
+// tokens definidos en packages/ui/src/theme.css.
+const GREEN = '#16a34a'
+const AMBER = '#f59e0b'
+const GREY = '#a8a29e'
 
 /**
  * Estado de disponibilidad y de avisos, SOLO lectura.

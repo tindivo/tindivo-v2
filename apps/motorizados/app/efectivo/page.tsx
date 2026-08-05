@@ -1,7 +1,7 @@
 'use client'
 
 import { type ApiEnvelope, ApiError } from '@tindivo/api-client'
-import { Badge, Button, Card } from '@tindivo/ui'
+import { Badge, Button, Card, cn } from '@tindivo/ui'
 import { type FormEvent, useCallback, useEffect, useState } from 'react'
 import { DriverShell } from '@/components/driver-shell'
 import { api } from '@/lib/api'
@@ -85,8 +85,10 @@ export default function EfectivoPage() {
             tiene que cuadrar con el fajo de su bolsillo. */}
         {porEntregar.length > 0 && (
           <Card className="mt-4 border-none bg-brand p-5 text-white shadow-none">
-            <p className="t-eyebrow text-white/80">Efectivo por entregar</p>
-            <p className="t-display mt-1 text-[38px] leading-none tabular-nums">
+            <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-white/80">
+              Efectivo por entregar
+            </p>
+            <p className="font-display mt-1 text-[38px] font-bold leading-none tracking-tight tabular-nums">
               {soles(totalPorEntregar)}
             </p>
             <p className="mt-2 text-[12px] text-white/85">
@@ -96,9 +98,11 @@ export default function EfectivoPage() {
           </Card>
         )}
 
-        <h2 className="t-eyebrow mt-6 mb-2">A entregar</h2>
+        <h2 className="font-mono mt-6 mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/55">
+          A entregar
+        </h2>
         {porEntregar.length === 0 ? (
-          <p className="t-muted text-[14px]">
+          <p className="text-ink/55 text-[14px]">
             {esperandoConfirmar.length > 0
               ? 'Ya entregaste todo el efectivo que tenías.'
               : 'No has cobrado efectivo pendiente de entregar.'}
@@ -113,7 +117,9 @@ export default function EfectivoPage() {
 
         {esperandoConfirmar.length > 0 && (
           <>
-            <h2 className="t-eyebrow mt-6 mb-2">Esperando confirmación del local</h2>
+            <h2 className="font-mono mt-6 mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/55">
+              Esperando confirmación del local
+            </h2>
             <div className="flex flex-col gap-2.5">
               {esperandoConfirmar.map((t) => (
                 <AwaitingCard key={t.settlementId} row={t} />
@@ -122,9 +128,11 @@ export default function EfectivoPage() {
           </>
         )}
 
-        <h2 className="t-eyebrow mt-6 mb-2">Historial</h2>
+        <h2 className="font-mono mt-6 mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/55">
+          Historial
+        </h2>
         {history.length === 0 ? (
-          <p className="t-muted text-[14px]">Sin entregas anteriores.</p>
+          <p className="text-ink/55 text-[14px]">Sin entregas anteriores.</p>
         ) : (
           <Card className="overflow-hidden p-0">
             {history.map((h, i) => {
@@ -132,9 +140,10 @@ export default function EfectivoPage() {
               return (
                 <div
                   key={h.id}
-                  className={`flex items-center justify-between px-4 py-3 ${
-                    i > 0 ? 'border-t border-ink/[0.06]' : ''
-                  }`}
+                  className={cn(
+                    'flex items-center justify-between px-4 py-3',
+                    i > 0 && 'border-t border-ink/[0.06]',
+                  )}
                 >
                   <div className="min-w-0">
                     <p className="truncate text-[14px] font-medium">{h.businesses?.name ?? '—'}</p>
@@ -198,14 +207,16 @@ function CashDeliverCard({
         </div>
       </div>
 
-      <p className="t-display mt-2 text-[24px] tabular-nums">{soles(row.expected)}</p>
+      <p className="font-display mt-2 text-[24px] font-bold tracking-tight tabular-nums">
+        {soles(row.expected)}
+      </p>
 
       <form onSubmit={submit} className="mt-3 flex items-center gap-2">
         <span className="rounded-2xl border border-border bg-card px-3 py-3 font-mono text-[15px] text-ink-muted">
           S/
         </span>
         <input
-          className="t-field flex-1 text-center font-mono"
+          className="w-full flex-1 rounded-2xl border border-ink/[0.06] bg-card px-4 py-3.5 text-center font-mono text-base font-medium text-ink outline-none transition-all placeholder:text-ink/45 focus:border-ink focus:ring-4 focus:ring-ink/8"
           inputMode="decimal"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
@@ -236,7 +247,9 @@ function AwaitingCard({ row }: { row: TodayRow }) {
         </Badge>
       </div>
 
-      <p className="t-display mt-2 text-[24px] tabular-nums">{soles(row.deliveredAmount ?? 0)}</p>
+      <p className="font-display mt-2 text-[24px] font-bold tracking-tight tabular-nums">
+        {soles(row.deliveredAmount ?? 0)}
+      </p>
 
       <p className="mt-2 text-[12px] text-ink-muted">
         {disputada

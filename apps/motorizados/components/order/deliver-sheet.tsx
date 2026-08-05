@@ -43,10 +43,10 @@ export function DeliverSheet({
   return (
     <BottomSheet open onClose={onClose}>
       <div className="p-5 pb-7">
-        <h2 className="t-display text-[20px]">
+        <h2 className="font-display text-[20px] font-bold tracking-tight">
           {prepaid ? 'Confirmar entrega' : '¿Cómo pagó el cliente?'}
         </h2>
-        {prepaid && <p className="t-muted mt-1 text-[14px]">Este pedido ya estaba pagado.</p>}
+        {prepaid && <p className="mt-1 text-[14px] text-ink/55">Este pedido ya estaba pagado.</p>}
 
         {!prepaid && (
           <div className="mt-4 grid grid-cols-2 gap-2.5">
@@ -92,7 +92,7 @@ export function DeliverSheet({
             </button>
           ) : (
             <div>
-              <p className="t-muted text-[13px]">
+              <p className="text-[13px] text-ink/55">
                 Espera 5 min e intenta contactar. Reportar genera un strike al cliente.
               </p>
               <div className="mt-2 flex gap-2">

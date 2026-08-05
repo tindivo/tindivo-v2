@@ -1,6 +1,6 @@
 'use client'
 
-import { Badge, Card, EmptyState, Icon } from '@tindivo/ui'
+import { Badge, Button, Card, EmptyState, Icon } from '@tindivo/ui'
 import { useCallback, useEffect, useState } from 'react'
 import { SourceChip } from '@/components/source-chip'
 import {
@@ -95,11 +95,13 @@ export function TeamTab({ onCount }: { onCount: (n: number) => void }) {
                   {o.businessName ?? 'Restaurante'} · {STATUS_LABEL[o.status] ?? o.status}
                 </p>
                 <div className="mt-2 flex items-center justify-between">
-                  <span className="t-display text-[16px] tabular-nums">{soles(o.total)}</span>
+                  <span className="font-display text-[16px] font-bold tracking-tight tabular-nums">
+                    {soles(o.total)}
+                  </span>
                   {o.transferable ? (
-                    <button
-                      type="button"
-                      className="rounded-[14px] bg-ink/[0.06] px-4 py-2.5 text-[14px] font-semibold text-ink transition-colors hover:bg-ink/[0.1] active:scale-[0.97]"
+                    <Button
+                      variant="secondary"
+                      size="sm"
                       onClick={() =>
                         setTarget({
                           orderId: o.orderId,
@@ -111,7 +113,7 @@ export function TeamTab({ onCount }: { onCount: (n: number) => void }) {
                       }
                     >
                       Solicitar pedido
-                    </button>
+                    </Button>
                   ) : (
                     <span className="text-[12px] text-ink-subtle">Ya en reparto</span>
                   )}

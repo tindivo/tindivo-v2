@@ -27,7 +27,9 @@ export function DestinationCard({ detail }: { detail: OrderDetailResponse }) {
           <Icon name="flag" size={20} />
         </span>
         <div className="min-w-0 flex-1">
-          <span className="t-eyebrow">Después entregas en</span>
+          <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/55">
+            Después entregas en
+          </span>
           <p className="mt-0.5 text-[15px] font-medium leading-snug text-ink">{where}</p>
           {/* En los manuales `delivery_address` es el relleno 'Pedido manual'
               que pone create_business_manual_order: solo estorba. */}

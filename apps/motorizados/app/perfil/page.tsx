@@ -100,7 +100,7 @@ export default function PerfilPage() {
   return (
     <DriverShell>
       <main className="mx-auto max-w-[480px] px-4 pt-20 pb-10">
-        <h1 className="t-display mb-4 text-[24px]">Mi perfil</h1>
+        <h1 className="font-display font-bold tracking-tight mb-4 text-[24px]">Mi perfil</h1>
 
         {loading || !profile ? (
           <div className="space-y-3">
@@ -122,7 +122,9 @@ export default function PerfilPage() {
             </Card>
 
             <Card className="p-5">
-              <p className="t-eyebrow mb-4">Tus datos</p>
+              <p className="mb-4 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/55">
+                Tus datos
+              </p>
               <dl className="space-y-4">
                 <Row icon="person" label="Nombre" value={profile.fullName} />
                 <Row icon="mail" label="Email" value={profile.email} />
@@ -133,7 +135,9 @@ export default function PerfilPage() {
             </Card>
 
             <Card className="p-5">
-              <p className="t-eyebrow mb-4">Preferencias</p>
+              <p className="mb-4 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/55">
+                Preferencias
+              </p>
               <div className="space-y-5">
                 <div>
                   <ToggleSwitch

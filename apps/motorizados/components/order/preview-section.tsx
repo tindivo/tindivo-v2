@@ -29,7 +29,9 @@ export function PreviewSection({ detail, now }: { detail: OrderDetailResponse; n
       </div>
 
       <Card className="mt-3 p-[18px]">
-        <p className="t-eyebrow">Recoger en</p>
+        <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/55">
+          Recoger en
+        </p>
         <p className="mt-1 text-[17px] font-semibold">{business?.name ?? 'Restaurante'}</p>
         {business?.address && (
           <p className="mt-0.5 text-[13px] text-ink-muted">{business.address}</p>
@@ -39,7 +41,9 @@ export function PreviewSection({ detail, now }: { detail: OrderDetailResponse; n
       <Card className="mt-3 p-[18px]">
         <div className="flex items-center justify-between">
           <span className="text-[14px] text-ink-muted">Total a cobrar</span>
-          <span className="t-display text-[22px] tabular-nums">{soles(total)}</span>
+          <span className="font-display text-[22px] font-bold tracking-tight tabular-nums">
+            {soles(total)}
+          </span>
         </div>
         <p className="mt-1 text-[14px]">
           {PAYMENT_LABEL[order.paymentIntent] ?? order.paymentIntent}
