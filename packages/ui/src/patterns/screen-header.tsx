@@ -1,7 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { Icon } from './icon'
+import { Icon } from '../primitives/icon'
 
 /** Header con back circular + título display. */
 export function ScreenHeader({
@@ -25,7 +25,7 @@ export function ScreenHeader({
           <Icon name="arrow_back" size={22} />
         </button>
       )}
-      <div className="t-display flex-1 text-[22px]">{title}</div>
+      <div className="flex-1 font-display text-[22px] font-bold tracking-tight">{title}</div>
       {right}
     </div>
   )

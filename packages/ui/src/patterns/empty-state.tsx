@@ -1,6 +1,6 @@
 import type { HTMLAttributes, ReactNode, Ref } from 'react'
 import { cn } from '../lib/cn'
-import { Icon } from './icon'
+import { Icon } from '../primitives/icon'
 
 export interface EmptyStateProps extends HTMLAttributes<HTMLDivElement> {
   icon?: string

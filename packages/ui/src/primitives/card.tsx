@@ -1,15 +1,21 @@
-import type { HTMLAttributes, Ref } from 'react'
+import type { AnchorHTMLAttributes, HTMLAttributes, Ref } from 'react'
 import { cn } from '../lib/cn'
 
-type CardAs = 'div' | 'button'
+type CardAs = 'div' | 'button' | 'a'
 
 export interface CardProps extends HTMLAttributes<HTMLDivElement> {
   as?: CardAs
   type?: 'button' | 'submit' | 'reset'
-  ref?: Ref<HTMLDivElement | HTMLButtonElement>
+  disabled?: boolean
+  ref?: Ref<HTMLDivElement | HTMLButtonElement | HTMLAnchorElement>
 }
 
-export function Card({ as = 'div', className, ref, ...props }: CardProps) {
+export function Card({
+  as = 'div',
+  className,
+  ref,
+  ...props
+}: CardProps & AnchorHTMLAttributes<HTMLAnchorElement>) {
   const classes = cn(
     'rounded-[20px] border border-ink/[0.04] bg-card shadow-elev-1 transition-shadow duration-300 hover:shadow-elev-2',
     className,
@@ -21,6 +27,15 @@ export function Card({ as = 'div', className, ref, ...props }: CardProps) {
         type="button"
         className={cn(classes, 'text-left')}
         {...(props as HTMLAttributes<HTMLButtonElement>)}
+      />
+    )
+  }
+  if (as === 'a') {
+    return (
+      <a
+        ref={ref as Ref<HTMLAnchorElement>}
+        className={cn(classes, 'block text-left no-underline')}
+        {...(props as AnchorHTMLAttributes<HTMLAnchorElement>)}
       />
     )
   }
