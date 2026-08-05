@@ -6,7 +6,7 @@
 ejecutó y se vio; nada aquí es estimación.
 
 Este documento **no arregla nada**. Registra cuatro riesgos estructurales y
-cinco hallazgos menores para que la decisión sea explícita y con fecha, en vez
+seis hallazgos menores para que la decisión sea explícita y con fecha, en vez
 de que alguien los redescubra dentro de seis meses leyendo un `UPDATE` suelto.
 
 Rige `.agents/AGENTS.md §2.2`: *"Gate humano obligatorio: cualquier cambio que
@@ -411,7 +411,7 @@ concluir que el bug sigue abierto.
 
 ### M-5 · 🔴 `register_appeal_refund` de 4 argumentos es ejecutable por `anon`
 
-Descubierto el 2026-08-04 al preparar `0126`. ACL medida:
+Descubierto el 2026-08-04 al preparar `0123`. ACL medida:
 
 ```
 register_appeal_refund(uuid,numeric,text,uuid)
@@ -477,11 +477,59 @@ que cambian la firma.
 > Debe devolver **una sola fila**, y con los privilegios esperados. Más de una
 > fila significa que quedaron sobrecargas conviviendo.
 
+### M-6 · 🔴 La sobrecarga de 4 argumentos nunca funcionó
+
+`register_appeal_refund(uuid,numeric,text,uuid)` comparaba `v_report.type`
+contra el literal `'appeal'`, que **no existe** en el enum `report_type`. Postgres
+lanza `22P02` al castear, así que la función **fallaba en TODA llamada desde que
+se creó en `0073`**. No estaba desconectada por un refactor incompleto: **nunca
+funcionó.**
+
+Medido en local el 2026-08-04, con monto correcto y con monto incorrecto:
+
+```
+NOTICE:  [sqlstate 22P02] invalid input value for enum public.report_type: "appeal"
+```
+
+Valores reales del enum: `no_show`, `rejected_proof_disputed`,
+`cash_difference`, `restaurant_fake`, `strike_reactivation`, `advance_dispute`,
+`prepay_refund_review`. Las apelaciones son `rejected_proof_disputed`, que es
+como las filtra `apps/api/app/api/v1/admin/appeals/route.ts:40`.
+
+**Detectado por prueba de predicados, no por lectura.** Tres levantamientos
+seguidos leyeron esa función —incluido el que la propuso como destino del
+repunte— y ninguno lo vio.
+
+### Es el cuarto caso del mismo patrón
+
+Código de dinero escrito, dado por bueno, nunca ejecutado:
+
+| # | caso | cómo se supo |
+| --- | --- | --- |
+| 1 | Las dos sobrecargas de `register_appeal_refund` conviviendo (R-L3) | comparar firmas contra el `grep` de `DROP FUNCTION` |
+| 2 | `pay_settlement` con cero ejecuciones históricas (R-L2) | contar filas en `settlements` y `restaurant_payments` |
+| 3 | La ventana de disputa inoperante por leer una clave borrada | seguir `contingency_fund` hasta `0077:169-174` |
+| 4 | **M-6**, esta | **ejecutarla** |
+
+Los tres primeros se descubrieron leyendo con cuidado. El cuarto solo salió al
+ejecutarlo — y era el más grave, porque el plan consistía en volverlo el camino
+canónico del dinero.
+
+> ## REGLA
+>
+> **Ninguna función de dinero se da por buena sin una prueba que la ejecute.
+> Leerla no cuenta.**
+>
+> Y cada guarda necesita su propia prueba: si una guarda no tiene una prueba que
+> la vea **rebotar**, no está verificada. Un `CHECK` o un `RAISE` que "se lee
+> bien" no prueba nada — ya pasó con el centinela 999 del ETL de direcciones y
+> volvió a pasar aquí.
+
 ---
 
-## Qué cierra la migración 0126
+## Qué cierra la migración 0123
 
-Spec en `Docs/spec/spec-0126-eliminar-contingencia.md`. Alcance decidido por
+Spec en `Docs/spec/spec-0123-eliminar-contingencia.md`. Alcance decidido por
 Jesús el 2026-08-04: **eliminar contingencia por completo**.
 
 | riesgo | ¿lo cierra? | cómo |
@@ -492,12 +540,13 @@ Jesús el 2026-08-04: **eliminar contingencia por completo**.
 | **M-2** · funciones muertas | ✅ | `handle_prepaid_cancel_auto_debt` y la sobrecarga de 4 argumentos dejan de estar duplicadas |
 | **M-1** · `update_business_balance` | ✅ | entra en el mismo `DROP` |
 | **M-4** · comentario obsoleto | ✅ | el test se toca igual para quitar el assert (A) |
-| **M-5** · `anon` puede ejecutar | ✅ | `REVOKE` + `GRANT` a `service_role` y comprobación de rol interna, en la misma migración |
-| **R-L1** · `balance_due` deprecado | ❌ **no lo toca** | sigue siendo el rediseño mayor. Pero al eliminar contingencia, `balance_due` **pasa a ser reconstruible**: era contingencia lo único que lo movía sin dejar rastro en el ledger. 0126 no lo resuelve, lo **habilita** |
+| **M-5** · `anon` puede ejecutar | ✅ | `REVOKE ALL … FROM PUBLIC, anon, service_role` + `GRANT … TO authenticated`, y comprobación de rol interna, en la misma migración |
+| **M-6** · la de 4 nunca funcionó | ✅ | el predicado se corrige a `rejected_proof_disputed` y cada guarda queda cubierta por una prueba que la ve rebotar |
+| **R-L1** · `balance_due` deprecado | ❌ **no lo toca** | sigue siendo el rediseño mayor. Pero al eliminar contingencia, `balance_due` **pasa a ser reconstruible**: era contingencia lo único que lo movía sin dejar rastro en el ledger. 0123 no lo resuelve, lo **habilita** |
 
 Ese último renglón es el que más importa: la opción "`balance_due` es un cache
 reconstruible" no estaba disponible mientras contingencia existiera. Después de
-0126, sí.
+0123, sí.
 
 ---
 

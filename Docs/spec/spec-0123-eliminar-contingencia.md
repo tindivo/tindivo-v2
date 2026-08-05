@@ -1,4 +1,4 @@
-# SPEC — 0126 · Eliminar contingencia por completo
+# SPEC — 0123 · Eliminar contingencia por completo
 
 **Fecha:** 2026-08-04 · **Destino:** `zpnipajgwfthxhdtzhly` (tindivo-prod)
 **Decisión:** Jesús, 2026-08-04. El fondo de contingencia se eliminó como
@@ -261,13 +261,51 @@ la sobrecarga de 3 argumentos.** Los cuatro se conservan idénticos, incluidos l
 Importa porque `refund/route.ts:60-63` mapea `P0002 → not_found` y
 `P0001 → forbidden`. Cambiar un `errcode` cambiaría el status HTTP.
 
-**Diferencia que NO se porta:** la de 3 exige
-`v_report.appeal_status = 'approved' AND v_report.refund_status = 'pending'`; la
-de 4 exige `v_report.type IN ('appeal','prepay_refund_review')` y que no esté ya
-resuelto. Se conserva **la de 4**, que es más amplia a propósito: cubre también
-los reportes `prepay_refund_review` que genera
-`handle_prepaid_refund_on_cancel` cuando su asiento automático falla. Restringir
-a `appeal_status='approved'` dejaría esos casos sin vía de devolución.
+### c) El predicado de elegibilidad — CORREGIDO tras la prueba local
+
+Una versión anterior de este spec decía que se conservaba la condición de la de
+4 argumentos *"a propósito, porque cubre los reportes `prepay_refund_review`"*.
+**Estaba deducido leyendo el código, sin ejecutarlo, y era falso por partida
+doble.**
+
+**1 · El literal `'appeal'` no existe.** El enum `report_type` es
+`no_show, rejected_proof_disputed, cash_difference, restaurant_fake,
+strike_reactivation, advance_dispute, prepay_refund_review`. Postgres castea el
+literal para comparar y lanza `22P02` — medido en local:
+
+```
+NOTICE:  [sqlstate 22P02] invalid input value for enum public.report_type: "appeal"
+```
+
+La función fallaba en **toda** llamada. Ver M-6 en `RIESGOS-LEDGER.md`.
+
+**2 · `prepay_refund_review` no es un camino de reembolso.** Verificado: solo
+existe como etiqueta (`apps/admin/lib/labels.ts:54`) y en el enum. Aparece en la
+pantalla de reportes (`reportes/page.tsx:29` lista todo salvo
+`rejected_proof_disputed`), pero la única acción de esa pantalla es
+`/admin/reports/{id}/resolve` con `{status, resolutionAction}` — resuelve el
+reporte, no devuelve dinero. **Queda fuera: no se abre un camino de dinero que
+nadie pidió.**
+
+Las apelaciones son reportes `rejected_proof_disputed`, que es como las filtra
+`admin/appeals/route.ts:40`. Predicado aprobado, tres guardas independientes:
+
+```sql
+IF v_report.type <> 'rejected_proof_disputed' THEN
+  RAISE EXCEPTION 'El reporte no es una apelación' USING errcode = 'P0001';
+END IF;
+
+IF v_report.status = 'resolved' OR v_report.refund_status = 'completed' THEN
+  RAISE EXCEPTION 'La devolución de este reporte ya fue completada' USING errcode = 'P0001';
+END IF;
+
+IF v_report.appeal_status IS DISTINCT FROM 'approved' THEN
+  RAISE EXCEPTION 'Este reporte no está aprobado o ya fue reembolsado' USING errcode = 'P0001';
+END IF;
+```
+
+**Cada guarda necesita su prueba.** Una guarda sin una prueba que la vea rebotar
+no está verificada. Ver §7-bis.
 
 ---
 
@@ -327,7 +365,7 @@ que la migración, junto con `pnpm db:types` (19 referencias a `contingency` en
 
 ### Secuencia obligada
 
-1. Migración `0126` aplicada con `supabase db push`
+1. Migración `0123` aplicada con `supabase db push`
 2. `pnpm db:types`
 3. Borrado de `enums.ts` + `enum-drift.ts`
 4. Repunte del endpoint
@@ -383,7 +421,7 @@ que cuenta liquidaciones que nadie puede cerrar.
 
 ### RESUELTO — `pay_settlement` se ACOTA, no se borra
 
-Decisión de Jesús, 2026-08-04. **0126 le quita el bloque de reposición del fondo
+Decisión de Jesús, 2026-08-04. **0123 le quita el bloque de reposición del fondo
 y nada más.** La función sigue viva, su endpoint sigue respondiendo, y el flujo
 de `settlements` no se toca en esta migración.
 
