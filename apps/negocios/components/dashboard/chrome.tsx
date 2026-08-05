@@ -16,6 +16,7 @@ import {
   useState,
 } from 'react'
 import { getBackoffDelayMs, useChannelHealth } from '@/hooks/use-channel-health'
+import { useIconFontReady } from '@/hooks/use-icon-font-ready'
 import { usePolledQuery } from '@/hooks/use-polled-query'
 import {
   getColumn,
@@ -479,6 +480,7 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
   const active = activeIdFor(pathname)
 
   const [ready, setReady] = useState(false)
+  const fontsReady = useIconFontReady()
   const [bizId, setBizId] = useState<string | null>(null)
   const [biz, setBiz] = useState<BizState>({
     name: 'Mi negocio',
@@ -797,7 +799,7 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
     refetchBiz,
   ])
 
-  if (!ready || !value) return <DashboardSkeleton />
+  if (!ready || !value || !fontsReady) return <DashboardSkeleton />
 
   // Gate del modo catálogo: solo Menú y Config son operables. Excepción: si aún
   // hay pedidos delivery en vuelo (de antes del cambio de modo), la sección de
