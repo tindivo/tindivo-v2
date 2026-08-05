@@ -11,12 +11,12 @@ const VARIANTS: Record<SpinnerVariant, string> = {
   muted: 'text-ink-muted',
 }
 
-const SIZES: Record<SpinnerSize, string> = {
-  xs: 'h-3.5 w-3.5 border-2',
-  sm: 'h-4 w-4 border-2',
-  md: 'h-6 w-6 border-2.5',
-  lg: 'h-8 w-8 border-3',
-  xl: 'h-11 w-11 border-4',
+const SIZES: Record<SpinnerSize, { container: string; border: string }> = {
+  xs: { container: 'h-3.5 w-3.5', border: 'border-[2px]' },
+  sm: { container: 'h-4 w-4', border: 'border-[2px]' },
+  md: { container: 'h-6 w-6', border: 'border-[2.5px]' },
+  lg: { container: 'h-8 w-8', border: 'border-[3px]' },
+  xl: { container: 'h-10 w-10', border: 'border-[3.5px]' },
 }
 
 export interface SpinnerProps extends HTMLAttributes<HTMLSpanElement> {
@@ -25,21 +25,33 @@ export interface SpinnerProps extends HTMLAttributes<HTMLSpanElement> {
 }
 
 /**
- * Spinner micro-animado de Tindivo.
- * Anillo suavizado con gradiente de marca y animación fluida.
+ * Spinner micro-animado de estilo Apple para Tindivo.
+ * Posee un carril translúcido de fondo y un arco superior giratorio.
  */
 export function Spinner({ variant = 'brand', size = 'md', className, ...props }: SpinnerProps) {
+  const { container, border } = SIZES[size]
+
   return (
     <span
       className={cn(
-        'inline-block animate-spin rounded-full border-current border-t-transparent',
+        'relative inline-flex shrink-0 items-center justify-center select-none align-middle',
         VARIANTS[variant],
-        SIZES[size],
+        container,
         className,
       )}
       role="status"
       aria-label="Cargando"
       {...props}
-    />
+    >
+      {/* Carril pasivo translúcido estilo iOS */}
+      <span className={cn('absolute inset-0 rounded-full border-current opacity-20', border)} />
+      {/* Arco activo en rotación continua */}
+      <span
+        className={cn(
+          'absolute inset-0 animate-spin rounded-full border-current border-t-transparent border-r-transparent',
+          border,
+        )}
+      />
+    </span>
   )
 }

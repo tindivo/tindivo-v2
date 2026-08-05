@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { type ReactNode, useEffect, useState } from 'react'
 import { cn } from '../lib/cn'
 import { Icon } from '../primitives/icon'
 import { Spinner } from '../primitives/spinner'
@@ -13,11 +13,11 @@ export interface LoadingStateProps {
 }
 
 /**
- * Estado de Carga elegante y consistente para el Design System Tindivo.
+ * Estado de Carga elegante y consistente con diseño Apple-like para Tindivo.
  *
  * Cumple RNF §12:
- * - Skeleton / Spinner con identidad visual cálida.
- * - Variantes: fullscreen (gate/layout), card (módulos/paneles), inline (botones/filas).
+ * - Apariencia translúcida estilo Apple con bordes finos y sombra difusa.
+ * - Si tarda más de 3s en cargar, muestra de forma sutil "Estamos cargando, un segundo...".
  */
 export function LoadingState({
   variant = 'inline',
@@ -27,22 +27,34 @@ export function LoadingState({
   className,
   children,
 }: LoadingStateProps) {
+  const [slowNotice, setSlowNotice] = useState(false)
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSlowNotice(true)
+    }, 3000)
+    return () => clearTimeout(timer)
+  }, [])
+
+  const effectiveDescription =
+    description ?? (slowNotice ? 'Estamos cargando, un segundo…' : undefined)
+
   if (variant === 'fullscreen') {
     return (
       <div
         className={cn(
-          'grid min-h-dvh w-full place-items-center bg-surface p-6 text-center animate-in fade-in duration-200',
+          'grid min-h-dvh w-full place-items-center bg-surface p-6 text-center transition-opacity duration-300',
           className,
         )}
       >
-        <div className="flex max-w-sm flex-col items-center justify-center gap-4 rounded-3xl border border-white/40 bg-card/85 p-8 shadow-elev-3 backdrop-blur-md">
+        <div className="relative flex max-w-xs w-full flex-col items-center justify-center gap-4 rounded-[28px] border border-white/60 bg-card/85 p-8 shadow-[0_20px_50px_rgba(26,22,20,0.08)] backdrop-blur-2xl">
           {icon ? (
-            <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-soft text-brand shadow-elev-1">
+            <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-soft text-brand shadow-sm">
               <Icon name={icon} size={28} filled />
               <Spinner
                 size="xl"
                 variant="brand"
-                className="absolute -inset-1 h-16 w-16 opacity-80"
+                className="absolute -inset-1.5 h-[60px] w-[60px] opacity-75"
               />
             </div>
           ) : (
@@ -52,9 +64,11 @@ export function LoadingState({
           )}
 
           <div className="flex flex-col gap-1">
-            <h3 className="font-sans text-base font-bold text-ink">{label}</h3>
-            {description && (
-              <p className="font-sans text-xs text-ink-muted leading-relaxed">{description}</p>
+            <h3 className="font-sans text-base font-bold tracking-tight text-ink">{label}</h3>
+            {effectiveDescription && (
+              <p className="font-sans text-xs text-ink-muted/80 leading-relaxed transition-all duration-300">
+                {effectiveDescription}
+              </p>
             )}
           </div>
           {children}
@@ -67,7 +81,7 @@ export function LoadingState({
     return (
       <div
         className={cn(
-          'flex flex-col items-center justify-center gap-3 rounded-2xl border border-border/80 bg-card p-8 text-center shadow-elev-1',
+          'flex flex-col items-center justify-center gap-3 rounded-2xl border border-border/70 bg-card/90 p-8 text-center shadow-elev-1 backdrop-blur-md',
           className,
         )}
       >
@@ -79,8 +93,12 @@ export function LoadingState({
           )}
         </div>
         <div className="flex flex-col gap-0.5">
-          <p className="font-sans text-sm font-semibold text-ink">{label}</p>
-          {description && <p className="font-sans text-xs text-ink-muted">{description}</p>}
+          <p className="font-sans text-sm font-semibold tracking-tight text-ink">{label}</p>
+          {effectiveDescription && (
+            <p className="font-sans text-xs text-ink-muted/80 transition-all duration-300">
+              {effectiveDescription}
+            </p>
+          )}
         </div>
         {children}
       </div>
@@ -91,7 +109,7 @@ export function LoadingState({
   return (
     <div
       className={cn(
-        'inline-flex items-center gap-2.5 px-3 py-2 font-sans text-sm text-ink-muted',
+        'inline-flex items-center gap-2.5 px-3 py-2 font-sans text-sm font-medium text-ink-muted',
         className,
       )}
     >
