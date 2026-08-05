@@ -144,6 +144,17 @@ export const E2E = {
 export const E2E_CUSTOMER_USER_IDS: readonly string[] = E2E.CUSTOMERS.map((c) => c.userId)
 
 /**
+ * Anon key del stack local de Supabase CLI. Es pública y está en su
+ * documentación, igual que la service_role que hardcodea
+ * `lib/__tests__/helpers/local-db.ts`. Se lee del entorno si está definida para
+ * no romper si alguien levanta el stack con otras llaves.
+ */
+const LOCAL_ANON_KEY =
+  process.env.SUPABASE_ANON_KEY ??
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0'
+
+/**
  * Ajustes que el seed SOBRESCRIBE en local para que el e2e sea determinista.
  *
  * Las migraciones siembran estas claves con los valores reales de operación
@@ -164,4 +175,21 @@ export const LOCAL_ONLY_SETTINGS = [
     },
   },
   { key: 'order_intake_cutoff', value: '23:59' },
+  /**
+   * El outbox dispara push por `net.http_post` contra la URL que hay aquí. La
+   * 0088 la fija al proyecto de PRODUCCIÓN, así que sin esto un cambio de
+   * estado en la base local golpea la Edge Function de producción — y el día
+   * que producción tenga suscripciones reales, un pedido de prueba avisaría a
+   * motorizados de verdad.
+   *
+   * `host.docker.internal` porque quien hace la petición es pg_net, desde
+   * DENTRO del contenedor de Postgres: `127.0.0.1` sería el propio contenedor.
+   */
+  {
+    key: 'push_dispatch',
+    value: {
+      url: 'http://host.docker.internal:54321/functions/v1/send-push',
+      anonKey: LOCAL_ANON_KEY,
+    },
+  },
 ]
