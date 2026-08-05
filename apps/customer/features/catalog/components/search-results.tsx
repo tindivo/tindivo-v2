@@ -38,12 +38,12 @@ export function SearchResults({ search, businesses }: SearchResultsProps) {
         <>
           {search.results.businesses.length > 0 && (
             <>
-              <div className="px-5 pt-3 pb-2">
+              <div className="px-4 pt-3 pb-2">
                 <div className="font-display text-[22px] font-bold tracking-tight">
                   Restaurantes
                 </div>
               </div>
-              <div className="flex flex-col gap-2.5 px-4 pt-1 md:grid md:grid-cols-2 md:gap-4 lg:grid-cols-3 lg:gap-5">
+              <div className="flex flex-col gap-3 px-4 md:grid md:grid-cols-2 md:gap-4 lg:grid-cols-3 lg:gap-5">
                 {search.results.businesses.map((b) => {
                   const full = businesses?.find((x) => x.id === b.id)
                   return <BusinessCard key={b.id} business={full ?? { ...b, is_open_now: null }} />
@@ -53,10 +53,10 @@ export function SearchResults({ search, businesses }: SearchResultsProps) {
           )}
           {search.results.items.length > 0 && (
             <>
-              <div className="px-5 pt-4 pb-2">
+              <div className="px-4 pt-4 pb-2">
                 <div className="font-display text-[22px] font-bold tracking-tight">Platos</div>
               </div>
-              <div className="flex flex-col gap-2.5 px-4 pt-1 md:grid md:grid-cols-2 md:gap-4 lg:grid-cols-3 lg:gap-5">
+              <div className="flex flex-col gap-3 px-4 md:grid md:grid-cols-2 md:gap-4 lg:grid-cols-3 lg:gap-5">
                 {search.results.items.map((it) => (
                   <DishResultCard key={it.id} item={it} />
                 ))}

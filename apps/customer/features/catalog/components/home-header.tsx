@@ -14,7 +14,7 @@ export function HomeHeader({ user }: HomeHeaderProps) {
   const name = firstName(user.name)
 
   return (
-    <header className="sticky top-0 z-30 w-full border-b border-ink/[0.04] bg-surface px-5 pt-3 pb-3">
+    <header className="sticky top-0 z-30 w-full border-b border-ink/[0.04] bg-surface px-4 pt-3 pb-3">
       <div className="flex items-center justify-between gap-3">
         <Link
           href="/"

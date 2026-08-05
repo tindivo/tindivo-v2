@@ -17,13 +17,13 @@ const CATEGORIES: Category[] = [
 
 export function CategoryCircles({ categories = CATEGORIES }: { categories?: Category[] }) {
   return (
-    <section className="w-full bg-surface px-5 pt-2 pb-4">
+    <section className="w-full bg-surface px-4 py-4">
       <div className="mb-3 flex items-baseline justify-between">
         <h2 className="font-display text-[18px] font-bold tracking-tight text-ink">Categorías</h2>
         <span className="text-[13px] font-semibold text-brand">Ver todas</span>
       </div>
 
-      <div className="-mx-5 flex gap-4 overflow-x-auto px-5 pb-1 scrollbar-hide">
+      <div className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-1 scrollbar-hide">
         {categories.map((c) => (
           <button
             key={c.label}

@@ -40,15 +40,15 @@ export function PromoCarousel({ promos = SAMPLE_PROMOS }: { promos?: Promo[] }) 
   if (promos.length === 0) return null
 
   return (
-    <section className="w-full bg-surface px-5 pt-2 pb-4">
-      <div className="mb-2.5 flex items-baseline justify-between">
+    <section className="w-full bg-surface px-4 py-4">
+      <div className="mb-3 flex items-baseline justify-between">
         <h2 className="font-display text-[18px] font-bold tracking-tight text-ink">
           Promos del día
         </h2>
         <span className="text-[13px] font-semibold text-brand">Ver todas</span>
       </div>
 
-      <div className="-mx-5 flex gap-3 overflow-x-auto px-5 pb-1 scrollbar-hide snap-x snap-mandatory">
+      <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 scrollbar-hide snap-x snap-mandatory">
         {promos.map((promo) => (
           <Card
             key={promo.id}

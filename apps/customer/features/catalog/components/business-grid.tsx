@@ -10,13 +10,13 @@ interface BusinessGridProps {
 export function BusinessGrid({ businesses, error }: BusinessGridProps) {
   return (
     <>
-      <div className="px-5 pt-5 pb-2">
+      <div className="px-4 pt-4 pb-2">
         <div className="font-display text-[22px] font-bold tracking-tight">Restaurantes</div>
       </div>
 
-      {error && <p className="px-5 text-danger text-sm">{error}</p>}
+      {error && <p className="px-4 text-danger text-sm">{error}</p>}
 
-      <div className="flex flex-col gap-3 px-4 pt-1 md:grid md:grid-cols-2 md:gap-4 lg:grid-cols-3 lg:gap-5">
+      <div className="flex flex-col gap-3 px-4 md:grid md:grid-cols-2 md:gap-4 lg:grid-cols-3 lg:gap-5">
         {businesses === null && !error
           ? [0, 1, 2].map((i) => <Skeleton key={i} className="h-[112px] rounded-[20px]" />)
           : businesses?.map((b) => <BusinessCard key={b.id} business={b} />)}

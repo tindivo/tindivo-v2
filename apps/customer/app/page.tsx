@@ -21,7 +21,7 @@ export default function Home() {
     <main className="mx-auto min-h-dvh max-w-[768px] bg-surface md:max-w-[880px] lg:max-w-6xl xl:max-w-7xl">
       <HomeHeader user={user} />
 
-      <div className="px-5 pt-1 pb-4">
+      <div className="px-4 pt-4 pb-5">
         <h1 className="font-display text-[32px] font-bold leading-[1.05] tracking-[-0.03em] lg:text-[40px]">
           {user.signedIn ? (
             <>
@@ -53,7 +53,7 @@ export default function Home() {
         </>
       )}
 
-      <div className="px-5 pt-6 pb-24 text-center">
+      <div className="px-4 pt-6 pb-24 text-center">
         <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-ink-muted">
           tindivo · piloto
         </div>

@@ -97,14 +97,14 @@ export function ActiveOrderBanner({ orders }: ActiveOrderBannerProps) {
 
   if (count === 1 || featured.status === 'awaiting_payment') {
     return (
-      <div className="px-4 pb-3">
+      <div className="px-4 pb-4">
         <ActiveOrderCard order={featured} />
       </div>
     )
   }
 
   return (
-    <div className="px-4 pb-3">
+    <div className="px-4 pb-4">
       <Link
         href="/pedidos"
         className="group relative flex items-center gap-3 overflow-hidden rounded-[18px] border border-white/40 bg-ink px-4 py-3.5 text-white shadow-elev-3"

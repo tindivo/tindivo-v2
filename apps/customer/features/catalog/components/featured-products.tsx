@@ -51,7 +51,7 @@ function soles(n: number) {
 
 export function FeaturedProducts({ products = SAMPLE_PRODUCTS }: { products?: Product[] }) {
   return (
-    <section className="w-full bg-surface px-5 pt-2 pb-4">
+    <section className="w-full bg-surface px-4 py-4">
       <div className="mb-3 flex items-baseline justify-between">
         <h2 className="font-display text-[18px] font-bold tracking-tight text-ink">
           Lo más pedido
@@ -59,7 +59,7 @@ export function FeaturedProducts({ products = SAMPLE_PRODUCTS }: { products?: Pr
         <span className="text-[13px] font-semibold text-brand">Ver todo</span>
       </div>
 
-      <div className="-mx-5 grid grid-cols-2 gap-3 px-5">
+      <div className="-mx-4 grid grid-cols-2 gap-3 px-4">
         {products.map((p) => (
           <Card
             key={p.id}

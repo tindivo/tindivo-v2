@@ -11,32 +11,27 @@ export function BusinessCard({ business }: BusinessCardProps) {
     <Card
       as="a"
       href={`/negocio/${b.id}`}
-      className="flex items-stretch gap-3.5 transition-all hover:-translate-y-0.5 hover:shadow-elev-3 active:translate-y-0 active:scale-[0.985]"
+      className="flex items-center gap-3 p-3 transition-all hover:-translate-y-0.5 hover:shadow-elev-2 active:translate-y-0 active:scale-[0.985]"
     >
       {b.logo_url ? (
         <img
           src={b.logo_url}
           alt={b.name}
-          className="h-[88px] w-[88px] shrink-0 rounded-2xl object-cover"
+          className="h-[72px] w-[72px] shrink-0 rounded-2xl object-cover"
         />
       ) : (
-        <div
-          className="flex h-[88px] w-[88px] items-center justify-center rounded-[16px]"
-          style={{ background: `#${b.accent_color}1a` }}
-        >
-          <span className="relative z-[1]" style={{ color: `#${b.accent_color}` }}>
-            <Icon name="store" size={24} />
-          </span>
+        <div className="flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-2xl bg-surface-low">
+          <Icon name="store" size={24} className="text-ink-subtle" />
         </div>
       )}
-      <div className="flex min-w-0 flex-1 flex-col justify-between">
+      <div className="flex min-w-0 flex-1 flex-col justify-between self-stretch py-0.5">
         <div>
-          <div className="font-display text-[18px] font-bold leading-tight tracking-tight">
+          <div className="font-display text-[17px] font-bold leading-tight tracking-tight">
             {b.name}
           </div>
-          {b.tagline && <div className="mt-0.5 text-[12px] text-ink-muted">{b.tagline}</div>}
+          {b.tagline && <div className="mt-0.5 text-[13px] text-ink-muted">{b.tagline}</div>}
         </div>
-        <div className="mt-2 flex flex-wrap items-center gap-2 text-[12px] text-ink-muted">
+        <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[12px] text-ink-muted">
           {b.primary_capability === 'catalog_only' ? (
             <span className="inline-flex items-center gap-1">
               <Icon name="chat" size={16} /> Pedidos por WhatsApp
