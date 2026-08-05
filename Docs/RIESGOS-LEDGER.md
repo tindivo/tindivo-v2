@@ -5,9 +5,16 @@
 (`pg_get_functiondef`) y el árbol del repo. Todo lo que dice "medido" se
 ejecutó y se vio; nada aquí es estimación.
 
-Este documento **no arregla nada**. Registra cuatro riesgos estructurales y
-seis hallazgos menores para que la decisión sea explícita y con fecha, en vez
-de que alguien los redescubra dentro de seis meses leyendo un `UPDATE` suelto.
+Este documento registra cuatro riesgos estructurales y seis hallazgos menores
+para que la decisión sea explícita y con fecha, en vez de que alguien los
+redescubra dentro de seis meses leyendo un `UPDATE` suelto.
+
+> **📌 Siete de los diez ya están CERRADOS.** La migración `0123` se aplicó a
+> producción el **2026-08-05**. El estado real de cada uno está en la sección
+> [ESTADO REAL](#estado-real--0123-aplicada-en-prod-el-2026-08-05); las
+> secciones que siguen describen los riesgos **tal como se encontraron**, y se
+> conservan sin reescribir porque el diagnóstico original es lo que explica por
+> qué la corrección quedó como quedó.
 
 Rige `.agents/AGENTS.md §2.2`: *"Gate humano obligatorio: cualquier cambio que
 toque lógica de dinero (ledger, appeals, refunds, comisiones, fees) requiere
@@ -524,6 +531,90 @@ canónico del dinero.
 > la vea **rebotar**, no está verificada. Un `CHECK` o un `RAISE` que "se lee
 > bien" no prueba nada — ya pasó con el centinela 999 del ETL de direcciones y
 > volvió a pasar aquí.
+
+---
+
+## ESTADO REAL — `0123` APLICADA EN PROD EL 2026-08-05
+
+Ya no es un plan. `supabase db push` aplicó `0123` a `zpnipajgwfthxhdtzhly` el
+2026-08-05, y el runbook completo cerró en verde: §8 contra prod (`t / t / 0`,
+una sola fila de `register_appeal_refund` con `anon=false`), la prueba de
+predicados contra prod con las seis guardas rebotando y los cinco conteos de
+limpieza en 0, `db:types` regenerado (`f7f5497`) y las tres compuertas
+—`type-check` 10/10, `lint` 0 errores, 168 tests—.
+
+| riesgo | estado | cerrado por |
+| --- | --- | --- |
+| **R-L1** · `balance_due` deprecado | 🟡 **ABIERTO, pero HABILITADO** | — |
+| **R-L2** · `pay_settlement` | 🟡 **CERRADO A MEDIAS** | `0123` (2026-08-05) |
+| **R-L3** · sobrecargas invertidas | ✅ **CERRADO** | `0123` (2026-08-05) |
+| **R-L4** · ledger paralelo | ✅ **CERRADO** | `0123` (2026-08-05) |
+| **M-1** · `update_business_balance` huérfana | ✅ **CERRADO** | `0123` (2026-08-05) |
+| **M-2** · funciones muertas | ✅ **CERRADO** | `0123` (2026-08-05) |
+| **M-3** · defaults desfasados en `advance_order` | 🔴 **ABIERTO** | — |
+| **M-4** · comentario obsoleto en el test | ✅ **CERRADO** | `0123` (2026-08-05) |
+| **M-5** · ejecutable por `anon` | ✅ **CERRADO** | `0123` (2026-08-05) |
+| **M-6** · la de 4 nunca funcionó | ✅ **CERRADO** | `0123` (2026-08-05) |
+
+### R-L2 — qué se cerró y qué queda
+
+**Cerrado:** el bloque de reposición del fondo de contingencia desapareció de
+`pay_settlement`. Con él se fue **el segundo decremento de `balance_due`**, que
+era el mismo defecto que `0076_fix_double_balance_decrement` corrigió en
+`settle_business_charges` y que aquí nunca se había revisado. Ya no baja el saldo
+dos veces en la misma llamada.
+
+**Queda abierto:** `pay_settlement` **sigue sin marcar los cargos como
+`settled`**. No escribe `status`, ni `settled_at`, ni `settlement_id` — pese a
+que `business_charges.settlement_id` existe, tiene FK a `settlements` e índice
+parcial desde hace tiempo. Un pago por esa vía baja el saldo y deja el ledger
+intacto, así que los mismos cargos quedan cobrables otra vez por
+`settle_business_charges`.
+
+**Antes de invertir en arreglarlo**, sigue pendiente el levantamiento sobre si el
+flujo de `settlements` se usa: no tiene pantalla en `apps/admin`, `pay_settlement`
+tenía cero ejecuciones históricas, y `generate_settlements` suma
+`orders.tindivo_commission` — una tercera base de cálculo distinta del ledger y
+de `balance_due`. Si resulta que no se usa, el arreglo es un borrado.
+
+### R-L1 — sigue abierto, pero la puerta está abierta
+
+`balance_due` sigue deprecado por `AGENTS.md §2.2` y sigue escrito por las
+funciones vivas. Eso no cambió.
+
+**Lo que sí cambió es que la opción "cache reconstruible" ya está disponible.**
+El nudo de este riesgo era esta frase: *"Hoy NO es reconstruible, porque
+contingencia mueve `balance_due` sin dejar rastro en el ledger"*. Contingencia ya
+no existe. **Ningún camino vivo mueve el saldo por fuera de `business_charges`**,
+así que `balance_due = SUM(business_charges WHERE status='pending')` pasa a ser
+una identidad que se puede imponer con un trigger de recálculo y verificar con
+una aserción.
+
+Con eso, las tres lecturas de la decisión pendiente de Jesús —¿el ledger o el
+campo?— dejan de estar bloqueadas por un impedimento técnico y pasan a ser una
+elección de diseño. La recomendación sigue siendo la opción A del levantamiento:
+trigger de recálculo completo sobre `business_charges`, que deja las 19 lecturas
+de UI intactas y arregla de paso el desbloqueo por mora, que hoy decide con el
+campo deprecado.
+
+> **Nota al pie — verificación pendiente en producción.** El PASO 6 del runbook
+> (prueba manual del flujo real: aprobar una devolución en `apps/admin` y ver el
+> cargo como línea en `apps/negocios/app/deuda`) **no se pudo hacer en prod**:
+> medido el 2026-08-05, prod tiene 0 negocios, 0 pedidos y 0 reportes, así que no
+> hay con qué probarlo. **Queda pendiente del primer reembolso real de Priamo.**
+>
+> Sí quedó **verificado en local con capturas**: antes del reembolso, total
+> S/ 3.50 con una línea de S/ 3.50; después, total **S/ 45.50 = 42.00 + 3.50**,
+> con el `refund_charge` visible como línea propia, su descripción y su botón
+> "Ver detalle", y la tarjeta "Devoluciones" pasando de S/ 0 a S/ 42. El total y
+> la suma del detalle coinciden en ambos momentos.
+>
+> Lo que **no** está verificado es el clic en la pantalla de apelaciones: todas
+> las sub-rutas de `apps/admin` daban 404 en el servidor de desarrollo —incluidas
+> las que nadie tocó—, así que la aprobación entró por
+> `POST /admin/appeals/{id}/refund` con login real de admin y respuesta 200, que
+> es el mismo endpoint que ese botón llama. Se probó la cadena entera menos el
+> botón.
 
 ---
 
