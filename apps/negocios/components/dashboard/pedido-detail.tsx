@@ -53,8 +53,8 @@ function Row({
         fontSize: 13,
       }}
     >
-      <span style={{ color: 'var(--tv-ink-muted)' }}>{label}</span>
-      <span className={mono ? 'tv-mono' : ''} style={{ fontWeight: bold ? 700 : 500 }}>
+      <span style={{ color: '#57534e' }}>{label}</span>
+      <span className={mono ? 'font-mono' : ''} style={{ fontWeight: bold ? 700 : 500 }}>
         {value}
       </span>
     </div>
@@ -97,7 +97,7 @@ function PaySectionCash({ order }: { order: OrderVM }) {
             <span style={{ fontSize: 12, fontWeight: 700, color: '#166534' }}>
               Vuelto a preparar
             </span>
-            <span className="tv-mono" style={{ fontSize: 16, fontWeight: 700, color: '#15803D' }}>
+            <span className="font-mono" style={{ fontSize: 16, fontWeight: 700, color: '#15803D' }}>
               {soles(order.cashChange)}
             </span>
           </div>
@@ -138,7 +138,7 @@ function PaySectionWallet({ order, qrUrl }: { order: OrderVM; qrUrl: string | nu
           style={{
             fontSize: 10,
             fontWeight: 700,
-            color: 'var(--tv-ink-muted)',
+            color: '#57534e',
             marginBottom: 6,
             textTransform: 'uppercase',
             letterSpacing: '0.06em',
@@ -161,10 +161,12 @@ function PaySectionWallet({ order, qrUrl }: { order: OrderVM; qrUrl: string | nu
           />
         ) : (
           <div
-            className="tv-ph"
-            style={{ width: 90, height: 90, borderRadius: 10, margin: '0 auto 8px' }}
+            className="relative overflow-hidden rounded-[10px] bg-[#f0ebe3]"
+            style={{ width: 90, height: 90, margin: '0 auto 8px' }}
           >
-            <span style={{ fontSize: 10 }}>QR Yape/Plin</span>
+            <span className="absolute inset-0 flex items-center justify-center text-[10px] uppercase tracking-wide text-ink/50">
+              QR Yape/Plin
+            </span>
           </div>
         )}
       </div>
@@ -329,7 +331,7 @@ function PaySectionPrepaid({
                 style={{
                   fontSize: 10,
                   fontWeight: 700,
-                  color: 'var(--tv-ink-muted)',
+                  color: '#57534e',
                   marginBottom: 6,
                   letterSpacing: '0.05em',
                 }}
@@ -345,28 +347,24 @@ function PaySectionPrepaid({
                 }}
               >
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontSize: 10, color: 'var(--tv-ink-muted)', marginBottom: 2 }}>
-                    Monto
-                  </span>
+                  <span style={{ fontSize: 10, color: '#57534e', marginBottom: 2 }}>Monto</span>
                   <span
-                    className="tv-mono"
+                    className="font-mono"
                     style={{ fontWeight: 700, color: '#16A34A', fontSize: 13 }}
                   >
                     {soles(order.total)}
                   </span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontSize: 10, color: 'var(--tv-ink-muted)', marginBottom: 2 }}>
+                  <span style={{ fontSize: 10, color: '#57534e', marginBottom: 2 }}>
                     Hora pedido
                   </span>
-                  <span className="tv-mono" style={{ fontWeight: 700, fontSize: 13 }}>
+                  <span className="font-mono" style={{ fontWeight: 700, fontSize: 13 }}>
                     {order.createdAtFormatted ?? '—'}
                   </span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                  <span style={{ fontSize: 10, color: 'var(--tv-ink-muted)', marginBottom: 2 }}>
-                    Cliente
-                  </span>
+                  <span style={{ fontSize: 10, color: '#57534e', marginBottom: 2 }}>Cliente</span>
                   <span
                     style={{
                       fontWeight: 700,
@@ -402,7 +400,7 @@ function PaySectionPrepaid({
             <div
               style={{
                 fontSize: 10,
-                color: 'var(--tv-ink-muted)',
+                color: '#57534e',
                 marginBottom: 6,
                 fontWeight: 700,
                 letterSpacing: '0.04em',
@@ -476,8 +474,13 @@ function PaySectionPrepaid({
                 )}
               </div>
             ) : (
-              <div className="tv-ph" style={{ width: '100%', height: 130, borderRadius: 10 }}>
-                <span>El cliente aún no ha subido el comprobante</span>
+              <div
+                className="relative overflow-hidden rounded-[10px] bg-[#f0ebe3]"
+                style={{ width: '100%', height: 130 }}
+              >
+                <span className="absolute inset-0 flex items-center justify-center px-1.5 text-center text-[10px] uppercase tracking-wide text-ink/50">
+                  El cliente aún no ha subido el comprobante
+                </span>
               </div>
             )}
           </div>
@@ -518,7 +521,7 @@ function PaySectionMixed({ order, qrUrl }: { order: OrderVM; qrUrl: string | nul
       <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
         <Row label="Billetera digital" value={soles(order.walletPart ?? 0)} mono />
         <Row label="Efectivo" value={soles(order.cashPart ?? 0)} mono />
-        <div style={{ height: 1, background: 'var(--tv-border)', margin: '2px 0' }} />
+        <div style={{ height: 1, background: '#EAE7E2', margin: '2px 0' }} />
         <Row label="Total" value={soles(order.total)} mono bold />
         {order.paysWith != null && (
           <Row label="Cliente paga efectivo con" value={soles(order.paysWith)} mono />
@@ -538,7 +541,7 @@ function PaySectionMixed({ order, qrUrl }: { order: OrderVM; qrUrl: string | nul
             <span style={{ fontSize: 12, fontWeight: 700, color: '#166534' }}>
               Vuelto (efectivo)
             </span>
-            <span className="tv-mono" style={{ fontSize: 15, fontWeight: 700, color: '#15803D' }}>
+            <span className="font-mono" style={{ fontSize: 15, fontWeight: 700, color: '#15803D' }}>
               {soles(order.cashChange)}
             </span>
           </div>
@@ -622,8 +625,8 @@ function ReasonModal({
               height: 38,
               borderRadius: 10,
               flexShrink: 0,
-              background: 'var(--tv-danger-soft)',
-              color: 'var(--tv-danger)',
+              background: '#fee2e2',
+              color: '#dc2626',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -633,7 +636,7 @@ function ReasonModal({
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 16, fontWeight: 700 }}>{title}</div>
-            <div style={{ fontSize: 12, color: 'var(--tv-ink-muted)', marginTop: 1 }}>
+            <div style={{ fontSize: 12, color: '#57534e', marginTop: 1 }}>
               #{order.id} · {order.customer ?? 'Cliente'}
             </div>
           </div>
@@ -660,7 +663,7 @@ function ReasonModal({
           style={{
             fontSize: 12,
             fontWeight: 700,
-            color: 'var(--tv-ink-muted)',
+            color: '#57534e',
             marginBottom: 10,
             textTransform: 'uppercase',
             letterSpacing: '0.06em',
@@ -680,8 +683,8 @@ function ReasonModal({
                 gap: 10,
                 padding: '10px 12px',
                 borderRadius: 10,
-                background: i === sel ? 'var(--tv-ink)' : 'var(--tv-surface)',
-                color: i === sel ? '#fff' : 'var(--tv-ink)',
+                background: i === sel ? '#1a1614' : '#faf6f1',
+                color: i === sel ? '#fff' : '#1a1614',
                 border: 'none',
                 fontFamily: 'inherit',
                 textAlign: 'left',
@@ -694,7 +697,7 @@ function ReasonModal({
                   width: 16,
                   height: 16,
                   borderRadius: 999,
-                  border: `2px solid ${i === sel ? '#fff' : 'var(--tv-border)'}`,
+                  border: `2px solid ${i === sel ? '#fff' : '#EAE7E2'}`,
                   background: i === sel ? '#fff' : 'transparent',
                   flexShrink: 0,
                   display: 'flex',
@@ -703,9 +706,7 @@ function ReasonModal({
                 }}
               >
                 {i === sel && (
-                  <div
-                    style={{ width: 7, height: 7, borderRadius: 999, background: 'var(--tv-ink)' }}
-                  />
+                  <div style={{ width: 7, height: 7, borderRadius: 999, background: '#1a1614' }} />
                 )}
               </div>
               {r.label}
@@ -714,7 +715,11 @@ function ReasonModal({
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          <button type="button" onClick={onClose} className="tv-btn tv-btn-ghost">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-ink/[0.06] px-5 py-3 text-[15px] font-semibold text-ink transition-transform active:scale-[0.98] disabled:opacity-50"
+          >
             {cancelLabel}
           </button>
           <button
@@ -723,8 +728,7 @@ function ReasonModal({
               const r = reasons[sel]
               if (r) onConfirm(r.code, r.label)
             }}
-            className="tv-btn"
-            style={{ background: 'var(--tv-danger)', color: '#fff', border: 'none' }}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-danger px-5 py-3 text-[15px] font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-50"
           >
             {confirmLabel}
           </button>
@@ -773,8 +777,8 @@ function PrepTimeModal({
               height: 38,
               borderRadius: 10,
               flexShrink: 0,
-              background: 'var(--tv-brand-soft, #EEF2FF)',
-              color: 'var(--tv-brand, #4F46E5)',
+              background: '#fff7ed',
+              color: '#f97316',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -784,7 +788,7 @@ function PrepTimeModal({
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 16, fontWeight: 700 }}>Tiempo de preparación</div>
-            <div style={{ fontSize: 12, color: 'var(--tv-ink-muted)', marginTop: 1 }}>
+            <div style={{ fontSize: 12, color: '#57534e', marginTop: 1 }}>
               #{order.id} · {order.customer ?? 'Cliente'}
             </div>
           </div>
@@ -811,7 +815,7 @@ function PrepTimeModal({
           style={{
             fontSize: 12,
             fontWeight: 700,
-            color: 'var(--tv-ink-muted)',
+            color: '#57534e',
             marginBottom: 10,
             textTransform: 'uppercase',
             letterSpacing: '0.06em',
@@ -834,10 +838,10 @@ function PrepTimeModal({
               key={m}
               onClick={() => setSel(m)}
               style={{
-                border: m === sel ? 'none' : '1px solid var(--tv-border)',
-                background: m === sel ? 'var(--tv-ink)' : '#fff',
-                color: m === sel ? '#fff' : 'var(--tv-ink)',
-                fontFamily: "var(--font-jetbrains), 'Manrope', sans-serif",
+                border: m === sel ? 'none' : '1px solid #EAE7E2',
+                background: m === sel ? '#1a1614' : '#fff',
+                color: m === sel ? '#fff' : '#1a1614',
+                fontFamily: 'var(--font-jetbrains), ui-monospace, monospace',
                 fontWeight: 700,
                 fontSize: 14,
                 padding: '12px 0',
@@ -852,14 +856,17 @@ function PrepTimeModal({
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 10 }}>
-          <button type="button" onClick={onClose} className="tv-btn tv-btn-ghost">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-ink/[0.06] px-5 py-3 text-[15px] font-semibold text-ink transition-transform active:scale-[0.98] disabled:opacity-50"
+          >
             Cancelar
           </button>
           <button
             type="button"
             onClick={() => onConfirm(sel)}
-            className="tv-btn tv-btn-brand"
-            style={{ background: '#16A34A', color: '#fff', border: 'none' }}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-success px-5 py-3 text-[15px] font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-50"
           >
             Confirmar y empezar
           </button>
@@ -1022,7 +1029,7 @@ export function DetailScreen({
       <div
         style={{
           padding: mobile ? '10px 14px' : '12px 18px',
-          borderBottom: '1px solid var(--tv-border)',
+          borderBottom: '1px solid #EAE7E2',
           position: 'sticky',
           top: 0,
           background: '#fff',
@@ -1063,15 +1070,12 @@ export function DetailScreen({
               marginBottom: 3,
             }}
           >
-            <span
-              className="tv-mono"
-              style={{ fontSize: 12, fontWeight: 700, color: 'var(--tv-ink-muted)' }}
-            >
+            <span className="font-mono" style={{ fontSize: 12, fontWeight: 700, color: '#57534e' }}>
               #{order.id}
             </span>
             {isPending && (
               <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                <span style={{ fontSize: 11, color: 'var(--tv-ink-muted)' }}>
+                <span style={{ fontSize: 11, color: '#57534e' }}>
                   ·{' '}
                   {order.status === 'awaiting_payment'
                     ? 'paga antes de'
@@ -1080,11 +1084,11 @@ export function DetailScreen({
                       : 'acepta antes de'}
                 </span>
                 <span
-                  className="tv-mono"
+                  className="font-mono"
                   style={{
                     fontSize: 12,
                     fontWeight: 700,
-                    color: order.countdownSec < 60 ? 'var(--tv-danger)' : 'var(--tv-ink)',
+                    color: order.countdownSec < 60 ? '#dc2626' : '#1a1614',
                   }}
                 >
                   {mmss(order.countdownSec)}
@@ -1098,11 +1102,11 @@ export function DetailScreen({
           </div>
         </div>
         <span
-          className="tv-mono"
+          className="font-mono"
           style={{
             fontSize: mobile ? 18 : 20,
             fontWeight: 700,
-            color: 'var(--tv-ink)',
+            color: '#1a1614',
             flexShrink: 0,
           }}
         >
@@ -1150,7 +1154,7 @@ export function DetailScreen({
             {order.cashChange != null && order.cashChange > 0 && (
               <div style={{ fontSize: 12, marginTop: 2 }}>
                 Prepara el vuelto:{' '}
-                <span className="tv-mono" style={{ fontWeight: 700 }}>
+                <span className="font-mono" style={{ fontWeight: 700 }}>
                   {soles(order.cashChange)}
                 </span>
               </div>
@@ -1161,7 +1165,6 @@ export function DetailScreen({
 
       {/* Scroll content */}
       <div
-        className="tv-scroll"
         style={{
           flex: 1,
           minHeight: 0,
@@ -1203,11 +1206,11 @@ export function DetailScreen({
         {isValidandoPrepaid ? (
           <div
             style={{
-              background: 'var(--tv-surface)',
+              background: '#faf6f1',
               borderRadius: 12,
               padding: '8px 12px',
               fontSize: 12,
-              color: 'var(--tv-ink-muted)',
+              color: '#57534e',
               display: 'flex',
               alignItems: 'center',
               flexWrap: 'wrap',
@@ -1217,7 +1220,7 @@ export function DetailScreen({
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               <Icon weight={500} name="person" size={14} className="text-ink-muted" />
-              <span style={{ fontWeight: 700, color: 'var(--tv-ink)' }}>
+              <span style={{ fontWeight: 700, color: '#1a1614' }}>
                 {order.customer ?? 'Cliente'}
               </span>
             </div>
@@ -1227,7 +1230,7 @@ export function DetailScreen({
                 <a
                   href={`tel:${order.phone}`}
                   style={{
-                    color: 'var(--tv-brand)',
+                    color: '#f97316',
                     textDecoration: 'none',
                     fontWeight: 600,
                     display: 'inline-flex',
@@ -1265,7 +1268,7 @@ export function DetailScreen({
             {/* Cliente */}
             <div
               style={{
-                background: 'var(--tv-surface)',
+                background: '#faf6f1',
                 borderRadius: 12,
                 padding: '12px 14px',
                 flexShrink: 0,
@@ -1275,7 +1278,7 @@ export function DetailScreen({
                 style={{
                   fontSize: 10,
                   fontWeight: 700,
-                  color: 'var(--tv-ink-muted)',
+                  color: '#57534e',
                   textTransform: 'uppercase',
                   letterSpacing: '0.06em',
                   marginBottom: 7,
@@ -1294,7 +1297,7 @@ export function DetailScreen({
                     alignItems: 'center',
                     gap: 6,
                     fontSize: 13,
-                    color: 'var(--tv-brand)',
+                    color: '#f97316',
                     textDecoration: 'none',
                     fontWeight: 600,
                   }}
@@ -1308,7 +1311,7 @@ export function DetailScreen({
             {order.addressRef && (
               <div
                 style={{
-                  background: 'var(--tv-surface)',
+                  background: '#faf6f1',
                   borderRadius: 12,
                   padding: '12px 14px',
                   flexShrink: 0,
@@ -1318,7 +1321,7 @@ export function DetailScreen({
                   style={{
                     fontSize: 10,
                     fontWeight: 700,
-                    color: 'var(--tv-ink-muted)',
+                    color: '#57534e',
                     textTransform: 'uppercase',
                     letterSpacing: '0.06em',
                     marginBottom: 7,
@@ -1346,7 +1349,7 @@ export function DetailScreen({
             open={itemsOpen}
             onToggle={(e) => setItemsOpen(e.currentTarget.open)}
             style={{
-              background: 'var(--tv-surface)',
+              background: '#faf6f1',
               borderRadius: 12,
               padding: isValidandoPrepaid ? '10px 12px' : '12px 14px',
               flexShrink: 0,
@@ -1371,7 +1374,7 @@ export function DetailScreen({
                 </span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <span className="tv-mono">{soles(order.total)}</span>
+                <span className="font-mono">{soles(order.total)}</span>
                 <Icon
                   weight={500}
                   name={itemsOpen ? 'expand_less' : 'expand_more'}
@@ -1380,20 +1383,20 @@ export function DetailScreen({
                 />
               </div>
             </summary>
-            <div style={{ marginTop: 8, borderTop: '1px solid var(--tv-border)', paddingTop: 8 }}>
+            <div style={{ marginTop: 8, borderTop: '1px solid #EAE7E2', paddingTop: 8 }}>
               {items.map((it, i) => (
                 <div
                   key={i}
                   style={{
                     padding: '5px 0',
-                    borderBottom: i < items.length - 1 ? '1px solid var(--tv-border)' : 'none',
+                    borderBottom: i < items.length - 1 ? '1px solid #EAE7E2' : 'none',
                   }}
                 >
                   <div style={{ display: 'flex', gap: 8 }}>
                     <span
-                      className="tv-mono"
+                      className="font-mono"
                       style={{
-                        color: 'var(--tv-ink-muted)',
+                        color: '#57534e',
                         width: 22,
                         flexShrink: 0,
                         fontWeight: 700,
@@ -1403,9 +1406,7 @@ export function DetailScreen({
                     </span>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 14, fontWeight: 600 }}>{it.name}</div>
-                      {it.mods && (
-                        <div style={{ fontSize: 12, color: 'var(--tv-ink-muted)' }}>{it.mods}</div>
-                      )}
+                      {it.mods && <div style={{ fontSize: 12, color: '#57534e' }}>{it.mods}</div>}
                       {it.note && (
                         <div style={{ fontSize: 12, color: '#B45309', marginTop: 2 }}>
                           <Icon weight={500} name="info" size={11} /> {it.note}
@@ -1413,12 +1414,12 @@ export function DetailScreen({
                       )}
                     </div>
                     <span
-                      className="tv-mono"
+                      className="font-mono"
                       style={{
                         fontSize: 13,
                         fontWeight: 600,
                         flexShrink: 0,
-                        color: 'var(--tv-ink-muted)',
+                        color: '#57534e',
                       }}
                     >
                       {soles(it.price)}
@@ -1430,7 +1431,7 @@ export function DetailScreen({
                 style={{
                   marginTop: 10,
                   padding: '8px 0 0',
-                  borderTop: '1px solid var(--tv-border)',
+                  borderTop: '1px solid #EAE7E2',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: 4,
@@ -1447,7 +1448,7 @@ export function DetailScreen({
             open={itemsOpen}
             onToggle={(e) => setItemsOpen(e.currentTarget.open)}
             style={{
-              background: 'var(--tv-surface)',
+              background: '#faf6f1',
               borderRadius: 12,
               padding: isValidandoPrepaid ? '10px 12px' : '12px 14px',
               flexShrink: 0,
@@ -1470,7 +1471,7 @@ export function DetailScreen({
                 <span>Cobro</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <span className="tv-mono">{soles(order.total)}</span>
+                <span className="font-mono">{soles(order.total)}</span>
                 <Icon
                   weight={500}
                   name={itemsOpen ? 'expand_less' : 'expand_more'}
@@ -1482,7 +1483,7 @@ export function DetailScreen({
             <div
               style={{
                 marginTop: 8,
-                borderTop: '1px solid var(--tv-border)',
+                borderTop: '1px solid #EAE7E2',
                 paddingTop: 8,
                 display: 'flex',
                 flexDirection: 'column',
@@ -1491,7 +1492,7 @@ export function DetailScreen({
             >
               <Row label="Total del pedido" value={soles(order.amount)} mono />
               <Row label="Delivery" value={soles(order.deliveryFee)} mono />
-              <div style={{ height: 1, background: 'var(--tv-border)', margin: '2px 0' }} />
+              <div style={{ height: 1, background: '#EAE7E2', margin: '2px 0' }} />
               <Row label="Total a cobrar" value={soles(order.total)} mono bold />
             </div>
           </details>
@@ -1505,11 +1506,11 @@ export function DetailScreen({
             {isLoadingActions ? (
               <div
                 style={{
-                  background: 'var(--tv-surface-muted, #F3F4F6)',
+                  background: '#F3F4F6',
                   borderRadius: 12,
                   padding: '12px 14px',
                   height: 64,
-                  border: '1px solid var(--tv-border, #E5E7EB)',
+                  border: '1px solid #E5E7EB',
                 }}
                 className="animate-pulse"
               />
@@ -1594,14 +1595,14 @@ export function DetailScreen({
         {showPrepPicker && (
           <div
             style={{
-              background: 'var(--tv-surface)',
+              background: '#faf6f1',
               borderRadius: 12,
               padding: '12px 14px',
               flexShrink: 0,
             }}
           >
-            <div className="tv-label" style={{ marginBottom: 8 }}>
-              TIEMPO DE PREPARACIÓN
+            <div className="mb-2 font-mono text-[11px] font-semibold uppercase tracking-wide text-ink-muted">
+              Tiempo de preparación
             </div>
             <div
               style={{
@@ -1620,10 +1621,10 @@ export function DetailScreen({
                   style={{
                     flexShrink: 0,
                     minWidth: 50,
-                    border: m === prep ? 'none' : '1px solid var(--tv-border)',
-                    background: m === prep ? 'var(--tv-ink)' : '#fff',
-                    color: m === prep ? '#fff' : 'var(--tv-ink)',
-                    fontFamily: "var(--font-jetbrains), 'Manrope', sans-serif",
+                    border: m === prep ? 'none' : '1px solid #EAE7E2',
+                    background: m === prep ? '#1a1614' : '#fff',
+                    color: m === prep ? '#fff' : '#1a1614',
+                    fontFamily: 'var(--font-jetbrains), ui-monospace, monospace',
                     fontWeight: 700,
                     fontSize: 14,
                     padding: '10px 0',
@@ -1642,7 +1643,7 @@ export function DetailScreen({
         {order.state === 'cooking' && !order.extensionUsed && (
           <div
             style={{
-              background: 'var(--tv-surface)',
+              background: '#faf6f1',
               borderRadius: 12,
               padding: '12px 14px',
               flexShrink: 0,
@@ -1655,11 +1656,11 @@ export function DetailScreen({
               type="button"
               onClick={() => actions.onExtend()}
               disabled={busy}
-              className="tv-btn tv-btn-ghost tv-btn-sm tv-btn-block"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-ink/[0.06] px-3 py-2 text-[13px] font-semibold text-ink transition-transform active:scale-[0.98] disabled:opacity-50"
             >
               <Icon weight={500} name="add" size={14} /> +10 min
             </button>
-            <div style={{ fontSize: 11, color: 'var(--tv-ink-muted)', marginTop: 6 }}>
+            <div style={{ fontSize: 11, color: '#57534e', marginTop: 6 }}>
               Solo disponible una vez y antes de que llegue el motorizado.
             </div>
           </div>
@@ -1668,7 +1669,7 @@ export function DetailScreen({
           <div
             style={{
               fontSize: 12,
-              color: 'var(--tv-warning)',
+              color: '#f59e0b',
               fontWeight: 600,
               textAlign: 'center',
               padding: '4px 0',
@@ -1684,8 +1685,7 @@ export function DetailScreen({
           <button
             type="button"
             onClick={() => actions.onCallDriver?.(order)}
-            className="tv-btn tv-btn-sm tv-btn-block"
-            style={{ background: 'var(--tv-danger)', color: '#fff', border: 'none', flexShrink: 0 }}
+            className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-danger px-3 py-2 text-[13px] font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-50"
           >
             <Icon weight={500} name="call" size={15} /> Llamar a un motorizado manualmente
           </button>
@@ -1697,8 +1697,8 @@ export function DetailScreen({
             style={{
               borderRadius: 12,
               padding: '12px 14px',
-              border: '1px solid var(--tv-border)',
-              background: 'var(--tv-surface)',
+              border: '1px solid #EAE7E2',
+              background: '#faf6f1',
               flexShrink: 0,
             }}
           >
@@ -1706,7 +1706,7 @@ export function DetailScreen({
               style={{
                 fontSize: 10,
                 fontWeight: 700,
-                color: 'var(--tv-ink-muted)',
+                color: '#57534e',
                 marginBottom: 8,
                 textTransform: 'uppercase',
                 letterSpacing: '0.06em',
@@ -1718,12 +1718,7 @@ export function DetailScreen({
               type="button"
               onClick={() => setModal('cancel')}
               disabled={busy}
-              className="tv-btn tv-btn-sm tv-btn-block"
-              style={{
-                background: 'transparent',
-                border: '1.5px solid var(--tv-danger)',
-                color: 'var(--tv-danger)',
-              }}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl border-[1.5px] border-danger bg-transparent px-3 py-2 text-[13px] font-semibold text-danger transition-transform active:scale-[0.98] disabled:opacity-50"
             >
               <Icon weight={500} name="cancel" size={14} /> Cancelar este pedido
             </button>
@@ -1736,7 +1731,7 @@ export function DetailScreen({
         <div
           style={{
             background: '#fff',
-            borderTop: '1px solid var(--tv-border)',
+            borderTop: '1px solid #EAE7E2',
             padding: '12px 14px 14px',
             boxShadow: '0 -6px 20px rgba(0,0,0,0.06)',
             display: 'flex',
@@ -1752,7 +1747,7 @@ export function DetailScreen({
                   flex: 1,
                   height: 44,
                   borderRadius: 12,
-                  background: 'var(--tv-surface-muted, #E5E7EB)',
+                  background: '#E5E7EB',
                 }}
               />
               <div
@@ -1760,7 +1755,7 @@ export function DetailScreen({
                   flex: 2,
                   height: 44,
                   borderRadius: 12,
-                  background: 'var(--tv-surface-muted, #E5E7EB)',
+                  background: '#E5E7EB',
                 }}
               />
             </div>
@@ -1770,13 +1765,7 @@ export function DetailScreen({
                 type="button"
                 onClick={() => actions.onRejectProof()}
                 disabled={busy}
-                className="tv-btn tv-btn-ghost"
-                style={{
-                  flex: 1,
-                  color: 'var(--tv-danger)',
-                  border: '1.5px solid #FCA5A5',
-                  background: '#FFF5F5',
-                }}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border-[1.5px] border-danger/30 bg-danger-soft px-5 py-3 text-[15px] font-semibold text-danger transition-transform active:scale-[0.98] disabled:opacity-50"
               >
                 <Icon weight={500} name="cancel" size={18} /> Inválido
               </button>
@@ -1784,8 +1773,7 @@ export function DetailScreen({
                 type="button"
                 onClick={() => setShowPrepModal(true)}
                 disabled={busy}
-                className="tv-btn tv-btn-brand"
-                style={{ flex: 2, background: '#16A34A' }}
+                className="inline-flex flex-[2] items-center justify-center gap-2 rounded-xl bg-success px-5 py-3 text-[15px] font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-50"
               >
                 <Icon weight={500} name="check_circle" size={18} filled /> Confirmar pago
               </button>
@@ -1796,22 +1784,11 @@ export function DetailScreen({
                 type="button"
                 onClick={() => setModal('cancel')}
                 disabled={busy}
-                className="tv-btn tv-btn-ghost"
-                style={{ flex: 1, color: 'var(--tv-danger)' }}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-ink/[0.06] px-5 py-3 text-[15px] font-semibold text-danger transition-transform active:scale-[0.98] disabled:opacity-50"
               >
                 <Icon weight={500} name="close" size={18} /> Cancelar
               </button>
-              <div
-                className="tv-btn"
-                style={{
-                  flex: 2,
-                  background: '#F3F4F6',
-                  color: '#9CA3AF',
-                  cursor: 'not-allowed',
-                  justifyContent: 'center',
-                  pointerEvents: 'none',
-                }}
-              >
+              <div className="inline-flex flex-[2] cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-gray-100 px-5 py-3 text-[15px] font-semibold text-gray-400 pointer-events-none">
                 Esperando pago...
               </div>
             </div>
@@ -1822,8 +1799,7 @@ export function DetailScreen({
                   type="button"
                   onClick={() => setModal('reject')}
                   disabled={busy}
-                  className="tv-btn tv-btn-ghost"
-                  style={{ flex: 1, color: 'var(--tv-danger)' }}
+                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-ink/[0.06] px-5 py-3 text-[15px] font-semibold text-danger transition-transform active:scale-[0.98] disabled:opacity-50"
                 >
                   <Icon weight={500} name="close" size={18} /> Rechazar
                 </button>
@@ -1831,15 +1807,14 @@ export function DetailScreen({
                   type="button"
                   onClick={() => actions.onAccept(isPrepaid ? 20 : prep)}
                   disabled={acceptDisabled}
-                  className="tv-btn tv-btn-brand"
-                  style={{ flex: 2 }}
+                  className="inline-flex flex-[2] items-center justify-center gap-2 rounded-xl bg-brand px-5 py-3 text-[15px] font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-50"
                 >
                   <Icon weight={500} name="check" size={18} filled />
                   {isPrepaid ? 'Aceptar disponibilidad' : `Aceptar · ${prep}m`}
                 </button>
               </div>
               {isPrepaid && (
-                <div style={{ fontSize: 11, color: 'var(--tv-ink-muted)', textAlign: 'center' }}>
+                <div style={{ fontSize: 11, color: '#57534e', textAlign: 'center' }}>
                   Confirmas disponibilidad para preparar. El cliente procederá a realizar el pago
                   por Yape/Plin.
                 </div>
@@ -1858,7 +1833,7 @@ export function DetailScreen({
         <div
           style={{
             background: '#fff',
-            borderTop: '1px solid var(--tv-border)',
+            borderTop: '1px solid #EAE7E2',
             padding: '12px 14px 14px',
             boxShadow: '0 -6px 20px rgba(0,0,0,0.06)',
             flexShrink: 0,
@@ -1872,8 +1847,8 @@ export function DetailScreen({
                 gap: 10,
                 padding: '12px 14px',
                 borderRadius: 14,
-                background: 'var(--tv-success-soft)',
-                border: '1px solid var(--tv-success)',
+                background: '#dcfce7',
+                border: '1px solid #16a34a',
               }}
             >
               <Icon weight={500} name="check_circle" size={20} filled className="text-success" />
@@ -1887,8 +1862,7 @@ export function DetailScreen({
                 type="button"
                 onClick={() => setConfirmReady(false)}
                 disabled={busy}
-                className="tv-btn"
-                style={{ flex: 1 }}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-ink/[0.06] px-5 py-3 text-[15px] font-semibold text-ink transition-transform active:scale-[0.98] disabled:opacity-50"
               >
                 Cancelar
               </button>
@@ -1899,8 +1873,7 @@ export function DetailScreen({
                   setConfirmReady(false)
                 }}
                 disabled={busy}
-                className="tv-btn"
-                style={{ flex: 1, background: 'var(--tv-success)', color: '#fff' }}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-success px-5 py-3 text-[15px] font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-50"
               >
                 <Icon weight={500} name="check_circle" size={18} filled /> Sí, está lista
               </button>
@@ -1910,8 +1883,7 @@ export function DetailScreen({
               type="button"
               onClick={() => setConfirmReady(true)}
               disabled={busy}
-              className="tv-btn tv-btn-block"
-              style={{ background: 'var(--tv-success)', color: '#fff' }}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-success px-5 py-3 text-[15px] font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-50"
             >
               <Icon weight={500} name="inventory_2" size={18} filled /> Listo — llamar moto
             </button>
@@ -2020,9 +1992,7 @@ export function PausarModal({
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 16, fontWeight: 700 }}>Pausar pedidos</div>
-            <div style={{ fontSize: 12, color: 'var(--tv-ink-muted)', marginTop: 1 }}>
-              ¿Por cuánto tiempo?
-            </div>
+            <div style={{ fontSize: 12, color: '#57534e', marginTop: 1 }}>¿Por cuánto tiempo?</div>
           </div>
           <button
             type="button"
@@ -2055,8 +2025,8 @@ export function PausarModal({
                 gap: 10,
                 padding: '9px 12px',
                 borderRadius: 9,
-                background: i === sel ? 'var(--tv-ink)' : 'var(--tv-surface)',
-                color: i === sel ? '#fff' : 'var(--tv-ink)',
+                background: i === sel ? '#1a1614' : '#faf6f1',
+                color: i === sel ? '#fff' : '#1a1614',
                 border: 'none',
                 fontFamily: 'inherit',
                 textAlign: 'left',
@@ -2089,7 +2059,7 @@ export function PausarModal({
           type="button"
           onClick={() => onConfirm(PAUSE_OPTS[sel]?.min ?? null)}
           disabled={busy}
-          className="tv-btn tv-btn-brand tv-btn-block tv-btn-lg"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand px-6 py-4 text-base font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-50"
         >
           {PAUSE_OPTS[sel]?.min
             ? `Confirmar pausa de ${PAUSE_OPTS[sel]?.label.toLowerCase()}`

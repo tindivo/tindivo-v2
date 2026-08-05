@@ -190,7 +190,7 @@ function Sidebar({ active, onSignOut }: { active: NavId; onSignOut: () => void }
         width: 240,
         flexShrink: 0,
         background: '#fff',
-        borderRight: '1px solid var(--tv-border)',
+        borderRight: '1px solid #EAE7E2',
         display: 'flex',
         flexDirection: 'column',
         padding: '20px 14px 16px',
@@ -210,16 +210,19 @@ function Sidebar({ active, onSignOut }: { active: NavId; onSignOut: () => void }
             justifyContent: 'center',
             fontWeight: 700,
             fontSize: 17,
-            fontFamily: 'var(--tv-font-display)',
+            fontFamily: 'var(--font-geist), system-ui, sans-serif',
           }}
         >
           {bizName[0] ?? 'T'}
         </div>
         <div style={{ minWidth: 0 }}>
-          <div className="tv-display" style={{ fontSize: 16, lineHeight: 1.1 }}>
+          <div
+            className="font-display text-base font-bold leading-tight tracking-tight"
+            style={{ fontSize: 16, lineHeight: 1.1 }}
+          >
             {bizName}
           </div>
-          <div className="tv-label" style={{ marginTop: 2, fontSize: 9 }}>
+          <div className="mt-0.5 font-mono text-[9px] font-semibold uppercase tracking-wide text-ink-muted">
             SAN JACINTO · ÁNCASH
           </div>
         </div>
@@ -238,8 +241,8 @@ function Sidebar({ active, onSignOut }: { active: NavId; onSignOut: () => void }
                 gap: 10,
                 padding: '10px 12px',
                 borderRadius: 12,
-                background: on ? 'var(--tv-ink)' : 'transparent',
-                color: on ? '#fff' : 'var(--tv-ink)',
+                background: on ? '#1a1614' : 'transparent',
+                color: on ? '#fff' : '#1a1614',
                 textDecoration: 'none',
                 fontFamily: 'inherit',
                 fontSize: 14,
@@ -254,7 +257,7 @@ function Sidebar({ active, onSignOut }: { active: NavId; onSignOut: () => void }
                     minWidth: 22,
                     height: 22,
                     borderRadius: 999,
-                    background: on ? 'var(--tv-brand)' : 'var(--tv-danger)',
+                    background: on ? '#f97316' : '#dc2626',
                     color: '#fff',
                     fontSize: 11,
                     fontWeight: 700,
@@ -276,8 +279,9 @@ function Sidebar({ active, onSignOut }: { active: NavId; onSignOut: () => void }
       <button
         type="button"
         onClick={toggleSound}
-        className={`tv-btn tv-btn-sm ${soundOn ? 'tv-btn-brand' : 'tv-btn-ghost'} ${counts.new > 0 && soundOn ? 'tv-pulse-brand' : ''}`}
-        style={{ marginBottom: 10, width: '100%' }}
+        className={`mb-2.5 inline-flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2 text-[13px] font-semibold transition-transform active:scale-[0.98] ${
+          soundOn ? 'bg-brand text-white' : 'bg-ink/[0.06] text-ink'
+        } ${counts.new > 0 && soundOn ? 'animate-pulse' : ''}`}
       >
         <Icon
           name={soundOn ? 'notifications_active' : 'notifications_off'}
@@ -287,8 +291,8 @@ function Sidebar({ active, onSignOut }: { active: NavId; onSignOut: () => void }
         Alertas {soundOn ? 'ON' : 'OFF'}
       </button>
       <div
-        className="tv-card"
-        style={{ padding: 12, marginBottom: 10, background: '#FFF4EC', boxShadow: 'none' }}
+        className="mb-2.5 rounded-2xl bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+        style={{ padding: 12, background: '#FFF4EC', boxShadow: 'none' }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Icon
@@ -301,7 +305,7 @@ function Sidebar({ active, onSignOut }: { active: NavId; onSignOut: () => void }
             {catalogOnly ? 'Pedidos por WhatsApp' : paused ? 'Pausado' : 'Plataforma abierta'}
           </div>
         </div>
-        <div className="tv-label" style={{ fontSize: 9, marginTop: 4 }}>
+        <div className="mt-1 font-mono text-[9px] font-semibold uppercase tracking-wide text-ink-muted">
           {catalogOnly
             ? 'MODO CATÁLOGO ACTIVO'
             : paused
@@ -315,7 +319,7 @@ function Sidebar({ active, onSignOut }: { active: NavId; onSignOut: () => void }
           alignItems: 'center',
           gap: 10,
           padding: '8px 6px',
-          borderTop: '1px solid var(--tv-border)',
+          borderTop: '1px solid #EAE7E2',
         }}
       >
         <div
@@ -323,8 +327,8 @@ function Sidebar({ active, onSignOut }: { active: NavId; onSignOut: () => void }
             width: 32,
             height: 32,
             borderRadius: 999,
-            background: 'var(--tv-brand-soft)',
-            color: 'var(--tv-brand-dark)',
+            background: '#fff7ed',
+            color: '#c2410c',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -358,23 +362,36 @@ function Sidebar({ active, onSignOut }: { active: NavId; onSignOut: () => void }
 }
 
 // ── Bottom nav (mobile, persistente) ──────────────────────────────────────────
-function navBtnStyle(active: boolean) {
-  return {
-    background: 'none',
-    border: 'none',
-    display: 'flex',
-    flexDirection: 'column' as const,
-    alignItems: 'center',
-    gap: 2,
-    padding: '6px 4px',
-    fontFamily: 'inherit',
-    fontSize: 10,
-    color: active ? 'var(--tv-brand)' : 'var(--tv-ink-muted)',
-    fontWeight: 600,
-    cursor: 'pointer',
-    borderRadius: 10,
-    textDecoration: 'none',
-  }
+function NavLink({
+  href,
+  active,
+  children,
+}: {
+  href: string
+  active: boolean
+  children: React.ReactNode
+}) {
+  return (
+    <Link
+      href={href}
+      className={`flex flex-col items-center gap-0.5 rounded-[10px] px-1 py-1.5 text-[10px] font-semibold no-underline ${
+        active ? 'text-brand' : 'text-ink-muted'
+      }`}
+    >
+      {children}
+    </Link>
+  )
+}
+
+function FabLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className="flex h-14 w-14 -translate-y-5 items-center justify-center self-center rounded-full bg-brand text-white shadow-[0_8px_20px_-6px_rgba(249,115,22,0.6)]"
+    >
+      {children}
+    </Link>
+  )
 }
 
 function BottomNav({ active }: { active: NavId }) {
@@ -386,71 +403,47 @@ function BottomNav({ active }: { active: NavId }) {
   if (capability === 'catalog_only') {
     const hasActiveOrders = counts.new + counts.cooking + counts.route > 0
     return (
-      <div className="tv-bottom-nav">
+      <nav className="grid grid-cols-3 border-t border-border bg-white px-1 pb-[max(18px,env(safe-area-inset-bottom))] pt-1.5 lg:hidden">
         {hasActiveOrders && (
-          <Link
-            href="/"
-            className={active === 'pedidos' ? 'active' : ''}
-            style={navBtnStyle(active === 'pedidos')}
-          >
+          <NavLink href="/" active={active === 'pedidos'}>
             <Icon name="receipt_long" size={22} filled={active === 'pedidos'} />
             <span>Pedidos</span>
-          </Link>
+          </NavLink>
         )}
-        <Link
-          href="/menu"
-          className={active === 'menu' ? 'active' : ''}
-          style={navBtnStyle(active === 'menu')}
-        >
+        <NavLink href="/menu" active={active === 'menu'}>
           <Icon name="restaurant_menu" size={22} filled={active === 'menu'} />
           <span>Menú</span>
-        </Link>
-        <Link
-          href="/configuracion"
-          className={active === 'config' ? 'active' : ''}
-          style={navBtnStyle(active === 'config')}
-        >
+        </NavLink>
+        <NavLink href="/configuracion" active={active === 'config'}>
           <Icon name="settings" size={22} filled={active === 'config'} />
           <span>Config</span>
-        </Link>
-      </div>
+        </NavLink>
+      </nav>
     )
   }
 
   return (
-    <div className="tv-bottom-nav">
-      <Link
-        href="/"
-        className={active === 'pedidos' ? 'active' : ''}
-        style={navBtnStyle(active === 'pedidos')}
-      >
+    <nav className="grid grid-cols-5 border-t border-border bg-white px-1 pb-[max(18px,env(safe-area-inset-bottom))] pt-1.5 lg:hidden">
+      <NavLink href="/" active={active === 'pedidos'}>
         <Icon name="receipt_long" size={22} filled={active === 'pedidos'} />
         <span>Pedidos</span>
-      </Link>
-      <Link
-        href="/menu"
-        className={active === 'menu' ? 'active' : ''}
-        style={navBtnStyle(active === 'menu')}
-      >
+      </NavLink>
+      <NavLink href="/menu" active={active === 'menu'}>
         <Icon name="restaurant_menu" size={22} filled={active === 'menu'} />
         <span>Menú</span>
-      </Link>
-      <Link href="/nuevo" className="fab">
+      </NavLink>
+      <FabLink href="/nuevo">
         <Icon name="add" size={28} filled />
-      </Link>
-      <Link
-        href="/efectivo"
-        className={active === 'efectivo' ? 'active' : ''}
-        style={navBtnStyle(active === 'efectivo')}
-      >
+      </FabLink>
+      <NavLink href="/efectivo" active={active === 'efectivo'}>
         <Icon name="payments" size={22} filled={active === 'efectivo'} />
         <span>Efectivo</span>
-      </Link>
-      <Link href="/configuracion" className={mas ? 'active' : ''} style={navBtnStyle(mas)}>
+      </NavLink>
+      <NavLink href="/configuracion" active={mas}>
         <Icon name="more_horiz" size={22} filled={mas} />
         <span>Más</span>
-      </Link>
-    </div>
+      </NavLink>
+    </nav>
   )
 }
 
@@ -475,25 +468,7 @@ function NewOrderToast({ count }: { count: number }) {
     <Link
       href="/"
       onClick={() => setShow(false)}
-      className="tv-pulse-brand"
-      style={{
-        position: 'fixed',
-        top: 14,
-        left: '50%',
-        transform: 'translateX(-50%)',
-        zIndex: 300,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-        background: 'var(--tv-brand)',
-        color: '#fff',
-        padding: '10px 16px',
-        borderRadius: 999,
-        fontWeight: 700,
-        fontSize: 14,
-        textDecoration: 'none',
-        boxShadow: '0 8px 24px -6px rgba(249,115,22,0.6)',
-      }}
+      className="fixed left-1/2 top-3.5 z-[300] flex -translate-x-1/2 animate-pulse items-center gap-2 rounded-full bg-brand px-4 py-2.5 text-sm font-bold text-white no-underline shadow-[0_8px_24px_-6px_rgba(249,115,22,0.6)]"
     >
       <Icon name="notifications_active" size={18} filled />
       {n === 1 ? 'Nuevo pedido' : `${n} pedidos nuevos`} · ver
@@ -512,8 +487,8 @@ function CatalogOnlyGate() {
           width: 64,
           height: 64,
           borderRadius: 999,
-          background: 'var(--tv-brand-soft)',
-          color: 'var(--tv-brand-dark)',
+          background: '#fff7ed',
+          color: '#c2410c',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -527,10 +502,16 @@ function CatalogOnlyGate() {
         servicio de delivery de la plataforma no está disponible por ahora.
       </p>
       <div className="mt-2 flex gap-2">
-        <Link href="/menu" className="tv-btn tv-btn-brand">
+        <Link
+          href="/menu"
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand px-5 py-3 text-[15px] font-semibold text-white transition-transform active:scale-[0.98]"
+        >
           <Icon name="restaurant_menu" size={16} /> Mi menú
         </Link>
-        <Link href="/configuracion" className="tv-btn tv-btn-ghost">
+        <Link
+          href="/configuracion"
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-ink/[0.06] px-5 py-3 text-[15px] font-semibold text-ink transition-transform active:scale-[0.98]"
+        >
           <Icon name="settings" size={16} /> Configuración
         </Link>
       </div>
@@ -568,8 +549,8 @@ function NotificationGate({ onActivate }: { onActivate: () => void }) {
             width: 72,
             height: 72,
             borderRadius: 20,
-            background: 'var(--tv-brand-soft)',
-            color: 'var(--tv-brand)',
+            background: '#fff7ed',
+            color: '#f97316',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -583,16 +564,14 @@ function NotificationGate({ onActivate }: { onActivate: () => void }) {
           Activa las notificaciones
         </div>
 
-        <div
-          style={{ fontSize: 15, color: 'var(--tv-ink-muted)', lineHeight: 1.6, marginBottom: 8 }}
-        >
+        <div style={{ fontSize: 15, color: '#57534e', lineHeight: 1.6, marginBottom: 8 }}>
           Para recibir pedidos necesitas activar las alertas de sonido y notificaciones del
           navegador.
         </div>
 
         <div
           style={{
-            background: 'var(--tv-warning-soft)',
+            background: '#fef3c7',
             borderRadius: 12,
             padding: '12px 16px',
             marginBottom: 24,
@@ -610,13 +589,13 @@ function NotificationGate({ onActivate }: { onActivate: () => void }) {
         <button
           type="button"
           onClick={onActivate}
-          className="tv-btn tv-btn-brand tv-btn-block tv-btn-xl"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand px-6 py-5 text-lg font-semibold text-white transition-transform active:scale-[0.98]"
         >
           <Icon name="notifications_active" size={22} filled />
           Activar notificaciones
         </button>
 
-        <div style={{ fontSize: 11, color: 'var(--tv-ink-muted)', marginTop: 12 }}>
+        <div style={{ fontSize: 11, color: '#57534e', marginTop: 12 }}>
           Puedes ajustar el volumen desde la configuración del navegador
         </div>
       </div>
@@ -959,7 +938,7 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
   return (
     <Ctx.Provider value={value}>
       {gateShown && <NotificationGate onActivate={handleActivateNotifications} />}
-      <div className="flex" style={{ height: '100dvh', background: 'var(--tv-surface)' }}>
+      <div className="flex" style={{ height: '100dvh', background: '#faf6f1' }}>
         <div className="hidden shrink-0 lg:block">
           <Sidebar active={active} onSignOut={onSignOut} />
         </div>
