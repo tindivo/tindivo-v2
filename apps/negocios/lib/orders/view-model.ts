@@ -102,6 +102,8 @@ export interface OrderVM {
   countdownSec: number
   prepMinutes: number | null
   minutesLeft: number | null
+  /** Segundos con signo entre `now` y `estimated_ready_at`. Positivo = tiempo restante, negativo = retraso. */
+  readySec: number | null
   bufferMinutes: number | null
   pickupMinAgo: number | null
   driver: { name: string } | null
@@ -132,6 +134,19 @@ export interface OrderVM {
 const ACCEPT_SEC = 5 * 60
 const VALIDATE_SEC = 5 * 60
 const PREPAY_SEC = 10 * 60
+
+/**
+ * Formatea los segundos hasta/desde `estimated_ready_at` en `mm:ss` con signo.
+ * - Signo negativo si ya pasó (`-02:45` = retraso de 2 min 45 seg).
+ * - Sin signo si está a tiempo (`04:30` = 4 min 30 seg restantes).
+ */
+export function formatReadyDelta(sec: number): string {
+  const absSec = Math.abs(Math.round(sec))
+  const min = Math.floor(absSec / 60)
+  const remSec = absSec % 60
+  const sign = sec < 0 ? '-' : ''
+  return `${sign}${String(min).padStart(2, '0')}:${String(remSec).padStart(2, '0')}`
+}
 
 function minutesSince(iso: string | null, now: number): number {
   if (!iso) return 0
@@ -253,6 +268,13 @@ export function toOrderVM(row: OrderRow, now: number = Date.now()): OrderVM {
         ? Math.max(0, Math.ceil((readyAtMs - now) / 60000))
         : null
 
+  const readySec =
+    readyAtMs != null &&
+    !row.ready_early_used &&
+    (state === 'cooking' || state === 'heading' || state === 'waiting')
+      ? Math.round((readyAtMs - now) / 1000)
+      : null
+
   const extCount = row.prep_extension_count ?? 0
 
   return {
@@ -273,6 +295,7 @@ export function toOrderVM(row: OrderRow, now: number = Date.now()): OrderVM {
     countdownSec,
     prepMinutes: row.prep_time_minutes ?? null,
     minutesLeft,
+    readySec,
     bufferMinutes:
       state === 'buffer_p1' || state === 'buffer_p2' || state === 'buffer_p3'
         ? minutesSince(row.waiting_driver_at, now)

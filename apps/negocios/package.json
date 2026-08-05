@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start --port 3002",
     "type-check": "tsc --noEmit",
-    "lint": "biome check ."
+    "lint": "biome check .",
+    "test": "vitest run"
   },
   "dependencies": {
     "@supabase/ssr": "catalog:",
@@ -29,6 +30,7 @@
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "tailwindcss": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

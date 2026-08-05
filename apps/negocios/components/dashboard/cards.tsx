@@ -1,7 +1,7 @@
 'use client'
 
 import { Icon } from '@tindivo/ui'
-import type { OrderVM } from '@/lib/orders/view-model'
+import { type OrderVM, formatReadyDelta } from '@/lib/orders/view-model'
 import { formatSupportPhone, normalizeSupportPhone } from '@/lib/support'
 import { mmss, PayBadgeMini, SourceBadgeMini, soles } from './primitives'
 
@@ -42,15 +42,27 @@ function RiskBadge({ order }: { order: OrderVM }) {
   )
 }
 
-/** Minutos que faltan para que la comida esté lista. Se muestra junto al
- *  motorizado cuando el pedido ya fue tomado pero la cocina sigue trabajando. */
-function CookingCountdown({ minutesLeft }: { minutesLeft: number }) {
-  return (
-    <span className="inline-flex items-center gap-[3px] text-[11px] font-semibold text-orange-700">
-      <Icon name="timer" size={12} weight={500} className="text-orange-700" />
-      <span className="font-mono font-bold">{minutesLeft}m</span> en cocina
-    </span>
-  )
+/** Minutos que faltan para que la comida esté lista (o badge de retraso si readySec < 0). */
+function CookingCountdown({ order }: { order: OrderVM }) {
+  if (order.readySec != null && order.readySec < 0) {
+    return (
+      <span className="inline-flex items-center gap-[3px] rounded-full bg-danger-soft px-1.5 py-0.5 text-[10px] font-bold text-danger border border-danger/20">
+        <Icon name="priority_high" size={12} weight={500} filled className="text-danger" />
+        ¡Demorado! <span className="font-mono">{formatReadyDelta(order.readySec)}</span>
+      </span>
+    )
+  }
+
+  if (order.minutesLeft != null && order.minutesLeft > 0) {
+    return (
+      <span className="inline-flex items-center gap-[3px] text-[11px] font-semibold text-orange-700">
+        <Icon name="timer" size={12} weight={500} className="text-orange-700" />
+        <span className="font-mono font-bold">{order.minutesLeft}m</span> en cocina
+      </span>
+    )
+  }
+
+  return null
 }
 
 // ── Status line dentro de "En cocina" ─────────────────────────────────────────
@@ -59,6 +71,20 @@ export function CookingStatusLine({ order }: { order: OrderVM }) {
   const d = order.driver
 
   if (s === 'cooking') {
+    if (order.readySec != null && order.readySec < 0) {
+      return (
+        <div className="flex items-center gap-[5px]">
+          <Icon name="priority_high" size={12} weight={500} filled className="text-danger" />
+          <span className="text-[11px] font-bold text-danger">
+            ¡Demorado! · <span className="font-mono">{formatReadyDelta(order.readySec)}</span>
+            {order.extensionUsed && (
+              <span className="ml-1 text-amber-700">+{order.extensionMin}m</span>
+            )}
+          </span>
+        </div>
+      )
+    }
+
     const left = order.minutesLeft ?? order.prepMinutes ?? 0
     const prep = order.prepMinutes ?? 0
     const pct = prep > 0 ? left / prep : 1
@@ -119,7 +145,7 @@ export function CookingStatusLine({ order }: { order: OrderVM }) {
         {/* El motorizado toma el pedido con ~10 min de cocción restantes, así que
             aquí la comida casi siempre sigue en la cocina. Sin este contador la
             cajera se quedaba ciega justo cuando más lo necesita. */}
-        {order.minutesLeft != null && <CookingCountdown minutesLeft={order.minutesLeft} />}
+        <CookingCountdown order={order} />
       </div>
     )
 
@@ -138,7 +164,7 @@ export function CookingStatusLine({ order }: { order: OrderVM }) {
             {d?.name ?? 'Motorizado'} llegó · Entregar pedido
           </span>
           {/* Puede haber llegado antes de que la comida salga de cocina. */}
-          {order.minutesLeft != null && <CookingCountdown minutesLeft={order.minutesLeft} />}
+          <CookingCountdown order={order} />
         </div>
         {order.cashChange != null && order.cashChange > 0 && (
           <div className="ml-[18px] mt-[3px] text-[11px] font-semibold text-green-700">
