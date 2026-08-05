@@ -35,10 +35,14 @@ export function randomShortId(): string {
   return out
 }
 
+/**
+ * Overrides por negocio. Desde la migración 0125 la comisión NO depende de la
+ * banda: `commission_override_near` pasó a `commission_override_delivery` y
+ * `commission_override_far` se eliminó.
+ */
 export interface CommissionOverrides {
   pickup?: number
-  near?: number
-  far?: number
+  delivery?: number
 }
 
 export interface LedgerWorld {
@@ -76,8 +80,7 @@ export async function seedLedgerWorld(overrides: CommissionOverrides = {}): Prom
       name: `Ledger Test ${tag}`,
       balance_due: 0,
       commission_override_pickup: overrides.pickup ?? null,
-      commission_override_near: overrides.near ?? null,
-      commission_override_far: overrides.far ?? null,
+      commission_override_delivery: overrides.delivery ?? null,
     })
     .select('id')
     .single()
@@ -247,7 +250,8 @@ export async function readBlockState(
 // midiendo el MODELO y no un número concreto.
 
 export interface MoneyConfig {
-  commissions: { pickup: number; near: number; far: number }
+  /** 0125: la comisión es plana. `delivery` vale igual para `near` y para `far`. */
+  commissions: { pickup: number; delivery: number }
   bands: { near: number; far: number }
 }
 
@@ -266,8 +270,7 @@ export async function readMoneyConfig(): Promise<MoneyConfig> {
   return {
     commissions: {
       pickup: Number(commissions.pickup),
-      near: Number(commissions.near),
-      far: Number(commissions.far),
+      delivery: Number(commissions.delivery),
     },
     bands: { near: Number(bands.near), far: Number(bands.far) },
   }
@@ -281,6 +284,14 @@ export async function readMoneyConfig(): Promise<MoneyConfig> {
  * de `delivery_bands[banda]`. Es la decisión de `0110`: "una entrega lejana
  * cuesta al negocio lo mismo que una cercana", porque el cliente paga igual vaya
  * donde vaya. Mientras eso siga así, `far` y `near` producen cargos idénticos.
+ *
+ * DESDE LA 0125 LA COMISIÓN YA NO SE RESTA. Antes, `commissions.near` era el
+ * TOTAL (comisión + envío) y había que restarle el envío para obtener la
+ * comisión sola. Ahora `commissions.delivery` ES la comisión sola, así que se
+ * usa tal cual. `band` sigue siendo parámetro porque `advance_order` la sigue
+ * escribiendo en `orders.delivery_distance_band`, pero ya NO decide el monto:
+ * pasar 'near' o 'far' da exactamente lo mismo. Que eso siga siendo verdad es
+ * justo lo que mide A1.2.
  */
 export function expectedMoney(args: {
   cfg: MoneyConfig
@@ -289,18 +300,14 @@ export function expectedMoney(args: {
   orderDeliveryFee: number
   overrides?: CommissionOverrides
 }): { fee: number; commission: number; total: number } {
-  const { cfg, deliveryMethod, band, orderDeliveryFee, overrides = {} } = args
+  const { cfg, deliveryMethod, orderDeliveryFee, overrides = {} } = args
 
   const fee = deliveryMethod === 'pickup' ? 0 : (orderDeliveryFee ?? cfg.bands.near)
 
-  let commission: number
-  if (deliveryMethod === 'pickup') {
-    commission = overrides.pickup ?? cfg.commissions.pickup
-  } else if (band === 'near') {
-    commission = (overrides.near ?? cfg.commissions.near) - fee
-  } else {
-    commission = (overrides.far ?? cfg.commissions.far) - fee
-  }
+  const commission =
+    deliveryMethod === 'pickup'
+      ? (overrides.pickup ?? cfg.commissions.pickup)
+      : (overrides.delivery ?? cfg.commissions.delivery)
 
   return { fee: round2(fee), commission: round2(commission), total: round2(commission + fee) }
 }
@@ -323,7 +330,6 @@ export async function cleanupLedgerWorld(world: LedgerWorld): Promise<void> {
   }
   await localClient.from('business_charges').delete().eq('business_id', world.businessId)
   await localClient.from('restaurant_payments').delete().eq('business_id', world.businessId)
-  await localClient.from('settlements').delete().eq('business_id', world.businessId)
   await localClient.from('drivers').delete().eq('id', world.driverId)
   await localClient.from('businesses').delete().eq('id', world.businessId)
   await localClient.from('users').delete().eq('id', world.businessUserId)

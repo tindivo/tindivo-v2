@@ -18,7 +18,10 @@ const minutes = z.number().int().positive().max(1440)
 
 /** Solo estos ajustes son editables desde el panel; cada uno valida su forma. */
 const EDITABLE: Record<string, z.ZodTypeAny> = {
-  commissions: z.object({ near: money, far: money, pickup: money }),
+  // Desde la migración 0125 `commissions` guarda la comisión SOLA, sin el envío
+  // mezclado dentro. Ya no hay clave por banda: `delivery` vale igual para near
+  // y para far, y el envío se suma aparte desde `orders.delivery_fee`.
+  commissions: z.object({ delivery: money, pickup: money }),
   delivery_bands: z.object({ near: money, far: money }),
   prepay_threshold: z.number().positive().max(10000),
   validation: z.object({ amountThreshold: money }),

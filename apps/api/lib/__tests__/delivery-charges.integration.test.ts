@@ -93,6 +93,12 @@ describe('generate_delivery_charges — el trigger que alimenta el ledger', () =
       // El envío cobrado es el del pedido, NO `delivery_bands.far`.
       expect(fee!.amount).toBe(2.0)
       expect(fee!.amount).not.toBe(cfg.bands.far)
+
+      // Y desde la 0125, la comisión es PLANA: `far` cobra exactamente el mismo
+      // `commissions.delivery` que `near`. Es la prueba de que el modelo nuevo
+      // no reintrodujo diferencia por banda. Si la Parte D vuelve a cobrar más
+      // por las lejanas, este es el test que tiene que cambiar a propósito.
+      expect(com!.amount).toBe(cfg.commissions.delivery)
     } finally {
       await cleanupLedgerWorld(world)
     }
@@ -181,13 +187,14 @@ describe('generate_delivery_charges — el trigger que alimenta el ledger', () =
 
   // ── A1.6 ────────────────────────────────────────────────────────────────────
   // `advance_order` resuelve la comisión con
-  // COALESCE(businesses.commission_override_<banda>, app_settings.commissions.<banda>, default).
+  // COALESCE(businesses.commission_override_delivery, app_settings.commissions.delivery, 1.50).
+  // Desde la 0125 ya no hay una columna por banda: es una sola.
   // El override se pone deliberadamente MAYOR que el valor global para que el
   // test distinga cuál ganó: si mandara app_settings, la comisión sería otra.
-  it('A1.6 commission_override_near gana sobre app_settings.commissions', async () => {
+  it('A1.6 commission_override_delivery gana sobre app_settings.commissions', async () => {
     const cfg: MoneyConfig = await readMoneyConfig()
-    const override = round2(cfg.commissions.near + 1.5)
-    const world = await seedLedgerWorld({ near: override })
+    const override = round2(cfg.commissions.delivery + 1.5)
+    const world = await seedLedgerWorld({ delivery: override })
     try {
       const orderId = await seedOrder(world, { deliveryFee: 2.0 })
       await deliverOrder(world, orderId, 'near')
@@ -197,7 +204,7 @@ describe('generate_delivery_charges — el trigger que alimenta el ledger', () =
         deliveryMethod: 'delivery',
         band: 'near',
         orderDeliveryFee: 2.0,
-        overrides: { near: override },
+        overrides: { delivery: override },
       })
       const sinOverride = expectedMoney({
         cfg,

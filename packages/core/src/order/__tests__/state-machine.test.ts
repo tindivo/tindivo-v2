@@ -2,7 +2,7 @@ import { toTrackingStep } from '@tindivo/contracts'
 import { describe, expect, it } from 'vitest'
 import { InvalidStateTransitionError, OrderNotCancellableError } from '../../shared/errors'
 import { assertCustomerCanCancel, assertTransition, isTerminal } from '../state-machine'
-import { applyDelivered, applyPickedUp } from '../transitions'
+import { applyPickedUp } from '../transitions'
 
 describe('máquina de estados del pedido', () => {
   it('permite transiciones válidas del flujo canónico', () => {
@@ -73,11 +73,7 @@ describe('operaciones de transición del agregado', () => {
     })
   })
 
-  it('applyDelivered hace snapshot de la comisión', () => {
-    const result = applyDelivered(
-      { status: 'picked_up', deliveryMethod: 'delivery', band: 'near' },
-      { config: { pickup: 0.5, near: 3.0, far: 3.5 } },
-    )
-    expect(result).toEqual({ status: 'delivered', tindivoCommission: 3.0 })
-  })
+  // El snapshot de la comisión al entregar ya NO se prueba aquí: `applyDelivered`
+  // se borró en la 0125. El cálculo corre en `advance_order` (Postgres) y lo
+  // cubre A1.* en apps/api/lib/__tests__/delivery-charges.integration.test.ts.
 })

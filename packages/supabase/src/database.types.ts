@@ -158,7 +158,6 @@ export type Database = {
           payment_id: string | null
           report_id: string | null
           settled_at: string | null
-          settlement_id: string | null
           status: string
         }
         Insert: {
@@ -172,7 +171,6 @@ export type Database = {
           payment_id?: string | null
           report_id?: string | null
           settled_at?: string | null
-          settlement_id?: string | null
           status?: string
         }
         Update: {
@@ -186,7 +184,6 @@ export type Database = {
           payment_id?: string | null
           report_id?: string | null
           settled_at?: string | null
-          settlement_id?: string | null
           status?: string
         }
         Relationships: [
@@ -216,13 +213,6 @@ export type Database = {
             columns: ["report_id"]
             isOneToOne: false
             referencedRelation: "reports"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "business_charges_settlement_id_fkey"
-            columns: ["settlement_id"]
-            isOneToOne: false
-            referencedRelation: "settlements"
             referencedColumns: ["id"]
           },
         ]
@@ -286,8 +276,7 @@ export type Database = {
           block_reason: string | null
           blocked_for_debt: boolean
           categoria: string[] | null
-          commission_override_far: number | null
-          commission_override_near: number | null
+          commission_override_delivery: number | null
           commission_override_pickup: number | null
           coordinates_lat: number | null
           coordinates_lng: number | null
@@ -327,8 +316,7 @@ export type Database = {
           block_reason?: string | null
           blocked_for_debt?: boolean
           categoria?: string[] | null
-          commission_override_far?: number | null
-          commission_override_near?: number | null
+          commission_override_delivery?: number | null
           commission_override_pickup?: number | null
           coordinates_lat?: number | null
           coordinates_lng?: number | null
@@ -368,8 +356,7 @@ export type Database = {
           block_reason?: string | null
           blocked_for_debt?: boolean
           categoria?: string[] | null
-          commission_override_far?: number | null
-          commission_override_near?: number | null
+          commission_override_delivery?: number | null
           commission_override_pickup?: number | null
           coordinates_lat?: number | null
           coordinates_lng?: number | null
@@ -2181,7 +2168,6 @@ export type Database = {
           paid_at: string
           payment_method: string
           registered_by: string | null
-          settlement_id: string | null
         }
         Insert: {
           amount: number
@@ -2192,7 +2178,6 @@ export type Database = {
           paid_at: string
           payment_method: string
           registered_by?: string | null
-          settlement_id?: string | null
         }
         Update: {
           amount?: number
@@ -2203,7 +2188,6 @@ export type Database = {
           paid_at?: string
           payment_method?: string
           registered_by?: string | null
-          settlement_id?: string | null
         }
         Relationships: [
           {
@@ -2216,92 +2200,6 @@ export type Database = {
           {
             foreignKeyName: "restaurant_payments_registered_by_fkey"
             columns: ["registered_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "restaurant_payments_settlement_id_fkey"
-            columns: ["settlement_id"]
-            isOneToOne: false
-            referencedRelation: "settlements"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      settlements: {
-        Row: {
-          business_id: string
-          created_at: string
-          created_by: string | null
-          due_date: string
-          excluded_reason: string | null
-          id: string
-          order_count: number
-          paid_at: string | null
-          paid_by: string | null
-          payment_method: string | null
-          payment_note: string | null
-          period_end: string
-          period_start: string
-          status: Database["public"]["Enums"]["settlement_status"]
-          total_amount: number
-          updated_at: string
-        }
-        Insert: {
-          business_id: string
-          created_at?: string
-          created_by?: string | null
-          due_date: string
-          excluded_reason?: string | null
-          id?: string
-          order_count?: number
-          paid_at?: string | null
-          paid_by?: string | null
-          payment_method?: string | null
-          payment_note?: string | null
-          period_end: string
-          period_start: string
-          status?: Database["public"]["Enums"]["settlement_status"]
-          total_amount?: number
-          updated_at?: string
-        }
-        Update: {
-          business_id?: string
-          created_at?: string
-          created_by?: string | null
-          due_date?: string
-          excluded_reason?: string | null
-          id?: string
-          order_count?: number
-          paid_at?: string | null
-          paid_by?: string | null
-          payment_method?: string | null
-          payment_note?: string | null
-          period_end?: string
-          period_start?: string
-          status?: Database["public"]["Enums"]["settlement_status"]
-          total_amount?: number
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "settlements_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "businesses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "settlements_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "settlements_paid_by_fkey"
-            columns: ["paid_by"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -2634,15 +2532,6 @@ export type Database = {
         Returns: Json
       }
       f_unaccent: { Args: { p_text: string }; Returns: string }
-      generate_settlements: {
-        Args: {
-          p_created_by?: string
-          p_due_date: string
-          p_period_end: string
-          p_period_start: string
-        }
-        Returns: Json
-      }
       generate_short_id: { Args: never; Returns: string }
       geo_distance_km: {
         Args: { p_lat1: number; p_lat2: number; p_lng1: number; p_lng2: number }
@@ -2665,15 +2554,6 @@ export type Database = {
       mark_appeal_in_review: { Args: { p_report_id: string }; Returns: Json }
       pause_business_orders: {
         Args: { p_business_user_id: string; p_minutes?: number }
-        Returns: Json
-      }
-      pay_settlement: {
-        Args: {
-          p_method?: string
-          p_note?: string
-          p_paid_by: string
-          p_settlement_id: string
-        }
         Returns: Json
       }
       point_in_coverage_polygon: {
@@ -3216,3 +3096,4 @@ export const Constants = {
     },
   },
 } as const
+
