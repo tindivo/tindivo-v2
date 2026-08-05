@@ -3,7 +3,6 @@
 import { type ApiEnvelope, ApiError } from '@tindivo/api-client'
 import { Badge, Button, Card, cn, EmptyState } from '@tindivo/ui'
 import { type FormEvent, useCallback, useEffect, useState } from 'react'
-import { DriverShell } from '@/components/driver-shell'
 import { api } from '@/lib/api'
 import { soles } from '@/lib/format'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
@@ -77,104 +76,102 @@ export default function EfectivoPage() {
   const totalPedidos = porEntregar.reduce((s, t) => s + t.orderCount, 0)
 
   return (
-    <DriverShell>
-      <main className="mx-auto max-w-[480px] px-4 pt-20 pb-10">
-        <div className="sticky top-[calc(44px+env(safe-area-inset-top))] z-30 -mx-4 mb-4 bg-surface/95 px-4 py-2 backdrop-blur-sm">
-          <h1 className="font-display text-[24px] font-bold tracking-tight">Efectivo</h1>
-        </div>
-        {error && <p className="mt-3 text-[13px] text-danger">{error}</p>}
+    <main className="mx-auto max-w-[480px] px-4 pt-20 pb-10">
+      <div className="sticky top-[calc(44px+env(safe-area-inset-top))] z-30 -mx-4 mb-4 bg-surface/95 px-4 py-2 backdrop-blur-sm">
+        <h1 className="font-display text-[24px] font-bold tracking-tight">Efectivo</h1>
+      </div>
+      {error && <p className="mt-3 text-[13px] text-danger">{error}</p>}
 
-        {/* Total que el motorizado lleva encima ahora mismo. Es el número que
+      {/* Total que el motorizado lleva encima ahora mismo. Es el número que
             tiene que cuadrar con el fajo de su bolsillo. */}
-        {porEntregar.length > 0 && (
-          <Card className="mt-4 border-none bg-brand p-5 text-white shadow-none">
-            <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-white/80">
-              Efectivo por entregar
-            </p>
-            <p className="font-display mt-1 text-[38px] font-bold leading-none tracking-tight tabular-nums">
-              {soles(totalPorEntregar)}
-            </p>
-            <p className="mt-2 text-[12px] text-white/85">
-              {totalPedidos} {totalPedidos === 1 ? 'pedido' : 'pedidos'} · {porEntregar.length}{' '}
-              {porEntregar.length === 1 ? 'restaurante' : 'restaurantes'}
-            </p>
-          </Card>
-        )}
+      {porEntregar.length > 0 && (
+        <Card className="mt-4 border-none bg-brand p-5 text-white shadow-none">
+          <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-white/80">
+            Efectivo por entregar
+          </p>
+          <p className="font-display mt-1 text-[38px] font-bold leading-none tracking-tight tabular-nums">
+            {soles(totalPorEntregar)}
+          </p>
+          <p className="mt-2 text-[12px] text-white/85">
+            {totalPedidos} {totalPedidos === 1 ? 'pedido' : 'pedidos'} · {porEntregar.length}{' '}
+            {porEntregar.length === 1 ? 'restaurante' : 'restaurantes'}
+          </p>
+        </Card>
+      )}
 
-        <h2 className="font-mono mt-6 mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/55">
-          A entregar
-        </h2>
-        {porEntregar.length === 0 ? (
-          <EmptyState
-            icon="payments"
-            heading="Sin efectivo por entregar"
-            description={
-              esperandoConfirmar.length > 0
-                ? 'Ya entregaste todo el efectivo que tenías.'
-                : 'Cuando cobres en efectivo aparecerá aquí.'
-            }
-          />
-        ) : (
+      <h2 className="font-mono mt-6 mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/55">
+        A entregar
+      </h2>
+      {porEntregar.length === 0 ? (
+        <EmptyState
+          icon="payments"
+          heading="Sin efectivo por entregar"
+          description={
+            esperandoConfirmar.length > 0
+              ? 'Ya entregaste todo el efectivo que tenías.'
+              : 'Cuando cobres en efectivo aparecerá aquí.'
+          }
+        />
+      ) : (
+        <div className="flex flex-col gap-2.5">
+          {porEntregar.map((t) => (
+            <CashDeliverCard key={t.businessId} row={t} onDone={load} setError={setError} />
+          ))}
+        </div>
+      )}
+
+      {esperandoConfirmar.length > 0 && (
+        <>
+          <h2 className="font-mono mt-6 mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/55">
+            Esperando confirmación del local
+          </h2>
           <div className="flex flex-col gap-2.5">
-            {porEntregar.map((t) => (
-              <CashDeliverCard key={t.businessId} row={t} onDone={load} setError={setError} />
+            {esperandoConfirmar.map((t) => (
+              <AwaitingCard key={t.settlementId} row={t} />
             ))}
           </div>
-        )}
+        </>
+      )}
 
-        {esperandoConfirmar.length > 0 && (
-          <>
-            <h2 className="font-mono mt-6 mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/55">
-              Esperando confirmación del local
-            </h2>
-            <div className="flex flex-col gap-2.5">
-              {esperandoConfirmar.map((t) => (
-                <AwaitingCard key={t.settlementId} row={t} />
-              ))}
-            </div>
-          </>
-        )}
-
-        <h2 className="font-mono mt-6 mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/55">
-          Historial
-        </h2>
-        {history.length === 0 ? (
-          <EmptyState
-            icon="history"
-            heading="Sin entregas anteriores"
-            description="Aquí verás las entregas de efectivo que ya hiciste."
-          />
-        ) : (
-          <Card className="overflow-hidden p-0">
-            {history.map((h, i) => {
-              const chip = STATUS_VARIANT[h.status]
-              return (
-                <div
-                  key={h.id}
-                  className={cn(
-                    'flex items-center justify-between px-4 py-3',
-                    i > 0 && 'border-t border-ink/[0.06]',
-                  )}
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-[14px] font-medium">{h.businesses?.name ?? '—'}</p>
-                    <p className="font-mono text-[11px] text-ink-subtle">{h.settlement_date}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-display text-[14px] font-semibold tabular-nums">
-                      {soles(h.delivered_amount)}
-                    </p>
-                    <Badge variant={chip?.variant ?? 'default'} size="sm" className="mt-0.5">
-                      {chip?.label ?? h.status}
-                    </Badge>
-                  </div>
+      <h2 className="font-mono mt-6 mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/55">
+        Historial
+      </h2>
+      {history.length === 0 ? (
+        <EmptyState
+          icon="history"
+          heading="Sin entregas anteriores"
+          description="Aquí verás las entregas de efectivo que ya hiciste."
+        />
+      ) : (
+        <Card className="overflow-hidden p-0">
+          {history.map((h, i) => {
+            const chip = STATUS_VARIANT[h.status]
+            return (
+              <div
+                key={h.id}
+                className={cn(
+                  'flex items-center justify-between px-4 py-3',
+                  i > 0 && 'border-t border-ink/[0.06]',
+                )}
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-[14px] font-medium">{h.businesses?.name ?? '—'}</p>
+                  <p className="font-mono text-[11px] text-ink-subtle">{h.settlement_date}</p>
                 </div>
-              )
-            })}
-          </Card>
-        )}
-      </main>
-    </DriverShell>
+                <div className="text-right">
+                  <p className="font-display text-[14px] font-semibold tabular-nums">
+                    {soles(h.delivered_amount)}
+                  </p>
+                  <Badge variant={chip?.variant ?? 'default'} size="sm" className="mt-0.5">
+                    {chip?.label ?? h.status}
+                  </Badge>
+                </div>
+              </div>
+            )
+          })}
+        </Card>
+      )}
+    </main>
   )
 }
 
