@@ -3,6 +3,8 @@
 import { useEffect, useRef } from 'react'
 
 let sharedCtx: AudioContext | null = null
+let audioBusyUntil = 0
+let autoUnlocked = false
 
 function getCtx(): AudioContext | null {
   if (typeof window === 'undefined') return null
@@ -10,48 +12,126 @@ function getCtx(): AudioContext | null {
     window.AudioContext ??
     (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
   if (!Ctx) return null
-  if (!sharedCtx) sharedCtx = new Ctx()
+  if (!sharedCtx) {
+    sharedCtx = new Ctx()
+  }
   return sharedCtx
 }
 
-/** Desbloquea el audio dentro de un gesto del usuario (toggle de Alertas). */
+/** Desbloquea el audio dentro de un gesto del usuario (toggle o primer toque PWA). */
 export function unlockAudio(): void {
-  void getCtx()?.resume?.()
+  const ctx = getCtx()
+  if (ctx && ctx.state === 'suspended') {
+    void ctx.resume()
+  }
+}
+
+/**
+ * Registra listeners globales para auto-desbloquear audio en PWA al primer gesto
+ * y mantener activo el AudioContext cuando la PWA se minimiza/restaura.
+ */
+
+if (typeof window !== 'undefined' && !autoUnlocked) {
+  autoUnlocked = true
+  const handleGesture = () => {
+    unlockAudio()
+    window.removeEventListener('pointerdown', handleGesture)
+    window.removeEventListener('keydown', handleGesture)
+  }
+  window.addEventListener('pointerdown', handleGesture, { passive: true })
+  window.addEventListener('keydown', handleGesture, { passive: true })
+
+  // Re-activar AudioContext cuando la PWA sale de segundo plano / se minimiza
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      unlockAudio()
+    }
+  })
 }
 
 /**
  * Anuncia verbalmente el estado de pedidos pendientes u otros avisos.
- * Usa la API de Web Speech (SpeechSynthesis), disponible en Chrome/Edge/Safari.
- * Se ejecuta después del beep, no en lugar de él.
+ * Usa la API de Web Speech (SpeechSynthesis). Se desfasa suavemente tras el bip
+ * para evitar que la voz hable sobre los tonos de audio.
  */
-export function speak(text: string): void {
+export function speak(text: string, delayMs = 350): void {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
-  // Cancelar cualquier utterance anterior para no acumular
-  window.speechSynthesis.cancel()
-  const utterance = new SpeechSynthesisUtterance(text)
-  utterance.lang = 'es-PE'
-  utterance.rate = 1.1 // Ligeramente más rápido que normal
-  utterance.pitch = 1.0
-  utterance.volume = 1.0 // Volumen máximo
-  window.speechSynthesis.speak(utterance)
+
+  setTimeout(() => {
+    try {
+      window.speechSynthesis.cancel()
+      const utterance = new SpeechSynthesisUtterance(text)
+      utterance.lang = 'es-PE'
+      utterance.rate = 1.1
+      utterance.pitch = 1.0
+      utterance.volume = 1.0
+      window.speechSynthesis.speak(utterance)
+    } catch {
+      // Ignorar fallos de speech en entornos donde la voz no está disponible
+    }
+  }, delayMs)
 }
 
-/**
- * Genera el texto de anuncio según la cantidad de pedidos pendientes.
- */
+/** Genera el texto de anuncio según la cantidad de pedidos pendientes. */
 function pendingAnnouncement(count: number): string {
   if (count === 1) return 'Tienes un pedido nuevo'
   return `Tienes ${count} pedidos en espera`
 }
 
 /**
- * Tres alertas de audio del dashboard (PROPUESTAS_UX_PEDIDOS §7):
- *  · Tipo 1 — pedido nuevo: 880Hz + 1175Hz, doble bip, cada 3s mientras haya
- *    pendientes y `soundOn` (volumen mejorado a 0.55).
- *  · Tipo 2 — motorizado llegó: 660-880-660Hz, triple bip suave, una vez al
- *    cambiar a `waiting`. Suena AUNQUE `soundOn` esté apagado (acción física).
+ * Reproduce una secuencia de tonos senoidales con prevención de solapamiento.
+ * Si `isInterval` es verdadero y el canal está ocupado, el tick del intervalo se salta
+ * para evitar acumulación de sonidos cuando la PWA está minimizada.
+ */
+function playToneSequence(
+  freqs: number[],
+  durEach: number,
+  peak = 0.3,
+  isInterval = false,
+): boolean {
+  const ctx = getCtx()
+  if (!ctx) return false
+  if (ctx.state === 'suspended') {
+    void ctx.resume()
+  }
+
+  const now = ctx.currentTime
+
+  // Si es un intervalo repetitivo y el canal de audio está ocupado, omitir para no acumular bips
+  if (isInterval && now < audioBusyUntil) {
+    return false
+  }
+
+  const startAt = Math.max(now, audioBusyUntil)
+  let at = startAt
+
+  for (const f of freqs) {
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.type = 'sine'
+    osc.frequency.value = f
+
+    // Envolvente de ganancia suave para evitar clics eléctricos
+    gain.gain.setValueAtTime(0.0001, at)
+    gain.gain.exponentialRampToValueAtTime(Math.max(peak, 0.001), at + 0.015)
+    gain.gain.exponentialRampToValueAtTime(0.0001, at + durEach - 0.015)
+
+    osc.start(at)
+    osc.stop(at + durEach)
+    at += durEach + 0.04
+  }
+
+  audioBusyUntil = at + 0.06
+  return true
+}
+
+/**
+ * Alertas de audio del dashboard de negocios (PROPUESTAS_UX_PEDIDOS §7):
+ *  · Tipo 1 — pedido nuevo: 880Hz + 1175Hz, doble bip, cada 3s mientras haya pendientes.
+ *  · Tipo 2 — motorizado llegó: 660-880-660Hz, triple bip suave, una vez al cambiar a `waiting`.
  *  · Tipo 3 — buffer fase 3 (5m+ sin moto): 440Hz, bip largo, cada 8s.
- * Requiere un gesto previo (toggle de Alertas) por la política de autoplay.
  */
 export function useDashboardSounds({
   hasPending,
@@ -72,28 +152,7 @@ export function useDashboardSounds({
   const prevPendingCount = useRef(0)
   const prevWaiting = useRef(false)
 
-  function seq(freqs: number[], durEach: number, peak = 0.3) {
-    const ctx = getCtx()
-    if (!ctx) return
-    void ctx.resume?.()
-    let at = ctx.currentTime
-    for (const f of freqs) {
-      const osc = ctx.createOscillator()
-      const gain = ctx.createGain()
-      osc.connect(gain)
-      gain.connect(ctx.destination)
-      osc.type = 'sine'
-      osc.frequency.value = f
-      gain.gain.setValueAtTime(0.0001, at)
-      gain.gain.exponentialRampToValueAtTime(peak, at + 0.02)
-      gain.gain.exponentialRampToValueAtTime(0.0001, at + durEach)
-      osc.start(at)
-      osc.stop(at + durEach)
-      at += durEach + 0.04
-    }
-  }
-
-  // Tipo 1 — pedido nuevo (bip mejorado a 0.55 de volumen).
+  // Tipo 1 — pedido nuevo
   useEffect(() => {
     const stop = () => {
       if (t1.current) clearInterval(t1.current)
@@ -103,13 +162,13 @@ export function useDashboardSounds({
       stop()
       return stop
     }
-    const play = () => seq([880, 1175], 0.18, 0.55)
+    const play = () => playToneSequence([880, 1175], 0.18, 0.55, true)
     play()
     t1.current = setInterval(play, 3000)
     return stop
   }, [soundOn, hasPending])
 
-  // Anuncio por voz — cada 15 segundos mientras haya pedidos pendientes.
+  // Anuncio por voz — cada 15s o inmediatamente al subir la cuenta
   useEffect(() => {
     const stop = () => {
       if (tVoice.current) clearInterval(tVoice.current)
@@ -121,20 +180,19 @@ export function useDashboardSounds({
       return stop
     }
 
-    // Anunciar inmediatamente si hay un NUEVO pedido (count subió) o al iniciar el efecto
     if (pendingCount > prevPendingCount.current) {
-      speak(pendingAnnouncement(pendingCount))
+      speak(pendingAnnouncement(pendingCount), 450)
     }
     prevPendingCount.current = pendingCount
 
     tVoice.current = setInterval(() => {
-      speak(pendingAnnouncement(pendingCount))
+      speak(pendingAnnouncement(pendingCount), 450)
     }, 15000)
 
     return stop
   }, [soundOn, hasPending, pendingCount])
 
-  // Tipo 3 — buffer fase 3.
+  // Tipo 3 — buffer fase 3
   useEffect(() => {
     const stop = () => {
       if (t3.current) clearInterval(t3.current)
@@ -144,17 +202,17 @@ export function useDashboardSounds({
       stop()
       return stop
     }
-    const play = () => seq([440], 0.8, 0.25)
+    const play = () => playToneSequence([440], 0.8, 0.25, true)
     play()
     t3.current = setInterval(play, 8000)
     return stop
   }, [soundOn, hasBufferP3])
 
-  // Tipo 2 — motorizado llegó (edge, ignora soundOn) con voz.
+  // Tipo 2 — motorizado llegó (evento único de alta prioridad)
   useEffect(() => {
     if (hasWaiting && !prevWaiting.current) {
-      seq([660, 880, 660], 0.3, 0.22)
-      speak('El motorizado llegó al local')
+      playToneSequence([660, 880, 660], 0.3, 0.22, false)
+      speak('El motorizado llegó al local', 650)
     }
     prevWaiting.current = hasWaiting
   }, [hasWaiting])
