@@ -17,11 +17,20 @@ export async function GET(req: Request): Promise<Response> {
     await requireRole(req, 'admin')
     const service = createServiceClient()
 
-    // 1. Obtener negocios con balance_due > 0 o cargos pendientes
+    // 1. Negocios con saldo distinto de cero, en CUALQUIER dirección.
+    //
+    // Antes filtraba `.gt('balance_due', 0)`. Desde la migración 0124 el saldo
+    // se deriva del ledger y puede quedar NEGATIVO (saldo a favor del negocio):
+    // con el filtro viejo esos negocios desaparecían del panel justo cuando hay
+    // algo que resolver con ellos. `.neq(0)` los conserva.
+    //
+    // PENDIENTE, fuera del alcance de 0124: separar el panel en dos secciones
+    // —"deben" y "les debemos"— en vez de una sola lista ordenada. Eso es
+    // trabajo de frontend en apps/admin/app/cobros/, no de esta query.
     const { data: businesses, error: bizError } = await service
       .from('businesses')
       .select('id, name, logo_url, accent_color, yape_number, balance_due')
-      .gt('balance_due', 0)
+      .neq('balance_due', 0)
       .order('balance_due', { ascending: false })
 
     if (bizError) throw new Error(bizError.message)
