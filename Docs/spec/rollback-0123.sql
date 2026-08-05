@@ -21,11 +21,27 @@
 --      falla con 22P02 en toda llamada — ver M-6 en RIESGOS-LEDGER.md). Es el
 --      estado real previo, no una mejora. El rollback restaura, no arregla.
 --
--- ANTES DE EJECUTARLO
---   1. Revertir el código de acompañamiento (endpoint, enums, enum-drift,
---      limpiezas). Si no, el repo queda apuntando a lo que este archivo
---      deshace.
---   2. `pnpm db:types` después.
+-- =============================================================================
+
+
+-- ── PASO 1 · REVERTIR EL CÓDIGO. NO ES OPCIONAL Y VA PRIMERO ----------------
+--
+-- Este archivo deshace la migración. Si el repo sigue apuntando al mundo
+-- post-0123, queda roto de las dos puntas: el endpoint de apelaciones llama a
+-- una firma de 4 argumentos que este rollback devuelve a su versión rota, y
+-- `database.types.ts` describe un esquema que ya no es el que hay.
+--
+--   git revert 18bfb76   # chore(types): database.types.ts contra LOCAL
+--   git revert 82081c4   # refactor: código de acompañamiento de 0123
+--
+-- En ese orden (el inverso al de aplicación). Solo después ejecutar el SQL de
+-- abajo. Y al terminar:
+--
+--   pnpm db:types        # regenerar contra el remoto ya revertido
+--   pnpm type-check
+--
+-- Si se ejecuta el SQL sin revertir los commits, el resultado NO es "como
+-- antes": es un tercer estado que nunca existió y que nadie ha probado.
 --
 -- =============================================================================
 
