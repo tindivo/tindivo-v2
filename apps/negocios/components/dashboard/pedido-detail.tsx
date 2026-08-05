@@ -1,9 +1,9 @@
 'use client'
 
-import { Icon } from '@tindivo/ui'
+import { cn, Icon } from '@tindivo/ui'
 
 import { useEffect, useState } from 'react'
-import type { OrderVM } from '@/lib/orders/view-model'
+import { formatReadyDelta, type OrderVM } from '@/lib/orders/view-model'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import { mmss, PayBadgeMini, SourceBadgeMini, soles } from './primitives'
 
@@ -53,7 +53,7 @@ function Row({
         fontSize: 13,
       }}
     >
-      <span style={{ color: '#57534e' }}>{label}</span>
+      <span className="text-ink-muted">{label}</span>
       <span className={mono ? 'font-mono' : ''} style={{ fontWeight: bold ? 700 : 500 }}>
         {value}
       </span>
@@ -65,17 +65,18 @@ function Row({
 function PaySectionCash({ order }: { order: OrderVM }) {
   return (
     <div
+      className="bg-green-50 border border-green-200"
       style={{
-        background: '#F0FDF4',
         borderRadius: 12,
         padding: '12px 14px',
-        border: '1px solid #BBF7D0',
         flexShrink: 0,
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
         <Icon weight={500} name="payments" size={18} filled className="text-green-600" />
-        <div style={{ fontSize: 13, fontWeight: 700, color: '#166534' }}>Pago en efectivo</div>
+        <div className="text-green-800" style={{ fontSize: 13, fontWeight: 700 }}>
+          Pago en efectivo
+        </div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
         <Row label="Total a cobrar" value={soles(order.total)} mono bold />
@@ -84,20 +85,20 @@ function PaySectionCash({ order }: { order: OrderVM }) {
         )}
         {order.cashChange != null && order.cashChange > 0 && (
           <div
+            className="bg-green-100"
             style={{
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              background: '#DCFCE7',
               borderRadius: 8,
               padding: '6px 10px',
               marginTop: 4,
             }}
           >
-            <span style={{ fontSize: 12, fontWeight: 700, color: '#166534' }}>
+            <span className="text-green-800" style={{ fontSize: 12, fontWeight: 700 }}>
               Vuelto a preparar
             </span>
-            <span className="font-mono" style={{ fontSize: 16, fontWeight: 700, color: '#15803D' }}>
+            <span className="font-mono text-green-700" style={{ fontSize: 16, fontWeight: 700 }}>
               {soles(order.cashChange)}
             </span>
           </div>
@@ -110,35 +111,34 @@ function PaySectionCash({ order }: { order: OrderVM }) {
 function PaySectionWallet({ order, qrUrl }: { order: OrderVM; qrUrl: string | null }) {
   return (
     <div
+      className="bg-violet-50 border border-violet-200"
       style={{
-        background: '#F5F3FF',
         borderRadius: 12,
         padding: '12px 14px',
-        border: '1px solid #DDD6FE',
         flexShrink: 0,
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
         <Icon weight={500} name="qr_code_2" size={18} filled className="text-violet-600" />
-        <div style={{ fontSize: 13, fontWeight: 700, color: '#5B21B6' }}>
+        <div className="text-violet-800" style={{ fontSize: 13, fontWeight: 700 }}>
           Cobrar con billetera digital
         </div>
       </div>
       <Row label="Total a cobrar" value={soles(order.total)} mono bold />
       <div
+        className="bg-white"
         style={{
           marginTop: 10,
-          background: '#fff',
           borderRadius: 10,
           padding: 10,
           textAlign: 'center',
         }}
       >
         <div
+          className="text-ink-muted"
           style={{
             fontSize: 10,
             fontWeight: 700,
-            color: '#57534e',
             marginBottom: 6,
             textTransform: 'uppercase',
             letterSpacing: '0.06em',
@@ -161,7 +161,7 @@ function PaySectionWallet({ order, qrUrl }: { order: OrderVM; qrUrl: string | nu
           />
         ) : (
           <div
-            className="relative overflow-hidden rounded-[10px] bg-[#f0ebe3]"
+            className="relative overflow-hidden rounded-[10px] bg-surface-low"
             style={{ width: 90, height: 90, margin: '0 auto 8px' }}
           >
             <span className="absolute inset-0 flex items-center justify-center text-[10px] uppercase tracking-wide text-ink/50">
@@ -202,11 +202,11 @@ function PaySectionPrepaid({
       {zoom && proofUrl && (
         <div
           onClick={() => setZoom(false)}
+          className="bg-black/85"
           style={{
             position: 'fixed',
             inset: 0,
             zIndex: 9999,
-            background: 'rgba(0,0,0,0.85)',
             backdropFilter: 'blur(4px)',
             display: 'flex',
             flexDirection: 'column',
@@ -218,12 +218,11 @@ function PaySectionPrepaid({
           <button
             type="button"
             onClick={() => setZoom(false)}
+            className="bg-white border-transparent shadow-elev-3"
             style={{
               position: 'absolute',
               top: 20,
               right: 20,
-              background: '#fff',
-              border: 'none',
               borderRadius: '50%',
               width: 40,
               height: 40,
@@ -231,7 +230,6 @@ function PaySectionPrepaid({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
             }}
           >
             <Icon weight={500} name="close" size={24} />
@@ -240,37 +238,37 @@ function PaySectionPrepaid({
           <img
             src={proofUrl}
             alt="Comprobante ampliado"
+            className="shadow-elev-4"
             style={{
               maxWidth: '90vw',
               maxHeight: '85vh',
               objectFit: 'contain',
               borderRadius: 12,
-              boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
             }}
           />
-          <div style={{ color: '#fff', fontSize: 13, marginTop: 12, fontWeight: 600 }}>
+          <div className="text-white" style={{ fontSize: 13, marginTop: 12, fontWeight: 600 }}>
             Comprobante de pago — {order.customer ?? 'Cliente'} ({soles(order.total)})
           </div>
         </div>
       )}
 
       <div
+        className={cn(
+          'border-[1.5px] shadow-elev-2',
+          verified && 'border-green-400',
+          !verified && isSecondAttempt && 'border-red-300',
+          !verified && !isSecondAttempt && 'border-sky-400',
+        )}
         style={{
           borderRadius: 12,
           overflow: 'hidden',
-          border: verified
-            ? '1.5px solid #4ADE80'
-            : isSecondAttempt
-              ? '1.5px solid #FCA5A5'
-              : '1.5px solid #38BDF8',
-          boxShadow: '0 4px 14px rgba(0,0,0,0.04)',
           flexShrink: 0,
         }}
       >
         <div
+          className={cn(verified ? 'bg-green-50' : isSecondAttempt ? 'bg-red-50' : 'bg-sky-50')}
           style={{
             padding: '10px 14px',
-            background: verified ? '#F0FDF4' : isSecondAttempt ? '#FEF2F2' : '#F0F9FF',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -288,25 +286,22 @@ function PaySectionPrepaid({
               }
             />
             <div
-              style={{
-                fontSize: 13,
-                fontWeight: 700,
-                color: verified ? '#166534' : isSecondAttempt ? '#991B1B' : '#0369A1',
-              }}
+              className={cn(
+                'text-[13px] font-bold',
+                verified ? 'text-green-800' : isSecondAttempt ? 'text-red-800' : 'text-sky-700',
+              )}
             >
               {verified ? 'Pago verificado' : 'Verificar comprobante de pago'}
             </div>
           </div>
           {isSecondAttempt && !verified && (
             <span
+              className="bg-danger-soft text-red-800 border border-red-300"
               style={{
                 fontSize: 10,
                 fontWeight: 700,
-                background: '#FEE2E2',
-                color: '#991B1B',
                 padding: '3px 8px',
                 borderRadius: 999,
-                border: '1px solid #FCA5A5',
               }}
             >
               Segundo y último intento
@@ -314,24 +309,23 @@ function PaySectionPrepaid({
           )}
         </div>
 
-        <div style={{ padding: '12px 14px', background: '#fff' }}>
+        <div className="bg-white" style={{ padding: '12px 14px' }}>
           {/* Guía de validación */}
           {!verified && (
             <div
+              className="bg-slate-50 border border-slate-200"
               style={{
                 marginBottom: 10,
                 padding: '10px 12px',
-                background: '#F8FAFC',
                 borderRadius: 10,
-                border: '1px solid #E2E8F0',
                 fontSize: 12,
               }}
             >
               <div
+                className="text-ink-muted"
                 style={{
                   fontSize: 10,
                   fontWeight: 700,
-                  color: '#57534e',
                   marginBottom: 6,
                   letterSpacing: '0.05em',
                 }}
@@ -347,16 +341,18 @@ function PaySectionPrepaid({
                 }}
               >
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontSize: 10, color: '#57534e', marginBottom: 2 }}>Monto</span>
+                  <span className="text-ink-muted" style={{ fontSize: 10, marginBottom: 2 }}>
+                    Monto
+                  </span>
                   <span
-                    className="font-mono"
-                    style={{ fontWeight: 700, color: '#16A34A', fontSize: 13 }}
+                    className="font-mono text-success"
+                    style={{ fontWeight: 700, fontSize: 13 }}
                   >
                     {soles(order.total)}
                   </span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontSize: 10, color: '#57534e', marginBottom: 2 }}>
+                  <span className="text-ink-muted" style={{ fontSize: 10, marginBottom: 2 }}>
                     Hora pedido
                   </span>
                   <span className="font-mono" style={{ fontWeight: 700, fontSize: 13 }}>
@@ -364,7 +360,9 @@ function PaySectionPrepaid({
                   </span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                  <span style={{ fontSize: 10, color: '#57534e', marginBottom: 2 }}>Cliente</span>
+                  <span className="text-ink-muted" style={{ fontSize: 10, marginBottom: 2 }}>
+                    Cliente
+                  </span>
                   <span
                     style={{
                       fontWeight: 700,
@@ -379,11 +377,10 @@ function PaySectionPrepaid({
                 </div>
               </div>
               <div
+                className="text-slate-600 border-t border-dashed border-slate-300"
                 style={{
                   marginTop: 6,
                   fontSize: 10,
-                  color: '#475569',
-                  borderTop: '1px dashed #CBD5E1',
                   paddingTop: 5,
                   lineHeight: 1.3,
                 }}
@@ -398,9 +395,9 @@ function PaySectionPrepaid({
           <Row label="Total pagado" value={soles(order.total)} mono bold />
           <div style={{ marginTop: 10, marginBottom: 4 }}>
             <div
+              className="text-ink-muted"
               style={{
                 fontSize: 10,
-                color: '#57534e',
                 marginBottom: 6,
                 fontWeight: 700,
                 letterSpacing: '0.04em',
@@ -411,34 +408,32 @@ function PaySectionPrepaid({
             {proofUrl ? (
               <div
                 onClick={() => setZoom(true)}
+                className="border border-slate-300 bg-slate-100"
                 style={{
                   position: 'relative',
                   cursor: 'pointer',
                   borderRadius: 10,
                   overflow: 'hidden',
-                  border: '1px solid #CBD5E1',
-                  background: '#F1F5F9',
                 }}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={proofUrl}
                   alt="Comprobante del cliente"
+                  className="bg-slate-50"
                   style={{
                     width: '100%',
                     maxHeight: 320,
                     objectFit: 'contain',
-                    background: '#F8FAFC',
                     display: 'block',
                   }}
                 />
                 <div
+                  className="bg-ink/95 text-white shadow-elev-2"
                   style={{
                     position: 'absolute',
                     bottom: 8,
                     right: 8,
-                    background: 'rgba(15, 23, 42, 0.95)',
-                    color: '#fff',
                     fontSize: 11,
                     padding: '6px 12px',
                     borderRadius: 8,
@@ -447,17 +442,16 @@ function PaySectionPrepaid({
                     gap: 5,
                     fontWeight: 600,
                     backdropFilter: 'blur(2px)',
-                    boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
                   }}
                 >
                   <Icon weight={500} name="zoom_in" size={15} /> Ampliar comprobante
                 </div>
                 {verified && (
                   <div
+                    className="bg-success/15"
                     style={{
                       position: 'absolute',
                       inset: 0,
-                      background: 'rgba(22,163,74,0.15)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -475,7 +469,7 @@ function PaySectionPrepaid({
               </div>
             ) : (
               <div
-                className="relative overflow-hidden rounded-[10px] bg-[#f0ebe3]"
+                className="relative overflow-hidden rounded-[10px] bg-surface-low"
                 style={{ width: '100%', height: 130 }}
               >
                 <span className="absolute inset-0 flex items-center justify-center px-1.5 text-center text-[10px] uppercase tracking-wide text-ink/50">
@@ -486,10 +480,10 @@ function PaySectionPrepaid({
           </div>
           {verified && (
             <div
+              className="text-green-700"
               style={{
                 marginTop: 8,
                 fontSize: 12,
-                color: '#15803D',
                 fontWeight: 600,
                 textAlign: 'center',
               }}
@@ -506,42 +500,43 @@ function PaySectionPrepaid({
 function PaySectionMixed({ order, qrUrl }: { order: OrderVM; qrUrl: string | null }) {
   return (
     <div
+      className="bg-amber-50 border border-amber-200"
       style={{
-        background: '#FFFBEB',
         borderRadius: 12,
         padding: '12px 14px',
-        border: '1px solid #FDE68A',
         flexShrink: 0,
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
         <Icon weight={500} name="shuffle" size={18} filled className="text-amber-700" />
-        <div style={{ fontSize: 13, fontWeight: 700, color: '#92400E' }}>Pago combinado</div>
+        <div className="text-amber-800" style={{ fontSize: 13, fontWeight: 700 }}>
+          Pago combinado
+        </div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
         <Row label="Billetera digital" value={soles(order.walletPart ?? 0)} mono />
         <Row label="Efectivo" value={soles(order.cashPart ?? 0)} mono />
-        <div style={{ height: 1, background: '#EAE7E2', margin: '2px 0' }} />
+        <div className="h-px bg-border" style={{ margin: '2px 0' }} />
         <Row label="Total" value={soles(order.total)} mono bold />
         {order.paysWith != null && (
           <Row label="Cliente paga efectivo con" value={soles(order.paysWith)} mono />
         )}
         {order.cashChange != null && order.cashChange > 0 && (
           <div
+            className="bg-green-100"
             style={{
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              background: '#D1FAE5',
               borderRadius: 8,
               padding: '6px 10px',
               marginTop: 4,
             }}
           >
-            <span style={{ fontSize: 12, fontWeight: 700, color: '#166534' }}>
+            <span className="text-green-800" style={{ fontSize: 12, fontWeight: 700 }}>
               Vuelto (efectivo)
             </span>
-            <span className="font-mono" style={{ fontSize: 15, fontWeight: 700, color: '#15803D' }}>
+            <span className="font-mono text-green-700" style={{ fontSize: 15, fontWeight: 700 }}>
               {soles(order.cashChange)}
             </span>
           </div>
@@ -549,9 +544,9 @@ function PaySectionMixed({ order, qrUrl }: { order: OrderVM; qrUrl: string | nul
       </div>
       {qrUrl && (
         <div
+          className="bg-white"
           style={{
             marginTop: 10,
-            background: '#fff',
             borderRadius: 10,
             padding: 10,
             textAlign: 'center',
@@ -598,35 +593,33 @@ function ReasonModal({
   const [sel, setSel] = useState(0)
   return (
     <div
+      className="bg-black/50"
       style={{
         position: 'absolute',
         inset: 0,
         zIndex: 300,
-        background: 'rgba(0,0,0,0.5)',
         display: 'flex',
         alignItems: 'flex-end',
         justifyContent: 'center',
       }}
     >
       <div
+        className="bg-white shadow-elev-3"
         style={{
-          background: '#fff',
           borderRadius: '20px 20px 0 0',
           padding: '20px 18px 28px',
           width: '100%',
           maxWidth: 440,
-          boxShadow: '0 -8px 40px rgba(0,0,0,0.15)',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
           <div
+            className="bg-danger-soft text-danger"
             style={{
               width: 38,
               height: 38,
               borderRadius: 10,
               flexShrink: 0,
-              background: '#fee2e2',
-              color: '#dc2626',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -636,18 +629,18 @@ function ReasonModal({
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 16, fontWeight: 700 }}>{title}</div>
-            <div style={{ fontSize: 12, color: '#57534e', marginTop: 1 }}>
+            <div className="text-ink-muted" style={{ fontSize: 12, marginTop: 1 }}>
               #{order.id} · {order.customer ?? 'Cliente'}
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
+            className="bg-ink/[0.06]"
             style={{
               width: 30,
               height: 30,
               borderRadius: 8,
-              background: 'rgba(26,22,20,0.06)',
               border: 'none',
               cursor: 'pointer',
               display: 'flex',
@@ -660,10 +653,10 @@ function ReasonModal({
         </div>
 
         <div
+          className="text-ink-muted"
           style={{
             fontSize: 12,
             fontWeight: 700,
-            color: '#57534e',
             marginBottom: 10,
             textTransform: 'uppercase',
             letterSpacing: '0.06em',
@@ -677,15 +670,16 @@ function ReasonModal({
               type="button"
               key={r.code + i}
               onClick={() => setSel(i)}
+              className={cn(
+                'border-transparent',
+                i === sel ? 'bg-ink text-white' : 'bg-surface text-ink',
+              )}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: 10,
                 padding: '10px 12px',
                 borderRadius: 10,
-                background: i === sel ? '#1a1614' : '#faf6f1',
-                color: i === sel ? '#fff' : '#1a1614',
-                border: 'none',
                 fontFamily: 'inherit',
                 textAlign: 'left',
                 cursor: 'pointer',
@@ -693,12 +687,14 @@ function ReasonModal({
               }}
             >
               <div
+                className={cn(
+                  'border-2',
+                  i === sel ? 'border-white bg-white' : 'border-border bg-transparent',
+                )}
                 style={{
                   width: 16,
                   height: 16,
                   borderRadius: 999,
-                  border: `2px solid ${i === sel ? '#fff' : '#EAE7E2'}`,
-                  background: i === sel ? '#fff' : 'transparent',
                   flexShrink: 0,
                   display: 'flex',
                   alignItems: 'center',
@@ -706,7 +702,7 @@ function ReasonModal({
                 }}
               >
                 {i === sel && (
-                  <div style={{ width: 7, height: 7, borderRadius: 999, background: '#1a1614' }} />
+                  <div className="bg-ink" style={{ width: 7, height: 7, borderRadius: 999 }} />
                 )}
               </div>
               {r.label}
@@ -750,35 +746,33 @@ function PrepTimeModal({
   const [sel, setSel] = useState(20)
   return (
     <div
+      className="bg-black/50"
       style={{
         position: 'absolute',
         inset: 0,
         zIndex: 300,
-        background: 'rgba(0,0,0,0.5)',
         display: 'flex',
         alignItems: 'flex-end',
         justifyContent: 'center',
       }}
     >
       <div
+        className="bg-white shadow-elev-3"
         style={{
-          background: '#fff',
           borderRadius: '20px 20px 0 0',
           padding: '20px 18px 28px',
           width: '100%',
           maxWidth: 440,
-          boxShadow: '0 -8px 40px rgba(0,0,0,0.15)',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
           <div
+            className="bg-brand-soft text-brand"
             style={{
               width: 38,
               height: 38,
               borderRadius: 10,
               flexShrink: 0,
-              background: '#fff7ed',
-              color: '#f97316',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -788,18 +782,18 @@ function PrepTimeModal({
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 16, fontWeight: 700 }}>Tiempo de preparación</div>
-            <div style={{ fontSize: 12, color: '#57534e', marginTop: 1 }}>
+            <div className="text-ink-muted" style={{ fontSize: 12, marginTop: 1 }}>
               #{order.id} · {order.customer ?? 'Cliente'}
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
+            className="bg-ink/[0.06]"
             style={{
               width: 30,
               height: 30,
               borderRadius: 8,
-              background: 'rgba(26,22,20,0.06)',
               border: 'none',
               cursor: 'pointer',
               display: 'flex',
@@ -812,10 +806,10 @@ function PrepTimeModal({
         </div>
 
         <div
+          className="text-ink-muted"
           style={{
             fontSize: 12,
             fontWeight: 700,
-            color: '#57534e',
             marginBottom: 10,
             textTransform: 'uppercase',
             letterSpacing: '0.06em',
@@ -837,10 +831,12 @@ function PrepTimeModal({
               type="button"
               key={m}
               onClick={() => setSel(m)}
+              className={cn(
+                m === sel
+                  ? 'bg-ink text-white border-transparent'
+                  : 'bg-white text-ink border border-border',
+              )}
               style={{
-                border: m === sel ? 'none' : '1px solid #EAE7E2',
-                background: m === sel ? '#1a1614' : '#fff',
-                color: m === sel ? '#fff' : '#1a1614',
                 fontFamily: 'var(--font-jetbrains), ui-monospace, monospace',
                 fontWeight: 700,
                 fontSize: 14,
@@ -973,13 +969,13 @@ export function DetailScreen({
 
   const content = (
     <div
+      className="bg-white"
       style={{
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
         maxHeight: '100%',
         minHeight: 0,
-        background: '#fff',
         position: 'relative',
         overflow: 'hidden',
       }}
@@ -1027,12 +1023,11 @@ export function DetailScreen({
 
       {/* Header flotante/fijo */}
       <div
+        className="bg-white border-b border-border"
         style={{
           padding: mobile ? '10px 14px' : '12px 18px',
-          borderBottom: '1px solid #EAE7E2',
           position: 'sticky',
           top: 0,
-          background: '#fff',
           zIndex: 10,
           display: 'flex',
           alignItems: 'center',
@@ -1044,11 +1039,11 @@ export function DetailScreen({
           <button
             type="button"
             onClick={actions.onClose}
+            className="bg-ink/[0.06]"
             style={{
               width: 34,
               height: 34,
               borderRadius: 10,
-              background: 'rgba(26,22,20,0.06)',
               border: 'none',
               cursor: 'pointer',
               display: 'flex',
@@ -1070,12 +1065,12 @@ export function DetailScreen({
               marginBottom: 3,
             }}
           >
-            <span className="font-mono" style={{ fontSize: 12, fontWeight: 700, color: '#57534e' }}>
+            <span className="font-mono text-ink-muted" style={{ fontSize: 12, fontWeight: 700 }}>
               #{order.id}
             </span>
-            {isPending && (
+            {isPending ? (
               <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                <span style={{ fontSize: 11, color: '#57534e' }}>
+                <span className="text-ink-muted" style={{ fontSize: 11 }}>
                   ·{' '}
                   {order.status === 'awaiting_payment'
                     ? 'paga antes de'
@@ -1084,17 +1079,21 @@ export function DetailScreen({
                       : 'acepta antes de'}
                 </span>
                 <span
-                  className="font-mono"
+                  className={cn('font-mono', order.countdownSec < 60 ? 'text-danger' : 'text-ink')}
                   style={{
                     fontSize: 12,
                     fontWeight: 700,
-                    color: order.countdownSec < 60 ? '#dc2626' : '#1a1614',
                   }}
                 >
                   {mmss(order.countdownSec)}
                 </span>
               </span>
-            )}
+            ) : order.readySec != null && order.readySec < 0 ? (
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-danger bg-danger-soft px-2 py-0.5 rounded-full border border-danger/20">
+                <Icon name="priority_high" size={12} weight={500} filled className="text-danger" />
+                ¡Demorado! <span className="font-mono">{formatReadyDelta(order.readySec)}</span>
+              </span>
+            ) : null}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <SourceBadgeMini source={order.source} />
@@ -1102,11 +1101,10 @@ export function DetailScreen({
           </div>
         </div>
         <span
-          className="font-mono"
+          className="font-mono text-ink"
           style={{
             fontSize: mobile ? 18 : 20,
             fontWeight: 700,
-            color: '#1a1614',
             flexShrink: 0,
           }}
         >
@@ -1116,11 +1114,11 @@ export function DetailScreen({
           <button
             type="button"
             onClick={actions.onClose}
+            className="bg-ink/[0.06]"
             style={{
               width: 32,
               height: 32,
               borderRadius: 9,
-              background: 'rgba(26,22,20,0.06)',
               border: 'none',
               cursor: 'pointer',
               display: 'flex',
@@ -1136,9 +1134,8 @@ export function DetailScreen({
       {/* Driver arrived banner */}
       {order.state === 'waiting' && (
         <div
+          className="bg-success text-white"
           style={{
-            background: '#16A34A',
-            color: '#fff',
             padding: '10px 16px',
             display: 'flex',
             alignItems: 'center',
@@ -1181,9 +1178,8 @@ export function DetailScreen({
           order.status === 'cancelled' &&
           order.cancelReasonCode === 'proof_rejected_final' && (
             <div
+              className="bg-warning-soft border border-amber-300"
               style={{
-                background: '#FEF3C7',
-                border: '1px solid #FCD34D',
                 borderRadius: 12,
                 padding: '12px 14px',
                 flexShrink: 0,
@@ -1191,11 +1187,11 @@ export function DetailScreen({
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
                 <Icon weight={500} name="gavel" size={18} filled className="text-amber-600" />
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#92400E' }}>
+                <div className="text-amber-800" style={{ fontSize: 13, fontWeight: 700 }}>
                   El cliente apeló el rechazo de este pedido
                 </div>
               </div>
-              <div style={{ fontSize: 12, color: '#B45309', lineHeight: 1.4 }}>
+              <div className="text-amber-700" style={{ fontSize: 12, lineHeight: 1.4 }}>
                 Tindivo está revisando este caso. Te recomendamos verificar tu cuenta Yape/Plin por
                 si el pago sí ingresó.
               </div>
@@ -1205,12 +1201,11 @@ export function DetailScreen({
         {/* Cliente y Dirección */}
         {isValidandoPrepaid ? (
           <div
+            className="bg-surface text-ink-muted"
             style={{
-              background: '#faf6f1',
               borderRadius: 12,
               padding: '8px 12px',
               fontSize: 12,
-              color: '#57534e',
               display: 'flex',
               alignItems: 'center',
               flexWrap: 'wrap',
@@ -1220,7 +1215,7 @@ export function DetailScreen({
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               <Icon weight={500} name="person" size={14} className="text-ink-muted" />
-              <span style={{ fontWeight: 700, color: '#1a1614' }}>
+              <span className="text-ink" style={{ fontWeight: 700 }}>
                 {order.customer ?? 'Cliente'}
               </span>
             </div>
@@ -1229,9 +1224,8 @@ export function DetailScreen({
                 <span>·</span>
                 <a
                   href={`tel:${order.phone}`}
+                  className="text-brand no-underline"
                   style={{
-                    color: '#f97316',
-                    textDecoration: 'none',
                     fontWeight: 600,
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -1267,18 +1261,18 @@ export function DetailScreen({
           <>
             {/* Cliente */}
             <div
+              className="bg-surface"
               style={{
-                background: '#faf6f1',
                 borderRadius: 12,
                 padding: '12px 14px',
                 flexShrink: 0,
               }}
             >
               <div
+                className="text-ink-muted"
                 style={{
                   fontSize: 10,
                   fontWeight: 700,
-                  color: '#57534e',
                   textTransform: 'uppercase',
                   letterSpacing: '0.06em',
                   marginBottom: 7,
@@ -1292,13 +1286,12 @@ export function DetailScreen({
               {order.phone && (
                 <a
                   href={`tel:${order.phone}`}
+                  className="text-brand no-underline"
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: 6,
                     fontSize: 13,
-                    color: '#f97316',
-                    textDecoration: 'none',
                     fontWeight: 600,
                   }}
                 >
@@ -1310,18 +1303,18 @@ export function DetailScreen({
             {/* Dirección */}
             {order.addressRef && (
               <div
+                className="bg-surface"
                 style={{
-                  background: '#faf6f1',
                   borderRadius: 12,
                   padding: '12px 14px',
                   flexShrink: 0,
                 }}
               >
                 <div
+                  className="text-ink-muted"
                   style={{
                     fontSize: 10,
                     fontWeight: 700,
-                    color: '#57534e',
                     textTransform: 'uppercase',
                     letterSpacing: '0.06em',
                     marginBottom: 7,
@@ -1348,8 +1341,8 @@ export function DetailScreen({
           <details
             open={itemsOpen}
             onToggle={(e) => setItemsOpen(e.currentTarget.open)}
+            className="bg-surface"
             style={{
-              background: '#faf6f1',
               borderRadius: 12,
               padding: isValidandoPrepaid ? '10px 12px' : '12px 14px',
               flexShrink: 0,
@@ -1383,20 +1376,19 @@ export function DetailScreen({
                 />
               </div>
             </summary>
-            <div style={{ marginTop: 8, borderTop: '1px solid #EAE7E2', paddingTop: 8 }}>
+            <div className="border-t border-border" style={{ marginTop: 8, paddingTop: 8 }}>
               {items.map((it, i) => (
                 <div
                   key={i}
-                  style={{
-                    padding: '5px 0',
-                    borderBottom: i < items.length - 1 ? '1px solid #EAE7E2' : 'none',
-                  }}
+                  className={cn(
+                    i < items.length - 1 ? 'border-b border-border' : 'border-b border-transparent',
+                  )}
+                  style={{ padding: '5px 0' }}
                 >
                   <div style={{ display: 'flex', gap: 8 }}>
                     <span
-                      className="font-mono"
+                      className="font-mono text-ink-muted"
                       style={{
-                        color: '#57534e',
                         width: 22,
                         flexShrink: 0,
                         fontWeight: 700,
@@ -1406,20 +1398,23 @@ export function DetailScreen({
                     </span>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 14, fontWeight: 600 }}>{it.name}</div>
-                      {it.mods && <div style={{ fontSize: 12, color: '#57534e' }}>{it.mods}</div>}
+                      {it.mods && (
+                        <div className="text-ink-muted" style={{ fontSize: 12 }}>
+                          {it.mods}
+                        </div>
+                      )}
                       {it.note && (
-                        <div style={{ fontSize: 12, color: '#B45309', marginTop: 2 }}>
+                        <div className="text-amber-700" style={{ fontSize: 12, marginTop: 2 }}>
                           <Icon weight={500} name="info" size={11} /> {it.note}
                         </div>
                       )}
                     </div>
                     <span
-                      className="font-mono"
+                      className="font-mono text-ink-muted"
                       style={{
                         fontSize: 13,
                         fontWeight: 600,
                         flexShrink: 0,
-                        color: '#57534e',
                       }}
                     >
                       {soles(it.price)}
@@ -1428,10 +1423,10 @@ export function DetailScreen({
                 </div>
               ))}
               <div
+                className="border-t border-border"
                 style={{
                   marginTop: 10,
                   padding: '8px 0 0',
-                  borderTop: '1px solid #EAE7E2',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: 4,
@@ -1447,8 +1442,8 @@ export function DetailScreen({
           <details
             open={itemsOpen}
             onToggle={(e) => setItemsOpen(e.currentTarget.open)}
+            className="bg-surface"
             style={{
-              background: '#faf6f1',
               borderRadius: 12,
               padding: isValidandoPrepaid ? '10px 12px' : '12px 14px',
               flexShrink: 0,
@@ -1481,9 +1476,9 @@ export function DetailScreen({
               </div>
             </summary>
             <div
+              className="border-t border-border"
               style={{
                 marginTop: 8,
-                borderTop: '1px solid #EAE7E2',
                 paddingTop: 8,
                 display: 'flex',
                 flexDirection: 'column',
@@ -1492,7 +1487,7 @@ export function DetailScreen({
             >
               <Row label="Total del pedido" value={soles(order.amount)} mono />
               <Row label="Delivery" value={soles(order.deliveryFee)} mono />
-              <div style={{ height: 1, background: '#EAE7E2', margin: '2px 0' }} />
+              <div className="h-px bg-border" style={{ margin: '2px 0' }} />
               <Row label="Total a cobrar" value={soles(order.total)} mono bold />
             </div>
           </details>
@@ -1505,25 +1500,22 @@ export function DetailScreen({
           <>
             {isLoadingActions ? (
               <div
+                className="bg-gray-100 border border-gray-200 animate-pulse"
                 style={{
-                  background: '#F3F4F6',
                   borderRadius: 12,
                   padding: '12px 14px',
                   height: 64,
-                  border: '1px solid #E5E7EB',
                 }}
-                className="animate-pulse"
               />
             ) : (
               <>
                 {/* 1. Esperando comprobante del cliente (pending_acceptance o validando sin comprobante aún) */}
                 {isPrepaidAwaitingProof && (
                   <div
+                    className="bg-brand-soft border border-orange-200"
                     style={{
-                      background: '#FFF7ED',
                       borderRadius: 12,
                       padding: '12px 14px',
-                      border: '1px solid #FFEDD5',
                       flexShrink: 0,
                     }}
                   >
@@ -1535,11 +1527,11 @@ export function DetailScreen({
                         filled
                         className="text-orange-700"
                       />
-                      <div style={{ fontSize: 13, fontWeight: 700, color: '#9A3412' }}>
+                      <div className="text-orange-800" style={{ fontSize: 13, fontWeight: 700 }}>
                         Pago por Yape / Plin
                       </div>
                     </div>
-                    <div style={{ fontSize: 12, color: '#C2410C', lineHeight: 1.4 }}>
+                    <div className="text-brand-dark" style={{ fontSize: 12, lineHeight: 1.4 }}>
                       Confirma la disponibilidad de insumos para este pedido. Una vez aceptado, el
                       cliente tendrá 10 minutos para transferir por Yape/Plin y adjuntar el
                       comprobante.
@@ -1549,11 +1541,10 @@ export function DetailScreen({
                 {/* 2. awaiting_payment: Banner de espera tras haber aceptado disponibilidad */}
                 {order.status === 'awaiting_payment' && (
                   <div
+                    className="bg-brand-soft border border-orange-200"
                     style={{
-                      background: '#FFF7ED',
                       borderRadius: 12,
                       padding: '12px 14px',
-                      border: '1px solid #FFEDD5',
                       flexShrink: 0,
                     }}
                   >
@@ -1565,11 +1556,11 @@ export function DetailScreen({
                         filled
                         className="text-orange-700"
                       />
-                      <div style={{ fontSize: 13, fontWeight: 700, color: '#9A3412' }}>
+                      <div className="text-orange-800" style={{ fontSize: 13, fontWeight: 700 }}>
                         Esperando pago del cliente
                       </div>
                     </div>
-                    <div style={{ fontSize: 12, color: '#C2410C', lineHeight: 1.4 }}>
+                    <div className="text-brand-dark" style={{ fontSize: 12, lineHeight: 1.4 }}>
                       Disponibilidad confirmada. El cliente tiene 10 minutos para realizar la
                       transferencia por Yape/Plin y adjuntar el comprobante.
                     </div>
@@ -1594,8 +1585,8 @@ export function DetailScreen({
         {/* Prep picker (al aceptar) */}
         {showPrepPicker && (
           <div
+            className="bg-surface"
             style={{
-              background: '#faf6f1',
               borderRadius: 12,
               padding: '12px 14px',
               flexShrink: 0,
@@ -1618,12 +1609,14 @@ export function DetailScreen({
                   type="button"
                   key={m}
                   onClick={() => setPrep(m)}
+                  className={cn(
+                    m === prep
+                      ? 'bg-ink text-white border-transparent'
+                      : 'bg-white text-ink border border-border',
+                  )}
                   style={{
                     flexShrink: 0,
                     minWidth: 50,
-                    border: m === prep ? 'none' : '1px solid #EAE7E2',
-                    background: m === prep ? '#1a1614' : '#fff',
-                    color: m === prep ? '#fff' : '#1a1614',
                     fontFamily: 'var(--font-jetbrains), ui-monospace, monospace',
                     fontWeight: 700,
                     fontSize: 14,
@@ -1642,8 +1635,8 @@ export function DetailScreen({
         {/* Extensión de preparación */}
         {order.state === 'cooking' && !order.extensionUsed && (
           <div
+            className="bg-surface"
             style={{
-              background: '#faf6f1',
               borderRadius: 12,
               padding: '12px 14px',
               flexShrink: 0,
@@ -1660,16 +1653,16 @@ export function DetailScreen({
             >
               <Icon weight={500} name="add" size={14} /> +10 min
             </button>
-            <div style={{ fontSize: 11, color: '#57534e', marginTop: 6 }}>
+            <div className="text-ink-muted" style={{ fontSize: 11, marginTop: 6 }}>
               Solo disponible una vez y antes de que llegue el motorizado.
             </div>
           </div>
         )}
         {order.state === 'cooking' && order.extensionUsed && (
           <div
+            className="text-warning"
             style={{
               fontSize: 12,
-              color: '#f59e0b',
               fontWeight: 600,
               textAlign: 'center',
               padding: '4px 0',
@@ -1694,19 +1687,18 @@ export function DetailScreen({
         {/* Otras acciones */}
         {!isPending && order.state !== 'picked_up' && (
           <div
+            className="bg-surface border border-border"
             style={{
               borderRadius: 12,
               padding: '12px 14px',
-              border: '1px solid #EAE7E2',
-              background: '#faf6f1',
               flexShrink: 0,
             }}
           >
             <div
+              className="text-ink-muted"
               style={{
                 fontSize: 10,
                 fontWeight: 700,
-                color: '#57534e',
                 marginBottom: 8,
                 textTransform: 'uppercase',
                 letterSpacing: '0.06em',
@@ -1729,11 +1721,9 @@ export function DetailScreen({
       {/* Footer de acciones (pendiente) */}
       {(isPending || isLoadingActions) && (
         <div
+          className="bg-white border-t border-border shadow-elev-2"
           style={{
-            background: '#fff',
-            borderTop: '1px solid #EAE7E2',
             padding: '12px 14px 14px',
-            boxShadow: '0 -6px 20px rgba(0,0,0,0.06)',
             display: 'flex',
             flexDirection: 'column',
             gap: 6,
@@ -1743,19 +1733,19 @@ export function DetailScreen({
           {isLoadingActions ? (
             <div style={{ display: 'flex', gap: 10, opacity: 0.7 }} className="animate-pulse">
               <div
+                className="bg-gray-200"
                 style={{
                   flex: 1,
                   height: 44,
                   borderRadius: 12,
-                  background: '#E5E7EB',
                 }}
               />
               <div
+                className="bg-gray-200"
                 style={{
                   flex: 2,
                   height: 44,
                   borderRadius: 12,
-                  background: '#E5E7EB',
                 }}
               />
             </div>
@@ -1814,7 +1804,7 @@ export function DetailScreen({
                 </button>
               </div>
               {isPrepaid && (
-                <div style={{ fontSize: 11, color: '#57534e', textAlign: 'center' }}>
+                <div className="text-ink-muted" style={{ fontSize: 11, textAlign: 'center' }}>
                   Confirmas disponibilidad para preparar. El cliente procederá a realizar el pago
                   por Yape/Plin.
                 </div>
@@ -1831,28 +1821,25 @@ export function DetailScreen({
           la comida salga. */}
       {(order.canMarkReady || order.readyEarly) && (
         <div
+          className="bg-white border-t border-border shadow-elev-2"
           style={{
-            background: '#fff',
-            borderTop: '1px solid #EAE7E2',
             padding: '12px 14px 14px',
-            boxShadow: '0 -6px 20px rgba(0,0,0,0.06)',
             flexShrink: 0,
           }}
         >
           {order.readyEarly ? (
             <div
+              className="bg-success-soft border border-success"
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: 10,
                 padding: '12px 14px',
                 borderRadius: 14,
-                background: '#dcfce7',
-                border: '1px solid #16a34a',
               }}
             >
               <Icon weight={500} name="check_circle" size={20} filled className="text-success" />
-              <span style={{ fontSize: 13, fontWeight: 600, color: '#15803D' }}>
+              <span className="text-green-700" style={{ fontSize: 13, fontWeight: 600 }}>
                 Comida lista. El motorizado ya lo sabe.
               </span>
             </div>
@@ -1895,18 +1882,20 @@ export function DetailScreen({
 
   if (mobile) {
     return (
-      <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: '#fff' }}>{content}</div>
+      <div className="bg-white" style={{ position: 'fixed', inset: 0, zIndex: 200 }}>
+        {content}
+      </div>
     )
   }
 
   return (
     <div
       onClick={actions.onClose}
+      className="bg-black/45"
       style={{
         position: 'fixed',
         inset: 0,
         zIndex: 200,
-        background: 'rgba(0, 0, 0, 0.45)',
         backdropFilter: 'blur(2px)',
         display: 'flex',
         justifyContent: 'flex-end',
@@ -1914,13 +1903,12 @@ export function DetailScreen({
     >
       <div
         onClick={(e) => e.stopPropagation()}
+        className="bg-white shadow-elev-3"
         style={{
           width: 420,
           maxWidth: '100vw',
           height: '100vh',
           maxHeight: '100vh',
-          background: '#fff',
-          boxShadow: '-12px 0 36px rgba(0, 0, 0, 0.2)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
@@ -1953,11 +1941,11 @@ export function PausarModal({
   const [sel, setSel] = useState(1)
   return (
     <div
+      className="bg-black/45"
       style={{
         position: 'absolute',
         inset: 0,
         zIndex: 200,
-        background: 'rgba(0,0,0,0.45)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -1965,24 +1953,22 @@ export function PausarModal({
       }}
     >
       <div
+        className="bg-white shadow-elev-4"
         style={{
-          background: '#fff',
           borderRadius: 20,
           padding: 20,
           maxWidth: 340,
           width: '100%',
-          boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
           <div
+            className="bg-warning-soft text-amber-800"
             style={{
               width: 40,
               height: 40,
               borderRadius: 11,
               flexShrink: 0,
-              background: '#FEF3C7',
-              color: '#92400E',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -1992,16 +1978,18 @@ export function PausarModal({
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 16, fontWeight: 700 }}>Pausar pedidos</div>
-            <div style={{ fontSize: 12, color: '#57534e', marginTop: 1 }}>¿Por cuánto tiempo?</div>
+            <div className="text-ink-muted" style={{ fontSize: 12, marginTop: 1 }}>
+              ¿Por cuánto tiempo?
+            </div>
           </div>
           <button
             type="button"
             onClick={onClose}
+            className="bg-ink/[0.06]"
             style={{
               width: 30,
               height: 30,
               borderRadius: 8,
-              background: 'rgba(26,22,20,0.06)',
               border: 'none',
               cursor: 'pointer',
               display: 'flex',
@@ -2019,15 +2007,16 @@ export function PausarModal({
               type="button"
               key={o.label}
               onClick={() => setSel(i)}
+              className={cn(
+                'border-transparent',
+                i === sel ? 'bg-ink text-white' : 'bg-surface text-ink',
+              )}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: 10,
                 padding: '9px 12px',
                 borderRadius: 9,
-                background: i === sel ? '#1a1614' : '#faf6f1',
-                color: i === sel ? '#fff' : '#1a1614',
-                border: 'none',
                 fontFamily: 'inherit',
                 textAlign: 'left',
                 cursor: 'pointer',
@@ -2035,7 +2024,9 @@ export function PausarModal({
             >
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 13, fontWeight: 600 }}>{o.label}</div>
-                <div style={{ fontSize: 11, opacity: 0.65 }}>{o.sub}</div>
+                <div className="text-ink-muted" style={{ fontSize: 11, opacity: 0.65 }}>
+                  {o.sub}
+                </div>
               </div>
               {i === sel && <Icon weight={500} name="check" size={16} />}
             </button>
@@ -2043,13 +2034,12 @@ export function PausarModal({
         </div>
 
         <div
+          className="bg-warning-soft text-amber-800"
           style={{
-            background: '#FEF3C7',
             borderRadius: 9,
             padding: '9px 12px',
             marginBottom: 12,
             fontSize: 12,
-            color: '#92400E',
           }}
         >
           <strong>Los pedidos activos continúan</strong> su flujo. Solo se bloquean los nuevos desde
