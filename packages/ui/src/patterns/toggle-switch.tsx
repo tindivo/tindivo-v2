@@ -25,7 +25,7 @@ export function ToggleSwitch({
   disabled = false,
 }: ToggleSwitchProps) {
   return (
-    <div className="flex items-center justify-between gap-4">
+    <div className={cn('flex items-center justify-between gap-4', disabled && 'opacity-60')}>
       <div className="flex items-center gap-3">
         {icon && (
           <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface-low text-ink">
@@ -44,14 +44,14 @@ export function ToggleSwitch({
         disabled={disabled}
         onClick={() => onChange(!checked)}
         className={cn(
-          'relative h-[30px] w-[52px] shrink-0 rounded-full transition-colors duration-200',
+          'relative h-[28px] w-[48px] shrink-0 rounded-full transition-colors duration-200',
           checked ? 'bg-brand' : 'bg-ink/20',
           disabled && 'opacity-50',
         )}
       >
         <span
-          className="absolute top-[3px] left-[3px] h-[24px] w-[24px] rounded-full bg-white shadow-md transition-transform duration-200"
-          style={{ transform: checked ? 'translateX(22px)' : 'translateX(0)' }}
+          className="absolute top-[4px] left-[4px] h-[22px] w-[22px] rounded-full bg-white shadow-sm transition-transform duration-200"
+          style={{ transform: checked ? 'translateX(20px)' : 'translateX(0)' }}
         />
       </button>
     </div>

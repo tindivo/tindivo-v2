@@ -187,7 +187,7 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
   if (mode === 'delivered') {
     if (justDelivered) return <DeliveredScreen detail={detail} justDelivered />
     return (
-      <main className="mx-auto min-h-dvh max-w-[480px] bg-surface px-4 pb-6">
+      <main className="mx-auto min-h-dvh max-w-[480px] bg-surface px-4 pb-10">
         <ScreenHeader title={`Pedido #${detail.order.shortId}`} onBack={() => router.push('/')} />
         <DeliveredScreen detail={detail} justDelivered={false} />
       </main>

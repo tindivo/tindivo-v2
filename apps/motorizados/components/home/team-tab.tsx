@@ -64,9 +64,9 @@ export function TeamTab({ onCount }: { onCount: (n: number) => void }) {
           <Card key={r.id} className="mb-3 border-brand/15 bg-brand-light p-4 shadow-none">
             <span className="text-[13px] text-ink">
               Solicitud enviada{r.shortId ? ` · #${r.shortId}` : ''} ·{' '}
-            </span>
-            <span className="font-mono text-[14px] font-bold tabular-nums text-brand-dark">
-              {mmss(remaining)}
+              <span className="font-mono font-bold tabular-nums text-brand-dark">
+                {mmss(remaining)}
+              </span>
             </span>
             <p className="mt-0.5 text-[12px] text-ink-muted">
               Si no responde, la solicitud caducará.

@@ -6,7 +6,7 @@ type Size = 'sm' | 'md' | 'lg'
 
 const VARIANTS: Record<Variant, string> = {
   brand:
-    'bg-gradient-to-br from-[#ff6b35] to-[#ff8c42] text-white shadow-[0_8px_24px_rgba(242,98,65,0.22)] hover:shadow-[0_12px_40px_rgba(255,107,53,0.32)]',
+    'bg-gradient-to-br from-brand to-brand-dark text-white shadow-[0_6px_18px_rgba(249,115,22,0.16)] hover:shadow-[0_10px_30px_rgba(249,115,22,0.24)]',
   outline: 'border border-ink/[0.08] bg-card text-ink hover:bg-surface',
   ghost: 'text-ink hover:bg-ink/[0.05]',
   danger: 'bg-danger text-white hover:bg-danger/90',

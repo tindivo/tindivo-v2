@@ -98,7 +98,7 @@ export function TransferWatcher() {
   }
 
   return (
-    <div className="fixed inset-x-0 top-0 z-[85] mx-auto max-w-[480px] p-3">
+    <div className="fixed inset-x-0 top-[env(safe-area-inset-top)] z-[85] mx-auto max-w-[480px] p-3">
       <Card className="rounded-[22px] bg-ink p-4 text-white shadow-elev-4">
         <div className="flex items-center justify-between">
           <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-brand-light">

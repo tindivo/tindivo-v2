@@ -1,6 +1,6 @@
 'use client'
 
-import { Card, EmptyState } from '@tindivo/ui'
+import { Badge, Card, EmptyState } from '@tindivo/ui'
 import { DriverShell } from '@/components/driver-shell'
 import { useDriverOrders } from '@/hooks/use-driver-orders'
 import { useNow } from '@/hooks/use-now'
@@ -13,7 +13,9 @@ export default function HistorialPage() {
   return (
     <DriverShell>
       <main className="mx-auto max-w-[480px] px-4 pt-20 pb-10">
-        <h1 className="font-display mb-4 text-[24px] font-bold tracking-tight">Entregas de hoy</h1>
+        <div className="sticky top-[calc(44px+env(safe-area-inset-top))] z-30 -mx-4 mb-4 bg-surface/95 px-4 py-2 backdrop-blur-sm">
+          <h1 className="font-display text-[24px] font-bold tracking-tight">Entregas de hoy</h1>
+        </div>
 
         {deliveredToday.length === 0 ? (
           <EmptyState
@@ -29,7 +31,9 @@ export default function HistorialPage() {
                   <span className="font-mono text-[12px] font-semibold text-ink">
                     #{o.short_id}
                   </span>
-                  <span className="text-[12px] text-success font-semibold">Entregado</span>
+                  <Badge variant="success" size="sm">
+                    Entregado
+                  </Badge>
                 </div>
                 <p className="mt-1 text-[15px] font-semibold">
                   {o.business?.name ?? 'Restaurante'}

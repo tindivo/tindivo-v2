@@ -88,7 +88,7 @@ export function OrderCard({
         aria-hidden
         className={cn('absolute inset-y-0 left-0 w-1.5', isUpcoming && 'bg-black/[0.12]')}
         style={
-          isUpcoming ? undefined : { backgroundColor: accent, boxShadow: `0 0 14px ${accent}55` }
+          isUpcoming ? undefined : { backgroundColor: accent, boxShadow: `0 0 8px ${accent}40` }
         }
       />
 
@@ -101,7 +101,7 @@ export function OrderCard({
             {order.customer_name ?? 'Cliente'}
           </span>
         </span>
-        <span className="flex shrink-0 flex-col items-end gap-1">
+        <span className="flex shrink-0 flex-col items-end gap-1.5">
           <span className="flex items-center gap-1.5">
             <SourceChip source={order.source} />
             <span className="font-mono text-[11px] text-ink-subtle">#{order.short_id}</span>

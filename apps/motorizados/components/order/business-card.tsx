@@ -33,26 +33,24 @@ export function BusinessCard({ business }: { business: OrderDetailResponse['busi
           )}
         </div>
       </div>
-      <div className="mt-3.5 grid grid-cols-2 gap-2">
-        {business.phone ? (
+      <div className="mt-3.5 flex flex-wrap gap-2">
+        {business.phone && (
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
-            className="w-full"
+            className="flex-1"
             as="a"
             href={telLink(business.phone)}
           >
             <Icon name="phone" size={20} />
             Llamar
           </Button>
-        ) : (
-          <span />
         )}
         {mapsHref && (
           <Button
             variant="secondary"
             size="sm"
-            className="w-full"
+            className="flex-1"
             as="a"
             href={mapsHref}
             target="_blank"

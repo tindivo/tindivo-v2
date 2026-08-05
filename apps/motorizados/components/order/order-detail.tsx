@@ -42,10 +42,10 @@ export function OrderDetail({
           <span
             aria-hidden
             className={`inline-flex transition-transform duration-200 ${
-              open ? 'rotate-90' : '-rotate-90'
+              open ? 'rotate-180' : 'rotate-0'
             }`}
           >
-            <Icon name="arrow_back" size={20} />
+            <Icon name="expand_more" size={20} />
           </span>
         </span>
       </button>
@@ -53,7 +53,7 @@ export function OrderDetail({
       {open && (
         <div className="px-[18px] pb-4">
           {items.map((item) => (
-            <div key={item.id} className="py-1">
+            <div key={item.id} className="border-b border-ink/[0.04] last:border-b-0 pb-2 pt-1">
               <div className="flex justify-between text-[14px] text-ink-muted">
                 <span>
                   {item.quantity}× {item.name}
@@ -79,7 +79,7 @@ export function OrderDetail({
           ))}
 
           {order.customerNotes && (
-            <div className="mt-2 rounded-[12px] bg-ink/[0.04] px-3 py-2 text-[13px]">
+            <div className="mt-2 rounded-[14px] bg-ink/[0.04] px-3 py-2 text-[13px]">
               Nota del cliente: {order.customerNotes}
             </div>
           )}
@@ -100,7 +100,7 @@ export function OrderDetail({
           </div>
           <div className="flex items-center justify-between pt-1.5">
             <span className="font-semibold text-[16px]">Total</span>
-            <span className="font-display text-[18px] font-bold tracking-tight tabular-nums">
+            <span className="font-display text-[20px] font-bold tracking-tight tabular-nums">
               {soles(total)}
             </span>
           </div>

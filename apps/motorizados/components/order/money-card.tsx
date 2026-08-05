@@ -75,11 +75,11 @@ export function MoneyCard({ detail }: { detail: OrderDetailResponse }) {
       {/* El vuelto es la causa número uno de volver al local con un problema. */}
       {order.changeToGive != null && order.changeToGive > 0 && (
         <div className="mt-3 flex items-center justify-between rounded-[14px] bg-warning-soft px-3.5 py-3">
-          <span className="flex items-center gap-2 text-[13px] font-medium text-amber-900">
+          <span className="flex items-center gap-2 text-[13px] font-medium text-warning">
             <Icon name="currency_exchange" size={18} />
             Paga con {soles(order.clientPaysWith)} · lleva vuelto
           </span>
-          <span className="font-display text-[17px] font-bold tracking-tight tabular-nums text-amber-900">
+          <span className="font-display text-[17px] font-bold tracking-tight tabular-nums text-warning">
             {soles(order.changeToGive)}
           </span>
         </div>

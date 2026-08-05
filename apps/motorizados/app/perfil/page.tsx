@@ -100,7 +100,9 @@ export default function PerfilPage() {
   return (
     <DriverShell>
       <main className="mx-auto max-w-[480px] px-4 pt-20 pb-10">
-        <h1 className="font-display font-bold tracking-tight mb-4 text-[24px]">Mi perfil</h1>
+        <div className="sticky top-[calc(44px+env(safe-area-inset-top))] z-30 -mx-4 mb-4 bg-surface/95 px-4 py-2 backdrop-blur-sm">
+          <h1 className="font-display text-[24px] font-bold tracking-tight">Mi perfil</h1>
+        </div>
 
         {loading || !profile ? (
           <div className="space-y-3">
@@ -140,18 +142,26 @@ export default function PerfilPage() {
               </p>
               <div className="space-y-5">
                 <div>
-                  <ToggleSwitch
-                    checked={availability.available}
-                    onChange={(next) => void availability.setAvailable(next)}
-                    disabled={availability.loading || availability.busy || availability.blocked}
-                    label="Disponible"
-                    description={
-                      availability.blocked
-                        ? 'Fuera del horario de la plataforma'
-                        : 'Recibir pedidos nuevos'
+                  <div
+                    className={
+                      availability.loading || availability.busy || availability.blocked
+                        ? 'opacity-60'
+                        : ''
                     }
-                    icon={<Icon name="toggle_on" size={22} />}
-                  />
+                  >
+                    <ToggleSwitch
+                      checked={availability.available}
+                      onChange={(next) => void availability.setAvailable(next)}
+                      disabled={availability.loading || availability.busy || availability.blocked}
+                      label="Disponible"
+                      description={
+                        availability.blocked
+                          ? 'Fuera del horario de la plataforma'
+                          : 'Recibir pedidos nuevos'
+                      }
+                      icon={<Icon name="toggle_on" size={22} />}
+                    />
+                  </div>
                   {/* Único sitio donde se enseña: el hook ya decide que los
                       fallos de lectura no molestan al motorizado. */}
                   {availability.error && (
@@ -162,32 +172,40 @@ export default function PerfilPage() {
                 <div className="h-px bg-ink/[0.06]" />
 
                 <div>
-                  <ToggleSwitch
-                    checked={push.status === 'subscribed'}
-                    onChange={() => {
-                      if (push.status === 'subscribed') {
-                        void push.unsubscribe()
-                        return
-                      }
-                      void handleEnableNotifications()
-                    }}
-                    // 'denied' se deja bloqueado a propósito: una vez negado el
-                    // permiso, `requestPermission()` ya no vuelve a preguntar.
-                    // Un switch que no hace nada al tocarlo es peor que uno
-                    // visiblemente apagado.
-                    disabled={
+                  <div
+                    className={
                       push.loading || push.status === 'unsupported' || push.status === 'denied'
+                        ? 'opacity-60'
+                        : ''
                     }
-                    label="Notificaciones"
-                    description={
-                      push.status === 'unsupported'
-                        ? 'No disponible en este navegador'
-                        : push.status === 'denied'
-                          ? 'Bloqueado en los ajustes del navegador'
-                          : 'Alertas de pedidos nuevos'
-                    }
-                    icon={<Icon name="notifications" size={22} />}
-                  />
+                  >
+                    <ToggleSwitch
+                      checked={push.status === 'subscribed'}
+                      onChange={() => {
+                        if (push.status === 'subscribed') {
+                          void push.unsubscribe()
+                          return
+                        }
+                        void handleEnableNotifications()
+                      }}
+                      // 'denied' se deja bloqueado a propósito: una vez negado el
+                      // permiso, `requestPermission()` ya no vuelve a preguntar.
+                      // Un switch que no hace nada al tocarlo es peor que uno
+                      // visiblemente apagado.
+                      disabled={
+                        push.loading || push.status === 'unsupported' || push.status === 'denied'
+                      }
+                      label="Notificaciones"
+                      description={
+                        push.status === 'unsupported'
+                          ? 'No disponible en este navegador'
+                          : push.status === 'denied'
+                            ? 'Bloqueado en los ajustes del navegador'
+                            : 'Alertas de pedidos nuevos'
+                      }
+                      icon={<Icon name="notifications" size={22} />}
+                    />
+                  </div>
                   {pushError && <p className="mt-2 text-[13px] text-danger">{pushError}</p>}
                 </div>
               </div>
@@ -212,7 +230,7 @@ function Row({ icon, label, value }: { icon: string; label: string; value: strin
       </span>
       <div className="min-w-0 flex-1">
         <dt className="text-[10px] font-bold uppercase tracking-wider text-ink-muted">{label}</dt>
-        <dd className="truncate font-semibold text-ink">{value}</dd>
+        <dd className="truncate text-[15px] font-semibold text-ink">{value}</dd>
       </div>
     </div>
   )

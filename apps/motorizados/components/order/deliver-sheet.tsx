@@ -1,6 +1,6 @@
 'use client'
 
-import { BottomSheet, Button } from '@tindivo/ui'
+import { BottomSheet, Button, Icon } from '@tindivo/ui'
 import { useState } from 'react'
 import type { OrderDetailResponse } from '@/lib/types'
 
@@ -62,7 +62,7 @@ export function DeliverSheet({
                 onClick={() => setPayment(p.value)}
                 className={`rounded-[18px] p-4 text-left transition-colors ${
                   payment === p.value
-                    ? 'border-2 border-brand bg-brand/5'
+                    ? 'border border-brand bg-brand/5 ring-2 ring-brand'
                     : 'border border-ink/10 bg-card hover:bg-surface'
                 }`}
               >
@@ -83,13 +83,15 @@ export function DeliverSheet({
 
         <div className="mt-5 border-t border-ink/10 pt-4">
           {!noShowArmed ? (
-            <button
-              type="button"
-              className="text-[13px] text-danger underline transition-colors hover:text-danger/80"
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mt-5 w-full"
               onClick={() => setNoShowArmed(true)}
             >
+              <Icon name="report_problem" size={20} />
               El cliente no apareció
-            </button>
+            </Button>
           ) : (
             <div>
               <p className="text-[13px] text-ink/55">

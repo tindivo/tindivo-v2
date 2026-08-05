@@ -42,7 +42,7 @@ export function AvailableTab({
       )}
 
       {full && (
-        <Card className="mb-3 flex items-start gap-2.5 border-none bg-ink/[0.04] p-4 shadow-none">
+        <Card className="mb-3 flex items-start gap-2.5 border border-ink/[0.06] bg-ink/[0.03] p-4 shadow-none">
           <Icon name="shopping_basket" size={20} className="shrink-0 text-ink" />
           <p className="font-semibold text-[14px]">
             Mochila llena (3/3). Entrega un pedido para tomar otro.
@@ -92,10 +92,10 @@ export function AvailableTab({
             <span
               aria-hidden
               className={`inline-flex text-ink-subtle transition-transform duration-200 ${
-                upcomingOpen ? 'rotate-90' : '-rotate-90'
+                upcomingOpen ? 'rotate-180' : 'rotate-0'
               }`}
             >
-              <Icon name="arrow_back" size={20} />
+              <Icon name="expand_more" size={20} />
             </span>
           </button>
           {upcomingOpen && (

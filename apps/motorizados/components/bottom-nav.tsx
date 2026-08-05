@@ -1,6 +1,6 @@
 'use client'
 
-import { BottomNav as BottomNavPattern, type BottomNavItem } from '@tindivo/ui'
+import { type BottomNavItem, BottomNav as BottomNavPattern } from '@tindivo/ui'
 
 export type { BottomNavItem }
 

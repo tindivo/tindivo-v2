@@ -46,10 +46,10 @@ export function MineTab({
             <span
               aria-hidden
               className={`inline-flex text-ink-subtle transition-transform duration-200 ${
-                historyOpen ? 'rotate-90' : '-rotate-90'
+                historyOpen ? 'rotate-180' : 'rotate-0'
               }`}
             >
-              <Icon name="arrow_back" size={20} />
+              <Icon name="expand_more" size={20} />
             </span>
           </button>
           {historyOpen && (

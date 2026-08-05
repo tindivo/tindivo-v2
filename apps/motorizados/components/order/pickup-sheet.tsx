@@ -51,7 +51,7 @@ export function PickupSheet({
 
       <div className="flex-1 overflow-y-auto px-5">
         {premature && (
-          <div className="mb-4 flex items-start gap-2 rounded-[14px] bg-warning-soft px-3.5 py-2.5 text-[13px] text-amber-900">
+          <div className="mb-4 flex items-start gap-2 rounded-[14px] bg-warning-soft px-3.5 py-2.5 text-[13px] text-warning">
             <span className="mt-0.5 shrink-0">
               <Icon name="schedule" size={20} />
             </span>
@@ -84,8 +84,8 @@ export function PickupSheet({
               onClick={() => setSlots(s.value)}
               className={`flex-1 rounded-2xl border py-3 text-center transition-colors ${
                 slots === s.value
-                  ? 'border-2 border-brand bg-brand/5 text-brand-dark'
-                  : 'border-ink/10 bg-card text-ink-muted hover:bg-surface'
+                  ? 'border border-brand bg-brand/5 text-brand-dark ring-2 ring-brand'
+                  : 'border border-ink/10 bg-card text-ink-muted hover:bg-surface'
               }`}
             >
               <span className="block text-[14px] font-semibold">{s.label}</span>

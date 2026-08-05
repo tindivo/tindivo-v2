@@ -14,9 +14,7 @@ function Stepper({ current }: { current: number }) {
           <div key={label} className="flex flex-1 items-center last:flex-none">
             <span
               className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-all ${
-                i <= current
-                  ? 'bg-brand shadow-[0_0_0_5px_rgba(249,115,22,0.25)]'
-                  : 'bg-white/[0.12]'
+                i <= current ? 'bg-brand ring-2 ring-brand/25' : 'bg-white/[0.12]'
               }`}
             >
               {i < current ? (
@@ -43,7 +41,7 @@ function Stepper({ current }: { current: number }) {
         {MOMENTS.map((label, i) => (
           <span
             key={label}
-            className={`font-mono text-[9px] uppercase tracking-widest ${
+            className={`font-mono text-[10px] uppercase tracking-widest ${
               i === current ? 'text-brand-light' : 'text-white/45'
             }`}
           >
@@ -78,13 +76,13 @@ export function StatusHero({ detail, moment }: { detail: OrderDetailResponse; mo
   return (
     <div className="relative overflow-hidden rounded-[22px] bg-gradient-to-br from-ink via-ink to-brand-dark px-5 py-[22px] text-white shadow-elev-3">
       <div
-        className={`pointer-events-none absolute top-0 right-0 h-[160px] w-[160px] translate-x-10 -translate-y-10 rounded-full opacity-60 blur-3xl ${
+        className={`pointer-events-none absolute top-0 right-0 h-[160px] w-[160px] translate-x-10 -translate-y-10 rounded-full opacity-40 blur-3xl ${
           moment === 2 ? 'bg-success/40' : 'bg-brand/40'
         }`}
       />
       <span
         className={`relative inline-flex items-center gap-1.5 rounded-full px-2.5 py-[5px] font-mono text-[10px] uppercase tracking-[0.2em] ${
-          moment === 2 ? 'bg-success/25 text-success-soft' : 'bg-brand/20 text-brand-light'
+          moment === 2 ? 'bg-success/25 text-success-soft' : 'bg-brand/20 text-white/90'
         }`}
       >
         <span

@@ -55,7 +55,7 @@ export function ReleaseSheet({
               onClick={() => setReason(r.value)}
               className={`rounded-2xl p-3.5 text-left text-[14px] font-semibold transition-colors border ${
                 reason === r.value
-                  ? 'border-danger bg-danger/10 text-danger'
+                  ? 'border-danger bg-danger/15 text-danger'
                   : 'border-ink/[0.08] bg-ink/[0.04] text-ink hover:bg-ink/[0.08]'
               }`}
             >

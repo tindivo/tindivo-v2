@@ -1,7 +1,7 @@
 'use client'
 
 import { type ApiEnvelope, ApiError } from '@tindivo/api-client'
-import { Badge, Button, Card, cn } from '@tindivo/ui'
+import { Badge, Button, Card, cn, EmptyState } from '@tindivo/ui'
 import { type FormEvent, useCallback, useEffect, useState } from 'react'
 import { DriverShell } from '@/components/driver-shell'
 import { api } from '@/lib/api'
@@ -79,6 +79,9 @@ export default function EfectivoPage() {
   return (
     <DriverShell>
       <main className="mx-auto max-w-[480px] px-4 pt-20 pb-10">
+        <div className="sticky top-[calc(44px+env(safe-area-inset-top))] z-30 -mx-4 mb-4 bg-surface/95 px-4 py-2 backdrop-blur-sm">
+          <h1 className="font-display text-[24px] font-bold tracking-tight">Efectivo</h1>
+        </div>
         {error && <p className="mt-3 text-[13px] text-danger">{error}</p>}
 
         {/* Total que el motorizado lleva encima ahora mismo. Es el número que
@@ -102,11 +105,15 @@ export default function EfectivoPage() {
           A entregar
         </h2>
         {porEntregar.length === 0 ? (
-          <p className="text-ink/55 text-[14px]">
-            {esperandoConfirmar.length > 0
-              ? 'Ya entregaste todo el efectivo que tenías.'
-              : 'No has cobrado efectivo pendiente de entregar.'}
-          </p>
+          <EmptyState
+            icon="payments"
+            heading="Sin efectivo por entregar"
+            description={
+              esperandoConfirmar.length > 0
+                ? 'Ya entregaste todo el efectivo que tenías.'
+                : 'Cuando cobres en efectivo aparecerá aquí.'
+            }
+          />
         ) : (
           <div className="flex flex-col gap-2.5">
             {porEntregar.map((t) => (
@@ -132,7 +139,11 @@ export default function EfectivoPage() {
           Historial
         </h2>
         {history.length === 0 ? (
-          <p className="text-ink/55 text-[14px]">Sin entregas anteriores.</p>
+          <EmptyState
+            icon="history"
+            heading="Sin entregas anteriores"
+            description="Aquí verás las entregas de efectivo que ya hiciste."
+          />
         ) : (
           <Card className="overflow-hidden p-0">
             {history.map((h, i) => {
@@ -150,7 +161,7 @@ export default function EfectivoPage() {
                     <p className="font-mono text-[11px] text-ink-subtle">{h.settlement_date}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-[14px] font-semibold tabular-nums">
+                    <p className="font-display text-[14px] font-semibold tabular-nums">
                       {soles(h.delivered_amount)}
                     </p>
                     <Badge variant={chip?.variant ?? 'default'} size="sm" className="mt-0.5">
@@ -212,7 +223,7 @@ function CashDeliverCard({
       </p>
 
       <form onSubmit={submit} className="mt-3 flex items-center gap-2">
-        <span className="rounded-2xl border border-border bg-card px-3 py-3 font-mono text-[15px] text-ink-muted">
+        <span className="rounded-2xl border border-border bg-card px-3 py-3.5 font-mono text-[15px] text-ink-muted">
           S/
         </span>
         <input
@@ -221,7 +232,7 @@ function CashDeliverCard({
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
         />
-        <Button size="sm" className="px-5" disabled={busy}>
+        <Button size="md" disabled={busy}>
           {busy ? '…' : 'Entregar'}
         </Button>
       </form>

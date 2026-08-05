@@ -40,7 +40,7 @@ export function Home() {
 
       <StatusIndicators />
 
-      <div className="mb-4">
+      <div className="sticky top-[calc(44px+env(safe-area-inset-top))] z-30 -mx-4 mb-4 bg-surface/95 px-4 py-2 backdrop-blur-sm">
         <Segmented<Tab>
           value={tab}
           onChange={setTab}

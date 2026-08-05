@@ -45,12 +45,12 @@ export function MomentPickedUp({
       <CustomerCard order={order} businessName={detail.business?.name} />
 
       {order.arrivedAtCustomerAt && (
-        <Card className="mt-3 border-amber-200 bg-amber-50 p-4">
-          <div className="flex items-center gap-2 text-amber-900 font-semibold text-[14px]">
-            <Icon name="person_pin_circle" size={20} className="text-amber-600" />
+        <Card className="mt-3 border-warning/20 bg-warning-soft p-4">
+          <div className="flex items-center gap-2 text-warning font-semibold text-[14px]">
+            <Icon name="person_pin_circle" size={20} className="text-warning/70" />
             Llegada registrada al domicilio
           </div>
-          <p className="mt-1 text-[13px] text-amber-800">
+          <p className="mt-1 text-[13px] text-warning/80">
             {canNoShow
               ? 'Se ha cumplido la ventana de espera de 5 minutos.'
               : `Esperando respuesta del cliente (${countdownFormatted} restante).`}
@@ -61,7 +61,7 @@ export function MomentPickedUp({
             variant="ghost"
             disabled={!canNoShow || busy}
             onClick={onNoShow}
-            className="mt-3 w-full border border-amber-300 text-amber-900 hover:bg-amber-100 disabled:opacity-50"
+            className="mt-3 w-full border border-warning/30 text-warning hover:bg-warning/10 disabled:opacity-50"
           >
             <Icon name="report_problem" size={18} />
             {canNoShow
@@ -119,15 +119,14 @@ export function MomentPickedUp({
         </Card>
       )}
 
-      <CollectCard detail={detail} />
+      <div className="mt-3.5">
+        <CollectCard detail={detail} />
+      </div>
 
-      <button
-        type="button"
-        onClick={onReport}
-        className="mt-4 px-1 text-[13px] text-ink-subtle underline transition-colors hover:text-ink"
-      >
+      <Button type="button" variant="ghost" size="sm" onClick={onReport} className="mt-4 w-full">
+        <Icon name="report_problem" size={18} />
         Reportar un problema
-      </button>
+      </Button>
     </div>
   )
 }

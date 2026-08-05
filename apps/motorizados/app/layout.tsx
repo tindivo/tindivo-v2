@@ -1,7 +1,7 @@
+import { EnvBanner } from '@tindivo/ui'
 import type { Metadata, Viewport } from 'next'
 import { Geist, JetBrains_Mono } from 'next/font/google'
 import type { ReactNode } from 'react'
-import { EnvBanner } from '@tindivo/ui'
 import { OfflineBanner } from '@/components/offline-banner'
 import { InstallBanner } from '@/components/pwa/install-banner'
 import { RegisterSW } from '@/components/pwa/register-sw'
@@ -71,9 +71,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         {/* Primero el service worker: push, avisos e instalación dependen de
             que esté registrado. */}
         <RegisterSW />
-        <EnvBanner />
-        <OfflineBanner />
-        <TransferWatcher />
+        <div className="contents">
+          <EnvBanner />
+          <OfflineBanner />
+          <TransferWatcher />
+        </div>
         {children}
         <InstallBanner />
       </body>

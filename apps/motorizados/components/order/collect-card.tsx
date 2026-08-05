@@ -57,17 +57,23 @@ export function CollectCard({ detail }: { detail: OrderDetailResponse }) {
           <img
             src={business.qrUrl}
             alt={`QR de Yape de ${business.name}`}
-            className="h-[180px] w-[180px] rounded-2xl border border-ink/[0.08] bg-card object-contain"
+            className="h-[180px] w-[180px] rounded-2xl border border-ink/[0.08] bg-card object-contain shadow-elev-1"
           />
         </div>
       )}
       {business?.yapeNumber && (
-        <p className="mt-2 text-center font-mono text-[22px] font-semibold">
-          {business.yapeNumber}
-        </p>
+        <>
+          <p className="mt-3 text-center font-mono text-[10px] uppercase tracking-wider text-ink/55">
+            Número de Yape
+          </p>
+          <p className="text-center font-mono text-[22px] font-semibold">{business.yapeNumber}</p>
+        </>
       )}
       {order.paymentIntent === 'pending_mixed' && (
         <div className="mt-3 border-t border-ink/10 pt-2">
+          <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/55">
+            Desglose
+          </p>
           <div className="flex justify-between py-1 text-[14px] tabular-nums text-ink-muted">
             <span>Por Yape</span>
             <span className="font-semibold text-ink">{soles(order.yapeAmount)}</span>

@@ -28,9 +28,9 @@ export function DestinationCard({ detail }: { detail: OrderDetailResponse }) {
         </span>
         <div className="min-w-0 flex-1">
           <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/55">
-            Después entregas en
+            Entregar en
           </span>
-          <p className="mt-0.5 text-[15px] font-medium leading-snug text-ink">{where}</p>
+          <p className="mt-0.5 text-[16px] font-semibold leading-snug text-ink">{where}</p>
           {/* En los manuales `delivery_address` es el relleno 'Pedido manual'
               que pone create_business_manual_order: solo estorba. */}
           {!order.isManual && order.deliveryAddress && order.deliveryReference && (
@@ -39,7 +39,7 @@ export function DestinationCard({ detail }: { detail: OrderDetailResponse }) {
         </div>
       </div>
       <Button
-        variant="ghost"
+        variant="outline"
         size="sm"
         className="mt-3 w-full"
         as="a"
