@@ -40,7 +40,7 @@ export interface PedidosViewProps {
   onConfirmPause: (min: number | null) => void
 }
 
-const ACCENT = '#F472B6'
+const ACCENT = 'var(--color-brand)'
 
 // El sidebar (desktop) y el bottom-nav (mobile) viven ahora en el chrome compartido
 // (components/dashboard/chrome.tsx) y persisten entre secciones; esta vista solo
@@ -102,8 +102,7 @@ function HistoryList({ history }: { history: OrderVM[] }) {
         return (
           <div
             key={h.rowId}
-            className="flex items-center gap-2.5 rounded-xl border border-border bg-white px-3 py-2.5"
-            style={{ opacity: cancelled ? 0.65 : 1 }}
+            className={`flex items-center gap-2.5 rounded-xl border border-border bg-white px-3 py-2.5 ${cancelled ? 'opacity-65' : ''}`}
           >
             <Icon
               name={cancelled ? 'cancel' : 'check_circle'}
@@ -126,11 +125,7 @@ function HistoryList({ history }: { history: OrderVM[] }) {
               </div>
             </div>
             <div
-              className="shrink-0 font-mono text-[14px] font-bold"
-              style={{
-                color: cancelled ? '#a8a29e' : '#1a1614',
-                textDecoration: cancelled ? 'line-through' : 'none',
-              }}
+              className={`shrink-0 font-mono text-[14px] font-bold ${cancelled ? 'text-ink-subtle line-through' : 'text-ink'}`}
             >
               {soles(h.total)}
             </div>
@@ -229,11 +224,7 @@ export function PedidosMobile(p: PedidosViewProps) {
           <button
             type="button"
             onClick={p.paused ? p.onResume : p.onOpenPause}
-            className="flex shrink-0 items-center rounded-xl p-1.5"
-            style={{
-              background: p.paused ? '#FDE68A' : 'rgba(26,22,20,0.08)',
-              color: p.paused ? '#78350F' : '#1a1614',
-            }}
+            className={`flex shrink-0 items-center rounded-xl p-1.5 ${p.paused ? 'bg-warning-soft text-amber-800' : 'bg-ink/[0.08] text-ink'}`}
           >
             <Icon name={p.paused ? 'play_circle' : 'pause_circle'} size={17} weight={500} />
           </button>
@@ -325,32 +316,28 @@ export function PedidosMobile(p: PedidosViewProps) {
 function KanbanCol({
   title,
   count,
-  accentColor,
-  alertColor,
+  dotClass,
   subtitle,
   children,
 }: {
   title: string
   count: number
-  accentColor: string
-  alertColor?: string | null
+  dotClass: string
   subtitle: string
   children: React.ReactNode
 }) {
   return (
     <div className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-surface">
       <div className="flex items-center gap-2 border-b border-border px-3 py-2.5">
-        <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: accentColor }} />
+        <span className={`h-2 w-2 shrink-0 rounded-full ${dotClass}`} />
         <div className="min-w-0 flex-1">
           <div className="text-[13px] font-bold">{title}</div>
           <div className="mt-px text-[10px] text-ink-muted">{subtitle}</div>
         </div>
         <span
-          className="inline-flex min-h-[22px] items-center justify-center rounded-full px-1.5 text-[11px] font-bold"
-          style={{
-            background: count > 0 && alertColor ? alertColor : 'rgba(26,22,20,0.08)',
-            color: count > 0 && alertColor ? '#fff' : '#1a1614',
-          }}
+          className={`inline-flex min-h-[22px] items-center justify-center rounded-full px-1.5 text-[11px] font-bold ${
+            count > 0 ? 'bg-danger text-white' : 'bg-ink/[0.08] text-ink'
+          }`}
         >
           {count}
         </span>
@@ -408,7 +395,7 @@ export function PedidosDesktop(p: PedidosViewProps) {
               {p.bizName}
             </div>
             <div className="mt-0.5 text-[11px] text-ink-muted">
-              <span className="font-bold" style={{ color: p.paused ? '#B45309' : '#16A34A' }}>
+              <span className={`font-bold ${p.paused ? 'text-amber-700' : 'text-success'}`}>
                 {p.paused ? '⏸ Pausado' : '● Abierto'}
               </span>
               {' · '}
@@ -428,11 +415,9 @@ export function PedidosDesktop(p: PedidosViewProps) {
           <button
             type="button"
             onClick={p.paused ? p.onResume : p.onOpenPause}
-            className="inline-flex items-center gap-1.5 rounded-xl border-0 px-3 py-2 text-[13px] font-semibold transition-transform active:scale-[0.98]"
-            style={{
-              background: p.paused ? '#FDE68A' : 'rgba(26,22,20,0.08)',
-              color: p.paused ? '#78350F' : '#1a1614',
-            }}
+            className={`inline-flex items-center gap-1.5 rounded-xl border-0 px-3 py-2 text-[13px] font-semibold transition-transform active:scale-[0.98] ${
+              p.paused ? 'bg-warning-soft text-amber-800' : 'bg-ink/[0.08] text-ink'
+            }`}
           >
             <Icon name={p.paused ? 'play_circle' : 'pause_circle'} size={16} weight={500} filled />
             {p.paused ? 'Reanudar' : 'Pausar pedidos'}
@@ -483,8 +468,7 @@ export function PedidosDesktop(p: PedidosViewProps) {
         <KanbanCol
           title="Nuevos"
           count={p.counts.new}
-          accentColor="#DC2626"
-          alertColor={p.counts.new > 0 ? '#DC2626' : null}
+          dotClass="bg-danger"
           subtitle="Revisar antes de aceptar"
         >
           {p.newOrders.length > 0 ? (
@@ -499,7 +483,7 @@ export function PedidosDesktop(p: PedidosViewProps) {
         <KanbanCol
           title="En cocina"
           count={p.counts.cooking}
-          accentColor="#C2410C"
+          dotClass="bg-brand-dark"
           subtitle="Cocinando + esperando moto"
         >
           {cooking.length > 0 ? (
@@ -523,7 +507,7 @@ export function PedidosDesktop(p: PedidosViewProps) {
         <KanbanCol
           title="En reparto"
           count={p.counts.route}
-          accentColor="#6D28D9"
+          dotClass="bg-purple-700"
           subtitle="Solo monitoreo · timer desde recogida"
         >
           {p.routeOrders.length > 0 ? (
