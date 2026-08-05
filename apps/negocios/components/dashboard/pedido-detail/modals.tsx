@@ -196,7 +196,7 @@ export function PausarModal({
     <div className="absolute inset-0 z-[200] flex items-center justify-center bg-black/45 p-5">
       <div className="w-full max-w-[340px] rounded-[20px] bg-white p-5 shadow-elev-4">
         <div className="mb-3.5 flex items-center gap-2.5">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[11px] bg-warning-soft text-amber-800">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[11px] bg-warning-soft text-warning">
             <Icon weight={500} name="pause_circle" size={22} filled />
           </div>
           <div className="min-w-0 flex-1">
@@ -232,7 +232,7 @@ export function PausarModal({
           ))}
         </div>
 
-        <div className="mb-3 rounded-lg bg-warning-soft p-2.5 text-xs text-amber-800">
+        <div className="mb-3 rounded-lg bg-warning-soft p-2.5 text-xs text-warning">
           <strong>Los pedidos activos continúan</strong> su flujo. Solo se bloquean los nuevos desde
           la web.
         </div>

@@ -76,15 +76,15 @@ function PaySectionPrepaid({ order, proofUrl }: { order: OrderVM; proofUrl: stri
       <div
         className={cn(
           'shrink-0 overflow-hidden rounded-xl border-[1.5px] shadow-elev-2',
-          verified && 'border-green-400',
-          !verified && isSecondAttempt && 'border-red-300',
-          !verified && !isSecondAttempt && 'border-sky-400',
+          verified && 'border-success/60',
+          !verified && isSecondAttempt && 'border-danger/40',
+          !verified && !isSecondAttempt && 'border-info/60',
         )}
       >
         <div
           className={cn(
             'flex items-center justify-between gap-2 px-3.5 py-2.5',
-            verified ? 'bg-green-50' : isSecondAttempt ? 'bg-red-50' : 'bg-sky-50',
+            verified ? 'bg-success/10' : isSecondAttempt ? 'bg-danger-soft' : 'bg-info/10',
           )}
         >
           <div className="flex items-center gap-2">
@@ -93,21 +93,19 @@ function PaySectionPrepaid({ order, proofUrl }: { order: OrderVM; proofUrl: stri
               name={verified ? 'verified' : 'schedule'}
               size={18}
               filled
-              className={
-                verified ? 'text-green-600' : isSecondAttempt ? 'text-danger' : 'text-sky-600'
-              }
+              className={verified ? 'text-success' : isSecondAttempt ? 'text-danger' : 'text-info'}
             />
             <div
               className={cn(
                 'text-[13px] font-bold',
-                verified ? 'text-green-800' : isSecondAttempt ? 'text-red-800' : 'text-sky-700',
+                verified ? 'text-success' : isSecondAttempt ? 'text-danger' : 'text-info',
               )}
             >
               {verified ? 'Pago verificado' : 'Verificar comprobante de pago'}
             </div>
           </div>
           {isSecondAttempt && !verified && (
-            <span className="rounded-full border border-red-300 bg-danger-soft px-2 py-0.5 text-[10px] font-bold text-red-800">
+            <span className="rounded-full border border-danger/40 bg-danger-soft px-2 py-0.5 text-[10px] font-bold text-danger">
               Segundo y último intento
             </span>
           )}
@@ -116,7 +114,7 @@ function PaySectionPrepaid({ order, proofUrl }: { order: OrderVM; proofUrl: stri
         <div className="bg-white p-3 px-3.5">
           {/* Guía de validación */}
           {!verified && (
-            <div className="mb-2.5 rounded-[10px] border border-slate-200 bg-slate-50 p-2.5 text-xs">
+            <div className="mb-2.5 rounded-[10px] border border-border bg-surface p-2.5 text-xs">
               <div className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.05em] text-ink-muted">
                 DATOS DE VALIDACIÓN
               </div>
@@ -140,7 +138,7 @@ function PaySectionPrepaid({ order, proofUrl }: { order: OrderVM; proofUrl: stri
                   </span>
                 </div>
               </div>
-              <div className="mt-1.5 border-t border-dashed border-slate-300 pt-1.5 text-[10px] leading-tight text-slate-600">
+              <div className="mt-1.5 border-t border-dashed border-border pt-1.5 text-[10px] leading-tight text-ink-muted">
                 Verifica pago posterior a{' '}
                 <strong>{order.createdAtFormatted ?? 'la hora del pedido'}</strong> por{' '}
                 <strong>{soles(order.total)}</strong>.
@@ -156,13 +154,13 @@ function PaySectionPrepaid({ order, proofUrl }: { order: OrderVM; proofUrl: stri
             {proofUrl ? (
               <div
                 onClick={() => setZoom(true)}
-                className="relative cursor-pointer overflow-hidden rounded-[10px] border border-slate-300 bg-slate-100"
+                className="relative cursor-pointer overflow-hidden rounded-[10px] border border-border bg-surface-low"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={proofUrl}
                   alt="Comprobante del cliente"
-                  className="block w-full max-h-80 bg-slate-50 object-contain"
+                  className="block w-full max-h-80 bg-surface object-contain"
                 />
                 <div className="absolute bottom-2 right-2 flex items-center gap-1 rounded-lg bg-ink/95 px-3 py-1.5 text-[11px] font-semibold text-white shadow-elev-2 backdrop-blur-sm">
                   <Icon weight={500} name="zoom_in" size={15} /> Ampliar comprobante
@@ -174,7 +172,7 @@ function PaySectionPrepaid({ order, proofUrl }: { order: OrderVM; proofUrl: stri
                       name="check_circle"
                       size={44}
                       filled
-                      className="text-green-600"
+                      className="text-success"
                     />
                   </div>
                 )}
@@ -188,7 +186,7 @@ function PaySectionPrepaid({ order, proofUrl }: { order: OrderVM; proofUrl: stri
             )}
           </div>
           {verified && (
-            <div className="mt-2 text-center text-xs font-semibold text-green-700">
+            <div className="mt-2 text-center text-xs font-semibold text-success">
               Comprobante verificado · pago registrado
             </div>
           )}
@@ -486,7 +484,7 @@ export function DetailScreen({
           order.status === 'cancelled' &&
           order.cancelReasonCode === 'proof_rejected_final' && (
             <div
-              className="bg-warning-soft border border-amber-300"
+              className="bg-warning-soft border border-warning/50"
               style={{
                 borderRadius: 12,
                 padding: '12px 14px',
@@ -494,12 +492,12 @@ export function DetailScreen({
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
-                <Icon weight={500} name="gavel" size={18} filled className="text-amber-600" />
-                <div className="text-amber-800" style={{ fontSize: 13, fontWeight: 700 }}>
+                <Icon weight={500} name="gavel" size={18} filled className="text-warning" />
+                <div className="text-warning" style={{ fontSize: 13, fontWeight: 700 }}>
                   El cliente apeló el rechazo de este pedido
                 </div>
               </div>
-              <div className="text-amber-700" style={{ fontSize: 12, lineHeight: 1.4 }}>
+              <div className="text-warning" style={{ fontSize: 12, lineHeight: 1.4 }}>
                 Tindivo está revisando este caso. Te recomendamos verificar tu cuenta Yape/Plin por
                 si el pago sí ingresó.
               </div>
@@ -712,7 +710,7 @@ export function DetailScreen({
                         </div>
                       )}
                       {it.note && (
-                        <div className="text-amber-700" style={{ fontSize: 12, marginTop: 2 }}>
+                        <div className="text-warning" style={{ fontSize: 12, marginTop: 2 }}>
                           <Icon weight={500} name="info" size={11} /> {it.note}
                         </div>
                       )}
@@ -808,7 +806,7 @@ export function DetailScreen({
           <>
             {isLoadingActions ? (
               <div
-                className="bg-gray-100 border border-gray-200 animate-pulse"
+                className="bg-ink/[0.06] border border-ink/[0.08] animate-pulse"
                 style={{
                   borderRadius: 12,
                   padding: '12px 14px',
@@ -820,7 +818,7 @@ export function DetailScreen({
                 {/* 1. Esperando comprobante del cliente (pending_acceptance o validando sin comprobante aún) */}
                 {isPrepaidAwaitingProof && (
                   <div
-                    className="bg-brand-soft border border-orange-200"
+                    className="bg-brand-soft border border-brand/30"
                     style={{
                       borderRadius: 12,
                       padding: '12px 14px',
@@ -833,9 +831,9 @@ export function DetailScreen({
                         name="qr_code_2"
                         size={18}
                         filled
-                        className="text-orange-700"
+                        className="text-brand-dark"
                       />
-                      <div className="text-orange-800" style={{ fontSize: 13, fontWeight: 700 }}>
+                      <div className="text-brand-dark" style={{ fontSize: 13, fontWeight: 700 }}>
                         Pago por Yape / Plin
                       </div>
                     </div>
@@ -849,7 +847,7 @@ export function DetailScreen({
                 {/* 2. awaiting_payment: Banner de espera tras haber aceptado disponibilidad */}
                 {order.status === 'awaiting_payment' && (
                   <div
-                    className="bg-brand-soft border border-orange-200"
+                    className="bg-brand-soft border border-brand/30"
                     style={{
                       borderRadius: 12,
                       padding: '12px 14px',
@@ -862,9 +860,9 @@ export function DetailScreen({
                         name="schedule"
                         size={18}
                         filled
-                        className="text-orange-700"
+                        className="text-brand-dark"
                       />
-                      <div className="text-orange-800" style={{ fontSize: 13, fontWeight: 700 }}>
+                      <div className="text-brand-dark" style={{ fontSize: 13, fontWeight: 700 }}>
                         Esperando pago del cliente
                       </div>
                     </div>
@@ -1033,7 +1031,7 @@ export function DetailScreen({
           {isLoadingActions ? (
             <div style={{ display: 'flex', gap: 10, opacity: 0.7 }} className="animate-pulse">
               <div
-                className="bg-gray-200"
+                className="bg-ink/[0.08]"
                 style={{
                   flex: 1,
                   height: 44,
@@ -1041,7 +1039,7 @@ export function DetailScreen({
                 }}
               />
               <div
-                className="bg-gray-200"
+                className="bg-ink/[0.08]"
                 style={{
                   flex: 2,
                   height: 44,
@@ -1078,7 +1076,7 @@ export function DetailScreen({
               >
                 <Icon weight={500} name="close" size={18} /> Cancelar
               </button>
-              <div className="inline-flex flex-[2] cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-gray-100 px-5 py-3 text-[15px] font-semibold text-gray-400 pointer-events-none">
+              <div className="inline-flex flex-[2] cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-ink/[0.06] px-5 py-3 text-[15px] font-semibold text-ink-subtle pointer-events-none">
                 Esperando pago...
               </div>
             </div>
@@ -1139,7 +1137,7 @@ export function DetailScreen({
               }}
             >
               <Icon weight={500} name="check_circle" size={20} filled className="text-success" />
-              <span className="text-green-700" style={{ fontSize: 13, fontWeight: 600 }}>
+              <span className="text-success" style={{ fontSize: 13, fontWeight: 600 }}>
                 Comida lista. El motorizado ya lo sabe.
               </span>
             </div>
