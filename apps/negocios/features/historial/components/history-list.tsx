@@ -1,0 +1,166 @@
+'use client'
+
+import { Card, EmptyState, Icon } from '@tindivo/ui'
+import { PAYMENT_META, SourceBadgeMini, soles } from '@/components/dashboard/primitives'
+import type { HistDisplay } from '../types'
+
+export function HistoryList({ rows }: { rows: HistDisplay[] }) {
+  if (rows.length === 0) {
+    return (
+      <EmptyState
+        icon="history"
+        heading="Sin pedidos registrados hoy"
+        description="Los pedidos entregados y cancelados de la jornada aparecerán aquí."
+      />
+    )
+  }
+
+  return (
+    <>
+      <div className="flex flex-col gap-2 lg:hidden">
+        {rows.map((row) => (
+          <MobileOrderRow key={row.id} row={row} />
+        ))}
+      </div>
+
+      <div className="hidden lg:block">
+        <DesktopTable rows={rows} />
+      </div>
+    </>
+  )
+}
+
+function MobileOrderRow({ row }: { row: HistDisplay }) {
+  const payMeta = PAYMENT_META[row.payment] ?? PAYMENT_META.pending_cash
+
+  return (
+    <Card className="flex items-center gap-2.5 p-3">
+      <div
+        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] ${
+          row.isCancel ? 'bg-surface text-ink-subtle' : 'bg-success-soft text-success'
+        }`}
+      >
+        <Icon name={row.isCancel ? 'cancel' : 'check_circle'} size={20} filled />
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <div className="mb-0.5 flex flex-wrap items-center gap-1.5">
+          <span className="text-[14px] font-semibold">{row.customer}</span>
+          <SourceBadgeMini source={row.source} />
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-ink-muted">
+          <span className="font-mono">#{row.shortId}</span>
+          {row.closedAt && (
+            <>
+              <span>·</span>
+              <span>{row.closedAt}</span>
+            </>
+          )}
+          <span>·</span>
+          <span className="inline-flex items-center gap-1">
+            <Icon name={payMeta.icon} size={11} /> {payMeta.short}
+          </span>
+          {row.isCancel && row.cancelReason && (
+            <>
+              <span>·</span>
+              <span className="text-danger">{row.cancelReason}</span>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="shrink-0 text-right">
+        <div
+          className={`font-mono text-[15px] font-bold ${
+            row.isCancel ? 'text-ink-subtle line-through' : 'text-ink'
+          }`}
+        >
+          {soles(row.total)}
+        </div>
+        <div
+          className={`mt-0.5 text-[10px] font-semibold ${
+            row.isCancel ? 'text-danger' : 'text-success'
+          }`}
+        >
+          {row.isCancel ? 'Cancelado' : 'Entregado'}
+        </div>
+      </div>
+    </Card>
+  )
+}
+
+const COLS = '36px 1fr 120px 100px 120px 80px'
+
+function DesktopTable({ rows }: { rows: HistDisplay[] }) {
+  return (
+    <Card className="overflow-hidden p-0">
+      <div
+        className="grid gap-3 border-b border-ink/[0.04] bg-surface px-4 py-2.5"
+        style={{ gridTemplateColumns: COLS }}
+      >
+        {(['', 'CLIENTE', 'ORIGEN', 'PAGO', 'HORA', 'TOTAL'] as const).map((h) => (
+          <div
+            key={h}
+            className="font-mono text-[10px] font-semibold uppercase tracking-wider text-ink-muted"
+          >
+            {h}
+          </div>
+        ))}
+      </div>
+
+      {rows.map((row, i) => {
+        const payMeta = PAYMENT_META[row.payment] ?? PAYMENT_META.pending_cash
+        return (
+          <div
+            key={row.id}
+            className={`grid items-center gap-3 px-4 py-3 ${
+              i < rows.length - 1 ? 'border-b border-ink/[0.04]' : ''
+            } ${row.isCancel ? 'bg-surface-low/50' : 'bg-card'}`}
+            style={{ gridTemplateColumns: COLS }}
+          >
+            <div>
+              <Icon
+                name={row.isCancel ? 'cancel' : 'check_circle'}
+                size={18}
+                filled
+                className={row.isCancel ? 'text-ink-subtle' : 'text-success'}
+              />
+            </div>
+
+            <div>
+              <div className="text-[14px] font-semibold">{row.customer}</div>
+              <div className="font-mono text-[11px] text-ink-muted">#{row.shortId}</div>
+            </div>
+
+            <div>
+              <SourceBadgeMini source={row.source} />
+            </div>
+
+            <div>
+              <span className="inline-flex items-center gap-1 text-[12px] text-ink-muted">
+                <Icon name={payMeta.icon} size={13} /> {payMeta.short}
+              </span>
+            </div>
+
+            <div>
+              {row.closedAt && (
+                <div className="font-mono text-[13px] font-semibold">{row.closedAt}</div>
+              )}
+              {row.isCancel && row.cancelReason && (
+                <div className="text-[11px] text-danger">{row.cancelReason}</div>
+              )}
+            </div>
+
+            <div
+              className={`font-mono text-right text-[14px] font-bold ${
+                row.isCancel ? 'text-ink-subtle line-through' : 'text-ink'
+              }`}
+            >
+              {soles(row.total)}
+            </div>
+          </div>
+        )
+      })}
+    </Card>
+  )
+}
