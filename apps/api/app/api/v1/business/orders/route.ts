@@ -37,7 +37,9 @@ const Schema = z.object({
     })
     .optional(),
   deliveryReference: z.string().trim().max(500).optional(),
-  notes: z.string().trim().max(500).optional(),
+  // `notes` se retiró en la migración 0127 junto con `p_notes`: era un campo que
+  // el RPC aceptaba desde la 0080 y descartaba en silencio. Ningún cliente lo
+  // enviaba. Una nota dirigida al MOTORIZADO es una idea aparte, sin diseñar.
   prepTimeMinutes: z.number().int().min(1).max(120).default(20),
   orderAmount: z.number().positive().max(99_999_999.99),
   clientPaysWith: z.number().nonnegative().max(99_999_999.99).optional(),
@@ -65,12 +67,6 @@ export async function POST(req: Request): Promise<Response> {
       p_order_amount: body.orderAmount,
       p_prep_time_minutes: body.prepTimeMinutes,
       p_delivery_reference: body.deliveryReference ?? undefined,
-      // OJO: `p_notes` NO hace nada. El RPC lo acepta en la firma desde la 0080
-      // y su cuerpo no lo referencia ni una vez, así que lo que la cajera
-      // escriba en "notas" se descarta en silencio. Se sigue enviando para no
-      // cambiar el contrato mientras se decide si se conecta o se borra; está
-      // anotado como deuda en la cabecera de la migración 0126.
-      p_notes: body.notes ?? undefined,
       p_delivery_distance_band: body.deliveryDistanceBand,
       p_client_pays_with: body.clientPaysWith ?? undefined,
       p_yape_amount: body.yapeAmount ?? undefined,
