@@ -14,6 +14,19 @@ export const dynamic = 'force-dynamic'
 const Schema = z.object({
   deliveryMethod: DeliveryMethodSchema,
   paymentIntent: PaymentIntentSchema,
+  // AQUÍ vive la obligatoriedad de la banda, no en el esquema de la DB.
+  //
+  // El RPC conserva `p_delivery_distance_band DEFAULT NULL` para que la firma
+  // aguante llamadas viejas sin reventar; una llamada sin banda queda marcada
+  // como `delivery_fee_source = 'system'`. Pero por ESTE endpoint no puede
+  // entrar un pedido sin banda: sin `.optional()`, zod lo rechaza con 422.
+  //
+  // Es deliberado y sigue el precedente del modal del motorizado en el v1
+  // (`confirm-pickup-modal.tsx`), que tampoco tenía valor por defecto: obligar
+  // a elegir en vez de caer a `near` en silencio. Un default aquí devolvería el
+  // problema que esta migración vino a resolver, pero con dos botones en
+  // pantalla dando falsa sensación de control.
+  deliveryDistanceBand: z.enum(['near', 'far']),
   customerName: z.string().trim().max(120).optional(),
   customerPhone: z
     .string()
@@ -52,7 +65,13 @@ export async function POST(req: Request): Promise<Response> {
       p_order_amount: body.orderAmount,
       p_prep_time_minutes: body.prepTimeMinutes,
       p_delivery_reference: body.deliveryReference ?? undefined,
+      // OJO: `p_notes` NO hace nada. El RPC lo acepta en la firma desde la 0080
+      // y su cuerpo no lo referencia ni una vez, así que lo que la cajera
+      // escriba en "notas" se descarta en silencio. Se sigue enviando para no
+      // cambiar el contrato mientras se decide si se conecta o se borra; está
+      // anotado como deuda en la cabecera de la migración 0126.
       p_notes: body.notes ?? undefined,
+      p_delivery_distance_band: body.deliveryDistanceBand,
       p_client_pays_with: body.clientPaysWith ?? undefined,
       p_yape_amount: body.yapeAmount ?? undefined,
       p_cash_amount: body.cashAmount ?? undefined,

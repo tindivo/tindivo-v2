@@ -5,7 +5,7 @@ import { Icon } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { useMemo, useState } from 'react'
 import { soles } from '@/components/dashboard/primitives'
-import { useCreateOrder } from '../hooks/use-create-order'
+import { type DistanceBand, useCreateOrder } from '../hooks/use-create-order'
 import { isReferenceValid, num } from '../lib/format'
 import type { Payment } from '../types'
 import { AmountForm } from './amount-form'
@@ -27,6 +27,12 @@ export function NuevoForm() {
   const [paysWith, setPaysWith] = useState('')
   const [walletPart, setWalletPart] = useState('')
   const [cashPart, setCashPart] = useState('')
+  // Banda de distancia. Arranca en `null` — nadie ha elegido todavía — y el
+  // selector de los dos botones llega en la Parte E. Hasta entonces `canSubmit`
+  // la exige, así que el botón queda deshabilitado: es el estado honesto, no un
+  // `'near'` silencioso que cobraría de menos una entrega lejana.
+  // Solo el getter: el setter lo cablea el selector de dos botones de la Parte E.
+  const [band] = useState<DistanceBand | null>(null)
 
   const deliveryMethod = 'delivery'
   const amountN = num(amount)
@@ -50,7 +56,12 @@ export function NuevoForm() {
     return c > 0 ? c : 0
   }, [isCashish, paysWith, cashTarget])
 
-  const canSubmit = amountN > 0 && mixedOk && phoneOk && referenceOk && !busy
+  // `band !== null` cierra el botón hasta que alguien elija cerca/lejos. Con el
+  // selector todavía sin construir (Parte E), eso deja el alta de pedidos
+  // manuales bloqueada en esta pantalla — a propósito: el endpoint ya exige la
+  // banda, así que sin ella el POST devolvería 422 igual, y es preferible un
+  // botón deshabilitado a un error tras rellenar todo el formulario.
+  const canSubmit = amountN > 0 && mixedOk && phoneOk && referenceOk && band !== null && !busy
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-surface">
@@ -124,7 +135,18 @@ export function NuevoForm() {
             type="button"
             onClick={() =>
               submit(
-                { prep, name, phone, reference, payment, amount, paysWith, walletPart, cashPart },
+                {
+                  prep,
+                  name,
+                  phone,
+                  reference,
+                  payment,
+                  amount,
+                  paysWith,
+                  walletPart,
+                  cashPart,
+                  band,
+                },
                 canSubmit,
               )
             }

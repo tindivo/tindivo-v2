@@ -2362,6 +2362,7 @@ export type Database = {
           p_client_pays_with?: number
           p_customer_name?: string
           p_customer_phone?: string
+          p_delivery_distance_band?: Database["public"]["Enums"]["distance_band"]
           p_delivery_method: Database["public"]["Enums"]["delivery_method"]
           p_delivery_reference?: string
           p_notes?: string

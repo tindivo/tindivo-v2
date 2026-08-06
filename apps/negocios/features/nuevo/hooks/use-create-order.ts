@@ -13,6 +13,9 @@ import {
 } from '../lib/format'
 import type { Payment } from '../types'
 
+/** Banda de distancia. `null` = la cajera todavía no eligió. */
+export type DistanceBand = 'near' | 'far'
+
 export interface CreateOrderPayload {
   prep: number
   name: string
@@ -23,6 +26,13 @@ export interface CreateOrderPayload {
   paysWith: string
   walletPart: string
   cashPart: string
+  /**
+   * SIN valor por defecto a propósito. El endpoint la exige (zod sin
+   * `.optional()`), así que un pedido sin banda se rechaza con 422 en vez de
+   * colarse como `near`. El selector de los dos botones se construye en la
+   * Parte E; hasta entonces esto es el contrato, no la interacción.
+   */
+  band: DistanceBand | null
 }
 
 export function useCreateOrder() {
@@ -49,6 +59,7 @@ export function useCreateOrder() {
       customerName: payload.name.trim() || undefined,
       customerPhone: cleanPhone || undefined,
       deliveryReference: payload.reference.trim() || undefined,
+      deliveryDistanceBand: payload.band,
       prepTimeMinutes: payload.prep,
       orderAmount: amountN,
       clientPaysWith: isCashish && num(payload.paysWith) > 0 ? num(payload.paysWith) : undefined,
