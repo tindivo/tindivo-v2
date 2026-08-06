@@ -6,9 +6,11 @@ import { useRouter } from 'next/navigation'
 import { useMemo, useState } from 'react'
 import { soles } from '@/components/dashboard/primitives'
 import { type DistanceBand, useCreateOrder } from '../hooks/use-create-order'
+import { useDeliveryBands } from '../hooks/use-delivery-bands'
 import { isReferenceValid, num } from '../lib/format'
 import type { Payment } from '../types'
 import { AmountForm } from './amount-form'
+import { BandSelector } from './band-selector'
 import { CustomerForm } from './customer-form'
 import { PaymentSelector } from './payment-selector'
 import { PrepSelector } from './prep-selector'
@@ -27,12 +29,11 @@ export function NuevoForm() {
   const [paysWith, setPaysWith] = useState('')
   const [walletPart, setWalletPart] = useState('')
   const [cashPart, setCashPart] = useState('')
-  // Banda de distancia. Arranca en `null` — nadie ha elegido todavía — y el
-  // selector de los dos botones llega en la Parte E. Hasta entonces `canSubmit`
-  // la exige, así que el botón queda deshabilitado: es el estado honesto, no un
-  // `'near'` silencioso que cobraría de menos una entrega lejana.
-  // Solo el getter: el setter lo cablea el selector de dos botones de la Parte E.
-  const [band] = useState<DistanceBand | null>(null)
+  // Zona de entrega. Arranca en `null` — nadie ha elegido todavía — y `canSubmit`
+  // la exige. Un default a `'near'` cobraría de menos cada entrega lejana sin que
+  // nadie se entere.
+  const [band, setBand] = useState<DistanceBand | null>(null)
+  const { bands } = useDeliveryBands()
 
   const deliveryMethod = 'delivery'
   const amountN = num(amount)
@@ -56,11 +57,10 @@ export function NuevoForm() {
     return c > 0 ? c : 0
   }, [isCashish, paysWith, cashTarget])
 
-  // `band !== null` cierra el botón hasta que alguien elija cerca/lejos. Con el
-  // selector todavía sin construir (Parte E), eso deja el alta de pedidos
-  // manuales bloqueada en esta pantalla — a propósito: el endpoint ya exige la
-  // banda, así que sin ella el POST devolvería 422 igual, y es preferible un
-  // botón deshabilitado a un error tras rellenar todo el formulario.
+  // `band !== null` cierra el botón hasta que se elija zona. El endpoint la
+  // exige (zod sin `.optional()` desde la 0126), así que sin ella el POST
+  // devolvería 422: mejor un botón que dice qué falta que un error tras
+  // rellenar todo el formulario.
   const canSubmit = amountN > 0 && mixedOk && phoneOk && referenceOk && band !== null && !busy
 
   return (
@@ -96,6 +96,14 @@ export function NuevoForm() {
             phoneFormatOk={phoneFormatOk}
           />
           <ReferenceForm reference={reference} onChange={setReference} isValid={referenceOk} />
+          {/* Va justo después de la referencia: la zona se decide mirando la
+              dirección recién escrita, y antes de hablar de dinero. */}
+          <BandSelector
+            value={band}
+            onChange={setBand}
+            nearFee={bands?.near ?? null}
+            farFee={bands?.far ?? null}
+          />
           <PaymentSelector value={payment} onChange={setPayment} />
           <AmountForm
             payment={payment}
@@ -153,7 +161,11 @@ export function NuevoForm() {
             disabled={!canSubmit}
             className="flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-brand px-6 text-base font-bold text-white shadow-[0_6px_18px_rgba(249,115,22,0.16)] transition-all hover:shadow-[0_10px_30px_rgba(249,115,22,0.24)] active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50"
           >
-            <Icon name="two_wheeler" size={22} filled /> {busy ? 'Creando…' : 'Pedir moto'}
+            <Icon name="two_wheeler" size={22} filled />{' '}
+            {/* El botón deshabilitado NOMBRA lo que falta en vez de quedarse gris
+                sin explicación. La zona es lo único que puede faltar sin señal
+                propia en el formulario: los demás campos avisan en su tarjeta. */}
+            {busy ? 'Creando…' : band === null ? 'Falta elegir la zona de entrega' : 'Pedir moto'}
           </button>
         </div>
       </div>
