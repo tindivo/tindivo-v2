@@ -1,7 +1,7 @@
 /* =========================================================================
    Sistema visual Tindivo — clases .t-* compartidas por todas las apps.
    Inspirado en tindivo-demo.vercel.app: naranja fresco, negro cálido,
-   superficies crema, tipografía Bricolage Grotesque + Geist.
+   superficies crema, tipografía Geist + JetBrains Mono.
    CSS plano (sin @apply) → independiente del pipeline Tailwind de cada app.
    ========================================================================= */
 .t-display {
