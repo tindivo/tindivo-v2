@@ -1,35 +1,24 @@
-/* Material Symbols Rounded — self-hosted subset
-   Range: opsz 24, wght 400..700, FILL 0..1, GRAD 0
-   Covers the weights used by the dashboard. font-display: block prevents
-   the broken-icon flash while the font loads; the files are preloaded in
-   layout.tsx so first paint is not delayed. */
+/* Material Symbols Rounded — fuente VARIABLE auto-hospedada, subconjunto.
+   Contiene solo los iconos que usa el panel (ver `icons.txt`), con los cuatro
+   ejes intactos (FILL, GRAD, opsz, wght) porque la primitiva `Icon` de
+   @tindivo/ui los maneja vía `font-variation-settings`.
+
+   Antes eran 4 TTF estáticos de ~1.2 MB (4.83 MB en total) precargados en el
+   layout: la clase fijaba `font-weight: normal`, así que el navegador siempre
+   servía el de 400 y los otros tres eran 3.6 MB de descarga muerta. Y al ser
+   estáticos, el eje `wght` no existía: el prop `weight` de `Icon` no hacía nada.
+
+   `font-display: swap` — antes era `block`, que deja los iconos INVISIBLES
+   hasta que la fuente carga. Con 92 KB el intercambio es imperceptible y no
+   hay pantalla en blanco.
+
+   Para regenerar tras añadir iconos nuevos: ver `README.md` en esta carpeta. */
 @font-face {
   font-family: 'Material Symbols Rounded';
   font-style: normal;
-  font-weight: 400;
-  font-display: block;
-  src: url('./material-symbols-rounded-400.ttf') format('truetype');
-}
-@font-face {
-  font-family: 'Material Symbols Rounded';
-  font-style: normal;
-  font-weight: 500;
-  font-display: block;
-  src: url('./material-symbols-rounded-500.ttf') format('truetype');
-}
-@font-face {
-  font-family: 'Material Symbols Rounded';
-  font-style: normal;
-  font-weight: 600;
-  font-display: block;
-  src: url('./material-symbols-rounded-600.ttf') format('truetype');
-}
-@font-face {
-  font-family: 'Material Symbols Rounded';
-  font-style: normal;
-  font-weight: 700;
-  font-display: block;
-  src: url('./material-symbols-rounded-700.ttf') format('truetype');
+  font-weight: 100 700;
+  font-display: swap;
+  src: url('./material-symbols-rounded.woff2') format('woff2-variations');
 }
 
 .material-symbols-rounded {

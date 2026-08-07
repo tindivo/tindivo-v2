@@ -30,37 +30,15 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="es" className={`${geist.variable} ${jetbrains.variable}`}>
       <head>
-        {/* Material Symbols Rounded — self-hosted subset
-            (opsz 24, wght 400..700, FILL 0..1, GRAD 0).
-            Preload the font files so icons render without the broken-glyph flash. */}
+        {/* Material Symbols Rounded — subset variable auto-hospedado (92 KB).
+            Un solo archivo con los cuatro ejes, así que basta un preload. */}
         <link rel="preload" as="style" href="/fonts/material-symbols.css" />
         <link
           rel="preload"
           as="font"
-          type="font/ttf"
+          type="font/woff2"
           crossOrigin="anonymous"
-          href="/fonts/material-symbols-rounded-400.ttf"
-        />
-        <link
-          rel="preload"
-          as="font"
-          type="font/ttf"
-          crossOrigin="anonymous"
-          href="/fonts/material-symbols-rounded-500.ttf"
-        />
-        <link
-          rel="preload"
-          as="font"
-          type="font/ttf"
-          crossOrigin="anonymous"
-          href="/fonts/material-symbols-rounded-600.ttf"
-        />
-        <link
-          rel="preload"
-          as="font"
-          type="font/ttf"
-          crossOrigin="anonymous"
-          href="/fonts/material-symbols-rounded-700.ttf"
+          href="/fonts/material-symbols-rounded.woff2"
         />
         <link rel="stylesheet" href="/fonts/material-symbols.css" />
       </head>
