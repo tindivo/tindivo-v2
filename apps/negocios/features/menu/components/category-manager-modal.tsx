@@ -1,4 +1,4 @@
-import { Icon, LoadingState } from '@tindivo/ui'
+import { Icon, IconButton, LoadingState } from '@tindivo/ui'
 import { useCategoryManager } from '../hooks/use-category-manager'
 import type { CatRow } from '../types'
 
@@ -40,14 +40,9 @@ export function CategoryManagerModal({
       <div className="flex w-full max-w-[560px] flex-col overflow-hidden rounded-2xl bg-card max-h-[85vh]">
         <div className="flex items-center justify-between border-b border-ink/[0.06] px-4 py-3.5">
           <h2 className="text-[16px] font-bold text-ink">Gestionar categorías</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-ink transition-colors hover:bg-ink/[0.06]"
-            aria-label="Cerrar"
-          >
+          <IconButton size="sm" onClick={onClose} aria-label="Cerrar">
             <Icon name="close" size={20} />
-          </button>
+          </IconButton>
         </div>
 
         <div className="flex flex-col gap-2.5 overflow-y-auto p-3.5">
@@ -93,24 +88,23 @@ export function CategoryManagerModal({
                     onBlur={(e) => saveName(row, e.target.value)}
                     placeholder="Nombre de la categoría"
                   />
-                  <button
-                    type="button"
+                  <IconButton
+                    size="sm"
                     onClick={() => toggleActive(row)}
                     disabled={busy}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-full text-ink transition-colors hover:bg-ink/[0.06] disabled:opacity-50"
                     title={row.is_active ? 'Ocultar del menú' : 'Mostrar en el menú'}
                   >
                     <Icon name={row.is_active ? 'visibility' : 'visibility_off'} size={18} />
-                  </button>
-                  <button
-                    type="button"
+                  </IconButton>
+                  <IconButton
+                    size="sm"
                     onClick={() => setConfirmDelete(row)}
                     disabled={busy}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-full text-danger transition-colors hover:bg-danger/10 disabled:opacity-50"
+                    className="text-danger hover:bg-danger/10"
                     aria-label="Eliminar categoría"
                   >
                     <Icon name="delete" size={18} />
-                  </button>
+                  </IconButton>
                 </div>
                 <input
                   className={`${inputCls} text-[13px]`}
