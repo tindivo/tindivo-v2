@@ -1,8 +1,8 @@
 'use client'
 
+import { Spinner } from '@tindivo/ui'
 import dynamic from 'next/dynamic'
 import { useEffect, useMemo, useState } from 'react'
-import { Spinner } from '@tindivo/ui'
 import { getCoverage, getCoveragePolygon, haversineKm, pointInPolygon } from '@/lib/coverage'
 import {
   type GeoFix,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { formatReadyDelta, toOrderVM } from '../view-model'
 import type { OrderRow } from '../view-model'
+import { formatReadyDelta, toOrderVM } from '../view-model'
 
 function mockOrderRow(overrides: Partial<OrderRow> = {}): OrderRow {
   return {
