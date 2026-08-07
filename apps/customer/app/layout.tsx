@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next'
-import { Bricolage_Grotesque, Geist, JetBrains_Mono } from 'next/font/google'
+import { Geist, JetBrains_Mono } from 'next/font/google'
 import type { ReactNode } from 'react'
 import { AuthOnboardingHost } from '@/components/auth-onboarding/host'
 import { BottomNav } from '@/components/bottom-nav'
@@ -7,15 +7,9 @@ import { PushManager } from '@/components/push-manager'
 import { CartHydrator } from '@/lib/cart'
 import './globals.css'
 
-// Sistema tipográfico del demo: Bricolage Grotesque para titulares,
-// Geist para cuerpo y JetBrains Mono para etiquetas/eyebrows.
-const bricolage = Bricolage_Grotesque({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-bricolage',
-  display: 'swap',
-})
-
+// Tipografía unificada del design system Tindivo (igual que motorizados y negocios):
+// - Geist para display, body y labels.
+// - JetBrains Mono solo para datos técnicos (IDs, precios, tiempos).
 const geist = Geist({
   subsets: ['latin'],
   variable: '--font-geist',
@@ -42,7 +36,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="es" className={`${bricolage.variable} ${geist.variable} ${jetbrains.variable}`}>
+    <html lang="es" className={`${geist.variable} ${jetbrains.variable}`}>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

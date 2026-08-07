@@ -1,28 +1,27 @@
 import type { Metadata } from 'next'
-import { Manrope } from 'next/font/google'
+import { Geist, JetBrains_Mono } from 'next/font/google'
 import type { ReactNode } from 'react'
 import { AdminShell } from '@/components/admin-shell'
 import { AuthGate } from '@/components/auth-gate'
 import { PushManager } from '@/components/push-manager'
 import './globals.css'
 
-// Tipografía única de la plataforma: Manrope con todos los pesos.
-// Se exponen tres variables para no romper los call sites existentes.
-const bricolage = Manrope({
+// Tipografía unificada del design system Tindivo (igual que motorizados,
+// negocios y customer):
+// - Geist para display, body y labels.
+// - JetBrains Mono solo para datos técnicos (IDs, precios, tiempos).
+//
+// Antes las tres variables cargaban Manrope. Como `theme.css` mapea
+// `--font-mono` a `--font-jetbrains`, los 34 `font-mono` de este panel salían
+// en una fuente PROPORCIONAL: los importes y los IDs no alineaban en columna.
+const geist = Geist({
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
-  variable: '--font-bricolage',
-  display: 'swap',
-})
-const geist = Manrope({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
   variable: '--font-geist',
   display: 'swap',
 })
-const jetbrains = Manrope({
+const jetbrains = JetBrains_Mono({
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
+  weight: ['400', '500', '600', '700'],
   variable: '--font-jetbrains',
   display: 'swap',
 })
@@ -36,7 +35,7 @@ import { EnvBanner } from '@tindivo/ui'
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="es" className={`${bricolage.variable} ${geist.variable} ${jetbrains.variable}`}>
+    <html lang="es" className={`${geist.variable} ${jetbrains.variable}`}>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
