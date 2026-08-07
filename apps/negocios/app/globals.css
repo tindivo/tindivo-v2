@@ -2,8 +2,3 @@
 @import '../../../packages/ui/src/theme.css';
 
 @source '../../../packages/ui/src';
-
-:root {
-  --font-geist: var(--font-geist), system-ui, sans-serif;
-  --font-jetbrains: var(--font-jetbrains), ui-monospace, monospace;
-}
