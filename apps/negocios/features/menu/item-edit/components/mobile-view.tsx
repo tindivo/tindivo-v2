@@ -48,7 +48,7 @@ export function MobileView(props: MobileViewProps) {
   } = props
 
   return (
-    <div className="flex flex-col lg:hidden" style={{ height: '100dvh' }}>
+    <div className="flex h-dvh flex-col lg:hidden">
       {showDeleteModal && (
         <ConfirmDeleteModal
           itemName={formData.name}

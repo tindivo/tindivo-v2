@@ -125,8 +125,7 @@ export function EditorForm({
           {/* biome-ignore lint/a11y/noLabelWithoutControl: input asociado como hermano */}
           <label className={labelCls}>Nombre del plato</label>
           <input
-            className={inputCls}
-            style={{ fontWeight: 600 }}
+            className={`${inputCls} font-semibold`}
             value={formData.name}
             onChange={(e) => onFormChange({ name: e.target.value })}
             placeholder="Ej: Pizza Hawaiana"
@@ -137,8 +136,7 @@ export function EditorForm({
           {/* biome-ignore lint/a11y/noLabelWithoutControl: textarea asociada como hermana */}
           <label className={labelCls}>Descripción (opcional)</label>
           <textarea
-            className={inputCls}
-            style={{ minHeight: 80, resize: 'none', lineHeight: 1.5 }}
+            className={`${inputCls} min-h-20 resize-none leading-normal`}
             value={formData.description}
             onChange={(e) => onFormChange({ description: e.target.value })}
             placeholder="Ingredientes y características del plato"
@@ -223,8 +221,7 @@ export function EditorForm({
             {/* biome-ignore lint/a11y/noLabelWithoutControl: input asociado como hermano */}
             <label className={labelCls}>Precio base (S/)</label>
             <input
-              className={inputMonoCls}
-              style={{ fontSize: 18, fontWeight: 700 }}
+              className={`${inputMonoCls} text-[18px] font-bold`}
               type="number"
               min={0}
               step={0.5}
@@ -278,8 +275,9 @@ export function EditorForm({
                   aria-label={on ? `Desactivar ${t.label}` : `Activar ${t.label}`}
                 >
                   <span
-                    className="absolute top-[3px] h-[18px] w-[18px] rounded-full bg-white transition-transform"
-                    style={{ transform: on ? 'translateX(18px)' : 'translateX(3px)' }}
+                    className={`absolute top-[3px] h-[18px] w-[18px] rounded-full bg-white transition-transform ${
+                      on ? 'translate-x-[18px]' : 'translate-x-[3px]'
+                    }`}
                   />
                 </button>
               </div>

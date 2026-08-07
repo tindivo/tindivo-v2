@@ -64,7 +64,7 @@ export function DeudaList({
               onClick={() => setMainTab(t.key)}
               className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-[13px] font-semibold transition-all ${
                 active
-                  ? 'bg-white text-ink shadow-[0_1px_3px_rgba(0,0,0,0.06)]'
+                  ? 'bg-white text-ink shadow-elev-1'
                   : 'bg-transparent text-ink-muted hover:text-ink'
               }`}
             >

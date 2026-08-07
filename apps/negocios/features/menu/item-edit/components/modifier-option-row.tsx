@@ -59,8 +59,9 @@ export function ModifierOptionRow({
           type="number"
           min={0}
           step={0.5}
-          className="w-full rounded-lg border border-ink/[0.06] bg-surface px-2.5 py-1.5 text-right font-mono text-[13px] font-semibold outline-none focus:border-ink"
-          style={{ color: opt.additional_price > 0 ? 'var(--color-success)' : undefined }}
+          className={`w-full rounded-lg border border-ink/[0.06] bg-surface px-2.5 py-1.5 text-right font-mono text-[13px] font-semibold outline-none focus:border-ink ${
+            opt.additional_price > 0 ? 'text-success' : ''
+          }`}
           value={opt.additional_price === 0 ? '' : opt.additional_price}
           placeholder="0"
           onChange={(e) => onChange({ additional_price: Number.parseFloat(e.target.value) || 0 })}
@@ -75,8 +76,9 @@ export function ModifierOptionRow({
         aria-label={opt.is_available ? 'Marcar como agotado' : 'Marcar como disponible'}
       >
         <span
-          className="absolute top-[2px] h-4 w-4 rounded-full bg-white transition-transform"
-          style={{ transform: opt.is_available ? 'translateX(16px)' : 'translateX(2px)' }}
+          className={`absolute top-[2px] h-4 w-4 rounded-full bg-white transition-transform ${
+            opt.is_available ? 'translate-x-4' : 'translate-x-[2px]'
+          }`}
         />
       </button>
       <button

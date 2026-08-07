@@ -55,7 +55,7 @@ export function DesktopView(props: DesktopViewProps) {
   } = props
 
   return (
-    <div className="hidden lg:flex" style={{ height: '100dvh' }}>
+    <div className="hidden h-dvh lg:flex">
       {showDeleteModal && (
         <ConfirmDeleteModal
           itemName={formData.name}

@@ -130,10 +130,7 @@ export function ModifierGroupCard({
             Opciones
           </div>
           <div className="mb-2">
-            <div
-              className="grid gap-2 pb-1 text-[9px] font-bold uppercase tracking-wider text-ink/55"
-              style={{ gridTemplateColumns: '1fr 90px 34px 28px', marginLeft: 24 }}
-            >
+            <div className="ml-6 grid grid-cols-[1fr_90px_34px_28px] gap-2 pb-1 text-[9px] font-bold uppercase tracking-wider text-ink/55">
               <span>Nombre</span>
               <span className="text-right">+ Precio</span>
               <span />

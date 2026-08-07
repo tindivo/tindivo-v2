@@ -7,10 +7,7 @@ export function DeudaHero({ balance, isBlocked }: { balance: number; isBlocked: 
   const pct = Math.min(balance / BLOCK_THRESHOLD, 1) * 100
 
   return (
-    <div
-      className="rounded-2xl p-5 text-white"
-      style={{ background: 'linear-gradient(135deg, #1A1614 0%, #2A2422 100%)' }}
-    >
+    <div className="rounded-2xl bg-gradient-to-br from-ink to-[#2A2422] p-5 text-white">
       {isBlocked && (
         <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-danger/20 px-3 py-1 text-xs font-semibold text-danger-light">
           Cuenta suspendida
@@ -29,11 +26,10 @@ export function DeudaHero({ balance, isBlocked }: { balance: number; isBlocked: 
         </div>
         <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
           <div
-            className="h-full transition-[width] duration-500 ease-out"
-            style={{
-              width: `${pct}%`,
-              background: pct >= 80 ? '#dc2626' : '#f97316',
-            }}
+            className={`h-full transition-[width] duration-500 ease-out ${
+              pct >= 80 ? 'bg-danger' : 'bg-brand'
+            }`}
+            style={{ width: `${pct}%` }}
           />
         </div>
       </div>

@@ -89,15 +89,13 @@ function MobileOrderRow({ row }: { row: HistDisplay }) {
   )
 }
 
-const COLS = '36px 1fr 120px 100px 120px 80px'
+/** Rejilla de la tabla de historial. Como clase, no como estilo inline. */
+const COLS = 'grid-cols-[36px_1fr_120px_100px_120px_80px]'
 
 function DesktopTable({ rows }: { rows: HistDisplay[] }) {
   return (
     <Card className="overflow-hidden p-0">
-      <div
-        className="grid gap-3 border-b border-ink/[0.04] bg-surface px-4 py-2.5"
-        style={{ gridTemplateColumns: COLS }}
-      >
+      <div className={`grid gap-3 border-b border-ink/[0.04] bg-surface px-4 py-2.5 ${COLS}`}>
         {(['', 'CLIENTE', 'ORIGEN', 'PAGO', 'HORA', 'TOTAL'] as const).map((h) => (
           <div
             key={h}
@@ -113,10 +111,9 @@ function DesktopTable({ rows }: { rows: HistDisplay[] }) {
         return (
           <div
             key={row.id}
-            className={`grid items-center gap-3 px-4 py-3 ${
+            className={`grid items-center gap-3 px-4 py-3 ${COLS} ${
               i < rows.length - 1 ? 'border-b border-ink/[0.04]' : ''
             } ${row.isCancel ? 'bg-surface-low/50' : 'bg-card'}`}
-            style={{ gridTemplateColumns: COLS }}
           >
             <div>
               <Icon

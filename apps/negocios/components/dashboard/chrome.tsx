@@ -194,11 +194,8 @@ function Sidebar({ active, onSignOut }: { active: NavId; onSignOut: () => void }
         >
           {bizName[0] ?? 'T'}
         </div>
-        <div style={{ minWidth: 0 }}>
-          <div
-            className="font-display text-base font-bold leading-tight tracking-tight"
-            style={{ fontSize: 16, lineHeight: 1.1 }}
-          >
+        <div className="min-w-0">
+          <div className="font-display text-base font-bold leading-[1.1] tracking-tight">
             {bizName}
           </div>
           <div className="mt-0.5 font-mono text-[9px] font-semibold uppercase tracking-wide text-ink-muted">
@@ -206,7 +203,7 @@ function Sidebar({ active, onSignOut }: { active: NavId; onSignOut: () => void }
           </div>
         </div>
       </div>
-      <nav style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <nav className="flex flex-col gap-0.5">
         {navItems.map((it) => {
           const on = it.id === active
           const badge = it.id === 'pedidos' ? counts.new : undefined
@@ -233,7 +230,7 @@ function Sidebar({ active, onSignOut }: { active: NavId; onSignOut: () => void }
           )
         })}
       </nav>
-      <div style={{ flex: 1 }} />
+      <div className="flex-1" />
       {/* Toggle de alertas (sonido) — accesible desde cualquier sección */}
       <button
         type="button"
@@ -250,14 +247,14 @@ function Sidebar({ active, onSignOut }: { active: NavId; onSignOut: () => void }
         Alertas {soundOn ? 'ON' : 'OFF'}
       </button>
       <div className="mb-2.5 rounded-2xl bg-brand-soft p-3">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className="flex items-center gap-2">
           <Icon
             name="circle"
             size={10}
             filled
             className={catalogOnly ? 'text-success' : paused ? 'text-amber-700' : 'text-success'}
           />
-          <div style={{ fontSize: 13, fontWeight: 600 }}>
+          <div className="text-[13px] font-semibold">
             {catalogOnly ? 'Pedidos por WhatsApp' : paused ? 'Pausado' : 'Plataforma abierta'}
           </div>
         </div>

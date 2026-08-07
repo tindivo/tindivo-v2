@@ -274,18 +274,7 @@ export function DetailScreen({
     : [...REJECT_REASONS_BASE, ...REJECT_REASONS_TAIL]
 
   const content = (
-    <div
-      className="bg-white"
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        maxHeight: '100%',
-        minHeight: 0,
-        position: 'relative',
-        overflow: 'hidden',
-      }}
-    >
+    <div className="relative flex h-full max-h-full min-h-0 flex-col overflow-hidden bg-white">
       {modal === 'reject' && (
         <ReasonModal
           title="Rechazar pedido"
@@ -329,54 +318,26 @@ export function DetailScreen({
 
       {/* Header flotante/fijo */}
       <div
-        className="bg-white border-b border-border"
-        style={{
-          padding: mobile ? '10px 14px' : '12px 18px',
-          position: 'sticky',
-          top: 0,
-          zIndex: 10,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          flexShrink: 0,
-        }}
+        className={cn(
+          'sticky top-0 z-10 flex shrink-0 items-center gap-2.5 border-b border-border bg-white',
+          mobile ? 'px-3.5 py-2.5' : 'px-[18px] py-3',
+        )}
       >
         {mobile && (
           <button
             type="button"
             onClick={actions.onClose}
-            className="bg-ink/[0.06]"
-            style={{
-              width: 34,
-              height: 34,
-              borderRadius: 10,
-              border: 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
+            className="flex h-[34px] w-[34px] shrink-0 cursor-pointer items-center justify-center rounded-[10px] border-none bg-ink/[0.06]"
           >
             <Icon weight={500} name="arrow_back" size={20} />
           </button>
         )}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 5,
-              flexWrap: 'wrap',
-              marginBottom: 3,
-            }}
-          >
-            <span className="font-mono text-ink-muted" style={{ fontSize: 12, fontWeight: 700 }}>
-              #{order.id}
-            </span>
+        <div className="min-w-0 flex-1">
+          <div className="mb-[3px] flex flex-wrap items-center gap-[5px]">
+            <span className="font-mono text-[12px] font-bold text-ink-muted">#{order.id}</span>
             {isPending ? (
-              <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                <span className="text-ink-muted" style={{ fontSize: 11 }}>
+              <span className="flex items-center gap-[3px]">
+                <span className="text-[11px] text-ink-muted">
                   ·{' '}
                   {order.status === 'awaiting_payment'
                     ? 'paga antes de'
@@ -385,11 +346,10 @@ export function DetailScreen({
                       : 'acepta antes de'}
                 </span>
                 <span
-                  className={cn('font-mono', order.countdownSec < 60 ? 'text-danger' : 'text-ink')}
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 700,
-                  }}
+                  className={cn(
+                    'font-mono text-[12px] font-bold',
+                    order.countdownSec < 60 ? 'text-danger' : 'text-ink',
+                  )}
                 >
                   {mmss(order.countdownSec)}
                 </span>
@@ -401,18 +361,16 @@ export function DetailScreen({
               </span>
             ) : null}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div className="flex items-center gap-1.5">
             <SourceBadgeMini source={order.source} />
             <PayBadgeMini payment={order.payment} />
           </div>
         </div>
         <span
-          className="font-mono text-ink"
-          style={{
-            fontSize: mobile ? 18 : 20,
-            fontWeight: 700,
-            flexShrink: 0,
-          }}
+          className={cn(
+            'shrink-0 font-mono font-bold text-ink',
+            mobile ? 'text-[18px]' : 'text-[20px]',
+          )}
         >
           {soles(order.total)}
         </span>
@@ -420,17 +378,7 @@ export function DetailScreen({
           <button
             type="button"
             onClick={actions.onClose}
-            className="bg-ink/[0.06]"
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: 9,
-              border: 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
+            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-[9px] border-none bg-ink/[0.06]"
           >
             <Icon weight={500} name="close" size={18} />
           </button>
@@ -439,27 +387,16 @@ export function DetailScreen({
 
       {/* Driver arrived banner */}
       {order.state === 'waiting' && (
-        <div
-          className="bg-success text-white"
-          style={{
-            padding: '10px 16px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            flexShrink: 0,
-          }}
-        >
+        <div className="flex shrink-0 items-center gap-2.5 bg-success px-4 py-2.5 text-white">
           <Icon weight={500} name="check_circle" size={20} filled />
           <div>
-            <div style={{ fontSize: 14, fontWeight: 700 }}>
+            <div className="text-[14px] font-bold">
               {order.driver?.name ?? 'El motorizado'} llegó al local · Entregar pedido
             </div>
             {order.cashChange != null && order.cashChange > 0 && (
-              <div style={{ fontSize: 12, marginTop: 2 }}>
+              <div className="mt-0.5 text-[12px]">
                 Prepara el vuelto:{' '}
-                <span className="font-mono" style={{ fontWeight: 700 }}>
-                  {soles(order.cashChange)}
-                </span>
+                <span className="font-mono font-bold">{soles(order.cashChange)}</span>
               </div>
             )}
           </div>
@@ -468,36 +405,23 @@ export function DetailScreen({
 
       {/* Scroll content */}
       <div
-        style={{
-          flex: 1,
-          minHeight: 0,
-          overflowY: 'auto',
-          WebkitOverflowScrolling: 'touch',
-          padding: mobile ? '14px 14px 28px' : '16px 18px 32px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 12,
-        }}
+        className={cn(
+          'flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto [-webkit-overflow-scrolling:touch]',
+          mobile ? 'px-3.5 pb-7 pt-3.5' : 'px-[18px] pb-8 pt-4',
+        )}
       >
         {/* Banner de apelación: solo para proof_rejected_final */}
         {hasAppeal &&
           order.status === 'cancelled' &&
           order.cancelReasonCode === 'proof_rejected_final' && (
-            <div
-              className="bg-warning-soft border border-warning/50"
-              style={{
-                borderRadius: 12,
-                padding: '12px 14px',
-                flexShrink: 0,
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
+            <div className="shrink-0 rounded-md border border-warning/50 bg-warning-soft px-3.5 py-3">
+              <div className="mb-1 flex items-center gap-[7px]">
                 <Icon weight={500} name="gavel" size={18} filled className="text-warning" />
-                <div className="text-warning" style={{ fontSize: 13, fontWeight: 700 }}>
+                <div className="text-[13px] font-bold text-warning">
                   El cliente apeló el rechazo de este pedido
                 </div>
               </div>
-              <div className="text-warning" style={{ fontSize: 12, lineHeight: 1.4 }}>
+              <div className="text-[12px] leading-[1.4] text-warning">
                 Tindivo está revisando este caso. Te recomendamos verificar tu cuenta Yape/Plin por
                 si el pago sí ingresó.
               </div>
@@ -506,37 +430,17 @@ export function DetailScreen({
 
         {/* Cliente y Dirección */}
         {isValidandoPrepaid ? (
-          <div
-            className="bg-surface text-ink-muted"
-            style={{
-              borderRadius: 12,
-              padding: '8px 12px',
-              fontSize: 12,
-              display: 'flex',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              gap: '4px 8px',
-              flexShrink: 0,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <div className="flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1 rounded-md bg-surface px-3 py-2 text-[12px] text-ink-muted">
+            <div className="flex items-center gap-1">
               <Icon weight={500} name="person" size={14} className="text-ink-muted" />
-              <span className="text-ink" style={{ fontWeight: 700 }}>
-                {order.customer ?? 'Cliente'}
-              </span>
+              <span className="font-bold text-ink">{order.customer ?? 'Cliente'}</span>
             </div>
             {order.phone && (
               <>
                 <span>·</span>
                 <a
                   href={`tel:${order.phone}`}
-                  className="text-brand no-underline"
-                  style={{
-                    fontWeight: 600,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 3,
-                  }}
+                  className="inline-flex items-center gap-[3px] font-semibold text-brand no-underline"
                 >
                   <Icon weight={500} name="call" size={12} filled /> {order.phone}
                 </a>
@@ -546,15 +450,7 @@ export function DetailScreen({
               <>
                 <span>·</span>
                 <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 3,
-                    minWidth: 0,
-                    textOverflow: 'ellipsis',
-                    overflow: 'hidden',
-                    whiteSpace: 'nowrap',
-                  }}
+                  className="inline-flex min-w-0 items-center gap-[3px] overflow-hidden text-ellipsis whitespace-nowrap"
                   title={order.addressRef}
                 >
                   <Icon weight={500} name="location_on" size={12} className="text-brand" />
@@ -566,40 +462,15 @@ export function DetailScreen({
         ) : (
           <>
             {/* Cliente */}
-            <div
-              className="bg-surface"
-              style={{
-                borderRadius: 12,
-                padding: '12px 14px',
-                flexShrink: 0,
-              }}
-            >
-              <div
-                className="text-ink-muted"
-                style={{
-                  fontSize: 10,
-                  fontWeight: 700,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.06em',
-                  marginBottom: 7,
-                }}
-              >
+            <div className="shrink-0 rounded-md bg-surface px-3.5 py-3">
+              <div className="mb-[7px] text-[10px] font-bold uppercase tracking-[0.06em] text-ink-muted">
                 Cliente
               </div>
-              <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 5 }}>
-                {order.customer ?? 'Cliente'}
-              </div>
+              <div className="mb-[5px] text-[16px] font-bold">{order.customer ?? 'Cliente'}</div>
               {order.phone && (
                 <a
                   href={`tel:${order.phone}`}
-                  className="text-brand no-underline"
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    fontSize: 13,
-                    fontWeight: 600,
-                  }}
+                  className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand no-underline"
                 >
                   <Icon weight={500} name="call" size={15} filled /> {order.phone}
                 </a>
@@ -608,34 +479,18 @@ export function DetailScreen({
 
             {/* Dirección */}
             {order.addressRef && (
-              <div
-                className="bg-surface"
-                style={{
-                  borderRadius: 12,
-                  padding: '12px 14px',
-                  flexShrink: 0,
-                }}
-              >
-                <div
-                  className="text-ink-muted"
-                  style={{
-                    fontSize: 10,
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.06em',
-                    marginBottom: 7,
-                  }}
-                >
+              <div className="shrink-0 rounded-md bg-surface px-3.5 py-3">
+                <div className="mb-[7px] text-[10px] font-bold uppercase tracking-[0.06em] text-ink-muted">
                   Dirección
                 </div>
-                <div style={{ display: 'flex', gap: 8 }}>
+                <div className="flex gap-2">
                   <Icon
                     weight={500}
                     name="location_on"
                     size={16}
                     className="mt-0.5 shrink-0 text-brand"
                   />
-                  <div style={{ fontSize: 14, lineHeight: 1.5 }}>{order.addressRef}</div>
+                  <div className="text-[14px] leading-normal">{order.addressRef}</div>
                 </div>
               </div>
             )}
@@ -647,32 +502,19 @@ export function DetailScreen({
           <details
             open={itemsOpen}
             onToggle={(e) => setItemsOpen(e.currentTarget.open)}
-            className="bg-surface"
-            style={{
-              borderRadius: 12,
-              padding: isValidandoPrepaid ? '10px 12px' : '12px 14px',
-              flexShrink: 0,
-            }}
+            className={cn(
+              'shrink-0 rounded-md bg-surface',
+              isValidandoPrepaid ? 'px-3 py-2.5' : 'px-3.5 py-3',
+            )}
           >
-            <summary
-              style={{
-                cursor: 'pointer',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                fontWeight: 700,
-                fontSize: 13,
-                userSelect: 'none',
-                listStyle: 'none',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <summary className="flex list-none cursor-pointer select-none items-center justify-between text-[13px] font-bold">
+              <div className="flex items-center gap-1.5">
                 <Icon weight={500} name="shopping_bag" size={16} />
                 <span>
                   Pedido ({items.length} {items.length === 1 ? 'ítem' : 'ítems'})
                 </span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div className="flex items-center gap-1">
                 <span className="font-mono">{soles(order.total)}</span>
                 <Icon
                   weight={500}
@@ -682,62 +524,35 @@ export function DetailScreen({
                 />
               </div>
             </summary>
-            <div className="border-t border-border" style={{ marginTop: 8, paddingTop: 8 }}>
+            <div className="mt-2 border-t border-border pt-2">
               {items.map((it, i) => (
                 <div
                   key={i}
                   className={cn(
+                    'py-[5px]',
                     i < items.length - 1 ? 'border-b border-border' : 'border-b border-transparent',
                   )}
-                  style={{ padding: '5px 0' }}
                 >
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <span
-                      className="font-mono text-ink-muted"
-                      style={{
-                        width: 22,
-                        flexShrink: 0,
-                        fontWeight: 700,
-                      }}
-                    >
+                  <div className="flex gap-2">
+                    <span className="w-[22px] shrink-0 font-mono font-bold text-ink-muted">
                       {it.qty}×
                     </span>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 14, fontWeight: 600 }}>{it.name}</div>
-                      {it.mods && (
-                        <div className="text-ink-muted" style={{ fontSize: 12 }}>
-                          {it.mods}
-                        </div>
-                      )}
+                    <div className="flex-1">
+                      <div className="text-[14px] font-semibold">{it.name}</div>
+                      {it.mods && <div className="text-[12px] text-ink-muted">{it.mods}</div>}
                       {it.note && (
-                        <div className="text-warning" style={{ fontSize: 12, marginTop: 2 }}>
+                        <div className="mt-0.5 text-[12px] text-warning">
                           <Icon weight={500} name="info" size={11} /> {it.note}
                         </div>
                       )}
                     </div>
-                    <span
-                      className="font-mono text-ink-muted"
-                      style={{
-                        fontSize: 13,
-                        fontWeight: 600,
-                        flexShrink: 0,
-                      }}
-                    >
+                    <span className="shrink-0 font-mono text-[13px] font-semibold text-ink-muted">
                       {soles(it.price)}
                     </span>
                   </div>
                 </div>
               ))}
-              <div
-                className="border-t border-border"
-                style={{
-                  marginTop: 10,
-                  padding: '8px 0 0',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 4,
-                }}
-              >
+              <div className="mt-2.5 flex flex-col gap-1 border-t border-border pt-2">
                 <DetailRow label="Subtotal" value={soles(order.subtotal)} mono />
                 <DetailRow label="Delivery" value={soles(order.deliveryFee)} mono />
                 <DetailRow label="Total" value={soles(order.total)} mono bold />
@@ -748,30 +563,17 @@ export function DetailScreen({
           <details
             open={itemsOpen}
             onToggle={(e) => setItemsOpen(e.currentTarget.open)}
-            className="bg-surface"
-            style={{
-              borderRadius: 12,
-              padding: isValidandoPrepaid ? '10px 12px' : '12px 14px',
-              flexShrink: 0,
-            }}
+            className={cn(
+              'shrink-0 rounded-md bg-surface',
+              isValidandoPrepaid ? 'px-3 py-2.5' : 'px-3.5 py-3',
+            )}
           >
-            <summary
-              style={{
-                cursor: 'pointer',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                fontWeight: 700,
-                fontSize: 13,
-                userSelect: 'none',
-                listStyle: 'none',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <summary className="flex list-none cursor-pointer select-none items-center justify-between text-[13px] font-bold">
+              <div className="flex items-center gap-1.5">
                 <Icon weight={500} name="payments" size={16} />
                 <span>Cobro</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div className="flex items-center gap-1">
                 <span className="font-mono">{soles(order.total)}</span>
                 <Icon
                   weight={500}
@@ -781,19 +583,10 @@ export function DetailScreen({
                 />
               </div>
             </summary>
-            <div
-              className="border-t border-border"
-              style={{
-                marginTop: 8,
-                paddingTop: 8,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 5,
-              }}
-            >
+            <div className="mt-2 flex flex-col gap-[5px] border-t border-border pt-2">
               <DetailRow label="Total del pedido" value={soles(order.amount)} mono />
               <DetailRow label="Delivery" value={soles(order.deliveryFee)} mono />
-              <div className="h-px bg-border" style={{ margin: '2px 0' }} />
+              <div className="my-0.5 h-px bg-border" />
               <DetailRow label="Total a cobrar" value={soles(order.total)} mono bold />
             </div>
           </details>
@@ -805,27 +598,13 @@ export function DetailScreen({
         {order.payment === 'prepaid' && (
           <>
             {isLoadingActions ? (
-              <div
-                className="bg-ink/[0.06] border border-ink/[0.08] animate-pulse"
-                style={{
-                  borderRadius: 12,
-                  padding: '12px 14px',
-                  height: 64,
-                }}
-              />
+              <div className="h-16 animate-pulse rounded-md border border-ink/[0.08] bg-ink/[0.06] px-3.5 py-3" />
             ) : (
               <>
                 {/* 1. Esperando comprobante del cliente (pending_acceptance o validando sin comprobante aún) */}
                 {isPrepaidAwaitingProof && (
-                  <div
-                    className="bg-brand-soft border border-brand/30"
-                    style={{
-                      borderRadius: 12,
-                      padding: '12px 14px',
-                      flexShrink: 0,
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
+                  <div className="shrink-0 rounded-md border border-brand/30 bg-brand-soft px-3.5 py-3">
+                    <div className="mb-1 flex items-center gap-[7px]">
                       <Icon
                         weight={500}
                         name="qr_code_2"
@@ -833,11 +612,11 @@ export function DetailScreen({
                         filled
                         className="text-brand-dark"
                       />
-                      <div className="text-brand-dark" style={{ fontSize: 13, fontWeight: 700 }}>
+                      <div className="text-[13px] font-bold text-brand-dark">
                         Pago por Yape / Plin
                       </div>
                     </div>
-                    <div className="text-brand-dark" style={{ fontSize: 12, lineHeight: 1.4 }}>
+                    <div className="text-[12px] leading-[1.4] text-brand-dark">
                       Confirma la disponibilidad de insumos para este pedido. Una vez aceptado, el
                       cliente tendrá 10 minutos para transferir por Yape/Plin y adjuntar el
                       comprobante.
@@ -846,15 +625,8 @@ export function DetailScreen({
                 )}
                 {/* 2. awaiting_payment: Banner de espera tras haber aceptado disponibilidad */}
                 {order.status === 'awaiting_payment' && (
-                  <div
-                    className="bg-brand-soft border border-brand/30"
-                    style={{
-                      borderRadius: 12,
-                      padding: '12px 14px',
-                      flexShrink: 0,
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
+                  <div className="shrink-0 rounded-md border border-brand/30 bg-brand-soft px-3.5 py-3">
+                    <div className="mb-1 flex items-center gap-[7px]">
                       <Icon
                         weight={500}
                         name="schedule"
@@ -862,11 +634,11 @@ export function DetailScreen({
                         filled
                         className="text-brand-dark"
                       />
-                      <div className="text-brand-dark" style={{ fontSize: 13, fontWeight: 700 }}>
+                      <div className="text-[13px] font-bold text-brand-dark">
                         Esperando pago del cliente
                       </div>
                     </div>
-                    <div className="text-brand-dark" style={{ fontSize: 12, lineHeight: 1.4 }}>
+                    <div className="text-[12px] leading-[1.4] text-brand-dark">
                       Disponibilidad confirmada. El cliente tiene 10 minutos para realizar la
                       transferencia por Yape/Plin y adjuntar el comprobante.
                     </div>
@@ -882,46 +654,22 @@ export function DetailScreen({
 
         {/* Prep picker (al aceptar) */}
         {showPrepPicker && (
-          <div
-            className="bg-surface"
-            style={{
-              borderRadius: 12,
-              padding: '12px 14px',
-              flexShrink: 0,
-            }}
-          >
+          <div className="shrink-0 rounded-md bg-surface px-3.5 py-3">
             <div className="mb-2 font-mono text-[11px] font-semibold uppercase tracking-wide text-ink-muted">
               Tiempo de preparación
             </div>
-            <div
-              style={{
-                display: 'flex',
-                gap: 6,
-                overflowX: 'auto',
-                scrollbarWidth: 'none',
-                paddingBottom: 4,
-              }}
-            >
+            <div className="flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
               {PREP_PRESETS.map((m) => (
                 <button
                   type="button"
                   key={m}
                   onClick={() => setPrep(m)}
                   className={cn(
+                    'min-w-[50px] shrink-0 cursor-pointer rounded-md py-2.5 font-mono text-[14px] font-bold',
                     m === prep
                       ? 'bg-ink text-white border-transparent'
                       : 'bg-white text-ink border border-border',
                   )}
-                  style={{
-                    flexShrink: 0,
-                    minWidth: 50,
-                    fontFamily: 'var(--font-jetbrains), ui-monospace, monospace',
-                    fontWeight: 700,
-                    fontSize: 14,
-                    padding: '10px 0',
-                    borderRadius: 12,
-                    cursor: 'pointer',
-                  }}
                 >
                   {m}m
                 </button>
@@ -932,17 +680,8 @@ export function DetailScreen({
 
         {/* Extensión de preparación */}
         {order.state === 'cooking' && !order.extensionUsed && (
-          <div
-            className="bg-surface"
-            style={{
-              borderRadius: 12,
-              padding: '12px 14px',
-              flexShrink: 0,
-            }}
-          >
-            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>
-              ¿Necesitas más tiempo?
-            </div>
+          <div className="shrink-0 rounded-md bg-surface px-3.5 py-3">
+            <div className="mb-2 text-[13px] font-semibold">¿Necesitas más tiempo?</div>
             <button
               type="button"
               onClick={() => actions.onExtend()}
@@ -951,22 +690,13 @@ export function DetailScreen({
             >
               <Icon weight={500} name="add" size={14} /> +10 min
             </button>
-            <div className="text-ink-muted" style={{ fontSize: 11, marginTop: 6 }}>
+            <div className="mt-1.5 text-[11px] text-ink-muted">
               Solo disponible una vez y antes de que llegue el motorizado.
             </div>
           </div>
         )}
         {order.state === 'cooking' && order.extensionUsed && (
-          <div
-            className="text-warning"
-            style={{
-              fontSize: 12,
-              fontWeight: 600,
-              textAlign: 'center',
-              padding: '4px 0',
-              flexShrink: 0,
-            }}
-          >
+          <div className="shrink-0 py-1 text-center text-[12px] font-semibold text-warning">
             Prórroga +{order.extensionMin}m usada · no se puede volver a extender
           </div>
         )}
@@ -984,24 +714,8 @@ export function DetailScreen({
 
         {/* Otras acciones */}
         {!isPending && order.state !== 'picked_up' && (
-          <div
-            className="bg-surface border border-border"
-            style={{
-              borderRadius: 12,
-              padding: '12px 14px',
-              flexShrink: 0,
-            }}
-          >
-            <div
-              className="text-ink-muted"
-              style={{
-                fontSize: 10,
-                fontWeight: 700,
-                marginBottom: 8,
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-              }}
-            >
+          <div className="shrink-0 rounded-md border border-border bg-surface px-3.5 py-3">
+            <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.06em] text-ink-muted">
               Otras acciones
             </div>
             <button
@@ -1018,37 +732,14 @@ export function DetailScreen({
 
       {/* Footer de acciones (pendiente) */}
       {(isPending || isLoadingActions) && (
-        <div
-          className="bg-white border-t border-border shadow-elev-2"
-          style={{
-            padding: '12px 14px 14px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 6,
-            flexShrink: 0,
-          }}
-        >
+        <div className="flex shrink-0 flex-col gap-1.5 border-t border-border bg-white px-3.5 pb-3.5 pt-3 shadow-elev-2">
           {isLoadingActions ? (
-            <div style={{ display: 'flex', gap: 10, opacity: 0.7 }} className="animate-pulse">
-              <div
-                className="bg-ink/[0.08]"
-                style={{
-                  flex: 1,
-                  height: 44,
-                  borderRadius: 12,
-                }}
-              />
-              <div
-                className="bg-ink/[0.08]"
-                style={{
-                  flex: 2,
-                  height: 44,
-                  borderRadius: 12,
-                }}
-              />
+            <div className="flex animate-pulse gap-2.5 opacity-70">
+              <div className="h-11 flex-1 rounded-md bg-ink/[0.08]" />
+              <div className="h-11 flex-[2] rounded-md bg-ink/[0.08]" />
             </div>
           ) : isValidandoPrepaid ? (
-            <div style={{ display: 'flex', gap: 10 }}>
+            <div className="flex gap-2.5">
               <button
                 type="button"
                 onClick={() => actions.onRejectProof()}
@@ -1067,7 +758,7 @@ export function DetailScreen({
               </button>
             </div>
           ) : order.status === 'awaiting_payment' && isPrepaid ? (
-            <div style={{ display: 'flex', gap: 10 }}>
+            <div className="flex gap-2.5">
               <button
                 type="button"
                 onClick={() => setModal('cancel')}
@@ -1082,7 +773,7 @@ export function DetailScreen({
             </div>
           ) : (
             <>
-              <div style={{ display: 'flex', gap: 10 }}>
+              <div className="flex gap-2.5">
                 <button
                   type="button"
                   onClick={() => setModal('reject')}
@@ -1102,7 +793,7 @@ export function DetailScreen({
                 </button>
               </div>
               {isPrepaid && (
-                <div className="text-ink-muted" style={{ fontSize: 11, textAlign: 'center' }}>
+                <div className="text-center text-[11px] text-ink-muted">
                   Confirmas disponibilidad para preparar. El cliente procederá a realizar el pago
                   por Yape/Plin.
                 </div>
@@ -1118,31 +809,16 @@ export function DetailScreen({
           con 10 minutos por delante, el caso normal es que llegue antes de que
           la comida salga. */}
       {(order.canMarkReady || order.readyEarly) && (
-        <div
-          className="bg-white border-t border-border shadow-elev-2"
-          style={{
-            padding: '12px 14px 14px',
-            flexShrink: 0,
-          }}
-        >
+        <div className="shrink-0 border-t border-border bg-white px-3.5 pb-3.5 pt-3 shadow-elev-2">
           {order.readyEarly ? (
-            <div
-              className="bg-success-soft border border-success"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                padding: '12px 14px',
-                borderRadius: 14,
-              }}
-            >
+            <div className="flex items-center gap-2.5 rounded-[14px] border border-success bg-success-soft px-3.5 py-3">
               <Icon weight={500} name="check_circle" size={20} filled className="text-success" />
-              <span className="text-success" style={{ fontSize: 13, fontWeight: 600 }}>
+              <span className="text-[13px] font-semibold text-success">
                 Comida lista. El motorizado ya lo sabe.
               </span>
             </div>
           ) : confirmReady ? (
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => setConfirmReady(false)}
@@ -1179,38 +855,17 @@ export function DetailScreen({
   )
 
   if (mobile) {
-    return (
-      <div className="bg-white" style={{ position: 'fixed', inset: 0, zIndex: 200 }}>
-        {content}
-      </div>
-    )
+    return <div className="fixed inset-0 z-[200] bg-white">{content}</div>
   }
 
   return (
     <div
       onClick={actions.onClose}
-      className="bg-black/45"
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 200,
-        backdropFilter: 'blur(2px)',
-        display: 'flex',
-        justifyContent: 'flex-end',
-      }}
+      className="fixed inset-0 z-[200] flex justify-end bg-black/45 backdrop-blur-[2px]"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white shadow-elev-3"
-        style={{
-          width: 420,
-          maxWidth: '100vw',
-          height: '100vh',
-          maxHeight: '100vh',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-        }}
+        className="flex h-screen max-h-screen w-[420px] max-w-[100vw] flex-col overflow-hidden bg-white shadow-elev-3"
       >
         {content}
       </div>

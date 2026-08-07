@@ -36,7 +36,7 @@ export function ImageLightbox({
       <img
         src={src}
         alt={alt}
-        className="max-h-[90vh] max-w-[90vw] rounded-2xl object-contain shadow-[0_20px_40px_-12px_rgba(0,0,0,0.5)]"
+        className="max-h-[90vh] max-w-[90vw] rounded-2xl object-contain shadow-elev-4"
         onClick={(e) => e.stopPropagation()}
       />
     </div>
