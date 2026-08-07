@@ -1,4 +1,4 @@
-export * from './order/commission'
+export * from './constants'
 export * from './order/money'
 export * from './order/short-id'
 export * from './order/state-machine'

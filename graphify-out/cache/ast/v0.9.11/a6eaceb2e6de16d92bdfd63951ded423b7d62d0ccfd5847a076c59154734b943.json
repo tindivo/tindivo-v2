@@ -1,0 +1,479 @@
+{
+  "nodes": [
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_md",
+      "label": "onboarding-checkout-flow.md",
+      "file_type": "document",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_flujo_de_onboarding_y_checkout_del_cliente_apps_customer",
+      "label": "Flujo de Onboarding y Checkout del Cliente (apps/customer)",
+      "file_type": "document",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_1_onboarding_registro_e_inicio_de_sesi\u00f3n",
+      "label": "1. Onboarding (Registro e Inicio de Sesi\u00f3n)",
+      "file_type": "document",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L7"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_componente_orquestador_principal",
+      "label": "Componente Orquestador Principal",
+      "file_type": "document",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L11"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_pasos_del_onboarding",
+      "label": "Pasos del Onboarding",
+      "file_type": "document",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L41"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_1_method_step",
+      "label": "1. Method Step",
+      "file_type": "document",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L43"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_2_email_signup_step",
+      "label": "2. Email Signup Step",
+      "file_type": "document",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L51"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_3_login_step",
+      "label": "3. Login Step",
+      "file_type": "document",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L63"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_4_google_name_step",
+      "label": "4. Google Name Step",
+      "file_type": "document",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L72"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_5_phone_step_whatsapp",
+      "label": "5. Phone Step (WhatsApp)",
+      "file_type": "document",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L82"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_6_address_step",
+      "label": "6. Address Step",
+      "file_type": "document",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L93"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_gesti\u00f3n_de_estado_de_onboarding_zustand",
+      "label": "Gesti\u00f3n de Estado de Onboarding (Zustand)",
+      "file_type": "document",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L105"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_capa_de_persistencia_base_de_datos_onboarding",
+      "label": "Capa de Persistencia Base de Datos (Onboarding)",
+      "file_type": "document",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L116"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_2_proceso_de_checkout_pasarela_de_pedido",
+      "label": "2. Proceso de Checkout (Pasarela de Pedido)",
+      "file_type": "document",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L130"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_p\u00e1gina_de_checkout",
+      "label": "P\u00e1gina de Checkout",
+      "file_type": "document",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L134"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_flujo_de_validaci\u00f3n_y_creaci\u00f3n_del_pedido",
+      "label": "Flujo de Validaci\u00f3n y Creaci\u00f3n del Pedido",
+      "file_type": "document",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L151"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_l\u00f3gica_de_creaci\u00f3n_del_pedido_en_base_de_datos",
+      "label": "L\u00f3gica de creaci\u00f3n del pedido en Base de Datos",
+      "file_type": "document",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L171"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_componente_del_carrito_bolsa_de_compra",
+      "label": "Componente del Carrito (Bolsa de Compra)",
+      "file_type": "document",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L179"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_gesti\u00f3n_de_estado_de_bolsa_zustand",
+      "label": "Gesti\u00f3n de Estado de Bolsa (Zustand)",
+      "file_type": "document",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L189"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_3_endpoints_de_verificaci\u00f3n_otp",
+      "label": "3. Endpoints de Verificaci\u00f3n OTP",
+      "file_type": "document",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L199"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_1_enviar_c\u00f3digo",
+      "label": "1. Enviar C\u00f3digo",
+      "file_type": "document",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L203"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_2_verificar_c\u00f3digo",
+      "label": "2. Verificar C\u00f3digo",
+      "file_type": "document",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L223"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_4_esquema_de_base_de_datos_relacionado",
+      "label": "4. Esquema de Base de Datos Relacionado",
+      "file_type": "document",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L251"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_tabla_customer_profiles",
+      "label": "Tabla: `customer_profiles`",
+      "file_type": "document",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L255"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_tabla_customer_addresses",
+      "label": "Tabla: `customer_addresses`",
+      "file_type": "document",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L275"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_tabla_customer_otp_attempts",
+      "label": "Tabla: `customer_otp_attempts`",
+      "file_type": "document",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L291"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_5_validaci\u00f3n_geogr\u00e1fica_cobertura",
+      "label": "5. Validaci\u00f3n Geogr\u00e1fica / Cobertura",
+      "file_type": "document",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L306"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_1_coverage_ts_file_d_tinkuy_20creativo_proyectos_tindivo_code_tindivo_v2_apps_customer_lib_coverage_ts",
+      "label": "1. [coverage.ts](file:///d:/Tinkuy%20Creativo/Proyectos/Tindivo/Code/tindivo-v2/apps/customer/lib/coverage.ts)",
+      "file_type": "document",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L308"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_2_address_fields_tsx_file_d_tinkuy_20creativo_proyectos_tindivo_code_tindivo_v2_apps_customer_components_address_fields_tsx",
+      "label": "2. [address-fields.tsx](file:///d:/Tinkuy%20Creativo/Proyectos/Tindivo/Code/tindivo-v2/apps/customer/components/address-fields.tsx)",
+      "file_type": "document",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L314"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_3_map_picker_tsx_file_d_tinkuy_20creativo_proyectos_tindivo_code_tindivo_v2_apps_customer_components_map_picker_tsx",
+      "label": "3. [map-picker.tsx](file:///d:/Tinkuy%20Creativo/Proyectos/Tindivo/Code/tindivo-v2/apps/customer/components/map-picker.tsx)",
+      "file_type": "document",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L317"
+    }
+  ],
+  "edges": [
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_md",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_flujo_de_onboarding_y_checkout_del_cliente_apps_customer",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_flujo_de_onboarding_y_checkout_del_cliente_apps_customer",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_1_onboarding_registro_e_inicio_de_sesi\u00f3n",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_1_onboarding_registro_e_inicio_de_sesi\u00f3n",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_componente_orquestador_principal",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_1_onboarding_registro_e_inicio_de_sesi\u00f3n",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_pasos_del_onboarding",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L41",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_pasos_del_onboarding",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_1_method_step",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L43",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_pasos_del_onboarding",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_2_email_signup_step",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L51",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_pasos_del_onboarding",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_3_login_step",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L63",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_pasos_del_onboarding",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_4_google_name_step",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L72",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_pasos_del_onboarding",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_5_phone_step_whatsapp",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L82",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_pasos_del_onboarding",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_6_address_step",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L93",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_1_onboarding_registro_e_inicio_de_sesi\u00f3n",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_gesti\u00f3n_de_estado_de_onboarding_zustand",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L105",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_1_onboarding_registro_e_inicio_de_sesi\u00f3n",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_capa_de_persistencia_base_de_datos_onboarding",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L116",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_flujo_de_onboarding_y_checkout_del_cliente_apps_customer",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_2_proceso_de_checkout_pasarela_de_pedido",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L130",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_2_proceso_de_checkout_pasarela_de_pedido",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_p\u00e1gina_de_checkout",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L134",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_2_proceso_de_checkout_pasarela_de_pedido",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_flujo_de_validaci\u00f3n_y_creaci\u00f3n_del_pedido",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L151",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_flujo_de_validaci\u00f3n_y_creaci\u00f3n_del_pedido",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_l\u00f3gica_de_creaci\u00f3n_del_pedido_en_base_de_datos",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L171",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_2_proceso_de_checkout_pasarela_de_pedido",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_componente_del_carrito_bolsa_de_compra",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L179",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_2_proceso_de_checkout_pasarela_de_pedido",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_gesti\u00f3n_de_estado_de_bolsa_zustand",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L189",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_flujo_de_onboarding_y_checkout_del_cliente_apps_customer",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_3_endpoints_de_verificaci\u00f3n_otp",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L199",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_3_endpoints_de_verificaci\u00f3n_otp",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_1_enviar_c\u00f3digo",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L203",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_3_endpoints_de_verificaci\u00f3n_otp",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_2_verificar_c\u00f3digo",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L223",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_flujo_de_onboarding_y_checkout_del_cliente_apps_customer",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_4_esquema_de_base_de_datos_relacionado",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L251",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_4_esquema_de_base_de_datos_relacionado",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_tabla_customer_profiles",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L255",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_4_esquema_de_base_de_datos_relacionado",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_tabla_customer_addresses",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L275",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_4_esquema_de_base_de_datos_relacionado",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_tabla_customer_otp_attempts",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L291",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_flujo_de_onboarding_y_checkout_del_cliente_apps_customer",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_5_validaci\u00f3n_geogr\u00e1fica_cobertura",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L306",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_5_validaci\u00f3n_geogr\u00e1fica_cobertura",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_1_coverage_ts_file_d_tinkuy_20creativo_proyectos_tindivo_code_tindivo_v2_apps_customer_lib_coverage_ts",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L308",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_5_validaci\u00f3n_geogr\u00e1fica_cobertura",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_2_address_fields_tsx_file_d_tinkuy_20creativo_proyectos_tindivo_code_tindivo_v2_apps_customer_components_address_fields_tsx",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L314",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_5_validaci\u00f3n_geogr\u00e1fica_cobertura",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_onboarding_checkout_flow_3_map_picker_tsx_file_d_tinkuy_20creativo_proyectos_tindivo_code_tindivo_v2_apps_customer_components_map_picker_tsx",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/onboarding-checkout-flow.md",
+      "source_location": "L317",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

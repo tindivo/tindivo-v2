@@ -1,28 +1,24 @@
+import { EnvBanner } from '@tindivo/ui'
 import type { Metadata, Viewport } from 'next'
-import { Manrope } from 'next/font/google'
+import { Geist, JetBrains_Mono } from 'next/font/google'
 import type { ReactNode } from 'react'
 import { OfflineBanner } from '@/components/offline-banner'
-import { PushManager } from '@/components/push-manager'
+import { InstallBanner } from '@/components/pwa/install-banner'
+import { RegisterSW } from '@/components/pwa/register-sw'
 import { TransferWatcher } from '@/components/transfers/transfer-watcher'
 import './globals.css'
 
-// Tipografía única de la plataforma (DECISIONS.md §16): Manrope cubre display
-// (--font-bricolage), cuerpo (--font-geist) y mono/tabular (--font-jetbrains).
-const bricolage = Manrope({
+// Tipografía unificada del design system Tindivo:
+// - Geist para display, body y labels (única familia de interfaz).
+// - JetBrains Mono solo para datos técnicos (IDs, precios, tiempos).
+const geist = Geist({
   subsets: ['latin'],
-  weight: ['600', '700', '800'],
-  variable: '--font-bricolage',
-  display: 'swap',
-})
-const geist = Manrope({
-  subsets: ['latin'],
-  weight: ['400', '500', '600'],
   variable: '--font-geist',
   display: 'swap',
 })
-const jetbrains = Manrope({
+const jetbrains = JetBrains_Mono({
   subsets: ['latin'],
-  weight: ['500', '600', '700'],
+  weight: ['400', '500', '600', '700'],
   variable: '--font-jetbrains',
   display: 'swap',
 })
@@ -30,18 +26,58 @@ const jetbrains = Manrope({
 export const metadata: Metadata = {
   title: 'Tindivo · Motorizado',
   description: 'Panel del motorizado en Tindivo',
+  manifest: '/manifest.webmanifest',
+  applicationName: 'Tindivo Moto',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Tindivo Moto',
+  },
+  icons: {
+    icon: [
+      { url: '/favicon-16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/favicon-32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+  },
+  formatDetection: { telephone: false },
 }
 
-export const viewport: Viewport = { themeColor: '#f97316', width: 'device-width', initialScale: 1 }
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: 'cover',
+  themeColor: '#F97316',
+}
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="es" className={`${bricolage.variable} ${geist.variable} ${jetbrains.variable}`}>
+    <html lang="es" className={`${geist.variable} ${jetbrains.variable}`}>
+      <head>
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-title" content="Tindivo Moto" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&display=swap"
+          rel="stylesheet"
+        />
+      </head>
       <body className="min-h-dvh bg-surface font-sans text-ink antialiased">
-        <OfflineBanner />
-        <TransferWatcher />
+        {/* Primero el service worker: push, avisos e instalación dependen de
+            que esté registrado. */}
+        <RegisterSW />
+        <div className="contents">
+          <EnvBanner />
+          <OfflineBanner />
+          <TransferWatcher />
+        </div>
         {children}
-        <PushManager />
+        <InstallBanner />
       </body>
     </html>
   )

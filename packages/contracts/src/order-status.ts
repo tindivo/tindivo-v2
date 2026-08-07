@@ -14,8 +14,9 @@ import type { OrderStatus, TrackingStep } from './enums'
  * define sus propias transiciones cuando se active (ver DECISIONS.md).
  */
 export const ORDER_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
-  validando: ['pending_acceptance', 'cancelled'],
-  pending_acceptance: ['confirmed', 'cancelled'],
+  validando: ['pending_acceptance', 'confirmed', 'awaiting_payment', 'cancelled'],
+  pending_acceptance: ['confirmed', 'awaiting_payment', 'cancelled'],
+  awaiting_payment: ['validando', 'cancelled'],
   confirmed: ['preparing', 'cancelled'],
   preparing: ['waiting_driver', 'heading_to_restaurant', 'cancelled'],
   waiting_driver: ['heading_to_restaurant', 'cancelled'],
@@ -48,6 +49,7 @@ export function canTransition(from: OrderStatus, to: OrderStatus): boolean {
 export const STATUS_TO_TRACKING: Record<OrderStatus, TrackingStep> = {
   validando: 'received',
   pending_acceptance: 'received',
+  awaiting_payment: 'received',
   confirmed: 'received',
   preparing: 'preparing',
   waiting_driver: 'preparing',

@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic'
 import { useEffect, useMemo, useState } from 'react'
+import { Spinner } from '@tindivo/ui'
 import { getCoverage, getCoveragePolygon, haversineKm, pointInPolygon } from '@/lib/coverage'
 import {
   type GeoFix,
@@ -16,9 +17,7 @@ export type { LatLng }
 // Leaflet touches `window`: must load client-only.
 const MapInner = dynamic(() => import('./map-picker-inner'), {
   ssr: false,
-  loading: () => (
-    <div className="h-full w-full animate-pulse" style={{ background: 'rgba(26,22,20,0.06)' }} />
-  ),
+  loading: () => <div className="h-full w-full animate-pulse bg-ink/[0.06]" />,
 })
 
 /**
@@ -117,11 +116,11 @@ export function MapPicker({
   return (
     <div>
       <div
-        className="relative overflow-hidden rounded-2xl"
+        className="relative overflow-hidden rounded-2xl border border-ink/[0.08]"
         // `isolation: isolate` crea un stacking context propio: confina los z-index
         // internos de Leaflet (panes/controles hasta ~1000) para que no se pinten por
         // encima de modales/bottom-sheets (que están en z-index menor en el contexto raíz).
-        style={{ height: heightPx, border: '1px solid rgba(26,22,20,0.08)', isolation: 'isolate' }}
+        style={{ height: heightPx, isolation: 'isolate' }}
       >
         {pos ? (
           <MapInner
@@ -132,53 +131,45 @@ export function MapPicker({
             recenterToken={recenter}
           />
         ) : (
-          <div
-            className="h-full w-full animate-pulse"
-            style={{ background: 'rgba(26,22,20,0.06)' }}
-          />
+          <div className="h-full w-full animate-pulse bg-ink/[0.06]" />
         )}
-        <span
-          className="pointer-events-none absolute top-2.5 left-2.5 rounded-md bg-white/95 px-2 py-1 font-bold text-[9px] uppercase shadow-sm"
-          style={{
-            letterSpacing: '0.1em',
-            zIndex: 1000,
-            fontFamily: 'var(--font-jetbrains), monospace',
-          }}
-        >
+        <span className="pointer-events-none absolute top-2.5 left-2.5 z-[1000] rounded-md bg-white/95 px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-[0.1em] shadow-sm">
           Arrastra para ajustar
         </span>
         <button
           type="button"
           onClick={useMyLocation}
           disabled={locating || !loaded}
-          className="absolute right-2.5 bottom-2.5 flex items-center gap-1.5 rounded-full bg-white px-3 py-2 font-semibold text-[12px] shadow-md disabled:opacity-60"
-          style={{ zIndex: 1000, color: '#C2410C' }}
+          className="absolute right-2.5 bottom-2.5 z-[1000] flex items-center gap-1.5 rounded-full bg-white px-3 py-2 font-semibold text-[12px] text-brand-dark shadow-md disabled:opacity-60"
         >
           <span aria-hidden>📍</span>
           {locating ? 'Ubicando…' : 'Usar mi ubicación'}
         </button>
       </div>
       <div
-        className="mt-1.5 flex items-center gap-1.5 text-[11px]"
-        style={{
-          color: locateError ? '#DC2626' : inside ? 'rgba(26,22,20,0.55)' : '#C2410C',
-          fontFamily: 'var(--font-jetbrains), monospace',
-        }}
+        className={`mt-1.5 flex items-center gap-1.5 font-mono text-[11px] ${
+          locateError ? 'text-danger' : inside ? 'text-ink/55' : 'text-brand-dark'
+        }`}
       >
         <span
           aria-hidden
-          className="inline-block h-1.5 w-1.5 rounded-full"
-          style={{ background: locateError || !inside ? '#DC2626' : '#F97316' }}
+          className={`inline-block h-1.5 w-1.5 rounded-full ${
+            locateError || !inside ? 'bg-danger' : 'bg-brand'
+          }`}
         />
-        {locateError
-          ? locateError
-          : !pos
-            ? 'Cargando mapa…'
-            : !inside
-              ? 'Fuera de la zona de reparto de San Jacinto'
-              : accuracyM != null
-                ? `Ubicación obtenida · precisión ±${accuracyM} m`
-                : `${pos.lat.toFixed(4)}, ${pos.lng.toFixed(4)} · San Jacinto, Áncash`}
+        {locateError ? (
+          locateError
+        ) : !pos ? (
+          <span className="inline-flex items-center gap-1.5">
+            <Spinner size="xs" variant="brand" /> Cargando mapa…
+          </span>
+        ) : !inside ? (
+          'Fuera de la zona de reparto de San Jacinto'
+        ) : accuracyM != null ? (
+          `Ubicación obtenida · precisión ±${accuracyM} m`
+        ) : (
+          `${pos.lat.toFixed(4)}, ${pos.lng.toFixed(4)} · San Jacinto, Áncash`
+        )}
       </div>
     </div>
   )

@@ -1,0 +1,104 @@
+{
+  "nodes": [
+    {
+      "id": "enums",
+      "label": "Enums (user_role, order_status, etc)",
+      "file_type": "code",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "\u00a72",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "table_orders",
+      "label": "Tabla orders (pedidos)",
+      "file_type": "code",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "\u00a74",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "table_domain_events",
+      "label": "Tabla domain_events (outbox)",
+      "file_type": "code",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "\u00a77",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "table_idempotency_keys",
+      "label": "Tabla idempotency_keys",
+      "file_type": "code",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "\u00a77",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "table_businesses",
+      "label": "Tabla businesses",
+      "file_type": "code",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "\u00a73",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "table_drivers",
+      "label": "Tabla drivers",
+      "file_type": "code",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "\u00a73",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "table_push_subscriptions",
+      "label": "Tabla push_subscriptions",
+      "file_type": "code",
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "\u00a77",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    }
+  ],
+  "edges": [
+    {
+      "source": "table_domain_events",
+      "target": "outbox_pattern",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "\u00a77",
+      "weight": 1.0
+    },
+    {
+      "source": "table_idempotency_keys",
+      "target": "idempotencia_stripe_style",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/04-base-de-datos.md",
+      "source_location": "\u00a77",
+      "weight": 1.0
+    }
+  ],
+  "hyperedges": []
+}

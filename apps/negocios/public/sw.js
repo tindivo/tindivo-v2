@@ -9,11 +9,12 @@ self.addEventListener('push', (event) => {
   const title = data.title || 'Tindivo'
   const options = {
     body: data.body || '',
-    tag: data.tag,
+    tag: data.tag || 'new-order',
     icon: '/icon.svg',
     badge: '/icon.svg',
     data: { url: data.url || '/' },
-    requireInteraction: Boolean(data.requireInteraction),
+    requireInteraction: true,
+    renotify: true,
   }
   if (Array.isArray(data.vibrate)) options.vibrate = data.vibrate
   event.waitUntil(self.registration.showNotification(title, options))

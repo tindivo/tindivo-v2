@@ -41,13 +41,10 @@ function EntrarContent() {
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-[480px] flex-col items-center justify-center px-6 text-center">
-      <div
-        className="flex h-14 w-14 items-center justify-center rounded-2xl font-bold text-[24px] text-white"
-        style={{ background: '#F97316', boxShadow: '0 8px 20px -6px rgba(249,115,22,0.55)' }}
-      >
+      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand font-bold text-[24px] text-white shadow-[0_8px_20px_-6px_rgba(249,115,22,0.55)]">
         T
       </div>
-      <p className="t-muted mt-4 text-[15px]">Para pedir en Tindivo necesitas una cuenta.</p>
+      <p className="mt-4 text-[15px] text-ink-muted">Para pedir en Tindivo necesitas una cuenta.</p>
     </main>
   )
 }

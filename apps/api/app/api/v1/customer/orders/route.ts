@@ -6,7 +6,11 @@ import { sha256Hex } from '@/lib/http/hash'
 import { findCompletedReplay, withIdempotency } from '@/lib/http/idempotency'
 import { handleError, problem } from '@/lib/http/problem'
 import { getRequestId } from '@/lib/http/request-id'
-import { sendOrderCreated, sendOrderPrepay, sendOrderValidation } from '@/lib/inngest/client'
+import {
+  sendOrderCreated,
+  sendOrderNotifyBusiness,
+  sendOrderValidation,
+} from '@/lib/inngest/client'
 import { createServiceClient } from '@/lib/supabase/service'
 
 export const dynamic = 'force-dynamic'
@@ -40,6 +44,97 @@ export async function POST(req: Request): Promise<Response> {
     const body = CreateOrderRequestSchema.parse(await req.json())
     const requestHash = await sha256Hex(JSON.stringify(body))
     const service = createServiceClient()
+
+    // Defensa en profundidad: verificar teléfono verificado
+    const { data: profile } = await service
+      .from('customer_profiles')
+      .select('phone_verified_at')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (!profile?.phone_verified_at) {
+      return problem('forbidden', {
+        detail: 'Verifica tu número de WhatsApp antes de hacer un pedido.',
+        requestId,
+        headers: corsHeaders(req),
+      })
+    }
+
+    // Guardia de contraentrega: verificar elegibilidad si el pago es contraentrega
+    if (body.paymentIntent === 'pending_cash' || body.paymentIntent === 'pending_yape') {
+      // 1. Verificar historial
+      const { count } = await service
+        .from('orders')
+        .select('id', { count: 'exact', head: true })
+        .eq('customer_user_id', user.id)
+        .eq('status', 'delivered')
+
+      if ((count ?? 0) < 1) {
+        return problem('forbidden', {
+          detail: 'Tu primer pedido debe ser con pago adelantado.',
+          requestId,
+          headers: corsHeaders(req),
+        })
+      }
+
+      // 2. Verificar tope usando el prepay_threshold de app_settings
+      const { data: thresholdSetting } = await service
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'prepay_threshold')
+        .maybeSingle()
+      const threshold = Number(thresholdSetting?.value ?? 80)
+
+      const itemIds = body.items.map((i) => i.menuItemId)
+      const modifierIds = body.items.flatMap((i) => i.modifiers || [])
+
+      const { data: itemsData } = await service
+        .from('menu_items')
+        .select('id, base_price')
+        .in('id', itemIds)
+
+      const { data: modifiersData } =
+        modifierIds.length > 0
+          ? await service
+              .from('menu_modifier_options')
+              .select('id, additional_price')
+              .in('id', modifierIds)
+          : { data: [] }
+
+      let calculatedSubtotal = 0
+      for (const item of body.items) {
+        const itemDb = itemsData?.find((db) => db.id === item.menuItemId)
+        if (itemDb) {
+          let itemUnitPrice = Number(itemDb.base_price)
+          for (const modId of item.modifiers || []) {
+            const modDb = modifiersData?.find((db) => db.id === modId)
+            if (modDb) {
+              itemUnitPrice += Number(modDb.additional_price)
+            }
+          }
+          calculatedSubtotal += itemUnitPrice * item.quantity
+        }
+      }
+
+      let deliveryFee = 0
+      if (body.deliveryMethod === 'delivery') {
+        const { data: bands } = await service
+          .from('app_settings')
+          .select('value')
+          .eq('key', 'delivery_bands')
+          .maybeSingle()
+        deliveryFee = Number((bands?.value as { near?: number })?.near ?? 2.0)
+      }
+
+      const calculatedTotal = calculatedSubtotal + deliveryFee
+      if (calculatedTotal > threshold) {
+        return problem('forbidden', {
+          detail: `Pedidos mayores a S/${threshold} requieren pago adelantado.`,
+          requestId,
+          headers: corsHeaders(req),
+        })
+      }
+    }
 
     // Replay temprano: si esta Idempotency-Key ya completó, devuelve la respuesta
     // original ANTES de los guards de pausa/capacidades/horario — el estado del
@@ -118,8 +213,8 @@ export async function POST(req: Request): Promise<Response> {
           p_payment_intent: body.paymentIntent,
           p_customer_name: body.customerName,
           p_customer_phone: body.customerPhone,
-          p_delivery_address: body.deliveryAddress ?? undefined,
-          p_delivery_reference: body.deliveryReference ?? undefined,
+          p_delivery_address: body.deliveryAddress ?? '',
+          p_delivery_reference: body.deliveryReference ?? '',
           p_delivery_lat: body.coordinates?.lat ?? undefined,
           p_delivery_lng: body.coordinates?.lng ?? undefined,
           p_items: body.items.map((i) => ({
@@ -139,6 +234,32 @@ export async function POST(req: Request): Promise<Response> {
           p_customer_gps_method: body.gpsValidation?.method,
         })
         if (error) {
+          // El guard de pedido activo no puede dejar su propio rastro: el RAISE
+          // revierte la transacción. Viaja en `details` y se registra aquí, contra
+          // el pedido que bloqueó. Sirve para decidir con datos si hace falta un
+          // "agregar a mi pedido": si salta tres veces al mes se deja así; si
+          // salta veinte, se construye.
+          const blocked = /^active_order_block:([^:]+):([^:]+):(.+)$/.exec(error.details ?? '')
+          if (blocked?.[1] && blocked[2] && blocked[3]) {
+            const [, blockingOrderId, blockingShortId, blockingStatus] = blocked
+            await service
+              .from('order_event_log')
+              .insert({
+                order_id: blockingOrderId,
+                event_type: 'order.active_order_block',
+                actor_role: 'cliente',
+                actor_user_id: user.id,
+                data: {
+                  blockingShortId,
+                  blockingStatus,
+                  businessId: body.businessId,
+                  attemptedPaymentIntent: body.paymentIntent,
+                },
+              })
+              .then(undefined, () => {
+                /* el registro es best-effort: nunca debe tapar el error real */
+              })
+          }
           if (error.code === 'P0002') throw new DomainError(error.message, 'not_found')
           if (error.code === 'P0001') throw new DomainError(error.message, 'validation_error')
           throw new Error(error.message)
@@ -150,15 +271,35 @@ export async function POST(req: Request): Promise<Response> {
     // Agenda el timeout de aceptación SOLO en creación real (no en replay).
     // Best-effort: un fallo de Inngest nunca debe romper la creación del pedido.
     if (!result.replayed) {
-      const created = (result.body as { data?: { id?: string; status?: string } }).data
+      const created = (result.body as { data?: { id?: string; status?: string; shortId?: string } })
+        .data
       if (created?.id) {
         try {
-          // Agenda el timer según el estado/método: prepago (10m) · validación (5m) · aceptación (5m).
-          if (created.status === 'validando' && body.paymentIntent === 'prepaid')
-            await sendOrderPrepay({ orderId: created.id })
-          else if (created.status === 'validando')
-            await sendOrderValidation({ orderId: created.id })
+          // Agenda el timer según el estado: validación para contraentrega con strike (5m) · aceptación (5m).
+          // El pago prepago se realiza en tracking tras la aceptación del negocio.
+          if (created.status === 'validando') await sendOrderValidation({ orderId: created.id })
           else await sendOrderCreated({ orderId: created.id })
+
+          // Fallback / obtención de shortId
+          let shortId = created.shortId
+          if (!shortId) {
+            const { data: oData } = await service
+              .from('orders')
+              .select('short_id')
+              .eq('id', created.id)
+              .maybeSingle()
+            shortId = oData?.short_id
+          }
+
+          // Notifica al negocio
+          if (shortId) {
+            await sendOrderNotifyBusiness({
+              businessId: body.businessId,
+              customerName: body.customerName,
+              shortId,
+              paymentIntent: body.paymentIntent,
+            })
+          }
         } catch {
           // El pedido ya está creado; el negocio lo ve igual. (TODO: dispatch vía outbox.)
         }

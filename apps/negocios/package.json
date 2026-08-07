@@ -4,17 +4,19 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev --port 3002",
+    "dev": "cross-env NODE_OPTIONS=--max-http-header-size=32768 next dev --port 3002",
     "build": "next build",
     "start": "next start --port 3002",
     "type-check": "tsc --noEmit",
-    "lint": "biome check ."
+    "lint": "biome check .",
+    "test": "vitest run"
   },
   "dependencies": {
     "@supabase/ssr": "catalog:",
     "@supabase/supabase-js": "catalog:",
     "@tindivo/api-client": "workspace:*",
     "@tindivo/contracts": "workspace:*",
+    "@tindivo/core": "workspace:*",
     "@tindivo/supabase": "workspace:*",
     "@tindivo/ui": "workspace:*",
     "next": "catalog:",
@@ -28,6 +30,7 @@
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "tailwindcss": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

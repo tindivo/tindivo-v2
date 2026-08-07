@@ -1,0 +1,44 @@
+/* Material Symbols Rounded — fuente VARIABLE auto-hospedada, subconjunto.
+   Contiene solo los iconos que usa el panel (ver `icons.txt`), con los cuatro
+   ejes intactos (FILL, GRAD, opsz, wght) porque la primitiva `Icon` de
+   @tindivo/ui los maneja vía `font-variation-settings`.
+
+   Antes eran 4 TTF estáticos de ~1.2 MB (4.83 MB en total) precargados en el
+   layout: la clase fijaba `font-weight: normal`, así que el navegador siempre
+   servía el de 400 y los otros tres eran 3.6 MB de descarga muerta. Y al ser
+   estáticos, el eje `wght` no existía: el prop `weight` de `Icon` no hacía nada.
+
+   `font-display: swap` — antes era `block`, que deja los iconos INVISIBLES
+   hasta que la fuente carga. Con 92 KB el intercambio es imperceptible y no
+   hay pantalla en blanco.
+
+   Para regenerar tras añadir iconos nuevos: ver `README.md` en esta carpeta. */
+@font-face {
+  font-family: 'Material Symbols Rounded';
+  font-style: normal;
+  font-weight: 100 700;
+  font-display: swap;
+  src: url('./material-symbols-rounded.woff2') format('woff2-variations');
+}
+
+.material-symbols-rounded {
+  font-family: 'Material Symbols Rounded', sans-serif;
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+  user-select: none;
+}
+
+.ms-fill {
+  font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+}

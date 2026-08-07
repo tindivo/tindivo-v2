@@ -95,11 +95,33 @@ export async function signInWithGoogle() {
   if (error) throw new Error(authErrorMessage(error.message))
 }
 
+/** Detecta si el error es un duplicado (PK unique violation), sin importar
+ * cómo el cliente Supabase mapee el código de PostgREST (23505, 409, etc.). */
+function isDuplicateKeyError(err: {
+  code?: string | number
+  message?: string
+  details?: string
+}): boolean {
+  const c = err.code
+  if (c === '23505' || c === 23505 || c === '409' || c === 409) return true
+  const msg = (err.message ?? '').toLowerCase()
+  return (
+    msg.includes('duplicate key') ||
+    msg.includes('unique violation') ||
+    msg.includes('already exists')
+  )
+}
+
 /**
  * Crea o actualiza el perfil (full_name es NOT NULL: siempre se envía).
  * No usa upsert(on_conflict): PostgREST exigiría privilegio UPDATE sobre TODAS
  * las columnas enviadas (incluida user_id), pero el grant de UPDATE es por
- * columnas (0004_rls.sql). Insert primero; si ya existe (23505), update.
+ * columnas (0004_rls.sql).
+ *
+ * Primero verifica si ya existe la fila (SELECT maybeSingle); si existe → UPDATE,
+ * si no → INSERT. Esto evita el 409 innecesario en el caso común de reanudar
+ * un onboarding interrumpido, y además no depende de que el cliente Supabase
+ * propague el código PG exacto en el error.
  */
 export async function upsertProfile(input: { userId: string; fullName: string; phone?: string }) {
   const supabase = getSupabaseBrowser()
@@ -107,16 +129,44 @@ export async function upsertProfile(input: { userId: string; fullName: string; p
     full_name: input.fullName,
     ...(input.phone ? { phone: input.phone } : {}),
   }
+
+  // Verificar si ya existe (caso común: onboarding reanudado)
+  const { data: existing, error: checkErr } = await supabase
+    .from('customer_profiles')
+    .select('user_id')
+    .eq('user_id', input.userId)
+    .maybeSingle()
+
+  if (checkErr) throw new Error(checkErr.message)
+
+  if (existing) {
+    // UPDATE: la fila ya existe
+    const { error: updErr } = await supabase
+      .from('customer_profiles')
+      .update(patch)
+      .eq('user_id', input.userId)
+    if (updErr) throw new Error(updErr.message)
+    return
+  }
+
+  // INSERT: primera vez
   const { error: insErr } = await supabase
     .from('customer_profiles')
     .insert({ user_id: input.userId, ...patch })
+
   if (!insErr) return
-  if (insErr.code !== '23505') throw new Error(insErr.message)
-  const { error: updErr } = await supabase
-    .from('customer_profiles')
-    .update(patch)
-    .eq('user_id', input.userId)
-  if (updErr) throw new Error(updErr.message)
+
+  // Si aún así falla por duplicado (race condition extremadamente rara), UPDATE
+  if (isDuplicateKeyError(insErr)) {
+    const { error: updErr } = await supabase
+      .from('customer_profiles')
+      .update(patch)
+      .eq('user_id', input.userId)
+    if (updErr) throw new Error(updErr.message)
+    return
+  }
+
+  throw new Error(insErr.message)
 }
 
 /** Guarda el teléfono (formato 9XXXXXXXX, consistente con PhonePeSchema). */

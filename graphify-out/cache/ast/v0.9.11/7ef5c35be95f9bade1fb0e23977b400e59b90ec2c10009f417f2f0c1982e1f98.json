@@ -1,0 +1,1023 @@
+{
+  "nodes": [
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_md",
+      "label": "FLUJO_TINDIVO.md",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_flujo_tindivo_documentaci\u00f3n_exhaustiva_v2",
+      "label": "FLUJO TINDIVO \u2014 Documentaci\u00f3n Exhaustiva (v2)",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_nota_sobre_backend_y_modo_demo",
+      "label": "NOTA SOBRE BACKEND Y MODO DEMO",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L8"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_1_mapa_completo_de_pantallas_y_navegaci\u00f3n",
+      "label": "1. MAPA COMPLETO DE PANTALLAS Y NAVEGACI\u00d3N",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L27"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_2_pantallas_detalle_completo",
+      "label": "2. PANTALLAS \u2014 DETALLE COMPLETO",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L173"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_2_1_landingscreen",
+      "label": "2.1 LandingScreen",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L175"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_2_2_menuscreen",
+      "label": "2.2 MenuScreen",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L222"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_2_3_productmodal",
+      "label": "2.3 ProductModal",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L266"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_2_4_cartscreen",
+      "label": "2.4 CartScreen",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L312"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_2_5_authonboarding_flujo_de_5_pasos",
+      "label": "2.5 AuthOnboarding \u2014 Flujo de 5 pasos",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L354"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_2_6_checkoutscreen",
+      "label": "2.6 CheckoutScreen",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L439"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_2_7_deliverypaymentscreen",
+      "label": "2.7 DeliveryPaymentScreen",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L505"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_2_8_pickuppaymentscreen_prepay",
+      "label": "2.8 PickupPaymentScreen (Prepay)",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L555"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_2_9_orderconfirmedscreen",
+      "label": "2.9 OrderConfirmedScreen",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L601"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_2_10_trackingscreen",
+      "label": "2.10 TrackingScreen",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L631"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_2_11_ordercancelledscreen",
+      "label": "2.11 OrderCancelledScreen",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L667"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_2_12_accountscreen",
+      "label": "2.12 AccountScreen",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L688"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_2_13_addresseditscreen",
+      "label": "2.13 AddressEditScreen",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L759"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_3_flujos_cr\u00edticos_completos",
+      "label": "3. FLUJOS CR\u00cdTICOS COMPLETOS",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L820"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_3_1_flujo_delivery_con_pago_al_recibir_yape_o_efectivo",
+      "label": "3.1 Flujo: Delivery con pago al recibir (Yape o Efectivo)",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L822"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_3_2_flujo_delivery_con_prepago_por_yape",
+      "label": "3.2 Flujo: Delivery con Prepago por Yape",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L887"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_3_3_flujo_pick_up_retiro_en_local",
+      "label": "3.3 Flujo: Pick-up (retiro en local)",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L918"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_3_4_flujo_registro_onboarding_v\u00eda_google",
+      "label": "3.4 Flujo: Registro/Onboarding \u2014 v\u00eda Google",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L946"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_3_5_flujo_registro_onboarding_v\u00eda_email",
+      "label": "3.5 Flujo: Registro/Onboarding \u2014 v\u00eda Email",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L986"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_3_6_flujo_gesti\u00f3n_de_carrito_persistente_fix_2",
+      "label": "3.6 Flujo: Gesti\u00f3n de Carrito Persistente (FIX 2)",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1005"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_3_7_flujo_manejo_de_errores",
+      "label": "3.7 Flujo: Manejo de Errores",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1031"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_error_a_restaurante_cerrado_al_intentar_abrir_carrito",
+      "label": "Error A: Restaurante cerrado al intentar abrir carrito",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1033"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_error_b_no_hay_direcciones_guardadas_en_checkout_delivery",
+      "label": "Error B: No hay direcciones guardadas en checkout (Delivery)",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1041"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_error_c_referencia_de_direcci\u00f3n_muy_corta_en_checkout",
+      "label": "Error C: Referencia de direcci\u00f3n muy corta en checkout",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1049"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_error_d_vuelto_inv\u00e1lido_pago_efectivo",
+      "label": "Error D: Vuelto inv\u00e1lido (pago efectivo)",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1056"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_error_e_timer_de_prepago_agotado",
+      "label": "Error E: Timer de prepago agotado",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1064"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_error_f_carrito_sin_auth_al_abrir",
+      "label": "Error F: Carrito sin auth al abrir",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1071"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_error_g_direcci\u00f3n_fuera_de_zona_de_cobertura",
+      "label": "Error G: Direcci\u00f3n fuera de zona de cobertura",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1078"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_error_h_nombre_inv\u00e1lido_en_namestep",
+      "label": "Error H: Nombre inv\u00e1lido en NameStep",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1086"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_error_i_referencia_de_direcci\u00f3n_20_chars",
+      "label": "Error I: Referencia de direcci\u00f3n < 20 chars",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1093"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_error_j_tel\u00e9fono_inv\u00e1lido",
+      "label": "Error J: Tel\u00e9fono inv\u00e1lido",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1100"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_4_componentes_reutilizables",
+      "label": "4. COMPONENTES REUTILIZABLES",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1109"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_4_1_de_src_components_ui_jsx",
+      "label": "4.1 De `src/components/ui.jsx`",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1111"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_4_2_de_src_components_iosframe_jsx",
+      "label": "4.2 De `src/components/IosFrame.jsx`",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1120"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_4_3_componentes_inline_reutilizados",
+      "label": "4.3 Componentes inline reutilizados",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1132"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_4_4_funciones_utilitarias_en_src_data_index_js",
+      "label": "4.4 Funciones utilitarias en `src/data/index.js`",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1145"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_reglas_de_negocio",
+      "label": "5. REGLAS DE NEGOCIO",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1156"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_1_horario_y_disponibilidad_de_restaurantes",
+      "label": "5.1 Horario y Disponibilidad de Restaurantes",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1158"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_2_zona_de_cobertura",
+      "label": "5.2 Zona de Cobertura",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1165"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_3_delivery_fee_y_precios",
+      "label": "5.3 Delivery Fee y Precios",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1172"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_4_carrito_y_persistencia",
+      "label": "5.4 Carrito y Persistencia",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1178"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_5_modifiers_personalizaciones",
+      "label": "5.5 Modifiers (Personalizaciones)",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1185"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_6_autenticaci\u00f3n_y_onboarding",
+      "label": "5.6 Autenticaci\u00f3n y Onboarding",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1190"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_7_validaci\u00f3n_del_nombre",
+      "label": "5.7 Validaci\u00f3n del Nombre",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1199"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_8_tel\u00e9fono",
+      "label": "5.8 Tel\u00e9fono",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1204"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_9_direcciones",
+      "label": "5.9 Direcciones",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1209"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_10_checkout_y_pago",
+      "label": "5.10 Checkout y Pago",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1216"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_11_prepago_timer",
+      "label": "5.11 Prepago (Timer)",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1223"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_12_n\u00famero_de_pedido",
+      "label": "5.12 N\u00famero de Pedido",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1229"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_13_seguimiento_de_pedido",
+      "label": "5.13 Seguimiento de Pedido",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1234"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_14_whatsapp_de_soporte",
+      "label": "5.14 WhatsApp de Soporte",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1240"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_15_historial_y_repetir_pedido",
+      "label": "5.15 Historial y \"Repetir pedido\"",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1245"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_16_bot\u00f3n_atr\u00e1s_del_navegador",
+      "label": "5.16 Bot\u00f3n Atr\u00e1s del Navegador",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1251"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_6_estado_global_estructura_completa_app_jsx",
+      "label": "6. ESTADO GLOBAL \u2014 ESTRUCTURA COMPLETA (App.jsx)",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1263"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_7_datos_est\u00e1ticos_src_data_index_js",
+      "label": "7. DATOS EST\u00c1TICOS (`src/data/index.js`)",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1297"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_constantes_de_configuraci\u00f3n",
+      "label": "Constantes de configuraci\u00f3n",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1299"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_men\u00fa_de_priamo",
+      "label": "Men\u00fa de Priamo",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1312"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_modifiers",
+      "label": "Modifiers",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1320"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_8_arquitectura_t\u00e9cnica",
+      "label": "8. ARQUITECTURA T\u00c9CNICA",
+      "file_type": "document",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1330"
+    }
+  ],
+  "edges": [
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_md",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_flujo_tindivo_documentaci\u00f3n_exhaustiva_v2",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_flujo_tindivo_documentaci\u00f3n_exhaustiva_v2",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_nota_sobre_backend_y_modo_demo",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_flujo_tindivo_documentaci\u00f3n_exhaustiva_v2",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_1_mapa_completo_de_pantallas_y_navegaci\u00f3n",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L27",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_flujo_tindivo_documentaci\u00f3n_exhaustiva_v2",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_2_pantallas_detalle_completo",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L173",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_2_pantallas_detalle_completo",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_2_1_landingscreen",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L175",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_2_pantallas_detalle_completo",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_2_2_menuscreen",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L222",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_2_pantallas_detalle_completo",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_2_3_productmodal",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L266",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_2_pantallas_detalle_completo",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_2_4_cartscreen",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L312",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_2_pantallas_detalle_completo",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_2_5_authonboarding_flujo_de_5_pasos",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L354",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_2_pantallas_detalle_completo",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_2_6_checkoutscreen",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L439",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_2_pantallas_detalle_completo",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_2_7_deliverypaymentscreen",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L505",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_2_pantallas_detalle_completo",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_2_8_pickuppaymentscreen_prepay",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L555",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_2_pantallas_detalle_completo",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_2_9_orderconfirmedscreen",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L601",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_2_pantallas_detalle_completo",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_2_10_trackingscreen",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L631",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_2_pantallas_detalle_completo",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_2_11_ordercancelledscreen",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L667",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_2_pantallas_detalle_completo",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_2_12_accountscreen",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L688",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_2_pantallas_detalle_completo",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_2_13_addresseditscreen",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L759",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_flujo_tindivo_documentaci\u00f3n_exhaustiva_v2",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_3_flujos_cr\u00edticos_completos",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L820",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_3_flujos_cr\u00edticos_completos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_3_1_flujo_delivery_con_pago_al_recibir_yape_o_efectivo",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L822",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_3_flujos_cr\u00edticos_completos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_3_2_flujo_delivery_con_prepago_por_yape",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L887",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_3_flujos_cr\u00edticos_completos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_3_3_flujo_pick_up_retiro_en_local",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L918",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_3_flujos_cr\u00edticos_completos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_3_4_flujo_registro_onboarding_v\u00eda_google",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L946",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_3_flujos_cr\u00edticos_completos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_3_5_flujo_registro_onboarding_v\u00eda_email",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L986",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_3_flujos_cr\u00edticos_completos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_3_6_flujo_gesti\u00f3n_de_carrito_persistente_fix_2",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1005",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_3_flujos_cr\u00edticos_completos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_3_7_flujo_manejo_de_errores",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1031",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_3_7_flujo_manejo_de_errores",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_error_a_restaurante_cerrado_al_intentar_abrir_carrito",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1033",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_3_7_flujo_manejo_de_errores",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_error_b_no_hay_direcciones_guardadas_en_checkout_delivery",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1041",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_3_7_flujo_manejo_de_errores",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_error_c_referencia_de_direcci\u00f3n_muy_corta_en_checkout",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1049",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_3_7_flujo_manejo_de_errores",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_error_d_vuelto_inv\u00e1lido_pago_efectivo",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1056",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_3_7_flujo_manejo_de_errores",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_error_e_timer_de_prepago_agotado",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1064",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_3_7_flujo_manejo_de_errores",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_error_f_carrito_sin_auth_al_abrir",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1071",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_3_7_flujo_manejo_de_errores",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_error_g_direcci\u00f3n_fuera_de_zona_de_cobertura",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1078",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_3_7_flujo_manejo_de_errores",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_error_h_nombre_inv\u00e1lido_en_namestep",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1086",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_3_7_flujo_manejo_de_errores",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_error_i_referencia_de_direcci\u00f3n_20_chars",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1093",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_3_7_flujo_manejo_de_errores",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_error_j_tel\u00e9fono_inv\u00e1lido",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1100",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_flujo_tindivo_documentaci\u00f3n_exhaustiva_v2",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_4_componentes_reutilizables",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1109",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_4_componentes_reutilizables",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_4_1_de_src_components_ui_jsx",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1111",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_4_componentes_reutilizables",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_4_2_de_src_components_iosframe_jsx",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1120",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_4_componentes_reutilizables",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_4_3_componentes_inline_reutilizados",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1132",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_4_componentes_reutilizables",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_4_4_funciones_utilitarias_en_src_data_index_js",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1145",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_flujo_tindivo_documentaci\u00f3n_exhaustiva_v2",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_reglas_de_negocio",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1156",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_reglas_de_negocio",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_1_horario_y_disponibilidad_de_restaurantes",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1158",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_reglas_de_negocio",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_2_zona_de_cobertura",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1165",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_reglas_de_negocio",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_3_delivery_fee_y_precios",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1172",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_reglas_de_negocio",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_4_carrito_y_persistencia",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1178",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_reglas_de_negocio",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_5_modifiers_personalizaciones",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1185",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_reglas_de_negocio",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_6_autenticaci\u00f3n_y_onboarding",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1190",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_reglas_de_negocio",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_7_validaci\u00f3n_del_nombre",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1199",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_reglas_de_negocio",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_8_tel\u00e9fono",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1204",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_reglas_de_negocio",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_9_direcciones",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1209",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_reglas_de_negocio",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_10_checkout_y_pago",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1216",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_reglas_de_negocio",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_11_prepago_timer",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1223",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_reglas_de_negocio",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_12_n\u00famero_de_pedido",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1229",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_reglas_de_negocio",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_13_seguimiento_de_pedido",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1234",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_reglas_de_negocio",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_14_whatsapp_de_soporte",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1240",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_reglas_de_negocio",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_15_historial_y_repetir_pedido",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1245",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_reglas_de_negocio",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_5_16_bot\u00f3n_atr\u00e1s_del_navegador",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1251",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_flujo_tindivo_documentaci\u00f3n_exhaustiva_v2",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_6_estado_global_estructura_completa_app_jsx",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1263",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_flujo_tindivo_documentaci\u00f3n_exhaustiva_v2",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_7_datos_est\u00e1ticos_src_data_index_js",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1297",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_7_datos_est\u00e1ticos_src_data_index_js",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_constantes_de_configuraci\u00f3n",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1299",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_7_datos_est\u00e1ticos_src_data_index_js",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_men\u00fa_de_priamo",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1312",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_7_datos_est\u00e1ticos_src_data_index_js",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_modifiers",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1320",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_flujo_tindivo_documentaci\u00f3n_exhaustiva_v2",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_flujo_tindivo_8_arquitectura_t\u00e9cnica",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/FLUJO_TINDIVO.md",
+      "source_location": "L1330",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

@@ -63,13 +63,29 @@ export type Coordinates = z.infer<typeof CoordinatesSchema>
 
 /**
  * Límites de la referencia de dirección (fuente única; consumida por UI y backend).
- * Mínimo 15 chars: en San Jacinto no hay nomenclatura de calles consistente, así que la
- * referencia debe describir la casa lo suficiente para que el motorizado la ubique (y
- * ancla los strikes antifraude). 15 equilibra utilidad con la fricción del formulario.
- * (DECISIONS.md §13 #12 — bajado de 20 a 15 el 2026-06-22.)
+ * Mínimo 5 chars.
  */
-export const ADDRESS_REFERENCE_MIN = 15
+export const ADDRESS_REFERENCE_MIN = 5
 export const ADDRESS_REFERENCE_MAX = 140
+export const ADDRESS_LINE_MIN = 5
+export const ADDRESS_LINE_MAX = 200
+
+/**
+ * Detecta texto basura o inválido en campos de texto de dirección:
+ * 1. Solo dígitos (ej. "12345").
+ * 2. 4 o más caracteres consecutivos repetidos (ej. "aaaaa").
+ * 3. Repetición de patrón completo ignorando espacios (ej. "asdfasdf" o "lala lala").
+ */
+export function isGarbageText(val: string): boolean {
+  const cleaned = val.trim().toLowerCase()
+  if (/^\d+$/.test(cleaned)) return true
+  if (/(.)\1{3,}/i.test(cleaned)) return true
+
+  const noSpaces = cleaned.replace(/\s+/g, '')
+  if (noSpaces.length >= 4 && /^(.{2,})\1+$/.test(noSpaces)) return true
+
+  return false
+}
 
 export const AddressReferenceSchema = z
   .string()
@@ -80,4 +96,22 @@ export const AddressReferenceSchema = z
   .max(ADDRESS_REFERENCE_MAX, {
     message: `La referencia no puede superar ${ADDRESS_REFERENCE_MAX} caracteres`,
   })
+  .refine((v) => !isGarbageText(v), {
+    message:
+      'Ingresa una referencia válida y descriptiva (evita números solos o patrones repetitivos)',
+  })
 export type AddressReference = z.infer<typeof AddressReferenceSchema>
+
+export const AddressLineSchema = z
+  .string()
+  .trim()
+  .min(ADDRESS_LINE_MIN, {
+    message: `La dirección debe tener al menos ${ADDRESS_LINE_MIN} caracteres`,
+  })
+  .max(ADDRESS_LINE_MAX, {
+    message: `La dirección no puede superar ${ADDRESS_LINE_MAX} caracteres`,
+  })
+  .refine((v) => !isGarbageText(v), {
+    message: 'Ingresa una dirección válida (evita números solos o patrones repetitivos)',
+  })
+export type AddressLine = z.infer<typeof AddressLineSchema>

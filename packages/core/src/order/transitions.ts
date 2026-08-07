@@ -1,11 +1,16 @@
-import type { DeliveryMethod, DistanceBand, OrderStatus } from '@tindivo/contracts'
-import { type CommissionConfig, type CommissionOverrides, computeCommission } from './commission'
+import type { DistanceBand, OrderStatus } from '@tindivo/contracts'
 import { assertTransition } from './state-machine'
 
 /**
  * Operaciones de transición PURAS del agregado Order. Devuelven el delta de
  * estado a persistir; la infraestructura (apps/api) lo aplica vía repositorio.
  * No tocan la DB ni el reloj global (testeables).
+ *
+ * AQUÍ NO SE CALCULA DINERO. `applyDelivered` y el módulo `commission.ts` que
+ * consumía se borraron en la migración 0125: eran código muerto que además ya
+ * divergía del modelo real. El cálculo vive íntegro en `advance_order`
+ * (Postgres) y lo cubren los tests de integración de `apps/api`, que ejercitan
+ * el código que de verdad corre. Ver PARTE C.5 del spec de fase 2.
  */
 
 /** Recoger: el motorizado declara la banda (determina la comisión al entregar). */
@@ -15,19 +20,4 @@ export function applyPickedUp(
 ): { status: OrderStatus; band: DistanceBand } {
   assertTransition(order.status, 'picked_up')
   return { status: 'picked_up', band }
-}
-
-/** Entregar: snapshot inmutable de la comisión total a Tindivo. */
-export function applyDelivered(
-  order: { status: OrderStatus; deliveryMethod: DeliveryMethod; band: DistanceBand | null },
-  args: { config: CommissionConfig; overrides?: CommissionOverrides },
-): { status: OrderStatus; tindivoCommission: number } {
-  assertTransition(order.status, 'delivered')
-  const tindivoCommission = computeCommission({
-    deliveryMethod: order.deliveryMethod,
-    band: order.band,
-    config: args.config,
-    overrides: args.overrides,
-  })
-  return { status: 'delivered', tindivoCommission }
 }

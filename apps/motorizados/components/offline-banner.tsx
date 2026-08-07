@@ -1,5 +1,6 @@
 'use client'
 
+import { Icon } from '@tindivo/ui'
 import { useOnline } from '@/hooks/use-online'
 import { queueSize } from '@/lib/offline-queue'
 
@@ -12,7 +13,7 @@ export function OfflineBanner() {
   if (!online) {
     const pending = queueSize()
     return (
-      <div className="fixed inset-x-0 top-0 z-[90] bg-danger py-2 text-center font-semibold text-[13px] text-white">
+      <div className="fixed inset-x-0 top-0 z-[90] bg-danger py-2 pt-[env(safe-area-inset-top)] text-center font-semibold text-[13px] text-white">
         Sin conexión. Reintentando…
         {pending > 0 && (
           <span className="ml-1.5 font-mono text-[11px] opacity-80">
@@ -24,8 +25,8 @@ export function OfflineBanner() {
   }
 
   return (
-    <div className="fixed inset-x-0 top-0 z-[90] bg-success py-2 text-center font-semibold text-[13px] text-white">
-      ✓ Conexión restablecida
+    <div className="fixed inset-x-0 top-0 z-[90] bg-success py-2 pt-[env(safe-area-inset-top)] text-center font-semibold text-[13px] text-white">
+      <Icon name="check" size={14} /> Conexión restablecida
     </div>
   )
 }

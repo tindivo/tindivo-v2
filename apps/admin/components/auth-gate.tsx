@@ -1,5 +1,6 @@
 'use client'
 
+import { LoadingState } from '@tindivo/ui'
 import { type ReactNode, useEffect, useState } from 'react'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import { Login } from './login'
@@ -20,7 +21,14 @@ export function AuthGate({ children }: { children: ReactNode }) {
   }, [])
 
   if (!ready)
-    return <div className="grid min-h-dvh place-items-center text-ink-muted">Cargando…</div>
+    return (
+      <LoadingState
+        variant="fullscreen"
+        label="Verificando acceso…"
+        description="Tindivo Administrador"
+        icon="shield_lock"
+      />
+    )
   if (!authed) return <Login />
   return <>{children}</>
 }

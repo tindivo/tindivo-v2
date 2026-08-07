@@ -40,11 +40,13 @@ Thumbs.db
 !.vscode/extensions.json
 !.vscode/settings.json
 .idea/
+scratch/
 
 # Misc
 *.tsbuildinfo
 .vercel/
 Docs.rar
+graphify-out/
 
 # QA / Playwright artifacts
 .playwright-mcp/
@@ -56,3 +58,8 @@ Docs.rar
 
 # QA credentials (test-only, never commit)
 Docs/QA-CATALOGO-CREDENCIALES.md
+
+# Playwright e2e: salida de corridas, nunca se commitea
+/test-results/
+/playwright-report/
+/blob-report/

@@ -1,0 +1,28 @@
+{
+  "nodes": [
+    {
+      "id": "tindivo_menu_v2",
+      "label": "Customer App Menu UI (screenshot)",
+      "file_type": "image",
+      "source_file": "tindivo-menu-v2.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    }
+  ],
+  "edges": [
+    {
+      "source": "tindivo_menu_v2",
+      "target": "docs_00_vision_pt2",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.7,
+      "source_file": "tindivo-menu-v2.png",
+      "source_location": null,
+      "weight": 1.0
+    }
+  ],
+  "hyperedges": []
+}

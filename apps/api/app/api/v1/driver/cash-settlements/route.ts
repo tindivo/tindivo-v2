@@ -4,7 +4,6 @@ import { requireRole } from '@/lib/http/auth'
 import { corsHeaders, handleOptions } from '@/lib/http/cors'
 import { handleError, ok } from '@/lib/http/problem'
 import { getRequestId } from '@/lib/http/request-id'
-import { sendCashDelivered } from '@/lib/inngest/client'
 import { createServiceClient } from '@/lib/supabase/service'
 
 export const dynamic = 'force-dynamic'
@@ -22,7 +21,7 @@ export function OPTIONS(req: Request): Response {
   return handleOptions(req)
 }
 
-/** Resumen de efectivo del motorizado: por negocio hoy (esperado) + historial. */
+/** Resumen de efectivo del motorizado: por negocio hoy (esperado). */
 export async function GET(req: Request): Promise<Response> {
   const requestId = getRequestId(req)
   try {
@@ -33,7 +32,7 @@ export async function GET(req: Request): Promise<Response> {
       .select('id')
       .eq('user_id', user.id)
       .maybeSingle()
-    if (!drv) return ok({ today: [], history: [] }, { headers: corsHeaders(req) })
+    if (!drv) return ok({ today: [] }, { headers: corsHeaders(req) })
 
     const limaDate = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' })
     const startUtc = new Date(`${limaDate}T05:00:00.000Z`) // Lima 00:00 = 05:00 UTC (UTC-5, sin DST)
@@ -45,6 +44,10 @@ export async function GET(req: Request): Promise<Response> {
       .eq('driver_id', drv.id)
       .eq('status', 'delivered')
       .eq('payment_real', 'paid_cash')
+      // Solo lo que AÚN no ha rendido. Antes sumaba todo lo cobrado hoy, así
+      // que tras la primera rendición seguía mostrando el total del día y
+      // pre-rellenaba el formulario con dinero que ya había entregado.
+      .is('cash_settlement_id', null)
       .gte('delivered_at', startUtc.toISOString())
       .lt('delivered_at', endUtc.toISOString())
 
@@ -65,31 +68,52 @@ export async function GET(req: Request): Promise<Response> {
       byBiz.set(o.business_id, e)
     }
 
+    const abiertos = ['pending_confirmation', 'disputed'] as const
+
+    // Solo necesitamos los settlements abiertos de hoy para el bucket
+    // "Esperando confirmación". El historial ya no se expone por este endpoint.
     const { data: settlements } = await service
       .from('cash_settlements')
       .select(
-        'id, business_id, settlement_date, status, delivered_amount, total_cash, businesses(name)',
+        'id, business_id, settlement_date, status, delivered_amount, total_cash, order_count, businesses(name)',
       )
       .eq('driver_id', drv.id)
-      .order('settlement_date', { ascending: false })
-      .limit(60)
+      .eq('settlement_date', limaDate)
+      .in('status', abiertos)
 
-    const todayMap = new Map(
-      (settlements ?? [])
-        .filter((s) => s.settlement_date === limaDate)
-        .map((s) => [s.business_id, s]),
-    )
-    const today = [...byBiz.values()].map((b) => {
-      const s = todayMap.get(b.businessId)
-      return {
+    // Desde 0111 puede haber VARIOS ciclos por negocio y día. El que le importa
+    // al motorizado es el abierto; si no hay, ninguno. Un `new Map` sobre todos
+    // se quedaba con uno arbitrario.
+    const todayMap = new Map((settlements ?? []).map((s) => [s.business_id, s]))
+    // Dos buckets distintos, como en producción — un negocio puede aparecer en
+    // los dos a la vez y son cosas diferentes:
+    //
+    //   'pending'  -> efectivo cobrado y aún no entregado. Lleva botón.
+    //   'awaiting' -> ya entregado, esperando que la cajera lo confirme. Solo
+    //                 informativo; ese dinero ya no lo tiene el motorizado.
+    //
+    // Fusionarlos en una sola fila hacía desaparecer el botón en cuanto había
+    // un ciclo sin confirmar, y el motorizado no podía rendir lo nuevo.
+    const today = [
+      ...[...byBiz.values()].map((b) => ({
         ...b,
-        settlementId: s?.id ?? null,
-        status: s?.status ?? null,
-        deliveredAmount: s?.delivered_amount ?? null,
-      }
-    })
-    const history = (settlements ?? []).filter((s) => s.settlement_date !== limaDate)
-    return ok({ today, history }, { headers: corsHeaders(req) })
+        kind: 'pending' as const,
+        settlementId: null as string | null,
+        status: null as string | null,
+        deliveredAmount: null as number | null,
+      })),
+      ...[...todayMap.values()].map((s) => ({
+        businessId: s.business_id,
+        businessName: (s.businesses as { name?: string } | null)?.name ?? '—',
+        expected: Number(s.total_cash ?? 0),
+        orderCount: s.order_count ?? 0,
+        kind: 'awaiting' as const,
+        settlementId: s.id as string | null,
+        status: s.status as string | null,
+        deliveredAmount: s.delivered_amount as number | null,
+      })),
+    ]
+    return ok({ today }, { headers: corsHeaders(req) })
   } catch (err) {
     return handleError(err, requestId, req)
   }
@@ -114,13 +138,8 @@ export async function POST(req: Request): Promise<Response> {
       if (error.code === 'P0001') throw new DomainError(error.message, 'validation_error')
       throw new Error(error.message)
     }
-    const created = data as { id?: string }
-    if (created?.id) {
-      // Best-effort: agenda la auto-confirmación a 24h.
-      try {
-        await sendCashDelivered({ cashSettlementId: created.id })
-      } catch {}
-    }
+    // La confirmación es SIEMPRE humana: la cajera cuenta el dinero. Ya no se
+    // agenda auto-confirmación a las 24h (0112).
     return ok(data, { status: 201, headers: corsHeaders(req) })
   } catch (err) {
     return handleError(err, requestId, req)

@@ -1,20 +1,19 @@
 'use client'
 
-import { Icon, Segmented } from '@tindivo/ui'
-import Link from 'next/link'
+import { Segmented } from '@tindivo/ui'
 import { useEffect, useState } from 'react'
 import { useDriverOrders } from '@/hooks/use-driver-orders'
 import { useNow } from '@/hooks/use-now'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
-import { AvailabilityCard } from './availability-card'
 import { AvailableTab } from './available-tab'
 import { MineTab } from './mine-tab'
+import { StatusIndicators } from './status-indicators'
 import { TeamTab } from './team-tab'
 
 type Tab = 'available' | 'mine' | 'team'
 
-/** Board principal del motorizado: disponibilidad + tabs + bandejas. */
-export function Home({ onSignOut }: { onSignOut: () => void }) {
+/** Board principal del motorizado: estado + tabs + bandejas. */
+export function Home() {
   const now = useNow()
   const board = useDriverOrders(now)
   const [tab, setTab] = useState<Tab>('available')
@@ -32,44 +31,16 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
   const firstName = driverName?.split(' ')[0]
 
   return (
-    <div className="mx-auto min-h-dvh max-w-[480px] px-4 pb-10">
-      <header className="flex items-start justify-between pt-5 pb-4">
-        <div>
-          <p className="t-eyebrow" style={{ marginBottom: 0 }}>
-            Tindivo · Motorizado
-          </p>
-          <h1 className="t-display text-[26px]">
-            {firstName ? `Hola, ${firstName}` : 'Mis entregas'}
-          </h1>
-          <p className="mt-0.5 font-mono text-[11px] text-ink-subtle">Mochila {board.mySlots}/3</p>
-        </div>
-        <div className="flex gap-2 pt-1">
-          <Link
-            href="/efectivo"
-            className="flex h-10 w-10 items-center justify-center rounded-full"
-            style={{ background: 'rgba(26,22,20,0.06)' }}
-            aria-label="Efectivo"
-          >
-            <Icon.Bag />
-          </Link>
-          <button
-            type="button"
-            onClick={async () => {
-              await getSupabaseBrowser().auth.signOut()
-              onSignOut()
-            }}
-            className="flex h-10 w-10 items-center justify-center rounded-full"
-            style={{ background: 'rgba(26,22,20,0.06)' }}
-            aria-label="Salir"
-          >
-            <Icon.Close />
-          </button>
-        </div>
-      </header>
+    <main className="mx-auto max-w-[480px] px-4 pt-20 pb-10">
+      {firstName && (
+        <p className="mb-3 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/55">
+          Hola, <span className="text-ink">{firstName}</span>
+        </p>
+      )}
 
-      <AvailabilityCard />
+      <StatusIndicators />
 
-      <div className="mb-4">
+      <div className="sticky top-[calc(44px+env(safe-area-inset-top))] z-30 -mx-4 mb-4 bg-surface/95 px-4 py-2 backdrop-blur-sm">
         <Segmented<Tab>
           value={tab}
           onChange={setTab}
@@ -95,6 +66,6 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
         <MineTab mine={board.mine} deliveredToday={board.deliveredToday} now={now} />
       )}
       {tab === 'team' && <TeamTab onCount={setTeamCount} />}
-    </div>
+    </main>
   )
 }

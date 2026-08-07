@@ -18,8 +18,9 @@ const Schema = z.object({
   plinNumber: z.string().max(30).nullable().optional(),
   accentColor: AccentColorSchema.optional(),
   deliveryFee: money.optional(),
-  commissionOverrideNear: money.nullable().optional(),
-  commissionOverrideFar: money.nullable().optional(),
+  // 0125: `commission_override_near` pasó a llamarse `commission_override_delivery`
+  // y `commission_override_far` se eliminó — la comisión ya no depende de la banda.
+  commissionOverrideDelivery: money.nullable().optional(),
   commissionOverridePickup: money.nullable().optional(),
   isActive: z.boolean().optional(),
   // Capacidades (modo del negocio): la consistencia la garantiza el CHECK
@@ -49,7 +50,7 @@ export async function GET(
     const { data, error } = await service
       .from('businesses')
       .select(
-        'id,name,tagline,phone,whatsapp_number,yape_number,plin_number,accent_color,delivery_fee,commission_override_near,commission_override_far,commission_override_pickup,is_active,is_blocked,blocked_for_debt,block_reason,balance_due,primary_capability,publishes_catalog,accepts_web_pickup,accepts_web_delivery,uses_tindivo_drivers',
+        'id,name,tagline,phone,whatsapp_number,yape_number,plin_number,accent_color,delivery_fee,commission_override_delivery,commission_override_pickup,is_active,is_blocked,blocked_for_debt,block_reason,balance_due,primary_capability,publishes_catalog,accepts_web_pickup,accepts_web_delivery,uses_tindivo_drivers',
       )
       .eq('id', id)
       .maybeSingle()
@@ -79,8 +80,7 @@ export async function PATCH(
       plin_number?: string | null
       accent_color?: string
       delivery_fee?: number
-      commission_override_near?: number | null
-      commission_override_far?: number | null
+      commission_override_delivery?: number | null
       commission_override_pickup?: number | null
       is_active?: boolean
       publishes_catalog?: boolean
@@ -96,10 +96,8 @@ export async function PATCH(
     if (body.plinNumber !== undefined) patch.plin_number = body.plinNumber
     if (body.accentColor !== undefined) patch.accent_color = body.accentColor
     if (body.deliveryFee !== undefined) patch.delivery_fee = body.deliveryFee
-    if (body.commissionOverrideNear !== undefined)
-      patch.commission_override_near = body.commissionOverrideNear
-    if (body.commissionOverrideFar !== undefined)
-      patch.commission_override_far = body.commissionOverrideFar
+    if (body.commissionOverrideDelivery !== undefined)
+      patch.commission_override_delivery = body.commissionOverrideDelivery
     if (body.commissionOverridePickup !== undefined)
       patch.commission_override_pickup = body.commissionOverridePickup
     if (body.isActive !== undefined) patch.is_active = body.isActive

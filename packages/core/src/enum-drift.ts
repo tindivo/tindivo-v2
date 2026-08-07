@@ -34,12 +34,7 @@ type _report_type = Assert<Equal<Dom['report_type'][number], Enums<'report_type'
 type _report_status = Assert<Equal<Dom['report_status'][number], Enums<'report_status'>>>
 type _cancel_reason = Assert<Equal<Dom['cancel_reason'][number], Enums<'cancel_reason'>>>
 type _vehicle_type = Assert<Equal<Dom['vehicle_type'][number], Enums<'vehicle_type'>>>
-type _contingency_advance_status = Assert<
-  Equal<Dom['contingency_advance_status'][number], Enums<'contingency_advance_status'>>
->
-type _contingency_actor_charged = Assert<
-  Equal<Dom['contingency_actor_charged'][number], Enums<'contingency_actor_charged'>>
->
+// contingency_advance_status y contingency_actor_charged se eliminaron en 0123.
 type _transfer_request_status = Assert<
   Equal<Dom['transfer_request_status'][number], Enums<'transfer_request_status'>>
 >

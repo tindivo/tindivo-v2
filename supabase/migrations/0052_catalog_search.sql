@@ -14,7 +14,7 @@ create extension if not exists pg_trgm with schema extensions;
 -- El diccionario va schema-calificado DENTRO del cast: con search_path='' un
 -- 'unaccent'::regdictionary sin calificar fallaría. Si algún día se editan las
 -- reglas del diccionario: REINDEX de los índices *_search_trgm_idx.
--- NO revocar EXECUTE de anon/authenticated: los índices de expresión evalúan
+-- NO revocar EXECUTE de authenticated: los índices de expresión evalúan
 -- esta función con el rol que ESCRIBE la fila, y el panel de negocios escribe
 -- menu_items directo vía PostgREST como authenticated.
 create or replace function public.f_unaccent(p_text text)

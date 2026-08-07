@@ -17,11 +17,22 @@
     "type-check": "turbo run type-check",
     "test": "turbo run test",
     "clean": "turbo run clean && rimraf node_modules",
-    "db:types": "supabase gen types typescript --project-id psjigdoinfpgrnedxeyf --schema public > packages/supabase/src/database.types.ts",
-    "db:lint": "supabase db lint --project-id psjigdoinfpgrnedxeyf"
+    "db:types": "supabase gen types typescript --project-id zpnipajgwfthxhdtzhly --schema public > packages/supabase/src/database.types.ts",
+    "db:lint": "supabase db lint --project-id zpnipajgwfthxhdtzhly",
+    "db:seed:e2e": "node apps/api/scripts/seed-e2e.ts",
+    "db:seed:e2e:clean": "node apps/api/scripts/seed-e2e-clean.ts",
+    "test:e2e": "playwright test",
+    "graphify:update": "graphify update .",
+    "graphify:cluster": "graphify cluster-only .",
+    "graphify:query": "graphify query",
+    "graphify:path": "graphify path",
+    "graphify:explain": "graphify explain",
+    "graphify:hooks": "graphify hook install"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
+    "@playwright/test": "^1.62.0",
+    "cross-env": "^10.1.0",
     "turbo": "catalog:",
     "typescript": "catalog:"
   }

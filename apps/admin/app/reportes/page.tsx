@@ -13,6 +13,7 @@ interface ReportRow {
   status: string
   customer_phone: string | null
   description: string | null
+  evidence_url: string | null
   created_at: string
   orders: { short_id: string } | null
 }
@@ -24,7 +25,9 @@ export default function ReportesPage() {
 
   const load = useCallback(() => {
     api
-      .get<ApiEnvelope<ReportRow[]>>('/admin/reports?status=open')
+      .get<ApiEnvelope<ReportRow[]>>(
+        '/admin/reports?status=open&exclude_type=rejected_proof_disputed',
+      )
       .then((r) => setReports(r.data))
       .catch((e) => setError(errMsg(e)))
   }, [])
@@ -32,10 +35,14 @@ export default function ReportesPage() {
     load()
   }, [load])
 
-  async function resolve(id: string, status: 'resolved' | 'dismissed') {
+  async function resolve(
+    id: string,
+    status: 'resolved' | 'dismissed',
+    action?: 'refund_customer' | 'none',
+  ) {
     setBusyId(id)
     try {
-      await api.post(`/admin/reports/${id}/resolve`, { status })
+      await api.post(`/admin/reports/${id}/resolve`, { status, resolutionAction: action })
       load()
     } catch (e) {
       setError(errMsg(e))
@@ -76,7 +83,7 @@ export default function ReportesPage() {
           {reports.map((r) => (
             <li key={r.id} className="t-card">
               <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <StatusBadge label={REPORT_TYPE_LABEL[r.type] ?? r.type} tone="danger" />
                     {r.orders?.short_id && (
@@ -88,6 +95,18 @@ export default function ReportesPage() {
                   <p className="mt-1.5 text-[14px] text-ink">{r.description}</p>
                   {r.customer_phone && (
                     <p className="mt-0.5 text-[13px] text-ink-subtle">📞 {r.customer_phone}</p>
+                  )}
+                  {r.evidence_url && (
+                    <div className="mt-2.5">
+                      <a
+                        href={r.evidence_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 font-semibold text-[13px] text-brand hover:underline"
+                      >
+                        <Ico.eye className="h-3.5 w-3.5" /> Ver comprobante adjunto
+                      </a>
+                    </div>
                   )}
                 </div>
                 <div className="flex shrink-0 flex-col gap-1.5">

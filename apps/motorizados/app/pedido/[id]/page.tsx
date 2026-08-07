@@ -1,19 +1,21 @@
 'use client'
 
 import { ApiError } from '@tindivo/api-client'
-import { Icon, ScreenHeader } from '@tindivo/ui'
-import Link from 'next/link'
+import { BottomActionBar, Button, Icon, ScreenHeader } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { use, useCallback, useEffect, useState } from 'react'
 import { BusinessCard } from '@/components/order/business-card'
 import { DeliverSheet } from '@/components/order/deliver-sheet'
 import { DeliveredScreen } from '@/components/order/delivered-screen'
+import { DestinationCard } from '@/components/order/destination-card'
 import { IncidentSheet } from '@/components/order/incident-sheet'
 import { MomentPickedUp } from '@/components/order/moment-picked-up'
+import { MoneyCard } from '@/components/order/money-card'
 import { OrderDetail } from '@/components/order/order-detail'
 import { PickupSheet } from '@/components/order/pickup-sheet'
 import { PreviewSection } from '@/components/order/preview-section'
 import { ReadyPromptSheet } from '@/components/order/ready-prompt-sheet'
+import { ReleaseSheet } from '@/components/order/release-sheet'
 import { StatusHero } from '@/components/order/status-hero'
 import { WaitTimer } from '@/components/order/wait-timer'
 import { useDriverOrders } from '@/hooks/use-driver-orders'
@@ -51,6 +53,7 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
   const [pickupOpen, setPickupOpen] = useState(false)
   const [deliverOpen, setDeliverOpen] = useState(false)
   const [incidentOpen, setIncidentOpen] = useState(false)
+  const [releaseOpen, setReleaseOpen] = useState(false)
 
   const load = useCallback(async () => {
     try {
@@ -157,8 +160,8 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
   if (mode === 'loading') {
     return (
       <main className="mx-auto max-w-[480px] px-4 pt-6">
-        <div className="h-[180px] animate-pulse rounded-[22px] bg-white" />
-        <div className="mt-3.5 h-[120px] animate-pulse rounded-[22px] bg-white" />
+        <div className="h-[180px] animate-pulse rounded-2xl bg-surface-low" />
+        <div className="mt-3.5 h-[120px] animate-pulse rounded-2xl bg-surface-low" />
       </main>
     )
   }
@@ -184,7 +187,7 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
   if (mode === 'delivered') {
     if (justDelivered) return <DeliveredScreen detail={detail} justDelivered />
     return (
-      <main className="mx-auto min-h-dvh max-w-[480px] bg-surface px-4 pb-6">
+      <main className="mx-auto min-h-dvh max-w-[480px] bg-surface px-4 pb-10">
         <ScreenHeader title={`Pedido #${detail.order.shortId}`} onBack={() => router.push('/')} />
         <DeliveredScreen detail={detail} justDelivered={false} />
       </main>
@@ -201,7 +204,7 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
   const blockedByCapacity = mode === 'preview' && board.mySlots >= 3
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-[480px] flex-col bg-surface pb-4">
+    <main className="mx-auto flex min-h-dvh max-w-[480px] flex-col bg-surface pb-28">
       <ScreenHeader title={`Pedido #${detail.order.shortId}`} onBack={() => router.push('/')} />
 
       <div className="flex-1 px-4 pt-1.5">
@@ -211,6 +214,8 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
           <>
             <StatusHero detail={detail} moment={0} />
             <BusinessCard business={detail.business} />
+            <MoneyCard detail={detail} />
+            <DestinationCard detail={detail} />
           </>
         )}
 
@@ -221,13 +226,20 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
               <WaitTimer since={detail.order.waitingAtRestaurantAt} now={now} />
             )}
             <BusinessCard business={detail.business} />
+            <MoneyCard detail={detail} />
+            <DestinationCard detail={detail} />
           </>
         )}
 
         {mode === 'picked_up' && (
           <>
             <StatusHero detail={detail} moment={2} />
-            <MomentPickedUp detail={detail} onReport={() => setIncidentOpen(true)} />
+            <MomentPickedUp
+              detail={detail}
+              busy={busy}
+              onReport={() => setIncidentOpen(true)}
+              onNoShow={() => run('no_show')}
+            />
           </>
         )}
 
@@ -236,77 +248,126 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
         {actionError && <p className="mt-3 px-1 text-[13px] text-danger">{actionError}</p>}
       </div>
 
-      <div className="t-sticky-cta mx-auto w-full max-w-[480px]">
+      <BottomActionBar>
         {mode === 'preview' &&
           (blockedByCapacity ? (
             <>
-              <button type="button" className="t-btn t-btn-primary t-btn-block" disabled>
+              <Button className="w-full" disabled>
                 Tomar pedido
-              </button>
-              <p className="mt-2 text-center text-[12px] text-danger">Mochila llena (3/3)</p>
+              </Button>
+              <p className="text-center text-[12px] text-danger">Mochila llena (3/3)</p>
             </>
           ) : blockedByOverdue ? (
             <>
-              <button type="button" className="t-btn t-btn-primary t-btn-block" disabled>
+              <Button className="w-full" disabled>
                 Tomar pedido
-              </button>
-              <p className="mt-2 text-center text-[12px] text-danger">
+              </Button>
+              <p className="text-center text-[12px] text-danger">
                 Hay pedidos vencidos con prioridad
               </p>
             </>
           ) : isUpcoming ? (
-            <button type="button" className="t-btn t-btn-primary t-btn-block" disabled>
+            <Button className="w-full" disabled>
               Disponible en ~
               {Math.max(
                 1,
                 Math.round((Date.parse(detail.order.appearsInQueueAt as string) - now) / 60_000),
               )}{' '}
               min
-            </button>
+            </Button>
           ) : (
-            <button
-              type="button"
-              className="t-btn t-btn-primary t-btn-block"
-              disabled={busy}
-              onClick={() => run('take')}
-            >
+            <Button className="w-full" disabled={busy} onClick={() => run('take')}>
               {busy ? 'Tomando…' : 'Tomar pedido'}
-            </button>
+            </Button>
           ))}
 
         {mode === 'heading' && (
-          <button
-            type="button"
-            className="t-btn t-btn-primary t-btn-block"
-            disabled={busy}
-            onClick={() => run('arrived')}
-          >
-            {busy ? 'Un momento…' : 'Llegué al local'}
-          </button>
+          <div className="flex flex-col gap-2 w-full">
+            <Button className="w-full" disabled={busy} onClick={() => run('arrived')}>
+              {busy ? 'Un momento…' : 'Llegué al local'}
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full text-danger border-danger/30 hover:bg-danger/10"
+              disabled={busy}
+              onClick={() => setReleaseOpen(true)}
+            >
+              Soltar pedido
+            </Button>
+          </div>
         )}
 
         {mode === 'waiting' && (
-          <button
-            type="button"
-            className="t-btn t-btn-primary t-btn-block"
-            disabled={busy}
-            onClick={() => setPickupOpen(true)}
-          >
-            Ya recogí el pedido
-          </button>
+          <div className="flex flex-col gap-2 w-full">
+            <Button className="w-full" disabled={busy} onClick={() => setPickupOpen(true)}>
+              Ya recogí el pedido
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full text-danger border-danger/30 hover:bg-danger/10"
+              disabled={busy}
+              onClick={() => setReleaseOpen(true)}
+            >
+              Soltar pedido
+            </Button>
+          </div>
         )}
 
         {mode === 'picked_up' && (
-          <button
-            type="button"
-            className="t-btn t-btn-primary t-btn-block"
-            disabled={busy}
-            onClick={() => setDeliverOpen(true)}
-          >
-            Pedido entregado
-          </button>
+          <div className="flex flex-col gap-2 w-full">
+            {!detail.order.arrivedAtCustomerAt ? (
+              <Button
+                className="w-full"
+                disabled={busy}
+                onClick={async () => {
+                  setBusy(true)
+                  setActionError(null)
+                  let coords: {
+                    lat: number | null
+                    lng: number | null
+                    accuracy_m: number | null
+                  } = {
+                    lat: null,
+                    lng: null,
+                    accuracy_m: null,
+                  }
+                  if (typeof window !== 'undefined' && 'geolocation' in navigator) {
+                    try {
+                      const posPromise = new Promise<GeolocationPosition>((resolve, reject) => {
+                        navigator.geolocation.getCurrentPosition(resolve, reject, {
+                          enableHighAccuracy: true,
+                          timeout: 5000,
+                          maximumAge: 0,
+                        })
+                      })
+                      const timeoutPromise = new Promise<null>((resolve) =>
+                        setTimeout(() => resolve(null), 5000),
+                      )
+                      const res = await Promise.race([posPromise, timeoutPromise])
+                      if (res && 'coords' in res) {
+                        coords = {
+                          lat: res.coords.latitude,
+                          lng: res.coords.longitude,
+                          accuracy_m: res.coords.accuracy,
+                        }
+                      }
+                    } catch {
+                      // Ignorar silenciosamente errores de GPS (G1)
+                    }
+                  }
+                  await run('arrived_customer', coords)
+                }}
+              >
+                {busy ? 'Registrando llegada…' : '¡He llegado al domicilio!'}
+              </Button>
+            ) : (
+              <Button className="w-full" disabled={busy} onClick={() => setDeliverOpen(true)}>
+                Pedido entregado
+              </Button>
+            )}
+          </div>
         )}
-      </div>
+      </BottomActionBar>
 
       {readyPromptOpen && mode === 'waiting' && (
         <ReadyPromptSheet
@@ -323,7 +384,7 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
           detail={detail}
           now={now}
           busy={busy}
-          onConfirm={({ band, slots }) => run('pickup', { band, slots })}
+          onConfirm={({ slots }) => run('pickup', { slots })}
           onClose={() => setPickupOpen(false)}
         />
       )}
@@ -339,6 +400,17 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
       )}
 
       {incidentOpen && <IncidentSheet orderId={id} onClose={() => setIncidentOpen(false)} />}
+
+      {releaseOpen && (
+        <ReleaseSheet
+          busy={busy}
+          onConfirm={async (reason, note) => {
+            await run('release', { reason, note })
+            setReleaseOpen(false)
+          }}
+          onClose={() => setReleaseOpen(false)}
+        />
+      )}
     </main>
   )
 }
@@ -346,17 +418,14 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
 function LostScreen({ title, body }: { title: string; body: string }) {
   return (
     <main className="mx-auto flex min-h-dvh max-w-[480px] flex-col items-center justify-center px-6 text-center">
-      <span
-        className="flex h-20 w-20 items-center justify-center rounded-full"
-        style={{ background: 'rgba(26,22,20,0.08)', color: 'rgba(26,22,20,0.5)' }}
-      >
-        <Icon.Close style={{ width: 30, height: 30 }} />
+      <span className="flex h-20 w-20 items-center justify-center rounded-full bg-ink/[0.08] text-ink-subtle">
+        <Icon name="close" size={30} />
       </span>
-      <h1 className="t-display mt-5 text-[24px]">{title}</h1>
-      <p className="t-muted mt-2 text-[14px]">{body}</p>
-      <Link href="/" className="t-btn t-btn-primary t-btn-block mt-6">
+      <h1 className="mt-5 font-display text-[24px] font-bold tracking-tight">{title}</h1>
+      <p className="mt-2 text-[14px] text-ink/55">{body}</p>
+      <Button as="a" href="/" variant="brand" className="mt-6 w-full">
         Volver al inicio
-      </Link>
+      </Button>
     </main>
   )
 }

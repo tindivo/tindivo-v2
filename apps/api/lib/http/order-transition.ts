@@ -1,4 +1,11 @@
-import { DistanceBandSchema, PaymentRealSchema, type UserRole } from '@tindivo/contracts'
+import {
+  CANCEL_REASON_DETAILS,
+  type CancelReasonDetail,
+  CancelReasonDetailSchema,
+  DistanceBandSchema,
+  PaymentRealSchema,
+  type UserRole,
+} from '@tindivo/contracts'
 import { DomainError } from '@tindivo/core'
 import { z } from 'zod'
 import { createServiceClient } from '../supabase/service'
@@ -16,17 +23,52 @@ const REJECTION_CODES = [
   'other',
 ] as const
 
-const TransitionSchema = z.object({
-  action: z.string().min(1),
-  prepTimeMinutes: z.number().int().min(1).max(120).optional(),
-  band: DistanceBandSchema.optional(),
-  /** Backpack slots declared at pickup (clamped 1-3 server-side too). */
-  slots: z.number().int().min(1).max(3).optional(),
-  paymentReal: PaymentRealSchema.optional(),
-  reason: z.string().max(200).optional(),
-  reasonCode: z.enum(REJECTION_CODES).optional(),
-  reasonText: z.string().max(300).optional(),
-})
+const TransitionSchema = z
+  .object({
+    action: z.string().min(1),
+    prepTimeMinutes: z.number().int().min(1).max(120).optional(),
+    band: DistanceBandSchema.optional(),
+    /** Backpack slots declared at pickup (clamped 1-3 server-side too). */
+    slots: z.number().int().min(1).max(3).optional(),
+    paymentReal: PaymentRealSchema.optional(),
+    reason: z.string().max(200).optional(),
+    cancelReasonDetail: CancelReasonDetailSchema.optional(),
+    reasonCode: z.enum(REJECTION_CODES).optional(),
+    reasonText: z.string().max(300).optional(),
+    // Nullable, no solo opcional: cuando el motorizado deniega el permiso de
+    // GPS o el fix tarda más de 5s, el front manda `null` explícito (no omite
+    // la clave). Con `.optional()` a secas eso era un 422 y la llegada no se
+    // registraba — que es justo el caso en el que más falta hace.
+    lat: z.number().nullable().optional(),
+    lng: z.number().nullable().optional(),
+    accuracy_m: z.number().nullable().optional(),
+  })
+  .transform((val) => {
+    if (val.action === 'cancel') {
+      let detail = val.cancelReasonDetail
+      if (!detail && val.reasonCode) {
+        if ((CANCEL_REASON_DETAILS as readonly string[]).includes(val.reasonCode)) {
+          detail = val.reasonCode as CancelReasonDetail
+        }
+      }
+      if (!detail) {
+        detail = 'other'
+      }
+      return { ...val, cancelReasonDetail: detail }
+    }
+    return val
+  })
+  .superRefine((val, ctx) => {
+    if (val.action === 'cancel' && (val.reason === 'business_cancelled' || !val.reason)) {
+      if (!val.cancelReasonDetail) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Motivo detallado de cancelación es obligatorio para cancelaciones de negocio',
+          path: ['cancelReasonDetail'],
+        })
+      }
+    }
+  })
 
 /** Lógica compartida de transición de pedido para negocio y motorizado. */
 export async function handleOrderTransition(
@@ -50,8 +92,12 @@ export async function handleOrderTransition(
         slots: body.slots,
         paymentReal: body.paymentReal,
         reason: body.reason,
+        cancelReasonDetail: body.cancelReasonDetail,
         reasonCode: body.reasonCode,
         reasonText: body.reasonText,
+        lat: body.lat,
+        lng: body.lng,
+        accuracy_m: body.accuracy_m,
       },
     })
     if (error) {
@@ -59,6 +105,15 @@ export async function handleOrderTransition(
       if (error.code === 'P0001') throw new DomainError(error.message, 'invalid_state_transition')
       throw new Error(error.message)
     }
+
+    const result = data as { status?: string }
+    if (body.action === 'accept' && result?.status === 'awaiting_payment') {
+      try {
+        const { sendOrderPaymentTimeout } = await import('../inngest/client')
+        await sendOrderPaymentTimeout({ orderId })
+      } catch {}
+    }
+
     return ok(data, { headers: corsHeaders(req) })
   } catch (err) {
     return handleError(err, requestId, req)

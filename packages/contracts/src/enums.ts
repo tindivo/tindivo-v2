@@ -19,6 +19,7 @@ export type UserRole = z.infer<typeof UserRoleSchema>
 export const ORDER_STATUSES = [
   'validando', // contraentrega cliente nuevo / con strike: la cajera llama (5 min)
   'pending_acceptance', // negocio debe aceptar (5 min); en prepago valida comprobante (10 min)
+  'awaiting_payment', // cliente paga y sube captura
   'confirmed', // negocio aceptó
   'preparing', // cocinando; prep_time fijado; +10 min máx 2 veces
   'waiting_driver', // listo para que un motorizado lo tome (panel plano en Fase 1)
@@ -30,6 +31,37 @@ export const ORDER_STATUSES = [
 ] as const
 export const OrderStatusSchema = z.enum(ORDER_STATUSES)
 export type OrderStatus = z.infer<typeof OrderStatusSchema>
+
+/**
+ * Estados en los que un pedido sigue vivo: no es terminal y todavía consume
+ * atención del cliente, la cajera o el motorizado. Complemento exacto de
+ * `delivered` y `cancelled`.
+ *
+ * Fuente única. La replicaban a mano el guard de `create_customer_order`, el
+ * hook que bloquea el catálogo y la lista de "Mis pedidos"; las tres copias
+ * omitían `awaiting_payment`, así que un prepago esperando pago no contaba
+ * como activo en ninguna de ellas.
+ *
+ * El equivalente SQL vive en `create_customer_order`. Si cambias esta lista,
+ * cambia también la migración correspondiente.
+ */
+export const ACTIVE_ORDER_STATUSES = [
+  'validando',
+  'pending_acceptance',
+  'awaiting_payment',
+  'confirmed',
+  'preparing',
+  'waiting_driver',
+  'heading_to_restaurant',
+  'waiting_at_restaurant',
+  'picked_up',
+] as const satisfies readonly OrderStatus[]
+export type ActiveOrderStatus = (typeof ACTIVE_ORDER_STATUSES)[number]
+
+/** `true` si el pedido sigue vivo (ni entregado ni cancelado). */
+export function isActiveOrderStatus(status: string): status is ActiveOrderStatus {
+  return (ACTIVE_ORDER_STATUSES as readonly string[]).includes(status)
+}
 
 // --- Pedido: pasos del tracking que ve el CLIENTE (proyección a 4 pasos + cancelado) ---
 export const TRACKING_STEPS = [
@@ -129,23 +161,44 @@ export const CANCEL_REASONS = [
   'admin_cancelled',
   'customer_cancelled', // solo antes de la aceptación o dentro de 2 min
   'no_show', // motorizado reportó que el cliente no se presentó (genera strike)
+  'proof_rejected_final', // segundo rechazo de comprobante prepago
 ] as const
 export const CancelReasonSchema = z.enum(CANCEL_REASONS)
 export type CancelReason = z.infer<typeof CancelReasonSchema>
+
+// --- Detalle granular de razón de cancelación manual de negocio ---
+export const CANCEL_REASON_DETAILS = [
+  'out_of_stock',
+  'closed',
+  'out_of_zone',
+  'no_answer',
+  'customer_request',
+  'duplicate',
+  'other',
+] as const
+export const CancelReasonDetailSchema = z.enum(CANCEL_REASON_DETAILS)
+export type CancelReasonDetail = z.infer<typeof CancelReasonDetailSchema>
+
+// --- Teléfonos de prueba bloqueados (Blacklist canónica) ---
+export const BLACKLISTED_PHONES = [
+  '999999999',
+  '987654321',
+  '912345678',
+  '955555555',
+  '900000000',
+  '911111111',
+  '123456789',
+] as const
+export const BlacklistedPhoneSchema = z.enum(BLACKLISTED_PHONES)
+export type BlacklistedPhone = z.infer<typeof BlacklistedPhoneSchema>
 
 // --- Vehículo del motorizado ---
 export const VEHICLE_TYPES = ['moto', 'bici', 'pie', 'auto'] as const
 export const VehicleTypeSchema = z.enum(VEHICLE_TYPES)
 export type VehicleType = z.infer<typeof VehicleTypeSchema>
 
-// --- Adelanto del fondo de contingencia ---
-export const CONTINGENCY_ADVANCE_STATUSES = ['activo', 'disputado', 'cancelado'] as const
-export const ContingencyAdvanceStatusSchema = z.enum(CONTINGENCY_ADVANCE_STATUSES)
-export type ContingencyAdvanceStatus = z.infer<typeof ContingencyAdvanceStatusSchema>
-
-export const CONTINGENCY_ACTORS_CHARGED = ['restaurante', 'tindivo'] as const
-export const ContingencyActorChargedSchema = z.enum(CONTINGENCY_ACTORS_CHARGED)
-export type ContingencyActorCharged = z.infer<typeof ContingencyActorChargedSchema>
+// Los enums del fondo de contingencia se eliminaron en la migración 0123 junto
+// con la tabla y sus tres RPC. Ver Docs/spec/spec-0123-eliminar-contingencia.md.
 
 // --- Transferencia entre motorizados (modelado; UI fuera de Fase 1) ---
 export const TRANSFER_REQUEST_STATUSES = [
@@ -173,8 +226,7 @@ export const DOMAIN_ENUMS = {
   report_type: REPORT_TYPES,
   report_status: REPORT_STATUSES,
   cancel_reason: CANCEL_REASONS,
+  cancel_reason_detail: CANCEL_REASON_DETAILS,
   vehicle_type: VEHICLE_TYPES,
-  contingency_advance_status: CONTINGENCY_ADVANCE_STATUSES,
-  contingency_actor_charged: CONTINGENCY_ACTORS_CHARGED,
   transfer_request_status: TRANSFER_REQUEST_STATUSES,
 } as const

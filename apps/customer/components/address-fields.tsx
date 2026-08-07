@@ -1,6 +1,6 @@
 'use client'
 
-import { ADDRESS_REFERENCE_MAX, ADDRESS_REFERENCE_MIN } from '@tindivo/contracts'
+import { ADDRESS_LINE_MIN, ADDRESS_REFERENCE_MAX, ADDRESS_REFERENCE_MIN } from '@tindivo/contracts'
 import { type LatLng, MapPicker } from '@/components/map-picker'
 
 /** Etiquetas de dirección (fuente única para onboarding, perfil y checkout). */
@@ -24,9 +24,49 @@ export const EMPTY_ADDRESS: AddressValue = {
   accuracyM: null,
 }
 
-/** ¿La referencia cumple el mínimo de caracteres? Helper compartido por las superficies. */
+export function getReferenceError(reference: string): string | null {
+  const cleaned = reference.trim()
+  if (cleaned.length < ADDRESS_REFERENCE_MIN) {
+    return `Mínimo ${ADDRESS_REFERENCE_MIN} caracteres`
+  }
+  if (/^\d+$/.test(cleaned)) {
+    return 'Agrega una descripción, no solo números'
+  }
+  if (/(.)\1{3,}/i.test(cleaned)) {
+    return 'Evita repetir letras'
+  }
+  const noSpaces = cleaned.toLowerCase().replace(/\s+/g, '')
+  if (noSpaces.length >= 4 && /^(.{2,})\1+$/.test(noSpaces)) {
+    return 'Evita repetir patrones o palabras'
+  }
+  return null
+}
+
 export function isReferenceOk(reference: string): boolean {
-  return reference.trim().length >= ADDRESS_REFERENCE_MIN
+  return getReferenceError(reference) === null
+}
+
+export function getLineError(line: string | null): string | null {
+  if (!line) return 'La dirección es obligatoria'
+  const cleaned = line.trim()
+  if (cleaned.length < ADDRESS_LINE_MIN) {
+    return `Mínimo ${ADDRESS_LINE_MIN} caracteres`
+  }
+  if (/^\d+$/.test(cleaned)) {
+    return 'Ingresa una dirección real, no solo números'
+  }
+  if (/(.)\1{3,}/i.test(cleaned)) {
+    return 'Evita repetir letras'
+  }
+  const noSpaces = cleaned.toLowerCase().replace(/\s+/g, '')
+  if (noSpaces.length >= 4 && /^(.{2,})\1+$/.test(noSpaces)) {
+    return 'Evita repetir patrones o palabras'
+  }
+  return null
+}
+
+export function isLineOk(line: string | null): boolean {
+  return getLineError(line) === null
 }
 
 /**
@@ -47,31 +87,42 @@ export function AddressFields({
   showLabelPicker?: boolean
   mapHeightPx?: number
 }) {
-  const refLen = value.reference.trim().length
-  const refOk = refLen >= ADDRESS_REFERENCE_MIN
+  const refError = getReferenceError(value.reference)
+  const refOk = refError === null
 
   return (
     <div>
       {showLabelPicker && (
         <div className="mb-3.5">
-          <span className="t-field-label">Etiqueta</span>
+          <span className="mb-2 block font-mono text-[12px] font-semibold uppercase tracking-wide text-ink-muted">
+            Etiqueta
+          </span>
           <div className="flex gap-1.5">
-            {ADDRESS_LABELS.map((l) => (
-              <button
-                key={l}
-                type="button"
-                onClick={() => onChange({ label: l })}
-                className={`t-chip flex-1 justify-center${value.label === l ? ' active' : ''}`}
-              >
-                {labelEmoji(l)} {l}
-              </button>
-            ))}
+            {ADDRESS_LABELS.map((l) => {
+              const active = value.label === l
+              return (
+                <button
+                  key={l}
+                  type="button"
+                  onClick={() => onChange({ label: l })}
+                  className={`inline-flex flex-1 items-center justify-center gap-1.5 rounded-full border px-3.5 py-2 text-[14px] font-medium transition-colors ${
+                    active
+                      ? 'border-ink bg-ink text-white'
+                      : 'border-ink/[0.08] bg-card text-ink hover:bg-ink/[0.04]'
+                  }`}
+                >
+                  {labelEmoji(l)} {l}
+                </button>
+              )
+            })}
           </div>
         </div>
       )}
 
       <div className="mb-3.5">
-        <span className="t-field-label">Tu ubicación en el mapa</span>
+        <span className="mb-2 block font-mono text-[12px] font-semibold uppercase tracking-wide text-ink-muted">
+          Tu ubicación en el mapa
+        </span>
         <MapPicker
           value={value.coords}
           onChange={(c) => onChange({ coords: c })}
@@ -84,25 +135,28 @@ export function AddressFields({
       </div>
 
       <label className="mb-3.5 block">
-        <span className="t-field-label">Calle / Jirón (opcional)</span>
+        <span className="mb-2 block font-mono text-[12px] font-semibold uppercase tracking-wide text-ink-muted">
+          Dirección <span className="text-brand">*</span>
+          <span className="text-ink/45"> · mín. {ADDRESS_LINE_MIN} caracteres</span>
+        </span>
         <input
-          className="t-field"
+          className="w-full rounded-2xl border border-ink/[0.06] bg-card px-4 py-3.5 text-[16px] font-medium text-ink outline-none transition-colors placeholder:text-ink-subtle focus:border-ink focus:ring-4 focus:ring-ink/[0.08]"
           placeholder="Ej. Jr. Sucre 412"
           value={value.line}
           onChange={(e) => onChange({ line: e.target.value })}
         />
+        {value.line.trim().length > 0 && !isLineOk(value.line) && (
+          <p className="mt-1 text-[12px] text-brand-dark">{getLineError(value.line)}</p>
+        )}
       </label>
 
       <label className="mb-1.5 block">
-        <span className="t-field-label">
-          Referencia <span style={{ color: '#F97316' }}>*</span>
-          <span style={{ color: 'rgba(26,22,20,0.45)' }}>
-            {' '}
-            · mín. {ADDRESS_REFERENCE_MIN} caracteres
-          </span>
+        <span className="mb-2 block font-mono text-[12px] font-semibold uppercase tracking-wide text-ink-muted">
+          Referencia <span className="text-brand">*</span>
+          <span className="text-ink/45"> · mín. {ADDRESS_REFERENCE_MIN} caracteres</span>
         </span>
         <textarea
-          className="t-field"
+          className="w-full rounded-2xl border border-ink/[0.06] bg-card px-4 py-3.5 text-[16px] font-medium text-ink outline-none transition-colors placeholder:text-ink-subtle focus:border-ink focus:ring-4 focus:ring-ink/[0.08]"
           placeholder="Frente a la bodega de don Carlos, casa de reja negra, tocar timbre 2 veces…"
           value={value.reference}
           maxLength={ADDRESS_REFERENCE_MAX}
@@ -110,15 +164,10 @@ export function AddressFields({
         />
       </label>
       <div
-        className="flex justify-between gap-3 text-[12px]"
-        style={{ color: refOk ? 'rgba(26,22,20,0.5)' : '#C2410C' }}
+        className={`flex justify-between gap-3 text-[12px] ${refOk ? 'text-ink/50' : 'text-brand-dark'}`}
       >
-        <span>
-          {refOk
-            ? 'Referencia suficiente'
-            : `Mínimo ${ADDRESS_REFERENCE_MIN} caracteres · faltan ${ADDRESS_REFERENCE_MIN - refLen}`}
-        </span>
-        <span className="tabular-nums" style={{ color: 'rgba(26,22,20,0.5)' }}>
+        <span>{refOk ? 'Referencia suficiente' : getReferenceError(value.reference)}</span>
+        <span className="tabular-nums text-ink/50">
           {value.reference.length}/{ADDRESS_REFERENCE_MAX}
         </span>
       </div>

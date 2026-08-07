@@ -1,7 +1,7 @@
 'use client'
 
 import { ApiError } from '@tindivo/api-client'
-import { BottomSheet, Icon } from '@tindivo/ui'
+import { BottomSheet, Button, Icon } from '@tindivo/ui'
 import { useState } from 'react'
 import { api } from '@/lib/api'
 
@@ -43,58 +43,54 @@ export function IncidentSheet({ orderId, onClose }: { orderId: string; onClose: 
       <div className="p-5 pb-7">
         {done ? (
           <div className="py-4 text-center">
-            <span
-              className="mx-auto flex h-14 w-14 items-center justify-center rounded-full text-white"
-              style={{ background: '#1A8050' }}
-            >
-              <Icon.Check />
+            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-success text-white">
+              <Icon name="check" size={20} />
             </span>
-            <p className="t-display mt-3 text-[18px]">Reporte enviado</p>
-            <p className="t-muted mt-1 text-[14px]">El equipo de Tindivo lo revisará.</p>
-            <button type="button" className="t-btn t-btn-ghost t-btn-block mt-4" onClick={onClose}>
+            <p className="mt-3 font-display text-[18px] font-bold tracking-tight">
+              Reporte enviado
+            </p>
+            <p className="mt-1 text-[14px] text-ink/55">El equipo de Tindivo lo revisará.</p>
+            <Button variant="outline" className="mt-4 w-full" onClick={onClose}>
               Cerrar
-            </button>
+            </Button>
           </div>
         ) : (
           <>
-            <h2 className="t-display text-[20px]">¿Qué problema hubo?</h2>
+            <h2 className="font-display text-[20px] font-bold tracking-tight">
+              ¿Qué problema hubo?
+            </h2>
             <div className="mt-4 flex flex-wrap gap-2">
               {INCIDENT_TYPES.map((t) => (
                 <button
                   key={t.value}
                   type="button"
                   onClick={() => setType(t.value)}
-                  className="rounded-full px-3.5 py-2 font-semibold text-[13px]"
-                  style={
+                  className={`rounded-full px-3.5 py-2 text-[13px] font-semibold transition-colors ${
                     type === t.value
-                      ? { background: '#F97316', color: '#fff' }
-                      : {
-                          background: 'rgba(26,22,20,0.04)',
-                          border: '1px solid rgba(26,22,20,0.08)',
-                        }
-                  }
+                      ? 'bg-brand text-white'
+                      : 'border border-ink/[0.08] bg-ink/[0.04] text-ink hover:bg-ink/[0.08]'
+                  }`}
                 >
                   {t.label}
                 </button>
               ))}
             </div>
             <textarea
-              className="t-field mt-4"
+              className="mt-4 w-full rounded-2xl border border-ink/[0.06] bg-card px-4 py-3.5 text-base font-medium text-ink outline-none transition-all placeholder:text-ink/45 focus:border-ink focus:ring-4 focus:ring-ink/8"
               placeholder="Detalle (opcional)"
               value={desc}
               maxLength={500}
               onChange={(e) => setDesc(e.target.value)}
             />
             {error && <p className="mt-2 text-[13px] text-danger">{error}</p>}
-            <button
-              type="button"
-              className="t-btn t-btn-block mt-4 text-white"
-              style={{ background: '#DC2626' }}
+            <Button
+              variant="danger"
+              className="mt-4 w-full"
               disabled={busy || !type}
               onClick={submit}
             >
               {busy ? 'Enviando…' : 'Enviar reporte'}
-            </button>
+            </Button>
           </>
         )}
       </div>

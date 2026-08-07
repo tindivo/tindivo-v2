@@ -1,0 +1,207 @@
+{
+  "nodes": [
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_deploy_md",
+      "label": "DEPLOY.md",
+      "file_type": "document",
+      "source_file": "DEPLOY.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_deploy_deploy_md_runbook_de_go_live_tindivo_2_0",
+      "label": "DEPLOY.md \u2014 Runbook de go-live (Tindivo 2.0)",
+      "file_type": "document",
+      "source_file": "DEPLOY.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_deploy_0_pre_requisitos",
+      "label": "0. Pre-requisitos",
+      "file_type": "document",
+      "source_file": "DEPLOY.md",
+      "source_location": "L8"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_deploy_1_variables_de_entorno_por_app_t\u00fa",
+      "label": "1. Variables de entorno por app **[t\u00fa]**",
+      "file_type": "document",
+      "source_file": "DEPLOY.md",
+      "source_location": "L14"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_deploy_2_edge_function_secrets_web_push_t\u00fa",
+      "label": "2. Edge Function secrets (Web Push) **[t\u00fa]**",
+      "file_type": "document",
+      "source_file": "DEPLOY.md",
+      "source_location": "L30"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_deploy_2_1_supabase_auth_onboarding_del_cliente_t\u00fa",
+      "label": "2.1 Supabase Auth \u2014 onboarding del cliente **[t\u00fa]**",
+      "file_type": "document",
+      "source_file": "DEPLOY.md",
+      "source_location": "L45"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_deploy_3_vercel_5_proyectos_t\u00fa",
+      "label": "3. Vercel \u2014 5 proyectos **[t\u00fa]**",
+      "file_type": "document",
+      "source_file": "DEPLOY.md",
+      "source_location": "L63"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_deploy_4_dns_t\u00fa",
+      "label": "4. DNS **[t\u00fa]**",
+      "file_type": "document",
+      "source_file": "DEPLOY.md",
+      "source_location": "L78"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_deploy_5_inngest_cloud_t\u00fa",
+      "label": "5. Inngest Cloud **[t\u00fa]**",
+      "file_type": "document",
+      "source_file": "DEPLOY.md",
+      "source_location": "L82"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_deploy_6_seeds_de_go_live",
+      "label": "6. Seeds de go-live",
+      "file_type": "document",
+      "source_file": "DEPLOY.md",
+      "source_location": "L88"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_deploy_7_contenido_legal_t\u00fa",
+      "label": "7. Contenido legal **[t\u00fa]**",
+      "file_type": "document",
+      "source_file": "DEPLOY.md",
+      "source_location": "L101"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_deploy_8_smoke_post_deploy",
+      "label": "8. Smoke post-deploy",
+      "file_type": "document",
+      "source_file": "DEPLOY.md",
+      "source_location": "L106"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_deploy_9_observabilidad_opcional_en_piloto_t\u00fa",
+      "label": "9. Observabilidad (opcional en piloto) **[t\u00fa]**",
+      "file_type": "document",
+      "source_file": "DEPLOY.md",
+      "source_location": "L114"
+    }
+  ],
+  "edges": [
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_deploy_md",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_deploy_deploy_md_runbook_de_go_live_tindivo_2_0",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "DEPLOY.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_deploy_deploy_md_runbook_de_go_live_tindivo_2_0",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_deploy_0_pre_requisitos",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "DEPLOY.md",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_deploy_deploy_md_runbook_de_go_live_tindivo_2_0",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_deploy_1_variables_de_entorno_por_app_t\u00fa",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "DEPLOY.md",
+      "source_location": "L14",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_deploy_deploy_md_runbook_de_go_live_tindivo_2_0",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_deploy_2_edge_function_secrets_web_push_t\u00fa",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "DEPLOY.md",
+      "source_location": "L30",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_deploy_deploy_md_runbook_de_go_live_tindivo_2_0",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_deploy_2_1_supabase_auth_onboarding_del_cliente_t\u00fa",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "DEPLOY.md",
+      "source_location": "L45",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_deploy_deploy_md_runbook_de_go_live_tindivo_2_0",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_deploy_3_vercel_5_proyectos_t\u00fa",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "DEPLOY.md",
+      "source_location": "L63",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_deploy_deploy_md_runbook_de_go_live_tindivo_2_0",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_deploy_4_dns_t\u00fa",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "DEPLOY.md",
+      "source_location": "L78",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_deploy_deploy_md_runbook_de_go_live_tindivo_2_0",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_deploy_5_inngest_cloud_t\u00fa",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "DEPLOY.md",
+      "source_location": "L82",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_deploy_deploy_md_runbook_de_go_live_tindivo_2_0",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_deploy_6_seeds_de_go_live",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "DEPLOY.md",
+      "source_location": "L88",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_deploy_deploy_md_runbook_de_go_live_tindivo_2_0",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_deploy_7_contenido_legal_t\u00fa",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "DEPLOY.md",
+      "source_location": "L101",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_deploy_deploy_md_runbook_de_go_live_tindivo_2_0",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_deploy_8_smoke_post_deploy",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "DEPLOY.md",
+      "source_location": "L106",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_deploy_deploy_md_runbook_de_go_live_tindivo_2_0",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_deploy_9_observabilidad_opcional_en_piloto_t\u00fa",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "DEPLOY.md",
+      "source_location": "L114",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

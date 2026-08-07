@@ -1,0 +1,703 @@
+{
+  "nodes": [
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_md",
+      "label": "inventario_tecnico_apelaciones_prepaid.md",
+      "file_type": "document",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_auditor\u00eda_del_sistema_de_apelaciones_y_flujo_prepaid_inventario_t\u00e9cnico",
+      "label": "Auditor\u00eda del sistema de apelaciones y flujo prepaid \u2014 Inventario t\u00e9cnico",
+      "file_type": "document",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_1_estructura_del_monorepo",
+      "label": "1. ESTRUCTURA DEL MONOREPO",
+      "file_type": "document",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L9"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_aplicaciones_apps",
+      "label": "Aplicaciones (`apps/`)",
+      "file_type": "document",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L11"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_carpetas_compartidas_packages",
+      "label": "Carpetas Compartidas (`packages/`)",
+      "file_type": "document",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L32"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_2_base_de_datos_tablas_relevantes",
+      "label": "2. BASE DE DATOS \u2014 Tablas relevantes",
+      "file_type": "document",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L42"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_table_public_reports",
+      "label": "Table: `public.reports`",
+      "file_type": "document",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L44"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_table_public_contingency_advances",
+      "label": "Table: `public.contingency_advances`",
+      "file_type": "document",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L80"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_table_public_customer_incidents",
+      "label": "Table: `public.customer_incidents`",
+      "file_type": "document",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L114"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_table_payment_proofs",
+      "label": "Table: `payment_proofs`",
+      "file_type": "document",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L150"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_table_public_orders_columnas_relevantes_a_cancel_reason_payment_status_y_prepaid_flow",
+      "label": "Table: `public.orders` (Columnas relevantes a cancel_reason, payment status y prepaid flow)",
+      "file_type": "document",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L154"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_table_public_app_settings",
+      "label": "Table: `public.app_settings`",
+      "file_type": "document",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L180"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_table_public_customer_profiles_columnas_de_strikes_bloqueo_y_verificaci\u00f3n",
+      "label": "Table: `public.customer_profiles` (Columnas de strikes, bloqueo y verificaci\u00f3n)",
+      "file_type": "document",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L203"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_3_base_de_datos_triggers_y_funciones",
+      "label": "3. BASE DE DATOS \u2014 Triggers y funciones",
+      "file_type": "document",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L223"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_1_trg_orders_prepaid_refund_y_handle_prepaid_refund_on_cancel",
+      "label": "1. `trg_orders_prepaid_refund` y `handle_prepaid_refund_on_cancel()`",
+      "file_type": "document",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L225"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_2_trg_incident_apply_strike_y_apply_incident_strike",
+      "label": "2. `trg_incident_apply_strike` y `apply_incident_strike()`",
+      "file_type": "document",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L300"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_3_trg_strike_creates_report_y_create_report_for_strike",
+      "label": "3. `trg_strike_creates_report` y `create_report_for_strike()`",
+      "file_type": "document",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L346"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_4_rpc_create_appeal_report_apelaci\u00f3n_de_comprobante_prepago_rechazado",
+      "label": "4. RPC: `create_appeal_report` (Apelaci\u00f3n de comprobante prepago rechazado)",
+      "file_type": "document",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L370"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_4_base_de_datos_rls_policies",
+      "label": "4. BASE DE DATOS \u2014 RLS Policies",
+      "file_type": "document",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L429"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_policies_para_public_reports",
+      "label": "Policies para `public.reports`",
+      "file_type": "document",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L431"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_policies_para_public_contingency_advances",
+      "label": "Policies para `public.contingency_advances`",
+      "file_type": "document",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L457"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_policies_para_public_customer_incidents",
+      "label": "Policies para `public.customer_incidents`",
+      "file_type": "document",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L469"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_policies_para_storage_bucket_payment_proofs_storage_objects",
+      "label": "Policies para Storage Bucket `payment-proofs` (`storage.objects`)",
+      "file_type": "document",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L476"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_5_base_de_datos_migraciones_recientes_0050_a_0066",
+      "label": "5. BASE DE DATOS \u2014 Migraciones recientes (0050 a 0066)",
+      "file_type": "document",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L511"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_6_api_endpoints",
+      "label": "6. API / ENDPOINTS",
+      "file_type": "document",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L533"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_endpoints_de_clientes_api_v1_customer",
+      "label": "Endpoints de Clientes (`/api/v1/customer/...`)",
+      "file_type": "document",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L535"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_endpoints_de_negocios_api_v1_business",
+      "label": "Endpoints de Negocios (`/api/v1/business/...`)",
+      "file_type": "document",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L553"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_endpoints_de_admin_api_v1_admin",
+      "label": "Endpoints de Admin (`/api/v1/admin/...`)",
+      "file_type": "document",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L571"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_7_hooks_y_state_management",
+      "label": "7. HOOKS Y STATE MANAGEMENT",
+      "file_type": "document",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L595"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_1_hook_gate_de_checkout_useorderreadiness",
+      "label": "1. Hook Gate de Checkout: `useOrderReadiness`",
+      "file_type": "document",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L597"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_2_stores_de_zustand",
+      "label": "2. Stores de Zustand",
+      "file_type": "document",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L708"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_8_componentes_de_ui_app_customer_b2c",
+      "label": "8. COMPONENTES DE UI \u2014 App Customer (B2C)",
+      "file_type": "document",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L714"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_1_pantalla_de_subida_de_comprobante_prepayproofsection",
+      "label": "1. Pantalla de Subida de Comprobante: `PrepayProofSection`",
+      "file_type": "document",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L716"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_2_modales_de_error_bloqueo_gates",
+      "label": "2. Modales de Error/Bloqueo (Gates)",
+      "file_type": "document",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L801"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_9_componentes_de_ui_app_admin",
+      "label": "9. COMPONENTES DE UI \u2014 App Admin",
+      "file_type": "document",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L806"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_1_bandeja_de_reportes_reportespage",
+      "label": "1. Bandeja de Reportes: `ReportesPage`",
+      "file_type": "document",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L808"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_10_componentes_de_ui_app_negocios_restaurante",
+      "label": "10. COMPONENTES DE UI \u2014 App Negocios (restaurante)",
+      "file_type": "document",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L925"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_1_validaci\u00f3n_de_comprobantes_de_pago_pedidodetail",
+      "label": "1. Validaci\u00f3n de Comprobantes de Pago: `PedidoDetail`",
+      "file_type": "document",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L927"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_11_inngest_jobs",
+      "label": "11. INNGEST JOBS",
+      "file_type": "document",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L933"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_12_tipos_de_typescript",
+      "label": "12. TIPOS DE TYPESCRIPT",
+      "file_type": "document",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L947"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_13_evaluaci\u00f3n_y_recomendaci\u00f3n_t\u00e9cnica_secciones_de_auditor\u00eda_en_admin",
+      "label": "13. EVALUACI\u00d3N Y RECOMENDACI\u00d3N T\u00c9CNICA: SECCIONES DE AUDITOR\u00cdA EN ADMIN",
+      "file_type": "document",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L995"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_estado_actual_de_las_p\u00e1ginas_de_auditor\u00eda_anti_fraude_en_admin",
+      "label": "Estado actual de las p\u00e1ginas de auditor\u00eda / anti-fraude en `/admin`:",
+      "file_type": "document",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L997"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_diagn\u00f3stico_t\u00e9cnico",
+      "label": "Diagn\u00f3stico t\u00e9cnico:",
+      "file_type": "document",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L1006"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_recomendaci\u00f3n_y_propuesta_de_unificaci\u00f3n",
+      "label": "Recomendaci\u00f3n y Propuesta de Unificaci\u00f3n:",
+      "file_type": "document",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L1010"
+    }
+  ],
+  "edges": [
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_md",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_auditor\u00eda_del_sistema_de_apelaciones_y_flujo_prepaid_inventario_t\u00e9cnico",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_auditor\u00eda_del_sistema_de_apelaciones_y_flujo_prepaid_inventario_t\u00e9cnico",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_1_estructura_del_monorepo",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_1_estructura_del_monorepo",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_aplicaciones_apps",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_1_estructura_del_monorepo",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_carpetas_compartidas_packages",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L32",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_auditor\u00eda_del_sistema_de_apelaciones_y_flujo_prepaid_inventario_t\u00e9cnico",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_2_base_de_datos_tablas_relevantes",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L42",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_2_base_de_datos_tablas_relevantes",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_table_public_reports",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L44",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_2_base_de_datos_tablas_relevantes",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_table_public_contingency_advances",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L80",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_2_base_de_datos_tablas_relevantes",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_table_public_customer_incidents",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L114",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_2_base_de_datos_tablas_relevantes",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_table_payment_proofs",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L150",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_2_base_de_datos_tablas_relevantes",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_table_public_orders_columnas_relevantes_a_cancel_reason_payment_status_y_prepaid_flow",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L154",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_2_base_de_datos_tablas_relevantes",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_table_public_app_settings",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L180",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_2_base_de_datos_tablas_relevantes",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_table_public_customer_profiles_columnas_de_strikes_bloqueo_y_verificaci\u00f3n",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L203",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_auditor\u00eda_del_sistema_de_apelaciones_y_flujo_prepaid_inventario_t\u00e9cnico",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_3_base_de_datos_triggers_y_funciones",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L223",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_3_base_de_datos_triggers_y_funciones",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_1_trg_orders_prepaid_refund_y_handle_prepaid_refund_on_cancel",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L225",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_3_base_de_datos_triggers_y_funciones",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_2_trg_incident_apply_strike_y_apply_incident_strike",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L300",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_3_base_de_datos_triggers_y_funciones",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_3_trg_strike_creates_report_y_create_report_for_strike",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L346",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_3_base_de_datos_triggers_y_funciones",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_4_rpc_create_appeal_report_apelaci\u00f3n_de_comprobante_prepago_rechazado",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L370",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_auditor\u00eda_del_sistema_de_apelaciones_y_flujo_prepaid_inventario_t\u00e9cnico",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_4_base_de_datos_rls_policies",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L429",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_4_base_de_datos_rls_policies",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_policies_para_public_reports",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L431",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_4_base_de_datos_rls_policies",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_policies_para_public_contingency_advances",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L457",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_4_base_de_datos_rls_policies",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_policies_para_public_customer_incidents",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L469",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_4_base_de_datos_rls_policies",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_policies_para_storage_bucket_payment_proofs_storage_objects",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L476",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_auditor\u00eda_del_sistema_de_apelaciones_y_flujo_prepaid_inventario_t\u00e9cnico",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_5_base_de_datos_migraciones_recientes_0050_a_0066",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L511",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_auditor\u00eda_del_sistema_de_apelaciones_y_flujo_prepaid_inventario_t\u00e9cnico",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_6_api_endpoints",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L533",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_6_api_endpoints",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_endpoints_de_clientes_api_v1_customer",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L535",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_6_api_endpoints",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_endpoints_de_negocios_api_v1_business",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L553",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_6_api_endpoints",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_endpoints_de_admin_api_v1_admin",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L571",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_auditor\u00eda_del_sistema_de_apelaciones_y_flujo_prepaid_inventario_t\u00e9cnico",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_7_hooks_y_state_management",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L595",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_7_hooks_y_state_management",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_1_hook_gate_de_checkout_useorderreadiness",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L597",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_7_hooks_y_state_management",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_2_stores_de_zustand",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L708",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_auditor\u00eda_del_sistema_de_apelaciones_y_flujo_prepaid_inventario_t\u00e9cnico",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_8_componentes_de_ui_app_customer_b2c",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L714",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_8_componentes_de_ui_app_customer_b2c",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_1_pantalla_de_subida_de_comprobante_prepayproofsection",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L716",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_8_componentes_de_ui_app_customer_b2c",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_2_modales_de_error_bloqueo_gates",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L801",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_auditor\u00eda_del_sistema_de_apelaciones_y_flujo_prepaid_inventario_t\u00e9cnico",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_9_componentes_de_ui_app_admin",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L806",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_9_componentes_de_ui_app_admin",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_1_bandeja_de_reportes_reportespage",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L808",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_auditor\u00eda_del_sistema_de_apelaciones_y_flujo_prepaid_inventario_t\u00e9cnico",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_10_componentes_de_ui_app_negocios_restaurante",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L925",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_10_componentes_de_ui_app_negocios_restaurante",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_1_validaci\u00f3n_de_comprobantes_de_pago_pedidodetail",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L927",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_auditor\u00eda_del_sistema_de_apelaciones_y_flujo_prepaid_inventario_t\u00e9cnico",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_11_inngest_jobs",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L933",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_auditor\u00eda_del_sistema_de_apelaciones_y_flujo_prepaid_inventario_t\u00e9cnico",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_12_tipos_de_typescript",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L947",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_auditor\u00eda_del_sistema_de_apelaciones_y_flujo_prepaid_inventario_t\u00e9cnico",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_13_evaluaci\u00f3n_y_recomendaci\u00f3n_t\u00e9cnica_secciones_de_auditor\u00eda_en_admin",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L995",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_13_evaluaci\u00f3n_y_recomendaci\u00f3n_t\u00e9cnica_secciones_de_auditor\u00eda_en_admin",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_estado_actual_de_las_p\u00e1ginas_de_auditor\u00eda_anti_fraude_en_admin",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L997",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_13_evaluaci\u00f3n_y_recomendaci\u00f3n_t\u00e9cnica_secciones_de_auditor\u00eda_en_admin",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_diagn\u00f3stico_t\u00e9cnico",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L1006",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_13_evaluaci\u00f3n_y_recomendaci\u00f3n_t\u00e9cnica_secciones_de_auditor\u00eda_en_admin",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_inventario_tecnico_apelaciones_prepaid_recomendaci\u00f3n_y_propuesta_de_unificaci\u00f3n",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/inventario_tecnico_apelaciones_prepaid.md",
+      "source_location": "L1010",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

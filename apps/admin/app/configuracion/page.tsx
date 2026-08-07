@@ -32,24 +32,32 @@ function NumberField({
   )
 }
 
+/**
+ * Comisiones de Tindivo. Desde la migración 0125 son DOS campos, no tres: la
+ * comisión dejó de depender de la banda.
+ *
+ * EL TÍTULO IMPORTA MÁS QUE EL FORMULARIO. Antes decía "Comisiones por pedido
+ * entregado", y el número incluía el envío: el admin tecleaba 3.50 y eso era el
+ * total que se le cobraba al negocio. Ahora el envío se suma aparte, así que si
+ * alguien teclea 3.50 aquí el negocio paga 3.50 + 2.00 = 5.50 sin que nada avise.
+ * Por eso el título dice explícitamente qué NO incluye.
+ */
 function CommissionsCard({ value, save }: { value: Cfg; save: SaveFn }) {
-  const [near, setNear] = useState(String((value as { near?: number })?.near ?? ''))
-  const [far, setFar] = useState(String((value as { far?: number })?.far ?? ''))
+  const [delivery, setDelivery] = useState(String((value as { delivery?: number })?.delivery ?? ''))
   const [pickup, setPickup] = useState(String((value as { pickup?: number })?.pickup ?? ''))
   return (
     <div className="t-card">
-      <p className="t-display mb-3 text-[15px] text-ink">Comisiones por pedido entregado (S/)</p>
-      <div className="grid grid-cols-3 gap-2">
-        <NumberField label="Cerca" value={near} onChange={setNear} />
-        <NumberField label="Lejos" value={far} onChange={setFar} />
+      <p className="t-display mb-3 text-[15px] text-ink">
+        Comisión de Tindivo (sin incluir el envío que paga el cliente)
+      </p>
+      <div className="grid grid-cols-2 gap-2">
+        <NumberField label="Delivery" value={delivery} onChange={setDelivery} />
         <NumberField label="Recojo" value={pickup} onChange={setPickup} />
       </div>
       <Button
         size="sm"
         className="mt-3"
-        onClick={() =>
-          save('commissions', { near: Number(near), far: Number(far), pickup: Number(pickup) })
-        }
+        onClick={() => save('commissions', { delivery: Number(delivery), pickup: Number(pickup) })}
       >
         Guardar comisiones
       </Button>

@@ -1,0 +1,69 @@
+-- =============================================================================
+-- 0104 · Habilitar RLS en las tablas backend-only que aún no la tenían
+-- =============================================================================
+--
+-- QUÉ HACE
+-- Activa Row Level Security (SIN FORCE, sin policies) en las dos únicas tablas de
+-- `public` que seguían con `relrowsecurity = false`.
+--
+-- POR QUÉ
+-- CLAUDE.md, invariante #3: «RLS activada en TODAS las tablas con policies explícitas».
+-- Estas dos se quedaron fuera desde su creación: `0055_customer_otp_attempts.sql` crea la
+-- tabla y nunca ejecuta ENABLE ROW LEVEL SECURITY, y `outbox_events` nunca la tuvo.
+-- El advisor de Supabase marca `customer_otp_attempts` como ERROR (`rls_disabled_in_public`).
+--
+-- EL RIESGO CONCRETO QUE CIERRA
+-- `customer_otp_attempts` tiene los 8 privilegios de tabla para `anon` y `authenticated`
+-- y CERO policies. Sin RLS eso significa que la anon key del browser podía, vía PostgREST:
+--   · leer los teléfonos (E.164) de todos los usuarios que pidieron un OTP, y
+--   · borrar filas para reiniciar el rate limit de 3 envíos / 24h.
+-- `outbox_events` ya estaba cerrada por privilegios (0068 solo concede a service_role);
+-- activarle RLS es defensa en profundidad, no un agujero abierto.
+--
+-- POR QUÉ SIN POLICIES
+-- RLS sin policies = deniega todo a los roles sujetos a RLS (`anon`, `authenticated`).
+-- `service_role` tiene `rolbypassrls = true` (verificado en local y prod), así que el
+-- backend no se entera. Es exactamente lo que se quiere: estas tablas son de uso interno,
+-- no hay ninguna operación de cliente que haya que permitir.
+--
+-- Precedente en este mismo esquema: `idempotency_keys` lleva RLS activa con 0 policies y
+-- grants a anon/authenticated, y funciona. El patrón ya está establecido y aceptado.
+--
+-- EVIDENCIA DE QUE SON BACKEND-ONLY (auditado tabla por tabla antes de cerrarlas)
+--
+--   customer_otp_attempts — 2 accesos en TODO el repo, ambos en el mismo archivo:
+--     · apps/api/.../customer/phone/send-code/route.ts:47  -> lectura (count para rate limit)
+--     · apps/api/.../customer/phone/send-code/route.ts:71  -> escritura (registrar intento)
+--     Ambos usan `createServiceClient()`, cuyo docblock dice «Cliente service-role (BYPASSA
+--     RLS). Server-side exclusivamente», y el endpoint exige `requireRole(req,'customer')`.
+--     Ninguna función de DB la menciona (barrido sobre pg_proc: 0 resultados).
+--     Cero referencias en las 4 apps cliente (customer, negocios, motorizados, admin).
+--     El flujo de verificación (phone/verify/route.ts) NO la toca: valida contra Twilio.
+--
+--   outbox_events — 3 accesos, todos server-side:
+--     · apps/api/lib/outbox/processor.ts:19      -> svc.rpc('claim_outbox_events')
+--     · apps/api/lib/outbox/processor.ts:44,55   -> svc.from('outbox_events').update(...)
+--     donde `svc = createServiceClient()`. En DB la escriben/leen solo dos funciones
+--     SECURITY DEFINER: `handle_orders_outbox_events` (trigger) y `claim_outbox_events`.
+--     Cero referencias en las apps cliente.
+--
+-- TABLAS EXCLUIDAS DEL LOTE (grupo riesgo): NINGUNA.
+-- El inventario de `relrowsecurity = false` devolvió exactamente estas dos tablas, y las
+-- dos resultaron backend-only tras la auditoría. No hubo ningún caso dudoso que apartar.
+--
+-- EFECTO EN ADVISORS
+-- `customer_otp_attempts` pasa de `rls_disabled_in_public` (ERROR) a
+-- `rls_enabled_no_policy` (INFO), que es el mismo estado que ya tiene `idempotency_keys`.
+-- Es una mejora neta de severidad, no un lint nuevo.
+--
+-- NOTA SOBRE FORCE
+-- Se usa ENABLE, no FORCE. FORCE sujetaría también al owner (`postgres`), que es quien
+-- corre las migraciones y las funciones SECURITY DEFINER. No hace falta y podría estorbar.
+--
+-- ⚠️  NO ES NO-OP EN PRODUCCIÓN: cambia comportamiento a propósito (cierra el acceso de
+-- `anon`/`authenticated`). Toca datos personales (teléfonos) -> gate humano (AGENTS.md §2.2).
+-- Idempotente: ENABLE ROW LEVEL SECURITY sobre una tabla que ya la tiene es un no-op.
+
+ALTER TABLE public.customer_otp_attempts ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE public.outbox_events ENABLE ROW LEVEL SECURITY;

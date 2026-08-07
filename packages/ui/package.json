@@ -16,12 +16,14 @@
     "tailwind-merge": "catalog:"
   },
   "peerDependencies": {
+    "next": "^16",
     "react": "^19",
     "react-dom": "^19"
   },
   "devDependencies": {
     "@tindivo/tsconfig": "workspace:*",
     "@types/react": "catalog:",
+    "next": "catalog:",
     "react": "catalog:",
     "typescript": "catalog:"
   }

@@ -1,7 +1,7 @@
 'use client'
 
+import { cn, Icon } from '@tindivo/ui'
 import { useEffect, useState } from 'react'
-import { MS } from './primitives'
 
 // Pub/sub módulo-level: permite notificar éxito desde cualquier página sin pasar
 // por DashboardCtx (el editor de plato no consume useDashboard) y sin provocar
@@ -51,28 +51,15 @@ export function SuccessToastHost() {
     <div
       key={toast.id}
       role="status"
+      className={cn(
+        'fixed left-1/2 top-[62px] z-[300] flex -translate-x-1/2 items-center gap-2 rounded-full bg-success px-4 py-2.5 text-sm font-bold text-white shadow-[0_8px_24px_-6px_rgba(22,163,74,0.55)] transition-[transform,opacity] duration-200 pointer-events-none',
+        shown ? 'translate-y-0 opacity-100' : '-translate-y-2.5 opacity-0',
+      )}
       style={{
-        position: 'fixed',
-        top: 62,
-        left: '50%',
-        zIndex: 300,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-        background: 'var(--tv-success)',
-        color: '#fff',
-        padding: '10px 16px',
-        borderRadius: 999,
-        fontWeight: 700,
-        fontSize: 14,
-        boxShadow: '0 8px 24px -6px rgba(22,163,74,0.55)',
-        transform: `translateX(-50%) translateY(${shown ? 0 : -10}px)`,
-        opacity: shown ? 1 : 0,
-        transition: 'transform 200ms cubic-bezier(0.16,1,0.3,1), opacity 200ms ease',
-        pointerEvents: 'none',
+        transitionTimingFunction: 'cubic-bezier(0.16,1,0.3,1), ease',
       }}
     >
-      <MS name="check_circle" size={18} filled />
+      <Icon name="check_circle" size={18} filled />
       {toast.text}
     </div>
   )

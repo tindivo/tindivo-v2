@@ -1,6 +1,5 @@
 @import "tailwindcss";
 @import "../../../packages/ui/src/theme.css";
-@import "../../../packages/ui/src/components.css";
 
 /* Escanea las clases usadas en el paquete de UI compartido. */
 @source '../../../packages/ui/src';
@@ -8,4 +7,16 @@
 /* Base: light mode siempre, mobile-first. */
 html {
   -webkit-text-size-adjust: 100%;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }

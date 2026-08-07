@@ -1,0 +1,1039 @@
+{
+  "nodes": [
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_md",
+      "label": "03-arquitectura.md",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_03_arquitectura_t\u00e9cnica",
+      "label": "03 \u00b7 Arquitectura t\u00e9cnica",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_tabla_de_contenidos",
+      "label": "Tabla de contenidos",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L7"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_1_principios_fundacionales",
+      "label": "1. Principios fundacionales",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L28"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_2_stack_tecnol\u00f3gico",
+      "label": "2. Stack tecnol\u00f3gico",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L43"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_justificaci\u00f3n_de_las_elecciones_m\u00e1s_importantes",
+      "label": "Justificaci\u00f3n de las elecciones m\u00e1s importantes",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L74"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_3_estructura_del_monorepo",
+      "label": "3. Estructura del monorepo",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L85"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_convenciones_de_nombres",
+      "label": "Convenciones de nombres",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L119"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_4_apps_por_subdominio",
+      "label": "4. Apps por subdominio",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L131"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_4_1_apps_api_api_tindivo_com",
+      "label": "4.1 `apps/api` (api.tindivo.com)",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L135"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_4_2_apps_customer_tindivo_com",
+      "label": "4.2 `apps/customer` (tindivo.com)",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L144"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_4_3_apps_admin_admin_tindivo_com",
+      "label": "4.3 `apps/admin` (admin.tindivo.com)",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L154"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_4_4_apps_negocios_negocios_tindivo_com",
+      "label": "4.4 `apps/negocios` (negocios.tindivo.com)",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L162"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_4_5_apps_motorizados_motorizados_tindivo_com",
+      "label": "4.5 `apps/motorizados` (motorizados.tindivo.com)",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L170"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_por_qu\u00e9_subdominios_separados_vs_route_groups",
+      "label": "Por qu\u00e9 subdominios separados (vs route groups)",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L178"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_5_packages_compartidos",
+      "label": "5. Packages compartidos",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L191"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_5_1_packages_core_dominio_puro",
+      "label": "5.1 `packages/core` \u2014 Dominio puro",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L193"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_5_2_packages_contracts_zod_schemas",
+      "label": "5.2 `packages/contracts` \u2014 Zod schemas",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L228"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_5_3_packages_api_client_cliente_rest_tipado",
+      "label": "5.3 `packages/api-client` \u2014 Cliente REST tipado",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L246"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_5_4_packages_supabase_tipos_generados_helpers",
+      "label": "5.4 `packages/supabase` \u2014 Tipos generados + helpers",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L272"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_5_5_packages_ui_ui_compartida",
+      "label": "5.5 `packages/ui` \u2014 UI compartida",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L283"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_5_6_packages_inngest_functions_de_scheduling",
+      "label": "5.6 `packages/inngest` \u2014 Functions de scheduling",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L295"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_5_7_packages_config_configs_compartidos",
+      "label": "5.7 `packages/config` \u2014 Configs compartidos",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L312"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_6_ddd_ligero_con_arquitectura_hexagonal",
+      "label": "6. DDD ligero con arquitectura hexagonal",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L328"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_6_1_conceptos_aplicados",
+      "label": "6.1 Conceptos aplicados",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L330"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_6_2_lo_que_no_usamos_de_ddd",
+      "label": "6.2 Lo que NO usamos de DDD",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L343"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_6_3_flujo_t\u00edpico_de_un_use_case",
+      "label": "6.3 Flujo t\u00edpico de un use case",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L350"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_6_4_por_qu\u00e9_hexagonal",
+      "label": "6.4 Por qu\u00e9 hexagonal",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L384"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_7_vertical_slicing_en_las_apps",
+      "label": "7. Vertical slicing en las apps",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L392"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_8_comunicaci\u00f3n_entre_apps_rest_\u00fanico",
+      "label": "8. Comunicaci\u00f3n entre apps \u00b7 REST \u00fanico",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L425"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_convenciones",
+      "label": "Convenciones",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L429"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_9_outbox_inngest_eventos_de_dominio",
+      "label": "9. Outbox + Inngest \u00b7 eventos de dominio",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L443"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_9_1_outbox_pattern",
+      "label": "9.1 Outbox pattern",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L445"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_9_2_relays",
+      "label": "9.2 Relays",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L465"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_9_3_inngest_como_scheduler",
+      "label": "9.3 Inngest como scheduler",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L478"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_9_4_failsafe_crons",
+      "label": "9.4 Failsafe crons",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L507"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_10_row_level_security",
+      "label": "10. Row Level Security",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L518"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_10_1_helpers_sql",
+      "label": "10.1 Helpers SQL",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L520"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_10_2_patr\u00f3n_de_policies",
+      "label": "10.2 Patr\u00f3n de policies",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L539"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_10_3_bypass_desde_el_servidor",
+      "label": "10.3 Bypass desde el servidor",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L566"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_11_idempotencia_stripe_style",
+      "label": "11. Idempotencia Stripe-style",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L576"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_11_1_tabla",
+      "label": "11.1 Tabla",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L578"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_11_2_flujo",
+      "label": "11.2 Flujo",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L595"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_11_3_limpieza",
+      "label": "11.3 Limpieza",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L607"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_12_realtime",
+      "label": "12. Realtime",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L613"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_12_1_postgres_changes_suscripci\u00f3n_directa",
+      "label": "12.1 Postgres Changes (suscripci\u00f3n directa)",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L615"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_12_2_broadcast_eventos_sint\u00e9ticos",
+      "label": "12.2 Broadcast (eventos sint\u00e9ticos)",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L634"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_12_3_tablas_publicadas_para_realtime",
+      "label": "12.3 Tablas publicadas para Realtime",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L653"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_13_storage_y_assets",
+      "label": "13. Storage y assets",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L665"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_buckets",
+      "label": "Buckets",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L667"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_14_auth_y_multi_rol",
+      "label": "14. Auth y multi-rol",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L681"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_14_1_identidad_vs_rol",
+      "label": "14.1 Identidad vs rol",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L683"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_14_2_jwt_claims",
+      "label": "14.2 JWT claims",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L689"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_14_3_login_y_selector_de_rol",
+      "label": "14.3 Login y selector de rol",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L699"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_14_4_logout",
+      "label": "14.4 Logout",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L710"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_15_decisiones_y_trade_offs",
+      "label": "15. Decisiones y trade-offs",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L725"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_15_1_por_qu\u00e9_no_server_actions_de_next_js",
+      "label": "15.1 \u00bfPor qu\u00e9 no Server Actions de Next.js?",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L727"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_15_2_por_qu\u00e9_no_prisma",
+      "label": "15.2 \u00bfPor qu\u00e9 no Prisma?",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L733"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_15_3_por_qu\u00e9_no_drizzle",
+      "label": "15.3 \u00bfPor qu\u00e9 no Drizzle?",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L739"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_15_4_por_qu\u00e9_inngest_y_no_qstash",
+      "label": "15.4 \u00bfPor qu\u00e9 Inngest y no QStash?",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L744"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_15_5_por_qu\u00e9_tailwind_v4_y_no_v3",
+      "label": "15.5 \u00bfPor qu\u00e9 Tailwind v4 y no v3?",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L750"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_15_6_por_qu\u00e9_biome_y_no_eslint_prettier",
+      "label": "15.6 \u00bfPor qu\u00e9 Biome y no ESLint + Prettier?",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L755"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_15_7_por_qu\u00e9_5_deploys_y_no_1",
+      "label": "15.7 \u00bfPor qu\u00e9 5 deploys y no 1?",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L760"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_15_8_por_qu\u00e9_material_symbols_y_no_lucide_heroicons",
+      "label": "15.8 \u00bfPor qu\u00e9 Material Symbols y no Lucide / Heroicons?",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L765"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_16_diagrama_de_alto_nivel",
+      "label": "16. Diagrama de alto nivel",
+      "file_type": "document",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L772"
+    }
+  ],
+  "edges": [
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_md",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_03_arquitectura_t\u00e9cnica",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_03_arquitectura_t\u00e9cnica",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_tabla_de_contenidos",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_03_arquitectura_t\u00e9cnica",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_1_principios_fundacionales",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L28",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_03_arquitectura_t\u00e9cnica",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_2_stack_tecnol\u00f3gico",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L43",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_2_stack_tecnol\u00f3gico",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_justificaci\u00f3n_de_las_elecciones_m\u00e1s_importantes",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L74",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_03_arquitectura_t\u00e9cnica",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_3_estructura_del_monorepo",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L85",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_3_estructura_del_monorepo",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_convenciones_de_nombres",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L119",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_03_arquitectura_t\u00e9cnica",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_4_apps_por_subdominio",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L131",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_4_apps_por_subdominio",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_4_1_apps_api_api_tindivo_com",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L135",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_4_apps_por_subdominio",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_4_2_apps_customer_tindivo_com",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L144",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_4_apps_por_subdominio",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_4_3_apps_admin_admin_tindivo_com",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L154",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_4_apps_por_subdominio",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_4_4_apps_negocios_negocios_tindivo_com",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L162",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_4_apps_por_subdominio",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_4_5_apps_motorizados_motorizados_tindivo_com",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L170",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_4_apps_por_subdominio",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_por_qu\u00e9_subdominios_separados_vs_route_groups",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L178",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_03_arquitectura_t\u00e9cnica",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_5_packages_compartidos",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L191",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_5_packages_compartidos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_5_1_packages_core_dominio_puro",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L193",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_5_packages_compartidos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_5_2_packages_contracts_zod_schemas",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L228",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_5_packages_compartidos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_5_3_packages_api_client_cliente_rest_tipado",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L246",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_5_packages_compartidos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_5_4_packages_supabase_tipos_generados_helpers",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L272",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_5_packages_compartidos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_5_5_packages_ui_ui_compartida",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L283",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_5_packages_compartidos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_5_6_packages_inngest_functions_de_scheduling",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L295",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_5_packages_compartidos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_5_7_packages_config_configs_compartidos",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L312",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_03_arquitectura_t\u00e9cnica",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_6_ddd_ligero_con_arquitectura_hexagonal",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L328",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_6_ddd_ligero_con_arquitectura_hexagonal",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_6_1_conceptos_aplicados",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L330",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_6_ddd_ligero_con_arquitectura_hexagonal",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_6_2_lo_que_no_usamos_de_ddd",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L343",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_6_ddd_ligero_con_arquitectura_hexagonal",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_6_3_flujo_t\u00edpico_de_un_use_case",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L350",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_6_ddd_ligero_con_arquitectura_hexagonal",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_6_4_por_qu\u00e9_hexagonal",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L384",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_03_arquitectura_t\u00e9cnica",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_7_vertical_slicing_en_las_apps",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L392",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_03_arquitectura_t\u00e9cnica",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_8_comunicaci\u00f3n_entre_apps_rest_\u00fanico",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L425",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_8_comunicaci\u00f3n_entre_apps_rest_\u00fanico",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_convenciones",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L429",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_03_arquitectura_t\u00e9cnica",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_9_outbox_inngest_eventos_de_dominio",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L443",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_9_outbox_inngest_eventos_de_dominio",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_9_1_outbox_pattern",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L445",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_9_outbox_inngest_eventos_de_dominio",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_9_2_relays",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L465",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_9_outbox_inngest_eventos_de_dominio",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_9_3_inngest_como_scheduler",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L478",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_9_outbox_inngest_eventos_de_dominio",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_9_4_failsafe_crons",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L507",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_03_arquitectura_t\u00e9cnica",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_10_row_level_security",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L518",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_10_row_level_security",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_10_1_helpers_sql",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L520",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_10_row_level_security",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_10_2_patr\u00f3n_de_policies",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L539",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_10_row_level_security",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_10_3_bypass_desde_el_servidor",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L566",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_03_arquitectura_t\u00e9cnica",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_11_idempotencia_stripe_style",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L576",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_11_idempotencia_stripe_style",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_11_1_tabla",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L578",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_11_idempotencia_stripe_style",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_11_2_flujo",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L595",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_11_idempotencia_stripe_style",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_11_3_limpieza",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L607",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_03_arquitectura_t\u00e9cnica",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_12_realtime",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L613",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_12_realtime",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_12_1_postgres_changes_suscripci\u00f3n_directa",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L615",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_12_realtime",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_12_2_broadcast_eventos_sint\u00e9ticos",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L634",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_12_realtime",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_12_3_tablas_publicadas_para_realtime",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L653",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_03_arquitectura_t\u00e9cnica",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_13_storage_y_assets",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L665",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_13_storage_y_assets",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_buckets",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L667",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_03_arquitectura_t\u00e9cnica",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_14_auth_y_multi_rol",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L681",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_14_auth_y_multi_rol",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_14_1_identidad_vs_rol",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L683",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_14_auth_y_multi_rol",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_14_2_jwt_claims",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L689",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_14_auth_y_multi_rol",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_14_3_login_y_selector_de_rol",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L699",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_14_auth_y_multi_rol",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_14_4_logout",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L710",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_03_arquitectura_t\u00e9cnica",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_15_decisiones_y_trade_offs",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L725",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_15_decisiones_y_trade_offs",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_15_1_por_qu\u00e9_no_server_actions_de_next_js",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L727",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_15_decisiones_y_trade_offs",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_15_2_por_qu\u00e9_no_prisma",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L733",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_15_decisiones_y_trade_offs",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_15_3_por_qu\u00e9_no_drizzle",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L739",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_15_decisiones_y_trade_offs",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_15_4_por_qu\u00e9_inngest_y_no_qstash",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L744",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_15_decisiones_y_trade_offs",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_15_5_por_qu\u00e9_tailwind_v4_y_no_v3",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L750",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_15_decisiones_y_trade_offs",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_15_6_por_qu\u00e9_biome_y_no_eslint_prettier",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L755",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_15_decisiones_y_trade_offs",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_15_7_por_qu\u00e9_5_deploys_y_no_1",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L760",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_15_decisiones_y_trade_offs",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_15_8_por_qu\u00e9_material_symbols_y_no_lucide_heroicons",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L765",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_03_arquitectura_t\u00e9cnica",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_03_arquitectura_16_diagrama_de_alto_nivel",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/03-arquitectura.md",
+      "source_location": "L772",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

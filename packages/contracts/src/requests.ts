@@ -1,7 +1,9 @@
 import { z } from 'zod'
 import { DeliveryMethodSchema, PaymentIntentSchema } from './enums'
 import {
+  ADDRESS_LINE_MIN,
   ADDRESS_REFERENCE_MIN,
+  AddressLineSchema,
   AddressReferenceSchema,
   CoordinatesSchema,
   PhonePeSchema,
@@ -46,7 +48,7 @@ export const CreateOrderRequestSchema = z
     paymentIntent: PaymentIntentSchema,
     customerName: z.string().trim().min(1).max(120),
     customerPhone: PhonePeSchema,
-    deliveryAddress: z.string().max(200).optional(),
+    deliveryAddress: AddressLineSchema.optional(),
     deliveryReference: AddressReferenceSchema.optional(),
     coordinates: CoordinatesSchema.optional(),
     gpsValidation: CustomerGpsValidationSchema.optional(),
@@ -56,9 +58,18 @@ export const CreateOrderRequestSchema = z
   })
   .refine(
     (d) =>
-      d.deliveryMethod === 'pickup' || (d.deliveryReference?.length ?? 0) >= ADDRESS_REFERENCE_MIN,
+      d.deliveryMethod === 'pickup' || (d.deliveryAddress?.trim().length ?? 0) >= ADDRESS_LINE_MIN,
     {
-      message: `La referencia de dirección es obligatoria para delivery (mínimo ${ADDRESS_REFERENCE_MIN} caracteres)`,
+      message: `La dirección es obligatoria para delivery (mínimo ${ADDRESS_LINE_MIN} caracteres)`,
+      path: ['deliveryAddress'],
+    },
+  )
+  .refine(
+    (d) =>
+      d.deliveryMethod === 'pickup' ||
+      (d.deliveryReference?.trim().length ?? 0) >= ADDRESS_REFERENCE_MIN,
+    {
+      message: `La referencia es obligatoria para delivery (mínimo ${ADDRESS_REFERENCE_MIN} caracteres)`,
       path: ['deliveryReference'],
     },
   )

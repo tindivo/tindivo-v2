@@ -19,7 +19,7 @@ const EXTRA_ORIGINS = (process.env.ALLOWED_ORIGINS ?? '')
 const ALLOWED_ORIGINS = [...DEFAULT_ORIGINS, ...EXTRA_ORIGINS]
 
 function isAllowed(origin: string | null): boolean {
-  if (!origin) return false
+  if (!origin) return true
   if (ALLOWED_ORIGINS.includes(origin)) return true
   // dev: cualquier localhost / 127.0.0.1
   if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return true
@@ -34,12 +34,13 @@ function isAllowed(origin: string | null): boolean {
 
 export function corsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get('origin')
-  if (!isAllowed(origin) || origin === null) return {}
+  const targetOrigin = origin && isAllowed(origin) ? origin : '*'
   return {
-    'access-control-allow-origin': origin,
+    'access-control-allow-origin': targetOrigin,
     'access-control-allow-credentials': 'true',
     'access-control-allow-methods': 'GET,POST,PATCH,PUT,DELETE,OPTIONS',
-    'access-control-allow-headers': 'authorization,content-type,idempotency-key,x-request-id',
+    'access-control-allow-headers':
+      'authorization,content-type,idempotency-key,x-request-id,accept,x-requested-with',
     'access-control-max-age': '86400',
     vary: 'Origin',
   }

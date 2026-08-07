@@ -3,6 +3,9 @@
 import { useEffect, useState } from 'react'
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
+import type { BusinessDetail } from '@/features/catalog/types'
+import type { CartValidationResult } from '@/lib/cart-validation'
+import { validateCartAgainstCatalog } from '@/lib/cart-validation'
 
 export interface CartModifier {
   groupName: string
@@ -26,10 +29,12 @@ export interface CartLine {
   imageUrl: string | null
 }
 
-interface CartState {
+export interface CartState {
   businessId: string | null
   businessName: string | null
   lines: CartLine[]
+  /** Resultado de la última validación contra el catálogo del backend. */
+  validation: CartValidationResult | null
   /** Agrega una línea configurada; si es de otro negocio, reinicia el carrito. */
   addLine: (
     businessId: string,
@@ -43,6 +48,14 @@ interface CartState {
   clear: () => void
   count: () => number
   subtotal: () => number
+  /** Valida las líneas contra el catálogo actual del backend. */
+  validateAgainst: (catalog: BusinessDetail) => void
+  /** Borra el resultado de validación (útil al cerrar advertencias). */
+  setValidation: (validation: CartValidationResult | null) => void
+  /** Elimina las líneas marcadas como inválidas por la última validación. */
+  removeInvalidLines: () => void
+  /** true si hay líneas inválidas en la última validación. */
+  hasInvalidLines: () => boolean
 }
 
 let seq = 0
@@ -86,11 +99,14 @@ export const useCart = create<CartState>()(
       businessId: null,
       businessName: null,
       lines: [],
+      validation: null,
 
       addLine: (businessId, businessName, line) =>
         set((state) => {
           const sameBusiness = state.businessId === businessId
           const lines = sameBusiness ? [...state.lines] : []
+          // Al cambiar de negocio se descarta la validación anterior.
+          const validation = sameBusiness ? state.validation : null
           // Fusiona con una línea idéntica (mismo ítem + opciones + nota): suma cantidad.
           const sig = lineSignature(line)
           const idx = lines.findIndex((l) => lineSignature(l) === sig)
@@ -98,11 +114,11 @@ export const useCart = create<CartState>()(
             const existing = lines[idx]
             if (existing) {
               lines[idx] = { ...existing, quantity: existing.quantity + line.quantity }
-              return { businessId, businessName, lines }
+              return { businessId, businessName, lines, validation }
             }
           }
           lines.push({ ...line, key: line.key ?? nextKey(line.itemId) })
-          return { businessId, businessName, lines }
+          return { businessId, businessName, lines, validation }
         }),
 
       replace: (businessId, businessName, lines) =>
@@ -110,6 +126,7 @@ export const useCart = create<CartState>()(
           businessId,
           businessName,
           lines: lines.map((l) => ({ ...l, key: nextKey(l.itemId) })),
+          validation: null,
         })),
 
       setQty: (key, qty) =>
@@ -117,20 +134,47 @@ export const useCart = create<CartState>()(
           const lines = state.lines
             .map((l) => (l.key === key ? { ...l, quantity: Math.max(1, qty) } : l))
             .filter((l) => l.quantity > 0)
-          return lines.length > 0 ? { lines } : { lines, businessId: null, businessName: null }
+          return lines.length > 0
+            ? { lines }
+            : { lines, businessId: null, businessName: null, validation: null }
         }),
 
       remove: (key) =>
         set((state) => {
           const lines = state.lines.filter((l) => l.key !== key)
-          return lines.length > 0 ? { lines } : { lines, businessId: null, businessName: null }
+          return lines.length > 0
+            ? { lines }
+            : { lines, businessId: null, businessName: null, validation: null }
         }),
 
-      clear: () => set({ businessId: null, businessName: null, lines: [] }),
+      clear: () => set({ businessId: null, businessName: null, lines: [], validation: null }),
 
       count: () => get().lines.reduce((n, l) => n + l.quantity, 0),
       subtotal: () =>
         Math.round(get().lines.reduce((s, l) => s + l.unitPrice * l.quantity, 0) * 100) / 100,
+
+      validateAgainst: (catalog) =>
+        set((state) => {
+          if (state.businessId !== catalog.business.id) return state
+          return { validation: validateCartAgainstCatalog(state.lines, catalog) }
+        }),
+
+      setValidation: (validation) => set({ validation }),
+
+      removeInvalidLines: () =>
+        set((state) => {
+          if (!state.validation) return state
+          const invalidKeys = new Set(state.validation.invalidLines.map((l) => l.key))
+          const lines = state.lines.filter((l) => !invalidKeys.has(l.key))
+          return lines.length > 0
+            ? { lines, validation: { ...state.validation, invalidLines: [] } }
+            : { lines, businessId: null, businessName: null, validation: null }
+        }),
+
+      hasInvalidLines: () => {
+        const v = get().validation
+        return v != null && v.invalidLines.length > 0
+      },
     }),
     {
       name: 'tindivo-cart-v1',
@@ -145,6 +189,7 @@ export const useCart = create<CartState>()(
       }),
       // Al rehidratar, re-asigna claves únicas: sana carritos previos que pudieran tener
       // claves duplicadas y garantiza unicidad para React (keys estables por sesión).
+      // La validación nunca se persiste: se recalcula al cargar el catálogo.
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<
           Pick<CartState, 'businessId' | 'businessName' | 'lines'>
@@ -154,6 +199,7 @@ export const useCart = create<CartState>()(
           businessId: p.businessId ?? null,
           businessName: p.businessName ?? null,
           lines: (p.lines ?? []).map((l) => ({ ...l, key: nextKey(l.itemId) })),
+          validation: null,
         }
       },
       // Hidratamos manualmente tras montar (CartHydrator) para evitar mismatch SSR.

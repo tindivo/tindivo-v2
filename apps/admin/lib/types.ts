@@ -30,6 +30,23 @@ export interface Metrics {
   byDriver: { name: string; deliveries: number; inProgress: number; gmv: number }[]
   byCancelReason: { reason: string; count: number }[]
   series?: { bucket: string; gmv: number; commission: number; orders: number; cancelled: number }[]
+  /** Conteo por método de pago REAL sobre lo entregado. Los métodos sin pedidos
+   *  en el rango no vienen: el `group by` de la RPC ya los deja fuera. */
+  byPaymentReal?: { method: string; count: number }[]
+  /** Embudo del primer pedido prepago (la regla de 0057). Ver 0116 para lo que
+   *  NO mide: el abandono en el checkout no deja fila en la base. */
+  prepayFunnel?: {
+    attempts: number
+    customers: number
+    customersConverted: number
+    delivered: number
+    prepayTimeout: number
+    validationTimeout: number
+    proofRejected: number
+    otherCancelled: number
+    inProgress: number
+    conversionPct: number
+  }
 }
 
 export interface OrderRow {

@@ -1,0 +1,104 @@
+{
+  "nodes": [
+    {
+      "id": "glass_topbar_pattern",
+      "label": "GlassTopBar pattern",
+      "file_type": "code",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "\u00a710",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "order_card_pattern",
+      "label": "OrderCard pattern",
+      "file_type": "code",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "\u00a710",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "ui_colors",
+      "label": "Paleta de colores (Brand #F97316)",
+      "file_type": "code",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "\u00a72",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "typography_manrope",
+      "label": "Tipograf\u00eda Manrope (\u00fanica familia)",
+      "file_type": "code",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "\u00a73",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "animations_motion",
+      "label": "Animaciones Motion (timing tokens)",
+      "file_type": "code",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "\u00a78",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "shadcn_primitives",
+      "label": "shadcn-based primitives (Button, Card, etc)",
+      "file_type": "code",
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "\u00a79",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    }
+  ],
+  "edges": [
+    {
+      "source": "packages_ui",
+      "target": "glass_topbar_pattern",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "\u00a710",
+      "weight": 1.0
+    },
+    {
+      "source": "packages_ui",
+      "target": "order_card_pattern",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "\u00a710",
+      "weight": 1.0
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "patrones_diseno_ui_compartidos",
+      "label": "Patrones de UI compartidos (GlassTopBar, OrderCard, etc)",
+      "nodes": ["packages_ui", "glass_topbar_pattern", "order_card_pattern"],
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/06-ui-design-system.md",
+      "source_location": "\u00a710"
+    }
+  ]
+}

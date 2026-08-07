@@ -14,6 +14,74 @@ export type Database = {
   }
   public: {
     Tables: {
+      address_directory: {
+        Row: {
+          accuracy_m: number | null
+          created_at: string
+          customer_name: string | null
+          id: string
+          imported_at: string | null
+          is_default: boolean
+          last_used_at: string | null
+          lat: number | null
+          legacy_address_id: string | null
+          legacy_created_at: string | null
+          lng: number | null
+          phone: string
+          reference: string
+          source: Database["public"]["Enums"]["address_source"]
+          times_used: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          accuracy_m?: number | null
+          created_at?: string
+          customer_name?: string | null
+          id?: string
+          imported_at?: string | null
+          is_default?: boolean
+          last_used_at?: string | null
+          lat?: number | null
+          legacy_address_id?: string | null
+          legacy_created_at?: string | null
+          lng?: number | null
+          phone: string
+          reference: string
+          source: Database["public"]["Enums"]["address_source"]
+          times_used?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          accuracy_m?: number | null
+          created_at?: string
+          customer_name?: string | null
+          id?: string
+          imported_at?: string | null
+          is_default?: boolean
+          last_used_at?: string | null
+          lat?: number | null
+          legacy_address_id?: string | null
+          legacy_created_at?: string | null
+          lng?: number | null
+          phone?: string
+          reference?: string
+          source?: Database["public"]["Enums"]["address_source"]
+          times_used?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "address_directory_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_alerts: {
         Row: {
           created_at: string
@@ -78,6 +146,77 @@ export type Database = {
           },
         ]
       }
+      business_charges: {
+        Row: {
+          amount: number
+          business_id: string
+          charge_type: string
+          created_at: string
+          description: string | null
+          id: string
+          order_id: string | null
+          payment_id: string | null
+          report_id: string | null
+          settled_at: string | null
+          status: string
+        }
+        Insert: {
+          amount: number
+          business_id: string
+          charge_type: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          order_id?: string | null
+          payment_id?: string | null
+          report_id?: string | null
+          settled_at?: string | null
+          status?: string
+        }
+        Update: {
+          amount?: number
+          business_id?: string
+          charge_type?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          order_id?: string | null
+          payment_id?: string | null
+          report_id?: string | null
+          settled_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_charges_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_charges_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_charges_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "restaurant_payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_charges_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_schedule: {
         Row: {
           business_id: string
@@ -137,8 +276,7 @@ export type Database = {
           block_reason: string | null
           blocked_for_debt: boolean
           categoria: string[] | null
-          commission_override_far: number | null
-          commission_override_near: number | null
+          commission_override_delivery: number | null
           commission_override_pickup: number | null
           coordinates_lat: number | null
           coordinates_lng: number | null
@@ -178,8 +316,7 @@ export type Database = {
           block_reason?: string | null
           blocked_for_debt?: boolean
           categoria?: string[] | null
-          commission_override_far?: number | null
-          commission_override_near?: number | null
+          commission_override_delivery?: number | null
           commission_override_pickup?: number | null
           coordinates_lat?: number | null
           coordinates_lng?: number | null
@@ -219,8 +356,7 @@ export type Database = {
           block_reason?: string | null
           blocked_for_debt?: boolean
           categoria?: string[] | null
-          commission_override_far?: number | null
-          commission_override_near?: number | null
+          commission_override_delivery?: number | null
           commission_override_pickup?: number | null
           coordinates_lat?: number | null
           coordinates_lng?: number | null
@@ -353,95 +489,6 @@ export type Database = {
           },
           {
             foreignKeyName: "cash_settlements_resolved_by_fkey"
-            columns: ["resolved_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      contingency_advances: {
-        Row: {
-          actor_charged: Database["public"]["Enums"]["contingency_actor_charged"]
-          amount: number
-          created_at: string
-          customer_phone: string | null
-          customer_user_id: string | null
-          dispute_note: string | null
-          disputed_at: string | null
-          id: string
-          operator: string | null
-          order_id: string
-          proof_url: string | null
-          reason: string
-          replenished_at: string | null
-          resolved_at: string | null
-          resolved_by: string | null
-          status: Database["public"]["Enums"]["contingency_advance_status"]
-          updated_at: string
-        }
-        Insert: {
-          actor_charged: Database["public"]["Enums"]["contingency_actor_charged"]
-          amount: number
-          created_at?: string
-          customer_phone?: string | null
-          customer_user_id?: string | null
-          dispute_note?: string | null
-          disputed_at?: string | null
-          id?: string
-          operator?: string | null
-          order_id: string
-          proof_url?: string | null
-          reason: string
-          replenished_at?: string | null
-          resolved_at?: string | null
-          resolved_by?: string | null
-          status?: Database["public"]["Enums"]["contingency_advance_status"]
-          updated_at?: string
-        }
-        Update: {
-          actor_charged?: Database["public"]["Enums"]["contingency_actor_charged"]
-          amount?: number
-          created_at?: string
-          customer_phone?: string | null
-          customer_user_id?: string | null
-          dispute_note?: string | null
-          disputed_at?: string | null
-          id?: string
-          operator?: string | null
-          order_id?: string
-          proof_url?: string | null
-          reason?: string
-          replenished_at?: string | null
-          resolved_at?: string | null
-          resolved_by?: string | null
-          status?: Database["public"]["Enums"]["contingency_advance_status"]
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "contingency_advances_customer_user_id_fkey"
-            columns: ["customer_user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "contingency_advances_operator_fkey"
-            columns: ["operator"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "contingency_advances_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "contingency_advances_resolved_by_fkey"
             columns: ["resolved_by"]
             isOneToOne: false
             referencedRelation: "users"
@@ -667,6 +714,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      customer_otp_attempts: {
+        Row: {
+          id: string
+          phone: string
+          sent_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          phone: string
+          sent_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          phone?: string
+          sent_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       customer_profiles: {
         Row: {
@@ -1485,18 +1553,27 @@ export type Database = {
       }
       orders: {
         Row: {
+          address_directory_id: string | null
           appears_in_queue_at: string | null
+          arrived_at_customer_accuracy_m: number | null
+          arrived_at_customer_at: string | null
+          arrived_at_customer_lat: number | null
+          arrived_at_customer_lng: number | null
           assigned_at: string | null
+          awaiting_payment_at: string | null
           business_id: string
           business_notes: string | null
           cancel_note: string | null
           cancel_reason: Database["public"]["Enums"]["cancel_reason"] | null
+          cancel_reason_detail: string | null
           cancelled_at: string | null
           cancelled_by: string | null
           cash_amount: number | null
           cash_owed_at_delivery: number | null
+          cash_settlement_id: string | null
           change_to_give: number | null
           client_pays_with: number | null
+          commission_amount: number | null
           comprobante_prepago_url: string | null
           confirmed_at: string | null
           created_at: string
@@ -1518,6 +1595,8 @@ export type Database = {
             | Database["public"]["Enums"]["distance_band"]
             | null
           delivery_fee: number
+          delivery_fee_charged: number | null
+          delivery_fee_source: string | null
           delivery_maps_url: string | null
           delivery_method: Database["public"]["Enums"]["delivery_method"]
           delivery_reference: string | null
@@ -1541,6 +1620,8 @@ export type Database = {
           prep_extension_count: number
           prep_time_minutes: number | null
           preparing_at: string | null
+          proof_attempt: number
+          ready_early_at: string | null
           ready_early_used: boolean
           rejected_at: string | null
           rejected_by: string | null
@@ -1559,6 +1640,7 @@ export type Database = {
           validated_at: string | null
           validated_by: string | null
           validating_at: string | null
+          validation_context: string | null
           validation_reason_code: string | null
           validation_result: string | null
           waiting_at_restaurant_at: string | null
@@ -1567,18 +1649,27 @@ export type Database = {
           yape_confirmed: boolean
         }
         Insert: {
+          address_directory_id?: string | null
           appears_in_queue_at?: string | null
+          arrived_at_customer_accuracy_m?: number | null
+          arrived_at_customer_at?: string | null
+          arrived_at_customer_lat?: number | null
+          arrived_at_customer_lng?: number | null
           assigned_at?: string | null
+          awaiting_payment_at?: string | null
           business_id: string
           business_notes?: string | null
           cancel_note?: string | null
           cancel_reason?: Database["public"]["Enums"]["cancel_reason"] | null
+          cancel_reason_detail?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
           cash_amount?: number | null
           cash_owed_at_delivery?: number | null
+          cash_settlement_id?: string | null
           change_to_give?: number | null
           client_pays_with?: number | null
+          commission_amount?: number | null
           comprobante_prepago_url?: string | null
           confirmed_at?: string | null
           created_at?: string
@@ -1600,6 +1691,8 @@ export type Database = {
             | Database["public"]["Enums"]["distance_band"]
             | null
           delivery_fee: number
+          delivery_fee_charged?: number | null
+          delivery_fee_source?: string | null
           delivery_maps_url?: string | null
           delivery_method?: Database["public"]["Enums"]["delivery_method"]
           delivery_reference?: string | null
@@ -1623,6 +1716,8 @@ export type Database = {
           prep_extension_count?: number
           prep_time_minutes?: number | null
           preparing_at?: string | null
+          proof_attempt?: number
+          ready_early_at?: string | null
           ready_early_used?: boolean
           rejected_at?: string | null
           rejected_by?: string | null
@@ -1641,6 +1736,7 @@ export type Database = {
           validated_at?: string | null
           validated_by?: string | null
           validating_at?: string | null
+          validation_context?: string | null
           validation_reason_code?: string | null
           validation_result?: string | null
           waiting_at_restaurant_at?: string | null
@@ -1649,18 +1745,27 @@ export type Database = {
           yape_confirmed?: boolean
         }
         Update: {
+          address_directory_id?: string | null
           appears_in_queue_at?: string | null
+          arrived_at_customer_accuracy_m?: number | null
+          arrived_at_customer_at?: string | null
+          arrived_at_customer_lat?: number | null
+          arrived_at_customer_lng?: number | null
           assigned_at?: string | null
+          awaiting_payment_at?: string | null
           business_id?: string
           business_notes?: string | null
           cancel_note?: string | null
           cancel_reason?: Database["public"]["Enums"]["cancel_reason"] | null
+          cancel_reason_detail?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
           cash_amount?: number | null
           cash_owed_at_delivery?: number | null
+          cash_settlement_id?: string | null
           change_to_give?: number | null
           client_pays_with?: number | null
+          commission_amount?: number | null
           comprobante_prepago_url?: string | null
           confirmed_at?: string | null
           created_at?: string
@@ -1682,6 +1787,8 @@ export type Database = {
             | Database["public"]["Enums"]["distance_band"]
             | null
           delivery_fee?: number
+          delivery_fee_charged?: number | null
+          delivery_fee_source?: string | null
           delivery_maps_url?: string | null
           delivery_method?: Database["public"]["Enums"]["delivery_method"]
           delivery_reference?: string | null
@@ -1705,6 +1812,8 @@ export type Database = {
           prep_extension_count?: number
           prep_time_minutes?: number | null
           preparing_at?: string | null
+          proof_attempt?: number
+          ready_early_at?: string | null
           ready_early_used?: boolean
           rejected_at?: string | null
           rejected_by?: string | null
@@ -1723,6 +1832,7 @@ export type Database = {
           validated_at?: string | null
           validated_by?: string | null
           validating_at?: string | null
+          validation_context?: string | null
           validation_reason_code?: string | null
           validation_result?: string | null
           waiting_at_restaurant_at?: string | null
@@ -1731,6 +1841,13 @@ export type Database = {
           yape_confirmed?: boolean
         }
         Relationships: [
+          {
+            foreignKeyName: "orders_address_directory_id_fkey"
+            columns: ["address_directory_id"]
+            isOneToOne: false
+            referencedRelation: "address_directory"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "orders_business_id_fkey"
             columns: ["business_id"]
@@ -1743,6 +1860,13 @@ export type Database = {
             columns: ["cancelled_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_cash_settlement_id_fkey"
+            columns: ["cash_settlement_id"]
+            isOneToOne: false
+            referencedRelation: "cash_settlements"
             referencedColumns: ["id"]
           },
           {
@@ -1788,6 +1912,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      outbox_events: {
+        Row: {
+          attempts: number
+          created_at: string
+          event_id: string
+          event_type: string
+          id: string
+          last_error: string | null
+          next_attempt_at: string | null
+          payload: Json
+          processed_at: string | null
+          status: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          event_id: string
+          event_type: string
+          id?: string
+          last_error?: string | null
+          next_attempt_at?: string | null
+          payload: Json
+          processed_at?: string | null
+          status?: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          event_id?: string
+          event_type?: string
+          id?: string
+          last_error?: string | null
+          next_attempt_at?: string | null
+          payload?: Json
+          processed_at?: string | null
+          status?: string
+        }
+        Relationships: []
       }
       push_delivery_log: {
         Row: {
@@ -1879,6 +2042,8 @@ export type Database = {
       }
       reports: {
         Row: {
+          appeal_deadline: string | null
+          appeal_status: string | null
           business_id: string | null
           created_at: string
           created_by: string | null
@@ -1889,6 +2054,10 @@ export type Database = {
           evidence_url: string | null
           id: string
           order_id: string | null
+          refund_amount: number | null
+          refund_completed_at: string | null
+          refund_proof_path: string | null
+          refund_status: string | null
           resolution_note: string | null
           resolved_at: string | null
           resolved_by: string | null
@@ -1897,6 +2066,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          appeal_deadline?: string | null
+          appeal_status?: string | null
           business_id?: string | null
           created_at?: string
           created_by?: string | null
@@ -1907,6 +2078,10 @@ export type Database = {
           evidence_url?: string | null
           id?: string
           order_id?: string | null
+          refund_amount?: number | null
+          refund_completed_at?: string | null
+          refund_proof_path?: string | null
+          refund_status?: string | null
           resolution_note?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
@@ -1915,6 +2090,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          appeal_deadline?: string | null
+          appeal_status?: string | null
           business_id?: string | null
           created_at?: string
           created_by?: string | null
@@ -1925,6 +2102,10 @@ export type Database = {
           evidence_url?: string | null
           id?: string
           order_id?: string | null
+          refund_amount?: number | null
+          refund_completed_at?: string | null
+          refund_proof_path?: string | null
+          refund_status?: string | null
           resolution_note?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
@@ -1987,7 +2168,6 @@ export type Database = {
           paid_at: string
           payment_method: string
           registered_by: string | null
-          settlement_id: string | null
         }
         Insert: {
           amount: number
@@ -1998,7 +2178,6 @@ export type Database = {
           paid_at: string
           payment_method: string
           registered_by?: string | null
-          settlement_id?: string | null
         }
         Update: {
           amount?: number
@@ -2009,7 +2188,6 @@ export type Database = {
           paid_at?: string
           payment_method?: string
           registered_by?: string | null
-          settlement_id?: string | null
         }
         Relationships: [
           {
@@ -2022,92 +2200,6 @@ export type Database = {
           {
             foreignKeyName: "restaurant_payments_registered_by_fkey"
             columns: ["registered_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "restaurant_payments_settlement_id_fkey"
-            columns: ["settlement_id"]
-            isOneToOne: false
-            referencedRelation: "settlements"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      settlements: {
-        Row: {
-          business_id: string
-          created_at: string
-          created_by: string | null
-          due_date: string
-          excluded_reason: string | null
-          id: string
-          order_count: number
-          paid_at: string | null
-          paid_by: string | null
-          payment_method: string | null
-          payment_note: string | null
-          period_end: string
-          period_start: string
-          status: Database["public"]["Enums"]["settlement_status"]
-          total_amount: number
-          updated_at: string
-        }
-        Insert: {
-          business_id: string
-          created_at?: string
-          created_by?: string | null
-          due_date: string
-          excluded_reason?: string | null
-          id?: string
-          order_count?: number
-          paid_at?: string | null
-          paid_by?: string | null
-          payment_method?: string | null
-          payment_note?: string | null
-          period_end: string
-          period_start: string
-          status?: Database["public"]["Enums"]["settlement_status"]
-          total_amount?: number
-          updated_at?: string
-        }
-        Update: {
-          business_id?: string
-          created_at?: string
-          created_by?: string | null
-          due_date?: string
-          excluded_reason?: string | null
-          id?: string
-          order_count?: number
-          paid_at?: string | null
-          paid_by?: string | null
-          payment_method?: string | null
-          payment_note?: string | null
-          period_end?: string
-          period_start?: string
-          status?: Database["public"]["Enums"]["settlement_status"]
-          total_amount?: number
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "settlements_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "businesses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "settlements_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "settlements_paid_by_fkey"
-            columns: ["paid_by"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -2222,7 +2314,6 @@ export type Database = {
         }
         Returns: undefined
       }
-      auto_confirm_cash_settlement: { Args: { p_id: string }; Returns: Json }
       block_business: {
         Args: { p_by: string; p_id: string; p_reason: string }
         Returns: Json
@@ -2230,6 +2321,17 @@ export type Database = {
       cancel_customer_order: {
         Args: { p_customer_user_id: string; p_order_id: string }
         Returns: Json
+      }
+      cancel_expired_prepay_orders: { Args: never; Returns: number }
+      claim_outbox_events: {
+        Args: { p_limit?: number }
+        Returns: {
+          out_attempts: number
+          out_event_id: string
+          out_event_type: string
+          out_id: string
+          out_payload: Json
+        }[]
       }
       close_drivers_outside_schedule: { Args: never; Returns: number }
       confirm_cash_settlement: {
@@ -2240,6 +2342,19 @@ export type Database = {
         }
         Returns: Json
       }
+      create_appeal_report:
+        | {
+            Args: {
+              p_customer_user_id: string
+              p_description?: string
+              p_order_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: { p_description?: string; p_order_id: string }
+            Returns: Json
+          }
       create_business_manual_order: {
         Args: {
           p_business_user_id: string
@@ -2247,9 +2362,9 @@ export type Database = {
           p_client_pays_with?: number
           p_customer_name?: string
           p_customer_phone?: string
+          p_delivery_distance_band?: Database["public"]["Enums"]["distance_band"]
           p_delivery_method: Database["public"]["Enums"]["delivery_method"]
           p_delivery_reference?: string
-          p_notes?: string
           p_order_amount: number
           p_payment_intent: Database["public"]["Enums"]["payment_intent"]
           p_prep_time_minutes?: number
@@ -2263,17 +2378,6 @@ export type Database = {
           p_delivered_amount?: number
           p_driver_user_id: string
           p_settlement_date: string
-        }
-        Returns: Json
-      }
-      create_contingency_advance: {
-        Args: {
-          p_actor_charged: Database["public"]["Enums"]["contingency_actor_charged"]
-          p_amount: number
-          p_operator: string
-          p_order_id: string
-          p_proof_url?: string
-          p_reason: string
         }
         Returns: Json
       }
@@ -2321,15 +2425,19 @@ export type Database = {
           p_customer_name: string
           p_customer_phone: string
           p_customer_user_id: string
-          p_delivery_address?: string
+          p_delivery_address: string
           p_delivery_lat?: number
           p_delivery_lng?: number
           p_delivery_method: Database["public"]["Enums"]["delivery_method"]
-          p_delivery_reference?: string
+          p_delivery_reference: string
           p_items: Json
           p_payment_intent: Database["public"]["Enums"]["payment_intent"]
           p_source?: Database["public"]["Enums"]["order_source"]
         }
+        Returns: Json
+      }
+      create_fallback_appeal_review: {
+        Args: { p_order_id: string }
         Returns: Json
       }
       create_fraud_claim: {
@@ -2399,13 +2507,17 @@ export type Database = {
         }
         Returns: Json
       }
-      dispute_contingency_advance: {
-        Args: {
-          p_advance_id: string
-          p_business_user_id: string
-          p_note: string
-        }
-        Returns: Json
+      driver_businesses: {
+        Args: never
+        Returns: {
+          accent_color: string
+          address: string
+          coordinates_lat: number
+          coordinates_lng: number
+          id: string
+          name: string
+          phone: string
+        }[]
       }
       expire_order: {
         Args: {
@@ -2420,42 +2532,47 @@ export type Database = {
         Returns: Json
       }
       f_unaccent: { Args: { p_text: string }; Returns: string }
-      generate_settlements: {
-        Args: {
-          p_created_by?: string
-          p_due_date: string
-          p_period_end: string
-          p_period_start: string
-        }
-        Returns: Json
-      }
       generate_short_id: { Args: never; Returns: string }
       geo_distance_km: {
         Args: { p_lat1: number; p_lat2: number; p_lng1: number; p_lng2: number }
         Returns: number
+      }
+      get_order_intake_status: {
+        Args: { p_custom_time?: string }
+        Returns: Json
       }
       get_tracking: { Args: { p_short_id: string }; Returns: Json }
       is_published_business: {
         Args: { p_business_id: string }
         Returns: boolean
       }
+      is_within_order_intake_window: {
+        Args: { p_custom_time?: string }
+        Returns: boolean
+      }
       is_within_platform_schedule: { Args: never; Returns: boolean }
+      mark_appeal_in_review: { Args: { p_report_id: string }; Returns: Json }
       pause_business_orders: {
         Args: { p_business_user_id: string; p_minutes?: number }
         Returns: Json
       }
-      pay_settlement: {
-        Args: {
-          p_method?: string
-          p_note?: string
-          p_paid_by: string
-          p_settlement_id: string
-        }
-        Returns: Json
+      point_in_coverage_polygon: {
+        Args: { p_lat: number; p_lng: number }
+        Returns: boolean
       }
+      queue_lead_minutes: { Args: never; Returns: number }
       refresh_customer_profile_risk: {
         Args: { p_phone: string; p_user_id: string }
         Returns: undefined
+      }
+      register_appeal_refund: {
+        Args: {
+          p_admin_user_id: string
+          p_amount: number
+          p_refund_proof_path: string
+          p_report_id: string
+        }
+        Returns: Json
       }
       request_order_transfer: {
         Args: {
@@ -2468,18 +2585,27 @@ export type Database = {
       request_order_validation: {
         Args: { p_business_user_id: string; p_order_id: string }
         Returns: {
+          address_directory_id: string | null
           appears_in_queue_at: string | null
+          arrived_at_customer_accuracy_m: number | null
+          arrived_at_customer_at: string | null
+          arrived_at_customer_lat: number | null
+          arrived_at_customer_lng: number | null
           assigned_at: string | null
+          awaiting_payment_at: string | null
           business_id: string
           business_notes: string | null
           cancel_note: string | null
           cancel_reason: Database["public"]["Enums"]["cancel_reason"] | null
+          cancel_reason_detail: string | null
           cancelled_at: string | null
           cancelled_by: string | null
           cash_amount: number | null
           cash_owed_at_delivery: number | null
+          cash_settlement_id: string | null
           change_to_give: number | null
           client_pays_with: number | null
+          commission_amount: number | null
           comprobante_prepago_url: string | null
           confirmed_at: string | null
           created_at: string
@@ -2501,6 +2627,8 @@ export type Database = {
             | Database["public"]["Enums"]["distance_band"]
             | null
           delivery_fee: number
+          delivery_fee_charged: number | null
+          delivery_fee_source: string | null
           delivery_maps_url: string | null
           delivery_method: Database["public"]["Enums"]["delivery_method"]
           delivery_reference: string | null
@@ -2524,6 +2652,8 @@ export type Database = {
           prep_extension_count: number
           prep_time_minutes: number | null
           preparing_at: string | null
+          proof_attempt: number
+          ready_early_at: string | null
           ready_early_used: boolean
           rejected_at: string | null
           rejected_by: string | null
@@ -2542,6 +2672,7 @@ export type Database = {
           validated_at: string | null
           validated_by: string | null
           validating_at: string | null
+          validation_context: string | null
           validation_reason_code: string | null
           validation_result: string | null
           waiting_at_restaurant_at: string | null
@@ -2556,21 +2687,16 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      resolve_appeal: {
+        Args: { p_note?: string; p_report_id: string; p_resolution: string }
+        Returns: Json
+      }
       resolve_cash_settlement: {
         Args: {
           p_admin_user_id: string
           p_id: string
           p_note: string
           p_resolved_amount: number
-        }
-        Returns: Json
-      }
-      resolve_contingency_advance: {
-        Args: {
-          p_advance_id: string
-          p_note: string
-          p_resolved_amount: number
-          p_resolved_by: string
         }
         Returns: Json
       }
@@ -2649,6 +2775,17 @@ export type Database = {
         Args: { p_available: boolean; p_user_id: string }
         Returns: Json
       }
+      settle_business_charges: {
+        Args: {
+          p_admin_user_id?: string
+          p_business_id: string
+          p_charge_ids: string[]
+          p_note?: string
+          p_payment_method?: string
+          p_total_amount: number
+        }
+        Returns: Json
+      }
       unblock_business: { Args: { p_by: string; p_id: string }; Returns: Json }
       validate_order: {
         Args: {
@@ -2656,6 +2793,7 @@ export type Database = {
           p_actor_user_id: string
           p_order_id: string
           p_pass: boolean
+          p_prep_time_minutes?: number
           p_reason?: string
           p_reason_code?: string
         }
@@ -2663,6 +2801,7 @@ export type Database = {
       }
     }
     Enums: {
+      address_source: "backfill" | "driver_verified" | "admin_curated"
       business_primary_capability:
         | "drivers_only"
         | "catalog_pickup"
@@ -2678,6 +2817,7 @@ export type Database = {
         | "admin_cancelled"
         | "customer_cancelled"
         | "no_show"
+        | "proof_rejected_final"
       cash_settlement_status:
         | "pending"
         | "pending_confirmation"
@@ -2685,8 +2825,6 @@ export type Database = {
         | "disputed"
         | "resolved"
         | "auto_assumed_confirmed"
-      contingency_actor_charged: "restaurante" | "tindivo"
-      contingency_advance_status: "activo" | "disputado" | "cancelado"
       delivery_method: "delivery" | "pickup"
       distance_band: "near" | "far"
       fraud_claim_status: "pending" | "approved" | "rejected"
@@ -2697,6 +2835,7 @@ export type Database = {
         | "payment_fraud"
         | "rejected_proof"
         | "other"
+        | "fraud_attempt"
       order_source: "customer_pwa" | "business_manual"
       order_status:
         | "validando"
@@ -2709,6 +2848,7 @@ export type Database = {
         | "picked_up"
         | "delivered"
         | "cancelled"
+        | "awaiting_payment"
       payment_intent:
         | "prepaid"
         | "pending_yape"
@@ -2866,6 +3006,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      address_source: ["backfill", "driver_verified", "admin_curated"],
       business_primary_capability: [
         "drivers_only",
         "catalog_pickup",
@@ -2882,6 +3023,7 @@ export const Constants = {
         "admin_cancelled",
         "customer_cancelled",
         "no_show",
+        "proof_rejected_final",
       ],
       cash_settlement_status: [
         "pending",
@@ -2891,8 +3033,6 @@ export const Constants = {
         "resolved",
         "auto_assumed_confirmed",
       ],
-      contingency_actor_charged: ["restaurante", "tindivo"],
-      contingency_advance_status: ["activo", "disputado", "cancelado"],
       delivery_method: ["delivery", "pickup"],
       distance_band: ["near", "far"],
       fraud_claim_status: ["pending", "approved", "rejected"],
@@ -2903,6 +3043,7 @@ export const Constants = {
         "payment_fraud",
         "rejected_proof",
         "other",
+        "fraud_attempt",
       ],
       order_source: ["customer_pwa", "business_manual"],
       order_status: [
@@ -2916,6 +3057,7 @@ export const Constants = {
         "picked_up",
         "delivered",
         "cancelled",
+        "awaiting_payment",
       ],
       payment_intent: [
         "prepaid",
@@ -2954,3 +3096,4 @@ export const Constants = {
     },
   },
 } as const
+

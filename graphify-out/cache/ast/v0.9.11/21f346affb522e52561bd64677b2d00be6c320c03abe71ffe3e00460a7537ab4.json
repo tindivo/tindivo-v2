@@ -1,0 +1,127 @@
+{
+  "nodes": [
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_buttons_audit_md",
+      "label": "sidebar-buttons-audit.md",
+      "file_type": "document",
+      "source_file": "Docs/context/sidebar-buttons-audit.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_buttons_audit_revisi\u00f3n_ui_botones_y_contenido_en_sidebar_pedido_detail_tsx",
+      "label": "Revisi\u00f3n UI: Botones y Contenido en Sidebar (`pedido-detail.tsx`)",
+      "file_type": "document",
+      "source_file": "Docs/context/sidebar-buttons-audit.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_buttons_audit_1_botones_de_acci\u00f3n_por_estado_footer_fijo_inferior",
+      "label": "1. Botones de acci\u00f3n por estado (Footer fijo inferior)",
+      "file_type": "document",
+      "source_file": "Docs/context/sidebar-buttons-audit.md",
+      "source_location": "L7"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_buttons_audit_evaluaci\u00f3n_de_integridad_de_botones",
+      "label": "Evaluaci\u00f3n de integridad de botones:",
+      "file_type": "document",
+      "source_file": "Docs/context/sidebar-buttons-audit.md",
+      "source_location": "L18"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_buttons_audit_2_bot\u00f3n_aceptar_disponibilidad",
+      "label": "2. Bot\u00f3n \"Aceptar disponibilidad\"",
+      "file_type": "document",
+      "source_file": "Docs/context/sidebar-buttons-audit.md",
+      "source_location": "L24"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_buttons_audit_3_flujo_de_botones_al_abrir_un_pedido_prepago_reci\u00e9n_llegado_pending_acceptance",
+      "label": "3. Flujo de botones al abrir un pedido prepago reci\u00e9n llegado (`pending_acceptance`)",
+      "file_type": "document",
+      "source_file": "Docs/context/sidebar-buttons-audit.md",
+      "source_location": "L48"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_buttons_audit_4_contenido_que_se_corta_y_visibilidad",
+      "label": "4. Contenido que se corta y visibilidad",
+      "file_type": "document",
+      "source_file": "Docs/context/sidebar-buttons-audit.md",
+      "source_location": "L55"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_buttons_audit_5_condiciones_de_renderizado_del_footer_de_acciones",
+      "label": "5. Condiciones de renderizado del footer de acciones",
+      "file_type": "document",
+      "source_file": "Docs/context/sidebar-buttons-audit.md",
+      "source_location": "L63"
+    }
+  ],
+  "edges": [
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_buttons_audit_md",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_buttons_audit_revisi\u00f3n_ui_botones_y_contenido_en_sidebar_pedido_detail_tsx",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/sidebar-buttons-audit.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_buttons_audit_revisi\u00f3n_ui_botones_y_contenido_en_sidebar_pedido_detail_tsx",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_buttons_audit_1_botones_de_acci\u00f3n_por_estado_footer_fijo_inferior",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/sidebar-buttons-audit.md",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_buttons_audit_1_botones_de_acci\u00f3n_por_estado_footer_fijo_inferior",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_buttons_audit_evaluaci\u00f3n_de_integridad_de_botones",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/sidebar-buttons-audit.md",
+      "source_location": "L18",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_buttons_audit_revisi\u00f3n_ui_botones_y_contenido_en_sidebar_pedido_detail_tsx",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_buttons_audit_2_bot\u00f3n_aceptar_disponibilidad",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/sidebar-buttons-audit.md",
+      "source_location": "L24",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_buttons_audit_revisi\u00f3n_ui_botones_y_contenido_en_sidebar_pedido_detail_tsx",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_buttons_audit_3_flujo_de_botones_al_abrir_un_pedido_prepago_reci\u00e9n_llegado_pending_acceptance",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/sidebar-buttons-audit.md",
+      "source_location": "L48",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_buttons_audit_revisi\u00f3n_ui_botones_y_contenido_en_sidebar_pedido_detail_tsx",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_buttons_audit_4_contenido_que_se_corta_y_visibilidad",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/sidebar-buttons-audit.md",
+      "source_location": "L55",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_buttons_audit_revisi\u00f3n_ui_botones_y_contenido_en_sidebar_pedido_detail_tsx",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_sidebar_buttons_audit_5_condiciones_de_renderizado_del_footer_de_acciones",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/sidebar-buttons-audit.md",
+      "source_location": "L63",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

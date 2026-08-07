@@ -1,20 +1,24 @@
 'use client'
 
-import { useState } from 'react'
-import type { OrderVM } from '@/lib/orders/view-model'
-import { MS, mmss, PayBadgeMini, SourceBadgeMini, soles } from './primitives'
+import { cn, Icon } from '@tindivo/ui'
 
-export interface DetailItem {
-  qty: number
-  name: string
-  mods: string | null
-  note: string | null
-  price: number
-}
+import { useEffect, useState } from 'react'
+import { formatReadyDelta, type OrderVM } from '@/lib/orders/view-model'
+import { getSupabaseBrowser } from '@/lib/supabase/client'
+import {
+  CANCEL_REASONS,
+  PREP_PRESETS,
+  REJECT_REASONS_BASE,
+  REJECT_REASONS_TAIL,
+} from './pedido-detail/constants'
+import { DetailRow } from './pedido-detail/detail-row'
+import { PrepTimeModal, ReasonModal } from './pedido-detail/modals'
+import { PaySectionCash, PaySectionMixed, PaySectionWallet } from './pedido-detail/pay-sections'
+import type { DetailItem, RejectReason } from './pedido-detail/types'
+import { mmss, PayBadgeMini, SourceBadgeMini, soles } from './primitives'
 
-export type RejectReason = { code: string; label: string }
-
-const PREP_PRESETS = [10, 15, 20, 25, 30, 35, 40, 45, 50]
+export { PausarModal } from './pedido-detail/modals'
+export type { DetailItem, RejectReason }
 
 export interface DetailActions {
   onClose: () => void
@@ -25,510 +29,172 @@ export interface DetailActions {
   onExtend: () => void | Promise<void>
   onReady: () => void | Promise<void>
   onCancel: (code: string, text: string) => void | Promise<void>
-  onCallDriver?: () => void
-}
-
-function Row({
-  label,
-  value,
-  mono,
-  bold,
-}: {
-  label: string
-  value: string
-  mono?: boolean
-  bold?: boolean
-}) {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        fontSize: 13,
-      }}
-    >
-      <span style={{ color: 'var(--tv-ink-muted)' }}>{label}</span>
-      <span className={mono ? 'tv-mono' : ''} style={{ fontWeight: bold ? 700 : 500 }}>
-        {value}
-      </span>
-    </div>
-  )
+  /** Escala a Tindivo por WhatsApp. Recibe el pedido: también lo llama la
+   *  tarjeta del tablero, donde no hay ningún detalle abierto. */
+  onCallDriver?: (o: OrderVM) => void
 }
 
 // ── Payment sections ──────────────────────────────────────────────────────────
-function PaySectionCash({ order }: { order: OrderVM }) {
-  return (
-    <div
-      style={{
-        background: '#F0FDF4',
-        borderRadius: 12,
-        padding: '12px 14px',
-        border: '1px solid #BBF7D0',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
-        <MS name="payments" size={18} filled style={{ color: '#16A34A' }} />
-        <div style={{ fontSize: 13, fontWeight: 700, color: '#166534' }}>Pago en efectivo</div>
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-        <Row label="Total a cobrar" value={soles(order.total)} mono bold />
-        {order.paysWith != null && (
-          <Row label="Cliente paga con" value={soles(order.paysWith)} mono />
-        )}
-        {order.cashChange != null && order.cashChange > 0 && (
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              background: '#DCFCE7',
-              borderRadius: 8,
-              padding: '6px 10px',
-              marginTop: 4,
-            }}
-          >
-            <span style={{ fontSize: 12, fontWeight: 700, color: '#166534' }}>
-              Vuelto a preparar
-            </span>
-            <span className="tv-mono" style={{ fontSize: 16, fontWeight: 700, color: '#15803D' }}>
-              {soles(order.cashChange)}
-            </span>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
 
-function PaySectionWallet({ order, qrUrl }: { order: OrderVM; qrUrl: string | null }) {
+function PaySectionPrepaid({ order, proofUrl }: { order: OrderVM; proofUrl: string | null }) {
+  const [zoom, setZoom] = useState(false)
+  const isSecondAttempt = (order.proofAttempt ?? 0) >= 2
+  const verified =
+    order.proofStatus === 'verified' ||
+    order.status === 'confirmed' ||
+    order.status === 'preparing' ||
+    order.status === 'waiting_driver' ||
+    order.status === 'picked_up' ||
+    order.status === 'delivered'
+
   return (
-    <div
-      style={{
-        background: '#F5F3FF',
-        borderRadius: 12,
-        padding: '12px 14px',
-        border: '1px solid #DDD6FE',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
-        <MS name="qr_code_2" size={18} filled style={{ color: '#7C3AED' }} />
-        <div style={{ fontSize: 13, fontWeight: 700, color: '#5B21B6' }}>
-          Cobrar con billetera digital
+    <>
+      {zoom && proofUrl && (
+        <div
+          onClick={() => setZoom(false)}
+          className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/85 p-5 backdrop-blur-sm"
+        >
+          <button
+            type="button"
+            onClick={() => setZoom(false)}
+            className="absolute right-5 top-5 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-transparent bg-white shadow-elev-3"
+          >
+            <Icon weight={500} name="close" size={24} />
+          </button>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={proofUrl}
+            alt="Comprobante ampliado"
+            className="max-h-[85vh] max-w-[90vw] rounded-xl object-contain shadow-elev-4"
+          />
+          <div className="mt-3 text-[13px] font-semibold text-white">
+            Comprobante de pago — {order.customer ?? 'Cliente'} ({soles(order.total)})
+          </div>
         </div>
-      </div>
-      <Row label="Total a cobrar" value={soles(order.total)} mono bold />
+      )}
+
       <div
-        style={{
-          marginTop: 10,
-          background: '#fff',
-          borderRadius: 10,
-          padding: 10,
-          textAlign: 'center',
-        }}
+        className={cn(
+          'shrink-0 overflow-hidden rounded-xl border-[1.5px] shadow-elev-2',
+          verified && 'border-success/60',
+          !verified && isSecondAttempt && 'border-danger/40',
+          !verified && !isSecondAttempt && 'border-info/60',
+        )}
       >
         <div
-          style={{
-            fontSize: 10,
-            fontWeight: 700,
-            color: 'var(--tv-ink-muted)',
-            marginBottom: 6,
-            textTransform: 'uppercase',
-            letterSpacing: '0.06em',
-          }}
+          className={cn(
+            'flex items-center justify-between gap-2 px-3.5 py-2.5',
+            verified ? 'bg-success/10' : isSecondAttempt ? 'bg-danger-soft' : 'bg-info/10',
+          )}
         >
-          QR del restaurante
-        </div>
-        {qrUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={qrUrl}
-            alt="QR del restaurante"
-            style={{
-              width: 90,
-              height: 90,
-              borderRadius: 10,
-              margin: '0 auto 8px',
-              objectFit: 'contain',
-            }}
-          />
-        ) : (
-          <div
-            className="tv-ph"
-            style={{ width: 90, height: 90, borderRadius: 10, margin: '0 auto 8px' }}
-          >
-            <span style={{ fontSize: 10 }}>QR Yape/Plin</span>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-function PaySectionPrepaid({
-  order,
-  proofUrl,
-  onVerify,
-  onReject,
-}: {
-  order: OrderVM
-  proofUrl: string | null
-  onVerify: () => void
-  onReject: () => void
-}) {
-  const verified = order.proofStatus === 'verified'
-  return (
-    <div
-      style={{
-        borderRadius: 12,
-        overflow: 'hidden',
-        border: verified ? '1.5px solid #4ADE80' : '1px solid #E0F2FE',
-      }}
-    >
-      <div
-        style={{
-          padding: '10px 14px',
-          background: verified ? '#F0FDF4' : '#E0F2FE',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-        }}
-      >
-        <MS
-          name={verified ? 'verified' : 'schedule'}
-          size={18}
-          filled
-          style={{ color: verified ? '#16A34A' : '#0369A1' }}
-        />
-        <div style={{ fontSize: 13, fontWeight: 700, color: verified ? '#166534' : '#0C4A6E' }}>
-          {verified ? 'Pago verificado' : 'Verificar comprobante de pago'}
-        </div>
-      </div>
-      <div style={{ padding: '12px 14px', background: '#fff' }}>
-        <Row label="Total pagado" value={soles(order.total)} mono bold />
-        <div style={{ marginTop: 10, marginBottom: 12 }}>
-          <div
-            style={{ fontSize: 11, color: 'var(--tv-ink-muted)', marginBottom: 6, fontWeight: 600 }}
-          >
-            COMPROBANTE DEL CLIENTE
-          </div>
-          {proofUrl ? (
-            <div style={{ position: 'relative' }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={proofUrl}
-                alt="Comprobante del cliente"
-                style={{
-                  width: '100%',
-                  height: 160,
-                  borderRadius: 10,
-                  objectFit: 'contain',
-                  background: '#F0EBE3',
-                }}
-              />
-              {verified && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    inset: 0,
-                    background: 'rgba(22,163,74,0.15)',
-                    borderRadius: 10,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <MS name="check_circle" size={40} filled style={{ color: '#16A34A' }} />
-                </div>
+          <div className="flex items-center gap-2">
+            <Icon
+              weight={500}
+              name={verified ? 'verified' : 'schedule'}
+              size={18}
+              filled
+              className={verified ? 'text-success' : isSecondAttempt ? 'text-danger' : 'text-info'}
+            />
+            <div
+              className={cn(
+                'text-[13px] font-bold',
+                verified ? 'text-success' : isSecondAttempt ? 'text-danger' : 'text-info',
               )}
+            >
+              {verified ? 'Pago verificado' : 'Verificar comprobante de pago'}
             </div>
-          ) : (
-            <div className="tv-ph" style={{ width: '100%', height: 130, borderRadius: 10 }}>
-              <span>El cliente aún no ha subido el comprobante</span>
+          </div>
+          {isSecondAttempt && !verified && (
+            <span className="rounded-full border border-danger/40 bg-danger-soft px-2 py-0.5 text-[10px] font-bold text-danger">
+              Segundo y último intento
+            </span>
+          )}
+        </div>
+
+        <div className="bg-white p-3 px-3.5">
+          {/* Guía de validación */}
+          {!verified && (
+            <div className="mb-2.5 rounded-[10px] border border-border bg-surface p-2.5 text-xs">
+              <div className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.05em] text-ink-muted">
+                DATOS DE VALIDACIÓN
+              </div>
+              <div className="mb-1.5 grid grid-cols-[1fr_1fr_1.2fr] gap-2">
+                <div className="flex flex-col">
+                  <span className="mb-0.5 text-[10px] text-ink-muted">Monto</span>
+                  <span className="font-mono text-[13px] font-bold text-success">
+                    {soles(order.total)}
+                  </span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="mb-0.5 text-[10px] text-ink-muted">Hora pedido</span>
+                  <span className="font-mono text-[13px] font-bold">
+                    {order.createdAtFormatted ?? '—'}
+                  </span>
+                </div>
+                <div className="flex min-w-0 flex-col">
+                  <span className="mb-0.5 text-[10px] text-ink-muted">Cliente</span>
+                  <span className="truncate text-[13px] font-bold">
+                    {order.customer ?? 'Cliente'}
+                  </span>
+                </div>
+              </div>
+              <div className="mt-1.5 border-t border-dashed border-border pt-1.5 text-[10px] leading-tight text-ink-muted">
+                Verifica pago posterior a{' '}
+                <strong>{order.createdAtFormatted ?? 'la hora del pedido'}</strong> por{' '}
+                <strong>{soles(order.total)}</strong>.
+              </div>
+            </div>
+          )}
+
+          <DetailRow label="Total pagado" value={soles(order.total)} mono bold />
+          <div className="mt-2.5 mb-1">
+            <div className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.04em] text-ink-muted">
+              COMPROBANTE DEL CLIENTE
+            </div>
+            {proofUrl ? (
+              <div
+                onClick={() => setZoom(true)}
+                className="relative cursor-pointer overflow-hidden rounded-[10px] border border-border bg-surface-low"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={proofUrl}
+                  alt="Comprobante del cliente"
+                  className="block w-full max-h-80 bg-surface object-contain"
+                />
+                <div className="absolute bottom-2 right-2 flex items-center gap-1 rounded-lg bg-ink/95 px-3 py-1.5 text-[11px] font-semibold text-white shadow-elev-2 backdrop-blur-sm">
+                  <Icon weight={500} name="zoom_in" size={15} /> Ampliar comprobante
+                </div>
+                {verified && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-success/15">
+                    <Icon
+                      weight={500}
+                      name="check_circle"
+                      size={44}
+                      filled
+                      className="text-success"
+                    />
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="relative h-[130px] w-full overflow-hidden rounded-[10px] bg-surface-low">
+                <span className="absolute inset-0 flex items-center justify-center px-1.5 text-center text-[10px] uppercase tracking-wide text-ink/50">
+                  El cliente aún no ha subido el comprobante
+                </span>
+              </div>
+            )}
+          </div>
+          {verified && (
+            <div className="mt-2 text-center text-xs font-semibold text-success">
+              Comprobante verificado · pago registrado
             </div>
           )}
         </div>
-        {!verified && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            <button
-              type="button"
-              onClick={onReject}
-              className="tv-btn tv-btn-sm"
-              style={{ border: '1.5px solid #FCA5A5', background: '#FFF5F5', color: '#DC2626' }}
-            >
-              <MS name="cancel" size={14} /> Inválido
-            </button>
-            <button
-              type="button"
-              onClick={onVerify}
-              disabled={!proofUrl}
-              className="tv-btn tv-btn-sm"
-              style={{ background: '#16A34A', color: '#fff', border: 'none' }}
-            >
-              <MS name="check_circle" size={14} /> Correcto
-            </button>
-          </div>
-        )}
-        {verified && (
-          <div style={{ fontSize: 12, color: '#15803D', fontWeight: 600, textAlign: 'center' }}>
-            Comprobante verificado · puedes aceptar el pedido
-          </div>
-        )}
       </div>
-    </div>
+    </>
   )
 }
-
-function PaySectionMixed({ order, qrUrl }: { order: OrderVM; qrUrl: string | null }) {
-  return (
-    <div
-      style={{
-        background: '#FFFBEB',
-        borderRadius: 12,
-        padding: '12px 14px',
-        border: '1px solid #FDE68A',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
-        <MS name="shuffle" size={18} filled style={{ color: '#B45309' }} />
-        <div style={{ fontSize: 13, fontWeight: 700, color: '#92400E' }}>Pago combinado</div>
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-        <Row label="Billetera digital" value={soles(order.walletPart ?? 0)} mono />
-        <Row label="Efectivo" value={soles(order.cashPart ?? 0)} mono />
-        <div style={{ height: 1, background: 'var(--tv-border)', margin: '2px 0' }} />
-        <Row label="Total" value={soles(order.total)} mono bold />
-        {order.paysWith != null && (
-          <Row label="Cliente paga efectivo con" value={soles(order.paysWith)} mono />
-        )}
-        {order.cashChange != null && order.cashChange > 0 && (
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              background: '#D1FAE5',
-              borderRadius: 8,
-              padding: '6px 10px',
-              marginTop: 4,
-            }}
-          >
-            <span style={{ fontSize: 12, fontWeight: 700, color: '#166534' }}>
-              Vuelto (efectivo)
-            </span>
-            <span className="tv-mono" style={{ fontSize: 15, fontWeight: 700, color: '#15803D' }}>
-              {soles(order.cashChange)}
-            </span>
-          </div>
-        )}
-      </div>
-      {qrUrl && (
-        <div
-          style={{
-            marginTop: 10,
-            background: '#fff',
-            borderRadius: 10,
-            padding: 10,
-            textAlign: 'center',
-          }}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={qrUrl}
-            alt="QR del restaurante"
-            style={{
-              width: 80,
-              height: 80,
-              borderRadius: 8,
-              margin: '0 auto',
-              objectFit: 'contain',
-            }}
-          />
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ── Reason modal (rechazo / cancelación) ─────────────────────────────────────
-function ReasonModal({
-  title,
-  subtitle,
-  reasons,
-  confirmLabel,
-  cancelLabel,
-  order,
-  onClose,
-  onConfirm,
-}: {
-  title: string
-  subtitle: string
-  reasons: RejectReason[]
-  confirmLabel: string
-  cancelLabel: string
-  order: OrderVM
-  onClose: () => void
-  onConfirm: (code: string, text: string) => void
-}) {
-  const [sel, setSel] = useState(0)
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        inset: 0,
-        zIndex: 300,
-        background: 'rgba(0,0,0,0.5)',
-        display: 'flex',
-        alignItems: 'flex-end',
-        justifyContent: 'center',
-      }}
-    >
-      <div
-        style={{
-          background: '#fff',
-          borderRadius: '20px 20px 0 0',
-          padding: '20px 18px 28px',
-          width: '100%',
-          maxWidth: 440,
-          boxShadow: '0 -8px 40px rgba(0,0,0,0.15)',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-          <div
-            style={{
-              width: 38,
-              height: 38,
-              borderRadius: 10,
-              flexShrink: 0,
-              background: 'var(--tv-danger-soft)',
-              color: 'var(--tv-danger)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <MS name="cancel" size={20} filled />
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 16, fontWeight: 700 }}>{title}</div>
-            <div style={{ fontSize: 12, color: 'var(--tv-ink-muted)', marginTop: 1 }}>
-              #{order.id} · {order.customer ?? 'Cliente'}
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              width: 30,
-              height: 30,
-              borderRadius: 8,
-              background: 'rgba(26,22,20,0.06)',
-              border: 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <MS name="close" size={16} />
-          </button>
-        </div>
-
-        <div
-          style={{
-            fontSize: 12,
-            fontWeight: 700,
-            color: 'var(--tv-ink-muted)',
-            marginBottom: 10,
-            textTransform: 'uppercase',
-            letterSpacing: '0.06em',
-          }}
-        >
-          {subtitle}
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
-          {reasons.map((r, i) => (
-            <button
-              type="button"
-              key={r.code + i}
-              onClick={() => setSel(i)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                padding: '10px 12px',
-                borderRadius: 10,
-                background: i === sel ? 'var(--tv-ink)' : 'var(--tv-surface)',
-                color: i === sel ? '#fff' : 'var(--tv-ink)',
-                border: 'none',
-                fontFamily: 'inherit',
-                textAlign: 'left',
-                cursor: 'pointer',
-                fontSize: 13,
-              }}
-            >
-              <div
-                style={{
-                  width: 16,
-                  height: 16,
-                  borderRadius: 999,
-                  border: `2px solid ${i === sel ? '#fff' : 'var(--tv-border)'}`,
-                  background: i === sel ? '#fff' : 'transparent',
-                  flexShrink: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                {i === sel && (
-                  <div
-                    style={{ width: 7, height: 7, borderRadius: 999, background: 'var(--tv-ink)' }}
-                  />
-                )}
-              </div>
-              {r.label}
-            </button>
-          ))}
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          <button type="button" onClick={onClose} className="tv-btn tv-btn-ghost">
-            {cancelLabel}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              const r = reasons[sel]
-              if (r) onConfirm(r.code, r.label)
-            }}
-            className="tv-btn"
-            style={{ background: 'var(--tv-danger)', color: '#fff', border: 'none' }}
-          >
-            {confirmLabel}
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-const REJECT_REASONS_BASE: RejectReason[] = [
-  { code: 'out_of_stock', label: 'Producto agotado' },
-  { code: 'closed', label: 'Restaurante cerrado / fuera de horario' },
-  { code: 'out_of_zone', label: 'Dirección fuera de zona de cobertura' },
-]
-const REJECT_REASONS_TAIL: RejectReason[] = [
-  { code: 'no_answer', label: 'Cliente no responde llamada' },
-  { code: 'other', label: 'Otro' },
-]
-const CANCEL_REASONS: RejectReason[] = [
-  { code: 'out_of_stock', label: 'Producto agotado' },
-  { code: 'other', label: 'Cliente canceló por teléfono' },
-  { code: 'out_of_zone', label: 'Dirección incorrecta o imposible' },
-  { code: 'closed', label: 'Restaurante no puede continuar' },
-  { code: 'other', label: 'Sin motorizado disponible después de mucho tiempo' },
-  { code: 'other', label: 'Otro' },
-]
 
 // ── Detail screen ─────────────────────────────────────────────────────────────
 export function DetailScreen({
@@ -537,6 +203,7 @@ export function DetailScreen({
   proofUrl,
   qrUrl,
   busy,
+  isLoadingActions = false,
   mobile = false,
   actions,
 }: {
@@ -545,17 +212,58 @@ export function DetailScreen({
   proofUrl: string | null
   qrUrl: string | null
   busy: boolean
+  isLoadingActions?: boolean
   mobile?: boolean
   actions: DetailActions
 }) {
   const [prep, setPrep] = useState(20)
   const [modal, setModal] = useState<null | 'reject' | 'cancel'>(null)
+  const [itemsOpen, setItemsOpen] = useState(order.status !== 'validando')
+  const [showPrepModal, setShowPrepModal] = useState(false)
+  const [hasAppeal, setHasAppeal] = useState(false)
+  // Confirmación en dos pasos antes de declarar la comida lista, como en prod:
+  // avisar al motorizado de que entre a recoger y que no esté lista se paga en
+  // minutos de moto parada.
+  const [confirmReady, setConfirmReady] = useState(false)
 
-  const isPending = order.status === 'pending_acceptance' || order.status === 'validando'
+  useEffect(() => {
+    const origOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = origOverflow
+    }
+  }, [])
+
+  useEffect(() => {
+    if (order.status === 'cancelled') {
+      const supabase = getSupabaseBrowser()
+      supabase
+        .from('reports')
+        .select('id')
+        .eq('order_id', order.rowId)
+        .eq('type', 'rejected_proof_disputed')
+        .maybeSingle()
+        .then(({ data }) => setHasAppeal(Boolean(data)))
+    } else {
+      setHasAppeal(false)
+    }
+  }, [order.rowId, order.status])
+
+  const isPending =
+    !isLoadingActions &&
+    (order.status === 'pending_acceptance' ||
+      order.status === 'awaiting_payment' ||
+      order.status === 'validando')
   const isPrepaid = order.payment === 'prepaid'
   const isOnline = order.source === 'web'
-  const acceptDisabled = busy || (isPrepaid && order.proofStatus !== 'verified')
-  const showPrepPicker = isPending && !(isPrepaid && order.proofStatus !== 'verified')
+  const acceptDisabled = busy || isLoadingActions
+  const isPrepaidAwaitingProof =
+    isPrepaid &&
+    !proofUrl &&
+    !isLoadingActions &&
+    (order.status === 'pending_acceptance' || order.status === 'validando')
+  const isValidandoPrepaid = isPrepaid && Boolean(proofUrl) && !isLoadingActions
+  const showPrepPicker = isPending && !isPrepaid
 
   const rejectReasons = isPrepaid
     ? [
@@ -566,15 +274,7 @@ export function DetailScreen({
     : [...REJECT_REASONS_BASE, ...REJECT_REASONS_TAIL]
 
   const content = (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        background: '#fff',
-        position: 'relative',
-      }}
-    >
+    <div className="relative flex h-full max-h-full min-h-0 flex-col overflow-hidden bg-white">
       {modal === 'reject' && (
         <ReasonModal
           title="Rechazar pedido"
@@ -605,88 +305,72 @@ export function DetailScreen({
           }}
         />
       )}
+      {showPrepModal && (
+        <PrepTimeModal
+          order={order}
+          onClose={() => setShowPrepModal(false)}
+          onConfirm={(prepTime) => {
+            setShowPrepModal(false)
+            actions.onAccept(prepTime)
+          }}
+        />
+      )}
 
-      {/* Header */}
+      {/* Header flotante/fijo */}
       <div
-        style={{
-          padding: mobile ? '10px 14px' : '12px 18px',
-          borderBottom: '1px solid var(--tv-border)',
-          position: 'sticky',
-          top: 0,
-          background: '#fff',
-          zIndex: 10,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-        }}
+        className={cn(
+          'sticky top-0 z-10 flex shrink-0 items-center gap-2.5 border-b border-border bg-white',
+          mobile ? 'px-3.5 py-2.5' : 'px-[18px] py-3',
+        )}
       >
         {mobile && (
           <button
             type="button"
             onClick={actions.onClose}
-            style={{
-              width: 34,
-              height: 34,
-              borderRadius: 10,
-              background: 'rgba(26,22,20,0.06)',
-              border: 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
+            className="flex h-[34px] w-[34px] shrink-0 cursor-pointer items-center justify-center rounded-[10px] border-none bg-ink/[0.06]"
           >
-            <MS name="arrow_back" size={20} />
+            <Icon weight={500} name="arrow_back" size={20} />
           </button>
         )}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 5,
-              flexWrap: 'wrap',
-              marginBottom: 3,
-            }}
-          >
-            <span
-              className="tv-mono"
-              style={{ fontSize: 12, fontWeight: 700, color: 'var(--tv-ink-muted)' }}
-            >
-              #{order.id}
-            </span>
-            {isPending && (
-              <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                <span style={{ fontSize: 11, color: 'var(--tv-ink-muted)' }}>
-                  · acepta antes de
+        <div className="min-w-0 flex-1">
+          <div className="mb-[3px] flex flex-wrap items-center gap-[5px]">
+            <span className="font-mono text-[12px] font-bold text-ink-muted">#{order.id}</span>
+            {isPending ? (
+              <span className="flex items-center gap-[3px]">
+                <span className="text-[11px] text-ink-muted">
+                  ·{' '}
+                  {order.status === 'awaiting_payment'
+                    ? 'paga antes de'
+                    : order.status === 'validando'
+                      ? 'revisa antes de'
+                      : 'acepta antes de'}
                 </span>
                 <span
-                  className="tv-mono"
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 700,
-                    color: order.countdownSec < 60 ? 'var(--tv-danger)' : 'var(--tv-ink)',
-                  }}
+                  className={cn(
+                    'font-mono text-[12px] font-bold',
+                    order.countdownSec < 60 ? 'text-danger' : 'text-ink',
+                  )}
                 >
                   {mmss(order.countdownSec)}
                 </span>
               </span>
-            )}
+            ) : order.readySec != null && order.readySec < 0 ? (
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-danger bg-danger-soft px-2 py-0.5 rounded-full border border-danger/20">
+                <Icon name="priority_high" size={12} weight={500} filled className="text-danger" />
+                ¡Demorado! <span className="font-mono">{formatReadyDelta(order.readySec)}</span>
+              </span>
+            ) : null}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div className="flex items-center gap-1.5">
             <SourceBadgeMini source={order.source} />
             <PayBadgeMini payment={order.payment} />
           </div>
         </div>
         <span
-          className="tv-mono"
-          style={{
-            fontSize: mobile ? 18 : 20,
-            fontWeight: 700,
-            color: 'var(--tv-ink)',
-            flexShrink: 0,
-          }}
+          className={cn(
+            'shrink-0 font-mono font-bold text-ink',
+            mobile ? 'text-[18px]' : 'text-[20px]',
+          )}
         >
           {soles(order.total)}
         </span>
@@ -694,46 +378,25 @@ export function DetailScreen({
           <button
             type="button"
             onClick={actions.onClose}
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: 9,
-              background: 'rgba(26,22,20,0.06)',
-              border: 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
+            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-[9px] border-none bg-ink/[0.06]"
           >
-            <MS name="close" size={18} />
+            <Icon weight={500} name="close" size={18} />
           </button>
         )}
       </div>
 
       {/* Driver arrived banner */}
       {order.state === 'waiting' && (
-        <div
-          style={{
-            background: '#16A34A',
-            color: '#fff',
-            padding: '10px 16px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-          }}
-        >
-          <MS name="check_circle" size={20} filled />
+        <div className="flex shrink-0 items-center gap-2.5 bg-success px-4 py-2.5 text-white">
+          <Icon weight={500} name="check_circle" size={20} filled />
           <div>
-            <div style={{ fontSize: 14, fontWeight: 700 }}>
+            <div className="text-[14px] font-bold">
               {order.driver?.name ?? 'El motorizado'} llegó al local · Entregar pedido
             </div>
             {order.cashChange != null && order.cashChange > 0 && (
-              <div style={{ fontSize: 12, marginTop: 2 }}>
+              <div className="mt-0.5 text-[12px]">
                 Prepara el vuelto:{' '}
-                <span className="tv-mono" style={{ fontWeight: 700 }}>
-                  {soles(order.cashChange)}
-                </span>
+                <span className="font-mono font-bold">{soles(order.cashChange)}</span>
               </div>
             )}
           </div>
@@ -742,220 +405,271 @@ export function DetailScreen({
 
       {/* Scroll content */}
       <div
-        style={{
-          flex: 1,
-          overflowY: 'auto',
-          padding: mobile ? '14px 14px 20px' : '16px 18px 24px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 12,
-        }}
+        className={cn(
+          'flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto [-webkit-overflow-scrolling:touch]',
+          mobile ? 'px-3.5 pb-7 pt-3.5' : 'px-[18px] pb-8 pt-4',
+        )}
       >
-        {/* Cliente */}
-        <div style={{ background: 'var(--tv-surface)', borderRadius: 12, padding: '12px 14px' }}>
-          <div
-            style={{
-              fontSize: 10,
-              fontWeight: 700,
-              color: 'var(--tv-ink-muted)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.06em',
-              marginBottom: 7,
-            }}
-          >
-            Cliente
-          </div>
-          <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 5 }}>
-            {order.customer ?? 'Cliente'}
-          </div>
-          {order.phone && (
-            <a
-              href={`tel:${order.phone}`}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                fontSize: 13,
-                color: 'var(--tv-brand)',
-                textDecoration: 'none',
-                fontWeight: 600,
-              }}
-            >
-              <MS name="call" size={15} filled /> {order.phone}
-            </a>
+        {/* Banner de apelación: solo para proof_rejected_final */}
+        {hasAppeal &&
+          order.status === 'cancelled' &&
+          order.cancelReasonCode === 'proof_rejected_final' && (
+            <div className="shrink-0 rounded-md border border-warning/50 bg-warning-soft px-3.5 py-3">
+              <div className="mb-1 flex items-center gap-[7px]">
+                <Icon weight={500} name="gavel" size={18} filled className="text-warning" />
+                <div className="text-[13px] font-bold text-warning">
+                  El cliente apeló el rechazo de este pedido
+                </div>
+              </div>
+              <div className="text-[12px] leading-[1.4] text-warning">
+                Tindivo está revisando este caso. Te recomendamos verificar tu cuenta Yape/Plin por
+                si el pago sí ingresó.
+              </div>
+            </div>
           )}
-        </div>
 
-        {/* Dirección */}
-        {order.addressRef && (
-          <div style={{ background: 'var(--tv-surface)', borderRadius: 12, padding: '12px 14px' }}>
-            <div
-              style={{
-                fontSize: 10,
-                fontWeight: 700,
-                color: 'var(--tv-ink-muted)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-                marginBottom: 7,
-              }}
-            >
-              Dirección
+        {/* Cliente y Dirección */}
+        {isValidandoPrepaid ? (
+          <div className="flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1 rounded-md bg-surface px-3 py-2 text-[12px] text-ink-muted">
+            <div className="flex items-center gap-1">
+              <Icon weight={500} name="person" size={14} className="text-ink-muted" />
+              <span className="font-bold text-ink">{order.customer ?? 'Cliente'}</span>
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <MS
-                name="location_on"
-                size={16}
-                style={{ color: 'var(--tv-brand)', flexShrink: 0, marginTop: 2 }}
-              />
-              <div style={{ fontSize: 14, lineHeight: 1.5 }}>{order.addressRef}</div>
-            </div>
+            {order.phone && (
+              <>
+                <span>·</span>
+                <a
+                  href={`tel:${order.phone}`}
+                  className="inline-flex items-center gap-[3px] font-semibold text-brand no-underline"
+                >
+                  <Icon weight={500} name="call" size={12} filled /> {order.phone}
+                </a>
+              </>
+            )}
+            {order.addressRef && (
+              <>
+                <span>·</span>
+                <span
+                  className="inline-flex min-w-0 items-center gap-[3px] overflow-hidden text-ellipsis whitespace-nowrap"
+                  title={order.addressRef}
+                >
+                  <Icon weight={500} name="location_on" size={12} className="text-brand" />
+                  {order.addressRef}
+                </span>
+              </>
+            )}
           </div>
+        ) : (
+          <>
+            {/* Cliente */}
+            <div className="shrink-0 rounded-md bg-surface px-3.5 py-3">
+              <div className="mb-[7px] text-[10px] font-bold uppercase tracking-[0.06em] text-ink-muted">
+                Cliente
+              </div>
+              <div className="mb-[5px] text-[16px] font-bold">{order.customer ?? 'Cliente'}</div>
+              {order.phone && (
+                <a
+                  href={`tel:${order.phone}`}
+                  className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand no-underline"
+                >
+                  <Icon weight={500} name="call" size={15} filled /> {order.phone}
+                </a>
+              )}
+            </div>
+
+            {/* Dirección */}
+            {order.addressRef && (
+              <div className="shrink-0 rounded-md bg-surface px-3.5 py-3">
+                <div className="mb-[7px] text-[10px] font-bold uppercase tracking-[0.06em] text-ink-muted">
+                  Dirección
+                </div>
+                <div className="flex gap-2">
+                  <Icon
+                    weight={500}
+                    name="location_on"
+                    size={16}
+                    className="mt-0.5 shrink-0 text-brand"
+                  />
+                  <div className="text-[14px] leading-normal">{order.addressRef}</div>
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         {/* Items (Online) o Cobro (Directo) */}
         {isOnline && items && items.length > 0 ? (
-          <div style={{ background: 'var(--tv-surface)', borderRadius: 12, padding: '12px 14px' }}>
-            <div
-              style={{
-                fontSize: 10,
-                fontWeight: 700,
-                color: 'var(--tv-ink-muted)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-                marginBottom: 7,
-              }}
-            >
-              Pedido
-            </div>
-            {items.map((it, i) => (
-              <div
-                key={i}
-                style={{
-                  padding: '7px 0',
-                  borderBottom: i < items.length - 1 ? '1px solid var(--tv-border)' : 'none',
-                }}
-              >
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <span
-                    className="tv-mono"
-                    style={{
-                      color: 'var(--tv-ink-muted)',
-                      width: 22,
-                      flexShrink: 0,
-                      fontWeight: 700,
-                    }}
-                  >
-                    {it.qty}×
-                  </span>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 14, fontWeight: 600 }}>{it.name}</div>
-                    {it.mods && (
-                      <div style={{ fontSize: 12, color: 'var(--tv-ink-muted)' }}>{it.mods}</div>
-                    )}
-                    {it.note && (
-                      <div style={{ fontSize: 12, color: '#B45309', marginTop: 2 }}>
-                        <MS name="info" size={11} /> {it.note}
-                      </div>
-                    )}
-                  </div>
-                  <span
-                    className="tv-mono"
-                    style={{
-                      fontSize: 13,
-                      fontWeight: 600,
-                      flexShrink: 0,
-                      color: 'var(--tv-ink-muted)',
-                    }}
-                  >
-                    {soles(it.price)}
-                  </span>
-                </div>
+          <details
+            open={itemsOpen}
+            onToggle={(e) => setItemsOpen(e.currentTarget.open)}
+            className={cn(
+              'shrink-0 rounded-md bg-surface',
+              isValidandoPrepaid ? 'px-3 py-2.5' : 'px-3.5 py-3',
+            )}
+          >
+            <summary className="flex list-none cursor-pointer select-none items-center justify-between text-[13px] font-bold">
+              <div className="flex items-center gap-1.5">
+                <Icon weight={500} name="shopping_bag" size={16} />
+                <span>
+                  Pedido ({items.length} {items.length === 1 ? 'ítem' : 'ítems'})
+                </span>
               </div>
-            ))}
-            <div
-              style={{
-                marginTop: 10,
-                padding: '8px 0 0',
-                borderTop: '1px solid var(--tv-border)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 4,
-              }}
-            >
-              <Row label="Subtotal" value={soles(order.subtotal)} mono />
-              <Row label="Delivery" value={soles(order.deliveryFee)} mono />
-              <Row label="Total" value={soles(order.total)} mono bold />
+              <div className="flex items-center gap-1">
+                <span className="font-mono">{soles(order.total)}</span>
+                <Icon
+                  weight={500}
+                  name={itemsOpen ? 'expand_less' : 'expand_more'}
+                  size={18}
+                  className="text-ink-muted"
+                />
+              </div>
+            </summary>
+            <div className="mt-2 border-t border-border pt-2">
+              {items.map((it, i) => (
+                <div
+                  key={i}
+                  className={cn(
+                    'py-[5px]',
+                    i < items.length - 1 ? 'border-b border-border' : 'border-b border-transparent',
+                  )}
+                >
+                  <div className="flex gap-2">
+                    <span className="w-[22px] shrink-0 font-mono font-bold text-ink-muted">
+                      {it.qty}×
+                    </span>
+                    <div className="flex-1">
+                      <div className="text-[14px] font-semibold">{it.name}</div>
+                      {it.mods && <div className="text-[12px] text-ink-muted">{it.mods}</div>}
+                      {it.note && (
+                        <div className="mt-0.5 text-[12px] text-warning">
+                          <Icon weight={500} name="info" size={11} /> {it.note}
+                        </div>
+                      )}
+                    </div>
+                    <span className="shrink-0 font-mono text-[13px] font-semibold text-ink-muted">
+                      {soles(it.price)}
+                    </span>
+                  </div>
+                </div>
+              ))}
+              <div className="mt-2.5 flex flex-col gap-1 border-t border-border pt-2">
+                <DetailRow label="Subtotal" value={soles(order.subtotal)} mono />
+                <DetailRow label="Delivery" value={soles(order.deliveryFee)} mono />
+                <DetailRow label="Total" value={soles(order.total)} mono bold />
+              </div>
             </div>
-          </div>
+          </details>
         ) : (
-          <div style={{ background: 'var(--tv-surface)', borderRadius: 12, padding: '12px 14px' }}>
-            <div
-              style={{
-                fontSize: 10,
-                fontWeight: 700,
-                color: 'var(--tv-ink-muted)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-                marginBottom: 10,
-              }}
-            >
-              Cobro
+          <details
+            open={itemsOpen}
+            onToggle={(e) => setItemsOpen(e.currentTarget.open)}
+            className={cn(
+              'shrink-0 rounded-md bg-surface',
+              isValidandoPrepaid ? 'px-3 py-2.5' : 'px-3.5 py-3',
+            )}
+          >
+            <summary className="flex list-none cursor-pointer select-none items-center justify-between text-[13px] font-bold">
+              <div className="flex items-center gap-1.5">
+                <Icon weight={500} name="payments" size={16} />
+                <span>Cobro</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="font-mono">{soles(order.total)}</span>
+                <Icon
+                  weight={500}
+                  name={itemsOpen ? 'expand_less' : 'expand_more'}
+                  size={18}
+                  className="text-ink-muted"
+                />
+              </div>
+            </summary>
+            <div className="mt-2 flex flex-col gap-[5px] border-t border-border pt-2">
+              <DetailRow label="Total del pedido" value={soles(order.amount)} mono />
+              <DetailRow label="Delivery" value={soles(order.deliveryFee)} mono />
+              <div className="my-0.5 h-px bg-border" />
+              <DetailRow label="Total a cobrar" value={soles(order.total)} mono bold />
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-              <Row label="Total del pedido" value={soles(order.amount)} mono />
-              <Row label="Delivery" value={soles(order.deliveryFee)} mono />
-              <div style={{ height: 1, background: 'var(--tv-border)', margin: '2px 0' }} />
-              <Row label="Total a cobrar" value={soles(order.total)} mono bold />
-            </div>
-          </div>
+          </details>
         )}
 
         {/* Sección de pago */}
         {order.payment === 'pending_cash' && <PaySectionCash order={order} />}
         {order.payment === 'pending_wallet' && <PaySectionWallet order={order} qrUrl={qrUrl} />}
         {order.payment === 'prepaid' && (
-          <PaySectionPrepaid
-            order={order}
-            proofUrl={proofUrl}
-            onVerify={() => actions.onVerifyProof()}
-            onReject={() => actions.onRejectProof()}
-          />
+          <>
+            {isLoadingActions ? (
+              <div className="h-16 animate-pulse rounded-md border border-ink/[0.08] bg-ink/[0.06] px-3.5 py-3" />
+            ) : (
+              <>
+                {/* 1. Esperando comprobante del cliente (pending_acceptance o validando sin comprobante aún) */}
+                {isPrepaidAwaitingProof && (
+                  <div className="shrink-0 rounded-md border border-brand/30 bg-brand-soft px-3.5 py-3">
+                    <div className="mb-1 flex items-center gap-[7px]">
+                      <Icon
+                        weight={500}
+                        name="qr_code_2"
+                        size={18}
+                        filled
+                        className="text-brand-dark"
+                      />
+                      <div className="text-[13px] font-bold text-brand-dark">
+                        Pago por Yape / Plin
+                      </div>
+                    </div>
+                    <div className="text-[12px] leading-[1.4] text-brand-dark">
+                      Confirma la disponibilidad de insumos para este pedido. Una vez aceptado, el
+                      cliente tendrá 10 minutos para transferir por Yape/Plin y adjuntar el
+                      comprobante.
+                    </div>
+                  </div>
+                )}
+                {/* 2. awaiting_payment: Banner de espera tras haber aceptado disponibilidad */}
+                {order.status === 'awaiting_payment' && (
+                  <div className="shrink-0 rounded-md border border-brand/30 bg-brand-soft px-3.5 py-3">
+                    <div className="mb-1 flex items-center gap-[7px]">
+                      <Icon
+                        weight={500}
+                        name="schedule"
+                        size={18}
+                        filled
+                        className="text-brand-dark"
+                      />
+                      <div className="text-[13px] font-bold text-brand-dark">
+                        Esperando pago del cliente
+                      </div>
+                    </div>
+                    <div className="text-[12px] leading-[1.4] text-brand-dark">
+                      Disponibilidad confirmada. El cliente tiene 10 minutos para realizar la
+                      transferencia por Yape/Plin y adjuntar el comprobante.
+                    </div>
+                  </div>
+                )}
+                {/* 3. Con comprobante subido: Guía de validación + comprobante + botones */}
+                {isValidandoPrepaid && <PaySectionPrepaid order={order} proofUrl={proofUrl} />}
+              </>
+            )}
+          </>
         )}
         {order.payment === 'pending_mixed' && <PaySectionMixed order={order} qrUrl={qrUrl} />}
 
         {/* Prep picker (al aceptar) */}
         {showPrepPicker && (
-          <div style={{ background: 'var(--tv-surface)', borderRadius: 12, padding: '12px 14px' }}>
-            <div className="tv-label" style={{ marginBottom: 8 }}>
-              TIEMPO DE PREPARACIÓN
+          <div className="shrink-0 rounded-md bg-surface px-3.5 py-3">
+            <div className="mb-2 font-mono text-[11px] font-semibold uppercase tracking-wide text-ink-muted">
+              Tiempo de preparación
             </div>
-            <div
-              style={{
-                display: 'flex',
-                gap: 6,
-                overflowX: 'auto',
-                scrollbarWidth: 'none',
-                paddingBottom: 4,
-              }}
-            >
+            <div className="flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
               {PREP_PRESETS.map((m) => (
                 <button
                   type="button"
                   key={m}
                   onClick={() => setPrep(m)}
-                  style={{
-                    flexShrink: 0,
-                    minWidth: 50,
-                    border: m === prep ? 'none' : '1px solid var(--tv-border)',
-                    background: m === prep ? 'var(--tv-ink)' : '#fff',
-                    color: m === prep ? '#fff' : 'var(--tv-ink)',
-                    fontFamily: "var(--font-jetbrains), 'Manrope', sans-serif",
-                    fontWeight: 700,
-                    fontSize: 14,
-                    padding: '10px 0',
-                    borderRadius: 12,
-                    cursor: 'pointer',
-                  }}
+                  className={cn(
+                    'min-w-[50px] shrink-0 cursor-pointer rounded-md py-2.5 font-mono text-[14px] font-bold',
+                    m === prep
+                      ? 'bg-ink text-white border-transparent'
+                      : 'bg-white text-ink border border-border',
+                  )}
                 >
                   {m}m
                 </button>
@@ -966,33 +680,23 @@ export function DetailScreen({
 
         {/* Extensión de preparación */}
         {order.state === 'cooking' && !order.extensionUsed && (
-          <div style={{ background: 'var(--tv-surface)', borderRadius: 12, padding: '12px 14px' }}>
-            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>
-              ¿Necesitas más tiempo?
-            </div>
+          <div className="shrink-0 rounded-md bg-surface px-3.5 py-3">
+            <div className="mb-2 text-[13px] font-semibold">¿Necesitas más tiempo?</div>
             <button
               type="button"
               onClick={() => actions.onExtend()}
               disabled={busy}
-              className="tv-btn tv-btn-ghost tv-btn-sm tv-btn-block"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-ink/[0.06] px-3 py-2 text-[13px] font-semibold text-ink transition-transform active:scale-[0.98] disabled:opacity-50"
             >
-              <MS name="add" size={14} /> +10 min
+              <Icon weight={500} name="add" size={14} /> +10 min
             </button>
-            <div style={{ fontSize: 11, color: 'var(--tv-ink-muted)', marginTop: 6 }}>
+            <div className="mt-1.5 text-[11px] text-ink-muted">
               Solo disponible una vez y antes de que llegue el motorizado.
             </div>
           </div>
         )}
         {order.state === 'cooking' && order.extensionUsed && (
-          <div
-            style={{
-              fontSize: 12,
-              color: 'var(--tv-warning)',
-              fontWeight: 600,
-              textAlign: 'center',
-              padding: '4px 0',
-            }}
-          >
+          <div className="shrink-0 py-1 text-center text-[12px] font-semibold text-warning">
             Prórroga +{order.extensionMin}m usada · no se puede volver a extender
           </div>
         )}
@@ -1001,273 +705,169 @@ export function DetailScreen({
         {order.state === 'buffer_p3' && actions.onCallDriver && (
           <button
             type="button"
-            onClick={actions.onCallDriver}
-            className="tv-btn tv-btn-sm tv-btn-block"
-            style={{ background: 'var(--tv-danger)', color: '#fff', border: 'none' }}
+            onClick={() => actions.onCallDriver?.(order)}
+            className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-danger px-3 py-2 text-[13px] font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-50"
           >
-            <MS name="call" size={15} /> Llamar a un motorizado manualmente
+            <Icon weight={500} name="call" size={15} /> Llamar a un motorizado manualmente
           </button>
         )}
 
         {/* Otras acciones */}
         {!isPending && order.state !== 'picked_up' && (
-          <div
-            style={{
-              borderRadius: 12,
-              padding: '12px 14px',
-              border: '1px solid var(--tv-border)',
-              background: 'var(--tv-surface)',
-            }}
-          >
-            <div
-              style={{
-                fontSize: 10,
-                fontWeight: 700,
-                color: 'var(--tv-ink-muted)',
-                marginBottom: 8,
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-              }}
-            >
+          <div className="shrink-0 rounded-md border border-border bg-surface px-3.5 py-3">
+            <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.06em] text-ink-muted">
               Otras acciones
             </div>
             <button
               type="button"
               onClick={() => setModal('cancel')}
               disabled={busy}
-              className="tv-btn tv-btn-sm tv-btn-block"
-              style={{
-                background: 'transparent',
-                border: '1.5px solid var(--tv-danger)',
-                color: 'var(--tv-danger)',
-              }}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl border-[1.5px] border-danger bg-transparent px-3 py-2 text-[13px] font-semibold text-danger transition-transform active:scale-[0.98] disabled:opacity-50"
             >
-              <MS name="cancel" size={14} /> Cancelar este pedido
+              <Icon weight={500} name="cancel" size={14} /> Cancelar este pedido
             </button>
           </div>
         )}
       </div>
 
       {/* Footer de acciones (pendiente) */}
-      {isPending && (
-        <div
-          style={{
-            background: '#fff',
-            borderTop: '1px solid var(--tv-border)',
-            padding: '12px 14px 14px',
-            boxShadow: '0 -6px 20px rgba(0,0,0,0.06)',
-            display: 'flex',
-            gap: 10,
-          }}
-        >
-          <button
-            type="button"
-            onClick={() => setModal('reject')}
-            disabled={busy}
-            className="tv-btn tv-btn-ghost"
-            style={{ flex: 1, color: 'var(--tv-danger)' }}
-          >
-            <MS name="close" size={18} /> Rechazar
-          </button>
-          <button
-            type="button"
-            onClick={() => actions.onAccept(prep)}
-            disabled={acceptDisabled}
-            className="tv-btn tv-btn-brand"
-            style={{ flex: 2 }}
-          >
-            <MS name="check" size={18} filled />
-            {isPrepaid && order.proofStatus !== 'verified'
-              ? 'Verifica el comprobante'
-              : `Aceptar · ${prep}m`}
-          </button>
+      {(isPending || isLoadingActions) && (
+        <div className="flex shrink-0 flex-col gap-1.5 border-t border-border bg-white px-3.5 pb-3.5 pt-3 shadow-elev-2">
+          {isLoadingActions ? (
+            <div className="flex animate-pulse gap-2.5 opacity-70">
+              <div className="h-11 flex-1 rounded-md bg-ink/[0.08]" />
+              <div className="h-11 flex-[2] rounded-md bg-ink/[0.08]" />
+            </div>
+          ) : isValidandoPrepaid ? (
+            <div className="flex gap-2.5">
+              <button
+                type="button"
+                onClick={() => actions.onRejectProof()}
+                disabled={busy}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border-[1.5px] border-danger/30 bg-danger-soft px-5 py-3 text-[15px] font-semibold text-danger transition-transform active:scale-[0.98] disabled:opacity-50"
+              >
+                <Icon weight={500} name="cancel" size={18} /> Inválido
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowPrepModal(true)}
+                disabled={busy}
+                className="inline-flex flex-[2] items-center justify-center gap-2 rounded-xl bg-success px-5 py-3 text-[15px] font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-50"
+              >
+                <Icon weight={500} name="check_circle" size={18} filled /> Confirmar pago
+              </button>
+            </div>
+          ) : order.status === 'awaiting_payment' && isPrepaid ? (
+            <div className="flex gap-2.5">
+              <button
+                type="button"
+                onClick={() => setModal('cancel')}
+                disabled={busy}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-ink/[0.06] px-5 py-3 text-[15px] font-semibold text-danger transition-transform active:scale-[0.98] disabled:opacity-50"
+              >
+                <Icon weight={500} name="close" size={18} /> Cancelar
+              </button>
+              <div className="inline-flex flex-[2] cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-ink/[0.06] px-5 py-3 text-[15px] font-semibold text-ink-subtle pointer-events-none">
+                Esperando pago...
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="flex gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setModal('reject')}
+                  disabled={busy}
+                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-ink/[0.06] px-5 py-3 text-[15px] font-semibold text-danger transition-transform active:scale-[0.98] disabled:opacity-50"
+                >
+                  <Icon weight={500} name="close" size={18} /> Rechazar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => actions.onAccept(isPrepaid ? 20 : prep)}
+                  disabled={acceptDisabled}
+                  className="inline-flex flex-[2] items-center justify-center gap-2 rounded-xl bg-brand px-5 py-3 text-[15px] font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-50"
+                >
+                  <Icon weight={500} name="check" size={18} filled />
+                  {isPrepaid ? 'Aceptar disponibilidad' : `Aceptar · ${prep}m`}
+                </button>
+              </div>
+              {isPrepaid && (
+                <div className="text-center text-[11px] text-ink-muted">
+                  Confirmas disponibilidad para preparar. El cliente procederá a realizar el pago
+                  por Yape/Plin.
+                </div>
+              )}
+            </>
+          )}
         </div>
       )}
 
-      {/* Footer cocina: marcar listo para el motorizado */}
-      {order.status === 'preparing' && (
-        <div
-          style={{
-            background: '#fff',
-            borderTop: '1px solid var(--tv-border)',
-            padding: '12px 14px 14px',
-            boxShadow: '0 -6px 20px rgba(0,0,0,0.06)',
-          }}
-        >
-          <button
-            type="button"
-            onClick={() => actions.onReady()}
-            disabled={busy}
-            className="tv-btn tv-btn-block"
-            style={{ background: 'var(--tv-success)', color: '#fff' }}
-          >
-            <MS name="inventory_2" size={18} filled /> Listo — llamar moto
-          </button>
+      {/* Footer cocina: declarar la comida lista.
+          Visible en los cuatro estados en los que la comida puede seguir en
+          cocina, no solo en `preparing`: desde que el motorizado toma el pedido
+          con 10 minutos por delante, el caso normal es que llegue antes de que
+          la comida salga. */}
+      {(order.canMarkReady || order.readyEarly) && (
+        <div className="shrink-0 border-t border-border bg-white px-3.5 pb-3.5 pt-3 shadow-elev-2">
+          {order.readyEarly ? (
+            <div className="flex items-center gap-2.5 rounded-[14px] border border-success bg-success-soft px-3.5 py-3">
+              <Icon weight={500} name="check_circle" size={20} filled className="text-success" />
+              <span className="text-[13px] font-semibold text-success">
+                Comida lista. El motorizado ya lo sabe.
+              </span>
+            </div>
+          ) : confirmReady ? (
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmReady(false)}
+                disabled={busy}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-ink/[0.06] px-5 py-3 text-[15px] font-semibold text-ink transition-transform active:scale-[0.98] disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  await actions.onReady()
+                  setConfirmReady(false)
+                }}
+                disabled={busy}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-success px-5 py-3 text-[15px] font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-50"
+              >
+                <Icon weight={500} name="check_circle" size={18} filled /> Sí, está lista
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmReady(true)}
+              disabled={busy}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-success px-5 py-3 text-[15px] font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-50"
+            >
+              <Icon weight={500} name="inventory_2" size={18} filled /> Listo — llamar moto
+            </button>
+          )}
         </div>
       )}
     </div>
   )
 
   if (mobile) {
-    return (
-      <div style={{ position: 'absolute', inset: 0, zIndex: 100, background: '#fff' }}>
-        {content}
-      </div>
-    )
+    return <div className="fixed inset-0 z-[200] bg-white">{content}</div>
   }
+
   return (
     <div
-      style={{
-        position: 'absolute',
-        right: 0,
-        top: 0,
-        bottom: 0,
-        zIndex: 90,
-        width: 380,
-        background: '#fff',
-        boxShadow: '-8px 0 32px rgba(0,0,0,0.1)',
-      }}
-    >
-      {content}
-    </div>
-  )
-}
-
-// ── Modal: Pausar pedidos (busy mode) ────────────────────────────────────────
-const PAUSE_OPTS: { label: string; sub: string; min: number | null; default?: boolean }[] = [
-  { label: '15 minutos', sub: 'Para un pico rápido', min: 15 },
-  { label: '30 minutos', sub: 'La opción más común', min: 30, default: true },
-  { label: '1 hora', sub: 'Para horas de alta demanda', min: 60 },
-  { label: '2 horas', sub: 'Para el resto del turno', min: 120 },
-  { label: 'Hasta que reactive', sub: 'Sin tiempo fijo', min: null },
-]
-
-export function PausarModal({
-  busy,
-  onClose,
-  onConfirm,
-}: {
-  busy: boolean
-  onClose: () => void
-  onConfirm: (minutes: number | null) => void
-}) {
-  const [sel, setSel] = useState(1)
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        inset: 0,
-        zIndex: 200,
-        background: 'rgba(0,0,0,0.45)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 20,
-      }}
+      onClick={actions.onClose}
+      className="fixed inset-0 z-[200] flex justify-end bg-black/45 backdrop-blur-[2px]"
     >
       <div
-        style={{
-          background: '#fff',
-          borderRadius: 20,
-          padding: 20,
-          maxWidth: 340,
-          width: '100%',
-          boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
-        }}
+        onClick={(e) => e.stopPropagation()}
+        className="flex h-screen max-h-screen w-[420px] max-w-[100vw] flex-col overflow-hidden bg-white shadow-elev-3"
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-          <div
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 11,
-              flexShrink: 0,
-              background: '#FEF3C7',
-              color: '#92400E',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <MS name="pause_circle" size={22} filled />
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 16, fontWeight: 700 }}>Pausar pedidos</div>
-            <div style={{ fontSize: 12, color: 'var(--tv-ink-muted)', marginTop: 1 }}>
-              ¿Por cuánto tiempo?
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              width: 30,
-              height: 30,
-              borderRadius: 8,
-              background: 'rgba(26,22,20,0.06)',
-              border: 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <MS name="close" size={16} />
-          </button>
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 14 }}>
-          {PAUSE_OPTS.map((o, i) => (
-            <button
-              type="button"
-              key={o.label}
-              onClick={() => setSel(i)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                padding: '9px 12px',
-                borderRadius: 9,
-                background: i === sel ? 'var(--tv-ink)' : 'var(--tv-surface)',
-                color: i === sel ? '#fff' : 'var(--tv-ink)',
-                border: 'none',
-                fontFamily: 'inherit',
-                textAlign: 'left',
-                cursor: 'pointer',
-              }}
-            >
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 600 }}>{o.label}</div>
-                <div style={{ fontSize: 11, opacity: 0.65 }}>{o.sub}</div>
-              </div>
-              {i === sel && <MS name="check" size={16} />}
-            </button>
-          ))}
-        </div>
-
-        <div
-          style={{
-            background: '#FEF3C7',
-            borderRadius: 9,
-            padding: '9px 12px',
-            marginBottom: 12,
-            fontSize: 12,
-            color: '#92400E',
-          }}
-        >
-          <strong>Los pedidos activos continúan</strong> su flujo. Solo se bloquean los nuevos desde
-          la web.
-        </div>
-        <button
-          type="button"
-          onClick={() => onConfirm(PAUSE_OPTS[sel]?.min ?? null)}
-          disabled={busy}
-          className="tv-btn tv-btn-brand tv-btn-block tv-btn-lg"
-        >
-          {PAUSE_OPTS[sel]?.min
-            ? `Confirmar pausa de ${PAUSE_OPTS[sel]?.label.toLowerCase()}`
-            : 'Confirmar pausa'}
-        </button>
+        {content}
       </div>
     </div>
   )

@@ -1,0 +1,39 @@
+{
+  "nodes": [
+    {
+      "id": "Docs_09_flujo_negocios_negocios_app",
+      "label": "Negocios PWA",
+      "file_type": "code",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "Docs_09_flujo_negocios_primary_capability",
+      "label": "Primary Capability Model",
+      "file_type": "concept",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    }
+  ],
+  "edges": [
+    {
+      "source": "Docs_09_flujo_negocios_negocios_app",
+      "target": "Docs_09_flujo_negocios_primary_capability",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": null,
+      "weight": 1.0
+    }
+  ],
+  "hyperedges": []
+}

@@ -1,22 +1,67 @@
-import type { ApiErrorCode } from '@tindivo/contracts'
 import { DomainError } from '@tindivo/core'
 
-/** SQLSTATE de los RPC antifraude -> código de API (status HTTP). */
-const SQLSTATE_TO_CODE: Record<string, ApiErrorCode> = {
-  P0002: 'not_found', // raise ... 'no existe'
-  '42501': 'forbidden', // pedido/recurso de otro dueño
-  '22023': 'validation_error', // parámetro inválido
+/**
+ * Mensajes conocidos de P0001 que mapean a 409 Conflict (estado incompatible).
+ * Las RPC usan P0001 (raise_exception) para múltiples situaciones;
+ * clasificamos por mensaje conocido para devolver el HTTP correcto.
+ */
+const CONFLICT_PATTERNS = [
+  /ya (ha sido|fue) (resuelta|devuelto|revisad[oa])/i,
+  /already (resolved|refunded|reviewed)/i,
+  /not in .* status/i,
+  /cannot \w+ because/i,
+]
+
+/** Mensajes conocidos de P0001 que mapean a 422 (validación). */
+const VALIDATION_PATTERNS = [
+  /amount.*(exceeds|incorrecto|superior|must)/i,
+  /monto/i,
+  /deadline.*expired/i,
+  /plazo.*vencido/i,
+  /invalid/i,
+]
+
+/**
+ * Convierte errores de Supabase/RPC a DomainError con el código HTTP adecuado.
+ *
+ * - P0002 → 404 not_found
+ * - P0001 → 409 conflict o 422 validation_error según el mensaje
+ * - 42501 → 403 forbidden
+ * - Otros → 500 (genérico)
+ *
+ * Uso:
+ *   const { data, error } = await client.rpc('resolve_appeal', params)
+ *   if (error) throwRpcError(error)
+ */
+export function throwRpcError(error: { code: string; message: string }): never {
+  // P0002: recurso no encontrado → 404
+  if (error.code === 'P0002') {
+    throw new DomainError(error.message, 'not_found')
+  }
+
+  // P0001: clasificar según mensaje conocido
+  if (error.code === 'P0001') {
+    if (CONFLICT_PATTERNS.some((p) => p.test(error.message))) {
+      throw new DomainError(error.message, 'conflict')
+    }
+    if (VALIDATION_PATTERNS.some((p) => p.test(error.message))) {
+      throw new DomainError(error.message, 'validation_error')
+    }
+    // Fallback seguro: 422 para P0001 desconocidos
+    throw new DomainError(error.message, 'validation_error')
+  }
+
+  // 42501: permisos insuficientes → 403
+  if (error.code === '42501') {
+    throw new DomainError(error.message, 'forbidden')
+  }
+
+  // Cualquier otro código: 500
+  throw new Error(error.message)
 }
 
 /**
- * Mapea el error de un RPC de Postgres a un `DomainError` con el código HTTP
- * adecuado. El rate-limit (P0001 con mensaje "Límite…") -> 429; el resto de
- * P0001 -> 409. `handleError` luego lo convierte a Problem Details.
+ * @deprecated Usar `throwRpcError` (nombre canónico).
+ * Alias mantenido para compatibilidad con código existente.
  */
-export function rpcError(error: { code?: string; message: string }): DomainError {
-  if (error.code === 'P0001' && /l[ií]mite/i.test(error.message)) {
-    return new DomainError(error.message, 'rate_limited')
-  }
-  const code = SQLSTATE_TO_CODE[error.code ?? ''] ?? 'conflict'
-  return new DomainError(error.message, code)
-}
+export const rpcError = throwRpcError

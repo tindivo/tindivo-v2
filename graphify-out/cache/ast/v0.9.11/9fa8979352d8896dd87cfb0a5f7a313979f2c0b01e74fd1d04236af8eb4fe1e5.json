@@ -1,0 +1,943 @@
+{
+  "nodes": [
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_md",
+      "label": "13-deploy-y-devops.md",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_13_deploy_y_devops",
+      "label": "13 \u00b7 Deploy y DevOps",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_tabla_de_contenidos",
+      "label": "Tabla de contenidos",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L7"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_1_arquitectura_de_deploy",
+      "label": "1. Arquitectura de deploy",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L25"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_2_vercel_5_proyectos",
+      "label": "2. Vercel \u00b7 5 proyectos",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L47"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_configuraci\u00f3n_por_proyecto",
+      "label": "Configuraci\u00f3n por proyecto",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L59"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_turborepo_cache",
+      "label": "Turborepo cache",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L70"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_custom_domains",
+      "label": "Custom domains",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L74"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_preview_deployments",
+      "label": "Preview deployments",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L89"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_3_supabase_proyecto_\u00fanico",
+      "label": "3. Supabase \u00b7 proyecto \u00fanico",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L95"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_plan",
+      "label": "Plan",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L99"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_componentes",
+      "label": "Componentes",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L104"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_acceso",
+      "label": "Acceso",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L116"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_4_inngest_cloud_o_self_hosted",
+      "label": "4. Inngest \u00b7 cloud o self-hosted",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L125"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_inngest_cloud_recomendado_mvp",
+      "label": "Inngest Cloud (recomendado MVP)",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L127"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_endpoint_en_vercel",
+      "label": "Endpoint en Vercel",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L135"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_inngest_cloud_vercel_webhook",
+      "label": "Inngest Cloud \u2192 Vercel webhook",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L149"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_self_hosting_alternativa_post_mvp",
+      "label": "Self-hosting (alternativa post-MVP)",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L156"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_5_variables_de_entorno",
+      "label": "5. Variables de entorno",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L165"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_por_app_vercel_env_vars",
+      "label": "Por app (Vercel env vars)",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L167"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_comunes_a_todas_las_apps",
+      "label": "Comunes a todas las apps",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L171"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_solo_en_apps_api",
+      "label": "Solo en `apps/api`",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L187"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_solo_en_apps_cliente_con_sentry",
+      "label": "Solo en apps cliente con Sentry",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L201"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_en_supabase_vault",
+      "label": "En Supabase Vault",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L207"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_sincronizaci\u00f3n_dev_staging_prod",
+      "label": "Sincronizaci\u00f3n dev / staging / prod",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L219"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_6_ci_cd_con_github_actions",
+      "label": "6. CI/CD con GitHub Actions",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L227"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_workflow_principal",
+      "label": "Workflow principal",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L229"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_deploy_autom\u00e1tico",
+      "label": "Deploy autom\u00e1tico",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L276"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_7_migrations_de_base_de_datos",
+      "label": "7. Migrations de base de datos",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L322"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_convenci\u00f3n",
+      "label": "Convenci\u00f3n",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L324"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_workflow",
+      "label": "Workflow",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L330"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_expand_contract",
+      "label": "Expand-contract",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L337"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_rollback",
+      "label": "Rollback",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L347"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_8_edge_functions_de_supabase",
+      "label": "8. Edge Functions de Supabase",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L353"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_estructura",
+      "label": "Estructura",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L355"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_deploy",
+      "label": "Deploy",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L369"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_secrets",
+      "label": "Secrets",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L377"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_logs",
+      "label": "Logs",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L386"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_9_crons",
+      "label": "9. Crons",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L392"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_en_supabase_pg_cron",
+      "label": "En Supabase (pg_cron)",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L394"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_lista_completa_de_crons",
+      "label": "Lista completa de crons",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L421"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_10_backups_y_disaster_recovery",
+      "label": "10. Backups y disaster recovery",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L438"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_supabase_automatic_backups",
+      "label": "Supabase automatic backups",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L440"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_backups_manuales",
+      "label": "Backups manuales",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L445"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_rpo_rto",
+      "label": "RPO / RTO",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L456"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_plan_de_disaster_recovery",
+      "label": "Plan de disaster recovery",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L461"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_11_monitoring_y_alertas",
+      "label": "11. Monitoring y alertas",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L478"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_stack_de_observabilidad",
+      "label": "Stack de observabilidad",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L480"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_alertas_cr\u00edticas",
+      "label": "Alertas cr\u00edticas",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L490"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_12_local_dev_setup",
+      "label": "12. Local dev setup",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L502"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_pre_requisitos",
+      "label": "Pre-requisitos",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L504"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_setup_inicial",
+      "label": "Setup inicial",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L511"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_inngest_dev_server",
+      "label": "Inngest dev server",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L533"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_seed_data",
+      "label": "Seed data",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L546"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_13_release_process",
+      "label": "13. Release process",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L555"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_versionado",
+      "label": "Versionado",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L557"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_release_checklist",
+      "label": "Release checklist",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L565"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_rollback_577",
+      "label": "Rollback",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L577"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_maintenance_window",
+      "label": "Maintenance window",
+      "file_type": "document",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L585"
+    }
+  ],
+  "edges": [
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_md",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_13_deploy_y_devops",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_13_deploy_y_devops",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_tabla_de_contenidos",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_13_deploy_y_devops",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_1_arquitectura_de_deploy",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L25",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_13_deploy_y_devops",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_2_vercel_5_proyectos",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L47",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_2_vercel_5_proyectos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_configuraci\u00f3n_por_proyecto",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L59",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_2_vercel_5_proyectos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_turborepo_cache",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L70",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_2_vercel_5_proyectos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_custom_domains",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L74",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_2_vercel_5_proyectos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_preview_deployments",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L89",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_13_deploy_y_devops",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_3_supabase_proyecto_\u00fanico",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L95",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_3_supabase_proyecto_\u00fanico",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_plan",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L99",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_3_supabase_proyecto_\u00fanico",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_componentes",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L104",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_3_supabase_proyecto_\u00fanico",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_acceso",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L116",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_13_deploy_y_devops",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_4_inngest_cloud_o_self_hosted",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L125",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_4_inngest_cloud_o_self_hosted",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_inngest_cloud_recomendado_mvp",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L127",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_4_inngest_cloud_o_self_hosted",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_endpoint_en_vercel",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L135",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_4_inngest_cloud_o_self_hosted",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_inngest_cloud_vercel_webhook",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L149",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_4_inngest_cloud_o_self_hosted",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_self_hosting_alternativa_post_mvp",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L156",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_13_deploy_y_devops",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_5_variables_de_entorno",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L165",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_5_variables_de_entorno",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_por_app_vercel_env_vars",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L167",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_por_app_vercel_env_vars",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_comunes_a_todas_las_apps",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L171",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_por_app_vercel_env_vars",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_solo_en_apps_api",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L187",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_por_app_vercel_env_vars",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_solo_en_apps_cliente_con_sentry",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L201",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_5_variables_de_entorno",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_en_supabase_vault",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L207",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_5_variables_de_entorno",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_sincronizaci\u00f3n_dev_staging_prod",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L219",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_13_deploy_y_devops",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_6_ci_cd_con_github_actions",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L227",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_6_ci_cd_con_github_actions",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_workflow_principal",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L229",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_6_ci_cd_con_github_actions",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_deploy_autom\u00e1tico",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L276",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_13_deploy_y_devops",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_7_migrations_de_base_de_datos",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L322",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_7_migrations_de_base_de_datos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_convenci\u00f3n",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L324",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_7_migrations_de_base_de_datos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_workflow",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L330",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_7_migrations_de_base_de_datos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_expand_contract",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L337",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_7_migrations_de_base_de_datos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_rollback",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L347",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_13_deploy_y_devops",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_8_edge_functions_de_supabase",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L353",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_8_edge_functions_de_supabase",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_estructura",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L355",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_8_edge_functions_de_supabase",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_deploy",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L369",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_8_edge_functions_de_supabase",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_secrets",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L377",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_8_edge_functions_de_supabase",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_logs",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L386",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_13_deploy_y_devops",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_9_crons",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L392",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_9_crons",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_en_supabase_pg_cron",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L394",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_9_crons",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_lista_completa_de_crons",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L421",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_13_deploy_y_devops",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_10_backups_y_disaster_recovery",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L438",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_10_backups_y_disaster_recovery",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_supabase_automatic_backups",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L440",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_10_backups_y_disaster_recovery",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_backups_manuales",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L445",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_10_backups_y_disaster_recovery",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_rpo_rto",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L456",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_10_backups_y_disaster_recovery",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_plan_de_disaster_recovery",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L461",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_13_deploy_y_devops",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_11_monitoring_y_alertas",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L478",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_11_monitoring_y_alertas",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_stack_de_observabilidad",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L480",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_11_monitoring_y_alertas",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_alertas_cr\u00edticas",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L490",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_13_deploy_y_devops",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_12_local_dev_setup",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L502",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_12_local_dev_setup",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_pre_requisitos",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L504",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_12_local_dev_setup",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_setup_inicial",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L511",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_12_local_dev_setup",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_inngest_dev_server",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L533",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_12_local_dev_setup",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_seed_data",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L546",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_13_deploy_y_devops",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_13_release_process",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L555",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_13_release_process",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_versionado",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L557",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_13_release_process",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_release_checklist",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L565",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_13_release_process",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_rollback_577",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L577",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_13_release_process",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_13_deploy_y_devops_maintenance_window",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/13-deploy-y-devops.md",
+      "source_location": "L585",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

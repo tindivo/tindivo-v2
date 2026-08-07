@@ -1,0 +1,335 @@
+{
+  "nodes": [
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_md",
+      "label": "customer.md",
+      "file_type": "document",
+      "source_file": "Docs/context/customer.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_apps_customer_contexto_y_estado",
+      "label": "`apps/customer` \u2014 Contexto y estado",
+      "file_type": "document",
+      "source_file": "Docs/context/customer.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_actores_y_prop\u00f3sito",
+      "label": "Actores y prop\u00f3sito",
+      "file_type": "document",
+      "source_file": "Docs/context/customer.md",
+      "source_location": "L9"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_flujo_principal_del_cliente",
+      "label": "Flujo principal del cliente",
+      "file_type": "document",
+      "source_file": "Docs/context/customer.md",
+      "source_location": "L16"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_m\u00f3dulos_estado_completo_auditado",
+      "label": "M\u00f3dulos \u2014 estado completo auditado",
+      "file_type": "document",
+      "source_file": "Docs/context/customer.md",
+      "source_location": "L74"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_onboarding_y_autenticaci\u00f3n_components_auth_onboarding_host_tsx_auth_onboarding_sheet_tsx_6_steps_persistence_ts",
+      "label": "\ud83d\udfe2 Onboarding y autenticaci\u00f3n (`components/auth-onboarding/` \u2192 `host.tsx` + `auth-onboarding-sheet.tsx` + 6 steps + `persistence.ts`)",
+      "file_type": "document",
+      "source_file": "Docs/context/customer.md",
+      "source_location": "L76"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_home_lista_de_restaurantes_search_app_page_tsx",
+      "label": "\ud83d\udfe2 Home \u2014 Lista de restaurantes + search (`/` \u2192 `app/page.tsx`)",
+      "file_type": "document",
+      "source_file": "Docs/context/customer.md",
+      "source_location": "L129"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_negocio_men\u00fa_y_carta_negocio_id_app_negocio_id_page_tsx",
+      "label": "\ud83d\udfe2 Negocio \u2014 Men\u00fa y carta (`/negocio/[id]` \u2192 `app/negocio/[id]/page.tsx`)",
+      "file_type": "document",
+      "source_file": "Docs/context/customer.md",
+      "source_location": "L142"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_carrito_lib_cart_ts_components_cart_sheet_tsx",
+      "label": "\ud83d\udfe2 Carrito (`lib/cart.ts` + `components/cart-sheet.tsx`)",
+      "file_type": "document",
+      "source_file": "Docs/context/customer.md",
+      "source_location": "L163"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_checkout_checkout_app_checkout_page_tsx",
+      "label": "\ud83d\udfe2 Checkout (`/checkout` \u2192 `app/checkout/page.tsx`)",
+      "file_type": "document",
+      "source_file": "Docs/context/customer.md",
+      "source_location": "L189"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_tracking_de_pedido_pedido_shortid_app_pedido_shortid_page_tsx",
+      "label": "\ud83d\udfe2 Tracking de pedido (`/pedido/[shortId]` \u2192 `app/pedido/[shortId]/page.tsx`)",
+      "file_type": "document",
+      "source_file": "Docs/context/customer.md",
+      "source_location": "L249"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_historial_de_pedidos_pedidos_app_pedidos_page_tsx",
+      "label": "\ud83d\udfe2 Historial de pedidos (`/pedidos` \u2192 `app/pedidos/page.tsx`)",
+      "file_type": "document",
+      "source_file": "Docs/context/customer.md",
+      "source_location": "L273"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_cuenta_perfil_y_direcciones_cuenta_app_cuenta_page_tsx",
+      "label": "\ud83d\udfe2 Cuenta \u2014 Perfil y direcciones (`/cuenta` \u2192 `app/cuenta/page.tsx`)",
+      "file_type": "document",
+      "source_file": "Docs/context/customer.md",
+      "source_location": "L289"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_p\u00e1ginas_legales_privacidad_terminos",
+      "label": "\ud83d\udfe2 P\u00e1ginas legales (`/privacidad`, `/terminos`)",
+      "file_type": "document",
+      "source_file": "Docs/context/customer.md",
+      "source_location": "L306"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_componentes_de_soporte_auditados",
+      "label": "Componentes de soporte \u2014 auditados",
+      "file_type": "document",
+      "source_file": "Docs/context/customer.md",
+      "source_location": "L317"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_deuda_t\u00e9cnica_confirmada_tabla_final",
+      "label": "Deuda t\u00e9cnica confirmada \u2014 tabla final",
+      "file_type": "document",
+      "source_file": "Docs/context/customer.md",
+      "source_location": "L346"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_estado_general_auditor\u00eda_completa",
+      "label": "Estado general \u2014 auditor\u00eda completa",
+      "file_type": "document",
+      "source_file": "Docs/context/customer.md",
+      "source_location": "L363"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_lo_que_falta_para_lanzar",
+      "label": "Lo que falta para lanzar",
+      "file_type": "document",
+      "source_file": "Docs/context/customer.md",
+      "source_location": "L397"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_cr\u00edtico_bloquea_lanzamiento",
+      "label": "\ud83d\udd34 Cr\u00edtico (bloquea lanzamiento)",
+      "file_type": "document",
+      "source_file": "Docs/context/customer.md",
+      "source_location": "L401"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_importante_primeras_semanas_post_lanzamiento",
+      "label": "\ud83d\udfe1 Importante (primeras semanas post-lanzamiento)",
+      "file_type": "document",
+      "source_file": "Docs/context/customer.md",
+      "source_location": "L405"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_deseable_post_piloto",
+      "label": "\ud83d\udfe2 Deseable (post-piloto)",
+      "file_type": "document",
+      "source_file": "Docs/context/customer.md",
+      "source_location": "L412"
+    }
+  ],
+  "edges": [
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_md",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_apps_customer_contexto_y_estado",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/customer.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_apps_customer_contexto_y_estado",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_actores_y_prop\u00f3sito",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/customer.md",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_apps_customer_contexto_y_estado",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_flujo_principal_del_cliente",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/customer.md",
+      "source_location": "L16",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_apps_customer_contexto_y_estado",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_m\u00f3dulos_estado_completo_auditado",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/customer.md",
+      "source_location": "L74",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_m\u00f3dulos_estado_completo_auditado",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_onboarding_y_autenticaci\u00f3n_components_auth_onboarding_host_tsx_auth_onboarding_sheet_tsx_6_steps_persistence_ts",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/customer.md",
+      "source_location": "L76",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_m\u00f3dulos_estado_completo_auditado",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_home_lista_de_restaurantes_search_app_page_tsx",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/customer.md",
+      "source_location": "L129",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_m\u00f3dulos_estado_completo_auditado",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_negocio_men\u00fa_y_carta_negocio_id_app_negocio_id_page_tsx",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/customer.md",
+      "source_location": "L142",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_m\u00f3dulos_estado_completo_auditado",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_carrito_lib_cart_ts_components_cart_sheet_tsx",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/customer.md",
+      "source_location": "L163",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_m\u00f3dulos_estado_completo_auditado",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_checkout_checkout_app_checkout_page_tsx",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/customer.md",
+      "source_location": "L189",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_m\u00f3dulos_estado_completo_auditado",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_tracking_de_pedido_pedido_shortid_app_pedido_shortid_page_tsx",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/customer.md",
+      "source_location": "L249",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_m\u00f3dulos_estado_completo_auditado",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_historial_de_pedidos_pedidos_app_pedidos_page_tsx",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/customer.md",
+      "source_location": "L273",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_m\u00f3dulos_estado_completo_auditado",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_cuenta_perfil_y_direcciones_cuenta_app_cuenta_page_tsx",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/customer.md",
+      "source_location": "L289",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_m\u00f3dulos_estado_completo_auditado",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_p\u00e1ginas_legales_privacidad_terminos",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/customer.md",
+      "source_location": "L306",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_apps_customer_contexto_y_estado",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_componentes_de_soporte_auditados",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/customer.md",
+      "source_location": "L317",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_apps_customer_contexto_y_estado",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_deuda_t\u00e9cnica_confirmada_tabla_final",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/customer.md",
+      "source_location": "L346",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_apps_customer_contexto_y_estado",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_estado_general_auditor\u00eda_completa",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/customer.md",
+      "source_location": "L363",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_apps_customer_contexto_y_estado",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_lo_que_falta_para_lanzar",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/customer.md",
+      "source_location": "L397",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_lo_que_falta_para_lanzar",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_cr\u00edtico_bloquea_lanzamiento",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/customer.md",
+      "source_location": "L401",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_lo_que_falta_para_lanzar",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_importante_primeras_semanas_post_lanzamiento",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/customer.md",
+      "source_location": "L405",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_lo_que_falta_para_lanzar",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_customer_deseable_post_piloto",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/customer.md",
+      "source_location": "L412",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

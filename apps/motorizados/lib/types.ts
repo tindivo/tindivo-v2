@@ -11,7 +11,13 @@ export type DriverOrderStatus =
 
 export type PaymentIntent = 'prepaid' | 'pending_yape' | 'pending_cash' | 'pending_mixed'
 export type OrderSource = 'customer_pwa' | 'business_manual'
-export type TransitionAction = 'take' | 'arrived' | 'pickup' | 'deliver' | 'no_show'
+export type TransitionAction =
+  | 'take'
+  | 'arrived'
+  | 'pickup'
+  | 'arrived_customer'
+  | 'deliver'
+  | 'no_show'
 
 /** Fila del board (lectura directa de supabase con RLS del driver). */
 export interface BoardOrder {
@@ -29,6 +35,9 @@ export interface BoardOrder {
   driver_id: string | null
   created_at: string
   estimated_ready_at: string | null
+  /** La cajera declaró la comida lista. Se muestra como distintivo en la tarjeta. */
+  ready_early_used: boolean | null
+  ready_early_at: string | null
   urgent_since: string | null
   appears_in_queue_at: string | null
   occupancy_slots: number
@@ -37,7 +46,23 @@ export interface BoardOrder {
   client_pays_with: number | null
   change_to_give: number | null
   business_id: string
-  businesses: { name: string } | null
+  /**
+   * Local resuelto desde `driver_businesses()` (0120), no desde un embed: las
+   * policies de `businesses` no dejan al motorizado leer la tabla, así que
+   * `businesses(name)` volvía NULL y todas las tarjetas decían "Restaurante".
+   */
+  business: DriverBusiness | null
+}
+
+/** Local asignado al motorizado, con lo justo para trabajar (0120). */
+export interface DriverBusiness {
+  id: string
+  name: string
+  phone: string | null
+  address: string | null
+  accent_color: string | null
+  coordinates_lat: number | null
+  coordinates_lng: number | null
 }
 
 /** Respuesta de GET /driver/orders/[id]. */
@@ -73,6 +98,7 @@ export interface OrderDetailResponse {
     headingAt: string | null
     waitingAtRestaurantAt: string | null
     pickedUpAt: string | null
+    arrivedAtCustomerAt: string | null
     deliveredAt: string | null
     cancelledAt: string | null
     cancelReason: string | null

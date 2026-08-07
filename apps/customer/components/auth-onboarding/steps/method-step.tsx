@@ -1,5 +1,6 @@
 'use client'
 
+import { Card } from '@tindivo/ui'
 import Link from 'next/link'
 import { useState } from 'react'
 
@@ -41,28 +42,21 @@ export function MethodStep({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="t-scroll flex-1 px-5 pt-2 pb-4">
-        <div
-          className="flex h-14 w-14 items-center justify-center rounded-2xl font-bold text-[24px] text-white"
-          style={{
-            background: '#F97316',
-            boxShadow: '0 8px 20px -6px rgba(249,115,22,0.55)',
-            fontFamily: 'var(--font-display, inherit)',
-          }}
-        >
+      <div className="flex-1 overflow-y-auto px-5 pt-2 pb-4 scrollbar-hide">
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand font-display font-bold text-[24px] text-white shadow-glow-brand">
           T
         </div>
-        <h2 className="t-display mt-4 text-[26px] leading-[1.1]">
+        <h2 className="mt-4 font-display text-[26px] font-bold leading-[1.1] tracking-tight text-ink">
           Crea tu cuenta
           <br />
           en Tindivo
         </h2>
-        <p className="mt-2 text-[14px]" style={{ color: 'rgba(26,22,20,0.6)' }}>
+        <p className="mt-2 text-[14px] text-ink-muted">
           Sin verificación de correo. Empiezas a pedir al instante.
         </p>
 
-        <button
-          type="button"
+        <Card
+          as="button"
           disabled={googleBusy}
           onClick={async () => {
             setError(null)
@@ -74,63 +68,66 @@ export function MethodStep({
               setGoogleBusy(false)
             }
           }}
-          className="mt-6 flex w-full items-center gap-3.5 rounded-[18px] bg-white p-4 text-left disabled:opacity-60"
-          style={{
-            border: '1px solid rgba(26,22,20,0.08)',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-          }}
+          className="mt-6 flex w-full items-center gap-3.5 p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-elev-3 active:translate-y-0 active:scale-[0.985] disabled:opacity-60"
         >
           <GoogleLogo />
           <span className="flex-1">
-            <span className="block font-semibold text-[15px]">
+            <span className="block font-semibold text-[15px] text-ink">
               {googleBusy ? 'Conectando…' : 'Continuar con Google'}
             </span>
-            <span className="block text-[12px]" style={{ color: 'rgba(26,22,20,0.55)' }}>
-              Recomendado · 1 toque
-            </span>
+            <span className="block text-[12px] text-ink-muted">Recomendado · 1 toque</span>
           </span>
-        </button>
+        </Card>
 
         <button
           type="button"
           onClick={onEmail}
-          className="mt-3 flex w-full items-center gap-3.5 rounded-[18px] p-4 text-left"
-          style={{ background: 'rgba(26,22,20,0.04)', border: '1px solid rgba(26,22,20,0.06)' }}
+          className="mt-3 flex w-full items-center gap-3.5 rounded-[18px] border border-ink/[0.06] bg-surface-low p-4 text-left transition-colors hover:bg-ink/[0.06]"
         >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <rect x="3" y="5" width="18" height="14" rx="2.5" stroke="#1A1614" strokeWidth="1.8" />
-            <path d="M3.5 7l8.5 6 8.5-6" stroke="#1A1614" strokeWidth="1.8" strokeLinecap="round" />
+            <rect
+              x="3"
+              y="5"
+              width="18"
+              height="14"
+              rx="2.5"
+              stroke="currentColor"
+              className="text-ink"
+              strokeWidth="1.8"
+            />
+            <path
+              d="M3.5 7l8.5 6 8.5-6"
+              stroke="currentColor"
+              className="text-ink"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+            />
           </svg>
           <span className="flex-1">
-            <span className="block font-semibold text-[15px]">Ingresar con correo</span>
-            <span className="block text-[12px]" style={{ color: 'rgba(26,22,20,0.55)' }}>
-              Crea tu cuenta en 1 paso
-            </span>
+            <span className="block font-semibold text-[15px] text-ink">Ingresar con correo</span>
+            <span className="block text-[12px] text-ink-muted">Crea tu cuenta en 1 paso</span>
           </span>
         </button>
 
         {error && <p className="mt-3 text-[13px] text-danger">{error}</p>}
 
         <div className="mt-6 flex items-center gap-3">
-          <span className="h-px flex-1" style={{ background: 'rgba(26,22,20,0.1)' }} />
-          <span className="t-eyebrow" style={{ marginBottom: 0 }}>
+          <span className="h-px flex-1 bg-ink/[0.10]" />
+          <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-muted">
             ¿Ya tienes cuenta?
           </span>
-          <span className="h-px flex-1" style={{ background: 'rgba(26,22,20,0.1)' }} />
+          <span className="h-px flex-1 bg-ink/[0.10]" />
         </div>
         <button
           type="button"
           onClick={onLogin}
-          className="mt-4 w-full text-center font-semibold text-[15px] text-brand"
+          className="mt-4 w-full text-center font-semibold text-[15px] text-brand transition-colors hover:text-brand-dark"
         >
           Iniciar sesión
         </button>
       </div>
 
-      <p
-        className="border-t px-5 pt-3 pb-5 text-center text-[11px]"
-        style={{ borderColor: 'rgba(26,22,20,0.06)', color: 'rgba(26,22,20,0.5)' }}
-      >
+      <p className="border-t border-ink/[0.04] px-5 pt-3 pb-5 text-center text-[11px] text-ink-muted">
         Al continuar aceptas los{' '}
         <Link href="/terminos" target="_blank" className="underline">
           Términos

@@ -1,0 +1,527 @@
+{
+  "nodes": [
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_md",
+      "label": "order-flow-audit.md",
+      "file_type": "document",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_auditor\u00eda_estado_actual_del_flujo_de_pedidos_b2c",
+      "label": "Auditor\u00eda: Estado actual del flujo de pedidos B2C",
+      "file_type": "document",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_1_timeout_de_confirmaci\u00f3n",
+      "label": "1. Timeout de confirmaci\u00f3n",
+      "file_type": "document",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L7"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_pregunta",
+      "label": "Pregunta",
+      "file_type": "document",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L9"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_evidencia_en_el_c\u00f3digo",
+      "label": "Evidencia en el C\u00f3digo",
+      "file_type": "document",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L12"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_comportamiento",
+      "label": "Comportamiento",
+      "file_type": "document",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L16"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_2_cancelaci\u00f3n_del_cliente",
+      "label": "2. Cancelaci\u00f3n del cliente",
+      "file_type": "document",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L23"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_pregunta_25",
+      "label": "Pregunta",
+      "file_type": "document",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L25"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_evidencia_en_el_c\u00f3digo_28",
+      "label": "Evidencia en el C\u00f3digo",
+      "file_type": "document",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L28"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_comportamiento_35",
+      "label": "Comportamiento",
+      "file_type": "document",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L35"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_3_m\u00e9todos_de_pago_en_checkout",
+      "label": "3. M\u00e9todos de pago en checkout",
+      "file_type": "document",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L45"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_pregunta_47",
+      "label": "Pregunta",
+      "file_type": "document",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L47"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_evidencia_en_el_c\u00f3digo_50",
+      "label": "Evidencia en el C\u00f3digo",
+      "file_type": "document",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L50"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_comportamiento_55",
+      "label": "Comportamiento",
+      "file_type": "document",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L55"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_4_validaci\u00f3n_de_celular_y_pedidos_hist\u00f3ricos_en_checkout",
+      "label": "4. Validaci\u00f3n de Celular y Pedidos Hist\u00f3ricos en Checkout",
+      "file_type": "document",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L64"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_pregunta_66",
+      "label": "Pregunta",
+      "file_type": "document",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L66"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_evidencia_en_el_c\u00f3digo_69",
+      "label": "Evidencia en el C\u00f3digo",
+      "file_type": "document",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L69"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_comportamiento_73",
+      "label": "Comportamiento",
+      "file_type": "document",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L73"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_5_verificaci\u00f3n_de_comprobante_yape_plin",
+      "label": "5. Verificaci\u00f3n de comprobante Yape/Plin",
+      "file_type": "document",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L83"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_pregunta_85",
+      "label": "Pregunta",
+      "file_type": "document",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L85"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_evidencia_en_el_c\u00f3digo_88",
+      "label": "Evidencia en el C\u00f3digo",
+      "file_type": "document",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L88"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_flujo_operativo",
+      "label": "Flujo Operativo",
+      "file_type": "document",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L94"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_6_ventana_de_10_minutos_para_auditar_prepagos",
+      "label": "6. Ventana de 10 minutos para auditar prepagos",
+      "file_type": "document",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L103"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_pregunta_105",
+      "label": "Pregunta",
+      "file_type": "document",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L105"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_evidencia_en_el_c\u00f3digo_108",
+      "label": "Evidencia en el C\u00f3digo",
+      "file_type": "document",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L108"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_comportamiento_113",
+      "label": "Comportamiento",
+      "file_type": "document",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L113"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_7_flujo_de_estados_m\u00e1quina_de_estados",
+      "label": "7. Flujo de estados (M\u00e1quina de Estados)",
+      "file_type": "document",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L120"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_evidencia_en_el_c\u00f3digo_122",
+      "label": "Evidencia en el C\u00f3digo",
+      "file_type": "document",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L122"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_estados_posibles",
+      "label": "Estados Posibles",
+      "file_type": "document",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L127"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_transiciones_v\u00e1lidas_m\u00e1quina_de_estados",
+      "label": "Transiciones V\u00e1lidas (M\u00e1quina de Estados)",
+      "file_type": "document",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L140"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_8_notificaciones_de_pedido_nuevo_al_restaurante",
+      "label": "8. Notificaciones de Pedido Nuevo al Restaurante",
+      "file_type": "document",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L177"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_evidencia_en_el_c\u00f3digo_179",
+      "label": "Evidencia en el C\u00f3digo",
+      "file_type": "document",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L179"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_comportamiento_185",
+      "label": "Comportamiento",
+      "file_type": "document",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L185"
+    }
+  ],
+  "edges": [
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_md",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_auditor\u00eda_estado_actual_del_flujo_de_pedidos_b2c",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_auditor\u00eda_estado_actual_del_flujo_de_pedidos_b2c",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_1_timeout_de_confirmaci\u00f3n",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_1_timeout_de_confirmaci\u00f3n",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_pregunta",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_1_timeout_de_confirmaci\u00f3n",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_evidencia_en_el_c\u00f3digo",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L12",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_1_timeout_de_confirmaci\u00f3n",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_comportamiento",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L16",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_auditor\u00eda_estado_actual_del_flujo_de_pedidos_b2c",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_2_cancelaci\u00f3n_del_cliente",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L23",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_2_cancelaci\u00f3n_del_cliente",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_pregunta_25",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L25",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_2_cancelaci\u00f3n_del_cliente",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_evidencia_en_el_c\u00f3digo_28",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L28",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_2_cancelaci\u00f3n_del_cliente",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_comportamiento_35",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L35",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_auditor\u00eda_estado_actual_del_flujo_de_pedidos_b2c",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_3_m\u00e9todos_de_pago_en_checkout",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L45",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_3_m\u00e9todos_de_pago_en_checkout",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_pregunta_47",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L47",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_3_m\u00e9todos_de_pago_en_checkout",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_evidencia_en_el_c\u00f3digo_50",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L50",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_3_m\u00e9todos_de_pago_en_checkout",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_comportamiento_55",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L55",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_auditor\u00eda_estado_actual_del_flujo_de_pedidos_b2c",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_4_validaci\u00f3n_de_celular_y_pedidos_hist\u00f3ricos_en_checkout",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L64",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_4_validaci\u00f3n_de_celular_y_pedidos_hist\u00f3ricos_en_checkout",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_pregunta_66",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L66",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_4_validaci\u00f3n_de_celular_y_pedidos_hist\u00f3ricos_en_checkout",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_evidencia_en_el_c\u00f3digo_69",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L69",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_4_validaci\u00f3n_de_celular_y_pedidos_hist\u00f3ricos_en_checkout",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_comportamiento_73",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L73",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_auditor\u00eda_estado_actual_del_flujo_de_pedidos_b2c",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_5_verificaci\u00f3n_de_comprobante_yape_plin",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L83",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_5_verificaci\u00f3n_de_comprobante_yape_plin",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_pregunta_85",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L85",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_5_verificaci\u00f3n_de_comprobante_yape_plin",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_evidencia_en_el_c\u00f3digo_88",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L88",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_5_verificaci\u00f3n_de_comprobante_yape_plin",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_flujo_operativo",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L94",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_auditor\u00eda_estado_actual_del_flujo_de_pedidos_b2c",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_6_ventana_de_10_minutos_para_auditar_prepagos",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L103",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_6_ventana_de_10_minutos_para_auditar_prepagos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_pregunta_105",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L105",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_6_ventana_de_10_minutos_para_auditar_prepagos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_evidencia_en_el_c\u00f3digo_108",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L108",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_6_ventana_de_10_minutos_para_auditar_prepagos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_comportamiento_113",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L113",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_auditor\u00eda_estado_actual_del_flujo_de_pedidos_b2c",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_7_flujo_de_estados_m\u00e1quina_de_estados",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L120",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_7_flujo_de_estados_m\u00e1quina_de_estados",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_evidencia_en_el_c\u00f3digo_122",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L122",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_7_flujo_de_estados_m\u00e1quina_de_estados",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_estados_posibles",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L127",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_7_flujo_de_estados_m\u00e1quina_de_estados",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_transiciones_v\u00e1lidas_m\u00e1quina_de_estados",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L140",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_auditor\u00eda_estado_actual_del_flujo_de_pedidos_b2c",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_8_notificaciones_de_pedido_nuevo_al_restaurante",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L177",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_8_notificaciones_de_pedido_nuevo_al_restaurante",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_evidencia_en_el_c\u00f3digo_179",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L179",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_8_notificaciones_de_pedido_nuevo_al_restaurante",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_context_order_flow_audit_comportamiento_185",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/context/order-flow-audit.md",
+      "source_location": "L185",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

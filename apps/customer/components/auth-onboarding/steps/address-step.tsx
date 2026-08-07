@@ -1,10 +1,12 @@
 'use client'
 
+import { Button } from '@tindivo/ui'
 import { type FormEvent, useState } from 'react'
 import {
   AddressFields,
   type AddressValue,
   EMPTY_ADDRESS,
+  isLineOk,
   isReferenceOk,
 } from '@/components/address-fields'
 import { saveAddress } from '../persistence'
@@ -15,18 +17,20 @@ export function AddressStep({
   userId,
   onBack,
   onDone,
+  mode = 'onboarding',
 }: {
   active: boolean
   userId: string | null
   onBack: () => void
   onDone: () => void
+  mode?: 'onboarding' | 'gate'
 }) {
   const [addr, setAddr] = useState<AddressValue>(EMPTY_ADDRESS)
   const [insideZone, setInsideZone] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const valid = isReferenceOk(addr.reference) && insideZone
+  const valid = isReferenceOk(addr.reference) && isLineOk(addr.line) && insideZone
 
   function patch(p: Partial<AddressValue>) {
     setAddr((a) => ({ ...a, ...p }))
@@ -57,13 +61,13 @@ export function AddressStep({
 
   return (
     <form onSubmit={onSubmit} className="flex h-full flex-col">
-      <div className="t-scroll flex-1 px-5 pt-2 pb-4">
-        <h2 className="t-display text-[24px] leading-[1.15]">
+      <div className="flex-1 overflow-y-auto px-5 pt-2 pb-4 scrollbar-hide">
+        <h2 className="font-display text-[24px] font-bold leading-[1.15] tracking-tight text-ink">
           Tu dirección
           <br />
           de entrega
         </h2>
-        <p className="mt-1.5 text-[14px]" style={{ color: 'rgba(26,22,20,0.6)' }}>
+        <p className="mt-1.5 text-[14px] text-ink-muted">
           Elige una etiqueta y marca tu casa en el mapa, o toca "Usar mi ubicación".
         </p>
 
@@ -77,27 +81,28 @@ export function AddressStep({
         {error && <p className="mt-3 text-[13px] text-danger">{error}</p>}
       </div>
 
-      <div
-        className="flex gap-2.5 border-t px-4 pt-3.5 pb-6"
-        style={{ borderColor: 'rgba(26,22,20,0.06)' }}
-      >
-        <button
+      <div className="flex gap-2.5 border-t border-ink/[0.04] px-4 pt-3.5 pb-6">
+        <Button
           type="button"
+          variant="ghost"
           onClick={onBack}
-          className="rounded-[14px] px-5 font-semibold text-[15px]"
-          style={{ background: 'rgba(26,22,20,0.06)' }}
+          className="rounded-[14px]"
           tabIndex={active ? 0 : -1}
         >
-          Atrás
-        </button>
-        <button
+          {mode === 'gate' ? 'Cancelar' : 'Atrás'}
+        </Button>
+        <Button
           type="submit"
-          className="t-btn t-btn-primary flex-1"
+          className="flex-1"
           disabled={!valid || busy}
           tabIndex={active ? 0 : -1}
         >
-          {busy ? 'Guardando…' : 'Guardar y empezar a pedir'}
-        </button>
+          {busy
+            ? 'Guardando…'
+            : mode === 'gate'
+              ? 'Confirmar dirección'
+              : 'Guardar y empezar a pedir'}
+        </Button>
       </div>
     </form>
   )

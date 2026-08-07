@@ -13,27 +13,25 @@ function Stepper({ current }: { current: number }) {
         {MOMENTS.map((label, i) => (
           <div key={label} className="flex flex-1 items-center last:flex-none">
             <span
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full"
-              style={{
-                background: i <= current ? '#F97316' : 'rgba(255,255,255,0.12)',
-                boxShadow: i === current ? '0 0 0 5px rgba(249,115,22,0.25)' : undefined,
-              }}
+              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-all ${
+                i <= current ? 'bg-brand ring-2 ring-brand/25' : 'bg-white/[0.12]'
+              }`}
             >
               {i < current ? (
                 <span className="text-white">
-                  <Icon.Check />
+                  <Icon name="check" size={20} />
                 </span>
               ) : (
                 <span
-                  className="h-2 w-2 rounded-full"
-                  style={{ background: i === current ? '#fff' : 'rgba(255,255,255,0.4)' }}
+                  className={`h-2 w-2 rounded-full ${i === current ? 'bg-white' : 'bg-white/40'}`}
                 />
               )}
             </span>
             {i < MOMENTS.length - 1 && (
               <span
-                className="mx-1 h-0.5 flex-1"
-                style={{ background: i < current ? '#F97316' : 'rgba(255,255,255,0.15)' }}
+                className={`mx-1 h-0.5 flex-1 rounded-full ${
+                  i < current ? 'bg-brand' : 'bg-white/15'
+                }`}
               />
             )}
           </div>
@@ -43,11 +41,9 @@ function Stepper({ current }: { current: number }) {
         {MOMENTS.map((label, i) => (
           <span
             key={label}
-            className="font-mono text-[9px] uppercase"
-            style={{
-              letterSpacing: '0.08em',
-              color: i === current ? '#FDBA74' : 'rgba(255,255,255,0.45)',
-            }}
+            className={`font-mono text-[10px] uppercase tracking-widest ${
+              i === current ? 'text-brand-light' : 'text-white/45'
+            }`}
           >
             {label}
           </span>
@@ -78,57 +74,43 @@ export function StatusHero({ detail, moment }: { detail: OrderDetailResponse; mo
               : 'No cobres nada al cliente'
 
   return (
-    <div
-      className="relative overflow-hidden rounded-[22px] px-5 py-[22px] text-white"
-      style={{ background: '#1A1614' }}
-    >
+    <div className="relative overflow-hidden rounded-[22px] bg-gradient-to-br from-ink via-ink to-brand-dark px-5 py-[22px] text-white shadow-elev-3">
       <div
-        className="pointer-events-none absolute top-0 right-0 h-[140px] w-[140px] rounded-full"
-        style={{
-          background: `radial-gradient(circle, ${
-            moment === 2 ? 'rgba(22,163,74,0.45)' : 'rgba(249,115,22,0.4)'
-          } 0%, transparent 70%)`,
-          transform: 'translate(40px,-40px)',
-        }}
+        className={`pointer-events-none absolute top-0 right-0 h-[160px] w-[160px] translate-x-10 -translate-y-10 rounded-full opacity-40 blur-3xl ${
+          moment === 2 ? 'bg-success/40' : 'bg-brand/40'
+        }`}
       />
       <span
-        className="relative inline-flex items-center gap-1.5 rounded-full px-2.5 py-[5px] font-mono text-[10px] uppercase"
-        style={{
-          letterSpacing: '0.2em',
-          background: moment === 2 ? 'rgba(22,163,74,0.25)' : 'rgba(249,115,22,0.2)',
-          color: moment === 2 ? '#BBF7D0' : '#FED7AA',
-        }}
+        className={`relative inline-flex items-center gap-1.5 rounded-full px-2.5 py-[5px] font-mono text-[10px] uppercase tracking-[0.2em] ${
+          moment === 2 ? 'bg-success/25 text-success-soft' : 'bg-brand/20 text-white/90'
+        }`}
       >
         <span
-          className="h-1.5 w-1.5 animate-pulse rounded-full"
-          style={{ background: moment === 2 ? '#4ADE80' : '#FDBA74' }}
+          className={`h-1.5 w-1.5 animate-pulse rounded-full ${
+            moment === 2 ? 'bg-success-soft' : 'bg-brand-light'
+          }`}
         />
         Pedido #{order.shortId}
       </span>
 
       {moment === 2 ? (
         <div className="relative mt-3">
-          <p
-            className="font-mono text-[11px] uppercase"
-            style={{ letterSpacing: '0.14em', color: 'rgba(255,255,255,0.6)' }}
-          >
+          <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-white/60">
             {collecting ? 'Cobrar al entregar' : 'Pedido pagado'}
           </p>
           {collecting ? (
-            <p className="t-display mt-1 text-[36px] tabular-nums">{soles(total)}</p>
+            <p className="mt-1 font-display text-[36px] font-bold tracking-tight tabular-nums">
+              {soles(total)}
+            </p>
           ) : (
-            <p className="t-display mt-1 text-[28px]">Ya está pagado</p>
+            <p className="mt-1 font-display text-[28px] font-bold tracking-tight">Ya está pagado</p>
           )}
-          <p className="mt-1 text-[14px]" style={{ color: 'rgba(255,255,255,0.7)' }}>
-            {sub}
-          </p>
+          <p className="mt-1 text-[14px] text-white/70">{sub}</p>
         </div>
       ) : (
         <div className="relative mt-3">
-          <p className="t-display text-[28px]">{title}</p>
-          <p className="mt-1 text-[14px]" style={{ color: 'rgba(255,255,255,0.7)' }}>
-            {sub}
-          </p>
+          <p className="font-display text-[28px] font-bold tracking-tight">{title}</p>
+          <p className="mt-1 text-[14px] text-white/70">{sub}</p>
         </div>
       )}
 

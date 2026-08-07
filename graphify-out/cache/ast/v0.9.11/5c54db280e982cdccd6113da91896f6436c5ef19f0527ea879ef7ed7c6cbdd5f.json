@@ -1,0 +1,863 @@
+{
+  "nodes": [
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_md",
+      "label": "09-flujo-negocios.md",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_09_flujo_del_negocio_negocios_tindivo_com",
+      "label": "09 \u00b7 Flujo del negocio \u00b7 negocios.tindivo.com",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_tabla_de_contenidos",
+      "label": "Tabla de contenidos",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L7"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_1_premisa_de_dise\u00f1o",
+      "label": "1. Premisa de dise\u00f1o",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L29"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_2_capacidades_y_modo_primario",
+      "label": "2. Capacidades y modo primario",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L39"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_modelo_4_dimensiones_ortogonales",
+      "label": "Modelo (4 dimensiones ortogonales)",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L41"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_derivaci\u00f3n_autom\u00e1tica_trigger_en_bd",
+      "label": "Derivaci\u00f3n autom\u00e1tica (trigger en BD)",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L51"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_reglas_de_consistencia_validadas_en_bd_por_check_constraint",
+      "label": "Reglas de consistencia (validadas en BD por CHECK constraint)",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L70"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_persistencia",
+      "label": "Persistencia",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L78"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_3_onboarding_obligatorio",
+      "label": "3. Onboarding obligatorio",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L90"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_pantalla_1_qu\u00e9_necesitas_wizard_con_dependencias",
+      "label": "Pantalla 1 \u2014 Qu\u00e9 necesitas (wizard con dependencias)",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L94"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_pantalla_2_resumen_y_confirmaci\u00f3n",
+      "label": "Pantalla 2 \u2014 Resumen y confirmaci\u00f3n",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L132"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_pantalla_3_datos_b\u00e1sicos",
+      "label": "Pantalla 3 \u2014 Datos b\u00e1sicos",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L161"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_pantalla_4_condicional_yape",
+      "label": "Pantalla 4 (condicional) \u2014 Yape",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L171"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_pantalla_5_condicional_primer_men\u00fa",
+      "label": "Pantalla 5 (condicional) \u2014 Primer men\u00fa",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L193"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_4_dashboard_adaptativo",
+      "label": "4. Dashboard adaptativo",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L220"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_bottomnav_condicional",
+      "label": "BottomNav condicional",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L235"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_5_flujo_drivers_only_solo_pedir_motorizado",
+      "label": "5. Flujo `drivers_only` (solo pedir motorizado)",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L258"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_home_drivers_only",
+      "label": "Home `drivers_only`",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L262"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_pedir_moto_form_r\u00e1pido",
+      "label": "\"Pedir moto\" \u2014 form r\u00e1pido",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L295"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_animaci\u00f3n",
+      "label": "Animaci\u00f3n",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L345"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_6_flujo_catalog_pickup_solo_pickup_web",
+      "label": "6. Flujo `catalog_pickup` (solo pickup web)",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L351"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_home_catalog_pickup",
+      "label": "Home `catalog_pickup`",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L359"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_7_flujo_catalog_delivery_y_catalog_full",
+      "label": "7. Flujo `catalog_delivery` y `catalog_full`",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L392"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_catalog_delivery_solo_delivery_web",
+      "label": "`catalog_delivery` (solo delivery web)",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L396"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_catalog_full_pickup_delivery_web",
+      "label": "`catalog_full` (pickup + delivery web)",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L404"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_home_catalog_delivery_y_catalog_full",
+      "label": "Home `catalog_delivery` y `catalog_full`",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L412"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_8_flujo_pickup_local",
+      "label": "8. Flujo `pickup_local`",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L445"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_9_editor_de_men\u00fa",
+      "label": "9. Editor de men\u00fa",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L453"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_estructura",
+      "label": "Estructura",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L457"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_vista_principal",
+      "label": "Vista principal",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L466"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_editor_de_categor\u00eda_sheet",
+      "label": "Editor de categor\u00eda (sheet)",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L504"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_editor_de_item_sheet",
+      "label": "Editor de item (sheet)",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L511"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_editor_de_grupo_de_modificadores",
+      "label": "Editor de grupo de modificadores",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L523"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_editor_de_opci\u00f3n_de_modificador",
+      "label": "Editor de opci\u00f3n de modificador",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L532"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_reglas",
+      "label": "Reglas",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L539"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_10_pedidos_pendientes_de_aceptaci\u00f3n_web",
+      "label": "10. Pedidos pendientes de aceptaci\u00f3n (web)",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L547"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_vista",
+      "label": "Vista",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L551"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_acciones",
+      "label": "Acciones",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L581"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_auto_cancel",
+      "label": "Auto-cancel",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L586"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_11_pedidos_activos",
+      "label": "11. Pedidos activos",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L592"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_12_detalle_de_pedido",
+      "label": "12. Detalle de pedido",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L626"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_acciones_disponibles_por_estado",
+      "label": "Acciones disponibles por estado",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L668"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_13_crear_pedido_manual",
+      "label": "13. Crear pedido manual",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L680"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_14_cash_recibido",
+      "label": "14. Cash recibido",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L707"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_confirmar",
+      "label": "Confirmar",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L734"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_reportar_diferencia",
+      "label": "Reportar diferencia",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L738"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_15_deuda_y_settlements",
+      "label": "15. Deuda y settlements",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L766"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_si_est\u00e1_bloqueado_por_mora",
+      "label": "Si est\u00e1 bloqueado por mora",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L797"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_16_perfil_y_configuraci\u00f3n",
+      "label": "16. Perfil y configuraci\u00f3n",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L815"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_17_cambio_de_capacidades_en_vivo",
+      "label": "17. Cambio de capacidades en vivo",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L830"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_reglas_de_consistencia_validadas_en_cliente_endpoint_bd",
+      "label": "Reglas de consistencia (validadas en cliente + endpoint + BD)",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L862"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_casos_de_uso_del_cambio",
+      "label": "Casos de uso del cambio",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L871"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_acciones_a_la_ui_tras_cambio",
+      "label": "Acciones a la UI tras cambio",
+      "file_type": "document",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L888"
+    }
+  ],
+  "edges": [
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_md",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_09_flujo_del_negocio_negocios_tindivo_com",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_09_flujo_del_negocio_negocios_tindivo_com",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_tabla_de_contenidos",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_09_flujo_del_negocio_negocios_tindivo_com",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_1_premisa_de_dise\u00f1o",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L29",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_09_flujo_del_negocio_negocios_tindivo_com",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_2_capacidades_y_modo_primario",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L39",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_2_capacidades_y_modo_primario",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_modelo_4_dimensiones_ortogonales",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L41",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_2_capacidades_y_modo_primario",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_derivaci\u00f3n_autom\u00e1tica_trigger_en_bd",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L51",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_2_capacidades_y_modo_primario",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_reglas_de_consistencia_validadas_en_bd_por_check_constraint",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L70",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_2_capacidades_y_modo_primario",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_persistencia",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L78",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_09_flujo_del_negocio_negocios_tindivo_com",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_3_onboarding_obligatorio",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L90",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_3_onboarding_obligatorio",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_pantalla_1_qu\u00e9_necesitas_wizard_con_dependencias",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L94",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_3_onboarding_obligatorio",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_pantalla_2_resumen_y_confirmaci\u00f3n",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L132",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_3_onboarding_obligatorio",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_pantalla_3_datos_b\u00e1sicos",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L161",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_3_onboarding_obligatorio",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_pantalla_4_condicional_yape",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L171",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_3_onboarding_obligatorio",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_pantalla_5_condicional_primer_men\u00fa",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L193",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_09_flujo_del_negocio_negocios_tindivo_com",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_4_dashboard_adaptativo",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L220",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_4_dashboard_adaptativo",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_bottomnav_condicional",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L235",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_09_flujo_del_negocio_negocios_tindivo_com",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_5_flujo_drivers_only_solo_pedir_motorizado",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L258",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_5_flujo_drivers_only_solo_pedir_motorizado",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_home_drivers_only",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L262",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_5_flujo_drivers_only_solo_pedir_motorizado",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_pedir_moto_form_r\u00e1pido",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L295",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_5_flujo_drivers_only_solo_pedir_motorizado",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_animaci\u00f3n",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L345",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_09_flujo_del_negocio_negocios_tindivo_com",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_6_flujo_catalog_pickup_solo_pickup_web",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L351",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_6_flujo_catalog_pickup_solo_pickup_web",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_home_catalog_pickup",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L359",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_09_flujo_del_negocio_negocios_tindivo_com",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_7_flujo_catalog_delivery_y_catalog_full",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L392",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_7_flujo_catalog_delivery_y_catalog_full",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_catalog_delivery_solo_delivery_web",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L396",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_7_flujo_catalog_delivery_y_catalog_full",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_catalog_full_pickup_delivery_web",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L404",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_7_flujo_catalog_delivery_y_catalog_full",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_home_catalog_delivery_y_catalog_full",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L412",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_09_flujo_del_negocio_negocios_tindivo_com",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_8_flujo_pickup_local",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L445",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_09_flujo_del_negocio_negocios_tindivo_com",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_9_editor_de_men\u00fa",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L453",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_9_editor_de_men\u00fa",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_estructura",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L457",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_9_editor_de_men\u00fa",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_vista_principal",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L466",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_9_editor_de_men\u00fa",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_editor_de_categor\u00eda_sheet",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L504",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_9_editor_de_men\u00fa",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_editor_de_item_sheet",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L511",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_9_editor_de_men\u00fa",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_editor_de_grupo_de_modificadores",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L523",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_9_editor_de_men\u00fa",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_editor_de_opci\u00f3n_de_modificador",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L532",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_9_editor_de_men\u00fa",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_reglas",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L539",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_09_flujo_del_negocio_negocios_tindivo_com",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_10_pedidos_pendientes_de_aceptaci\u00f3n_web",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L547",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_10_pedidos_pendientes_de_aceptaci\u00f3n_web",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_vista",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L551",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_10_pedidos_pendientes_de_aceptaci\u00f3n_web",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_acciones",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L581",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_10_pedidos_pendientes_de_aceptaci\u00f3n_web",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_auto_cancel",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L586",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_09_flujo_del_negocio_negocios_tindivo_com",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_11_pedidos_activos",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L592",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_09_flujo_del_negocio_negocios_tindivo_com",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_12_detalle_de_pedido",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L626",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_12_detalle_de_pedido",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_acciones_disponibles_por_estado",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L668",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_09_flujo_del_negocio_negocios_tindivo_com",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_13_crear_pedido_manual",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L680",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_09_flujo_del_negocio_negocios_tindivo_com",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_14_cash_recibido",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L707",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_14_cash_recibido",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_confirmar",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L734",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_14_cash_recibido",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_reportar_diferencia",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L738",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_09_flujo_del_negocio_negocios_tindivo_com",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_15_deuda_y_settlements",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L766",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_15_deuda_y_settlements",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_si_est\u00e1_bloqueado_por_mora",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L797",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_09_flujo_del_negocio_negocios_tindivo_com",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_16_perfil_y_configuraci\u00f3n",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L815",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_09_flujo_del_negocio_negocios_tindivo_com",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_17_cambio_de_capacidades_en_vivo",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L830",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_17_cambio_de_capacidades_en_vivo",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_reglas_de_consistencia_validadas_en_cliente_endpoint_bd",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L862",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_17_cambio_de_capacidades_en_vivo",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_casos_de_uso_del_cambio",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L871",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_17_cambio_de_capacidades_en_vivo",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_09_flujo_negocios_acciones_a_la_ui_tras_cambio",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/09-flujo-negocios.md",
+      "source_location": "L888",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

@@ -15,7 +15,7 @@ export function orderUrgency(
 }
 
 export const URGENCY_CARD: Record<Urgency, string> = {
-  overdue: 'border-2 border-danger bg-danger/5',
-  ready: 'border-2 border-warning bg-warning/5',
-  normal: 'border border-ink/5 bg-white',
+  overdue: 'border border-danger/20 bg-danger-soft',
+  ready: 'border border-warning/25 bg-warning-soft',
+  normal: 'border border-ink/[0.04] bg-white',
 }

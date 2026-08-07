@@ -41,7 +41,10 @@ function Legend({ dot, label }: { dot: string; label: string }) {
 function ActiveOrderCard({ o }: { o: OrderRow }) {
   const s = ORDER_STATUS[o.status] ?? { label: o.status, tone: 'neutral' as const }
   return (
-    <div className="rounded-[16px] border border-ink/5 bg-surface p-3">
+    <Link
+      href={`/orders/${o.id}`}
+      className="block rounded-[16px] border border-ink/5 bg-surface p-3 transition-colors hover:border-ink/15"
+    >
       <div className="flex items-center justify-between gap-2">
         <span className="font-mono text-[13px] text-ink">#{o.short_id}</span>
         <StatusBadge label={s.label} tone={s.tone} />
@@ -50,7 +53,7 @@ function ActiveOrderCard({ o }: { o: OrderRow }) {
       <p className="mt-0.5 font-mono text-[12px] text-ink-subtle tabular-nums">
         {soles(o.order_amount)}
       </p>
-    </div>
+    </Link>
   )
 }
 

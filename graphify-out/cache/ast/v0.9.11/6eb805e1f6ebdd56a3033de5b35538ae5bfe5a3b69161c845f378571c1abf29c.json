@@ -1,0 +1,303 @@
+{
+  "nodes": [
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_md",
+      "label": "14-roadmap-y-fuera-de-mvp.md",
+      "file_type": "document",
+      "source_file": "Docs/14-roadmap-y-fuera-de-mvp.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_14_roadmap_y_fuera_de_alcance_del_mvp",
+      "label": "14 \u00b7 Roadmap y fuera de alcance del MVP",
+      "file_type": "document",
+      "source_file": "Docs/14-roadmap-y-fuera-de-mvp.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_tabla_de_contenidos",
+      "label": "Tabla de contenidos",
+      "file_type": "document",
+      "source_file": "Docs/14-roadmap-y-fuera-de-mvp.md",
+      "source_location": "L7"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_1_principios_para_post_mvp",
+      "label": "1. Principios para post-MVP",
+      "file_type": "document",
+      "source_file": "Docs/14-roadmap-y-fuera-de-mvp.md",
+      "source_location": "L28"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_2_encomiendas",
+      "label": "2. Encomiendas",
+      "file_type": "document",
+      "source_file": "Docs/14-roadmap-y-fuera-de-mvp.md",
+      "source_location": "L39"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_3_tienda_tindivo_com",
+      "label": "3. tienda.tindivo.com",
+      "file_type": "document",
+      "source_file": "Docs/14-roadmap-y-fuera-de-mvp.md",
+      "source_location": "L58"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_4_apps_nativas_ios_android",
+      "label": "4. Apps nativas iOS / Android",
+      "file_type": "document",
+      "source_file": "Docs/14-roadmap-y-fuera-de-mvp.md",
+      "source_location": "L77"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_5_pasarela_de_pago_digital",
+      "label": "5. Pasarela de pago digital",
+      "file_type": "document",
+      "source_file": "Docs/14-roadmap-y-fuera-de-mvp.md",
+      "source_location": "L96"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_6_real_time_gps_tracking",
+      "label": "6. Real-time GPS tracking",
+      "file_type": "document",
+      "source_file": "Docs/14-roadmap-y-fuera-de-mvp.md",
+      "source_location": "L114"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_7_cupones_promociones_y_descuentos",
+      "label": "7. Cupones, promociones y descuentos",
+      "file_type": "document",
+      "source_file": "Docs/14-roadmap-y-fuera-de-mvp.md",
+      "source_location": "L133"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_8_propinas_digitales_al_motorizado",
+      "label": "8. Propinas digitales al motorizado",
+      "file_type": "document",
+      "source_file": "Docs/14-roadmap-y-fuera-de-mvp.md",
+      "source_location": "L151"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_9_heatmap_geogr\u00e1fico_de_demanda",
+      "label": "9. Heatmap geogr\u00e1fico de demanda",
+      "file_type": "document",
+      "source_file": "Docs/14-roadmap-y-fuera-de-mvp.md",
+      "source_location": "L168"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_10_multi_tenant_replicar_a_otros_pueblos",
+      "label": "10. Multi-tenant (replicar a otros pueblos)",
+      "file_type": "document",
+      "source_file": "Docs/14-roadmap-y-fuera-de-mvp.md",
+      "source_location": "L184"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_11_rol_de_soporte",
+      "label": "11. Rol de soporte",
+      "file_type": "document",
+      "source_file": "Docs/14-roadmap-y-fuera-de-mvp.md",
+      "source_location": "L203"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_12_verificaci\u00f3n_de_tel\u00e9fono_por_sms",
+      "label": "12. Verificaci\u00f3n de tel\u00e9fono por SMS",
+      "file_type": "document",
+      "source_file": "Docs/14-roadmap-y-fuera-de-mvp.md",
+      "source_location": "L219"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_13_internacionalizaci\u00f3n_i18n",
+      "label": "13. Internacionalizaci\u00f3n (i18n)",
+      "file_type": "document",
+      "source_file": "Docs/14-roadmap-y-fuera-de-mvp.md",
+      "source_location": "L236"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_14_calificaciones_y_reviews",
+      "label": "14. Calificaciones y reviews",
+      "file_type": "document",
+      "source_file": "Docs/14-roadmap-y-fuera-de-mvp.md",
+      "source_location": "L251"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_15_programa_de_fidelizaci\u00f3n_del_cliente",
+      "label": "15. Programa de fidelizaci\u00f3n del cliente",
+      "file_type": "document",
+      "source_file": "Docs/14-roadmap-y-fuera-de-mvp.md",
+      "source_location": "L266"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_16_roadmap_propuesto_en_fases",
+      "label": "16. Roadmap propuesto en fases",
+      "file_type": "document",
+      "source_file": "Docs/14-roadmap-y-fuera-de-mvp.md",
+      "source_location": "L282"
+    }
+  ],
+  "edges": [
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_md",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_14_roadmap_y_fuera_de_alcance_del_mvp",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/14-roadmap-y-fuera-de-mvp.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_14_roadmap_y_fuera_de_alcance_del_mvp",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_tabla_de_contenidos",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/14-roadmap-y-fuera-de-mvp.md",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_14_roadmap_y_fuera_de_alcance_del_mvp",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_1_principios_para_post_mvp",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/14-roadmap-y-fuera-de-mvp.md",
+      "source_location": "L28",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_14_roadmap_y_fuera_de_alcance_del_mvp",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_2_encomiendas",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/14-roadmap-y-fuera-de-mvp.md",
+      "source_location": "L39",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_14_roadmap_y_fuera_de_alcance_del_mvp",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_3_tienda_tindivo_com",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/14-roadmap-y-fuera-de-mvp.md",
+      "source_location": "L58",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_14_roadmap_y_fuera_de_alcance_del_mvp",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_4_apps_nativas_ios_android",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/14-roadmap-y-fuera-de-mvp.md",
+      "source_location": "L77",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_14_roadmap_y_fuera_de_alcance_del_mvp",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_5_pasarela_de_pago_digital",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/14-roadmap-y-fuera-de-mvp.md",
+      "source_location": "L96",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_14_roadmap_y_fuera_de_alcance_del_mvp",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_6_real_time_gps_tracking",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/14-roadmap-y-fuera-de-mvp.md",
+      "source_location": "L114",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_14_roadmap_y_fuera_de_alcance_del_mvp",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_7_cupones_promociones_y_descuentos",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/14-roadmap-y-fuera-de-mvp.md",
+      "source_location": "L133",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_14_roadmap_y_fuera_de_alcance_del_mvp",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_8_propinas_digitales_al_motorizado",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/14-roadmap-y-fuera-de-mvp.md",
+      "source_location": "L151",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_14_roadmap_y_fuera_de_alcance_del_mvp",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_9_heatmap_geogr\u00e1fico_de_demanda",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/14-roadmap-y-fuera-de-mvp.md",
+      "source_location": "L168",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_14_roadmap_y_fuera_de_alcance_del_mvp",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_10_multi_tenant_replicar_a_otros_pueblos",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/14-roadmap-y-fuera-de-mvp.md",
+      "source_location": "L184",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_14_roadmap_y_fuera_de_alcance_del_mvp",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_11_rol_de_soporte",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/14-roadmap-y-fuera-de-mvp.md",
+      "source_location": "L203",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_14_roadmap_y_fuera_de_alcance_del_mvp",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_12_verificaci\u00f3n_de_tel\u00e9fono_por_sms",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/14-roadmap-y-fuera-de-mvp.md",
+      "source_location": "L219",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_14_roadmap_y_fuera_de_alcance_del_mvp",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_13_internacionalizaci\u00f3n_i18n",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/14-roadmap-y-fuera-de-mvp.md",
+      "source_location": "L236",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_14_roadmap_y_fuera_de_alcance_del_mvp",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_14_calificaciones_y_reviews",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/14-roadmap-y-fuera-de-mvp.md",
+      "source_location": "L251",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_14_roadmap_y_fuera_de_alcance_del_mvp",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_15_programa_de_fidelizaci\u00f3n_del_cliente",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/14-roadmap-y-fuera-de-mvp.md",
+      "source_location": "L266",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_14_roadmap_y_fuera_de_alcance_del_mvp",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_14_roadmap_y_fuera_de_mvp_16_roadmap_propuesto_en_fases",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/14-roadmap-y-fuera-de-mvp.md",
+      "source_location": "L282",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

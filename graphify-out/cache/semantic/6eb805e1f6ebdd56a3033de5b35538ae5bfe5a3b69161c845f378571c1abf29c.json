@@ -1,0 +1,657 @@
+{
+  "nodes": [
+    {
+      "id": "apps_nativas",
+      "label": "Apps Nativas iOS/Android",
+      "file_type": "concept",
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "businesses_table",
+      "label": "Businesses Table",
+      "file_type": "concept",
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "calificaciones_reviews",
+      "label": "Calificaciones y Reviews",
+      "file_type": "concept",
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "coupons_table",
+      "label": "Coupons Table",
+      "file_type": "concept",
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "customer_profiles_table",
+      "label": "Customer Profiles Table",
+      "file_type": "concept",
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "docs_14_roadmap_y_fuera_de_mvp",
+      "label": "Roadmap and Out-of-Scope Items",
+      "file_type": "document",
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "drivers_table",
+      "label": "Drivers Table",
+      "file_type": "concept",
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "encomiendas",
+      "label": "Encomiendas",
+      "file_type": "concept",
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "fase_2",
+      "label": "Fase 2",
+      "file_type": "concept",
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "fase_3",
+      "label": "Fase 3",
+      "file_type": "concept",
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "fidelizacion",
+      "label": "Programa de Fidelizaci\u00f3n",
+      "file_type": "concept",
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "heatmap_demanda",
+      "label": "Heatmap Geogr\u00e1fico de Demanda",
+      "file_type": "concept",
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "i18n",
+      "label": "Internacionalizaci\u00f3n (i18n)",
+      "file_type": "concept",
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "loyalty_points_table",
+      "label": "Loyalty Points Table",
+      "file_type": "concept",
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "multi_tenant",
+      "label": "Multi-Tenant",
+      "file_type": "concept",
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "mvp_v2",
+      "label": "MVP v2",
+      "file_type": "concept",
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "orders_table",
+      "label": "Orders Table",
+      "file_type": "concept",
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "pasarela_pago",
+      "label": "Pasarela de Pago Digital",
+      "file_type": "concept",
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "payment_intent_table",
+      "label": "Payment Intent Table",
+      "file_type": "concept",
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "propinas_digitales",
+      "label": "Propinas Digitales",
+      "file_type": "concept",
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "real_time_gps",
+      "label": "Real-Time GPS Tracking",
+      "file_type": "concept",
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "reviews_table",
+      "label": "Reviews Table",
+      "file_type": "concept",
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "rol_soporte",
+      "label": "Rol de Soporte",
+      "file_type": "concept",
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "tienda_tindivo",
+      "label": "tienda.tindivo.com",
+      "file_type": "concept",
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "verificacion_telefono_sms",
+      "label": "Verificaci\u00f3n de Tel\u00e9fono por SMS",
+      "file_type": "concept",
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    }
+  ],
+  "edges": [
+    {
+      "source": "docs_14_roadmap_y_fuera_de_mvp",
+      "target": "mvp_v2",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_14_roadmap_y_fuera_de_mvp",
+      "target": "fase_2",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_14_roadmap_y_fuera_de_mvp",
+      "target": "fase_3",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_14_roadmap_y_fuera_de_mvp",
+      "target": "encomiendas",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_14_roadmap_y_fuera_de_mvp",
+      "target": "tienda_tindivo",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_14_roadmap_y_fuera_de_mvp",
+      "target": "apps_nativas",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_14_roadmap_y_fuera_de_mvp",
+      "target": "pasarela_pago",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_14_roadmap_y_fuera_de_mvp",
+      "target": "real_time_gps",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_14_roadmap_y_fuera_de_mvp",
+      "target": "cupones",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_14_roadmap_y_fuera_de_mvp",
+      "target": "propinas_digitales",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_14_roadmap_y_fuera_de_mvp",
+      "target": "heatmap_demanda",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_14_roadmap_y_fuera_de_mvp",
+      "target": "multi_tenant",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_14_roadmap_y_fuera_de_mvp",
+      "target": "rol_soporte",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_14_roadmap_y_fuera_de_mvp",
+      "target": "verificacion_telefono_sms",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_14_roadmap_y_fuera_de_mvp",
+      "target": "i18n",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_14_roadmap_y_fuera_de_mvp",
+      "target": "calificaciones_reviews",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_14_roadmap_y_fuera_de_mvp",
+      "target": "fidelizacion",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_14_roadmap_y_fuera_de_mvp",
+      "target": "orders_table",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_14_roadmap_y_fuera_de_mvp",
+      "target": "businesses_table",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_14_roadmap_y_fuera_de_mvp",
+      "target": "drivers_table",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_14_roadmap_y_fuera_de_mvp",
+      "target": "payment_intent_table",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_14_roadmap_y_fuera_de_mvp",
+      "target": "coupons_table",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_14_roadmap_y_fuera_de_mvp",
+      "target": "reviews_table",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_14_roadmap_y_fuera_de_mvp",
+      "target": "loyalty_points_table",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_14_roadmap_y_fuera_de_mvp",
+      "target": "customer_profiles_table",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "encomiendas",
+      "target": "orders_table",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "tienda_tindivo",
+      "target": "businesses_table",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "real_time_gps",
+      "target": "drivers_table",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "cupones",
+      "target": "coupons_table",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "pasarela_pago",
+      "target": "payment_intent_table",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "verificacion_telefono_sms",
+      "target": "customer_profiles_table",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "calificaciones_reviews",
+      "target": "reviews_table",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "fidelizacion",
+      "target": "loyalty_points_table",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "propinas_digitales",
+      "target": "orders_table",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "multi_tenant",
+      "target": "supabase_rls",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.7,
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md",
+      "source_location": null,
+      "weight": 1.0
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "post_mvp_features",
+      "label": "Post-MVP Features",
+      "nodes": [
+        "encomiendas",
+        "tienda_tindivo",
+        "apps_nativas",
+        "pasarela_pago",
+        "real_time_gps",
+        "cupones",
+        "propinas_digitales",
+        "heatmap_demanda",
+        "multi_tenant",
+        "rol_soporte",
+        "verificacion_telefono_sms",
+        "i18n",
+        "calificaciones_reviews",
+        "fidelizacion"
+      ],
+      "relation": "form",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\14-roadmap-y-fuera-de-mvp.md"
+    }
+  ]
+}

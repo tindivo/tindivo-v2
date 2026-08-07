@@ -1,4 +1,4 @@
-import { DeliveryMethodSchema, PaymentIntentSchema } from '@tindivo/contracts'
+import { BLACKLISTED_PHONES, DeliveryMethodSchema, PaymentIntentSchema } from '@tindivo/contracts'
 import { DomainError } from '@tindivo/core'
 import { z } from 'zod'
 import { requireRole } from '@/lib/http/auth'
@@ -14,10 +14,32 @@ export const dynamic = 'force-dynamic'
 const Schema = z.object({
   deliveryMethod: DeliveryMethodSchema,
   paymentIntent: PaymentIntentSchema,
+  // AQUÍ vive la obligatoriedad de la banda, no en el esquema de la DB.
+  //
+  // El RPC conserva `p_delivery_distance_band DEFAULT NULL` para que la firma
+  // aguante llamadas viejas sin reventar; una llamada sin banda queda marcada
+  // como `delivery_fee_source = 'system'`. Pero por ESTE endpoint no puede
+  // entrar un pedido sin banda: sin `.optional()`, zod lo rechaza con 422.
+  //
+  // Es deliberado y sigue el precedente del modal del motorizado en el v1
+  // (`confirm-pickup-modal.tsx`), que tampoco tenía valor por defecto: obligar
+  // a elegir en vez de caer a `near` en silencio. Un default aquí devolvería el
+  // problema que esta migración vino a resolver, pero con dos botones en
+  // pantalla dando falsa sensación de control.
+  deliveryDistanceBand: z.enum(['near', 'far']),
   customerName: z.string().trim().max(120).optional(),
-  customerPhone: z.string().trim().max(20).optional(),
+  customerPhone: z
+    .string()
+    .trim()
+    .max(20)
+    .refine((val) => !val || !BLACKLISTED_PHONES.includes(val.replace(/\D/g, '') as any), {
+      message: 'Número de teléfono de prueba no permitido',
+    })
+    .optional(),
   deliveryReference: z.string().trim().max(500).optional(),
-  notes: z.string().trim().max(500).optional(),
+  // `notes` se retiró en la migración 0127 junto con `p_notes`: era un campo que
+  // el RPC aceptaba desde la 0080 y descartaba en silencio. Ningún cliente lo
+  // enviaba. Una nota dirigida al MOTORIZADO es una idea aparte, sin diseñar.
   prepTimeMinutes: z.number().int().min(1).max(120).default(20),
   orderAmount: z.number().positive().max(99_999_999.99),
   clientPaysWith: z.number().nonnegative().max(99_999_999.99).optional(),
@@ -45,7 +67,7 @@ export async function POST(req: Request): Promise<Response> {
       p_order_amount: body.orderAmount,
       p_prep_time_minutes: body.prepTimeMinutes,
       p_delivery_reference: body.deliveryReference ?? undefined,
-      p_notes: body.notes ?? undefined,
+      p_delivery_distance_band: body.deliveryDistanceBand,
       p_client_pays_with: body.clientPaysWith ?? undefined,
       p_yape_amount: body.yapeAmount ?? undefined,
       p_cash_amount: body.cashAmount ?? undefined,

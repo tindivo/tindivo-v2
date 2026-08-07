@@ -6,6 +6,7 @@ export type UiSource = 'web' | 'manual'
 export type UiPayment = 'pending_cash' | 'pending_wallet' | 'prepaid' | 'pending_mixed'
 export type UiState =
   | 'pending_acceptance'
+  | 'awaiting_payment'
   | 'validando'
   | 'cooking'
   | 'buffer_p1'
@@ -21,11 +22,13 @@ export type OrderColumn = 'nuevos' | 'cocina' | 'reparto' | 'entregados'
 /** Columnas a traer de `orders` para el kanban (incl. nombre del motorizado). */
 export const ORDER_SELECT =
   'id,short_id,status,source,customer_name,customer_phone,delivery_reference,delivery_method,' +
-  'order_amount,delivery_fee,payment_intent,payment_proof_status,comprobante_prepago_url,' +
-  'prep_time_minutes,estimated_ready_at,prep_extension_count,client_pays_with,change_to_give,' +
+  'order_amount,delivery_fee,payment_intent,payment_proof_status,comprobante_prepago_url,proof_attempt,' +
+  'prep_time_minutes,estimated_ready_at,prep_extension_count,' +
+  'ready_early_used,ready_early_at,' +
+  'client_pays_with,change_to_give,' +
   'yape_amount,cash_amount,requires_validation,validation_reason_code,risk_flags,' +
-  'driver_id,created_at,pending_acceptance_at,validating_at,' +
-  'waiting_driver_at,picked_up_at,delivered_at,cancelled_at,cancel_note,driver:drivers(full_name)'
+  'driver_id,created_at,pending_acceptance_at,awaiting_payment_at,validating_at,' +
+  'waiting_driver_at,picked_up_at,delivered_at,cancelled_at,cancel_note,cancel_reason,driver:drivers(full_name)'
 
 const limaTime = new Intl.DateTimeFormat('es-PE', {
   hour: '2-digit',
@@ -54,9 +57,12 @@ export interface OrderRow {
   payment_intent: string
   payment_proof_status: string | null
   comprobante_prepago_url: string | null
+  proof_attempt?: number | null
   prep_time_minutes: number | null
   estimated_ready_at: string | null
   prep_extension_count: number | null
+  ready_early_used: boolean | null
+  ready_early_at: string | null
   client_pays_with: number | null
   change_to_give: number | null
   yape_amount: number | null
@@ -67,12 +73,14 @@ export interface OrderRow {
   driver_id: string | null
   created_at: string
   pending_acceptance_at: string | null
+  awaiting_payment_at: string | null
   validating_at: string | null
   waiting_driver_at: string | null
   picked_up_at: string | null
   delivered_at: string | null
   cancelled_at: string | null
   cancel_note: string | null
+  cancel_reason: string | null
   driver?: { full_name: string | null } | null
 }
 
@@ -94,6 +102,8 @@ export interface OrderVM {
   countdownSec: number
   prepMinutes: number | null
   minutesLeft: number | null
+  /** Segundos con signo entre `now` y `estimated_ready_at`. Positivo = tiempo restante, negativo = retraso. */
+  readySec: number | null
   bufferMinutes: number | null
   pickupMinAgo: number | null
   driver: { name: string } | null
@@ -106,10 +116,17 @@ export interface OrderVM {
   riskFlags: Record<string, unknown>
   extensionUsed: boolean
   extensionMin: number | null
+  /** La cajera ya declaró la comida lista. Oculta el botón y el cronómetro. */
+  readyEarly: boolean
+  /** `true` si "Marcar listo" tiene sentido: la comida puede seguir en cocina. */
+  canMarkReady: boolean
   proofStatus: string | null
   proofUrl: string | null
+  proofAttempt: number
+  createdAtFormatted: string | null
   closedAt: string | null
   cancelReason: string | null
+  cancelReasonCode: string | null
 }
 
 // Timeouts canónicos (DECISIONS.md §10). Configurables en app_settings.timers;
@@ -117,6 +134,19 @@ export interface OrderVM {
 const ACCEPT_SEC = 5 * 60
 const VALIDATE_SEC = 5 * 60
 const PREPAY_SEC = 10 * 60
+
+/**
+ * Formatea los segundos hasta/desde `estimated_ready_at` en `mm:ss` con signo.
+ * - Signo negativo si ya pasó (`-02:45` = retraso de 2 min 45 seg).
+ * - Sin signo si está a tiempo (`04:30` = 4 min 30 seg restantes).
+ */
+export function formatReadyDelta(sec: number): string {
+  const absSec = Math.abs(Math.round(sec))
+  const min = Math.floor(absSec / 60)
+  const remSec = absSec % 60
+  const sign = sec < 0 ? '-' : ''
+  return `${sign}${String(min).padStart(2, '0')}:${String(remSec).padStart(2, '0')}`
+}
 
 function minutesSince(iso: string | null, now: number): number {
   if (!iso) return 0
@@ -128,9 +158,18 @@ function secondsUntil(iso: string | null, addSec: number, now: number): number {
   return Math.max(0, Math.round((Date.parse(iso) + addSec * 1000 - now) / 1000))
 }
 
+/**
+ * Escalado de alarma para un pedido en `waiting_driver` sin motorizado.
+ *
+ * `waiting_driver` cambió de significado. Antes era el estado normal de
+ * tránsito y un escalado suave tenía sentido. Ahora el flujo normal va
+ * `preparing` → `heading_to_restaurant`, saltándoselo: si un pedido cae aquí
+ * es que la comida está lista y nadie la ha tomado. Es la excepción, y a los
+ * 5 minutos ya es demasiado tarde — por eso el rojo entra antes que antes.
+ */
 function bufferPhase(mins: number): UiState {
-  if (mins < 3) return 'buffer_p1'
-  if (mins < 5) return 'buffer_p2'
+  if (mins < 2) return 'buffer_p1'
+  if (mins < 4) return 'buffer_p2'
   return 'buffer_p3'
 }
 
@@ -141,7 +180,8 @@ export function mapPayment(intent: string): UiPayment {
 }
 
 export function getColumn(status: string): OrderColumn {
-  if (status === 'pending_acceptance' || status === 'validando') return 'nuevos'
+  if (status === 'pending_acceptance' || status === 'awaiting_payment' || status === 'validando')
+    return 'nuevos'
   if (
     [
       'confirmed',
@@ -160,6 +200,8 @@ function getUiState(row: OrderRow, now: number): UiState {
   switch (row.status) {
     case 'pending_acceptance':
       return 'pending_acceptance'
+    case 'awaiting_payment':
+      return 'awaiting_payment'
     case 'validando':
       return 'validando'
     case 'confirmed':
@@ -190,19 +232,47 @@ export function toOrderVM(row: OrderRow, now: number = Date.now()): OrderVM {
   const countdownSec =
     row.status === 'pending_acceptance'
       ? secondsUntil(row.pending_acceptance_at ?? row.created_at, ACCEPT_SEC, now)
-      : row.status === 'validando'
+      : row.status === 'awaiting_payment'
         ? secondsUntil(
-            row.validating_at ?? row.created_at,
-            row.payment_intent === 'prepaid' ? PREPAY_SEC : VALIDATE_SEC,
+            row.awaiting_payment_at ?? row.validating_at ?? row.created_at,
+            PREPAY_SEC,
             now,
           )
-        : 0
+        : row.status === 'validando'
+          ? secondsUntil(
+              row.validating_at ?? row.created_at,
+              row.payment_intent === 'prepaid' ? PREPAY_SEC : VALIDATE_SEC,
+              now,
+            )
+          : 0
 
+  // Minutos que faltan para que la comida esté lista.
+  //
+  // Se calcula también en `heading` y `waiting`, no solo en `cooking`: bajo el
+  // diseño actual el motorizado toma el pedido con 10 minutos de cocción
+  // restantes, así que el solapamiento "moto asignada + comida cocinándose" es
+  // el caso normal de todos los pedidos, no una excepción. La cajera necesita
+  // seguir viendo el reloj justo cuando el motorizado va en camino.
+  //
+  // En esos dos estados solo se muestra si la comida sigue cocinándose: si
+  // `estimated_ready_at` ya pasó, o si se marcó listo antes de tiempo, no hay
+  // nada que contar.
+  const readyAtMs = row.estimated_ready_at ? Date.parse(row.estimated_ready_at) : null
+  const stillCooking = readyAtMs != null && readyAtMs > now && !row.ready_early_used
   const minutesLeft =
     state === 'cooking'
-      ? row.estimated_ready_at
-        ? Math.max(0, Math.ceil((Date.parse(row.estimated_ready_at) - now) / 60000))
+      ? readyAtMs != null
+        ? Math.max(0, Math.ceil((readyAtMs - now) / 60000))
         : (row.prep_time_minutes ?? null)
+      : (state === 'heading' || state === 'waiting') && stillCooking
+        ? Math.max(0, Math.ceil((readyAtMs - now) / 60000))
+        : null
+
+  const readySec =
+    readyAtMs != null &&
+    !row.ready_early_used &&
+    (state === 'cooking' || state === 'heading' || state === 'waiting')
+      ? Math.round((readyAtMs - now) / 1000)
       : null
 
   const extCount = row.prep_extension_count ?? 0
@@ -225,6 +295,7 @@ export function toOrderVM(row: OrderRow, now: number = Date.now()): OrderVM {
     countdownSec,
     prepMinutes: row.prep_time_minutes ?? null,
     minutesLeft,
+    readySec,
     bufferMinutes:
       state === 'buffer_p1' || state === 'buffer_p2' || state === 'buffer_p3'
         ? minutesSince(row.waiting_driver_at, now)
@@ -244,10 +315,20 @@ export function toOrderVM(row: OrderRow, now: number = Date.now()): OrderVM {
     riskFlags: row.risk_flags ?? {},
     extensionUsed: extCount > 0,
     extensionMin: extCount > 0 ? extCount * 10 : null,
+    readyEarly: Boolean(row.ready_early_used),
+    // Los mismos cuatro estados que acepta advance_order('ready').
+    canMarkReady:
+      !row.ready_early_used &&
+      ['preparing', 'waiting_driver', 'heading_to_restaurant', 'waiting_at_restaurant'].includes(
+        row.status,
+      ),
     proofStatus: row.payment_proof_status,
     proofUrl: row.comprobante_prepago_url,
+    proofAttempt: row.proof_attempt ?? 0,
+    createdAtFormatted: fmtTime(row.created_at),
     closedAt: fmtTime(row.delivered_at ?? row.cancelled_at),
     cancelReason: row.status === 'cancelled' ? row.cancel_note : null,
+    cancelReasonCode: row.status === 'cancelled' ? row.cancel_reason : null,
   }
 }
 

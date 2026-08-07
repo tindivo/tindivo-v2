@@ -1,6 +1,6 @@
 'use client'
 
-import { Icon } from '@tindivo/ui'
+import { Button, Card, Icon } from '@tindivo/ui'
 import { mapsDirToCoords, mapsSearchAddress, telLink } from '@/lib/deeplinks'
 import type { OrderDetailResponse } from '@/lib/types'
 
@@ -15,53 +15,52 @@ export function BusinessCard({ business }: { business: OrderDetailResponse['busi
         : null
 
   return (
-    <div className="mt-3.5 rounded-[22px] border border-ink/5 bg-white p-[18px]">
-      <div className="flex items-start gap-3">
-        <span
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
-          style={{ background: 'rgba(249,115,22,0.1)', color: '#C2410C' }}
-        >
-          <Icon.Store />
+    <Card className="mt-3.5 overflow-hidden p-[18px]">
+      <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/55">
+        Recoges en
+      </span>
+      <div className="mt-1.5 flex items-start gap-3">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand-dark">
+          <Icon name="storefront" size={22} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="font-semibold text-[16px]">{business.name}</p>
+          <p className="text-[17px] font-semibold leading-tight">{business.name}</p>
           {business.address && (
-            <p className="mt-0.5 text-[13px]" style={{ color: 'rgba(26,22,20,0.55)' }}>
-              {business.address}
-            </p>
+            <p className="mt-0.5 text-[13px] leading-snug text-ink-muted">{business.address}</p>
+          )}
+          {business.phone && (
+            <p className="mt-0.5 font-mono text-[12.5px] text-ink-subtle">{business.phone}</p>
           )}
         </div>
       </div>
-      <div className="mt-3.5 grid grid-cols-2 gap-2">
-        {business.phone ? (
-          <a
+      <div className="mt-3.5 flex flex-wrap gap-2">
+        {business.phone && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1"
+            as="a"
             href={telLink(business.phone)}
-            className="t-btn t-btn-ghost"
-            style={{ padding: '12px 16px', fontSize: 14 }}
           >
-            <span className="mr-1.5 inline-flex align-middle">
-              <Icon.Phone />
-            </span>
+            <Icon name="phone" size={20} />
             Llamar
-          </a>
-        ) : (
-          <span />
+          </Button>
         )}
         {mapsHref && (
-          <a
+          <Button
+            variant="secondary"
+            size="sm"
+            className="flex-1"
+            as="a"
             href={mapsHref}
             target="_blank"
             rel="noopener noreferrer"
-            className="t-btn t-btn-secondary"
-            style={{ padding: '12px 16px', fontSize: 14 }}
           >
-            <span className="mr-1.5 inline-flex align-middle">
-              <Icon.Pin />
-            </span>
+            <Icon name="location_on" size={20} />
             Abrir en Maps
-          </a>
+          </Button>
         )}
       </div>
-    </div>
+    </Card>
   )
 }

@@ -18,7 +18,8 @@ export function OPTIONS(req: Request): Response {
 
 /**
  * El dueño actual del pedido acepta o rechaza la solicitud de traspaso.
- * Si la solicitud ya venció, el RPC aplica timeout-as-accept (silencio = sí).
+ * Si la solicitud ya venció, el RPC la cierra como 'expired' y el pedido se
+ * queda con su dueño actual (0119): responder tarde no cambia nada.
  */
 export async function POST(
   req: Request,

@@ -5,9 +5,7 @@ import dynamic from 'next/dynamic'
 // Leaflet toca `window`: cliente puro.
 const Inner = dynamic(() => import('./map-readonly-inner'), {
   ssr: false,
-  loading: () => (
-    <div className="h-full w-full animate-pulse" style={{ background: 'rgba(26,22,20,0.06)' }} />
-  ),
+  loading: () => <div className="h-full w-full animate-pulse bg-ink/[0.06]" />,
 })
 
 /** Mapa de la ubicación de entrega (pedidos online con coordenadas). */

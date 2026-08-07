@@ -1,5 +1,6 @@
 'use client'
 
+import { Button } from '@tindivo/ui'
 import { type FormEvent, useEffect, useState } from 'react'
 import { saveGoogleName } from '../persistence'
 
@@ -46,18 +47,18 @@ export function GoogleNameStep({
 
   return (
     <form onSubmit={onSubmit} className="flex h-full flex-col">
-      <div className="t-scroll flex-1 px-5 pt-2 pb-4">
-        <h2 className="t-display text-[24px] leading-[1.1]">¿Cómo te llamamos?</h2>
-        <p className="mt-1.5 text-[14px]" style={{ color: 'rgba(26,22,20,0.6)' }}>
-          Este nombre aparecerá en tu pedido.
-        </p>
+      <div className="flex-1 overflow-y-auto px-5 pt-2 pb-4 scrollbar-hide">
+        <h2 className="font-display text-[24px] font-bold leading-[1.1] tracking-tight text-ink">
+          ¿Cómo te llamamos?
+        </h2>
+        <p className="mt-1.5 text-[14px] text-ink-muted">Este nombre aparecerá en tu pedido.</p>
 
         <label className="mt-5 block">
-          <span className="t-field-label">
-            Nombre <span style={{ color: '#F97316' }}>*</span>
+          <span className="mb-2 block font-mono text-[12px] font-semibold uppercase tracking-wide text-ink-muted">
+            Nombre <span className="text-brand">*</span>
           </span>
           <input
-            className="t-field"
+            className="w-full rounded-2xl border border-ink/[0.06] bg-card px-4 py-3.5 text-[16px] font-medium text-ink outline-none transition-colors placeholder:text-ink-subtle focus:border-ink focus:ring-4 focus:ring-ink/[0.08]"
             placeholder="Tu nombre"
             value={name}
             onChange={(e) => setName(e.target.value.slice(0, 40))}
@@ -66,10 +67,7 @@ export function GoogleNameStep({
             tabIndex={active ? 0 : -1}
           />
         </label>
-        <div
-          className="mt-1.5 flex justify-between text-[12px]"
-          style={{ color: 'rgba(26,22,20,0.5)' }}
-        >
+        <div className="mt-1.5 flex justify-between text-[12px] text-ink-muted">
           <span>Mínimo 2 caracteres, solo letras.</span>
           <span className="tabular-nums">{name.length}/40</span>
         </div>
@@ -77,15 +75,15 @@ export function GoogleNameStep({
         {error && <p className="mt-3 text-[13px] text-danger">{error}</p>}
       </div>
 
-      <div className="border-t px-4 pt-3.5 pb-6" style={{ borderColor: 'rgba(26,22,20,0.06)' }}>
-        <button
+      <div className="border-t border-ink/[0.04] px-4 pt-3.5 pb-6">
+        <Button
           type="submit"
-          className="t-btn t-btn-primary t-btn-block"
+          className="w-full"
           disabled={!valid || busy}
           tabIndex={active ? 0 : -1}
         >
           {busy ? 'Guardando…' : 'Continuar'}
-        </button>
+        </Button>
       </div>
     </form>
   )

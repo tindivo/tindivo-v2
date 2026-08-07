@@ -383,6 +383,57 @@ Cuando entrega, tap "Marcar como entregado" → modal final:
 
 POST `/api/v1/driver/orders/{id}/delivered`. Estado → `delivered`. Push al cliente "Pedido entregado". Push al negocio.
 
+### Captura de dirección al entregar · las casi-duplicadas son problema de UI
+
+Al entregar es cuando el motorizado escribe en `address_directory` (es quien
+estuvo parado en la puerta; la cajera no escribe ahí). **Antes de dejarlo
+escribir una referencia nueva, hay que mostrarle las que ese teléfono YA tiene.**
+
+El ETL del legacy (2026-08-04, `Docs/spec/spec_manual.md`) dejó el caso que lo
+demuestra. El teléfono 923642122 quedó con estas dos filas, que son la misma casa:
+
+```
+RENOVACION CASA DE LALI          · 24 usos · principal
+RENOVACION CASA DE LALI O LILI   ·  1 uso  · escrita después
+```
+
+**El lookup NO se resuelve con fuzzy automático.** `pg_trgm` decidiendo solo si
+dos referencias son la misma casa se equivoca en ambos sentidos, y **fusionar
+dos direcciones distintas es peor que tener dos casi-iguales**: una entrega que
+va a la casa equivocada cuesta más que una lista con una fila de sobra. La
+solución es de UI — se le muestran las opciones y **decide un humano**, que es
+el que está mirando la puerta.
+
+```
+┌────────────────────────────────────┐
+│ Dirección del cliente              │
+│                                    │
+│  Este teléfono ya tiene:           │
+│  ┌──────────────────────────┐     │
+│  │ ● RENOVACION CASA DE LALI │     │
+│  │   24 entregas · principal │     │
+│  ├──────────────────────────┤     │
+│  │ ○ San Pedro, frente a la  │     │
+│  │   losa · 2 entregas       │     │
+│  └──────────────────────────┘     │
+│                                    │
+│  ○ Es otra dirección → escribir    │
+│                                    │
+│  [Guardar]                         │
+└────────────────────────────────────┘
+```
+
+"Es otra dirección" existe y no se esconde: 58 de los 595 teléfonos del legacy
+tenían varias direcciones **genuinamente distintas**. Lo que cambia es el orden —
+elegir es lo primero y escribir es lo segundo, no al revés.
+
+**Consecuencia para la Parte 7 del ETL.** El índice único
+`address_directory_phone_reference_unique` sigue siendo correcto, y el lookup
+previo al INSERT también, pero **ninguno de los dos resuelve las
+casi-duplicadas**: el índice solo ataja el texto idéntico salvo espacios y
+mayúsculas, y `LALI` vs `LALI O LILI` lo esquiva. Eso no es un defecto del
+índice; es que el problema no es de datos.
+
 ---
 
 ## 8. Asignación R1-R5

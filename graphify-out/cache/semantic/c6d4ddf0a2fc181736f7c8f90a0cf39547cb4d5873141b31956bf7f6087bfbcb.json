@@ -1,0 +1,238 @@
+{
+  "nodes": [
+    {
+      "id": "admin_app",
+      "label": "Admin App (admin.tindivo.com)",
+      "file_type": "code",
+      "source_file": "Docs\\CHECKLIST-VERIFICACION.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "bug_cors_headers",
+      "label": "Bug: CORS Headers in Error Responses",
+      "file_type": "concept",
+      "source_file": "Docs\\CHECKLIST-VERIFICACION.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "cliente_app",
+      "label": "Cliente App (tindivo.com)",
+      "file_type": "code",
+      "source_file": "Docs\\CHECKLIST-VERIFICACION.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "docs_checklist_verificacion",
+      "label": "Checklist de Verificaci\u00f3n",
+      "file_type": "document",
+      "source_file": "Docs\\CHECKLIST-VERIFICACION.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "motorizados_app",
+      "label": "Motorizados App (motorizados.tindivo.com)",
+      "file_type": "code",
+      "source_file": "Docs\\CHECKLIST-VERIFICACION.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "negocios_app",
+      "label": "Negocios App (negocios.tindivo.com)",
+      "file_type": "code",
+      "source_file": "Docs\\CHECKLIST-VERIFICACION.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "push_pipeline",
+      "label": "Push Pipeline (Outbox \u2192 Edge Function)",
+      "file_type": "concept",
+      "source_file": "Docs\\CHECKLIST-VERIFICACION.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "pwa",
+      "label": "Progressive Web App (PWA)",
+      "file_type": "concept",
+      "source_file": "Docs\\CHECKLIST-VERIFICACION.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "short_id",
+      "label": "short_id (8 chars)",
+      "file_type": "concept",
+      "source_file": "Docs\\CHECKLIST-VERIFICACION.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "supabase_realtime",
+      "label": "Supabase Realtime",
+      "file_type": "concept",
+      "source_file": "Docs\\CHECKLIST-VERIFICACION.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "supabase_rls",
+      "label": "Supabase RLS",
+      "file_type": "concept",
+      "source_file": "Docs\\CHECKLIST-VERIFICACION.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    }
+  ],
+  "edges": [
+    {
+      "source": "docs_checklist_verificacion",
+      "target": "cliente_app",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\CHECKLIST-VERIFICACION.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_checklist_verificacion",
+      "target": "negocios_app",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\CHECKLIST-VERIFICACION.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_checklist_verificacion",
+      "target": "motorizados_app",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\CHECKLIST-VERIFICACION.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_checklist_verificacion",
+      "target": "admin_app",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\CHECKLIST-VERIFICACION.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_checklist_verificacion",
+      "target": "bug_cors_headers",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\CHECKLIST-VERIFICACION.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_checklist_verificacion",
+      "target": "pwa",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\CHECKLIST-VERIFICACION.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_checklist_verificacion",
+      "target": "push_pipeline",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\CHECKLIST-VERIFICACION.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_checklist_verificacion",
+      "target": "short_id",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\CHECKLIST-VERIFICACION.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_checklist_verificacion",
+      "target": "supabase_realtime",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\CHECKLIST-VERIFICACION.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "docs_checklist_verificacion",
+      "target": "supabase_rls",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\CHECKLIST-VERIFICACION.md",
+      "source_location": null,
+      "weight": 1.0
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "tindivo_apps",
+      "label": "Tindivo Applications",
+      "nodes": ["cliente_app", "negocios_app", "motorizados_app", "admin_app"],
+      "relation": "form",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Docs\\CHECKLIST-VERIFICACION.md"
+    }
+  ]
+}

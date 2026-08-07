@@ -1,8 +1,8 @@
 'use client'
 
+import { BottomSheet, Icon } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { BottomSheet, Icon } from '@/components/ui'
 import {
   clearOnboardingResume,
   type OnboardingStep,
@@ -29,7 +29,7 @@ const PANEL_ORDER: OnboardingStep[] = [
 ]
 
 // Pasos posteriores a la creación de cuenta: el X significa "completar después".
-const SKIPPABLE: OnboardingStep[] = ['google-name', 'phone', 'address']
+const SKIPPABLE: OnboardingStep[] = ['google-name', 'address']
 
 /**
  * Bottom-sheet de onboarding multi-paso (réplica de tindivo-demo.vercel.app).
@@ -97,42 +97,38 @@ export function AuthOnboardingSheet() {
           : null
   const chip = stepNumber[ob.step]
 
+  const canDismiss = SKIPPABLE.includes(ob.step)
+
   return (
-    <BottomSheet open onClose={userId ? finish : abandon}>
+    <BottomSheet open onClose={canDismiss ? (userId ? finish : abandon) : undefined}>
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
         <div className="flex items-center gap-2.5">
           <button
             type="button"
             onClick={onHeaderLeading}
-            className="flex h-9 w-9 items-center justify-center rounded-full"
-            style={{ background: 'rgba(26,22,20,0.06)' }}
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-ink/[0.06] transition-colors hover:bg-ink/[0.10]"
             aria-label={isBack ? 'Atrás' : 'Cerrar'}
           >
-            {isBack ? <Icon.Back /> : <Icon.Close />}
+            {isBack ? <Icon name="arrow_back" size={20} /> : <Icon name="close" size={20} />}
           </button>
           {skippable && (
-            <span className="text-[12px]" style={{ color: 'rgba(26,22,20,0.5)' }}>
-              Puedes completar esto después
-            </span>
+            <span className="text-[12px] text-ink-muted">Puedes completar esto después</span>
           )}
         </div>
         {chip ? (
-          <span
-            className="rounded-full px-2.5 py-1 font-semibold text-[11px]"
-            style={{ background: 'rgba(249,115,22,0.12)', color: '#C2410C' }}
-          >
+          <span className="rounded-full bg-brand-soft px-2.5 py-1 font-semibold text-[11px] text-brand-dark">
             Paso {chip} de {totalSteps}
           </span>
         ) : headerLabel ? (
-          <span className="t-eyebrow" style={{ marginBottom: 0 }}>
+          <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-muted">
             {headerLabel}
           </span>
         ) : null}
       </div>
 
       {/* Carrusel horizontal: todos los pasos montados, translate al activo. */}
-      <div className="overflow-hidden" style={{ height: 'min(560px, 78dvh)' }}>
+      <div className="h-[min(560px,78dvh)] overflow-hidden">
         <div
           className="flex h-full"
           style={{

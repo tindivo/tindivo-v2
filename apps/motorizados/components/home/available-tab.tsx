@@ -1,6 +1,6 @@
 'use client'
 
-import { Icon } from '@tindivo/ui'
+import { Badge, Card, EmptyState, Icon } from '@tindivo/ui'
 import { useState } from 'react'
 import type { BoardOrder } from '@/lib/types'
 import { orderUrgency } from '@/lib/urgency'
@@ -36,30 +36,27 @@ export function AvailableTab({
   return (
     <div>
       {!lastSyncOk && (
-        <span
-          className="mb-3 inline-block rounded-md px-2 py-1 font-mono text-[10px] text-ink-subtle uppercase"
-          style={{ letterSpacing: '0.14em', background: 'rgba(26,22,20,0.06)' }}
-        >
+        <Badge variant="default" size="sm" className="mb-3 font-mono uppercase tracking-widest">
           Datos sin conexión
-        </span>
+        </Badge>
       )}
 
       {full && (
-        <div
-          className="mb-3 flex items-start gap-2.5 rounded-[18px] px-4 py-3.5"
-          style={{ background: 'rgba(26,22,20,0.04)' }}
-        >
-          <Icon.Bag style={{ flexShrink: 0, marginTop: 2 }} />
+        <Card className="mb-3 flex items-start gap-2.5 border border-ink/[0.06] bg-ink/[0.03] p-4 shadow-none">
+          <Icon name="shopping_basket" size={20} className="shrink-0 text-ink" />
           <p className="font-semibold text-[14px]">
             Mochila llena (3/3). Entrega un pedido para tomar otro.
           </p>
-        </div>
+        </Card>
       )}
 
       {hasOverdueAvailable && (
-        <div className="mb-3 rounded-[18px] border border-danger/20 bg-danger/10 px-4 py-3 font-semibold text-[13px] text-danger">
-          ⚠ Prioriza los pedidos vencidos
-        </div>
+        <Card className="mb-3 border-danger/15 bg-danger-soft p-4 shadow-none">
+          <p className="flex items-center gap-2 font-semibold text-[13px] text-danger">
+            <Icon name="warning" size={18} />
+            Prioriza los pedidos vencidos
+          </p>
+        </Card>
       )}
 
       <div className="flex flex-col gap-2.5">
@@ -75,12 +72,11 @@ export function AvailableTab({
       </div>
 
       {sorted.length === 0 && (
-        <div className="py-14 text-center">
-          <span className="inline-block text-ink-subtle">
-            <Icon.Truck style={{ width: 28, height: 28 }} />
-          </span>
-          <p className="t-muted mt-2 text-[14px]">Sin pedidos disponibles ahora.</p>
-        </div>
+        <EmptyState
+          icon="local_shipping"
+          heading="Sin pedidos disponibles"
+          description="Vuelve en unos minutos, pronto llegarán nuevas entregas."
+        />
       )}
 
       {upcoming.length > 0 && (
@@ -90,18 +86,16 @@ export function AvailableTab({
             className="flex w-full items-center justify-between"
             onClick={() => setUpcomingOpen((v) => !v)}
           >
-            <span className="t-eyebrow" style={{ marginBottom: 0 }}>
+            <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/55">
               Próximos ({upcoming.length})
             </span>
             <span
               aria-hidden
-              className="inline-flex text-ink-subtle"
-              style={{
-                transform: upcomingOpen ? 'rotate(90deg)' : 'rotate(-90deg)',
-                transition: 'transform 200ms ease',
-              }}
+              className={`inline-flex text-ink-subtle transition-transform duration-200 ${
+                upcomingOpen ? 'rotate-180' : 'rotate-0'
+              }`}
             >
-              <Icon.Back />
+              <Icon name="expand_more" size={20} />
             </span>
           </button>
           {upcomingOpen && (

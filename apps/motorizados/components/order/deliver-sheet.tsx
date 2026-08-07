@@ -1,10 +1,17 @@
 'use client'
 
-import { BottomSheet } from '@tindivo/ui'
+import { BottomSheet, Button, Icon } from '@tindivo/ui'
 import { useState } from 'react'
 import type { OrderDetailResponse } from '@/lib/types'
 
-type PaymentReal = 'paid_cash' | 'paid_yape'
+/**
+ * Cómo pagó el cliente REALMENTE. `paid_prepaid` no se elige: se deduce de que
+ * el pedido ya venía pagado. Registrarlo importa — si un prepago entregado se
+ * guardara como `paid_yape`, sería indistinguible de un Yape cobrado en la
+ * puerta, y ese es justo el número que hace falta para saber si la regla de
+ * "primer pedido obligatoriamente prepago" está costando clientes.
+ */
+type PaymentReal = 'paid_prepaid' | 'paid_cash' | 'paid_yape'
 
 /** Confirmación de entrega: cómo pagó el cliente + no-show en 2 pasos (HU-D-029). */
 export function DeliverSheet({
@@ -24,7 +31,7 @@ export function DeliverSheet({
   const prepaid = order.paymentIntent === 'prepaid'
   const [payment, setPayment] = useState<PaymentReal | null>(
     prepaid
-      ? 'paid_yape'
+      ? 'paid_prepaid'
       : order.paymentIntent === 'pending_cash'
         ? 'paid_cash'
         : order.paymentIntent === 'pending_yape'
@@ -36,10 +43,10 @@ export function DeliverSheet({
   return (
     <BottomSheet open onClose={onClose}>
       <div className="p-5 pb-7">
-        <h2 className="t-display text-[20px]">
+        <h2 className="font-display text-[20px] font-bold tracking-tight">
           {prepaid ? 'Confirmar entrega' : '¿Cómo pagó el cliente?'}
         </h2>
-        {prepaid && <p className="t-muted mt-1 text-[14px]">Este pedido ya estaba pagado.</p>}
+        {prepaid && <p className="mt-1 text-[14px] text-ink/55">Este pedido ya estaba pagado.</p>}
 
         {!prepaid && (
           <div className="mt-4 grid grid-cols-2 gap-2.5">
@@ -53,63 +60,50 @@ export function DeliverSheet({
                 key={p.value}
                 type="button"
                 onClick={() => setPayment(p.value)}
-                className="rounded-[18px] p-4 text-left"
-                style={
+                className={`rounded-[18px] p-4 text-left transition-colors ${
                   payment === p.value
-                    ? { border: '2px solid #F97316', background: 'rgba(249,115,22,0.05)' }
-                    : { border: '1px solid rgba(26,22,20,0.1)', background: '#fff' }
-                }
+                    ? 'border border-brand bg-brand/5 ring-2 ring-brand'
+                    : 'border border-ink/10 bg-card hover:bg-surface'
+                }`}
               >
-                <p className="font-semibold text-[15px]">{p.label}</p>
-                <p className="mt-0.5 text-[12px]" style={{ color: 'rgba(26,22,20,0.55)' }}>
-                  {p.desc}
-                </p>
+                <p className="font-semibold text-[15px] text-ink">{p.label}</p>
+                <p className="mt-0.5 text-[12px] text-ink-muted">{p.desc}</p>
               </button>
             ))}
           </div>
         )}
 
-        <button
-          type="button"
-          className="t-btn t-btn-primary t-btn-block mt-5"
+        <Button
+          className="mt-5 w-full"
           disabled={!payment || busy}
           onClick={() => payment && onConfirm(payment)}
         >
           {busy ? 'Confirmando…' : 'Confirmar entrega'}
-        </button>
+        </Button>
 
-        <div className="mt-5 border-ink/10 border-t pt-4">
+        <div className="mt-5 border-t border-ink/10 pt-4">
           {!noShowArmed ? (
-            <button
-              type="button"
-              className="text-[13px] text-danger underline"
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mt-5 w-full"
               onClick={() => setNoShowArmed(true)}
             >
+              <Icon name="report_problem" size={20} />
               El cliente no apareció
-            </button>
+            </Button>
           ) : (
             <div>
-              <p className="t-muted text-[13px]">
+              <p className="text-[13px] text-ink/55">
                 Espera 5 min e intenta contactar. Reportar genera un strike al cliente.
               </p>
               <div className="mt-2 flex gap-2">
-                <button
-                  type="button"
-                  className="t-btn flex-1 text-white"
-                  style={{ background: '#DC2626', padding: '12px 16px', fontSize: 14 }}
-                  disabled={busy}
-                  onClick={onNoShow}
-                >
+                <Button variant="danger" className="flex-1" disabled={busy} onClick={onNoShow}>
                   Sí, reportar no-show
-                </button>
-                <button
-                  type="button"
-                  className="t-btn t-btn-ghost"
-                  style={{ padding: '12px 16px', fontSize: 14 }}
-                  onClick={() => setNoShowArmed(false)}
-                >
+                </Button>
+                <Button variant="outline" className="flex-1" onClick={() => setNoShowArmed(false)}>
                   Cancelar
-                </button>
+                </Button>
               </div>
             </div>
           )}

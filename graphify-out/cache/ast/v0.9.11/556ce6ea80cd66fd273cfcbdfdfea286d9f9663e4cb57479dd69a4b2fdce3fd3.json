@@ -1,0 +1,527 @@
+{
+  "nodes": [
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_md",
+      "label": "Tindivo_Documento_Maestro.md",
+      "file_type": "document",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_tindivo_documento_maestro_de_reconciliaci\u00f3n_brief_de_dise\u00f1o",
+      "label": "Tindivo \u2014 Documento Maestro de Reconciliaci\u00f3n + Brief de Dise\u00f1o",
+      "file_type": "document",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_0_las_cuatro_apps_a_construir",
+      "label": "0. Las cuatro apps a construir",
+      "file_type": "document",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L11"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_1_modelo_de_dinero_la_correcci\u00f3n_central",
+      "label": "1. Modelo de dinero \u2014 la correcci\u00f3n central",
+      "file_type": "document",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L26"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_corrige_el_spec_c\u00f3mo_fluye_y_cu\u00e1nto",
+      "label": "\ud83d\udd34 CORRIGE EL SPEC \u00b7 C\u00f3mo fluye y cu\u00e1nto",
+      "file_type": "document",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L28"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_tabla_congelada_2_bandas_no_3",
+      "label": "Tabla congelada (2 bandas, no 3)",
+      "file_type": "document",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L34"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_narrativa_de_cara_al_restaurante_importante_para_ventas",
+      "label": "Narrativa de cara al restaurante (importante para ventas)",
+      "file_type": "document",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L46"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_ya_coincid\u00eda",
+      "label": "\u2705 YA COINCID\u00cdA",
+      "file_type": "document",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L50"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_2_el_punto_de_equilibrio_el_n\u00famero_rey_del_piloto",
+      "label": "2. El punto de equilibrio \u2014 el n\u00famero rey del piloto",
+      "file_type": "document",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L58"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_3_pagos_del_cliente_prepago_contra_entrega_umbral",
+      "label": "3. Pagos del cliente \u2014 prepago, contra entrega, umbral",
+      "file_type": "document",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L76"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_nuevo_default_contra_entrega_umbral_de_prepago",
+      "label": "\ud83d\udfe2 NUEVO \u00b7 Default contra entrega + umbral de prepago",
+      "file_type": "document",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L78"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_routing_del_prepago",
+      "label": "Routing del prepago",
+      "file_type": "document",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L86"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_ya_coincid\u00eda_89",
+      "label": "\u2705 YA COINCID\u00cdA",
+      "file_type": "document",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L89"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_4_anti_fraude_cliente_fake_no_show_strikes",
+      "label": "4. Anti-fraude: cliente fake / no-show / strikes",
+      "file_type": "document",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L96"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_capas",
+      "label": "Capas",
+      "file_type": "document",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L102"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_por_qu\u00e9_la_cajera_valida_incentivo_alineado",
+      "label": "Por qu\u00e9 la cajera valida (incentivo alineado)",
+      "file_type": "document",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L108"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_el_n\u00famero_que_cambia_no_es_un_hueco",
+      "label": "El n\u00famero que cambia NO es un hueco",
+      "file_type": "document",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L111"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_protocolo_de_no_show_para_mostrar_al_restaurante",
+      "label": "Protocolo de no-show (para mostrar al restaurante)",
+      "file_type": "document",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L114"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_no_show_qui\u00e9n_pierde",
+      "label": "No-show: qui\u00e9n pierde",
+      "file_type": "document",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L121"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_fake_de_restaurante_due\u00f1o_inventa_pedido_fantasma",
+      "label": "Fake de restaurante (due\u00f1o inventa pedido fantasma)",
+      "file_type": "document",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L124"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_salir_de_un_strike",
+      "label": "Salir de un strike",
+      "file_type": "document",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L127"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_5_bandeja_de_reportes_del_admin",
+      "label": "5. Bandeja de reportes del admin",
+      "file_type": "document",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L133"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_registro_contable_de_adelantos",
+      "label": "Registro contable de adelantos",
+      "file_type": "document",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L146"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_fondo_de_contingencia",
+      "label": "Fondo de contingencia",
+      "file_type": "document",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L149"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_6_reglas_de_tiempo_consolidadas",
+      "label": "6. Reglas de tiempo (consolidadas)",
+      "file_type": "document",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L154"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_7_brief_por_app_qu\u00e9_construir_y_con_qu\u00e9_foco",
+      "label": "7. Brief por app \u2014 qu\u00e9 construir y con qu\u00e9 foco",
+      "file_type": "document",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L167"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_7_1_cliente_tindivo_com_ajustes_sobre_el_prototipo",
+      "label": "7.1 Cliente \u2014 `tindivo.com` (ajustes sobre el prototipo)",
+      "file_type": "document",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L171"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_7_2_negocio_negocios_tindivo_com",
+      "label": "7.2 Negocio \u2014 `negocios.tindivo.com`",
+      "file_type": "document",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L177"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_7_3_motorizado_motorizados_tindivo_com",
+      "label": "7.3 Motorizado \u2014 `motorizados.tindivo.com`",
+      "file_type": "document",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L186"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_7_4_admin_admin_tindivo_com",
+      "label": "7.4 Admin \u2014 `admin.tindivo.com`",
+      "file_type": "document",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L193"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_8_brief_de_dise\u00f1o_para_claude_design",
+      "label": "8. Brief de dise\u00f1o (para Claude Design)",
+      "file_type": "document",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L203"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_9_checklist_de_lo_que_tu_socio_debe_revisar_los",
+      "label": "9. Checklist de lo que tu socio debe revisar (los \ud83d\udd34)",
+      "file_type": "document",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L237"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_10_lo_que_queda_fuera_del_piloto",
+      "label": "10. Lo que queda fuera del piloto",
+      "file_type": "document",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L250"
+    }
+  ],
+  "edges": [
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_md",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_tindivo_documento_maestro_de_reconciliaci\u00f3n_brief_de_dise\u00f1o",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_tindivo_documento_maestro_de_reconciliaci\u00f3n_brief_de_dise\u00f1o",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_0_las_cuatro_apps_a_construir",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_tindivo_documento_maestro_de_reconciliaci\u00f3n_brief_de_dise\u00f1o",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_1_modelo_de_dinero_la_correcci\u00f3n_central",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L26",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_1_modelo_de_dinero_la_correcci\u00f3n_central",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_corrige_el_spec_c\u00f3mo_fluye_y_cu\u00e1nto",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L28",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_1_modelo_de_dinero_la_correcci\u00f3n_central",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_tabla_congelada_2_bandas_no_3",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L34",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_1_modelo_de_dinero_la_correcci\u00f3n_central",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_narrativa_de_cara_al_restaurante_importante_para_ventas",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L46",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_1_modelo_de_dinero_la_correcci\u00f3n_central",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_ya_coincid\u00eda",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L50",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_tindivo_documento_maestro_de_reconciliaci\u00f3n_brief_de_dise\u00f1o",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_2_el_punto_de_equilibrio_el_n\u00famero_rey_del_piloto",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L58",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_tindivo_documento_maestro_de_reconciliaci\u00f3n_brief_de_dise\u00f1o",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_3_pagos_del_cliente_prepago_contra_entrega_umbral",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L76",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_3_pagos_del_cliente_prepago_contra_entrega_umbral",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_nuevo_default_contra_entrega_umbral_de_prepago",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L78",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_3_pagos_del_cliente_prepago_contra_entrega_umbral",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_routing_del_prepago",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L86",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_3_pagos_del_cliente_prepago_contra_entrega_umbral",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_ya_coincid\u00eda_89",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L89",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_tindivo_documento_maestro_de_reconciliaci\u00f3n_brief_de_dise\u00f1o",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_4_anti_fraude_cliente_fake_no_show_strikes",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L96",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_4_anti_fraude_cliente_fake_no_show_strikes",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_capas",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L102",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_4_anti_fraude_cliente_fake_no_show_strikes",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_por_qu\u00e9_la_cajera_valida_incentivo_alineado",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L108",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_4_anti_fraude_cliente_fake_no_show_strikes",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_el_n\u00famero_que_cambia_no_es_un_hueco",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L111",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_4_anti_fraude_cliente_fake_no_show_strikes",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_protocolo_de_no_show_para_mostrar_al_restaurante",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L114",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_4_anti_fraude_cliente_fake_no_show_strikes",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_no_show_qui\u00e9n_pierde",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L121",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_4_anti_fraude_cliente_fake_no_show_strikes",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_fake_de_restaurante_due\u00f1o_inventa_pedido_fantasma",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L124",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_4_anti_fraude_cliente_fake_no_show_strikes",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_salir_de_un_strike",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L127",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_tindivo_documento_maestro_de_reconciliaci\u00f3n_brief_de_dise\u00f1o",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_5_bandeja_de_reportes_del_admin",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L133",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_5_bandeja_de_reportes_del_admin",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_registro_contable_de_adelantos",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L146",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_5_bandeja_de_reportes_del_admin",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_fondo_de_contingencia",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L149",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_tindivo_documento_maestro_de_reconciliaci\u00f3n_brief_de_dise\u00f1o",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_6_reglas_de_tiempo_consolidadas",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L154",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_tindivo_documento_maestro_de_reconciliaci\u00f3n_brief_de_dise\u00f1o",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_7_brief_por_app_qu\u00e9_construir_y_con_qu\u00e9_foco",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L167",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_7_brief_por_app_qu\u00e9_construir_y_con_qu\u00e9_foco",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_7_1_cliente_tindivo_com_ajustes_sobre_el_prototipo",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L171",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_7_brief_por_app_qu\u00e9_construir_y_con_qu\u00e9_foco",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_7_2_negocio_negocios_tindivo_com",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L177",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_7_brief_por_app_qu\u00e9_construir_y_con_qu\u00e9_foco",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_7_3_motorizado_motorizados_tindivo_com",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L186",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_7_brief_por_app_qu\u00e9_construir_y_con_qu\u00e9_foco",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_7_4_admin_admin_tindivo_com",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L193",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_tindivo_documento_maestro_de_reconciliaci\u00f3n_brief_de_dise\u00f1o",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_8_brief_de_dise\u00f1o_para_claude_design",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L203",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_tindivo_documento_maestro_de_reconciliaci\u00f3n_brief_de_dise\u00f1o",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_9_checklist_de_lo_que_tu_socio_debe_revisar_los",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L237",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_tindivo_documento_maestro_de_reconciliaci\u00f3n_brief_de_dise\u00f1o",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_tindivo_documento_maestro_10_lo_que_queda_fuera_del_piloto",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/Tindivo_Documento_Maestro.md",
+      "source_location": "L250",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

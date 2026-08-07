@@ -1,0 +1,143 @@
+{
+  "nodes": [
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_claude_md",
+      "label": "CLAUDE.md",
+      "file_type": "document",
+      "source_file": "CLAUDE.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_claude_claude_md_tindivo_2_0",
+      "label": "CLAUDE.md \u2014 Tindivo 2.0",
+      "file_type": "document",
+      "source_file": "CLAUDE.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_claude_qu\u00e9_es",
+      "label": "Qu\u00e9 es",
+      "file_type": "document",
+      "source_file": "CLAUDE.md",
+      "source_location": "L6"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_claude_arquitectura_resumen_detalle_en_decisions_md_3",
+      "label": "Arquitectura (resumen \u2014 detalle en `DECISIONS.md \u00a73`)",
+      "file_type": "document",
+      "source_file": "CLAUDE.md",
+      "source_location": "L14"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_claude_convenciones",
+      "label": "Convenciones",
+      "file_type": "document",
+      "source_file": "CLAUDE.md",
+      "source_location": "L23"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_claude_invariantes_que_no_se_rompen_lecciones_del_v1",
+      "label": "Invariantes que NO se rompen (lecciones del v1)",
+      "file_type": "document",
+      "source_file": "CLAUDE.md",
+      "source_location": "L32"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_claude_comandos",
+      "label": "Comandos",
+      "file_type": "document",
+      "source_file": "CLAUDE.md",
+      "source_location": "L42"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_claude_supabase",
+      "label": "Supabase",
+      "file_type": "document",
+      "source_file": "CLAUDE.md",
+      "source_location": "L56"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_claude_reglas_de_proceso_del_sistema_multi_agente_de_mauri",
+      "label": "Reglas de proceso (del sistema multi-agente de Mauri)",
+      "file_type": "document",
+      "source_file": "CLAUDE.md",
+      "source_location": "L63"
+    }
+  ],
+  "edges": [
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_claude_md",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_claude_claude_md_tindivo_2_0",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "CLAUDE.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_claude_claude_md_tindivo_2_0",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_claude_qu\u00e9_es",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "CLAUDE.md",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_claude_claude_md_tindivo_2_0",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_claude_arquitectura_resumen_detalle_en_decisions_md_3",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "CLAUDE.md",
+      "source_location": "L14",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_claude_claude_md_tindivo_2_0",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_claude_convenciones",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "CLAUDE.md",
+      "source_location": "L23",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_claude_claude_md_tindivo_2_0",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_claude_invariantes_que_no_se_rompen_lecciones_del_v1",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "CLAUDE.md",
+      "source_location": "L32",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_claude_claude_md_tindivo_2_0",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_claude_comandos",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "CLAUDE.md",
+      "source_location": "L42",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_claude_claude_md_tindivo_2_0",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_claude_supabase",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "CLAUDE.md",
+      "source_location": "L56",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_claude_claude_md_tindivo_2_0",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_claude_reglas_de_proceso_del_sistema_multi_agente_de_mauri",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "CLAUDE.md",
+      "source_location": "L63",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

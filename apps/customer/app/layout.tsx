@@ -1,28 +1,30 @@
 import type { Metadata, Viewport } from 'next'
-import { Manrope } from 'next/font/google'
+import { Bricolage_Grotesque, Geist, JetBrains_Mono } from 'next/font/google'
 import type { ReactNode } from 'react'
 import { AuthOnboardingHost } from '@/components/auth-onboarding/host'
+import { BottomNav } from '@/components/bottom-nav'
 import { PushManager } from '@/components/push-manager'
 import { CartHydrator } from '@/lib/cart'
 import './globals.css'
 
-// Tipografía única de la plataforma (DECISIONS.md §16): Manrope cubre display
-// (--font-bricolage), cuerpo (--font-geist) y mono/tabular (--font-jetbrains).
-const bricolage = Manrope({
+// Sistema tipográfico del demo: Bricolage Grotesque para titulares,
+// Geist para cuerpo y JetBrains Mono para etiquetas/eyebrows.
+const bricolage = Bricolage_Grotesque({
   subsets: ['latin'],
-  weight: ['600', '700', '800'],
+  weight: ['400', '500', '600', '700'],
   variable: '--font-bricolage',
   display: 'swap',
 })
-const geist = Manrope({
+
+const geist = Geist({
   subsets: ['latin'],
-  weight: ['400', '500', '600'],
   variable: '--font-geist',
   display: 'swap',
 })
-const jetbrains = Manrope({
+
+const jetbrains = JetBrains_Mono({
   subsets: ['latin'],
-  weight: ['500', '600', '700'],
+  weight: ['400', '500', '600', '700'],
   variable: '--font-jetbrains',
   display: 'swap',
 })
@@ -41,11 +43,20 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="es" className={`${bricolage.variable} ${geist.variable} ${jetbrains.variable}`}>
-      <body className="min-h-dvh bg-surface font-sans text-ink antialiased">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&display=swap"
+          rel="stylesheet"
+        />
+      </head>
+      <body className="min-h-dvh bg-surface pb-16 font-sans text-ink antialiased lg:pb-0">
         {children}
         <CartHydrator />
         <PushManager />
         <AuthOnboardingHost />
+        <BottomNav />
       </body>
     </html>
   )

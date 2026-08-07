@@ -32,7 +32,7 @@ Copia `.env.example` → `.env.local` (o configúralas en Vercel) por proyecto. 
 El Edge Function `send-push` ya está desplegado. Para que **envíe** (no solo registre), setea sus secrets:
 
 ```bash
-supabase secrets set --project-ref psjigdoinfpgrnedxeyf \
+supabase secrets set --project-ref zpnipajgwfthxhdtzhly \
   VAPID_PUBLIC_KEY="<NEXT_PUBLIC_VAPID_PUBLIC_KEY>" \
   VAPID_PRIVATE_KEY="<privada de apps/api/.env.local>" \
   VAPID_SUBJECT="mailto:soporte@tindivo.com"
@@ -50,7 +50,7 @@ configuración manual en dashboards:
 1. **Google Cloud Console** (console.cloud.google.com → APIs & Services → Credentials):
    - Crear **OAuth 2.0 Client ID** tipo "Web application".
    - Authorized JavaScript origins: `http://localhost:3000` y `https://tindivo.com`.
-   - Authorized redirect URI: `https://psjigdoinfpgrnedxeyf.supabase.co/auth/v1/callback`.
+   - Authorized redirect URI: `https://zpnipajgwfthxhdtzhly.supabase.co/auth/v1/callback`.
 2. **Supabase dashboard** (proyecto Web v2):
    - Authentication → Sign In / Providers → **Google: ON** (pegar Client ID + Secret del paso 1).
    - Authentication → Sign In / Providers → Email: **desactivar "Confirm email"**

@@ -1,7 +1,7 @@
 'use client'
 
 import type { BusinessPrimaryCapability } from '@tindivo/contracts'
-import { Button, Card, CardBody } from '@tindivo/ui'
+import { Button, Card, CardBody, Icon } from '@tindivo/ui'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -15,6 +15,9 @@ import {
   useRef,
   useState,
 } from 'react'
+import { getBackoffDelayMs, useChannelHealth } from '@/hooks/use-channel-health'
+import { useIconFontReady } from '@/hooks/use-icon-font-ready'
+import { usePolledQuery } from '@/hooks/use-polled-query'
 import {
   getColumn,
   isBusinessPaused,
@@ -25,9 +28,24 @@ import {
   toOrderVM,
 } from '@/lib/orders/view-model'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
-import { unlockAudio, useDashboardSounds } from '@/lib/use-audio-alert'
-import { MS } from './primitives'
+import { speak, unlockAudio, useDashboardSounds } from '@/lib/use-audio-alert'
+import { DashboardSkeleton } from './dashboard-skeleton'
 import { SuccessToastHost } from './toast'
+
+// ── Debounce hook ─────────────────────────────────────────────────────────────
+function useDebouncedCallback<T extends (...args: any[]) => void>(fn: T, delay: number): T {
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const fnRef = useRef(fn)
+  fnRef.current = fn
+
+  return useCallback(
+    ((...args: any[]) => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+      timeoutRef.current = setTimeout(() => fnRef.current(...args), delay)
+    }) as any as T,
+    [delay],
+  )
+}
 
 // ── Navegación (fuente única; el activo se deriva de la ruta) ─────────────────
 export type NavId = 'pedidos' | 'menu' | 'add' | 'efectivo' | 'historial' | 'deuda' | 'config'
@@ -36,9 +54,9 @@ const NAV_ITEMS: { id: NavId; label: string; icon: string; href: string }[] = [
   { id: 'pedidos', label: 'Pedidos', icon: 'receipt_long', href: '/' },
   { id: 'menu', label: 'Menú', icon: 'restaurant_menu', href: '/menu' },
   { id: 'add', label: 'Pedir moto', icon: 'two_wheeler', href: '/nuevo' },
-  { id: 'efectivo', label: 'Efectivo', icon: 'payments', href: '/efectivo' },
+  { id: 'efectivo', label: 'Liquidaciones', icon: 'payments', href: '/efectivo' },
   { id: 'historial', label: 'Historial', icon: 'history', href: '/historial' },
-  { id: 'deuda', label: 'Deuda', icon: 'account_balance_wallet', href: '/deuda' },
+  { id: 'deuda', label: 'Mi cuenta', icon: 'account_balance_wallet', href: '/deuda' },
   { id: 'config', label: 'Config', icon: 'settings', href: '/configuracion' },
 ]
 
@@ -46,7 +64,7 @@ const NAV_ITEMS: { id: NavId; label: string; icon: string; href: string }[] = [
 // así que su panel se reduce a gestionar el menú y la configuración.
 const CATALOG_ONLY_NAV: NavId[] = ['menu', 'config']
 
-const ACCENT_DEFAULT = '#F472B6'
+const ACCENT_DEFAULT = 'var(--color-brand)'
 
 function activeIdFor(pathname: string): NavId {
   if (pathname === '/') return 'pedidos'
@@ -168,46 +186,24 @@ function Sidebar({ active, onSignOut }: { active: NavId; onSignOut: () => void }
   const catalogNav: NavId[] = hasActiveOrders ? ['pedidos', ...CATALOG_ONLY_NAV] : CATALOG_ONLY_NAV
   const navItems = catalogOnly ? NAV_ITEMS.filter((it) => catalogNav.includes(it.id)) : NAV_ITEMS
   return (
-    <aside
-      style={{
-        width: 240,
-        flexShrink: 0,
-        background: '#fff',
-        borderRight: '1px solid var(--tv-border)',
-        display: 'flex',
-        flexDirection: 'column',
-        padding: '20px 14px 16px',
-        height: '100dvh',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 6px 18px' }}>
+    <aside className="flex h-dvh w-[240px] shrink-0 flex-col border-r border-border bg-white px-3.5 py-5 pb-4">
+      <div className="flex items-center gap-2.5 px-1.5 pb-[18px]">
         <div
-          style={{
-            width: 38,
-            height: 38,
-            borderRadius: 12,
-            background: accent || ACCENT_DEFAULT,
-            color: '#fff',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontWeight: 700,
-            fontSize: 17,
-            fontFamily: 'var(--tv-font-display)',
-          }}
+          className="flex h-[38px] w-[38px] items-center justify-center rounded-xl text-[17px] font-bold text-white"
+          style={{ background: accent || ACCENT_DEFAULT }}
         >
           {bizName[0] ?? 'T'}
         </div>
-        <div style={{ minWidth: 0 }}>
-          <div className="tv-display" style={{ fontSize: 16, lineHeight: 1.1 }}>
+        <div className="min-w-0">
+          <div className="font-display text-base font-bold leading-[1.1] tracking-tight">
             {bizName}
           </div>
-          <div className="tv-label" style={{ marginTop: 2, fontSize: 9 }}>
+          <div className="mt-0.5 font-mono text-[9px] font-semibold uppercase tracking-wide text-ink-muted">
             SAN JACINTO · ÁNCASH
           </div>
         </div>
       </div>
-      <nav style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <nav className="flex flex-col gap-0.5">
         {navItems.map((it) => {
           const on = it.id === active
           const badge = it.id === 'pedidos' ? counts.new : undefined
@@ -215,37 +211,17 @@ function Sidebar({ active, onSignOut }: { active: NavId; onSignOut: () => void }
             <Link
               key={it.id}
               href={it.href}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                padding: '10px 12px',
-                borderRadius: 12,
-                background: on ? 'var(--tv-ink)' : 'transparent',
-                color: on ? '#fff' : 'var(--tv-ink)',
-                textDecoration: 'none',
-                fontFamily: 'inherit',
-                fontSize: 14,
-                fontWeight: 500,
-              }}
+              className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[14px] font-medium no-underline ${
+                on ? 'bg-ink text-white' : 'bg-transparent text-ink'
+              }`}
             >
-              <MS name={it.icon} size={20} filled={on} />
-              <span style={{ flex: 1 }}>{it.label}</span>
+              <Icon name={it.icon} size={20} filled={on} />
+              <span className="flex-1">{it.label}</span>
               {badge != null && badge > 0 && (
                 <span
-                  style={{
-                    minWidth: 22,
-                    height: 22,
-                    borderRadius: 999,
-                    background: on ? 'var(--tv-brand)' : 'var(--tv-danger)',
-                    color: '#fff',
-                    fontSize: 11,
-                    fontWeight: 700,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '0 6px',
-                  }}
+                  className={`inline-flex min-h-[22px] items-center justify-center rounded-full px-1.5 text-[11px] font-bold text-white ${
+                    on ? 'bg-brand' : 'bg-danger'
+                  }`}
                 >
                   {badge}
                 </span>
@@ -254,37 +230,35 @@ function Sidebar({ active, onSignOut }: { active: NavId; onSignOut: () => void }
           )
         })}
       </nav>
-      <div style={{ flex: 1 }} />
+      <div className="flex-1" />
       {/* Toggle de alertas (sonido) — accesible desde cualquier sección */}
       <button
         type="button"
         onClick={toggleSound}
-        className={`tv-btn tv-btn-sm ${soundOn ? 'tv-btn-brand' : 'tv-btn-ghost'} ${counts.new > 0 && soundOn ? 'tv-pulse-brand' : ''}`}
-        style={{ marginBottom: 10, width: '100%' }}
+        className={`mb-2.5 inline-flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2 text-[13px] font-semibold transition-transform active:scale-[0.98] ${
+          soundOn ? 'bg-brand text-white' : 'bg-ink/[0.06] text-ink'
+        } ${counts.new > 0 && soundOn ? 'animate-pulse' : ''}`}
       >
-        <MS
+        <Icon
           name={soundOn ? 'notifications_active' : 'notifications_off'}
           size={16}
           filled={soundOn}
         />
         Alertas {soundOn ? 'ON' : 'OFF'}
       </button>
-      <div
-        className="tv-card"
-        style={{ padding: 12, marginBottom: 10, background: '#FFF4EC', boxShadow: 'none' }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <MS
+      <div className="mb-2.5 rounded-2xl bg-brand-soft p-3">
+        <div className="flex items-center gap-2">
+          <Icon
             name="circle"
             size={10}
             filled
-            style={{ color: catalogOnly ? '#16A34A' : paused ? '#B45309' : '#16A34A' }}
+            className={catalogOnly ? 'text-success' : paused ? 'text-amber-700' : 'text-success'}
           />
-          <div style={{ fontSize: 13, fontWeight: 600 }}>
+          <div className="text-[13px] font-semibold">
             {catalogOnly ? 'Pedidos por WhatsApp' : paused ? 'Pausado' : 'Plataforma abierta'}
           </div>
         </div>
-        <div className="tv-label" style={{ fontSize: 9, marginTop: 4 }}>
+        <div className="mt-1 font-mono text-[9px] font-semibold uppercase tracking-wide text-ink-muted">
           {catalogOnly
             ? 'MODO CATÁLOGO ACTIVO'
             : paused
@@ -292,48 +266,20 @@ function Sidebar({ active, onSignOut }: { active: NavId; onSignOut: () => void }
               : 'RECIBIENDO PEDIDOS'}
         </div>
       </div>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          padding: '8px 6px',
-          borderTop: '1px solid var(--tv-border)',
-        }}
-      >
-        <div
-          style={{
-            width: 32,
-            height: 32,
-            borderRadius: 999,
-            background: 'var(--tv-brand-soft)',
-            color: 'var(--tv-brand-dark)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontWeight: 700,
-            fontSize: 13,
-          }}
-        >
+      <div className="flex items-center gap-2.5 border-t border-border px-1.5 py-2">
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-soft text-[13px] font-bold text-brand-dark">
           {bizName[0] ?? 'T'}
         </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 600 }}>Caja</div>
+        <div className="min-w-0 flex-1">
+          <div className="text-[13px] font-semibold text-ink">Caja</div>
         </div>
         <button
           type="button"
           onClick={onSignOut}
           title="Salir"
-          style={{
-            width: 32,
-            height: 32,
-            borderRadius: 8,
-            background: 'rgba(26,22,20,0.06)',
-            border: 'none',
-            cursor: 'pointer',
-          }}
+          className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border-none bg-ink/[0.06] transition-colors hover:bg-ink/[0.10]"
         >
-          <MS name="logout" size={18} />
+          <Icon name="logout" size={18} />
         </button>
       </div>
     </aside>
@@ -341,23 +287,36 @@ function Sidebar({ active, onSignOut }: { active: NavId; onSignOut: () => void }
 }
 
 // ── Bottom nav (mobile, persistente) ──────────────────────────────────────────
-function navBtnStyle(active: boolean) {
-  return {
-    background: 'none',
-    border: 'none',
-    display: 'flex',
-    flexDirection: 'column' as const,
-    alignItems: 'center',
-    gap: 2,
-    padding: '6px 4px',
-    fontFamily: 'inherit',
-    fontSize: 10,
-    color: active ? 'var(--tv-brand)' : 'var(--tv-ink-muted)',
-    fontWeight: 600,
-    cursor: 'pointer',
-    borderRadius: 10,
-    textDecoration: 'none',
-  }
+function NavLink({
+  href,
+  active,
+  children,
+}: {
+  href: string
+  active: boolean
+  children: React.ReactNode
+}) {
+  return (
+    <Link
+      href={href}
+      className={`flex flex-col items-center gap-0.5 rounded-[10px] px-1 py-1.5 text-[10px] font-semibold no-underline ${
+        active ? 'text-brand' : 'text-ink-muted'
+      }`}
+    >
+      {children}
+    </Link>
+  )
+}
+
+function FabLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className="flex h-14 w-14 -translate-y-5 items-center justify-center self-center rounded-full bg-brand text-white shadow-[0_8px_20px_-6px_rgba(249,115,22,0.6)]"
+    >
+      {children}
+    </Link>
+  )
 }
 
 function BottomNav({ active }: { active: NavId }) {
@@ -369,71 +328,47 @@ function BottomNav({ active }: { active: NavId }) {
   if (capability === 'catalog_only') {
     const hasActiveOrders = counts.new + counts.cooking + counts.route > 0
     return (
-      <div className="tv-bottom-nav">
+      <nav className="grid grid-cols-3 border-t border-border bg-white px-1 pb-[max(18px,env(safe-area-inset-bottom))] pt-1.5 lg:hidden">
         {hasActiveOrders && (
-          <Link
-            href="/"
-            className={active === 'pedidos' ? 'active' : ''}
-            style={navBtnStyle(active === 'pedidos')}
-          >
-            <MS name="receipt_long" size={22} filled={active === 'pedidos'} />
+          <NavLink href="/" active={active === 'pedidos'}>
+            <Icon name="receipt_long" size={22} filled={active === 'pedidos'} />
             <span>Pedidos</span>
-          </Link>
+          </NavLink>
         )}
-        <Link
-          href="/menu"
-          className={active === 'menu' ? 'active' : ''}
-          style={navBtnStyle(active === 'menu')}
-        >
-          <MS name="restaurant_menu" size={22} filled={active === 'menu'} />
+        <NavLink href="/menu" active={active === 'menu'}>
+          <Icon name="restaurant_menu" size={22} filled={active === 'menu'} />
           <span>Menú</span>
-        </Link>
-        <Link
-          href="/configuracion"
-          className={active === 'config' ? 'active' : ''}
-          style={navBtnStyle(active === 'config')}
-        >
-          <MS name="settings" size={22} filled={active === 'config'} />
+        </NavLink>
+        <NavLink href="/configuracion" active={active === 'config'}>
+          <Icon name="settings" size={22} filled={active === 'config'} />
           <span>Config</span>
-        </Link>
-      </div>
+        </NavLink>
+      </nav>
     )
   }
 
   return (
-    <div className="tv-bottom-nav">
-      <Link
-        href="/"
-        className={active === 'pedidos' ? 'active' : ''}
-        style={navBtnStyle(active === 'pedidos')}
-      >
-        <MS name="receipt_long" size={22} filled={active === 'pedidos'} />
+    <nav className="grid grid-cols-5 border-t border-border bg-white px-1 pb-[max(18px,env(safe-area-inset-bottom))] pt-1.5 lg:hidden">
+      <NavLink href="/" active={active === 'pedidos'}>
+        <Icon name="receipt_long" size={22} filled={active === 'pedidos'} />
         <span>Pedidos</span>
-      </Link>
-      <Link
-        href="/menu"
-        className={active === 'menu' ? 'active' : ''}
-        style={navBtnStyle(active === 'menu')}
-      >
-        <MS name="restaurant_menu" size={22} filled={active === 'menu'} />
+      </NavLink>
+      <NavLink href="/menu" active={active === 'menu'}>
+        <Icon name="restaurant_menu" size={22} filled={active === 'menu'} />
         <span>Menú</span>
-      </Link>
-      <Link href="/nuevo" className="fab">
-        <MS name="add" size={28} filled />
-      </Link>
-      <Link
-        href="/efectivo"
-        className={active === 'efectivo' ? 'active' : ''}
-        style={navBtnStyle(active === 'efectivo')}
-      >
-        <MS name="payments" size={22} filled={active === 'efectivo'} />
+      </NavLink>
+      <FabLink href="/nuevo">
+        <Icon name="add" size={28} filled />
+      </FabLink>
+      <NavLink href="/efectivo" active={active === 'efectivo'}>
+        <Icon name="payments" size={22} filled={active === 'efectivo'} />
         <span>Efectivo</span>
-      </Link>
-      <Link href="/configuracion" className={mas ? 'active' : ''} style={navBtnStyle(mas)}>
-        <MS name="more_horiz" size={22} filled={mas} />
+      </NavLink>
+      <NavLink href="/configuracion" active={mas}>
+        <Icon name="more_horiz" size={22} filled={mas} />
         <span>Más</span>
-      </Link>
-    </div>
+      </NavLink>
+    </nav>
   )
 }
 
@@ -458,27 +393,9 @@ function NewOrderToast({ count }: { count: number }) {
     <Link
       href="/"
       onClick={() => setShow(false)}
-      className="tv-pulse-brand"
-      style={{
-        position: 'fixed',
-        top: 14,
-        left: '50%',
-        transform: 'translateX(-50%)',
-        zIndex: 300,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-        background: 'var(--tv-brand)',
-        color: '#fff',
-        padding: '10px 16px',
-        borderRadius: 999,
-        fontWeight: 700,
-        fontSize: 14,
-        textDecoration: 'none',
-        boxShadow: '0 8px 24px -6px rgba(249,115,22,0.6)',
-      }}
+      className="fixed left-1/2 top-3.5 z-[300] flex -translate-x-1/2 animate-pulse items-center gap-2 rounded-full bg-brand px-4 py-2.5 text-sm font-bold text-white no-underline shadow-[0_8px_24px_-6px_rgba(249,115,22,0.6)]"
     >
-      <MS name="notifications_active" size={18} filled />
+      <Icon name="notifications_active" size={18} filled />
       {n === 1 ? 'Nuevo pedido' : `${n} pedidos nuevos`} · ver
     </Link>
   )
@@ -490,19 +407,8 @@ function NewOrderToast({ count }: { count: number }) {
 function CatalogOnlyGate() {
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
-      <span
-        style={{
-          width: 64,
-          height: 64,
-          borderRadius: 999,
-          background: 'var(--tv-brand-soft)',
-          color: 'var(--tv-brand-dark)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <MS name="chat" size={30} filled />
+      <span className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-soft text-brand-dark">
+        <Icon name="chat" size={30} filled />
       </span>
       <h1 className="font-display font-semibold text-[22px] text-ink">Modo catálogo activo</h1>
       <p className="max-w-[420px] text-[14px] text-ink-muted">
@@ -510,14 +416,58 @@ function CatalogOnlyGate() {
         servicio de delivery de la plataforma no está disponible por ahora.
       </p>
       <div className="mt-2 flex gap-2">
-        <Link href="/menu" className="tv-btn tv-btn-brand">
-          <MS name="restaurant_menu" size={16} /> Mi menú
+        <Link
+          href="/menu"
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand px-5 py-3 text-[15px] font-semibold text-white transition-transform active:scale-[0.98]"
+        >
+          <Icon name="restaurant_menu" size={16} /> Mi menú
         </Link>
-        <Link href="/configuracion" className="tv-btn tv-btn-ghost">
-          <MS name="settings" size={16} /> Configuración
+        <Link
+          href="/configuracion"
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-ink/[0.06] px-5 py-3 text-[15px] font-semibold text-ink transition-transform active:scale-[0.98]"
+        >
+          <Icon name="settings" size={16} /> Configuración
         </Link>
       </div>
     </main>
+  )
+}
+
+function NotificationGate({ onActivate }: { onActivate: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/85 p-5">
+      <div className="w-full max-w-[420px] rounded-3xl bg-white p-8 px-7 text-center">
+        {/* Icono grande de campana */}
+        <div className="mx-auto mb-4 flex h-[72px] w-[72px] items-center justify-center rounded-[20px] bg-brand-soft text-brand">
+          <Icon name="notifications_active" size={36} filled />
+        </div>
+
+        <h2 className="mb-2 text-[22px] font-bold text-ink">Activa las notificaciones</h2>
+
+        <div className="mb-2 text-[15px] leading-relaxed text-ink-muted">
+          Para recibir pedidos necesitas activar las alertas de sonido y notificaciones del
+          navegador.
+        </div>
+
+        <div className="mb-6 flex items-center gap-2 rounded-xl bg-warning-soft px-4 py-3 text-[13px] text-amber-800">
+          <Icon name="warning" size={16} filled />
+          Sin notificaciones activas, los pedidos pueden perderse y cancelarse automáticamente.
+        </div>
+
+        <button
+          type="button"
+          onClick={onActivate}
+          className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand px-6 py-5 text-lg font-semibold text-white transition-transform active:scale-[0.98]"
+        >
+          <Icon name="notifications_active" size={22} filled />
+          Activar notificaciones
+        </button>
+
+        <div className="mt-3 text-[11px] text-ink-muted">
+          Puedes ajustar el volumen desde la configuración del navegador
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -527,6 +477,7 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
   const active = activeIdFor(pathname)
 
   const [ready, setReady] = useState(false)
+  const fontsReady = useIconFontReady()
   const [bizId, setBizId] = useState<string | null>(null)
   const [biz, setBiz] = useState<BizState>({
     name: 'Mi negocio',
@@ -539,7 +490,50 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
   })
   const [rows, setRows] = useState<OrderRow[]>([])
   const [now, setNow] = useState(() => Date.now())
-  const [soundOn, setSoundOn] = useState(false)
+  const [soundOn, setSoundOn] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('tindivo_sound_on') === 'true'
+    }
+    return false
+  })
+  const [gateDismissed, setGateDismissed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('tindivo_notifications_gate_dismissed') === 'true'
+    }
+    return false
+  })
+  const [gateShown, setGateShown] = useState(false)
+
+  // Mostrar gate en la carga inicial si sonido está desactivado y no ha sido descartado antes.
+  useEffect(() => {
+    if (!soundOn && !gateDismissed) {
+      setGateShown(true)
+    }
+  }, []) // Solo en el montaje
+
+  const handleActivateNotifications = useCallback(async () => {
+    // 1. Activar sonido + unlockAudio (gesto del usuario)
+    setSoundOn(true)
+    unlockAudio()
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('tindivo_sound_on', 'true')
+    }
+
+    // 2. Habla de prueba para validar que la voz funciona
+    speak('Notificaciones activadas')
+
+    // 3. Pedir permiso de push/Notification si no está concedido
+    if ('Notification' in window && Notification.permission === 'default') {
+      await Notification.requestPermission()
+    }
+
+    // 4. Cerrar el modal y persistir
+    setGateShown(false)
+    setGateDismissed(true)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('tindivo_notifications_gate_dismissed', 'true')
+    }
+  }, [])
 
   const refetchBiz = useCallback(async () => {
     const { data } = await getSupabaseBrowser()
@@ -562,38 +556,115 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
     }
   }, [])
 
-  const refetchOrders = useCallback(async () => {
+  const { setChannelState, refetchIntervalMs, healthStatus } = useChannelHealth()
+
+  const fetchOrdersQuery = useCallback(async () => {
     const { data } = await getSupabaseBrowser()
       .from('orders')
       .select(ORDER_SELECT)
       .order('created_at', { ascending: false })
       .limit(100)
-    setRows((data ?? []) as unknown as OrderRow[])
+    const fetched = (data ?? []) as unknown as OrderRow[]
+    setRows(fetched)
+    return fetched
   }, [])
 
-  // Carga inicial + suscripción Realtime ÚNICA (persiste en toda sección).
+  const { refetch: refetchOrders } = usePolledQuery({
+    queryKey: `biz-orders-${bizId ?? 'none'}`,
+    queryFn: fetchOrdersQuery,
+    refetchInterval: refetchIntervalMs,
+    enabled: !!bizId,
+  })
+
+  const debouncedRefetchOrders = useDebouncedCallback(refetchOrders, 500)
+  const debouncedRefetchBiz = useDebouncedCallback(refetchBiz, 500)
+
+  // Carga inicial: solo esperamos el negocio para pintar el shell.
+  // Los pedidos se cargan vía usePolledQuery una vez que bizId está disponible.
   useEffect(() => {
+    refetchBiz().finally(() => setReady(true))
+  }, [refetchBiz])
+
+  // Suscripción Realtime ÚNICA (filtrada por bizId) con auto-reconstrucción de canal quemado y backoff exponencial.
+  useEffect(() => {
+    if (!bizId) return
     const supabase = getSupabaseBrowser()
-    Promise.all([refetchBiz(), refetchOrders()]).finally(() => setReady(true))
-    const channel = supabase
-      .channel('biz-orders')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () =>
-        refetchOrders(),
-      )
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'businesses' }, () =>
-        refetchBiz(),
-      )
-      .subscribe()
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [refetchBiz, refetchOrders])
+    let activeChannel: any = null
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null
+    let retryAttempt = 0
+    let destroyed = false
 
-  // Tick para countdowns / buffer.
-  useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 1000)
-    return () => clearInterval(t)
-  }, [])
+    function subscribeChannel() {
+      if (destroyed) return
+      if (activeChannel) {
+        supabase.removeChannel(activeChannel)
+        activeChannel = null
+      }
+
+      const channel = supabase
+        .channel(`biz-orders-${bizId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'orders',
+            filter: `business_id=eq.${bizId}`,
+          },
+          () => debouncedRefetchOrders(),
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'businesses',
+            filter: `id=eq.${bizId}`,
+          },
+          () => debouncedRefetchBiz(),
+        )
+
+      channel.subscribe((status, err) => {
+        if (destroyed) return
+        setChannelState(status)
+        if (status === 'SUBSCRIBED') {
+          retryAttempt = 0 // Reset de contador al conectar exitosamente
+          console.log(
+            '[realtime] suscrito a',
+            `biz-orders-${bizId}`,
+            'Salud:',
+            'healthy (90s polling)',
+          )
+        } else if (status === 'CHANNEL_ERROR' || status === 'CLOSED' || status === 'TIMED_OUT') {
+          const delayMs = getBackoffDelayMs(retryAttempt)
+          retryAttempt++
+          console.warn(
+            `[realtime] estado degradado: ${status} (intento ${retryAttempt}). Re-creando en ${delayMs / 1000}s...`,
+            err,
+          )
+          // Destruir canal quemado y solicitar instancia limpia con backoff exponencial
+          if (reconnectTimer) clearTimeout(reconnectTimer)
+          reconnectTimer = setTimeout(() => {
+            if (!destroyed) subscribeChannel()
+          }, delayMs)
+        }
+      })
+
+      activeChannel = channel
+    }
+
+    subscribeChannel()
+
+    return () => {
+      destroyed = true
+      if (reconnectTimer) clearTimeout(reconnectTimer)
+      if (activeChannel) {
+        supabase.removeChannel(activeChannel)
+        activeChannel = null
+      }
+      setChannelState('CLOSED')
+    }
+  }, [bizId, debouncedRefetchOrders, debouncedRefetchBiz, setChannelState])
 
   const vms = useMemo(() => rows.map((r) => toOrderVM(r, now)), [rows, now])
   const counts = useMemo(() => {
@@ -608,18 +679,84 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
     return n
   }, [vms])
 
+  // Tick inteligente: solo si hay countdowns o buffer activos.
+  const needsTickRef = useRef(false)
+  const lastExpireTriggerRef = useRef<number>(0)
+
+  useEffect(() => {
+    const hasTicking = vms.some(
+      (v) =>
+        v.status === 'pending_acceptance' ||
+        v.status === 'awaiting_payment' ||
+        v.status === 'validando' ||
+        v.state === 'cooking' ||
+        v.state === 'heading' ||
+        v.state === 'waiting' ||
+        v.state === 'buffer_p1' ||
+        v.state === 'buffer_p2' ||
+        v.state === 'buffer_p3' ||
+        v.state === 'picked_up',
+    )
+    needsTickRef.current = hasTicking
+  }, [vms])
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      if (needsTickRef.current) setNow(Date.now())
+    }, 1000)
+    return () => clearInterval(t)
+  }, [])
+
+  // Auto-expiración instantánea cuando el contador llega a 0:00
+  useEffect(() => {
+    const hasExpired = vms.some(
+      (v) =>
+        (v.status === 'pending_acceptance' ||
+          v.status === 'awaiting_payment' ||
+          v.status === 'validando') &&
+        v.countdownSec <= 0,
+    )
+
+    if (hasExpired && Date.now() - lastExpireTriggerRef.current > 5000) {
+      lastExpireTriggerRef.current = Date.now()
+      const supabase = getSupabaseBrowser()
+      ;(supabase as any)
+        .rpc('cancel_expired_prepay_orders')
+        .then(() => {
+          debouncedRefetchOrders()
+        })
+        .catch(() => {
+          debouncedRefetchOrders()
+        })
+    }
+  }, [vms, debouncedRefetchOrders])
+
   const paused = isBusinessPaused(biz.until, now)
   const pauseMin = pauseMinutesLeft(biz.until, now)
   const hasWaiting = vms.some((o) => o.state === 'waiting')
-  const hasBufferP3 = vms.some((o) => o.state === 'buffer_p3')
+  const hasBufferP3 = vms.some((o) => o.state === 'buffer_p2' || o.state === 'buffer_p3')
+  const actionRequiredCount = useMemo(
+    () => vms.filter((o) => o.status === 'pending_acceptance' || o.status === 'validando').length,
+    [vms],
+  )
 
   // Sonido persistente (corre en el chrome → suena en cualquier sección).
-  useDashboardSounds({ hasPending: counts.new > 0, hasWaiting, hasBufferP3, soundOn })
+  useDashboardSounds({
+    hasPending: actionRequiredCount > 0,
+    pendingCount: actionRequiredCount,
+    hasWaiting,
+    hasBufferP3,
+    soundOn,
+  })
 
   const toggleSound = useCallback(() => {
     setSoundOn((s) => {
+      const next = !s
       if (!s) unlockAudio()
-      return !s
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('tindivo_sound_on', String(next))
+      }
+      return next
     })
   }, [])
 
@@ -659,7 +796,7 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
     refetchBiz,
   ])
 
-  if (!ready || !value) return <div className="p-10 text-ink-muted">Cargando…</div>
+  if (!ready || !value || !fontsReady) return <DashboardSkeleton />
 
   // Gate del modo catálogo: solo Menú y Config son operables. Excepción: si aún
   // hay pedidos delivery en vuelo (de antes del cambio de modo), la sección de
@@ -671,25 +808,15 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
 
   return (
     <Ctx.Provider value={value}>
-      <div className="flex" style={{ height: '100dvh', background: 'var(--tv-surface)' }}>
+      {gateShown && <NotificationGate onActivate={handleActivateNotifications} />}
+      <div className="flex h-dvh bg-surface">
         <div className="hidden shrink-0 lg:block">
           <Sidebar active={active} onSignOut={onSignOut} />
         </div>
-        <div className="flex flex-col" style={{ flex: 1, minWidth: 0, height: '100dvh' }}>
+        <div className="flex min-w-0 flex-1 flex-col h-dvh">
           {catalogOnly && legacyOrdersVisible && (
-            <div
-              style={{
-                background: '#FEF3C7',
-                color: '#92400E',
-                padding: '8px 16px',
-                fontSize: 13,
-                fontWeight: 600,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-              }}
-            >
-              <MS name="info" size={16} filled />
+            <div className="flex items-center gap-2 bg-warning-soft px-4 py-2 text-[13px] font-semibold text-amber-800">
+              <Icon name="info" size={16} filled />
               Modo catálogo activo: estos pedidos son del modo delivery anterior.
             </div>
           )}
@@ -722,7 +849,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
     return () => sub.subscription.unsubscribe()
   }, [])
 
-  if (!ready) return <div className="p-10 text-ink-muted">Cargando…</div>
+  if (!ready) return <DashboardSkeleton />
   if (!authed) return <Login onAuthed={() => setAuthed(true)} />
   return (
     <AuthedChrome

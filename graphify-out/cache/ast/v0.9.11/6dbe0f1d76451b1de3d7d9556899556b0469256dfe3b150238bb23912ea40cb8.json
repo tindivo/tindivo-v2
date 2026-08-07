@@ -1,0 +1,815 @@
+{
+  "nodes": [
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_md",
+      "label": "08-flujo-admin.md",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_08_flujo_del_admin_admin_tindivo_com",
+      "label": "08 \u00b7 Flujo del admin \u00b7 admin.tindivo.com",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_tabla_de_contenidos",
+      "label": "Tabla de contenidos",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L7"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_1_tres_principios_del_dise\u00f1o",
+      "label": "1. Tres principios del dise\u00f1o",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L26"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_2_contexto_de_uso_real",
+      "label": "2. Contexto de uso real",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L36"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_3_mapa_de_navegaci\u00f3n",
+      "label": "3. Mapa de navegaci\u00f3n",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L46"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_4_secci\u00f3n_dashboard",
+      "label": "4. Secci\u00f3n \u00b7 Dashboard",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L68"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_vista_comando",
+      "label": "Vista comando",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L70"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_kpis_del_d\u00eda_8_cards",
+      "label": "KPIs del d\u00eda (8 cards)",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L117"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_monitor_en_vivo_4_cards",
+      "label": "Monitor en vivo (4 cards)",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L128"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_alertas",
+      "label": "Alertas",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L137"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_lista_pedidos_activos",
+      "label": "Lista pedidos activos",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L147"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_5_secci\u00f3n_m\u00e9tricas",
+      "label": "5. Secci\u00f3n \u00b7 M\u00e9tricas",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L153"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_6_sub_tabs",
+      "label": "6 sub-tabs",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L157"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_export_csv",
+      "label": "Export CSV",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L166"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_6_secci\u00f3n_pedidos",
+      "label": "6. Secci\u00f3n \u00b7 Pedidos",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L172"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_lista_con_filtros",
+      "label": "Lista con filtros",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L174"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_detalle_de_pedido_inmutable",
+      "label": "Detalle de pedido (inmutable)",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L185"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_acciones_del_admin",
+      "label": "Acciones del admin",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L226"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_7_secci\u00f3n_env\u00edo_de_tracking",
+      "label": "7. Secci\u00f3n \u00b7 Env\u00edo de tracking",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L237"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_lista",
+      "label": "Lista",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L239"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_flujo",
+      "label": "Flujo",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L257"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_tab_enviados",
+      "label": "Tab \"Enviados\"",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L264"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_8_secci\u00f3n_negocios_restaurants",
+      "label": "8. Secci\u00f3n \u00b7 Negocios (restaurants)",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L270"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_lista_272",
+      "label": "Lista",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L272"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_detalle_del_negocio",
+      "label": "Detalle del negocio",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L278"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_crear_negocio",
+      "label": "Crear negocio",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L317"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_bloquear_desbloquear",
+      "label": "Bloquear / desbloquear",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L335"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_9_secci\u00f3n_cat\u00e1logos_p\u00fablicos",
+      "label": "9. Secci\u00f3n \u00b7 Cat\u00e1logos p\u00fablicos",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L360"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_10_secci\u00f3n_motorizados",
+      "label": "10. Secci\u00f3n \u00b7 Motorizados",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L368"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_lista_370",
+      "label": "Lista",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L370"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_crear_driver",
+      "label": "Crear driver",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L374"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_detalle_del_driver",
+      "label": "Detalle del driver",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L385"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_desactivar_driver",
+      "label": "Desactivar driver",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L415"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_push_no_configurado",
+      "label": "Push no configurado",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L419"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_11_secci\u00f3n_cobros",
+      "label": "11. Secci\u00f3n \u00b7 Cobros",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L425"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_vista_principal",
+      "label": "Vista principal",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L427"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_generar_liquidaciones_lunes_10am",
+      "label": "Generar liquidaciones (lunes 10am)",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L450"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_marcar_como_pagado",
+      "label": "Marcar como pagado",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L478"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_historial_de_pagos",
+      "label": "Historial de pagos",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L500"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_12_secci\u00f3n_disputas_de_efectivo",
+      "label": "12. Secci\u00f3n \u00b7 Disputas de efectivo",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L506"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_lista_508",
+      "label": "Lista",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L508"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_resolver",
+      "label": "Resolver",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L531"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_13_secci\u00f3n_auditor\u00eda",
+      "label": "13. Secci\u00f3n \u00b7 Auditor\u00eda",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L564"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_filtros",
+      "label": "Filtros",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L568"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_vista",
+      "label": "Vista",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L576"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_14_secci\u00f3n_configuraci\u00f3n",
+      "label": "14. Secci\u00f3n \u00b7 Configuraci\u00f3n",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L599"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_horario_operativo",
+      "label": "Horario operativo",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L601"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_reglas_de_asignaci\u00f3n_r1_r5",
+      "label": "Reglas de asignaci\u00f3n R1-R5",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L626"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_tel\u00e9fono_soporte",
+      "label": "Tel\u00e9fono soporte",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L641"
+    },
+    {
+      "id": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_comisiones_override_del_default",
+      "label": "Comisiones (override del default)",
+      "file_type": "document",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L649"
+    }
+  ],
+  "edges": [
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_md",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_08_flujo_del_admin_admin_tindivo_com",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_08_flujo_del_admin_admin_tindivo_com",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_tabla_de_contenidos",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_08_flujo_del_admin_admin_tindivo_com",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_1_tres_principios_del_dise\u00f1o",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L26",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_08_flujo_del_admin_admin_tindivo_com",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_2_contexto_de_uso_real",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L36",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_08_flujo_del_admin_admin_tindivo_com",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_3_mapa_de_navegaci\u00f3n",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L46",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_08_flujo_del_admin_admin_tindivo_com",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_4_secci\u00f3n_dashboard",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L68",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_4_secci\u00f3n_dashboard",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_vista_comando",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L70",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_4_secci\u00f3n_dashboard",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_kpis_del_d\u00eda_8_cards",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L117",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_4_secci\u00f3n_dashboard",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_monitor_en_vivo_4_cards",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L128",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_4_secci\u00f3n_dashboard",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_alertas",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L137",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_4_secci\u00f3n_dashboard",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_lista_pedidos_activos",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L147",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_08_flujo_del_admin_admin_tindivo_com",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_5_secci\u00f3n_m\u00e9tricas",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L153",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_5_secci\u00f3n_m\u00e9tricas",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_6_sub_tabs",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L157",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_5_secci\u00f3n_m\u00e9tricas",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_export_csv",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L166",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_08_flujo_del_admin_admin_tindivo_com",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_6_secci\u00f3n_pedidos",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L172",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_6_secci\u00f3n_pedidos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_lista_con_filtros",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L174",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_6_secci\u00f3n_pedidos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_detalle_de_pedido_inmutable",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L185",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_6_secci\u00f3n_pedidos",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_acciones_del_admin",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L226",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_08_flujo_del_admin_admin_tindivo_com",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_7_secci\u00f3n_env\u00edo_de_tracking",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L237",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_7_secci\u00f3n_env\u00edo_de_tracking",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_lista",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L239",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_7_secci\u00f3n_env\u00edo_de_tracking",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_flujo",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L257",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_7_secci\u00f3n_env\u00edo_de_tracking",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_tab_enviados",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L264",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_08_flujo_del_admin_admin_tindivo_com",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_8_secci\u00f3n_negocios_restaurants",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L270",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_8_secci\u00f3n_negocios_restaurants",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_lista_272",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L272",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_8_secci\u00f3n_negocios_restaurants",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_detalle_del_negocio",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L278",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_8_secci\u00f3n_negocios_restaurants",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_crear_negocio",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L317",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_8_secci\u00f3n_negocios_restaurants",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_bloquear_desbloquear",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L335",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_08_flujo_del_admin_admin_tindivo_com",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_9_secci\u00f3n_cat\u00e1logos_p\u00fablicos",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L360",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_08_flujo_del_admin_admin_tindivo_com",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_10_secci\u00f3n_motorizados",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L368",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_10_secci\u00f3n_motorizados",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_lista_370",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L370",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_10_secci\u00f3n_motorizados",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_crear_driver",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L374",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_10_secci\u00f3n_motorizados",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_detalle_del_driver",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L385",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_10_secci\u00f3n_motorizados",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_desactivar_driver",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L415",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_10_secci\u00f3n_motorizados",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_push_no_configurado",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L419",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_08_flujo_del_admin_admin_tindivo_com",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_11_secci\u00f3n_cobros",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L425",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_11_secci\u00f3n_cobros",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_vista_principal",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L427",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_11_secci\u00f3n_cobros",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_generar_liquidaciones_lunes_10am",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L450",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_11_secci\u00f3n_cobros",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_marcar_como_pagado",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L478",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_11_secci\u00f3n_cobros",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_historial_de_pagos",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L500",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_08_flujo_del_admin_admin_tindivo_com",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_12_secci\u00f3n_disputas_de_efectivo",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L506",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_12_secci\u00f3n_disputas_de_efectivo",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_lista_508",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L508",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_12_secci\u00f3n_disputas_de_efectivo",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_resolver",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L531",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_08_flujo_del_admin_admin_tindivo_com",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_13_secci\u00f3n_auditor\u00eda",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L564",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_13_secci\u00f3n_auditor\u00eda",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_filtros",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L568",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_13_secci\u00f3n_auditor\u00eda",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_vista",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L576",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_08_flujo_del_admin_admin_tindivo_com",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_14_secci\u00f3n_configuraci\u00f3n",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L599",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_14_secci\u00f3n_configuraci\u00f3n",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_horario_operativo",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L601",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_14_secci\u00f3n_configuraci\u00f3n",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_reglas_de_asignaci\u00f3n_r1_r5",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L626",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_14_secci\u00f3n_configuraci\u00f3n",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_tel\u00e9fono_soporte",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L641",
+      "weight": 1.0
+    },
+    {
+      "source": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_14_secci\u00f3n_configuraci\u00f3n",
+      "target": "d_tinkuy_creativo_proyectos_tindivo_code_tindivo_v2_docs_08_flujo_admin_comisiones_override_del_default",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Docs/08-flujo-admin.md",
+      "source_location": "L649",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

@@ -1,14 +1,14 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { isToday } from '@/lib/format'
 import { getOptimistic } from '@/lib/offline-queue'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
-import type { BoardOrder } from '@/lib/types'
+import type { BoardOrder, DriverBusiness } from '@/lib/types'
 import { orderUrgency } from '@/lib/urgency'
 
 const BOARD_COLUMNS =
-  'id,short_id,status,source,customer_name,customer_phone,delivery_address,delivery_reference,order_amount,delivery_fee,payment_intent,driver_id,created_at,estimated_ready_at,urgent_since,appears_in_queue_at,occupancy_slots,waiting_at_restaurant_at,delivered_at,client_pays_with,change_to_give,business_id,businesses(name)'
+  'id,short_id,status,source,customer_name,customer_phone,delivery_address,delivery_reference,order_amount,delivery_fee,payment_intent,driver_id,created_at,estimated_ready_at,ready_early_used,ready_early_at,urgent_since,appears_in_queue_at,occupancy_slots,waiting_at_restaurant_at,delivered_at,client_pays_with,change_to_give,business_id'
 
 export interface DriverBoard {
   orders: BoardOrder[]
@@ -26,8 +26,10 @@ export interface DriverBoard {
 /** Board del motorizado: supabase directo (RLS) + realtime + derivados. */
 export function useDriverOrders(now: number): DriverBoard {
   const [orders, setOrders] = useState<BoardOrder[]>([])
+  const [businesses, setBusinesses] = useState<Record<string, DriverBusiness>>({})
   const [myDriverId, setMyDriverId] = useState<string | null>(null)
   const [lastSyncOk, setLastSyncOk] = useState(true)
+  const channelNameRef = useRef(`drv-orders-${crypto.randomUUID()}`)
 
   const refetch = useCallback(async () => {
     const supabase = getSupabaseBrowser()
@@ -52,6 +54,16 @@ export function useDriverOrders(now: number): DriverBoard {
     )
   }, [])
 
+  // Los locales del motorizado cambian de higos a brevas: se piden una vez y se
+  // cruzan por id, en vez de re-embeberlos en cada refetch del board.
+  useEffect(() => {
+    const supabase = getSupabaseBrowser()
+    supabase.rpc('driver_businesses').then(({ data }) => {
+      const rows = (data ?? []) as DriverBusiness[]
+      setBusinesses(Object.fromEntries(rows.map((b) => [b.id, b])))
+    })
+  }, [])
+
   useEffect(() => {
     const supabase = getSupabaseBrowser()
     supabase
@@ -61,7 +73,7 @@ export function useDriverOrders(now: number): DriverBoard {
       .then(({ data }) => setMyDriverId(data?.id ?? null))
     void refetch()
     const channel = supabase
-      .channel('drv-orders')
+      .channel(channelNameRef.current)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
         void refetch()
       })
@@ -79,26 +91,37 @@ export function useDriverOrders(now: number): DriverBoard {
   // Cola offline: pintar el estado optimista de transiciones aún no sincronizadas.
   const effective = useMemo(() => {
     const optimistic = getOptimistic()
-    if (Object.keys(optimistic).length === 0) return orders
     return orders.map((o) => {
       const next = optimistic[o.id]
-      return next ? { ...o, status: next } : o
+      const business = businesses[o.business_id] ?? null
+      return next ? { ...o, business, status: next } : { ...o, business }
     })
-  }, [orders])
+  }, [orders, businesses])
 
   const derived = useMemo(() => {
+    // VISIBLE lo decide la RLS (preparing + waiting_driver, sin motorizado).
+    // TOMABLE lo decide este filtro:
+    //   - waiting_driver: SIEMPRE, sin condición de tiempo. La comida ya está
+    //     lista; esconderla porque appears_in_queue_at siga en el futuro dejaba
+    //     el pedido enfriándose sin que nadie pudiera verlo.
+    //   - preparing: solo con la ventana abierta, o sea cuando quedan 10
+    //     minutos o menos para que esté listo.
     const available = effective.filter(
       (o) =>
-        o.status === 'waiting_driver' &&
         o.driver_id == null &&
-        (o.appears_in_queue_at == null || Date.parse(o.appears_in_queue_at) <= now),
+        (o.status === 'waiting_driver' ||
+          (o.status === 'preparing' &&
+            o.appears_in_queue_at != null &&
+            Date.parse(o.appears_in_queue_at) <= now)),
     )
+    // Visible pero todavía no tomable. `appears_in_queue_at` nulo cae aquí a
+    // propósito: es el lado conservador. Antes contaba como tomable, que es
+    // justo la interpretación equivocada si el reloj no llegó a arrancar.
     const upcoming = effective.filter(
       (o) =>
         o.driver_id == null &&
         o.status === 'preparing' &&
-        o.appears_in_queue_at != null &&
-        Date.parse(o.appears_in_queue_at) > now,
+        (o.appears_in_queue_at == null || Date.parse(o.appears_in_queue_at) > now),
     )
     const mine = effective.filter(
       (o) =>

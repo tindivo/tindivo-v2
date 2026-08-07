@@ -11,6 +11,7 @@ export const dynamic = 'force-dynamic'
 const Schema = z.object({
   status: z.enum(['resolved', 'dismissed']).default('resolved'),
   resolutionNote: z.string().trim().max(500).optional(),
+  resolutionAction: z.enum(['refund_customer', 'none']).optional(),
 })
 
 export function OPTIONS(req: Request): Response {
@@ -28,6 +29,21 @@ export async function POST(
     const { id } = await params
     const body = Schema.parse(await req.json().catch(() => ({})))
     const service = createServiceClient()
+
+    // ── Guard: bloquear apelaciones — deben usar POST /admin/appeals/[id]/resolve ──
+    const { data: reportType } = await service
+      .from('reports')
+      .select('type')
+      .eq('id', id)
+      .maybeSingle()
+
+    if (reportType?.type === 'rejected_proof_disputed') {
+      throw new DomainError(
+        'Las apelaciones deben resolverse desde el endpoint dedicado: POST /admin/appeals/[id]/resolve',
+        'conflict',
+      )
+    }
+
     const { data, error } = await service
       .from('reports')
       .update({
@@ -40,6 +56,7 @@ export async function POST(
       .eq('status', 'open')
       .select('id,status')
       .maybeSingle()
+
     if (error) throw new Error(error.message)
     if (!data) throw new DomainError('Reporte no encontrado o ya resuelto', 'not_found')
     return ok(data, { headers: corsHeaders(req) })
