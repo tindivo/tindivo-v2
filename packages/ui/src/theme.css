@@ -48,6 +48,34 @@
   --font-sans: var(--font-geist), system-ui, sans-serif;
   --font-mono: var(--font-jetbrains), ui-monospace, monospace;
 
+  /* ── Escala tipográfica ──
+     Nombres SEMÁNTICOS a propósito, no tallas de camiseta: no colisionan con
+     `text-xs`/`sm`/`base`/`lg`/`xl` de Tailwind, así que los 136 usos de esas
+     utilidades siguen midiendo lo mismo. Sustituirlas habría movido cada una
+     1-4 px en silencio.
+
+     Los valores salen del uso real (1295 `text-[Npx]` en las cuatro apps), no
+     de una proporción teórica: el rango 10-15 es denso a propósito, que es lo
+     normal en UI de producto donde 11 y 13 comunican jerarquías distintas.
+
+     Objetivo: que el código NUEVO tenga una respuesta obvia. Los corchetes
+     existentes convergen al tocar cada fichero; no hay migración masiva, porque
+     colapsarlos cambia píxeles y eso es una pasada de diseño, no un refactor.
+
+     Pendiente de decisión: `caption`(12) vs `meta`(11) y `body`(14) vs
+     `body-lg`(15) son pares casi redundantes — 12px y 14px suman 386 usos,
+     concentrados en customer y admin. Colapsar cada par a un peldaño dejaría
+     una escala de 7, pero hay que decidirlo mirando pantallas. */
+  --text-micro: 10px; /* eyebrows y microlabels UPPERCASE */
+  --text-meta: 11px; /* metadatos, chips, timestamps */
+  --text-caption: 12px; /* texto de apoyo */
+  --text-label: 13px; /* labels y secundario — el más usado (271) */
+  --text-body: 14px; /* cuerpo */
+  --text-body-lg: 15px; /* cuerpo en superficies amplias */
+  --text-lead: 17px; /* énfasis, nombres, importes en card */
+  --text-title: 22px; /* títulos de sección */
+  --text-display: 28px; /* displays y cifras hero */
+
   /* ── Radios ── */
   --radius-sm: 8px;
   --radius-md: 12px;
