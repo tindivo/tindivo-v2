@@ -14,6 +14,14 @@
   --color-brand-light: #fed7aa;
   --color-brand-soft: #fff7ed;
 
+  /* Degradado de marca para superficies rellenas (CTA primario, nav activa).
+     ARRANCA en --color-brand y ACLARA hacia orange-400, en vez de oscurecer
+     hacia brand-dark como antes: aquel se ensuciaba hacia el marrón-rojo en
+     la esquina inferior. La idea (aclarar, no oscurecer) viene del repo
+     tindivo-delivery; el naranja es el nuestro, así el CTA no se descuelga
+     del texto, los bordes y los acentos que usan el token. */
+  --gradient-brand-to: #fb923c;
+
   /* ── Tinta (negro cálido, nunca puro #000) ── */
   --color-ink: #1a1614;
   --color-ink-muted: #57534e;

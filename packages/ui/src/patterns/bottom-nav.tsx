@@ -57,7 +57,7 @@ export function BottomNav({ items, variant = 'default', className }: BottomNavPr
               className={cn(
                 'flex flex-1 flex-col items-center justify-center rounded-[22px] p-2.5 transition-all duration-300 active:scale-90',
                 active
-                  ? 'bg-gradient-to-br from-brand to-brand-dark text-white shadow-glow-brand'
+                  ? 'bg-[linear-gradient(135deg,var(--color-brand),var(--gradient-brand-to))] text-white shadow-glow-brand'
                   : 'text-ink-muted',
               )}
             >
