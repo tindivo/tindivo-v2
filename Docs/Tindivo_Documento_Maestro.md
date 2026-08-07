@@ -202,7 +202,8 @@ Si Tindivo adelanta una devolución del **fondo de contingencia** (caso: prepago
 
 ## 8. Brief de diseño (para Claude Design)
 
-> Fuente canónica: `06-ui-design-system.md` + `Tindivo_Design_Spec.html`. Resumen operativo:
+> Fuente canónica: `packages/ui/src/theme.css` (tokens) + `apps/motorizados` (uso real).
+> El antiguo `06-ui-design-system.md` se eliminó por estar desviado del código. Resumen operativo:
 
 **Filosofía:** cercano, no corporativo. Servicio de barrio peruano. Mobile-first 1:1 (base 402×874). **Sin dark mode** (fondo claro siempre). Bordes muy redondeados. Naranja protagonista, sin secundarios genéricos.
 
@@ -213,8 +214,9 @@ Si Tindivo adelanta una devolución del **fondo de contingencia** (caso: prepago
 - Success `#16A34A` · Warning `#F59E0B` · Danger `#DC2626` · Info `#0EA5E9`
 
 **Tipografía:**
-- **Bricolage Grotesque** → displays (saludos, hero, títulos grandes). Nunca en body.
-- **Geist** → body, labels, números. El caballito de batalla.
+- **Geist** → displays, body, labels y números. Familia única de interfaz; la jerarquía
+  se logra variando el **peso** (600-800 displays · 400-600 body · 500-700 microlabels),
+  no cambiando de familia. Bricolage Grotesque quedó eliminada en la migración.
 - **JetBrains Mono** → microlabels UPPERCASE, IDs (#TND-12345), times, precios.
 - Escala: display-lg 36px / display-sm 24px / heading-md 18px / body 15px / label 11px / mono-md 14px. Máx 3 tamaños por vista.
 

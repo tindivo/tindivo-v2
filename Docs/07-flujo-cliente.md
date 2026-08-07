@@ -33,7 +33,7 @@
 
 **Audiencia**: cliente final del pueblo (5,000-50,000 habitantes), no tech-savvy promedio. La app está pensada para que **una abuela pueda pedir desde su nieto/a celular** sin fricción.
 
-**Diseño base**: extraído pixel a pixel del demo `Tindivo.html`. Paleta `#F97316` brand, fondo cálido `#FAF6F1`. Tipografías Bricolage Grotesque (display) / Geist (body) / JetBrains Mono (microlabels). Ver `06-ui-design-system.md`.
+**Diseño base**: extraído pixel a pixel del demo `Tindivo.html`. Paleta `#F97316` brand, fondo cálido `#FAF6F1`. Tipografías **Geist** (display, body y labels) / **JetBrains Mono** (solo datos técnicos: IDs, precios, horas). Tokens en `packages/ui/src/theme.css`; uso de referencia en `apps/motorizados`.
 
 **Estado actual del demo**: prototipo client-side sin backend. En v2 se conecta a `api.tindivo.com`. Se mantiene 1:1 la UI/UX, animaciones, efectos.
 

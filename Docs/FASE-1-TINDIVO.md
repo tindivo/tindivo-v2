@@ -594,7 +594,7 @@ Se construye el **espacio** en el modelo de datos para que estas features no req
 
 ## 18. Design system aplicado
 
-**Fuente canónica:** `Tindivo_Design_Spec.html` + `06-ui-design-system.md` + `Tindivo_Documento_Maestro.md` §8.
+**Fuente canónica:** `packages/ui/src/theme.css` (tokens) + `apps/motorizados` (uso real) + `Tindivo_Documento_Maestro.md` §8. El antiguo `06-ui-design-system.md` se eliminó por estar desviado del código.
 
 - **Light mode siempre. Sin dark mode**, en las 4 apps. (El panel antiguo era dark; **no se replica esa estética**, solo sus patrones de UX.)
 - **Filosofía:** cercano, no corporativo. Servicio de barrio peruano. Bordes muy redondeados, naranja protagonista.
@@ -628,7 +628,6 @@ Este documento (`FASE-1-TINDIVO.md`) va **a todos los agentes** como entrada. Ad
 - `Tindivo_Documento_Maestro.md`
 - `08-flujo-admin.md`
 - `09-flujo-negocios.md`
-- `06-ui-design-system.md`
 - `Tindivo_Design_Spec.html`
 - `DOCUMENTACION_PANELES_TINDIVO.md` (referencia de UX validada: toggle on/off, gestión de horarios, métricas básicas, gestión de productos, impersonación)
 - `11-notificaciones-push.md` (para el audio del restaurante)
@@ -639,7 +638,6 @@ Este documento (`FASE-1-TINDIVO.md`) va **a todos los agentes** como entrada. Ad
 - `FASE-1-TINDIVO.md` (este)
 - `Tindivo_Documento_Maestro.md`
 - `10-flujo-motorizados.md` (⚠️ ignorar R1-R5/FCFS/transferencias — ver §3.3 de este doc)
-- `06-ui-design-system.md`
 - `11-notificaciones-push.md`
 - `05-api-rest.md`
 
@@ -650,7 +648,6 @@ Este documento (`FASE-1-TINDIVO.md`) va **a todos los agentes** como entrada. Ad
 - `FLUJO_TINDIVO.md` (comportamiento + tabla A–J de conexión a backend)
 - `Tindivo_Design_Spec.html` (visual)
 - `07-flujo-cliente.md`
-- `06-ui-design-system.md`
 - `05-api-rest.md`
 
 > **Regla para todos los agentes:** si un spec contradice este documento, gana este documento para la Fase 1 (ver orden de precedencia al inicio).
