@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import { LoadingState } from '@tindivo/ui'
+import { useEffect, useState } from 'react'
 import { DriverShell } from '@/components/driver-shell'
 import { Login } from '@/components/login'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
