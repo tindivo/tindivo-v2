@@ -63,3 +63,6 @@ Docs/QA-CATALOGO-CREDENCIALES.md
 /test-results/
 /playwright-report/
 /blob-report/
+
+# sesiones de Playwright (contienen tokens locales de e2e)
+e2e/.auth/
