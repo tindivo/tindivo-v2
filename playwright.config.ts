@@ -53,6 +53,9 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
         viewport: { width: 1440, height: 900 },
         storageState: 'e2e/.auth/negocios.json',
+        // Sin esto, el panel levanta el modal «Activa las notificaciones» encima
+        // de todo y las capturas salen del modal, no de la pantalla.
+        permissions: ['notifications'],
       },
     },
   ],

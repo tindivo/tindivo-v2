@@ -53,6 +53,7 @@ async function settle(page: Page): Promise<void> {
 
 const PANTALLAS = [
   { ruta: '/', nombre: 'tablero' },
+  { ruta: '/nuevo', nombre: 'pedido-manual' },
   { ruta: '/menu', nombre: 'menu' },
   { ruta: '/deuda', nombre: 'deuda' },
   { ruta: '/historial', nombre: 'historial' },
@@ -70,7 +71,9 @@ test.describe('regresión visual — panel de negocios', () => {
       // Tindivo» del login, y capturó la pantalla equivocada.
       // La barra lateral solo existe con sesión: sirve de prueba de que
       // estamos dentro, en cualquier ruta.
-      await expect(page.getByText(/SAN JACINTO/i)).toBeVisible({ timeout: 30_000 })
+      // `.first()`: algunas rutas montan la barra lateral de escritorio Y la de
+      // móvil, y sin acotar salta la violación de modo estricto de Playwright.
+      await expect(page.getByText(/SAN JACINTO/i).first()).toBeVisible({ timeout: 30_000 })
       await expect(page.getByLabel(/contraseña/i)).toHaveCount(0)
 
       await settle(page)
@@ -89,4 +92,27 @@ test.describe('regresión visual — panel de negocios', () => {
       })
     })
   }
+
+  /**
+   * El formulario de pedido manual vive en un contenedor con scroll propio, así
+   * que `fullPage` solo alcanza lo que entra en el viewport y deja fuera la
+   * mitad de abajo. Este test cubre el selector de método de pago, que es
+   * justo lo que queda cortado — y donde vive el color por método.
+   */
+  test('selector de método de pago', async ({ page }) => {
+    await page.goto(`${NEGOCIOS}/nuevo`)
+    await expect(page.getByText(/SAN JACINTO/i).first()).toBeVisible({ timeout: 30_000 })
+
+    // `data-testid` y no un filtro por texto: la primera versión buscaba el div
+    // que contuviera «Método de pago» y capturaba solo la etiqueta, porque el
+    // match más profundo es el propio label, no la tarjeta.
+    const tarjeta = page.getByTestId('payment-selector')
+    await tarjeta.scrollIntoViewIfNeeded()
+    await settle(page)
+
+    await expect(tarjeta).toHaveScreenshot('pedido-manual-pago.png', {
+      threshold: 0.02,
+      maxDiffPixelRatio: 0.002,
+    })
+  })
 })

@@ -111,7 +111,7 @@
     "apps/negocios/features/nuevo/components/band-selector.tsx:94",
     "apps/negocios/features/nuevo/components/nuevo-form.tsx:142",
     "apps/negocios/features/nuevo/components/nuevo-form.tsx:70",
-    "apps/negocios/features/nuevo/components/payment-selector.tsx:23",
+    "apps/negocios/features/nuevo/components/payment-selector.tsx:40",
     "apps/negocios/features/nuevo/components/prep-selector.tsx:19"
   ]
 }

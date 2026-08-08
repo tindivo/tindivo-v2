@@ -24,5 +24,18 @@ setup('sesión de negocios', async ({ page }) => {
   // El formulario desaparece = la sesión cuajó.
   await expect(email).toBeHidden({ timeout: 30_000 })
 
+  // Desactiva la compuerta de notificaciones. Sin esto sale un modal a pantalla
+  // completa (`fixed inset-0 bg-black/85`) sobre CUALQUIER ruta, y las capturas
+  // salen del modal con el panel oscurecido detrás. Pasaban en verde igual,
+  // porque `toBeVisible` de Playwright comprueba tamaño y CSS, NO oclusión: el
+  // ancla de la barra lateral se considera visible aunque haya algo encima.
+  //
+  // Va en la sesión guardada, no en cada test, porque la compuerta se decide en
+  // el montaje del chrome leyendo localStorage.
+  await page.evaluate(() => {
+    localStorage.setItem('tindivo_sound_on', 'true')
+    localStorage.setItem('tindivo_notifications_gate_dismissed', 'true')
+  })
+
   await page.context().storageState({ path: SESSION })
 })
