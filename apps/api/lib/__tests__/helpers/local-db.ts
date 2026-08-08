@@ -186,6 +186,10 @@ export async function seedPrepaidOrder(opts: SeedOrderOptions = {}): Promise<See
 
 export const E2E = {
   BUSINESS_ID: 'e2e00000-0000-4000-8000-000000000010',
+  // Segundo negocio del seed: existe SIN motorizados en `driver_restaurants`, a
+  // propósito (seed-e2e.ts:155-156). Es el escenario para el caso negativo de la
+  // guarda de autorización que añadió la 0128.
+  BUSINESS_2_ID: 'e2e00000-0000-4000-8000-0000000000b1',
   BUSINESS_USER_ID: 'e2e00000-0000-4000-8000-000000000001',
   DRIVER_USER_ID: 'e2e00000-0000-4000-8000-000000000002',
   DRIVER_ID: 'e2e00000-0000-4000-8000-000000000050',
@@ -317,7 +321,10 @@ export async function cleanup(seed: SeededOrder): Promise<void> {
   // deja eventos huérfanos acumulándose (medido: 4 tras dos corridas de la suite).
   await localClient.from('domain_events').delete().eq('aggregate_id', seed.orderId)
   await localClient.from('orders').delete().eq('id', seed.orderId)
-  if (seed.businessId !== E2E.BUSINESS_ID) {
+  // Los negocios del SEED nunca se borran: son mundo compartido, no basura del
+  // test. Borrar BUSINESS_2 aquí dejaba la suite dependiendo del orden de los
+  // archivos y obligaba a re-sembrar entre corridas.
+  if (seed.businessId !== E2E.BUSINESS_ID && seed.businessId !== E2E.BUSINESS_2_ID) {
     await localClient.from('businesses').delete().eq('id', seed.businessId)
   }
   if (seed.userId !== E2E.BUSINESS_USER_ID) {

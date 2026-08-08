@@ -9,10 +9,18 @@
  *   los borra al terminar.
  *
  * QUÉ HACE FALTA PARA LLEVAR UN PEDIDO A `delivered` — MEDIDO, NO SUPUESTO
- *   `advance_order` NO valida `driver_restaurants` ni `driver_availability` en
- *   `take` (verificado contra la definición viva). Basta una fila en `drivers`
- *   apuntando al user_id del actor. No hace falta autorizar el motorizado en el
- *   negocio ni marcarlo disponible.
+ *   Desde la 0128, `advance_order` SÍ valida `driver_restaurants` en `take`: el
+ *   motorizado tiene que estar autorizado en el negocio del pedido. Por eso
+ *   `seedLedgerWorld` inserta esa fila; sin ella todos estos tests rebotan con
+ *   P0001 'No estas autorizado para este negocio'.
+ *
+ *   Lo que la 0128 sigue SIN validar en `take` (verificado contra la definición
+ *   viva, no supuesto): `driver_availability`. No hace falta marcar el
+ *   motorizado como disponible para tomar un pedido.
+ *
+ *   La otra guarda de la 0128, `appears_in_queue_at`, no afecta a estos tests:
+ *   solo aplica a pedidos en `preparing`, y `seedOrder` los crea directamente en
+ *   `waiting_driver`, que pasa sin condición de tiempo.
  *
  * DÓNDE SE CALCULA EL DINERO
  *   El trigger `generate_delivery_charges` NO calcula nada: lee
@@ -96,6 +104,16 @@ export async function seedLedgerWorld(overrides: CommissionOverrides = {}): Prom
     .select('id')
     .single()
   if (drvErr) throw new Error(`seed drivers failed: ${drvErr.message}`)
+
+  // 0128: `take` exige que el motorizado esté autorizado en el negocio. Sin esta
+  // fila, el primer `advance_order('take')` de la cadena rebota con P0001 y todos
+  // los tests de ledger fallan antes de llegar al dinero, que es lo que miden.
+  // No necesita cleanup propio: `driver_restaurants.driver_id` cascadea al borrar
+  // el motorizado en `cleanupLedgerWorld`.
+  const { error: authErr } = await localClient
+    .from('driver_restaurants')
+    .insert({ driver_id: drv.id, business_id: biz.id })
+  if (authErr) throw new Error(`seed driver_restaurants failed: ${authErr.message}`)
 
   return {
     businessUserId: bizUser.user.id,
