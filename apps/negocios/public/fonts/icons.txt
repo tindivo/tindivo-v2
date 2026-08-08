@@ -23,6 +23,7 @@ edit_note
 error
 expand_less
 expand_more
+fastfood
 gavel
 history
 info
@@ -37,6 +38,7 @@ looks_3
 looks_one
 looks_two
 more_horiz
+near_me
 notifications
 notifications_active
 notifications_off
@@ -53,6 +55,7 @@ remove
 replay
 report_problem
 restaurant_menu
+route
 save
 schedule
 search

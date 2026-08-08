@@ -8,16 +8,23 @@
    servía el de 400 y los otros tres eran 3.6 MB de descarga muerta. Y al ser
    estáticos, el eje `wght` no existía: el prop `weight` de `Icon` no hacía nada.
 
-   `font-display: swap` — antes era `block`, que deja los iconos INVISIBLES
-   hasta que la fuente carga. Con 92 KB el intercambio es imperceptible y no
-   hay pantalla en blanco.
+   `font-display: block` — OBLIGATORIO en una fuente de iconos, no es una
+   preferencia. `Icon` renderiza el NOMBRE del icono como texto y deja que la
+   ligadura lo convierta en glifo. Con `swap` el navegador pinta la fuente de
+   reserva de inmediato y se lee «two_wheeler» literal en pantalla, además de
+   reventar la caja porque el texto es mucho más ancho que el glifo. `block` lo
+   mantiene invisible hasta que la fuente está lista.
+
+   Estuvo en `swap` un tiempo por razonar que 92 KB hacen el intercambio
+   imperceptible. No lo es: por rápido que cargue, en una conexión móvil real
+   la ventana se ve.
 
    Para regenerar tras añadir iconos nuevos: ver `README.md` en esta carpeta. */
 @font-face {
   font-family: 'Material Symbols Rounded';
   font-style: normal;
   font-weight: 100 700;
-  font-display: swap;
+  font-display: block;
   src: url('./material-symbols-rounded.woff2') format('woff2-variations');
 }
 
