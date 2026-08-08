@@ -1,5 +1,10 @@
 # Plan de migración del design system Tindivo
 
+> **Documento histórico.** Registra las decisiones de la migración; no describe el
+> estado actual. Las menciones a `Docs/06-ui-design-system.md` son de contexto: ese
+> fichero se eliminó por llevar tiempo desviado del código. La fuente de verdad hoy
+> son los tokens de `packages/ui/src/theme.css` y el uso real en `apps/motorizados`.
+
 > Objetivo: unificar la identidad visual de `apps/customer` y `apps/motorizados` bajo un solo design system coherente, inspirado en la claridad y coherencia de Apple, sin perder el tono cercano de Tindivo.
 
 ## Fases aprobadas
@@ -89,7 +94,7 @@ Mover componentes actuales a la estructura aprobada:
 - Actualizar `theme.css` para que `--font-display`, `--font-sans` apunten a Geist.
 - Mantener `--font-mono` para JetBrains Mono.
 - Actualizar `apps/customer/app/layout.tsx` y `apps/motorizados/app/layout.tsx` para cargar solo Geist + JetBrains Mono.
-- Actualizar `Docs/06-ui-design-system.md` para reflejar la decisión.
+- ~~Actualizar `Docs/06-ui-design-system.md` para reflejar la decisión.~~ → el fichero se eliminó; la decisión vive en `theme.css`.
 
 ### 0.3 Unificar tokens de color
 
@@ -193,8 +198,9 @@ pnpm graphify:update
 ## Checklist de éxito
 
 - [ ] `packages/ui` tiene carpetas `primitives/` y `patterns/`.
-- [ ] Todos los layouts frontend cargan solo Geist + JetBrains Mono.
-- [ ] `theme.css` y `Docs/06-ui-design-system.md` coinciden en tokens.
+- [x] Todos los layouts frontend cargan solo Geist + JetBrains Mono. → las cuatro apps,
+      incluidas `admin` (cargaba Manrope) y `negocios`, que quedaban fuera de este plan.
+- [x] ~~`theme.css` y `Docs/06-ui-design-system.md` coinciden en tokens.~~ → `theme.css` es la única fuente; el doc se eliminó.
 - [ ] No quedan clases `.t-*` en `apps/customer` ni `apps/motorizados`.
 - [ ] `BottomNav` y `ToggleSwitch` son compartidos.
 - [ ] `apps/customer/components/ui.tsx` wrapper fue eliminado.

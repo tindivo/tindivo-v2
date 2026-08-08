@@ -37,6 +37,9 @@ jobs:
       - name: Lint (Biome)
         run: pnpm lint
 
+      - name: Design system (superficies de botón fuera de @tindivo/ui)
+        run: pnpm check:ds
+
       - name: Type-check (incluye el drift de enums compile-time)
         run: pnpm type-check
 

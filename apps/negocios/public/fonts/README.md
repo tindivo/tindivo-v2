@@ -14,19 +14,32 @@ funcione con mala conectividad en el piloto.
 
 ## Al añadir un icono nuevo
 
-Si usas un `name` que no está en `icons.txt`, **no se renderiza**: hay que
-regenerar el subset. El proceso completo:
+Si usas un `name` que no está en `icons.txt`, la ligadura no existe y **se lee
+el nombre del icono como texto en pantalla** (`near_me`, `two_wheeler`…). Hay
+que regenerar el subset.
+
+> Comprobación rápida de que no falta ninguno, útil antes de un release:
+> genera la lista con el paso 1 y compárala con la del repo.
+> `comm -13 <(tr -d '\r' < public/fonts/icons.txt | LC_ALL=C sort -u) /tmp/nueva.txt`
+> Si imprime algo, ese icono no está en la fuente.
+
+El proceso completo:
 
 ```bash
 pip install fonttools brotli
 
-# 1. Recolectar todos los nombres de icono del código
+# 1. Recolectar todos los nombres de icono del código.
+#    OJO con las CINCO formas: la primera versión de esto solo cubría tres y se
+#    dejó fuera `near_me`, `route` y `fastfood`, que se pasan como prop
+#    `icon="..."`. Resultado: esos tres se leían como texto en pantalla.
 cd apps/negocios
 {
   grep -rohE 'name="[a-z_0-9]+"' . ../../packages/ui --include=*.tsx | sed 's/name="//;s/"//'
+  grep -rohE 'icon="[a-z_0-9]+"' . ../../packages/ui --include=*.tsx | sed 's/icon="//;s/"//'
   grep -rohE "icon:\s*'[a-z_0-9]+'" . ../../packages/ui --include=*.tsx --include=*.ts | sed "s/.*'\(.*\)'/\1/"
-  grep -rohE "name=\{[^}]*\}" . ../../packages/ui --include=*.tsx | grep -ohE "'[a-z_0-9]+'" | tr -d "'"
-} | sort -u > public/fonts/icons.txt
+  grep -rohE 'name=\{[^}]*\}' . ../../packages/ui --include=*.tsx | grep -ohE "'[a-z_0-9]+'" | tr -d "'"
+  grep -rohE 'icon=\{[^}]*\}' . ../../packages/ui --include=*.tsx | grep -ohE "'[a-z_0-9]+'" | tr -d "'"
+} | grep -v node_modules | LC_ALL=C sort -u > public/fonts/icons.txt
 
 # 2. Bajar la fuente variable completa (~15 MB, no se versiona)
 curl -sL -o /tmp/MSR-var.ttf \

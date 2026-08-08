@@ -128,6 +128,68 @@ describe('toOrderVM readySec calculation', () => {
     expect(vm.readySec).toBeNull()
   })
 
+  // ── "Marcar listo" con la comida aún por delante ───────────────────────────
+  // Escenario de la regla (a) de `advance_order('ready')`: si faltaban MÁS de
+  // `queue_lead_minutes()` (10), el LEAST adelanta `estimated_ready_at` a
+  // ahora+10min — o sea que SIGUE EN EL FUTURO aunque la comida ya esté lista.
+  // Ese desfase es justo el que hacía que la tarjeta contara minutos de cocción
+  // de un pedido que ya salió. Estos tres casos fijan qué recibe cada tarjeta.
+  const readyAtPlus10 = '2026-08-05T15:25:00Z' // baseNow + 10 min
+
+  it('4. readyEarly en `cooking`: readySec null pero minutesLeft SIGUE contando', () => {
+    const vm = toOrderVM(
+      mockOrderRow({
+        status: 'preparing',
+        driver_id: null,
+        ready_early_used: true,
+        estimated_ready_at: readyAtPlus10,
+      }),
+      baseNow,
+    )
+    expect(vm.state).toBe('cooking')
+    expect(vm.readyEarly).toBe(true)
+    expect(vm.readySec).toBeNull()
+    // `minutesLeft` NO mira `ready_early_used` en la rama de 'cooking'. Sin la
+    // guarda de `readyEarly` en la tarjeta, esto se pinta como "Cocinando · 10m
+    // restantes" para comida que ya está lista.
+    expect(vm.minutesLeft).toBe(10)
+  })
+
+  it('5. readyEarly en `heading`: readySec y minutesLeft ambos null', () => {
+    const vm = toOrderVM(
+      mockOrderRow({
+        status: 'heading_to_restaurant',
+        driver_id: 'drv_1',
+        driver: { full_name: 'Carlos Chofer' },
+        ready_early_used: true,
+        estimated_ready_at: readyAtPlus10,
+      }),
+      baseNow,
+    )
+    expect(vm.state).toBe('heading')
+    expect(vm.readyEarly).toBe(true)
+    expect(vm.readySec).toBeNull()
+    // Aquí sí interviene `stillCooking`, que incluye `!ready_early_used`.
+    expect(vm.minutesLeft).toBeNull()
+  })
+
+  it('6. readyEarly en `waiting`: readySec y minutesLeft ambos null', () => {
+    const vm = toOrderVM(
+      mockOrderRow({
+        status: 'waiting_at_restaurant',
+        driver_id: 'drv_1',
+        driver: { full_name: 'Carlos Chofer' },
+        ready_early_used: true,
+        estimated_ready_at: readyAtPlus10,
+      }),
+      baseNow,
+    )
+    expect(vm.state).toBe('waiting')
+    expect(vm.readyEarly).toBe(true)
+    expect(vm.readySec).toBeNull()
+    expect(vm.minutesLeft).toBeNull()
+  })
+
   it('4. estimated_ready_at null -> readySec null', () => {
     const row = mockOrderRow({
       status: 'preparing',

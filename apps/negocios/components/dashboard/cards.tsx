@@ -47,6 +47,19 @@ function RiskBadge({ order }: { order: OrderVM }) {
 
 /** Minutos que faltan para que la comida esté lista (o badge de retraso si readySec < 0). */
 function CookingCountdown({ order }: { order: OrderVM }) {
+  // Máxima prioridad: si la cajera ya declaró la comida lista, no hay nada que
+  // contar. Antes de esto el pedido se quedaba MUDO en `heading` y `waiting`
+  // —`minutesLeft` cae a null por `stillCooking`— así que la única señal de
+  // "listo" vivía en el panel de detalle y el tablero no la reflejaba.
+  if (order.readyEarly) {
+    return (
+      <span className="inline-flex items-center gap-[3px] text-[11px] font-semibold text-success">
+        <Icon name="check_circle" size={12} weight={500} filled className="text-success" />
+        Comida lista
+      </span>
+    )
+  }
+
   if (order.readySec != null && order.readySec < 0) {
     return (
       <span className="inline-flex items-center gap-[3px] rounded-full bg-danger-soft px-1.5 py-0.5 text-[10px] font-bold text-danger border border-danger/20">
@@ -74,6 +87,25 @@ export function CookingStatusLine({ order }: { order: OrderVM }) {
   const d = order.driver
 
   if (s === 'cooking') {
+    // Misma prioridad que en `CookingCountdown`: `readyEarly` gana sobre todo lo
+    // demás. Aquí importa el doble porque en 'cooking' `minutesLeft` NO mira
+    // `ready_early_used` (view-model.ts:262-269), así que sin esta guarda la
+    // línea diría "Cocinando · Xm restantes" de comida ya lista.
+    //
+    // Hoy la combinación 'cooking' + readyEarly no parece alcanzable: `ready`
+    // con driver NULL manda el pedido a `waiting_driver`, y con driver asignado
+    // el estado ya no es 'cooking'. Se cubre igual: la guarda es de una línea y
+    // el día que aparezca un camino nuevo, la etiqueta ya estará correcta en vez
+    // de mentir en silencio.
+    if (order.readyEarly) {
+      return (
+        <div className="flex items-center gap-[5px]">
+          <Icon name="check_circle" size={12} weight={500} filled className="text-success" />
+          <span className="text-[11px] font-semibold text-success">Comida lista</span>
+        </div>
+      )
+    }
+
     if (order.readySec != null && order.readySec < 0) {
       return (
         <div className="flex items-center gap-[5px]">

@@ -17,6 +17,15 @@ type Props = {
  * Wrapper de Material Symbols Rounded.
  * Variable font axes: FILL, wght, GRAD, opsz.
  * Siempre setear los 4 ejes para evitar render `.notdef`.
+ *
+ * El contenido es el NOMBRE del icono en texto; la ligadura de la fuente lo
+ * convierte en glifo. Por eso la fuente DEBE cargarse con `font-display: block`
+ * en todas las apps: con `swap` se lee «two_wheeler» literal mientras carga.
+ *
+ * `overflow-hidden` es la red de seguridad para cuando eso falle igual (fuente
+ * caída, CDN bloqueado, red muerta): el nombre en texto es mucho más ancho que
+ * el glifo y sin recorte desborda y descuadra la tarjeta que lo contiene. Con
+ * él, el peor caso es un hueco vacío del tamaño correcto.
  */
 export function Icon({
   name,
@@ -32,7 +41,7 @@ export function Icon({
   return (
     <span
       className={cn(
-        'material-symbols-rounded inline-flex select-none items-center justify-center leading-none',
+        'material-symbols-rounded inline-flex shrink-0 select-none items-center justify-center overflow-hidden leading-none',
         className,
       )}
       style={{

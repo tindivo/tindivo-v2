@@ -270,3 +270,184 @@ describe('Traspasos y Soltar Pedido (Release)', () => {
     }
   })
 })
+
+/**
+ * Guardias que la 0128 añadió a `advance_order`, acción `take`.
+ *
+ * POR QUÉ ESTOS TESTS EXISTEN
+ *   Antes de la 0128 la autorización del motorizado vivía SOLO en la RLS, y la
+ *   escritura no pasa por la RLS: el endpoint usa el service client. O sea que
+ *   un motorizado no podía VER un pedido de un negocio ajeno pero sí TOMARLO si
+ *   conseguía el id. Estos cuatro casos fijan el contrato nuevo para que no se
+ *   pueda reabrir sin que algo se ponga rojo.
+ */
+describe('0128 · Guardias de `take`', () => {
+  it('G1 negativo: un motorizado NO puede tomar un pedido de un negocio en el que no está autorizado', async () => {
+    // BUSINESS_2 existe en el seed sin ninguna fila en `driver_restaurants`, a
+    // propósito. Es exactamente el escenario que la RLS ya bloqueaba para leer.
+    const seeded = await seedContraentregaOrder(E2E.BUSINESS_2_ID)
+    const supabase = localClient
+
+    try {
+      const { error } = await supabase.rpc('advance_order', {
+        p_order_id: seeded.orderId,
+        p_actor_user_id: E2E.DRIVER_USER_ID,
+        p_actor_role: 'driver',
+        p_action: 'take',
+      })
+
+      expect(error).not.toBeNull()
+      expect(error?.message).toMatch(/No estas autorizado para este negocio/)
+
+      // Y el pedido queda intacto: sin motorizado y en su estado original.
+      const { data: after } = await supabase
+        .from('orders')
+        .select('driver_id, status')
+        .eq('id', seeded.orderId)
+        .single()
+      expect(after?.driver_id).toBeNull()
+      expect(after?.status).toBe('waiting_driver')
+    } finally {
+      await cleanup(seeded)
+    }
+  })
+
+  it('G1 positivo: el mismo motorizado SÍ puede tomar un pedido de su negocio autorizado', async () => {
+    // Contraparte del anterior: mismo actor, negocio donde sí está autorizado.
+    // Sin esto, un test negativo que pasa no prueba nada — pasaría igual si la
+    // guarda rechazara siempre.
+    const seeded = await seedContraentregaOrder(E2E.BUSINESS_ID)
+    const supabase = localClient
+
+    try {
+      const { error } = await supabase.rpc('advance_order', {
+        p_order_id: seeded.orderId,
+        p_actor_user_id: E2E.DRIVER_USER_ID,
+        p_actor_role: 'driver',
+        p_action: 'take',
+      })
+      expect(error).toBeNull()
+
+      const { data: after } = await supabase
+        .from('orders')
+        .select('driver_id, status')
+        .eq('id', seeded.orderId)
+        .single()
+      expect(after?.driver_id).toBe(E2E.DRIVER_ID)
+      expect(after?.status).toBe('heading_to_restaurant')
+    } finally {
+      await cleanup(seeded)
+    }
+  })
+
+  it('G2 negativo: un pedido en `preparing` con la ventana de cola aún cerrada NO se puede tomar', async () => {
+    const seeded = await seedContraentregaOrder(E2E.BUSINESS_ID)
+    const supabase = localClient
+
+    try {
+      // El seed crea el pedido en `waiting_driver`; lo movemos a `preparing` con
+      // la ventana en el futuro, que es el estado que la guarda 2 debe rechazar.
+      const { error: upErr } = await supabase
+        .from('orders')
+        .update({
+          status: 'preparing',
+          appears_in_queue_at: new Date(Date.now() + 10 * 60_000).toISOString(),
+        })
+        .eq('id', seeded.orderId)
+      expect(upErr).toBeNull()
+
+      const { error } = await supabase.rpc('advance_order', {
+        p_order_id: seeded.orderId,
+        p_actor_user_id: E2E.DRIVER_USER_ID,
+        p_actor_role: 'driver',
+        p_action: 'take',
+      })
+
+      expect(error).not.toBeNull()
+      expect(error?.message).toMatch(/aun no esta disponible para tomar/)
+
+      const { data: after } = await supabase
+        .from('orders')
+        .select('driver_id, status')
+        .eq('id', seeded.orderId)
+        .single()
+      expect(after?.driver_id).toBeNull()
+      expect(after?.status).toBe('preparing')
+    } finally {
+      await cleanup(seeded)
+    }
+  })
+
+  it('G2 límite: con la ventana recién abierta (`appears_in_queue_at <= now()`) SÍ se puede tomar', async () => {
+    // SOBRE EL CASO LÍMITE EXACTO
+    //   La condición de rechazo es `appears_in_queue_at > now()`, así que la
+    //   igualdad estricta cae del lado PERMITIDO por construcción. No se puede
+    //   provocar esa igualdad desde el test: `now()` lo evalúa Postgres dentro
+    //   del RPC y siempre avanza respecto al valor que escribimos aquí.
+    //   Lo que sí se puede es acorralar el límite por los dos lados: el test
+    //   anterior fija el rechazo con la ventana en el futuro, y este fija el
+    //   permiso con la ventana justo abierta.
+    const seeded = await seedContraentregaOrder(E2E.BUSINESS_ID)
+    const supabase = localClient
+
+    try {
+      const { error: upErr } = await supabase
+        .from('orders')
+        .update({ status: 'preparing', appears_in_queue_at: new Date().toISOString() })
+        .eq('id', seeded.orderId)
+      expect(upErr).toBeNull()
+
+      const { error } = await supabase.rpc('advance_order', {
+        p_order_id: seeded.orderId,
+        p_actor_user_id: E2E.DRIVER_USER_ID,
+        p_actor_role: 'driver',
+        p_action: 'take',
+      })
+      expect(error).toBeNull()
+
+      const { data: after } = await supabase
+        .from('orders')
+        .select('driver_id, status')
+        .eq('id', seeded.orderId)
+        .single()
+      expect(after?.driver_id).toBe(E2E.DRIVER_ID)
+      expect(after?.status).toBe('heading_to_restaurant')
+    } finally {
+      await cleanup(seeded)
+    }
+  })
+
+  it('G2 no aplica a `waiting_driver`: la comida lista se puede tomar aunque la ventana siga en el futuro', async () => {
+    // Este es el criterio del board (use-driver-orders.ts:104-106) que la 0128
+    // portó en vez del criterio del GET. Si alguien "unifica" ambas guardias
+    // aplicando la ventana también a `waiting_driver`, este test se pone rojo.
+    const seeded = await seedContraentregaOrder(E2E.BUSINESS_ID)
+    const supabase = localClient
+
+    try {
+      const { error: upErr } = await supabase
+        .from('orders')
+        .update({ appears_in_queue_at: new Date(Date.now() + 10 * 60_000).toISOString() })
+        .eq('id', seeded.orderId)
+      expect(upErr).toBeNull()
+
+      const { error } = await supabase.rpc('advance_order', {
+        p_order_id: seeded.orderId,
+        p_actor_user_id: E2E.DRIVER_USER_ID,
+        p_actor_role: 'driver',
+        p_action: 'take',
+      })
+      expect(error).toBeNull()
+
+      const { data: after } = await supabase
+        .from('orders')
+        .select('driver_id, status')
+        .eq('id', seeded.orderId)
+        .single()
+      expect(after?.driver_id).toBe(E2E.DRIVER_ID)
+      expect(after?.status).toBe('heading_to_restaurant')
+    } finally {
+      await cleanup(seeded)
+    }
+  })
+})

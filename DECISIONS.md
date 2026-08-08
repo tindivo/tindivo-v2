@@ -293,11 +293,21 @@ Codificado en `@tindivo/contracts` (`order-status.ts`: `ORDER_TRANSITIONS`, `STA
 
 ---
 
-## 16. Diseño (fuente: `06-ui-design-system.md` + `Tindivo Design Spec.html`)
+## 16. Diseño (fuente: `packages/ui/src/theme.css` + `apps/motorizados`)
 
 - **Filosofía**: cercano, no corporativo. Mobile-first 1:1 (base 402×874). **Sin dark mode**. Bordes muy redondeados. Naranja protagonista.
 - **Color**: Brand `#F97316` · Brand Dark `#C2410C` · Brand Light `#FED7AA` · Ink `#1A1614` · Surface `#FAF6F1` · Card `#FFFFFF` · Border `#EAE7E2` · Success `#16A34A` · Warning `#F59E0B` · Danger `#DC2626` · Info `#0EA5E9`.
-- **Tipografía**: Manrope única en toda la plataforma (peso 600-800 displays · 400-600 body/números · 500-700 microlabels/IDs/precios, con `tabular-nums` en contextos numéricos). Máx 3 tamaños por vista.
+- **Tipografía**: **Geist** para display, body y labels; **JetBrains Mono** solo para datos técnicos (IDs, precios, horas), con `tabular-nums` en contextos numéricos. Máx 3 tamaños por vista. La jerarquía se logra con peso (600-800 displays · 400-600 body · 500-700 microlabels), no con familias distintas.
+  > Esta línea decía «Manrope única en toda la plataforma» y contradecía al código
+  > desde la migración del design system (ver `Docs/context/design-system-migration-plan.md`,
+  > que eligió Geist por ser más cercana al look moderno manteniendo legibilidad en
+  > móvil).
+
+> **No hay documento de design system.** Lo había (`Docs/06-ui-design-system.md`) y se
+> eliminó porque llevaba tiempo desviado del código y ya indujo a error a más de una
+> sesión. La fuente de verdad son los **tokens en `packages/ui/src/theme.css`** y el
+> **uso real en `apps/motorizados`**, que es la app más pulida. Si necesitas el
+> contenido histórico: `git show HEAD~1:Docs/06-ui-design-system.md`.
 - **Iconos**: Material Symbols Rounded (único set). Nunca emojis como iconos UI.
 - **Radius**: sm8/md12/lg16/xl24/2xl32/3xl48. **Glassmorphism solo en topbars**.
 - **Color de papelito por negocio**: franja/dot vertical único por negocio en todas las cards de pedido.

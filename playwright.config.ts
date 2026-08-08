@@ -31,7 +31,34 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
 
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    // Flujos funcionales (customer). No tocan el panel de negocios.
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] },
+      testIgnore: /visual[\\/]/,
+    },
+    // Sesión de negocios: corre una vez y deja la cookie en disco.
+    {
+      name: 'setup-negocios',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /visual[\\/]negocios\.setup\.ts/,
+    },
+    // Regresión visual: viewport FIJO — si cambia, cambian todas las capturas.
+    {
+      name: 'visual',
+      dependencies: ['setup-negocios'],
+      testMatch: /visual[\\/].*\.spec\.ts/,
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1440, height: 900 },
+        storageState: 'e2e/.auth/negocios.json',
+        // Sin esto, el panel levanta el modal «Activa las notificaciones» encima
+        // de todo y las capturas salen del modal, no de la pantalla.
+        permissions: ['notifications'],
+      },
+    },
+  ],
 
   webServer: [
     {
@@ -43,6 +70,12 @@ export default defineConfig({
     {
       command: 'pnpm --filter @tindivo/customer dev',
       url: 'http://localhost:3000',
+      reuseExistingServer: true,
+      timeout: 120_000,
+    },
+    {
+      command: 'pnpm --filter @tindivo/negocios dev',
+      url: 'http://localhost:3002',
       reuseExistingServer: true,
       timeout: 120_000,
     },
