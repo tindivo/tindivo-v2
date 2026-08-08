@@ -22,9 +22,13 @@ const VARIANTS: Record<Variant, string> = {
   secondary: 'bg-ink text-white hover:bg-ink/90',
 }
 
+/* Alturas fijas a propósito: dan una línea base consistente aunque cambie el
+   tamaño de texto. Los CTA escritos a mano suelen derivar la altura del padding
+   (`px-5 py-3 text-[15px]` = 46px), que queda a 2px de `md` — indistinguible.
+   Por eso no hay un tamaño `xs`: no hay un hueco real que llenar. */
 const SIZES: Record<Size, string> = {
-  sm: 'h-9 px-3 text-sm',
-  md: 'h-11 px-5 text-[15px]',
+  sm: 'h-9 px-3 text-body',
+  md: 'h-11 px-5 text-body-lg',
   lg: 'h-12 px-6 text-base',
 }
 
