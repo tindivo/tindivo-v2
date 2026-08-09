@@ -108,6 +108,13 @@ export async function GET(req: Request): Promise<Response> {
             requesterName: requesterName(r.to_driver_id),
             reason: r.reason,
             expiresAt: r.expires_at,
+            // `createdAt` viaja para que el cliente pueda pintar la barra de
+            // progreso contra la ventana REAL de la solicitud. El TTL sale de
+            // `app_settings.timers.transferTtlSeconds` en el momento de crearla
+            // (0043:272-276), así que `expiresAt - createdAt` ES el TTL que se
+            // aplicó a ESTA fila — y sigue siendo correcto aunque el ajuste
+            // cambie después. Sin este campo el cliente solo puede adivinar.
+            createdAt: r.created_at,
           })),
       },
       { headers: corsHeaders(req) },

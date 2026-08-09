@@ -11,10 +11,45 @@ const vapidPublic = Deno.env.get('VAPID_PUBLIC_KEY') ?? ''
 const vapidPrivate = Deno.env.get('VAPID_PRIVATE_KEY') ?? ''
 const vapidSubject = Deno.env.get('VAPID_SUBJECT') ?? 'mailto:soporte@tindivo.com'
 
-if (vapidPublic && vapidPrivate) {
-  webpush.setVapidDetails(vapidSubject, vapidPublic, vapidPrivate)
+/**
+ * Arranque a prueba de configuración rota.
+ *
+ * `setVapidDetails` y `createClient` LANZAN si su entrada está mal formada, y en
+ * el module scope de una Edge Function eso no es un error manejable: mata al
+ * worker, y cada invocación responde un `WORKER_ERROR` genérico que no dice
+ * nada. Producción estuvo así desde el 2026-08-01 con una `VAPID_PUBLIC_KEY`
+ * mal pegada: cero notificaciones enviadas y cero señal de la causa durante dos
+ * meses.
+ *
+ * Ahora el fallo de config se captura y se sirve como 500 con el motivo, así que
+ * un curl al endpoint lo revela al primer intento. Deliberadamente NO se sanean
+ * las llaves (quitar comillas, recortar espacios): eso enmascara el error de
+ * despliegue en vez de exponerlo, que es justo cómo se llegó hasta aquí.
+ */
+let bootError: string | null = null
+
+if (!vapidPublic || !vapidPrivate) {
+  bootError = 'VAPID_PUBLIC_KEY y/o VAPID_PRIVATE_KEY sin configurar'
+} else {
+  try {
+    webpush.setVapidDetails(vapidSubject, vapidPublic, vapidPrivate)
+  } catch (e) {
+    // Los mensajes de web-push describen la FORMA del defecto ("should be 65
+    // bytes long when decoded", "must be a URL safe Base 64") y nunca incluyen
+    // el valor de la llave, así que son seguros de propagar en la respuesta.
+    bootError = `setVapidDetails: ${(e as Error)?.message ?? String(e)}`
+  }
 }
-const db = createClient(url, serviceKey)
+
+let dbOrNull: ReturnType<typeof createClient> | null = null
+try {
+  dbOrNull = createClient(url, serviceKey)
+} catch (e) {
+  bootError = `createClient: ${(e as Error)?.message ?? String(e)}`
+}
+// El handler corta con 500 en cuanto hay `bootError`, así que a partir de aquí
+// `db` solo se toca cuando la construcción sí funcionó.
+const db = dbOrNull as ReturnType<typeof createClient>
 
 type Note = {
   userId: string
@@ -118,6 +153,17 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
 }
 
 Deno.serve(async (req: Request) => {
+  // Config rota → 500 con el motivo, para CUALQUIER petición (incluida una
+  // inerte de smoke test). Es la diferencia entre "el worker está sano" y "el
+  // worker arranca pero no puede firmar nada".
+  if (bootError) {
+    console.error('[send-push] config invalida:', bootError)
+    return new Response(JSON.stringify({ ok: false, error: 'config', detail: bootError }), {
+      status: 500,
+      headers: { 'content-type': 'application/json' },
+    })
+  }
+
   try {
     const { event_type, aggregate_id, payload } = await req.json()
     const notes = await buildNotes(event_type, aggregate_id, payload ?? {})

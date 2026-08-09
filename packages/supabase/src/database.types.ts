@@ -2365,9 +2365,9 @@ export type Database = {
           p_delivery_distance_band?: Database["public"]["Enums"]["distance_band"]
           p_delivery_method: Database["public"]["Enums"]["delivery_method"]
           p_delivery_reference?: string
-          p_order_amount: number
           p_payment_intent: Database["public"]["Enums"]["payment_intent"]
           p_prep_time_minutes?: number
+          p_total_amount: number
           p_yape_amount?: number
         }
         Returns: Json
