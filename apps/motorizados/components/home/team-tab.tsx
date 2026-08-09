@@ -1,14 +1,14 @@
 'use client'
 
 import { Badge, Button, Card, EmptyState, Icon } from '@tindivo/ui'
-import { useCallback, useEffect, useState } from 'react'
+import { useState } from 'react'
 import { SourceChip } from '@/components/source-chip'
 import {
   RequestTransferSheet,
   type TransferTarget,
 } from '@/components/transfers/request-transfer-sheet'
 import { useNow } from '@/hooks/use-now'
-import { api } from '@/lib/api'
+import { getTransferRemaining, useTeam } from '@/hooks/use-team'
 import { mmss, soles } from '@/lib/format'
 import type { TeamResponse } from '@/lib/types'
 
@@ -18,34 +18,21 @@ const STATUS_LABEL: Record<string, string> = {
   picked_up: 'En reparto',
 }
 
-/** Equipo: pedidos de los compañeros + solicitar traspaso (HU-D-033/034). */
-export function TeamTab({ onCount }: { onCount: (n: number) => void }) {
-  const [team, setTeam] = useState<TeamResponse | null>(null)
+/**
+ * Equipo: pedidos de los compañeros + solicitar traspaso (HU-D-033/034).
+ *
+ * Ya no trae sus propios datos. Tenía un `setInterval` de 15s y un
+ * `CustomEvent('tindivo:transfer')` para hablar con `TransferWatcher`, que a su
+ * vez pedía lo mismo por su cuenta; y devolvía el contador hacia arriba por un
+ * `onCount` que solo disparaba estando montado —o sea, nunca cuando hacía
+ * falta—. Todo eso vive ahora en `useTeam()`.
+ */
+export function TeamTab() {
+  const team = useTeam()
   const [target, setTarget] = useState<TransferTarget | null>(null)
   const now = useNow()
 
-  const load = useCallback(() => {
-    api
-      .get<{ data: TeamResponse }>('/driver/team')
-      .then((r) => {
-        setTeam(r.data)
-        onCount(r.data.receivedRequests.length)
-      })
-      .catch(() => {})
-  }, [onCount])
-
-  useEffect(() => {
-    load()
-    const onTransfer = () => load()
-    window.addEventListener('tindivo:transfer', onTransfer)
-    const t = setInterval(load, 15_000)
-    return () => {
-      window.removeEventListener('tindivo:transfer', onTransfer)
-      clearInterval(t)
-    }
-  }, [load])
-
-  if (!team) return <div className="h-32 animate-pulse rounded-2xl bg-surface-low" />
+  if (team.loading) return <div className="h-32 animate-pulse rounded-2xl bg-surface-low" />
 
   // Agrupar por compañero.
   const byDriver = new Map<string, { name: string; orders: TeamResponse['teamOrders'] }>()
@@ -59,7 +46,8 @@ export function TeamTab({ onCount }: { onCount: (n: number) => void }) {
   return (
     <div>
       {team.sentRequests.map((r) => {
-        const remaining = r.expiresAt ? Math.round((Date.parse(r.expiresAt) - now) / 1000) : 0
+        // Mismo helper que el banner: una sola forma de contar en toda la app.
+        const { remainingSec: remaining } = getTransferRemaining(r, now)
         return (
           <Card key={r.id} className="mb-3 border-brand/15 bg-brand-light p-4 shadow-none">
             <span className="text-[13px] text-ink">
@@ -138,7 +126,7 @@ export function TeamTab({ onCount }: { onCount: (n: number) => void }) {
           onClose={() => setTarget(null)}
           onSent={() => {
             setTarget(null)
-            load()
+            void team.refresh()
           }}
         />
       )}

@@ -1,10 +1,13 @@
 'use client'
 
-import { Badge, Card, EmptyState, Icon } from '@tindivo/ui'
-import { useState } from 'react'
+import { Badge, Card, EmptyState, Icon, SkeletonList } from '@tindivo/ui'
+import { useMemo } from 'react'
+import { useOverdueFeedback } from '@/hooks/use-overdue-feedback'
 import type { BoardOrder } from '@/lib/types'
 import { orderUrgency } from '@/lib/urgency'
 import { OrderCard } from './order-card'
+import { OverdueBanner } from './overdue-banner'
+import { UpcomingOrdersSection } from './upcoming-orders-section'
 
 /** Bandeja de disponibles: prioriza vencidos (HU-D-013), capa de capacidad
  *  (HU-D-014) y sección colapsable de "Próximos" en cola fría (HU-D-012). */
@@ -12,8 +15,9 @@ export function AvailableTab({
   available,
   upcoming,
   mySlots,
-  hasOverdueAvailable,
+  hasOverdueAvailable: _hasOverdueAvailable,
   lastSyncOk,
+  loading,
   now,
 }: {
   available: BoardOrder[]
@@ -21,17 +25,42 @@ export function AvailableTab({
   mySlots: number
   hasOverdueAvailable: boolean
   lastSyncOk: boolean
+  /** Primera carga sin resolver: no se sabe si está vacío. */
+  loading: boolean
   now: number
 }) {
-  const [upcomingOpen, setUpcomingOpen] = useState(false)
   const full = mySlots >= 3
 
-  const sorted = [...available].sort((a, b) => {
-    const ua = orderUrgency(a, now) === 'overdue' ? 0 : 1
-    const ub = orderUrgency(b, now) === 'overdue' ? 0 : 1
-    if (ua !== ub) return ua - ub
-    return Date.parse(a.created_at) - Date.parse(b.created_at)
-  })
+  const overdueSet = useMemo(() => {
+    const set = new Set<string>()
+    for (const o of available) {
+      if (orderUrgency(o, now) === 'overdue') set.add(o.id)
+    }
+    return set
+  }, [available, now])
+
+  const overdueCount = overdueSet.size
+  const hasOverdue = overdueCount > 0
+
+  // Feedback háptico + audible cuando se detectan pedidos vencidos nuevos
+  useOverdueFeedback(overdueSet)
+
+  const sorted = useMemo(() => {
+    return [...available].sort((a, b) => {
+      const ua = orderUrgency(a, now) === 'overdue' ? 0 : 1
+      const ub = orderUrgency(b, now) === 'overdue' ? 0 : 1
+      if (ua !== ub) return ua - ub
+      return Date.parse(a.created_at) - Date.parse(b.created_at)
+    })
+  }, [available, now])
+
+  // UN VACÍO SOLO SE AFIRMA CUANDO SE SABE VACÍO.
+  //
+  // El board arranca con `orders: []`, así que el primer render decía "Sin
+  // pedidos disponibles" y un instante después aparecían las tarjetas: la
+  // pantalla afirmaba lo contrario de la verdad justo cuando el motorizado la
+  // mira para decidir si tiene trabajo.
+  if (loading) return <SkeletonList count={3} />
 
   return (
     <div>
@@ -45,19 +74,12 @@ export function AvailableTab({
         <Card className="mb-3 flex items-start gap-2.5 border border-ink/[0.06] bg-ink/[0.03] p-4 shadow-none">
           <Icon name="shopping_basket" size={20} className="shrink-0 text-ink" />
           <p className="font-semibold text-[14px]">
-            Mochila llena (3/3). Entrega un pedido para tomar otro.
+            Mochila llena {mySlots}/3. Entrega un pedido para tomar otro.
           </p>
         </Card>
       )}
 
-      {hasOverdueAvailable && (
-        <Card className="mb-3 border-danger/15 bg-danger-soft p-4 shadow-none">
-          <p className="flex items-center gap-2 font-semibold text-[13px] text-danger">
-            <Icon name="warning" size={18} />
-            Prioriza los pedidos vencidos
-          </p>
-        </Card>
-      )}
+      <OverdueBanner count={overdueCount} />
 
       <div className="flex flex-col gap-2.5">
         {sorted.map((o) => (
@@ -66,12 +88,18 @@ export function AvailableTab({
             order={o}
             now={now}
             variant="available"
-            dimmed={full || (hasOverdueAvailable && orderUrgency(o, now) !== 'overdue')}
+            // Mochila llena = NO se puede tomar, y así se comporta la tarjeta.
+            // La razón viaja con ella: el cartel de arriba se pierde en cuanto
+            // la lista scrollea.
+            blocked={full}
+            blockedReason={full ? `Mochila llena ${mySlots}/3` : undefined}
+            // La prioridad de vencidos sigue siendo solo visual hasta T6.
+            dimmed={!full && hasOverdue && orderUrgency(o, now) !== 'overdue'}
           />
         ))}
       </div>
 
-      {sorted.length === 0 && (
+      {sorted.length === 0 && upcoming.length === 0 && (
         <EmptyState
           icon="local_shipping"
           heading="Sin pedidos disponibles"
@@ -79,34 +107,7 @@ export function AvailableTab({
         />
       )}
 
-      {upcoming.length > 0 && (
-        <div className="mt-5">
-          <button
-            type="button"
-            className="flex w-full items-center justify-between"
-            onClick={() => setUpcomingOpen((v) => !v)}
-          >
-            <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/55">
-              Próximos ({upcoming.length})
-            </span>
-            <span
-              aria-hidden
-              className={`inline-flex text-ink-subtle transition-transform duration-200 ${
-                upcomingOpen ? 'rotate-180' : 'rotate-0'
-              }`}
-            >
-              <Icon name="expand_more" size={20} />
-            </span>
-          </button>
-          {upcomingOpen && (
-            <div className="mt-2 flex flex-col gap-2.5">
-              {upcoming.map((o) => (
-                <OrderCard key={o.id} order={o} now={now} variant="upcoming" />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      <UpcomingOrdersSection items={upcoming} now={now} />
     </div>
   )
 }

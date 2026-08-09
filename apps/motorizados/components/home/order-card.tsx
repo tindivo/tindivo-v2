@@ -3,25 +3,52 @@
 import { Badge, Card, cn, Icon } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { SourceChip } from '@/components/source-chip'
-import { hourOf, mmss, PAYMENT_LABEL, soles } from '@/lib/format'
-import type { BoardOrder } from '@/lib/types'
+import { getTransferRemaining } from '@/hooks/use-team'
+import { hourOf, mmss, soles } from '@/lib/format'
+import type { BoardOrder, TeamResponse } from '@/lib/types'
 import { orderUrgency, URGENCY_CARD } from '@/lib/urgency'
+
+type IncomingRequest = TeamResponse['receivedRequests'][number]
+
+/**
+ * Aviso de que un compañero te está pidiendo ESTE pedido.
+ *
+ * SOLO INFORMATIVO, a propósito: sin botones y sin abrir nada. Aceptar y
+ * rechazar viven exclusivamente en el banner global (`TransferWatcher`), que se
+ * ve desde cualquier pestaña. Dos superficies para la misma acción es una
+ * invitación a que el motorizado toque la que no responde.
+ *
+ * El reloj sale de `getTransferRemaining`, el mismo helper que usa el banner, y
+ * el `now` llega del ticker compartido: por eso los dos countdowns muestran el
+ * mismo número en el mismo frame en vez de ir desfasados hasta un segundo.
+ * NADA de `setInterval` aquí.
+ */
+function IncomingRequestStrip({ request, now }: { request: IncomingRequest; now: number }) {
+  const { remainingSec, expired } = getTransferRemaining(request, now)
+
+  if (expired) {
+    return (
+      <p className="mt-2.5 flex items-center gap-1.5 rounded-lg bg-warning-soft px-2.5 py-1.5 text-[11.5px] font-bold text-amber-900">
+        <Icon name="sync" size={14} filled />
+        Traspaso en curso a {request.requesterName}
+      </p>
+    )
+  }
+
+  return (
+    <p className="mt-2.5 flex items-center gap-1.5 rounded-lg bg-danger-soft px-2.5 py-1.5 text-[11.5px] font-bold text-danger">
+      <Icon name="swap_horiz" size={14} filled />
+      {request.requesterName} te lo está pidiendo
+      {/* Mismo formateador que el banner (ver nota allí). */}
+      <span className="ml-auto font-mono tabular-nums">{mmss(remainingSec)}</span>
+    </p>
+  )
+}
 
 const MINE_STEPS: Record<string, { idx: number; label: string }> = {
   heading_to_restaurant: { idx: 0, label: 'Voy al local' },
   waiting_at_restaurant: { idx: 1, label: 'En el local' },
   picked_up: { idx: 2, label: 'En camino' },
-}
-
-/** Lo que el motorizado tiene que HACER con el dinero, no el nombre del intent. */
-function moneyLine(order: BoardOrder, total: number): string {
-  if (order.payment_intent === 'prepaid') return 'Ya pagado · no cobrar'
-  if (order.payment_intent === 'pending_mixed') return 'Cobrar mixto (Yape + efectivo)'
-  if (order.payment_intent === 'pending_yape') return `Cobrar ${soles(total)} por Yape`
-  if (order.change_to_give != null && order.change_to_give > 0) {
-    return `Efectivo · lleva ${soles(order.change_to_give)} de vuelto`
-  }
-  return `Cobrar ${soles(total)} en efectivo`
 }
 
 /** Cuenta atrás viva hasta que la comida esté lista. */
@@ -46,11 +73,28 @@ export function OrderCard({
   now,
   variant = 'available',
   dimmed = false,
+  blocked = false,
+  blockedReason,
+  incomingRequest = null,
 }: {
   order: BoardOrder
   now: number
   variant?: 'available' | 'mine' | 'upcoming' | 'delivered'
   dimmed?: boolean
+  /** Solicitud de traspaso entrante sobre ESTE pedido (solo en "Míos"). */
+  incomingRequest?: IncomingRequest | null
+  /**
+   * El pedido existe y se ve, pero no se puede tomar todavía. La tarjeta deja
+   * de navegar y de responder al toque.
+   *
+   * Atenuar SIN bloquear era lo que había antes (`dimmed` a secas) y no
+   * comunicaba una regla: parecía un fallo de render, y la tarjeta seguía
+   * navegando igual, así que la supuesta prioridad era decorativa.
+   */
+  blocked?: boolean
+  /** Por qué está bloqueada. Se pinta en la tarjeta: bloquear sin decir por qué
+   *  es indistinguible de una app rota. */
+  blockedReason?: string
 }) {
   const router = useRouter()
   const urgency = variant === 'available' ? orderUrgency(order, now) : 'normal'
@@ -60,6 +104,8 @@ export function OrderCard({
   // responde al toque, como en producción. La señal de "aún no" tiene que ser
   // evidente antes de tocar, no después.
   const isUpcoming = variant === 'upcoming'
+  // Mismo camino para las dos razones de no-accionable: en cocina o bloqueada.
+  const inert = isUpcoming || blocked
   const accent = `#${order.business?.accent_color ?? 'f97316'}`
   const readyAt = order.estimated_ready_at
   const showCountdown =
@@ -70,16 +116,17 @@ export function OrderCard({
 
   return (
     <Card
-      as={isUpcoming ? 'div' : 'button'}
-      {...(isUpcoming ? { 'aria-disabled': true } : { type: 'button' as const })}
-      onClick={isUpcoming ? undefined : () => router.push(`/pedido/${order.id}`)}
+      as={inert ? 'div' : 'button'}
+      {...(inert ? { 'aria-disabled': true } : { type: 'button' as const })}
+      onClick={inert ? undefined : () => router.push(`/pedido/${order.id}`)}
       className={cn(
         'relative block w-full overflow-hidden bg-gradient-to-br from-white to-surface py-3.5 pl-[18px] pr-4 text-left transition-all duration-300',
-        isUpcoming
+        inert
           ? 'cursor-default opacity-70'
           : 'hover:-translate-y-0.5 hover:shadow-elev-2 active:translate-y-0 active:scale-[0.99]',
         URGENCY_CARD[urgency],
-        dimmed && !isUpcoming && 'opacity-60',
+        urgency === 'overdue' && 'tindivo-overdue-glow',
+        dimmed && !inert && 'opacity-60',
         variant === 'delivered' && 'opacity-85',
       )}
     >
@@ -134,25 +181,46 @@ export function OrderCard({
       )}
 
       <div className="mt-2.5 flex items-end justify-between gap-2">
-        <span>
-          <span className="block font-display text-[20px] font-bold tracking-tight leading-none tabular-nums">
-            {soles(total)}
+        {order.payment_intent === 'prepaid' ? (
+          <span className="inline-flex items-center gap-1.5 rounded-xl bg-success-soft px-3 py-1.5 text-xs font-bold text-success">
+            <Icon name="verified" size={16} filled />
+            No cobrar (Prepagado)
           </span>
-          <span className="mt-1 block text-[11.5px] font-medium text-ink-muted">
-            {order.payment_intent === 'prepaid' ? (
-              <span className="text-success">{moneyLine(order, total)}</span>
-            ) : (
-              moneyLine(order, total)
-            )}
-          </span>
-        </span>
-        {showCountdown && <CookingChip readyAt={readyAt} now={now} />}
-        {order.status === 'picked_up' && (
-          <span className="text-[11px] font-semibold text-ink-muted">
-            {PAYMENT_LABEL[order.payment_intent] ?? order.payment_intent}
+        ) : (
+          <span>
+            <span className="block font-display text-[20px] font-bold tracking-tight leading-none tabular-nums text-ink">
+              {soles(total)}
+            </span>
+            <span className="mt-1.5 block">
+              {order.payment_intent === 'pending_yape' ||
+              (order.payment_intent as string) === 'pending_wallet' ? (
+                <span className="inline-flex items-center gap-1 rounded-lg bg-purple-100 px-2 py-0.5 text-[11.5px] font-bold text-purple-800">
+                  <Icon name="qr_code_2" size={14} filled />
+                  Cobrar por Yape / Plin
+                </span>
+              ) : order.payment_intent === 'pending_mixed' ? (
+                <span className="inline-flex items-center gap-1 rounded-lg bg-indigo-100 px-2 py-0.5 text-[11.5px] font-bold text-indigo-800">
+                  <Icon name="shuffle" size={14} filled />
+                  Pago mixto (Yape + Efectivo)
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-100 px-2 py-0.5 text-[11.5px] font-bold text-emerald-800">
+                  <Icon name="payments" size={14} filled />
+                  Cobrar en efectivo
+                  {order.change_to_give != null && order.change_to_give > 0
+                    ? ` (Lleva ${soles(order.change_to_give)} de vuelto)`
+                    : ''}
+                </span>
+              )}
+            </span>
           </span>
         )}
+        {showCountdown && <CookingChip readyAt={readyAt} now={now} />}
       </div>
+
+      {variant === 'mine' && incomingRequest && (
+        <IncomingRequestStrip request={incomingRequest} now={now} />
+      )}
 
       {variant === 'mine' && step && (
         <div className="mt-3">
@@ -166,6 +234,13 @@ export function OrderCard({
           </div>
           <p className="mt-1 text-[11px] font-medium text-ink-muted">{step.label}</p>
         </div>
+      )}
+
+      {blocked && blockedReason && (
+        <p className="mt-2.5 flex items-center gap-1.5 border-t border-ink/[0.06] pt-2 text-[11px] font-semibold text-ink-muted">
+          <Icon name="lock" size={13} className="shrink-0" />
+          {blockedReason}
+        </p>
       )}
 
       {isUpcoming && (

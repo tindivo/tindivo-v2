@@ -105,6 +105,7 @@ export interface OrderDetailResponse {
     customerNotes: string | null
     businessNotes: string | null
     driverNotes: string | null
+    readyEarlyUsed: boolean
     createdAt: string
   }
   items: {
@@ -125,6 +126,8 @@ export interface OrderDetailResponse {
     coordinatesLng: number | null
     yapeNumber: string | null
     qrUrl: string | null
+    accentColor: string | null
+    logoUrl: string | null
   } | null
   isPreview: boolean
   transfer: {
@@ -164,6 +167,8 @@ export interface TeamResponse {
     requesterName: string
     reason: string | null
     expiresAt: string | null
+    /** Con `expiresAt` delimita la ventana real de la solicitud. Ver el endpoint. */
+    createdAt: string
   }[]
 }
 

@@ -14,6 +14,14 @@ export interface DriverBoard {
   orders: BoardOrder[]
   myDriverId: string | null
   lastSyncOk: boolean
+  /**
+   * `true` hasta que la PRIMERA carga resuelve, con éxito o con error.
+   *
+   * Distingue "todavía no sé" de "sé que está vacío", que es una diferencia que
+   * el board no podía expresar: arrancaba con `orders: []` y quien lo leía no
+   * tenía forma de saber si eso era la verdad o el estado inicial.
+   */
+  loading: boolean
   refetch: () => Promise<void>
   available: BoardOrder[]
   upcoming: BoardOrder[]
@@ -29,6 +37,7 @@ export function useDriverOrders(now: number): DriverBoard {
   const [businesses, setBusinesses] = useState<Record<string, DriverBusiness>>({})
   const [myDriverId, setMyDriverId] = useState<string | null>(null)
   const [lastSyncOk, setLastSyncOk] = useState(true)
+  const [loading, setLoading] = useState(true)
   const channelNameRef = useRef(`drv-orders-${crypto.randomUUID()}`)
 
   const refetch = useCallback(async () => {
@@ -38,11 +47,16 @@ export function useDriverOrders(now: number): DriverBoard {
       .select(BOARD_COLUMNS)
       .order('created_at', { ascending: false })
       .limit(50)
+    // Un error tampoco deja el board en "cargando": un spinner eterno miente
+    // igual que un vacío falso. Se sale de `loading` y `lastSyncOk` cuenta la
+    // otra mitad de la verdad.
     if (error) {
       setLastSyncOk(false)
+      setLoading(false)
       return
     }
     setLastSyncOk(true)
+    setLoading(false)
     setOrders(
       (data ?? []).map((o) => ({
         ...o,
@@ -137,5 +151,5 @@ export function useDriverOrders(now: number): DriverBoard {
     return { available, upcoming, mine, deliveredToday, mySlots, hasOverdueAvailable }
   }, [effective, myDriverId, now])
 
-  return { orders: effective, myDriverId, lastSyncOk, refetch, ...derived }
+  return { orders: effective, myDriverId, lastSyncOk, loading, refetch, ...derived }
 }
