@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation'
 import { useMemo, useState } from 'react'
 import { soles } from '@/components/dashboard/primitives'
 import { type DistanceBand, useCreateOrder } from '../hooks/use-create-order'
-import { useDeliveryBands } from '../hooks/use-delivery-bands'
 import { isReferenceValid, num } from '../lib/format'
 import type { Payment } from '../types'
 import { AmountForm } from './amount-form'
@@ -30,10 +29,9 @@ export function NuevoForm() {
   const [walletPart, setWalletPart] = useState('')
   const [cashPart, setCashPart] = useState('')
   // Zona de entrega. Arranca en `null` — nadie ha elegido todavía — y `canSubmit`
-  // la exige. Un default a `'near'` cobraría de menos cada entrega lejana sin que
-  // nadie se entere.
+  // la exige. Un default a `'near'` registraría como cercana cada entrega lejana
+  // sin que nadie se entere.
   const [band, setBand] = useState<DistanceBand | null>(null)
-  const { bands } = useDeliveryBands()
 
   const deliveryMethod = 'delivery'
   const amountN = num(amount)
@@ -44,6 +42,14 @@ export function NuevoForm() {
   const phoneOk = phoneFormatOk && !isPhoneBlacklisted
   const referenceOk = isReferenceValid(reference, deliveryMethod)
 
+  // Desde la 0129 `amount` ES el total con envío incluido, así que estas dos
+  // cuentas por fin coinciden con las del RPC. Antes no había número que pudiera
+  // satisfacer a las dos: la pantalla exigía `billetera + efectivo = comida` y
+  // el servidor `= comida + envío`, así que TODO pago mixto que la pantalla
+  // marcaba en verde se rechazaba al enviar. Igual el vuelto, que salía S/2 de
+  // más porque se restaba del monto sin envío. No hizo falta tocar la aritmética
+  // para arreglarlo: bastó con que el número de entrada significara lo que el
+  // rótulo decía.
   const centsTotal = Math.round(amountN * 100)
   const centsWallet = Math.round(num(walletPart) * 100)
   const centsCash = Math.round(num(cashPart) * 100)
@@ -96,14 +102,6 @@ export function NuevoForm() {
             phoneFormatOk={phoneFormatOk}
           />
           <ReferenceForm reference={reference} onChange={setReference} isValid={referenceOk} />
-          {/* Va justo después de la referencia: la zona se decide mirando la
-              dirección recién escrita, y antes de hablar de dinero. */}
-          <BandSelector
-            value={band}
-            onChange={setBand}
-            nearFee={bands?.near ?? null}
-            farFee={bands?.far ?? null}
-          />
           <PaymentSelector value={payment} onChange={setPayment} />
           <AmountForm
             payment={payment}
@@ -118,6 +116,12 @@ export function NuevoForm() {
             mixedOk={mixedOk}
             change={change}
           />
+          {/* AL FINAL, y después del dinero. Antes iba tras la referencia, cuando
+              la banda decidía cuánto se le sumaba al monto: elegirla primero era
+              obligado. Desde la 0129 el total ya no se mueve, la zona solo dice a
+              dónde va el pedido — y ponerla aquí evita que la cajera vea dos
+              precios (envío y comida) antes de teclear el único que le importa. */}
+          <BandSelector value={band} onChange={setBand} />
 
           {error && (
             <div className="flex items-center gap-2 rounded-xl bg-danger-soft p-3 text-[13px] font-semibold text-danger">

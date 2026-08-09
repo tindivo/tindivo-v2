@@ -33,22 +33,17 @@ export function AmountForm({
   const isCashish = payment === 'pending_cash' || payment === 'pending_mixed'
   const amountN = num(amount)
 
-  if (payment === 'prepaid') {
-    return (
-      <div className="mb-3 flex items-center gap-2 rounded-xl bg-sky-100 p-3 text-[13px] text-sky-800">
-        <Icon name="verified" size={18} filled />
-        El cliente ya pagó — el motorizado solo entrega, no cobra.
-      </div>
-    )
-  }
-
   return (
     <div className="rounded-2xl border border-border bg-card p-4">
       <div className="mb-2.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
         Monto del pedido
       </div>
+      {/* 0129 · El rótulo dice DELIVERY + COMIDA porque eso es exactamente lo que
+          se manda ahora. Antes decía "Total del pedido" y se enviaba como solo
+          comida: la cajera escribía el total que le había dicho al cliente por
+          teléfono y el backend le sumaba el envío otra vez. */}
       <label className="mb-1 block font-mono text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
-        Total del pedido (S/)
+        Total a cobrar · delivery + comida (S/)
       </label>
       <input
         className="h-11 w-full rounded-xl border border-border bg-card px-3 font-mono text-xl font-bold text-ink outline-none focus:border-brand"
@@ -58,8 +53,15 @@ export function AmountForm({
         inputMode="decimal"
       />
       <p className="mt-1 text-xs text-ink-muted">
-        No necesitas desglosar los platos. Solo el total que el cliente debe.
+        El mismo número que le dijiste al cliente. Es lo que va a cobrar el motorizado.
       </p>
+
+      {payment === 'prepaid' && (
+        <div className="mt-3 flex items-center gap-2 rounded-xl bg-sky-100 p-3 text-[13px] text-sky-800">
+          <Icon name="verified" size={18} filled />
+          El cliente ya pagó — el motorizado solo entrega, no cobra.
+        </div>
+      )}
 
       {payment === 'pending_mixed' && (
         <div className="mt-3 grid grid-cols-2 gap-2.5">

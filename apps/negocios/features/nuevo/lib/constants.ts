@@ -20,11 +20,11 @@ export const PAYMENTS: {
   tile: string
 }[] = [
   {
-    id: 'pending_cash',
-    icon: 'payments',
-    label: 'Efectivo',
-    sub: 'El motorizado cobra en efectivo',
-    tile: 'bg-[linear-gradient(135deg,var(--color-success),#4ade80)]',
+    id: 'prepaid',
+    icon: 'verified',
+    label: 'Ya pagó',
+    sub: 'El cliente ya realizó la transferencia',
+    tile: 'bg-[linear-gradient(135deg,var(--color-info),#38bdf8)]',
   },
   {
     id: 'pending_wallet',
@@ -34,11 +34,11 @@ export const PAYMENTS: {
     tile: 'bg-[linear-gradient(135deg,#7c3aed,#a78bfa)]',
   },
   {
-    id: 'prepaid',
-    icon: 'verified',
-    label: 'Ya pagó',
-    sub: 'El cliente ya realizó la transferencia',
-    tile: 'bg-[linear-gradient(135deg,var(--color-info),#38bdf8)]',
+    id: 'pending_cash',
+    icon: 'payments',
+    label: 'Efectivo',
+    sub: 'El motorizado cobra en efectivo',
+    tile: 'bg-[linear-gradient(135deg,var(--color-success),#4ade80)]',
   },
   {
     id: 'pending_mixed',
