@@ -4,34 +4,37 @@ import { Icon } from '@tindivo/ui'
 import type { DistanceBand } from '../hooks/use-create-order'
 
 /**
- * Selector de zona de entrega. Decide el ENVÍO QUE PAGA EL CLIENTE.
+ * Selector de zona de entrega. Va AL FINAL del formulario y NO MUESTRA PRECIOS.
+ *
+ * Las dos cosas son la misma decisión, tomada en la 0129. Desde que la cajera
+ * teclea el TOTAL con envío incluido, la zona ya no cambia lo que paga el
+ * cliente: cambia cómo se reparte ese total entre comida y envío, que es un
+ * asunto interno del ledger. Poner "S/ 2.00" y "S/ 2.50" en los botones
+ * invitaría a sumarlos otra vez al monto —justo el hábito que la 0129 vino a
+ * corregir— y a preguntarse por qué el total no se mueve al cambiar de zona.
  *
  * OJO CON EL COPY: el precedente del v1 (`confirm-pickup-modal.tsx`) decía
  * "sirve para calcular la comisión del restaurante". Aquí sería falso — eso lo
- * elegía el motorizado y afectaba a la comisión de Tindivo. Lo que elige la
- * cajera en esta pantalla es cuánto le cobra al cliente por el envío.
+ * elegía el motorizado y afectaba a la comisión de Tindivo. Y "define cuánto
+ * paga el cliente por el envío", que es lo que decía esta pantalla antes de la
+ * 0129, también dejó de ser cierto. Lo que hoy define es a dónde va el pedido.
  *
  * SIN PRESELECCIÓN, a propósito. Ninguno de los dos arranca activo, y el
- * formulario no deja enviar hasta que haya uno. Un default a "Cerca" cobraría
- * de menos cada entrega lejana sin que nadie se entere, que es exactamente el
- * problema que venía arrastrando el pedido manual antes de la 0126.
+ * formulario no deja enviar hasta que haya uno. Un default a "Cerca" registraría
+ * cada entrega lejana como cercana sin que nadie se entere, que es exactamente
+ * el problema que venía arrastrando el pedido manual antes de la 0126.
  *
  * Azul (`--color-info`) y no naranja de marca: el selector de tiempo de
- * preparación, dos tarjetas más arriba, usa `bg-ink` para su activo y la marca
- * para el CTA. Un acento distinto evita que la cajera confunda las dos
- * decisiones cuando va rápido.
+ * preparación, arriba del todo, usa `bg-ink` para su activo y la marca para el
+ * CTA. Un acento distinto evita que la cajera confunda las dos decisiones
+ * cuando va rápido.
  */
 export function BandSelector({
   value,
   onChange,
-  nearFee,
-  farFee,
 }: {
   value: DistanceBand | null
   onChange: (band: DistanceBand) => void
-  /** `null` mientras carga o si falló: el botón se muestra sin monto. */
-  nearFee: number | null
-  farFee: number | null
 }) {
   return (
     <div className="rounded-2xl border border-border bg-card p-4">
@@ -46,7 +49,6 @@ export function BandSelector({
           zones="San Jacinto (zona regular)"
           icon="near_me"
           ariaLabel="Entrega cerca"
-          fee={nearFee}
           selected={value === 'near'}
           onSelect={onChange}
         />
@@ -56,7 +58,6 @@ export function BandSelector({
           zones="San Francisco de la Losa (arriba), San Cristóbal, Cocharcas"
           icon="route"
           ariaLabel="Entrega lejos"
-          fee={farFee}
           selected={value === 'far'}
           onSelect={onChange}
         />
@@ -64,8 +65,8 @@ export function BandSelector({
 
       <p className="mt-2.5 text-xs text-ink-muted">
         {value === null
-          ? 'Elige la zona para calcular el envío'
-          : 'Esto define cuánto paga el cliente por el envío'}
+          ? 'Elige la zona para terminar'
+          : 'El cliente paga el total de arriba, vayas donde vayas'}
       </p>
     </div>
   )
@@ -77,7 +78,6 @@ function BandButton({
   zones,
   icon,
   ariaLabel,
-  fee,
   selected,
   onSelect,
 }: {
@@ -86,7 +86,6 @@ function BandButton({
   zones: string
   icon: string
   ariaLabel: string
-  fee: number | null
   selected: boolean
   onSelect: (band: DistanceBand) => void
 }) {
@@ -104,11 +103,6 @@ function BandButton({
     >
       <Icon name={icon} size={20} filled={selected} />
       <span className="font-mono text-[10px] font-bold uppercase tracking-wider">{label}</span>
-      {/* `tabular-nums` mantiene el ancho estable entre 2.00 y 2.50: sin esto,
-          los botones bailan al alternar la selección. */}
-      {fee !== null && (
-        <span className="font-mono text-sm font-black tabular-nums">S/ {fee.toFixed(2)}</span>
-      )}
       <span
         className={`text-[11px] leading-tight ${selected ? 'text-white/85' : 'text-ink-muted'}`}
       >

@@ -22,6 +22,13 @@ export interface CreateOrderPayload {
   phone: string
   reference: string
   payment: Payment
+  /**
+   * TOTAL con envío incluido, tal como la cajera se lo dijo al cliente. La
+   * comida la deduce el RPC restando el envío de la banda (0129); esta pantalla
+   * no resta nada, a propósito — el envío sale de una cadena de fallback que
+   * solo la función de la DB resuelve, y un navegador que reste mal cobraría el
+   * envío dos veces sin dejar rastro.
+   */
   amount: string
   paysWith: string
   walletPart: string
@@ -61,7 +68,7 @@ export function useCreateOrder() {
       deliveryReference: payload.reference.trim() || undefined,
       deliveryDistanceBand: payload.band,
       prepTimeMinutes: payload.prep,
-      orderAmount: amountN,
+      totalAmount: amountN,
       clientPaysWith: isCashish && num(payload.paysWith) > 0 ? num(payload.paysWith) : undefined,
       yapeAmount: payload.payment === 'pending_mixed' ? num(payload.walletPart) : undefined,
       cashAmount: payload.payment === 'pending_mixed' ? num(payload.cashPart) : undefined,
