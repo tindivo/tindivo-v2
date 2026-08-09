@@ -47,11 +47,50 @@ async function login(page: Page): Promise<void> {
   await formLogin.getByPlaceholder('Tu contraseña').fill(E2E.PASSWORD)
   await formLogin.locator('button[type="submit"]').click()
 
-  // La sesión queda lista cuando el header deja de ofrecer "Ingresar".
-  await expect(page.getByLabel('Ingresar')).toBeHidden()
+  // ── La sesión tiene que EXISTIR antes de seguir ──────────────────────────
+  //
+  // Aquí había `expect(page.getByLabel('Ingresar')).toBeHidden()`, y era una
+  // aserción VACUA: ese control vive en la cabecera del catálogo
+  // (`features/catalog/components/home-header.tsx:46`) y en `/entrar` no existe.
+  // En Playwright, `toBeHidden()` sobre un elemento inexistente pasa al
+  // instante, así que no esperaba nada ni comprobaba nada.
+  //
+  // Consecuencia medida: el test seguía a `/negocio/...` con el login TODAVÍA
+  // EN VUELO. Cuando la navegación ganaba la carrera, la app quedaba sin sesión,
+  // "Ir a pagar" caía en la compuerta `auth` —que abre una hoja en vez de
+  // navegar— y el test moría 50 líneas después, en el `toHaveURL(/checkout/)`,
+  // sin una sola llamada de API fallida que delatara el motivo.
+  //
+  // El login NUNCA estuvo roto: instrumentado da `/auth/v1/token` 200 y cookie
+  // creada. Lo que faltaba era esperarlo.
+  //
+  // Ahora se afirma sobre la COOKIE DE SESIÓN, que no puede existir sin un login
+  // real. Nada de `toBeHidden`/`toBeVisible` sobre elementos que quizá no estén
+  // en la página: eso es lo que hizo vacua a la anterior.
+  await page.waitForURL((url) => !url.pathname.startsWith('/entrar'), { timeout: 20_000 })
+  await expect
+    .poll(
+      async () => (await page.context().cookies()).some((c) => c.name === 'tindivo-customer-auth'),
+      { timeout: 15_000, message: 'no se creó la cookie de sesión del cliente tras el login' },
+    )
+    .toBe(true)
 }
 
 test.describe('camino feliz — cliente hasta el punto de pago', () => {
+  // GPS del navegador, que un cliente real SIEMPRE aporta y Chromium headless no.
+  //
+  // Sin esto el checkout manda método de GPS sin coordenadas y
+  // `create_customer_order` lo rechaza con 422 «Coordenadas GPS del cliente
+  // incompletas» (guard de 0082, líneas 352-355). No es un defecto de la app:
+  // es que al test le faltaba una capacidad del entorno.
+  //
+  // Se usan las mismas coordenadas que la dirección sembrada para no caer en la
+  // rama de aviso por distancia (>0.4 km) y medir el camino feliz de verdad.
+  test.use({
+    geolocation: { latitude: -9.151, longitude: -78.28 },
+    permissions: ['geolocation'],
+  })
+
   // ETAPA 0 — este test SÍ crea pedidos, así que necesita mundo fresco antes y
   // purga de transaccionales después. El mundo (negocio, menú, driver, cliente)
   // sobrevive a la limpieza; solo se borran los pedidos del cliente de prueba.
