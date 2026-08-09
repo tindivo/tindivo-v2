@@ -12,7 +12,7 @@ export function OPTIONS(req: Request): Response {
 }
 
 const ORDER_COLUMNS =
-  'id,short_id,order_number,status,source,delivery_method,delivery_distance_band,customer_name,customer_phone,delivery_address,delivery_reference,delivery_coordinates_lat,delivery_coordinates_lng,order_amount,delivery_fee,payment_intent,payment_real,yape_amount,cash_amount,client_pays_with,change_to_give,occupancy_slots,urgent_since,prep_time_minutes,estimated_ready_at,appears_in_queue_at,confirmed_at,preparing_at,waiting_driver_at,heading_at,waiting_at_restaurant_at,picked_up_at,arrived_at_customer_at,arrived_at_customer_lat,arrived_at_customer_lng,arrived_at_customer_accuracy_m,delivered_at,cancelled_at,cancel_reason,customer_notes,business_notes,driver_notes,driver_id,business_id,created_at' as const
+  'id,short_id,order_number,status,source,delivery_method,delivery_distance_band,customer_name,customer_phone,delivery_address,delivery_reference,delivery_coordinates_lat,delivery_coordinates_lng,order_amount,delivery_fee,payment_intent,payment_real,yape_amount,cash_amount,client_pays_with,change_to_give,occupancy_slots,urgent_since,prep_time_minutes,estimated_ready_at,appears_in_queue_at,confirmed_at,preparing_at,waiting_driver_at,heading_at,waiting_at_restaurant_at,picked_up_at,arrived_at_customer_at,arrived_at_customer_lat,arrived_at_customer_lng,arrived_at_customer_accuracy_m,delivered_at,cancelled_at,cancel_reason,customer_notes,business_notes,driver_notes,driver_id,business_id,ready_early_used,created_at' as const
 
 /**
  * Detalle completo del pedido para el motorizado: order + items con modifiers
@@ -75,7 +75,9 @@ export async function GET(
           .order('created_at'),
         service
           .from('businesses')
-          .select('id,name,address,phone,coordinates_lat,coordinates_lng,yape_number,qr_url')
+          .select(
+            'id,name,address,phone,coordinates_lat,coordinates_lng,yape_number,qr_url,accent_color,logo_url',
+          )
           .eq('id', order.business_id)
           .maybeSingle(),
         service
@@ -131,6 +133,10 @@ export async function GET(
           customerNotes: order.customer_notes,
           businessNotes: order.business_notes,
           driverNotes: order.driver_notes,
+          // La cajera confirmó que la comida ya salió de cocina. Para el
+          // motorizado pesa más que la cuenta atrás: es la diferencia entre
+          // salir ya o esperar. El board ya lo tenía; el detalle no.
+          readyEarlyUsed: order.ready_early_used ?? false,
           createdAt: order.created_at,
         },
         items: (items ?? []).map((i) => ({
@@ -156,6 +162,11 @@ export async function GET(
               coordinatesLng: biz.coordinates_lng == null ? null : Number(biz.coordinates_lng),
               yapeNumber: biz.yape_number,
               qrUrl: biz.qr_url,
+              // Identidad del local. El board ya la usaba para la franja de
+              // color de cada tarjeta; sin esto el detalle no podía continuar
+              // esa señal y todos los restaurantes se veían iguales.
+              accentColor: biz.accent_color,
+              logoUrl: biz.logo_url,
             }
           : null,
         isPreview,

@@ -5,7 +5,7 @@
 > este documento difieran, **gana este documento**. Se mantiene vivo: cada
 > decisión nueva o cambio se registra aquí, no en specs paralelos.
 >
-> Última actualización: 2026-07-02 (paleta de papelito establecida en contracts; el color ya no es único entre negocios activos).
+> Última actualización: 2026-08-07 (pedido manual: la cajera teclea el total con envío incluido y la comida se deduce en el RPC — §22).
 
 ---
 
@@ -385,3 +385,20 @@ El alta de un negocio fallaba con `conflict` cuando el color elegido ya pertenec
 - **`AccentColorSchema` normaliza** (`trim`, quita `#`, `toLowerCase`) antes de validar — cualquier cliente (curl/Capacitor) queda cubierto por el server.
 - **Selector visual** (grid de 12 swatches + "Color personalizado" colapsable, auto-expandido si el valor no es de paleta — negocios legacy): en el alta del admin (`negocios/nuevo`). Hex libre sigue permitido.
 - **Defaults**: el form de alta preselecciona el primer color de la paleta (Rosado `f472b6`); el default de la columna en DB sigue `f97316` (naranja = brand, con la reserva del spec: solo asignarlo si Tindivo no opera ese pueblo).
+
+---
+
+## 22. Pedido manual: la cajera teclea el TOTAL, la comida se deduce (2026-08-07)
+
+**Solo el canal manual** (`create_business_manual_order`). El checkout del cliente no cambia: ahí el monto sale del carrito y el envío por banda se le sigue mostrando desglosado (§15).
+
+El formulario de `apps/negocios/nuevo` rotulaba su campo "Total del pedido" pero lo mandaba como `p_order_amount`, que significa **comida**; el RPC le sumaba el envío encima. La cajera, que ya tiene el hábito de decirle al cliente el total con envío incluido, escribía 27 y el pedido salía a 29.
+
+- **Entra el TOTAL, sale la comida** (migración `0129`): `p_order_amount` → `p_total_amount`, y `order_amount := round(total − delivery_fee, 2)`. El esquema NO cambia: `orders.order_amount` y `orders.delivery_fee` siguen separados, con la misma semántica, y el ledger/apelaciones/reportes no se enteran.
+- **La resta vive en el RPC, nunca en el navegador.** El envío sale de una cadena de fallback (`delivery_bands ->> banda` → `businesses.delivery_fee` → `2.00`) que solo la función resuelve. Un cliente que restara mal —o que restara 0 porque no cargó las tarifas— cobraría el envío dos veces en silencio.
+- **Un total que no cubre el envío se rechaza** con un mensaje que dice ambos números. Antes era imposible por construcción; ahora es la vía de error natural ("una gaseosa de S/2").
+- **El selector de zona va AL FINAL y sin precios.** Ya no decide cuánto paga el cliente, así que mostrarle "S/ 2.00 / S/ 2.50" invitaría a sumarlos otra vez al monto. Sigue **sin preselección**: `canSubmit` la exige y el CTA nombra lo que falta.
+- **Consecuencia económica asumida**: con el total fijo, elegir "Lejos" ya no le cobra S/0.50 más al cliente — se los resta a la comida, o sea que **el negocio absorbe** la diferencia (le sigue debiendo el envío íntegro a Tindivo vía `business_charges`, §4). Si se decide lo contrario, la salida es igualar `far` a `near` en `app_settings` (precedente de la `0110` con `commissions`), no revertir la `0129`.
+- **Renombre deliberado del campo del endpoint** (`orderAmount` → `totalAmount`), sin alias de compatibilidad: un cliente viejo se lleva un 422 en vez de colar un total por comida. `apps/api` y `apps/negocios` se despliegan juntos.
+- **Arregla de rebote dos defectos vivos** que nacían de la misma asimetría: el pago **mixto** era imposible de enviar (la pantalla exigía `billetera + efectivo = comida`, el servidor `= comida + envío`) y el **vuelto** se mostraba inflado por el importe del envío.
+- **Supersede** `Docs/spec/spec_ui_cajera.md` en su punto "«Monto del pedido» pasa a ser solo comida" (líneas 62 y 374): sigue siendo `orders.order_amount`, pero ya no es lo que teclea la cajera.

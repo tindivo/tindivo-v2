@@ -41,7 +41,20 @@ const Schema = z.object({
   // el RPC aceptaba desde la 0080 y descartaba en silencio. Ningún cliente lo
   // enviaba. Una nota dirigida al MOTORIZADO es una idea aparte, sin diseñar.
   prepTimeMinutes: z.number().int().min(1).max(120).default(20),
-  orderAmount: z.number().positive().max(99_999_999.99),
+  // 0129 · Es el TOTAL que la cajera le cobra al cliente, envío INCLUIDO. La
+  // comida la deduce el RPC restando el envío de la banda.
+  //
+  // El campo se llamaba `orderAmount` y significaba solo comida, mientras la
+  // pantalla lo rotulaba "Total del pedido": la cajera escribía 27 (25 + 2 de
+  // envío) y el pedido salía a 29. El RENOMBRE ES PARTE DEL ARREGLO — un
+  // frontend viejo que mande `orderAmount` se lleva un 422 aquí en vez de colar
+  // un total por comida. Por eso NO hay alias de compatibilidad: mantener los
+  // dos nombres vivos sería mantener viva la ambigüedad.
+  //
+  // Que el total cubra el envío NO se valida aquí: el envío depende de la banda
+  // y de una cadena de fallback que solo el RPC resuelve. Allá se rechaza con un
+  // mensaje que dice los dos números.
+  totalAmount: z.number().positive().max(99_999_999.99),
   clientPaysWith: z.number().nonnegative().max(99_999_999.99).optional(),
   yapeAmount: z.number().nonnegative().max(99_999_999.99).optional(),
   cashAmount: z.number().nonnegative().max(99_999_999.99).optional(),
@@ -64,7 +77,7 @@ export async function POST(req: Request): Promise<Response> {
       p_payment_intent: body.paymentIntent,
       p_customer_name: body.customerName ?? undefined,
       p_customer_phone: body.customerPhone ?? undefined,
-      p_order_amount: body.orderAmount,
+      p_total_amount: body.totalAmount,
       p_prep_time_minutes: body.prepTimeMinutes,
       p_delivery_reference: body.deliveryReference ?? undefined,
       p_delivery_distance_band: body.deliveryDistanceBand,
