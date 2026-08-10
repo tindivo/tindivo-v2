@@ -1,0 +1,65 @@
+-- =============================================================================
+-- ROLLBACK de la 0131 · el pedido manual vuelve a NO guardar el vuelto
+-- =============================================================================
+--
+-- 0131 · El pedido manual vuelve a guardar el vuelto.
+--
+-- Restaura `create_business_manual_order` al estado que dejó la 0129, o sea SIN
+-- `change_to_give` en el INSERT.
+--
+-- ⚠️ NO CONFUNDIR CON `rollback-0130.sql`, que revierte la transferencia por
+-- silencio. Son migraciones distintas y sin relación.
+--
+-- ─────────────────────────────────────────────────────────────────────────────
+-- QUÉ VUELVE A ROMPERSE AL REVERTIR
+--
+--   Todo pedido manual creado a partir de ese momento vuelve a guardar
+--   `change_to_give = NULL`, y las seis pantallas que leen esa columna vuelven a
+--   mentir — entre ellas la que el motorizado mira antes de salir, que deja de
+--   avisarle del vuelto que tiene que llevar. Es la regresión que entró en la
+--   0092 y que la 0131 cierra. Revertir sin un plan alternativo devuelve un
+--   defecto de dinero a producción.
+--
+-- QUÉ NO DESHACE, y por qué no hace falta
+--
+--   La 0131 NO toca datos: no hay backfill. Revertirla no deja filas a medias.
+--   Las creadas mientras estuvo viva conservan su `change_to_give` correcto, que
+--   es un dato bueno y que la versión vieja simplemente ignora al escribir.
+--
+-- ─────────────────────────────────────────────────────────────────────────────
+-- PASO 1 — PRIMERO EL CÓDIGO
+--
+--       git revert <sha-del-commit-de-0131>
+--
+--   `apps/motorizados/lib/payment.ts` deriva el vuelto en cliente y seguiría
+--   funcionando aunque la columna vuelva a NULL — está escrito justo para
+--   sobrevivir a esto. Las otras cinco pantallas (admin ×2, customer tracking,
+--   collect-card, status-hero) NO derivan nada y volverían a enseñar
+--   "S/ 0.00" o a callar.
+--
+-- PASO 2 — el SQL.
+--
+--   No se deja el cuerpo precopiado A PROPÓSITO: un rollback con una copia
+--   desactualizada del cuerpo revierte a un estado que nunca existió, que es
+--   peor que no tener rollback. La fuente es la 0129, y está versionada:
+--
+--     supabase/migrations/0129_the_cashier_types_the_total.sql
+--     bloque "── 2 · La firma nueva: entra el total"  (líneas 122-318)
+--
+--   Se copia ese `CREATE OR REPLACE FUNCTION` tal cual y se ejecuta. La firma no
+--   cambia en ninguna dirección, así que NO hace falta DROP y los grants
+--   sobreviven: no hay que reemitir REVOKE/GRANT.
+--
+-- CÓMO APLICARLO: con el CLI de Supabase, nunca pegándolo en el editor SQL del
+-- panel.
+-- =============================================================================
+
+
+-- ── Verificación posterior obligatoria ───────────────────────────────────────
+--
+--   SELECT pg_get_functiondef(p.oid) LIKE '%change_to_give%'
+--     FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+--    WHERE n.nspname = 'public' AND p.proname = 'create_business_manual_order';
+--
+-- Debe devolver `false` tras el rollback. Si devuelve `true`, el cuerpo que se
+-- pegó no era el de la 0129.
