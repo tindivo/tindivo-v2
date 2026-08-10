@@ -38,7 +38,16 @@ export async function GET(req: Request): Promise<Response> {
         service
           .from('orders')
           .select(
-            'id,short_id,status,source,order_amount,delivery_fee,occupancy_slots,urgent_since,driver_id,drivers(id,full_name,vehicle_type),businesses(name)',
+            // `delivery_reference` y `businesses(accent_color)` son los DOS
+            // únicos campos que se añadieron para que la pestaña Equipo use la
+            // misma tarjeta que las otras bandejas.
+            //
+            // NO entra nada más, y menos por comodidad: el nombre y el teléfono
+            // del cliente son datos de un tercero que no ayudan a decidir un
+            // traspaso, y `estimated_ready_at` permitiría pedir solo los pedidos
+            // ya listos y dejarle los lentos al compañero. Se elimina el vector
+            // en vez de documentarlo como riesgo.
+            'id,short_id,status,source,delivery_reference,order_amount,delivery_fee,occupancy_slots,urgent_since,driver_id,drivers(id,full_name,vehicle_type),businesses(name,accent_color)',
           )
           .neq('driver_id', driver.id)
           .not('driver_id', 'is', null)
@@ -47,7 +56,12 @@ export async function GET(req: Request): Promise<Response> {
         service
           .from('order_transfer_requests')
           .select(
-            'id,order_id,from_driver_id,to_driver_id,status,reason,expires_at,created_at,orders(short_id,order_amount,delivery_fee,businesses(name))',
+            // `delivery_reference` para el modal de C1.1: hay 30 segundos para
+            // decidir, y el código corto no basta para reconocer un pedido —
+            // "Jr. Los Pinos, casa azul" sí. Aquí NO hay problema de privacidad
+            // como en `teamOrders`: estas solicitudes son sobre pedidos PROPIOS
+            // de quien las recibe.
+            'id,order_id,from_driver_id,to_driver_id,status,reason,expires_at,created_at,orders(short_id,delivery_reference,order_amount,delivery_fee,businesses(name))',
           )
           .eq('status', 'pending')
           .gt('expires_at', nowIso)
@@ -82,6 +96,12 @@ export async function GET(req: Request): Promise<Response> {
               }
             : null,
           businessName: o.businesses?.name ?? null,
+          // Responde "¿me queda de camino?", que es la pregunta que decide un
+          // traspaso.
+          deliveryReference: o.delivery_reference ?? null,
+          // Franja de color del local: identifica el negocio de un vistazo,
+          // igual que en las otras bandejas.
+          accentColor: o.businesses?.accent_color ?? null,
           transferable: TRANSFERABLE.has(o.status),
         })),
         sentRequests: (pending ?? [])
@@ -105,6 +125,7 @@ export async function GET(req: Request): Promise<Response> {
                 ? null
                 : Number(r.orders.order_amount) + Number(r.orders.delivery_fee),
             businessName: r.orders?.businesses?.name ?? null,
+            deliveryReference: r.orders?.delivery_reference ?? null,
             requesterName: requesterName(r.to_driver_id),
             reason: r.reason,
             expiresAt: r.expires_at,

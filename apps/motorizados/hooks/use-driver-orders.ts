@@ -96,9 +96,38 @@ export function useDriverOrders(now: number): DriverBoard {
       if (document.visibilityState === 'visible') void refetch()
     }
     document.addEventListener('visibilitychange', onVisible)
+
+    // ── POLL DE RESPALDO. No sustituye al realtime: lo cubre donde no llega.
+    //
+    // El realtime de `orders` va filtrado por RLS, así que cuando una fila DEJA
+    // de ser visible para ti el evento no llega. Es una clase entera de
+    // silencios, no un caso suelto: un traspaso que te quita el pedido, una
+    // reasignación del admin, una cancelación desde negocios. En todos, tu
+    // pantalla se queda enseñando algo que ya no es tuyo.
+    //
+    // Con la 0130 eso pasó de molesto a caro: el silencio transfiere, y sin este
+    // poll el motorizado conduce al local a por comida que ya recogió otro. Solo
+    // se descubría al minimizar la app y volver (`visibilitychange`).
+    //
+    // DESFASADO 7s RESPECTO A `useTeam`, que sondea a los 15s exactos. Son
+    // endpoints distintos —board por supabase directo, equipo por la API—, así
+    // que no son el fetcher duplicado que T1 eliminó; pero salir a la vez cada
+    // 15s es una estampida gratuita en un móvil con datos móviles. Desfasar es
+    // más simple que compartir un ticker entre dos stores que no se conocen.
+    const POLL_MS = 15_000
+    const POLL_OFFSET_MS = 7_000
+    let poll: ReturnType<typeof setInterval> | null = null
+    const arranquePoll = setTimeout(() => {
+      poll = setInterval(() => {
+        if (document.visibilityState === 'visible') void refetch()
+      }, POLL_MS)
+    }, POLL_OFFSET_MS)
+
     return () => {
       supabase.removeChannel(channel)
       document.removeEventListener('visibilitychange', onVisible)
+      clearTimeout(arranquePoll)
+      if (poll !== null) clearInterval(poll)
     }
   }, [refetch])
 

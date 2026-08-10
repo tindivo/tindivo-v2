@@ -1,8 +1,7 @@
 'use client'
 
 import { ApiError } from '@tindivo/api-client'
-import { Button, Card, cn } from '@tindivo/ui'
-import { useLayoutEffect, useRef } from 'react'
+import { Button, cn, Icon } from '@tindivo/ui'
 import { useNow } from '@/hooks/use-now'
 import { getTransferRemaining, useTeam } from '@/hooks/use-team'
 import { api } from '@/lib/api'
@@ -12,65 +11,33 @@ import type { TeamResponse } from '@/lib/types'
 type Request = TeamResponse['receivedRequests'][number]
 
 /**
- * Variable que publica la altura de la pila para que el resto de la pantalla se
- * aparte. La escribe este componente y la leen las pestañas y el tablero de
- * `Home`; vale `0px` cuando no hay solicitudes.
- */
-const STACK_VAR = '--drv-transfer-h'
-
-/**
- * Pila de solicitudes de traspaso entrantes (HU-D-035/036).
+ * Solicitudes de traspaso entrantes (HU-D-035/036), a PANTALLA COMPLETA.
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * POR QUÉ TODAS Y NO SOLO LA PRIMERA
+ * POR QUÉ UN MODAL Y NO EL BANNER QUE HABÍA
  *
- *   Antes se pintaba `receivedRequests[0]` y punto. Con dos solicitudes vivas la
- *   segunda era literalmente invisible, y eso no es un problema de comodidad:
- *   el silencio TRANSFIERE el pedido (`expire_order_transfers` llama a
- *   `apply_order_transfer(req, 'expired')`, migración 0119). Un motorizado podía
- *   perder una entrega sin haberla visto nunca.
+ *   Desde la 0130 el silencio TRANSFIERE el pedido, y la ventana son 30
+ *   segundos. O sea: no responder ya no es neutral, cuesta el reparto. Con esa
+ *   regla, que la solicitud se vea deja de ser una mejora de UX y pasa a ser
+ *   parte del contrato: un banner que compite con el resto de la pantalla, o que
+ *   queda tras una notificación, no lo garantiza.
+ *
+ *   El modal tapa todo a propósito. Es la única interacción de la app que puede
+ *   costarte trabajo por no mirarla.
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * POR QUÉ TAPA LA BARRA SUPERIOR PERO NO EL TABLERO
+ * SIN COLA NI TURNOS, A PROPÓSITO
  *
- *   La pila va fija arriba del todo, por encima del `GlassTopBar`. Es una
- *   decisión, no un descuido: durante los segundos en que se decide si pierdes
- *   un reparto, la solicitud pesa más que el cromo de la app.
+ *   Hay dos motorizados como mucho, así que dos solicitudes simultáneas al mismo
+ *   dueño exigirían tres personas: no puede pasar. Si aun así llegaran, se
+ *   APILAN —se pintan las dos, cada una con su reloj— igual que hacía el banner.
  *
- *   Lo que NO puede tapar es aquello sobre lo que estás decidiendo. Antes cubría
- *   las pestañas y las primeras tarjetas del tablero —se veía en la captura del
- *   gate de T1—, y con una pila de dos o tres habría cubierto la pantalla
- *   entera. Ahora publica su altura en `--drv-transfer-h` y el contenido se
- *   aparta solo.
+ *   Una cola sería peor que apilar: la segunda solicitud correría su cuenta
+ *   atrás mientras espera turno, y podría caducar sin que el dueño la haya visto
+ *   nunca. Con la 0130 eso es perder un pedido en silencio.
  */
 export function TransferWatcher() {
   const { receivedRequests, refresh } = useTeam()
-  const stackRef = useRef<HTMLDivElement | null>(null)
-
-  // `useLayoutEffect` y no `useEffect`: la variable tiene que estar puesta antes
-  // del primer pintado, o el tablero da un salto visible al aparecer la pila.
-  useLayoutEffect(() => {
-    const root = document.documentElement
-    const node = stackRef.current
-    if (!node) {
-      root.style.setProperty(STACK_VAR, '0px')
-      return
-    }
-    // La altura cambia sola: entran y salen solicitudes, y cada card cambia de
-    // tamaño al caducar (pierde los botones). Medir una vez no sirve.
-    const observer = new ResizeObserver(() => {
-      root.style.setProperty(STACK_VAR, `${Math.ceil(node.getBoundingClientRect().height)}px`)
-    })
-    observer.observe(node)
-    root.style.setProperty(STACK_VAR, `${Math.ceil(node.getBoundingClientRect().height)}px`)
-    return () => {
-      observer.disconnect()
-      root.style.setProperty(STACK_VAR, '0px')
-    }
-    // Depende del NÚMERO de solicitudes, no de `[]`: cuando la pila pasa de 0 a
-    // 1 el componente venía devolviendo `null`, así que el `ref` estaba vacío y
-    // el observer no llegaba a engancharse nunca.
-  }, [receivedRequests.length])
 
   if (receivedRequests.length === 0) return null
 
@@ -85,18 +52,17 @@ export function TransferWatcher() {
   }
 
   return (
-    <div
-      ref={stackRef}
-      className="fixed inset-x-0 top-[env(safe-area-inset-top)] z-[85] mx-auto flex max-w-[480px] flex-col gap-2 p-3"
-    >
-      {receivedRequests.map((request) => (
-        <RequestCard key={request.id} request={request} onRespond={respond} />
-      ))}
+    <div className="fixed inset-0 z-[90] flex flex-col overflow-y-auto bg-ink/95 p-4 backdrop-blur-sm">
+      <div className="mx-auto flex w-full max-w-[480px] flex-col justify-center gap-3 py-6 min-h-full">
+        {receivedRequests.map((request) => (
+          <RequestModal key={request.id} request={request} onRespond={respond} />
+        ))}
+      </div>
     </div>
   )
 }
 
-function RequestCard({
+function RequestModal({
   request,
   onRespond,
 }: {
@@ -107,76 +73,116 @@ function RequestCard({
   const { remainingSec, pct, expired } = getTransferRemaining(request, now)
   const danger = remainingSec <= 10
 
-  // CADUCADA NO ES "SE CANCELÓ". El backend interpreta el silencio como un sí:
-  // el pedido se está pasando al compañero ahora mismo, con hasta un minuto de
-  // latencia del cron. Decir "solicitud caducada" —que es lo que decía antes—
-  // sugiere lo contrario, y el pedido desaparecía de "Míos" sin explicación.
+  // CADUCADA NO ES "SE CANCELÓ". El backend interpreta el silencio como un sí
+  // (0130): el pedido se está pasando al compañero ahora mismo. Decir "solicitud
+  // caducada" sugeriría lo contrario, y el pedido desaparecería de "Míos" sin
+  // explicación.
   if (expired) {
     return (
-      <Card className="rounded-[22px] bg-warning p-4 text-white shadow-elev-4">
+      <div className="rounded-[24px] bg-warning p-6 text-white shadow-elev-4">
         <div className="flex items-start gap-3">
-          <span className="mt-0.5 inline-block h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-white border-t-transparent" />
+          <span className="mt-1 inline-block h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-white border-t-transparent" />
           <div className="min-w-0">
-            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em]">
+            <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.2em]">
               Transferencia automática…
             </p>
-            <p className="mt-0.5 text-[14px] font-semibold">
+            <p className="mt-1 text-[17px] font-semibold">
               Pasando el pedido
               {request.shortId ? ` #${request.shortId}` : ''} a {request.requesterName}
             </p>
           </div>
         </div>
-      </Card>
+      </div>
     )
   }
 
   return (
-    <Card className="rounded-[22px] bg-ink p-4 text-white shadow-elev-4">
-      <div className="flex items-center justify-between">
-        <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-brand-light">
+    <div className="rounded-[24px] bg-card p-6 shadow-elev-4">
+      {/* Reloj arriba y grande: es el dato que decide. */}
+      <div className="flex items-start justify-between gap-3">
+        <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.2em] text-ink-muted">
           Solicitud de traspaso
-        </span>
+        </p>
         <span
           className={cn(
-            'font-mono text-[22px] font-bold tabular-nums',
-            danger ? 'text-danger' : 'text-warning',
+            'font-mono text-[30px] font-bold leading-none tabular-nums',
+            danger ? 'text-danger' : 'text-brand-dark',
           )}
         >
-          {/* `mmss` y no `0:${segundos}`: el TTL es configurable
-              (`app_settings.timers.transferTtlSeconds`) y con cualquier valor
-              por encima de 59 el formato viejo escribía "0:75". Un contador que
-              obliga a traducir mentalmente, justo en el momento de más prisa,
-              estorba más de lo que ayuda. Mismo formateador que la tarjeta de
-              "Míos": un solo reloj y una sola forma de escribirlo. */}
           {mmss(remainingSec)}
         </span>
       </div>
-      <p className="mt-1 text-[14px]">
-        {request.requesterName} te pide el pedido
-        {request.shortId ? ` #${request.shortId}` : ''}
-        {request.total != null ? ` · ${soles(request.total)}` : ''}
+
+      <h2 className="mt-3 font-display text-[22px] font-bold leading-tight text-ink">
+        Un motorizado quiere tomar tu pedido
+      </h2>
+
+      <p className="mt-1.5 text-[15px] text-ink-muted">
+        <span className="font-semibold text-ink">{request.requesterName}</span> te lo está pidiendo.
       </p>
-      <div className="mt-3 h-1.5 rounded-full bg-white/10">
+
+      {/* Identificación del pedido: código para nombrarlo, y dirección para
+          reconocerlo. En 30 segundos el código solo no basta. */}
+      <div className="mt-4 rounded-2xl bg-surface p-4">
+        <div className="flex items-center justify-between gap-2">
+          <span className="font-mono text-[13px] font-semibold text-ink">
+            {request.shortId ? `#${request.shortId}` : 'Pedido'}
+          </span>
+          {request.total != null && (
+            <span className="font-display text-[17px] font-bold tabular-nums text-ink">
+              {soles(request.total)}
+            </span>
+          )}
+        </div>
+        {request.businessName && (
+          <p className="mt-1 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-ink/55">
+            {request.businessName}
+          </p>
+        )}
+        {request.deliveryReference && (
+          <p className="mt-1.5 flex items-start gap-1.5 text-[14px] leading-snug text-ink-muted">
+            <Icon name="location_on" size={16} className="mt-px shrink-0 text-brand" />
+            <span className="line-clamp-2">{request.deliveryReference}</span>
+          </p>
+        )}
+      </div>
+
+      <div className="mt-4 h-2 rounded-full bg-ink/[0.08]">
         <div
           className={cn(
-            'h-1.5 rounded-full transition-[width] duration-1000 ease-linear',
+            'h-2 rounded-full transition-[width] duration-1000 ease-linear',
             danger ? 'bg-danger' : 'bg-brand',
           )}
           style={{ width: `${pct}%` }}
         />
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-2">
+
+      {/* SI NO RESPONDES, SE LO LLEVAN. Dicho explícitamente: es lo que cambió
+          con la 0130 y lo que la persona necesita saber para decidir. */}
+      <p className="mt-2.5 text-[12px] text-ink-subtle">
+        Si no respondes a tiempo, el pedido pasa a {request.requesterName}.
+      </p>
+
+      <div className="mt-5 grid grid-cols-2 gap-2.5">
         <Button className="w-full" onClick={() => onRespond(request.id, true)}>
-          Aceptar
+          Sí, dáselo
         </Button>
-        <Button
-          variant="ghost"
-          className="w-full bg-white/10 text-white hover:bg-white/15 hover:text-white"
-          onClick={() => onRespond(request.id, false)}
-        >
-          Rechazar
+        <Button variant="secondary" className="w-full" onClick={() => onRespond(request.id, false)}>
+          No, es mío
         </Button>
       </div>
-    </Card>
+
+      {/* Cerrar = rechazar explícito, no "ignorar". Con el silencio costando el
+          pedido, una X que solo esconda el modal sería una trampa. */}
+      <button
+        type="button"
+        onClick={() => onRespond(request.id, false)}
+        aria-label="Cerrar y quedarme el pedido"
+        className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl py-2 text-[13px] font-semibold text-ink-subtle transition-colors hover:bg-ink/[0.04]"
+      >
+        <Icon name="close" size={16} />
+        Cerrar
+      </button>
+    </div>
   )
 }

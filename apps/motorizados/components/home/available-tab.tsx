@@ -82,21 +82,37 @@ export function AvailableTab({
       <OverdueBanner count={overdueCount} />
 
       <div className="flex flex-col gap-2.5">
-        {sorted.map((o) => (
-          <OrderCard
-            key={o.id}
-            order={o}
-            now={now}
-            variant="available"
-            // Mochila llena = NO se puede tomar, y así se comporta la tarjeta.
-            // La razón viaja con ella: el cartel de arriba se pierde en cuanto
-            // la lista scrollea.
-            blocked={full}
-            blockedReason={full ? `Mochila llena ${mySlots}/3` : undefined}
-            // La prioridad de vencidos sigue siendo solo visual hasta T6.
-            dimmed={!full && hasOverdue && orderUrgency(o, now) !== 'overdue'}
-          />
-        ))}
+        {sorted.map((o) => {
+          const esVencido = orderUrgency(o, now) === 'overdue'
+          // DOS razones distintas para no poder tomar un pedido, y cada una dice
+          // la suya. La mochila manda sobre la prioridad: si no te cabe, da
+          // igual cuál sea el urgente.
+          //
+          // La prioridad de vencidos era hasta ahora SOLO atenuación: la
+          // tarjeta seguía navegando, así que la regla era una sugerencia
+          // visual. Ahora bloquea de verdad, como el legacy.
+          const porMochila = full
+          const porPrioridad = !full && hasOverdue && !esVencido
+          const motivo = porMochila
+            ? `Mochila llena ${mySlots}/3`
+            : porPrioridad
+              ? 'Primero el pedido vencido'
+              : undefined
+
+          return (
+            <OrderCard
+              key={o.id}
+              order={o}
+              now={now}
+              variant="available"
+              // La razón viaja CON la tarjeta: el cartel de arriba se pierde en
+              // cuanto la lista scrollea, y una tarjeta apagada sin explicación
+              // es indistinguible de un fallo de render.
+              blocked={porMochila || porPrioridad}
+              blockedReason={motivo}
+            />
+          )
+        })}
       </div>
 
       {sorted.length === 0 && upcoming.length === 0 && (

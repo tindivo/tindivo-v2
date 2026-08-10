@@ -2,20 +2,72 @@
 
 import { Badge, Button, Card, EmptyState, Icon } from '@tindivo/ui'
 import { useState } from 'react'
-import { SourceChip } from '@/components/source-chip'
 import {
   RequestTransferSheet,
   type TransferTarget,
 } from '@/components/transfers/request-transfer-sheet'
 import { useNow } from '@/hooks/use-now'
 import { getTransferRemaining, useTeam } from '@/hooks/use-team'
-import { mmss, soles } from '@/lib/format'
-import type { TeamResponse } from '@/lib/types'
+import { mmss } from '@/lib/format'
+import type { CardOrder, TeamResponse } from '@/lib/types'
+import { OrderCard } from './order-card'
 
 const STATUS_LABEL: Record<string, string> = {
   heading_to_restaurant: 'Voy al local',
   waiting_at_restaurant: 'En el local',
   picked_up: 'En reparto',
+}
+
+/**
+ * Adapta un pedido de equipo al tipo que consume `OrderCard`.
+ *
+ * Los nulos NO son descuido: son lo que el endpoint deliberadamente no manda de
+ * un pedido ajeno. El cliente y su teléfono son datos de un tercero, y
+ * `estimated_ready_at` permitiría quedarse solo con los pedidos ya listos.
+ *
+ * `delivery_fee: 0` con `order_amount: total` porque el payload trae el importe
+ * ya sumado; la tarjeta muestra `order_amount + delivery_fee`, así que el total
+ * sale correcto sin exponer el desglose.
+ */
+function teamOrderToCard(o: TeamResponse['teamOrders'][number]): CardOrder {
+  return {
+    id: o.orderId,
+    short_id: o.shortId,
+    status: o.status,
+    source: o.source,
+    customer_name: null,
+    delivery_address: null,
+    delivery_reference: o.deliveryReference,
+    // OJO: el importe va ENTERO en `order_amount` y el envío a 0, a propósito.
+    // El endpoint de equipo devuelve `total` ya sumado —no el desglose— y la
+    // tarjeta pinta `order_amount + delivery_fee`, así que el número que se ve
+    // es correcto. Quien lea `delivery_fee` aquí obtendrá 0 y NO significa
+    // "envío gratis": significa que ese dato no viaja para pedidos ajenos.
+    order_amount: o.total,
+    delivery_fee: 0,
+    payment_intent: null,
+    change_to_give: null,
+    // No viaja, como el resto del cobro: de un pedido ajeno no se expone con
+    // qué billete paga el cliente. Sin él, `changeDue` devuelve null y la
+    // tarjeta simplemente no habla de vuelto — que es lo correcto acá.
+    client_pays_with: null,
+    // Sí viaja, y aquí importa más que en las otras bandejas: antes de pedir un
+    // traspaso conviene saber si ese pedido te va a comer dos huecos.
+    occupancy_slots: o.occupancySlots,
+    estimated_ready_at: null,
+    ready_early_used: null,
+    urgent_since: o.urgentSince,
+    delivered_at: null,
+    business: {
+      id: '',
+      name: o.businessName ?? 'Restaurante',
+      phone: null,
+      address: null,
+      accent_color: o.accentColor,
+      coordinates_lat: null,
+      coordinates_lng: null,
+    },
+  }
 }
 
 /**
@@ -74,17 +126,20 @@ export function TeamTab() {
           </p>
           <div className="mt-2 flex flex-col gap-2.5">
             {group.orders.map((o) => (
-              <Card key={o.orderId} className="p-4 shadow-elev-1">
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-[12px] font-semibold text-ink">#{o.shortId}</span>
-                  <SourceChip source={o.source} />
-                </div>
-                <p className="mt-1 text-[13px] text-ink-muted">
-                  {o.businessName ?? 'Restaurante'} · {STATUS_LABEL[o.status] ?? o.status}
-                </p>
-                <div className="mt-2 flex items-center justify-between">
-                  <span className="font-display text-[16px] font-bold tracking-tight tabular-nums">
-                    {soles(o.total)}
+              <div key={o.orderId} className="flex flex-col gap-1.5">
+                {/* MISMA tarjeta que Disponibles y Míos. Antes esta pestaña
+                    dibujaba sus propias `Card`: otra tipografía, sin franja del
+                    local y sin la referencia de entrega, o sea sin el dato que
+                    de verdad decide si pides el traspaso. */}
+                <OrderCard
+                  order={teamOrderToCard(o)}
+                  now={now}
+                  variant="team"
+                  ownerName={group.name}
+                />
+                <div className="flex items-center justify-between px-1">
+                  <span className="text-[12px] text-ink-muted">
+                    {STATUS_LABEL[o.status] ?? o.status}
                   </span>
                   {o.transferable ? (
                     <Button
@@ -106,7 +161,7 @@ export function TeamTab() {
                     <span className="text-[12px] text-ink-subtle">Ya en reparto</span>
                   )}
                 </div>
-              </Card>
+              </div>
             ))}
           </div>
         </div>

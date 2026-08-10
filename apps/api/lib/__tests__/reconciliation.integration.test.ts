@@ -1,6 +1,22 @@
 /**
  * RECONCILIACIÓN GLOBAL — `balance_due` = SUM del ledger, para TODOS los negocios.
  *
+ * ⚠️ NO DEVUELVAS ESTE FICHERO AL PARALELISMO.
+ *
+ *   Recorre TODOS los negocios contra la base compartida. Cuando los ficheros de
+ *   test corrían en paralelo, veía el estado intermedio de otro fichero a mitad
+ *   de liquidar cargos y fallaba con "ningún negocio tiene el saldo desalineado
+ *   del ledger". Medido: en solitario pasa, y la base no tenía ni una fila
+ *   desalineada. Era un FALSO POSITIVO.
+ *
+ *   Por eso `apps/api/vitest.config.ts` fija `fileParallelism: false`. Si
+ *   alguien lo revierte, este test vuelve a acusar en falso al ledger — y una
+ *   alarma financiera que suena sin motivo se deja de mirar, que es exactamente
+ *   lo que no puede pasar con la única fuente de verdad del dinero.
+ *
+ *   Su alcance NO se acota para que pase: el valor está en ser global. Si algún
+ *   día falla YA AISLADO, eso no es una carrera: es el ledger desalineado.
+ *
  * Es la query 3 de B.6 del spec de fase 2, convertida en test permanente. Lo que
  * la hace posible es la migración `0124`: hasta entonces `balance_due` se
  * mantenía a mano en seis funciones distintas y contingencia lo movía sin dejar

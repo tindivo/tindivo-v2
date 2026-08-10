@@ -318,8 +318,8 @@ export function getTransferRemaining(
   const createdAt = Date.parse(req.createdAt)
 
   // Fechas ilegibles: se trata como caducada. Es el lado seguro — la expiración
-  // TRANSFIERE el pedido (0119), así que ante la duda hay que enseñar el aviso
-  // de traspaso en curso, no una cuenta atrás inventada.
+  // TRANSFIERE el pedido (0130, que revirtió la 0119), así que ante la duda hay
+  // que enseñar el aviso de traspaso en curso, no una cuenta atrás inventada.
   if (Number.isNaN(expiresAt) || Number.isNaN(createdAt)) {
     return { totalMs: 0, remainingMs: 0, remainingSec: 0, pct: 0, expired: true }
   }

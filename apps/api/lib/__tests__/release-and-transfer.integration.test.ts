@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { cleanup, E2E, localClient, seedContraentregaOrder } from './helpers/local-db'
 
 describe('Traspasos y Soltar Pedido (Release)', () => {
-  it('T1 Expiración: al expirar la solicitud de traspaso, el pedido SE QUEDA con el dueño original', async () => {
+  it('T1 Expiración CON capacidad: el silencio TRANSFIERE el pedido al solicitante', async () => {
     // 1. Crear un pedido en heading_to_restaurant asignado al driver 1
     const seeded = await seedContraentregaOrder(E2E.BUSINESS_ID)
     const orderId = seeded.orderId
@@ -60,7 +60,15 @@ describe('Traspasos y Soltar Pedido (Release)', () => {
       })
       expect(expireErr).toBeNull()
 
-      // 4. Verificar que la solicitud pasó a 'expired' PERO el pedido SE QUEDÓ con el dueño original
+      // 4. La solicitud queda 'expired' Y el pedido PASA al solicitante.
+      //
+      // Esta aserción estaba invertida hasta la 0130, que revirtió la 0119 y
+      // restauró la regla de la 0043: el solicitante ya está en el local con la
+      // comida saliendo, y el silencio del dueño se interpreta como conformidad.
+      //
+      // El estado sigue siendo 'expired' —no 'accepted'— a propósito: distingue
+      // "cedido por silencio" de "aceptado explícitamente", y esa diferencia es
+      // la que se consulta en una disputa.
       const { data: reqExpired } = await supabase
         .from('order_transfer_requests')
         .select('status')
@@ -73,8 +81,96 @@ describe('Traspasos y Soltar Pedido (Release)', () => {
         .select('driver_id')
         .eq('id', orderId)
         .single()
-      expect(oAfter?.driver_id).toBe(E2E.DRIVER_ID)
+      expect(oAfter?.driver_id).toBe(E2E.DRIVER_2_ID)
     } finally {
+      await cleanup(seeded)
+    }
+  })
+
+  it('T1b Expiración SIN capacidad: el pedido SE QUEDA con su dueño', async () => {
+    // La salvaguarda de la 0130. Sin este caso, la única barrera del camino que
+    // se recorre solo —el pedido se mueve sin que nadie pulse nada— no tendría
+    // cobertura, y su ausencia no rompería ningún test.
+    const seeded = await seedContraentregaOrder(E2E.BUSINESS_ID)
+    const orderId = seeded.orderId
+    const supabase = localClient
+    let llenoId: string | null = null
+
+    try {
+      await supabase.rpc('advance_order', {
+        p_order_id: orderId,
+        p_actor_user_id: E2E.DRIVER_USER_ID,
+        p_actor_role: 'driver',
+        p_action: 'take',
+      })
+
+      // El SOLICITANTE llena su mochila: un pedido suyo que ocupa los 3 huecos.
+      //
+      // Se inserta la fila directamente en vez de usar `seedContraentregaOrder`:
+      // aquí solo hace falta que exista un pedido activo del solicitante con sus
+      // slots, y el helper monta bastante más. Con la suite en paralelo, ese
+      // trabajo extra empujaba a `A2.1` —que ya corre a ~4.1s de un límite de 5—
+      // por encima de su tiempo. Medido: con el helper A2.1 caía por timeout;
+      // con este insert, no.
+      const { data: lleno, error: llenoErr } = await supabase
+        .from('orders')
+        .insert({
+          business_id: E2E.BUSINESS_ID,
+          // Alfabeto sin I/O/0/1 (invariante del repo, CHECK en la tabla).
+          short_id: 'TBLLENAX',
+          delivery_method: 'delivery',
+          delivery_reference: 'Mochila llena',
+          order_amount: 25,
+          delivery_fee: 2,
+          payment_intent: 'pending_cash',
+          status: 'picked_up',
+          driver_id: E2E.DRIVER_2_ID,
+          occupancy_slots: 3,
+        })
+        .select('id')
+        .single()
+      expect(llenoErr).toBeNull()
+      llenoId = lleno?.id ?? null
+
+      const { data: xferRes } = await supabase.rpc('request_order_transfer', {
+        p_to_driver_user_id: E2E.DRIVER_2_USER_ID,
+        p_order_id: orderId,
+        p_reason: 'sin hueco',
+      })
+      const reqId = (xferRes as { id: string }).id
+
+      const { data: reqRow } = await supabase
+        .from('order_transfer_requests')
+        .select('*')
+        .eq('id', reqId)
+        .single()
+
+      const { data: transferido, error: expireErr } = await supabase.rpc('apply_order_transfer', {
+        p_req: reqRow,
+        p_final: 'expired',
+      })
+      expect(expireErr).toBeNull()
+      // La función devuelve si transfirió: aquí NO.
+      expect(transferido).toBe(false)
+
+      const { data: oAfter } = await supabase
+        .from('orders')
+        .select('driver_id')
+        .eq('id', orderId)
+        .single()
+      expect(oAfter?.driver_id).toBe(E2E.DRIVER_ID)
+
+      // Y el motivo queda registrado para poder explicarlo después.
+      const { data: evento } = await supabase
+        .from('order_event_log')
+        .select('data')
+        .eq('order_id', orderId)
+        .eq('event_type', 'order.transfer_expired')
+        .single()
+      expect((evento?.data as { transferred: boolean }).transferred).toBe(false)
+      expect((evento?.data as { reason: string }).reason).toBe('requester_no_capacity')
+    } finally {
+      if (llenoId) await localClient.from('orders').delete().eq('id', llenoId)
       await cleanup(seeded)
     }
   })

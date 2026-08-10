@@ -36,7 +36,27 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
-      testIgnore: /visual[\\/]/,
+      testIgnore: [/visual[\\/]/, /driver[\\/]/],
+    },
+    // Sesión del motorizado: corre una vez y deja la cookie en disco, igual que
+    // la de negocios. Vive en `visual/` por cercanía con su gemela, pero su
+    // extensión (`.setup.ts`, no `.spec.ts`) la mantiene fuera del proyecto
+    // `visual`, que usa OTRA sesión.
+    {
+      name: 'setup-motorizados',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /visual[\\/]motorizados\.setup\.ts/,
+    },
+    // Flujos del motorizado. Separados de `chromium` porque necesitan sesión de
+    // driver, y de `visual` porque no comparan capturas.
+    {
+      name: 'driver',
+      dependencies: ['setup-motorizados'],
+      testMatch: /driver[\\/].*\.spec\.ts/,
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: 'e2e/.auth/motorizados.json',
+      },
     },
     // Sesión de negocios: corre una vez y deja la cookie en disco.
     {
@@ -76,6 +96,12 @@ export default defineConfig({
     {
       command: 'pnpm --filter @tindivo/negocios dev',
       url: 'http://localhost:3002',
+      reuseExistingServer: true,
+      timeout: 120_000,
+    },
+    {
+      command: 'pnpm --filter @tindivo/motorizados dev',
+      url: 'http://localhost:3004',
       reuseExistingServer: true,
       timeout: 120_000,
     },

@@ -16,4 +16,44 @@ export default defineConfig({
   resolve: {
     alias: { '@': root },
   },
+  test: {
+    /**
+     * ESTOS TESTS SON DE INTEGRACIÓN CONTRA UNA ÚNICA BASE DE DATOS.
+     *
+     * No comparten un mock: comparten `postgres`. Ejecutar los archivos en
+     * paralelo significa varios ficheros creando, entregando y liquidando
+     * pedidos sobre las mismas tablas a la vez, y eso produjo dos síntomas
+     * distintos que costaron media tarde distinguir:
+     *
+     *   1. Toda la familia del ledger (A1.x, A2.x) rozando el presupuesto de
+     *      5s por contención. Medido: A1.3, A2.2 y A2.3 fallando a 5.01–5.03s,
+     *      y A1.1/A1.5/A2.1 entre 3.2s y 4.6s — o sea al 90% del límite incluso
+     *      cuando pasaban. No eran tests frágiles: era presupuesto mal
+     *      calibrado bajo carga.
+     *
+     *   2. `reconciliation.integration.test.ts` fallando con "ningún negocio
+     *      tiene el saldo desalineado del ledger". Ese test recorre TODOS los
+     *      negocios comprobando `balance_due = SUM(cargos pending)`, así que en
+     *      paralelo veía el estado intermedio de otro fichero a mitad de
+     *      liquidación. Aislado pasa, y la base no tenía ni una fila
+     *      desalineada: era un FALSO POSITIVO.
+     *
+     * El segundo es el que obliga. Un falso positivo de "el ledger está
+     * desalineado" es la alarma que menos puede mentir: si suena en falso, se
+     * deja de mirar, y el día que el ledger se desalinee de verdad nadie
+     * levantará la vista.
+     *
+     * Serializar los ficheros cuesta unos segundos de suite. Un test de
+     * invariante financiera que no se cree nadie cuesta bastante más.
+     */
+    fileParallelism: false,
+
+    /**
+     * 15s en vez de los 5s por defecto. Con los ficheros ya serializados casi
+     * ningún test lo necesita —los del ledger bajan a menos de 1s—, pero el
+     * margen evita que un entorno más lento (CI, un portátil cargado) vuelva a
+     * convertir la contención en rojos intermitentes.
+     */
+    testTimeout: 15_000,
+  },
 })

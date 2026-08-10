@@ -54,6 +54,47 @@ export interface BoardOrder {
   business: DriverBusiness | null
 }
 
+/**
+ * Lo ÚNICO que `OrderCard` lee de un pedido.
+ *
+ * Existe para que la pestaña Equipo pueda usar la misma tarjeta que Disponibles
+ * y Míos sin arrastrar todo `BoardOrder`, que sale de una lectura directa de
+ * `orders` con RLS y trae campos que de un pedido AJENO no deben viajar.
+ *
+ * `BoardOrder` lo satisface estructuralmente, así que Disponibles y Míos siguen
+ * pasando su objeto tal cual: no cambia ni una línea en esas dos bandejas.
+ *
+ * Los campos que un pedido de equipo NO puede aportar van como nullables a
+ * propósito —`customer_name`, `estimated_ready_at`, `payment_intent`—: la
+ * tarjeta ya sabe no pintarlos, y así el tipo documenta qué es opcional en vez
+ * de obligar a inventar valores de relleno.
+ */
+export interface CardOrder {
+  id: string
+  short_id: string
+  status: string
+  source: string
+  customer_name: string | null
+  delivery_address: string | null
+  delivery_reference: string | null
+  order_amount: number
+  delivery_fee: number
+  payment_intent: string | null
+  change_to_give: number | null
+  /**
+   * Billete con el que paga el cliente. Hace falta para DERIVAR el vuelto:
+   * `change_to_give` llega NULL en los pedidos manuales. Ver `lib/payment.ts`.
+   */
+  client_pays_with: number | null
+  /** Huecos de mochila que consume. Puede ser 2: la tarjeta lo avisa. */
+  occupancy_slots: number
+  estimated_ready_at: string | null
+  ready_early_used: boolean | null
+  urgent_since: string | null
+  delivered_at: string | null
+  business: DriverBusiness | null
+}
+
 /** Local asignado al motorizado, con lo justo para trabajar (0120). */
 export interface DriverBusiness {
   id: string
@@ -148,6 +189,9 @@ export interface TeamResponse {
     urgentSince: string | null
     driver: { id: string; fullName: string; vehicleType: string } | null
     businessName: string | null
+    /** Dónde va. Único dato del cliente que viaja: decide si te queda de camino. */
+    deliveryReference: string | null
+    accentColor: string | null
     transferable: boolean
   }[]
   sentRequests: {
@@ -164,6 +208,9 @@ export interface TeamResponse {
     shortId: string | null
     total: number | null
     businessName: string | null
+    /** Dónde va. Es un pedido PROPIO, así que aquí sí viaja: en 30 segundos el
+     *  código corto no basta para reconocerlo, la dirección sí. */
+    deliveryReference: string | null
     requesterName: string
     reason: string | null
     expiresAt: string | null

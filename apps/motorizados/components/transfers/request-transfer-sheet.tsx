@@ -14,7 +14,14 @@ export interface TransferTarget {
   driverName: string
 }
 
-/** Confirmación de solicitud de traspaso (explica el TTL con timeout-as-accept). */
+/**
+ * Confirmación de solicitud de traspaso.
+ *
+ * Explica el TTL con timeout-as-accept, que vuelve a ser la regla vigente desde
+ * la 0130: si el dueño no responde en la ventana, el pedido pasa al solicitante
+ * —siempre que a este le quepa—. Entre la 0119 y la 0130 no fue así, y este
+ * comentario describía algo que la base no hacía.
+ */
 export function RequestTransferSheet({
   target,
   onClose,
