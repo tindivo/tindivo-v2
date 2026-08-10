@@ -16,6 +16,7 @@
  * guardarraíl entra en vigor hoy y se aprieta según se vayan migrando, en vez
  * de bloquear el repo hasta terminar.
  */
+import { createHash } from 'node:crypto'
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { globSync } from 'node:fs'
 import { join, relative } from 'node:path'
@@ -69,14 +70,39 @@ const files = globSync('{apps,packages}/**/*.tsx', {
   exclude: (p) => p.includes('node_modules') || p.includes('.next'),
 })
 
+/**
+ * Huella de una infracción: fichero + hash del tag, NO fichero + línea.
+ *
+ * Anclar por línea hacía que el gate se pusiera rojo cada vez que alguien
+ * editaba cualquier cosa POR ENCIMA de una infracción ya conocida: la misma
+ * infracción se reportaba como "resuelta" en su línea vieja y "nueva" en la
+ * nueva. Pasó de verdad con el sprint de negocios —cards.tsx 248→280,
+ * nuevo-form.tsx 142→146 y 70→76— sin que nadie hubiera empeorado nada. Un
+ * guardarraíl que grita en falso se acaba ignorando, que es la peor forma de
+ * perder un guardarraíl.
+ *
+ * El hash se calcula sobre el tag con los espacios normalizados, así que
+ * reformatear no cuenta como infracción nueva, pero CAMBIAR las clases sí — y
+ * debe: si alguien retoca la superficie de un botón exento, vuelve a revisarse.
+ */
+function fingerprint(file, tag) {
+  const normalized = tag.replace(/\s+/g, ' ').trim()
+  const hash = createHash('sha256').update(normalized).digest('hex').slice(0, 12)
+  return `${file.replace(/\\/g, '/')}#${hash}`
+}
+
 const found = []
+/** Huella -> línea actual, solo para que el informe diga dónde mirar. */
+const lineOf = new Map()
 for (const file of files) {
   // packages/ui ES la implementación: ahí sí se pinta la superficie.
   if (file.replace(/\\/g, '/').startsWith('packages/ui/')) continue
   const src = readFileSync(join(ROOT, file), 'utf8')
   for (const { tag, line } of buttonTags(src)) {
     if (SURFACE.test(tag) && SHAPE.test(tag)) {
-      found.push(`${file.replace(/\\/g, '/')}:${line}`)
+      const id = fingerprint(file, tag)
+      found.push(id)
+      lineOf.set(id, line)
     }
   }
 }
@@ -101,7 +127,9 @@ if (resueltas.length) {
 
 if (nuevas.length) {
   console.error(`\n${nuevas.length} <button> pinta su propia superficie:\n`)
-  for (const f of nuevas) console.error(`  ${f}`)
+  // La huella lleva hash, que no sirve para ir a mirar. El informe enseña
+  // fichero:línea, que es lo que se pega en el editor.
+  for (const f of nuevas) console.error(`  ${f.split('#')[0]}:${lineOf.get(f)}`)
   console.error(
     '\nUsa <Button> o <IconButton> de @tindivo/ui.' +
       '\nVariantes: brand · soft · outline · ghost · danger · success · secondary' +
