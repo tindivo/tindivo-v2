@@ -337,3 +337,16 @@ textarea.t-field {
 .t-lift:active {
   transform: translateY(0) scale(0.985);
 }
+
+/**
+ * Fuerza color blanco en botones con fondo de color.
+ * Razón: Tailwind v4 emite utilidades dentro de @layer utilities, que tiene menor
+ * prioridad que los estilos sin capa de este mismo archivo. Reglas como
+ * `.t-modal-sheet { color: #1a1614 }` heredan a todos los hijos —incluyendo
+ * botones— y ganan sobre `text-white` de Tailwind.
+ * La clase `btn-white-text` se añade en las variantes brand/danger/success/secondary
+ * del componente <Button> para que el blanco sea garantizado vía !important.
+ */
+.btn-white-text {
+  color: #ffffff !important;
+}

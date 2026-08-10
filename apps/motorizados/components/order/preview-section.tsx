@@ -1,10 +1,12 @@
 'use client'
 
-import { Badge, Card, Icon } from '@tindivo/ui'
+import { Card, Icon } from '@tindivo/ui'
 import { SourceChip } from '@/components/source-chip'
 import { mapsDirToCoords, telLink } from '@/lib/deeplinks'
-import { mmss, soles } from '@/lib/format'
+import { soles } from '@/lib/format'
+import { changeDue } from '@/lib/payment'
 import type { OrderDetailResponse } from '@/lib/types'
+import { remainingParts } from '@/lib/urgency'
 
 /**
  * Ficha de previsualización del pedido tomable (HU-D-015).
@@ -32,21 +34,6 @@ const BAND_LABEL: Record<string, string> = { near: 'Cerca', far: 'Lejos' }
 function prettyPhone(raw: string): string {
   const d = raw.replace(/\D/g, '').slice(-9)
   return d.length === 9 ? `+51 ${d.slice(0, 3)} ${d.slice(3, 6)} ${d.slice(6)}` : raw
-}
-
-/**
- * Precisión adaptativa del contador.
- *
- * `estimated_ready_at` sale de `prep_time_minutes`, que es una estimación que
- * teclea una persona. Un segundero corriendo sobre eso promete una exactitud
- * que el dato no tiene, y de paso mete prisa cuando todavía faltan diez
- * minutos. Los segundos solo informan en el tramo final y cuando ya se pasó:
- * ahí sí cada uno cuenta.
- */
-function countdownLabel(remainingMs: number): string {
-  if (remainingMs < 0) return `Vencido hace ${mmss(-remainingMs / 1000)}`
-  if (remainingMs <= 120_000) return mmss(remainingMs / 1000)
-  return `~${Math.round(remainingMs / 60_000)} min`
 }
 
 /** Fila de dato con icono relleno. Un solo nivel de tarjeta: el icono ya
@@ -146,33 +133,23 @@ export function PreviewSection({ detail, now }: { detail: OrderDetailResponse; n
   const total = order.orderAmount + order.deliveryFee
   const accent = `#${business?.accentColor ?? 'f97316'}`
 
-  const overdue =
-    order.urgentSince != null ||
-    (order.estimatedReadyAt != null && Date.parse(order.estimatedReadyAt) < now)
+  // Lo vencido lo decide SOLO el reloj. La expresión anterior también miraba
+  // `urgentSince`, pero en v2 nadie escribe esa columna —cero migraciones la
+  // setean, cero filas en producción la tienen— así que esa rama nunca podía
+  // dispararse. Es un resto del v1, donde sí existía marcar un pedido urgente.
   const remainingMs = order.estimatedReadyAt ? Date.parse(order.estimatedReadyAt) - now : null
   const band = order.deliveryDistanceBand ? BAND_LABEL[order.deliveryDistanceBand] : null
   const destination = order.deliveryReference ?? order.deliveryAddress
   const hasCoords = order.deliveryCoordinatesLat != null && order.deliveryCoordinatesLng != null
 
-  /**
-   * Vuelto a llevar. `changeToGive` manda cuando existe, pero en los pedidos
-   * MANUALES llega null: `create_business_manual_order` calcula el vuelto y lo
-   * devuelve en su respuesta sin persistirlo nunca en la columna. Derivarlo acá
-   * es exacto —los tres sumandos vienen en el payload— y evita que el aviso
-   * quede mudo justo en el tipo de pedido que hoy domina el piloto.
-   *
-   * Arreglarlo en origen (que el RPC escriba `change_to_give`) es lo correcto y
-   * está pendiente: requiere migración.
-   */
-  const cashPart =
-    order.paymentIntent === 'pending_cash'
-      ? total
-      : order.paymentIntent === 'pending_mixed'
-        ? (order.cashAmount ?? 0)
-        : 0
-  const derivedChange =
-    order.clientPaysWith != null && cashPart > 0 ? order.clientPaysWith - cashPart : 0
-  const changeDue = order.changeToGive ?? (derivedChange > 0 ? derivedChange : null)
+  // Misma regla que la tarjeta del board, en un solo sitio (`lib/payment.ts`).
+  const vuelto = changeDue({
+    paymentIntent: order.paymentIntent,
+    total,
+    cashAmount: order.cashAmount,
+    clientPaysWith: order.clientPaysWith,
+    changeToGive: order.changeToGive,
+  })
 
   return (
     <div>
@@ -221,18 +198,21 @@ export function PreviewSection({ detail, now }: { detail: OrderDetailResponse; n
             )}
           </div>
 
-          <span className="flex shrink-0 flex-col items-end gap-1.5">
-            <SourceChip source={order.source} />
-            {order.readyEarlyUsed ? (
-              <Badge variant="success" size="sm">
-                Comida lista
-              </Badge>
-            ) : overdue ? (
-              <Badge variant="danger" size="sm">
-                Vencido
-              </Badge>
-            ) : null}
-          </span>
+          {/* El hero es identidad del local, y nada más.
+              Aquí vivían dos distintivos —"Comida lista" y "Vencido"— que
+              repetían tal cual lo que la tarjeta "Cuándo" ya dice más abajo, y
+              con más contexto: allí "Comida lista" viene con "el local confirmó
+              que ya salió de cocina", y lo vencido con los minutos exactos.
+              Decir dos veces lo mismo no es énfasis, es ruido.
+
+              El distintivo de origen sigue la misma regla que la tarjeta del
+              board: solo aparece cuando el pedido viene de la app del cliente,
+              porque hoy el 100% son manuales y un chip constante no informa. */}
+          {order.source === 'customer_pwa' && (
+            <span className="shrink-0">
+              <SourceChip source={order.source} />
+            </span>
+          )}
         </div>
       </section>
 
@@ -358,12 +338,12 @@ export function PreviewSection({ detail, now }: { detail: OrderDetailResponse; n
         {/* Vuelto y billete: apoyo, no protagonistas. Se avisa ACÁ —antes de
             aceptar— porque llevar sencillo encima es una decisión que se toma
             al salir, no al llegar al domicilio. */}
-        {changeDue != null && changeDue > 0 && (
+        {vuelto != null && (
           <div className="mt-2 grid grid-cols-2 gap-2">
             <SupportChip
               icon="currency_exchange"
               label="Vuelto"
-              amount={changeDue}
+              amount={vuelto}
               sub="que debes dar"
             />
             {order.clientPaysWith != null && (
@@ -385,8 +365,14 @@ export function PreviewSection({ detail, now }: { detail: OrderDetailResponse; n
           comida. `readyEarlyUsed` gana siempre — es confirmación humana de la
           cajera y hace irrelevante la estimación. */}
       <Card className="mt-3 p-[18px]">
+        {/* El rótulo sigue al dato. "Falta para que esté listo" encima de un
+            "Esperando 04:53" se contradice: si ya se pasó, no falta nada. */}
         <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/55">
-          {order.readyEarlyUsed ? 'Cuándo' : 'Falta para que esté listo'}
+          {order.readyEarlyUsed
+            ? 'Cuándo'
+            : remainingMs != null && remainingMs < 0
+              ? 'Se pasó del tiempo'
+              : 'Falta para que esté listo'}
         </p>
 
         {order.readyEarlyUsed ? (
@@ -416,7 +402,9 @@ export function PreviewSection({ detail, now }: { detail: OrderDetailResponse; n
                   remainingMs < 0 ? 'text-danger' : 'text-ink'
                 }`}
               >
-                {countdownLabel(remainingMs)}
+                {remainingMs < 0
+                  ? `Esperando ${remainingParts(remainingMs).value}`
+                  : remainingParts(remainingMs).value}
               </p>
               {order.prepTimeMinutes != null && (
                 <p className="text-[12.5px] text-ink-muted">

@@ -16,3 +16,17 @@
 .tindivo-overdue-glow {
   animation: tindivoGlow 2s infinite ease-in-out;
 }
+
+/**
+ * Sin movimiento, la señal NO desaparece: se congela en el fotograma más
+ * visible del pulse. Quitar la animación y dejar la tarjeta igual que las demás
+ * borraría la prioridad del pedido para quien pidió reducir el movimiento, que
+ * es justo a quien menos conviene perdérsela. Y de paso deja de repintar cada
+ * 2s durante todo un turno.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .tindivo-overdue-glow {
+    animation: none;
+    box-shadow: 0 0 24px rgba(220, 38, 38, 0.65), inset 0 0 0 1.5px rgba(220, 38, 38, 0.6);
+  }
+}
