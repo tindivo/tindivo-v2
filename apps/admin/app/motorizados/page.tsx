@@ -13,14 +13,27 @@ interface DrvRow {
   full_name: string
   phone: string | null
   vehicle_type: string
+  license_plate: string | null
   is_active: boolean
   driver_availability: { is_available: boolean } | null
+  driver_restaurants: { business_id: string }[] | null
+}
+
+interface BizRow {
+  id: string
+  name: string
+  is_active: boolean
 }
 
 export default function MotorizadosPage() {
   const [rows, setRows] = useState<DrvRow[] | null>(null)
+  const [locales, setLocales] = useState<BizRow[]>([])
   const [error, setError] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
+  /** Motorizado cuyo panel de locales está abierto. */
+  const [editando, setEditando] = useState<string | null>(null)
+  /** Selección en curso, sin guardar. */
+  const [seleccion, setSeleccion] = useState<Set<string>>(new Set())
 
   const load = useCallback(() => {
     api
@@ -30,7 +43,32 @@ export default function MotorizadosPage() {
   }, [])
   useEffect(() => {
     load()
+    api
+      .get<ApiEnvelope<BizRow[]>>('/admin/businesses')
+      .then((r) => setLocales(r.data.filter((b) => b.is_active)))
+      .catch((e) => setError(errMsg(e)))
   }, [load])
+
+  function abrirLocales(d: DrvRow) {
+    setEditando(d.id)
+    setSeleccion(new Set((d.driver_restaurants ?? []).map((r) => r.business_id)))
+  }
+
+  async function guardarLocales(driverId: string) {
+    setBusyId(driverId)
+    setError(null)
+    try {
+      await api.put(`/admin/drivers/${driverId}/restaurants`, {
+        businessIds: [...seleccion],
+      })
+      setEditando(null)
+      load()
+    } catch (e) {
+      setError(errMsg(e))
+    } finally {
+      setBusyId(null)
+    }
+  }
 
   async function toggleActive(d: DrvRow) {
     setBusyId(d.id)
@@ -77,37 +115,111 @@ export default function MotorizadosPage() {
         </div>
       ) : (
         <ul className="space-y-2">
-          {rows.map((d) => (
-            <li key={d.id} className="t-card flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-semibold text-[15px] text-ink">{d.full_name}</span>
-                  {d.driver_availability?.is_available ? (
-                    <StatusBadge label="Disponible" tone="success" />
-                  ) : (
-                    <StatusBadge label="No disponible" tone="neutral" />
-                  )}
-                  {!d.is_active && <StatusBadge label="Desactivado" tone="danger" />}
+          {rows.map((d) => {
+            const asignados = d.driver_restaurants ?? []
+            const sinLocales = asignados.length === 0
+            const nombres = asignados
+              .map((r) => locales.find((b) => b.id === r.business_id)?.name)
+              .filter(Boolean)
+            return (
+              <li key={d.id} className="t-card">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-semibold text-[15px] text-ink">{d.full_name}</span>
+                      {d.driver_availability?.is_available ? (
+                        <StatusBadge label="Disponible" tone="success" />
+                      ) : (
+                        <StatusBadge label="No disponible" tone="neutral" />
+                      )}
+                      {!d.is_active && <StatusBadge label="Desactivado" tone="danger" />}
+                      {/* El fallo silencioso hecho ruidoso: sin locales el
+                          motorizado abre su app y no ve UN SOLO pedido, sin
+                          error que lo explique. Aquí se ve antes de que pase. */}
+                      {sinLocales && <StatusBadge label="Sin locales" tone="danger" />}
+                    </div>
+                    <p className="mt-0.5 text-[12px] text-ink-subtle">
+                      {d.vehicle_type}
+                      {d.license_plate ? ` · ${d.license_plate}` : ''} · {d.phone ?? '—'}
+                    </p>
+                    <p className="mt-0.5 text-[12px] text-ink-subtle">
+                      {sinLocales ? (
+                        <span className="text-danger">
+                          No verá ningún pedido hasta asignarle un local
+                        </span>
+                      ) : (
+                        `Atiende: ${nombres.join(', ')}`
+                      )}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 gap-1">
+                    <Button size="sm" variant="outline" onClick={() => abrirLocales(d)}>
+                      Locales
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={busyId === d.id}
+                      onClick={() => toggleActive(d)}
+                    >
+                      {d.is_active ? 'Desactivar' : 'Activar'}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={openImpersonation('drivers', d.id)}
+                    >
+                      Entrar como
+                    </Button>
+                  </div>
                 </div>
-                <p className="mt-0.5 text-[12px] text-ink-subtle">
-                  {d.vehicle_type} · {d.phone ?? '—'}
-                </p>
-              </div>
-              <div className="flex shrink-0 gap-1">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  disabled={busyId === d.id}
-                  onClick={() => toggleActive(d)}
-                >
-                  {d.is_active ? 'Desactivar' : 'Activar'}
-                </Button>
-                <Button size="sm" variant="outline" onClick={openImpersonation('drivers', d.id)}>
-                  Entrar como
-                </Button>
-              </div>
-            </li>
-          ))}
+
+                {editando === d.id && (
+                  <div className="mt-3 border-ink/[0.08] border-t pt-3">
+                    <p className="mb-2 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/55">
+                      Locales que atiende
+                    </p>
+                    {locales.length === 0 ? (
+                      <p className="text-[13px] text-ink-subtle">No hay negocios activos.</p>
+                    ) : (
+                      <div className="grid gap-1.5 sm:grid-cols-2">
+                        {locales.map((b) => (
+                          <label
+                            key={b.id}
+                            className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-[14px] hover:bg-ink/[0.03]"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={seleccion.has(b.id)}
+                              onChange={(e) => {
+                                const s = new Set(seleccion)
+                                if (e.target.checked) s.add(b.id)
+                                else s.delete(b.id)
+                                setSeleccion(s)
+                              }}
+                            />
+                            {b.name}
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                    <div className="mt-3 flex gap-2">
+                      <Button
+                        size="sm"
+                        disabled={busyId === d.id}
+                        onClick={() => guardarLocales(d.id)}
+                      >
+                        {busyId === d.id ? 'Guardando…' : 'Guardar'}
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setEditando(null)}>
+                        Cancelar
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </li>
+            )
+          })}
         </ul>
       )}
     </div>

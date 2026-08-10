@@ -13,6 +13,10 @@ const Schema = z.object({
   fullName: z.string().trim().min(1).max(120).optional(),
   phone: z.string().min(1).max(30).optional(),
   vehicleType: VehicleTypeSchema.optional(),
+  // Editable, no solo asignable al crear: una placa mal tecleada en el alta
+  // era incorregible desde la app. Cadena vacía = borrar la placa, y por eso
+  // aquí sí se distingue de `undefined` (que significa "no tocar el campo").
+  licensePlate: z.string().trim().max(12).optional(),
   isActive: z.boolean().optional(),
 })
 
@@ -34,11 +38,14 @@ export async function PATCH(
       full_name?: string
       phone?: string
       vehicle_type?: z.infer<typeof VehicleTypeSchema>
+      license_plate?: string | null
       is_active?: boolean
     } = {}
     if (body.fullName !== undefined) patch.full_name = body.fullName
     if (body.phone !== undefined) patch.phone = body.phone
     if (body.vehicleType !== undefined) patch.vehicle_type = body.vehicleType
+    // Vacío explícito = borrar. Ver la nota del schema.
+    if (body.licensePlate !== undefined) patch.license_plate = body.licensePlate || null
     if (body.isActive !== undefined) patch.is_active = body.isActive
 
     const service = createServiceClient()
