@@ -9,6 +9,22 @@
 -- el que dejó la 0127.
 --
 -- ─────────────────────────────────────────────────────────────────────────────
+-- 🚨 REGLA OPERATIVA: NUNCA REVERTIR LA 0129 SIN REVERTIR ANTES LA 0131
+--
+--   La 0131 arregla `change_to_give`, que dejó de escribirse en la 0092 y hacía
+--   que el motorizado saliera sin saber cuánto vuelto llevar. Su arreglo vive
+--   DENTRO del cuerpo de `create_business_manual_order`.
+--
+--   Este rollback restaura el cuerpo de la 0127, que es ANTERIOR a ese arreglo.
+--   Ejecutarlo con la 0131 aplicada se lleva por delante el vuelto **en
+--   silencio**: la firma vuelve a la vieja, nadie ve un error, y a partir de ese
+--   momento todo pedido manual guarda `change_to_give = NULL` otra vez.
+--
+--   Orden correcto:  0131.rollback  →  0130.rollback  →  0129.rollback
+--   (el de la 0130 es independiente, pero se revierte en orden inverso al de
+--   aplicación por higiene).
+--
+-- ─────────────────────────────────────────────────────────────────────────────
 -- ⚠️ PASO 1 — PRIMERO EL CÓDIGO, Y AQUÍ EL ORDEN NO ES NEGOCIABLE
 --
 --       git revert <sha-del-commit-de-0129>
