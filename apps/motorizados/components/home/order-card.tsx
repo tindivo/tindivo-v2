@@ -42,17 +42,28 @@ type IncomingRequest = TeamResponse['receivedRequests'][number]
  */
 
 /**
- * La urgencia mueve el HAIRLINE, nunca el relleno.
+ * EL BORDE MARCA LA EMERGENCIA, Y NADA MÁS. No es un termómetro.
  *
- * Doctrina original de `urgency.ts`, restaurada: el rediseño anterior había
- * metido fondos semánticos que aplanaban el contraste de todo lo que hay dentro
- * justo en la tarjeta que más urge leer — y uno de ellos era del 2% de
- * opacidad, invisible en un móvil al sol.
+ * Tenía un escalón ámbar y otro rojo, o sea un TERCER canal de color repitiendo
+ * lo que el reloj ya dice con los mismos dos tonos — y encima su ámbar se
+ * confundía con la franja naranja del local, que está a tres píxeles. La
+ * pregunta "¿qué significa el marrón?" es la prueba: si hay que preguntarlo, no
+ * está comunicando.
+ *
+ * Ahora el reloj lleva la escala completa (neutro → ámbar → rojo) y el borde
+ * solo se enciende en el último escalón, para que una tarjeta urgente siga
+ * siendo localizable de un vistazo mientras se hace scroll. Un solo nivel, un
+ * solo significado: "esta ya".
+ *
+ * Se mantiene la doctrina de `urgency.ts`: la urgencia mueve el hairline, nunca
+ * el relleno. Los fondos semánticos del rediseño anterior aplanaban el
+ * contraste de todo lo que hay dentro justo en la tarjeta que más urge leer, y
+ * uno era del 2% de opacidad, invisible al sol.
  */
 const TONE_BORDER: Record<Tone, string> = {
   neutral: 'border-ink/10',
-  success: 'border-success/45',
-  warning: 'border-warning/60',
+  success: 'border-ink/10',
+  warning: 'border-ink/10',
   danger: 'border-danger/45',
 }
 

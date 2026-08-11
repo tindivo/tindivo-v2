@@ -3,6 +3,7 @@
 import { Badge, Card, EmptyState, Icon, SkeletonList } from '@tindivo/ui'
 import { useMemo } from 'react'
 import { useOverdueFeedback } from '@/hooks/use-overdue-feedback'
+import { byReadyClock } from '@/lib/orders/sort'
 import type { BoardOrder } from '@/lib/types'
 import { orderUrgency } from '@/lib/urgency'
 import { OrderCard } from './order-card'
@@ -45,14 +46,10 @@ export function AvailableTab({
   // Feedback háptico + audible cuando se detectan pedidos vencidos nuevos
   useOverdueFeedback(overdueSet)
 
-  const sorted = useMemo(() => {
-    return [...available].sort((a, b) => {
-      const ua = orderUrgency(a, now) === 'overdue' ? 0 : 1
-      const ub = orderUrgency(b, now) === 'overdue' ? 0 : 1
-      if (ua !== ub) return ua - ub
-      return Date.parse(a.created_at) - Date.parse(b.created_at)
-    })
-  }, [available, now])
+  // Por el reloj, que es lo que la tarjeta enseña. La regla y su porqué viven
+  // en `lib/orders/sort`, con tests: ya se rompió una vez y el síntoma no fue
+  // un fallo sino una lista que "no se entendía".
+  const sorted = useMemo(() => byReadyClock(available), [available])
 
   // UN VACÍO SOLO SE AFIRMA CUANDO SE SABE VACÍO.
   //
