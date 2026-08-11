@@ -66,8 +66,11 @@ export function NuevoForm() {
   // `band !== null` cierra el botón hasta que se elija zona. El endpoint la
   // exige (zod sin `.optional()` desde la 0126), así que sin ella el POST
   // devolvería 422: mejor un botón que dice qué falta que un error tras
-  // rellenar todo el formulario.
-  const canSubmit = amountN > 0 && mixedOk && phoneOk && referenceOk && band !== null && !busy
+  // rellenar todo el formulario. Mismo criterio para el nombre, que desde ahora
+  // también lo exige el endpoint: es cómo el motorizado identifica el pedido.
+  const nameOk = name.trim().length > 0
+  const canSubmit =
+    amountN > 0 && nameOk && mixedOk && phoneOk && referenceOk && band !== null && !busy
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-surface">

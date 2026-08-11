@@ -3,7 +3,7 @@
 import { Card, cn, Icon } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { SourceChip } from '@/components/source-chip'
-import { useQueueLeadMinutes } from '@/hooks/use-queue-lead'
+import { useDriverTimers } from '@/hooks/use-queue-lead'
 import { getTransferRemaining } from '@/hooks/use-team'
 import { mmss } from '@/lib/format'
 import {
@@ -146,12 +146,13 @@ export function OrderCard({
   blockedReason?: string
 }) {
   const router = useRouter()
-  const queueLeadMinutes = useQueueLeadMinutes()
+  const { queueLeadMinutes, deliveryLateMinutes } = useDriverTimers()
   const vm = buildCardVM({
     order,
     now,
     variant,
     queueLeadMinutes,
+    deliveryLateMinutes,
     ownerName,
     blocked,
     blockedReason,
@@ -211,11 +212,6 @@ export function OrderCard({
       <div className="flex items-center gap-1.5 text-micro text-ink-muted">
         <span className="truncate font-bold uppercase tracking-[0.1em]">{vm.businessName}</span>
         {vm.shortId && <span className="shrink-0 font-mono">#{vm.shortId}</span>}
-        {vm.slotsNote && (
-          <span className="shrink-0 rounded-full bg-warning-soft px-1.5 font-semibold text-amber-900">
-            {vm.slotsNote}
-          </span>
-        )}
         {vm.showSourceChip && <SourceChip source={order.source} />}
 
         {vm.badge && (

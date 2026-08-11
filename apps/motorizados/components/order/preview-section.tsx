@@ -133,10 +133,13 @@ export function PreviewSection({ detail, now }: { detail: OrderDetailResponse; n
   const total = order.orderAmount + order.deliveryFee
   const accent = `#${business?.accentColor ?? 'f97316'}`
 
-  // Lo vencido lo decide SOLO el reloj. La expresión anterior también miraba
-  // `urgentSince`, pero en v2 nadie escribe esa columna —cero migraciones la
-  // setean, cero filas en producción la tienen— así que esa rama nunca podía
-  // dispararse. Es un resto del v1, donde sí existía marcar un pedido urgente.
+  // Lo vencido lo decide SOLO el reloj de la cocina, igual que en la bandeja.
+  //
+  // Aquí decía que `urgentSince` no lo escribía nadie en v2. Dejó de ser cierto:
+  // la migración `0134` lo sella con el cron `OrderOverdue`. El motivo bueno
+  // está en `lib/urgency.ts` — es OTRO reloj, el de la asignación, que salta a
+  // los 5 minutos con la comida aún en el horno, y ese hecho ya lo avisa un push
+  // vibrante. No pinta tablero.
   const remainingMs = order.estimatedReadyAt ? Date.parse(order.estimatedReadyAt) - now : null
   const band = order.deliveryDistanceBand ? BAND_LABEL[order.deliveryDistanceBand] : null
   const destination = order.deliveryReference ?? order.deliveryAddress

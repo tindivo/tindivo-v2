@@ -154,8 +154,24 @@ export interface CardVM {
   /** Cejilla: local y código. `shortId` es `null` cuando sube a identidad. */
   businessName: string
   shortId: string | null
-  /** Huecos de mochila, solo cuando ocupa más de uno. */
-  slotsNote: string | null
+  /**
+   * NO HAY `slotsNote`, y borrarlo fue el arreglo.
+   *
+   * Pintaba `${occupancy_slots} huecos` en Equipo para avisar de que un pedido
+   * te comería dos sitios de la mochila. No podía funcionar: `occupancy_slots`
+   * nace en 1 y solo la escribe la acción `pickup` (`advance_order`), que deja
+   * el pedido en `picked_up` — y lo recogido NO es traspasable. O sea que el
+   * chip solo podía salir en pedidos que no puedes pedir, y en los que sí
+   * puedes valía siempre 1 y no salía nunca.
+   *
+   * Además el texto decía lo contrario de lo que quería decir: "2 huecos" se
+   * lee como "quedan 2 libres", no como "te ocupa 2".
+   *
+   * Lo que de verdad bloquea un traspaso es TU carga —`apply_order_transfer`
+   * suma tus pedidos activos, no el tamaño del que pides—, y eso ya lo dice el
+   * indicador de mochila de la barra superior. La prevención vive ahora en el
+   * botón "Solicitar pedido", que se deshabilita con el motivo.
+   */
   /** El reloj, a la altura del nombre. Ver la nota de `Clock`. */
   clock: Clock | null
   /** El nombre, en grande. Es como el motorizado identifica el pedido. */
@@ -179,7 +195,10 @@ export interface CardVMInput {
   order: CardOrder
   now: number
   variant: CardVariant
+  /** §23. Margen tras "Pedido listo" antes de que el BORDE se encienda. */
   queueLeadMinutes: number
+  /** 0139. A partir de aquí el reloj de REPARTO se pone rojo. */
+  deliveryLateMinutes: number
   /** Nombre del compañero dueño del pedido. Solo en Equipo. */
   ownerName?: string
   blocked?: boolean
@@ -225,17 +244,47 @@ function remainingMs(input: CardVMInput): number | null {
  * mochila, cuál lleva más tiempo rodando es exactamente lo que decide a quién
  * entregar primero.
  *
- * NO ALARMA, Y ES DELIBERADO. `app_settings.timers` no define ningún umbral de
- * entrega tardía —`noShowWaitMinutes` es para esperar en la puerta, no para el
- * trayecto—, así que este reloj cuenta en negro y no se pone rojo. Inventarle
- * un límite sería fabricar una regla de negocio que nadie ha decidido. El día
- * que exista el ajuste, aquí es donde se enchufa.
+ * SE PONE ROJO A LOS `deliveryLateMinutes` (0139, 20 por defecto). Nació sin
+ * alarma a propósito, porque `app_settings.timers` no definía ningún umbral de
+ * entrega tardía y ponerlo rojo a ojo habría sido fabricar una regla de negocio
+ * que nadie había decidido. Ya está decidida, y vive donde se puede cambiar sin
+ * desplegar — igual que `queueLeadMinutes`.
  */
 function deliveryElapsedMs(input: CardVMInput): number | null {
   const { order, now, variant } = input
-  if (variant !== 'mine' || order.status !== 'picked_up') return null
+  // También en `team`, donde no decide un traspaso —lo recogido no es
+  // traspasable— sino que da conciencia de situación: cuánto lleva rodando lo
+  // que carga el compañero.
+  if (variant !== 'mine' && variant !== 'team') return null
+  if (order.status !== 'picked_up') return null
   if (order.picked_up_at == null) return null
   return now - Date.parse(order.picked_up_at)
+}
+
+/**
+ * Edad del pedido ajeno, o `null` si no aplica. SOLO en Equipo.
+ *
+ * NINGUNA TARJETA DE LA APP SE QUEDA SIN RELOJ, y Equipo era la excepción. Las
+ * de "En reparto" ya cuentan desde que el compañero recogió; estas —"Voy al
+ * local" y "En el local", las que SÍ puedes pedir— no tenían anclaje porque el
+ * tiempo de cocina de un pedido ajeno no viaja, y no va a viajar:
+ * `estimated_ready_at` permitiría quedarse con lo ya listo y dejarle lo lento
+ * al compañero.
+ *
+ * `created_at` sí es honesto aquí. No dice cuándo estará la comida, dice cuánto
+ * lleva esperando el cliente — que es la razón legítima para pedir un traspaso,
+ * y la que además empuja en la dirección correcta: un pedido viejo suele serlo
+ * porque la cocina va lenta.
+ *
+ * EN NEGRO Y SIN UMBRAL, como el de reparto: la urgencia de un pedido ajeno ya
+ * la marca `urgent_since` en el borde de la tarjeta. Un segundo canal de alarma
+ * para el mismo hecho enseña a ignorar los dos.
+ */
+function teamAgeMs(input: CardVMInput): number | null {
+  const { order, now, variant } = input
+  if (variant !== 'team') return null
+  if (order.status === 'picked_up') return null
+  return now - Date.parse(order.created_at)
 }
 
 /**
@@ -278,11 +327,22 @@ function buildClock(input: CardVMInput): Clock | null {
       : null
   }
 
-  // Con la comida encima manda el reloj de reparto. Cuenta hacia arriba y en
-  // negro: no hay umbral de entrega tardía que respetar (ver `deliveryElapsedMs`).
+  // Con la comida encima manda el reloj de reparto: cuenta hacia arriba y se
+  // pone rojo pasados `deliveryLateMinutes` (0139).
+  //
+  // SOLO EN "MÍOS". En Equipo el pedido es de otro: enrojecerle a uno el reloj
+  // por un retraso que no puede resolver —lo recogido no es traspasable— sería
+  // alarmar sin salida. Ahí el número informa y nada más.
   const delivering = deliveryElapsedMs(input)
   if (delivering != null) {
-    return { text: mmss(delivering / 1000), tone: 'neutral', ready: false }
+    const late = variant === 'mine' && delivering > input.deliveryLateMinutes * 60_000
+    return { text: mmss(delivering / 1000), tone: late ? 'danger' : 'neutral', ready: false }
+  }
+
+  // Equipo, sin recoger: la edad del pedido. Ver `teamAgeMs`.
+  const age = teamAgeMs(input)
+  if (age != null) {
+    return { text: mmss(age / 1000), tone: 'neutral', ready: false }
   }
 
   const ms = remainingMs(input)
@@ -461,7 +521,6 @@ export function buildCardVM(input: CardVMInput): CardVM {
   return {
     businessName: order.business?.name ?? 'Restaurante',
     shortId: hasName ? order.short_id : null,
-    slotsNote: isTeam && order.occupancy_slots > 1 ? `${order.occupancy_slots} huecos` : null,
     clock,
     identity,
     identityIcon: isTeam ? 'directions_bike' : null,

@@ -13,6 +13,7 @@ function order(overrides: Partial<CardOrder> = {}): CardOrder {
     short_id: 'A3K2M9XY',
     status: 'waiting_driver',
     source: 'business_manual',
+    created_at: new Date(NOW - min(12)).toISOString(),
     customer_name: 'María Quispe',
     delivery_address: null,
     delivery_reference: 'Frente a la bodega de doña Rosa',
@@ -48,6 +49,7 @@ function vm(input: Partial<CardVMInput> = {}) {
     now: NOW,
     variant: 'available',
     queueLeadMinutes: 10,
+    deliveryLateMinutes: 20,
     ...input,
   })
 }
@@ -164,17 +166,39 @@ describe('el reloj', () => {
 
   // NO ALARMA, y es deliberado: `app_settings.timers` no define ningun umbral
   // de entrega tardia, asi que ponerlo rojo seria inventar una regla de negocio.
-  it('el reloj de reparto no se pone rojo por muy largo que sea', () => {
-    const v = vm({
+  // El umbral existe desde 0139 (`deliveryLateMinutes`, 20 por defecto). Nacio
+  // sin alarma porque no habia umbral decidido y ponerlo a ojo habria sido
+  // inventar una regla de negocio; ahora esta decidido y vive en app_settings.
+  it('el reloj de reparto enrojece pasados los minutos configurados', () => {
+    const enPlazo = vm({
       variant: 'mine',
-      order: order({
-        status: 'picked_up',
-        picked_up_at: new Date(NOW - min(90)).toISOString(),
-      }),
+      order: order({ status: 'picked_up', picked_up_at: new Date(NOW - min(18)).toISOString() }),
     })
-    expect(v.clock?.text).toBe('1h 30m')
+    expect(enPlazo.clock?.tone).toBe('neutral')
+
+    const tarde = vm({
+      variant: 'mine',
+      order: order({ status: 'picked_up', picked_up_at: new Date(NOW - min(90)).toISOString() }),
+    })
+    expect(tarde.clock?.text).toBe('1h 30m')
+    expect(tarde.clock?.tone).toBe('danger')
+  })
+
+  it('el umbral de reparto sale de app_settings, no del codigo', () => {
+    const o = order({ status: 'picked_up', picked_up_at: new Date(NOW - min(25)).toISOString() })
+    expect(vm({ variant: 'mine', order: o, deliveryLateMinutes: 20 }).clock?.tone).toBe('danger')
+    expect(vm({ variant: 'mine', order: o, deliveryLateMinutes: 40 }).clock?.tone).toBe('neutral')
+  })
+
+  // En Equipo el pedido es de otro y lo recogido no es traspasable: enrojecerle
+  // el reloj por un retraso que no puede resolver seria alarmar sin salida.
+  it('en Equipo el reloj de reparto informa, no alarma', () => {
+    const v = vm({
+      variant: 'team',
+      ownerName: 'Juan',
+      order: order({ status: 'picked_up', picked_up_at: new Date(NOW - min(90)).toISOString() }),
+    })
     expect(v.clock?.tone).toBe('neutral')
-    expect(v.tone).toBe('neutral')
   })
 
   it('sin hora de recojo no se inventa un reloj', () => {
@@ -502,13 +526,55 @@ describe('la alarma solo por debajo de cero', () => {
   })
 })
 
-describe('huecos de mochila', () => {
-  it('Equipo avisa cuando el pedido ocupa mas de uno', () => {
-    const v = vm({ variant: 'team', ownerName: 'Juan', order: order({ occupancy_slots: 2 }) })
-    expect(v.slotsNote).toBe('2 huecos')
+describe('el reloj de un pedido ajeno', () => {
+  /**
+   * Sustituye a los dos casos de "huecos de mochila", que afirmaban un chip
+   * imposible: `occupancy_slots` solo la escribe `pickup`, lo recogido no es
+   * traspasable, y por tanto en todo pedido que se puede pedir vale 1. El test
+   * pasaba porque sembraba `occupancy_slots: 2` a mano — exactamente el estado
+   * que la aplicación nunca produce en esa bandeja.
+   */
+  it('en reparto cuenta desde que el companero lo recogio', () => {
+    const v = vm({
+      variant: 'team',
+      ownerName: 'Juan',
+      order: order({
+        status: 'picked_up',
+        picked_up_at: new Date(NOW - min(7)).toISOString(),
+      }),
+    })
+    expect(v.clock?.text).toBe('07:00')
+    // Negro: no hay umbral de entrega tardia que respetar.
+    expect(v.clock?.tone).toBe('neutral')
   })
 
-  it('con un solo hueco no dice nada', () => {
-    expect(vm({ variant: 'team', ownerName: 'Juan' }).slotsNote).toBeNull()
+  it('sin recoger cuenta la EDAD del pedido, no el tiempo de cocina', () => {
+    const v = vm({
+      variant: 'team',
+      ownerName: 'Juan',
+      order: order({
+        status: 'waiting_at_restaurant',
+        created_at: new Date(NOW - min(12)).toISOString(),
+        // Presente y en el futuro: si el reloj lo usara, marcaría 05:00.
+        estimated_ready_at: new Date(NOW + min(5)).toISOString(),
+      }),
+    })
+    expect(v.clock?.text).toBe('12:00')
+    expect(v.clock?.tone).toBe('neutral')
+  })
+
+  it('el tiempo de cocina ajeno NUNCA manda, ni cuando esta vencido', () => {
+    const v = vm({
+      variant: 'team',
+      ownerName: 'Juan',
+      order: order({
+        status: 'heading_to_restaurant',
+        created_at: new Date(NOW - min(3)).toISOString(),
+        estimated_ready_at: new Date(NOW - min(20)).toISOString(),
+      }),
+    })
+    // 03:00 y en negro. Con el reloj de cocina serian 20:00 en rojo.
+    expect(v.clock?.text).toBe('03:00')
+    expect(v.clock?.tone).toBe('neutral')
   })
 })

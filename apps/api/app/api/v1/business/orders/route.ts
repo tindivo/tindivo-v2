@@ -27,7 +27,12 @@ const Schema = z.object({
   // problema que esta migración vino a resolver, pero con dos botones en
   // pantalla dando falsa sensación de control.
   deliveryDistanceBand: z.enum(['near', 'far']),
-  customerName: z.string().trim().max(120).optional(),
+  // OBLIGATORIO. Es cómo el motorizado identifica el pedido —lo más grande de
+  // su tarjeta, lo que busca en la lista, lo que dice al llamar—, y era
+  // opcional (`create_business_manual_order`, 0032) en el único canal que crea
+  // pedidos en el piloto. Se exige en el borde, no en la columna: hay filas
+  // viejas con NULL y un `not null` en la tabla necesitaría rellenarlas.
+  customerName: z.string().trim().min(1).max(120),
   customerPhone: z
     .string()
     .trim()

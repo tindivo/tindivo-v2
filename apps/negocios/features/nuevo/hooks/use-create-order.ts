@@ -63,7 +63,10 @@ export function useCreateOrder() {
     const orderPayload = {
       deliveryMethod,
       paymentIntent: payload.payment === 'pending_wallet' ? 'pending_yape' : payload.payment,
-      customerName: payload.name.trim() || undefined,
+      // Sin `|| undefined`: el endpoint lo exige y el formulario no deja
+      // enviar vacío. Mandar `undefined` aquí solo convertiría un aviso claro
+      // en un 422.
+      customerName: payload.name.trim(),
       customerPhone: cleanPhone || undefined,
       deliveryReference: payload.reference.trim() || undefined,
       deliveryDistanceBand: payload.band,
