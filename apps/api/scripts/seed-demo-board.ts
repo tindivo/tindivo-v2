@@ -223,7 +223,39 @@ async function wipe() {
   return ids.length
 }
 
+/**
+ * El QR de Yape del local.
+ *
+ * El seed e2e deja el negocio sin `qr_url`, así que la hoja de entrega enseñaba
+ * el bloque del QR vacío — y desde fuera eso parece un fallo de carga, no un
+ * dato ausente. Se genera contra un servicio público a partir del número, que
+ * es lo que un Yape real codifica.
+ */
+async function ensureQr() {
+  const { data } = await db
+    .from('businesses')
+    .select('qr_url,yape_number')
+    .eq('id', E2E.BUSINESS_ID)
+    .single()
+  if (data?.qr_url) return
+
+  const numero = data?.yape_number ?? '987654321'
+  await db
+    .from('businesses')
+    .update({
+      yape_number: numero,
+      // 1000px, no 400: el QR se abre a pantalla completa y a 400 se ve
+      // interpolado justo cuando más nítido hace falta — que es cuando el
+      // primer intento de escaneo ha fallado.
+      qr_url: `https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&margin=8&data=${encodeURIComponent(
+        `yape://p2p?n=${numero}`,
+      )}`,
+    })
+    .eq('id', E2E.BUSINESS_ID)
+}
+
 const cleanOnly = process.argv.includes('--clean')
+if (!cleanOnly) await ensureQr()
 const borrados = await wipe()
 
 if (cleanOnly) {

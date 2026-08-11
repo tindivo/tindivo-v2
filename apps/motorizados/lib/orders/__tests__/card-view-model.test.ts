@@ -29,6 +29,8 @@ function order(overrides: Partial<CardOrder> = {}): CardOrder {
     ready_early_used: false,
     urgent_since: null,
     picked_up_at: null,
+    payment_real: null,
+    cash_owed_at_delivery: null,
     delivered_at: null,
     business: {
       id: 'biz_1',

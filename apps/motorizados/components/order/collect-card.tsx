@@ -4,6 +4,7 @@ import { Card, Icon } from '@tindivo/ui'
 import { soles } from '@/lib/format'
 import { changeDue } from '@/lib/payment'
 import type { OrderDetailResponse } from '@/lib/types'
+import { YapeQr } from './yape-qr'
 
 /**
  * El cobro, con el cliente delante: efectivo + vuelto, QR del negocio, o nada.
@@ -72,23 +73,17 @@ export function CollectCard({ detail }: { detail: OrderDetailResponse }) {
       <p className="font-mono text-meta font-semibold uppercase tracking-[0.14em] text-ink-muted">
         El cliente paga al Yape del restaurante
       </p>
-      {business?.qrUrl && (
-        <div className="mt-3 flex justify-center">
-          <img
-            src={business.qrUrl}
-            alt={`QR de Yape de ${business.name}`}
-            className="h-[180px] w-[180px] rounded-2xl border border-ink/[0.08] bg-card object-contain shadow-elev-1"
-          />
-        </div>
-      )}
-      {business?.yapeNumber && (
-        <>
-          <p className="mt-3 text-center font-mono text-micro uppercase tracking-wider text-ink-muted">
-            Número de Yape
-          </p>
-          <p className="text-center font-mono text-title font-semibold">{business.yapeNumber}</p>
-        </>
-      )}
+      {/* Mismo QR que en la hoja de entrega: a pantalla completa de un toque, y
+          con caída al número si el local no tiene imagen cargada. Antes eran
+          180px fijos — suficiente para verlo, corto para que lo escanee un
+          móvil ajeno de noche. */}
+      <div className="mt-3">
+        <YapeQr
+          qrUrl={business?.qrUrl}
+          yapeNumber={business?.yapeNumber}
+          businessName={business?.name}
+        />
+      </div>
       {order.paymentIntent === 'pending_mixed' && (
         <div className="mt-3 border-t border-ink/10 pt-2">
           <p className="font-mono text-meta font-semibold uppercase tracking-[0.14em] text-ink-muted">

@@ -91,6 +91,15 @@ export interface MoneyLine {
 
 export interface MoneyInput {
   paymentIntent: string | null
+  /**
+   * Cómo se cobró DE VERDAD (`orders.payment_real`), si ya se entregó.
+   *
+   * MANDA SOBRE EL PLAN, y por eso existe. Sin esto, un pedido planeado en
+   * efectivo que el cliente acabó pagando por Yape seguía diciendo "efectivo"
+   * en el historial: la pantalla describía la intención para siempre, y el
+   * motorizado veía en su resumen un cobro que no hizo.
+   */
+  paymentReal?: string | null
   /** Comida + envío. */
   total: number
   cashAmount: number | null
@@ -99,13 +108,45 @@ export interface MoneyInput {
   changeToGive: number | null
   /**
    * Ya se cobró (historial). Silencia el vuelto: ahí ya se dio, y hablar de él
-   * en pasado confunde.
+   * en pasado confunde. Se asume cuando llega `paymentReal`.
    */
   settled?: boolean
 }
 
+/**
+ * Traduce el cobro REAL al mismo vocabulario que el planeado.
+ *
+ * `cash_amount`/`yape_amount` son de fiar aquí: `advance_order` los reescribe
+ * con la división real cuando el cobro termina siendo mixto (0140).
+ */
+function settledLine(real: string, input: MoneyInput): MoneyLine {
+  const { total } = input
+
+  if (real === 'paid_prepaid') {
+    return { headline: 'Prepagado', detail: 'no cobrado', tone: 'success' }
+  }
+  if (real === 'paid_yape') {
+    return { headline: soles(total), detail: 'Yape/Plin', tone: 'neutral' }
+  }
+  if (real === 'paid_mixed' && input.cashAmount != null && input.yapeAmount != null) {
+    return {
+      headline: soles(input.cashAmount),
+      detail: `efectivo + ${soles(input.yapeAmount)} Yape`,
+      tone: 'neutral',
+    }
+  }
+  if (real === 'paid_cash' || real === 'paid_mixed') {
+    return { headline: soles(total), detail: 'efectivo', tone: 'neutral' }
+  }
+  // `unpaid` / `refunded`: no se inventa un cobro que no hubo.
+  return { headline: soles(total), detail: 'sin cobrar', tone: 'neutral' }
+}
+
 export function moneyLine(input: MoneyInput): MoneyLine {
   const { paymentIntent: intent, total } = input
+
+  // Entregado: lo que cuenta es lo que pasó, no lo que se había planeado.
+  if (input.paymentReal) return settledLine(input.paymentReal, input)
 
   // LA PALABRA OCUPA EL SITIO DE LA CIFRA. Sin número no hay número que cobrar
   // por error, y la instrucción va debajo donde va el método en los demás: el

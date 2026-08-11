@@ -14,8 +14,21 @@ export function DeliveredScreen({
   justDelivered: boolean
 }) {
   const { order } = detail
-  const total = order.orderAmount + order.deliveryFee
-  const cash = order.paymentReal === 'paid_cash' || order.paymentIntent === 'pending_cash'
+
+  /**
+   * CUÁNTO EFECTIVO LLEVAS, no cuánto costó el pedido.
+   *
+   * Decía `paymentReal === 'paid_cash' || paymentIntent === 'pending_cash'` y
+   * enseñaba el TOTAL. Ese `||` es el fallo: un pedido planeado en efectivo que
+   * el cliente pagó por Yape seguía anunciando "llevas S/ 52 para liquidar",
+   * porque bastaba con la INTENCIÓN. Y en un mixto el número era el total,
+   * cuando de ese pedido solo se lleva la parte en efectivo.
+   *
+   * `cashOwedAtDelivery` (0140) responde exactamente esto y es lo que suma el
+   * corte de caja, así que la frase y la liquidación no pueden discrepar.
+   */
+  const cashOwed = order.cashOwedAtDelivery ?? 0
+  const cash = cashOwed > 0
 
   if (justDelivered) {
     return (
@@ -30,7 +43,7 @@ export function DeliveredScreen({
           <h1 className="mt-1.5 font-display text-display font-bold tracking-tight">¡Entregado!</h1>
           <p className="mt-2 max-w-[300px] text-body text-ink-muted">
             {cash
-              ? `Recuerda: llevas ${soles(total)} en efectivo para liquidar hoy.`
+              ? `Recuerda: llevas ${soles(cashOwed)} en efectivo para liquidar hoy.`
               : 'Buen trabajo. Vuelve al inicio para tomar otro pedido.'}
           </p>
         </div>

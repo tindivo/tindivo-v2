@@ -70,6 +70,59 @@ describe('el vocabulario es UNO SOLO para tarjeta y detalle', () => {
     expect(m.detail).toBe('método por confirmar')
   })
 
+  // ENTREGADO: MANDA LO QUE PASÓ, NO LO QUE SE PLANEÓ.
+  //
+  // El historial describía `payment_intent` para siempre, así que un pedido
+  // planeado en efectivo que el cliente acabo pagando por Yape seguía diciendo
+  // "efectivo" en el resumen del turno — un cobro que el motorizado no hizo.
+  describe('cuando ya se entregó', () => {
+    const planeado = {
+      paymentIntent: 'pending_cash',
+      total: 52,
+      cashAmount: null,
+      yapeAmount: null,
+      clientPaysWith: 100,
+      changeToGive: null,
+    }
+
+    it('el metodo real pisa al planeado', () => {
+      expect(moneyLine({ ...planeado, paymentReal: 'paid_yape' })).toEqual({
+        headline: 'S/ 52.00',
+        detail: 'Yape/Plin',
+        tone: 'neutral',
+      })
+    })
+
+    it('un mixto real enseña SU division, no la que hubiera planeado la cajera', () => {
+      // Planeado todo en efectivo; acabo siendo 20 + 32.
+      const m = moneyLine({
+        ...planeado,
+        paymentReal: 'paid_mixed',
+        cashAmount: 20,
+        yapeAmount: 32,
+      })
+      expect(m.headline).toBe('S/ 20.00')
+      expect(m.detail).toBe('efectivo + S/ 32.00 Yape')
+    })
+
+    it('no habla de vuelto: ahi ya se dio', () => {
+      expect(moneyLine({ ...planeado, paymentReal: 'paid_cash' }).detail).toBe('efectivo')
+    })
+
+    it('un prepago entregado no se anuncia como cobro', () => {
+      expect(moneyLine({ ...planeado, paymentReal: 'paid_prepaid' }).headline).toBe('Prepagado')
+    })
+
+    it('sin cobrar no se inventa uno', () => {
+      expect(moneyLine({ ...planeado, paymentReal: 'unpaid' }).detail).toBe('sin cobrar')
+    })
+
+    it('sin `paymentReal` sigue describiendo el plan', () => {
+      // Es lo que ven las bandejas antes de entregar.
+      expect(moneyLine(planeado).detail).toBe('efectivo · vuelto S/ 48.00')
+    })
+  })
+
   it('ya cobrado: no se habla de vuelto', () => {
     const m = moneyLine({
       paymentIntent: 'pending_cash',

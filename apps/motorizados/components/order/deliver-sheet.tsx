@@ -6,6 +6,7 @@ import { soles } from '@/lib/format'
 import { moneyLine } from '@/lib/orders/presentation'
 import { changeDue } from '@/lib/payment'
 import type { OrderDetailResponse } from '@/lib/types'
+import { YapeQr } from './yape-qr'
 
 export type PaymentReal = 'paid_prepaid' | 'paid_cash' | 'paid_yape' | 'paid_mixed'
 
@@ -264,26 +265,15 @@ export function DeliverSheet({
 
                 {/* El QR, en cuanto Yape entra en juego: es el caso de "no me
                     alcanza el efectivo" resuelto sin cerrar la hoja. */}
-                {(method === 'paid_yape' || method === 'paid_mixed') &&
-                  (business?.qrUrl || business?.yapeNumber) && (
-                    <div className="mt-3 rounded-[14px] bg-card p-3 text-center">
-                      <p className="font-mono text-meta font-semibold uppercase tracking-[0.14em] text-ink-muted">
-                        Que escanee este QR
-                      </p>
-                      {business.qrUrl && (
-                        <img
-                          src={business.qrUrl}
-                          alt={`QR de Yape de ${business.name}`}
-                          className="mx-auto mt-2 h-[150px] w-[150px] rounded-xl border border-ink/[0.08] object-contain"
-                        />
-                      )}
-                      {business.yapeNumber && (
-                        <p className="mt-1.5 font-mono text-body-lg font-bold tabular-nums text-ink">
-                          {business.yapeNumber}
-                        </p>
-                      )}
-                    </div>
-                  )}
+                {(method === 'paid_yape' || method === 'paid_mixed') && (
+                  <div className="mt-3">
+                    <YapeQr
+                      qrUrl={business?.qrUrl}
+                      yapeNumber={business?.yapeNumber}
+                      businessName={business?.name}
+                    />
+                  </div>
+                )}
               </div>
             )}
           </>

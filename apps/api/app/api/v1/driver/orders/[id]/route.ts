@@ -12,7 +12,7 @@ export function OPTIONS(req: Request): Response {
 }
 
 const ORDER_COLUMNS =
-  'id,short_id,order_number,status,source,delivery_method,delivery_distance_band,customer_name,customer_phone,delivery_address,delivery_reference,delivery_coordinates_lat,delivery_coordinates_lng,order_amount,delivery_fee,payment_intent,payment_real,yape_amount,cash_amount,client_pays_with,change_to_give,occupancy_slots,urgent_since,prep_time_minutes,estimated_ready_at,appears_in_queue_at,confirmed_at,preparing_at,waiting_driver_at,heading_at,waiting_at_restaurant_at,picked_up_at,arrived_at_customer_at,arrived_at_customer_lat,arrived_at_customer_lng,arrived_at_customer_accuracy_m,delivered_at,cancelled_at,cancel_reason,customer_notes,business_notes,driver_notes,driver_id,business_id,ready_early_used,created_at' as const
+  'id,short_id,order_number,status,source,delivery_method,delivery_distance_band,customer_name,customer_phone,delivery_address,delivery_reference,delivery_coordinates_lat,delivery_coordinates_lng,order_amount,delivery_fee,payment_intent,payment_real,cash_owed_at_delivery,yape_amount,cash_amount,client_pays_with,change_to_give,occupancy_slots,urgent_since,prep_time_minutes,estimated_ready_at,appears_in_queue_at,confirmed_at,preparing_at,waiting_driver_at,heading_at,waiting_at_restaurant_at,picked_up_at,arrived_at_customer_at,arrived_at_customer_lat,arrived_at_customer_lng,arrived_at_customer_accuracy_m,delivered_at,cancelled_at,cancel_reason,customer_notes,business_notes,driver_notes,driver_id,business_id,ready_early_used,created_at' as const
 
 /**
  * Detalle completo del pedido para el motorizado: order + items con modifiers
@@ -114,6 +114,10 @@ export async function GET(
           deliveryFee: Number(order.delivery_fee),
           paymentIntent: order.payment_intent,
           paymentReal: order.payment_real,
+          // Lo que se rinde por este pedido (0140). La pantalla de entregado
+          // decia el TOTAL y bastaba con la INTENCION de cobrar en efectivo.
+          cashOwedAtDelivery:
+            order.cash_owed_at_delivery == null ? null : Number(order.cash_owed_at_delivery),
           yapeAmount: order.yape_amount == null ? null : Number(order.yape_amount),
           cashAmount: order.cash_amount == null ? null : Number(order.cash_amount),
           clientPaysWith: order.client_pays_with == null ? null : Number(order.client_pays_with),

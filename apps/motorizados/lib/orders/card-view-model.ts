@@ -380,6 +380,9 @@ function buildMoney(input: CardVMInput): MoneyLine | null {
 
   return moneyLine({
     paymentIntent: order.payment_intent,
+    // Una vez entregado manda lo que PASÓ, no lo que se planeó: si el cliente
+    // cambió de método en la puerta, el historial tiene que decir eso.
+    paymentReal: variant === 'delivered' ? order.payment_real : null,
     total,
     cashAmount: order.cash_amount,
     yapeAmount: order.yape_amount,

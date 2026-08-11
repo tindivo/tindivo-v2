@@ -45,6 +45,9 @@ export interface BoardOrder {
   /** Cuándo recogiste. Es el origen del reloj de reparto. Ver `CardOrder`. */
   picked_up_at: string | null
   delivered_at: string | null
+  /** Cómo se cobró de verdad, y cuánto efectivo quedó a deber. Ver `CardOrder`. */
+  payment_real: string | null
+  cash_owed_at_delivery: number | null
   client_pays_with: number | null
   change_to_give: number | null
   /** Desglose del pago mixto. Ver la nota en `CardOrder`. */
@@ -124,6 +127,17 @@ export interface CardOrder {
    */
   picked_up_at: string | null
   delivered_at: string | null
+  /**
+   * Cómo se cobró DE VERDAD (`orders.payment_real`), una vez entregado.
+   *
+   * MANDA SOBRE `payment_intent` EN EL HISTORIAL, y por eso hace falta aquí. Sin
+   * él la tarjeta describía la intención para siempre: un pedido planeado en
+   * efectivo que el cliente acabó pagando por Yape seguía diciendo "efectivo"
+   * en el resumen del turno, y el motorizado veía un cobro que no hizo.
+   */
+  payment_real: string | null
+  /** Efectivo que quedó a deber por este pedido (0140). Lo que se rinde. */
+  cash_owed_at_delivery: number | null
   business: DriverBusiness | null
 }
 
@@ -159,6 +173,8 @@ export interface OrderDetailResponse {
     deliveryFee: number
     paymentIntent: string
     paymentReal: string | null
+    /** Efectivo que quedó a deber por este pedido (0140). Lo que se rinde. */
+    cashOwedAtDelivery: number | null
     yapeAmount: number | null
     cashAmount: number | null
     clientPaysWith: number | null
