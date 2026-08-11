@@ -22,6 +22,8 @@
     "db:lint": "supabase db lint --project-id zpnipajgwfthxhdtzhly",
     "db:seed:e2e": "node apps/api/scripts/seed-e2e.ts",
     "db:seed:e2e:clean": "node apps/api/scripts/seed-e2e-clean.ts",
+    "db:seed:demo": "node apps/api/scripts/seed-demo-board.ts",
+    "db:seed:demo:clean": "node apps/api/scripts/seed-demo-board.ts --clean",
     "test:e2e": "playwright test --ignore-snapshots",
     "test:e2e:visual": "playwright test --project=visual",
     "graphify:update": "graphify update .",
