@@ -27,14 +27,14 @@ export function DestinationCard({ detail }: { detail: OrderDetailResponse }) {
           <Icon name="flag" size={20} />
         </span>
         <div className="min-w-0 flex-1">
-          <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/55">
+          <span className="font-mono text-meta font-semibold uppercase tracking-[0.14em] text-ink-muted">
             Entregar en
           </span>
-          <p className="mt-0.5 text-[16px] font-semibold leading-snug text-ink">{where}</p>
+          <p className="mt-0.5 text-body-lg font-semibold leading-snug text-ink">{where}</p>
           {/* En los manuales `delivery_address` es el relleno 'Pedido manual'
               que pone create_business_manual_order: solo estorba. */}
           {!order.isManual && order.deliveryAddress && order.deliveryReference && (
-            <p className="mt-0.5 text-[12.5px] text-ink-subtle">{order.deliveryAddress}</p>
+            <p className="mt-0.5 text-caption text-ink-subtle">{order.deliveryAddress}</p>
           )}
         </div>
       </div>

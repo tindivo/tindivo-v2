@@ -13,10 +13,10 @@ export function ReadyPromptSheet({
   return (
     <BottomSheet open onClose={onWaiting}>
       <div className="p-5 pb-7">
-        <h2 className="font-display text-[20px] font-bold tracking-tight">
+        <h2 className="font-display text-title font-bold tracking-tight">
           ¿El pedido ya está listo?
         </h2>
-        <p className="mt-1.5 text-[14px] text-ink/55">Pregunta en el mostrador antes de marcar.</p>
+        <p className="mt-1.5 text-body text-ink-muted">Pregunta en el mostrador antes de marcar.</p>
         <div className="mt-4 grid grid-cols-2 gap-2.5">
           <Button className="w-full" onClick={onReady}>
             Sí, está listo

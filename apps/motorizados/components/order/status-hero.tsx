@@ -128,7 +128,7 @@ export function StatusHero({ detail }: { detail: OrderDetailResponse }) {
             'font-display font-bold tracking-tight',
             // La cifra pide más cuerpo que una palabra de estado, y en mono los
             // dígitos ya corren más de lo que dice su talla.
-            collecting && !prepaid ? 'mt-1 font-mono text-[34px] tabular-nums' : 'text-display',
+            collecting && !prepaid ? 'mt-1 font-mono text-display tabular-nums' : 'text-display',
             collecting && prepaid && 'text-success-soft',
           )}
         >

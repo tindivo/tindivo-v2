@@ -39,10 +39,10 @@ export function ReleaseSheet({
   return (
     <BottomSheet open onClose={onClose}>
       <div className="p-5 pb-7">
-        <h2 className="font-display text-[20px] font-bold tracking-tight text-danger">
+        <h2 className="font-display text-title font-bold tracking-tight text-danger">
           ¿Soltar este pedido?
         </h2>
-        <p className="mt-1.5 text-[14px] leading-relaxed text-ink/55">
+        <p className="mt-1.5 text-body leading-relaxed text-ink-muted">
           El pedido volverá al pool para que lo tome otro motorizado. Selecciona el motivo
           obligatorio:
         </p>
@@ -53,7 +53,7 @@ export function ReleaseSheet({
               key={r.value}
               type="button"
               onClick={() => setReason(r.value)}
-              className={`rounded-2xl p-3.5 text-left text-[14px] font-semibold transition-colors border ${
+              className={`rounded-2xl p-3.5 text-left text-body font-semibold transition-colors border ${
                 reason === r.value
                   ? 'border-danger bg-danger/15 text-danger'
                   : 'border-ink/[0.08] bg-ink/[0.04] text-ink hover:bg-ink/[0.08]'
@@ -72,7 +72,7 @@ export function ReleaseSheet({
           onChange={(e) => setNote(e.target.value)}
         />
 
-        {error && <p className="mt-2 text-[13px] text-danger">{error}</p>}
+        {error && <p className="mt-2 text-caption text-danger">{error}</p>}
 
         <div className="mt-5 flex flex-col gap-2.5">
           <Button

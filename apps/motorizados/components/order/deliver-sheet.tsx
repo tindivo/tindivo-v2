@@ -2,6 +2,7 @@
 
 import { BottomSheet, Button, Icon } from '@tindivo/ui'
 import { useState } from 'react'
+import { moneyLine } from '@/lib/orders/presentation'
 import type { OrderDetailResponse } from '@/lib/types'
 
 /**
@@ -40,13 +41,37 @@ export function DeliverSheet({
   )
   const [noShowArmed, setNoShowArmed] = useState(false)
 
+  const money = moneyLine({
+    paymentIntent: order.paymentIntent,
+    total: order.orderAmount + order.deliveryFee,
+    cashAmount: order.cashAmount,
+    yapeAmount: order.yapeAmount,
+    clientPaysWith: order.clientPaysWith,
+    changeToGive: order.changeToGive,
+  })
+
   return (
     <BottomSheet open onClose={onClose}>
       <div className="p-5 pb-7">
-        <h2 className="font-display text-[20px] font-bold tracking-tight">
+        <h2 className="font-display text-title font-bold tracking-tight">
           {prepaid ? 'Confirmar entrega' : '¿Cómo pagó el cliente?'}
         </h2>
-        {prepaid && <p className="mt-1 text-[14px] text-ink/55">Este pedido ya estaba pagado.</p>}
+        {prepaid && <p className="mt-1 text-body text-ink-muted">Este pedido ya estaba pagado.</p>}
+
+        {/* LA CIFRA, AQUÍ TAMBIÉN. Esta hoja preguntaba cómo pagó sin decir
+            cuánto, y se abre con el cliente delante: para comprobar el importe
+            había que cerrarla. En un mixto era peor — hay que elegir por qué vía
+            terminó pagando sin el desglose a la vista. */}
+        {!prepaid && (
+          <div className="mt-3 rounded-[16px] bg-ink/[0.04] px-4 py-3">
+            <p className="font-mono text-title font-bold leading-none tabular-nums text-ink">
+              {money.headline}
+            </p>
+            {money.detail && (
+              <p className="mt-1 text-caption font-medium text-ink-muted">{money.detail}</p>
+            )}
+          </div>
+        )}
 
         {!prepaid && (
           <div className="mt-4 grid grid-cols-2 gap-2.5">
@@ -66,8 +91,8 @@ export function DeliverSheet({
                     : 'border border-ink/10 bg-card hover:bg-surface'
                 }`}
               >
-                <p className="font-semibold text-[15px] text-ink">{p.label}</p>
-                <p className="mt-0.5 text-[12px] text-ink-muted">{p.desc}</p>
+                <p className="font-semibold text-body-lg text-ink">{p.label}</p>
+                <p className="mt-0.5 text-caption text-ink-muted">{p.desc}</p>
               </button>
             ))}
           </div>
@@ -94,7 +119,7 @@ export function DeliverSheet({
             </Button>
           ) : (
             <div>
-              <p className="text-[13px] text-ink/55">
+              <p className="text-caption text-ink-muted">
                 Espera 5 min e intenta contactar. Reportar genera un strike al cliente.
               </p>
               <div className="mt-2 flex gap-2">

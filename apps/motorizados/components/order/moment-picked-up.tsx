@@ -46,11 +46,11 @@ export function MomentPickedUp({
 
       {order.arrivedAtCustomerAt && (
         <Card className="mt-3 border-warning/20 bg-warning-soft p-4">
-          <div className="flex items-center gap-2 text-warning font-semibold text-[14px]">
+          <div className="flex items-center gap-2 text-warning font-semibold text-body">
             <Icon name="person_pin_circle" size={20} className="text-warning/70" />
             Llegada registrada al domicilio
           </div>
-          <p className="mt-1 text-[13px] text-warning/80">
+          <p className="mt-1 text-caption text-warning/80">
             {canNoShow
               ? 'Se ha cumplido la ventana de espera de 5 minutos.'
               : `Esperando respuesta del cliente (${countdownFormatted} restante).`}
@@ -79,14 +79,14 @@ export function MomentPickedUp({
             heightPx={180}
           />
           <div className="p-4">
-            <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/55">
+            <p className="font-mono text-meta font-semibold uppercase tracking-[0.14em] text-ink-muted">
               Entregar en
             </p>
             {!order.isManual && order.deliveryAddress && (
-              <p className="mt-1 text-[14px]">{order.deliveryAddress}</p>
+              <p className="mt-1 text-body">{order.deliveryAddress}</p>
             )}
             {order.deliveryReference && (
-              <p className="mt-0.5 text-[13px] text-ink-muted">{order.deliveryReference}</p>
+              <p className="mt-0.5 text-caption text-ink-muted">{order.deliveryReference}</p>
             )}
             <Button
               size="sm"
@@ -106,15 +106,15 @@ export function MomentPickedUp({
         </Card>
       ) : (
         <Card className="mt-3 p-[18px]">
-          <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/55">
+          <p className="font-mono text-meta font-semibold uppercase tracking-[0.14em] text-ink-muted">
             Referencia del cliente
           </p>
-          <p className="mt-2 text-[17px] font-semibold leading-snug">
+          <p className="mt-2 text-lead font-semibold leading-snug">
             {order.deliveryReference ?? 'Sin referencia — llama al cliente'}
           </p>
           {/* En los manuales la direccion es el relleno 'Pedido manual'. */}
           {!order.isManual && order.deliveryAddress && (
-            <p className="mt-1 text-[14px] text-ink-muted">{order.deliveryAddress}</p>
+            <p className="mt-1 text-body text-ink-muted">{order.deliveryAddress}</p>
           )}
         </Card>
       )}

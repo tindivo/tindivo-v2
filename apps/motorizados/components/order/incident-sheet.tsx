@@ -46,17 +46,15 @@ export function IncidentSheet({ orderId, onClose }: { orderId: string; onClose: 
             <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-success text-white">
               <Icon name="check" size={20} />
             </span>
-            <p className="mt-3 font-display text-[18px] font-bold tracking-tight">
-              Reporte enviado
-            </p>
-            <p className="mt-1 text-[14px] text-ink/55">El equipo de Tindivo lo revisará.</p>
+            <p className="mt-3 font-display text-lead font-bold tracking-tight">Reporte enviado</p>
+            <p className="mt-1 text-body text-ink-muted">El equipo de Tindivo lo revisará.</p>
             <Button variant="outline" className="mt-4 w-full" onClick={onClose}>
               Cerrar
             </Button>
           </div>
         ) : (
           <>
-            <h2 className="font-display text-[20px] font-bold tracking-tight">
+            <h2 className="font-display text-title font-bold tracking-tight">
               ¿Qué problema hubo?
             </h2>
             <div className="mt-4 flex flex-wrap gap-2">
@@ -65,7 +63,7 @@ export function IncidentSheet({ orderId, onClose }: { orderId: string; onClose: 
                   key={t.value}
                   type="button"
                   onClick={() => setType(t.value)}
-                  className={`rounded-full px-3.5 py-2 text-[13px] font-semibold transition-colors ${
+                  className={`rounded-full px-3.5 py-2 text-caption font-semibold transition-colors ${
                     type === t.value
                       ? 'bg-brand text-white'
                       : 'border border-ink/[0.08] bg-ink/[0.04] text-ink hover:bg-ink/[0.08]'
@@ -82,7 +80,7 @@ export function IncidentSheet({ orderId, onClose }: { orderId: string; onClose: 
               maxLength={500}
               onChange={(e) => setDesc(e.target.value)}
             />
-            {error && <p className="mt-2 text-[13px] text-danger">{error}</p>}
+            {error && <p className="mt-2 text-caption text-danger">{error}</p>}
             <Button
               variant="danger"
               className="mt-4 w-full"

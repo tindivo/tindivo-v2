@@ -1,12 +1,12 @@
 'use client'
 
-import { Card, Icon } from '@tindivo/ui'
+import { Card, cn, Icon } from '@tindivo/ui'
 import { SourceChip } from '@/components/source-chip'
 import { mapsDirToCoords, telLink } from '@/lib/deeplinks'
-import { soles } from '@/lib/format'
+import { mmss, prettyPhone, soles } from '@/lib/format'
+import { moneyLine } from '@/lib/orders/presentation'
 import { changeDue } from '@/lib/payment'
 import type { OrderDetailResponse } from '@/lib/types'
-import { remainingParts } from '@/lib/urgency'
 
 /**
  * Ficha de previsualización del pedido tomable (HU-D-015).
@@ -16,25 +16,21 @@ import { remainingParts } from '@/lib/urgency'
  * necesita: de qué local es (el color se lee sin leer), a dónde va, cuánto
  * cobra, y si sale ya o espera.
  *
- * "Recoger en" ya no encabeza: con un solo restaurante en el piloto era el dato
- * menos informativo de la pantalla, y ocupaba el primer lugar.
+ * NO SIGUE EL LAYOUT DE LAS PANTALLAS OPERATIVAS, y es a propósito: aquí no se
+ * ejecuta nada, se DECIDE. La referencia va completa —en la tarjeta del listado
+ * se corta a dos líneas y es justo el dato que hay que leer entero antes de
+ * comprometerse— y el vuelto pesa más que en ningún otro sitio, porque llevar
+ * sencillo encima se decide al salir, no al llegar.
  *
- * Los colores e iconos de pago son LOS MISMOS que en `order-card.tsx` a
- * propósito. Esta pantalla se abre tocando esa tarjeta; si el amarillo de allá
- * fuese otro acá, el motorizado tendría que releer lo que ya había leído.
+ * Lo que SÍ comparte con el resto de la app es el vocabulario: las palabras del
+ * cobro y el formato del reloj salen de `lib/orders/presentation`. Tenía los
+ * suyos —«Cobra por Yape / Plin», tiles morados y esmeralda— con un comentario
+ * que juraba que eran «los mismos que order-card.tsx». Habían dejado de serlo:
+ * la tarjeta reserva el color para la urgencia y deja que la palabra diga el
+ * método. Dos copias de un criterio divergen.
  */
 
 const BAND_LABEL: Record<string, string> = { near: 'Cerca', far: 'Lejos' }
-
-/**
- * `987654123` -> `+51 987 654 123`. Los tríos no son estética: el motorizado
- * lee este número en voz alta o lo teclea con guantes, y agrupado se equivoca
- * menos.
- */
-function prettyPhone(raw: string): string {
-  const d = raw.replace(/\D/g, '').slice(-9)
-  return d.length === 9 ? `+51 ${d.slice(0, 3)} ${d.slice(3, 6)} ${d.slice(6)}` : raw
-}
 
 /** Fila de dato con icono relleno. Un solo nivel de tarjeta: el icono ya
  *  etiqueta, así que no se repite un "TELÉFONO"/"DIRECCIÓN" encima. */
@@ -50,9 +46,10 @@ function InfoRow({
   return (
     <div className="mt-2.5 flex items-start gap-2.5">
       <span
-        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] ${
-          tone === 'brand' ? 'bg-brand text-white' : 'bg-ink/[0.06] text-ink-muted'
-        }`}
+        className={cn(
+          'flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px]',
+          tone === 'brand' ? 'bg-brand text-white' : 'bg-ink/[0.06] text-ink-muted',
+        )}
       >
         <Icon name={icon} size={18} filled />
       </span>
@@ -61,70 +58,12 @@ function InfoRow({
   )
 }
 
-/**
- * Tile de cobro. El color codifica el MEDIO DE PAGO, no "dinero": morado Yape,
- * esmeralda efectivo — los mismos que `order-card.tsx`. Pintarlo todo de verde
- * se ve más armónico y le quita al motorizado la señal que distingue de un
- * vistazo por qué vía tiene que cobrar.
- */
-function MoneyTile({
-  tone,
-  label,
-  amount,
-  sub,
-  big = false,
-}: {
-  tone: 'yape' | 'cash'
-  label: string
-  amount: number
-  sub?: string
-  big?: boolean
-}) {
-  const styles =
-    tone === 'yape'
-      ? { bg: 'from-purple-600 to-purple-700', icon: 'qr_code_2' }
-      : { bg: 'from-emerald-600 to-emerald-700', icon: 'payments' }
+/** Rótulo de sección. Siempre igual en toda la ficha. */
+function Eyebrow({ children }: { children: React.ReactNode }) {
   return (
-    <div className={`rounded-[16px] bg-gradient-to-br ${styles.bg} px-4 py-3 text-white`}>
-      <p className="flex items-center gap-1.5 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] opacity-90">
-        <Icon name={styles.icon} size={14} filled />
-        {label}
-      </p>
-      <p
-        className={`mt-0.5 font-display font-bold leading-none tracking-tight tabular-nums ${
-          big ? 'text-[32px]' : 'text-[22px]'
-        }`}
-      >
-        {soles(amount)}
-      </p>
-      {sub && <p className="mt-1 text-[12px] opacity-90">{sub}</p>}
-    </div>
-  )
-}
-
-/** Cifra de apoyo: contorno, nunca relleno. No es lo que se cobra. */
-function SupportChip({
-  icon,
-  label,
-  amount,
-  sub,
-}: {
-  icon: string
-  label: string
-  amount: number
-  sub: string
-}) {
-  return (
-    <div className="rounded-[16px] border border-ink/[0.09] px-3.5 py-2.5">
-      <p className="flex items-center gap-1.5 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-ink/50">
-        <Icon name={icon} size={13} />
-        {label}
-      </p>
-      <p className="mt-0.5 font-display text-[19px] font-bold leading-none tracking-tight tabular-nums text-ink">
-        {soles(amount)}
-      </p>
-      <p className="mt-1 text-[11.5px] text-ink-subtle">{sub}</p>
-    </div>
+    <p className="font-mono text-meta font-semibold uppercase tracking-[0.14em] text-ink-muted">
+      {children}
+    </p>
   )
 }
 
@@ -134,18 +73,26 @@ export function PreviewSection({ detail, now }: { detail: OrderDetailResponse; n
   const accent = `#${business?.accentColor ?? 'f97316'}`
 
   // Lo vencido lo decide SOLO el reloj de la cocina, igual que en la bandeja.
-  //
-  // Aquí decía que `urgentSince` no lo escribía nadie en v2. Dejó de ser cierto:
-  // la migración `0134` lo sella con el cron `OrderOverdue`. El motivo bueno
-  // está en `lib/urgency.ts` — es OTRO reloj, el de la asignación, que salta a
-  // los 5 minutos con la comida aún en el horno, y ese hecho ya lo avisa un push
-  // vibrante. No pinta tablero.
+  // El motivo de no mirar `urgentSince` está en `lib/urgency.ts`: es otro reloj,
+  // el de la asignación, y ese hecho ya lo avisa un push.
   const remainingMs = order.estimatedReadyAt ? Date.parse(order.estimatedReadyAt) - now : null
+  const late = remainingMs != null && remainingMs < 0
   const band = order.deliveryDistanceBand ? BAND_LABEL[order.deliveryDistanceBand] : null
   const destination = order.deliveryReference ?? order.deliveryAddress
   const hasCoords = order.deliveryCoordinatesLat != null && order.deliveryCoordinatesLng != null
 
-  // Misma regla que la tarjeta del board, en un solo sitio (`lib/payment.ts`).
+  const money = moneyLine({
+    paymentIntent: order.paymentIntent,
+    total,
+    cashAmount: order.cashAmount,
+    yapeAmount: order.yapeAmount,
+    clientPaysWith: order.clientPaysWith,
+    changeToGive: order.changeToGive,
+  })
+  const prepaid = order.paymentIntent === 'prepaid'
+
+  // Se calcula aparte del `detail` porque aquí el vuelto NO es un apunte al
+  // final de una línea: es una de las cosas que deciden si aceptas.
   const vuelto = changeDue({
     paymentIntent: order.paymentIntent,
     total,
@@ -156,7 +103,7 @@ export function PreviewSection({ detail, now }: { detail: OrderDetailResponse; n
 
   return (
     <div>
-      {/* ── Identidad del local ──────────────────────────────────────────────
+      {/* ── Identidad del local ──
           Va arriba y con el color de marca: es lo único que se reconoce sin
           leer, y continúa la franja de color de la tarjeta del listado. */}
       <section
@@ -187,30 +134,27 @@ export function PreviewSection({ detail, now }: { detail: OrderDetailResponse; n
           )}
 
           <div className="min-w-0 flex-1">
-            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] opacity-85">
+            <p className="font-mono text-micro font-semibold uppercase tracking-[0.18em] opacity-85">
               Recoger en
             </p>
-            <p className="mt-0.5 truncate font-display text-[19px] font-bold tracking-tight">
+            <p className="mt-0.5 truncate font-display text-lead font-bold tracking-tight">
               {business?.name ?? 'Restaurante'}
             </p>
             {business?.address && (
-              <p className="mt-0.5 flex items-center gap-1 text-[12.5px] opacity-90">
+              <p className="mt-0.5 flex items-center gap-1 text-caption opacity-90">
                 <Icon name="location_on" size={14} filled />
                 <span className="truncate">{business.address}</span>
               </p>
             )}
           </div>
 
-          {/* El hero es identidad del local, y nada más.
-              Aquí vivían dos distintivos —"Comida lista" y "Vencido"— que
-              repetían tal cual lo que la tarjeta "Cuándo" ya dice más abajo, y
-              con más contexto: allí "Comida lista" viene con "el local confirmó
-              que ya salió de cocina", y lo vencido con los minutos exactos.
-              Decir dos veces lo mismo no es énfasis, es ruido.
+          {/* El hero es identidad del local, y nada más. Los distintivos de
+              "Comida lista" y "vencido" viven abajo, en la tarjeta "Cuándo", y
+              allí vienen con contexto. Decir dos veces lo mismo no es énfasis.
 
-              El distintivo de origen sigue la misma regla que la tarjeta del
-              board: solo aparece cuando el pedido viene de la app del cliente,
-              porque hoy el 100% son manuales y un chip constante no informa. */}
+              El de origen sigue la regla de la tarjeta del board: solo cuando el
+              pedido viene de la app, porque hoy el 100% son manuales y un chip
+              constante no informa. */}
           {order.source === 'customer_pwa' && (
             <span className="shrink-0">
               <SourceChip source={order.source} />
@@ -219,34 +163,30 @@ export function PreviewSection({ detail, now }: { detail: OrderDetailResponse; n
         </div>
       </section>
 
-      {/* ── ¿A dónde voy? ────────────────────────────────────────────────────
-          Primera pregunta real del motorizado: decide distancia, si conoce el
-          sitio y si le conviene. La referencia va COMPLETA — en la tarjeta del
-          listado se corta a dos líneas, y es justo el dato que hay que leer
-          entero antes de comprometerse. */}
+      {/* ── ¿A dónde voy? ──
+          Primera pregunta real: decide distancia, si conoce el sitio y si le
+          conviene. */}
       <Card className="mt-3 overflow-hidden">
         <div className="p-[18px]">
           <div className="flex items-center justify-between gap-2">
-            <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/55">
-              Entregar en
-            </p>
+            <Eyebrow>Entregar en</Eyebrow>
             {band && (
-              <span className="rounded-full bg-ink/[0.06] px-2.5 py-1 text-[11px] font-semibold text-ink-muted">
+              <span className="rounded-full bg-ink/[0.06] px-2.5 py-1 text-meta font-semibold text-ink-muted">
                 {band}
               </span>
             )}
           </div>
 
-          <p className="mt-1 text-[20px] font-bold leading-tight tracking-tight">
+          <p className="mt-1 text-title font-bold leading-tight tracking-tight">
             {order.customerName ?? 'Cliente'}
           </p>
 
           {destination ? (
             <InfoRow icon="pin_drop">
-              <p className="text-[14.5px] leading-snug text-ink">{destination}</p>
+              <p className="text-body leading-snug text-ink">{destination}</p>
             </InfoRow>
           ) : (
-            <p className="mt-2 text-[13px] italic text-ink-subtle">Sin referencia de entrega</p>
+            <p className="mt-2 text-caption italic text-ink-muted">Sin referencia de entrega</p>
           )}
 
           {/* El teléfono va en gris y sin peso: acá todavía se está DECIDIENDO.
@@ -258,7 +198,7 @@ export function PreviewSection({ detail, now }: { detail: OrderDetailResponse; n
             <InfoRow icon="call" tone="muted">
               <a
                 href={telLink(order.customerPhone)}
-                className="font-mono text-[14px] font-semibold tracking-tight text-ink-muted underline decoration-ink/20 underline-offset-4"
+                className="font-mono text-body font-semibold tracking-tight text-ink-muted underline decoration-ink/20 underline-offset-4"
               >
                 {prettyPhone(order.customerPhone)}
               </a>
@@ -278,7 +218,7 @@ export function PreviewSection({ detail, now }: { detail: OrderDetailResponse; n
             )}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 border-ink/[0.07] border-t py-3 text-[14px] font-semibold text-brand-dark"
+            className="flex items-center justify-center gap-2 border-ink/[0.07] border-t py-3 text-body font-semibold text-brand-dark"
           >
             <Icon name="map" size={18} filled />
             Cómo llegar
@@ -286,97 +226,58 @@ export function PreviewSection({ detail, now }: { detail: OrderDetailResponse; n
         )}
       </Card>
 
-      {/* ── ¿Cuánto cobro y cómo? ──────────────────────────────────────────
-          Un tile relleno con LA cifra que se cobra, y lo demás en chips de
-          apoyo. Tres cifras del mismo peso (cobra / vuelto / paga con) es sopa
-          de números, y confundirlas cuesta plata de verdad. */}
+      {/* ── ¿Cuánto cobro y cómo? ──
+          Misma jerarquía que en el resto de la app: la cifra grande y debajo el
+          método. El vuelto NO va en esa línea aquí, sino en su propia caja: en
+          la tarjeta es un apunte y aquí es una de las cosas que deciden. */}
       <Card className="mt-3 p-[18px]">
-        <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/55">
-          Cobro al cliente
-        </p>
+        <Eyebrow>{prepaid ? 'Ya pagado' : 'Cobro al cliente'}</Eyebrow>
 
-        {order.paymentIntent === 'prepaid' ? (
-          <div className="mt-2 flex items-center gap-3 rounded-[16px] bg-success-soft px-4 py-3.5">
-            <Icon name="verified" size={26} filled className="shrink-0 text-success" />
-            <div>
-              <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-success/80">
-                Ya pagó
-              </p>
-              <p className="text-[16px] font-bold text-success">No cobres nada. Solo entrega.</p>
-            </div>
-          </div>
-        ) : order.paymentIntent === 'pending_mixed' ? (
-          <>
-            {/* El caso caro: dos cifras que hay que cobrar por vías distintas.
-                Van lado a lado y con SU color, porque el error típico es
-                cobrarlo todo por una sola vía. */}
-            <div className="mt-2 grid grid-cols-2 gap-2">
-              <MoneyTile tone="yape" label="Cobra por Yape" amount={order.yapeAmount ?? 0} />
-              <MoneyTile tone="cash" label="Cobra en efectivo" amount={order.cashAmount ?? 0} />
-            </div>
-            <p className="mt-2 text-center text-[12.5px] text-ink-muted tabular-nums">
-              Total del pedido {soles(total)}
-            </p>
-          </>
-        ) : (
-          <div className="mt-2">
-            <MoneyTile
-              tone={
-                order.paymentIntent === 'pending_yape' || order.paymentIntent === 'pending_wallet'
-                  ? 'yape'
-                  : 'cash'
-              }
-              label="Cobra"
-              amount={total}
-              sub={
-                order.paymentIntent === 'pending_yape' || order.paymentIntent === 'pending_wallet'
-                  ? 'por Yape / Plin'
-                  : 'en efectivo'
-              }
-              big
-            />
-          </div>
+        <p
+          className={cn(
+            'mt-1.5 font-mono text-display font-bold leading-none tracking-tight tabular-nums',
+            prepaid ? 'text-success' : 'text-ink',
+          )}
+        >
+          {money.headline}
+        </p>
+        {money.detail && (
+          <p
+            className={cn(
+              'mt-1.5 text-caption font-medium',
+              prepaid ? 'text-success' : 'text-ink-muted',
+            )}
+          >
+            {money.detail}
+          </p>
         )}
 
-        {/* Vuelto y billete: apoyo, no protagonistas. Se avisa ACÁ —antes de
-            aceptar— porque llevar sencillo encima es una decisión que se toma
-            al salir, no al llegar al domicilio. */}
-        {vuelto != null && (
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            <SupportChip
-              icon="currency_exchange"
-              label="Vuelto"
-              amount={vuelto}
-              sub="que debes dar"
-            />
-            {order.clientPaysWith != null && (
-              <SupportChip
-                icon="payments"
-                label="Paga con"
-                amount={order.clientPaysWith}
-                sub="billete del cliente"
-              />
-            )}
+        {vuelto != null && vuelto > 0 && (
+          <div className="mt-3 flex items-center gap-3 rounded-[16px] bg-warning-soft px-3.5 py-3">
+            <Icon name="currency_exchange" size={20} className="shrink-0 text-amber-900" />
+            <div className="min-w-0">
+              <p className="text-body font-semibold text-amber-900">
+                Necesitas {soles(vuelto)} de vuelto
+              </p>
+              <p className="mt-0.5 text-caption text-amber-900/80">
+                Paga con {soles(order.clientPaysWith)} · llévalo encima
+              </p>
+            </div>
           </div>
         )}
       </Card>
 
-      {/* ── ¿Salgo ya o espero? ──────────────────────────────────────────────
-          Cronómetro, preparación y contacto unificados. La cuenta va HACIA
-          ADELANTE (cuánto falta), no hacia atrás: al motorizado no le sirve
-          saber cuánto lleva el pedido publicado, le sirve saber cuándo sale la
-          comida. `readyEarlyUsed` gana siempre — es confirmación humana de la
-          cajera y hace irrelevante la estimación. */}
+      {/* ── ¿Salgo ya o espero? ──
+          La cuenta va HACIA ADELANTE (cuánto falta), no hacia atrás: no sirve
+          saber cuánto lleva publicado, sirve saber cuándo sale la comida.
+          `readyEarlyUsed` gana siempre: es confirmación humana de la cajera y
+          hace irrelevante la estimación. */}
       <Card className="mt-3 p-[18px]">
         {/* El rótulo sigue al dato. "Falta para que esté listo" encima de un
             "Esperando 04:53" se contradice: si ya se pasó, no falta nada. */}
-        <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/55">
-          {order.readyEarlyUsed
-            ? 'Cuándo'
-            : remainingMs != null && remainingMs < 0
-              ? 'Se pasó del tiempo'
-              : 'Falta para que esté listo'}
-        </p>
+        <Eyebrow>
+          {order.readyEarlyUsed ? 'Cuándo' : late ? 'Se pasó del tiempo' : 'Falta para que esté'}
+        </Eyebrow>
 
         {order.readyEarlyUsed ? (
           <div className="mt-2 flex items-center gap-2.5">
@@ -384,46 +285,48 @@ export function PreviewSection({ detail, now }: { detail: OrderDetailResponse; n
               <Icon name="check_circle" size={22} filled />
             </span>
             <div>
-              <p className="text-[16px] font-bold text-success">Comida lista</p>
-              <p className="text-[12.5px] text-ink-muted">
+              <p className="text-body-lg font-bold text-success">Comida lista</p>
+              <p className="text-caption text-ink-muted">
                 El local confirmó que ya salió de cocina
               </p>
             </div>
           </div>
         ) : remainingMs != null ? (
           <div className="mt-2 flex items-center gap-2.5">
+            {/* Negro o rojo, como el reloj de la tarjeta: el número ya dice
+                cuánto, así que al color le basta con decir si se pasó. */}
             <span
-              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px] ${
-                remainingMs < 0 ? 'bg-danger-soft text-danger' : 'bg-warning-soft text-amber-900'
-              }`}
+              className={cn(
+                'flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px]',
+                late ? 'bg-danger-soft text-danger' : 'bg-ink/[0.06] text-ink-muted',
+              )}
             >
-              <Icon name={remainingMs < 0 ? 'priority_high' : 'schedule'} size={22} filled />
+              <Icon name={late ? 'priority_high' : 'schedule'} size={22} filled />
             </span>
             <div>
               <p
-                className={`text-[16px] font-bold tabular-nums ${
-                  remainingMs < 0 ? 'text-danger' : 'text-ink'
-                }`}
+                className={cn(
+                  'font-mono text-body-lg font-bold tabular-nums',
+                  late ? 'text-danger' : 'text-ink',
+                )}
               >
-                {remainingMs < 0
-                  ? `Esperando ${remainingParts(remainingMs).value}`
-                  : remainingParts(remainingMs).value}
+                {mmss(Math.abs(remainingMs) / 1000)}
               </p>
               {order.prepTimeMinutes != null && (
-                <p className="text-[12.5px] text-ink-muted">
+                <p className="text-caption text-ink-muted">
                   Preparación de {order.prepTimeMinutes} min
                 </p>
               )}
             </div>
           </div>
         ) : (
-          <p className="mt-2 text-[13px] italic text-ink-subtle">Sin hora estimada</p>
+          <p className="mt-2 text-caption italic text-ink-muted">Sin hora estimada</p>
         )}
 
         {business?.phone && (
           <a
-            href={`tel:+51${business.phone}`}
-            className="mt-3 flex items-center justify-center gap-2 rounded-[14px] border border-ink/[0.08] py-2.5 text-[14px] font-semibold text-ink"
+            href={telLink(business.phone)}
+            className="mt-3 flex items-center justify-center gap-2 rounded-[14px] border border-ink/[0.08] py-2.5 text-body font-semibold text-ink"
           >
             <Icon name="call" size={17} filled />
             Llamar al local

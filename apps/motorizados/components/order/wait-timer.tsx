@@ -19,13 +19,13 @@ export function WaitTimer({ since, now }: { since: string; now: number }) {
       <Card
         className={`mt-3.5 flex items-center justify-between border-none px-4 py-3.5 shadow-none ${tone.card}`}
       >
-        <span className="text-[14px]">Esperando en el local</span>
-        <span className={`font-mono text-[22px] font-bold tabular-nums ${tone.text}`}>
+        <span className="text-body">Esperando en el local</span>
+        <span className={`font-mono text-title font-bold tabular-nums ${tone.text}`}>
           {mmss(seconds)}
         </span>
       </Card>
       {minutes >= 10 && (
-        <p className="mt-2 px-1 text-[12px] text-danger">
+        <p className="mt-2 px-1 text-caption text-danger">
           Demora inusual. Llama al local o reporta un problema.
         </p>
       )}
