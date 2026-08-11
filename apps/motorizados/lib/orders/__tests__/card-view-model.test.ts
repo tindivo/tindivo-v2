@@ -76,41 +76,46 @@ describe('identidad', () => {
   })
 })
 
-describe('ranura', () => {
+describe('el reloj de la esquina', () => {
   it('en cocina cuenta en mm:ss', () => {
-    expect(vm().slot).toEqual({ icon: 'schedule', text: '04:00', tone: 'neutral' })
+    expect(vm().clock).toEqual({ text: '04:00', tone: 'neutral' })
   })
 
   it('mm:ss tambien por encima de los dos minutos', () => {
     // Antes salia "~12 min" y la cajera veia "11:55" del mismo pedido.
     const v = vm({ order: order({ estimated_ready_at: new Date(NOW + min(12)).toISOString() }) })
-    expect(v.slot?.text).toBe('12:00')
+    expect(v.clock?.text).toBe('12:00')
   })
 
-  it('comida lista con reloj vivo dice Lista, no el contador', () => {
+  // ESTA ES LA REGLA QUE §23 PROTEGE, y la que una version anterior rompio al
+  // fundir reloj y estado en un solo elemento.
+  it('marcar la comida lista NO esconde el contador', () => {
     const v = vm({ order: order({ ready_early_used: true }) })
-    expect(v.slot).toEqual({ icon: 'check_circle', text: 'Lista', tone: 'success' })
+    expect(v.clock).toEqual({ text: '04:00', tone: 'neutral' })
+    expect(v.badge).toEqual({ icon: 'check_circle', text: 'Lista', tone: 'success' })
   })
 
-  it('lista y sin recoger dentro del margen: ambar y copy de reparto', () => {
+  it('lista y sin recoger: el reloj cuenta hacia arriba, en ambar', () => {
     const v = vm({
       order: order({
         ready_early_used: true,
         estimated_ready_at: new Date(NOW - min(3)).toISOString(),
       }),
     })
-    expect(v.slot).toEqual({ icon: 'schedule', text: 'Te espera 03:00', tone: 'warning' })
+    expect(v.clock).toEqual({ text: '03:00', tone: 'warning' })
+    expect(v.badge).toEqual({ icon: 'schedule', text: 'Te espera', tone: 'warning' })
   })
 
-  it('pasado queueLeadMinutes escala a rojo', () => {
+  it('pasado queueLeadMinutes escalan reloj e insignia', () => {
     const v = vm({
       order: order({
         ready_early_used: true,
         estimated_ready_at: new Date(NOW - min(14)).toISOString(),
       }),
     })
-    expect(v.slot?.tone).toBe('danger')
-    expect(v.slot?.text).toBe('Te espera 14:00')
+    expect(v.clock).toEqual({ text: '14:00', tone: 'danger' })
+    expect(v.badge?.tone).toBe('danger')
+    expect(v.badge?.text).toBe('Te espera')
   })
 
   it('el umbral sale de app_settings, no del codigo', () => {
@@ -118,7 +123,9 @@ describe('ranura', () => {
       ready_early_used: true,
       estimated_ready_at: new Date(NOW - min(14)).toISOString(),
     })
-    expect(vm({ order: late, queueLeadMinutes: 20 }).slot?.tone).toBe('warning')
+    const v = vm({ order: late, queueLeadMinutes: 20 })
+    expect(v.clock?.tone).toBe('warning')
+    expect(v.badge?.tone).toBe('warning')
   })
 
   it('cocina demorada habla de la cocina, no del reparto', () => {
@@ -128,30 +135,38 @@ describe('ranura', () => {
         estimated_ready_at: new Date(NOW - min(3)).toISOString(),
       }),
     })
-    expect(v.slot).toEqual({ icon: 'priority_high', text: 'Esperando 03:00', tone: 'danger' })
+    expect(v.clock).toEqual({ text: '03:00', tone: 'danger' })
+    expect(v.badge).toEqual({ icon: 'priority_high', text: 'Demorado', tone: 'danger' })
   })
 
-  it('con la comida encima no hay reloj de cocina', () => {
+  it('a tiempo y sin marcar, no hay insignia que poner', () => {
+    expect(vm().badge).toBeNull()
+  })
+
+  it('con la comida encima no hay reloj de cocina ni insignia', () => {
     const v = vm({ variant: 'mine', order: order({ status: 'picked_up' }) })
-    expect(v.slot).toBeNull()
+    expect(v.clock).toBeNull()
+    expect(v.badge).toBeNull()
   })
 
-  it('en Equipo la ranura lleva el estado, porque el reloj no viaja', () => {
+  it('en Equipo hay insignia de estado pero NO reloj: no viaja', () => {
     const v = vm({
       variant: 'team',
       ownerName: 'Juan',
       order: order({ status: 'picked_up', estimated_ready_at: null }),
     })
-    expect(v.slot).toEqual({ icon: 'delivery_dining', text: 'En reparto', tone: 'neutral' })
+    expect(v.clock).toBeNull()
+    expect(v.badge).toEqual({ icon: 'delivery_dining', text: 'En reparto', tone: 'neutral' })
   })
 
-  it('en el historial la ranura lleva la hora ROTULADA', () => {
+  it('en el historial la hora va en la esquina y la insignia la rotula', () => {
     // Antes salia un "20:45" desnudo abajo a la izquierda, sin decir de que
     // hora hablaba. El formato lo decide `hourOf` (locale es-PE), asi que se
     // compara contra el helper y no contra un literal.
     const at = '2026-08-11T20:45:00.000Z'
     const v = vm({ variant: 'delivered', order: order({ status: 'delivered', delivered_at: at }) })
-    expect(v.slot?.text).toBe(`Entregado ${hourOf(at)}`)
+    expect(v.clock).toEqual({ text: hourOf(at), tone: 'neutral' })
+    expect(v.badge).toEqual({ icon: 'check_circle', text: 'Entregado', tone: 'neutral' })
   })
 })
 

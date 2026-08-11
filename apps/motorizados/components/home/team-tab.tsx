@@ -124,7 +124,7 @@ export function TeamTab() {
               {group.orders.length} {group.orders.length === 1 ? 'activo' : 'activos'}
             </Badge>
           </p>
-          <div className="mt-2 flex flex-col gap-2.5">
+          <div className="mt-2 flex flex-col gap-3">
             {group.orders.map((o) => (
               <div key={o.orderId} className="flex flex-col gap-1.5">
                 {/* MISMA tarjeta que Disponibles y Míos. Antes esta pestaña

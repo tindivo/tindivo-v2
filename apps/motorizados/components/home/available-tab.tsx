@@ -71,7 +71,7 @@ export function AvailableTab({
       )}
 
       {full && (
-        <Card className="mb-3 flex items-start gap-2.5 border border-ink/[0.06] bg-ink/[0.03] p-4 shadow-none">
+        <Card className="mb-3 flex items-start gap-3 border border-ink/[0.06] bg-ink/[0.03] p-4 shadow-none">
           <Icon name="shopping_basket" size={20} className="shrink-0 text-ink" />
           <p className="font-semibold text-[14px]">
             Mochila llena {mySlots}/3. Entrega un pedido para tomar otro.
@@ -81,7 +81,7 @@ export function AvailableTab({
 
       <OverdueBanner count={overdueCount} />
 
-      <div className="flex flex-col gap-2.5">
+      <div className="flex flex-col gap-3">
         {sorted.map((o) => {
           const esVencido = orderUrgency(o, now) === 'overdue'
           // DOS razones distintas para no poder tomar un pedido, y cada una dice

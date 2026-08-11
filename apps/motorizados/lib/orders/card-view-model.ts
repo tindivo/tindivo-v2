@@ -27,14 +27,30 @@ export type CardVariant = 'available' | 'mine' | 'delivered' | 'team'
 export type Tone = 'neutral' | 'success' | 'warning' | 'danger'
 
 /**
- * La ranura a la altura del nombre: UN solo dato, el más urgente del momento.
+ * EL RELOJ Y EL ESTADO SON DOS COSAS, Y VAN EN DOS SITIOS.
  *
- * Sustituye a tres elementos que competían por decir lo mismo (el chip "Comida
- * lista", el contador y la píldora de estado). Nunca hacían falta los tres a la
- * vez: si la comida está lista el contador ya no cuenta hacia abajo, cuenta
- * cuánto lleva esperándote, y eso ES el estado.
+ * Hubo un intento de fundirlos en una sola ranura "con la verdad más urgente".
+ * Estaba mal, y `DECISIONS §23` ya lo decía por escrito: `ready_early_used`
+ * **no debe usarse como guarda para ocultar el temporizador**, y el legacy
+ * enseñaba "Comida lista" y el reloj a la vez. Fundirlos volvía a esconder el
+ * contador justo al marcar la comida lista — la misma regresión que §23 había
+ * arreglado.
+ *
+ * Ahora:
+ *   - EL RELOJ vive en la esquina superior derecha, sobre la cejilla. Pequeño,
+ *     mono, sin caja. Está siempre que haya un reloj que enseñar, pase lo que
+ *     pase con la comida.
+ *   - LA INSIGNIA vive a la altura del nombre, y solo aparece cuando hay algo
+ *     que decir con palabras ("Lista", "Te espera", "Demorado").
+ *
+ * Así conviven, cada uno en su fila, y ninguno tapa al otro.
  */
-export interface Slot {
+export interface Clock {
+  text: string
+  tone: Tone
+}
+
+export interface Badge {
   icon: string
   text: string
   tone: Tone
@@ -64,12 +80,15 @@ export interface CardVM {
   shortId: string | null
   /** Huecos de mochila, solo cuando ocupa más de uno. */
   slotsNote: string | null
+  /** El reloj, en la esquina. Ver la nota de `Clock`. */
+  clock: Clock | null
   /** El nombre, en grande. Es como el motorizado identifica el pedido. */
   identity: string
   /** Icono que desambigua de quién es el nombre (en Equipo es un compañero). */
   identityIcon: string | null
+  /** La insignia de estado, a la altura del nombre. */
+  badge: Badge | null
   reference: string | null
-  slot: Slot | null
   /** Verbo de la acción siguiente. Solo en "Míos". */
   action: string | null
   money: MoneyLine | null
@@ -115,63 +134,85 @@ const ACTION_VERB: Record<string, string> = {
   picked_up: 'Entregar pedido',
 }
 
-/** Estado de un pedido ajeno. En Equipo la ranura lleva esto y no un reloj:
+/** Estado de un pedido ajeno. En Equipo no hay reloj que enseñar:
  *  `estimated_ready_at` no viaja de un pedido de otro, por diseño. */
-const TEAM_STATE: Record<string, Slot> = {
+const TEAM_STATE: Record<string, Badge> = {
   heading_to_restaurant: { icon: 'directions_bike', text: 'Va al local', tone: 'neutral' },
   waiting_at_restaurant: { icon: 'hourglass_top', text: 'En el local', tone: 'warning' },
   picked_up: { icon: 'delivery_dining', text: 'En reparto', tone: 'neutral' },
 }
 
+/** Milisegundos que faltan (negativo = ya pasó), o `null` si no hay reloj. */
+function remainingMs(input: CardVMInput): number | null {
+  const { order, now, variant } = input
+  if (variant === 'team' || variant === 'delivered') return null
+  // Con la comida encima el reloj de cocina ya no dice nada.
+  if (order.status === 'picked_up') return null
+  if (order.estimated_ready_at == null) return null
+  return Date.parse(order.estimated_ready_at) - now
+}
+
 /**
- * Qué va en la ranura, por orden de urgencia decreciente.
+ * Cuánto se ha pasado del margen de cola, o `null` si no se ha pasado.
  *
- * El orden importa: se devuelve la PRIMERA verdad que aplica, no la suma de
- * todas. Es lo que permite que una sola ranura sustituya a tres elementos.
+ * El umbral sale de `app_settings.timers.queueLeadMinutes` (§23), nunca del
+ * código.
  */
-function buildSlot(input: CardVMInput): Slot | null {
-  const { order, now, variant, queueLeadMinutes } = input
+function escalation(input: CardVMInput, ms: number): 'warning' | 'danger' {
+  const elapsedSec = Math.abs(ms) / 1000
+  return elapsedSec > input.queueLeadMinutes * 60 ? 'danger' : 'warning'
+}
+
+/** El reloj de la esquina. Siempre que haya uno, marque o no la cajera. */
+function buildClock(input: CardVMInput): Clock | null {
+  if (input.variant === 'delivered') {
+    return input.order.delivered_at
+      ? { text: hourOf(input.order.delivered_at), tone: 'neutral' }
+      : null
+  }
+
+  const ms = remainingMs(input)
+  if (ms == null) return null
+
+  const text = mmss(Math.abs(ms) / 1000)
+  if (ms >= 0) return { text, tone: 'neutral' }
+
+  // Ya se pasó. Si la cajera marcó la comida lista, la demora es del reparto y
+  // escala con el margen de cola; si no, es la cocina la que se pasó.
+  return {
+    text,
+    tone: input.order.ready_early_used ? escalation(input, ms) : 'danger',
+  }
+}
+
+/** La insignia de estado. Solo cuando hay algo que decir con palabras. */
+function buildBadge(input: CardVMInput): Badge | null {
+  const { order, variant } = input
 
   if (variant === 'delivered') {
-    return order.delivered_at
-      ? { icon: 'check_circle', text: `Entregado ${hourOf(order.delivered_at)}`, tone: 'neutral' }
-      : null
+    return order.delivered_at ? { icon: 'check_circle', text: 'Entregado', tone: 'neutral' } : null
   }
 
   if (variant === 'team') return TEAM_STATE[order.status] ?? null
 
-  // Con la comida encima el reloj de cocina ya no dice nada.
-  if (order.status === 'picked_up') return null
+  const ms = remainingMs(input)
+  if (ms == null) return null
 
-  const readyAt = order.estimated_ready_at
-  if (readyAt == null) return null
-
-  const remainingMs = Date.parse(readyAt) - now
   const readyEarly = Boolean(order.ready_early_used)
 
-  if (remainingMs >= 0) {
-    // La cajera ya marcó la comida lista y el reloj recortado (§23) aún corre:
-    // contar hacia una estimación que ya se cumplió no informa. Lo que importa
-    // es que está lista.
-    if (readyEarly) return { icon: 'check_circle', text: 'Lista', tone: 'success' }
-    return { icon: 'schedule', text: mmss(remainingMs / 1000), tone: 'neutral' }
-  }
+  // COMIDA LISTA Y RELOJ VIVO: van LOS DOS. El reloj sigue en la esquina; aquí
+  // se dice que ya está lista. Esconder el contador al marcar listo es
+  // justamente lo que §23 prohíbe.
+  if (ms >= 0) return readyEarly ? { icon: 'check_circle', text: 'Lista', tone: 'success' } : null
 
-  const elapsedSec = Math.abs(remainingMs) / 1000
-
-  // Comida lista y sin recoger: la demora es del reparto, no de la cocina, y el
-  // copy se lo dice a quien puede arreglarlo (§23).
+  // Lista y sin recoger: el copy se lo dice a quien puede arreglarlo (§23).
   if (readyEarly) {
-    const escalated = elapsedSec > queueLeadMinutes * 60
-    return {
-      icon: escalated ? 'priority_high' : 'schedule',
-      text: `Te espera ${mmss(elapsedSec)}`,
-      tone: escalated ? 'danger' : 'warning',
-    }
+    const tone = escalation(input, ms)
+    return { icon: tone === 'danger' ? 'priority_high' : 'schedule', text: 'Te espera', tone }
   }
 
   // La cocina se pasó de su propia estimación.
-  return { icon: 'priority_high', text: `Esperando ${mmss(elapsedSec)}`, tone: 'danger' }
+  return { icon: 'priority_high', text: 'Demorado', tone: 'danger' }
 }
 
 /**
@@ -194,18 +235,18 @@ function buildSlot(input: CardVMInput): Slot | null {
  *   - "En espera" usa `orderUrgency`, LA MISMA función con la que la bandeja
  *     ordena, bloquea las demás tarjetas y dispara el banner. Antes la tarjeta
  *     tenía su propio criterio (más estricto), así que el cartel gritaba "hay un
- *     vencido" y la tarjeta señalada seguía con el borde neutro.
+ *     vencido" y la tarjeta señalada se quedaba con el borde neutro.
  *
  * `orderUrgency` NO se aplica a "Míos": mira si la ETA ya pasó, y con el pedido
- * recogido eso es cierto siempre. Ahí manda el tono de la ranura.
+ * recogido eso es cierto siempre.
  */
-function buildTone(input: CardVMInput, slot: Slot | null): Tone {
+function buildTone(input: CardVMInput, badge: Badge | null, clock: Clock | null): Tone {
   const { order, now, variant } = input
 
   if (variant === 'delivered' || variant === 'team') return 'neutral'
   if (variant === 'available' && orderUrgency(order, now) === 'overdue') return 'danger'
 
-  return slot?.tone ?? 'neutral'
+  return badge?.tone ?? clock?.tone ?? 'neutral'
 }
 
 const PAYMENT_ICON: Record<string, string> = {
@@ -332,7 +373,8 @@ function buildMoney(input: CardVMInput): MoneyLine | null {
 export function buildCardVM(input: CardVMInput): CardVM {
   const { order, variant, ownerName, blocked, blockedReason } = input
 
-  const slot = buildSlot(input)
+  const clock = buildClock(input)
+  const badge = buildBadge(input)
   const isTeam = variant === 'team'
 
   // LA IDENTIDAD ES EL NOMBRE, y por eso tiene un plan B explícito: el canal
@@ -348,14 +390,15 @@ export function buildCardVM(input: CardVMInput): CardVM {
     businessName: order.business?.name ?? 'Restaurante',
     shortId: hasName ? order.short_id : null,
     slotsNote: isTeam && order.occupancy_slots > 1 ? `${order.occupancy_slots} huecos` : null,
+    clock,
     identity,
     identityIcon: isTeam ? 'directions_bike' : null,
+    badge,
     reference: order.delivery_reference ?? order.delivery_address,
-    slot,
     action: variant === 'mine' ? (ACTION_VERB[order.status] ?? null) : null,
     money: blocked && blockedReason ? null : buildMoney(input),
     blockedReason: blocked && blockedReason ? blockedReason : null,
-    tone: buildTone(input, slot),
+    tone: buildTone(input, badge, clock),
     interactive: !blocked && !isTeam,
     muted: Boolean(blocked),
     showSourceChip: order.source === 'customer_pwa',

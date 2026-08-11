@@ -12,24 +12,25 @@ import type { CardOrder, TeamResponse } from '@/lib/types'
 type IncomingRequest = TeamResponse['receivedRequests'][number]
 
 /**
- * Tarjeta del board en CUATRO FILAS, de arriba abajo por orden de lectura real:
+ * Tarjeta del board, de arriba abajo por orden de lectura real:
  *
- *   1. Cejilla   — local · código, en gris pequeño. Contexto, no decisión.
- *   2. Identidad — el nombre, en grande, con UNA ranura a su altura.
+ *   1. Cejilla   — local · código en gris pequeño, y EL RELOJ en la esquina.
+ *   2. Identidad — el nombre, en grande, con la insignia de estado a su altura.
  *   3. Referencia— dónde va. En un pueblo sin numeración, esto ES la dirección.
- *   4. Cobro     — una línea, método al frente.
+ *   4. Verbo     — solo en "Míos".
+ *   5. Cobro     — una línea, método al frente.
  *
- * Míos intercala el verbo de la acción entre la 3 y la 4; es la única bandeja
- * donde "qué toca ahora" no es evidente por el contexto de la pestaña.
+ * EL RELOJ ARRIBA Y EL ESTADO ABAJO NO ES DECORACIÓN: son dos hechos distintos
+ * que tienen que poder verse a la vez. Un intento anterior los fundió en una
+ * sola ranura "con la verdad más urgente" y eso escondía el contador en cuanto
+ * la cajera marcaba la comida lista — exactamente la regresión que `DECISIONS
+ * §23` había arreglado y prohibido por escrito. Separados, "Lista" y el reloj
+ * conviven, que es lo que hacía el legacy.
  *
- * POR QUÉ ASÍ. La versión anterior medía ~250px y solo entraban dos tarjetas en
- * un móvil de 360×780 (el lienzo real son ~440px: el resto se lo llevan la
- * barra superior, el saludo, las pestañas pegajosas y la nav inferior). Esta
- * mide ~112px, o ~132 en Míos. La altura no se recortó apretando la letra —eso
- * habría empeorado lo que ya se leía mal— sino borrando filas: tres elementos
- * que decían lo mismo colapsaron en la ranura, la banda de cobro pasó de cuatro
- * líneas con fondo propio a una, y el nombre del local dejó su sitio al del
- * cliente, que es por quien el motorizado identifica el pedido.
+ * SOBRE EL AIRE. Una primera versión bajó a ~107px y entraban cuatro tarjetas,
+ * pero se leían amontonadas. Se cambia la cuarta tarjeta por respiración: el
+ * espaciado vuelve a ser cómodo y quedan tres cómodas en lugar de cuatro
+ * apretadas. El punto de partida eran DOS.
  *
  * Las decisiones de QUÉ se dice viven en `lib/orders/card-view-model`, con
  * tests. Aquí solo se pinta.
@@ -50,12 +51,20 @@ const TONE_BORDER: Record<Tone, string> = {
   danger: 'border-danger/45',
 }
 
-/** Neutro sin caja: solo la verdad urgente merece fondo y grita. */
-const SLOT_CHIP: Record<Tone, string> = {
+/** El reloj de la esquina: texto desnudo, sin caja. Es un dato, no una alarma. */
+const CLOCK_TONE: Record<Tone, string> = {
   neutral: 'text-ink-muted',
-  success: 'rounded-full bg-success-soft px-2 py-0.5 text-success',
-  warning: 'rounded-full bg-warning-soft px-2 py-0.5 text-amber-900',
-  danger: 'rounded-full bg-danger-soft px-2 py-0.5 text-danger',
+  success: 'text-ink-muted',
+  warning: 'text-amber-800',
+  danger: 'text-danger',
+}
+
+/** La insignia sí lleva caja: es una palabra de estado, y se busca de un vistazo. */
+const BADGE_TONE: Record<Tone, string> = {
+  neutral: 'bg-ink/[0.05] text-ink-muted',
+  success: 'bg-success-soft text-success',
+  warning: 'bg-warning-soft text-amber-900',
+  danger: 'bg-danger-soft text-danger',
 }
 
 function IncomingRequestStrip({ request, now }: { request: IncomingRequest; now: number }) {
@@ -63,7 +72,7 @@ function IncomingRequestStrip({ request, now }: { request: IncomingRequest; now:
 
   if (expired) {
     return (
-      <p className="mb-2 flex items-center gap-1.5 rounded-lg bg-warning-soft px-2.5 py-1.5 text-meta font-bold text-amber-900">
+      <p className="mb-2.5 flex items-center gap-1.5 rounded-lg bg-warning-soft px-2.5 py-1.5 text-meta font-bold text-amber-900">
         <Icon name="sync" size={14} filled />
         Traspaso en curso a {request.requesterName}
       </p>
@@ -71,7 +80,7 @@ function IncomingRequestStrip({ request, now }: { request: IncomingRequest; now:
   }
 
   return (
-    <p className="mb-2 flex animate-pulse items-center gap-1.5 rounded-lg bg-danger-soft px-2.5 py-1.5 text-meta font-bold text-danger">
+    <p className="mb-2.5 flex animate-pulse items-center gap-1.5 rounded-lg bg-danger-soft px-2.5 py-1.5 text-meta font-bold text-danger">
       <Icon name="swap_horiz" size={14} filled />
       {request.requesterName} te lo está pidiendo
       <span className="ml-auto font-mono tabular-nums">{mmss(remainingSec)}</span>
@@ -113,7 +122,7 @@ export function OrderCard({
     <Card
       as="div"
       className={cn(
-        'relative w-full overflow-hidden rounded-2xl border bg-card px-3 py-2.5 pl-4 text-left transition-shadow duration-200',
+        'relative w-full overflow-hidden rounded-2xl border bg-card py-3.5 pr-3.5 pl-4 text-left transition-shadow duration-200',
         TONE_BORDER[vm.tone],
         vm.muted && 'opacity-70',
         // `Card` mete `hover:shadow-elev-2` en su base incondicionalmente, así
@@ -145,7 +154,7 @@ export function OrderCard({
           type="button"
           onClick={() => router.push(`/pedido/${order.id}`)}
           aria-label={`Ver pedido de ${vm.identity} · ${vm.businessName}`}
-          className="absolute inset-0 z-10 cursor-pointer rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand active:scale-[0.99]"
+          className="absolute inset-0 z-10 cursor-pointer rounded-2xl focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2 active:scale-[0.99]"
         />
       )}
 
@@ -153,7 +162,7 @@ export function OrderCard({
         <IncomingRequestStrip request={incomingRequest} now={now} />
       )}
 
-      {/* ── 1 · Cejilla ── */}
+      {/* ── 1 · Cejilla, con el reloj en la esquina ── */}
       <div className="flex items-center gap-1.5 text-meta text-ink-muted">
         <span className="truncate">{vm.businessName}</span>
         {vm.shortId && <span className="shrink-0 font-mono">#{vm.shortId}</span>}
@@ -163,10 +172,21 @@ export function OrderCard({
           </span>
         )}
         {vm.showSourceChip && <SourceChip source={order.source} />}
+
+        {vm.clock && (
+          <span
+            className={cn(
+              'ml-auto shrink-0 font-mono font-semibold tabular-nums',
+              CLOCK_TONE[vm.clock.tone],
+            )}
+          >
+            {vm.clock.text}
+          </span>
+        )}
       </div>
 
-      {/* ── 2 · Identidad + ranura ── */}
-      <div className="mt-1 flex items-center justify-between gap-2">
+      {/* ── 2 · Identidad + insignia de estado ── */}
+      <div className="mt-1.5 flex items-center justify-between gap-2">
         <span className="flex min-w-0 items-center gap-1.5">
           {vm.identityIcon && (
             <Icon name={vm.identityIcon} size={17} className="shrink-0 text-ink-muted" />
@@ -176,15 +196,15 @@ export function OrderCard({
           </span>
         </span>
 
-        {vm.slot && (
+        {vm.badge && (
           <span
             className={cn(
-              'inline-flex shrink-0 items-center gap-1 font-mono text-meta font-semibold tabular-nums',
-              SLOT_CHIP[vm.slot.tone],
+              'inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-meta font-semibold',
+              BADGE_TONE[vm.badge.tone],
             )}
           >
-            <Icon name={vm.slot.icon} size={13} filled={vm.slot.tone !== 'neutral'} />
-            {vm.slot.text}
+            <Icon name={vm.badge.icon} size={13} filled />
+            {vm.badge.text}
           </span>
         )}
       </div>
@@ -194,7 +214,7 @@ export function OrderCard({
           entrega equivocada, así que las tarjetas con dirección larga miden más
           y está bien que así sea. */}
       {vm.reference && (
-        <p className="mt-1 flex items-start gap-1 text-body font-medium leading-snug text-ink">
+        <p className="mt-2 flex items-start gap-1 text-body font-medium leading-snug text-ink">
           <Icon name="location_on" size={16} className="mt-px shrink-0 text-brand" />
           <span className="line-clamp-2">{vm.reference}</span>
         </p>
@@ -202,12 +222,12 @@ export function OrderCard({
 
       {/* ── 4 · Verbo (solo Míos) ── */}
       {vm.action && (
-        <p className="mt-1.5 font-semibold text-body-lg text-ink tracking-tight">{vm.action}</p>
+        <p className="mt-2 font-semibold text-body-lg text-ink tracking-tight">{vm.action}</p>
       )}
 
       {/* ── 5 · Cobro, o el motivo del bloqueo en su lugar ── */}
       {vm.blockedReason ? (
-        <p className="mt-1.5 flex items-center gap-1.5 text-caption font-medium text-ink-muted">
+        <p className="mt-2.5 flex items-center gap-1.5 text-caption font-medium text-ink-muted">
           <Icon name="lock" size={14} className="shrink-0" />
           {vm.blockedReason}
         </p>
@@ -215,7 +235,7 @@ export function OrderCard({
         vm.money && (
           <p
             className={cn(
-              'mt-1.5 flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5',
+              'mt-2.5 flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5',
               vm.money.tone === 'success' ? 'text-success' : 'text-ink',
             )}
           >
@@ -223,7 +243,7 @@ export function OrderCard({
               name={vm.money.icon}
               size={15}
               filled
-              className="self-center shrink-0"
+              className="shrink-0 self-center"
               aria-hidden
             />
             {vm.money.amount && (
