@@ -466,6 +466,18 @@ La Edge Function `send-push` corre con `verify_jwt`, y la anon key vale como JWT
 **El arreglo, ya verificado como viable:** un secreto compartido en `app_settings.push_dispatch` —que NO es de lectura pública: la policy `as_public_read` lista nueve claves y `push_dispatch` no está entre ellas— que `dispatch_event` mande como cabecera y `send-push` exija.
 **El orden del despliegue no es opcional:** (1) migración que empieza a mandar la cabecera, (2) verificar con un pedido real que los avisos siguen llegando, (3) recién entonces el secreto en la función y su despliegue. Al revés —la función exigiendo una cabecera que la base todavía no manda— mata TODAS las notificaciones, en silencio y de golpe. Es el mismo modo de fallo que costó tres días de diagnóstico en agosto, así que este cambio pide ventana de verificación, no un despliegue a ciegas.
 
+### DEUDA-09 · QR alternativo de Yape, para cuando el principal no escanea
+
+**🟡 P2 — el legacy lo tenía, v2 no**
+`tindivo-delivery` (`yape-qr-card.tsx`) permitía **dos** QR por restaurante —principal y alternativo— con pestañas para cambiar de uno a otro. El motivo estaba escrito ahí y es de campo: el QR impreso se moja, se raya o se sube mal escaneado, y en la puerta del cliente no hay segunda oportunidad. Con uno solo, un QR malo deja al motorizado cobrando a mano por número, que es más lento y más propenso a error de tipeo.
+
+**Qué falta en v2**, en este orden:
+1. Columna `qr_url_secondary` en `businesses` (hoy solo existe `qr_url`).
+2. Subida en el panel de admin, junto a la del principal.
+3. Las pestañas en `apps/motorizados/components/order/yape-qr.tsx`, que ya está portado y preparado para recibirlo — el componente y su nota lo mencionan explícitamente.
+
+**Por qué no se hizo ahora:** el resto del portado (pantalla completa, cuadrado a ancho completo, zona de silencio blanca, caída al número) resuelve el grueso de la escaneabilidad sin tocar el esquema ni el admin. Esto es la red de seguridad del caso raro, y pide migración + pantalla nueva.
+
 ---
 
 ## Notas finales
