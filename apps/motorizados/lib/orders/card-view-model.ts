@@ -270,14 +270,27 @@ function buildMoney(input: CardVMInput): MoneyLine | null {
     // El desglose EXISTE en la base desde 0002 y `negocios` ya lo lee; al board
     // del motorizado no llegaba, así que el caso que más necesita el detalle
     // era el único que no podía darlo.
-    const label =
-      order.cash_amount != null && order.yape_amount != null
-        ? `${soles(order.cash_amount)} efectivo + ${soles(order.yape_amount)} Yape`
-        : 'mixto'
+    //
+    // LA CIFRA GRANDE ES LA PARTE EN EFECTIVO, NO EL TOTAL. En un pago mixto el
+    // total no es un número que el motorizado maneje: no cuenta 45, cuenta 30 y
+    // comprueba que entraron 15 por Yape. Enseñar además el total ponía tres
+    // importes seguidos en la misma línea —`S/ 45.00 S/ 30.00 efectivo + S/
+    // 15.00 Yape`— con el primero redundante, porque las dos partes ya suman.
+    if (order.cash_amount != null && order.yape_amount != null) {
+      return {
+        icon: PAYMENT_ICON.pending_mixed ?? 'call_split',
+        amount: soles(order.cash_amount),
+        label: `efectivo + ${soles(order.yape_amount)} Yape`,
+        change,
+        tone: 'neutral',
+      }
+    }
+
+    // Sin desglose no se inventa: se enseña el total y se nombra el método.
     return {
       icon: PAYMENT_ICON.pending_mixed ?? 'call_split',
       amount: soles(total),
-      label,
+      label: 'mixto',
       change,
       tone: 'neutral',
     }

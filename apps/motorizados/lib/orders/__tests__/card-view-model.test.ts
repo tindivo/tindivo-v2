@@ -228,11 +228,21 @@ describe('linea de cobro', () => {
     expect(v.money?.tone).toBe('success')
   })
 
-  it('el mixto desglosa las dos partes', () => {
+  it('el mixto desglosa, y la cifra grande es la parte en EFECTIVO', () => {
+    // NO el total: en un mixto el total no es un numero que el motorizado
+    // maneje, y ponerlo delante dejaba tres importes seguidos en una linea
+    // (`S/ 45.00 S/ 30.00 efectivo + S/ 15.00 Yape`) con el primero redundante.
     const v = vm({
       order: order({ payment_intent: 'pending_mixed', cash_amount: 30, yape_amount: 15 }),
     })
-    expect(v.money?.label).toBe('S/ 30.00 efectivo + S/ 15.00 Yape')
+    expect(v.money?.amount).toBe('S/ 30.00')
+    expect(v.money?.label).toBe('efectivo + S/ 15.00 Yape')
+  })
+
+  it('sin desglose el mixto no se lo inventa', () => {
+    const v = vm({ order: order({ payment_intent: 'pending_mixed' }) })
+    expect(v.money?.amount).toBe('S/ 45.00')
+    expect(v.money?.label).toBe('mixto')
   })
 
   it('el mixto ahora SI calcula vuelto sobre su parte en efectivo', () => {
