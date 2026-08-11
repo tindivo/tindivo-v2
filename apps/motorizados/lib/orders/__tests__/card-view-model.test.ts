@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { hourOf } from '../../format'
 import type { CardOrder } from '../../types'
+import { orderUrgency } from '../../urgency'
 import { buildCardVM, type CardVMInput } from '../card-view-model'
 
 const NOW = Date.parse('2026-08-11T20:00:00.000Z')
@@ -143,34 +144,17 @@ describe('el reloj de la esquina', () => {
     expect(vm().badge).toBeNull()
   })
 
-  // EL RELOJ DE LA COCINA Y EL DE LA ASIGNACION SON DISTINTOS.
-  // `urgent_since` lo sella el cron OrderOverdue (0134) tras
-  // assignment_rules.urgentAfterMinutes sin dueno, y puede dispararse con la
-  // comida todavia en el horno. Sin insignia, la tarjeta salia con borde rojo,
-  // el contador contando tranquilo y nada que explicara el rojo.
-  it('nadie lo toma pero la cocina va bien: el borde rojo se explica', () => {
+  // `urgent_since` NO PINTA NADA EN EL TABLERO.
+  //
+  // Lo sella el cron OrderOverdue (0134) a los 5 min sin dueno — otro reloj,
+  // que salta con la comida todavia en el horno. Ese hecho ya lo avisa un push
+  // vibrante con requireInteraction; anadirle banner, reordenacion y bloqueo
+  // eran tres canales mas para lo mismo, gritando cuando no pasa nada.
+  it('5 minutos sin tomar, con la cocina a tiempo, NO altera la tarjeta', () => {
     const v = vm({ order: order({ urgent_since: new Date(NOW - min(6)).toISOString() }) })
     expect(v.clock).toEqual({ text: '04:00', tone: 'neutral' })
-    expect(v.badge).toEqual({ icon: 'hourglass_top', text: 'Sin tomar', tone: 'danger' })
-    expect(v.tone).toBe('danger')
-  })
-
-  it('si hay algo que decir de la comida, eso manda sobre "Sin tomar"', () => {
-    const v = vm({
-      order: order({ ready_early_used: true, urgent_since: new Date(NOW - min(6)).toISOString() }),
-    })
-    expect(v.badge?.text).toBe('Lista')
-  })
-
-  it('en Mios no se habla de "Sin tomar": ya lo tomaste', () => {
-    const v = vm({
-      variant: 'mine',
-      order: order({
-        status: 'heading_to_restaurant',
-        urgent_since: new Date(NOW - min(6)).toISOString(),
-      }),
-    })
     expect(v.badge).toBeNull()
+    expect(v.tone).toBe('neutral')
   })
 
   it('con la comida encima no hay reloj de cocina ni insignia', () => {
@@ -216,11 +200,18 @@ describe('tono del borde', () => {
     expect(v.tone).toBe('neutral')
   })
 
-  it('en espera usa el MISMO criterio de vencido que la bandeja', () => {
-    // `urgent_since` marcado y ETA aun futura: la lista lo sube al tope y
-    // bloquea las demas, asi que la tarjeta tiene que verse vencida.
-    const v = vm({ order: order({ urgent_since: new Date(NOW - min(5)).toISOString() }) })
-    expect(v.tone).toBe('danger')
+  it('en espera usa el MISMO criterio que la bandeja: el reloj de la cocina', () => {
+    // Si `orderUrgency` lo marca, la lista lo sube al tope, dispara el banner y
+    // bloquea las demas — asi que la tarjeta TIENE que verse urgente. Antes la
+    // tarjeta tenia su propio criterio y el cartel senalaba un borde neutro.
+    const late = order({ estimated_ready_at: new Date(NOW - min(2)).toISOString() })
+    expect(orderUrgency(late, NOW)).toBe('overdue')
+    expect(vm({ order: late }).tone).toBe('danger')
+
+    // Y a la inversa: lo que la bandeja NO marca, la tarjeta no tine.
+    const soon = order({ urgent_since: new Date(NOW - min(30)).toISOString() })
+    expect(orderUrgency(soon, NOW)).not.toBe('overdue')
+    expect(vm({ order: soon }).tone).toBe('neutral')
   })
 
   it('ETA vencida sin ready_early tambien tine la tarjeta', () => {
@@ -342,11 +333,13 @@ describe('linea de cobro', () => {
   })
 })
 
-describe('verbo de accion', () => {
-  it('solo lo lleva Mios', () => {
-    expect(vm({ variant: 'mine', order: order({ status: 'heading_to_restaurant' }) }).action).toBe(
-      'Ir al local',
-    )
+describe('el paso siguiente', () => {
+  it('solo lo lleva Mios, y viene CON icono', () => {
+    // El icono no es adorno: era la unica fila sin el, entre la referencia y el
+    // cobro, asi que flotaba como un segundo titular.
+    const v = vm({ variant: 'mine', order: order({ status: 'heading_to_restaurant' }) })
+    expect(v.action).toEqual({ icon: 'storefront', text: 'Ir al local' })
+
     expect(vm().action).toBeNull()
     expect(vm({ variant: 'team', ownerName: 'Juan' }).action).toBeNull()
     expect(vm({ variant: 'delivered' }).action).toBeNull()
@@ -354,7 +347,7 @@ describe('verbo de accion', () => {
 
   it('en Mios no repite el nombre que ya esta arriba', () => {
     const v = vm({ variant: 'mine', order: order({ status: 'picked_up' }) })
-    expect(v.action).toBe('Entregar pedido')
+    expect(v.action).toEqual({ icon: 'flag', text: 'Entregar pedido' })
   })
 
   it('un preparing tomable ya no cae en un generico "Ver pedido"', () => {

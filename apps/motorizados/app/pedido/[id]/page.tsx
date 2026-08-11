@@ -25,6 +25,7 @@ import { getOptimistic } from '@/lib/offline-queue'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import { postTransition } from '@/lib/transitions'
 import type { OrderDetailResponse } from '@/lib/types'
+import { isOverdue } from '@/lib/urgency'
 
 type Mode =
   | 'loading'
@@ -197,10 +198,11 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
   // Gates de la bandeja en preview (HU-D-013 / HU-D-014).
   const isUpcoming =
     detail.order.appearsInQueueAt != null && Date.parse(detail.order.appearsInQueueAt) > now
-  const isOverdue =
-    detail.order.urgentSince != null ||
-    (detail.order.estimatedReadyAt != null && Date.parse(detail.order.estimatedReadyAt) < now)
-  const blockedByOverdue = mode === 'preview' && board.hasOverdueAvailable && !isOverdue
+  // MISMO helper que la bandeja, no una copia. Esta pantalla repetía la regla
+  // en línea y por tanto se quedaba con la vieja —la que también miraba
+  // `urgent_since`— cada vez que la bandeja cambiaba de criterio.
+  const esUrgente = isOverdue(detail.order.estimatedReadyAt, now)
+  const blockedByOverdue = mode === 'preview' && board.hasOverdueAvailable && !esUrgente
   const blockedByCapacity = mode === 'preview' && board.mySlots >= 3
 
   return (

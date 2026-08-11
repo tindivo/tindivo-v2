@@ -91,8 +91,8 @@ export interface CardVM {
   /** La insignia de estado, a la altura del nombre. */
   badge: Badge | null
   reference: string | null
-  /** Verbo de la acción siguiente. Solo en "Míos". */
-  action: string | null
+  /** El paso siguiente, con su icono. Solo en "Míos". */
+  action: NextStep | null
   money: MoneyLine | null
   /** Motivo del bloqueo. Ocupa el sitio del dinero: si no lo puedes tomar, el
    *  precio no decide nada. */
@@ -115,7 +115,13 @@ export interface CardVMInput {
 }
 
 /**
- * Verbo de la acción siguiente, SOLO para "Míos".
+ * El paso siguiente, SOLO para "Míos".
+ *
+ * VA CON ICONO, y no es adorno. Era la única fila de la tarjeta sin él, entre
+ * la referencia (📍) y el cobro (💵), así que quedaba como una frase suelta
+ * flotando en medio; y a 15px seminegrita competía con el nombre por ser el
+ * titular. Con icono entra en la misma rejilla que las otras dos filas y se lee
+ * como lo que es: una instrucción, no un segundo título.
  *
  * Las otras tres bandejas no lo llevan, y eso resuelve dos defectos de raíz en
  * vez de parchearlos:
@@ -130,10 +136,15 @@ export interface CardVMInput {
  * vive fijo en la identidad de la tarjeta, así que repetirlo aquí era la misma
  * palabra dos veces en la misma tarjeta.
  */
-const ACTION_VERB: Record<string, string> = {
-  heading_to_restaurant: 'Ir al local',
-  waiting_at_restaurant: 'Recoger pedido',
-  picked_up: 'Entregar pedido',
+export interface NextStep {
+  icon: string
+  text: string
+}
+
+const ACTION_VERB: Record<string, NextStep> = {
+  heading_to_restaurant: { icon: 'storefront', text: 'Ir al local' },
+  waiting_at_restaurant: { icon: 'shopping_bag', text: 'Recoger pedido' },
+  picked_up: { icon: 'flag', text: 'Entregar pedido' },
 }
 
 /** Estado de un pedido ajeno. En Equipo no hay reloj que enseñar:
@@ -219,19 +230,14 @@ function buildBadge(input: CardVMInput): Badge | null {
     return { icon: 'priority_high', text: 'Demorado', tone: 'danger' }
   }
 
-  // NADIE LO HA TOMADO, Y LA COCINA VA BIEN.
+  // AQUÍ VIVÍA UN "Sin tomar" que ya no hace falta.
   //
-  // `urgent_since` lo sella el cron `OrderOverdue` (0134) cuando el pedido pasa
-  // `assignment_rules.urgentAfterMinutes` sin dueño — un reloj distinto del de
-  // la cocina, que puede dispararse con la comida todavía en el horno. Sin esta
-  // rama la tarjeta salía con el borde rojo, el contador contando tan tranquilo
-  // y NADA que explicara el rojo.
-  //
-  // Va la última a propósito: si hay algo que decir de la comida, eso manda.
-  if (variant === 'available' && order.urgent_since) {
-    return { icon: 'hourglass_top', text: 'Sin tomar', tone: 'danger' }
-  }
-
+  // Existía para explicar un borde rojo que aparecía con `urgent_since` —el
+  // reloj de la ASIGNACIÓN, a los 5 minutos sin dueño— mientras el contador de
+  // cocina seguía corriendo tan tranquilo. Ese criterio se retiró de
+  // `orderUrgency` (ver su nota): ese hecho ya lo avisa un push vibrante, y no
+  // necesitaba además banner, reordenación y bloqueo. Sin borde rojo que
+  // justificar, la insignia sobra.
   return null
 }
 

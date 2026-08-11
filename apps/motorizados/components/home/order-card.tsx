@@ -227,9 +227,14 @@ export function OrderCard({
         </p>
       )}
 
-      {/* ── 4 · Verbo (solo Míos) ── */}
+      {/* ── 4 · El paso siguiente (solo Míos) ──
+          Con icono, como la referencia y el cobro: las tres filas comparten
+          rejilla y el verbo deja de flotar como un segundo titular. */}
       {vm.action && (
-        <p className="mt-2 font-semibold text-body-lg text-ink tracking-tight">{vm.action}</p>
+        <p className="mt-2 flex items-center gap-1 text-body font-semibold text-ink">
+          <Icon name={vm.action.icon} size={16} className="shrink-0 text-brand" filled />
+          {vm.action.text}
+        </p>
       )}
 
       {/* ── 5 · Cobro, o el motivo del bloqueo en su lugar ── */}
