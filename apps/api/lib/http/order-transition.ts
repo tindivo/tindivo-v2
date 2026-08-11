@@ -31,6 +31,18 @@ const TransitionSchema = z
     /** Backpack slots declared at pickup (clamped 1-3 server-side too). */
     slots: z.number().int().min(1).max(3).optional(),
     paymentReal: PaymentRealSchema.optional(),
+    /**
+     * Cobro REAL de la entrega (0140). El cliente puede pagar distinto de lo
+     * planeado, y estos tres son lo que define lo que de verdad pasó.
+     *
+     * AQUÍ SOLO SE VALIDA LA FORMA. Que las partes sumen el pedido y que el
+     * billete cubra el efectivo lo comprueba `advance_order`, dentro de la
+     * misma transacción que cambia el estado: es dinero, y un cliente que se
+     * salte esta capa no puede colar un descuadre.
+     */
+    cashAmount: z.number().nonnegative().max(10_000).optional(),
+    yapeAmount: z.number().nonnegative().max(10_000).optional(),
+    clientPaysWith: z.number().nonnegative().max(10_000).optional(),
     reason: z.string().max(200).optional(),
     cancelReasonDetail: CancelReasonDetailSchema.optional(),
     reasonCode: z.enum(REJECTION_CODES).optional(),
@@ -91,6 +103,9 @@ export async function handleOrderTransition(
         band: body.band,
         slots: body.slots,
         paymentReal: body.paymentReal,
+        cashAmount: body.cashAmount,
+        yapeAmount: body.yapeAmount,
+        clientPaysWith: body.clientPaysWith,
         reason: body.reason,
         cancelReasonDetail: body.cancelReasonDetail,
         reasonCode: body.reasonCode,

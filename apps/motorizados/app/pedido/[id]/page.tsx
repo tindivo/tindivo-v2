@@ -408,7 +408,9 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
         <DeliverSheet
           detail={detail}
           busy={busy}
-          onConfirm={(paymentReal) => run('deliver', { paymentReal })}
+          // El cobro real viaja entero, no solo el método: los importes son lo
+          // que decide el corte de caja (0140/0141).
+          onConfirm={(payment) => run('deliver', { ...payment })}
           onNoShow={() => run('no_show')}
           onClose={() => setDeliverOpen(false)}
         />
