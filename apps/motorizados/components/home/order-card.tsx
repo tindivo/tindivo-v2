@@ -6,7 +6,12 @@ import { SourceChip } from '@/components/source-chip'
 import { useQueueLeadMinutes } from '@/hooks/use-queue-lead'
 import { getTransferRemaining } from '@/hooks/use-team'
 import { mmss } from '@/lib/format'
-import { buildCardVM, type CardVariant, type Tone } from '@/lib/orders/card-view-model'
+import {
+  buildCardVM,
+  type CardVariant,
+  type StateTone,
+  type Tone,
+} from '@/lib/orders/card-view-model'
 import type { CardOrder, TeamResponse } from '@/lib/types'
 
 type IncomingRequest = TeamResponse['receivedRequests'][number]
@@ -63,13 +68,28 @@ const CLOCK_TONE: Record<Tone, string> = {
   danger: 'text-danger',
 }
 
-/** La insignia, arriba en la cejilla. Pequeña y con caja: es una palabra que se
- *  busca de un vistazo, no un número que se lee. */
-const BADGE_TONE: Record<Tone, string> = {
-  neutral: 'bg-ink/[0.05] text-ink-muted',
-  success: 'bg-success-soft text-success',
-  warning: 'bg-warning-soft text-amber-900',
-  danger: 'bg-danger-soft text-danger',
+/**
+ * La insignia, arriba en la cejilla. Pequeña y con caja: es una palabra que se
+ * busca de un vistazo, no un número que se lee.
+ *
+ * GAMA CATEGÓRICA, Y SIN ÁMBAR NI ROJO. Esos dos son el idioma del reloj en
+ * esta tarjeta —"se te está pasando", "ya se pasó"— y son lo único que
+ * significa urgencia. Un estado normal pintado de ámbar sería indistinguible de
+ * una alarma y el color dejaría de querer decir nada. Aquí el color solo
+ * identifica la fase.
+ *
+ * Los pares 50/800 no son un capricho: todos quedan por encima de 8:1 sobre su
+ * propio fondo (el naranja, con los tokens de marca, en ~5,9:1). Bien por
+ * encima del mínimo AA, que es justo lo que hace falta en una pantalla que se
+ * lee en la calle.
+ */
+const BADGE_TONE: Record<StateTone, string> = {
+  idle: 'bg-ink/[0.05] text-ink-muted',
+  ready: 'bg-emerald-50 text-emerald-800',
+  transit: 'bg-sky-50 text-sky-800',
+  onsite: 'bg-brand-soft text-brand-dark',
+  carrying: 'bg-violet-50 text-violet-800',
+  done: 'bg-ink/[0.05] text-ink-muted',
 }
 
 function IncomingRequestStrip({ request, now }: { request: IncomingRequest; now: number }) {

@@ -72,35 +72,51 @@ export interface Clock {
   ready: boolean
 }
 
+/**
+ * El color del estado es CATEGÓRICO, no semántico. Nombra la FASE, no la
+ * gravedad.
+ *
+ * Y por eso es un tipo aparte de `Tone`: en esta tarjeta el ámbar y el rojo son
+ * el idioma del reloj —"se te está pasando", "ya se pasó"—, y son los únicos
+ * dos colores que significan urgencia. Si un estado normal usara cualquiera de
+ * los dos, una fase corriente sería indistinguible de una alarma, y el color
+ * dejaría de querer decir nada. Un estado nunca es una alarma: es un hecho.
+ *
+ * Los nombres son de fase a propósito (`transit`, `onsite`, `carrying`), no de
+ * color: el view-model no sabe de CSS y la gama se puede reafinar en el
+ * componente sin tocar esto.
+ */
+export type StateTone = 'idle' | 'ready' | 'transit' | 'onsite' | 'carrying' | 'done'
+
 export interface Badge {
   icon: string
   text: string
-  tone: Tone
+  tone: StateTone
 }
 
 /**
  * El estado del pedido, tal cual, por `status`.
  *
- * TONO NEUTRO EN CASI TODOS a propósito: un estado es un hecho, no una alarma.
- * La alarma la da el reloj, y solo cuando baja de cero. La única excepción es
- * "Lista", que no es alarma sino buena noticia.
+ * La gama sigue el viaje: gris mientras no hay nada que hacer, verde cuando
+ * toca ir, azul de camino, naranja al llegar al mostrador, violeta con la
+ * comida encima, gris otra vez al cerrar.
  *
  * Equipo habla en TERCERA persona porque el nombre de la tarjeta es el del
  * compañero, no el del cliente.
  */
 const ORDER_STATE: Record<string, Badge> = {
-  preparing: { icon: 'restaurant', text: 'En cocina', tone: 'neutral' },
-  waiting_driver: { icon: 'check_circle', text: 'Lista', tone: 'success' },
-  heading_to_restaurant: { icon: 'directions_bike', text: 'Voy al local', tone: 'neutral' },
-  waiting_at_restaurant: { icon: 'storefront', text: 'En el local', tone: 'neutral' },
-  picked_up: { icon: 'delivery_dining', text: 'En reparto', tone: 'neutral' },
-  delivered: { icon: 'check_circle', text: 'Entregado', tone: 'neutral' },
+  preparing: { icon: 'restaurant', text: 'En cocina', tone: 'idle' },
+  waiting_driver: { icon: 'check_circle', text: 'Lista', tone: 'ready' },
+  heading_to_restaurant: { icon: 'directions_bike', text: 'Voy al local', tone: 'transit' },
+  waiting_at_restaurant: { icon: 'storefront', text: 'En el local', tone: 'onsite' },
+  picked_up: { icon: 'delivery_dining', text: 'En reparto', tone: 'carrying' },
+  delivered: { icon: 'check_circle', text: 'Entregado', tone: 'done' },
 }
 
 const TEAM_STATE: Record<string, Badge> = {
-  heading_to_restaurant: { icon: 'directions_bike', text: 'Va al local', tone: 'neutral' },
-  waiting_at_restaurant: { icon: 'storefront', text: 'En el local', tone: 'neutral' },
-  picked_up: { icon: 'delivery_dining', text: 'En reparto', tone: 'neutral' },
+  heading_to_restaurant: { icon: 'directions_bike', text: 'Va al local', tone: 'transit' },
+  waiting_at_restaurant: { icon: 'storefront', text: 'En el local', tone: 'onsite' },
+  picked_up: { icon: 'delivery_dining', text: 'En reparto', tone: 'carrying' },
 }
 
 /**

@@ -161,7 +161,7 @@ describe('el reloj', () => {
       order: order({ status: 'picked_up', estimated_ready_at: null }),
     })
     expect(v.clock).toBeNull()
-    expect(v.badge).toEqual({ icon: 'delivery_dining', text: 'En reparto', tone: 'neutral' })
+    expect(v.badge).toEqual({ icon: 'delivery_dining', text: 'En reparto', tone: 'carrying' })
   })
 
   it('en el historial la hora va en la esquina y la insignia la rotula', () => {
@@ -171,7 +171,7 @@ describe('el reloj', () => {
     const at = '2026-08-11T20:45:00.000Z'
     const v = vm({ variant: 'delivered', order: order({ status: 'delivered', delivered_at: at }) })
     expect(v.clock).toEqual({ text: hourOf(at), tone: 'neutral', ready: false })
-    expect(v.badge).toEqual({ icon: 'check_circle', text: 'Entregado', tone: 'neutral' })
+    expect(v.badge).toEqual({ icon: 'check_circle', text: 'Entregado', tone: 'done' })
   })
 })
 
@@ -331,12 +331,12 @@ describe('la insignia es el ESTADO DEL PEDIDO', () => {
     expect(vm({ order: order({ status: 'preparing' }) }).badge).toEqual({
       icon: 'restaurant',
       text: 'En cocina',
-      tone: 'neutral',
+      tone: 'idle',
     })
     expect(vm({ order: order({ status: 'waiting_driver' }) }).badge).toEqual({
       icon: 'check_circle',
       text: 'Lista',
-      tone: 'success',
+      tone: 'ready',
     })
   })
 
@@ -395,8 +395,38 @@ describe('la alarma solo por debajo de cero', () => {
   it('el estado NO mueve el borde: un estado es un hecho, no una alarma', () => {
     // "Lista" es verde en la insignia y aun asi el borde sigue neutro.
     const v = vm({ order: order({ status: 'waiting_driver' }) })
-    expect(v.badge?.tone).toBe('success')
+    expect(v.badge?.tone).toBe('ready')
     expect(v.tone).toBe('neutral')
+  })
+
+  // EL ESTADO NUNCA HABLA EL IDIOMA DE LA ALARMA.
+  //
+  // En esta tarjeta el ambar y el rojo significan urgencia y son SOLO del
+  // reloj. La gama del estado es categorica —nombra la fase— y es un tipo
+  // aparte justamente para que nadie pueda meterle un tono de alarma sin que
+  // TypeScript se queje. Este test cubre lo que el tipo no puede: que ningun
+  // estado, en ninguna variante, acabe pintado como una urgencia.
+  it('ningun estado usa un tono de alarma', () => {
+    const alarma = ['warning', 'danger']
+    const casos: Array<[string, 'available' | 'mine' | 'team' | 'delivered']> = [
+      ['preparing', 'available'],
+      ['waiting_driver', 'available'],
+      ['heading_to_restaurant', 'mine'],
+      ['waiting_at_restaurant', 'mine'],
+      ['picked_up', 'mine'],
+      ['heading_to_restaurant', 'team'],
+      ['waiting_at_restaurant', 'team'],
+      ['picked_up', 'team'],
+      ['delivered', 'delivered'],
+    ]
+    for (const [status, variant] of casos) {
+      const v = vm({
+        variant,
+        ownerName: 'Juan',
+        order: order({ status, delivered_at: new Date(NOW).toISOString() }),
+      })
+      expect(alarma, `${variant}/${status}`).not.toContain(v.badge?.tone)
+    }
   })
 
   it('pasado cero, el reloj enciende el borde', () => {
