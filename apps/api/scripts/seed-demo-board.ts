@@ -265,20 +265,45 @@ const rows = [
   },
 ]
 
+/**
+ * Borra TODOS los pedidos de los negocios e2e, no solo los del set de demo.
+ *
+ * NO ES EXCESO DE CELO. Los tests de integración crean pedidos con
+ * `seedContraentregaOrder` —short_id aleatorio, asignados al motorizado e2e— y
+ * NO los limpian al terminar. Cada corrida de la suite deja unos cuantos, y se
+ * acumulan: una revisión encontró 154, con 49 en reparto y 37 entregados. El
+ * motorizado abría la app y veía su bandeja y su historial llenos de pedidos
+ * con códigos que no reconocía, mezclados con los de demo.
+ *
+ * Es la base LOCAL y todo lo que hay dentro es de prueba, así que barrer por
+ * negocio es lo correcto y deja el tablero de verdad limpio.
+ */
 async function wipe() {
-  const { data } = await db.from('orders').select('id').like('short_id', `${PREFIX}%`)
+  const negocios = [E2E.BUSINESS_ID, E2E.BUSINESS_2_ID]
+  const { data } = await db.from('orders').select('id').in('business_id', negocios)
   const ids = (data ?? []).map((r) => r.id)
   if (ids.length === 0) return 0
 
   // Los entregados devengaron cargos y las FK los sujetan: se van primero.
-  for (const [table, col] of [
-    ['business_charges', 'order_id'],
-    ['order_transfer_requests', 'order_id'],
-    ['domain_events', 'aggregate_id'],
-  ] as const) {
-    await db.from(table).delete().in(col, ids)
+  // `.in()` en lotes porque una URL de PostgREST con miles de UUID se pasa de
+  // largo y falla con un 414 poco descriptivo.
+  const LOTE = 200
+  for (let i = 0; i < ids.length; i += LOTE) {
+    const lote = ids.slice(i, i + LOTE)
+    for (const [table, col] of [
+      ['business_charges', 'order_id'],
+      ['order_transfer_requests', 'order_id'],
+      ['domain_events', 'aggregate_id'],
+    ] as const) {
+      await db.from(table).delete().in(col, lote)
+    }
+    await db.from('orders').delete().in('id', lote)
   }
-  await db.from('orders').delete().in('id', ids)
+
+  // Los ciclos de caja quedarían huérfanos: sin pedidos que rendir, la pantalla
+  // de efectivo enseñaría fajos que ya no existen.
+  await db.from('cash_settlements').delete().in('business_id', negocios)
+
   return ids.length
 }
 
