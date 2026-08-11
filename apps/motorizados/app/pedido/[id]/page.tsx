@@ -5,12 +5,12 @@ import { BottomActionBar, Button, Icon, ScreenHeader } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { use, useCallback, useEffect, useState } from 'react'
 import { BusinessCard } from '@/components/order/business-card'
+import { ChangeHeadsUp } from '@/components/order/change-heads-up'
 import { DeliverSheet } from '@/components/order/deliver-sheet'
 import { DeliveredScreen } from '@/components/order/delivered-screen'
 import { DestinationCard } from '@/components/order/destination-card'
 import { IncidentSheet } from '@/components/order/incident-sheet'
 import { MomentPickedUp } from '@/components/order/moment-picked-up'
-import { MoneyCard } from '@/components/order/money-card'
 import { OrderDetail } from '@/components/order/order-detail'
 import { PickupSheet } from '@/components/order/pickup-sheet'
 import { PreviewSection } from '@/components/order/preview-section'
@@ -212,11 +212,25 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
       <div className="flex-1 px-4 pt-1.5">
         {mode === 'preview' && <PreviewSection detail={detail} now={now} />}
 
+        {/* CADA PASO ENSEÑA LO QUE ESE PASO PERMITE HACER.
+            Los tres momentos pintaban casi lo mismo, así que la pantalla no
+            ayudaba a distinguir en cuál estabas — y la tarjeta del board ya da
+            el preview completo del pedido, así que repetirlo aquí no aporta.
+
+            Lo que se cayó de cada uno, y por qué:
+              · «Voy al local» ya no enseña el COBRO. Faltan veinte minutos para
+                tocar dinero y no hay nada que hacer con ese número mientras
+                conduces. El destino SÍ se queda: saber si la entrega cae al
+                lado o al otro extremo del pueblo cambia cómo te organizas, y
+                por eso `DestinationCard` se pensó para verse ya en el trayecto.
+              · «En el local» pierde el destino y el bloque de cobro entero, y
+                gana lo único de dinero que se puede resolver desde el mostrador:
+                conseguir el vuelto. Ahí lo que importa es qué recoges —por eso
+                el detalle se abre solo— y cuánto llevas esperando. */}
         {mode === 'heading' && (
           <>
             <StatusHero detail={detail} />
             <BusinessCard business={detail.business} />
-            <MoneyCard detail={detail} />
             <DestinationCard detail={detail} />
           </>
         )}
@@ -227,9 +241,8 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
             {detail.order.waitingAtRestaurantAt && (
               <WaitTimer since={detail.order.waitingAtRestaurantAt} now={now} />
             )}
+            <ChangeHeadsUp detail={detail} />
             <BusinessCard business={detail.business} />
-            <MoneyCard detail={detail} />
-            <DestinationCard detail={detail} />
           </>
         )}
 
