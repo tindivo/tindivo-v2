@@ -44,29 +44,41 @@ export function MomentPickedUp({
     <div>
       <CustomerCard order={order} businessName={detail.business?.name} />
 
+      {/* ÁMBAR OSCURO SOBRE ÁMBAR CLARO, no `text-warning`.
+          `--color-warning` (#f59e0b) sobre `warning-soft` da ~2:1 — el bloque
+          se veía como un borrón. Y con el botón deshabilitado encima
+          (`opacity-50`) el texto quedaba en ~1,4:1, o sea prácticamente
+          invisible justo mientras corre la cuenta atrás que hay que leer. */}
       {order.arrivedAtCustomerAt && (
-        <Card className="mt-3 border-warning/20 bg-warning-soft p-4">
-          <div className="flex items-center gap-2 text-warning font-semibold text-body">
-            <Icon name="person_pin_circle" size={20} className="text-warning/70" />
+        <Card className="mt-3 border-warning/30 bg-warning-soft p-4 shadow-none">
+          <div className="flex items-center gap-2 font-semibold text-body text-amber-900">
+            <Icon name="person_pin_circle" size={20} filled />
             Llegada registrada al domicilio
           </div>
-          <p className="mt-1 text-caption text-warning/80">
+          <p className="mt-1 text-caption text-amber-900/85">
             {canNoShow
               ? 'Se ha cumplido la ventana de espera de 5 minutos.'
               : `Esperando respuesta del cliente (${countdownFormatted} restante).`}
           </p>
 
+          {/* La cuenta atrás en mono y tabular: cambia cada segundo, y sin
+              ancho fijo el botón entero baila. */}
           <Button
             size="sm"
             variant="ghost"
             disabled={!canNoShow || busy}
             onClick={onNoShow}
-            className="mt-3 w-full border border-warning/30 text-warning hover:bg-warning/10 disabled:opacity-50"
+            className="mt-3 w-full border border-amber-900/25 bg-white/60 text-amber-900 hover:bg-white disabled:opacity-100 disabled:text-amber-900/70"
           >
-            <Icon name="report_problem" size={18} />
-            {canNoShow
-              ? 'Reportar cliente no aparece (No-show)'
-              : `Cliente no responde (${countdownFormatted})`}
+            <Icon name={canNoShow ? 'person_off' : 'schedule'} size={18} />
+            {canNoShow ? (
+              'Reportar que no apareció'
+            ) : (
+              <>
+                Cliente no responde{' '}
+                <span className="font-mono tabular-nums">{countdownFormatted}</span>
+              </>
+            )}
           </Button>
         </Card>
       )}
@@ -123,8 +135,18 @@ export function MomentPickedUp({
         <CollectCard detail={detail} />
       </div>
 
-      <Button type="button" variant="ghost" size="sm" onClick={onReport} className="mt-4 w-full">
-        <Icon name="report_problem" size={18} />
+      {/* EN GRIS, NO EN ROJO. Es una salida de emergencia que casi nunca se
+          usa; en rojo era una alarma permanente al pie de una pantalla que
+          termina bien el 99% de las veces, y compite con el rojo que sí
+          significa algo (el reloj pasado, el no-show armado). */}
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={onReport}
+        className="mt-4 w-full text-ink-muted"
+      >
+        <Icon name="flag" size={18} />
         Reportar un problema
       </Button>
     </div>

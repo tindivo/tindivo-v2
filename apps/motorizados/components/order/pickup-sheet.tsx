@@ -1,6 +1,6 @@
 'use client'
 
-import { BottomSheet, Button, Icon } from '@tindivo/ui'
+import { BottomSheet, Button, cn, Icon } from '@tindivo/ui'
 import { useState } from 'react'
 import { soles } from '@/lib/format'
 import type { OrderDetailResponse } from '@/lib/types'
@@ -50,13 +50,15 @@ export function PickupSheet({
       </div>
 
       <div className="flex-1 overflow-y-auto px-5">
+        {/* `text-warning` (#f59e0b) sobre `warning-soft` da ~2:1: el aviso se
+            leía como un borrón amarillo. El ámbar oscuro pasa de 8:1. */}
         {premature && (
-          <div className="mb-4 flex items-start gap-2 rounded-[14px] bg-warning-soft px-3.5 py-2.5 text-caption text-warning">
-            <span className="mt-0.5 shrink-0">
-              <Icon name="schedule" size={20} />
+          <div className="mb-4 flex items-start gap-2.5 rounded-[14px] bg-warning-soft px-3.5 py-2.5 text-caption text-amber-900">
+            <Icon name="schedule" size={20} filled className="mt-px shrink-0" />
+            <span>
+              Aún faltan {minutesEarly} min para la hora estimada. Confirma con el local que es tu
+              pedido.
             </span>
-            Aún faltan {minutesEarly} min para la hora estimada. Confirma con el local que es tu
-            pedido.
           </div>
         )}
 
@@ -73,25 +75,42 @@ export function PickupSheet({
           </span>
         </div>
 
-        <span className="mb-2 block font-mono text-xs font-semibold uppercase tracking-wide text-ink-muted">
+        {/* La pregunta es lo que decide el bloqueo de la mochila, así que se
+            lee como pregunta y no como microetiqueta: en versalita de 10px
+            competía con las opciones que la contestan. */}
+        <p className="mb-2 font-semibold text-body text-ink">
           ¿Cuánto espacio ocupa en la mochila?
-        </span>
+        </p>
         <div className="flex gap-2">
-          {SLOT_OPTIONS.map((s) => (
-            <button
-              key={s.value}
-              type="button"
-              onClick={() => setSlots(s.value)}
-              className={`flex-1 rounded-2xl border py-3 text-center transition-colors ${
-                slots === s.value
-                  ? 'border border-brand bg-brand/5 text-brand-dark ring-2 ring-brand'
-                  : 'border border-ink/10 bg-card text-ink-muted hover:bg-surface'
-              }`}
-            >
-              <span className="block text-body font-semibold">{s.label}</span>
-              <span className="mt-0.5 block text-meta opacity-70">{s.hint}</span>
-            </button>
-          ))}
+          {SLOT_OPTIONS.map((s) => {
+            const active = slots === s.value
+            return (
+              <button
+                key={s.value}
+                type="button"
+                aria-pressed={active}
+                onClick={() => setSlots(s.value)}
+                className={cn(
+                  'flex-1 rounded-2xl py-3 text-center transition-colors',
+                  active
+                    ? 'border-2 border-brand bg-brand-soft text-brand-dark'
+                    : 'border border-ink/10 bg-card text-ink hover:bg-surface',
+                )}
+              >
+                <span className="block text-body font-semibold">{s.label}</span>
+                {/* `text-ink-muted` en vez de heredar el gris con `opacity-70`:
+                    encima de un botón ya atenuado, la pista quedaba en ~2:1. */}
+                <span
+                  className={cn(
+                    'mt-0.5 block text-meta',
+                    active ? 'text-brand-dark/80' : 'text-ink-muted',
+                  )}
+                >
+                  {s.hint}
+                </span>
+              </button>
+            )
+          })}
         </div>
       </div>
 
