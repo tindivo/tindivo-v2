@@ -42,6 +42,8 @@ export interface BoardOrder {
   appears_in_queue_at: string | null
   occupancy_slots: number
   waiting_at_restaurant_at: string | null
+  /** Cuándo recogiste. Es el origen del reloj de reparto. Ver `CardOrder`. */
+  picked_up_at: string | null
   delivered_at: string | null
   client_pays_with: number | null
   change_to_give: number | null
@@ -106,6 +108,15 @@ export interface CardOrder {
   estimated_ready_at: string | null
   ready_early_used: boolean | null
   urgent_since: string | null
+  /**
+   * Cuándo se recogió el pedido. Es el origen del RELOJ DE REPARTO: con la
+   * comida encima el reloj de cocina ya no dice nada, pero sí importa cuánto
+   * lleva esperando el cliente — y con dos o tres pedidos en la mochila, cuál
+   * lleva más tiempo rodando es justo lo que decide a quién entregar primero.
+   *
+   * No viaja en los pedidos de equipo, como el resto de los tiempos.
+   */
+  picked_up_at: string | null
   delivered_at: string | null
   business: DriverBusiness | null
 }

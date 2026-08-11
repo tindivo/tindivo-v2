@@ -201,14 +201,41 @@ export interface CardVMInput {
  * cliente—.
  */
 
-/** Milisegundos que faltan (negativo = ya pasó), o `null` si no hay reloj. */
+/**
+ * Milisegundos que faltan para que la comida esté (negativo = ya pasó), o
+ * `null` si ese reloj no aplica.
+ *
+ * Con la comida ya recogida devuelve `null` a propósito: el reloj de cocina
+ * dejó de significar nada. Ese momento tiene SU PROPIO reloj —ver
+ * `deliveryElapsedMs`—, y son dos cosas distintas.
+ */
 function remainingMs(input: CardVMInput): number | null {
   const { order, now, variant } = input
   if (variant === 'team' || variant === 'delivered') return null
-  // Con la comida encima el reloj de cocina ya no dice nada.
   if (order.status === 'picked_up') return null
   if (order.estimated_ready_at == null) return null
   return Date.parse(order.estimated_ready_at) - now
+}
+
+/**
+ * Milisegundos que llevas con el pedido encima, o `null` si no aplica.
+ *
+ * EL RELOJ NO SE APAGA NUNCA. Al recoger, el contador de cocina se acaba pero
+ * el cliente empieza a esperar, y eso importa: con dos o tres pedidos en la
+ * mochila, cuál lleva más tiempo rodando es exactamente lo que decide a quién
+ * entregar primero.
+ *
+ * NO ALARMA, Y ES DELIBERADO. `app_settings.timers` no define ningún umbral de
+ * entrega tardía —`noShowWaitMinutes` es para esperar en la puerta, no para el
+ * trayecto—, así que este reloj cuenta en negro y no se pone rojo. Inventarle
+ * un límite sería fabricar una regla de negocio que nadie ha decidido. El día
+ * que exista el ajuste, aquí es donde se enchufa.
+ */
+function deliveryElapsedMs(input: CardVMInput): number | null {
+  const { order, now, variant } = input
+  if (variant !== 'mine' || order.status !== 'picked_up') return null
+  if (order.picked_up_at == null) return null
+  return now - Date.parse(order.picked_up_at)
 }
 
 /**
@@ -249,6 +276,13 @@ function buildClock(input: CardVMInput): Clock | null {
     return order.delivered_at
       ? { text: hourOf(order.delivered_at), tone: 'neutral', ready: false }
       : null
+  }
+
+  // Con la comida encima manda el reloj de reparto. Cuenta hacia arriba y en
+  // negro: no hay umbral de entrega tardía que respetar (ver `deliveryElapsedMs`).
+  const delivering = deliveryElapsedMs(input)
+  if (delivering != null) {
+    return { text: mmss(delivering / 1000), tone: 'neutral', ready: false }
   }
 
   const ms = remainingMs(input)

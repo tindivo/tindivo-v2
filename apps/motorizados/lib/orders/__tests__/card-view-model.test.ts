@@ -27,6 +27,7 @@ function order(overrides: Partial<CardOrder> = {}): CardOrder {
     estimated_ready_at: new Date(NOW + min(4)).toISOString(),
     ready_early_used: false,
     urgent_since: null,
+    picked_up_at: null,
     delivered_at: null,
     business: {
       id: 'biz_1',
@@ -144,10 +145,41 @@ describe('el reloj', () => {
     expect(v.tone).toBe('neutral')
   })
 
-  it('con la comida encima no hay reloj de cocina', () => {
-    const v = vm({ variant: 'mine', order: order({ status: 'picked_up' }) })
-    expect(v.clock).toBeNull()
+  // EL RELOJ NO SE APAGA NUNCA. Al recoger se acaba el contador de cocina, pero
+  // empieza a esperar el cliente — y con dos o tres pedidos en la mochila, cuál
+  // lleva mas tiempo rodando es lo que decide a quien entregar primero.
+  it('en reparto el reloj cambia de sentido: cuenta lo que lleva rodando', () => {
+    const v = vm({
+      variant: 'mine',
+      order: order({
+        status: 'picked_up',
+        picked_up_at: new Date(NOW - min(7)).toISOString(),
+        // ETA de cocina muy pasada: NO es la que se cuenta aqui.
+        estimated_ready_at: new Date(NOW - min(40)).toISOString(),
+      }),
+    })
+    expect(v.clock).toEqual({ text: '07:00', tone: 'neutral', ready: false })
     expect(v.badge?.text).toBe('En reparto')
+  })
+
+  // NO ALARMA, y es deliberado: `app_settings.timers` no define ningun umbral
+  // de entrega tardia, asi que ponerlo rojo seria inventar una regla de negocio.
+  it('el reloj de reparto no se pone rojo por muy largo que sea', () => {
+    const v = vm({
+      variant: 'mine',
+      order: order({
+        status: 'picked_up',
+        picked_up_at: new Date(NOW - min(90)).toISOString(),
+      }),
+    })
+    expect(v.clock?.text).toBe('1h 30m')
+    expect(v.clock?.tone).toBe('neutral')
+    expect(v.tone).toBe('neutral')
+  })
+
+  it('sin hora de recojo no se inventa un reloj', () => {
+    const v = vm({ variant: 'mine', order: order({ status: 'picked_up', picked_up_at: null }) })
+    expect(v.clock).toBeNull()
   })
 
   it('en Equipo hay insignia de estado pero NO reloj: no viaja', () => {

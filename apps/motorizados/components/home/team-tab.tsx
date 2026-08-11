@@ -57,6 +57,11 @@ function teamOrderToCard(o: TeamResponse['teamOrders'][number]): CardOrder {
     estimated_ready_at: null,
     ready_early_used: null,
     urgent_since: o.urgentSince,
+    // Ningún tiempo del pedido ajeno viaja, tampoco este. Consecuencia visible:
+    // una tarjeta de Equipo "En reparto" no lleva reloj. Si algún día conviene
+    // saber cuánto lleva rodando el pedido de un compañero antes de pedírselo,
+    // el endpoint tendría que mandarlo.
+    picked_up_at: null,
     delivered_at: null,
     business: {
       id: '',
