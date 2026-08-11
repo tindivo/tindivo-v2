@@ -71,11 +71,15 @@ const TONE_BORDER: Record<Tone, string> = {
  * El reloj, a la altura del nombre. Lleva el peso porque es el dato que decide
  * si te da tiempo. Sin caja: el tamaño y el color ya lo destacan, y una píldora
  * ahí compite con el nombre.
+ *
+ * NEGRO O ROJO, SIN ESCALONES INTERMEDIOS. En negro (`ink`, no `ink-muted`)
+ * porque es el número que se lee de lejos y merece los 15:1 de contraste; en
+ * rojo en cuanto se pasa de cero. Cuánto se pasó lo dice el propio número.
  */
 const CLOCK_TONE: Record<Tone, string> = {
-  neutral: 'text-ink-muted',
-  success: 'text-ink-muted',
-  warning: 'text-amber-800',
+  neutral: 'text-ink',
+  success: 'text-ink',
+  warning: 'text-danger',
   danger: 'text-danger',
 }
 
@@ -249,6 +253,16 @@ export function OrderCard({
                 comida: su visto bueno pertenece aquí. */}
             {vm.clock.ready && (
               <Icon name="check_circle" size={15} filled className="text-success" />
+            )}
+            {/* EL SIGNO NO ES ADORNO: hace que la alarma no dependa del color,
+                que es lo primero que se pierde con el sol de frente o con una
+                pantalla barata. Va estático a propósito — el número ya cambia
+                cada segundo y es lo único que se mueve solo en la tarjeta;
+                animarlo encima sería ruido, y repintar cada 2s durante todo un
+                turno se paga en batería. El parpadeo vive en el banner, uno
+                solo en toda la pantalla. */}
+            {vm.clock.tone === 'danger' && (
+              <Icon name="priority_high" size={16} filled className="text-danger" />
             )}
             <span
               className={cn(

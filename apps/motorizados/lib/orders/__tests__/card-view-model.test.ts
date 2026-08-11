@@ -96,37 +96,33 @@ describe('el reloj', () => {
     expect(v.badge?.text).toBe('Lista')
   })
 
-  it('lista y sin recoger: cuenta hacia arriba, en ambar', () => {
-    const v = vm({
+  // DOS ESTADOS Y NO TRES. El escalon ambar intermedio se quito: el numero ya
+  // lleva el grado (`00:45` vs `14:20`), y el ambar codificaba un umbral
+  // —queueLeadMinutes— que el motorizado no conoce y por tanto no puede
+  // interpretar.
+  it('rojo en cuanto se pasa, sin escalon intermedio', () => {
+    const apenas = vm({
       order: order({
         ready_early_used: true,
         estimated_ready_at: new Date(NOW - min(3)).toISOString(),
       }),
     })
-    expect(v.clock?.text).toBe('03:00')
-    expect(v.clock?.tone).toBe('warning')
-  })
-
-  it('pasado queueLeadMinutes escala a rojo', () => {
-    const v = vm({
+    const mucho = vm({
       order: order({
         ready_early_used: true,
         estimated_ready_at: new Date(NOW - min(14)).toISOString(),
       }),
     })
-    expect(v.clock?.text).toBe('14:00')
-    expect(v.clock?.tone).toBe('danger')
+    expect(apenas.clock).toEqual({ text: '03:00', tone: 'danger', ready: false })
+    expect(mucho.clock).toEqual({ text: '14:00', tone: 'danger', ready: false })
   })
 
-  it('el umbral sale de app_settings, no del codigo', () => {
-    const late = order({
-      ready_early_used: true,
-      estimated_ready_at: new Date(NOW - min(14)).toISOString(),
-    })
-    expect(vm({ order: late, queueLeadMinutes: 20 }).clock?.tone).toBe('warning')
+  it('negro mientras quede tiempo, con la comida marcada o sin marcar', () => {
+    expect(vm().clock?.tone).toBe('neutral')
+    expect(vm({ order: order({ ready_early_used: true }) }).clock?.tone).toBe('neutral')
   })
 
-  it('cocina demorada, sin marcar lista: rojo directo', () => {
+  it('cocina demorada, sin marcar lista: tambien rojo', () => {
     const v = vm({
       order: order({
         ready_early_used: false,
@@ -191,28 +187,46 @@ describe('tono del borde', () => {
     expect(v.tone).toBe('neutral')
   })
 
-  it('en espera usa el MISMO criterio que la bandeja: el reloj de la cocina', () => {
+  it('lo que la bandeja marca, la tarjeta lo enseña — en el RELOJ', () => {
     // Si `orderUrgency` lo marca, la lista lo sube al tope, dispara el banner y
-    // bloquea las demas — asi que la tarjeta TIENE que verse urgente. Antes la
-    // tarjeta tenia su propio criterio y el cartel senalaba un borde neutro.
+    // bloquea las demas, asi que la tarjeta TIENE que verse urgente. Antes tenia
+    // su propio criterio y el cartel senalaba una tarjeta neutra. El canal es
+    // ahora el reloj, que enrojece exactamente en el mismo instante.
     const late = order({ estimated_ready_at: new Date(NOW - min(2)).toISOString() })
     expect(orderUrgency(late, NOW)).toBe('overdue')
-    expect(vm({ order: late }).tone).toBe('danger')
+    expect(vm({ order: late }).clock?.tone).toBe('danger')
 
     // Y a la inversa: lo que la bandeja NO marca, la tarjeta no tine.
     const soon = order({ urgent_since: new Date(NOW - min(30)).toISOString() })
     expect(orderUrgency(soon, NOW)).not.toBe('overdue')
-    expect(vm({ order: soon }).tone).toBe('neutral')
+    expect(vm({ order: soon }).clock?.tone).toBe('neutral')
   })
 
-  it('ETA vencida sin ready_early tambien tine la tarjeta', () => {
-    const v = vm({
-      order: order({
-        ready_early_used: false,
-        estimated_ready_at: new Date(NOW - min(2)).toISOString(),
-      }),
+  // EL BORDE ES EL SEGUNDO ESCALON, con umbral propio: espera a que la demora
+  // cruce queueLeadMinutes. Si se encendiera a la vez que el reloj, un pedido
+  // recien pasado gritaria igual que uno de veinte minutos.
+  it('el borde espera al margen de cola; el reloj no', () => {
+    const apenas = order({
+      ready_early_used: true,
+      estimated_ready_at: new Date(NOW - min(3)).toISOString(),
     })
-    expect(v.tone).toBe('danger')
+    expect(vm({ order: apenas }).clock?.tone).toBe('danger')
+    expect(vm({ order: apenas }).tone).toBe('neutral')
+
+    const pasado = order({
+      ready_early_used: true,
+      estimated_ready_at: new Date(NOW - min(14)).toISOString(),
+    })
+    expect(vm({ order: pasado }).tone).toBe('danger')
+  })
+
+  it('el umbral del borde sale de app_settings, no del codigo', () => {
+    const late = order({
+      ready_early_used: true,
+      estimated_ready_at: new Date(NOW - min(14)).toISOString(),
+    })
+    expect(vm({ order: late, queueLeadMinutes: 10 }).tone).toBe('danger')
+    expect(vm({ order: late, queueLeadMinutes: 20 }).tone).toBe('neutral')
   })
 
   it('en Mios el criterio de vencido de la bandeja NO aplica', () => {
@@ -436,14 +450,23 @@ describe('la alarma solo por debajo de cero', () => {
     }
   })
 
-  it('pasado cero, el reloj enciende el borde', () => {
-    const v = vm({
+  it('pasado cero se enciende el reloj; el borde solo si la demora es seria', () => {
+    const recien = vm({
       order: order({
         status: 'waiting_driver',
         estimated_ready_at: new Date(NOW - min(1)).toISOString(),
       }),
     })
-    expect(v.tone).toBe('danger')
+    expect(recien.clock?.tone).toBe('danger')
+    expect(recien.tone).toBe('neutral')
+
+    const seria = vm({
+      order: order({
+        status: 'waiting_driver',
+        estimated_ready_at: new Date(NOW - min(15)).toISOString(),
+      }),
+    })
+    expect(seria.tone).toBe('danger')
   })
 })
 

@@ -225,9 +225,22 @@ function escalation(input: CardVMInput, ms: number): 'warning' | 'danger' {
 /**
  * El reloj. Siempre que haya uno, marque o no la cajera.
  *
- * MIENTRAS NO BAJE DE CERO, NO HAY ALARMA. El tono es neutro hasta que el
- * contador se pasa; recién ahí escala. Un reloj que se pone de color con seis
- * minutos por delante enseña a ignorar el color.
+ * DOS ESTADOS Y NO TRES: negro mientras queda tiempo, rojo en cuanto se pasa.
+ *
+ * Tenía un escalón ámbar intermedio —pasado de cero pero dentro del margen de
+ * cola— y se quitó por dos razones:
+ *
+ *   1. EL NÚMERO YA LLEVA EL GRADO. `00:45` y `14:20` dicen solos cuánto va de
+ *      retraso, así que el color no tiene que codificar cuánto: le basta con
+ *      decir SI. Reservarlo para el hecho lo hace inequívoco.
+ *
+ *   2. EL ÁMBAR CODIFICABA UN UMBRAL QUE EL MOTORIZADO NO CONOCE.
+ *      `queueLeadMinutes` es un parámetro de operación; que el reloj cambiara
+ *      de color al cruzarlo le pedía interpretar una regla que nadie le ha
+ *      contado. Un color que no se puede interpretar se termina ignorando.
+ *
+ * El margen SIGUE existiendo, pero donde sí se puede leer sin conocerlo: mueve
+ * el borde de la tarjeta, que solo se enciende cuando la demora ya es seria.
  */
 function buildClock(input: CardVMInput): Clock | null {
   const { order, variant } = input
@@ -246,15 +259,10 @@ function buildClock(input: CardVMInput): Clock | null {
   // `waiting_driver` y la insignia ya pone "Lista": repetirlo sería decirlo dos
   // veces en la misma tarjeta.
   const ready = variant === 'mine' && Boolean(order.ready_early_used)
-  const text = mmss(Math.abs(ms) / 1000)
 
-  if (ms >= 0) return { text, tone: 'neutral', ready }
-
-  // Ya se pasó. Si la cajera marcó la comida lista, la demora es del reparto y
-  // escala con el margen de cola; si no, es la cocina la que se pasó.
   return {
-    text,
-    tone: order.ready_early_used ? escalation(input, ms) : 'danger',
+    text: mmss(Math.abs(ms) / 1000),
+    tone: ms >= 0 ? 'neutral' : 'danger',
     ready,
   }
 }
@@ -295,24 +303,33 @@ function buildBadge(input: CardVMInput): Badge | null {
  *     variante, así que un pedido de hace tres horas tenía la ETA vencida por
  *     goleada y el historial entero salía en rojo de alarma.
  *
- *   - "En espera" queda alineada con `orderUrgency`, LA MISMA función con la que
- *     la bandeja ordena, bloquea las demás tarjetas y dispara el banner. Antes
- *     la tarjeta tenía su propio criterio (más estricto), así que el cartel
- *     gritaba y la tarjeta señalada se quedaba con el borde neutro. Hoy las dos
- *     preguntan lo mismo —¿pasó el reloj de la cocina?— y hay un test que lo
- *     amarra.
+ * EL BORDE ES EL SEGUNDO ESCALÓN, NO UNA COPIA DEL RELOJ.
  *
- * EL BORDE LO MANDA EL RELOJ, Y SOLO POR DEBAJO DE CERO. Ya no lo mueve la
- * insignia: la insignia es el ESTADO del pedido, y un estado es un hecho, no
- * una alarma. Un pedido "En cocina" con seis minutos por delante no tiene por
- * qué teñir nada; el día que el contador se pase, el borde se enciende solo.
+ * El reloj se pone rojo en cuanto se pasa de cero: eso es "vas tarde". El borde
+ * espera a que la demora cruce `queueLeadMinutes`: eso es "esto ya no da más".
+ * Dos canales, cada uno binario, con umbrales distintos — y así el margen de
+ * cola sigue vivo sin obligar al motorizado a interpretarlo, porque una tarjeta
+ * enmarcada en rojo se entiende sin saber cuántos minutos son.
+ *
+ * Si el borde se encendiera al mismo tiempo que el reloj, cualquier pedido que
+ * acabara de cruzar el cero quedaría igual de gritón que uno de veinte minutos,
+ * y se volvería a perder el "atiende ESTE".
+ *
+ * La insignia NO lo mueve: es el ESTADO del pedido, y un estado es un hecho, no
+ * una alarma.
  */
-function buildTone(input: CardVMInput, clock: Clock | null): Tone {
+function buildTone(input: CardVMInput): Tone {
   const { variant } = input
 
   if (variant === 'delivered' || variant === 'team') return 'neutral'
 
-  return clock?.tone ?? 'neutral'
+  const ms = remainingMs(input)
+  if (ms == null || ms >= 0) return 'neutral'
+
+  // Encendido o apagado, nada intermedio: por debajo del margen el borde no se
+  // enciende, y decirlo `neutral` en vez de `warning` evita que el modelo
+  // prometa un color que el componente no pinta.
+  return escalation(input, ms) === 'danger' ? 'danger' : 'neutral'
 }
 
 /**
@@ -418,7 +435,7 @@ export function buildCardVM(input: CardVMInput): CardVM {
     reference: order.delivery_reference ?? order.delivery_address,
     money: blocked && blockedReason ? null : buildMoney(input),
     blockedReason: blocked && blockedReason ? blockedReason : null,
-    tone: buildTone(input, clock),
+    tone: buildTone(input),
     interactive: !blocked && !isTeam,
     muted: Boolean(blocked),
     showSourceChip: order.source === 'customer_pwa',
