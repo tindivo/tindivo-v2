@@ -1952,6 +1952,24 @@ export type Database = {
         }
         Relationships: []
       }
+      pilot_whitelist: {
+        Row: {
+          active: boolean
+          created_at: string
+          phone: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          phone: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          phone?: string
+        }
+        Relationships: []
+      }
       push_delivery_log: {
         Row: {
           at: string
