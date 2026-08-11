@@ -38,12 +38,22 @@ export async function GET(req: Request): Promise<Response> {
     const startUtc = new Date(`${limaDate}T05:00:00.000Z`) // Lima 00:00 = 05:00 UTC (UTC-5, sin DST)
     const endUtc = new Date(startUtc.getTime() + 86_400_000)
 
+    // LEE `cash_owed_at_delivery`, NO DEDUCE DEL MÉTODO (0141).
+    //
+    // Filtraba `payment_real = 'paid_cash'` y sumaba el total del pedido: la
+    // misma regla que el RPC de liquidación, escrita otra vez. Con un cobro
+    // mixto las dos copias mentían igual —el pedido no salía, y el motorizado
+    // veía menos de lo que llevaba encima— y al divergir, la pantalla habría
+    // dicho un número y el corte otro.
+    //
+    // `> 0` en vez de un filtro por método: lo que define si entra al corte es
+    // llevar efectivo, no cómo se llame el cobro.
     const { data: orders } = await service
       .from('orders')
-      .select('business_id, order_amount, delivery_fee, businesses(name)')
+      .select('business_id, cash_owed_at_delivery, businesses(name)')
       .eq('driver_id', drv.id)
       .eq('status', 'delivered')
-      .eq('payment_real', 'paid_cash')
+      .gt('cash_owed_at_delivery', 0)
       // Solo lo que AÚN no ha rendido. Antes sumaba todo lo cobrado hoy, así
       // que tras la primera rendición seguía mostrando el total del día y
       // pre-rellenaba el formulario con dinero que ya había entregado.
@@ -63,7 +73,7 @@ export async function GET(req: Request): Promise<Response> {
         expected: 0,
         orderCount: 0,
       }
-      e.expected += Number(o.order_amount) + Number(o.delivery_fee)
+      e.expected += Number(o.cash_owed_at_delivery)
       e.orderCount += 1
       byBiz.set(o.business_id, e)
     }
