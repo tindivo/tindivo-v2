@@ -67,8 +67,8 @@ Hoy `pending_acceptance` se auto-cancela a los 5 minutos — el primer contacto 
 
 ### ALE-03 · Subir la ventana de aceptación de 5 a 12-15 minutos
 
-**🔴 P0 — un valor en `app_settings.timers.acceptanceMinutes`, cuesta segundos cambiarlo**
-5 minutos es agresivo en las primeras semanas, cuando nadie tiene el hábito de mirar la pantalla todavía. Subir el valor ahora y bajarlo cuando el hábito exista.
+**✅ DONE — ya estaba hecho y seguía marcado como P0 bloqueante (verificado 2026-08-11)**
+La migración `0113_config_support_and_timers` subió `acceptanceMinutes` de 5 a 15, y está aplicada en producción. El valor vivo es 15. Queda la segunda mitad de la idea —bajarlo cuando el hábito de mirar la pantalla exista— pero eso es una perilla de `app_settings`, no trabajo pendiente.
 
 ### ALE-04 · Botón "listo para operar" + "cerrar por hoy" + recordatorio
 
@@ -457,6 +457,14 @@ Diseño de dos caminos (lectura: autocompletar desde el directorio legacy import
 
 **🟡 P2**
 El setup existe con seed idempotente, pero no hay registro de una corrida completa reciente que incluya todos los cambios de esta sesión (Parte C/D/E del ledger, count-up, selector de zona).
+
+### DEUDA-08 · `send-push` la puede invocar cualquiera con la anon key
+
+**🟡 P2 — real y confirmado, pero no bloquea el lanzamiento**
+La Edge Function `send-push` corre con `verify_jwt`, y la anon key vale como JWT — y esa llave va pública en los bundles de las cuatro apps. Confirmado el 2026-08-11: el smoke test contra producción se hizo con esa misma llave y la función lo ejecutó.
+**Por qué no es urgente:** para disparar un aviso hay que mandar un `aggregate_id` de pedido válido, que es un UUID y no se adivina. Con un id inválido la función responde `recipients: 0`. El daño realista es que alguien que ya conoce un id (su propio pedido) repita avisos a los motorizados.
+**El arreglo, ya verificado como viable:** un secreto compartido en `app_settings.push_dispatch` —que NO es de lectura pública: la policy `as_public_read` lista nueve claves y `push_dispatch` no está entre ellas— que `dispatch_event` mande como cabecera y `send-push` exija.
+**El orden del despliegue no es opcional:** (1) migración que empieza a mandar la cabecera, (2) verificar con un pedido real que los avisos siguen llegando, (3) recién entonces el secreto en la función y su despliegue. Al revés —la función exigiendo una cabecera que la base todavía no manda— mata TODAS las notificaciones, en silencio y de golpe. Es el mismo modo de fallo que costó tres días de diagnóstico en agosto, así que este cambio pide ventana de verificación, no un despliegue a ciegas.
 
 ---
 
