@@ -232,44 +232,49 @@ describe('tono del borde', () => {
   })
 })
 
-describe('linea de cobro', () => {
-  it('efectivo: cifra, metodo, sin verbos', () => {
+describe('el cobro, en dos alturas', () => {
+  it('efectivo: la cifra arriba, el metodo debajo, sin verbos', () => {
     expect(vm().money).toEqual({
-      icon: 'payments',
-      amount: 'S/ 45.00',
-      label: 'efectivo',
-      change: null,
+      headline: 'S/ 45.00',
+      detail: 'efectivo',
       tone: 'neutral',
     })
   })
 
   it('el vuelto se deriva y se muestra tambien en En espera', () => {
     const v = vm({ order: order({ client_pays_with: 50 }) })
-    expect(v.money?.change).toBe('vuelto S/ 5.00')
+    expect(v.money?.detail).toBe('efectivo · vuelto S/ 5.00')
   })
 
-  it('el prepago NO lleva cifra', () => {
+  // LA PALABRA OCUPA EL SITIO DE LA CIFRA. Sin numero no hay numero que cobrar
+  // por error, y el bloque se lee igual que en los otros tres casos.
+  it('el prepago NO lleva cifra: la palabra ocupa su sitio', () => {
     const v = vm({ order: order({ payment_intent: 'prepaid' }) })
-    expect(v.money?.amount).toBeNull()
-    expect(v.money?.label).toBe('Prepagado · no cobrar')
-    expect(v.money?.tone).toBe('success')
+    expect(v.money).toEqual({ headline: 'Prepagado', detail: 'no cobrar', tone: 'success' })
+  })
+
+  it('ningun otro caso pone una palabra donde va la cifra', () => {
+    for (const intent of ['pending_cash', 'pending_yape', 'pending_mixed', null]) {
+      const v = vm({ order: order({ payment_intent: intent }) })
+      expect(v.money?.headline, String(intent)).toMatch(/^S\/ \d/)
+    }
   })
 
   it('el mixto desglosa, y la cifra grande es la parte en EFECTIVO', () => {
     // NO el total: en un mixto el total no es un numero que el motorizado
-    // maneje, y ponerlo delante dejaba tres importes seguidos en una linea
-    // (`S/ 45.00 S/ 30.00 efectivo + S/ 15.00 Yape`) con el primero redundante.
+    // maneje, y ponerlo delante dejaba tres importes seguidos con el primero
+    // redundante, porque las dos partes ya suman.
     const v = vm({
       order: order({ payment_intent: 'pending_mixed', cash_amount: 30, yape_amount: 15 }),
     })
-    expect(v.money?.amount).toBe('S/ 30.00')
-    expect(v.money?.label).toBe('efectivo + S/ 15.00 Yape')
+    expect(v.money?.headline).toBe('S/ 30.00')
+    expect(v.money?.detail).toBe('efectivo + S/ 15.00 Yape')
   })
 
   it('sin desglose el mixto no se lo inventa', () => {
     const v = vm({ order: order({ payment_intent: 'pending_mixed' }) })
-    expect(v.money?.amount).toBe('S/ 45.00')
-    expect(v.money?.label).toBe('mixto')
+    expect(v.money?.headline).toBe('S/ 45.00')
+    expect(v.money?.detail).toBe('mixto')
   })
 
   it('el mixto ahora SI calcula vuelto sobre su parte en efectivo', () => {
@@ -283,17 +288,17 @@ describe('linea de cobro', () => {
         client_pays_with: 50,
       }),
     })
-    expect(v.money?.change).toBe('vuelto S/ 20.00')
+    expect(v.money?.detail).toBe('efectivo + S/ 15.00 Yape · vuelto S/ 20.00')
   })
 
   it('un metodo nulo NO se hace pasar por efectivo', () => {
     const v = vm({ order: order({ payment_intent: null }) })
-    expect(v.money?.label).toBe('método por confirmar')
+    expect(v.money?.detail).toBe('método por confirmar')
   })
 
   it('un metodo desconocido tampoco', () => {
     const v = vm({ order: order({ payment_intent: 'pending_wallet' }) })
-    expect(v.money?.label).toBe('método por confirmar')
+    expect(v.money?.detail).toBe('método por confirmar')
   })
 
   it('en el historial no se habla de vuelto', () => {
@@ -305,14 +310,16 @@ describe('linea de cobro', () => {
         delivered_at: new Date(NOW).toISOString(),
       }),
     })
-    expect(v.money?.change).toBeNull()
-    expect(v.money?.label).toBe('efectivo')
+    expect(v.money?.detail).toBe('efectivo')
   })
 
   it('de un pedido ajeno solo viaja el importe', () => {
     const v = vm({ variant: 'team', ownerName: 'Juan', order: order({ payment_intent: null }) })
-    expect(v.money?.label).toBe('importe')
-    expect(v.money?.amount).toBe('S/ 45.00')
+    expect(v.money).toEqual({
+      headline: 'S/ 45.00',
+      detail: 'importe del pedido',
+      tone: 'neutral',
+    })
   })
 
   it('bloqueado: el motivo ocupa el sitio del precio', () => {

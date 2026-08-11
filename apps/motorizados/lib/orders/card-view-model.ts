@@ -120,20 +120,33 @@ const TEAM_STATE: Record<string, Badge> = {
 }
 
 /**
- * La línea de cobro. Una sola, método al frente, sin verbos.
+ * EL COBRO EN DOS ALTURAS: la cifra grande, y debajo lo que hay que saber de
+ * ella.
  *
- * SIN VERBOS a propósito: "Cobrar en efectivo" solo se lee bien en presente y
- * la misma línea se pinta en el historial, donde ya se cobró. `S/ 45.00 ·
- * efectivo` es cierto en cualquier tiempo verbal. La única excepción es el
- * prepago, donde la instrucción evita un error de plata.
+ * Antes era una sola línea con icono, cifra y cualificador al mismo nivel, y el
+ * importe —lo que se lee en la puerta del cliente, con prisa y con casco— no
+ * pesaba más que la palabra "efectivo" que lo acompaña. Partirlo en dos alturas
+ * le da a cada cosa su papel: el número se ve de lejos, el detalle se lee
+ * cuando hace falta.
+ *
+ * SIN ICONO a propósito: la palabra ya dice el método, y el icono le robaba
+ * ancho a la única línea que puede desbordarse (el mixto, con dos importes y el
+ * vuelto).
+ *
+ * SIN VERBOS, también a propósito: "Cobrar en efectivo" solo se lee bien en
+ * presente y la misma línea se pinta en el historial, donde ya se cobró.
+ * `S/ 45.00 / efectivo` es cierto en cualquier tiempo verbal. La única
+ * excepción es el prepago, donde la instrucción evita un error de plata.
  */
 export interface MoneyLine {
-  icon: string
-  /** `null` en prepago: enseñar la cifra invita a cobrarla por error. */
-  amount: string | null
-  label: string
-  /** `vuelto S/ 5.00`, o `null` si no hay o si ya no viene a cuento. */
-  change: string | null
+  /**
+   * Lo grande. La cifra a cobrar, o la palabra que ocupa su lugar cuando no hay
+   * nada que cobrar: enseñar `S/ 45.00` al lado de "Prepagado" es una
+   * invitación a cobrarlo por error, y sin número no hay error posible.
+   */
+  headline: string
+  /** Lo pequeño debajo: método, desglose, vuelto o instrucción. */
+  detail: string | null
   tone: Tone
 }
 
@@ -302,13 +315,6 @@ function buildTone(input: CardVMInput, clock: Clock | null): Tone {
   return clock?.tone ?? 'neutral'
 }
 
-const PAYMENT_ICON: Record<string, string> = {
-  prepaid: 'verified',
-  pending_cash: 'payments',
-  pending_yape: 'qr_code_2',
-  pending_mixed: 'call_split',
-}
-
 /**
  * La línea de cobro.
  *
@@ -316,9 +322,6 @@ const PAYMENT_ICON: Record<string, string> = {
  * sencillo encima, un pedido que paga con billete grande es un problema que
  * prefieres ver antes de aceptarlo y no en la puerta del cliente. En el
  * historial no se pinta: ahí ya se dio.
- *
- * EL PREPAGO NO LLEVA CIFRA. Poner `S/ 45.00` al lado de "Prepagado" es una
- * invitación a cobrarlo por error; sin número no hay error posible.
  */
 function buildMoney(input: CardVMInput): MoneyLine | null {
   const { order, variant } = input
@@ -328,23 +331,14 @@ function buildMoney(input: CardVMInput): MoneyLine | null {
   // De un pedido ajeno el cobro no viaja. Solo el importe, para decidir si
   // pides el traspaso.
   if (variant === 'team') {
-    return {
-      icon: 'receipt_long',
-      amount: soles(total),
-      label: 'importe',
-      change: null,
-      tone: 'neutral',
-    }
+    return { headline: soles(total), detail: 'importe del pedido', tone: 'neutral' }
   }
 
+  // LA PALABRA OCUPA EL SITIO DE LA CIFRA. Sin número no hay número que cobrar
+  // por error, y la instrucción va debajo donde va el método en los demás: el
+  // bloque se lee igual en los cuatro casos.
   if (intent === 'prepaid') {
-    return {
-      icon: PAYMENT_ICON.prepaid ?? 'verified',
-      amount: null,
-      label: 'Prepagado · no cobrar',
-      change: null,
-      tone: 'success',
-    }
+    return { headline: 'Prepagado', detail: 'no cobrar', tone: 'success' }
   }
 
   const vuelto =
@@ -358,7 +352,7 @@ function buildMoney(input: CardVMInput): MoneyLine | null {
           changeToGive: order.change_to_give,
         })
 
-  const change = vuelto != null && vuelto > 0 ? `vuelto ${soles(vuelto)}` : null
+  const change = vuelto != null && vuelto > 0 ? ` · vuelto ${soles(vuelto)}` : ''
 
   if (intent === 'pending_mixed') {
     // El desglose EXISTE en la base desde 0002 y `negocios` ya lo lee; al board
@@ -368,59 +362,33 @@ function buildMoney(input: CardVMInput): MoneyLine | null {
     // LA CIFRA GRANDE ES LA PARTE EN EFECTIVO, NO EL TOTAL. En un pago mixto el
     // total no es un número que el motorizado maneje: no cuenta 45, cuenta 30 y
     // comprueba que entraron 15 por Yape. Enseñar además el total ponía tres
-    // importes seguidos en la misma línea —`S/ 45.00 S/ 30.00 efectivo + S/
-    // 15.00 Yape`— con el primero redundante, porque las dos partes ya suman.
+    // importes seguidos con el primero redundante, porque las dos partes ya
+    // suman.
     if (order.cash_amount != null && order.yape_amount != null) {
       return {
-        icon: PAYMENT_ICON.pending_mixed ?? 'call_split',
-        amount: soles(order.cash_amount),
-        label: `efectivo + ${soles(order.yape_amount)} Yape`,
-        change,
+        headline: soles(order.cash_amount),
+        detail: `efectivo + ${soles(order.yape_amount)} Yape${change}`,
         tone: 'neutral',
       }
     }
 
     // Sin desglose no se inventa: se enseña el total y se nombra el método.
-    return {
-      icon: PAYMENT_ICON.pending_mixed ?? 'call_split',
-      amount: soles(total),
-      label: 'mixto',
-      change,
-      tone: 'neutral',
-    }
+    return { headline: soles(total), detail: `mixto${change}`, tone: 'neutral' }
   }
 
   if (intent === 'pending_yape') {
-    return {
-      icon: PAYMENT_ICON.pending_yape ?? 'qr_code_2',
-      amount: soles(total),
-      label: 'Yape/Plin',
-      change,
-      tone: 'neutral',
-    }
+    return { headline: soles(total), detail: `Yape/Plin${change}`, tone: 'neutral' }
   }
 
   if (intent === 'pending_cash') {
-    return {
-      icon: PAYMENT_ICON.pending_cash ?? 'payments',
-      amount: soles(total),
-      label: 'efectivo',
-      change,
-      tone: 'neutral',
-    }
+    return { headline: soles(total), detail: `efectivo${change}`, tone: 'neutral' }
   }
 
   // NI NULL NI DESCONOCIDO SE HACEN PASAR POR EFECTIVO. El tipo admite `null` y
   // la rama final del código anterior afirmaba "Cobrar en efectivo" para
   // cualquier valor que no reconociera: un dato ausente convertido en una
   // instrucción de cobro.
-  return {
-    icon: 'help',
-    amount: soles(total),
-    label: 'método por confirmar',
-    change,
-    tone: 'neutral',
-  }
+  return { headline: soles(total), detail: `método por confirmar${change}`, tone: 'neutral' }
 }
 
 export function buildCardVM(input: CardVMInput): CardVM {

@@ -187,9 +187,14 @@ export function OrderCard({
         <IncomingRequestStrip request={incomingRequest} now={now} />
       )}
 
-      {/* ── 1 · Cejilla, con la INSIGNIA DE ESTADO en la esquina ── */}
-      <div className="flex items-center gap-1.5 text-meta text-ink-muted">
-        <span className="truncate">{vm.businessName}</span>
+      {/* ── 1 · Cejilla, con la INSIGNIA DE ESTADO en la esquina ──
+          MAYÚSCULAS Y NEGRITA, PERO EN GRIS. Es el patrón de cejilla que ya usa
+          la app (`upcoming-orders-section`) y el que traía el legacy: la
+          versalita da estructura y peso de rótulo sin robarle protagonismo al
+          nombre, porque el gris lo mantiene en segundo plano. En negro
+          competiría; en gris minúscula se perdía. */}
+      <div className="flex items-center gap-1.5 text-micro text-ink-muted">
+        <span className="truncate font-bold uppercase tracking-[0.1em]">{vm.businessName}</span>
         {vm.shortId && <span className="shrink-0 font-mono">#{vm.shortId}</span>}
         {vm.slotsNote && (
           <span className="shrink-0 rounded-full bg-warning-soft px-1.5 font-semibold text-amber-900">
@@ -246,14 +251,21 @@ export function OrderCard({
         )}
       </div>
 
-      {/* ── 3 · Referencia ──
+      {/* ── 3 · Referencia, PEGADA AL NOMBRE ──
+          Van juntos porque son la misma cosa: a quién y dónde. Separarlos con
+          aire los convertía en dos datos sueltos.
+
+          SIN ICONO: es la única línea de texto libre de la tarjeta, así que no
+          hace falta un pin para saber que es la dirección — y el pin le robaba
+          ancho justo a la línea que más se desborda, la referencia larga de
+          pueblo.
+
           `line-clamp-2` y no altura fija: una referencia rural truncada es una
           entrega equivocada, así que las tarjetas con dirección larga miden más
           y está bien que así sea. */}
       {vm.reference && (
-        <p className="mt-2 flex items-start gap-1 text-body font-medium leading-snug text-ink">
-          <Icon name="location_on" size={16} className="mt-px shrink-0 text-brand" />
-          <span className="line-clamp-2">{vm.reference}</span>
+        <p className="mt-0.5 line-clamp-2 text-caption leading-snug text-ink-muted">
+          {vm.reference}
         </p>
       )}
 
@@ -263,45 +275,43 @@ export function OrderCard({
           local" y "Recoger pedido" son la misma frase— y dejaba dos estados
           conviviendo en la tarjeta. */}
       {vm.blockedReason ? (
-        <p className="mt-2.5 flex items-center gap-1.5 text-caption font-medium text-ink-muted">
+        <p className="mt-3 flex items-center gap-1.5 text-caption font-medium text-ink-muted">
           <Icon name="lock" size={14} className="shrink-0" />
           {vm.blockedReason}
         </p>
       ) : (
         vm.money && (
-          <p
-            className={cn(
-              'mt-2.5 flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5',
-              vm.money.tone === 'success' ? 'text-success' : 'text-ink',
-            )}
-          >
-            <Icon
-              name={vm.money.icon}
-              size={15}
-              filled
-              className="shrink-0 self-center"
-              aria-hidden
-            />
-            {vm.money.amount && (
-              <span className="font-mono text-body-lg font-bold tabular-nums">
-                {vm.money.amount}
-              </span>
-            )}
+          <div className="mt-3">
+            {/* LA CIFRA, EN GRANDE. Es lo que se lee en la puerta del cliente,
+                con prisa y con casco, y hasta ahora pesaba lo mismo que la
+                palabra "efectivo" que la acompaña.
+
+                `--text-title` y no `--text-display`: en mono los dígitos ya
+                ocupan más de lo que dice su talla, así que a 22px el importe
+                pesa como el nombre a 17px sin llegar a destronarlo — y el nombre
+                sigue siendo la identidad de la tarjeta. */}
+            <p
+              className={cn(
+                'font-mono text-title font-bold leading-none tracking-tight tabular-nums',
+                vm.money.tone === 'success' ? 'text-success' : 'text-ink',
+              )}
+            >
+              {vm.money.headline}
+            </p>
             {/* `ink-muted` y NO `ink-subtle`: aquí vive el vuelto, y
                 `--color-ink-subtle` da 2,5:1 sobre blanco — por debajo del
                 mínimo legible, en la calle y con casco. */}
-            <span
-              className={cn(
-                'text-caption font-medium',
-                vm.money.tone === 'success' ? 'text-success' : 'text-ink-muted',
-              )}
-            >
-              {vm.money.label}
-            </span>
-            {vm.money.change && (
-              <span className="text-caption font-semibold text-ink-muted">· {vm.money.change}</span>
+            {vm.money.detail && (
+              <p
+                className={cn(
+                  'mt-1 text-caption font-medium',
+                  vm.money.tone === 'success' ? 'text-success' : 'text-ink-muted',
+                )}
+              >
+                {vm.money.detail}
+              </p>
             )}
-          </p>
+          </div>
         )
       )}
     </Card>
