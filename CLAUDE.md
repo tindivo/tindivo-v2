@@ -85,6 +85,11 @@ pnpm graphify:hooks     # instala post-commit git hook para auto-actualizar
   Antes de crear una, `supabase migration list` para ver el primer número libre.
 - Tras cada migración: `pnpm db:types` (apunta al remoto, así que **después** del
   push) y revisar `get_advisors`.
+- **`supabase db reset` borra el mundo e2e y no lo repone**: no hay `seed.sql`, el
+  seed vive en `pnpm db:seed:e2e`. Los tests de `apps/api` son de integración
+  contra esa base, así que sin reponerlo fallan en masa por precondición
+  ausente, con errores que apuntan a otro sitio (`seed orders failed`, FK de
+  `business_id`). Después de cada `db reset`, `pnpm db:seed:e2e`.
 
 ## Reglas de proceso (del sistema multi-agente de Mauri)
 

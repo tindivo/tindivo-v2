@@ -61,9 +61,82 @@ type Note = {
   vibrate: boolean
 }
 
-function unwrapAvailability(v: unknown): boolean {
-  if (Array.isArray(v)) return Boolean((v[0] as { is_available?: boolean })?.is_available)
-  return Boolean((v as { is_available?: boolean })?.is_available)
+/** `user_id` del motorizado a partir de su `drivers.id`. Null si no existe. */
+async function driverUserId(driverId: unknown): Promise<string | null> {
+  if (typeof driverId !== 'string' || !driverId) return null
+  const { data } = await db.from('drivers').select('user_id').eq('id', driverId).maybeSingle()
+  return (data?.user_id as string | null) ?? null
+}
+
+/**
+ * `user_id` de todos los motorizados activos, opcionalmente sin uno.
+ *
+ * NOTIFICAR NO ES ASIGNAR: igual que en la rama `ready`, no se filtra por
+ * `driver_availability.is_available`. El razonamiento largo está donde se tomó
+ * la decisión, más abajo.
+ *
+ * El error se propaga a propósito: una consulta fallida devuelve lo mismo que
+ * "no hay motorizados" —cero destinatarios, respuesta 200— y ese silencio es
+ * exactamente el que costó tres días de diagnóstico.
+ */
+async function allDriverUserIds(exceptDriverId?: unknown): Promise<string[]> {
+  const { data, error } = await db.from('drivers').select('id,user_id').eq('is_active', true)
+  if (error) throw new Error(`drivers query: ${error.message}`)
+  return (data ?? [])
+    .filter((d) => d.user_id && d.id !== exceptDriverId)
+    .map((d) => d.user_id as string)
+}
+
+/** Datos del pedido que aparecen en el cuerpo de cualquier aviso al motorizado. */
+async function orderBrief(orderId: string) {
+  const { data: o } = await db
+    .from('orders')
+    .select('short_id,business_id,driver_id,status,prep_time_minutes,order_amount')
+    .eq('id', orderId)
+    .maybeSingle()
+  if (!o) return null
+  const { data: biz } = await db
+    .from('businesses')
+    .select('name')
+    .eq('id', o.business_id)
+    .maybeSingle()
+  return {
+    sid: (o.short_id as string) ?? '',
+    bizName: (biz?.name as string) ?? 'el restaurante',
+    driverId: o.driver_id as string | null,
+    status: o.status as string,
+    prepMinutes: Number(o.prep_time_minutes ?? 0),
+    amount: `S/ ${Number(o.order_amount ?? 0).toFixed(2)}`,
+  }
+}
+
+/**
+ * Aviso anticipado a los motorizados: la cocina tardará y conviene que lo sepan
+ * antes de que la comida esté lista. Se dispara en los dos momentos en que un
+ * pedido entra en cocina —`OrderCreated` para el manual, que nace en
+ * `preparing`, y `action='accept'` para el del cliente, que sale de
+ * `pending_acceptance`— replicando el par `OrderCreated`/`OrderAcceptedByRestaurant`
+ * del v1. Por debajo del umbral no se avisa: el aviso de `ready` llega antes de
+ * que al motorizado le dé tiempo a moverse, y dos pushes seguidos por el mismo
+ * pedido son ruido.
+ */
+const HEADS_UP_MIN_PREP_MINUTES = 10
+
+async function headsUpNotes(orderId: string, eventType: string): Promise<Note[]> {
+  const o = await orderBrief(orderId)
+  if (!o) return []
+  if (o.status !== 'preparing') return []
+  if (o.prepMinutes <= HEADS_UP_MIN_PREP_MINUTES) return []
+  const userIds = await allDriverUserIds()
+  return userIds.map((userId) => ({
+    userId,
+    title: `Pedido en cocina — ${o.bizName}`,
+    body: `${o.amount} · estará listo en ${o.prepMinutes} min. Atento.`,
+    tag: `${eventType}-headsup-${o.sid}`,
+    url: '/',
+    requireInteraction: false,
+    vibrate: false,
+  }))
 }
 
 async function buildNotes(eventType: string, aggregateId: string, payload: Record<string, unknown>): Promise<Note[]> {
@@ -105,14 +178,46 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
       push(cust, 'Pedido cancelado', `#${sid} cancelado · se agotó el tiempo`)
     } else if (action === 'accept') {
       push(cust, 'Tu pedido fue confirmado', `${bizName} confirmó #${sid} y empezó a prepararlo`)
+      // El negocio acaba de meterlo en cocina: si va a tardar, los motorizados
+      // lo saben desde ya en vez de enterarse cuando la comida ya está fría.
+      out.push(...(await headsUpNotes(aggregateId, eventType)))
     } else if (action === 'ready') {
-      const { data: drivers } = await db
+      /**
+       * NOTIFICAR NO ES ASIGNAR.
+       *
+       * Se avisa a TODOS los motorizados activos con suscripción, SIN filtrar
+       * por `driver_availability.is_available`. El filtro sigue vigente donde
+       * corresponde —quién puede TOMAR el pedido— pero no puede gobernar quién
+       * se ENTERA de que existe.
+       *
+       * Filtrar aquí creaba un bloqueo circular, medido en producción: el cron
+       * `close-driver-shifts` apaga la disponibilidad de todos al cerrar el
+       * horario (23:00 Perú). Al día siguiente entra un pedido, `is_available`
+       * es false para todos, nadie recibe el aviso, y por tanto nadie se entera
+       * de que hay trabajo — así que nadie abre la app para volver a activarse.
+       * La única salida era que el motorizado entrase por azar.
+       *
+       * El v1 ya había llegado a esta conclusión y la dejó escrita en su propio
+       * `send-push` ("dejándolos en un limbo donde no podían volver a
+       * participar sin entrar primero a la PWA por azar"). v2 reintrodujo el
+       * filtro al reescribir la función.
+       */
+      const { data: drivers, error: driversErr } = await db
         .from('drivers')
-        .select('user_id,driver_availability(is_available)')
+        .select('user_id')
         .eq('is_active', true)
+      // Este error SÍ se mira: si la consulta falla, el resultado es
+      // indistinguible de "no hay motorizados" — un 200 con recipients 0 que
+      // parece normal. Es justo el silencio que costó tres días de diagnóstico.
+      if (driversErr) throw new Error(`drivers query: ${driversErr.message}`)
       for (const d of drivers ?? []) {
-        if (unwrapAvailability(d.driver_availability) && d.user_id) {
-          push(d.user_id as string, 'Nuevo pedido disponible', `${bizName} · #${sid}`, { url: '/', req: true })
+        if (d.user_id) {
+          // Deeplink al pedido, no a la raíz: tocar el aviso tiene que abrir
+          // LO que se está avisando.
+          push(d.user_id as string, 'Nuevo pedido disponible', `${bizName} · #${sid}`, {
+            url: `/pedido/${aggregateId}`,
+            req: true,
+          })
         }
       }
     } else if (action === 'take') {
@@ -129,6 +234,200 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
       const reason = (o.cancel_reason as string) ?? ''
       push(cust, 'Pedido cancelado', `#${sid} cancelado`)
       push(bizUser, 'Pedido cancelado', `#${sid} cancelado · ${reason}`, { url: '/' })
+      // Si ya tenía motorizado, es quien más necesita saberlo: puede estar
+      // yendo al local o esperando la comida en el mostrador.
+      push(
+        await driverUserId(o.driver_id),
+        'Pedido cancelado',
+        `#${sid} se canceló · no lo recojas`,
+        { url: `/pedido/${aggregateId}`, req: true },
+      )
+    }
+  } else if (eventType === 'OrderCreated') {
+    // El pedido manual nace en `preparing`, así que aquí ya está en cocina.
+    // El del cliente nace en `pending_acceptance` y `headsUpNotes` lo descarta
+    // por estado — su aviso sale con `action='accept'`.
+    out.push(...(await headsUpNotes(aggregateId, eventType)))
+  } else if (eventType === 'OrderReleased') {
+    // El motorizado soltó el pedido y vuelve a la bolsa. Se avisa a todos los
+    // demás, no al que lo soltó.
+    const o = await orderBrief(aggregateId)
+    if (o) {
+      for (const userId of await allDriverUserIds(payload?.driverId)) {
+        out.push({
+          userId,
+          title: `Pedido libre — ${o.bizName}`,
+          body: `#${o.sid} · ${o.amount} · se liberó, tómalo`,
+          tag: `OrderReleased-${o.sid}`,
+          url: `/pedido/${aggregateId}`,
+          requireInteraction: true,
+          vibrate: true,
+        })
+      }
+    }
+  } else if (eventType === 'OrderOverdue') {
+    const o = await orderBrief(aggregateId)
+    if (o) {
+      const mins = Number(payload?.minutesWaiting ?? 0)
+      for (const userId of await allDriverUserIds()) {
+        out.push({
+          userId,
+          title: `Se está enfriando — ${o.bizName}`,
+          body: `#${o.sid} lleva ${mins} min sin motorizado · ${o.amount}`,
+          tag: `OrderOverdue-${o.sid}`,
+          url: `/pedido/${aggregateId}`,
+          requireInteraction: true,
+          vibrate: true,
+        })
+      }
+    }
+  } else if (eventType === 'TransferRequested') {
+    // Al dueño actual (`fromDriverId`), no al solicitante: tiene una ventana de
+    // segundos para responder y, desde la 0130, callarse le cede el pedido.
+    // Por eso `requireInteraction`: en Android con Doze, un aviso sin él se
+    // clasifica como baja prioridad y puede no llegar a verse.
+    const o = await orderBrief(aggregateId)
+    const owner = await driverUserId(payload?.fromDriverId)
+    if (o && owner) {
+      const seconds = Math.max(
+        0,
+        Math.round((new Date(String(payload?.expiresAt)).getTime() - Date.now()) / 1000),
+      )
+      out.push({
+        userId: owner,
+        title: `Te piden tu pedido — #${o.sid}`,
+        body: `Un compañero quiere llevarlo. Responde en ${seconds || 30}s o se lo llevará.`,
+        tag: `TransferRequested-${payload?.requestId ?? aggregateId}`,
+        url: '/',
+        requireInteraction: true,
+        vibrate: true,
+      })
+    }
+  } else if (eventType === 'TransferResolved') {
+    const o = await orderBrief(aggregateId)
+    const resolution = (payload?.resolution as string) ?? ''
+    const transferred = payload?.transferred === true
+    const reqId = payload?.requestId ?? aggregateId
+    // `fromDriverId`/`toDriverId` vienen del payload desde la 0134. Si falta
+    // (evento anterior a la migración, o Edge Function desplegada antes que
+    // ella), se recuperan de la solicitud: el acoplamiento código↔migración ya
+    // dejó producción sin pedidos una vez, y aquí sale gratis no repetirlo.
+    let fromId = payload?.fromDriverId
+    let toId = payload?.toDriverId
+    if ((!fromId || !toId) && typeof reqId === 'string') {
+      const { data: req } = await db
+        .from('order_transfer_requests')
+        .select('from_driver_id,to_driver_id')
+        .eq('id', reqId)
+        .maybeSingle()
+      fromId = fromId ?? req?.from_driver_id
+      toId = toId ?? req?.to_driver_id
+    }
+    const owner = await driverUserId(fromId)
+    const requester = await driverUserId(toId)
+
+    if (o && resolution === 'accepted' && requester) {
+      out.push({
+        userId: requester,
+        title: `Aceptó — #${o.sid} es tuyo`,
+        body: `${o.bizName} · ${o.amount} · ya está en tu mochila`,
+        tag: `TransferResolved-accepted-${reqId}`,
+        url: `/pedido/${aggregateId}`,
+        requireInteraction: true,
+        vibrate: true,
+      })
+    } else if (o && resolution === 'rejected' && requester) {
+      out.push({
+        userId: requester,
+        title: `Rechazó — #${o.sid}`,
+        body: 'Tu compañero se queda con el pedido.',
+        tag: `TransferResolved-rejected-${reqId}`,
+        url: '/',
+        requireInteraction: false,
+        vibrate: false,
+      })
+    } else if (o && resolution === 'expired' && transferred) {
+      // Doble aviso con TAGS DISTINTOS. Con el mismo tag, FCM/APNs colapsan los
+      // dos en uno y el que perdió el pedido vería el mensaje del que lo ganó.
+      if (owner) {
+        out.push({
+          userId: owner,
+          title: `Perdiste #${o.sid}`,
+          body: 'No respondiste a tiempo · el pedido pasó a tu compañero',
+          tag: `TransferResolved-expired-from-${reqId}`,
+          url: '/',
+          requireInteraction: true,
+          vibrate: true,
+        })
+      }
+      if (requester) {
+        out.push({
+          userId: requester,
+          title: `#${o.sid} es tuyo`,
+          body: `${o.bizName} · ${o.amount} · nadie respondió, te lo quedas`,
+          tag: `TransferResolved-expired-to-${reqId}`,
+          url: `/pedido/${aggregateId}`,
+          requireInteraction: true,
+          vibrate: true,
+        })
+      }
+    } else if (o && resolution === 'expired' && !transferred && requester) {
+      // Venció y el pedido NO se movió. El único motivo que hoy produce la
+      // 0130 es la mochila llena; se nombra para que el solicitante entienda
+      // por qué no calificó en vez de creer que el sistema falló.
+      const reason = (payload?.reason as string) ?? ''
+      out.push({
+        userId: requester,
+        title: `Se venció — #${o.sid}`,
+        body:
+          reason === 'requester_no_capacity'
+            ? 'Tu mochila está llena, el pedido se quedó con su dueño.'
+            : 'La solicitud venció y el pedido se quedó con su dueño.',
+        tag: `TransferResolved-expired-none-${reqId}`,
+        url: '/',
+        requireInteraction: false,
+        vibrate: false,
+      })
+    }
+  } else if (
+    eventType === 'CashConfirmed' ||
+    eventType === 'CashDisputed' ||
+    eventType === 'CashResolved'
+  ) {
+    const { data: cs } = await db
+      .from('cash_settlements')
+      .select('driver_id,delivered_amount,reported_amount,resolved_amount,confirmed_amount')
+      .eq('id', aggregateId)
+      .maybeSingle()
+    const driverUser = await driverUserId(cs?.driver_id)
+    if (driverUser) {
+      const money = (n: unknown) => `S/ ${Number(n ?? 0).toFixed(2)}`
+      const base = { userId: driverUser, url: '/efectivo', vibrate: false }
+      if (eventType === 'CashConfirmed') {
+        out.push({
+          ...base,
+          title: 'Efectivo confirmado',
+          body: `El negocio confirmó ${money(cs?.confirmed_amount)}. Cuenta cerrada.`,
+          tag: `CashConfirmed-${aggregateId}`,
+          requireInteraction: false,
+        })
+      } else if (eventType === 'CashDisputed') {
+        out.push({
+          ...base,
+          title: 'Diferencia reportada',
+          body: `El negocio dice haber recibido ${money(cs?.reported_amount)} de los ${money(cs?.delivered_amount)} que declaraste. Tindivo lo revisa — no discutas en el local.`,
+          tag: `CashDisputed-${aggregateId}`,
+          requireInteraction: true,
+        })
+      } else {
+        out.push({
+          ...base,
+          title: 'Caso resuelto por Tindivo',
+          body: `Monto final: ${money(cs?.resolved_amount)}.`,
+          tag: `CashResolved-${aggregateId}`,
+          requireInteraction: false,
+        })
+      }
     }
   } else if (eventType === 'CashDelivered') {
     const { data: cs } = await db

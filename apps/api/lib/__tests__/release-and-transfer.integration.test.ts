@@ -379,10 +379,38 @@ describe('Traspasos y Soltar Pedido (Release)', () => {
  */
 describe('0128 · Guardias de `take`', () => {
   it('G1 negativo: un motorizado NO puede tomar un pedido de un negocio en el que no está autorizado', async () => {
-    // BUSINESS_2 existe en el seed sin ninguna fila en `driver_restaurants`, a
-    // propósito. Es exactamente el escenario que la RLS ya bloqueaba para leer.
+    /**
+     * El estado "no autorizado" hay que CONSTRUIRLO desde la 0133.
+     *
+     * Antes bastaba con apuntar a BUSINESS_2, que el seed dejaba a propósito sin
+     * ninguna fila en `driver_restaurants`. La 0133 vincula cada motorizado
+     * activo con cada negocio activo —y hace backfill—, así que ese hueco ya no
+     * existe por omisión: hay que abrirlo.
+     *
+     * Eso NO deja la guarda de la 0128 sin sentido. Sigue cubriendo los dos
+     * casos que la 0133 no toca: el negocio inactivo (nunca se auto-vincula) y
+     * la flota dedicada, que es justo lo que se simula aquí borrando el vínculo
+     * a mano, igual que lo haría alguien desde el panel.
+     */
     const seeded = await seedContraentregaOrder(E2E.BUSINESS_2_ID)
     const supabase = localClient
+
+    const { error: unlinkErr } = await supabase
+      .from('driver_restaurants')
+      .delete()
+      .eq('driver_id', E2E.DRIVER_ID)
+      .eq('business_id', E2E.BUSINESS_2_ID)
+    if (unlinkErr) throw new Error(`no se pudo desvincular: ${unlinkErr.message}`)
+
+    // Sembrar el caso contrario: si el borrado no hizo nada, el test pasaría a
+    // medir otra cosa (un motorizado autorizado que falla por otro motivo) y
+    // seguiría verde. Se comprueba que el vínculo REALMENTE no está.
+    const { count: stillLinked } = await supabase
+      .from('driver_restaurants')
+      .select('*', { count: 'exact', head: true })
+      .eq('driver_id', E2E.DRIVER_ID)
+      .eq('business_id', E2E.BUSINESS_2_ID)
+    expect(stillLinked).toBe(0)
 
     try {
       const { error } = await supabase.rpc('advance_order', {
@@ -405,6 +433,16 @@ describe('0128 · Guardias de `take`', () => {
       expect(after?.status).toBe('waiting_driver')
     } finally {
       await cleanup(seeded)
+      // El vínculo se devuelve como lo dejó la 0133. Los ficheros de este
+      // paquete corren serializados sobre UNA base compartida
+      // (`fileParallelism: false`), así que un mundo e2e que sale distinto de
+      // como entró es un fallo diferido en el siguiente test que lo use.
+      await supabase
+        .from('driver_restaurants')
+        .upsert(
+          { driver_id: E2E.DRIVER_ID, business_id: E2E.BUSINESS_2_ID },
+          { ignoreDuplicates: true },
+        )
     }
   })
 

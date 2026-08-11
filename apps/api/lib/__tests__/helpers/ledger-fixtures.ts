@@ -110,9 +110,17 @@ export async function seedLedgerWorld(overrides: CommissionOverrides = {}): Prom
   // los tests de ledger fallan antes de llegar al dinero, que es lo que miden.
   // No necesita cleanup propio: `driver_restaurants.driver_id` cascadea al borrar
   // el motorizado en `cleanupLedgerWorld`.
+  //
+  // Va como upsert y no como insert porque desde la 0133 el vínculo YA existe
+  // cuando llegamos aquí: el negocio se creó unas líneas más arriba y el INSERT
+  // en `drivers` dispara `trg_drivers_link_businesses`, que engancha al recién
+  // llegado con todos los negocios activos. Un `insert` a secas choca contra la
+  // PK y tumba los trece tests del ledger antes de su primera aserción. Lo que
+  // esta línea garantiza es el ESTADO ("existe el vínculo"), no el acto de
+  // crearlo, así que quién lo creó da igual.
   const { error: authErr } = await localClient
     .from('driver_restaurants')
-    .insert({ driver_id: drv.id, business_id: biz.id })
+    .upsert({ driver_id: drv.id, business_id: biz.id }, { ignoreDuplicates: true })
   if (authErr) throw new Error(`seed driver_restaurants failed: ${authErr.message}`)
 
   return {
