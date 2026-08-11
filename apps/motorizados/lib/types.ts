@@ -79,6 +79,12 @@ export interface CardOrder {
   short_id: string
   status: string
   source: string
+  /**
+   * Cuándo se creó. En las bandejas propias no se pinta —ahí manda el reloj de
+   * cocina—, pero en Equipo es el único anclaje honesto para un pedido que
+   * todavía no se ha recogido: cuánto lleva esperando el cliente.
+   */
+  created_at: string
   customer_name: string | null
   delivery_address: string | null
   delivery_reference: string | null
@@ -213,6 +219,21 @@ export interface TeamResponse {
     total: number
     occupancySlots: number
     urgentSince: string | null
+    /**
+     * Edad del pedido. Da el reloj de las tarjetas que todavía se pueden pedir
+     * ("Voy al local", "En el local"): cuánto lleva esperando el cliente.
+     */
+    createdAt: string
+    /**
+     * El reloj de la tarjeta "En reparto", igual que en la bandeja propia.
+     *
+     * Los dos son tiempos de un pedido ajeno y los dos viajan a propósito.
+     * `estimated_ready_at` sigue sin hacerlo, y esa es la línea: dice CUÁNDO
+     * ESTARÁ LISTA la comida, que es lo que permitiría pedir solo lo ya listo y
+     * dejarle lo lento al compañero. Estos dos solo dicen cuánto lleva
+     * esperando alguien.
+     */
+    pickedUpAt: string | null
     driver: { id: string; fullName: string; vehicleType: string } | null
     businessName: string | null
     /** Dónde va. Único dato del cliente que viaja: decide si te queda de camino. */

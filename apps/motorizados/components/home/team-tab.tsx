@@ -29,6 +29,8 @@ function teamOrderToCard(o: TeamResponse['teamOrders'][number]): CardOrder {
     short_id: o.shortId,
     status: o.status,
     source: o.source,
+    // Da el reloj de las tarjetas que todavía se pueden pedir. Ver `teamAgeMs`.
+    created_at: o.createdAt,
     customer_name: null,
     delivery_address: null,
     delivery_reference: o.deliveryReference,
@@ -48,20 +50,20 @@ function teamOrderToCard(o: TeamResponse['teamOrders'][number]): CardOrder {
     // Mismo criterio: el desglose de un pago ajeno no se expone.
     cash_amount: null,
     yape_amount: null,
-    // Sí viaja, y aquí importa más que en las otras bandejas: antes de pedir un
-    // traspaso conviene saber si ese pedido te va a comer dos huecos. La
-    // cejilla de la tarjeta lo pinta cuando ocupa más de uno; sin eso, el
-    // motorizado pedía el traspaso y se comía el `requester_no_capacity` de
-    // 0130 sin haber podido preverlo.
+    // Viaja, pero la tarjeta YA NO lo pinta. El chip "N huecos" pretendía
+    // prevenir el `requester_no_capacity` de 0130 y no podía: esta columna solo
+    // la escribe `pickup`, y lo recogido no es traspasable, así que en todo
+    // pedido que SÍ puedes pedir vale 1 y el chip no salía nunca. La prevención
+    // está ahora abajo, en el botón.
     occupancy_slots: o.occupancySlots,
     estimated_ready_at: null,
     ready_early_used: null,
     urgent_since: o.urgentSince,
-    // Ningún tiempo del pedido ajeno viaja, tampoco este. Consecuencia visible:
-    // una tarjeta de Equipo "En reparto" no lleva reloj. Si algún día conviene
-    // saber cuánto lleva rodando el pedido de un compañero antes de pedírselo,
-    // el endpoint tendría que mandarlo.
-    picked_up_at: null,
+    // El ÚNICO tiempo ajeno que viaja, y es lo que le da reloj a la tarjeta "En
+    // reparto" — la única de toda la app que salía sin ninguno. Los demás siguen
+    // fuera: `estimated_ready_at` permitiría pedir solo lo ya listo, y este no,
+    // porque los pedidos recogidos no se pueden pedir.
+    picked_up_at: o.pickedUpAt,
     delivered_at: null,
     business: {
       id: '',
@@ -83,11 +85,21 @@ function teamOrderToCard(o: TeamResponse['teamOrders'][number]): CardOrder {
  * vez pedía lo mismo por su cuenta; y devolvía el contador hacia arriba por un
  * `onCount` que solo disparaba estando montado —o sea, nunca cuando hacía
  * falta—. Todo eso vive ahora en `useTeam()`.
+ *
+ * `mySlots` llega por prop y NO por `useDriverOrders()`: ese hook no es un store
+ * compartido —monta su propio poll y su propio canal realtime—, así que
+ * llamarlo aquí duplicaría los dos por tener un número que `Home` ya tiene.
  */
-export function TeamTab() {
+export function TeamTab({ mySlots }: { mySlots: number }) {
   const team = useTeam()
   const [target, setTarget] = useState<TransferTarget | null>(null)
   const now = useNow()
+
+  // El límite se repite aquí como en `available-tab.tsx` y `capacity-indicator`.
+  // La verdad vive en la BD (`apply_order_transfer` lo lee de `app_settings`) y
+  // debería bajar por el endpoint; mientras no lo haga, un cuarto sitio con el 3
+  // escrito a mano es peor que reconocerlo, así que queda anotado.
+  const full = mySlots >= 3
 
   if (team.loading) return <div className="h-32 animate-pulse rounded-2xl bg-surface-low" />
 
@@ -146,23 +158,39 @@ export function TeamTab() {
                     pintaba por TERCERA vez (píldora + verbo + esta línea), y
                     una de las tres mentía: el verbo decía "Entregar a Juan"
                     con Juan siendo el dueño, no el cliente. */}
-                <div className="flex items-center justify-end px-1">
+                <div className="flex items-center justify-end gap-2 px-1">
                   {o.transferable ? (
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() =>
-                        setTarget({
-                          orderId: o.orderId,
-                          shortId: o.shortId,
-                          businessName: o.businessName,
-                          total: o.total,
-                          driverName: group.name,
-                        })
-                      }
-                    >
-                      Solicitar pedido
-                    </Button>
+                    <>
+                      {/* SE IMPIDE EL ERROR, NO SE AVISA DE ÉL.
+                          Con la mochila llena, `apply_order_transfer` rechaza
+                          por `requester_no_capacity` (0130) — pero solo DESPUÉS
+                          de que el dueño reciba el aviso, deje pasar la ventana
+                          y el pedido se quede donde estaba. Se le hace perder 30
+                          segundos a otra persona por algo que ya se sabía al
+                          pulsar. Aquí el botón no llega a pulsarse, y el motivo
+                          va al lado en vez de en un error posterior. */}
+                      {full && (
+                        <span className="text-caption text-ink-muted">
+                          Mochila llena {mySlots}/3
+                        </span>
+                      )}
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        disabled={full}
+                        onClick={() =>
+                          setTarget({
+                            orderId: o.orderId,
+                            shortId: o.shortId,
+                            businessName: o.businessName,
+                            total: o.total,
+                            driverName: group.name,
+                          })
+                        }
+                      >
+                        Solicitar pedido
+                      </Button>
+                    </>
                   ) : (
                     <span className="text-caption text-ink-muted">Ya en reparto</span>
                   )}

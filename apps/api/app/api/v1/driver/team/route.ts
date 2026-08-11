@@ -47,7 +47,25 @@ export async function GET(req: Request): Promise<Response> {
             // traspaso, y `estimated_ready_at` permitiría pedir solo los pedidos
             // ya listos y dejarle los lentos al compañero. Se elimina el vector
             // en vez de documentarlo como riesgo.
-            'id,short_id,status,source,delivery_reference,order_amount,delivery_fee,occupancy_slots,urgent_since,driver_id,drivers(id,full_name,vehicle_type),businesses(name,accent_color)',
+            //
+            // `picked_up_at` SÍ entra, y no contradice lo anterior. Es lo que
+            // hace que la tarjeta "En reparto" tenga reloj como todas las demás
+            // de la app; sin él era la única que salía sin tiempo y parecía rota.
+            // No abre el vector de `estimated_ready_at` por dos razones: no dice
+            // nada de cuándo estará lista la comida, y solo existe en pedidos ya
+            // recogidos — que NO son traspasables (`respond_order_transfer`
+            // exige `heading_to_restaurant` o `waiting_at_restaurant`). O sea
+            // que no se puede usar para elegir qué pedir, porque esos pedidos no
+            // se pueden pedir.
+            //
+            // `created_at` es el otro, y da el reloj de las tarjetas que TODAVÍA
+            // se pueden pedir. Es la edad del pedido —cuánto lleva esperando el
+            // cliente—, no cuándo estará listo, así que tampoco abre el vector:
+            // un pedido viejo puede serlo porque la cocina va lenta, que es
+            // razón para NO quedárselo. Y sin él, la mitad de las tarjetas de
+            // Equipo salían sin tiempo mientras todas las demás de la app lo
+            // tienen.
+            'id,short_id,status,source,delivery_reference,order_amount,delivery_fee,occupancy_slots,urgent_since,created_at,picked_up_at,driver_id,drivers(id,full_name,vehicle_type),businesses(name,accent_color)',
           )
           .neq('driver_id', driver.id)
           .not('driver_id', 'is', null)
@@ -88,6 +106,8 @@ export async function GET(req: Request): Promise<Response> {
           total: Number(o.order_amount) + Number(o.delivery_fee),
           occupancySlots: o.occupancy_slots,
           urgentSince: o.urgent_since,
+          createdAt: o.created_at,
+          pickedUpAt: o.picked_up_at,
           driver: o.drivers
             ? {
                 id: o.drivers.id,
