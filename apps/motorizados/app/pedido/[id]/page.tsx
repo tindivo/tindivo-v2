@@ -214,7 +214,7 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
 
         {mode === 'heading' && (
           <>
-            <StatusHero detail={detail} moment={0} />
+            <StatusHero detail={detail} />
             <BusinessCard business={detail.business} />
             <MoneyCard detail={detail} />
             <DestinationCard detail={detail} />
@@ -223,7 +223,7 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
 
         {mode === 'waiting' && (
           <>
-            <StatusHero detail={detail} moment={1} />
+            <StatusHero detail={detail} />
             {detail.order.waitingAtRestaurantAt && (
               <WaitTimer since={detail.order.waitingAtRestaurantAt} now={now} />
             )}
@@ -235,7 +235,7 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
 
         {mode === 'picked_up' && (
           <>
-            <StatusHero detail={detail} moment={2} />
+            <StatusHero detail={detail} />
             <MomentPickedUp
               detail={detail}
               busy={busy}

@@ -20,13 +20,19 @@
 // reloj se pasa de cero exactamente cuando esa función dice `overdue`. La
 // equivalencia no se deja al azar — hay un test que la amarra.
 import { hourOf, mmss, soles } from '../format'
-import { changeDue } from '../payment'
 import type { CardOrder } from '../types'
+import {
+  type Badge,
+  type MoneyLine,
+  moneyLine,
+  orderStateBadge,
+  type StateTone,
+  type Tone,
+} from './presentation'
+
+export type { Badge, MoneyLine, StateTone, Tone }
 
 export type CardVariant = 'available' | 'mine' | 'delivered' | 'team'
-
-/** Tono semántico. El componente lo traduce a clases; aquí no hay CSS. */
-export type Tone = 'neutral' | 'success' | 'warning' | 'danger'
 
 /**
  * LA INSIGNIA ES EL ESTADO DEL PEDIDO. EL RELOJ ES EL TIEMPO. NADA MÁS.
@@ -72,83 +78,9 @@ export interface Clock {
   ready: boolean
 }
 
-/**
- * El color del estado es CATEGÓRICO, no semántico. Nombra la FASE, no la
- * gravedad.
- *
- * Y por eso es un tipo aparte de `Tone`: en esta tarjeta el ámbar y el rojo son
- * el idioma del reloj —"se te está pasando", "ya se pasó"—, y son los únicos
- * dos colores que significan urgencia. Si un estado normal usara cualquiera de
- * los dos, una fase corriente sería indistinguible de una alarma, y el color
- * dejaría de querer decir nada. Un estado nunca es una alarma: es un hecho.
- *
- * Los nombres son de fase a propósito (`transit`, `onsite`, `carrying`), no de
- * color: el view-model no sabe de CSS y la gama se puede reafinar en el
- * componente sin tocar esto.
- */
-export type StateTone = 'idle' | 'ready' | 'transit' | 'onsite' | 'carrying' | 'done'
-
-export interface Badge {
-  icon: string
-  text: string
-  tone: StateTone
-}
-
-/**
- * El estado del pedido, tal cual, por `status`.
- *
- * La gama sigue el viaje: gris mientras no hay nada que hacer, verde cuando
- * toca ir, azul de camino, naranja al llegar al mostrador, violeta con la
- * comida encima, gris otra vez al cerrar.
- *
- * Equipo habla en TERCERA persona porque el nombre de la tarjeta es el del
- * compañero, no el del cliente.
- */
-const ORDER_STATE: Record<string, Badge> = {
-  preparing: { icon: 'restaurant', text: 'En cocina', tone: 'idle' },
-  waiting_driver: { icon: 'check_circle', text: 'Lista', tone: 'ready' },
-  heading_to_restaurant: { icon: 'directions_bike', text: 'Voy al local', tone: 'transit' },
-  waiting_at_restaurant: { icon: 'storefront', text: 'En el local', tone: 'onsite' },
-  picked_up: { icon: 'delivery_dining', text: 'En reparto', tone: 'carrying' },
-  delivered: { icon: 'check_circle', text: 'Entregado', tone: 'done' },
-}
-
-const TEAM_STATE: Record<string, Badge> = {
-  heading_to_restaurant: { icon: 'directions_bike', text: 'Va al local', tone: 'transit' },
-  waiting_at_restaurant: { icon: 'storefront', text: 'En el local', tone: 'onsite' },
-  picked_up: { icon: 'delivery_dining', text: 'En reparto', tone: 'carrying' },
-}
-
-/**
- * EL COBRO EN DOS ALTURAS: la cifra grande, y debajo lo que hay que saber de
- * ella.
- *
- * Antes era una sola línea con icono, cifra y cualificador al mismo nivel, y el
- * importe —lo que se lee en la puerta del cliente, con prisa y con casco— no
- * pesaba más que la palabra "efectivo" que lo acompaña. Partirlo en dos alturas
- * le da a cada cosa su papel: el número se ve de lejos, el detalle se lee
- * cuando hace falta.
- *
- * SIN ICONO a propósito: la palabra ya dice el método, y el icono le robaba
- * ancho a la única línea que puede desbordarse (el mixto, con dos importes y el
- * vuelto).
- *
- * SIN VERBOS, también a propósito: "Cobrar en efectivo" solo se lee bien en
- * presente y la misma línea se pinta en el historial, donde ya se cobró.
- * `S/ 45.00 / efectivo` es cierto en cualquier tiempo verbal. La única
- * excepción es el prepago, donde la instrucción evita un error de plata.
- */
-export interface MoneyLine {
-  /**
-   * Lo grande. La cifra a cobrar, o la palabra que ocupa su lugar cuando no hay
-   * nada que cobrar: enseñar `S/ 45.00` al lado de "Prepagado" es una
-   * invitación a cobrarlo por error, y sin número no hay error posible.
-   */
-  headline: string
-  /** Lo pequeño debajo: método, desglose, vuelto o instrucción. */
-  detail: string | null
-  tone: Tone
-}
+// El ESTADO y el COBRO viven en `presentation.ts`, compartidos con el detalle.
+// Tenerlos aquí los dejaba divergir, y ya lo habían hecho: el detalle se había
+// quedado con una regla vieja del vuelto que no lo enseñaba nunca.
 
 export interface CardVM {
   /** Cejilla: local y código. `shortId` es `null` cuando sube a identidad. */
@@ -374,10 +306,11 @@ function buildClock(input: CardVMInput): Clock | null {
 function buildBadge(input: CardVMInput): Badge | null {
   const { order, variant } = input
 
-  if (variant === 'team') return TEAM_STATE[order.status] ?? null
   if (variant === 'delivered' && order.delivered_at == null) return null
 
-  return ORDER_STATE[order.status] ?? null
+  // Equipo habla en tercera persona: el nombre de la tarjeta es el del
+  // compañero, no el del cliente.
+  return orderStateBadge(order.status, variant === 'team')
 }
 
 /**
@@ -427,17 +360,17 @@ function buildTone(input: CardVMInput): Tone {
 }
 
 /**
- * La línea de cobro.
+ * La línea de cobro. La REGLA vive en `presentation.ts`, compartida con el
+ * detalle; aquí solo se adapta la fila de `orders` (snake_case) y se decide lo
+ * que es propio de la bandeja.
  *
- * EL VUELTO APARECE SIEMPRE QUE EXISTA, también en "En espera": si no llevas
- * sencillo encima, un pedido que paga con billete grande es un problema que
- * prefieres ver antes de aceptarlo y no en la puerta del cliente. En el
- * historial no se pinta: ahí ya se dio.
+ * EL VUELTO APARECE TAMBIÉN EN "EN ESPERA": si no llevas sencillo encima, un
+ * pedido que paga con billete grande es un problema que prefieres ver antes de
+ * aceptarlo y no en la puerta del cliente. En el historial no, que ahí ya se dio.
  */
 function buildMoney(input: CardVMInput): MoneyLine | null {
   const { order, variant } = input
   const total = order.order_amount + order.delivery_fee
-  const intent = order.payment_intent
 
   // De un pedido ajeno el cobro no viaja. Solo el importe, para decidir si
   // pides el traspaso.
@@ -445,61 +378,15 @@ function buildMoney(input: CardVMInput): MoneyLine | null {
     return { headline: soles(total), detail: 'importe del pedido', tone: 'neutral' }
   }
 
-  // LA PALABRA OCUPA EL SITIO DE LA CIFRA. Sin número no hay número que cobrar
-  // por error, y la instrucción va debajo donde va el método en los demás: el
-  // bloque se lee igual en los cuatro casos.
-  if (intent === 'prepaid') {
-    return { headline: 'Prepagado', detail: 'no cobrar', tone: 'success' }
-  }
-
-  const vuelto =
-    variant === 'delivered'
-      ? null
-      : changeDue({
-          paymentIntent: intent,
-          total,
-          cashAmount: order.cash_amount,
-          clientPaysWith: order.client_pays_with,
-          changeToGive: order.change_to_give,
-        })
-
-  const change = vuelto != null && vuelto > 0 ? ` · vuelto ${soles(vuelto)}` : ''
-
-  if (intent === 'pending_mixed') {
-    // El desglose EXISTE en la base desde 0002 y `negocios` ya lo lee; al board
-    // del motorizado no llegaba, así que el caso que más necesita el detalle
-    // era el único que no podía darlo.
-    //
-    // LA CIFRA GRANDE ES LA PARTE EN EFECTIVO, NO EL TOTAL. En un pago mixto el
-    // total no es un número que el motorizado maneje: no cuenta 45, cuenta 30 y
-    // comprueba que entraron 15 por Yape. Enseñar además el total ponía tres
-    // importes seguidos con el primero redundante, porque las dos partes ya
-    // suman.
-    if (order.cash_amount != null && order.yape_amount != null) {
-      return {
-        headline: soles(order.cash_amount),
-        detail: `efectivo + ${soles(order.yape_amount)} Yape${change}`,
-        tone: 'neutral',
-      }
-    }
-
-    // Sin desglose no se inventa: se enseña el total y se nombra el método.
-    return { headline: soles(total), detail: `mixto${change}`, tone: 'neutral' }
-  }
-
-  if (intent === 'pending_yape') {
-    return { headline: soles(total), detail: `Yape/Plin${change}`, tone: 'neutral' }
-  }
-
-  if (intent === 'pending_cash') {
-    return { headline: soles(total), detail: `efectivo${change}`, tone: 'neutral' }
-  }
-
-  // NI NULL NI DESCONOCIDO SE HACEN PASAR POR EFECTIVO. El tipo admite `null` y
-  // la rama final del código anterior afirmaba "Cobrar en efectivo" para
-  // cualquier valor que no reconociera: un dato ausente convertido en una
-  // instrucción de cobro.
-  return { headline: soles(total), detail: `método por confirmar${change}`, tone: 'neutral' }
+  return moneyLine({
+    paymentIntent: order.payment_intent,
+    total,
+    cashAmount: order.cash_amount,
+    yapeAmount: order.yape_amount,
+    clientPaysWith: order.client_pays_with,
+    changeToGive: order.change_to_give,
+    settled: variant === 'delivered',
+  })
 }
 
 export function buildCardVM(input: CardVMInput): CardVM {
