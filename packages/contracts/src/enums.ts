@@ -174,6 +174,7 @@ export const CANCEL_REASON_DETAILS = [
   'no_answer',
   'customer_request',
   'duplicate',
+  'no_change',
   'other',
 ] as const
 export const CancelReasonDetailSchema = z.enum(CANCEL_REASON_DETAILS)

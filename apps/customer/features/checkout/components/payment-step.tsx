@@ -29,6 +29,9 @@ export function PaymentStep({
     deliveryFee,
     cart,
     error,
+    maxCashBill,
+    maxChange,
+    maxDeclarable,
   } = checkout
   const { cashAmount, cashChange } = validation
 
@@ -100,6 +103,9 @@ export function PaymentStep({
           setCashCustom={setCashCustom}
           cashAmount={cashAmount}
           cashChange={cashChange}
+          maxCashBill={maxCashBill}
+          maxChange={maxChange}
+          maxDeclarable={maxDeclarable}
         />
       )}
 

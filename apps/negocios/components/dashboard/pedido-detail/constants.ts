@@ -13,6 +13,7 @@ export const REJECT_REASONS_TAIL = [
 
 export const CANCEL_REASONS = [
   { code: 'out_of_stock', label: 'Producto agotado' },
+  { code: 'no_change', label: 'No hay vuelto' },
   { code: 'other', label: 'Cliente canceló por teléfono' },
   { code: 'out_of_zone', label: 'Dirección incorrecta o imposible' },
   { code: 'closed', label: 'Restaurante no puede continuar' },

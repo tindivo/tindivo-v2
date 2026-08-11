@@ -53,6 +53,9 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
     cartHydrated,
     reloadAddresses,
     validating,
+    maxCashBill,
+    maxChange,
+    maxDeclarable,
   } = checkout
 
   const { cashAmount, cashChange, validate } = validation
@@ -242,6 +245,9 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
                 setCashCustom={setCashCustom}
                 cashAmount={cashAmount}
                 cashChange={cashChange}
+                maxCashBill={maxCashBill}
+                maxChange={maxChange}
+                maxDeclarable={maxDeclarable}
               />
             </div>
           )}

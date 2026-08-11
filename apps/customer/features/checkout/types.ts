@@ -1,6 +1,9 @@
 import type { PaymentIntent } from '@tindivo/contracts'
 
 export const DEFAULT_PREPAY_THRESHOLD = 80
+export const DEFAULT_MAX_CASH_BILL = 100
+export const DEFAULT_MAX_CHANGE = 50
+export const CASH_STEP = 0.5 // redondeo del input libre: múltiplos de S/0.50
 export const NEAR_DELIVERY_FEE = 2.0
 
 /**
