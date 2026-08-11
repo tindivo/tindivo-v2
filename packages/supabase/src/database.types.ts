@@ -1621,6 +1621,7 @@ export type Database = {
           prep_time_minutes: number | null
           preparing_at: string | null
           proof_attempt: number
+          queue_notified_at: string | null
           ready_early_at: string | null
           ready_early_used: boolean
           rejected_at: string | null
@@ -1717,6 +1718,7 @@ export type Database = {
           prep_time_minutes?: number | null
           preparing_at?: string | null
           proof_attempt?: number
+          queue_notified_at?: string | null
           ready_early_at?: string | null
           ready_early_used?: boolean
           rejected_at?: string | null
@@ -1813,6 +1815,7 @@ export type Database = {
           prep_time_minutes?: number | null
           preparing_at?: string | null
           proof_attempt?: number
+          queue_notified_at?: string | null
           ready_early_at?: string | null
           ready_early_used?: boolean
           rejected_at?: string | null
@@ -2538,6 +2541,7 @@ export type Database = {
         }[]
       }
       enqueue_overdue_orders: { Args: never; Returns: number }
+      enqueue_queued_orders: { Args: never; Returns: number }
       expire_order: {
         Args: {
           p_order_id: string
@@ -2672,6 +2676,7 @@ export type Database = {
           prep_time_minutes: number | null
           preparing_at: string | null
           proof_attempt: number
+          queue_notified_at: string | null
           ready_early_at: string | null
           ready_early_used: boolean
           rejected_at: string | null

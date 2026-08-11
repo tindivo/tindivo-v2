@@ -61,6 +61,21 @@ type Note = {
   vibrate: boolean
 }
 
+/**
+ * Un plazo de `app_settings.timers`, en minutos.
+ *
+ * Se lee en vez de escribirse a mano porque es un parámetro operativo
+ * (CLAUDE.md): el día que alguien mueva `noShowWaitMinutes` en la tabla, el
+ * aviso que le da ese plazo al cliente tiene que moverse con él. Un número
+ * hardcodeado aquí empezaría a mentir sin que nadie se entere.
+ */
+async function timerMinutes(name: string, fallback: number): Promise<number> {
+  const { data } = await db.from('app_settings').select('value').eq('key', 'timers').maybeSingle()
+  const raw = (data?.value as Record<string, unknown> | null)?.[name]
+  const n = Number(raw)
+  return Number.isFinite(n) && n > 0 ? n : fallback
+}
+
 /** `user_id` del motorizado a partir de su `drivers.id`. Null si no existe. */
 async function driverUserId(driverId: unknown): Promise<string | null> {
   if (typeof driverId !== 'string' || !driverId) return null
@@ -137,6 +152,58 @@ async function headsUpNotes(orderId: string, eventType: string): Promise<Note[]>
     requireInteraction: false,
     vibrate: false,
   }))
+}
+
+/**
+ * Aviso a la cajera de que entró un pedido del cliente.
+ *
+ * Hasta la 0136 esto no salía por aquí sino por Inngest
+ * (`order/notify-business` → `apps/api/lib/push/send.ts`): un SEGUNDO camino de
+ * push, con su propia pareja VAPID en Vercel, su propio `catch {}` que se comía
+ * los fallos y un `tag` constante (`'new-order'`) que hacía que dos pedidos
+ * seguidos colapsaran en una sola notificación. Ahora el destinatario se
+ * resuelve aquí, con la misma pareja de llaves que los otros doce avisos.
+ *
+ * Solo los estados en los que la cajera TIENE que hacer algo. El pedido manual
+ * nace en `preparing` —lo acaba de teclear ella— y no se avisa a sí misma.
+ */
+async function newOrderBusinessNotes(orderId: string): Promise<Note[]> {
+  const { data: o } = await db
+    .from('orders')
+    .select('short_id,business_id,status,customer_name,order_amount')
+    .eq('id', orderId)
+    .maybeSingle()
+  if (!o) return []
+  const status = o.status as string
+  if (status !== 'pending_acceptance' && status !== 'validando') return []
+  const { data: biz } = await db
+    .from('businesses')
+    .select('user_id')
+    .eq('id', o.business_id)
+    .maybeSingle()
+  const bizUser = (biz?.user_id as string | null) ?? null
+  if (!bizUser) return []
+  const sid = (o.short_id as string) ?? ''
+  const who = ((o.customer_name as string) ?? '').trim() || 'Un cliente'
+  return [
+    {
+      userId: bizUser,
+      title: `Nuevo pedido #${sid} · S/ ${Number(o.order_amount ?? 0).toFixed(2)}`,
+      // Sin el número de minutos: el plazo vive en `app_settings.timers` y
+      // escribirlo aquí lo dejaría mintiendo en cuanto alguien lo cambie.
+      body:
+        status === 'validando'
+          ? `${who} · llámalo para validarlo antes de que se cancele`
+          : `${who} · acéptalo antes de que se cancele`,
+      tag: `OrderCreated-${sid}`,
+      url: '/',
+      // La cajera puede tener el celular en el mostrador y de espaldas: sin
+      // `requireInteraction` el aviso se descarta solo y el pedido se cancela
+      // por silencio.
+      requireInteraction: true,
+      vibrate: true,
+    },
+  ]
 }
 
 async function buildNotes(eventType: string, aggregateId: string, payload: Record<string, unknown>): Promise<Note[]> {
@@ -227,6 +294,39 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
     } else if (action === 'pickup') {
       push(cust, 'Tu pedido salió', 'Va camino a la entrega')
       push(bizUser, 'Pedido recogido', `#${sid} salió a entrega`, { url: '/' })
+    } else if (action === 'arrived_customer') {
+      /**
+       * El aviso que más le cuesta al cliente no recibir.
+       *
+       * Marcar la llegada arranca el reloj de `noShowWaitMinutes`. Cuando vence,
+       * el motorizado puede declarar `no_show`, y eso cancela el pedido E
+       * inserta una fila en `customer_strikes` — que `create_customer_order`
+       * lee para obligar a validación en TODOS los pedidos futuros de ese
+       * teléfono. Sin este push, alguien pierde su pedido y se lleva una
+       * penalización permanente sin haber sabido nunca que el motorizado estaba
+       * en su puerta.
+       */
+      const wait = await timerMinutes('noShowWaitMinutes', 5)
+      push(
+        cust,
+        'El motorizado está en tu puerta',
+        // "puede cancelarlo", no "se cancela": el no-show lo declara la persona
+        // cuando vence la espera, no un cron.
+        `#${sid} · sal a recibirlo · pasados ${wait} min puede cancelarlo`,
+        { req: true },
+      )
+    } else if (action === 'no_show') {
+      push(cust, 'Pedido cancelado', `#${sid} · el motorizado esperó y nadie salió`, { req: true })
+      push(bizUser, 'Pedido cancelado', `#${sid} · el cliente no apareció`, { url: '/' })
+    } else if (action === 'validate_fail_retry') {
+      // La cajera rechazó el comprobante y el pedido volvió a `awaiting_payment`.
+      // El cliente tiene que subir otro, con tope de dos intentos y el cron de
+      // expiración de prepago corriendo: enterarse tarde le quema la ventana.
+      push(cust, 'Comprobante rechazado', `#${sid} · revisa el pago y sube otro comprobante`, {
+        req: true,
+      })
+    } else if (action === 'validate_fail') {
+      push(cust, 'Pedido cancelado', `#${sid} · no se pudo verificar el comprobante`, { req: true })
     } else if (action === 'deliver') {
       push(cust, 'Pedido entregado', '¡Gracias por usar Tindivo!')
       push(bizUser, 'Pedido entregado', `#${sid} fue entregado`, { url: '/' })
@@ -246,8 +346,38 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
   } else if (eventType === 'OrderCreated') {
     // El pedido manual nace en `preparing`, así que aquí ya está en cocina.
     // El del cliente nace en `pending_acceptance` y `headsUpNotes` lo descarta
-    // por estado — su aviso sale con `action='accept'`.
+    // por estado — su aviso al motorizado sale con `action='accept'`.
     out.push(...(await headsUpNotes(aggregateId, eventType)))
+    // Y el del cliente es, justamente, el que la cajera tiene que atender.
+    out.push(...(await newOrderBusinessNotes(aggregateId)))
+  } else if (eventType === 'OrderQueued') {
+    /**
+     * El pedido entró a la bandeja por RELOJ, no porque nadie pulsara nada:
+     * `appears_in_queue_at` = `listo - queueLeadMinutes` (0117). Era el único
+     * camino de entrada a la bandeja que no avisaba, así que el pedido aparecía
+     * en silencio y solo lo veía quien tuviera la app abierta por azar.
+     *
+     * Es el aviso accionable —"ya puedes tomarlo"—, de ahí `requireInteraction`.
+     * El de `headsUpNotes` es el previo ("va a tardar, atento") y no compite:
+     * ese solo sale con `prep > 10`, que es exactamente cuando hay hueco entre
+     * los dos momentos.
+     */
+    const o = await orderBrief(aggregateId)
+    if (o) {
+      const mins = Number(payload?.minutesToReady ?? 0)
+      const when = mins > 1 ? `estará listo en ~${mins} min` : 'está por salir'
+      for (const userId of await allDriverUserIds()) {
+        out.push({
+          userId,
+          title: `Ya puedes tomarlo — ${o.bizName}`,
+          body: `#${o.sid} · ${o.amount} · ${when}`,
+          tag: `OrderQueued-${o.sid}`,
+          url: `/pedido/${aggregateId}`,
+          requireInteraction: true,
+          vibrate: true,
+        })
+      }
+    }
   } else if (eventType === 'OrderReleased') {
     // El motorizado soltó el pedido y vuelve a la bolsa. Se avisa a todos los
     // demás, no al que lo soltó.

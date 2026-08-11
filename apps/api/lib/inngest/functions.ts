@@ -1,11 +1,9 @@
 import type { InngestFunction } from 'inngest'
 import { processPendingOutboxEvents } from '../outbox/processor'
-import { sendPushToUser } from '../push/send'
 import { createServiceClient } from '../supabase/service'
 import {
   EVENT_ORDER_APPEAL_CREATED,
   EVENT_ORDER_CREATED,
-  EVENT_ORDER_NOTIFY_BUSINESS,
   EVENT_ORDER_PAYMENT_TIMEOUT,
   EVENT_ORDER_PREPAY,
   EVENT_ORDER_PREPAY_PROOF_UPLOADED,
@@ -14,7 +12,6 @@ import {
   EVENT_TRANSFER_REQUESTED,
   inngest,
   type OrderCreatedData,
-  type OrderNotifyBusinessData,
   type OrderPaymentTimeoutData,
   type OrderPrepayData,
   type OrderValidationData,
@@ -199,45 +196,6 @@ export const transferRequestTimeout: InngestFunction.Any = inngest.createFunctio
 )
 
 /**
- * Envía una notificación push al operador del negocio al recibir un nuevo pedido.
- */
-export const orderNotifyBusiness: InngestFunction.Any = inngest.createFunction(
-  {
-    id: 'order-notify-business',
-    name: 'Notificar negocio sobre nuevo pedido',
-    triggers: [{ event: EVENT_ORDER_NOTIFY_BUSINESS }],
-  },
-  async ({ event, step }) => {
-    const { businessId, customerName, shortId, paymentIntent } =
-      event.data as OrderNotifyBusinessData
-
-    const operatorUserId = await step.run('get-business-operator', async () => {
-      const svc = createServiceClient()
-      const { data, error } = await svc
-        .from('businesses')
-        .select('user_id')
-        .eq('id', businessId)
-        .single()
-      if (error) throw new Error(error.message)
-      return data.user_id as string
-    })
-
-    await step.run('send-push', async () => {
-      const isPrepaid = paymentIntent === 'prepaid'
-      const paymentStr = isPrepaid ? 'Pago Online' : 'Contraentrega'
-      await sendPushToUser(operatorUserId, {
-        title: `Nuevo pedido #${shortId}`,
-        body: `${customerName} solicitó un pedido (${paymentStr})`,
-        url: '/',
-        tag: 'new-order',
-      })
-    })
-
-    return { notified: true }
-  },
-)
-
-/**
  * Fallback de revisión de prepago tras 24 horas sin apelación del cliente.
  * Utiliza idempotencia por orderId+cancelledAt, sleepUntil con la fecha exacta
  * de cancelled_at + 24h, e invocación a la RPC transaccional create_fallback_appeal_review.
@@ -295,7 +253,6 @@ export const functions: InngestFunction.Any[] = [
   orderValidationTimeout,
   orderPrepayTimeout,
   transferRequestTimeout,
-  orderNotifyBusiness,
   orderProofRejectedFallback,
   processOutboxEventsCron,
 ]

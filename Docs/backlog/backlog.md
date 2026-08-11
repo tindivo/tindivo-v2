@@ -124,13 +124,16 @@ Investigación de mercado (8 plataformas: PedidosYa, Rappi, DiDi Food, Uber Eats
 
 ### NOSHOW-01 · Tiempo de espera mínimo antes de marcar no-show
 
-**🟢 P3 (documentado, no implementar)**
-Hoy el motorizado puede marcar no-show en el segundo cero. Propuesta: 5 minutos desde que llega al destino, con escalamiento a los 3 minutos (aviso a central para segundo intento de contacto). Falta el equivalente en destino de `waiting_at_restaurant` — o un timestamp de llegada al cliente.
+**✅ DONE (2026-08-10) — quedaba escrito como pendiente y ya no lo es**
+La entrada decía "hoy el motorizado puede marcar no-show en el segundo cero" y "falta un timestamp de llegada al cliente". Ambas cosas dejaron de ser ciertas con la 0114: existe `orders.arrived_at_customer_at`, y la rama `no_show` de `advance_order` exige que esté puesto y que hayan pasado `app_settings.timers.noShowWaitMinutes` (5 por defecto) — si no, lanza excepción diciendo cuántos minutos faltan. El plazo es configurable sin deploy.
+Lo único que sobrevive de la propuesta original es el **escalamiento** ("aviso a central para segundo intento de contacto"), que ahora vive en NOSHOW-08.
 
 ### NOSHOW-02 · Evidencia fotográfica, no GPS
 
 **🟢 P3 (documentado, no implementar)**
 Decisión ya tomada: foto, no GPS. En San Jacinto las direcciones son referencias verbales; el GPS solo prueba cercanía, no significa nada para el cliente. La foto sirve para la conversación real — el cliente reconoce su propia puerta. Con un motorizado asalariado y de confianza, la evidencia es para hablar con el cliente, no para vigilar al motorizado. Evaluar si se reutiliza el bucket de comprobantes de pago o se crea uno nuevo.
+
+**Dónde engancha (2026-08-10):** el punto exacto es la rama `no_show` de `advance_order`, que en una sola transacción cancela el pedido e inserta la fila de `customer_strikes`. La foto tiene que ser condición de esa transacción, no un paso posterior: si se sube después, existe la ventana en la que el strike ya está puesto y la evidencia no. El momento natural de capturarla es el mismo en que el motorizado marca `arrived_customer` o al vencer la espera, no al declarar el no-show — para entonces ya lleva 5 minutos parado en la puerta.
 
 ### NOSHOW-03 · Cobro al restaurante, solo en prepago
 
@@ -147,6 +150,7 @@ Popup cuando el cliente abre la app tras un no-show: qué pasó en lenguaje clar
 **🟢 P3 (documentado, no implementar) — decisión de alcance ya tomada: por WhatsApp para el lanzamiento**
 El pedido queda `cancelled` (terminal, no reactivable — verificado). Un reenvío sería siempre un pedido nuevo de solo-envío, y la cajera ya puede crearlo hoy con `create_business_manual_order`. Automatizarlo no es trivial: solo el restaurante sabe si la comida todavía sirve. Feature completa (si los datos la justifican): cliente pulsa "solicitar reenvío" → se crea una solicitud, no un pedido → el restaurante confirma si aún tiene la comida → se habilita pagar el envío nuevo → se crea el pedido de solo-envío. Depende de que `create_business_manual_order` acepte `order_amount = 0`.
 **Dato que falta para decidir si vale la pena construirla:** ¿cada cuánto ocurre un no-show hoy en `delivery.tindivo.com`? Si es una vez al mes, el WhatsApp manual es la respuesta definitiva y esto no se construye nunca.
+**Sigue pendiente y sin cambios (2026-08-10).** Lo confirmado hoy es que `delivered` y `cancelled` son terminales de verdad: ninguna de las nueve funciones que escriben `orders.status` saca un pedido de ahí. O sea que el reenvío es necesariamente un pedido nuevo, como dice la entrada — no hay atajo por reactivación.
 
 ### NOSHOW-06 · Distinguir "cliente no apareció" de "no encontraron la dirección"
 
@@ -157,6 +161,13 @@ El sistema no diferencia hoy "cliente no apareció / pedido falso" de "Ernesto n
 
 **✅ Descartado, no aplica**
 Un informe de mercado propone un "fondo de incidencias" para pagar al motorizado el viaje perdido. No aplica: ese modelo asume pago por viaje, y Ernesto tiene sueldo fijo sin límite de entregas — el viaje perdido ya lo absorbe Tindivo vía costo fijo.
+
+### NOSHOW-08 · Insistir con el cliente antes de dar el no-show
+
+**🟡 P2 — es el escalamiento que sobró de NOSHOW-01**
+Hoy el cliente recibe **un solo** aviso: el push de "El motorizado está en tu puerta" que se añadió el 2026-08-10 (rama `arrived_customer` de `send-push`). Si tiene el celular en silencio, ese único intento se pierde y a los 5 minutos se lleva un strike permanente — porque `create_customer_order` lee `customer_strikes` y le exige validación en todos sus pedidos futuros.
+Falta el segundo intento: re-avisar a mitad de la ventana de espera (p. ej. al minuto 3 de 5), y/o escalar a la cajera para que llame — que es el antifraude humano que ya funciona en el resto del flujo. Un push repetido es barato; una llamada es lo que de verdad resuelve.
+**Ojo con el `tag`:** un segundo aviso con el mismo tag que el primero lo REEMPLAZA en la bandeja en vez de sonar otra vez (FCM/APNs colapsan por tag). El re-aviso necesita tag propio, igual que se hizo con las dos resoluciones de traspaso.
 
 ---
 
