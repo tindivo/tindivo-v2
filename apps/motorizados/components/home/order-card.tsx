@@ -51,7 +51,11 @@ const TONE_BORDER: Record<Tone, string> = {
   danger: 'border-danger/45',
 }
 
-/** El reloj de la esquina: texto desnudo, sin caja. Es un dato, no una alarma. */
+/**
+ * El reloj, a la altura del nombre. Lleva el peso porque es el dato que decide
+ * si te da tiempo. Sin caja: el tamaño y el color ya lo destacan, y una píldora
+ * ahí compite con el nombre.
+ */
 const CLOCK_TONE: Record<Tone, string> = {
   neutral: 'text-ink-muted',
   success: 'text-ink-muted',
@@ -59,7 +63,8 @@ const CLOCK_TONE: Record<Tone, string> = {
   danger: 'text-danger',
 }
 
-/** La insignia sí lleva caja: es una palabra de estado, y se busca de un vistazo. */
+/** La insignia, arriba en la cejilla. Pequeña y con caja: es una palabra que se
+ *  busca de un vistazo, no un número que se lee. */
 const BADGE_TONE: Record<Tone, string> = {
   neutral: 'bg-ink/[0.05] text-ink-muted',
   success: 'bg-success-soft text-success',
@@ -162,7 +167,7 @@ export function OrderCard({
         <IncomingRequestStrip request={incomingRequest} now={now} />
       )}
 
-      {/* ── 1 · Cejilla, con el reloj en la esquina ── */}
+      {/* ── 1 · Cejilla, con la INSIGNIA DE ESTADO en la esquina ── */}
       <div className="flex items-center gap-1.5 text-meta text-ink-muted">
         <span className="truncate">{vm.businessName}</span>
         {vm.shortId && <span className="shrink-0 font-mono">#{vm.shortId}</span>}
@@ -173,19 +178,22 @@ export function OrderCard({
         )}
         {vm.showSourceChip && <SourceChip source={order.source} />}
 
-        {vm.clock && (
+        {vm.badge && (
           <span
             className={cn(
-              'ml-auto shrink-0 font-mono font-semibold tabular-nums',
-              CLOCK_TONE[vm.clock.tone],
+              'ml-auto inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 font-semibold',
+              BADGE_TONE[vm.badge.tone],
             )}
           >
-            {vm.clock.text}
+            <Icon name={vm.badge.icon} size={12} filled />
+            {vm.badge.text}
           </span>
         )}
       </div>
 
-      {/* ── 2 · Identidad + insignia de estado ── */}
+      {/* ── 2 · Identidad + EL RELOJ ──
+          El reloj cae aquí, a la altura del nombre, porque es donde va la vista
+          y porque es el número que decide si te da tiempo. */}
       <div className="mt-1.5 flex items-center justify-between gap-2">
         <span className="flex min-w-0 items-center gap-1.5">
           {vm.identityIcon && (
@@ -196,15 +204,14 @@ export function OrderCard({
           </span>
         </span>
 
-        {vm.badge && (
+        {vm.clock && (
           <span
             className={cn(
-              'inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-meta font-semibold',
-              BADGE_TONE[vm.badge.tone],
+              'shrink-0 font-mono text-body-lg font-bold tabular-nums',
+              CLOCK_TONE[vm.clock.tone],
             )}
           >
-            <Icon name={vm.badge.icon} size={13} filled />
-            {vm.badge.text}
+            {vm.clock.text}
           </span>
         )}
       </div>

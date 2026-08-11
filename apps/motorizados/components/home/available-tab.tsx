@@ -83,20 +83,26 @@ export function AvailableTab({
 
       <div className="flex flex-col gap-3">
         {sorted.map((o) => {
-          const esVencido = orderUrgency(o, now) === 'overdue'
+          const esUrgente = orderUrgency(o, now) === 'overdue'
           // DOS razones distintas para no poder tomar un pedido, y cada una dice
           // la suya. La mochila manda sobre la prioridad: si no te cabe, da
           // igual cuál sea el urgente.
           //
-          // La prioridad de vencidos era hasta ahora SOLO atenuación: la
-          // tarjeta seguía navegando, así que la regla era una sugerencia
-          // visual. Ahora bloquea de verdad, como el legacy.
+          // La prioridad era hasta ahora SOLO atenuación: la tarjeta seguía
+          // navegando, así que la regla era una sugerencia visual. Ahora
+          // bloquea de verdad, como el legacy.
+          //
+          // NO DICE "VENCIDO", igual que el banner: `orderUrgency` marca por
+          // `urgent_since` —nadie lo ha tomado en 5 min, reloj de la ASIGNACIÓN—
+          // o por ETA pasada —reloj de la COCINA—, y el primero salta con la
+          // comida aún en el horno. "Vencido" prometía un plazo agotado junto a
+          // un contador corriendo tan tranquilo.
           const porMochila = full
-          const porPrioridad = !full && hasOverdue && !esVencido
+          const porPrioridad = !full && hasOverdue && !esUrgente
           const motivo = porMochila
             ? `Mochila llena ${mySlots}/3`
             : porPrioridad
-              ? 'Primero el pedido vencido'
+              ? 'Primero el que lleva esperando'
               : undefined
 
           return (

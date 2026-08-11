@@ -143,6 +143,36 @@ describe('el reloj de la esquina', () => {
     expect(vm().badge).toBeNull()
   })
 
+  // EL RELOJ DE LA COCINA Y EL DE LA ASIGNACION SON DISTINTOS.
+  // `urgent_since` lo sella el cron OrderOverdue (0134) tras
+  // assignment_rules.urgentAfterMinutes sin dueno, y puede dispararse con la
+  // comida todavia en el horno. Sin insignia, la tarjeta salia con borde rojo,
+  // el contador contando tranquilo y nada que explicara el rojo.
+  it('nadie lo toma pero la cocina va bien: el borde rojo se explica', () => {
+    const v = vm({ order: order({ urgent_since: new Date(NOW - min(6)).toISOString() }) })
+    expect(v.clock).toEqual({ text: '04:00', tone: 'neutral' })
+    expect(v.badge).toEqual({ icon: 'hourglass_top', text: 'Sin tomar', tone: 'danger' })
+    expect(v.tone).toBe('danger')
+  })
+
+  it('si hay algo que decir de la comida, eso manda sobre "Sin tomar"', () => {
+    const v = vm({
+      order: order({ ready_early_used: true, urgent_since: new Date(NOW - min(6)).toISOString() }),
+    })
+    expect(v.badge?.text).toBe('Lista')
+  })
+
+  it('en Mios no se habla de "Sin tomar": ya lo tomaste', () => {
+    const v = vm({
+      variant: 'mine',
+      order: order({
+        status: 'heading_to_restaurant',
+        urgent_since: new Date(NOW - min(6)).toISOString(),
+      }),
+    })
+    expect(v.badge).toBeNull()
+  })
+
   it('con la comida encima no hay reloj de cocina ni insignia', () => {
     const v = vm({ variant: 'mine', order: order({ status: 'picked_up' }) })
     expect(v.clock).toBeNull()

@@ -36,12 +36,14 @@ export type Tone = 'neutral' | 'success' | 'warning' | 'danger'
  * contador justo al marcar la comida lista — la misma regresión que §23 había
  * arreglado.
  *
- * Ahora:
- *   - EL RELOJ vive en la esquina superior derecha, sobre la cejilla. Pequeño,
- *     mono, sin caja. Está siempre que haya un reloj que enseñar, pase lo que
- *     pase con la comida.
- *   - LA INSIGNIA vive a la altura del nombre, y solo aparece cuando hay algo
- *     que decir con palabras ("Lista", "Te espera", "Demorado").
+ * Ahora, y con EL NÚMERO ABAJO Y LA PALABRA ARRIBA:
+ *   - LA INSIGNIA vive arriba, en la cejilla. Pequeña, con su color. Solo
+ *     aparece cuando hay algo que decir con palabras ("Lista", "Te espera",
+ *     "Demorado", "Sin tomar", o el estado del compañero en Equipo).
+ *   - EL RELOJ vive a la altura del nombre, que es donde cae la vista. Es el
+ *     dato que decide si te da tiempo, así que se lleva el peso: mono grande,
+ *     `tabular-nums`, con el color de la urgencia. Sin caja — el color y el
+ *     tamaño ya lo destacan, y una píldora ahí competía con el nombre.
  *
  * Así conviven, cada uno en su fila, y ninguno tapa al otro.
  */
@@ -185,7 +187,10 @@ function buildClock(input: CardVMInput): Clock | null {
   }
 }
 
-/** La insignia de estado. Solo cuando hay algo que decir con palabras. */
+/**
+ * La insignia de estado, arriba en la cejilla. Solo cuando hay algo que decir
+ * con palabras; el número lo lleva el reloj, abajo.
+ */
 function buildBadge(input: CardVMInput): Badge | null {
   const { order, variant } = input
 
@@ -196,23 +201,38 @@ function buildBadge(input: CardVMInput): Badge | null {
   if (variant === 'team') return TEAM_STATE[order.status] ?? null
 
   const ms = remainingMs(input)
-  if (ms == null) return null
-
   const readyEarly = Boolean(order.ready_early_used)
 
-  // COMIDA LISTA Y RELOJ VIVO: van LOS DOS. El reloj sigue en la esquina; aquí
-  // se dice que ya está lista. Esconder el contador al marcar listo es
-  // justamente lo que §23 prohíbe.
-  if (ms >= 0) return readyEarly ? { icon: 'check_circle', text: 'Lista', tone: 'success' } : null
-
-  // Lista y sin recoger: el copy se lo dice a quien puede arreglarlo (§23).
-  if (readyEarly) {
-    const tone = escalation(input, ms)
-    return { icon: tone === 'danger' ? 'priority_high' : 'schedule', text: 'Te espera', tone }
+  // COMIDA LISTA Y RELOJ VIVO: van LOS DOS, cada uno en su fila. Esconder el
+  // contador al marcar listo es justamente lo que §23 prohíbe.
+  if (ms != null && ms >= 0 && readyEarly) {
+    return { icon: 'check_circle', text: 'Lista', tone: 'success' }
   }
 
-  // La cocina se pasó de su propia estimación.
-  return { icon: 'priority_high', text: 'Demorado', tone: 'danger' }
+  if (ms != null && ms < 0) {
+    // Lista y sin recoger: el copy se lo dice a quien puede arreglarlo (§23).
+    if (readyEarly) {
+      const tone = escalation(input, ms)
+      return { icon: tone === 'danger' ? 'priority_high' : 'schedule', text: 'Te espera', tone }
+    }
+    // La cocina se pasó de su propia estimación.
+    return { icon: 'priority_high', text: 'Demorado', tone: 'danger' }
+  }
+
+  // NADIE LO HA TOMADO, Y LA COCINA VA BIEN.
+  //
+  // `urgent_since` lo sella el cron `OrderOverdue` (0134) cuando el pedido pasa
+  // `assignment_rules.urgentAfterMinutes` sin dueño — un reloj distinto del de
+  // la cocina, que puede dispararse con la comida todavía en el horno. Sin esta
+  // rama la tarjeta salía con el borde rojo, el contador contando tan tranquilo
+  // y NADA que explicara el rojo.
+  //
+  // Va la última a propósito: si hay algo que decir de la comida, eso manda.
+  if (variant === 'available' && order.urgent_since) {
+    return { icon: 'hourglass_top', text: 'Sin tomar', tone: 'danger' }
+  }
+
+  return null
 }
 
 /**
