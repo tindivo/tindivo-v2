@@ -10,6 +10,7 @@ import { SearchBar } from '@/features/catalog/components/search-bar'
 import { SearchResults } from '@/features/catalog/components/search-results'
 import { useHomeData } from '@/features/catalog/hooks/use-home-data'
 import { firstName } from '@/features/catalog/lib/format'
+import { PilotWall } from '@/features/pilot/components/pilot-wall'
 import { useCatalogSearch } from '@/lib/use-search'
 
 export default function Home() {
@@ -19,6 +20,9 @@ export default function Home() {
 
   return (
     <main className="mx-auto min-h-dvh max-w-[768px] bg-surface md:max-w-[880px] lg:max-w-6xl xl:max-w-7xl">
+      {/* Muro del piloto. Se autodesmonta en PILOT_LAUNCH_AT; después no renderiza nada. */}
+      <PilotWall />
+
       <HomeHeader user={user} />
 
       <div className="px-4 pt-4 pb-5">

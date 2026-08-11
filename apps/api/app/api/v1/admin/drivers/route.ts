@@ -15,7 +15,15 @@ const Schema = z.object({
   fullName: z.string().trim().min(1).max(120),
   phone: z.string().min(1),
   vehicleType: VehicleTypeSchema.default('moto'),
-  licensePlate: z.string().optional(),
+  // `''` no es "sin placa", es basura: el formulario manda cadena vacía cuando
+  // el campo queda en blanco y sin esto acabaría en la columna. Se normaliza a
+  // undefined para que el INSERT deje NULL, que es lo que significa.
+  licensePlate: z
+    .string()
+    .trim()
+    .max(12)
+    .optional()
+    .transform((v) => v || undefined),
 })
 
 export function OPTIONS(req: Request): Response {
@@ -30,7 +38,12 @@ export async function GET(req: Request): Promise<Response> {
     const service = createServiceClient()
     const { data, error } = await service
       .from('drivers')
-      .select('id,full_name,phone,vehicle_type,is_active,driver_availability(is_available)')
+      // `driver_restaurants` viaja con la lista para que el panel pueda avisar
+      // de un motorizado sin locales SIN pedir una consulta por fila. Es el
+      // fallo que hay que hacer visible: sin asignación no ve ningún pedido.
+      .select(
+        'id,full_name,phone,vehicle_type,license_plate,is_active,driver_availability(is_available),driver_restaurants(business_id)',
+      )
       .order('full_name')
     if (error) throw new Error(error.message)
     return ok(data ?? [], { headers: corsHeaders(req) })

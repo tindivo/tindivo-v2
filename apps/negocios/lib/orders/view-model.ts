@@ -142,9 +142,14 @@ const PREPAY_SEC = 10 * 60
  */
 export function formatReadyDelta(sec: number): string {
   const absSec = Math.abs(Math.round(sec))
+  const sign = sec < 0 ? '-' : ''
+  if (absSec >= 3600) {
+    const hours = Math.floor(absSec / 3600)
+    const mins = Math.floor((absSec % 3600) / 60)
+    return `${sign}${hours}h ${String(mins).padStart(2, '0')}m`
+  }
   const min = Math.floor(absSec / 60)
   const remSec = absSec % 60
-  const sign = sec < 0 ? '-' : ''
   return `${sign}${String(min).padStart(2, '0')}:${String(remSec).padStart(2, '0')}`
 }
 
@@ -258,7 +263,7 @@ export function toOrderVM(row: OrderRow, now: number = Date.now()): OrderVM {
   // `estimated_ready_at` ya pasó, o si se marcó listo antes de tiempo, no hay
   // nada que contar.
   const readyAtMs = row.estimated_ready_at ? Date.parse(row.estimated_ready_at) : null
-  const stillCooking = readyAtMs != null && readyAtMs > now && !row.ready_early_used
+  const stillCooking = readyAtMs != null && readyAtMs > now
   const minutesLeft =
     state === 'cooking'
       ? readyAtMs != null
@@ -269,9 +274,7 @@ export function toOrderVM(row: OrderRow, now: number = Date.now()): OrderVM {
         : null
 
   const readySec =
-    readyAtMs != null &&
-    !row.ready_early_used &&
-    (state === 'cooking' || state === 'heading' || state === 'waiting')
+    readyAtMs != null && (state === 'cooking' || state === 'heading' || state === 'waiting')
       ? Math.round((readyAtMs - now) / 1000)
       : null
 
@@ -342,8 +345,35 @@ export const COOKING_PRIORITY: Record<string, number> = {
   cooking: 5,
 }
 
+function getUrgencyTier(o: OrderVM): number {
+  // 1. Motorizado en puerta esperando entrega (acción física ahora)
+  if (o.state === 'waiting') return 1
+
+  // 2. buffer_p3 (15m+ sin moto)
+  if (o.state === 'buffer_p3') return 2
+
+  // 3. Cocina retrasada (readySec < 0 & !readyEarly)
+  if (o.readySec != null && o.readySec < 0 && !o.readyEarly) return 3
+
+  // 4. Comida lista esperando > queue_lead_minutes (readySec < 0 & readyEarly & abs > 600)
+  if (o.readySec != null && o.readySec < 0 && o.readyEarly && Math.abs(o.readySec) > 600) return 4
+
+  // 5. buffer_p2 O comida lista esperando <= queue_lead_minutes
+  if (o.state === 'buffer_p2') return 5
+  if (o.readySec != null && o.readySec < 0 && o.readyEarly && Math.abs(o.readySec) <= 600) return 5
+
+  // 6. Cocinando a tiempo (heading, buffer_p1, cooking a tiempo)
+  return 6
+}
+
 export function sortCooking(a: OrderVM, b: OrderVM): number {
-  return (COOKING_PRIORITY[a.state] ?? 6) - (COOKING_PRIORITY[b.state] ?? 6)
+  const tierA = getUrgencyTier(a)
+  const tierB = getUrgencyTier(b)
+  if (tierA !== tierB) return tierA - tierB
+
+  const aSec = a.readySec ?? 99999
+  const bSec = b.readySec ?? 99999
+  return aSec - bSec
 }
 
 // ── Busy mode helpers ─────────────────────────────────────────────────────────

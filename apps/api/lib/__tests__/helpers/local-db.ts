@@ -186,9 +186,11 @@ export async function seedPrepaidOrder(opts: SeedOrderOptions = {}): Promise<See
 
 export const E2E = {
   BUSINESS_ID: 'e2e00000-0000-4000-8000-000000000010',
-  // Segundo negocio del seed: existe SIN motorizados en `driver_restaurants`, a
-  // propósito (seed-e2e.ts:155-156). Es el escenario para el caso negativo de la
-  // guarda de autorización que añadió la 0128.
+  // Segundo negocio del seed. Nació para ser el negocio SIN motorizados, pero
+  // desde la 0133 los pares activos se vinculan solos, así que llega vinculado
+  // como cualquier otro. Quien necesite el estado "no autorizado" lo construye
+  // en su propio test borrando el vínculo y lo devuelve al terminar — así lo
+  // hace G1 en `release-and-transfer.integration.test.ts`.
   BUSINESS_2_ID: 'e2e00000-0000-4000-8000-0000000000b1',
   BUSINESS_USER_ID: 'e2e00000-0000-4000-8000-000000000001',
   DRIVER_USER_ID: 'e2e00000-0000-4000-8000-000000000002',

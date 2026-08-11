@@ -13,6 +13,10 @@ export default function NuevoMotorizadoPage() {
     fullName: '',
     phone: '',
     vehicleType: 'moto',
+    // El endpoint acepta `licensePlate` desde siempre y la inserta, pero el
+    // formulario nunca la mandaba: ningún motorizado podía tener placa
+    // registrada. Era un campo muerto en el backend por falta de un input.
+    licensePlate: '',
   })
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const [loading, setLoading] = useState(false)
@@ -27,7 +31,14 @@ export default function NuevoMotorizadoPage() {
         form,
       )
       setMsg({ ok: true, text: `Motorizado "${r.data.driver.full_name}" creado.` })
-      setForm({ email: '', password: '', fullName: '', phone: '', vehicleType: 'moto' })
+      setForm({
+        email: '',
+        password: '',
+        fullName: '',
+        phone: '',
+        vehicleType: 'moto',
+        licensePlate: '',
+      })
     } catch (err) {
       setMsg({ ok: false, text: errMsg(err) })
     } finally {
@@ -93,6 +104,17 @@ export default function NuevoMotorizadoPage() {
               <option value="auto">Auto</option>
               <option value="pie">A pie</option>
             </select>
+          </Field>
+          {/* Opcional a propósito: "a pie" y "bici" no tienen placa, y exigirla
+              bloquearía dar de alta a esos motorizados. */}
+          <Field label="Placa (opcional)">
+            <input
+              className="t-field"
+              value={form.licensePlate}
+              onChange={(e) => setForm({ ...form, licensePlate: e.target.value.toUpperCase() })}
+              placeholder="ABC-123"
+              maxLength={12}
+            />
           </Field>
           <div className="flex items-end">
             <button type="submit" className="t-btn t-btn-primary t-btn-block" disabled={loading}>

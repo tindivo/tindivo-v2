@@ -1952,6 +1952,24 @@ export type Database = {
         }
         Relationships: []
       }
+      pilot_whitelist: {
+        Row: {
+          active: boolean
+          created_at: string
+          phone: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          phone: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          phone?: string
+        }
+        Relationships: []
+      }
       push_delivery_log: {
         Row: {
           at: string
@@ -2312,7 +2330,7 @@ export type Database = {
           p_final: Database["public"]["Enums"]["transfer_request_status"]
           p_req: Database["public"]["Tables"]["order_transfer_requests"]["Row"]
         }
-        Returns: undefined
+        Returns: boolean
       }
       block_business: {
         Args: { p_by: string; p_id: string; p_reason: string }
@@ -2519,6 +2537,7 @@ export type Database = {
           phone: string
         }[]
       }
+      enqueue_overdue_orders: { Args: never; Returns: number }
       expire_order: {
         Args: {
           p_order_id: string
@@ -3096,4 +3115,3 @@ export const Constants = {
     },
   },
 } as const
-

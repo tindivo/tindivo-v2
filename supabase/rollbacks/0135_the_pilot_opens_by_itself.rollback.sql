@@ -1,0 +1,37 @@
+-- =============================================================================
+-- ROLLBACK de la 0135 · se borra el padrón del piloto
+-- =============================================================================
+--
+-- 0135 · El piloto se abre solo.
+--
+-- Elimina `pilot_whitelist` con todo lo que cuelga de ella (RLS, grants, CHECK).
+--
+-- ─────────────────────────────────────────────────────────────────────────────
+-- ⚠️ LEER ANTES DE EJECUTAR
+--
+--   ESTO BORRA LOS 30-50 NÚMEROS INVITADOS Y NO HAY DE DÓNDE RECUPERARLOS.
+--   Se teclearon a mano desde el dashboard; no existe seed, ni export, ni
+--   endpoint de alta que los regenere. Si vas a revertir, sácalos primero:
+--
+--     copy (select phone, active, created_at from public.pilot_whitelist
+--           order by created_at) to stdout with csv header;
+--
+--   Con la tabla borrada y el piloto AÚN ACTIVO (antes del
+--   2026-08-14T23:00:00Z), los dos gates del API consultan una tabla que no
+--   existe. `supabase-js` devuelve error en vez de fila, y tal como está escrito
+--   `isPhoneAllowed()` eso significa RECHAZO: se cierra el piloto para TODOS,
+--   incluidos los invitados. El síntoma es «nadie puede pedir», no un 500.
+--   Es decir: revertir esta migración sin revertir también B3 apaga el producto.
+--
+--   Después del 2026-08-14T23:00:00Z esto es inocuo: `isPilotActive()` devuelve
+--   `false` y ningún gate llega a tocar la tabla.
+--
+-- ─────────────────────────────────────────────────────────────────────────────
+-- ORDEN DE REVERSIÓN CORRECTO, si de verdad hay que deshacerlo estando el piloto activo:
+--   1. Revertir el código (los gates de send-code y customer/orders).
+--   2. Desplegar.
+--   3. Recién entonces correr este archivo.
+--
+-- No hace falta deshacer el `revoke` ni el `grant`: mueren con la tabla.
+
+drop table if exists public.pilot_whitelist;

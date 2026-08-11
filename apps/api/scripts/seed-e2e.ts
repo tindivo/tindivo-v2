@@ -152,8 +152,11 @@ async function main(): Promise<void> {
         coordinates_lat: E2E.BUSINESS_LAT,
         coordinates_lng: E2E.BUSINESS_LNG,
       },
-      // Segundo negocio: SIN motorizados asignados, a propósito. Sirve para
-      // probar que la RLS del motorizado filtra por `driver_restaurants`.
+      // Segundo negocio. Se creó para quedarse SIN motorizados asignados y así
+      // probar el filtro por negocio de la RLS; desde la 0133 eso ya no es
+      // posible por omisión —los pares activos se vinculan solos— y el test que
+      // necesita ese hueco lo abre él mismo. Sigue siendo útil como segundo
+      // negocio del mundo e2e.
       {
         id: E2E.BUSINESS_2_ID,
         user_id: E2E.BUSINESS_2_USER_ID,
@@ -355,8 +358,10 @@ async function main(): Promise<void> {
   )
 
   // Los DOS motorizados sirven a La Florencia: eso permite probar concurrencia
-  // sobre el mismo pool. `Otro Negocio E2E` queda deliberadamente sin ninguno,
-  // para poder probar el filtro por restaurante de la RLS.
+  // sobre el mismo pool. Estas filas son redundantes desde la 0133 —el trigger
+  // ya las habría creado— pero se mantienen porque son las que DECLARAN la
+  // intención: si algún día el auto-vínculo se restringe (flotas dedicadas,
+  // `primary_capability`), el mundo e2e debe seguir teniendo estos dos pares.
   await upsert(
     'driver_restaurants',
     [

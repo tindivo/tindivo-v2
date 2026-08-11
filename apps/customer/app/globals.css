@@ -20,3 +20,10 @@ html {
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
+
+/* Muro del piloto: el atributo lo pone el script inline de `app/layout.tsx` antes
+   del primer pintado, para que un dispositivo con bypass no vea el muro ni un
+   instante. React lo desmonta después; esto solo cubre ese hueco. */
+[data-pilot-bypass='1'] [data-pilot-wall] {
+  display: none;
+}
