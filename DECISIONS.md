@@ -388,6 +388,41 @@ El alta de un negocio fallaba con `conflict` cuando el color elegido ya pertenec
 
 ---
 
+## 23. Regla de los 10 minutos post-Pedido Listo, co-existencia del temporizador y diferenciación de copy (2026-08-10)
+
+- **Regla del temporizador en SQL (Fuente de Verdad)**: La reducción del tiempo estimado tras pulsar "Pedido listo" vive en el RPC `advance_order('ready')` en PostgreSQL usando `LEAST(estimated_ready_at, now() + queue_lead_minutes())`.
+- **Configurabilidad**: `queue_lead_minutes` (default 10 min) es una constante configurable en `app_settings.timers` dentro de la base de datos.
+- **Visibilidad en UI (`ready_early_used`)**: La marca `ready_early_used = true` registra si la acción se ejecutó antes de tiempo, pero **NO debe usarse como guarda para ocultar el temporizador** en la tarjeta de pedido.
+- **Referencia histórica del legacy**: En el sistema legacy (`active-orders.tsx`), la tarjeta del listado mostraba simultáneamente la etiqueta "Comida lista" y el reloj de tiempo restante. La regresión en V2 (que ocultaba el contador al marcar listo) ha sido solucionada restituyendo la visibilidad conjunta en `negocios` y `motorizados`.
+- **Formato del contador en Negocios**: El contador de la tarjeta de negocios (`CookingCountdown`) utiliza el formato `mm:ss` derivado de `formatReadyDelta(readySec)` para la cuenta positiva (e.g. `09:55 en cocina`), manteniendo la concordancia de tiempo con `motorizados`.
+- **Diferenciación de copy ("Listo pero sin recoger")**: Cuando `ready_early_used = true` y `readySec < 0` (el reloj de comida lista expira), la responsabilidad no es de la cocina sino del reparto. Se distingue de la demora de cocina (`ready_early_used = false` $\rightarrow$ `¡Demorado!` / `Esperando mm:ss` en rojo):
+  - **`negocios` (cajera)**: `Lista · esperando moto mm:ss` (información de monitoreo).
+  - **`motorizados` (repartidor)**: `Te espera hace mm:ss` (llamada a la acción).
+- **Escalada de color basada en `queue_lead_minutes`**:
+  - Tiempo transcurrido $\le \text{queue\_lead\_minutes}$ (hasta 10 min): **ÁMBAR / warning** (`bg-amber-50 text-amber-800 border-amber-300`).
+  - Tiempo transcurrido $> \text{queue\_lead\_minutes}$ (más de 10 min): **ROJO / danger** (`bg-danger-soft text-danger`).
+  - El umbral de escalada se lee dinámicamente de `app_settings.timers.queueLeadMinutes` vía `useQueueLeadMinutes()`.
+
+---
+
+## 24. Rediseño Estructural de Cards: 3 Bandas en Motorizados y Ordenación por Urgencia en Negocios (2026-08-10)
+
+- **Principio de Jerarquía Visual:** Ningún dato se elimina; se reorganizan por peso, tamaño y aislamiento para evitar la saturación informativa (11 elementos al mismo nivel).
+- **Estructura en 3 Bandas (`motorizados` OrderCard):**
+  - **Banda 1 (Orientación - peso medio):** Local, `#short_id`, Píldora de estado, Dirección de la ruta (`text-body` 14px font-medium), Cliente (`text-caption` 12px `text-ink-muted`).
+  - **Banda 2 (Acción - peso máximo - M1):** Acción verbal explícita en infinitivo (`Ir al local`, `Recoger pedido`, `Entregar a [cliente]`, `Tomar pedido`) en `--text-lead` (17px) peso 600 **en su propia línea sola**, seguida en la Fila B por badges de estado (`Comida lista`) y temporizadores accionables (`Te espera hace mm:ss`).
+  - **Banda 3 (Dinero - peso protegido - M2):** Fondo sutil propio aislado (`bg-ink/[0.03]`). Jerarquía interna: Cifra grande en mono 700 / "No cobrar" grande en sans 700 $\rightarrow$ Cualificador en caption (`Cobrar en efectivo` / `Cobrar por Yape/Plin` / `Prepagado en la app`) $\rightarrow$ Instrucción operacional en meta (`Muestra el QR` / `Paga con S/ X · devuelves S/ Y` / `Sin vuelto`).
+- **Formato de Tiempo con Desbordamiento (M4):** Helper compartido (`mmss` y `formatReadyDelta`) conmuta automáticamente: $< 60$ min $\rightarrow$ `mm:ss` (`04:06`), $\ge 60$ min $\rightarrow$ `Xh Ym` (`2h 05m`).
+- **Remoción de Barra Segmentada (M3):** La barra segmentada de 3 pasos se elimina ya que la Acción Verbal de Banda 2 indica el paso exacto dinámicamente sin duplicidad.
+- **Ordenación por Urgencia en Negocios (N1):** La columna "En cocina" se ordena estrictamente por `getUrgencyTier`:
+  - *P1 (Crítico):* `buffer_p3` (15m+ sin moto), cocina retrasada (`readySec < 0 & !readyEarly`), espera escalada $>10$m.
+  - *P2 (Atención):* `waiting` (moto en puerta), `buffer_p2`, espera normal $\le 10$m.
+  - *P3 (Normal):* `heading`, `buffer_p1`, `cooking` a tiempo ordenados de menor a mayor tiempo restante.
+- **Cards Expandidas vs Compactas (N2):** Tarjetas críticas se renderizan expandidas (105px min, borde 2px semántico + CTA directo), mientras que las normales de cocina permanecen compactas (64px, 2 líneas limpias).
+- **Democión de Jerarquía del Precio en Negocios (N3):** El total se desplaza a `--text-caption` (12px) `font-mono text-ink-muted` junto al `PayBadgeMini`, liberando la esquina superior derecha para el monitoreo operacional.
+
+---
+
 ## 22. Pedido manual: la cajera teclea el TOTAL, la comida se deduce (2026-08-07)
 
 **Solo el canal manual** (`create_business_manual_order`). El checkout del cliente no cambia: ahí el monto sale del carrito y el envío por banda se le sigue mostrando desglosado (§15).
@@ -402,3 +437,68 @@ El formulario de `apps/negocios/nuevo` rotulaba su campo "Total del pedido" pero
 - **Renombre deliberado del campo del endpoint** (`orderAmount` → `totalAmount`), sin alias de compatibilidad: un cliente viejo se lleva un 422 en vez de colar un total por comida. `apps/api` y `apps/negocios` se despliegan juntos.
 - **Arregla de rebote dos defectos vivos** que nacían de la misma asimetría: el pago **mixto** era imposible de enviar (la pantalla exigía `billetera + efectivo = comida`, el servidor `= comida + envío`) y el **vuelto** se mostraba inflado por el importe del envío.
 - **Supersede** `Docs/spec/spec_ui_cajera.md` en su punto "«Monto del pedido» pasa a ser solo comida" (líneas 62 y 374): sigue siendo `orders.order_amount`, pero ya no es lo que teclea la cajera.
+
+---
+
+## 25. El motorizado se entera: qué momentos disparan push (2026-08-10)
+
+Portado del v1 (`Code/tindivo-delivery`), que notificaba **24 momentos**. El v2
+sólo reenviaba tres tipos de evento al Edge Function (`OrderStatusChanged`,
+`OrderExpired`, `CashDelivered`) de los diecinueve que emiten los RPC vivos: los
+otros dieciséis se caían en el filtro de `dispatch_event`, en silencio. Migración
+`0134`.
+
+**Alcance: sólo motorizados.** `apps/motorizados` es hoy la única app que llama a
+`pushManager.subscribe`; `negocios`, `customer` y `admin` tienen `sw.js` pero
+nunca crean suscripción, así que sus avisos —los que ya se despachaban— no
+tienen a quién llegar. Eso se arregla aparte.
+
+**Los momentos que ahora avisan al motorizado:**
+
+| Momento | Evento (payload) | A quién |
+|---|---|---|
+| Te piden tu pedido | `TransferRequested` | dueño (`fromDriverId`) |
+| Aceptaron tu solicitud | `TransferResolved` `accepted` | solicitante |
+| Rechazaron tu solicitud | `TransferResolved` `rejected` | solicitante |
+| Venció y cedió el pedido | `TransferResolved` `expired` + `transferred` | **los dos**, mensajes distintos |
+| Venció sin ceder (mochila llena) | `TransferResolved` `expired` sin `transferred` | solicitante, con el motivo |
+| Pedido liberado, vuelve a la bolsa | `OrderReleased` | todos **menos** quien lo soltó |
+| Nadie lo ha tomado, se enfría | `OrderOverdue` (nuevo) | todos |
+| Pedido cancelado | `OrderStatusChanged` `cancel` | el asignado (además de cliente y negocio) |
+| En cocina y va a tardar | `OrderCreated` / `OrderStatusChanged` `accept` | todos, sólo si `prep_time_minutes > 10` |
+| Efectivo confirmado / disputado / resuelto | `CashConfirmed` / `CashDisputed` / `CashResolved` | el motorizado |
+
+**Decisiones que conviene no re-litigar:**
+
+- **La lista blanca sigue siendo explícita**, no un `not in` de auditoría. Lo que
+  NO se notifica (`BusinessBlocked`, `CustomerNoShow`, `OrderValidated`,
+  `OrderProofVerified`, `OrderPrepExtended`, `order/appeal.created`) es una
+  decisión de producto y se lee mejor enumerada que deducida.
+- **El doble aviso del traspaso por silencio lleva TAGS DISTINTOS**
+  (`…-expired-from-…` / `…-expired-to-…`). Con el mismo tag, FCM/APNs los
+  colapsan y quien pierde el pedido ve el mensaje de quien lo gana. El v1 ya
+  había chocado con esto.
+- **Notificar no es asignar** (§ heredada del v1): no se filtra por
+  `driver_availability.is_available`. El cron `close-driver-shifts` apaga la
+  disponibilidad de todos al cerrar; filtrar aquí deja a los motorizados en un
+  limbo del que sólo salen entrando a la PWA por azar.
+- **El aviso anticipado tiene umbral de 10 min** (`HEADS_UP_MIN_PREP_MINUTES`).
+  Por debajo, el aviso de `ready` llega antes de que dé tiempo a moverse y son
+  dos pushes por el mismo pedido.
+- **`OrderOverdue` se emite UNA vez**, sellando `orders.urgent_since` en la misma
+  transacción. `urgent_since` y `assignment_rules.urgentAfterMinutes` ya existían
+  desde hace decenas de migraciones, escritos por nadie hasta ahora. El sello lo
+  limpia el propio cron cuando el pedido consigue dueño.
+- **`respond_order_transfer` mete `fromDriverId`/`toDriverId` en el rechazo.** Las
+  otras dos resoluciones salen de `apply_order_transfer`, que sí los ponía; la
+  rama de rechazo escribía sólo `requestId` y `resolution`, así que el aviso no
+  tenía destinatario. El Edge Function además los recupera de
+  `order_transfer_requests` si faltan, para que un despliegue en el orden
+  equivocado (función antes que migración) no vuelva a dejar producción muda.
+
+**Deuda que esto NO cubre**, por orden: suscripción push en `negocios` y
+`customer`; outbox real (hoy `dispatch_event` es `net.http_post` a fondo perdido:
+si falla, el aviso se pierde y `published_at` no lo escribe nadie, así que el
+cron `prune-domain-events` tampoco borra nunca); avisos al cliente del prepago
+rechazado (`validate_fail` / `validate_fail_retry` llegan al Edge Function y no
+tienen rama).

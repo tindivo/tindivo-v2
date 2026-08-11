@@ -58,6 +58,11 @@ describe('formatReadyDelta', () => {
     expect(formatReadyDelta(-165)).toBe('-02:45')
     expect(formatReadyDelta(-5)).toBe('-00:05')
   })
+
+  it('formatea deltas >= 60 minutos como Xh Ym (ej. 2h 05m, -2h 43m)', () => {
+    expect(formatReadyDelta(7516)).toBe('2h 05m')
+    expect(formatReadyDelta(-9814)).toBe('-2h 43m')
+  })
 })
 
 describe('toOrderVM readySec calculation', () => {
@@ -118,25 +123,24 @@ describe('toOrderVM readySec calculation', () => {
     expect(vmWaiting.readySec).toBe(-165)
   })
 
-  it('3. estimated_ready_at en el pasado, ready_early_used=true -> readySec null', () => {
+  it('3. estimated_ready_at en el pasado, ready_early_used=true -> readySec negativo (-300s)', () => {
     const row = mockOrderRow({
       status: 'preparing',
       estimated_ready_at: '2026-08-05T15:10:00Z',
       ready_early_used: true,
     })
     const vm = toOrderVM(row, baseNow)
-    expect(vm.readySec).toBeNull()
+    expect(vm.readySec).toBe(-300)
   })
 
   // ── "Marcar listo" con la comida aún por delante ───────────────────────────
   // Escenario de la regla (a) de `advance_order('ready')`: si faltaban MÁS de
   // `queue_lead_minutes()` (10), el LEAST adelanta `estimated_ready_at` a
   // ahora+10min — o sea que SIGUE EN EL FUTURO aunque la comida ya esté lista.
-  // Ese desfase es justo el que hacía que la tarjeta contara minutos de cocción
-  // de un pedido que ya salió. Estos tres casos fijan qué recibe cada tarjeta.
+  // Con T1, el countdown sigue activo junto con el badge readyEarly.
   const readyAtPlus10 = '2026-08-05T15:25:00Z' // baseNow + 10 min
 
-  it('4. readyEarly en `cooking`: readySec null pero minutesLeft SIGUE contando', () => {
+  it('4. readyEarly en `cooking`: readySec (600s) y minutesLeft (10m) siguen contando', () => {
     const vm = toOrderVM(
       mockOrderRow({
         status: 'preparing',
@@ -148,14 +152,11 @@ describe('toOrderVM readySec calculation', () => {
     )
     expect(vm.state).toBe('cooking')
     expect(vm.readyEarly).toBe(true)
-    expect(vm.readySec).toBeNull()
-    // `minutesLeft` NO mira `ready_early_used` en la rama de 'cooking'. Sin la
-    // guarda de `readyEarly` en la tarjeta, esto se pinta como "Cocinando · 10m
-    // restantes" para comida que ya está lista.
+    expect(vm.readySec).toBe(600)
     expect(vm.minutesLeft).toBe(10)
   })
 
-  it('5. readyEarly en `heading`: readySec y minutesLeft ambos null', () => {
+  it('5. readyEarly en `heading`: readySec (600s) y minutesLeft (10m) siguen contando', () => {
     const vm = toOrderVM(
       mockOrderRow({
         status: 'heading_to_restaurant',
@@ -168,12 +169,11 @@ describe('toOrderVM readySec calculation', () => {
     )
     expect(vm.state).toBe('heading')
     expect(vm.readyEarly).toBe(true)
-    expect(vm.readySec).toBeNull()
-    // Aquí sí interviene `stillCooking`, que incluye `!ready_early_used`.
-    expect(vm.minutesLeft).toBeNull()
+    expect(vm.readySec).toBe(600)
+    expect(vm.minutesLeft).toBe(10)
   })
 
-  it('6. readyEarly en `waiting`: readySec y minutesLeft ambos null', () => {
+  it('6. readyEarly en `waiting`: readySec (600s) y minutesLeft (10m) siguen contando', () => {
     const vm = toOrderVM(
       mockOrderRow({
         status: 'waiting_at_restaurant',
@@ -186,8 +186,8 @@ describe('toOrderVM readySec calculation', () => {
     )
     expect(vm.state).toBe('waiting')
     expect(vm.readyEarly).toBe(true)
-    expect(vm.readySec).toBeNull()
-    expect(vm.minutesLeft).toBeNull()
+    expect(vm.readySec).toBe(600)
+    expect(vm.minutesLeft).toBe(10)
   })
 
   it('4. estimated_ready_at null -> readySec null', () => {

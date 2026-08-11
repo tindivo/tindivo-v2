@@ -14,19 +14,43 @@ export function CapacityIndicator() {
   const now = useNow()
   const { mySlots } = useDriverOrders(now)
 
+  const isOverflow = mySlots > MAX_SLOTS
   const isFull = mySlots >= MAX_SLOTS
   const isNear = !isFull && mySlots >= MAX_SLOTS - 1
 
-  const palette = isFull
-    ? { bg: 'bg-danger', text: 'text-white', icon: 'block' as const }
-    : isNear
-      ? { bg: 'bg-warning-soft', text: 'text-warning', icon: 'hourglass_top' as const }
-      : { bg: 'bg-success/15', text: 'text-success', icon: 'delivery_dining' as const }
+  const palette = isOverflow
+    ? {
+        bg: 'bg-danger border border-white/20',
+        text: 'text-white',
+        icon: 'warning' as const,
+        label: `Mochila sobrecargada: ${mySlots}/${MAX_SLOTS}`,
+      }
+    : isFull
+      ? {
+          bg: 'bg-danger',
+          text: 'text-white',
+          icon: 'block' as const,
+          label: `Mochila llena: ${mySlots}/${MAX_SLOTS}`,
+        }
+      : isNear
+        ? {
+            bg: 'bg-warning-soft',
+            text: 'text-warning',
+            icon: 'hourglass_top' as const,
+            label: `Mochila casi llena: ${mySlots}/${MAX_SLOTS}`,
+          }
+        : {
+            bg: 'bg-success/15',
+            text: 'text-success',
+            icon: 'delivery_dining' as const,
+            label: `Mochila ${mySlots}/${MAX_SLOTS}`,
+          }
 
   return (
     <div
       role="status"
-      aria-label={`Mochila ${mySlots} de ${MAX_SLOTS} slots`}
+      aria-label={palette.label}
+      title={palette.label}
       className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-bold ${palette.bg} ${palette.text}`}
     >
       <Icon name={palette.icon} size={16} filled />

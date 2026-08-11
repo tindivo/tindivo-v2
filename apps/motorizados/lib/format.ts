@@ -1,12 +1,21 @@
 export const soles = (n: number | null | undefined) =>
   n == null ? '—' : `S/ ${Number(n).toFixed(2)}`
 
-/** Segundos -> "MM:SS" (clamp a 0). */
+/** Segundos -> "MM:SS" si < 60 min, "Xh Ym" si >= 60 min. Preserva el signo. */
 export function mmss(totalSeconds: number): string {
-  const s = Math.max(0, Math.floor(totalSeconds))
-  const mm = String(Math.floor(s / 60)).padStart(2, '0')
-  const ss = String(s % 60).padStart(2, '0')
-  return `${mm}:${ss}`
+  const isNeg = totalSeconds < 0
+  const absSec = Math.abs(Math.round(totalSeconds))
+  const sign = isNeg ? '-' : ''
+
+  if (absSec >= 3600) {
+    const hours = Math.floor(absSec / 3600)
+    const mins = Math.floor((absSec % 3600) / 60)
+    return `${sign}${hours}h ${String(mins).padStart(2, '0')}m`
+  }
+
+  const mm = String(Math.floor(absSec / 60)).padStart(2, '0')
+  const ss = String(absSec % 60).padStart(2, '0')
+  return `${sign}${mm}:${ss}`
 }
 
 export function minutesUntil(iso: string, now: number): number {
