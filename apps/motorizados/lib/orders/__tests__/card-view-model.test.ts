@@ -77,9 +77,9 @@ describe('identidad', () => {
   })
 })
 
-describe('el reloj de la esquina', () => {
+describe('el reloj', () => {
   it('en cocina cuenta en mm:ss', () => {
-    expect(vm().clock).toEqual({ text: '04:00', tone: 'neutral' })
+    expect(vm().clock).toEqual({ text: '04:00', tone: 'neutral', ready: false })
   })
 
   it('mm:ss tambien por encima de los dos minutos', () => {
@@ -91,32 +91,31 @@ describe('el reloj de la esquina', () => {
   // ESTA ES LA REGLA QUE §23 PROTEGE, y la que una version anterior rompio al
   // fundir reloj y estado en un solo elemento.
   it('marcar la comida lista NO esconde el contador', () => {
-    const v = vm({ order: order({ ready_early_used: true }) })
-    expect(v.clock).toEqual({ text: '04:00', tone: 'neutral' })
-    expect(v.badge).toEqual({ icon: 'check_circle', text: 'Lista', tone: 'success' })
+    const v = vm({ order: order({ status: 'waiting_driver', ready_early_used: true }) })
+    expect(v.clock?.text).toBe('04:00')
+    expect(v.badge?.text).toBe('Lista')
   })
 
-  it('lista y sin recoger: el reloj cuenta hacia arriba, en ambar', () => {
+  it('lista y sin recoger: cuenta hacia arriba, en ambar', () => {
     const v = vm({
       order: order({
         ready_early_used: true,
         estimated_ready_at: new Date(NOW - min(3)).toISOString(),
       }),
     })
-    expect(v.clock).toEqual({ text: '03:00', tone: 'warning' })
-    expect(v.badge).toEqual({ icon: 'schedule', text: 'Te espera', tone: 'warning' })
+    expect(v.clock?.text).toBe('03:00')
+    expect(v.clock?.tone).toBe('warning')
   })
 
-  it('pasado queueLeadMinutes escalan reloj e insignia', () => {
+  it('pasado queueLeadMinutes escala a rojo', () => {
     const v = vm({
       order: order({
         ready_early_used: true,
         estimated_ready_at: new Date(NOW - min(14)).toISOString(),
       }),
     })
-    expect(v.clock).toEqual({ text: '14:00', tone: 'danger' })
-    expect(v.badge?.tone).toBe('danger')
-    expect(v.badge?.text).toBe('Te espera')
+    expect(v.clock?.text).toBe('14:00')
+    expect(v.clock?.tone).toBe('danger')
   })
 
   it('el umbral sale de app_settings, no del codigo', () => {
@@ -124,24 +123,17 @@ describe('el reloj de la esquina', () => {
       ready_early_used: true,
       estimated_ready_at: new Date(NOW - min(14)).toISOString(),
     })
-    const v = vm({ order: late, queueLeadMinutes: 20 })
-    expect(v.clock?.tone).toBe('warning')
-    expect(v.badge?.tone).toBe('warning')
+    expect(vm({ order: late, queueLeadMinutes: 20 }).clock?.tone).toBe('warning')
   })
 
-  it('cocina demorada habla de la cocina, no del reparto', () => {
+  it('cocina demorada, sin marcar lista: rojo directo', () => {
     const v = vm({
       order: order({
         ready_early_used: false,
         estimated_ready_at: new Date(NOW - min(3)).toISOString(),
       }),
     })
-    expect(v.clock).toEqual({ text: '03:00', tone: 'danger' })
-    expect(v.badge).toEqual({ icon: 'priority_high', text: 'Demorado', tone: 'danger' })
-  })
-
-  it('a tiempo y sin marcar, no hay insignia que poner', () => {
-    expect(vm().badge).toBeNull()
+    expect(v.clock).toEqual({ text: '03:00', tone: 'danger', ready: false })
   })
 
   // `urgent_since` NO PINTA NADA EN EL TABLERO.
@@ -152,15 +144,14 @@ describe('el reloj de la esquina', () => {
   // eran tres canales mas para lo mismo, gritando cuando no pasa nada.
   it('5 minutos sin tomar, con la cocina a tiempo, NO altera la tarjeta', () => {
     const v = vm({ order: order({ urgent_since: new Date(NOW - min(6)).toISOString() }) })
-    expect(v.clock).toEqual({ text: '04:00', tone: 'neutral' })
-    expect(v.badge).toBeNull()
+    expect(v.clock).toEqual({ text: '04:00', tone: 'neutral', ready: false })
     expect(v.tone).toBe('neutral')
   })
 
-  it('con la comida encima no hay reloj de cocina ni insignia', () => {
+  it('con la comida encima no hay reloj de cocina', () => {
     const v = vm({ variant: 'mine', order: order({ status: 'picked_up' }) })
     expect(v.clock).toBeNull()
-    expect(v.badge).toBeNull()
+    expect(v.badge?.text).toBe('En reparto')
   })
 
   it('en Equipo hay insignia de estado pero NO reloj: no viaja', () => {
@@ -179,7 +170,7 @@ describe('el reloj de la esquina', () => {
     // compara contra el helper y no contra un literal.
     const at = '2026-08-11T20:45:00.000Z'
     const v = vm({ variant: 'delivered', order: order({ status: 'delivered', delivered_at: at }) })
-    expect(v.clock).toEqual({ text: hourOf(at), tone: 'neutral' })
+    expect(v.clock).toEqual({ text: hourOf(at), tone: 'neutral', ready: false })
     expect(v.badge).toEqual({ icon: 'check_circle', text: 'Entregado', tone: 'neutral' })
   })
 })
@@ -333,27 +324,89 @@ describe('linea de cobro', () => {
   })
 })
 
-describe('el paso siguiente', () => {
-  it('solo lo lleva Mios, y viene CON icono', () => {
-    // El icono no es adorno: era la unica fila sin el, entre la referencia y el
-    // cobro, asi que flotaba como un segundo titular.
-    const v = vm({ variant: 'mine', order: order({ status: 'heading_to_restaurant' }) })
-    expect(v.action).toEqual({ icon: 'storefront', text: 'Ir al local' })
-
-    expect(vm().action).toBeNull()
-    expect(vm({ variant: 'team', ownerName: 'Juan' }).action).toBeNull()
-    expect(vm({ variant: 'delivered' }).action).toBeNull()
+describe('la insignia es el ESTADO DEL PEDIDO', () => {
+  // En espera: el propio status distingue si la comida esta o no, porque
+  // `ready` sin motorizado deja el pedido en `waiting_driver` (0128:156-159).
+  it('en espera distingue cocina de lista, por status', () => {
+    expect(vm({ order: order({ status: 'preparing' }) }).badge).toEqual({
+      icon: 'restaurant',
+      text: 'En cocina',
+      tone: 'neutral',
+    })
+    expect(vm({ order: order({ status: 'waiting_driver' }) }).badge).toEqual({
+      icon: 'check_circle',
+      text: 'Lista',
+      tone: 'success',
+    })
   })
 
-  it('en Mios no repite el nombre que ya esta arriba', () => {
-    const v = vm({ variant: 'mine', order: order({ status: 'picked_up' }) })
-    expect(v.action).toEqual({ icon: 'flag', text: 'Entregar pedido' })
+  it('en Mios habla del viaje del motorizado', () => {
+    const de = (status: string) => vm({ variant: 'mine', order: order({ status }) }).badge?.text
+    expect(de('heading_to_restaurant')).toBe('Voy al local')
+    expect(de('waiting_at_restaurant')).toBe('En el local')
+    expect(de('picked_up')).toBe('En reparto')
   })
 
-  it('un preparing tomable ya no cae en un generico "Ver pedido"', () => {
-    // En "En espera" no hay fila de verbo, asi que no hay mapa que fallar.
-    const v = vm({ order: order({ status: 'preparing' }) })
-    expect(v.action).toBeNull()
+  it('en Equipo habla en tercera persona: el nombre es el del companero', () => {
+    const v = vm({
+      variant: 'team',
+      ownerName: 'Juan',
+      order: order({ status: 'heading_to_restaurant', estimated_ready_at: null }),
+    })
+    expect(v.badge?.text).toBe('Va al local')
+  })
+
+  // ESTE ES EL CASO QUE NO ES OBVIO. Con motorizado, `ready` NO toca el status,
+  // asi que "lista" no cabe en la insignia sin pisar el estado del viaje. Viaja
+  // con el reloj, que es el reloj de la comida.
+  it('puede ser MIO y estar lista: los dos hechos, sin pisarse', () => {
+    const v = vm({
+      variant: 'mine',
+      order: order({ status: 'heading_to_restaurant', ready_early_used: true }),
+    })
+    expect(v.badge?.text).toBe('Voy al local')
+    expect(v.clock).toEqual({ text: '04:00', tone: 'neutral', ready: true })
+  })
+
+  it('en espera NO se repite el visto: la insignia ya dice "Lista"', () => {
+    const v = vm({ order: order({ status: 'waiting_driver', ready_early_used: true }) })
+    expect(v.badge?.text).toBe('Lista')
+    expect(v.clock?.ready).toBe(false)
+  })
+
+  // Soltar un pedido lo devuelve a `preparing` o a `waiting_driver` segun la
+  // comida (0121:205-210), asi que al volver a la bandeja la insignia dice la
+  // verdad sin ningun caso especial.
+  it('un pedido soltado vuelve con el estado que le toca', () => {
+    expect(vm({ order: order({ status: 'preparing' }) }).badge?.text).toBe('En cocina')
+    expect(vm({ order: order({ status: 'waiting_driver' }) }).badge?.text).toBe('Lista')
+  })
+})
+
+describe('la alarma solo por debajo de cero', () => {
+  it('con tiempo por delante NO tine nada, este el pedido como este', () => {
+    for (const status of ['preparing', 'waiting_driver']) {
+      const v = vm({ order: order({ status }) })
+      expect(v.clock?.tone).toBe('neutral')
+      expect(v.tone).toBe('neutral')
+    }
+  })
+
+  it('el estado NO mueve el borde: un estado es un hecho, no una alarma', () => {
+    // "Lista" es verde en la insignia y aun asi el borde sigue neutro.
+    const v = vm({ order: order({ status: 'waiting_driver' }) })
+    expect(v.badge?.tone).toBe('success')
+    expect(v.tone).toBe('neutral')
+  })
+
+  it('pasado cero, el reloj enciende el borde', () => {
+    const v = vm({
+      order: order({
+        status: 'waiting_driver',
+        estimated_ready_at: new Date(NOW - min(1)).toISOString(),
+      }),
+    })
+    expect(v.tone).toBe('danger')
   })
 })
 

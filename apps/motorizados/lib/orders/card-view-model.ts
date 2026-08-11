@@ -16,10 +16,12 @@
  * configuración de alias, igual que los de negocios.
  */
 
+// `orderUrgency` ya no se llama desde aquí: el tono lo decide el reloj, y el
+// reloj se pasa de cero exactamente cuando esa función dice `overdue`. La
+// equivalencia no se deja al azar — hay un test que la amarra.
 import { hourOf, mmss, soles } from '../format'
 import { changeDue } from '../payment'
 import type { CardOrder } from '../types'
-import { orderUrgency } from '../urgency'
 
 export type CardVariant = 'available' | 'mine' | 'delivered' | 'team'
 
@@ -27,35 +29,78 @@ export type CardVariant = 'available' | 'mine' | 'delivered' | 'team'
 export type Tone = 'neutral' | 'success' | 'warning' | 'danger'
 
 /**
- * EL RELOJ Y EL ESTADO SON DOS COSAS, Y VAN EN DOS SITIOS.
+ * LA INSIGNIA ES EL ESTADO DEL PEDIDO. EL RELOJ ES EL TIEMPO. NADA MÁS.
  *
- * Hubo un intento de fundirlos en una sola ranura "con la verdad más urgente".
- * Estaba mal, y `DECISIONS §23` ya lo decía por escrito: `ready_early_used`
- * **no debe usarse como guarda para ocultar el temporizador**, y el legacy
- * enseñaba "Comida lista" y el reloj a la vez. Fundirlos volvía a esconder el
- * contador justo al marcar la comida lista — la misma regresión que §23 había
- * arreglado.
+ * Antes la insignia llevaba estados DERIVADOS DEL RELOJ ("Te espera",
+ * "Demorado") y había además una fila con el verbo de la acción ("Recoger
+ * pedido", "Ir al local"). Eran dos estados conviviendo y diciendo lo mismo por
+ * dos vías: "En el local" y "Recoger pedido" son la misma frase. Y encima el
+ * estado real del pedido —lo que de verdad distingue una tarjeta de otra en una
+ * bandeja donde conviven varios— no se veía por ninguna parte.
  *
- * Ahora, y con EL NÚMERO ABAJO Y LA PALABRA ARRIBA:
- *   - LA INSIGNIA vive arriba, en la cejilla. Pequeña, con su color. Solo
- *     aparece cuando hay algo que decir con palabras ("Lista", "Te espera",
- *     "Demorado", "Sin tomar", o el estado del compañero en Equipo).
- *   - EL RELOJ vive a la altura del nombre, que es donde cae la vista. Es el
- *     dato que decide si te da tiempo, así que se lleva el peso: mono grande,
- *     `tabular-nums`, con el color de la urgencia. Sin caja — el color y el
- *     tamaño ya lo destacan, y una píldora ahí competía con el nombre.
+ * Ahora:
+ *   - LA INSIGNIA (cejilla) dice el ESTADO DEL PEDIDO, y solo eso.
+ *   - EL RELOJ (altura del nombre) dice el tiempo, y solo eso.
+ *   - EL VERBO SE FUE. Era la traducción del estado a imperativo; con el estado
+ *     a la vista, sobraba.
  *
- * Así conviven, cada uno en su fila, y ninguno tapa al otro.
+ * DÓNDE VA "LISTA", QUE ES EL CASO QUE NO ES OBVIO.
+ *
+ * `advance_order('ready')` (0128:156-159) hace DOS cosas distintas según haya
+ * motorizado o no:
+ *   - SIN motorizado ("En espera"): el status pasa a `waiting_driver`. O sea,
+ *     el estado del pedido YA dice que está lista, y la insignia la enseña.
+ *   - CON motorizado ("Míos"): el status NO cambia —sigue siendo el viaje del
+ *     motorizado (`heading_to_restaurant`…)—, y lo único que marca la comida
+ *     lista es `ready_early_used`. Ahí "Lista" no cabe en la insignia sin pisar
+ *     el estado.
+ *
+ * Por eso en "Míos" la marca de comida lista viaja CON EL RELOJ (`ready`): es
+ * el reloj de la comida, así que su visto bueno pertenece ahí. Un pedido puede
+ * ser tuyo, ir de camino al local y estar la comida lista: insignia "Voy al
+ * local", reloj "✓ 04:52". Los dos hechos, sin taparse — que es lo que exige
+ * `DECISIONS §23`.
+ *
+ * Y soltarlo encaja solo: `release` (0121:205-210) devuelve el pedido a
+ * `preparing` o a `waiting_driver` según la comida esté o no, así que al volver
+ * a "En espera" la insignia dice la verdad sin ningún caso especial.
  */
 export interface Clock {
   text: string
   tone: Tone
+  /** Comida lista cuando el ESTADO no puede decirlo (o sea, en "Míos"). */
+  ready: boolean
 }
 
 export interface Badge {
   icon: string
   text: string
   tone: Tone
+}
+
+/**
+ * El estado del pedido, tal cual, por `status`.
+ *
+ * TONO NEUTRO EN CASI TODOS a propósito: un estado es un hecho, no una alarma.
+ * La alarma la da el reloj, y solo cuando baja de cero. La única excepción es
+ * "Lista", que no es alarma sino buena noticia.
+ *
+ * Equipo habla en TERCERA persona porque el nombre de la tarjeta es el del
+ * compañero, no el del cliente.
+ */
+const ORDER_STATE: Record<string, Badge> = {
+  preparing: { icon: 'restaurant', text: 'En cocina', tone: 'neutral' },
+  waiting_driver: { icon: 'check_circle', text: 'Lista', tone: 'success' },
+  heading_to_restaurant: { icon: 'directions_bike', text: 'Voy al local', tone: 'neutral' },
+  waiting_at_restaurant: { icon: 'storefront', text: 'En el local', tone: 'neutral' },
+  picked_up: { icon: 'delivery_dining', text: 'En reparto', tone: 'neutral' },
+  delivered: { icon: 'check_circle', text: 'Entregado', tone: 'neutral' },
+}
+
+const TEAM_STATE: Record<string, Badge> = {
+  heading_to_restaurant: { icon: 'directions_bike', text: 'Va al local', tone: 'neutral' },
+  waiting_at_restaurant: { icon: 'storefront', text: 'En el local', tone: 'neutral' },
+  picked_up: { icon: 'delivery_dining', text: 'En reparto', tone: 'neutral' },
 }
 
 /**
@@ -82,17 +127,15 @@ export interface CardVM {
   shortId: string | null
   /** Huecos de mochila, solo cuando ocupa más de uno. */
   slotsNote: string | null
-  /** El reloj, en la esquina. Ver la nota de `Clock`. */
+  /** El reloj, a la altura del nombre. Ver la nota de `Clock`. */
   clock: Clock | null
   /** El nombre, en grande. Es como el motorizado identifica el pedido. */
   identity: string
   /** Icono que desambigua de quién es el nombre (en Equipo es un compañero). */
   identityIcon: string | null
-  /** La insignia de estado, a la altura del nombre. */
+  /** El estado del pedido, arriba en la cejilla. */
   badge: Badge | null
   reference: string | null
-  /** El paso siguiente, con su icono. Solo en "Míos". */
-  action: NextStep | null
   money: MoneyLine | null
   /** Motivo del bloqueo. Ocupa el sitio del dinero: si no lo puedes tomar, el
    *  precio no decide nada. */
@@ -115,45 +158,19 @@ export interface CardVMInput {
 }
 
 /**
- * El paso siguiente, SOLO para "Míos".
+ * AQUÍ VIVÍA EL VERBO DE LA ACCIÓN ("Ir al local", "Recoger pedido").
  *
- * VA CON ICONO, y no es adorno. Era la única fila de la tarjeta sin él, entre
- * la referencia (📍) y el cobro (💵), así que quedaba como una frase suelta
- * flotando en medio; y a 15px seminegrita competía con el nombre por ser el
- * titular. Con icono entra en la misma rejilla que las otras dos filas y se lee
- * como lo que es: una instrucción, no un segundo título.
+ * Se fue con el rediseño de la insignia. Era la traducción del estado a
+ * imperativo, así que con el estado del pedido a la vista quedaban dos estados
+ * conviviendo en la misma tarjeta y diciendo lo mismo por dos vías: "En el
+ * local" y "Recoger pedido" son la misma frase.
  *
- * Las otras tres bandejas no lo llevan, y eso resuelve dos defectos de raíz en
- * vez de parchearlos:
- *   - En "En espera" un pedido `preparing` dentro de la ventana de cola caía al
- *     genérico "Ver pedido", porque el mapa no tenía esa clave. Ya no hay mapa
- *     que consultar ahí.
- *   - En Equipo se pintaba "Entregar a {compañero}": un imperativo dirigido a
- *     quien no puede ejecutarlo, y con el nombre del dueño en el sitio donde el
- *     lector espera el del cliente.
- *
- * `picked_up` ya NO lleva el nombre del cliente ("Entregar a María"): el nombre
- * vive fijo en la identidad de la tarjeta, así que repetirlo aquí era la misma
- * palabra dos veces en la misma tarjeta.
+ * De paso desaparecieron con él dos defectos que ya no tienen dónde ocurrir: el
+ * `preparing` que caía en un genérico "Ver pedido" por no estar en el mapa, y
+ * el "Entregar a {compañero}" de Equipo —un imperativo dirigido a quien no
+ * puede ejecutarlo, con el nombre del dueño donde el lector espera el del
+ * cliente—.
  */
-export interface NextStep {
-  icon: string
-  text: string
-}
-
-const ACTION_VERB: Record<string, NextStep> = {
-  heading_to_restaurant: { icon: 'storefront', text: 'Ir al local' },
-  waiting_at_restaurant: { icon: 'shopping_bag', text: 'Recoger pedido' },
-  picked_up: { icon: 'flag', text: 'Entregar pedido' },
-}
-
-/** Estado de un pedido ajeno. En Equipo no hay reloj que enseñar:
- *  `estimated_ready_at` no viaja de un pedido de otro, por diseño. */
-const TEAM_STATE: Record<string, Badge> = {
-  heading_to_restaurant: { icon: 'directions_bike', text: 'Va al local', tone: 'neutral' },
-  waiting_at_restaurant: { icon: 'hourglass_top', text: 'En el local', tone: 'warning' },
-  picked_up: { icon: 'delivery_dining', text: 'En reparto', tone: 'neutral' },
-}
 
 /** Milisegundos que faltan (negativo = ya pasó), o `null` si no hay reloj. */
 function remainingMs(input: CardVMInput): number | null {
@@ -176,69 +193,60 @@ function escalation(input: CardVMInput, ms: number): 'warning' | 'danger' {
   return elapsedSec > input.queueLeadMinutes * 60 ? 'danger' : 'warning'
 }
 
-/** El reloj de la esquina. Siempre que haya uno, marque o no la cajera. */
+/**
+ * El reloj. Siempre que haya uno, marque o no la cajera.
+ *
+ * MIENTRAS NO BAJE DE CERO, NO HAY ALARMA. El tono es neutro hasta que el
+ * contador se pasa; recién ahí escala. Un reloj que se pone de color con seis
+ * minutos por delante enseña a ignorar el color.
+ */
 function buildClock(input: CardVMInput): Clock | null {
-  if (input.variant === 'delivered') {
-    return input.order.delivered_at
-      ? { text: hourOf(input.order.delivered_at), tone: 'neutral' }
+  const { order, variant } = input
+
+  if (variant === 'delivered') {
+    return order.delivered_at
+      ? { text: hourOf(order.delivered_at), tone: 'neutral', ready: false }
       : null
   }
 
   const ms = remainingMs(input)
   if (ms == null) return null
 
+  // La marca de comida lista SOLO aquí cuando el estado no puede decirla, o sea
+  // con el pedido ya tomado. Sin motorizado, `ready` deja el status en
+  // `waiting_driver` y la insignia ya pone "Lista": repetirlo sería decirlo dos
+  // veces en la misma tarjeta.
+  const ready = variant === 'mine' && Boolean(order.ready_early_used)
   const text = mmss(Math.abs(ms) / 1000)
-  if (ms >= 0) return { text, tone: 'neutral' }
+
+  if (ms >= 0) return { text, tone: 'neutral', ready }
 
   // Ya se pasó. Si la cajera marcó la comida lista, la demora es del reparto y
   // escala con el margen de cola; si no, es la cocina la que se pasó.
   return {
     text,
-    tone: input.order.ready_early_used ? escalation(input, ms) : 'danger',
+    tone: order.ready_early_used ? escalation(input, ms) : 'danger',
+    ready,
   }
 }
 
 /**
- * La insignia de estado, arriba en la cejilla. Solo cuando hay algo que decir
- * con palabras; el número lo lleva el reloj, abajo.
+ * La insignia: EL ESTADO DEL PEDIDO, tal cual viene de `status`.
+ *
+ * Ya no lleva estados derivados del reloj ("Te espera", "Demorado"). Esos eran
+ * el tiempo disfrazado de estado, y convivían con el verbo de la acción
+ * diciendo lo mismo por otra vía. Lo que distingue de verdad una tarjeta de
+ * otra en una bandeja donde conviven varias fases es el estado del pedido, y
+ * eso es lo que se pinta aquí. La demora la sigue contando el reloj, con su
+ * color, abajo.
  */
 function buildBadge(input: CardVMInput): Badge | null {
   const { order, variant } = input
 
-  if (variant === 'delivered') {
-    return order.delivered_at ? { icon: 'check_circle', text: 'Entregado', tone: 'neutral' } : null
-  }
-
   if (variant === 'team') return TEAM_STATE[order.status] ?? null
+  if (variant === 'delivered' && order.delivered_at == null) return null
 
-  const ms = remainingMs(input)
-  const readyEarly = Boolean(order.ready_early_used)
-
-  // COMIDA LISTA Y RELOJ VIVO: van LOS DOS, cada uno en su fila. Esconder el
-  // contador al marcar listo es justamente lo que §23 prohíbe.
-  if (ms != null && ms >= 0 && readyEarly) {
-    return { icon: 'check_circle', text: 'Lista', tone: 'success' }
-  }
-
-  if (ms != null && ms < 0) {
-    // Lista y sin recoger: el copy se lo dice a quien puede arreglarlo (§23).
-    if (readyEarly) {
-      const tone = escalation(input, ms)
-      return { icon: tone === 'danger' ? 'priority_high' : 'schedule', text: 'Te espera', tone }
-    }
-    // La cocina se pasó de su propia estimación.
-    return { icon: 'priority_high', text: 'Demorado', tone: 'danger' }
-  }
-
-  // AQUÍ VIVÍA UN "Sin tomar" que ya no hace falta.
-  //
-  // Existía para explicar un borde rojo que aparecía con `urgent_since` —el
-  // reloj de la ASIGNACIÓN, a los 5 minutos sin dueño— mientras el contador de
-  // cocina seguía corriendo tan tranquilo. Ese criterio se retiró de
-  // `orderUrgency` (ver su nota): ese hecho ya lo avisa un push vibrante, y no
-  // necesitaba además banner, reordenación y bloqueo. Sin borde rojo que
-  // justificar, la insignia sobra.
-  return null
+  return ORDER_STATE[order.status] ?? null
 }
 
 /**
@@ -258,21 +266,24 @@ function buildBadge(input: CardVMInput): Badge | null {
  *     variante, así que un pedido de hace tres horas tenía la ETA vencida por
  *     goleada y el historial entero salía en rojo de alarma.
  *
- *   - "En espera" usa `orderUrgency`, LA MISMA función con la que la bandeja
- *     ordena, bloquea las demás tarjetas y dispara el banner. Antes la tarjeta
- *     tenía su propio criterio (más estricto), así que el cartel gritaba "hay un
- *     vencido" y la tarjeta señalada se quedaba con el borde neutro.
+ *   - "En espera" queda alineada con `orderUrgency`, LA MISMA función con la que
+ *     la bandeja ordena, bloquea las demás tarjetas y dispara el banner. Antes
+ *     la tarjeta tenía su propio criterio (más estricto), así que el cartel
+ *     gritaba y la tarjeta señalada se quedaba con el borde neutro. Hoy las dos
+ *     preguntan lo mismo —¿pasó el reloj de la cocina?— y hay un test que lo
+ *     amarra.
  *
- * `orderUrgency` NO se aplica a "Míos": mira si la ETA ya pasó, y con el pedido
- * recogido eso es cierto siempre.
+ * EL BORDE LO MANDA EL RELOJ, Y SOLO POR DEBAJO DE CERO. Ya no lo mueve la
+ * insignia: la insignia es el ESTADO del pedido, y un estado es un hecho, no
+ * una alarma. Un pedido "En cocina" con seis minutos por delante no tiene por
+ * qué teñir nada; el día que el contador se pase, el borde se enciende solo.
  */
-function buildTone(input: CardVMInput, badge: Badge | null, clock: Clock | null): Tone {
-  const { order, now, variant } = input
+function buildTone(input: CardVMInput, clock: Clock | null): Tone {
+  const { variant } = input
 
   if (variant === 'delivered' || variant === 'team') return 'neutral'
-  if (variant === 'available' && orderUrgency(order, now) === 'overdue') return 'danger'
 
-  return badge?.tone ?? clock?.tone ?? 'neutral'
+  return clock?.tone ?? 'neutral'
 }
 
 const PAYMENT_ICON: Record<string, string> = {
@@ -421,10 +432,9 @@ export function buildCardVM(input: CardVMInput): CardVM {
     identityIcon: isTeam ? 'directions_bike' : null,
     badge,
     reference: order.delivery_reference ?? order.delivery_address,
-    action: variant === 'mine' ? (ACTION_VERB[order.status] ?? null) : null,
     money: blocked && blockedReason ? null : buildMoney(input),
     blockedReason: blocked && blockedReason ? blockedReason : null,
-    tone: buildTone(input, badge, clock),
+    tone: buildTone(input, clock),
     interactive: !blocked && !isTeam,
     muted: Boolean(blocked),
     showSourceChip: order.source === 'customer_pwa',

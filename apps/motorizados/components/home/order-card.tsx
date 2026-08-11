@@ -205,13 +205,23 @@ export function OrderCard({
         </span>
 
         {vm.clock && (
-          <span
-            className={cn(
-              'shrink-0 font-mono text-body-lg font-bold tabular-nums',
-              CLOCK_TONE[vm.clock.tone],
+          <span className="flex shrink-0 items-center gap-1">
+            {/* El visto de comida lista viaja CON el reloj, no en la insignia:
+                con el pedido ya tomado el estado habla del viaje del motorizado
+                (`ready` no cambia el status cuando hay dueño, 0128:156-159), así
+                que "lista" no cabe arriba sin pisarlo. Y es el reloj de la
+                comida: su visto bueno pertenece aquí. */}
+            {vm.clock.ready && (
+              <Icon name="check_circle" size={15} filled className="text-success" />
             )}
-          >
-            {vm.clock.text}
+            <span
+              className={cn(
+                'font-mono text-body-lg font-bold tabular-nums',
+                CLOCK_TONE[vm.clock.tone],
+              )}
+            >
+              {vm.clock.text}
+            </span>
           </span>
         )}
       </div>
@@ -227,17 +237,11 @@ export function OrderCard({
         </p>
       )}
 
-      {/* ── 4 · El paso siguiente (solo Míos) ──
-          Con icono, como la referencia y el cobro: las tres filas comparten
-          rejilla y el verbo deja de flotar como un segundo titular. */}
-      {vm.action && (
-        <p className="mt-2 flex items-center gap-1 text-body font-semibold text-ink">
-          <Icon name={vm.action.icon} size={16} className="shrink-0 text-brand" filled />
-          {vm.action.text}
-        </p>
-      )}
-
-      {/* ── 5 · Cobro, o el motivo del bloqueo en su lugar ── */}
+      {/* ── 4 · Cobro, o el motivo del bloqueo en su lugar ──
+          AQUÍ VIVÍA EL VERBO ("Recoger pedido", "Ir al local"). Se fue: con el
+          estado del pedido en la insignia, era el mismo hecho dos veces —"En el
+          local" y "Recoger pedido" son la misma frase— y dejaba dos estados
+          conviviendo en la tarjeta. */}
       {vm.blockedReason ? (
         <p className="mt-2.5 flex items-center gap-1.5 text-caption font-medium text-ink-muted">
           <Icon name="lock" size={14} className="shrink-0" />
