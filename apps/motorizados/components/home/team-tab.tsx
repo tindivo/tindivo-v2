@@ -12,12 +12,6 @@ import { mmss } from '@/lib/format'
 import type { CardOrder, TeamResponse } from '@/lib/types'
 import { OrderCard } from './order-card'
 
-const STATUS_LABEL: Record<string, string> = {
-  heading_to_restaurant: 'Voy al local',
-  waiting_at_restaurant: 'En el local',
-  picked_up: 'En reparto',
-}
-
 /**
  * Adapta un pedido de equipo al tipo que consume `OrderCard`.
  *
@@ -51,8 +45,14 @@ function teamOrderToCard(o: TeamResponse['teamOrders'][number]): CardOrder {
     // qué billete paga el cliente. Sin él, `changeDue` devuelve null y la
     // tarjeta simplemente no habla de vuelto — que es lo correcto acá.
     client_pays_with: null,
+    // Mismo criterio: el desglose de un pago ajeno no se expone.
+    cash_amount: null,
+    yape_amount: null,
     // Sí viaja, y aquí importa más que en las otras bandejas: antes de pedir un
-    // traspaso conviene saber si ese pedido te va a comer dos huecos.
+    // traspaso conviene saber si ese pedido te va a comer dos huecos. La
+    // cejilla de la tarjeta lo pinta cuando ocupa más de uno; sin eso, el
+    // motorizado pedía el traspaso y se comía el `requester_no_capacity` de
+    // 0130 sin haber podido preverlo.
     occupancy_slots: o.occupancySlots,
     estimated_ready_at: null,
     ready_early_used: null,
@@ -137,10 +137,11 @@ export function TeamTab() {
                   variant="team"
                   ownerName={group.name}
                 />
-                <div className="flex items-center justify-between px-1">
-                  <span className="text-[12px] text-ink-muted">
-                    {STATUS_LABEL[o.status] ?? o.status}
-                  </span>
+                {/* El estado ya lo lleva la ranura de la tarjeta. Aquí se
+                    pintaba por TERCERA vez (píldora + verbo + esta línea), y
+                    una de las tres mentía: el verbo decía "Entregar a Juan"
+                    con Juan siendo el dueño, no el cliente. */}
+                <div className="flex items-center justify-end px-1">
                   {o.transferable ? (
                     <Button
                       variant="secondary"
@@ -158,7 +159,7 @@ export function TeamTab() {
                       Solicitar pedido
                     </Button>
                   ) : (
-                    <span className="text-[12px] text-ink-subtle">Ya en reparto</span>
+                    <span className="text-caption text-ink-muted">Ya en reparto</span>
                   )}
                 </div>
               </div>

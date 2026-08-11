@@ -502,3 +502,126 @@ si falla, el aviso se pierde y `published_at` no lo escribe nadie, así que el
 cron `prune-domain-events` tampoco borra nunca); avisos al cliente del prepago
 rechazado (`validate_fail` / `validate_fail_retry` llegan al Edge Function y no
 tienen rama).
+
+---
+
+## 26. La tarjeta del motorizado cabe tres veces en pantalla (2026-08-11)
+
+**Supersede Â§24 en su mitad de `motorizados`.** La parte de `negocios` de Â§24
+(ordenaciÃ³n por urgencia, cards expandidas vs compactas, demociÃ³n del precio)
+sigue vigente y no se ha tocado.
+
+### El problema medido
+
+La tarjeta de Â§24 medÃ­a ~250px. En un mÃ³vil de 360Ã—780 el lienzo real son
+~440px â€”el resto se lo llevan la barra superior (80), el saludo (26), las
+pestaÃ±as pegajosas (~68) y el `pb-28` de la nav (112)â€”, asÃ­ que entraban **dos**.
+La nueva mide **~112px**, o ~132 en MÃ­os.
+
+**La altura no se recortÃ³ apretando la letra.** Eso habrÃ­a empeorado justo lo
+que ya se leÃ­a mal: `--color-ink-subtle` (#a8a29e) da **2,5:1** sobre blanco,
+por debajo del mÃ­nimo AA, y ahÃ­ vivÃ­an el contador y el vuelto â€” los dos datos
+con mayor coste operativo si se leen mal, en un mÃ³vil que se usa en la calle y
+con casco. Se recortÃ³ **borrando filas**.
+
+### Las cuatro filas
+
+1. **Cejilla** â€” `local Â· #cÃ³digo`, en `--text-meta` gris. Contexto, no decisiÃ³n.
+2. **Identidad** â€” el nombre del cliente, en `--text-lead`, con **una** ranura a
+   su altura.
+3. **Referencia** â€” dÃ³nde va. En un pueblo sin numeraciÃ³n esto ES la direcciÃ³n.
+4. **Cobro** â€” una lÃ­nea, mÃ©todo al frente.
+
+MÃ­os intercala el verbo entre 3 y 4. Es la Ãºnica bandeja donde "quÃ© toca ahora"
+no lo dice el contexto de la pestaÃ±a.
+
+### Las decisiones que no conviene re-litigar
+
+- **EL NOMBRE ES LA IDENTIDAD, NO UN DATO DE ENTREGA.** Es como el motorizado
+  reconoce el pedido en la lista y cÃ³mo lo nombra cuando la cajera lo llama. Por
+  eso va en grande y en fila propia, y por eso desplazÃ³ al **nombre del local**,
+  que en el piloto es idÃ©ntico en el 100% de las tarjetas y ya lo codifica la
+  franja de acento. Si no cabe, se trunca el local, nunca el nombre.
+- **Y TIENE PLAN B EXPLÃCITO.** `create_business_manual_order` declara el nombre
+  opcional (0032) y el canal manual es el 100% del piloto, asÃ­ que puede
+  faltar. Cuando falta, el `#short_id` **sube** a identidad y desaparece de la
+  cejilla: identificador de repuesto sin salir dos veces. *(Pendiente de
+  producto: si el nombre es la identidad, quizÃ¡ deba ser obligatorio en el
+  formulario de la cajera. Le mete fricciÃ³n a ella para beneficio de Ã©l; no se
+  decide desde aquÃ­.)*
+- **UNA SOLA RANURA, LA VERDAD MÃS URGENTE.** Sustituye a tres elementos que
+  decÃ­an lo mismo (chip "Comida lista" + contador + pÃ­ldora de estado). Nunca
+  hacÃ­an falta los tres: si la comida estÃ¡ lista el contador ya no cuenta hacia
+  abajo, cuenta cuÃ¡nto lleva esperÃ¡ndote, y eso *es* el estado. Por variante:
+  tiempo en "En espera"/MÃ­os, **estado** en Equipo (ahÃ­ `estimated_ready_at` no
+  viaja, por diseÃ±o), hora rotulada en Historial.
+- **LA LÃNEA DE COBRO NO USA VERBOS.** "Cobrar en efectivo" solo se lee bien en
+  presente, y la misma lÃ­nea se pinta en el historial. `S/ 45.00 Â· efectivo` es
+  cierto en cualquier tiempo. Ãšnica excepciÃ³n: el prepago lleva instrucciÃ³n
+  (`Prepagado Â· no cobrar`) porque ahÃ­ la instrucciÃ³n evita un error de plata.
+- **EL PREPAGO NO LLEVA CIFRA.** EnseÃ±ar `S/ 45.00` al lado de "Prepagado" es una
+  invitaciÃ³n a cobrarlo por error. Sin nÃºmero no hay error posible.
+- **UN SOLO COLOR SEMÃNTICO EN LA LÃNEA DE COBRO**: verde para el prepago, neutro
+  para los otros tres. Se marca la excepciÃ³n, no las cuatro â€” colorear todo
+  devuelve el arcoÃ­ris del que Â§24 estaba saliendo.
+- **EL VUELTO APARECE TAMBIÃ‰N EN "EN ESPERA"**, aunque no decida la mayorÃ­a de
+  las veces: si no llevas sencillo encima, un pedido que paga con billete grande
+  es un problema que prefieres ver antes de aceptarlo y no en la puerta. En el
+  historial no se pinta: ahÃ­ ya se dio.
+- **SE RESTAURA LA DOCTRINA DEL HAIRLINE.** Â§24 habÃ­a metido fondos semÃ¡nticos
+  (`bg-danger-soft/10`, `bg-amber-50/20`, `bg-success/[0.02]`) mientras el
+  docblock de `urgency.ts` seguÃ­a argumentando en contra â€” y con razÃ³n: el
+  relleno aplana el contraste de todo lo que hay dentro justo en la tarjeta que
+  mÃ¡s urge leer. Uno de ellos era del 2% de opacidad, invisible al sol. La
+  urgencia mueve el borde y nada mÃ¡s. `URGENCY_CARD` (constante huÃ©rfana desde
+  Â§24) se elimina; su doctrina vive ahora donde se aplica.
+- **SIN BOTÃ“N DE ACCIÃ“N EN LA TARJETA, y se evaluÃ³ a fondo.** Un botÃ³n "Tomar"
+  serÃ­a un **segundo objetivo tÃ¡ctil** a 44px del primero con consecuencia
+  distinta: tocar abre el detalle, el botÃ³n te compromete con una entrega. Con
+  guantes, un fallo deja de ser "una pantalla de la que sales con atrÃ¡s". Y
+  `release` no es gratis: `OrderReleased` avisa a todo el equipo (Â§25). La
+  tarjeta es el **Ã­ndice**; el detalle, donde se decide y se actÃºa. *(La forma
+  rÃ¡pida de tomar que sÃ­ se va a construir es un **swipe izquierdaâ†’derecha**
+  sobre la tarjeta: no compite con el toque â€”ejes distintosâ€”, no se dispara sin
+  querer si va con umbral, y cuesta 0px. Va como cambio aparte, para poder
+  revertirlo solo.)*
+- **`pickup` y `deliver` NO PODRÃAN tener botÃ³n de tarjeta aunque quisiÃ©ramos**:
+  `pickup` pide `slots` (abre hoja) y es donde se devengan los cargos (0128);
+  `deliver` confirma el cobro.
+
+### Nace el view-model del board, con tests
+
+`apps/motorizados` no tenÃ­a **un solo test**, mientras `apps/negocios` ya habÃ­a
+elegido el patrÃ³n en `lib/orders/view-model.ts` â€” actualizado en el mismo commit
+de Â§24. Las decisiones de presentaciÃ³n (identidad, ranura, lÃ­nea de cobro,
+verbo, tono) salen del JSX a `lib/orders/card-view-model.ts`, puro y con 34
+tests; el componente solo pinta. Sin eso, 4 variantes Ã— 4 mÃ©todos de cobro Ã— 4
+estados de urgencia solo se verificaban abriendo la app y mirando, que es
+exactamente como se colaron los defectos que esta entrada cierra.
+
+### Defectos que esto arregla, cada uno con su test
+
+| Defecto | CÃ³mo se arregla |
+|---|---|
+| El **historial entero en rojo**: el borde se calculaba sin mirar la variante, y una ETA de hace horas dispara la alarma | `delivered` nunca se colorea |
+| **Dos definiciones de "vencido"**: la bandeja ordenaba/bloqueaba/gritaba con `orderUrgency` y la tarjeta usaba un criterio mÃ¡s estricto, asÃ­ que el banner seÃ±alaba una tarjeta de borde neutro | "En espera" usa `orderUrgency`, la misma funciÃ³n |
+| Un `preparing` tomable mostraba **"Ver pedido"** en el sitio de peso mÃ¡ximo | "En espera" ya no tiene fila de verbo |
+| Equipo pintaba **"Entregar a {compaÃ±ero}"**: imperativo a quien no puede ejecutarlo, con el nombre del dueÃ±o donde se espera el del cliente | Equipo no tiene verbo; el estado va a la ranura |
+| El estado se pintaba **tres veces** en Equipo (pÃ­ldora + verbo + lÃ­nea inferior) | Una sola vez, en la ranura |
+| **El vuelto de un pago mixto no se mostraba nunca**: `cash_amount`/`yape_amount` existen desde 0002 y `negocios` ya los leÃ­a, pero el board no los pedÃ­a y la tarjeta pasaba `cashAmount: null` a pelo | Al select del board; el mixto ahora desglosa `S/ 30.00 efectivo + S/ 15.00 Yape` |
+| Un `payment_intent` **nulo o desconocido** afirmaba "Cobrar en efectivo" | `mÃ©todo por confirmar` |
+| El historial mostraba el cobro **en imperativo** y un `20:45` desnudo sin rÃ³tulo | LÃ­nea sin verbos; `Entregado 20:45` |
+| `occupancy_slots` viajaba a Equipo a propÃ³sito y **no se pintaba**, asÃ­ que el traspaso se rechazaba con `requester_no_capacity` (0130) sin poder preverlo | Aviso de huecos en la cejilla |
+| La tarjeta entera era un `<button>` con `<p>`/`<div>` dentro: HTML invÃ¡lido y ~40 palabras como una sola etiqueta | `div` + botÃ³n estirado con `aria-label` corto |
+| Rejilla desalineada 4px (bandas con `pl-1`, caja de dinero sin Ã©l); glow del acento recortado por `overflow-hidden`; tallas `text-[10.5px]`â€¦`text-[20px]` esquivando la escala | Rejilla Ãºnica, sin glow, solo tokens |
+
+### El reloj, siempre en mm:ss
+
+`remainingParts` era adaptativa (`~12 min` por encima de dos minutos). Â§23 decÃ­a
+que el contador de `negocios` iba en mm:ss "manteniendo la concordancia de
+tiempo con motorizados" â€” **y esa concordancia no existÃ­a**: por encima de dos
+minutos ella veÃ­a `09:55` y Ã©l `~10 min` del mismo pedido, justo cuando lo llama
+para preguntarle. AdemÃ¡s mm:ss es de ancho fijo y con `tabular-nums` se compara
+en columna. El argumento contrario del docblock (los segundos prometen una
+precisiÃ³n que un `prep_time_minutes` tecleado a mano no tiene) era bueno, pero
+pesa menos que dos pantallas contradiciÃ©ndose.

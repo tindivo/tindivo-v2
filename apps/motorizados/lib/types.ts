@@ -45,6 +45,9 @@ export interface BoardOrder {
   delivered_at: string | null
   client_pays_with: number | null
   change_to_give: number | null
+  /** Desglose del pago mixto. Ver la nota en `CardOrder`. */
+  cash_amount: number | null
+  yape_amount: number | null
   business_id: string
   /**
    * Local resuelto desde `driver_businesses()` (0120), no desde un embed: las
@@ -86,6 +89,18 @@ export interface CardOrder {
    * `change_to_give` llega NULL en los pedidos manuales. Ver `lib/payment.ts`.
    */
   client_pays_with: number | null
+  /**
+   * Desglose del pago mixto (`orders.cash_amount` / `orders.yape_amount`,
+   * existen desde 0002).
+   *
+   * El board del motorizado no los pedía, y la tarjeta pasaba `cashAmount:
+   * null` a pelo a `changeDue`. Consecuencia: en un pago mixto la parte en
+   * efectivo salía 0, `changeDue` devolvía siempre `null` y **el vuelto de un
+   * mixto no se mostraba nunca** — el caso que más necesita el desglose era el
+   * único que no podía darlo. `apps/negocios` ya los leía.
+   */
+  cash_amount: number | null
+  yape_amount: number | null
   /** Huecos de mochila que consume. Puede ser 2: la tarjeta lo avisa. */
   occupancy_slots: number
   estimated_ready_at: string | null
