@@ -162,9 +162,13 @@ const rows = [
     heading_at: ago(12),
     waiting_at_restaurant_at: ago(3),
   },
+  // ── EN REPARTO · UNO POR CADA TIPO DE COBRO ────────────────────────────────
+  //
+  // Los cuatro listos para tocar "Pedido entregado" y recorrer la hoja entera:
+  // los tres caminos, la división editable, el QR y el vuelto en vivo. Sin esto
+  // había que fabricar a mano cada tipo para probarlo.
   {
-    // Momento «En reparto». Recogido hace 6 min: el reloj cuenta hacia arriba y
-    // todavía en negro (el umbral son 20, migración 0139).
+    // EFECTIVO con vuelto. Camino "pagó exacto" disponible.
     ...base,
     short_id: `${PREFIX}HH99`,
     status: 'picked_up',
@@ -173,13 +177,68 @@ const rows = [
     delivery_reference: 'Calle Bolognesi 88',
     order_amount: 55,
     payment_intent: 'pending_cash',
-    client_pays_with: 60, // → vuelto S/ 0.00, así que NO sale la caja del vuelto
+    client_pays_with: 100, // → vuelto S/ 40.00
     estimated_ready_at: ago(25),
     appears_in_queue_at: ago(40),
     ready_early_used: true,
     assigned_at: ago(30),
     picked_up_at: ago(6),
     delivery_distance_band: 'near',
+  },
+  {
+    // YAPE. Al entregar sale el QR a pantalla completa.
+    ...base,
+    short_id: `${PREFIX}KK34`,
+    status: 'picked_up',
+    driver_id: E2E.DRIVER_ID,
+    customer_name: 'Nadia Espinoza',
+    delivery_reference: 'Av. Perú 1204, tercer piso',
+    order_amount: 31,
+    payment_intent: 'pending_yape',
+    estimated_ready_at: ago(30),
+    appears_in_queue_at: ago(45),
+    ready_early_used: true,
+    assigned_at: ago(35),
+    picked_up_at: ago(11),
+    delivery_distance_band: 'near',
+  },
+  {
+    // MIXTO ya planeado por la cajera. Entregarlo "tal cual" es el caso que
+    // antes NO se podía contar con verdad.
+    ...base,
+    short_id: `${PREFIX}LL45`,
+    status: 'picked_up',
+    driver_id: E2E.DRIVER_ID,
+    customer_name: 'Óscar Ninaquispe',
+    delivery_reference: 'Pasaje Unión 12, casa con portón negro',
+    order_amount: 43,
+    payment_intent: 'pending_mixed',
+    cash_amount: 28,
+    yape_amount: 20, // 28 + 20 = 48 = 43 + 5 de envío
+    client_pays_with: 50, // → vuelto S/ 22.00 sobre la parte en efectivo
+    estimated_ready_at: ago(35),
+    appears_in_queue_at: ago(50),
+    ready_early_used: true,
+    assigned_at: ago(40),
+    picked_up_at: ago(23), // pasado de los 20 min: el reloj sale en rojo
+    delivery_distance_band: 'near',
+  },
+  {
+    // PREPAGADO. La hoja no debe ofrecer cambiar nada: no hay cobro.
+    ...base,
+    short_id: `${PREFIX}MM56`,
+    status: 'picked_up',
+    driver_id: E2E.DRIVER_ID,
+    customer_name: 'Gladys Poma',
+    delivery_reference: 'Jr. Ayacucho 77, al frente de la posta',
+    order_amount: 26,
+    payment_intent: 'prepaid',
+    estimated_ready_at: ago(28),
+    appears_in_queue_at: ago(42),
+    ready_early_used: true,
+    assigned_at: ago(33),
+    picked_up_at: ago(9),
+    delivery_distance_band: 'far',
   },
 
   // ── HISTORIAL ─────────────────────────────────────────────────────────────
@@ -271,7 +330,14 @@ if (error) {
 
 console.log(`🧹 ${borrados} anteriores borrados`)
 console.log(`✅ ${rows.length} pedidos de demo listos\n`)
-console.log('   En espera  5   · toca cualquiera para ver la ficha de "tomar"')
-console.log('   Míos       3   · uno por momento: voy / en el local / en reparto')
+console.log('   En espera  5  · toca cualquiera para la ficha de "tomar"')
+console.log('   Míos       6  · voy al local · en el local · y CUATRO en reparto,')
+console.log('                   uno por tipo de cobro, listos para entregar:')
+console.log('                     #DEMZHH99  efectivo   vuelto S/ 40.00')
+console.log('                     #DEMZKK34  Yape       sale el QR')
+console.log('                     #DEMZLL45  mixto      28 + 20, reloj en rojo')
+console.log('                     #DEMZMM56  prepagado  no se cobra nada')
 console.log('   Historial  1\n')
+console.log('   La mochila marcará 6/3: es el estado de sobrecarga, y es correcto —')
+console.log('   el límite bloquea TOMAR, no tener asignados.\n')
 console.log(`   Entra con ${E2E.DRIVER_EMAIL} · ${E2E.PASSWORD}`)
