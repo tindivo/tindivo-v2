@@ -2,48 +2,30 @@
 
 import { Icon } from '@tindivo/ui'
 import { useEffect, useState } from 'react'
-import { prettyPhone } from '@/lib/format'
+import { prettyPhone, soles } from '@/lib/format'
 
 /**
- * El QR de Yape del local, para que el cliente escanee en la puerta.
+ * Tarjeta de QR de Yape del local con temática morada vibrante.
+ * Portada de `tindivo-delivery/yape-qr-card.tsx`.
  *
- * PORTADO DE `tindivo-delivery/yape-qr-card.tsx`, que lo tenía mejor resuelto.
- * En v2 el QR salía en un recuadro de 150px fijo: sobra para verlo y falta para
- * escanearlo con un móvil ajeno, de noche, con la pantalla sucia y a la
- * distancia a la que dos personas sostienen sus teléfonos.
- *
- * TRES COSAS QUE HACEN QUE SE ESCANEE:
- *
- *   · OCUPA EL ANCHO, en cuadrado. La cámara del cliente necesita módulos
- *     grandes, no una miniatura centrada.
- *   · PANTALLA COMPLETA a un toque, sobre negro. Es lo que salva el caso malo:
- *     poca luz, brillo bajo, o un lector quisquilloso. Se toca en cualquier
- *     parte para cerrar.
- *   · FONDO BLANCO CON MARGEN alrededor. No es estética: un QR sin zona de
- *     silencio no lo lee la mitad de los lectores, y pegarlo a un borde de
- *     color es la forma más común de romperlo.
- *
- * SIN QR NO SE ENSEÑA UN HUECO. Se cae al número, que es con lo que se cobra a
- * mano. Un marco vacío se lee como un fallo de carga y deja al motorizado
- * esperando algo que no va a llegar.
- *
- * NO HAY QR ALTERNATIVO, y en el legacy sí: allí un restaurante podía tener dos
- * por si el principal falla al escanear. `businesses` en v2 solo tiene
- * `qr_url`, así que eso necesitaría columna y pantalla de admin.
+ * Muestra el QR del restaurante para que el cliente lo escanee en la puerta,
+ * con opción a pantalla completa y número de cuenta de respaldo.
  */
 export function YapeQr({
   qrUrl,
   yapeNumber,
   businessName,
+  amount,
 }: {
   qrUrl: string | null | undefined
   yapeNumber: string | null | undefined
   businessName?: string | null
+  /** Monto a cobrar por Yape si está disponible */
+  amount?: number | null
 }) {
   const [fullscreen, setFullscreen] = useState(false)
 
-  // Escape cierra, y el fondo deja de hacer scroll debajo del QR: en móvil, un
-  // overlay que se puede arrastrar se siente roto.
+  // Escape cierra, y el fondo deja de hacer scroll debajo del QR.
   useEffect(() => {
     if (!fullscreen) return
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setFullscreen(false)
@@ -60,68 +42,116 @@ export function YapeQr({
 
   const numero = yapeNumber ? prettyPhone(yapeNumber) : null
 
-  if (!qrUrl) {
-    return (
-      <div className="rounded-[18px] border border-ink/[0.07] bg-card p-4 text-center">
-        <p className="font-mono text-meta font-semibold uppercase tracking-[0.14em] text-ink-muted">
-          Cóbralo a este número
-        </p>
-        <p className="mt-1.5 font-mono text-title font-bold tabular-nums text-ink">{numero}</p>
-        <p className="mt-1 text-caption text-ink-muted">Este local no tiene QR cargado.</p>
-      </div>
-    )
-  }
-
   return (
     <>
-      <div className="rounded-[18px] border border-ink/[0.07] bg-card p-3">
-        <p className="text-center font-mono text-meta font-semibold uppercase tracking-[0.14em] text-ink-muted">
-          Que escanee este QR
-        </p>
+      <section
+        className="relative overflow-hidden rounded-[24px] p-5 shadow-lg"
+        style={{
+          background: 'linear-gradient(135deg, #5E00B8 0%, #7B1FA2 60%, #9B27B0 100%)',
+          color: '#ffffff',
+          boxShadow: '0 16px 40px -12px rgba(94, 0, 184, 0.55)',
+        }}
+      >
+        {/* Resplandor radial de adorno */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-10 -right-10 h-44 w-44 rounded-full"
+          style={{
+            background: 'radial-gradient(circle, rgba(255,255,255,0.22) 0%, transparent 60%)',
+          }}
+        />
 
-        <button
-          type="button"
-          onClick={() => setFullscreen(true)}
-          aria-label="Ver el QR en pantalla completa"
-          className="mt-2 block w-full overflow-hidden rounded-2xl bg-white p-3 transition-transform active:scale-[0.98]"
-        >
-          <img
-            src={qrUrl}
-            alt={`QR de Yape de ${businessName ?? 'el local'}`}
-            className="aspect-square w-full object-contain"
-          />
-        </button>
+        <div className="relative space-y-4">
+          <div className="flex items-center gap-3">
+            <span
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white"
+              style={{ background: 'rgba(255, 255, 255, 0.18)' }}
+            >
+              <Icon name="qr_code_2" size={22} filled />
+            </span>
+            <div>
+              <div className="font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-white/85">
+                Yape al cliente
+              </div>
+              {amount != null && (
+                <div className="font-mono text-lg font-black leading-tight text-white">
+                  Cobrar {soles(amount)}
+                </div>
+              )}
+            </div>
+          </div>
 
-        <button
-          type="button"
-          onClick={() => setFullscreen(true)}
-          className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-ink/[0.06] py-2.5 text-body font-semibold text-ink"
-        >
-          <Icon name="fullscreen" size={18} />
-          Ver más grande
-        </button>
+          {qrUrl ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setFullscreen(true)}
+                className="block w-full overflow-hidden rounded-2xl bg-white p-3 transition-transform active:scale-[0.98]"
+                aria-label="Ver QR en pantalla completa"
+              >
+                <div className="relative aspect-square w-full">
+                  <img
+                    src={qrUrl}
+                    alt={`QR de Yape de ${businessName ?? 'el local'}`}
+                    className="h-full w-full object-contain"
+                  />
+                </div>
+              </button>
 
-        {numero && (
-          <p className="mt-2 text-center text-caption text-ink-muted">
-            o al número <span className="font-mono font-semibold text-ink">{numero}</span>
-          </p>
-        )}
-      </div>
+              <button
+                type="button"
+                onClick={() => setFullscreen(true)}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold text-white transition-opacity active:opacity-80"
+                style={{ background: 'rgba(255, 255, 255, 0.18)' }}
+              >
+                <Icon name="fullscreen" size={18} />
+                Ver más grande
+              </button>
+            </>
+          ) : (
+            <div
+              className="rounded-2xl p-4 text-center"
+              style={{ background: 'rgba(255, 255, 255, 0.15)' }}
+            >
+              <Icon name="info" size={20} className="mx-auto" />
+              <p className="mt-2 text-sm font-semibold">Este local no tiene QR cargado.</p>
+              {numero && (
+                <p className="mt-1 text-xs opacity-90">
+                  Cobrar manualmente al número:{' '}
+                  <span className="font-mono font-bold">{numero}</span>
+                </p>
+              )}
+            </div>
+          )}
 
-      {fullscreen && (
+          {numero && qrUrl && (
+            <div
+              className="rounded-lg py-2 text-center text-xs"
+              style={{ background: 'rgba(255, 255, 255, 0.12)' }}
+            >
+              <span className="opacity-85">Nº de cuenta: </span>
+              <span className="font-mono font-bold">{numero}</span>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Pantalla Completa Modal */}
+      {fullscreen && qrUrl && (
         <button
           type="button"
           onClick={() => setFullscreen(false)}
           aria-label="Cerrar el QR"
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 p-4"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/92 p-4"
         >
           {numero && (
             <span
               aria-hidden
-              className="absolute top-6 left-1/2 inline-flex -translate-x-1/2 items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-white backdrop-blur-sm"
+              className="absolute top-6 left-1/2 inline-flex -translate-x-1/2 items-center gap-2 rounded-full px-4 py-2 text-white backdrop-blur-md"
+              style={{ background: 'rgba(255, 255, 255, 0.16)' }}
             >
               <Icon name="smartphone" size={18} filled />
-              <span className="font-mono text-body font-bold tabular-nums">{numero}</span>
+              <span className="font-mono text-sm font-bold tracking-wide">{numero}</span>
             </span>
           )}
 
@@ -133,13 +163,14 @@ export function YapeQr({
 
           <span
             aria-hidden
-            className="absolute top-6 right-6 inline-flex h-12 w-12 items-center justify-center rounded-full bg-white/15 text-white"
+            className="absolute top-6 right-6 inline-flex h-12 w-12 items-center justify-center rounded-full text-white"
+            style={{ background: 'rgba(255, 255, 255, 0.16)' }}
           >
             <Icon name="close" size={28} />
           </span>
           <span
             aria-hidden
-            className="absolute bottom-8 left-1/2 -translate-x-1/2 font-mono text-meta font-bold uppercase tracking-[0.2em] text-white/70"
+            className="absolute bottom-8 left-1/2 -translate-x-1/2 font-mono text-xs font-bold uppercase tracking-[0.2em] text-white/70"
           >
             Toca para cerrar
           </span>

@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import type { OrderDetailResponse } from '@/lib/types'
 import { CollectCard } from './collect-card'
 import { CustomerCard } from './customer-card'
-import { MapSheet } from './map-sheet'
+import { DestinationCard } from './destination-card'
 import { WhatsAppSheet } from './whatsapp-sheet'
 
 /** Momento 3 (picked_up): destino + cliente + cobro. Online = mapa; manual = referencia. */
@@ -21,11 +21,9 @@ export function MomentPickedUp({
   busy?: boolean
 }) {
   const { order } = detail
-  const hasCoords = order.deliveryCoordinatesLat != null && order.deliveryCoordinatesLng != null
 
   const [now, setNow] = useState(() => Date.now())
   const [whatsappOpen, setWhatsappOpen] = useState(false)
-  const [mapOpen, setMapOpen] = useState(false)
 
   useEffect(() => {
     if (!order.arrivedAtCustomerAt) return
@@ -48,11 +46,7 @@ export function MomentPickedUp({
 
       {whatsappOpen && <WhatsAppSheet detail={detail} onClose={() => setWhatsappOpen(false)} />}
 
-      {/* ÁMBAR OSCURO SOBRE ÁMBAR CLARO, no `text-warning`.
-          `--color-warning` (#f59e0b) sobre `warning-soft` da ~2:1 — el bloque
-          se veía como un borrón. Y con el botón deshabilitado encima
-          (`opacity-50`) el texto quedaba en ~1,4:1, o sea prácticamente
-          invisible justo mientras corre la cuenta atrás que hay que leer. */}
+      {/* ÁMBAR OSCURO SOBRE ÁMBAR CLARO, no `text-warning`. */}
       {order.arrivedAtCustomerAt && (
         <Card className="mt-3 border-warning/30 bg-warning-soft p-4 shadow-none">
           <div className="flex items-center gap-2 font-semibold text-body text-amber-900">
@@ -65,8 +59,6 @@ export function MomentPickedUp({
               : `Esperando respuesta del cliente (${countdownFormatted} restante).`}
           </p>
 
-          {/* La cuenta atrás en mono y tabular: cambia cada segundo, y sin
-              ancho fijo el botón entero baila. */}
           <Button
             size="sm"
             variant="ghost"
@@ -87,55 +79,8 @@ export function MomentPickedUp({
         </Card>
       )}
 
-      {hasCoords ? (
-        /* EL MAPA YA NO VA EMBEBIDO AQUÍ. Ocupaba 180px fijos en mitad del
-           recorrido y, peor, se quedaba con el gesto: arrastrar el dedo encima
-           hacía pan en el mapa y la página no bajaba, justo por encima de la
-           tarjeta de cobro. Ahora se abre en una hoja, donde el pan es lo único
-           que se espera y hay sitio para que el mapa sirva de algo. */
-        <Card className="mt-3 p-[18px]">
-          <p className="font-mono text-meta font-semibold uppercase tracking-[0.14em] text-ink-muted">
-            Entregar en
-          </p>
-          <p className="mt-1 text-lead font-semibold leading-snug">
-            {order.deliveryReference ?? order.deliveryAddress ?? 'Ubicación del cliente'}
-          </p>
-          {!order.isManual && order.deliveryAddress && order.deliveryReference && (
-            <p className="mt-0.5 text-caption text-ink-muted">{order.deliveryAddress}</p>
-          )}
-          <Button size="sm" className="mt-3 w-full" onClick={() => setMapOpen(true)}>
-            <Icon name="map" size={20} />
-            Ver en el mapa
-          </Button>
-        </Card>
-      ) : (
-        <Card className="mt-3 p-[18px]">
-          <p className="font-mono text-meta font-semibold uppercase tracking-[0.14em] text-ink-muted">
-            Referencia del cliente
-          </p>
-          <p className="mt-2 text-lead font-semibold leading-snug">
-            {order.deliveryReference ?? 'Sin referencia — llama al cliente'}
-          </p>
-          {/* En los manuales la direccion es el relleno 'Pedido manual'. */}
-          {!order.isManual && order.deliveryAddress && (
-            <p className="mt-1 text-body text-ink-muted">{order.deliveryAddress}</p>
-          )}
-        </Card>
-      )}
-
-      {mapOpen && hasCoords && (
-        <MapSheet
-          lat={order.deliveryCoordinatesLat as number}
-          lng={order.deliveryCoordinatesLng as number}
-          title={order.deliveryReference ?? order.deliveryAddress}
-          subtitle={
-            !order.isManual && order.deliveryAddress && order.deliveryReference
-              ? order.deliveryAddress
-              : null
-          }
-          onClose={() => setMapOpen(false)}
-        />
-      )}
+      {/* Tarjeta de Ubicación de entrega unificada */}
+      <DestinationCard detail={detail} />
 
       <div className="mt-3.5">
         <CollectCard detail={detail} />

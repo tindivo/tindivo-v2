@@ -66,6 +66,7 @@ Docs/QA-CATALOGO-CREDENCIALES.md
 
 # sesiones de Playwright (contienen tokens locales de e2e)
 e2e/.auth/
+.viaje/
 
 # Exports crudos del directorio del legacy: teléfonos, nombres y direcciones de
 # personas reales. Solo se commitea `address-directory.json`, que es la salida

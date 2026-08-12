@@ -82,6 +82,7 @@ export function CollectCard({ detail }: { detail: OrderDetailResponse }) {
           qrUrl={business?.qrUrl}
           yapeNumber={business?.yapeNumber}
           businessName={business?.name}
+          amount={order.paymentIntent === 'pending_mixed' ? (order.yapeAmount ?? total) : total}
         />
       </div>
       {order.paymentIntent === 'pending_mixed' && (

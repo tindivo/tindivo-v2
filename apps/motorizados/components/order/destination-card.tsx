@@ -1,55 +1,146 @@
 'use client'
 
 import { Button, Card, Icon } from '@tindivo/ui'
+import { useState } from 'react'
 import { mapsDirToCoords, mapsSearchAddress } from '@/lib/deeplinks'
+import { BAND_LABEL } from '@/lib/orders/presentation'
 import type { OrderDetailResponse } from '@/lib/types'
+import { MapSheet } from './map-sheet'
 
 /**
- * A dónde va DESPUÉS de recoger. Se enseña ya en el trayecto al local: saber
- * si la entrega queda al lado o al otro extremo del pueblo cambia cómo se
- * organiza el motorizado, y hasta ahora ese dato no aparecía hasta tener el
- * pedido en la mochila.
+ * Componente unificado de la ubicación de entrega del cliente.
+ * Se reutiliza con paridad visual idéntica en los 3 estados (VOY, LOCAL y CAMINO).
  */
 export function DestinationCard({ detail }: { detail: OrderDetailResponse }) {
   const { order } = detail
-  const where = order.deliveryReference ?? order.deliveryAddress
-  if (order.deliveryMethod === 'pickup' || !where) return null
+  const [mapOpen, setMapOpen] = useState(false)
 
-  const mapsHref =
-    order.deliveryCoordinatesLat != null && order.deliveryCoordinatesLng != null
-      ? mapsDirToCoords(order.deliveryCoordinatesLat, order.deliveryCoordinatesLng)
-      : mapsSearchAddress(where)
+  if (order.deliveryMethod === 'pickup') return null
+
+  // Filtramos la dirección en pedidos manuales cuando viene como 'Pedido manual' de relleno.
+  const rawAddress = order.deliveryAddress?.trim() || null
+  const cleanAddress =
+    rawAddress && !(order.isManual && rawAddress.toLowerCase() === 'pedido manual')
+      ? rawAddress
+      : null
+
+  const reference = order.deliveryReference?.trim() || null
+  const hasCoords = order.deliveryCoordinatesLat != null && order.deliveryCoordinatesLng != null
+  const band = order.deliveryDistanceBand ? BAND_LABEL[order.deliveryDistanceBand] : null
+
+  // Si no hay ni dirección ni referencia ni coordenadas, omitir.
+  if (!cleanAddress && !reference && !hasCoords) return null
+
+  const searchTarget = (reference ?? cleanAddress) || 'San Jacinto Ancash'
+  const mapsHref = hasCoords
+    ? mapsDirToCoords(order.deliveryCoordinatesLat as number, order.deliveryCoordinatesLng as number)
+    : mapsSearchAddress(searchTarget)
 
   return (
-    <Card className="mt-3.5 p-[18px]">
-      <div className="flex items-start gap-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-ink/[0.06] text-ink-muted">
-          <Icon name="flag" size={20} />
-        </span>
-        <div className="min-w-0 flex-1">
+    <>
+      <Card className="mt-3.5 p-[18px]">
+        {/* Rótulo principal con chip de banda si existe */}
+        <div className="mb-3 flex items-center justify-between gap-2">
           <span className="font-mono text-meta font-semibold uppercase tracking-[0.14em] text-ink-muted">
             Entregar en
           </span>
-          <p className="mt-0.5 text-body-lg font-semibold leading-snug text-ink">{where}</p>
-          {/* En los manuales `delivery_address` es el relleno 'Pedido manual'
-              que pone create_business_manual_order: solo estorba. */}
-          {!order.isManual && order.deliveryAddress && order.deliveryReference && (
-            <p className="mt-0.5 text-caption text-ink-muted">{order.deliveryAddress}</p>
+          {band && (
+            <span className="rounded-full bg-ink/[0.06] px-2.5 py-0.5 font-mono text-micro font-semibold text-ink-muted">
+              {band}
+            </span>
           )}
         </div>
-      </div>
-      <Button
-        variant="outline"
-        size="sm"
-        className="mt-3 w-full"
-        as="a"
-        href={mapsHref}
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        <Icon name="map" size={20} />
-        Ver la entrega en Maps
-      </Button>
-    </Card>
+
+        <div className="space-y-3">
+          {/* 1. Dirección (si existe) */}
+          {cleanAddress && (
+            <div className="flex items-start gap-2.5">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-ink/[0.06] text-ink-muted">
+                <Icon name="home" size={17} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <span className="block font-mono text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
+                  Dirección
+                </span>
+                <p className="mt-0.5 text-body font-semibold leading-snug text-ink">
+                  {cleanAddress}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* 2. Referencia (si existe) */}
+          {reference && (
+            <div className="flex items-start gap-2.5">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand-dark">
+                <Icon name="location_on" size={17} filled />
+              </span>
+              <div className="min-w-0 flex-1">
+                <span className="block font-mono text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
+                  Referencia
+                </span>
+                <p className="mt-0.5 text-body-lg font-bold leading-snug text-ink">
+                  {reference}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Fallback si no hay ni dirección ni referencia */}
+          {!cleanAddress && !reference && (
+            <div className="flex items-start gap-2.5">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-ink/[0.06] text-ink-muted">
+                <Icon name="location_on" size={17} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <span className="block font-mono text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
+                  Ubicación
+                </span>
+                <p className="mt-0.5 text-body italic text-ink-muted">
+                  Sin referencia registrada — coordinar con el cliente
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 3. Botón de mapa (hoja interactiva si hay coordenadas, o Google Maps si no hay) */}
+        {hasCoords ? (
+          <Button
+            size="sm"
+            variant="outline"
+            className="mt-3.5 w-full"
+            onClick={() => setMapOpen(true)}
+          >
+            <Icon name="map" size={18} />
+            Ver en el mapa
+          </Button>
+        ) : (
+          <Button
+            size="sm"
+            variant="outline"
+            className="mt-3.5 w-full"
+            as="a"
+            href={mapsHref}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Icon name="map" size={18} />
+            Buscar en Google Maps
+          </Button>
+        )}
+      </Card>
+
+      {/* Sheet interactivo de Leaflet al presionar "Ver en el mapa" */}
+      {mapOpen && hasCoords && (
+        <MapSheet
+          lat={order.deliveryCoordinatesLat as number}
+          lng={order.deliveryCoordinatesLng as number}
+          title={reference ?? cleanAddress ?? 'Ubicación de entrega'}
+          subtitle={cleanAddress && reference ? cleanAddress : null}
+          onClose={() => setMapOpen(false)}
+        />
+      )}
+    </>
   )
 }

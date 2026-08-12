@@ -408,6 +408,7 @@ mira cuál está poblado.
 | 3 | Reparto en `Yape + Efectivo` | Levantamiento del legacy |
 | 4 | Dispositivo de la cajera | Jesús / Yolvi |
 | 5 | Cuándo subir `commissions` si hace falta | Jesús, con datos del piloto |
+| 6 | Soporte para 2do QR de Yape (QR alternativo/secundario en `businesses`) | Backlog UI/DB — portar tabs de `tindivo-delivery/yape-qr-card.tsx` cuando se agregue la columna `qr_url_secondary` |
 
 ---
 

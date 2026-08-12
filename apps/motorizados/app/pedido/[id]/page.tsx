@@ -344,6 +344,7 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
             )}
             <ChangeHeadsUp detail={detail} />
             <BusinessCard business={detail.business} />
+            <DestinationCard detail={detail} />
           </>
         )}
 
