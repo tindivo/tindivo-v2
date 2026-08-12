@@ -11,7 +11,12 @@
  * EXACTAMENTE el mismo número que antes.
  */
 import { beforeAll, describe, expect, it } from 'vitest'
-import { localClient as db, E2E, seedContraentregaOrder } from './helpers/local-db'
+import {
+  localClient as db,
+  E2E,
+  seedContraentregaOrder,
+  TELEFONOS_FIXTURE,
+} from './helpers/local-db'
 
 /** El seeder crea 50 + 2 de envío. */
 const TOTAL = 52
@@ -46,8 +51,15 @@ async function parkPending() {
     .eq('business_id', E2E.BUSINESS_ID)
     .is('cash_settlement_id', null)
     .eq('status', 'delivered')
+    .in('customer_phone', TELEFONOS_FIXTURE)
   // Se marcan como ya rendidos con un ciclo ficticio no: se les quita el
   // estado `delivered` para que no entren, y se restaura nada — son de prueba.
+  //
+  // El `.in('customer_phone', …)` acota el update a pedidos de fixture. Sin él
+  // sacaba de `delivered` a TODO entregado del par e2e, y `delivered` es
+  // terminal en el dominio (CLAUDE.md, invariante 8): era el único sitio del
+  // repo que lo pisaba, y se comía el pedido de historial del tablero de demo
+  // en cada corrida.
   await db
     .from('orders')
     .update({ status: 'cancelled' })
@@ -55,6 +67,7 @@ async function parkPending() {
     .eq('business_id', E2E.BUSINESS_ID)
     .eq('status', 'delivered')
     .is('cash_settlement_id', null)
+    .in('customer_phone', TELEFONOS_FIXTURE)
 }
 
 async function settle() {

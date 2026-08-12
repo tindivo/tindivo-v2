@@ -184,6 +184,17 @@ export async function seedPrepaidOrder(opts: SeedOrderOptions = {}): Promise<See
   return { userId, businessId: biz.id, orderId: order.id }
 }
 
+/**
+ * Teléfonos que los fixtures ponen en sus pedidos — el marcador que distingue
+ * "esto lo sembró un test" de todo lo demás.
+ *
+ * Hace falta porque los pedidos que cuelgan del negocio e2e COMPARTIDO no se
+ * pueden identificar por su negocio: ese negocio es mundo del seed y no se
+ * borra. Los del tablero de demo (`seed-demo-board.ts`) llevan el teléfono a
+ * NULL, así que filtrar por estos valores nunca los alcanza.
+ */
+export const TELEFONOS_FIXTURE = ['+51999000222', '+51999000333']
+
 export const E2E = {
   BUSINESS_ID: 'e2e00000-0000-4000-8000-000000000010',
   // Segundo negocio del seed. Nació para ser el negocio SIN motorizados, pero

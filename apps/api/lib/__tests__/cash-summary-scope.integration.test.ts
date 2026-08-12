@@ -19,7 +19,12 @@
  */
 import { createClient } from '@supabase/supabase-js'
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
-import { localClient as db, E2E, seedContraentregaOrder } from './helpers/local-db'
+import {
+  localClient as db,
+  E2E,
+  seedContraentregaOrder,
+  TELEFONOS_FIXTURE,
+} from './helpers/local-db'
 
 const LOCAL_URL = 'http://127.0.0.1:54321'
 const LOCAL_ANON_KEY =
@@ -81,7 +86,19 @@ async function deliveredAt(deliveredAt: Date) {
   return orderId
 }
 
-/** Saca de en medio lo que hayan dejado otros tests del mismo par. */
+/**
+ * Saca de en medio lo que hayan dejado otros tests del mismo par.
+ *
+ * El `.in('customer_phone', TELEFONOS_FIXTURE)` NO es cosmético. Sin él este
+ * update saca de `delivered` a TODO pedido entregado del par e2e, y `delivered`
+ * es terminal en el dominio (CLAUDE.md, invariante 8): las ocho funciones que
+ * escriben `orders.status` lo respetan, y este `.update()` con service_role era
+ * el único sitio del repo que lo pisaba. Se llevaba por delante el pedido de
+ * historial del tablero de demo en cada corrida —medido el 2026-08-11: DEMZJJ23
+ * pasó de `delivered` a `cancelled` con `cancel_reason` vacío, que es la firma
+ * de que no lo canceló ninguna RPC— y dejaba al negocio con un porcentaje de
+ * cancelados inventado. El filtro lo acota a lo que sembró un test.
+ */
 async function parkPending() {
   await db
     .from('orders')
@@ -90,6 +107,7 @@ async function parkPending() {
     .eq('business_id', E2E.BUSINESS_ID)
     .eq('status', 'delivered')
     .is('cash_settlement_id', null)
+    .in('customer_phone', TELEFONOS_FIXTURE)
 }
 
 async function pendingRow(): Promise<TodayRow | undefined> {

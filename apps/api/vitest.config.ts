@@ -18,6 +18,14 @@ export default defineConfig({
   },
   test: {
     /**
+     * Barre los mundos de test que dejó una corrida abortada — al arrancar y al
+     * terminar. Los helpers ya limpian lo suyo, pero su `afterAll` no corre si
+     * matas el proceso; barrer en el SETUP es lo único que impide que la basura
+     * de la corrida anterior sobreviva a la siguiente. Detalle en el fichero.
+     */
+    globalSetup: ['./vitest.global-setup.ts'],
+
+    /**
      * ESTOS TESTS SON DE INTEGRACIÓN CONTRA UNA ÚNICA BASE DE DATOS.
      *
      * No comparten un mock: comparten `postgres`. Ejecutar los archivos en
