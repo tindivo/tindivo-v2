@@ -13,10 +13,18 @@ export function MapReadonly({
   lat,
   lng,
   heightPx = 180,
+  /**
+   * Alto por CSS en vez de por píxeles. Lo usa el sheet, que quiere `55vh`:
+   * calcularlo en JS obligaría a leer `window.innerHeight` durante el render y
+   * eso no existe en el servidor — la primera pintura saldría con otro alto que
+   * la hidratación, y React lo canta.
+   */
+  heightClass,
 }: {
   lat: number
   lng: number
   heightPx?: number
+  heightClass?: string
 }) {
   return (
     /**
@@ -36,7 +44,10 @@ export function MapReadonly({
      * lo consumen las cuatro apps, y subirlo taparía este síntoma a cambio de
      * mover el problema a sitios que nadie está mirando.
      */
-    <div className="relative isolate overflow-hidden" style={{ height: heightPx, zIndex: 0 }}>
+    <div
+      className={`relative isolate overflow-hidden ${heightClass ?? ''}`}
+      style={{ height: heightClass ? undefined : heightPx, zIndex: 0 }}
+    >
       <Inner lat={lat} lng={lng} />
     </div>
   )

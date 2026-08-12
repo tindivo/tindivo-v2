@@ -2,11 +2,10 @@
 
 import { Button, Card, Icon } from '@tindivo/ui'
 import { useEffect, useState } from 'react'
-import { mapsDirToCoords } from '@/lib/deeplinks'
 import type { OrderDetailResponse } from '@/lib/types'
 import { CollectCard } from './collect-card'
 import { CustomerCard } from './customer-card'
-import { MapReadonly } from './map-readonly'
+import { MapSheet } from './map-sheet'
 import { WhatsAppSheet } from './whatsapp-sheet'
 
 /** Momento 3 (picked_up): destino + cliente + cobro. Online = mapa; manual = referencia. */
@@ -26,6 +25,7 @@ export function MomentPickedUp({
 
   const [now, setNow] = useState(() => Date.now())
   const [whatsappOpen, setWhatsappOpen] = useState(false)
+  const [mapOpen, setMapOpen] = useState(false)
 
   useEffect(() => {
     if (!order.arrivedAtCustomerAt) return
@@ -44,17 +44,7 @@ export function MomentPickedUp({
 
   return (
     <div>
-      <CustomerCard order={order} businessName={detail.business?.name} />
-
-      <Button
-        type="button"
-        size="sm"
-        onClick={() => setWhatsappOpen(true)}
-        className="mt-3 w-full bg-[#25D366] text-white hover:bg-[#1ebd5a]"
-      >
-        <Icon name="chat" size={18} />
-        Enviar mensaje por WhatsApp
-      </Button>
+      <CustomerCard order={order} onWhatsApp={() => setWhatsappOpen(true)} />
 
       {whatsappOpen && <WhatsAppSheet detail={detail} onClose={() => setWhatsappOpen(false)} />}
 
@@ -98,37 +88,25 @@ export function MomentPickedUp({
       )}
 
       {hasCoords ? (
-        <Card className="mt-3 overflow-hidden p-0">
-          <MapReadonly
-            lat={order.deliveryCoordinatesLat as number}
-            lng={order.deliveryCoordinatesLng as number}
-            heightPx={180}
-          />
-          <div className="p-4">
-            <p className="font-mono text-meta font-semibold uppercase tracking-[0.14em] text-ink-muted">
-              Entregar en
-            </p>
-            {!order.isManual && order.deliveryAddress && (
-              <p className="mt-1 text-body">{order.deliveryAddress}</p>
-            )}
-            {order.deliveryReference && (
-              <p className="mt-0.5 text-caption text-ink-muted">{order.deliveryReference}</p>
-            )}
-            <Button
-              size="sm"
-              className="mt-3 w-full"
-              as="a"
-              href={mapsDirToCoords(
-                order.deliveryCoordinatesLat as number,
-                order.deliveryCoordinatesLng as number,
-              )}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Icon name="location_on" size={20} />
-              Cómo llegar
-            </Button>
-          </div>
+        /* EL MAPA YA NO VA EMBEBIDO AQUÍ. Ocupaba 180px fijos en mitad del
+           recorrido y, peor, se quedaba con el gesto: arrastrar el dedo encima
+           hacía pan en el mapa y la página no bajaba, justo por encima de la
+           tarjeta de cobro. Ahora se abre en una hoja, donde el pan es lo único
+           que se espera y hay sitio para que el mapa sirva de algo. */
+        <Card className="mt-3 p-[18px]">
+          <p className="font-mono text-meta font-semibold uppercase tracking-[0.14em] text-ink-muted">
+            Entregar en
+          </p>
+          <p className="mt-1 text-lead font-semibold leading-snug">
+            {order.deliveryReference ?? order.deliveryAddress ?? 'Ubicación del cliente'}
+          </p>
+          {!order.isManual && order.deliveryAddress && order.deliveryReference && (
+            <p className="mt-0.5 text-caption text-ink-muted">{order.deliveryAddress}</p>
+          )}
+          <Button size="sm" className="mt-3 w-full" onClick={() => setMapOpen(true)}>
+            <Icon name="map" size={20} />
+            Ver en el mapa
+          </Button>
         </Card>
       ) : (
         <Card className="mt-3 p-[18px]">
@@ -143,6 +121,20 @@ export function MomentPickedUp({
             <p className="mt-1 text-body text-ink-muted">{order.deliveryAddress}</p>
           )}
         </Card>
+      )}
+
+      {mapOpen && hasCoords && (
+        <MapSheet
+          lat={order.deliveryCoordinatesLat as number}
+          lng={order.deliveryCoordinatesLng as number}
+          title={order.deliveryReference ?? order.deliveryAddress}
+          subtitle={
+            !order.isManual && order.deliveryAddress && order.deliveryReference
+              ? order.deliveryAddress
+              : null
+          }
+          onClose={() => setMapOpen(false)}
+        />
       )}
 
       <div className="mt-3.5">

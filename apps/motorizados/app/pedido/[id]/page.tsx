@@ -543,7 +543,10 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
           <div className="flex items-center gap-2 shrink-0 ml-3">
             <Button
               size="sm"
-              className="bg-[#25D366] text-white hover:bg-[#1ebd5a]"
+              /* `bg-none` apaga el degradado de la variante `brand`: es
+                 `background-image` y se pinta encima del color. Ver la nota de
+                 `customer-card`. */
+              className="bg-none bg-[#25D366] text-white shadow-none hover:bg-[#1ebd5a]"
               onClick={() => {
                 const url = waLink(waToast.phone, waToast.text)
                 if (url) window.open(url, '_blank', 'noopener,noreferrer')
