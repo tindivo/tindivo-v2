@@ -21,7 +21,7 @@ export type OrderColumn = 'nuevos' | 'cocina' | 'reparto' | 'entregados'
 
 /** Columnas a traer de `orders` para el kanban (incl. nombre del motorizado). */
 export const ORDER_SELECT =
-  'id,short_id,status,source,customer_name,customer_phone,delivery_reference,delivery_method,' +
+  'id,short_id,status,source,customer_name,customer_phone,delivery_address,delivery_reference,delivery_method,' +
   'order_amount,delivery_fee,payment_intent,payment_proof_status,comprobante_prepago_url,proof_attempt,' +
   'prep_time_minutes,estimated_ready_at,prep_extension_count,' +
   'ready_early_used,ready_early_at,' +
@@ -50,6 +50,7 @@ export interface OrderRow {
   source: string
   customer_name: string | null
   customer_phone: string | null
+  delivery_address: string | null
   delivery_reference: string | null
   delivery_method: string
   order_amount: number
@@ -94,6 +95,21 @@ export interface OrderVM {
   customer: string | null
   phone: string | null
   addressRef: string | null
+  /**
+   * La dirección FORMAL, y solo cuando existe de verdad.
+   *
+   * En los pedidos manuales `create_business_manual_order` mete el relleno
+   * `'Pedido manual'` en `delivery_address` (la cajera escribe una sola línea, y
+   * esa va a `delivery_reference`), así que la columna nunca es `NULL` y no se
+   * puede preguntar por ella para saber si hay dirección. `motorizados` ya
+   * tropezó con esto y lo tapa en el JSX (`destination-card.tsx`); aquí se
+   * normaliza en el mapeo, que es donde el relleno deja de existir para el resto
+   * de la app.
+   *
+   * En los pedidos online SÍ es la dirección que puso el cliente, y entonces la
+   * tarjeta enseña las dos líneas: dirección + referencia.
+   */
+  address: string | null
   method: 'delivery' | 'pickup'
   total: number
   amount: number
@@ -290,6 +306,7 @@ function getUiState(row: OrderRow, now: number): UiState {
 /** Convierte una fila de `orders` en el view-model que consume la UI. */
 export function toOrderVM(row: OrderRow, now: number = Date.now()): OrderVM {
   const state = getUiState(row, now)
+  const source: UiSource = row.source === 'business_manual' ? 'manual' : 'web'
   const payment = mapPayment(row.payment_intent)
   const amount = Number(row.order_amount ?? 0)
   const deliveryFee = Number(row.delivery_fee ?? 0)
@@ -347,13 +364,15 @@ export function toOrderVM(row: OrderRow, now: number = Date.now()): OrderVM {
   return {
     rowId: row.id,
     id: row.short_id,
-    source: row.source === 'business_manual' ? 'manual' : 'web',
+    source,
     payment,
     status: row.status,
     state,
     customer: row.customer_name,
     phone: row.customer_phone,
     addressRef: row.delivery_reference,
+    // Ver `address`: en manual la columna es el relleno 'Pedido manual'.
+    address: source === 'manual' ? null : row.delivery_address?.trim() || null,
     method: row.delivery_method === 'pickup' ? 'pickup' : 'delivery',
     total: amount + deliveryFee,
     amount,

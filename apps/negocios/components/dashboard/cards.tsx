@@ -68,6 +68,13 @@ function NegociosBaseCard({
         TONE_BORDER[vm.tone],
       )}
     >
+      {/* Sombra de aura roja difusa (idéntica a la del banner de Pedidos urgentes) */}
+      {vm.clock?.tone === 'danger' && (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-0 rounded-xl shadow-[0_0_20px_6px_rgba(220,38,38,0.55)] animate-pulse z-10"
+        />
+      )}
       {/* ── 1 · Cejilla Superior ──
           Solo lleva lo que DISTINGUE. Las insignias de origen y de método salen
           únicamente cuando son la excepción (ver `buildNegociosCardVM`): antes
@@ -120,77 +127,120 @@ function NegociosBaseCard({
           `DECISIONS §24 N3` ya lo había decidido —"Democión de Jerarquía del
           Precio", el total a caption para liberar la esquina al monitoreo
           operacional— y había quedado sin aplicar. */}
-      <div className="mb-1 flex items-center justify-between gap-2">
-        <span className="truncate font-semibold text-[15px] text-ink tracking-tight flex-1">
-          {vm.customerName}
-        </span>
+      {/* NOMBRE Y DIRECCIÓN SON UNA SOLA COLUMNA; EL RELOJ ES OTRA.
+          Estaban en dos filas apiladas, y una fila de flex crece hasta la altura
+          de su hijo MÁS ALTO: el reloj (cifra de 17px + rótulo) mide bastante
+          más que un nombre de 15px, así que la fila del nombre se estiraba a la
+          altura del reloj y la dirección arrancaba al final de ese estirón. El
+          hueco no era margen —por eso no se iba tocando márgenes—: era el nombre
+          flotando arriba de una fila más alta que él.
+
+          Con las dos líneas dentro de la MISMA columna, la dirección va pegada
+          al nombre y el reloj ocupa a su derecha el alto de las dos. El sobrante
+          vertical, si lo hay, queda ahora en la columna del reloj, que es donde
+          no separa nada.
+
+          El rótulo del reloj sigue haciendo falta: `05:31` a secas no dice si
+          son los minutos que faltan, los que sobran o los que lleva el
+          motorizado en la calle, y en esta pantalla el mismo número significa
+          las tres cosas según la columna. */}
+      <div className="mb-1.5 flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-semibold text-[15px] text-ink tracking-tight">
+            {vm.customerName}
+          </p>
+
+          {/* Destino: dirección + referencia. Dos líneas en los pedidos online
+              (el cliente da las dos), una en los manuales (la cajera escribe una
+              sola). Ver `CardDestination`. */}
+          {vm.destination && (
+            <div className="mt-0.5 flex items-start gap-1 text-[12px] leading-snug text-ink-muted">
+              <Icon
+                name="location_on"
+                size={13}
+                weight={500}
+                className="mt-px shrink-0 text-ink-subtle"
+              />
+              <div className="min-w-0 flex-1">
+                <p className="line-clamp-2">{vm.destination.primary}</p>
+                {vm.destination.secondary && (
+                  <p className="truncate text-[11px] text-ink-subtle">{vm.destination.secondary}</p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
 
         {vm.clock && (
-          <div className="flex shrink-0 items-center gap-1">
-            {vm.clock.readyBadge && (
-              <Icon name="check_circle" size={15} weight={500} filled className="text-success" />
-            )}
-            <span
-              className={cn(
-                'font-mono text-[17px] font-bold leading-none tabular-nums',
-                CLOCK_TONE[vm.clock.tone],
+          <div className="flex shrink-0 flex-col items-end">
+            <div className="flex items-center gap-1">
+              {vm.clock.readyBadge && (
+                <Icon name="check_circle" size={15} weight={500} filled className="text-success" />
               )}
-            >
-              {vm.clock.text}
-            </span>
+              <span
+                className={cn(
+                  'font-mono text-[17px] font-bold leading-none tabular-nums',
+                  CLOCK_TONE[vm.clock.tone],
+                )}
+              >
+                {vm.clock.text}
+              </span>
+            </div>
+            {vm.clock.label && (
+              <span className="mt-0.5 text-[10px] font-semibold uppercase leading-none tracking-[0.06em] text-ink-subtle">
+                {vm.clock.label}
+              </span>
+            )}
           </div>
         )}
       </div>
 
-      {/* El rótulo del reloj, DEBAJO y en gris pequeño.
-          `05:31` a secas no dice si son los minutos que faltan, los que sobran o
-          los que lleva el motorizado en la calle — y en esta pantalla el mismo
-          número significa las tres cosas según la columna. El rótulo lo fija sin
-          robarle tamaño a la cifra. */}
-      {vm.clock?.label && (
-        <p className="-mt-0.5 mb-1 text-right text-[10px] font-semibold uppercase tracking-[0.06em] text-ink-subtle">
-          {vm.clock.label}
-        </p>
-      )}
-
-      {/* ── 3 · Referencia de Dirección / Recojo ── */}
-      {vm.reference && (
-        <div className="mb-1.5 flex items-start gap-1 text-[12px] leading-snug text-ink-muted line-clamp-2">
-          <Icon
-            name="location_on"
-            size={13}
-            weight={500}
-            className="mt-0.5 shrink-0 text-ink-subtle"
-          />
-          <span>{vm.reference}</span>
-        </div>
-      )}
-
-      {/* ── 4 · Cobro & Destacado de Vuelto ── */}
-      <div className="mt-2 flex flex-wrap items-baseline justify-between gap-1.5 border-t border-ink/[0.04] pt-2">
-        <div className="flex items-center gap-1.5">
-          {/* 14px, por debajo del reloj (17px). El importe sigue siendo legible
-              —la cajera lo canta por teléfono— pero deja de competir por la
-              mirada con el único dato que le pide actuar. §24 N3. */}
-          <span className="font-mono text-[14px] font-bold text-ink-muted tracking-tight">
-            {vm.money.totalHeadline}
-          </span>
+      {/* ── 4 · Cobro ──
+          La franja contesta QUÉ HACER CON LA PLATA, no cuál fue el método. Un
+          prepago sin verificar y uno verificado ya no se parecen. Ver
+          `MoneyStatus`. */}
+      <div className="mt-2 border-t border-ink/[0.04] pt-2">
+        <div className="flex items-center justify-between gap-2">
           <span
             className={cn(
-              'rounded-full px-2 py-0.5 text-[10px] font-semibold',
+              'inline-flex min-w-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold',
               vm.money.paymentClassName,
             )}
           >
-            {vm.money.paymentLabel}
+            <Icon name={vm.money.paymentIcon} size={12} weight={500} filled />
+            <span className="truncate">{vm.money.paymentLabel}</span>
           </span>
+          {/* 14px, por debajo del reloj (17px). El importe sigue siendo legible
+              —la cajera lo canta por teléfono— pero deja de competir por la
+              mirada con el único dato que le pide actuar. §24 N3.
+              Y desaparece cuando no hay nada que cobrar: ver `showTotal`. */}
+          {vm.money.showTotal && (
+            <span className="shrink-0 font-mono text-[14px] font-bold text-ink-muted tracking-tight">
+              {vm.money.totalHeadline}
+            </span>
+          )}
         </div>
+
+        {vm.money.breakdown && (
+          <p className="mt-1 font-mono text-[11px] text-ink-muted tabular-nums">
+            {vm.money.breakdown}
+          </p>
+        )}
       </div>
 
-      {/* Destacado de Vuelto para la cajera */}
-      {vm.money.cashChangeText && (
-        <div className="mt-1.5 inline-flex items-center gap-1 rounded-md bg-emerald-50 border border-emerald-200/80 px-2 py-1 text-[11px] font-bold text-emerald-900">
+      {/* El vuelto sale de la caja del negocio: es plata que la cajera adelanta,
+          y por eso tiene bloque propio en vez de ser un renglón más. Junto a
+          "paga con" para que ella misma pueda comprobar la resta. */}
+      {(vm.money.cashChangeText || vm.money.paysWithText) && (
+        <div className="mt-1.5 inline-flex flex-wrap items-center gap-x-1.5 gap-y-0.5 rounded-md border border-emerald-200/80 bg-emerald-50 px-2 py-1 text-[11px] text-emerald-900">
           <Icon name="payments" size={13} weight={500} className="text-emerald-700" />
-          {vm.money.cashChangeText}
+          {vm.money.paysWithText && <span>{vm.money.paysWithText}</span>}
+          {vm.money.paysWithText && vm.money.cashChangeText && (
+            <span aria-hidden className="text-emerald-600">
+              ·
+            </span>
+          )}
+          {vm.money.cashChangeText && <span className="font-bold">{vm.money.cashChangeText}</span>}
         </div>
       )}
 

@@ -32,10 +32,64 @@ export interface CardClock {
   label?: string
 }
 
+/**
+ * DÓNDE VA EL PEDIDO, EN UNA O EN DOS LÍNEAS SEGÚN EL CANAL.
+ *
+ * El manual trae UN solo texto: la cajera escucha al cliente por teléfono y
+ * escribe una línea ("renovación, casa de Lali"). El online trae DOS: la
+ * dirección que el cliente eligió y, aparte, la referencia que escribió. La
+ * tarjeta enseñaba solo la referencia, así que de un pedido online se perdía la
+ * mitad del destino — y es justo el pedido con el que nadie ha hablado.
+ *
+ * `primary` es la referencia cuando la hay, no la dirección: en San Jacinto
+ * "casa de Lali, portón azul" localiza la casa y "Jr. Lima 234" no
+ * necesariamente. `motorizados` ordena las dos igual (`destination-card.tsx`), y
+ * las dos pantallas tienen que decir lo mismo primero cuando la cajera y el
+ * motorizado hablan por teléfono.
+ */
+export interface CardDestination {
+  primary: string
+  /** La dirección formal. `null` cuando ya es `primary` o cuando no existe. */
+  secondary: string | null
+}
+
+/**
+ * QUÉ TIENE QUE PASAR CON EL DINERO. Es la pregunta que la tarjeta contesta, y
+ * no la contestaba: enseñaba el método de pago ("Prepago", "Efectivo") como si
+ * el método fuera el hecho. No lo es. Para la cajera hay tres situaciones
+ * distintas que la palabra "Prepago" mete en el mismo saco:
+ *
+ * - `paid`        · la plata YA entró y alguien la verificó. No hay nada que hacer.
+ * - `unverified`  · el cliente dice que pagó y el comprobante está sin mirar.
+ *                   ES TRABAJO SUYO, y es el único caso en el que la comida no
+ *                   debería salir todavía.
+ * - `rejected`    · lo miró y no cuadraba.
+ * - `collect`     · se cobra en la puerta (o en el mostrador). Aquí lo que
+ *                   importa es cuánto y con qué, más el vuelto que sale de caja.
+ */
+export type MoneyStatus = 'paid' | 'unverified' | 'rejected' | 'collect'
+
 export interface MoneyInfo {
   totalHeadline: string
+  /**
+   * ¿Se enseña la cifra? NO cuando no hay nada que cobrar.
+   *
+   * Regla prestada de `motorizados` (`presentation.ts`): «enseñar `S/ 45.00` al
+   * lado de "Prepagado" es una invitación a cobrarlo por error, y sin número no
+   * hay error posible». Vale igual en el mostrador que en la puerta.
+   *
+   * El prepago SIN verificar es la excepción y sí la lleva: ahí la cifra no es
+   * un cobro, es el dato contra el que la cajera compara el comprobante.
+   */
+  showTotal: boolean
+  status: MoneyStatus
   paymentLabel: string
+  paymentIcon: string
   paymentClassName: string
+  /** Desglose del cobro mixto: `S/ 18 Yape/Plin + S/ 12 efectivo`. */
+  breakdown: string | null
+  /** `Paga con S/ 50`, o `Paga justo` cuando no hay vuelto. */
+  paysWithText: string | null
   cashChangeText: string | null
 }
 
@@ -62,7 +116,7 @@ export interface NegociosCardVM {
   identityIsCode: boolean
   customerPhone: string | null
   clock: CardClock | null
-  reference: string | null
+  destination: CardDestination | null
   money: MoneyInfo
   riskLabel: string | null
   primaryAction: CardPrimaryAction | null
@@ -76,10 +130,17 @@ export const SOURCE_BADGE_MAP: Record<UiSource, SourceBadge> = {
     icon: 'call',
     className: 'bg-amber-100 text-amber-900 border border-amber-300/60 font-bold',
   },
+  /**
+   * SÓLIDO, NO PASTEL. Era `bg-blue-50` sobre blanco: la insignia que separa el
+   * pedido con el que NADIE HABLÓ de los demás pesaba visualmente menos que el
+   * chip de estado que llevan todas. Si el único marcador de canal es una
+   * ausencia —sin insignia = manual—, el marcador que sí está tiene que verse
+   * desde el otro lado del mostrador.
+   */
   web: {
     label: 'Online',
     icon: 'language',
-    className: 'bg-blue-50 text-blue-800 border border-blue-200 font-semibold',
+    className: 'bg-blue-600 text-white font-bold',
   },
 }
 
@@ -148,18 +209,147 @@ export const STATE_BADGE_MAP: Record<UiState, StateBadge> = {
   cancelled: { label: 'Cancelado', icon: 'cancel', className: 'bg-red-50 text-red-700' },
 }
 
-export const PAY_CLASS_MAP: Record<UiPayment, string> = {
-  pending_cash: 'bg-emerald-50 text-emerald-800 border border-emerald-200',
-  pending_wallet: 'bg-violet-50 text-violet-800 border border-violet-200',
-  prepaid: 'bg-sky-50 text-sky-800 border border-sky-200',
-  pending_mixed: 'bg-amber-50 text-amber-800 border border-amber-200',
+// ── Cobro ────────────────────────────────────────────────────────────────────
+//
+// Los mapas de abajo cubren SOLO el caso `collect` (hay plata que cobrar en la
+// puerta). El prepago no está aquí porque no es un método de cobro sino un
+// estado de verificación, y se resuelve en `buildMoney`.
+
+const COLLECT_CLASS_MAP: Record<UiPayment, string> = {
+  pending_cash: 'bg-emerald-50 text-emerald-900 border border-emerald-200',
+  pending_wallet: 'bg-violet-50 text-violet-900 border border-violet-200',
+  pending_mixed: 'bg-amber-50 text-amber-900 border border-amber-200',
+  // Inalcanzable (`prepaid` nunca es `collect`); el Record lo exige.
+  prepaid: 'bg-sky-50 text-sky-900 border border-sky-200',
 }
 
-export const PAY_LABEL_MAP: Record<UiPayment, string> = {
-  pending_cash: 'Efectivo',
-  pending_wallet: 'Billetera',
-  prepaid: 'Prepago',
-  pending_mixed: 'Mixto',
+const COLLECT_LABEL_MAP: Record<UiPayment, string> = {
+  pending_cash: 'Cobrar en efectivo',
+  pending_wallet: 'Cobrar con Yape/Plin',
+  pending_mixed: 'Cobro mixto',
+  prepaid: 'Cobrar',
+}
+
+const COLLECT_ICON_MAP: Record<UiPayment, string> = {
+  pending_cash: 'payments',
+  pending_wallet: 'qr_code_2',
+  pending_mixed: 'shuffle',
+  prepaid: 'payments',
+}
+
+/**
+ * El bloque de dinero de la tarjeta. Ver `MoneyStatus` para el porqué de los
+ * cuatro estados.
+ *
+ * El prepago sin verificar es el que justifica todo esto: `payment_intent =
+ * 'prepaid'` con `payment_proof_status` en `pending` significa que el cliente
+ * subió una captura y NADIE la ha mirado. La tarjeta lo pintaba con la misma
+ * etiqueta celeste tranquila que un prepago ya verificado —"Prepago"—, o sea
+ * que el pedido que exige una comprobación y el que no exige ninguna eran
+ * indistinguibles. Con el canal online ese es el caso corriente, no el raro.
+ */
+function buildMoney(order: OrderVM): MoneyInfo {
+  const totalHeadline = soles(order.total)
+
+  const breakdown =
+    order.payment === 'pending_mixed'
+      ? `${soles(order.walletPart ?? 0)} Yape/Plin + ${soles(order.cashPart ?? 0)} efectivo`
+      : null
+
+  // Vuelto y "paga con": solo donde hay efectivo de por medio.
+  const hayEfectivo = order.payment === 'pending_cash' || order.payment === 'pending_mixed'
+  const cashChangeText =
+    hayEfectivo && order.cashChange != null && order.cashChange > 0
+      ? `Vuelto a entregar: ${soles(order.cashChange)}`
+      : null
+  // "Paga con S/ 20" JUNTO A UN TOTAL DE S/ 30 SE LEE COMO UN ERROR, y en mixto
+  // no lo es: `client_pays_with` es el billete con el que cubre SOLO la parte en
+  // efectivo. El detalle ya lo dice así ("Cliente paga efectivo con"); la
+  // tarjeta lo decía a secas y dejaba a la cajera cuadrando una resta que no
+  // era la suya.
+  const conQue = order.payment === 'pending_mixed' ? 'el efectivo con' : 'con'
+  // "Paga justo" NO se afirma sin dato: sin `client_pays_with` lo que hay es
+  // desconocimiento, y decirle a la cajera que no hace falta vuelto cuando nadie
+  // lo preguntó es peor que callarse. Con el dato y sin vuelto, sí.
+  const paysWithText =
+    !hayEfectivo || order.paysWith == null
+      ? null
+      : cashChangeText
+        ? `Paga ${conQue} ${soles(order.paysWith)}`
+        : `Paga justo ${conQue} ${soles(order.paysWith)}`
+
+  if (order.payment === 'prepaid') {
+    const yaPagado = {
+      totalHeadline,
+      showTotal: false,
+      status: 'paid' as const,
+      paymentIcon: 'verified',
+      paymentClassName: 'bg-emerald-50 text-emerald-900 border border-emerald-200 font-bold',
+      breakdown: null,
+      paysWithText: null,
+      cashChangeText: null,
+    }
+
+    /**
+     * EN UN MANUAL NO HAY NADA QUE VERIFICAR, Y NUNCA LO VA A HABER.
+     *
+     * La cajera cobró ella misma —por Yape, en la mano— y DESPUÉS creó el
+     * pedido: cuando la tarjeta existe, el dinero ya entró y ella es la
+     * verificación. `create_business_manual_order` no escribe
+     * `payment_proof_status` en ningún caso, así que un manual prepagado se
+     * queda en `NULL` para siempre.
+     *
+     * Sin esta rama caía en "Falta verificar el pago" y le pedía revisar un
+     * comprobante que no existe: trabajo inventado en la única columna donde
+     * ella mira qué le falta por hacer. Visto en el piloto con #EWWLWNCV.
+     *
+     * El comprobante SOLO existe en el canal online, donde lo sube el cliente y
+     * ella no vio el dinero entrar.
+     */
+    if (order.source === 'manual') {
+      return { ...yaPagado, paymentLabel: 'Prepagado · no cobrar' }
+    }
+    if (order.proofStatus === 'rejected') {
+      return {
+        totalHeadline,
+        showTotal: true,
+        status: 'rejected',
+        paymentLabel: 'Comprobante rechazado',
+        paymentIcon: 'gpp_bad',
+        paymentClassName: 'bg-red-100 text-red-900 border border-red-300 font-bold',
+        breakdown: null,
+        paysWithText: null,
+        cashChangeText: null,
+      }
+    }
+    if (order.proofStatus === 'verified') {
+      return { ...yaPagado, paymentLabel: 'Pagado · no cobrar' }
+    }
+    return {
+      totalHeadline,
+      // La cifra se queda: aquí no es un cobro, es contra lo que compara.
+      showTotal: true,
+      status: 'unverified',
+      paymentLabel: 'Falta verificar el pago',
+      paymentIcon: 'hourglass_top',
+      paymentClassName: 'bg-amber-100 text-amber-900 border border-amber-300 font-bold',
+      breakdown: null,
+      paysWithText: null,
+      cashChangeText: null,
+    }
+  }
+
+  return {
+    totalHeadline,
+    showTotal: true,
+    status: 'collect',
+    paymentLabel: COLLECT_LABEL_MAP[order.payment] ?? COLLECT_LABEL_MAP.pending_cash,
+    paymentIcon: COLLECT_ICON_MAP[order.payment] ?? COLLECT_ICON_MAP.pending_cash,
+    paymentClassName: COLLECT_CLASS_MAP[order.payment] ?? COLLECT_CLASS_MAP.pending_cash,
+    breakdown,
+    paysWithText,
+    cashChangeText,
+  }
 }
 
 const RISK_REASON_LABEL: Record<string, string> = {
@@ -340,17 +530,17 @@ export function buildNegociosCardVM(
   }
 
   // 6. Cobro y Vuelto
-  let cashChangeText: string | null = null
-  if (order.cashChange != null && order.cashChange > 0) {
-    cashChangeText = `Vuelto a entregar: ${soles(order.cashChange)}`
-  }
+  const money = buildMoney(order)
 
-  const money: MoneyInfo = {
-    totalHeadline: soles(order.total),
-    paymentLabel: PAY_LABEL_MAP[order.payment] ?? 'Efectivo',
-    paymentClassName: PAY_CLASS_MAP[order.payment] ?? PAY_CLASS_MAP.pending_cash,
-    cashChangeText,
-  }
+  // 6-bis. Destino. Ver `CardDestination`.
+  const destination: CardDestination | null =
+    order.method === 'pickup'
+      ? { primary: 'Recojo en local', secondary: null }
+      : order.addressRef
+        ? { primary: order.addressRef, secondary: order.address }
+        : order.address
+          ? { primary: order.address, secondary: null }
+          : null
 
   // 7. Riesgo
   const riskLabel = order.requiresValidation
@@ -400,7 +590,7 @@ export function buildNegociosCardVM(
     identityIsCode: !hasName,
     customerPhone: order.phone,
     clock,
-    reference: order.method === 'pickup' ? 'Recojo en local' : order.addressRef,
+    destination,
     money,
     riskLabel,
     primaryAction,

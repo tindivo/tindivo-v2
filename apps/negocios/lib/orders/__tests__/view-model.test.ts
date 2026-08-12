@@ -12,6 +12,7 @@ function mockOrderRow(overrides: Partial<OrderRow> = {}): OrderRow {
     payment_intent: 'pending_cash',
     customer_name: 'Juan Perez',
     customer_phone: '999888777',
+    delivery_address: null,
     delivery_reference: 'Calle San Martin 123',
     delivery_method: 'delivery',
     order_amount: 25.0,
@@ -467,7 +468,7 @@ describe('buildNegociosCardVM', () => {
   // vive en `la cejilla solo enseña lo que distingue`, arriba. Este test decía
   // que el manual SIEMPRE lleva insignia, que es justo lo que se quitó.
 
-  it('destaca el vuelto a entregar en efectivo', () => {
+  it('destaca el vuelto a entregar en efectivo, con el "paga con" al lado', () => {
     const row = mockOrderRow({
       payment_intent: 'pending_cash',
       client_pays_with: 50.0,
@@ -476,7 +477,192 @@ describe('buildNegociosCardVM', () => {
       delivery_fee: 5.0,
     })
     const cardVm = buildNegociosCardVM(toOrderVM(row, baseNow))
+    expect(cardVm.money.status).toBe('collect')
+    expect(cardVm.money.paymentLabel).toBe('Cobrar en efectivo')
+    expect(cardVm.money.paysWithText).toBe('Paga con S/ 50')
     expect(cardVm.money.cashChangeText).toBe('Vuelto a entregar: S/ 20')
+  })
+
+  it('sin vuelto pero con "paga con", avisa que paga justo', () => {
+    const row = mockOrderRow({
+      payment_intent: 'pending_cash',
+      client_pays_with: 30.0,
+      change_to_give: 0,
+      order_amount: 25.0,
+      delivery_fee: 5.0,
+    })
+    const money = buildNegociosCardVM(toOrderVM(row, baseNow)).money
+    expect(money.cashChangeText).toBeNull()
+    expect(money.paysWithText).toBe('Paga justo con S/ 30')
+  })
+
+  it('sin `client_pays_with` no afirma nada sobre el vuelto', () => {
+    const money = buildNegociosCardVM(
+      toOrderVM(mockOrderRow({ payment_intent: 'pending_cash' }), baseNow),
+    ).money
+    expect(money.paysWithText).toBeNull()
+    expect(money.cashChangeText).toBeNull()
+  })
+
+  it('el cobro mixto enseña el desglose billetera + efectivo', () => {
+    const row = mockOrderRow({
+      payment_intent: 'pending_mixed',
+      order_amount: 25.0,
+      delivery_fee: 5.0,
+      yape_amount: 18.0,
+      cash_amount: 12.0,
+    })
+    const money = buildNegociosCardVM(toOrderVM(row, baseNow)).money
+    expect(money.status).toBe('collect')
+    expect(money.breakdown).toBe('S/ 18 Yape/Plin + S/ 12 efectivo')
+  })
+
+  it('en mixto el "paga con" dice que es del efectivo, no del total', () => {
+    const row = mockOrderRow({
+      payment_intent: 'pending_mixed',
+      order_amount: 25.0,
+      delivery_fee: 5.0,
+      yape_amount: 18.0,
+      cash_amount: 12.0,
+      client_pays_with: 20.0,
+      change_to_give: 8.0,
+    })
+    const money = buildNegociosCardVM(toOrderVM(row, baseNow)).money
+    expect(money.paysWithText).toBe('Paga el efectivo con S/ 20')
+    expect(money.cashChangeText).toBe('Vuelto a entregar: S/ 8')
+  })
+
+  it('en billetera y prepago no hay ni vuelto ni desglose', () => {
+    for (const intent of ['pending_yape', 'prepaid']) {
+      const money = buildNegociosCardVM(
+        toOrderVM(mockOrderRow({ payment_intent: intent, change_to_give: 20 }), baseNow),
+      ).money
+      expect(money.cashChangeText).toBeNull()
+      expect(money.breakdown).toBeNull()
+    }
+  })
+
+  describe('un manual prepagado no tiene nada que verificar', () => {
+    /**
+     * La cajera cobró antes de crear el pedido, así que
+     * `create_business_manual_order` deja `payment_proof_status` en NULL para
+     * siempre. Sin la rama por origen, ese NULL se leía como "pendiente" y la
+     * tarjeta le pedía revisar un comprobante inexistente (#EWWLWNCV).
+     */
+    const manualPrepago = buildNegociosCardVM(
+      toOrderVM(
+        mockOrderRow({
+          source: 'business_manual',
+          payment_intent: 'prepaid',
+          payment_proof_status: null,
+        }),
+        baseNow,
+      ),
+    ).money
+
+    it('dice que no se cobra, en vez de pedir una verificación imposible', () => {
+      expect(manualPrepago.status).toBe('paid')
+      expect(manualPrepago.paymentLabel).toBe('Prepagado · no cobrar')
+    })
+
+    it('esconde la cifra: enseñarla invita a cobrarla por error', () => {
+      expect(manualPrepago.showTotal).toBe(false)
+    })
+  })
+
+  describe('el prepago sin verificar no se parece al verificado', () => {
+    const prepago = (proof: string | null) =>
+      buildNegociosCardVM(
+        toOrderVM(
+          mockOrderRow({
+            source: 'customer_pwa',
+            payment_intent: 'prepaid',
+            payment_proof_status: proof,
+          }),
+          baseNow,
+        ),
+      ).money
+
+    it('verificado: la plata ya entró, y la cifra se retira con ella', () => {
+      expect(prepago('verified').status).toBe('paid')
+      expect(prepago('verified').paymentLabel).toBe('Pagado · no cobrar')
+      expect(prepago('verified').showTotal).toBe(false)
+    })
+
+    it('pendiente o sin comprobante: es trabajo de la cajera', () => {
+      expect(prepago('pending').status).toBe('unverified')
+      expect(prepago(null).status).toBe('unverified')
+      expect(prepago(null).paymentLabel).toBe('Falta verificar el pago')
+      // La cifra SÍ se queda: es contra lo que compara el comprobante.
+      expect(prepago(null).showTotal).toBe(true)
+    })
+
+    it('rechazado: se dice, no se calla', () => {
+      expect(prepago('rejected').status).toBe('rejected')
+      expect(prepago('rejected').paymentLabel).toBe('Comprobante rechazado')
+    })
+  })
+
+  describe('destino: el online trae dirección Y referencia', () => {
+    it('el manual enseña una sola línea: el relleno "Pedido manual" no sale', () => {
+      const dest = buildNegociosCardVM(
+        toOrderVM(
+          mockOrderRow({
+            source: 'business_manual',
+            delivery_address: 'Pedido manual',
+            delivery_reference: 'Renovacion, casa de Lali',
+          }),
+          baseNow,
+        ),
+      ).destination
+      expect(dest).toEqual({ primary: 'Renovacion, casa de Lali', secondary: null })
+    })
+
+    it('el online enseña las dos, con la referencia primero', () => {
+      const dest = buildNegociosCardVM(
+        toOrderVM(
+          mockOrderRow({
+            source: 'customer_pwa',
+            delivery_address: 'Jr. Lima 234',
+            delivery_reference: 'Porton azul, al lado de la bodega',
+          }),
+          baseNow,
+        ),
+      ).destination
+      expect(dest).toEqual({
+        primary: 'Porton azul, al lado de la bodega',
+        secondary: 'Jr. Lima 234',
+      })
+    })
+
+    it('un online sin referencia cae a la dirección', () => {
+      const dest = buildNegociosCardVM(
+        toOrderVM(
+          mockOrderRow({
+            source: 'customer_pwa',
+            delivery_address: 'Jr. Lima 234',
+            delivery_reference: null,
+          }),
+          baseNow,
+        ),
+      ).destination
+      expect(dest).toEqual({ primary: 'Jr. Lima 234', secondary: null })
+    })
+
+    it('el recojo en local no lleva dirección de nadie', () => {
+      const dest = buildNegociosCardVM(
+        toOrderVM(
+          mockOrderRow({
+            source: 'customer_pwa',
+            delivery_method: 'pickup',
+            delivery_address: 'Recojo en tienda',
+            delivery_reference: null,
+          }),
+          baseNow,
+        ),
+      ).destination
+      expect(dest).toEqual({ primary: 'Recojo en local', secondary: null })
+    })
   })
 
   it('asigna la acción 1-tap "Motorizado llegó · Entregar" cuando el motorizado está en la puerta', () => {
