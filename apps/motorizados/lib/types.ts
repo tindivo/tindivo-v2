@@ -62,6 +62,7 @@ export interface BoardOrder {
    * la casa a ojo. Las dos cosas cambian qué pedido te conviene tomar, y el
    * board —que es donde se toma esa decisión— no las tenía.
    */
+  delivery_method: string
   delivery_distance_band: string | null
   delivery_coordinates_lat: number | null
   delivery_coordinates_lng: number | null
@@ -107,6 +108,7 @@ export interface CardOrder {
    * destino. En Disponibles y Míos sí llegan, y son los que dicen cuán lejos
    * cae la entrega y si habrá navegación.
    */
+  delivery_method?: string | null
   delivery_distance_band?: string | null
   delivery_coordinates_lat?: number | null
   delivery_coordinates_lng?: number | null

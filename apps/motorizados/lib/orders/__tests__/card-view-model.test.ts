@@ -602,7 +602,11 @@ describe('coste del viaje', () => {
   it('una direccion sin coordenadas se avisa en Disponibles', () => {
     const v = vm({
       variant: 'available',
-      order: order({ delivery_coordinates_lat: null, delivery_coordinates_lng: null }),
+      order: order({
+        delivery_method: 'delivery',
+        delivery_coordinates_lat: null,
+        delivery_coordinates_lng: null,
+      }),
     })
     expect(v.noLocation).toBe(true)
   })
@@ -622,8 +626,30 @@ describe('coste del viaje', () => {
    * un pedido ajeno ni siquiera viaja: sin el, `noLocation` seria true SIEMPRE
    * y marcaria de amarillo la bandeja entera.
    */
+  /**
+   * UN RECOJO NO TIENE ADONDE IR. La policy del motorizado no filtra por
+   * `delivery_method`, asi que un pedido de recojo en tienda aparece en su
+   * bandeja igual que uno de reparto. Marcarle «Sin ubicacion» seria avisar de
+   * que falta un dato que ese pedido no necesita.
+   */
+  it('un recojo en tienda NO se marca sin ubicacion', () => {
+    const v = vm({
+      variant: 'available',
+      order: order({
+        delivery_method: 'pickup',
+        delivery_coordinates_lat: null,
+        delivery_coordinates_lng: null,
+      }),
+    })
+    expect(v.noLocation).toBe(false)
+  })
+
   it('el aviso NO sale fuera de Disponibles, aunque falten las coordenadas', () => {
-    const sinCoords = order({ delivery_coordinates_lat: null, delivery_coordinates_lng: null })
+    const sinCoords = order({
+      delivery_method: 'delivery',
+      delivery_coordinates_lat: null,
+      delivery_coordinates_lng: null,
+    })
     expect(vm({ variant: 'mine', order: sinCoords }).noLocation).toBe(false)
     expect(vm({ variant: 'team', ownerName: 'Juan', order: sinCoords }).noLocation).toBe(false)
   })

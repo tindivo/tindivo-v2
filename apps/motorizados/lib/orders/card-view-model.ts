@@ -432,6 +432,12 @@ export function buildCardVM(input: CardVMInput): CardVM {
     band: BAND_LABEL[order.delivery_distance_band ?? ''] ?? null,
     noLocation:
       variant === 'available' &&
+      // UN RECOJO NO TIENE ADÓNDE IR. La policy del motorizado no filtra por
+      // `delivery_method`, así que un pedido de recojo en tienda SÍ aparece en
+      // su bandeja; sin este guard se le marcaría «Sin ubicación» a un pedido
+      // que el cliente viene a buscar. Avisar de que falta algo que no hace
+      // falta es peor que no avisar.
+      order.delivery_method !== 'pickup' &&
       order.delivery_coordinates_lat == null &&
       order.delivery_coordinates_lng == null,
     money: blocked && blockedReason ? null : buildMoney(input),
