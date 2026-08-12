@@ -2347,6 +2347,17 @@ export type Database = {
         Returns: Json
       }
       cancel_expired_prepay_orders: { Args: never; Returns: number }
+      capture_delivery_address: {
+        Args: {
+          p_accuracy_m?: number
+          p_driver_user_id: string
+          p_lat: number
+          p_lng: number
+          p_order_id: string
+          p_reference?: string
+        }
+        Returns: Json
+      }
       claim_outbox_events: {
         Args: { p_limit?: number }
         Returns: {

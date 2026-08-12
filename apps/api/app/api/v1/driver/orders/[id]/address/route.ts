@@ -55,24 +55,20 @@ export async function POST(
     const body = Schema.parse(await req.json())
 
     const service = createServiceClient()
-    // El cast existe porque `database.types.ts` se genera contra el REMOTO y la
-    // 0147 todavía no está pusheada allí, así que el tipo no conoce la función.
-    // SE QUITA tras `supabase db push` + `pnpm db:types`.
-    // OJO CON EL ORDEN AL DESPLEGAR: la base primero. Si este endpoint sale
-    // antes que la migración, PostgREST no encuentra la función y la captura
-    // falla — no tumba la entrega (va en su propio try/catch en la PWA), pero
-    // el motorizado vería un error en cada intento.
-    // biome-ignore lint/suspicious/noExplicitAny: la firma llega con `pnpm db:types` tras el push
-    const { data, error } = await (service.rpc as any)('capture_delivery_address', {
+    const { data, error } = await service.rpc('capture_delivery_address', {
       p_order_id: id,
       p_driver_user_id: user.id,
       p_lat: body.lat,
       p_lng: body.lng,
-      // `?? null` explícito: `undefined` haría que PostgREST usara el DEFAULT
-      // del parámetro, que es lo mismo, pero dejarlo escrito evita que un
-      // cambio futuro del default cambie el significado en silencio.
-      p_accuracy_m: body.accuracyM ?? null,
-      p_reference: body.reference ?? null,
+      // Se OMITEN cuando no vienen, en vez de mandarse como null: los dos
+      // parámetros declaran `DEFAULT NULL` en la 0147, así que omitirlos y
+      // mandar null producen exactamente lo mismo. Y omitir es lo que el tipo
+      // generado admite — `p_accuracy_m?: number`, no `number | null`.
+      //
+      // Que `accuracyM` llegue ausente NO es un detalle de transporte: es la
+      // convención de la 0122 para "el pin lo puso una persona, no el sensor".
+      p_accuracy_m: body.accuracyM ?? undefined,
+      p_reference: body.reference ?? undefined,
     })
 
     if (error) throw rpcError(error)
