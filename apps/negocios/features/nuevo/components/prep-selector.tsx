@@ -10,25 +10,28 @@ export function PrepSelector({
   onChange: (m: number) => void
 }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-4">
-      <label className="mb-2 block font-mono text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
+    <div className="rounded-[24px] border border-ink/10 bg-white p-4 sm:p-5 shadow-xs">
+      <p className="mb-3 block font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-ink-muted">
         Tiempo de preparación
-      </label>
-      <div className="flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
-        {PREP_PRESETS.map((m) => (
-          <button
-            type="button"
-            key={m}
-            onClick={() => onChange(m)}
-            className={`h-11 min-w-[52px] shrink-0 rounded-xl font-mono text-sm font-bold transition-all ${
-              m === value
-                ? 'bg-ink text-white'
-                : 'border border-border bg-card text-ink hover:bg-surface'
-            }`}
-          >
-            {m}m
-          </button>
-        ))}
+      </p>
+      <div className="flex items-center gap-2.5 overflow-x-auto pb-1 [scrollbar-width:none] [-webkit-overflow-scrolling:touch]">
+        {PREP_PRESETS.map((m) => {
+          const active = m === value
+          return (
+            <button
+              type="button"
+              key={m}
+              onClick={() => onChange(m)}
+              className={`h-[52px] w-[52px] shrink-0 rounded-full font-mono text-[14px] font-bold transition-all duration-150 flex items-center justify-center active:scale-95 ${
+                active
+                  ? 'bg-ink text-white shadow-md border border-ink'
+                  : 'border border-ink/15 bg-white text-ink hover:bg-surface hover:border-ink/30'
+              }`}
+            >
+              {m}m
+            </button>
+          )
+        })}
       </div>
     </div>
   )

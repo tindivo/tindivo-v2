@@ -2,247 +2,29 @@
 
 import { cn, Icon } from '@tindivo/ui'
 import { useQueueLeadMinutes } from '@/hooks/use-queue-lead'
-import { formatReadyDelta, type OrderVM } from '@/lib/orders/view-model'
-import { formatSupportPhone, normalizeSupportPhone } from '@/lib/support'
-import { mmss, PayBadgeMini, SourceBadgeMini, soles } from './primitives'
+import { buildNegociosCardVM, type CardTone } from '@/lib/orders/card-view-model'
+import type { OrderVM } from '@/lib/orders/view-model'
 
-type CardProps = { order: OrderVM; onOpen?: (o: OrderVM) => void; compact?: boolean }
-
-type CocinaCardProps = CardProps & {
-  /** El número de soporte tal cual sale de `app_settings`. La tarjeta lo valida
-   *  por su cuenta: no se fía de que llegue ya normalizado. */
+type CardProps = {
+  order: OrderVM
+  onOpen?: (o: OrderVM) => void
+  compact?: boolean
   supportPhone?: string | null
   onCallDriver?: (o: OrderVM) => void
 }
 
-/** Borde y fondo de la tarjeta según el estado de cocina. Mismo patrón que
- *  `URGENCY_CARD` en motorizados: el estado mapea a clases, no a estilos inline. */
-const COOKING_STATE_CARD: Record<string, string> = {
-  cooking: 'border border-border bg-white',
-  buffer_p1: 'border border-border bg-white',
-  buffer_p2: 'border border-[#FDBA74] bg-white',
-  buffer_p3: 'border border-[#FCA5A5] bg-white',
-  heading: 'border border-border bg-white',
-  waiting: 'border-2 border-brand bg-brand-soft/20 shadow-sm',
-}
-const COOKING_STATE_CARD_FALLBACK = 'border border-border bg-white'
-
-const RISK_REASON_LABEL: Record<string, string> = {
-  gps_warning_zone: 'Validar · zona ampliada',
-  same_phone_burst: 'Validar · varios pedidos',
-  nearby_address_burst: 'Validar · direcciones cercanas',
-  new_phone_high_ticket_burst: 'Validar · patrón inusual',
-  order_spike: 'Validar · pico de pedidos',
-  standard_validation_rule: 'Validar antes de cocinar',
+const TONE_BORDER: Record<CardTone, string> = {
+  neutral: 'border border-border bg-white',
+  warning: 'border border-[#FDBA74] bg-white',
+  danger: 'border border-danger/45 bg-white',
+  brand: 'border-2 border-brand bg-white shadow-sm',
 }
 
-function RiskBadge({ order }: { order: OrderVM }) {
-  if (!order.requiresValidation) return null
-  return (
-    <div className="mt-1.5 inline-flex items-center gap-[5px] rounded-full bg-warning-soft px-2 py-1 text-[11px] font-bold text-brand-dark">
-      <Icon name="shield" size={13} weight={500} filled />
-      {RISK_REASON_LABEL[order.validationReasonCode ?? ''] ?? 'Validar antes de cocinar'}
-    </div>
-  )
-}
-
-/** Minutos que faltan para que la comida esté lista (o badge de retraso/espera si readySec < 0). */
-function CookingCountdown({ order }: { order: OrderVM }) {
-  const queueLeadMin = useQueueLeadMinutes()
-  const readyEarlyBadge = order.readyEarly ? (
-    <span className="inline-flex items-center gap-[3px] text-[11px] font-semibold text-success">
-      <Icon name="check_circle" size={12} weight={500} filled className="text-success" />
-      Comida lista
-    </span>
-  ) : null
-
-  if (order.readySec != null && order.readySec < 0) {
-    if (order.readyEarly) {
-      const elapsedSec = Math.abs(order.readySec)
-      const isAmber = elapsedSec <= queueLeadMin * 60
-      return (
-        <div className="inline-flex items-center gap-1.5">
-          <span
-            className={cn(
-              'inline-flex items-center gap-[3px] rounded-full px-1.5 py-0.5 text-[10px] font-bold border',
-              isAmber
-                ? 'bg-amber-50 text-amber-800 border-amber-300/60'
-                : 'bg-danger-soft text-danger border-danger/20',
-            )}
-          >
-            <Icon
-              name={isAmber ? 'schedule' : 'priority_high'}
-              size={12}
-              weight={500}
-              filled={!isAmber}
-              className={isAmber ? 'text-amber-700' : 'text-danger'}
-            />
-            Lista · esperando moto{' '}
-            <span className="font-mono">{formatReadyDelta(Math.abs(order.readySec))}</span>
-          </span>
-        </div>
-      )
-    }
-
-    return (
-      <div className="inline-flex items-center gap-1.5">
-        {readyEarlyBadge}
-        <span className="inline-flex items-center gap-[3px] rounded-full bg-danger-soft px-1.5 py-0.5 text-[10px] font-bold text-danger border border-danger/20">
-          <Icon name="priority_high" size={12} weight={500} filled className="text-danger" />
-          ¡Demorado! <span className="font-mono">{formatReadyDelta(order.readySec)}</span>
-        </span>
-      </div>
-    )
-  }
-
-  if (order.readySec != null && order.readySec >= 0) {
-    return (
-      <div className="inline-flex items-center gap-1.5">
-        {readyEarlyBadge}
-        <span className="inline-flex items-center gap-[3px] text-[11px] font-semibold text-brand-dark">
-          <Icon name="timer" size={12} weight={500} className="text-brand-dark" />
-          <span className="font-mono font-bold">{formatReadyDelta(order.readySec)}</span> en cocina
-        </span>
-      </div>
-    )
-  }
-
-  return readyEarlyBadge
-}
-
-// ── Status line dentro de "En cocina" ─────────────────────────────────────────
-export function CookingStatusLine({ order }: { order: OrderVM }) {
-  const s = order.state
-  const d = order.driver
-  const queueLeadMin = useQueueLeadMinutes()
-
-  if (s === 'cooking') {
-    if (order.readySec != null && order.readySec < 0) {
-      if (order.readyEarly) {
-        const elapsedSec = Math.abs(order.readySec)
-        const isAmber = elapsedSec <= queueLeadMin * 60
-        const colorClass = isAmber ? 'text-amber-700' : 'text-danger'
-        const iconName = isAmber ? 'schedule' : 'priority_high'
-        return (
-          <div className="flex items-center gap-[5px]">
-            <Icon name={iconName} size={12} weight={500} filled={!isAmber} className={colorClass} />
-            <span className={`text-[11px] font-bold ${colorClass}`}>
-              Lista · esperando moto{' '}
-              <span className="font-mono">{formatReadyDelta(Math.abs(order.readySec))}</span>
-            </span>
-          </div>
-        )
-      }
-
-      return (
-        <div className="flex items-center gap-[5px]">
-          <Icon name="priority_high" size={12} weight={500} filled className="text-danger" />
-          <span className="text-[11px] font-bold text-danger">
-            ¡Demorado! · <span className="font-mono">{formatReadyDelta(order.readySec)}</span>
-            {order.extensionUsed && (
-              <span className="ml-1 text-amber-700">+{order.extensionMin}m</span>
-            )}
-          </span>
-        </div>
-      )
-    }
-
-    const left = order.minutesLeft ?? order.prepMinutes ?? 0
-    const prep = order.prepMinutes ?? 0
-    const pct = prep > 0 ? left / prep : 1
-    const timerClass = pct < 0.15 ? 'text-brand-dark' : 'text-ink-subtle'
-    return (
-      <div className="flex items-center gap-[5px]">
-        {order.readyEarly ? (
-          <span className="inline-flex items-center gap-[3px] text-[11px] font-semibold text-success mr-1">
-            <Icon name="check_circle" size={12} weight={500} filled className="text-success" />
-            Comida lista
-          </span>
-        ) : (
-          <Icon name="timer" size={12} weight={500} className={timerClass} />
-        )}
-        <span className={`text-[11px] font-medium ${timerClass}`}>
-          Cocinando · <span className="font-mono font-bold">{left}m</span> restantes
-          {order.extensionUsed && (
-            <span className="ml-1 text-amber-700">+{order.extensionMin}m</span>
-          )}
-        </span>
-      </div>
-    )
-  }
-
-  // p1 ya no es un estado de tránsito normal: si el pedido está aquí es que la
-  // comida está lista y nadie la ha tomado. El copy avisa desde el primer minuto.
-  if (s === 'buffer_p1')
-    return (
-      <div className="flex items-center gap-[5px]">
-        <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-yellow-500" />
-        <span className="text-[11px] font-semibold text-amber-700">
-          Comida lista · nadie la ha tomado ·{' '}
-          <span className="font-mono">{order.bufferMinutes}m</span>
-        </span>
-      </div>
-    )
-
-  if (s === 'buffer_p2')
-    return (
-      <div className="flex items-center gap-[5px]">
-        <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-brand" />
-        <span className="text-[11px] font-semibold text-brand-dark">
-          Sin motorizado · <span className="font-mono">{order.bufferMinutes}m</span>
-        </span>
-      </div>
-    )
-
-  if (s === 'buffer_p3')
-    return (
-      <div className="flex items-center gap-[5px]">
-        <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-danger" />
-        <span className="text-[11px] font-bold text-danger">
-          Sin motorizado hace <span className="font-mono">{order.bufferMinutes}m</span>
-        </span>
-      </div>
-    )
-
-  if (s === 'heading')
-    return (
-      <div className="flex flex-wrap items-center gap-[5px]">
-        <Icon name="two_wheeler" size={13} weight={500} className="shrink-0 text-violet-700" />
-        <span className="text-[11px] font-medium text-violet-700">
-          {d?.name ?? 'Motorizado'} viene a recoger
-        </span>
-        {/* El motorizado toma el pedido con ~10 min de cocción restantes, así que
-            aquí la comida casi siempre sigue en la cocina. Sin este contador la
-            cajera se quedaba ciega justo cuando más lo necesita. */}
-        <CookingCountdown order={order} />
-      </div>
-    )
-
-  if (s === 'waiting')
-    return (
-      <div>
-        <div className="flex flex-wrap items-center gap-[5px]">
-          <Icon
-            name="local_shipping"
-            size={14}
-            weight={500}
-            filled
-            className="shrink-0 text-brand-dark"
-          />
-          <span className="text-[12px] font-bold text-brand-dark">
-            {d?.name ?? 'Motorizado'} llegó · Entregar pedido
-          </span>
-          <CookingCountdown order={order} />
-        </div>
-        {order.cashChange != null && order.cashChange > 0 && (
-          <div className="ml-[18px] mt-[3px] text-[11px] font-semibold text-brand-dark">
-            Vuelto a preparar: <span className="font-mono">{soles(order.cashChange)}</span>
-          </div>
-        )}
-      </div>
-    )
-
-  return null
+const CLOCK_TONE: Record<CardTone, string> = {
+  neutral: 'text-ink-muted',
+  warning: 'text-amber-700',
+  danger: 'text-danger font-black',
+  brand: 'text-brand-dark',
 }
 
 function clickProps(order: OrderVM, onOpen?: (o: OrderVM) => void) {
@@ -259,253 +41,191 @@ function clickProps(order: OrderVM, onOpen?: (o: OrderVM) => void) {
   }
 }
 
-function IdAddress({ order }: { order: OrderVM }) {
-  if (!order.addressRef) return null
-  return (
-    <div className="flex items-start gap-1 overflow-hidden text-ellipsis whitespace-nowrap text-[11px] text-ink-muted">
-      <Icon name="location_on" size={11} weight={500} className="mt-px shrink-0" />
-      <span className="overflow-hidden text-ellipsis">{order.addressRef}</span>
-    </div>
-  )
-}
-
 /**
- * Escalamiento a Tindivo desde la propia tarjeta del tablero.
- *
- * `buffer_p2`/`p3` significan que la comida está lista y nadie la ha tomado —
- * el único camino de escalamiento que existe. El botón vivía solo dentro del
- * detalle: la cajera veía el rojo en la tarjeta y tenía que abrir el pedido
- * para encontrarlo. Ahora está a un toque, donde salta la alarma.
- *
- * Sin número usable se enseña el estado alternativo de prod: el aviso se ve,
- * pero no hay enlace que lleve a ninguna parte.
+ * Componente Base de Tarjeta para la Cajera.
+ * Consume `buildNegociosCardVM` para desacoplar completamente la lógica visual del JSX.
  */
-function UrgentDriverButton({
-  order,
-  supportPhone,
-  onCallDriver,
-}: {
-  order: OrderVM
-  supportPhone?: string | null
-  onCallDriver?: (o: OrderVM) => void
-}) {
-  if (order.state === 'waiting') {
-    return (
-      <div className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl bg-brand px-3 py-1.5 text-[12.5px] font-bold text-white shadow-sm">
-        <Icon name="local_shipping" size={15} filled />
-        Motorizado llegó · Entregar pedido
-      </div>
-    )
-  }
-
-  // Aquí ya no puede quedar ningún `waiting`: sale por el return de arriba, que
-  // va PRIMERO a propósito. `isUrgent` (cards.tsx:349) manda a este componente
-  // tanto los buffers como `waiting`, y mientras el aviso del motorizado en el
-  // local estuvo por debajo de esta guarda no se pintó nunca — la tarjeta se
-  // agrandaba a 105px con borde de 2px para no enseñar nada. Volver a nombrar
-  // `waiting` en esta condición reabre esa confusión y TypeScript lo rechaza
-  // como comparación imposible.
-  if (order.state !== 'buffer_p2' && order.state !== 'buffer_p3') return null
-
-  const alarma = order.state === 'buffer_p3'
-  const phone = normalizeSupportPhone(supportPhone)
-
-  if (!phone || !onCallDriver) {
-    return (
-      <div className="mt-1.5 flex items-center gap-[5px] rounded-lg border border-dashed border-border px-2 py-1.5 text-[11px] font-semibold text-ink-muted">
-        <Icon name="phone_disabled" size={13} weight={500} />
-        Sin número de soporte configurado
-      </div>
-    )
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={(e) => {
-        // La tarjeta entera abre el detalle: sin esto, escalar también lo abriría.
-        e.stopPropagation()
-        onCallDriver(order)
-      }}
-      className={`mt-1.5 inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-xl px-4 py-2 text-[13px] font-semibold transition-transform active:scale-[0.98] ${
-        alarma
-          ? 'animate-pulse bg-danger text-white'
-          : 'border border-orange-300 bg-white text-brand-dark'
-      }`}
-    >
-      <Icon name="call" size={14} weight={500} filled={alarma} />
-      {alarma ? 'Pedir motorizado YA' : 'Pedir motorizado'} · {formatSupportPhone(phone)}
-    </button>
-  )
-}
-
-// ── Card: En cocina ───────────────────────────────────────────────────────────
-export function CocinaCard({
+function NegociosBaseCard({
   order,
   onOpen,
   compact = false,
   supportPhone,
   onCallDriver,
-}: CocinaCardProps) {
-  const isUrgent =
-    order.state === 'buffer_p3' ||
-    order.state === 'buffer_p2' ||
-    (order.readySec != null && order.readySec < 0) ||
-    order.state === 'waiting'
+}: CardProps) {
+  const queueLeadMin = useQueueLeadMinutes()
+  const vm = buildNegociosCardVM(order, { queueLeadMin, supportPhone })
 
   return (
     <div
       {...clickProps(order, onOpen)}
       className={cn(
-        'cursor-pointer rounded-xl transition-all duration-150 hover:shadow-elev-2',
-        isUrgent ? 'px-3 py-3 border-2 min-h-[105px]' : 'px-3 py-2 border min-h-[64px]',
-        COOKING_STATE_CARD[order.state] ?? COOKING_STATE_CARD_FALLBACK,
+        'group relative cursor-pointer rounded-xl border transition-all duration-150 hover:shadow-elev-2 text-left overflow-hidden',
+        compact ? 'px-3 py-2.5' : 'px-3.5 py-3',
+        TONE_BORDER[vm.tone],
       )}
     >
-      <div className="mb-0.5 flex items-center gap-[5px]">
-        <span className="font-mono text-[10px] font-bold text-ink-muted">#{order.id}</span>
-        {isUrgent && <SourceBadgeMini source={order.source} />}
-      </div>
+      {/* ── 1 · Cejilla Superior ── */}
+      <div className="mb-1 flex flex-wrap items-center gap-1.5 text-[11px]">
+        <span className="font-mono font-bold text-ink-muted">#{vm.shortId}</span>
 
-      <div className="mb-1 flex items-center gap-1.5 justify-between">
-        <span className="truncate font-semibold text-body flex-1">
-          {order.customer ?? 'Cliente'}
-        </span>
-        <div className="flex items-center gap-1.5 shrink-0">
-          <span className="font-mono text-caption text-ink-muted">{soles(order.total)}</span>
-          <PayBadgeMini payment={order.payment} />
-        </div>
-      </div>
-
-      <CookingStatusLine order={order} />
-
-      {isUrgent && (
-        <UrgentDriverButton order={order} supportPhone={supportPhone} onCallDriver={onCallDriver} />
-      )}
-    </div>
-  )
-}
-
-// ── Card: Nuevo (pending_acceptance / validando) ──────────────────────────────
-export function NuevoCard({ order, onOpen, compact = false }: CardProps) {
-  const isUrgent = order.countdownSec < 60
-  const urgencyClass = isUrgent ? 'text-danger' : 'text-brand'
-
-  return (
-    <div
-      {...clickProps(order, onOpen)}
-      className={cn(
-        'cursor-pointer rounded-xl border bg-white shadow-none transition-shadow duration-150 hover:shadow-elev-2',
-        compact ? 'px-2.5 py-2' : 'px-3 py-2.5',
-        isUrgent ? 'border-[#FCA5A5]' : 'border-[#FDBA74]',
-      )}
-    >
-      <div className="mb-1 flex items-center gap-[5px]">
-        <span className="font-mono text-[10px] font-bold text-ink-muted">#{order.id}</span>
-        <div className="flex items-center gap-[3px]">
-          <Icon name="timer" size={11} weight={500} className={`shrink-0 ${urgencyClass}`} />
-          <span className={`font-mono text-[11px] font-bold ${urgencyClass}`}>
-            {mmss(order.countdownSec)}
-          </span>
-        </div>
-        <div className="flex-1" />
-        {order.status === 'awaiting_payment' && (
-          <span className="rounded-md border border-orange-100 bg-warning-soft px-1.5 py-0.5 text-[10px] font-bold text-brand-dark">
-            Esperando pago
-          </span>
-        )}
-        {order.status === 'validando' && (
-          <span className="rounded-md border border-blue-100 bg-sky-50 px-1.5 py-0.5 text-[10px] font-bold text-blue-700">
-            Validando
-          </span>
-        )}
-        <SourceBadgeMini source={order.source} />
-      </div>
-
-      <div className="mb-1 flex items-center gap-1.5">
+        {/* Badge de Origen ultra-visible: MANUAL vs ONLINE */}
         <span
-          className={cn('flex-1 truncate font-semibold', compact ? 'text-[13px]' : 'text-[14px]')}
+          className={cn(
+            'inline-flex items-center gap-[3px] rounded-full px-2 py-0.5 text-[10px]',
+            vm.sourceBadge.className,
+          )}
         >
-          {order.customer ?? 'Cliente'}
+          <Icon name={vm.sourceBadge.icon} size={10} weight={500} />
+          {vm.sourceBadge.label}
         </span>
-        <div className="flex shrink-0 items-center gap-[5px]">
-          <PayBadgeMini payment={order.payment} />
-          <span className={cn('font-mono font-bold', compact ? 'text-[13px]' : 'text-[14px]')}>
-            {soles(order.total)}
-          </span>
-        </div>
-      </div>
 
-      <IdAddress order={order} />
-      <RiskBadge order={order} />
-    </div>
-  )
-}
-
-// ── Card: En reparto ──────────────────────────────────────────────────────────
-export function RepartoCard({ order, onOpen, compact = false }: CardProps) {
-  const mAgo = order.pickupMinAgo ?? 0
-  const isMed = mAgo >= 30 && mAgo < 45
-  const isHigh = mAgo >= 45
-  const borderClass = isHigh ? 'border-[#FDBA74]' : isMed ? 'border-[#FDE68A]' : 'border-border'
-
-  const driverName = order.driver?.name ?? 'Motorizado'
-  const statusDotClass = isHigh ? 'bg-brand' : isMed ? 'bg-yellow-500' : null
-  const statusClass = isHigh ? 'text-brand-dark' : isMed ? 'text-amber-700' : 'text-violet-700'
-  const statusText = isHigh
-    ? `Reparto demorado · hace ${mAgo}m`
-    : isMed
-      ? `En camino mucho tiempo · hace ${mAgo}m`
-      : `${driverName} entregando · hace ${mAgo}m`
-
-  return (
-    <div
-      {...clickProps(order, onOpen)}
-      className={cn(
-        'cursor-pointer rounded-xl border bg-white shadow-none transition-shadow duration-150 hover:shadow-elev-2',
-        compact ? 'px-2.5 py-2' : 'px-3 py-2.5',
-        borderClass,
-      )}
-    >
-      <div className="mb-1 flex items-center gap-[5px]">
-        <span className="font-mono text-[10px] font-bold text-ink-muted">#{order.id}</span>
-        <SourceBadgeMini source={order.source} />
-        <div className="flex-1" />
-        <span className={cn('font-mono font-bold', compact ? 'text-[13px]' : 'text-[14px]')}>
-          {soles(order.total)}
+        {/* Badge de Método de entrega */}
+        <span className="inline-flex items-center gap-[3px] rounded-full bg-ink/[0.04] px-1.5 py-0.5 text-[10px] font-semibold text-ink-muted">
+          <Icon name={vm.methodBadge.icon} size={10} weight={500} />
+          {vm.methodBadge.label}
         </span>
-      </div>
 
-      <div className="mb-1 flex items-center gap-1.5">
+        <div className="flex-1 min-w-[4px]" />
+
+        {/* Badge de Estado del Pedido */}
         <span
-          className={cn('flex-1 truncate font-semibold', compact ? 'text-[13px]' : 'text-[14px]')}
+          className={cn(
+            'inline-flex shrink-0 items-center gap-[3px] rounded-full px-2 py-0.5 text-[10px] font-bold',
+            vm.stateBadge.className,
+          )}
         >
-          {order.customer ?? 'Cliente'}
+          <Icon name={vm.stateBadge.icon} size={11} weight={500} />
+          {vm.stateBadge.label}
         </span>
-        <PayBadgeMini payment={order.payment} />
       </div>
 
-      {order.addressRef && (
-        <div className="mb-1.5 truncate text-[11px] text-ink-muted">{order.addressRef}</div>
-      )}
+      {/* ── 2 · Identidad + El Reloj ── */}
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <span className="truncate font-semibold text-[15px] text-ink tracking-tight flex-1">
+          {vm.customerName}
+        </span>
 
-      <div className="flex items-center gap-[5px]">
-        {statusDotClass ? (
-          <span className={cn('h-[7px] w-[7px] shrink-0 rounded-full', statusDotClass)} />
-        ) : (
+        {vm.clock && (
+          <div className="flex shrink-0 items-center gap-1">
+            {vm.clock.readyBadge && (
+              <Icon name="check_circle" size={14} weight={500} filled className="text-success" />
+            )}
+            <span
+              className={cn(
+                'font-mono text-[13px] font-bold tabular-nums',
+                CLOCK_TONE[vm.clock.tone],
+              )}
+            >
+              {vm.clock.text}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* ── 3 · Referencia de Dirección / Recojo ── */}
+      {vm.reference && (
+        <div className="mb-1.5 flex items-start gap-1 text-[12px] leading-snug text-ink-muted line-clamp-2">
           <Icon
-            name="delivery_dining"
+            name="location_on"
             size={13}
             weight={500}
-            className={`shrink-0 ${statusClass}`}
+            className="mt-0.5 shrink-0 text-ink-subtle"
           />
-        )}
-        <span
-          className={`text-[11px] ${isMed || isHigh ? 'font-semibold' : 'font-medium'} ${statusClass}`}
-        >
-          {statusText}
-        </span>
+          <span>{vm.reference}</span>
+        </div>
+      )}
+
+      {/* ── 4 · Cobro & Destacado de Vuelto ── */}
+      <div className="mt-2 flex flex-wrap items-baseline justify-between gap-1.5 border-t border-ink/[0.04] pt-2">
+        <div className="flex items-center gap-1.5">
+          <span className="font-mono text-[16px] font-bold text-ink tracking-tight">
+            {vm.money.totalHeadline}
+          </span>
+          <span
+            className={cn(
+              'rounded-full px-2 py-0.5 text-[10px] font-semibold',
+              vm.money.paymentClassName,
+            )}
+          >
+            {vm.money.paymentLabel}
+          </span>
+        </div>
       </div>
+
+      {/* Destacado de Vuelto para la cajera */}
+      {vm.money.cashChangeText && (
+        <div className="mt-1.5 inline-flex items-center gap-1 rounded-md bg-emerald-50 border border-emerald-200/80 px-2 py-1 text-[11px] font-bold text-emerald-900">
+          <Icon name="payments" size={13} weight={500} className="text-emerald-700" />
+          {vm.money.cashChangeText}
+        </div>
+      )}
+
+      {/* Alerta de Riesgo */}
+      {vm.riskLabel && (
+        <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-md bg-warning-soft border border-orange-200 px-2 py-1 text-[11px] font-bold text-brand-dark">
+          <Icon name="shield" size={13} weight={500} filled />
+          {vm.riskLabel}
+        </div>
+      )}
+
+      {/* ── 5 · Botón de Acción 1-Tap ── */}
+      {vm.primaryAction && (
+        <div className="mt-2.5">
+          {vm.primaryAction.type === 'callDriver' ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onCallDriver?.(order)
+              }}
+              className={cn(
+                'inline-flex w-full items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-[13px] font-bold transition-transform active:scale-[0.98]',
+                vm.primaryAction.isUrgent
+                  ? 'animate-pulse bg-danger text-white'
+                  : 'bg-brand text-white',
+              )}
+            >
+              <Icon name="call" size={15} weight={500} filled />
+              {vm.primaryAction.label}
+            </button>
+          ) : (
+            <div
+              className={cn(
+                'inline-flex w-full items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-[13px] font-bold text-white shadow-sm',
+                vm.primaryAction.isUrgent ? 'bg-emerald-600' : 'bg-brand',
+              )}
+            >
+              <Icon name="local_shipping" size={15} filled />
+              {vm.primaryAction.label}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Exportaciones para el Kanban (compatibles con pedidos-view.tsx) ───────────
+
+export function CocinaCard(props: CardProps) {
+  return <NegociosBaseCard {...props} />
+}
+
+export function NuevoCard(props: CardProps) {
+  return <NegociosBaseCard {...props} />
+}
+
+export function RepartoCard(props: CardProps) {
+  return <NegociosBaseCard {...props} />
+}
+
+export function CookingStatusLine({ order }: { order: OrderVM }) {
+  const queueLeadMin = useQueueLeadMinutes()
+  const vm = buildNegociosCardVM(order, { queueLeadMin })
+  return (
+    <div className="flex items-center gap-1.5 text-[11px] font-semibold text-ink-muted">
+      <Icon name={vm.stateBadge.icon} size={12} weight={500} />
+      <span>{vm.stateBadge.label}</span>
     </div>
   )
 }

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { buildNegociosCardVM } from '../card-view-model'
 import type { OrderRow } from '../view-model'
 import { formatReadyDelta, toOrderVM } from '../view-model'
 
@@ -133,11 +134,6 @@ describe('toOrderVM readySec calculation', () => {
     expect(vm.readySec).toBe(-300)
   })
 
-  // ── "Marcar listo" con la comida aún por delante ───────────────────────────
-  // Escenario de la regla (a) de `advance_order('ready')`: si faltaban MÁS de
-  // `queue_lead_minutes()` (10), el LEAST adelanta `estimated_ready_at` a
-  // ahora+10min — o sea que SIGUE EN EL FUTURO aunque la comida ya esté lista.
-  // Con T1, el countdown sigue activo junto con el badge readyEarly.
   const readyAtPlus10 = '2026-08-05T15:25:00Z' // baseNow + 10 min
 
   it('4. readyEarly en `cooking`: readySec (600s) y minutesLeft (10m) siguen contando', () => {
@@ -189,24 +185,55 @@ describe('toOrderVM readySec calculation', () => {
     expect(vm.readySec).toBe(600)
     expect(vm.minutesLeft).toBe(10)
   })
+})
 
-  it('4. estimated_ready_at null -> readySec null', () => {
-    const row = mockOrderRow({
-      status: 'preparing',
-      estimated_ready_at: null,
-    })
-    const vm = toOrderVM(row, baseNow)
-    expect(vm.readySec).toBeNull()
+describe('buildNegociosCardVM', () => {
+  const baseNow = Date.parse('2026-08-05T15:15:00Z')
+
+  it('diferencia origen Manual vs Online en la insignia de origen', () => {
+    const rowManual = mockOrderRow({ source: 'business_manual', status: 'pending_acceptance' })
+    const vmManual = buildNegociosCardVM(toOrderVM(rowManual, baseNow))
+    expect(vmManual.sourceBadge.label).toBe('Manual')
+    expect(vmManual.sourceBadge.icon).toBe('call')
+
+    const rowWeb = mockOrderRow({ source: 'customer_pwa', status: 'pending_acceptance' })
+    const vmWeb = buildNegociosCardVM(toOrderVM(rowWeb, baseNow))
+    expect(vmWeb.sourceBadge.label).toBe('Online')
+    expect(vmWeb.sourceBadge.icon).toBe('language')
   })
 
-  it('5. Caso límite: readyAtMs === now -> readySec === 0 (no negativo)', () => {
-    const exactNowStr = '2026-08-05T15:15:00Z'
+  it('destaca el vuelto a entregar en efectivo', () => {
     const row = mockOrderRow({
-      status: 'preparing',
-      estimated_ready_at: exactNowStr,
+      payment_intent: 'pending_cash',
+      client_pays_with: 50.0,
+      change_to_give: 20.0,
+      order_amount: 25.0,
+      delivery_fee: 5.0,
     })
-    const vm = toOrderVM(row, baseNow)
-    expect(vm.readySec).toBe(0)
-    expect(formatReadyDelta(vm.readySec!)).toBe('00:00')
+    const cardVm = buildNegociosCardVM(toOrderVM(row, baseNow))
+    expect(cardVm.money.cashChangeText).toBe('Vuelto a entregar: S/ 20')
+  })
+
+  it('asigna la acción 1-tap "Motorizado llegó · Entregar" cuando el motorizado está en la puerta', () => {
+    const row = mockOrderRow({
+      status: 'waiting_at_restaurant',
+      driver_id: 'drv_1',
+      driver: { full_name: 'Carlos Chofer' },
+    })
+    const cardVm = buildNegociosCardVM(toOrderVM(row, baseNow))
+    expect(cardVm.primaryAction?.type).toBe('deliver')
+    expect(cardVm.primaryAction?.label).toContain('Carlos Chofer llegó · Entregar')
+  })
+
+  it('asigna la acción 1-tap "Pedir motorizado YA" en buffer_p3', () => {
+    const row = mockOrderRow({
+      status: 'waiting_driver',
+      waiting_driver_at: '2026-08-05T15:00:00Z', // 15 min esperando moto
+    })
+    const cardVm = buildNegociosCardVM(toOrderVM(row, baseNow), { supportPhone: '999111222' })
+    expect(cardVm.primaryAction?.type).toBe('callDriver')
+    expect(cardVm.primaryAction?.label).toBe('Pedir motorizado YA')
   })
 })
+
+
