@@ -48,6 +48,13 @@ export interface Badge {
  * toca ir, azul de camino, naranja al llegar al mostrador, violeta con la
  * comida encima, gris otra vez al cerrar.
  */
+/**
+ * Cuán lejos cae la entrega. Vive aquí por lo mismo que todo lo demás de este
+ * fichero: lo dicen la tarjeta y el detalle, y si cada una se guarda su copia
+ * acaban llamando distinto a la misma banda.
+ */
+export const BAND_LABEL: Record<string, string> = { near: 'Cerca', far: 'Lejos' }
+
 const OWN: Record<string, Badge> = {
   preparing: { icon: 'restaurant', text: 'En cocina', tone: 'idle' },
   waiting_driver: { icon: 'check_circle', text: 'Lista', tone: 'ready' },

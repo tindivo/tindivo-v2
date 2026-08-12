@@ -34,7 +34,7 @@ export function DestinationCard({ detail }: { detail: OrderDetailResponse }) {
           {/* En los manuales `delivery_address` es el relleno 'Pedido manual'
               que pone create_business_manual_order: solo estorba. */}
           {!order.isManual && order.deliveryAddress && order.deliveryReference && (
-            <p className="mt-0.5 text-caption text-ink-subtle">{order.deliveryAddress}</p>
+            <p className="mt-0.5 text-caption text-ink-muted">{order.deliveryAddress}</p>
           )}
         </div>
       </div>

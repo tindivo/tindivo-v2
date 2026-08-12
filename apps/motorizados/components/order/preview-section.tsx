@@ -4,7 +4,7 @@ import { Card, cn, Icon } from '@tindivo/ui'
 import { SourceChip } from '@/components/source-chip'
 import { mapsDirToCoords, telLink } from '@/lib/deeplinks'
 import { mmss, prettyPhone, soles } from '@/lib/format'
-import { moneyLine } from '@/lib/orders/presentation'
+import { BAND_LABEL, moneyLine } from '@/lib/orders/presentation'
 import { changeDue } from '@/lib/payment'
 import type { OrderDetailResponse } from '@/lib/types'
 
@@ -29,8 +29,6 @@ import type { OrderDetailResponse } from '@/lib/types'
  * la tarjeta reserva el color para la urgencia y deja que la palabra diga el
  * método. Dos copias de un criterio divergen.
  */
-
-const BAND_LABEL: Record<string, string> = { near: 'Cerca', far: 'Lejos' }
 
 /** Fila de dato con icono relleno. Un solo nivel de tarjeta: el icono ya
  *  etiqueta, así que no se repite un "TELÉFONO"/"DIRECCIÓN" encima. */
@@ -259,7 +257,7 @@ export function PreviewSection({ detail, now }: { detail: OrderDetailResponse; n
               <p className="text-body font-semibold text-amber-900">
                 Necesitas {soles(vuelto)} de vuelto
               </p>
-              <p className="mt-0.5 text-caption text-amber-900/80">
+              <p className="mt-0.5 text-caption text-amber-900">
                 Paga con {soles(order.clientPaysWith)} · llévalo encima
               </p>
             </div>

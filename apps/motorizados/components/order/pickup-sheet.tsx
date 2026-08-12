@@ -1,22 +1,25 @@
 'use client'
 
-import { BottomSheet, Button, cn, Icon } from '@tindivo/ui'
-import { useState } from 'react'
+import { BottomSheet, Button, Icon } from '@tindivo/ui'
 import { soles } from '@/lib/format'
 import type { OrderDetailResponse } from '@/lib/types'
 
-const SLOT_OPTIONS = [
-  { value: 1, label: '1 · Pequeño', hint: 'Una bolsa' },
-  { value: 2, label: '2 · Mediano', hint: 'Dos bolsas' },
-  { value: 3, label: '3 · Grande', hint: 'Llena la mochila' },
-] as const
-
 /**
- * Confirmación de recogida: solo el espacio que ocupa en la mochila (HU-D-024).
+ * Confirmación de recogida.
  *
- * La banda cerca/lejos ya no se pregunta (0120): no es un dato que el
+ * YA NO SE PREGUNTA POR LA MOCHILA. Era la última pregunta antes de salir del
+ * local, con la comida en la mano y el reloj corriendo, y la respuesta era
+ * siempre «1»: bajo esa presión nadie se para a estimar bolsas. Un dato que
+ * siempre vale lo mismo no informa nada, y este además alimentaba el bloqueo de
+ * capacidad — o sea que una respuesta apurada decidía si podías tomar el
+ * siguiente pedido. Cada pedido pasa a valer 1 y se acabó la pregunta.
+ *
+ * La banda cerca/lejos tampoco se pregunta desde la 0120: no es un dato que el
  * motorizado decida —sale de la ubicación en los pedidos web y de la cajera en
  * los manuales— y desde la 0110 tampoco cambia lo que se cobra.
+ *
+ * Lo que queda es lo que sí sirve en el mostrador: si llegas antes de tiempo, y
+ * cuánto vas a cobrar.
  */
 export function PickupSheet({
   detail,
@@ -31,7 +34,6 @@ export function PickupSheet({
   onConfirm: (opts: { slots: number }) => void
   onClose: () => void
 }) {
-  const [slots, setSlots] = useState(1)
   const { order, business } = detail
   const premature = order.estimatedReadyAt != null && Date.parse(order.estimatedReadyAt) > now
   const minutesEarly = premature
@@ -74,48 +76,13 @@ export function PickupSheet({
             {cobra ? soles(total) : 'No cobrar'}
           </span>
         </div>
-
-        {/* La pregunta es lo que decide el bloqueo de la mochila, así que se
-            lee como pregunta y no como microetiqueta: en versalita de 10px
-            competía con las opciones que la contestan. */}
-        <p className="mb-2 font-semibold text-body text-ink">
-          ¿Cuánto espacio ocupa en la mochila?
-        </p>
-        <div className="flex gap-2">
-          {SLOT_OPTIONS.map((s) => {
-            const active = slots === s.value
-            return (
-              <button
-                key={s.value}
-                type="button"
-                aria-pressed={active}
-                onClick={() => setSlots(s.value)}
-                className={cn(
-                  'flex-1 rounded-2xl py-3 text-center transition-colors',
-                  active
-                    ? 'border-2 border-brand bg-brand-soft text-brand-dark'
-                    : 'border border-ink/10 bg-card text-ink hover:bg-surface',
-                )}
-              >
-                <span className="block text-body font-semibold">{s.label}</span>
-                {/* `text-ink-muted` en vez de heredar el gris con `opacity-70`:
-                    encima de un botón ya atenuado, la pista quedaba en ~2:1. */}
-                <span
-                  className={cn(
-                    'mt-0.5 block text-meta',
-                    active ? 'text-brand-dark/80' : 'text-ink-muted',
-                  )}
-                >
-                  {s.hint}
-                </span>
-              </button>
-            )
-          })}
-        </div>
       </div>
 
       <div className="border-t border-ink/5 px-5 pt-3.5 pb-6">
-        <Button className="w-full" disabled={busy} onClick={() => onConfirm({ slots })}>
+        {/* `slots: 1` fijo. El contrato con el backend NO cambia en este paso:
+            `occupancy_slots` sigue existiendo y `advance_order` sigue
+            escribiéndola. Lo que se va es la pregunta, no la columna. */}
+        <Button className="w-full" disabled={busy} onClick={() => onConfirm({ slots: 1 })}>
           {busy ? 'Confirmando…' : 'Confirmar recogida'}
         </Button>
       </div>

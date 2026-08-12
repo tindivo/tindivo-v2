@@ -7,6 +7,7 @@ import type { OrderDetailResponse } from '@/lib/types'
 import { CollectCard } from './collect-card'
 import { CustomerCard } from './customer-card'
 import { MapReadonly } from './map-readonly'
+import { WhatsAppSheet } from './whatsapp-sheet'
 
 /** Momento 3 (picked_up): destino + cliente + cobro. Online = mapa; manual = referencia. */
 export function MomentPickedUp({
@@ -24,6 +25,7 @@ export function MomentPickedUp({
   const hasCoords = order.deliveryCoordinatesLat != null && order.deliveryCoordinatesLng != null
 
   const [now, setNow] = useState(() => Date.now())
+  const [whatsappOpen, setWhatsappOpen] = useState(false)
 
   useEffect(() => {
     if (!order.arrivedAtCustomerAt) return
@@ -43,6 +45,18 @@ export function MomentPickedUp({
   return (
     <div>
       <CustomerCard order={order} businessName={detail.business?.name} />
+
+      <Button
+        type="button"
+        size="sm"
+        onClick={() => setWhatsappOpen(true)}
+        className="mt-3 w-full bg-[#25D366] text-white hover:bg-[#1ebd5a]"
+      >
+        <Icon name="chat" size={18} />
+        Enviar mensaje por WhatsApp
+      </Button>
+
+      {whatsappOpen && <WhatsAppSheet detail={detail} onClose={() => setWhatsappOpen(false)} />}
 
       {/* ÁMBAR OSCURO SOBRE ÁMBAR CLARO, no `text-warning`.
           `--color-warning` (#f59e0b) sobre `warning-soft` da ~2:1 — el bloque

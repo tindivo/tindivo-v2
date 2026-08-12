@@ -44,7 +44,7 @@ export function StatusIndicators() {
   const showPush = push.status !== 'unsupported'
 
   return (
-    <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 px-1 text-[12px] text-ink-subtle">
+    <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 px-1 text-[12px] text-ink-muted">
       <span className="flex items-center gap-1.5">
         <ColorDot color={availColor} size={7} />
         <span className={availability.available ? 'font-medium text-ink-muted' : undefined}>

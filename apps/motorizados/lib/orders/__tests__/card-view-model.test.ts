@@ -580,3 +580,51 @@ describe('el reloj de un pedido ajeno', () => {
     expect(v.clock?.tone).toBe('neutral')
   })
 })
+
+/**
+ * Lo que cuesta llegar, en la tarjeta.
+ *
+ * La banda y la falta de coordenadas decidían el viaje y solo se veian
+ * ABRIENDO la ficha: en el board, dos pedidos con costes de reparto muy
+ * distintos se pintaban identicos.
+ */
+describe('coste del viaje', () => {
+  it('la banda se traduce a la palabra que usa el detalle', () => {
+    expect(vm({ order: order({ delivery_distance_band: 'near' }) }).band).toBe('Cerca')
+    expect(vm({ order: order({ delivery_distance_band: 'far' }) }).band).toBe('Lejos')
+  })
+
+  it('sin banda no se inventa ninguna', () => {
+    expect(vm({ order: order({ delivery_distance_band: null }) }).band).toBeNull()
+    expect(vm({ order: order({ delivery_distance_band: 'unknown' }) }).band).toBeNull()
+  })
+
+  it('una direccion sin coordenadas se avisa en Disponibles', () => {
+    const v = vm({
+      variant: 'available',
+      order: order({ delivery_coordinates_lat: null, delivery_coordinates_lng: null }),
+    })
+    expect(v.noLocation).toBe(true)
+  })
+
+  it('con coordenadas no se avisa nada', () => {
+    const v = vm({
+      variant: 'available',
+      order: order({ delivery_coordinates_lat: -9.1507112, delivery_coordinates_lng: -78.280578 }),
+    })
+    expect(v.noLocation).toBe(false)
+  })
+
+  /**
+   * EL AVISO ES PARA DECIDIR, NO PARA REPROCHAR. Una vez tomado el pedido ya no
+   * se puede elegir otro, asi que en Mios el aviso solo seria ruido — y la
+   * queja de fondo de esta app es que abruma. En Equipo, ademas, el destino de
+   * un pedido ajeno ni siquiera viaja: sin el, `noLocation` seria true SIEMPRE
+   * y marcaria de amarillo la bandeja entera.
+   */
+  it('el aviso NO sale fuera de Disponibles, aunque falten las coordenadas', () => {
+    const sinCoords = order({ delivery_coordinates_lat: null, delivery_coordinates_lng: null })
+    expect(vm({ variant: 'mine', order: sinCoords }).noLocation).toBe(false)
+    expect(vm({ variant: 'team', ownerName: 'Juan', order: sinCoords }).noLocation).toBe(false)
+  })
+})

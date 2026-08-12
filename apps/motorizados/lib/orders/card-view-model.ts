@@ -22,6 +22,7 @@
 import { hourOf, mmss, soles } from '../format'
 import type { CardOrder } from '../types'
 import {
+  BAND_LABEL,
   type Badge,
   type MoneyLine,
   moneyLine,
@@ -113,6 +114,18 @@ export interface CardVM {
   /** El estado del pedido, arriba en la cejilla. */
   badge: Badge | null
   reference: string | null
+  /** «Cerca» / «Lejos». `null` cuando no aplica (recojo) o no viaja (Equipo). */
+  band: string | null
+  /**
+   * La dirección NO tiene coordenadas: al llegar habrá que buscar la casa a
+   * ojo, con la referencia como única guía.
+   *
+   * Solo se marca en la bandeja de DISPONIBLES. En Míos ya lo tomaste y el
+   * aviso no cambia nada —solo sería un reproche—, y en Equipo el destino ni
+   * siquiera viaja. Aquí sí decide: entre dos pedidos, el que no tiene punto en
+   * el mapa cuesta más, y hasta ahora eso no se sabía sin abrir la ficha.
+   */
+  noLocation: boolean
   money: MoneyLine | null
   /** Motivo del bloqueo. Ocupa el sitio del dinero: si no lo puedes tomar, el
    *  precio no decide nada. */
@@ -416,6 +429,11 @@ export function buildCardVM(input: CardVMInput): CardVM {
     identityIcon: isTeam ? 'directions_bike' : null,
     badge,
     reference: order.delivery_reference ?? order.delivery_address,
+    band: BAND_LABEL[order.delivery_distance_band ?? ''] ?? null,
+    noLocation:
+      variant === 'available' &&
+      order.delivery_coordinates_lat == null &&
+      order.delivery_coordinates_lng == null,
     money: blocked && blockedReason ? null : buildMoney(input),
     blockedReason: blocked && blockedReason ? blockedReason : null,
     tone: buildTone(input),

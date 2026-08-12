@@ -89,7 +89,7 @@ export function UpcomingOrdersSection({ items, now }: { items: BoardOrder[]; now
                   <span className="rounded-full bg-warning-soft px-2 py-0.5 text-[11px] font-bold text-amber-900">
                     {minutesFromNow(order.estimated_ready_at, now)}
                   </span>
-                  <span className="font-mono text-[10px] text-ink-subtle">#{order.short_id}</span>
+                  <span className="font-mono text-[10px] text-ink-muted">#{order.short_id}</span>
                 </div>
               </li>
             )

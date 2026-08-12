@@ -29,7 +29,7 @@ export function BusinessCard({ business }: { business: OrderDetailResponse['busi
             <p className="mt-0.5 text-caption leading-snug text-ink-muted">{business.address}</p>
           )}
           {business.phone && (
-            <p className="mt-0.5 font-mono text-caption text-ink-subtle">{business.phone}</p>
+            <p className="mt-0.5 font-mono text-caption text-ink-muted">{business.phone}</p>
           )}
         </div>
       </div>

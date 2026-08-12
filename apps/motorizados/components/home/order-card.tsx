@@ -163,16 +163,20 @@ export function OrderCard({
     <Card
       as="div"
       className={cn(
-        'relative w-full overflow-hidden rounded-2xl border bg-card py-3.5 pr-3.5 pl-4 text-left transition-shadow duration-200',
+        'relative w-full overflow-hidden rounded-2xl border bg-card py-3.5 pr-3.5 pl-4 text-left transition-all duration-200',
         TONE_BORDER[vm.tone],
         vm.muted && 'opacity-70',
-        // `Card` mete `hover:shadow-elev-2` en su base incondicionalmente, así
-        // que las tarjetas que NO se pueden pulsar —Equipo, y las bloqueadas de
-        // "En espera"— se levantaban al pasar el cursor fingiendo ser
-        // clicables. `twMerge` deja ganar a la última del mismo grupo.
         !vm.interactive && 'hover:shadow-elev-1',
       )}
     >
+      {/* Sombra de aura roja difusa (idéntica a la del banner de Pedidos urgentes) */}
+      {vm.clock?.tone === 'danger' && (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-0 rounded-2xl shadow-[0_0_20px_6px_rgba(220,38,38,0.55)] animate-pulse z-10"
+        />
+      )}
+
       {/* Franja de acento del local. Sin glow: `overflow-hidden` lo recortaba
           entero, así que era una sombra pagada y nunca vista. */}
       <span
@@ -258,12 +262,13 @@ export function OrderCard({
                 turno se paga en batería. El parpadeo vive en el banner, uno
                 solo en toda la pantalla. */}
             {vm.clock.tone === 'danger' && (
-              <Icon name="priority_high" size={16} filled className="text-danger" />
+              <Icon name="priority_high" size={16} filled className="text-danger animate-pulse" />
             )}
             <span
               className={cn(
                 'font-mono text-body-lg font-bold tabular-nums',
                 CLOCK_TONE[vm.clock.tone],
+                vm.clock.tone === 'danger' && 'animate-pulse',
               )}
             >
               {vm.clock.text}
@@ -285,9 +290,38 @@ export function OrderCard({
           entrega equivocada, así que las tarjetas con dirección larga miden más
           y está bien que así sea. */}
       {vm.reference && (
-        <p className="mt-0.5 line-clamp-2 text-caption leading-snug text-ink-muted">
-          {vm.reference}
-        </p>
+        <div className="mt-0.5 flex items-start gap-1 text-caption leading-snug text-ink-muted line-clamp-2">
+          <Icon name="location_on" size={14} className="mt-0.5 shrink-0 text-brand" filled />
+          <span>{vm.reference}</span>
+        </div>
+      )}
+
+      {/* ── 3b · Cuánto cuesta llegar ──
+          Las dos cosas que decidían el viaje y solo se veían ABRIENDO la ficha.
+
+          La banda dice si la entrega cae al lado o al otro extremo del pueblo.
+          El aviso de ubicación dice si vas a tener navegación o vas a buscar la
+          casa con la referencia en la mano — y en un pueblo esa diferencia son
+          diez minutos y dos llamadas.
+
+          Van juntas y en una sola línea fina a propósito: la queja de fondo es
+          que la app abruma, así que esto no puede ser otro bloque que grita.
+          El aviso solo sale en Disponibles (`noLocation` ya lo acota): una vez
+          tomado el pedido, avisar no cambia nada. */}
+      {(vm.band || vm.noLocation) && (
+        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+          {vm.band && (
+            <span className="rounded-full bg-ink/[0.06] px-2 py-0.5 text-meta font-semibold text-ink-muted">
+              {vm.band}
+            </span>
+          )}
+          {vm.noLocation && (
+            <span className="flex items-center gap-1 rounded-full bg-warning-soft px-2 py-0.5 text-meta font-semibold text-amber-900">
+              <Icon name="gps_off" size={13} className="shrink-0" />
+              Sin ubicación
+            </span>
+          )}
+        </div>
       )}
 
       {/* ── 4 · Cobro, o el motivo del bloqueo en su lugar ──

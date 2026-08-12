@@ -9,7 +9,7 @@ export function ScreenHeader({
   onBack,
   right,
 }: {
-  title: string
+  title: ReactNode
   onBack?: () => void
   right?: ReactNode
 }) {
@@ -26,7 +26,9 @@ export function ScreenHeader({
             <Icon name="arrow_back" size={22} />
           </button>
         )}
-        <div className="flex-1 font-display text-[22px] font-bold tracking-tight">{title}</div>
+        <div className="flex-1 font-display text-base sm:text-lg font-bold tracking-tight">
+          {title}
+        </div>
         {right}
       </div>
     </div>

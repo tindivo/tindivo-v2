@@ -37,7 +37,7 @@ export function ChangeHeadsUp({ detail }: { detail: OrderDetailResponse }) {
       </span>
       <div className="min-w-0">
         <p className="text-body font-semibold text-amber-900">Lleva {soles(vuelto)} de vuelto</p>
-        <p className="mt-0.5 text-caption text-amber-900/80">
+        <p className="mt-0.5 text-caption text-amber-900">
           Paga con {soles(order.clientPaysWith)}. Consíguelo aquí, antes de salir.
         </p>
       </div>

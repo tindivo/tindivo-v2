@@ -63,7 +63,7 @@ function Stepper({ current }: { current: number }) {
             key={label}
             className={cn(
               'font-mono text-micro uppercase tracking-widest',
-              i === current ? 'text-brand-light' : 'text-white/45',
+              i === current ? 'text-brand-light' : 'text-white/60',
             )}
           >
             {label}
@@ -109,12 +109,14 @@ export function StatusHero({ detail }: { detail: OrderDetailResponse }) {
         )}
       />
 
-      <span className="relative inline-flex items-center gap-1.5 rounded-full bg-white/[0.14] px-2.5 py-[5px] font-mono text-micro uppercase tracking-[0.2em] text-white/90">
-        {/* El punto ya no parpadea. En esta pantalla el único movimiento debe
-            ser el que informa; un latido decorativo compite con los avisos que
-            sí significan algo. */}
-        <span className="h-1.5 w-1.5 rounded-full bg-brand-light" />
-        Pedido #{order.shortId}
+      <span className="relative inline-flex items-center gap-1.5 rounded-full bg-white/[0.14] px-3 py-1 text-xs font-semibold text-white/90">
+        {/* El punto de la marca */}
+        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand-light" />
+        <span>{business?.name ?? 'Restaurante'}</span>
+        <span className="text-white/40">•</span>
+        <span>
+          {order.customerName ? `Pedido de ${order.customerName}` : `Pedido #${order.shortId}`}
+        </span>
       </span>
 
       <div className="relative mt-3">

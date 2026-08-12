@@ -159,7 +159,7 @@ function RequestModal({
 
       {/* SI NO RESPONDES, SE LO LLEVAN. Dicho explícitamente: es lo que cambió
           con la 0130 y lo que la persona necesita saber para decidir. */}
-      <p className="mt-2.5 text-[12px] text-ink-subtle">
+      <p className="mt-2.5 text-[12px] text-ink-muted">
         Si no respondes a tiempo, el pedido pasa a {request.requesterName}.
       </p>
 
@@ -178,7 +178,7 @@ function RequestModal({
         type="button"
         onClick={() => onRespond(request.id, false)}
         aria-label="Cerrar y quedarme el pedido"
-        className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl py-2 text-[13px] font-semibold text-ink-subtle transition-colors hover:bg-ink/[0.04]"
+        className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl py-2 text-[13px] font-semibold text-ink-muted transition-colors hover:bg-ink/[0.04]"
       >
         <Icon name="close" size={16} />
         Cerrar

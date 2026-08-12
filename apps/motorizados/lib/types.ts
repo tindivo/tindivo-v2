@@ -55,6 +55,17 @@ export interface BoardOrder {
   yape_amount: number | null
   business_id: string
   /**
+   * Lo que decide el viaje, y hasta ahora solo se veía ABRIENDO la ficha.
+   *
+   * `delivery_distance_band` dice si la entrega cae al lado o al otro extremo
+   * del pueblo. Las coordenadas dicen si vas a tener navegación o vas a buscar
+   * la casa a ojo. Las dos cosas cambian qué pedido te conviene tomar, y el
+   * board —que es donde se toma esa decisión— no las tenía.
+   */
+  delivery_distance_band: string | null
+  delivery_coordinates_lat: number | null
+  delivery_coordinates_lng: number | null
+  /**
    * Local resuelto desde `driver_businesses()` (0120), no desde un embed: las
    * policies de `businesses` no dejan al motorizado leer la tabla, así que
    * `businesses(name)` volvía NULL y todas las tarjetas decían "Restaurante".
@@ -91,6 +102,14 @@ export interface CardOrder {
   customer_name: string | null
   delivery_address: string | null
   delivery_reference: string | null
+  /**
+   * Opcionales porque Equipo no los aporta: de un pedido ajeno no viaja el
+   * destino. En Disponibles y Míos sí llegan, y son los que dicen cuán lejos
+   * cae la entrega y si habrá navegación.
+   */
+  delivery_distance_band?: string | null
+  delivery_coordinates_lat?: number | null
+  delivery_coordinates_lng?: number | null
   order_amount: number
   delivery_fee: number
   payment_intent: string | null

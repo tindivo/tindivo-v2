@@ -32,7 +32,7 @@ export function OrderDetail({
         <span className="font-mono text-meta font-semibold uppercase tracking-[0.14em] text-ink-muted">
           Detalle del pedido
         </span>
-        <span className="flex items-center gap-2 text-caption text-ink-subtle">
+        <span className="flex items-center gap-2 text-caption text-ink-muted">
           {/* Los manuales no traen líneas: "0 productos" sonaba a pedido vacío. */}
           {count === 0
             ? order.isManual
@@ -63,7 +63,7 @@ export function OrderDetail({
               {item.modifiers.map((m) => (
                 <div
                   key={`${item.id}-${m.option}`}
-                  className="mt-0.5 flex justify-between pl-5 text-caption text-ink-subtle"
+                  className="mt-0.5 flex justify-between pl-5 text-caption text-ink-muted"
                 >
                   <span>{m.option}</span>
                   {m.additionalPrice > 0 && (
@@ -73,7 +73,7 @@ export function OrderDetail({
               ))}
               {/* En manuales el item sintético duplica business_notes: prima el panel. */}
               {item.note && item.note !== order.businessNotes && (
-                <p className="mt-0.5 pl-5 text-caption italic text-ink-subtle">“{item.note}”</p>
+                <p className="mt-0.5 pl-5 text-caption italic text-ink-muted">“{item.note}”</p>
               )}
             </div>
           ))}

@@ -22,11 +22,13 @@ import { WaitTimer } from '@/components/order/wait-timer'
 import { useDriverOrders } from '@/hooks/use-driver-orders'
 import { useNow } from '@/hooks/use-now'
 import { api } from '@/lib/api'
+import { isValidPePhone, waLink } from '@/lib/deeplinks'
 import { getOptimistic } from '@/lib/offline-queue'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import { postTransition } from '@/lib/transitions'
 import type { OrderDetailResponse } from '@/lib/types'
 import { isOverdue } from '@/lib/urgency'
+import { WA_TEMPLATES } from '@/lib/whatsapp-templates'
 
 type Mode =
   | 'loading'
@@ -60,6 +62,13 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
   const [captureBusy, setCaptureBusy] = useState(false)
   /** Desde dónde se abrió la captura. Decide si al cerrar se encadena el cobro. */
   const [captureIntent, setCaptureIntent] = useState<'before_deliver' | 'adjust'>('before_deliver')
+
+  /** Toast no bloqueante de sugerencia de WhatsApp post-recogida o al llegar. */
+  const [waToast, setWaToast] = useState<{
+    templateId: 'on_the_way' | 'outside'
+    text: string
+    phone: string
+  } | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -147,6 +156,23 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
     try {
       const result = await postTransition(id, action, params)
       if (action === 'deliver') setJustDelivered(true)
+
+      // Sugerencia no bloqueante de WhatsApp post-recogida (A.5) o al llegar (A.6)
+      if (action === 'pickup' || action === 'arrived_customer') {
+        const phone = detail?.order.customerPhone
+        if (isValidPePhone(phone)) {
+          const tmplId = action === 'pickup' ? 'on_the_way' : 'outside'
+          const tmpl = WA_TEMPLATES.find((t) => t.id === tmplId)
+          if (tmpl) {
+            const text = tmpl.build({
+              customerName: detail?.order.customerName ?? null,
+              businessName: detail?.business?.name ?? null,
+            })
+            setWaToast({ templateId: tmplId, text, phone })
+          }
+        }
+      }
+
       if (result === 'ok') await load()
       else {
         // Encolado offline: reflejar el avance optimista sin red.
@@ -232,11 +258,24 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
     )
   }
 
+  const businessName = detail.business?.name ?? 'Restaurante'
+  const customerLabel = detail.order.customerName
+    ? `Pedido de ${detail.order.customerName}`
+    : `Pedido #${detail.order.shortId}`
+
+  const headerTitle = (
+    <div className="flex items-center gap-1.5 min-w-0 text-sm sm:text-base font-bold">
+      <span className="truncate text-ink">{businessName}</span>
+      <span className="h-1.5 w-1.5 rounded-full bg-brand shrink-0" />
+      <span className="truncate text-ink-muted font-medium">{customerLabel}</span>
+    </div>
+  )
+
   if (mode === 'delivered') {
     if (justDelivered) return <DeliveredScreen detail={detail} justDelivered />
     return (
       <main className="mx-auto min-h-dvh max-w-[480px] bg-surface px-4 pb-10">
-        <ScreenHeader title={`Pedido #${detail.order.shortId}`} onBack={() => router.push('/')} />
+        <ScreenHeader title={headerTitle} onBack={() => router.push('/')} />
         <DeliveredScreen detail={detail} justDelivered={false} />
       </main>
     )
@@ -268,8 +307,8 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
   const canAdjustAddress = detail.order.isManual && hasCoords
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-[480px] flex-col bg-surface pb-28">
-      <ScreenHeader title={`Pedido #${detail.order.shortId}`} onBack={() => router.push('/')} />
+    <main className="mx-auto flex min-h-dvh max-w-[480px] flex-col bg-surface pb-48">
+      <ScreenHeader title={headerTitle} onBack={() => router.push('/')} />
 
       <div className="flex-1 px-4 pt-1.5">
         {mode === 'preview' && <PreviewSection detail={detail} now={now} />}
@@ -359,34 +398,34 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
           ))}
 
         {mode === 'heading' && (
-          <div className="flex flex-col gap-2 w-full">
+          <div className="flex w-full flex-col items-center gap-1.5">
             <Button className="w-full" disabled={busy} onClick={() => run('arrived')}>
               {busy ? 'Un momento…' : 'Llegué al local'}
             </Button>
-            <Button
-              variant="outline"
-              className="w-full text-danger border-danger/30 hover:bg-danger/10"
+            <button
+              type="button"
               disabled={busy}
               onClick={() => setReleaseOpen(true)}
+              className="mx-auto py-1 text-xs font-semibold text-danger/80 hover:text-danger hover:underline active:opacity-70 transition-colors"
             >
               Soltar pedido
-            </Button>
+            </button>
           </div>
         )}
 
         {mode === 'waiting' && (
-          <div className="flex flex-col gap-2 w-full">
+          <div className="flex w-full flex-col items-center gap-1.5">
             <Button className="w-full" disabled={busy} onClick={() => setPickupOpen(true)}>
               Ya recogí el pedido
             </Button>
-            <Button
-              variant="outline"
-              className="w-full text-danger border-danger/30 hover:bg-danger/10"
+            <button
+              type="button"
               disabled={busy}
               onClick={() => setReleaseOpen(true)}
+              className="mx-auto py-1 text-xs font-semibold text-danger/80 hover:text-danger hover:underline active:opacity-70 transition-colors"
             >
               Soltar pedido
-            </Button>
+            </button>
           </div>
         )}
 
@@ -485,6 +524,45 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
           </div>
         )}
       </BottomActionBar>
+
+      {waToast && (
+        <div className="fixed top-14 inset-x-4 z-50 flex items-center justify-between rounded-2xl bg-ink p-4 text-white shadow-xl animate-t-slide-up">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#25D366] text-white">
+              <Icon name="mail" size={20} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold text-body">
+                {waToast.templateId === 'on_the_way'
+                  ? '¿Avisar que vas en camino?'
+                  : '¿Avisar que ya llegaste?'}
+              </p>
+              <p className="text-caption text-white/70 truncate">{waToast.text}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 ml-3">
+            <Button
+              size="sm"
+              className="bg-[#25D366] text-white hover:bg-[#1ebd5a]"
+              onClick={() => {
+                const url = waLink(waToast.phone, waToast.text)
+                if (url) window.open(url, '_blank', 'noopener,noreferrer')
+                setWaToast(null)
+              }}
+            >
+              Enviar
+            </Button>
+            <button
+              type="button"
+              onClick={() => setWaToast(null)}
+              aria-label="Cerrar aviso"
+              className="text-white/60 hover:text-white p-1"
+            >
+              <Icon name="close" size={18} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {readyPromptOpen && mode === 'waiting' && (
         <ReadyPromptSheet
