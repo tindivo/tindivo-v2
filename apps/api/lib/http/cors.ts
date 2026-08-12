@@ -8,6 +8,23 @@
  */
 const DEFAULT_ORIGINS = [
   'https://tindivo.com',
+  /**
+   * `www` ES OTRO ORIGEN, y es el que usan los clientes de verdad.
+   *
+   * Para CORS, `https://tindivo.com` y `https://www.tindivo.com` no se parecen
+   * en nada: la comparación es de cadena exacta, sin idea de "mismo sitio". La
+   * lista solo tenía el ápex mientras la web se sirve en `www`, así que toda
+   * petición del cliente caía al comodín y el navegador la bloqueaba.
+   *
+   * Tumbó el registro del piloto en producción el 2026-08-12, en
+   * `/public/businesses` y `/public/pilot-access` — las dos primeras llamadas
+   * que hace un vecino al entrar. No se cayó "la API": se cayó la puerta.
+   *
+   * Se quedan los dos: cuál sirve el DNS es una decisión que puede cambiar, y
+   * un redirect de uno a otro no salva el preflight (el OPTIONS se manda al
+   * origen que pidió el navegador, no al destino del redirect).
+   */
+  'https://www.tindivo.com',
   'https://negocios.tindivo.com',
   'https://motorizados.tindivo.com',
   'https://admin.tindivo.com',
@@ -34,16 +51,24 @@ function isAllowed(origin: string | null): boolean {
 
 export function corsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get('origin')
-  const targetOrigin = origin && isAllowed(origin) ? origin : '*'
-  return {
+  const allowed = isAllowed(origin)
+  const targetOrigin = origin && allowed ? origin : '*'
+
+  const headers: Record<string, string> = {
     'access-control-allow-origin': targetOrigin,
-    'access-control-allow-credentials': 'true',
     'access-control-allow-methods': 'GET,POST,PATCH,PUT,DELETE,OPTIONS',
     'access-control-allow-headers':
       'authorization,content-type,idempotency-key,x-request-id,accept,x-requested-with',
     'access-control-max-age': '86400',
     vary: 'Origin',
   }
+
+  // W3C CORS Spec: credentials NO se pueden enviar junto a '*'
+  if (targetOrigin !== '*') {
+    headers['access-control-allow-credentials'] = 'true'
+  }
+
+  return headers
 }
 
 /** Maneja el preflight OPTIONS. */
