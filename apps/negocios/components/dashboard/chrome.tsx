@@ -472,6 +472,59 @@ function NotificationGate({ onActivate }: { onActivate: () => void }) {
 }
 
 // ── Chrome autenticado: sidebar + realtime + sonido persistentes ──────────────
+/**
+ * Se muestra cuando la carga del negocio terminó sin negocio.
+ *
+ * Existe porque la alternativa era un esqueleto infinito: la cajera se quedaba
+ * mirando cajas grises, de noche y con el cliente al teléfono, sin un botón que
+ * tocar ni un texto que leer. Aquí siempre hay dos salidas.
+ */
+function BizLoadError({
+  reason,
+  onRetry,
+  onSignOut,
+}: {
+  reason: string | null
+  onRetry: () => void
+  onSignOut: () => void
+}) {
+  const noBiz = reason === 'NO_BIZ' || reason === 'NO_SESSION'
+  return (
+    <div className="flex h-dvh flex-col items-center justify-center gap-4 bg-surface px-6 text-center">
+      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-danger-soft">
+        <Icon name={noBiz ? 'store' : 'cloud_off'} size={28} filled className="text-danger" />
+      </div>
+      <div className="max-w-[360px]">
+        <h1 className="font-display text-lg font-bold text-ink">
+          {noBiz ? 'Esta cuenta no tiene un negocio' : 'No se pudo cargar tu negocio'}
+        </h1>
+        <p className="mt-1 text-[14px] text-ink-muted">
+          {noBiz
+            ? 'Tu sesión es válida, pero no está asociada a ningún negocio. Escríbenos para revisarlo.'
+            : 'Puede ser tu conexión o una sesión vencida. Vuelve a intentar; si sigue igual, cierra sesión y entra de nuevo.'}
+        </p>
+        {!noBiz && reason && (
+          <p className="mt-2 break-words font-mono text-[11px] text-ink-muted/70">{reason}</p>
+        )}
+      </div>
+      <div className="flex w-full max-w-[320px] flex-col gap-2">
+        {!noBiz && (
+          <Button className="w-full" onClick={onRetry}>
+            Volver a intentar
+          </Button>
+        )}
+        <button
+          type="button"
+          onClick={onSignOut}
+          className="h-11 w-full cursor-pointer rounded-full border border-ink/[0.12] bg-card text-[15px] font-semibold text-ink transition-colors hover:bg-ink/[0.04]"
+        >
+          Cerrar sesión
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut: () => void }) {
   const pathname = usePathname()
   const active = activeIdFor(pathname)
@@ -479,6 +532,9 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
   const [ready, setReady] = useState(false)
   const fontsReady = useIconFontReady()
   const [bizId, setBizId] = useState<string | null>(null)
+  /** Por qué no se pudo cargar el negocio. `'NO_BIZ'` = la consulta fue bien
+   *  pero no devolvió ninguna fila. Cualquier otro texto = error de la consulta. */
+  const [bizError, setBizError] = useState<string | null>(null)
   const [biz, setBiz] = useState<BizState>({
     name: 'Mi negocio',
     accent: ACCENT_DEFAULT,
@@ -536,12 +592,57 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
   }, [])
 
   const refetchBiz = useCallback(async () => {
-    const { data } = await getSupabaseBrowser()
+    const supabase = getSupabaseBrowser()
+
+    // SE FILTRA POR `user_id`, NO SE CONFÍA EN QUE RLS DEVUELVA UNA SOLA FILA.
+    //
+    // La consulta era `.from('businesses').select(…).maybeSingle()` a secas, o
+    // sea "el negocio que puedo ver". Y `businesses` tiene DOS policies
+    // permisivas, que se suman con OR: `biz_self_read` (user_id = auth.uid()) y
+    // `biz_admin_all` (cmd=ALL para el rol admin). Un usuario con rol business
+    // Y admin —que existe: la cuenta del piloto los tiene ambos— ve TODOS los
+    // negocios, así que `maybeSingle()` recibía 69 filas y reventaba con
+    // "JSON object requested, multiple (or no) rows returned".
+    //
+    // El dashboard de negocios quiere EL NEGOCIO DE QUIEN ENTRÓ. Decirlo en la
+    // consulta lo hace correcto para cualquier combinación de roles, presente o
+    // futura, en vez de depender de que las policies nunca devuelvan dos filas.
+    const { data: sessionData } = await supabase.auth.getSession()
+    const userId = sessionData.session?.user.id
+    if (!userId) {
+      setBizError('NO_SESSION')
+      return
+    }
+
+    const { data, error } = await supabase
       .from('businesses')
       .select(
         'id,name,accent_color,qr_url,primary_capability,accepting_orders_until,is_blocked,block_reason',
       )
+      .eq('user_id', userId)
       .maybeSingle()
+
+    // EL ERROR NO SE PUEDE TIRAR A LA BASURA.
+    //
+    // Antes esto era `const { data } = await …` y el error se descartaba. Si la
+    // consulta fallaba —sesión inválida, JWT vencido, RLS que no devuelve
+    // ninguna fila— `data` venía null, `setBizId` no llegaba a ejecutarse y
+    // `bizId` se quedaba en null. Y con `bizId` null, `value` es null, así que
+    // la pantalla devolvía `<DashboardSkeleton />` PARA SIEMPRE: sin error, sin
+    // login, sin nada que tocar. Un esqueleto eterno con la consola limpia.
+    //
+    // Ahora el fallo se guarda y la pantalla lo muestra con salida (reintentar o
+    // cerrar sesión). Distinguimos los dos casos porque piden cosas distintas:
+    // un error es "reintenta", y cero filas es "esta cuenta no tiene negocio".
+    if (error) {
+      setBizError(error.message)
+      return
+    }
+    if (!data) {
+      setBizError('NO_BIZ')
+      return
+    }
+    setBizError(null)
     if (data) {
       setBizId(data.id as string)
       setBiz({
@@ -796,6 +897,22 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
     refetchBiz,
   ])
 
+  // La carga TERMINÓ y aun así no hay negocio: eso ya no es "cargando", es un
+  // fallo, y merece una pantalla con salida. El esqueleto solo se queda mientras
+  // de verdad se está esperando algo.
+  if (ready && !value) {
+    return (
+      <BizLoadError
+        reason={bizError}
+        onRetry={() => {
+          setReady(false)
+          refetchBiz().finally(() => setReady(true))
+        }}
+        onSignOut={onSignOut}
+      />
+    )
+  }
+
   if (!ready || !value || !fontsReady) return <DashboardSkeleton />
 
   // Gate del modo catálogo: solo Menú y Config son operables. Excepción: si aún
@@ -839,10 +956,27 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const supabase = getSupabaseBrowser()
-    supabase.auth.getSession().then(({ data }) => {
-      setAuthed(!!data.session)
-      setReady(true)
-    })
+    // `ready` SE PONE EN TRUE PASE LO QUE PASE.
+    //
+    // `getSession()` no solo resuelve con `{data: {session: null}}` cuando no hay
+    // sesión: si hay un refresh token guardado y el servidor lo rechaza
+    // ("Invalid Refresh Token: Refresh Token Not Found"), la promesa REVIENTA.
+    // Con `.then()` a secas, `setReady(true)` no llegaba a ejecutarse y la
+    // pantalla se quedaba en el esqueleto para siempre, sin login ni error —
+    // solo una rejection sin manejar en la consola.
+    //
+    // Le pasa a cualquiera cuya sesión se invalide: token expirado del lado del
+    // servidor, sesión revocada, o un `supabase db reset` que se lleve
+    // `auth.users` por delante. La cajera, a media noche y con el cliente al
+    // teléfono, se queda mirando un esqueleto sin forma de salir salvo borrar
+    // los datos del sitio.
+    //
+    // Un fallo al recuperar la sesión ES no tener sesión: se muestra el login.
+    supabase.auth
+      .getSession()
+      .then(({ data }) => setAuthed(!!data.session))
+      .catch(() => setAuthed(false))
+      .finally(() => setReady(true))
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
       setAuthed(!!session)
     })

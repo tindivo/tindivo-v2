@@ -1571,6 +1571,7 @@ export type Database = {
           cash_amount: number | null
           cash_owed_at_delivery: number | null
           cash_settlement_id: string | null
+          change_advanced: number | null
           change_to_give: number | null
           client_pays_with: number | null
           commission_amount: number | null
@@ -1668,6 +1669,7 @@ export type Database = {
           cash_amount?: number | null
           cash_owed_at_delivery?: number | null
           cash_settlement_id?: string | null
+          change_advanced?: number | null
           change_to_give?: number | null
           client_pays_with?: number | null
           commission_amount?: number | null
@@ -1765,6 +1767,7 @@ export type Database = {
           cash_amount?: number | null
           cash_owed_at_delivery?: number | null
           cash_settlement_id?: string | null
+          change_advanced?: number | null
           change_to_give?: number | null
           client_pays_with?: number | null
           commission_amount?: number | null
@@ -2378,6 +2381,7 @@ export type Database = {
           }
       create_business_manual_order: {
         Args: {
+          p_address_directory_id?: string
           p_business_user_id: string
           p_cash_amount?: number
           p_client_pays_with?: number
@@ -2575,6 +2579,10 @@ export type Database = {
       }
       is_within_platform_schedule: { Args: never; Returns: boolean }
       mark_appeal_in_review: { Args: { p_report_id: string }; Returns: Json }
+      order_cash_owed: {
+        Args: { o: Database["public"]["Tables"]["orders"]["Row"] }
+        Returns: number
+      }
       pause_business_orders: {
         Args: { p_business_user_id: string; p_minutes?: number }
         Returns: Json
@@ -2626,6 +2634,7 @@ export type Database = {
           cash_amount: number | null
           cash_owed_at_delivery: number | null
           cash_settlement_id: string | null
+          change_advanced: number | null
           change_to_give: number | null
           client_pays_with: number | null
           commission_amount: number | null
@@ -2791,6 +2800,21 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      search_address_directory: {
+        Args: { p_phone: string }
+        Returns: {
+          customer_name: string
+          has_gps: boolean
+          id: string
+          is_default: boolean
+          last_used_at: string
+          lat: number
+          lng: number
+          phone: string
+          reference: string
+          times_used: number
+        }[]
+      }
       search_catalog: {
         Args: { p_limit?: number; p_query: string }
         Returns: Json
@@ -2825,7 +2849,11 @@ export type Database = {
       }
     }
     Enums: {
-      address_source: "backfill" | "driver_verified" | "admin_curated"
+      address_source:
+        | "backfill"
+        | "driver_verified"
+        | "admin_curated"
+        | "business_created"
       business_primary_capability:
         | "drivers_only"
         | "catalog_pickup"
@@ -3030,7 +3058,12 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      address_source: ["backfill", "driver_verified", "admin_curated"],
+      address_source: [
+        "backfill",
+        "driver_verified",
+        "admin_curated",
+        "business_created",
+      ],
       business_primary_capability: [
         "drivers_only",
         "catalog_pickup",

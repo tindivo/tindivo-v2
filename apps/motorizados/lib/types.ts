@@ -161,6 +161,9 @@ export interface OrderDetailResponse {
     status: string
     source: string
     isManual: boolean
+    /** Fila del directorio a la que apunta el pedido (0145). `null` cuando el
+     *  pedido se creó sin teléfono y no hay dónde guardar el GPS. */
+    addressDirectoryId: string | null
     deliveryMethod: string
     deliveryDistanceBand: string | null
     customerName: string | null

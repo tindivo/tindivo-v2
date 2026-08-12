@@ -12,10 +12,16 @@ export function AuthGate({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const sb = getSupabaseBrowser()
-    sb.auth.getSession().then(({ data }) => {
-      setAuthed(!!data.session)
-      setReady(true)
-    })
+    // `ready` se pone en true pase lo que pase: si el refresh token guardado ya
+    // no vale, `getSession()` REVIENTA en vez de resolver con sesión nula, y con
+    // `.then()` a secas la pantalla se quedaba en "Verificando acceso…" para
+    // siempre. Un fallo al recuperar la sesión ES no tener sesión.
+    // (Mismo defecto que tenía `apps/negocios`, corregido a la vez.)
+    sb.auth
+      .getSession()
+      .then(({ data }) => setAuthed(!!data.session))
+      .catch(() => setAuthed(false))
+      .finally(() => setReady(true))
     const { data: sub } = sb.auth.onAuthStateChange((_e, session) => setAuthed(!!session))
     return () => sub.subscription.unsubscribe()
   }, [])
