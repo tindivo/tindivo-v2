@@ -40,6 +40,21 @@ function volatile(page: Page): Locator[] {
     page.locator('.font-mono').filter({ hasText: /^\d{1,2}:\d{2}$/ }),
     page.locator('text=/hace \\d+m/'),
     page.locator('text=/listo en ~?\\d+/i'),
+    /**
+     * EL QR SALE DE INTERNET, ASÍ QUE NO PUEDE DECIDIR SI EL TEST PASA.
+     *
+     * El seed pone `businesses.qr_url` apuntando a `api.qrserver.com`, un
+     * servicio EXTERNO. La imagen carga o no según haya red y según cómo respire
+     * ese servicio, y el resultado se colaba en la captura de `configuracion`:
+     * el mismo código daba verde o rojo según el momento, sin que nadie hubiera
+     * tocado la pantalla. Un test de regresión visual que depende de un tercero
+     * no mide la regresión, mide la conexión.
+     *
+     * Enmascarado —no excluido— para que el hueco siga ocupando su sitio: si el
+     * QR desapareciera del formulario, la maquetación cambiaría y eso SÍ debe
+     * fallar.
+     */
+    page.locator('img[src*="qrserver.com"], img[alt*="QR" i]'),
   ]
 }
 

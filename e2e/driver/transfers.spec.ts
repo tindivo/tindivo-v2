@@ -15,12 +15,60 @@ function shortId(): string {
   return s
 }
 
+/**
+ * Marcador de propiedad: todo pedido que siembre este fichero lo lleva.
+ *
+ * Sin él, `wipe()` borraba «por negocio» y arrastraba lo de todo el mundo —la
+ * misma trampa que `parkPending()` ya documentó en la suite de caja—.
+ */
+const TELEFONO_FIXTURE = '+51999004444'
+
+/**
+ * Borra SOLO lo que sembró este fichero, y GRITA si no puede.
+ *
+ * LAS DOS COSAS ERAN EL BUG, y llevaban al mismo sitio. La versión anterior
+ * hacía `delete().eq('business_id', …)` sin mirar el error, y ese error existía:
+ *
+ *   violates foreign key constraint "business_charges_order_id_fkey"  (409)
+ *
+ * Los pedidos entregados del negocio e2e tienen cargos en `business_charges`
+ * (FK sin CASCADE), así que la sentencia se abortaba ENTERA. No es que se
+ * borrara de menos: no se borraba NADA, ni siquiera los pedidos de este fichero,
+ * que no tienen cargos. Y como el error se descartaba, la limpieza llevaba
+ * tiempo sin limpiar sin que nadie se enterara.
+ *
+ * Consecuencia medida el 2026-08-12: 4 copias de cada cliente de prueba
+ * acumuladas, y `getByText('Cliente Expira')` reventando por modo estricto
+ * («resolved to 2 elements», luego 3). El síntoma se leía como inestabilidad
+ * —cada corrida fallaba en un test distinto, o en ninguno— y la causa era basura
+ * creciendo, no una carrera.
+ *
+ * Acotar al marcador arregla las dos: estos pedidos nunca tienen cargos, así que
+ * la FK ya no puede bloquear, y de paso el fichero deja de tocar lo ajeno.
+ */
 async function wipe(): Promise<void> {
-  await db
+  // Las solicitudes SÍ se barren enteras: una entrante de cualquier origen
+  // levanta el modal a pantalla completa y rompe estos tests desde fuera.
+  const { error: errReq } = await db
     .from('order_transfer_requests')
     .delete()
     .neq('id', '00000000-0000-0000-0000-000000000000')
-  await db.from('orders').delete().eq('business_id', E2E.BUSINESS_ID)
+  if (errReq) throw new Error(`FALLÓ wipe de solicitudes: ${errReq.message}`)
+
+  const { data: mios, error: errSel } = await db
+    .from('orders')
+    .select('id')
+    .eq('business_id', E2E.BUSINESS_ID)
+    .eq('customer_phone', TELEFONO_FIXTURE)
+  if (errSel) throw new Error(`FALLÓ leer pedidos del fixture: ${errSel.message}`)
+
+  const ids = (mios ?? []).map((o: { id: string }) => o.id)
+  if (ids.length === 0) return
+
+  await db.from('domain_events').delete().in('aggregate_id', ids)
+  await db.from('order_event_log').delete().in('order_id', ids)
+  const { error } = await db.from('orders').delete().in('id', ids)
+  if (error) throw new Error(`FALLÓ wipe de pedidos: ${error.message}`)
 }
 
 /** Pedido MÍO, en estado transferible. */
@@ -33,7 +81,7 @@ async function seedMine(nombre: string): Promise<{ id: string; short: string }> 
       business_id: E2E.BUSINESS_ID,
       short_id: short,
       customer_name: nombre,
-      customer_phone: '+51999004444',
+      customer_phone: TELEFONO_FIXTURE,
       delivery_method: 'delivery',
       delivery_reference: 'Jr. Traspaso 123',
       order_amount: 25,
@@ -68,6 +116,16 @@ async function seedRequest(orderId: string, ttlSeconds: number): Promise<string>
 }
 
 test.describe.configure({ mode: 'serial' })
+
+/**
+ * Limpiar SIEMPRE, no solo al terminar bien.
+ *
+ * Los `await wipe()` del final de cada test no corren cuando el test falla, así
+ * que el primer fallo dejaba sus pedidos y el siguiente los encontraba: un
+ * fallo se convertía en varios, y el segundo culpaba a la pantalla de lo que
+ * había hecho el primero. Por eso cada corrida acusaba a un test distinto.
+ */
+test.afterEach(wipe)
 
 test('la pila muestra las DOS solicitudes entrantes', async ({ page }) => {
   await wipe()
@@ -165,6 +223,9 @@ test('expirar SIN capacidad: el pedido se queda y el evento lo explica', async (
     business_id: E2E.BUSINESS_ID,
     short_id: shortId(),
     customer_name: 'Mochila del compañero',
+    // Con marcador: sin él este pedido sobrevivía a `wipe()` y le comía los
+    // 3 slots al solicitante en las corridas siguientes.
+    customer_phone: TELEFONO_FIXTURE,
     delivery_method: 'delivery',
     delivery_reference: 'Jr. Lleno 3',
     order_amount: 25,
