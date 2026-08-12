@@ -21,7 +21,13 @@ export function OPTIONS(req: Request): Response {
   return handleOptions(req)
 }
 
-/** Resumen de efectivo del motorizado: por negocio hoy (esperado). */
+/**
+ * Resumen de efectivo del motorizado, agregado por negocio.
+ *
+ * Devuelve TODO lo pendiente, no lo de hoy: lo que define el corte es el
+ * conjunto de pedidos sin rendir, igual que en `create_cash_settlement`. Ver el
+ * comentario de la consulta.
+ */
 export async function GET(req: Request): Promise<Response> {
   const requestId = getRequestId(req)
   try {
@@ -33,10 +39,6 @@ export async function GET(req: Request): Promise<Response> {
       .eq('user_id', user.id)
       .maybeSingle()
     if (!drv) return ok({ today: [] }, { headers: corsHeaders(req) })
-
-    const limaDate = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' })
-    const startUtc = new Date(`${limaDate}T05:00:00.000Z`) // Lima 00:00 = 05:00 UTC (UTC-5, sin DST)
-    const endUtc = new Date(startUtc.getTime() + 86_400_000)
 
     // LEE `cash_owed_at_delivery`, NO DEDUCE DEL MÉTODO (0141).
     //
@@ -57,9 +59,16 @@ export async function GET(req: Request): Promise<Response> {
       // Solo lo que AÚN no ha rendido. Antes sumaba todo lo cobrado hoy, así
       // que tras la primera rendición seguía mostrando el total del día y
       // pre-rellenaba el formulario con dinero que ya había entregado.
+      //
+      // SIN FILTRO DE FECHA, y no es un olvido. `create_cash_settlement` liquida
+      // TODO lo no rendido a ese negocio sin mirar el día ("es el conjunto que
+      // define la rendición: no la fecha", 0141). Cuando esta consulta sí
+      // filtraba por el día de Lima, el efectivo de ayer sin rendir era
+      // invisible aquí pero entraba igual en la liquidación: el motorizado
+      // confirmaba el total de hoy, el RPC guardaba el total real, y la
+      // diferencia le aparecía a la cajera como un faltante de dinero que la
+      // pantalla nunca le mostró.
       .is('cash_settlement_id', null)
-      .gte('delivered_at', startUtc.toISOString())
-      .lt('delivered_at', endUtc.toISOString())
 
     const byBiz = new Map<
       string,
@@ -80,21 +89,27 @@ export async function GET(req: Request): Promise<Response> {
 
     const abiertos = ['pending_confirmation', 'disputed'] as const
 
-    // Solo necesitamos los settlements abiertos de hoy para el bucket
-    // "Esperando confirmación". El historial ya no se expone por este endpoint.
+    // Los settlements ABIERTOS alimentan el bucket "Esperando confirmación". El
+    // historial ya no se expone por este endpoint.
+    //
+    // Tampoco se acotan al día: un ciclo que la cajera no confirmó ayer sigue
+    // abierto hoy, y es dinero del motorizado pendiente de cerrar. Filtrarlo por
+    // fecha lo hacía desaparecer de su pantalla a medianoche sin que nada
+    // hubiera pasado.
     const { data: settlements } = await service
       .from('cash_settlements')
       .select(
         'id, business_id, settlement_date, status, delivered_amount, total_cash, order_count, businesses(name)',
       )
       .eq('driver_id', drv.id)
-      .eq('settlement_date', limaDate)
       .in('status', abiertos)
 
-    // Desde 0111 puede haber VARIOS ciclos por negocio y día. El que le importa
-    // al motorizado es el abierto; si no hay, ninguno. Un `new Map` sobre todos
-    // se quedaba con uno arbitrario.
-    const todayMap = new Map((settlements ?? []).map((s) => [s.business_id, s]))
+    // Desde 0111 puede haber VARIOS ciclos por negocio y día, y desde que esta
+    // consulta dejó de acotarse al día también los hay de días distintos: el de
+    // ayer que la cajera no confirmó y el de hoy. Se listan TODOS los abiertos.
+    // Colapsarlos en un `Map` por negocio —como se hacía— dejaba uno arbitrario
+    // y borraba de la pantalla dinero que sigue pendiente de cerrar.
+    const abiertosDelDriver = settlements ?? []
     // Dos buckets distintos, como en producción — un negocio puede aparecer en
     // los dos a la vez y son cosas diferentes:
     //
@@ -112,7 +127,7 @@ export async function GET(req: Request): Promise<Response> {
         status: null as string | null,
         deliveredAmount: null as number | null,
       })),
-      ...[...todayMap.values()].map((s) => ({
+      ...abiertosDelDriver.map((s) => ({
         businessId: s.business_id,
         businessName: (s.businesses as { name?: string } | null)?.name ?? '—',
         expected: Number(s.total_cash ?? 0),
