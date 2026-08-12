@@ -104,6 +104,20 @@ export interface OrderVM {
   minutesLeft: number | null
   /** Segundos con signo entre `now` y `estimated_ready_at`. Positivo = tiempo restante, negativo = retraso. */
   readySec: number | null
+  /**
+   * Segundos que el pedido lleva encima del motorizado, o `null` fuera de
+   * reparto.
+   *
+   * La columna "En reparto" lleva de rótulo "timer desde recogida" y no había
+   * ningún timer: en `picked_up` el reloj de cocina se apaga —correcto, la
+   * comida ya salió— y no empezaba ninguno. La cabecera prometía un dato que la
+   * tarjeta no daba.
+   *
+   * Cuenta HACIA ARRIBA, como el de `motorizados`: con varios pedidos en la
+   * calle, cuál lleva más tiempo rodando es lo que decide a quién llamar
+   * primero cuando un cliente reclama.
+   */
+  deliverySec: number | null
   bufferMinutes: number | null
   pickupMinAgo: number | null
   driver: { name: string } | null
@@ -118,6 +132,19 @@ export interface OrderVM {
   extensionMin: number | null
   /** La cajera ya declaró la comida lista. Oculta el botón y el cronómetro. */
   readyEarly: boolean
+  /**
+   * ¿Está la comida hecha? Por la marca O POR EL ESTADO.
+   *
+   * `readyEarly` dice que la cajera pulsó el botón, no que la comida exista, y
+   * son cosas distintas: en los `buffer_*` la comida está hecha por definición
+   * del estado —`waiting_driver` significa hoy "lista y nadie la ha tomado",
+   * ver `bufferPhase`— aunque nadie haya pulsado nada.
+   *
+   * Vive aquí y no en la tarjeta porque el detalle necesita el mismo hecho: con
+   * la derivación duplicada, las dos pantallas ya se habían contradicho sobre el
+   * mismo pedido (insignia "Lista · esperando moto" contra reloj "Demorado").
+   */
+  comidaLista: boolean
   /** `true` si "Marcar listo" tiene sentido: la comida puede seguir en cocina. */
   canMarkReady: boolean
   proofStatus: string | null
@@ -177,6 +204,39 @@ function bufferPhase(mins: number): UiState {
   if (mins < 4) return 'buffer_p2'
   return 'buffer_p3'
 }
+
+/**
+ * Estados en los que el reloj de COCINA todavía significa algo.
+ *
+ * LOS `buffer_*` ESTÁN AQUÍ, Y ESO ERA EL BUG. Sin ellos, pulsar "Pedido listo"
+ * en un pedido sin motorizado apagaba el cronómetro: `advance_order('ready')`
+ * pasa el status a `waiting_driver` y, sin `driver_id`, `getUiState` lo
+ * clasifica como `buffer_p1`. Ese estado no estaba en la lista, así que
+ * `readySec` y `minutesLeft` se volvían `null` de golpe y la tarjeta se quedaba
+ * sin reloj — justo la regresión que `DECISIONS §23` arregló y prohibió por
+ * escrito ("`ready_early_used` NO debe usarse como guarda para ocultar el
+ * temporizador"), reaparecida por otra puerta: no por la marca, sino por el
+ * cambio de estado que la acompaña.
+ *
+ * Es además el caso NORMAL, no el raro: la comida suele estar antes de que un
+ * motorizado tome el pedido. La cajera marcaba listo y perdía de vista el único
+ * número que le dice cuánto lleva la comida en el mostrador enfriándose.
+ *
+ * `motorizados` nunca tuvo el fallo porque su reloj se apaga por un hecho del
+ * dominio —`status === 'picked_up'`, o sea la comida ya salió— y no por una
+ * lista de estados de UI que hay que acordarse de ampliar.
+ *
+ * `picked_up` NO está aquí a propósito: ahí el reloj de cocina dejó de
+ * significar nada y empieza otro, el de reparto (`deliverySec`).
+ */
+const COOKING_CLOCK_STATES: ReadonlySet<UiState> = new Set<UiState>([
+  'cooking',
+  'buffer_p1',
+  'buffer_p2',
+  'buffer_p3',
+  'heading',
+  'waiting',
+])
 
 export function mapPayment(intent: string): UiPayment {
   if (intent === 'pending_yape') return 'pending_wallet'
@@ -263,19 +323,23 @@ export function toOrderVM(row: OrderRow, now: number = Date.now()): OrderVM {
   // `estimated_ready_at` ya pasó, o si se marcó listo antes de tiempo, no hay
   // nada que contar.
   const readyAtMs = row.estimated_ready_at ? Date.parse(row.estimated_ready_at) : null
-  const stillCooking = readyAtMs != null && readyAtMs > now
-  const minutesLeft =
-    state === 'cooking'
-      ? readyAtMs != null
-        ? Math.max(0, Math.ceil((readyAtMs - now) / 60000))
-        : (row.prep_time_minutes ?? null)
-      : (state === 'heading' || state === 'waiting') && stillCooking
-        ? Math.max(0, Math.ceil((readyAtMs - now) / 60000))
+  const minutesLeft = !COOKING_CLOCK_STATES.has(state)
+    ? null
+    : readyAtMs != null
+      ? Math.max(0, Math.ceil((readyAtMs - now) / 60000))
+      : state === 'cooking'
+        ? (row.prep_time_minutes ?? null)
         : null
 
   const readySec =
-    readyAtMs != null && (state === 'cooking' || state === 'heading' || state === 'waiting')
+    readyAtMs != null && COOKING_CLOCK_STATES.has(state)
       ? Math.round((readyAtMs - now) / 1000)
+      : null
+
+  // Segundos que el pedido lleva encima del motorizado. Ver `deliverySec`.
+  const deliverySec =
+    state === 'picked_up' && row.picked_up_at != null
+      ? Math.round((now - Date.parse(row.picked_up_at)) / 1000)
       : null
 
   const extCount = row.prep_extension_count ?? 0
@@ -299,6 +363,7 @@ export function toOrderVM(row: OrderRow, now: number = Date.now()): OrderVM {
     prepMinutes: row.prep_time_minutes ?? null,
     minutesLeft,
     readySec,
+    deliverySec,
     bufferMinutes:
       state === 'buffer_p1' || state === 'buffer_p2' || state === 'buffer_p3'
         ? minutesSince(row.waiting_driver_at, now)
@@ -319,6 +384,11 @@ export function toOrderVM(row: OrderRow, now: number = Date.now()): OrderVM {
     extensionUsed: extCount > 0,
     extensionMin: extCount > 0 ? extCount * 10 : null,
     readyEarly: Boolean(row.ready_early_used),
+    comidaLista:
+      Boolean(row.ready_early_used) ||
+      state === 'buffer_p1' ||
+      state === 'buffer_p2' ||
+      state === 'buffer_p3',
     // Los mismos cuatro estados que acepta advance_order('ready').
     canMarkReady:
       !row.ready_early_used &&

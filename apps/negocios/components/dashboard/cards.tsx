@@ -1,7 +1,7 @@
 'use client'
 
 import { cn, Icon } from '@tindivo/ui'
-import { useQueueLeadMinutes } from '@/hooks/use-queue-lead'
+import { useBusinessTimers } from '@/hooks/use-queue-lead'
 import { buildNegociosCardVM, type CardTone } from '@/lib/orders/card-view-model'
 import type { OrderVM } from '@/lib/orders/view-model'
 
@@ -52,8 +52,12 @@ function NegociosBaseCard({
   supportPhone,
   onCallDriver,
 }: CardProps) {
-  const queueLeadMin = useQueueLeadMinutes()
-  const vm = buildNegociosCardVM(order, { queueLeadMin, supportPhone })
+  const { queueLeadMinutes, deliveryLateMinutes } = useBusinessTimers()
+  const vm = buildNegociosCardVM(order, {
+    queueLeadMin: queueLeadMinutes,
+    deliveryLateMin: deliveryLateMinutes,
+    supportPhone,
+  })
 
   return (
     <div
@@ -64,26 +68,35 @@ function NegociosBaseCard({
         TONE_BORDER[vm.tone],
       )}
     >
-      {/* ── 1 · Cejilla Superior ── */}
+      {/* ── 1 · Cejilla Superior ──
+          Solo lleva lo que DISTINGUE. Las insignias de origen y de método salen
+          únicamente cuando son la excepción (ver `buildNegociosCardVM`): antes
+          iban las cuatro siempre y la tarjeta típica gastaba su primera línea
+          en repetir "Manual · Delivery", que es lo que son todas. */}
       <div className="mb-1 flex flex-wrap items-center gap-1.5 text-[11px]">
-        <span className="font-mono font-bold text-ink-muted">#{vm.shortId}</span>
+        {/* El código NO se repite cuando ya es la identidad de la tarjeta. */}
+        {!vm.identityIsCode && (
+          <span className="font-mono font-bold text-ink-muted">#{vm.shortId}</span>
+        )}
 
-        {/* Badge de Origen ultra-visible: MANUAL vs ONLINE */}
-        <span
-          className={cn(
-            'inline-flex items-center gap-[3px] rounded-full px-2 py-0.5 text-[10px]',
-            vm.sourceBadge.className,
-          )}
-        >
-          <Icon name={vm.sourceBadge.icon} size={10} weight={500} />
-          {vm.sourceBadge.label}
-        </span>
+        {vm.sourceBadge && (
+          <span
+            className={cn(
+              'inline-flex items-center gap-[3px] rounded-full px-2 py-0.5 text-[10px]',
+              vm.sourceBadge.className,
+            )}
+          >
+            <Icon name={vm.sourceBadge.icon} size={10} weight={500} />
+            {vm.sourceBadge.label}
+          </span>
+        )}
 
-        {/* Badge de Método de entrega */}
-        <span className="inline-flex items-center gap-[3px] rounded-full bg-ink/[0.04] px-1.5 py-0.5 text-[10px] font-semibold text-ink-muted">
-          <Icon name={vm.methodBadge.icon} size={10} weight={500} />
-          {vm.methodBadge.label}
-        </span>
+        {vm.methodBadge && (
+          <span className="inline-flex items-center gap-[3px] rounded-full bg-ink/[0.04] px-1.5 py-0.5 text-[10px] font-semibold text-ink-muted">
+            <Icon name={vm.methodBadge.icon} size={10} weight={500} />
+            {vm.methodBadge.label}
+          </span>
+        )}
 
         <div className="flex-1 min-w-[4px]" />
 
@@ -99,7 +112,14 @@ function NegociosBaseCard({
         </span>
       </div>
 
-      {/* ── 2 · Identidad + El Reloj ── */}
+      {/* ── 2 · Identidad + EL RELOJ ──
+          EL RELOJ PASA A 17px MONO. Estaba a 13px, o sea más pequeño que el
+          importe (16px), y para la cajera que vigila la cocina el número que
+          decide algo es el tiempo, no el precio: el precio ya está cobrado o se
+          cobra en la puerta, y no cambia nada de lo que ella hace ahora.
+          `DECISIONS §24 N3` ya lo había decidido —"Democión de Jerarquía del
+          Precio", el total a caption para liberar la esquina al monitoreo
+          operacional— y había quedado sin aplicar. */}
       <div className="mb-1 flex items-center justify-between gap-2">
         <span className="truncate font-semibold text-[15px] text-ink tracking-tight flex-1">
           {vm.customerName}
@@ -108,11 +128,11 @@ function NegociosBaseCard({
         {vm.clock && (
           <div className="flex shrink-0 items-center gap-1">
             {vm.clock.readyBadge && (
-              <Icon name="check_circle" size={14} weight={500} filled className="text-success" />
+              <Icon name="check_circle" size={15} weight={500} filled className="text-success" />
             )}
             <span
               className={cn(
-                'font-mono text-[13px] font-bold tabular-nums',
+                'font-mono text-[17px] font-bold leading-none tabular-nums',
                 CLOCK_TONE[vm.clock.tone],
               )}
             >
@@ -121,6 +141,17 @@ function NegociosBaseCard({
           </div>
         )}
       </div>
+
+      {/* El rótulo del reloj, DEBAJO y en gris pequeño.
+          `05:31` a secas no dice si son los minutos que faltan, los que sobran o
+          los que lleva el motorizado en la calle — y en esta pantalla el mismo
+          número significa las tres cosas según la columna. El rótulo lo fija sin
+          robarle tamaño a la cifra. */}
+      {vm.clock?.label && (
+        <p className="-mt-0.5 mb-1 text-right text-[10px] font-semibold uppercase tracking-[0.06em] text-ink-subtle">
+          {vm.clock.label}
+        </p>
+      )}
 
       {/* ── 3 · Referencia de Dirección / Recojo ── */}
       {vm.reference && (
@@ -138,7 +169,10 @@ function NegociosBaseCard({
       {/* ── 4 · Cobro & Destacado de Vuelto ── */}
       <div className="mt-2 flex flex-wrap items-baseline justify-between gap-1.5 border-t border-ink/[0.04] pt-2">
         <div className="flex items-center gap-1.5">
-          <span className="font-mono text-[16px] font-bold text-ink tracking-tight">
+          {/* 14px, por debajo del reloj (17px). El importe sigue siendo legible
+              —la cajera lo canta por teléfono— pero deja de competir por la
+              mirada con el único dato que le pide actuar. §24 N3. */}
+          <span className="font-mono text-[14px] font-bold text-ink-muted tracking-tight">
             {vm.money.totalHeadline}
           </span>
           <span
@@ -220,8 +254,8 @@ export function RepartoCard(props: CardProps) {
 }
 
 export function CookingStatusLine({ order }: { order: OrderVM }) {
-  const queueLeadMin = useQueueLeadMinutes()
-  const vm = buildNegociosCardVM(order, { queueLeadMin })
+  const { queueLeadMinutes } = useBusinessTimers()
+  const vm = buildNegociosCardVM(order, { queueLeadMin: queueLeadMinutes })
   return (
     <div className="flex items-center gap-1.5 text-[11px] font-semibold text-ink-muted">
       <Icon name={vm.stateBadge.icon} size={12} weight={500} />
