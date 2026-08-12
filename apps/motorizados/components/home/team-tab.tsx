@@ -65,6 +65,11 @@ function teamOrderToCard(o: TeamResponse['teamOrders'][number]): CardOrder {
     // porque los pedidos recogidos no se pueden pedir.
     picked_up_at: o.pickedUpAt,
     delivered_at: null,
+    // Un pedido de equipo nunca está entregado —la pestaña solo lista los
+    // activos—, así que el cobro real no aplica. Y aunque aplicara, no viaja:
+    // es dato de la caja de otro.
+    payment_real: null,
+    cash_owed_at_delivery: null,
     business: {
       id: '',
       name: o.businessName ?? 'Restaurante',
