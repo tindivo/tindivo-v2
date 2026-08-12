@@ -333,8 +333,24 @@ export function DetailScreen({
           </button>
         )}
         <div className="min-w-0 flex-1">
-          <div className="mb-[3px] flex flex-wrap items-center gap-[5px]">
-            <span className="font-mono text-[12px] font-bold text-ink-muted">#{order.id}</span>
+          {/* IDENTIDAD PRIMERO, Y LA IDENTIDAD ES EL NOMBRE.
+              La cabecera abría con `#P9JV3PZV`, un código que nadie reconoce,
+              y el nombre del cliente no salía en toda la franja superior — la
+              cajera tiene que bajar a la tarjeta «Cliente» para saber de quién
+              es el pedido que está mirando. Ahora el nombre manda y el código
+              baja a acompañarlo: sigue estando (hace falta para cotejar con el
+              motorizado) pero deja de liderar.
+              Es la misma regla que ya sigue la tarjeta del board del
+              motorizado: el nombre es identidad y el short_id es repuesto. */}
+          <div className="flex min-w-0 items-baseline gap-1.5">
+            <span className="truncate text-[15px] font-bold leading-tight text-ink">
+              {order.customer ?? 'Cliente'}
+            </span>
+            <span className="shrink-0 font-mono text-[11px] font-bold text-ink-muted">
+              #{order.id}
+            </span>
+          </div>
+          <div className="mt-[3px] mb-[3px] flex flex-wrap items-center gap-[5px]">
             {isPending ? (
               <span className="flex items-center gap-[3px]">
                 <span className="text-[11px] text-ink-muted">
@@ -385,8 +401,14 @@ export function DetailScreen({
               )
             ) : null}
           </div>
+          {/* El chip de origen SOLO cuando el pedido viene de la app.
+              Hoy el 100% del piloto son manuales, así que «Directo» salía en
+              todas las cabeceras: un distintivo constante no distingue nada, y
+              aquí competía con el de urgencia, que sí decide. Es el criterio
+              que ya aplica la tarjeta del motorizado con `showSourceChip`.
+              El de pago se queda: ese sí varía y cambia lo que hay que hacer. */}
           <div className="flex items-center gap-1.5">
-            <SourceBadgeMini source={order.source} />
+            {order.source !== 'manual' && <SourceBadgeMini source={order.source} />}
             <PayBadgeMini payment={order.payment} />
           </div>
         </div>
@@ -484,41 +506,53 @@ export function DetailScreen({
             )}
           </div>
         ) : (
-          <>
-            {/* Cliente */}
-            <div className="shrink-0 rounded-md bg-surface px-3.5 py-3">
-              <div className="mb-[7px] text-[10px] font-bold uppercase tracking-[0.06em] text-ink-muted">
-                Cliente
-              </div>
-              <div className="mb-[5px] text-[16px] font-bold">{order.customer ?? 'Cliente'}</div>
-              {order.phone && (
-                <a
-                  href={`tel:${order.phone}`}
-                  className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand no-underline"
-                >
-                  <Icon weight={500} name="call" size={15} filled /> {order.phone}
-                </a>
-              )}
+          /* UNA SOLA TARJETA, no «Cliente» y «Dirección» por separado.
+             Eran dos rótulos y dos cajas para un único hecho: a quién le
+             llevas el pedido y adónde. Nadie mira la dirección sin mirar de
+             quién es, así que separarlas solo añadía un salto de lectura y un
+             borde en una columna que ya va apretada.
+             Los dos datos siguen distinguiéndose por el icono —teléfono y
+             pin—, que es lo que de verdad los etiquetaba; el rótulo
+             «DIRECCIÓN» encima no aportaba nada que el pin no dijera ya. */
+          <div className="shrink-0 rounded-md bg-surface px-3.5 py-3">
+            <div className="mb-[7px] text-[10px] font-bold uppercase tracking-[0.06em] text-ink-muted">
+              Cliente
             </div>
+            <div className="text-[16px] font-bold">{order.customer ?? 'Cliente'}</div>
 
-            {/* Dirección */}
-            {order.addressRef && (
-              <div className="shrink-0 rounded-md bg-surface px-3.5 py-3">
-                <div className="mb-[7px] text-[10px] font-bold uppercase tracking-[0.06em] text-ink-muted">
-                  Dirección
-                </div>
-                <div className="flex gap-2">
-                  <Icon
-                    weight={500}
-                    name="location_on"
-                    size={16}
-                    className="mt-0.5 shrink-0 text-brand"
-                  />
-                  <div className="text-[14px] leading-normal">{order.addressRef}</div>
+            {order.phone && (
+              <a
+                href={`tel:${order.phone}`}
+                className="mt-[5px] inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand no-underline"
+              >
+                <Icon weight={500} name="call" size={15} filled /> {order.phone}
+              </a>
+            )}
+
+            {/* En los online el cliente da DOS datos —la dirección que eligió y
+                la referencia que escribió— y el detalle solo enseñaba la
+                referencia, igual que la tarjeta. `OrderVM.address` ya viene
+                limpio del relleno 'Pedido manual', así que la segunda línea
+                aparece sola cuando existe de verdad. */}
+            {(order.addressRef || order.address) && (
+              <div className="mt-2.5 flex gap-2 border-t border-ink/[0.06] pt-2.5">
+                <Icon
+                  weight={500}
+                  name="location_on"
+                  size={16}
+                  className="mt-0.5 shrink-0 text-brand"
+                />
+                <div className="min-w-0">
+                  <div className="text-[14px] leading-normal">
+                    {order.addressRef ?? order.address}
+                  </div>
+                  {order.addressRef && order.address && (
+                    <div className="text-[12px] leading-normal text-ink-muted">{order.address}</div>
+                  )}
                 </div>
               </div>
             )}
-          </>
+          </div>
         )}
 
         {/* Items (Online) o Cobro (Directo) */}
@@ -618,7 +652,7 @@ export function DetailScreen({
 
         {/* Sección de pago */}
         {order.payment === 'pending_cash' && <PaySectionCash order={order} />}
-        {order.payment === 'pending_wallet' && <PaySectionWallet order={order} qrUrl={qrUrl} />}
+        {order.payment === 'pending_wallet' && <PaySectionWallet qrUrl={qrUrl} />}
         {order.payment === 'prepaid' && (
           <>
             {isLoadingActions ? (

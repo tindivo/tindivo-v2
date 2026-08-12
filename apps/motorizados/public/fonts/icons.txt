@@ -15,6 +15,8 @@ check_circle
 circle
 close
 cloud_done
+cloud_off
+contact_phone
 currency_exchange
 delete
 delivery_dining
@@ -27,13 +29,17 @@ edit_note
 error
 expand_less
 expand_more
+fact_check
 fastfood
 flag
 fullscreen
 gavel
+gpp_bad
+gps_fixed
 gps_off
 history
 hourglass_top
+inbox
 info
 install_mobile
 inventory_2
@@ -59,6 +65,7 @@ pan_tool
 pause_circle
 payments
 person
+person_add
 person_off
 person_pin_circle
 phone
@@ -88,6 +95,7 @@ shuffle
 smartphone
 soup_kitchen
 star
+store
 storefront
 swap_horiz
 sync
