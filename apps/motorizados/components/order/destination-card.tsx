@@ -33,7 +33,10 @@ export function DestinationCard({ detail }: { detail: OrderDetailResponse }) {
 
   const searchTarget = (reference ?? cleanAddress) || 'San Jacinto Ancash'
   const mapsHref = hasCoords
-    ? mapsDirToCoords(order.deliveryCoordinatesLat as number, order.deliveryCoordinatesLng as number)
+    ? mapsDirToCoords(
+        order.deliveryCoordinatesLat as number,
+        order.deliveryCoordinatesLng as number,
+      )
     : mapsSearchAddress(searchTarget)
 
   return (
@@ -79,9 +82,7 @@ export function DestinationCard({ detail }: { detail: OrderDetailResponse }) {
                 <span className="block font-mono text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
                   Referencia
                 </span>
-                <p className="mt-0.5 text-body-lg font-bold leading-snug text-ink">
-                  {reference}
-                </p>
+                <p className="mt-0.5 text-body-lg font-bold leading-snug text-ink">{reference}</p>
               </div>
             </div>
           )}
