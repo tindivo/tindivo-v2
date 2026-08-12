@@ -1,7 +1,7 @@
 # Spec · El efectivo se rinde pedido por pedido, y todo lo que el motorizado lleva encima vuelve
 
-**Estado:** propuesta, sin implementar.
-**Escrito:** 2026-08-12.
+**Estado:** cerrado para implementación.
+**Escrito:** 2026-08-12. **Revisado:** 2026-08-11 — la fórmula estaba en neto y dejaba escapar el adelanto en el caso más común; corregida a la lectura gross del legacy tras confirmar Jesús que el sencillo lo pone siempre la cajera.
 **Precede a:** cualquier despliegue de la pantalla de Efectivo del motorizado.
 
 ---
@@ -24,16 +24,18 @@ El legacy sí lo desglosa (`tindivo-delivery`, `features/motorizado/efectivo/com
 
 Cuando un pedido necesita vuelto, ese vuelto **sale del negocio**: la cajera se lo adelanta al motorizado antes de que salga. Ese dinero es del restaurante y está en el bolsillo del motorizado.
 
-Si el cliente acaba **pagando exacto**, o **cambia a Yape**, el motorizado se queda con ese adelanto — y hoy v2 **no lo pide de vuelta**:
+**El sencillo lo pone SIEMPRE la cajera** (confirmado por Jesús, 2026-08-11). El motorizado nunca pone fondo propio, y por eso cada adelanto es deuda suya desde que sale del local. Toda la fórmula de abajo cuelga de este hecho: si el sencillo fuera del motorizado, v2 estaría bien hoy y este spec sobraría.
 
 | Situación | Lo que el motorizado lleva encima | Lo que v2 le reclama hoy |
 |---|---|---|
-| Pedido en efectivo S/ 45, adelanto S/ 5, cliente paga con S/ 50 | S/ 45 | S/ 45 ✅ |
+| Pedido en efectivo S/ 45, adelanto S/ 5, cliente paga con S/ 50 | **el billete de S/ 50** | S/ 45 ❌ |
 | Mismo pedido, **cliente paga exacto** | S/ 45 **+ S/ 5 del adelanto** | S/ 45 ❌ |
 | Mismo pedido, **cliente paga por Yape** | **S/ 5 del adelanto** | **S/ 0** ❌ |
 | Pedido Yape, **cliente paga en efectivo** | el total | el total ✅ |
 
-Las dos filas con ❌ son dinero del negocio que se queda en el bolsillo del motorizado sin que ningún sistema lo registre. No es fraude: es que **nadie se lo recuerda**, y al final del turno ni él sabe que lo tiene.
+**Tres de cuatro, y la que más ocurre es la primera.** Ahí el motorizado se queda con el billete de S/ 50 del cliente y le devolvió los S/ 5 que le adelantó la caja: si rinde 45, esos 5 son dinero del negocio que se queda en su bolsillo. La caja salió con 5 menos y vuelve con 45 por un pedido de 45 — le falta el adelanto.
+
+Ninguna de las tres es fraude: es que **nadie se lo recuerda**, y al final del turno ni él sabe que lo tiene.
 
 El legacy sí lo contempla, y lo dice en su propio código
 (`apps/api/app/api/v1/driver/cash-summary/route.ts:47-49`):
@@ -52,9 +54,26 @@ O sea: en el legacy `cash_owed_at_delivery` **no es "lo que cobró"**, es **"tod
 Son dos fuentes, y hoy solo se cuenta una:
 
 ```
-efectivo a rendir  =  lo cobrado en efectivo al cliente
-                   +  el adelanto de vuelto que no se llegó a usar
+efectivo a rendir  =  el adelanto que le dio la caja
+                   +  el efectivo que recibió del cliente
+                   −  el vuelto que le devolvió al cliente
 ```
+
+**Ojo con "el efectivo que recibió": es el billete completo, no el total del
+pedido.** Un pedido de S/ 45 pagado con S/ 50 aporta 50, y los 5 que el
+motorizado devolvió salen restados. Leerlo en neto (45, con el vuelto ya
+descontado) es exactamente lo que fuga hoy: da por devuelto un adelanto que
+nunca volvió a la caja.
+
+La fórmula se simplifica sola, y esa es la forma que conviene implementar:
+
+```
+efectivo a rendir  =  adelanto  +  parte en efectivo del pedido
+```
+
+porque *recibido − devuelto* es siempre la parte en efectivo del pedido, pague
+el cliente con el billete que pague. Es la misma fórmula del legacy
+(`tindivo-delivery`, `packages/core/.../order.ts:1219-1245`).
 
 ---
 
@@ -69,8 +88,11 @@ Lo que YA existe y funciona (migraciones `0140` y `0141`, con tests):
 Lo que **falta**:
 
 - **El adelanto no se modela.** No hay columna que diga "el negocio le adelantó S/ X a este motorizado por este pedido". `contingency_advances` existe en el esquema pero es otra cosa (fondo de contingencia, eliminado en `0123`).
-- Con `paid_yape` o `paid_prepaid`, `advance_order` escribe `cash_owed_at_delivery = 0` — correcto para lo cobrado, **incompleto para lo que lleva encima**.
+- Con `paid_cash`, `advance_order` escribe `cash_owed_at_delivery = v_total` (`0140:242-245`): el total del pedido, no el billete que el motorizado tiene en la mano. Fuga el adelanto en el caso más común.
+- Con `paid_yape` o `paid_prepaid` escribe `cash_owed_at_delivery = 0` (`0140:247-253`) — correcto para lo cobrado, **incompleto para lo que lleva encima**.
 - El endpoint `/driver/cash-settlements` agrega por negocio y **no devuelve los pedidos**.
+
+Y algo que ya existe y **sirve de fuente para el adelanto**: `orders.change_to_give` se persiste al crear, tanto en manual (`0131`, recuperado tras la regresión de `0092`) como en B2C (`0143`). O sea, el dato "cuánto sencillo le tuvo que dar la caja" ya está en la fila antes de salir. El comentario `PENDIENTE` de `apps/motorizados/lib/payment.ts:21-23` que dice lo contrario quedó obsoleto con `0131`.
 
 ---
 
@@ -80,34 +102,58 @@ Lo que **falta**:
 
 **Decisión previa, y es de producto, no técnica:** ¿cuándo se considera adelantado el vuelto?
 
-- **Opción A — implícito.** Si `client_pays_with > total`, se asume que la cajera adelantó `client_pays_with - total`. Cero fricción, cero pantallas nuevas; pero asume un dato que nadie confirmó, y en el piloto la cajera teclea ese campo mirando lo que el cliente dijo por teléfono.
+- **Opción A — implícito.** El adelanto es el vuelto que el pedido ya tenía planeado: `change_to_give` de la fila, que se persiste al crear desde `0131`/`0143`. Cero fricción, cero pantallas nuevas; pero asume que la cajera dio de verdad ese sencillo, y en el piloto ella teclea `client_pays_with` mirando lo que el cliente dijo por teléfono.
 - **Opción B — explícito.** La cajera marca al entregar el pedido al motorizado cuánto vuelto le da. Es la verdad, pero es un paso más para ella.
 
-**Recomendación: A para empezar**, con la columna preparada para B. El importe es el mismo en el caso normal, y A no pide nada a la cajera. Si aparecen discrepancias, se sube a B sin migrar datos.
+**Decisión: A**, con la columna preparada para B. El importe es el mismo en el caso normal, y A no pide nada a la cajera. Si aparecen discrepancias, se sube a B sin migrar datos.
 
-Columna sugerida: `orders.change_advanced` (`numeric(10,2)`, nullable). La escribe el mismo `advance_order` que ya toca el resto.
+Columna: `orders.change_advanced` (`numeric(10,2)`, nullable). La escribe el mismo `advance_order` que ya toca el resto.
+
+**Por qué una columna y no leer `change_to_give` al liquidar.** Porque `advance_order` la PISA al entregar (`0140:415`): después de la entrega esa columna vale *el vuelto que se dio*, no *el que se adelantó*. Son distintos justo en los casos que este spec viene a arreglar. `change_advanced` es el snapshot de la pre-imagen, tomado dentro de la misma transacción.
+
+El valor sale de la pre-imagen `v_order`, nunca de `p_params` — el motorizado no declara el adelanto, ya lo tiene en el bolsillo desde antes de salir:
+
+```
+parte_efectivo_planeada = total            si payment_intent = 'pending_cash'
+                        = cash_amount      si 'pending_mixed'
+                        = 0                en cualquier otro caso
+
+adelanto = 0                                          si parte_efectivo_planeada = 0
+         = COALESCE(change_to_give,                   si no
+                    client_pays_with − parte_efectivo_planeada,
+                    0)
+```
+
+El `COALESCE` cubre las filas manuales creadas entre `0092` y `0131`, donde `change_to_give` llegó NULL.
 
 ### 4.2 · La fórmula, en un solo sitio
 
 `advance_order('deliver')` (migración nueva, sobre lo que dejó `0140`):
 
 ```
-cash_owed_at_delivery =
-      (efectivo cobrado al cliente)          -- ya implementado
-    + (adelanto - vuelto realmente entregado) -- lo que falta
+cash_owed_at_delivery = adelanto + parte en efectivo del pedido
 ```
 
-Por caso:
+donde la *parte en efectivo* la manda `payment_real` (el cobro REAL, no el planeado): el total en `paid_cash`, `cash_amount` en `paid_mixed`, y 0 en `paid_yape` / `paid_prepaid`.
 
-| `payment_real` | Cobrado | Adelanto sin usar | `cash_owed_at_delivery` |
-|---|---|---|---|
-| `paid_cash`, cliente paga con billete | total | 0 | total |
-| `paid_cash`, **paga exacto** | total | **el adelanto entero** | **total + adelanto** |
-| `paid_mixed` | parte en efectivo | lo que sobre del adelanto | suma de ambos |
-| `paid_yape` | 0 | **el adelanto entero** | **el adelanto** |
-| `paid_prepaid` | 0 | el adelanto entero | el adelanto |
+Por caso, con un pedido de S/ 45 y adelanto de S/ 5:
 
-**Ojo con el camino "Pagó exacto" de la hoja de entrega.** Hoy manda `clientPaysWith = total` para que el vuelto salga 0. Con esta fórmula eso deja de bastar: hay que distinguir *"el cliente pagó justo y me quedo el adelanto"* de *"no había adelanto"*. La hoja ya tiene ese camino separado (`kind: 'cash_exact'`), así que el dato existe — hay que hacerlo viajar.
+| `payment_real` | Adelanto | Parte en efectivo | `cash_owed_at_delivery` | Hoy |
+|---|---|---|---|---|
+| `paid_cash`, paga con S/ 50 | 5 | 45 | **50** | 45 |
+| `paid_cash`, **paga exacto** | 5 | 45 | **50** | 45 |
+| `paid_mixed` (20 efectivo) | 5 | 20 | **25** | 20 |
+| `paid_yape` | 5 | 0 | **5** | 0 |
+| `paid_prepaid` | 5 | 0 | **5** | 0 |
+| Cualquiera **sin adelanto** | 0 | la que sea | la parte en efectivo | igual |
+
+La fila de `paid_prepaid` es teórica: un pedido `prepaid` de origen se paga antes de que el motorizado salga, así que la caja nunca le adelanta sencillo y su adelanto es siempre 0. Solo se alcanza forzando ese método sobre un pedido que sí tenía plan en efectivo, y ahí la fórmula responde bien.
+
+**Las cuatro primeras filas cambian de número.** Solo la última se queda igual, y es la que amarra que un pedido sin vuelto no se mueva ni un céntimo.
+
+**"Pagó exacto" deja de necesitar nada especial.** El spec anterior daba por hecho que había que hacer viajar el `kind: 'cash_exact'` de la hoja hasta el RPC. No hace falta: el adelanto sale del plan, no de lo que el cliente acabó tendiendo, así que "pagó exacto" y "pagó con billete" dan el mismo `cash_owed` — que es justo lo correcto, porque el motorizado acaba con el mismo dinero encima en los dos casos. La hoja puede seguir mandando `clientPaysWith = total` sin tocarla.
+
+**Lo que SÍ hay que mover: la validación del billete.** Hoy `0140:255-259` exige `client_pays_with >= cash_owed`. Con la fórmula nueva, `cash_owed` incluye el adelanto y esa comparación empieza a rechazar entregas legítimas — el camino "pagó exacto" manda `clientPaysWith = total`, que es menor que `total + adelanto`. La comparación correcta es contra **la parte en efectivo del pedido**: el billete tiene que cubrir lo que se le cobra al cliente, no el sencillo que el motorizado ya traía. Lo mismo aplica al `change_to_give` que se escribe al cerrar: `billete − parte en efectivo`.
 
 ### 4.3 · El desglose por pedido
 
@@ -135,9 +181,11 @@ Y la pantalla los lista bajo cada negocio: **nombre (o `#código`) · hora · im
 
 **No es negociable, es dinero:**
 
-1. **Migración**: columna `change_advanced` + `advance_order('deliver')` escribiendo la fórmula completa. Genera el dato sin cambiar ningún importe existente.
+1. **Migración**: columna `change_advanced` + `advance_order('deliver')` escribiendo la fórmula completa, con la validación del billete movida a la parte en efectivo.
 2. **Backfill**: las filas ya entregadas se quedan como están. **No se recalculan**: los ciclos cerrados son contabilidad, y reescribirlos cambia lo que la cajera ya contó.
-3. **Tests de integración** de los cinco casos de la tabla, más el de siempre (`paid_cash` con billete) verificando que **no se mueve ni un céntimo**.
+3. **Tests de integración** de los casos de la tabla de §4.2, en `deliver-change-advance.integration.test.ts`. El que amarra que nada se mueva es el pedido **sin adelanto**.
+
+   Los tests de `0140`/`0141` **no cambian ni una línea**, y conviene entender por qué antes de tocarlos: ninguno sembraba un adelanto (`client_pays_with` y `change_to_give` llegaban NULL del seeder), así que todos describen el caso sin vuelto, donde la fórmula nueva da exactamente lo mismo. Si alguno hubiera empezado a fallar, no sería ruido: sería que el importe se movió donde no debía.
 4. **Endpoint** devolviendo el desglose.
 5. **Pantalla**.
 
