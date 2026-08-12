@@ -39,7 +39,20 @@ export function ScheduleEditor() {
 
   const load = useCallback(async () => {
     const supabase = getSupabaseBrowser()
-    const { data: biz } = await supabase.from('businesses').select('id').maybeSingle()
+    // Filtrado por `user_id`: ver `chrome.tsx:refetchBiz`. Sin él, la cuenta con
+    // rol business + admin ve todos los negocios y `maybeSingle()` falla; el
+    // editor se quedaba sin horario y en blanco, que en esta pantalla se lee
+    // como "no tengo horario configurado".
+    const { data: sessionData } = await supabase.auth.getSession()
+    const userId = sessionData.session?.user.id
+    if (!userId) return
+
+    const { data: biz, error } = await supabase
+      .from('businesses')
+      .select('id')
+      .eq('user_id', userId)
+      .maybeSingle()
+    if (error) console.error('[horario] no se pudo resolver el negocio:', error.message)
     if (!biz) return
     setBizId(biz.id)
     const { data } = await supabase

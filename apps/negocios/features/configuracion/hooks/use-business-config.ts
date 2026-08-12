@@ -25,34 +25,45 @@ export function useBusinessConfig() {
 
   useEffect(() => {
     const supabase = getSupabaseBrowser()
-    supabase
-      .from('businesses')
-      .select(
-        'name,phone,whatsapp_number,yape_number,tagline,accent_color,estimated_eta_min,estimated_eta_max,delivery_fee,publishes_catalog,accepts_web_pickup,accepts_web_delivery,uses_tindivo_drivers,primary_capability,qr_url,logo_url,banner_url',
-      )
-      .maybeSingle()
-      .then(({ data: biz }) => {
-        if (!biz) return
-        setQrUrl(biz.qr_url ?? null)
-        setLogoUrl(biz.logo_url ?? null)
-        setBannerUrl(biz.banner_url ?? null)
-        setForm({
-          name: biz.name ?? '',
-          phone: biz.phone ?? '',
-          whatsappNumber: biz.whatsapp_number ?? '',
-          yapeNumber: biz.yape_number ?? '',
-          tagline: biz.tagline ?? '',
-          accentColor: biz.accent_color ?? 'f97316',
-          estimatedEtaMin: biz.estimated_eta_min ?? 25,
-          estimatedEtaMax: biz.estimated_eta_max ?? 35,
-          deliveryFee: Number(biz.delivery_fee ?? 2),
-          publishesCatalog: Boolean(biz.publishes_catalog),
-          acceptsWebPickup: Boolean(biz.accepts_web_pickup),
-          acceptsWebDelivery: Boolean(biz.accepts_web_delivery),
-          usesTindivoDrivers: Boolean(biz.uses_tindivo_drivers),
-        })
-        setCapability(biz.primary_capability ?? '')
+    // Filtrado por `user_id`: ver `chrome.tsx:refetchBiz`. Sin él, la cuenta con
+    // rol business + admin ve todos los negocios y `maybeSingle()` falla; el
+    // formulario se quedaba en blanco, como si el negocio no tuviera datos
+    // configurados, y guardar encima habría sido peor que no ver nada.
+    void (async () => {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const userId = sessionData.session?.user.id
+      if (!userId) return
+
+      const { data: biz, error } = await supabase
+        .from('businesses')
+        .select(
+          'name,phone,whatsapp_number,yape_number,tagline,accent_color,estimated_eta_min,estimated_eta_max,delivery_fee,publishes_catalog,accepts_web_pickup,accepts_web_delivery,uses_tindivo_drivers,primary_capability,qr_url,logo_url,banner_url',
+        )
+        .eq('user_id', userId)
+        .maybeSingle()
+      if (error) console.error('[configuracion] no se pudo resolver el negocio:', error.message)
+      if (!biz) return
+
+      setQrUrl(biz.qr_url ?? null)
+      setLogoUrl(biz.logo_url ?? null)
+      setBannerUrl(biz.banner_url ?? null)
+      setForm({
+        name: biz.name ?? '',
+        phone: biz.phone ?? '',
+        whatsappNumber: biz.whatsapp_number ?? '',
+        yapeNumber: biz.yape_number ?? '',
+        tagline: biz.tagline ?? '',
+        accentColor: biz.accent_color ?? 'f97316',
+        estimatedEtaMin: biz.estimated_eta_min ?? 25,
+        estimatedEtaMax: biz.estimated_eta_max ?? 35,
+        deliveryFee: Number(biz.delivery_fee ?? 2),
+        publishesCatalog: Boolean(biz.publishes_catalog),
+        acceptsWebPickup: Boolean(biz.accepts_web_pickup),
+        acceptsWebDelivery: Boolean(biz.accepts_web_delivery),
+        usesTindivoDrivers: Boolean(biz.uses_tindivo_drivers),
       })
+      setCapability(biz.primary_capability ?? '')
+    })()
   }, [])
 
   const save = useCallback(

@@ -59,10 +59,16 @@ export function useItemEditor() {
         return
       }
 
-      const { data: biz } = await supabase
+      // Filtrado por `user_id`: ver `chrome.tsx:refetchBiz`. Sin él, la cuenta
+      // con rol business + admin ve todos los negocios, `maybeSingle()` falla y
+      // aquí eso sacaba al editor a la portada — el síntoma más confuso de los
+      // cuatro, porque parece que el plato no existe.
+      const { data: biz, error } = await supabase
         .from('businesses')
         .select('id,name,accent_color')
+        .eq('user_id', data.session.user.id)
         .maybeSingle()
+      if (error) console.error('[item-editor] no se pudo resolver el negocio:', error.message)
       if (!biz?.id) {
         router.replace('/')
         return

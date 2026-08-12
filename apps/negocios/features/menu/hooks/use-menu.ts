@@ -107,7 +107,26 @@ export function useMenu() {
         router.replace('/')
         return
       }
-      const { data: biz } = await supabase.from('businesses').select('id').maybeSingle()
+      // SE FILTRA POR `user_id`. Ver el porqué largo en `chrome.tsx:refetchBiz`.
+      //
+      // En corto: `businesses` tiene dos policies permisivas que se suman con
+      // OR —`biz_self_read` y `biz_admin_all`—, así que un usuario con rol
+      // business Y admin (la cuenta del piloto los tiene los dos) ve TODOS los
+      // negocios y `maybeSingle()` revienta con "multiple (or no) rows
+      // returned". Aquí el error se descartaba con `const { data: biz }`, así
+      // que `bizId` se quedaba en null y la pantalla pintaba "Tu menú está
+      // vacío" sobre un menú lleno: la cajera no podía tocar sus platos y nada
+      // le decía por qué.
+      //
+      // `chrome.tsx` ya lo arreglaba —por eso la barra lateral sí acertaba el
+      // negocio mientras el contenido salía vacío—, pero el arreglo se quedó
+      // allí. Medido el 2026-08-12 con `negocio@e2e.local`.
+      const { data: biz, error } = await supabase
+        .from('businesses')
+        .select('id')
+        .eq('user_id', data.session.user.id)
+        .maybeSingle()
+      if (error) console.error('[menu] no se pudo resolver el negocio:', error.message)
       if (biz?.id) {
         setBizId(biz.id)
         await load(biz.id)
