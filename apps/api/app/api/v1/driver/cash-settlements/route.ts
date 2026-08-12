@@ -21,6 +21,56 @@ export function OPTIONS(req: Request): Response {
   return handleOptions(req)
 }
 
+/** Un pedido dentro de la rendición de un negocio. */
+interface SettlementOrder {
+  orderId: string
+  shortId: string
+  /** Cae al `#shortId` en la pantalla cuando el pedido no trae nombre. */
+  customerName: string | null
+  deliveredAt: string | null
+  cashOwed: number
+  /**
+   * Solo cuando hubo adelanto. Es lo que permite responder a la pregunta que
+   * el motorizado va a hacer —"¿por qué debo S/ 5 de un pedido que se pagó por
+   * Yape?"— sin que nadie tenga que reconstruir la cuenta a mano.
+   */
+  breakdown?: { collected: number; advance: number }
+}
+
+/**
+ * Fila de `orders` tal y como la piden las dos consultas de abajo.
+ *
+ * ⚠️ TEMPORAL. `database.types.ts` se genera contra el REMOTO (`pnpm db:types`)
+ * y `change_advanced` entra ahí con el `db push` de la 0146. Hasta entonces el
+ * tipado generado no conoce la columna y el `select` se resuelve como error.
+ * En cuanto se regeneren los tipos, esta interfaz y sus dos casts se borran y
+ * la inferencia vuelve a hacer el trabajo.
+ */
+interface OrderCashRow {
+  id: string
+  short_id: string
+  customer_name: string | null
+  delivered_at: string | null
+  cash_owed_at_delivery: number | null
+  change_advanced: number | null
+}
+
+function toSettlementOrder(o: OrderCashRow): SettlementOrder {
+  const cashOwed = Number(o.cash_owed_at_delivery ?? 0)
+  const advance = Number(o.change_advanced ?? 0)
+  return {
+    orderId: o.id,
+    shortId: o.short_id,
+    customerName: o.customer_name,
+    deliveredAt: o.delivered_at,
+    cashOwed,
+    // `collected` no se lee: se deriva de la misma resta que define la fórmula,
+    // así que no puede contradecir al total. Guardarlo aparte habría creado una
+    // quinta copia de la regla del corte de caja.
+    ...(advance > 0 ? { breakdown: { collected: cashOwed - advance, advance } } : {}),
+  }
+}
+
 /**
  * Resumen de efectivo del motorizado, agregado por negocio.
  *
@@ -50,9 +100,11 @@ export async function GET(req: Request): Promise<Response> {
     //
     // `> 0` en vez de un filtro por método: lo que define si entra al corte es
     // llevar efectivo, no cómo se llame el cobro.
-    const { data: orders } = await service
+    const { data: rawOrders } = await service
       .from('orders')
-      .select('business_id, cash_owed_at_delivery, businesses(name)')
+      .select(
+        'id, short_id, customer_name, delivered_at, business_id, cash_owed_at_delivery, change_advanced, businesses(name)',
+      )
       .eq('driver_id', drv.id)
       .eq('status', 'delivered')
       .gt('cash_owed_at_delivery', 0)
@@ -70,21 +122,41 @@ export async function GET(req: Request): Promise<Response> {
       // pantalla nunca le mostró.
       .is('cash_settlement_id', null)
 
+    // Ver `OrderCashRow`: el cast se va con `pnpm db:types` tras el push.
+    const orders = (rawOrders ?? []) as unknown as (OrderCashRow & {
+      business_id: string
+      businesses: { name?: string } | null
+    })[]
+
     const byBiz = new Map<
       string,
-      { businessId: string; businessName: string; expected: number; orderCount: number }
+      {
+        businessId: string
+        businessName: string
+        expected: number
+        orderCount: number
+        orders: SettlementOrder[]
+      }
     >()
-    for (const o of orders ?? []) {
-      const name = (o.businesses as { name?: string } | null)?.name ?? '—'
+    for (const o of orders) {
+      const name = o.businesses?.name ?? '—'
       const e = byBiz.get(o.business_id) ?? {
         businessId: o.business_id,
         businessName: name,
         expected: 0,
         orderCount: 0,
+        orders: [],
       }
       e.expected += Number(o.cash_owed_at_delivery)
       e.orderCount += 1
+      e.orders.push(toSettlementOrder(o))
       byBiz.set(o.business_id, e)
+    }
+
+    // Del más reciente al más antiguo. El motorizado repasa el fajo empezando
+    // por el último pedido, que es el que tiene fresco.
+    for (const e of byBiz.values()) {
+      e.orders.sort((a, b) => (b.deliveredAt ?? '').localeCompare(a.deliveredAt ?? ''))
     }
 
     const abiertos = ['pending_confirmation', 'disputed'] as const
@@ -110,6 +182,35 @@ export async function GET(req: Request): Promise<Response> {
     // Colapsarlos en un `Map` por negocio —como se hacía— dejaba uno arbitrario
     // y borraba de la pantalla dinero que sigue pendiente de cerrar.
     const abiertosDelDriver = settlements ?? []
+
+    // Los pedidos de cada ciclo abierto. Siguen haciendo falta después de
+    // declarar la entrega: si la cajera cuenta el fajo y sale distinto, la
+    // conversación es sobre CUÁL pedido no cuadra, y sin el desglose solo queda
+    // disputar el total.
+    const ordersBySettlement = new Map<string, SettlementOrder[]>()
+    const idsAbiertos = abiertosDelDriver.map((s) => s.id)
+    if (idsAbiertos.length > 0) {
+      const { data: rawLinked } = await service
+        .from('orders')
+        .select(
+          'id, short_id, customer_name, delivered_at, cash_owed_at_delivery, change_advanced, cash_settlement_id',
+        )
+        .in('cash_settlement_id', idsAbiertos)
+      // Ver `OrderCashRow`: el cast se va con `pnpm db:types` tras el push.
+      const linked = (rawLinked ?? []) as unknown as (OrderCashRow & {
+        cash_settlement_id: string | null
+      })[]
+      for (const o of linked) {
+        if (!o.cash_settlement_id) continue
+        const list = ordersBySettlement.get(o.cash_settlement_id) ?? []
+        list.push(toSettlementOrder(o))
+        ordersBySettlement.set(o.cash_settlement_id, list)
+      }
+      for (const list of ordersBySettlement.values()) {
+        list.sort((a, b) => (b.deliveredAt ?? '').localeCompare(a.deliveredAt ?? ''))
+      }
+    }
+
     // Dos buckets distintos, como en producción — un negocio puede aparecer en
     // los dos a la vez y son cosas diferentes:
     //
@@ -136,6 +237,7 @@ export async function GET(req: Request): Promise<Response> {
         settlementId: s.id as string | null,
         status: s.status as string | null,
         deliveredAmount: s.delivered_amount as number | null,
+        orders: ordersBySettlement.get(s.id) ?? [],
       })),
     ]
     return ok({ today }, { headers: corsHeaders(req) })

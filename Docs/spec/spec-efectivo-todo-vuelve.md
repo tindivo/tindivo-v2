@@ -168,10 +168,14 @@ orders: {
   cashOwed: number              // cash_owed_at_delivery
   breakdown?: {                 // solo si hay adelanto, para poder explicar el número
     collected: number
-    unusedAdvance: number
+    advance: number
   }
 }[]
 ```
+
+`collected` **se deriva** de `cashOwed - advance`, no se lee de una columna. Guardarlo aparte habría creado una quinta copia de la regla del corte de caja, con el riesgo conocido: que el desglose y el total dejen de cuadrar.
+
+El desglose viaja también en el bucket `awaiting`, no solo en el `pending`: hace falta justo **después** de declarar la entrega, que es cuando la cajera cuenta el fajo y hay que poder señalar un pedido.
 
 Y la pantalla los lista bajo cada negocio: **nombre (o `#código`) · hora · importe**, con el desglose visible cuando el número no sea evidente — que es justo el caso del adelanto, donde el motorizado va a preguntar "¿por qué debo S/ 5 de un pedido que se pagó por Yape?".
 
@@ -187,13 +191,66 @@ Y la pantalla los lista bajo cada negocio: **nombre (o `#código`) · hora · im
 
    Los tests de `0140`/`0141` **no cambian ni una línea**, y conviene entender por qué antes de tocarlos: ninguno sembraba un adelanto (`client_pays_with` y `change_to_give` llegaban NULL del seeder), así que todos describen el caso sin vuelto, donde la fórmula nueva da exactamente lo mismo. Si alguno hubiera empezado a fallar, no sería ruido: sería que el importe se movió donde no debía.
 4. **Endpoint** devolviendo el desglose.
-5. **Pantalla**.
+5. **Pantalla del motorizado**.
+6. **Pantalla del negocio** — ver §6, que es la parte con trabajo de diseño pendiente.
 
 Como en `0140`/`0141`: la base primero. Si se para a medias, queda una base que registra la verdad aunque la UI no la enseñe todavía. Al revés, la app pediría dinero que nadie calculó.
 
 ---
 
-## 6. Cómo generar la función
+## 6. La pantalla del negocio, que es la mitad que falta
+
+**Estado: el dato ya está bien; el diseño no.** Esta sección es el encargo pendiente, no una descripción de algo terminado.
+
+### 6.1 · Lo que ya se arregló, porque era dinero
+
+`apps/negocios/features/efectivo/hooks/use-cash-settlements.ts` calculaba el efectivo pendiente con la regla vieja: filtraba `payment_real = 'paid_cash'` y sumaba `order_amount + delivery_fee`. Era la **cuarta copia** de la regla del corte de caja, y la única que sobrevivió a `0141`.
+
+Con eso la cajera y el motorizado veían números distintos para el mismo dinero, la misma noche:
+
+- un cobro **mixto** no aparecía aquí, aunque el motorizado llevara su parte;
+- y con el adelanto en juego, la cajera veía S/ 45 de un pedido por el que el motorizado rinde S/ 50 — los 5 que **ella misma le adelantó**.
+
+Ahora lee `cash_owed_at_delivery`, igual que todos los demás, y trae el desglose por pedido. **Que las dos pantallas digan el mismo número es la precondición de todo lo demás:** si no coinciden, la conversación entre cajera y motorizado empieza discutiendo cuál de las dos miente, y ahí ya no hay diseño que salve nada.
+
+### 6.2 · El problema de diseño: no se entiende qué se le está pidiendo
+
+La pantalla tiene hoy cuatro bloques —resumen, "Pendiente del motorizado", "Por confirmar ahora", "En disputa", "Historial"— y la cajera no distingue **cuál de ellos requiere que haga algo ahora mismo, con una persona esperando delante**.
+
+Los dos primeros bloques se parecen visualmente y significan cosas opuestas:
+
+| Bloque | Qué es | ¿Acción? |
+|---|---|---|
+| Pendiente del motorizado | dinero que él **todavía tiene encima** | ninguna, es informativo |
+| Por confirmar ahora | dinero que él **ya te entregó** y espera que cuentes | **sí, y hay alguien esperando** |
+
+El segundo es una **solicitud dirigida a ella**: el motorizado declaró "te entregué S/ X" y el ciclo queda abierto hasta que ella confirme o reporte diferencia. Eso hoy no se lee como una solicitud, se lee como una fila más de una lista.
+
+**El síntoma más claro, verificado en pantalla** con tres pedidos sembrados: la tarjeta de resumen dice **"PENDIENTE CONFIRMAR · S/ 0"** y tres centímetros más abajo el bloque dice **"Pendiente del motorizado · S/ 88"**. Dos rótulos casi idénticos, ninguno de los dos falso, contando cosas distintas. Los cuatro contadores de arriba (`cash-summary.tsx`) miden el ciclo de liquidación y el bloque de abajo mide dinero en la calle; puestos juntos, se leen como si se contradijeran.
+
+### 6.3 · Qué tomar del legacy, y qué no
+
+El legacy (`tindivo-delivery`, `features/restaurante/efectivo-recibido/`) resuelve varias de estas cosas y conviene copiarlas:
+
+- **`cash-settlements-list.tsx:43-47` — orden por urgencia, no por fecha.** `delivered → disputed → confirmed → resolved`. Lo que espera acción va arriba siempre. v2 ordena por `created_at` dentro de cada bloque, pero no jerarquiza los bloques entre sí.
+- **`:97-108` — el encabezado dice el estado en una frase.** "2 motorizados con efectivo pendiente · 1 por confirmar". v2 tiene un resumen con cifras sueltas que no dicen qué hacer.
+- **`:264-266` — la instrucción, junto al botón y no en una cabecera.** *"Primero cuenta el efectivo físicamente. Si coincide, confirma. Si no, reporta diferencia — Tindivo resuelve. **No discutas en el local.**"* Esa última frase es política de la empresa y es lo que evita que una diferencia de S/ 5 se convierta en una discusión con el cliente delante. v2 tiene un aviso equivalente pero arriba de la tarjeta, lejos del momento de decidir.
+- **`pending-cash-section.tsx:129-136` — el botón de llamar dentro del detalle.** Ya existe en v2.
+
+Lo que **no** hay que copiar:
+
+- Los gradientes y sombras del legacy (`#065F46 → #10B981`, `bleed-text`). v2 tiene su propio sistema de tokens y componentes en `@tindivo/ui`; el rediseño va con esos, no importando estilos inline.
+- El desglose **siempre colapsado**. En la pantalla del motorizado va abierto —se usa mientras se cuenta el fajo— y en la de la cajera colapsado, que es como quedó. Esa asimetría es deliberada: la misma información, distinto momento de uso.
+
+### 6.4 · Lo que hay que decidir antes de diseñar
+
+1. **¿La confirmación es una tarjeta en una lista o una pantalla dedicada?** Con una persona esperando delante y dinero contado a mano, puede que merezca sacarla de la lista.
+2. **¿Qué pasa si hay dos ciclos abiertos del mismo motorizado?** Es posible desde que el corte dejó de acotarse al día (uno de ayer sin confirmar + uno de hoy). ¿Se cuentan por separado o se fusionan?
+3. **¿La cajera necesita ver el historial en esta pantalla?** Hoy está abajo del todo y nadie ha dicho que lo use.
+
+---
+
+## 7. Cómo generar la función
 
 `advance_order` tiene ~390 líneas y se re-crea entera en cada migración. **No transcribirla a mano.** El método que funcionó en `0140`:
 
@@ -204,11 +261,18 @@ docker exec supabase_db_<ref> psql -U postgres -d postgres -tAc \
     where n.nspname='public' and p.proname='advance_order';"
 ```
 
-Se toca **solo** la rama `deliver` con un script, y se verifica con `diff` contra el volcado: en `0140` salieron **1 línea fuera y 389 idénticas**. Cualquier otra diferencia es una rama perdida.
+Se toca **solo** la rama `deliver` con un script, y se verifica con `diff` contra el volcado: en `0140` salieron **1 línea fuera y 389 idénticas**; en `0146`, **10 líneas** (la fórmula, la validación del billete y el UPDATE) y **0 en las otras diez ramas de acciones**. Cualquier otra diferencia es una rama perdida.
+
+Dos cosas que `0146` añadió al método y conviene conservar:
+
+- **El script aborta si un ancla no aparece exactamente una vez.** Si la definición viva cambia bajo los pies, falla en vez de producir una función silenciosamente distinta.
+- **La migración lleva guardas** (`DO $guard$`) que comprueban, sobre `pg_get_functiondef` ya aplicado, que están las diez ramas y lo que arreglaron `0131` y `0140`. Es la red contra el fallo que `0131` documentó: una omisión que sobrevivió a seis reproducciones sin que nadie la viera.
+
+**Ojo con el punto y coma.** `pg_get_functiondef` **no** cierra con `;`. Sin añadirlo, el splitter de migraciones pega la función y el bloque de guardas en una sola sentencia y la migración falla con un error que no señala la causa.
 
 ---
 
-## 7. Lo que este spec NO cubre
+## 8. Lo que este spec NO cubre
 
 - **La cajera confirmando la recepción** (`confirm_cash_settlement`) no cambia: sigue contando un fajo contra un total.
 - **Las disputas** tampoco. Con el desglose por pedido serán más fáciles de resolver, pero el flujo es el mismo.

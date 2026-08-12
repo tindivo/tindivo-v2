@@ -39,11 +39,21 @@ const E2E_PASSWORD = 'e2e-password-12345'
 /** El seeder crea 50 + 2 de envío. */
 const TOTAL = 52
 
+interface SettlementOrder {
+  orderId: string
+  shortId: string
+  customerName: string | null
+  deliveredAt: string | null
+  cashOwed: number
+  breakdown?: { collected: number; advance: number }
+}
+
 interface TodayRow {
   businessId: string
   expected: number
   orderCount: number
   kind: 'pending' | 'awaiting'
+  orders: SettlementOrder[]
 }
 
 let driverToken = ''
@@ -176,5 +186,72 @@ describe('lo que la pantalla enseña es lo que la rendición cobra', () => {
       (r) => r.kind === 'awaiting' && r.businessId === E2E.BUSINESS_ID,
     )
     expect(awaiting.length).toBeGreaterThan(0)
+    // El desglose sobrevive a declarar la entrega: es lo que permite señalar
+    // CUÁL pedido no cuadra cuando la cajera cuenta el fajo.
+    expect(awaiting[0]?.orders.length).toBeGreaterThan(0)
+  })
+
+  describe('el desglose por pedido', () => {
+    it('lista cada pedido con nombre, hora e importe', async () => {
+      const id = await deliveredAt(new Date())
+      await db.from('orders').update({ customer_name: 'Carmen' }).eq('id', id)
+
+      const row = await pendingRow()
+      const order = row?.orders.find((o) => o.orderId === id)
+      expect(order).toBeDefined()
+      expect(order?.customerName).toBe('Carmen')
+      expect(order?.deliveredAt).toBeTruthy()
+      expect(order?.cashOwed).toBe(TOTAL)
+    })
+
+    it('el nombre puede faltar: la pantalla cae al código', async () => {
+      const id = await deliveredAt(new Date())
+      const row = await pendingRow()
+      expect(row?.orders.find((o) => o.orderId === id)?.customerName).toBeNull()
+      expect(row?.orders.find((o) => o.orderId === id)?.shortId).toHaveLength(8)
+    })
+
+    // LA PREGUNTA QUE EL DESGLOSE VIENE A RESPONDER: "¿por qué debo S/ 8 de un
+    // pedido que se pagó por Yape?". Sin esto, el número no se puede explicar.
+    it('con adelanto trae el desglose; sin adelanto no lo trae', async () => {
+      const { orderId: yapeId } = await seedContraentregaOrder(E2E.BUSINESS_ID)
+      await db
+        .from('orders')
+        .update({
+          driver_id: E2E.DRIVER_ID,
+          status: 'picked_up',
+          client_pays_with: 60,
+          change_to_give: 8,
+        })
+        .eq('id', yapeId)
+      const { error } = await db.rpc('advance_order', {
+        p_order_id: yapeId,
+        p_actor_user_id: E2E.DRIVER_USER_ID,
+        p_actor_role: 'driver',
+        p_action: 'deliver',
+        p_params: { paymentReal: 'paid_yape' },
+      })
+      if (error) throw new Error(`deliver failed: ${error.message}`)
+
+      const sinAdelanto = await deliveredAt(new Date())
+
+      const row = await pendingRow()
+      const conAdelanto = row?.orders.find((o) => o.orderId === yapeId)
+      expect(conAdelanto?.cashOwed).toBe(8)
+      expect(conAdelanto?.breakdown).toEqual({ collected: 0, advance: 8 })
+
+      expect(row?.orders.find((o) => o.orderId === sinAdelanto)?.breakdown).toBeUndefined()
+    })
+
+    // El desglose tiene que sumar el total, o la pantalla se contradice sola.
+    it('los pedidos suman exactamente el total del negocio', async () => {
+      await deliveredAt(new Date())
+      await deliveredAt(new Date())
+
+      const row = await pendingRow()
+      const suma = row?.orders.reduce((s, o) => s + o.cashOwed, 0)
+      expect(suma).toBe(row?.expected)
+      expect(row?.orders.length).toBe(row?.orderCount)
+    })
   })
 })
