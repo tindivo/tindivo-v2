@@ -89,7 +89,11 @@ export function Home() {
           top: 'max(calc(44px + env(safe-area-inset-top)), calc(var(--drv-transfer-h, 0px) + 8px))',
         }}
       >
+        {/* `sm`: tres pestañas en 361px de ancho. La talla base deja "En espera"
+            y "Equipo" pegados a sus bordes y el bloque pesa más que las tarjetas
+            que hay debajo, que son lo que el motorizado viene a leer. */}
         <Segmented<Tab>
+          size="sm"
           value={tab}
           onChange={setTab}
           options={[
@@ -118,7 +122,7 @@ export function Home() {
         />
       )}
       {tab === 'mine' && <MineTab mine={board.mine} loading={board.loading} now={now} />}
-      {tab === 'team' && <TeamTab />}
+      {tab === 'team' && <TeamTab mySlots={board.mySlots} />}
     </main>
   )
 }

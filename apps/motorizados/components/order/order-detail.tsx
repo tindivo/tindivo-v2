@@ -29,10 +29,10 @@ export function OrderDetail({
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
       >
-        <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/55">
+        <span className="font-mono text-meta font-semibold uppercase tracking-[0.14em] text-ink-muted">
           Detalle del pedido
         </span>
-        <span className="flex items-center gap-2 text-[12px] text-ink-subtle">
+        <span className="flex items-center gap-2 text-caption text-ink-subtle">
           {/* Los manuales no traen líneas: "0 productos" sonaba a pedido vacío. */}
           {count === 0
             ? order.isManual
@@ -54,7 +54,7 @@ export function OrderDetail({
         <div className="px-[18px] pb-4">
           {items.map((item) => (
             <div key={item.id} className="border-b border-ink/[0.04] last:border-b-0 pb-2 pt-1">
-              <div className="flex justify-between text-[14px] text-ink-muted">
+              <div className="flex justify-between text-body text-ink-muted">
                 <span>
                   {item.quantity}× {item.name}
                 </span>
@@ -63,7 +63,7 @@ export function OrderDetail({
               {item.modifiers.map((m) => (
                 <div
                   key={`${item.id}-${m.option}`}
-                  className="mt-0.5 flex justify-between pl-5 text-[12px] text-ink-subtle"
+                  className="mt-0.5 flex justify-between pl-5 text-caption text-ink-subtle"
                 >
                   <span>{m.option}</span>
                   {m.additionalPrice > 0 && (
@@ -73,34 +73,34 @@ export function OrderDetail({
               ))}
               {/* En manuales el item sintético duplica business_notes: prima el panel. */}
               {item.note && item.note !== order.businessNotes && (
-                <p className="mt-0.5 pl-5 text-[12px] italic text-ink-subtle">“{item.note}”</p>
+                <p className="mt-0.5 pl-5 text-caption italic text-ink-subtle">“{item.note}”</p>
               )}
             </div>
           ))}
 
           {order.customerNotes && (
-            <div className="mt-2 rounded-[14px] bg-ink/[0.04] px-3 py-2 text-[13px]">
+            <div className="mt-2 rounded-[14px] bg-ink/[0.04] px-3 py-2 text-caption">
               Nota del cliente: {order.customerNotes}
             </div>
           )}
           {order.isManual && order.businessNotes && (
-            <div className="mt-2 rounded-[14px] bg-brand/10 px-3.5 py-3 text-[14px] font-medium text-brand-dark">
+            <div className="mt-2 rounded-[14px] bg-brand/10 px-3.5 py-3 text-body font-medium text-brand-dark">
               {order.businessNotes}
             </div>
           )}
 
           <div className="my-2.5 h-px bg-ink/[0.08]" />
-          <div className="flex justify-between py-0.5 text-[13px] tabular-nums text-ink-muted">
+          <div className="flex justify-between py-0.5 text-caption tabular-nums text-ink-muted">
             <span>Productos</span>
             <span>{soles(order.orderAmount)}</span>
           </div>
-          <div className="flex justify-between py-0.5 text-[13px] tabular-nums text-ink-muted">
+          <div className="flex justify-between py-0.5 text-caption tabular-nums text-ink-muted">
             <span>Delivery</span>
             <span>{soles(order.deliveryFee)}</span>
           </div>
           <div className="flex items-center justify-between pt-1.5">
-            <span className="font-semibold text-[16px]">Total</span>
-            <span className="font-display text-[20px] font-bold tracking-tight tabular-nums">
+            <span className="font-semibold text-body-lg">Total</span>
+            <span className="font-display text-title font-bold tracking-tight tabular-nums">
               {soles(total)}
             </span>
           </div>

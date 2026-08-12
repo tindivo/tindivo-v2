@@ -46,6 +46,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: '/negocios', label: 'Negocios', icon: Ico.store },
       { href: '/motorizados', label: 'Motorizados', icon: Ico.truck },
+      { href: '/agenda', label: 'Agenda', icon: Ico.contacts },
     ],
   },
   {

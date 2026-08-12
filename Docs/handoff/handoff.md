@@ -13,6 +13,8 @@ Una sesión nueva añade su archivo y actualiza la tabla de abajo.
 
 | Archivo | De qué va | Estado al cerrar |
 |---|---|---|
+| [`2026-08-11-los-momentos-sin-aviso.md`](./2026-08-11-los-momentos-sin-aviso.md) | Seis momentos que resolvían a cero destinatarios · había **dos caminos de push en paralelo** y el aviso de la cajera colgaba del muerto · `0136`/`0137`/`0138` | Todo desplegado en producción. **Sigue sin verificarse en un celular**, y la suscripción de la cajera no tiene ninguna evidencia. |
+| [`2026-08-10-whitelist-piloto.md`](./2026-08-10-whitelist-piloto.md) | Diseño del lanzamiento con whitelist para el **14-ago 18:00 (UTC−5)**: tabla de números permitidos, muro con countdown, pantalla en admin | Solo diseño, **cero código**. Una pregunta abierta bloquea el muro del frontend. |
 | [`2026-08-10-push-y-admin.md`](./2026-08-10-push-y-admin.md) | Por qué no llegaba ninguna notificación (tres causas simultáneas) · admin de motorizados: asignación de locales y placa · auto-vínculo `0133` | Push arreglado en producción pero **sin verificar en un celular**. `0132`/`0133` sin pushear. |
 | [`2026-08-10-sprint-motorizados.md`](./2026-08-10-sprint-motorizados.md) | `0129` (la cajera teclea el total) · `0130` (el silencio transfiere) · sprint T1–T8 del panel de motorizados | Su "Lo urgente" **quedó resuelto** por la sesión siguiente: el despliegue de `negocios` sí tiene el código nuevo. |
 

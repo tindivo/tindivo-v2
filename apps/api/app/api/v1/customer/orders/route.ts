@@ -6,11 +6,7 @@ import { sha256Hex } from '@/lib/http/hash'
 import { findCompletedReplay, withIdempotency } from '@/lib/http/idempotency'
 import { handleError, problem } from '@/lib/http/problem'
 import { getRequestId } from '@/lib/http/request-id'
-import {
-  sendOrderCreated,
-  sendOrderNotifyBusiness,
-  sendOrderValidation,
-} from '@/lib/inngest/client'
+import { sendOrderCreated, sendOrderValidation } from '@/lib/inngest/client'
 import { isPhoneAllowed, PILOT_REJECTION_DETAIL } from '@/lib/pilot/gate'
 import { createServiceClient } from '@/lib/supabase/service'
 
@@ -297,29 +293,15 @@ export async function POST(req: Request): Promise<Response> {
           // El pago prepago se realiza en tracking tras la aceptación del negocio.
           if (created.status === 'validando') await sendOrderValidation({ orderId: created.id })
           else await sendOrderCreated({ orderId: created.id })
-
-          // Fallback / obtención de shortId
-          let shortId = created.shortId
-          if (!shortId) {
-            const { data: oData } = await service
-              .from('orders')
-              .select('short_id')
-              .eq('id', created.id)
-              .maybeSingle()
-            shortId = oData?.short_id
-          }
-
-          // Notifica al negocio
-          if (shortId) {
-            await sendOrderNotifyBusiness({
-              businessId: body.businessId,
-              customerName: body.customerName,
-              shortId,
-              paymentIntent: body.paymentIntent,
-            })
-          }
+          // El aviso al negocio NO se manda desde aquí. Salía por Inngest
+          // (`order/notify-business`), o sea por un segundo camino de push con
+          // su propia pareja VAPID y este mismo `catch {}` tragándose los
+          // fallos: si no llegaba, no quedaba rastro en ningún sitio. Desde la
+          // 0136 lo emite send-push al recibir `OrderCreated` del outbox, que es
+          // transaccional con el pedido y deja fila en `push_delivery_log`.
         } catch {
-          // El pedido ya está creado; el negocio lo ve igual. (TODO: dispatch vía outbox.)
+          // Solo quedan los temporizadores. El pedido ya está creado y el
+          // negocio lo ve igual.
         }
       }
     }

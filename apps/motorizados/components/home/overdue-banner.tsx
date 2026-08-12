@@ -7,8 +7,20 @@ type Props = {
 }
 
 /**
- * Banner rojo de alta prioridad que aparece cuando hay pedidos vencidos (overdue).
- * Explicita al repartidor que debe atender estos primero.
+ * Banner de máxima prioridad de la bandeja "En espera".
+ *
+ * NO DICE "VENCIDO", Y ES DELIBERADO. `orderUrgency` marca un pedido por dos
+ * motivos distintos, y ninguno es un contador que llegue a cero:
+ *
+ *   - `urgent_since`: el cron `OrderOverdue` (0134) lo sella cuando NADIE ha
+ *     tomado el pedido tras `assignment_rules.urgentAfterMinutes` (5 por
+ *     defecto). Es el reloj de la ASIGNACIÓN.
+ *   - `estimated_ready_at` ya pasada: es el reloj de la COCINA.
+ *
+ * El primero se dispara con la comida todavía en el horno, así que el banner
+ * decía "vencido" junto a una tarjeta con el contador corriendo tan tranquilo
+ * —`06:17`—, y eso se lee como una contradicción. "Lleva esperando" es cierto
+ * en los dos casos y no promete un plazo agotado.
  */
 export function OverdueBanner({ count }: Props) {
   if (count === 0) return null
@@ -51,8 +63,8 @@ export function OverdueBanner({ count }: Props) {
           </div>
           <div className="font-display text-base font-bold tracking-tight text-white">
             {count === 1
-              ? 'Hay 1 pedido vencido — atiéndelo primero'
-              : `Hay ${count} pedidos vencidos — atiéndelos primero`}
+              ? '1 pedido lleva esperando — tómalo primero'
+              : `${count} pedidos llevan esperando — tómalos primero`}
           </div>
         </div>
       </div>

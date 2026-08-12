@@ -502,3 +502,256 @@ si falla, el aviso se pierde y `published_at` no lo escribe nadie, así que el
 cron `prune-domain-events` tampoco borra nunca); avisos al cliente del prepago
 rechazado (`validate_fail` / `validate_fail_retry` llegan al Edge Function y no
 tienen rama).
+
+---
+
+## 26. La tarjeta del motorizado: qué dice cada sitio y por qué (2026-08-11)
+
+**Supersede §24 en su mitad de `motorizados`.** La parte de `negocios` de §24
+(ordenación por urgencia, cards expandidas vs compactas, democión del precio)
+sigue vigente y no se ha tocado.
+
+Esta entrada se reescribió entera tras ocho iteraciones sobre la tarjeta. Lo que
+se conserva son las **reglas**, no la secuencia: los intentos descartados están
+anotados solo donde entender por qué se descartaron evita repetirlos.
+
+### El problema medido
+
+La tarjeta de §24 medía ~250px. En un móvil de 390px de ancho el lienzo útil son
+~440px —el resto se lo llevan la barra superior, el saludo, las pestañas
+pegajosas y el `pb-28` de la nav—, así que entraban **dos**. Hoy ronda los
+**~120-170px** según variante y longitud de la referencia.
+
+**La altura no se recortó apretando la letra.** Eso habría empeorado justo lo que
+ya se leía mal: `--color-ink-subtle` (#a8a29e) da **2,5:1** sobre blanco, por
+debajo del mínimo AA, y ahí vivían el contador y el vuelto. Se recortó borrando
+filas. Y hubo un punto en que se pasó de frenada: una versión de ~107px entraba
+cuatro veces y se leía amontonada; se cambió la cuarta tarjeta por respiración.
+**El techo útil no es cuántas caben, es cuántas se leen de un vistazo desde una
+moto.**
+
+### Las cuatro filas
+
+1. **Cejilla** — `LOCAL · #código` en versalita gris, y a la derecha **la
+   insignia de estado**.
+2. **Identidad** — el nombre del cliente en `--text-lead`, y a su altura **el
+   reloj**.
+3. **Referencia** — pegada al nombre, en `--text-caption` gris y sin icono.
+4. **Cobro** — en dos alturas: la cifra en `--text-title` mono, y debajo método,
+   desglose y vuelto.
+
+### Cada sitio dice UNA cosa
+
+Esta es la regla que ordena todo lo demás, y la que más veces se rompió al
+intentar atajos:
+
+| Canal | Dice | Nunca dice |
+|---|---|---|
+| Franja izquierda | de qué local es | otra cosa |
+| Insignia (cejilla) | **el estado del pedido** | urgencia |
+| Reloj (junto al nombre) | **el tiempo** | el estado |
+| Borde de la tarjeta | **la emergencia** | grados intermedios |
+
+**LA INSIGNIA ES EL ESTADO DEL PEDIDO, TAL CUAL.** Hubo una versión donde llevaba
+estados *derivados del reloj* ("Te espera", "Demorado") mientras una fila aparte
+llevaba el verbo de la acción ("Recoger pedido"). Eran **dos estados
+conviviendo** y diciendo lo mismo por dos vías —"En el local" y "Recoger pedido"
+son la misma frase— y, entretanto, el estado real del pedido no se veía en
+ninguna parte. El verbo se eliminó: era el estado traducido a imperativo.
+
+**DÓNDE VA "LISTA", QUE ES EL CASO QUE NO ES OBVIO.** `advance_order('ready')`
+(`0128:156-159`) hace dos cosas distintas:
+
+- **Sin motorizado** ("En espera"): el status pasa a `waiting_driver`, así que el
+  estado **ya dice** que está lista y la insignia la enseña.
+- **Con motorizado** ("Míos"): el status **no cambia** —sigue siendo el viaje del
+  motorizado— y lo único que marca la comida es `ready_early_used`. Ahí "Lista"
+  no cabe en la insignia sin pisar el estado.
+
+Por eso en Míos la marca viaja **con el reloj**: es el reloj de la comida, así
+que su visto bueno pertenece ahí. Un pedido puede ser tuyo, ir de camino al local
+y estar la comida lista: insignia "Voy al local", reloj "✓ 04:52". **Los dos
+hechos, sin taparse** — que es lo que exige §23.
+
+Y soltar un pedido encajó solo, sin código: `release` (`0121:205-210`) lo
+devuelve a `preparing` o a `waiting_driver` según la comida esté o no.
+
+### El reloj no se apaga nunca, y cambia de sentido
+
+| Momento | Cuenta | Origen |
+|---|---|---|
+| En cocina | lo que falta | `estimated_ready_at` |
+| Pasada la ETA | lo que se pasó | `estimated_ready_at` |
+| En reparto | **lo que lleva rodando** | `picked_up_at` |
+| Equipo, sin recoger | la edad del pedido | `created_at` |
+| Historial | la hora de entrega | `delivered_at` |
+
+Recoger no acaba el reloj: **cambia lo que cuenta**. Con dos o tres pedidos en la
+mochila, cuál lleva más tiempo rodando es exactamente lo que decide a quién
+entregar primero. `picked_up_at` hubo que añadirlo al select del board; existía
+desde `0002` y nunca se pedía.
+
+**Siempre en mm:ss.** Era adaptativo (`~12 min` por encima de dos minutos) y §23
+afirmaba una "concordancia con motorizados" que no existía: la cajera veía
+`09:55` y él `~10 min` del mismo pedido, justo cuando lo llama.
+
+### Dos colores, dos umbrales, y ninguno intermedio
+
+- **El reloj es negro o rojo.** Rojo en cuanto se pasa de cero. Hubo un escalón
+  ámbar intermedio y se quitó por dos razones: **el número ya lleva el grado**
+  (`00:45` y `14:20` lo dicen solos, así que el color solo tiene que decir *si*),
+  y **el ámbar codificaba `queueLeadMinutes`, un umbral que el motorizado no
+  conoce**. Un color que no se puede interpretar acaba ignorándose.
+- **El borde es el segundo escalón**, con umbral propio: espera a que la demora
+  cruce `queueLeadMinutes`. Así el margen sigue trabajando sin obligar a nadie a
+  entenderlo — una tarjeta enmarcada en rojo se lee sin saber cuántos minutos
+  son. Encendido a la vez que el reloj, un pedido con un segundo de retraso
+  gritaría igual que uno de veinte y se perdería el "atiende ESTE".
+- **El reloj de reparto enrojece a los `deliveryLateMinutes`** (`0139`, 20 por
+  defecto). Nació sin alarma a propósito, porque no había umbral decidido y
+  ponerlo a ojo habría sido fabricar una regla de negocio. En Equipo **no**
+  enrojece: el pedido es de otro y lo recogido no es traspasable, así que sería
+  alarmar sin salida.
+
+**Los colores del ESTADO son categóricos, no semánticos**: nombran la fase (gris
+en cocina, verde lista, azul de camino, naranja en el local, violeta en reparto,
+gris entregado) y **excluyen ámbar y rojo a propósito**, porque esos dos son el
+idioma de la urgencia. Es un **tipo distinto** en el código (`StateTone` vs
+`Tone`) para que nadie pueda darle a un estado un tono de alarma sin que
+TypeScript se queje, y hay un test que cubre lo que el tipo no puede.
+
+### Lo que se decidió sobre el contenido
+
+- **EL NOMBRE ES LA IDENTIDAD, NO UN DATO DE ENTREGA.** Es cómo el motorizado
+  reconoce el pedido en la lista y cómo lo nombra cuando la cajera lo llama. Por
+  eso desplazó al nombre del local —idéntico en el 100% de las tarjetas del
+  piloto y ya codificado por la franja—, que baja a cejilla en versalita gris.
+  **Y por eso pasó a ser obligatorio** en el formulario de la cajera y en el
+  endpoint: era opcional (`0032`) en el único canal que crea pedidos. Se exige en
+  el borde y no en la columna, porque hay filas viejas con NULL. El fallback al
+  `#short_id` se queda para esas.
+- **La referencia va pegada al nombre y sin icono.** Son la misma cosa —a quién y
+  dónde—, y el pin robaba ancho justo a la línea que más se desborda.
+- **El cobro, en dos alturas.** El importe es lo que se lee en la puerta del
+  cliente, con prisa y con casco. `--text-title` y no `--text-display`: en mono
+  los dígitos ya corren más de lo que dice su talla, así que a 22px pesa como el
+  nombre a 17px **sin destronarlo**.
+- **Sin verbos en el cobro**: la misma línea se pinta en el historial. `S/ 45.00 /
+  efectivo` es cierto en cualquier tiempo verbal.
+- **El prepago pone una PALABRA donde va la cifra** ("Prepagado" / "no cobrar").
+  Enseñar `S/ 45.00` al lado de "Prepagado" es una invitación a cobrarlo por
+  error; sin número no hay error posible. Un test fija que ningún otro método
+  haga eso.
+- **En el mixto la cifra grande es la parte en EFECTIVO**, no el total: el
+  motorizado no cuenta 45, cuenta 30 y comprueba que entraron 15 por Yape.
+- **El vuelto aparece también en "En espera"**: si no llevas sencillo, un pedido
+  que paga con billete grande es un problema que prefieres ver antes de
+  aceptarlo.
+
+### La bandeja se ordena por el reloj que enseña
+
+Ordenaba por `created_at` —"del más antiguo al más nuevo"— y **se leía como un
+desorden**, porque `created_at` no coincide con el reloj: cada pedido lleva su
+`prep_time_minutes`, así que uno pedido antes puede estar listo después. La lista
+mostraba contadores en secuencias tipo `03:00 · 07:00 · 02:00` sin regla
+deducible.
+
+Con `estimated_ready_at` ascendente los contadores bajan monótonos y es **un solo
+criterio**: lo pasado de cero queda arriba por aritmética. **Y deja de moverse**:
+el comparador viejo dependía de la hora actual, así que una tarjeta saltaba al
+tope al cruzar el cero, reordenando bajo el pulgar. Vive en `lib/orders/sort`.
+
+### `urgent_since` no pinta el tablero
+
+Lo sella el cron `OrderOverdue` (`0134`) tras `assignment_rules.urgentAfterMinutes`
+(5 por defecto) — **otro reloj**, el de la asignación, que salta con la comida
+todavía en el horno. Se retiró de `orderUrgency` porque:
+
+1. A los 5 minutos sin dueño, con un motorizado y ~10 pedidos por noche, es
+   **operación normal**: está repartiendo.
+2. **Ya hay un aviso, y es fuerte**: push a todos con `requireInteraction` y
+   vibración. Añadirle banner, reordenación y bloqueo eran tres canales más para
+   el mismo hecho. Un banner que grita cuando no pasa nada deja de creerse.
+
+Por lo mismo, ni el banner ni el bloqueo dicen ya **"vencido"**: esa palabra
+promete un plazo agotado y se leía junto a un contador corriendo tan tranquilo.
+
+### El view-model del board, con tests
+
+`apps/motorizados` no tenía **un solo test** mientras `apps/negocios` ya había
+elegido este patrón en `lib/orders/view-model.ts`. Las decisiones de presentación
+salen del JSX a `lib/orders/card-view-model.ts`, puro y con 56 tests entre él y
+`sort`. Sin eso, 4 variantes × 4 métodos de cobro × 4 estados de urgencia solo se
+verificaban abriendo la app y mirando — que es exactamente como se colaron los
+defectos de abajo.
+
+### Defectos que esto cerró, cada uno con su test
+
+| Defecto | Arreglo |
+|---|---|
+| El **historial entero en rojo**: el borde se calculaba sin mirar la variante y una ETA de hace horas dispara la alarma | `delivered` nunca se colorea |
+| **Dos definiciones de "vencido"**: la bandeja ordenaba y gritaba con un criterio y la tarjeta con otro más estricto, así que el banner señalaba una tarjeta neutra | La tarjeta enrojece exactamente cuando `orderUrgency` marca; hay test |
+| Un `preparing` tomable mostraba **"Ver pedido"** en el sitio de peso máximo | Ya no hay fila de verbo |
+| Equipo pintaba **"Entregar a {compañero}"**: imperativo a quien no puede ejecutarlo, con el nombre del dueño donde se espera el del cliente | Equipo no tiene verbo; el estado va a la insignia |
+| **El vuelto de un pago mixto no se mostraba nunca**: `cash_amount`/`yape_amount` existen desde `0002` y `negocios` ya los leía, pero el board no los pedía | Al select; el mixto desglosa |
+| Un `payment_intent` **nulo o desconocido** afirmaba "Cobrar en efectivo" | `método por confirmar` |
+| El historial mostraba el cobro **en imperativo** y un `20:45` desnudo sin rótulo | Sin verbos; insignia "Entregado" + hora |
+| La tarjeta entera era un `<button>` con `<p>`/`<div>` dentro: HTML inválido y ~40 palabras como una sola etiqueta | `div` + botón estirado con `aria-label` corto |
+| Rejilla desalineada 4px, glow del acento recortado por `overflow-hidden`, tallas `text-[10.5px]`…`text-[20px]` esquivando la escala | Rejilla única, sin glow, solo tokens |
+| **`cn()` borraba en silencio las tallas del tema** (ver §27) | `extendTailwindMerge` en `packages/ui` |
+
+### Sin botón de acción en la tarjeta, y se evaluó a fondo
+
+Un botón "Tomar" sería un **segundo objetivo táctil** a 44px del primero con
+consecuencia distinta: tocar abre el detalle, el botón te compromete con una
+entrega. Con guantes, un fallo deja de ser "una pantalla de la que sales con
+atrás". Y `release` no es gratis: avisa a todo el equipo (§25). **La tarjeta es
+el índice; el detalle, donde se decide y se actúa.**
+
+`pickup` y `deliver` **no podrían** tenerlo aunque quisiéramos: `pickup` pide
+`slots` (abre hoja) y es donde se devengan los cargos (`0128`); `deliver`
+confirma el cobro.
+
+La forma rápida de tomar que sí se va a construir es un **swipe
+izquierda→derecha**: no compite con el toque —ejes distintos—, no se dispara sin
+querer si va con umbral, y cuesta 0px. Va como cambio aparte para poder
+revertirlo solo.
+
+### Pendiente
+
+- **La pantalla de detalle** (`/pedido/[id]`) todavía habla otro idioma visual:
+  su `status-hero`, `money-card` y `preview-section` no siguen estas reglas.
+- **`negocios`** conserva la mitad de §24 que le toca.
+
+---
+
+## 27. `cn()` borraba en silencio las tallas de texto del tema (2026-08-11)
+
+`tailwind-merge` resuelve conflictos por grupos de clases y solo conoce las
+tallas de fábrica (`text-sm`, `text-lg`…). Una `text-caption` le resulta
+desconocida y la clasifica como **color** de texto —tiene la misma forma,
+`text-<algo>`—, así que cualquier `text-ink-muted` en la misma llamada la pisa.
+El elemento se queda **sin talla y hereda 16px, sin avisar**.
+
+Comprobado contra el propio merger:
+
+```
+cn('mt-1 text-caption font-medium', 'text-ink-muted')
+  -> mt-1 font-medium text-ink-muted        (text-caption BORRADA)
+cn('text-sm font-medium', 'text-ink-muted')
+  -> text-sm font-medium text-ink-muted     (sobrevive)
+```
+
+Lo perverso es que **el mismo par funciona escrito a pelo en un `className`**
+—ahí `twMerge` no corre— y falla dentro de `cn()`. Se descubrió porque el detalle
+del cobro de la tarjeta del motorizado salía más grande que la referencia
+teniendo los dos `text-caption`; estaban afectados también la cifra y el reloj,
+que se veían casi del mismo tamaño.
+
+Las nueve tallas de `theme.css` se declaran ahora como grupo `font-size` en
+`packages/ui/src/lib/cn.ts`. Los conflictos de verdad siguen resolviéndose
+(`cn('text-caption', 'text-title')` sigue dando `text-title`).
+
+**Al añadir una talla nueva a `@theme`, hay que añadirla también ahí.** Es el
+único acoplamiento que deja esta solución, y no avisa si se olvida.
+

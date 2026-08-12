@@ -1,23 +1,118 @@
 'use client'
 
-import { Badge, Card, cn, Icon } from '@tindivo/ui'
+import { Card, cn, Icon } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { SourceChip } from '@/components/source-chip'
-import { useQueueLeadMinutes } from '@/hooks/use-queue-lead'
+import { useDriverTimers } from '@/hooks/use-queue-lead'
 import { getTransferRemaining } from '@/hooks/use-team'
-import { hourOf, mmss, soles } from '@/lib/format'
-import { changeDue } from '@/lib/payment'
+import { mmss } from '@/lib/format'
+import {
+  buildCardVM,
+  type CardVariant,
+  type StateTone,
+  type Tone,
+} from '@/lib/orders/card-view-model'
 import type { CardOrder, TeamResponse } from '@/lib/types'
-import { remainingParts } from '@/lib/urgency'
 
 type IncomingRequest = TeamResponse['receivedRequests'][number]
+
+/**
+ * Tarjeta del board, de arriba abajo por orden de lectura real:
+ *
+ *   1. Cejilla   — local · código en gris pequeño, y EL RELOJ en la esquina.
+ *   2. Identidad — el nombre, en grande, con la insignia de estado a su altura.
+ *   3. Referencia— dónde va. En un pueblo sin numeración, esto ES la dirección.
+ *   4. Verbo     — solo en "Míos".
+ *   5. Cobro     — una línea, método al frente.
+ *
+ * EL RELOJ ARRIBA Y EL ESTADO ABAJO NO ES DECORACIÓN: son dos hechos distintos
+ * que tienen que poder verse a la vez. Un intento anterior los fundió en una
+ * sola ranura "con la verdad más urgente" y eso escondía el contador en cuanto
+ * la cajera marcaba la comida lista — exactamente la regresión que `DECISIONS
+ * §23` había arreglado y prohibido por escrito. Separados, "Lista" y el reloj
+ * conviven, que es lo que hacía el legacy.
+ *
+ * SOBRE EL AIRE. Una primera versión bajó a ~107px y entraban cuatro tarjetas,
+ * pero se leían amontonadas. Se cambia la cuarta tarjeta por respiración: el
+ * espaciado vuelve a ser cómodo y quedan tres cómodas en lugar de cuatro
+ * apretadas. El punto de partida eran DOS.
+ *
+ * Las decisiones de QUÉ se dice viven en `lib/orders/card-view-model`, con
+ * tests. Aquí solo se pinta.
+ */
+
+/**
+ * EL BORDE MARCA LA EMERGENCIA, Y NADA MÁS. No es un termómetro.
+ *
+ * Tenía un escalón ámbar y otro rojo, o sea un TERCER canal de color repitiendo
+ * lo que el reloj ya dice con los mismos dos tonos — y encima su ámbar se
+ * confundía con la franja naranja del local, que está a tres píxeles. La
+ * pregunta "¿qué significa el marrón?" es la prueba: si hay que preguntarlo, no
+ * está comunicando.
+ *
+ * Ahora el reloj lleva la escala completa (neutro → ámbar → rojo) y el borde
+ * solo se enciende en el último escalón, para que una tarjeta urgente siga
+ * siendo localizable de un vistazo mientras se hace scroll. Un solo nivel, un
+ * solo significado: "esta ya".
+ *
+ * Se mantiene la doctrina de `urgency.ts`: la urgencia mueve el hairline, nunca
+ * el relleno. Los fondos semánticos del rediseño anterior aplanaban el
+ * contraste de todo lo que hay dentro justo en la tarjeta que más urge leer, y
+ * uno era del 2% de opacidad, invisible al sol.
+ */
+const TONE_BORDER: Record<Tone, string> = {
+  neutral: 'border-ink/10',
+  success: 'border-ink/10',
+  warning: 'border-ink/10',
+  danger: 'border-danger/45',
+}
+
+/**
+ * El reloj, a la altura del nombre. Lleva el peso porque es el dato que decide
+ * si te da tiempo. Sin caja: el tamaño y el color ya lo destacan, y una píldora
+ * ahí compite con el nombre.
+ *
+ * NEGRO O ROJO, SIN ESCALONES INTERMEDIOS. En negro (`ink`, no `ink-muted`)
+ * porque es el número que se lee de lejos y merece los 15:1 de contraste; en
+ * rojo en cuanto se pasa de cero. Cuánto se pasó lo dice el propio número.
+ */
+const CLOCK_TONE: Record<Tone, string> = {
+  neutral: 'text-ink',
+  success: 'text-ink',
+  warning: 'text-danger',
+  danger: 'text-danger',
+}
+
+/**
+ * La insignia, arriba en la cejilla. Pequeña y con caja: es una palabra que se
+ * busca de un vistazo, no un número que se lee.
+ *
+ * GAMA CATEGÓRICA, Y SIN ÁMBAR NI ROJO. Esos dos son el idioma del reloj en
+ * esta tarjeta —"se te está pasando", "ya se pasó"— y son lo único que
+ * significa urgencia. Un estado normal pintado de ámbar sería indistinguible de
+ * una alarma y el color dejaría de querer decir nada. Aquí el color solo
+ * identifica la fase.
+ *
+ * Los pares 50/800 no son un capricho: todos quedan por encima de 8:1 sobre su
+ * propio fondo (el naranja, con los tokens de marca, en ~5,9:1). Bien por
+ * encima del mínimo AA, que es justo lo que hace falta en una pantalla que se
+ * lee en la calle.
+ */
+const BADGE_TONE: Record<StateTone, string> = {
+  idle: 'bg-ink/[0.05] text-ink-muted',
+  ready: 'bg-emerald-50 text-emerald-800',
+  transit: 'bg-sky-50 text-sky-800',
+  onsite: 'bg-brand-soft text-brand-dark',
+  carrying: 'bg-violet-50 text-violet-800',
+  done: 'bg-ink/[0.05] text-ink-muted',
+}
 
 function IncomingRequestStrip({ request, now }: { request: IncomingRequest; now: number }) {
   const { remainingSec, expired } = getTransferRemaining(request, now)
 
   if (expired) {
     return (
-      <p className="mb-2 flex items-center gap-1.5 rounded-lg bg-warning-soft px-2.5 py-1.5 text-[11.5px] font-bold text-amber-900">
+      <p className="mb-2.5 flex items-center gap-1.5 rounded-lg bg-warning-soft px-2.5 py-1.5 text-meta font-bold text-amber-900">
         <Icon name="sync" size={14} filled />
         Traspaso en curso a {request.requesterName}
       </p>
@@ -25,84 +120,11 @@ function IncomingRequestStrip({ request, now }: { request: IncomingRequest; now:
   }
 
   return (
-    <p className="mb-2 flex items-center gap-1.5 rounded-lg bg-danger-soft px-2.5 py-1.5 text-[11.5px] font-bold text-danger animate-pulse">
+    <p className="mb-2.5 flex animate-pulse items-center gap-1.5 rounded-lg bg-danger-soft px-2.5 py-1.5 text-meta font-bold text-danger">
       <Icon name="swap_horiz" size={14} filled />
       {request.requesterName} te lo está pidiendo
       <span className="ml-auto font-mono tabular-nums">{mmss(remainingSec)}</span>
     </p>
-  )
-}
-
-const ACTION_VERB: Record<string, string> = {
-  heading_to_restaurant: 'Ir al local',
-  waiting_at_restaurant: 'Recoger pedido',
-  picked_up: 'Entregar pedido',
-  waiting_driver: 'Tomar pedido',
-  delivered: 'Pedido entregado',
-}
-
-type Pill = { label: string; icon: string; tone: 'default' | 'brand' | 'success' | 'warning' }
-
-const STATE_PILL: Record<string, Pill> = {
-  heading_to_restaurant: { label: 'En camino al local', icon: 'directions_bike', tone: 'warning' },
-  waiting_at_restaurant: { label: 'Esperando pedido', icon: 'hourglass_top', tone: 'warning' },
-  picked_up: { label: 'En entrega', icon: 'delivery_dining', tone: 'brand' },
-  delivered: { label: 'Entregado', icon: 'check_circle', tone: 'success' },
-}
-
-function statePillFor(order: CardOrder, variant: string): Pill | null {
-  if (variant === 'delivered') return STATE_PILL.delivered ?? null
-  return STATE_PILL[order.status] ?? null
-}
-
-function CookingChip({
-  readyAt,
-  now,
-  readyEarly = false,
-}: {
-  readyAt: string
-  now: number
-  readyEarly?: boolean
-}) {
-  const queueLeadMin = useQueueLeadMinutes()
-  const remainingMs = Date.parse(readyAt) - now
-  const remainingSec = remainingMs / 1000
-  const { value, late } = remainingParts(remainingMs)
-
-  if (late) {
-    if (readyEarly) {
-      const elapsedSec = Math.abs(remainingMs) / 1000
-      const isAmber = elapsedSec <= queueLeadMin * 60
-      const timeStr = mmss(elapsedSec)
-      return (
-        <span
-          className={cn(
-            'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums border',
-            isAmber
-              ? 'bg-amber-50 text-amber-900 border-amber-300/60'
-              : 'bg-danger-soft text-danger border-danger/20',
-          )}
-        >
-          <Icon name={isAmber ? 'schedule' : 'priority_high'} size={13} />
-          Te espera hace {timeStr}
-        </span>
-      )
-    }
-
-    return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-danger-soft px-2 py-0.5 text-[11px] font-semibold tabular-nums text-danger border border-danger/20">
-        <Icon name="priority_high" size={13} />
-        Esperando {mmss(Math.abs(remainingSec))}
-      </span>
-    )
-  }
-
-  // Countdown en curso normal: Terciario sin color semántico
-  return (
-    <span className="inline-flex items-center gap-1 text-meta text-ink-subtle font-mono">
-      <Icon name="schedule" size={13} className="text-ink-subtle" />
-      Listo en {value}
-    </span>
   )
 }
 
@@ -117,206 +139,201 @@ export function OrderCard({
 }: {
   order: CardOrder
   now: number
-  variant?: 'available' | 'mine' | 'delivered' | 'team'
+  variant?: CardVariant
   ownerName?: string
   incomingRequest?: IncomingRequest | null
   blocked?: boolean
   blockedReason?: string
 }) {
   const router = useRouter()
-  const queueLeadMin = useQueueLeadMinutes()
-  const total = order.order_amount + order.delivery_fee
-  const isTeam = variant === 'team'
-  const inert = blocked || isTeam
-  const muted = blocked
-  const accent = `#${order.business?.accent_color ?? 'f97316'}`
-  const statePill = statePillFor(order, variant)
-
-  const vuelto = changeDue({
-    paymentIntent: order.payment_intent,
-    total,
-    cashAmount: null,
-    clientPaysWith: order.client_pays_with,
-    changeToGive: order.change_to_give,
+  const { queueLeadMinutes, deliveryLateMinutes } = useDriverTimers()
+  const vm = buildCardVM({
+    order,
+    now,
+    variant,
+    queueLeadMinutes,
+    deliveryLateMinutes,
+    ownerName,
+    blocked,
+    blockedReason,
   })
-
-  const readyAt = order.estimated_ready_at
-  const showCountdown = readyAt != null && variant !== 'delivered' && order.status !== 'picked_up'
-
-  // Determinación de Urgencia y Colores de Borde (A.4)
-  const remainingMs = readyAt ? Date.parse(readyAt) - now : 0
-  const isLate = readyAt ? remainingMs < 0 : false
-  const elapsedSec = isLate ? Math.abs(remainingMs) / 1000 : 0
-  const isOverdue = isLate && order.ready_early_used && elapsedSec > queueLeadMin * 60
-
-  let borderStyle = 'border-ink/10 bg-card'
-  if (isOverdue) {
-    borderStyle = 'border-danger/40 bg-danger-soft/10 shadow-sm'
-  } else if (isLate && order.ready_early_used) {
-    borderStyle = 'border-warning/50 bg-amber-50/20'
-  } else if (order.ready_early_used) {
-    borderStyle = 'border-success/40 bg-success/[0.02]'
-  }
-
-  // Acción verbal personalizada
-  let actionText = ACTION_VERB[order.status] ?? 'Ver pedido'
-  if (order.status === 'picked_up' && (isTeam ? ownerName : order.customer_name)) {
-    actionText = `Entregar a ${isTeam ? ownerName : order.customer_name}`
-  }
+  const accent = `#${order.business?.accent_color ?? 'f97316'}`
 
   return (
     <Card
-      as={inert ? 'div' : 'button'}
-      {...(inert ? { 'aria-disabled': true } : { type: 'button' as const })}
-      onClick={inert ? undefined : () => router.push(`/pedido/${order.id}`)}
+      as="div"
       className={cn(
-        'relative block w-full overflow-hidden p-3.5 text-left transition-all duration-300 border rounded-2xl',
-        borderStyle,
-        muted && 'opacity-70',
-        inert
-          ? 'cursor-default'
-          : 'hover:-translate-y-0.5 hover:shadow-elev-2 active:translate-y-0 active:scale-[0.99]',
+        'relative w-full overflow-hidden rounded-2xl border bg-card py-3.5 pr-3.5 pl-4 text-left transition-shadow duration-200',
+        TONE_BORDER[vm.tone],
+        vm.muted && 'opacity-70',
+        // `Card` mete `hover:shadow-elev-2` en su base incondicionalmente, así
+        // que las tarjetas que NO se pueden pulsar —Equipo, y las bloqueadas de
+        // "En espera"— se levantaban al pasar el cursor fingiendo ser
+        // clicables. `twMerge` deja ganar a la última del mismo grupo.
+        !vm.interactive && 'hover:shadow-elev-1',
       )}
     >
-      {/* Franja de acento de marca del local */}
+      {/* Franja de acento del local. Sin glow: `overflow-hidden` lo recortaba
+          entero, así que era una sombra pagada y nunca vista. */}
       <span
         aria-hidden
-        className="absolute inset-y-0 left-0 w-1.5 rounded-l-2xl"
-        style={{ backgroundColor: accent, boxShadow: `0 0 8px ${accent}40` }}
+        className="absolute inset-y-0 left-0 w-1.5"
+        style={{ backgroundColor: accent }}
       />
 
-      {/* Traspaso entrante (Modal o Strip Flotante Superior) */}
+      {/*
+        UN SOLO OBJETIVO TÁCTIL, y encima de todo.
+
+        Antes la tarjeta ENTERA era un `<button>` con `<p>` y `<div>` dentro:
+        HTML inválido, y un lector de pantalla anunciaba las ~40 palabras del
+        contenido como una sola etiqueta. Ahora el contenedor es un `div`
+        normal y la interacción la lleva este botón transparente estirado, con
+        una etiqueta corta que dice de qué pedido se trata.
+      */}
+      {vm.interactive && (
+        <button
+          type="button"
+          onClick={() => router.push(`/pedido/${order.id}`)}
+          aria-label={`Ver pedido de ${vm.identity} · ${vm.businessName}`}
+          className="absolute inset-0 z-10 cursor-pointer rounded-2xl focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2 active:scale-[0.99]"
+        />
+      )}
+
       {variant === 'mine' && incomingRequest && (
         <IncomingRequestStrip request={incomingRequest} now={now} />
       )}
 
-      {/* ── BANDA 1 · ORIENTACIÓN (peso medio) ── */}
-      <div className="mb-2.5 pl-1">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5 min-w-0">
-            <span className="truncate font-medium text-caption text-ink-muted">
-              {order.business?.name ?? 'Restaurante'}
-            </span>
-            <span className="font-mono text-micro text-ink-subtle shrink-0">#{order.short_id}</span>
-            {order.source === 'customer_pwa' && <SourceChip source={order.source} />}
-          </div>
+      {/* ── 1 · Cejilla, con la INSIGNIA DE ESTADO en la esquina ──
+          MAYÚSCULAS Y NEGRITA, PERO EN GRIS. Es el patrón de cejilla que ya usa
+          la app (`upcoming-orders-section`) y el que traía el legacy: la
+          versalita da estructura y peso de rótulo sin robarle protagonismo al
+          nombre, porque el gris lo mantiene en segundo plano. En negro
+          competiría; en gris minúscula se perdía. */}
+      <div className="flex items-center gap-1.5 text-micro text-ink-muted">
+        <span className="truncate font-bold uppercase tracking-[0.1em]">{vm.businessName}</span>
+        {vm.shortId && <span className="shrink-0 font-mono">#{vm.shortId}</span>}
+        {vm.showSourceChip && <SourceChip source={order.source} />}
 
-          {isTeam && statePill && (
-            <Badge variant={statePill.tone} size="sm" className="shrink-0 gap-1 text-[10.5px]">
-              <Icon name={statePill.icon} size={12} filled />
-              {statePill.label}
-            </Badge>
-          )}
-        </div>
-
-        {(order.delivery_reference ?? order.delivery_address) && (
-          <p className="mt-1 flex items-start gap-1 text-body font-medium leading-snug text-ink">
-            <Icon name="location_on" size={16} className="mt-0.5 shrink-0 text-brand" />
-            <span className="line-clamp-2">
-              {order.delivery_reference ?? order.delivery_address}
-            </span>
-          </p>
-        )}
-
-        <p className="mt-0.5 text-caption text-ink-muted pl-5">
-          Cliente:{' '}
-          <span className="font-medium text-ink-muted">
-            {isTeam ? (ownerName ?? 'Compañero') : (order.customer_name ?? 'Cliente')}
+        {vm.badge && (
+          <span
+            className={cn(
+              'ml-auto inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 font-semibold',
+              BADGE_TONE[vm.badge.tone],
+            )}
+          >
+            <Icon name={vm.badge.icon} size={12} filled />
+            {vm.badge.text}
           </span>
-        </p>
-      </div>
-
-      {/* ── BANDA 2 · ACCIÓN (peso máximo) — M1: La acción en su propia línea ── */}
-      <div className="mb-3 pl-1">
-        {/* Fila A: Acción Verbal sola en su propia línea */}
-        <div className="block font-semibold text-lead text-ink tracking-tight">{actionText}</div>
-
-        {/* Fila B: Badges y timers en la siguiente línea (Comida lista solo cuando va al local) */}
-        {((order.ready_early_used && order.status === 'heading_to_restaurant') ||
-          showCountdown) && (
-          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-            {order.ready_early_used && order.status === 'heading_to_restaurant' && (
-              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-success-soft px-2 py-0.5 text-[11px] font-semibold text-success">
-                <Icon name="check_circle" size={13} filled />
-                Comida lista
-              </span>
-            )}
-            {showCountdown && (
-              <CookingChip
-                readyAt={readyAt}
-                now={now}
-                readyEarly={Boolean(order.ready_early_used)}
-              />
-            )}
-          </div>
         )}
       </div>
 
-      {/* ── BANDA 3 · DINERO (peso protegido) — M2: Jerarquía dentro de cobro ── */}
-      {blocked && blockedReason ? (
-        <div className="rounded-xl bg-ink/[0.04] p-2.5 border border-ink/[0.06] text-caption font-medium text-ink-muted flex items-center gap-1.5">
-          <Icon name="lock" size={14} className="shrink-0 text-ink-muted" />
-          <span>Acción suspendida: {blockedReason}</span>
-        </div>
-      ) : (
-        <div className="rounded-xl bg-ink/[0.03] p-2.5 border border-ink/[0.05]">
-          {isTeam ? (
-            <div>
-              <span className="block font-mono text-[20px] font-bold text-ink leading-tight">
-                {soles(total)}
-              </span>
-              <span className="block text-caption font-semibold text-ink-muted mt-0.5">
-                Importe del pedido
-              </span>
-            </div>
-          ) : order.payment_intent === 'prepaid' ? (
-            <div>
-              {/* "No cobrar" ocupa el lugar de la cifra grande */}
-              <span className="block font-sans text-[20px] font-bold text-success leading-tight">
-                No cobrar
-              </span>
-              <span className="block text-caption font-semibold text-success/90 mt-0.5">
-                Prepagado en la app
-              </span>
-              <span className="block text-meta text-ink-subtle mt-0.5">
-                Ya pagado por el cliente
-              </span>
-            </div>
-          ) : (
-            <div>
-              {/* Cifra grande en mono peso 700 */}
-              <span className="block font-mono text-[20px] font-bold text-ink leading-tight">
-                {soles(total)}
-              </span>
-
-              {/* Cualificador en caption */}
-              <span className="block text-caption font-semibold text-ink-muted mt-0.5">
-                {order.payment_intent === 'pending_yape' ||
-                (order.payment_intent as string) === 'pending_wallet'
-                  ? 'Cobrar por Yape / Plin'
-                  : order.payment_intent === 'pending_mixed'
-                    ? 'Pago mixto (Yape + Efectivo)'
-                    : 'Cobrar en efectivo'}
-              </span>
-
-              {/* Instrucción en meta */}
-              <span className="block text-meta text-ink-subtle mt-0.5">
-                {order.payment_intent === 'pending_yape' ||
-                (order.payment_intent as string) === 'pending_wallet'
-                  ? 'Muestra el QR al cliente'
-                  : order.payment_intent === 'pending_mixed'
-                    ? 'Verifica saldo Yape + efectivo'
-                    : vuelto != null && vuelto > 0
-                      ? `Paga con ${soles(order.client_pays_with ?? 0)} · devuelves ${soles(vuelto)}`
-                      : 'Sin vuelto'}
-              </span>
-            </div>
+      {/* ── 2 · Identidad + EL RELOJ ──
+          El reloj cae aquí, a la altura del nombre, porque es donde va la vista
+          y porque es el número que decide si te da tiempo. */}
+      <div className="mt-1.5 flex items-center justify-between gap-2">
+        <span className="flex min-w-0 items-center gap-1.5">
+          {vm.identityIcon && (
+            <Icon name={vm.identityIcon} size={17} className="shrink-0 text-ink-muted" />
           )}
-        </div>
+          <span className="truncate font-semibold text-lead text-ink tracking-tight">
+            {vm.identity}
+          </span>
+        </span>
+
+        {vm.clock && (
+          <span className="flex shrink-0 items-center gap-1">
+            {/* El visto de comida lista viaja CON el reloj, no en la insignia:
+                con el pedido ya tomado el estado habla del viaje del motorizado
+                (`ready` no cambia el status cuando hay dueño, 0128:156-159), así
+                que "lista" no cabe arriba sin pisarlo. Y es el reloj de la
+                comida: su visto bueno pertenece aquí. */}
+            {vm.clock.ready && (
+              <Icon name="check_circle" size={15} filled className="text-success" />
+            )}
+            {/* EL SIGNO NO ES ADORNO: hace que la alarma no dependa del color,
+                que es lo primero que se pierde con el sol de frente o con una
+                pantalla barata. Va estático a propósito — el número ya cambia
+                cada segundo y es lo único que se mueve solo en la tarjeta;
+                animarlo encima sería ruido, y repintar cada 2s durante todo un
+                turno se paga en batería. El parpadeo vive en el banner, uno
+                solo en toda la pantalla. */}
+            {vm.clock.tone === 'danger' && (
+              <Icon name="priority_high" size={16} filled className="text-danger" />
+            )}
+            <span
+              className={cn(
+                'font-mono text-body-lg font-bold tabular-nums',
+                CLOCK_TONE[vm.clock.tone],
+              )}
+            >
+              {vm.clock.text}
+            </span>
+          </span>
+        )}
+      </div>
+
+      {/* ── 3 · Referencia, PEGADA AL NOMBRE ──
+          Van juntos porque son la misma cosa: a quién y dónde. Separarlos con
+          aire los convertía en dos datos sueltos.
+
+          SIN ICONO: es la única línea de texto libre de la tarjeta, así que no
+          hace falta un pin para saber que es la dirección — y el pin le robaba
+          ancho justo a la línea que más se desborda, la referencia larga de
+          pueblo.
+
+          `line-clamp-2` y no altura fija: una referencia rural truncada es una
+          entrega equivocada, así que las tarjetas con dirección larga miden más
+          y está bien que así sea. */}
+      {vm.reference && (
+        <p className="mt-0.5 line-clamp-2 text-caption leading-snug text-ink-muted">
+          {vm.reference}
+        </p>
       )}
 
-      {variant === 'delivered' && order.delivered_at && (
-        <p className="mt-2 font-mono text-micro text-ink-subtle">{hourOf(order.delivered_at)}</p>
+      {/* ── 4 · Cobro, o el motivo del bloqueo en su lugar ──
+          AQUÍ VIVÍA EL VERBO ("Recoger pedido", "Ir al local"). Se fue: con el
+          estado del pedido en la insignia, era el mismo hecho dos veces —"En el
+          local" y "Recoger pedido" son la misma frase— y dejaba dos estados
+          conviviendo en la tarjeta. */}
+      {vm.blockedReason ? (
+        <p className="mt-3 flex items-center gap-1.5 text-caption font-medium text-ink-muted">
+          <Icon name="lock" size={14} className="shrink-0" />
+          {vm.blockedReason}
+        </p>
+      ) : (
+        vm.money && (
+          <div className="mt-3">
+            {/* LA CIFRA, EN GRANDE. Es lo que se lee en la puerta del cliente,
+                con prisa y con casco, y hasta ahora pesaba lo mismo que la
+                palabra "efectivo" que la acompaña.
+
+                `--text-title` y no `--text-display`: en mono los dígitos ya
+                ocupan más de lo que dice su talla, así que a 22px el importe
+                pesa como el nombre a 17px sin llegar a destronarlo — y el nombre
+                sigue siendo la identidad de la tarjeta. */}
+            <p
+              className={cn(
+                'font-mono text-title font-bold leading-none tracking-tight tabular-nums',
+                vm.money.tone === 'success' ? 'text-success' : 'text-ink',
+              )}
+            >
+              {vm.money.headline}
+            </p>
+            {/* `ink-muted` y NO `ink-subtle`: aquí vive el vuelto, y
+                `--color-ink-subtle` da 2,5:1 sobre blanco — por debajo del
+                mínimo legible, en la calle y con casco. */}
+            {vm.money.detail && (
+              <p
+                className={cn(
+                  'mt-1 text-caption font-medium',
+                  vm.money.tone === 'success' ? 'text-success' : 'text-ink-muted',
+                )}
+              >
+                {vm.money.detail}
+              </p>
+            )}
+          </div>
+        )
       )}
     </Card>
   )

@@ -67,6 +67,16 @@ pnpm graphify:cluster   # re-agrupa y actualiza reportes del grafo existente
 pnpm graphify:hooks     # instala post-commit git hook para auto-actualizar
 ```
 
+## Uso de Graphify (Ahorro de tokens y velocidad)
+
+Para ahorrar tokens y obtener contexto rápido del monorepo, **usar Graphify antes de hacer búsquedas masivas de código**:
+
+1. **Consultas de arquitectura o flujo:** `graphify query "<pregunta>"` devuelve solo el subgrafo relevante acotado (máx. 2-3 hops) sin leer decenas de archivos.
+2. **Explorar dependencias de una entidad/fichero:** `graphify explain "<simbolo_o_archivo>"` (ej. `graphify explain "cards.tsx"`) lista imports, exports y vecinos inmediatos.
+3. **Ruta de dependencia entre dos módulos:** `graphify path "<ModuloA>" "<ModuloB>"` para entender cómo se conectan dos partes.
+4. **Navegación general:** Consultar `graphify-out/wiki/index.md` o `GRAPH_REPORT.md` para entender el impacto antes de refactorizar.
+5. **Mantenimiento incremental:** Ejecutar `graphify update .` tras modificar archivos de código (procesamiento AST puramente local, 0 costo de API/tokens).
+
 ## Supabase
 
 - **Dos bases.** Local en `127.0.0.1:54321` (Postgres en `54322`), que es donde

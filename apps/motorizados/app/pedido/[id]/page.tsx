@@ -4,13 +4,14 @@ import { ApiError } from '@tindivo/api-client'
 import { BottomActionBar, Button, Icon, ScreenHeader } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { use, useCallback, useEffect, useState } from 'react'
+import { AddressCaptureSheet } from '@/components/order/address-capture-sheet'
 import { BusinessCard } from '@/components/order/business-card'
+import { ChangeHeadsUp } from '@/components/order/change-heads-up'
 import { DeliverSheet } from '@/components/order/deliver-sheet'
 import { DeliveredScreen } from '@/components/order/delivered-screen'
 import { DestinationCard } from '@/components/order/destination-card'
 import { IncidentSheet } from '@/components/order/incident-sheet'
 import { MomentPickedUp } from '@/components/order/moment-picked-up'
-import { MoneyCard } from '@/components/order/money-card'
 import { OrderDetail } from '@/components/order/order-detail'
 import { PickupSheet } from '@/components/order/pickup-sheet'
 import { PreviewSection } from '@/components/order/preview-section'
@@ -25,6 +26,7 @@ import { getOptimistic } from '@/lib/offline-queue'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import { postTransition } from '@/lib/transitions'
 import type { OrderDetailResponse } from '@/lib/types'
+import { isOverdue } from '@/lib/urgency'
 
 type Mode =
   | 'loading'
@@ -54,6 +56,10 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
   const [deliverOpen, setDeliverOpen] = useState(false)
   const [incidentOpen, setIncidentOpen] = useState(false)
   const [releaseOpen, setReleaseOpen] = useState(false)
+  const [captureOpen, setCaptureOpen] = useState(false)
+  const [captureBusy, setCaptureBusy] = useState(false)
+  /** Desde dónde se abrió la captura. Decide si al cerrar se encadena el cobro. */
+  const [captureIntent, setCaptureIntent] = useState<'before_deliver' | 'adjust'>('before_deliver')
 
   const load = useCallback(async () => {
     try {
@@ -157,6 +163,48 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
     }
   }
 
+  /**
+   * Guarda la ubicación en el directorio (0147).
+   *
+   * NO BLOQUEA LA ENTREGA, y es la regla que gobierna toda esta pieza: si algo
+   * falla —red, permiso, coordenada rechazada— se avisa y se sigue igual al
+   * cobro. El pedido es lo urgente; la dirección es la mejora de mañana.
+   */
+  async function saveAddress(captured: {
+    lat: number
+    lng: number
+    accuracyM: number | null
+    reference?: string
+  }) {
+    setCaptureBusy(true)
+    setActionError(null)
+    try {
+      await api.post(`/driver/orders/${id}/address`, {
+        lat: captured.lat,
+        lng: captured.lng,
+        accuracyM: captured.accuracyM,
+        reference: captured.reference,
+      })
+      await load()
+    } catch (err) {
+      setActionError(
+        err instanceof ApiError
+          ? `No se guardó la ubicación: ${err.problem.detail ?? err.message}`
+          : 'No se guardó la ubicación. El pedido se puede entregar igual.',
+      )
+    } finally {
+      setCaptureBusy(false)
+      setCaptureOpen(false)
+      // Solo se encadena al cobro cuando la captura fue el PASO PREVIO a
+      // entregar. Un ajuste voluntario termina donde empezó: el motorizado
+      // corrigió el pin y sigue con lo suyo.
+      //
+      // Y cuando sí encadena, lo hace PASE LO QUE PASE: que la dirección no se
+      // guardara no puede dejarlo sin poder cerrar la entrega.
+      if (captureIntent === 'before_deliver') setDeliverOpen(true)
+    }
+  }
+
   if (mode === 'loading') {
     return (
       <main className="mx-auto max-w-[480px] px-4 pt-6">
@@ -197,11 +245,27 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
   // Gates de la bandeja en preview (HU-D-013 / HU-D-014).
   const isUpcoming =
     detail.order.appearsInQueueAt != null && Date.parse(detail.order.appearsInQueueAt) > now
-  const isOverdue =
-    detail.order.urgentSince != null ||
-    (detail.order.estimatedReadyAt != null && Date.parse(detail.order.estimatedReadyAt) < now)
-  const blockedByOverdue = mode === 'preview' && board.hasOverdueAvailable && !isOverdue
+  // MISMO helper que la bandeja, no una copia. Esta pantalla repetía la regla
+  // en línea y por tanto se quedaba con la vieja —la que también miraba
+  // `urgent_since`— cada vez que la bandeja cambiaba de criterio.
+  const esUrgente = isOverdue(detail.order.estimatedReadyAt, now)
+  const blockedByOverdue = mode === 'preview' && board.hasOverdueAvailable && !esUrgente
   const blockedByCapacity = mode === 'preview' && board.mySlots >= 3
+
+  // ── Captura de la dirección (0147) ─────────────────────────────────────────
+  //
+  // SOLO EN PEDIDOS MANUALES. Un pedido B2C trae la dirección de la libreta del
+  // cliente (`customer_addresses`), que es otra tabla y es del cliente: dejar
+  // que el motorizado la reescriba sería editarle la libreta a alguien que no
+  // se lo pidió. El RPC lo rechaza igual, pero la pantalla ni lo ofrece.
+  const hasCoords =
+    detail.order.deliveryCoordinatesLat != null && detail.order.deliveryCoordinatesLng != null
+
+  /** Se interpone antes de cobrar: es manual y nadie sabe dónde queda la casa. */
+  const needsAddressCapture = detail.order.isManual && !hasCoords
+
+  /** Ofrecido, no impuesto: ya hay ubicación pero puede estar mal puesta. */
+  const canAdjustAddress = detail.order.isManual && hasCoords
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-[480px] flex-col bg-surface pb-28">
@@ -210,30 +274,43 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
       <div className="flex-1 px-4 pt-1.5">
         {mode === 'preview' && <PreviewSection detail={detail} now={now} />}
 
+        {/* CADA PASO ENSEÑA LO QUE ESE PASO PERMITE HACER.
+            Los tres momentos pintaban casi lo mismo, así que la pantalla no
+            ayudaba a distinguir en cuál estabas — y la tarjeta del board ya da
+            el preview completo del pedido, así que repetirlo aquí no aporta.
+
+            Lo que se cayó de cada uno, y por qué:
+              · «Voy al local» ya no enseña el COBRO. Faltan veinte minutos para
+                tocar dinero y no hay nada que hacer con ese número mientras
+                conduces. El destino SÍ se queda: saber si la entrega cae al
+                lado o al otro extremo del pueblo cambia cómo te organizas, y
+                por eso `DestinationCard` se pensó para verse ya en el trayecto.
+              · «En el local» pierde el destino y el bloque de cobro entero, y
+                gana lo único de dinero que se puede resolver desde el mostrador:
+                conseguir el vuelto. Ahí lo que importa es qué recoges —por eso
+                el detalle se abre solo— y cuánto llevas esperando. */}
         {mode === 'heading' && (
           <>
-            <StatusHero detail={detail} moment={0} />
+            <StatusHero detail={detail} />
             <BusinessCard business={detail.business} />
-            <MoneyCard detail={detail} />
             <DestinationCard detail={detail} />
           </>
         )}
 
         {mode === 'waiting' && (
           <>
-            <StatusHero detail={detail} moment={1} />
+            <StatusHero detail={detail} />
             {detail.order.waitingAtRestaurantAt && (
               <WaitTimer since={detail.order.waitingAtRestaurantAt} now={now} />
             )}
+            <ChangeHeadsUp detail={detail} />
             <BusinessCard business={detail.business} />
-            <MoneyCard detail={detail} />
-            <DestinationCard detail={detail} />
           </>
         )}
 
         {mode === 'picked_up' && (
           <>
-            <StatusHero detail={detail} moment={2} />
+            <StatusHero detail={detail} />
             <MomentPickedUp
               detail={detail}
               busy={busy}
@@ -361,9 +438,49 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
                 {busy ? 'Registrando llegada…' : '¡He llegado al domicilio!'}
               </Button>
             ) : (
-              <Button className="w-full" disabled={busy} onClick={() => setDeliverOpen(true)}>
-                Pedido entregado
-              </Button>
+              <div className="flex w-full flex-col gap-2">
+                <Button
+                  className="w-full"
+                  disabled={busy}
+                  onClick={() => {
+                    // EL GATE DE LA DIRECCIÓN. Solo se interpone cuando de
+                    // verdad hace falta: pedido MANUAL y sin ubicación guardada.
+                    // Un pedido con coordenadas ya le dio el mapa al motorizado,
+                    // y uno B2C trae la dirección de la libreta del cliente, que
+                    // no es del negocio y el RPC ni deja tocar.
+                    //
+                    // Es un paso ANTES de cobrar, no dentro: si se salta o
+                    // falla, la entrega sigue su curso igual.
+                    if (needsAddressCapture) {
+                      setCaptureIntent('before_deliver')
+                      setCaptureOpen(true)
+                    } else {
+                      setDeliverOpen(true)
+                    }
+                  }}
+                >
+                  Pedido entregado
+                </Button>
+
+                {/* Ajuste voluntario: el pedido YA trae ubicación pero el
+                    motorizado ve que el pin no está en la puerta. Sin esto, la
+                    única forma de corregir una dirección mala sería que nadie
+                    la corrigiera nunca. */}
+                {canAdjustAddress && (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => {
+                      setCaptureIntent('adjust')
+                      setCaptureOpen(true)
+                    }}
+                    className="flex h-10 w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-border bg-card text-[13px] font-semibold text-ink-muted transition-transform active:scale-[0.98]"
+                  >
+                    <Icon name="edit_location_alt" size={16} />
+                    Ajustar la ubicación guardada
+                  </button>
+                )}
+              </div>
             )}
           </div>
         )}
@@ -389,11 +506,30 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
         />
       )}
 
+      {captureOpen && (
+        <AddressCaptureSheet
+          initialLat={detail.order.deliveryCoordinatesLat}
+          initialLng={detail.order.deliveryCoordinatesLng}
+          initialReference={detail.order.deliveryReference}
+          hasDirectoryRow={detail.order.addressDirectoryId != null}
+          busy={captureBusy}
+          onConfirm={saveAddress}
+          onSkip={() => {
+            setCaptureOpen(false)
+            // Omitir la ubicación NO cancela la entrega. Era el paso previo al
+            // cobro, así que el cobro sigue.
+            if (captureIntent === 'before_deliver') setDeliverOpen(true)
+          }}
+        />
+      )}
+
       {deliverOpen && (
         <DeliverSheet
           detail={detail}
           busy={busy}
-          onConfirm={(paymentReal) => run('deliver', { paymentReal })}
+          // El cobro real viaja entero, no solo el método: los importes son lo
+          // que decide el corte de caja (0140/0141).
+          onConfirm={(payment) => run('deliver', { ...payment })}
           onNoShow={() => run('no_show')}
           onClose={() => setDeliverOpen(false)}
         />

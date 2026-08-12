@@ -355,10 +355,34 @@ export function DetailScreen({
                 </span>
               </span>
             ) : order.readySec != null && order.readySec < 0 ? (
-              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-danger bg-danger-soft px-2 py-0.5 rounded-full border border-danger/20">
-                <Icon name="priority_high" size={12} weight={500} filled className="text-danger" />
-                ¡Demorado! <span className="font-mono">{formatReadyDelta(order.readySec)}</span>
-              </span>
+              /* §23: con la comida YA declarada lista, el retraso no es de la
+                 cocina sino del reparto. Decía "¡Demorado!" en los dos casos, y
+                 eso mandaba a la cajera a apurar a un cocinero que ya terminó.
+                 El copy —y el color— siguen a quien tiene la pelota. */
+              order.comidaLista ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-amber-300/60 bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-900">
+                  <Icon
+                    name="check_circle"
+                    size={12}
+                    weight={500}
+                    filled
+                    className="text-success"
+                  />
+                  Lista · esperando moto{' '}
+                  <span className="font-mono">{formatReadyDelta(-order.readySec)}</span>
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-danger bg-danger-soft px-2 py-0.5 rounded-full border border-danger/20">
+                  <Icon
+                    name="priority_high"
+                    size={12}
+                    weight={500}
+                    filled
+                    className="text-danger"
+                  />
+                  ¡Demorado! <span className="font-mono">{formatReadyDelta(order.readySec)}</span>
+                </span>
+              )
             ) : null}
           </div>
           <div className="flex items-center gap-1.5">

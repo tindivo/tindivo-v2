@@ -2,9 +2,16 @@
 
 import { Button, Card, Icon } from '@tindivo/ui'
 import { telLink, waLink } from '@/lib/deeplinks'
+import { prettyPhone } from '@/lib/format'
 import type { OrderDetailResponse } from '@/lib/types'
 
-/** Card del cliente: llamar + WhatsApp con mensaje precargado (Momento 3). */
+/**
+ * El cliente, en la puerta: a quién entregas y cómo alcanzarlo.
+ *
+ * El número va AGRUPADO EN TRÍOS (`prettyPhone`), como en la ficha de
+ * previsualización. Salía crudo justo aquí, que es donde de verdad se llama —
+ * con guantes, de noche y a veces dictándoselo a alguien.
+ */
 export function CustomerCard({
   order,
   businessName,
@@ -14,7 +21,7 @@ export function CustomerCard({
 }) {
   return (
     <Card className="mt-3.5 p-[18px]">
-      <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/55">
+      <span className="font-mono text-meta font-semibold uppercase tracking-[0.14em] text-ink-muted">
         Entregar a
       </span>
       <div className="mt-1.5 flex items-start gap-3">
@@ -22,9 +29,11 @@ export function CustomerCard({
           <Icon name="person" size={20} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="font-semibold text-[16px]">{order.customerName ?? 'Cliente'}</p>
+          <p className="font-semibold text-body-lg">{order.customerName ?? 'Cliente'}</p>
           {order.customerPhone && (
-            <p className="mt-0.5 font-mono text-[13px] text-ink-muted">{order.customerPhone}</p>
+            <p className="mt-0.5 font-mono text-caption text-ink-muted">
+              {prettyPhone(order.customerPhone)}
+            </p>
           )}
         </div>
       </div>

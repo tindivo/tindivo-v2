@@ -19,12 +19,26 @@ export interface CashRow {
   drivers: { full_name: string | null } | null
 }
 
-/** Efectivo que el motorizado ya cobró al cliente pero todavía no ha rendido. */
+/** Efectivo del negocio que el motorizado lleva encima y todavía no ha rendido. */
 interface PendingCashRow {
   driver_id: string
-  order_amount: number
-  delivery_fee: number
+  id: string
+  short_id: string
+  customer_name: string | null
+  delivered_at: string | null
+  cash_owed_at_delivery: number | null
+  change_advanced: number | null
   drivers: { full_name: string | null; phone: string | null } | null
+}
+
+/** Un pedido del desglose. Mismo contenido que ve el motorizado. */
+export interface PendingOrder {
+  orderId: string
+  shortId: string
+  customerName: string | null
+  deliveredAt: string | null
+  cashOwed: number
+  advance: number
 }
 
 export interface PendingByDriver {
@@ -33,6 +47,7 @@ export interface PendingByDriver {
   phone: string | null
   total: number
   orders: number
+  detail: PendingOrder[]
 }
 
 export function useCashSettlements() {
@@ -63,11 +78,28 @@ export function useCashSettlements() {
       // Efectivo cobrado y NO rendido. `cash_settlement_id is null` es lo que lo
       // define, posible desde 0111: antes no había forma de distinguir un pedido
       // ya liquidado de uno pendiente.
+      //
+      // LEE `cash_owed_at_delivery`, NO DEDUCE DEL MÉTODO.
+      //
+      // Esta consulta era la CUARTA copia de la regla del corte de caja, y la
+      // única que quedaba viva después de 0141: filtraba `paid_cash` y sumaba
+      // `order_amount + delivery_fee`. Con eso la cajera veía un número y el
+      // motorizado otro, para el mismo dinero y en la misma noche:
+      //
+      //   · un cobro mixto no salía aquí, aunque el motorizado llevara su parte;
+      //   · y desde 0146, el sencillo adelantado tampoco — la cajera veía S/ 45
+      //     de un pedido por el que el motorizado rinde S/ 50, que son los 5 que
+      //     ella misma le adelantó.
+      //
+      // `> 0` en vez de un filtro por método: lo que define si entra al corte es
+      // llevar efectivo, no cómo se llame el cobro.
       const { data: pend } = await supabase
         .from('orders')
-        .select('driver_id,order_amount,delivery_fee,drivers(full_name,phone)')
+        .select(
+          'driver_id,id,short_id,customer_name,delivered_at,cash_owed_at_delivery,change_advanced,drivers(full_name,phone)',
+        )
         .eq('status', 'delivered')
-        .eq('payment_real', 'paid_cash')
+        .gt('cash_owed_at_delivery', 0)
         .is('cash_settlement_id', null)
         .not('driver_id', 'is', null)
 
@@ -80,10 +112,22 @@ export function useCashSettlements() {
           phone: o.drivers?.phone ?? null,
           total: 0,
           orders: 0,
+          detail: [],
         }
-        acc.total += Number(o.order_amount ?? 0) + Number(o.delivery_fee ?? 0)
+        acc.total += Number(o.cash_owed_at_delivery ?? 0)
         acc.orders += 1
+        acc.detail.push({
+          orderId: o.id,
+          shortId: o.short_id,
+          customerName: o.customer_name,
+          deliveredAt: o.delivered_at,
+          cashOwed: Number(o.cash_owed_at_delivery ?? 0),
+          advance: Number(o.change_advanced ?? 0),
+        })
         porMotorizado.set(o.driver_id, acc)
+      }
+      for (const d of porMotorizado.values()) {
+        d.detail.sort((a, b) => (b.deliveredAt ?? '').localeCompare(a.deliveredAt ?? ''))
       }
       setPendingCash([...porMotorizado.values()].sort((a, b) => b.total - a.total))
     } catch (err) {

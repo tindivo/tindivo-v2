@@ -7,7 +7,6 @@ export const EVENT_TRANSFER_REQUESTED = 'transfer/requested' as const
 export const EVENT_ORDER_PREPAY = 'order/prepay' as const
 export const EVENT_ORDER_PAYMENT_TIMEOUT = 'order/payment.timeout' as const
 export const EVENT_ORDER_PREPAY_PROOF_UPLOADED = 'order/prepay.proof_uploaded' as const
-export const EVENT_ORDER_NOTIFY_BUSINESS = 'order/notify-business' as const
 
 export const EVENT_ORDER_PROOF_REJECTED_FINAL = 'order/proof-rejected-final' as const
 export const EVENT_ORDER_APPEAL_CREATED = 'order/appeal.created' as const
@@ -93,19 +92,6 @@ export type OrderPrepayProofUploadedData = {
 
 export function sendOrderPrepayProofUploaded(data: OrderPrepayProofUploadedData) {
   return inngest.send({ name: EVENT_ORDER_PREPAY_PROOF_UPLOADED, data })
-}
-
-/** Datos del evento que notifica al negocio sobre un nuevo pedido. */
-export type OrderNotifyBusinessData = {
-  businessId: string
-  customerName: string
-  shortId: string
-  paymentIntent: string
-}
-
-/** Envío tipado del evento `order/notify-business`. */
-export function sendOrderNotifyBusiness(data: OrderNotifyBusinessData) {
-  return inngest.send({ name: EVENT_ORDER_NOTIFY_BUSINESS, data })
 }
 
 /** Envío tipado del evento `order/proof-rejected-final` con ID determinista */

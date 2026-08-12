@@ -42,9 +42,17 @@ export interface BoardOrder {
   appears_in_queue_at: string | null
   occupancy_slots: number
   waiting_at_restaurant_at: string | null
+  /** Cuándo recogiste. Es el origen del reloj de reparto. Ver `CardOrder`. */
+  picked_up_at: string | null
   delivered_at: string | null
+  /** Cómo se cobró de verdad, y cuánto efectivo quedó a deber. Ver `CardOrder`. */
+  payment_real: string | null
+  cash_owed_at_delivery: number | null
   client_pays_with: number | null
   change_to_give: number | null
+  /** Desglose del pago mixto. Ver la nota en `CardOrder`. */
+  cash_amount: number | null
+  yape_amount: number | null
   business_id: string
   /**
    * Local resuelto desde `driver_businesses()` (0120), no desde un embed: las
@@ -74,6 +82,12 @@ export interface CardOrder {
   short_id: string
   status: string
   source: string
+  /**
+   * Cuándo se creó. En las bandejas propias no se pinta —ahí manda el reloj de
+   * cocina—, pero en Equipo es el único anclaje honesto para un pedido que
+   * todavía no se ha recogido: cuánto lleva esperando el cliente.
+   */
+  created_at: string
   customer_name: string | null
   delivery_address: string | null
   delivery_reference: string | null
@@ -86,12 +100,44 @@ export interface CardOrder {
    * `change_to_give` llega NULL en los pedidos manuales. Ver `lib/payment.ts`.
    */
   client_pays_with: number | null
+  /**
+   * Desglose del pago mixto (`orders.cash_amount` / `orders.yape_amount`,
+   * existen desde 0002).
+   *
+   * El board del motorizado no los pedía, y la tarjeta pasaba `cashAmount:
+   * null` a pelo a `changeDue`. Consecuencia: en un pago mixto la parte en
+   * efectivo salía 0, `changeDue` devolvía siempre `null` y **el vuelto de un
+   * mixto no se mostraba nunca** — el caso que más necesita el desglose era el
+   * único que no podía darlo. `apps/negocios` ya los leía.
+   */
+  cash_amount: number | null
+  yape_amount: number | null
   /** Huecos de mochila que consume. Puede ser 2: la tarjeta lo avisa. */
   occupancy_slots: number
   estimated_ready_at: string | null
   ready_early_used: boolean | null
   urgent_since: string | null
+  /**
+   * Cuándo se recogió el pedido. Es el origen del RELOJ DE REPARTO: con la
+   * comida encima el reloj de cocina ya no dice nada, pero sí importa cuánto
+   * lleva esperando el cliente — y con dos o tres pedidos en la mochila, cuál
+   * lleva más tiempo rodando es justo lo que decide a quién entregar primero.
+   *
+   * No viaja en los pedidos de equipo, como el resto de los tiempos.
+   */
+  picked_up_at: string | null
   delivered_at: string | null
+  /**
+   * Cómo se cobró DE VERDAD (`orders.payment_real`), una vez entregado.
+   *
+   * MANDA SOBRE `payment_intent` EN EL HISTORIAL, y por eso hace falta aquí. Sin
+   * él la tarjeta describía la intención para siempre: un pedido planeado en
+   * efectivo que el cliente acabó pagando por Yape seguía diciendo "efectivo"
+   * en el resumen del turno, y el motorizado veía un cobro que no hizo.
+   */
+  payment_real: string | null
+  /** Efectivo que quedó a deber por este pedido (0140). Lo que se rinde. */
+  cash_owed_at_delivery: number | null
   business: DriverBusiness | null
 }
 
@@ -115,6 +161,9 @@ export interface OrderDetailResponse {
     status: string
     source: string
     isManual: boolean
+    /** Fila del directorio a la que apunta el pedido (0145). `null` cuando el
+     *  pedido se creó sin teléfono y no hay dónde guardar el GPS. */
+    addressDirectoryId: string | null
     deliveryMethod: string
     deliveryDistanceBand: string | null
     customerName: string | null
@@ -127,6 +176,8 @@ export interface OrderDetailResponse {
     deliveryFee: number
     paymentIntent: string
     paymentReal: string | null
+    /** Efectivo que quedó a deber por este pedido (0140). Lo que se rinde. */
+    cashOwedAtDelivery: number | null
     yapeAmount: number | null
     cashAmount: number | null
     clientPaysWith: number | null
@@ -187,6 +238,21 @@ export interface TeamResponse {
     total: number
     occupancySlots: number
     urgentSince: string | null
+    /**
+     * Edad del pedido. Da el reloj de las tarjetas que todavía se pueden pedir
+     * ("Voy al local", "En el local"): cuánto lleva esperando el cliente.
+     */
+    createdAt: string
+    /**
+     * El reloj de la tarjeta "En reparto", igual que en la bandeja propia.
+     *
+     * Los dos son tiempos de un pedido ajeno y los dos viajan a propósito.
+     * `estimated_ready_at` sigue sin hacerlo, y esa es la línea: dice CUÁNDO
+     * ESTARÁ LISTA la comida, que es lo que permitiría pedir solo lo ya listo y
+     * dejarle lo lento al compañero. Estos dos solo dicen cuánto lleva
+     * esperando alguien.
+     */
+    pickedUpAt: string | null
     driver: { id: string; fullName: string; vehicleType: string } | null
     businessName: string | null
     /** Dónde va. Único dato del cliente que viaja: decide si te queda de camino. */

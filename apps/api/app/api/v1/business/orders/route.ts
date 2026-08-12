@@ -27,7 +27,12 @@ const Schema = z.object({
   // problema que esta migración vino a resolver, pero con dos botones en
   // pantalla dando falsa sensación de control.
   deliveryDistanceBand: z.enum(['near', 'far']),
-  customerName: z.string().trim().max(120).optional(),
+  // OBLIGATORIO. Es cómo el motorizado identifica el pedido —lo más grande de
+  // su tarjeta, lo que busca en la lista, lo que dice al llamar—, y era
+  // opcional (`create_business_manual_order`, 0032) en el único canal que crea
+  // pedidos en el piloto. Se exige en el borde, no en la columna: hay filas
+  // viejas con NULL y un `not null` en la tabla necesitaría rellenarlas.
+  customerName: z.string().trim().min(1).max(120),
   customerPhone: z
     .string()
     .trim()
@@ -58,6 +63,14 @@ const Schema = z.object({
   clientPaysWith: z.number().nonnegative().max(99_999_999.99).optional(),
   yapeAmount: z.number().nonnegative().max(99_999_999.99).optional(),
   cashAmount: z.number().nonnegative().max(99_999_999.99).optional(),
+  // 0145 · La fila del directorio que la cajera eligió en el popup. Opcional: es
+  // NULL para el cliente nuevo, para "escribir dirección nueva", y cuando la
+  // cajera editó el texto y se desvinculó.
+  //
+  // NO se confía en él como permiso de nada: el RPC comprueba que la fila exista
+  // Y que sea del MISMO teléfono antes de copiarle las coordenadas. Un id de
+  // otro cliente se ignora en vez de mandar al motorizado al GPS de otra casa.
+  addressDirectoryId: z.string().uuid().optional(),
 })
 
 export function OPTIONS(req: Request): Response {
@@ -84,6 +97,7 @@ export async function POST(req: Request): Promise<Response> {
       p_client_pays_with: body.clientPaysWith ?? undefined,
       p_yape_amount: body.yapeAmount ?? undefined,
       p_cash_amount: body.cashAmount ?? undefined,
+      p_address_directory_id: body.addressDirectoryId ?? undefined,
     })
     if (error) {
       if (error.code === 'P0002') throw new DomainError(error.message, 'not_found')

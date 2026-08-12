@@ -40,6 +40,16 @@ export interface CreateOrderPayload {
    * Parte E; hasta entonces esto es el contrato, no la interacción.
    */
   band: DistanceBand | null
+  /**
+   * Fila del directorio que la cajera confirmó en el popup, o `null`.
+   *
+   * Es lo que le dice al motorizado a QUÉ fila escribirle el GPS al entregar.
+   * Va `null` cuando el cliente es nuevo, cuando eligió "escribir dirección
+   * nueva" o cuando editó el texto y se desvinculó — y en esos casos el RPC
+   * CREA la fila a partir del teléfono y la referencia, así que la próxima vez
+   * ya sale sola.
+   */
+  addressDirectoryId: string | null
 }
 
 export function useCreateOrder() {
@@ -63,7 +73,10 @@ export function useCreateOrder() {
     const orderPayload = {
       deliveryMethod,
       paymentIntent: payload.payment === 'pending_wallet' ? 'pending_yape' : payload.payment,
-      customerName: payload.name.trim() || undefined,
+      // Sin `|| undefined`: el endpoint lo exige y el formulario no deja
+      // enviar vacío. Mandar `undefined` aquí solo convertiría un aviso claro
+      // en un 422.
+      customerName: payload.name.trim(),
       customerPhone: cleanPhone || undefined,
       deliveryReference: payload.reference.trim() || undefined,
       deliveryDistanceBand: payload.band,
@@ -72,6 +85,7 @@ export function useCreateOrder() {
       clientPaysWith: isCashish && num(payload.paysWith) > 0 ? num(payload.paysWith) : undefined,
       yapeAmount: payload.payment === 'pending_mixed' ? num(payload.walletPart) : undefined,
       cashAmount: payload.payment === 'pending_mixed' ? num(payload.cashPart) : undefined,
+      addressDirectoryId: payload.addressDirectoryId ?? undefined,
     }
 
     try {

@@ -67,8 +67,8 @@ Hoy `pending_acceptance` se auto-cancela a los 5 minutos — el primer contacto 
 
 ### ALE-03 · Subir la ventana de aceptación de 5 a 12-15 minutos
 
-**🔴 P0 — un valor en `app_settings.timers.acceptanceMinutes`, cuesta segundos cambiarlo**
-5 minutos es agresivo en las primeras semanas, cuando nadie tiene el hábito de mirar la pantalla todavía. Subir el valor ahora y bajarlo cuando el hábito exista.
+**✅ DONE — ya estaba hecho y seguía marcado como P0 bloqueante (verificado 2026-08-11)**
+La migración `0113_config_support_and_timers` subió `acceptanceMinutes` de 5 a 15, y está aplicada en producción. El valor vivo es 15. Queda la segunda mitad de la idea —bajarlo cuando el hábito de mirar la pantalla exista— pero eso es una perilla de `app_settings`, no trabajo pendiente.
 
 ### ALE-04 · Botón "listo para operar" + "cerrar por hoy" + recordatorio
 
@@ -124,13 +124,16 @@ Investigación de mercado (8 plataformas: PedidosYa, Rappi, DiDi Food, Uber Eats
 
 ### NOSHOW-01 · Tiempo de espera mínimo antes de marcar no-show
 
-**🟢 P3 (documentado, no implementar)**
-Hoy el motorizado puede marcar no-show en el segundo cero. Propuesta: 5 minutos desde que llega al destino, con escalamiento a los 3 minutos (aviso a central para segundo intento de contacto). Falta el equivalente en destino de `waiting_at_restaurant` — o un timestamp de llegada al cliente.
+**✅ DONE (2026-08-10) — quedaba escrito como pendiente y ya no lo es**
+La entrada decía "hoy el motorizado puede marcar no-show en el segundo cero" y "falta un timestamp de llegada al cliente". Ambas cosas dejaron de ser ciertas con la 0114: existe `orders.arrived_at_customer_at`, y la rama `no_show` de `advance_order` exige que esté puesto y que hayan pasado `app_settings.timers.noShowWaitMinutes` (5 por defecto) — si no, lanza excepción diciendo cuántos minutos faltan. El plazo es configurable sin deploy.
+Lo único que sobrevive de la propuesta original es el **escalamiento** ("aviso a central para segundo intento de contacto"), que ahora vive en NOSHOW-08.
 
 ### NOSHOW-02 · Evidencia fotográfica, no GPS
 
 **🟢 P3 (documentado, no implementar)**
 Decisión ya tomada: foto, no GPS. En San Jacinto las direcciones son referencias verbales; el GPS solo prueba cercanía, no significa nada para el cliente. La foto sirve para la conversación real — el cliente reconoce su propia puerta. Con un motorizado asalariado y de confianza, la evidencia es para hablar con el cliente, no para vigilar al motorizado. Evaluar si se reutiliza el bucket de comprobantes de pago o se crea uno nuevo.
+
+**Dónde engancha (2026-08-10):** el punto exacto es la rama `no_show` de `advance_order`, que en una sola transacción cancela el pedido e inserta la fila de `customer_strikes`. La foto tiene que ser condición de esa transacción, no un paso posterior: si se sube después, existe la ventana en la que el strike ya está puesto y la evidencia no. El momento natural de capturarla es el mismo en que el motorizado marca `arrived_customer` o al vencer la espera, no al declarar el no-show — para entonces ya lleva 5 minutos parado en la puerta.
 
 ### NOSHOW-03 · Cobro al restaurante, solo en prepago
 
@@ -147,6 +150,7 @@ Popup cuando el cliente abre la app tras un no-show: qué pasó en lenguaje clar
 **🟢 P3 (documentado, no implementar) — decisión de alcance ya tomada: por WhatsApp para el lanzamiento**
 El pedido queda `cancelled` (terminal, no reactivable — verificado). Un reenvío sería siempre un pedido nuevo de solo-envío, y la cajera ya puede crearlo hoy con `create_business_manual_order`. Automatizarlo no es trivial: solo el restaurante sabe si la comida todavía sirve. Feature completa (si los datos la justifican): cliente pulsa "solicitar reenvío" → se crea una solicitud, no un pedido → el restaurante confirma si aún tiene la comida → se habilita pagar el envío nuevo → se crea el pedido de solo-envío. Depende de que `create_business_manual_order` acepte `order_amount = 0`.
 **Dato que falta para decidir si vale la pena construirla:** ¿cada cuánto ocurre un no-show hoy en `delivery.tindivo.com`? Si es una vez al mes, el WhatsApp manual es la respuesta definitiva y esto no se construye nunca.
+**Sigue pendiente y sin cambios (2026-08-10).** Lo confirmado hoy es que `delivered` y `cancelled` son terminales de verdad: ninguna de las nueve funciones que escriben `orders.status` saca un pedido de ahí. O sea que el reenvío es necesariamente un pedido nuevo, como dice la entrada — no hay atajo por reactivación.
 
 ### NOSHOW-06 · Distinguir "cliente no apareció" de "no encontraron la dirección"
 
@@ -157,6 +161,13 @@ El sistema no diferencia hoy "cliente no apareció / pedido falso" de "Ernesto n
 
 **✅ Descartado, no aplica**
 Un informe de mercado propone un "fondo de incidencias" para pagar al motorizado el viaje perdido. No aplica: ese modelo asume pago por viaje, y Ernesto tiene sueldo fijo sin límite de entregas — el viaje perdido ya lo absorbe Tindivo vía costo fijo.
+
+### NOSHOW-08 · Insistir con el cliente antes de dar el no-show
+
+**🟡 P2 — es el escalamiento que sobró de NOSHOW-01**
+Hoy el cliente recibe **un solo** aviso: el push de "El motorizado está en tu puerta" que se añadió el 2026-08-10 (rama `arrived_customer` de `send-push`). Si tiene el celular en silencio, ese único intento se pierde y a los 5 minutos se lleva un strike permanente — porque `create_customer_order` lee `customer_strikes` y le exige validación en todos sus pedidos futuros.
+Falta el segundo intento: re-avisar a mitad de la ventana de espera (p. ej. al minuto 3 de 5), y/o escalar a la cajera para que llame — que es el antifraude humano que ya funciona en el resto del flujo. Un push repetido es barato; una llamada es lo que de verdad resuelve.
+**Ojo con el `tag`:** un segundo aviso con el mismo tag que el primero lo REEMPLAZA en la bandeja en vez de sonar otra vez (FCM/APNs colapsan por tag). El re-aviso necesita tag propio, igual que se hizo con las dos resoluciones de traspaso.
 
 ---
 
@@ -446,6 +457,26 @@ Diseño de dos caminos (lectura: autocompletar desde el directorio legacy import
 
 **🟡 P2**
 El setup existe con seed idempotente, pero no hay registro de una corrida completa reciente que incluya todos los cambios de esta sesión (Parte C/D/E del ledger, count-up, selector de zona).
+
+### DEUDA-08 · `send-push` la puede invocar cualquiera con la anon key
+
+**🟡 P2 — real y confirmado, pero no bloquea el lanzamiento**
+La Edge Function `send-push` corre con `verify_jwt`, y la anon key vale como JWT — y esa llave va pública en los bundles de las cuatro apps. Confirmado el 2026-08-11: el smoke test contra producción se hizo con esa misma llave y la función lo ejecutó.
+**Por qué no es urgente:** para disparar un aviso hay que mandar un `aggregate_id` de pedido válido, que es un UUID y no se adivina. Con un id inválido la función responde `recipients: 0`. El daño realista es que alguien que ya conoce un id (su propio pedido) repita avisos a los motorizados.
+**El arreglo, ya verificado como viable:** un secreto compartido en `app_settings.push_dispatch` —que NO es de lectura pública: la policy `as_public_read` lista nueve claves y `push_dispatch` no está entre ellas— que `dispatch_event` mande como cabecera y `send-push` exija.
+**El orden del despliegue no es opcional:** (1) migración que empieza a mandar la cabecera, (2) verificar con un pedido real que los avisos siguen llegando, (3) recién entonces el secreto en la función y su despliegue. Al revés —la función exigiendo una cabecera que la base todavía no manda— mata TODAS las notificaciones, en silencio y de golpe. Es el mismo modo de fallo que costó tres días de diagnóstico en agosto, así que este cambio pide ventana de verificación, no un despliegue a ciegas.
+
+### DEUDA-09 · QR alternativo de Yape, para cuando el principal no escanea
+
+**🟡 P2 — el legacy lo tenía, v2 no**
+`tindivo-delivery` (`yape-qr-card.tsx`) permitía **dos** QR por restaurante —principal y alternativo— con pestañas para cambiar de uno a otro. El motivo estaba escrito ahí y es de campo: el QR impreso se moja, se raya o se sube mal escaneado, y en la puerta del cliente no hay segunda oportunidad. Con uno solo, un QR malo deja al motorizado cobrando a mano por número, que es más lento y más propenso a error de tipeo.
+
+**Qué falta en v2**, en este orden:
+1. Columna `qr_url_secondary` en `businesses` (hoy solo existe `qr_url`).
+2. Subida en el panel de admin, junto a la del principal.
+3. Las pestañas en `apps/motorizados/components/order/yape-qr.tsx`, que ya está portado y preparado para recibirlo — el componente y su nota lo mencionan explícitamente.
+
+**Por qué no se hizo ahora:** el resto del portado (pantalla completa, cuadrado a ancho completo, zona de silencio blanca, caída al número) resuelve el grueso de la escaneabilidad sin tocar el esquema ni el admin. Esto es la red de seguridad del caso raro, y pide migración + pantalla nueva.
 
 ---
 

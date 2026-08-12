@@ -24,7 +24,7 @@ export default function HistorialPage() {
           description="Los pedidos que entregues aparecerán aquí."
         />
       ) : (
-        <div className="flex flex-col gap-2.5">
+        <div className="flex flex-col gap-3">
           {deliveredToday.map((o) => (
             <OrderCard key={o.id} order={o} now={now} variant="delivered" />
           ))}

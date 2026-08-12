@@ -5,22 +5,21 @@ type Variant = 'brand' | 'soft' | 'outline' | 'ghost' | 'danger' | 'success' | '
 type Size = 'sm' | 'md' | 'lg'
 
 const VARIANTS: Record<Variant, string> = {
-  /** CTA principal. Degradado oscuro→claro (135deg) + text-shadow sutil para
-   *  que el blanco destaque incluso ante cualquier reset de color del navegador. */
+  /** CTA principal. Degradado oscuro→claro (135deg). */
   brand:
-    'btn-white-text bg-[linear-gradient(135deg,var(--color-brand),var(--gradient-brand-to))] text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.28)] tracking-wide font-extrabold shadow-[0_4px_20px_rgba(171,53,0,0.2)] hover:shadow-[0_10px_40px_rgba(255,107,53,0.3)]',
+    'btn-white-text bg-[linear-gradient(135deg,var(--color-brand),var(--gradient-brand-to))] text-white tracking-wide font-extrabold shadow-[0_4px_20px_rgba(171,53,0,0.2)] hover:shadow-[0_10px_40px_rgba(255,107,53,0.3)]',
   /** Secundario neutro: superficie tenue de marca, sin borde. */
   soft: 'bg-brand/[0.08] text-brand-dark font-semibold hover:bg-brand/[0.12]',
   outline: 'border border-brand/[0.25] bg-card text-brand-dark font-semibold hover:bg-brand/[0.05]',
   ghost: 'text-brand-dark font-semibold hover:bg-brand/[0.06]',
   danger:
-    'btn-white-text bg-[linear-gradient(135deg,#dc2626,#ef4444)] text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.25)] tracking-wide font-extrabold shadow-[0_4px_16px_rgba(220,38,38,0.25)] hover:shadow-[0_8px_28px_rgba(220,38,38,0.35)]',
+    'btn-white-text bg-[linear-gradient(135deg,#dc2626,#ef4444)] text-white tracking-wide font-extrabold shadow-[0_4px_16px_rgba(220,38,38,0.25)] hover:shadow-[0_8px_28px_rgba(220,38,38,0.35)]',
   /** Confirmación positiva e irreversible: «Confirmo el monto», «Sí, está
    *  lista». No usar como CTA primario — para eso está `brand`. */
   success:
-    'btn-white-text bg-[linear-gradient(135deg,#16a34a,#22c55e)] text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.2)] tracking-wide font-extrabold shadow-[0_4px_16px_rgba(22,163,74,0.25)] hover:shadow-[0_8px_28px_rgba(22,163,74,0.35)]',
+    'btn-white-text bg-[linear-gradient(135deg,#16a34a,#22c55e)] text-white tracking-wide font-extrabold shadow-[0_4px_16px_rgba(22,163,74,0.25)] hover:shadow-[0_8px_28px_rgba(22,163,74,0.35)]',
   secondary:
-    'btn-white-text bg-[linear-gradient(135deg,#27272a,#3f3f46)] text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.2)] tracking-wide font-extrabold hover:opacity-90',
+    'btn-white-text bg-[linear-gradient(135deg,#27272a,#3f3f46)] text-white tracking-wide font-extrabold hover:opacity-90',
 }
 
 /* Alturas fijas a propósito: dan una línea base consistente aunque cambie el

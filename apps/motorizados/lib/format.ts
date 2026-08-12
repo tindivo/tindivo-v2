@@ -42,3 +42,19 @@ export const PAYMENT_LABEL: Record<string, string> = {
 
 export const hourOf = (iso: string) =>
   new Date(iso).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
+
+/**
+ * `987654123` -> `+51 987 654 123`.
+ *
+ * Los tríos no son estética: el motorizado lee este número en voz alta o lo
+ * teclea con guantes, y agrupado se equivoca menos.
+ *
+ * Vive aquí porque hace falta en los DOS momentos en que se usa un teléfono, y
+ * estaba solo en uno: la ficha de previsualización lo agrupaba y la tarjeta del
+ * cliente —la que se mira en la puerta, que es cuando de verdad se llama— lo
+ * pintaba crudo.
+ */
+export function prettyPhone(raw: string): string {
+  const d = raw.replace(/\D/g, '').slice(-9)
+  return d.length === 9 ? `+51 ${d.slice(0, 3)} ${d.slice(3, 6)} ${d.slice(6)}` : raw
+}

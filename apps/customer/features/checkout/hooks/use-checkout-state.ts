@@ -8,6 +8,8 @@ import { EMPTY_ADDRESS } from '@/components/address-fields'
 import {
   type Address,
   type CashChoice,
+  DEFAULT_MAX_CASH_BILL,
+  DEFAULT_MAX_CHANGE,
   DEFAULT_PREPAY_THRESHOLD,
   type GeoBlockKind,
   NEAR_DELIVERY_FEE,
@@ -55,6 +57,11 @@ export interface CheckoutState {
 
   prepayThreshold: number
   setPrepayThreshold: (v: number) => void
+  maxCashBill: number
+  setMaxCashBill: (v: number) => void
+  maxChange: number
+  setMaxChange: (v: number) => void
+  maxDeclarable: number
   prepayOnlyByRisk: boolean
   setPrepayOnlyByRisk: (v: boolean) => void
   deliveredCount: number
@@ -111,6 +118,8 @@ export function useCheckoutState(): CheckoutState {
   const [cashCustom, setCashCustom] = useState('')
   const [geoBlock, setGeoBlock] = useState<GeoBlockKind | null>(null)
   const [prepayThreshold, setPrepayThreshold] = useState(DEFAULT_PREPAY_THRESHOLD)
+  const [maxCashBill, setMaxCashBill] = useState(DEFAULT_MAX_CASH_BILL)
+  const [maxChange, setMaxChange] = useState(DEFAULT_MAX_CHANGE)
   const [prepayOnlyByRisk, setPrepayOnlyByRisk] = useState(false)
   const [deliveredCount, setDeliveredCount] = useState(0)
   const [locating, setLocating] = useState(false)
@@ -132,6 +141,12 @@ export function useCheckoutState(): CheckoutState {
 
   const mustPrepay = isNewUser || exceedsCashCap || isBlocked
 
+  // Máximo declarable = mín(billete máximo, total + vuelto máximo)
+  const maxDeclarable = useMemo(
+    () => Math.min(maxCashBill, total + maxChange),
+    [maxCashBill, maxChange, total],
+  )
+
   const prepayReason = isBlocked
     ? 'Tu cuenta tiene restringido el pago contraentrega.'
     : isNewUser
@@ -151,16 +166,21 @@ export function useCheckoutState(): CheckoutState {
     }
   }, [cartHydrated, confirmed, ordering.info, cart.businessId, router])
 
+  // Una sola query para las tres configuraciones de efectivo — no tres round-trips.
   useEffect(() => {
     getSupabaseBrowser()
       .from('app_settings')
-      .select('value')
-      .eq('key', 'prepay_threshold')
-      .maybeSingle()
+      .select('key, value')
+      .in('key', ['prepay_threshold', 'max_cash_bill', 'max_change'])
       .then(({ data }) => {
-        const raw = data?.value
-        const value = typeof raw === 'number' ? raw : typeof raw === 'string' ? Number(raw) : null
-        if (value && Number.isFinite(value)) setPrepayThreshold(value)
+        for (const row of data ?? []) {
+          const raw = row.value
+          const v = typeof raw === 'number' ? raw : typeof raw === 'string' ? Number(raw) : null
+          if (!v || !Number.isFinite(v)) continue
+          if (row.key === 'prepay_threshold') setPrepayThreshold(v)
+          else if (row.key === 'max_cash_bill') setMaxCashBill(v)
+          else if (row.key === 'max_change') setMaxChange(v)
+        }
       })
   }, [])
 
@@ -216,6 +236,11 @@ export function useCheckoutState(): CheckoutState {
     setCashCustom,
     prepayThreshold,
     setPrepayThreshold,
+    maxCashBill,
+    setMaxCashBill,
+    maxChange,
+    setMaxChange,
+    maxDeclarable,
     prepayOnlyByRisk,
     setPrepayOnlyByRisk,
     deliveredCount,

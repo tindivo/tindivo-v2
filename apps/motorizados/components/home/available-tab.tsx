@@ -3,6 +3,7 @@
 import { Badge, Card, EmptyState, Icon, SkeletonList } from '@tindivo/ui'
 import { useMemo } from 'react'
 import { useOverdueFeedback } from '@/hooks/use-overdue-feedback'
+import { byReadyClock } from '@/lib/orders/sort'
 import type { BoardOrder } from '@/lib/types'
 import { orderUrgency } from '@/lib/urgency'
 import { OrderCard } from './order-card'
@@ -45,14 +46,10 @@ export function AvailableTab({
   // Feedback háptico + audible cuando se detectan pedidos vencidos nuevos
   useOverdueFeedback(overdueSet)
 
-  const sorted = useMemo(() => {
-    return [...available].sort((a, b) => {
-      const ua = orderUrgency(a, now) === 'overdue' ? 0 : 1
-      const ub = orderUrgency(b, now) === 'overdue' ? 0 : 1
-      if (ua !== ub) return ua - ub
-      return Date.parse(a.created_at) - Date.parse(b.created_at)
-    })
-  }, [available, now])
+  // Por el reloj, que es lo que la tarjeta enseña. La regla y su porqué viven
+  // en `lib/orders/sort`, con tests: ya se rompió una vez y el síntoma no fue
+  // un fallo sino una lista que "no se entendía".
+  const sorted = useMemo(() => byReadyClock(available), [available])
 
   // UN VACÍO SOLO SE AFIRMA CUANDO SE SABE VACÍO.
   //
@@ -71,7 +68,7 @@ export function AvailableTab({
       )}
 
       {full && (
-        <Card className="mb-3 flex items-start gap-2.5 border border-ink/[0.06] bg-ink/[0.03] p-4 shadow-none">
+        <Card className="mb-3 flex items-start gap-3 border border-ink/[0.06] bg-ink/[0.03] p-4 shadow-none">
           <Icon name="shopping_basket" size={20} className="shrink-0 text-ink" />
           <p className="font-semibold text-[14px]">
             Mochila llena {mySlots}/3. Entrega un pedido para tomar otro.
@@ -81,22 +78,28 @@ export function AvailableTab({
 
       <OverdueBanner count={overdueCount} />
 
-      <div className="flex flex-col gap-2.5">
+      <div className="flex flex-col gap-3">
         {sorted.map((o) => {
-          const esVencido = orderUrgency(o, now) === 'overdue'
+          const esUrgente = orderUrgency(o, now) === 'overdue'
           // DOS razones distintas para no poder tomar un pedido, y cada una dice
           // la suya. La mochila manda sobre la prioridad: si no te cabe, da
           // igual cuál sea el urgente.
           //
-          // La prioridad de vencidos era hasta ahora SOLO atenuación: la
-          // tarjeta seguía navegando, así que la regla era una sugerencia
-          // visual. Ahora bloquea de verdad, como el legacy.
+          // La prioridad era hasta ahora SOLO atenuación: la tarjeta seguía
+          // navegando, así que la regla era una sugerencia visual. Ahora
+          // bloquea de verdad, como el legacy.
+          //
+          // NO DICE "VENCIDO", igual que el banner: `orderUrgency` marca por
+          // `urgent_since` —nadie lo ha tomado en 5 min, reloj de la ASIGNACIÓN—
+          // o por ETA pasada —reloj de la COCINA—, y el primero salta con la
+          // comida aún en el horno. "Vencido" prometía un plazo agotado junto a
+          // un contador corriendo tan tranquilo.
           const porMochila = full
-          const porPrioridad = !full && hasOverdue && !esVencido
+          const porPrioridad = !full && hasOverdue && !esUrgente
           const motivo = porMochila
             ? `Mochila llena ${mySlots}/3`
             : porPrioridad
-              ? 'Primero el pedido vencido'
+              ? 'Primero el que lleva esperando'
               : undefined
 
           return (

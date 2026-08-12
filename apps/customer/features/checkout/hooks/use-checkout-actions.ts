@@ -41,6 +41,8 @@ export function useCheckoutActions(state: CheckoutState): CheckoutActions {
     setConfirmed,
     setBlocked,
     setShowOtpSheet,
+    maxCashBill,
+    maxChange,
   } = state
 
   const idempotencyKeyRef = useRef<string>(crypto.randomUUID())
@@ -116,9 +118,24 @@ export function useCheckoutActions(state: CheckoutState): CheckoutActions {
       return
     }
 
-    if (selectedPayment === 'pending_cash' && payingWithCash() < total) {
-      setError('El monto con el que pagarás debe cubrir el total del pedido')
-      return
+    if (selectedPayment === 'pending_cash') {
+      const paying = payingWithCash()
+      if (paying < total) {
+        setError('El monto con el que pagarás debe cubrir el total del pedido')
+        return
+      }
+      if (paying > maxCashBill) {
+        setError(`El monto máximo con el que puedes pagar es S/ ${maxCashBill.toFixed(2)}.`)
+        return
+      }
+      const change = Math.round((paying - total) * 100) / 100
+      if (change > maxChange) {
+        const maxCash = Math.floor((total + maxChange) * 100) / 100
+        setError(
+          `El vuelto sería S/ ${change.toFixed(2)} y el máximo es S/ ${maxChange.toFixed(2)}. Paga con S/ ${maxCash.toFixed(2)} o menos, o elige Yape.`,
+        )
+        return
+      }
     }
 
     setLoading(true)
@@ -169,7 +186,9 @@ export function useCheckoutActions(state: CheckoutState): CheckoutActions {
       customerName: name.trim() || 'Cliente',
       customerPhone: phone,
       cashPayingWith:
-        selectedPayment === 'pending_cash' ? Math.round(payingWithCash() * 100) / 100 : undefined,
+        selectedPayment === 'pending_cash'
+          ? Math.round(Math.round(payingWithCash() / 0.5) * 0.5 * 100) / 100
+          : undefined,
       deliveryAddress: selectedAddress?.line ?? (manualAddr.line.trim() || undefined),
       deliveryReference: deliveryMethod === 'delivery' ? state.reference : undefined,
       coordinates:

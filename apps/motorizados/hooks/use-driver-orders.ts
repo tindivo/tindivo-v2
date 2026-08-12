@@ -8,7 +8,7 @@ import type { BoardOrder, DriverBusiness } from '@/lib/types'
 import { orderUrgency } from '@/lib/urgency'
 
 const BOARD_COLUMNS =
-  'id,short_id,status,source,customer_name,customer_phone,delivery_address,delivery_reference,order_amount,delivery_fee,payment_intent,driver_id,created_at,estimated_ready_at,ready_early_used,ready_early_at,urgent_since,appears_in_queue_at,occupancy_slots,waiting_at_restaurant_at,delivered_at,client_pays_with,change_to_give,business_id'
+  'id,short_id,status,source,customer_name,customer_phone,delivery_address,delivery_reference,order_amount,delivery_fee,payment_intent,driver_id,created_at,estimated_ready_at,ready_early_used,ready_early_at,urgent_since,appears_in_queue_at,occupancy_slots,waiting_at_restaurant_at,picked_up_at,delivered_at,payment_real,cash_owed_at_delivery,client_pays_with,change_to_give,cash_amount,yape_amount,business_id'
 
 export interface DriverBoard {
   orders: BoardOrder[]
