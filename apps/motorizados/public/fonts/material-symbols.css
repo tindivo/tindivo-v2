@@ -1,0 +1,49 @@
+/* Material Symbols Rounded — fuente VARIABLE auto-hospedada, subconjunto.
+   Contiene solo los iconos que usan esta app y `packages/ui` (ver `icons.txt`),
+   con los cuatro ejes intactos (FILL, GRAD, opsz, wght) porque la primitiva
+   `Icon` de @tindivo/ui los maneja vía `font-variation-settings`.
+
+   POR QUÉ SE DEJÓ DE USAR EL CDN DE GOOGLE.
+   La URL pedía los ejes con VALORES FIJOS (`FILL,GRAD@24,400,0,0`), así que la
+   fuente entregada solo contenía la instancia FILL=0: el prop `filled` de
+   `Icon` no hacía nada, en ninguna app. Pedirlos como rangos lo arregla pero
+   dispara el peso — medido contra el CDN: 369 KB con FILL muerto, 537 KB con
+   solo `FILL@0..1`, 5.2 MB con los cuatro ejes abiertos. Este subset pesa
+   103 KB CON los cuatro ejes, y además es local: la PWA del motorizado se abre
+   en el pueblo con mala señal, y un icono que depende de una petición al CDN es
+   un icono que a veces no llega.
+
+   `font-display: block` — OBLIGATORIO en una fuente de iconos, no es una
+   preferencia. `Icon` renderiza el NOMBRE del icono como texto y deja que la
+   ligadura lo convierta en glifo. Con `swap` el navegador pinta la fuente de
+   reserva de inmediato y se lee «two_wheeler» literal en pantalla, además de
+   reventar la caja porque el texto es mucho más ancho que el glifo.
+   Con el archivo local y precargado la ventana de invisibilidad es mínima.
+
+   Para regenerar tras añadir iconos nuevos: `apps/negocios/public/fonts/README.md`
+   documenta el proceso; el script está en `scratch/subset-icons.py`. */
+@font-face {
+  font-family: 'Material Symbols Rounded';
+  font-style: normal;
+  font-weight: 100 700;
+  font-display: block;
+  src: url('./material-symbols-rounded.woff2') format('woff2-variations');
+}
+
+.material-symbols-rounded {
+  font-family: 'Material Symbols Rounded', sans-serif;
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  user-select: none;
+}

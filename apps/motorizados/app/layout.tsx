@@ -60,12 +60,21 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-title" content="Tindivo Moto" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* Material Symbols Rounded — subset variable auto-hospedado (103 KB).
+            Un solo archivo con los cuatro ejes, así que basta un preload. El
+            porqué de no usar el CDN está en `public/fonts/material-symbols.css`;
+            en corto: por la URL que había, el prop `filled` no funcionaba, y
+            arreglarlo contra el CDN costaba 5.2 MB. Además esto es local, y
+            esta app se abre con la señal del pueblo. */}
+        <link rel="preload" as="style" href="/fonts/material-symbols.css" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&display=block"
-          rel="stylesheet"
+          rel="preload"
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+          href="/fonts/material-symbols-rounded.woff2"
         />
+        <link rel="stylesheet" href="/fonts/material-symbols.css" />
       </head>
       <body className="min-h-dvh bg-surface font-sans text-ink antialiased">
         {/* Primero el service worker: push, avisos e instalación dependen de
