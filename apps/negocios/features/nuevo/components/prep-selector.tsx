@@ -1,15 +1,16 @@
 'use client'
 
-import { Icon } from '@tindivo/ui'
 import { useRef } from 'react'
 import { PREP_PRESETS } from '../lib/constants'
 
 export function PrepSelector({
   value,
   onChange,
+  disabled = false,
 }: {
   value: number
   onChange: (m: number) => void
+  disabled?: boolean
 }) {
   const carouselRef = useRef<HTMLDivElement>(null)
 
@@ -23,49 +24,86 @@ export function PrepSelector({
   }
 
   return (
-    <section className="space-y-3">
+    <section
+      className={`space-y-3 transition-all ${disabled ? 'opacity-60 pointer-events-none' : ''}`}
+    >
       <div className="flex items-center justify-between px-1">
         <span className="text-sm font-semibold text-ink">Tiempo de preparación</span>
-        <span className="font-mono text-xs font-bold text-ink-muted">{value} min</span>
+        <span className="font-mono text-xs font-bold text-ink-muted">
+          {disabled ? 'Primero ingresa el teléfono' : `${value} min`}
+        </span>
       </div>
 
       <div className="relative">
         {/* Desplazamiento izquierda (Desktop) */}
-        <button
-          type="button"
-          aria-label="Desplazar izquierda"
-          onClick={() => scrollCarousel(-1)}
-          className="absolute -left-3 top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/95 text-ink border border-orange-200/50 shadow-md backdrop-blur-md transition-transform duration-200 hover:scale-105 active:scale-95 md:flex"
-        >
-          <Icon name="chevron_left" size={20} />
-        </button>
+        {!disabled && (
+          <button
+            type="button"
+            aria-label="Desplazar izquierda"
+            onClick={() => scrollCarousel(-1)}
+            className="absolute -left-3 top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/95 text-ink border border-orange-200/50 shadow-md backdrop-blur-md transition-transform duration-200 hover:scale-105 active:scale-95 md:flex"
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M15 18l-6-6 6-6" />
+            </svg>
+          </button>
+        )}
 
         {/* Desplazamiento derecha (Desktop) */}
-        <button
-          type="button"
-          aria-label="Desplazar derecha"
-          onClick={() => scrollCarousel(1)}
-          className="absolute -right-3 top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/95 text-ink border border-orange-200/50 shadow-md backdrop-blur-md transition-transform duration-200 hover:scale-105 active:scale-95 md:flex"
-        >
-          <Icon name="chevron_right" size={20} />
-        </button>
+        {!disabled && (
+          <button
+            type="button"
+            aria-label="Desplazar derecha"
+            onClick={() => scrollCarousel(1)}
+            className="absolute -right-3 top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/95 text-ink border border-orange-200/50 shadow-md backdrop-blur-md transition-transform duration-200 hover:scale-105 active:scale-95 md:flex"
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M9 18l6-6-6-6" />
+            </svg>
+          </button>
+        )}
 
         {/* Carrusel horizontal de tarjetas verticales */}
         <div
           ref={carouselRef}
-          className="-mx-2 flex gap-3 overflow-x-auto px-2 pb-3 pt-1 snap-x snap-mandatory scroll-smooth [scrollbar-width:none] [-webkit-overflow-scrolling:touch]"
+          className="-mx-2 flex gap-3 overflow-x-auto px-2 py-3 pb-6 snap-x snap-mandatory scroll-smooth [scrollbar-width:none] [-webkit-overflow-scrolling:touch]"
           style={{ touchAction: 'pan-x' }}
         >
           {PREP_PRESETS.map((m, idx) => {
-            const active = value === m
+            const active = !disabled && value === m
             return (
               <button
                 key={m}
                 type="button"
                 data-prep={idx}
+                disabled={disabled}
                 onClick={() => onChange(m)}
                 className={`flex shrink-0 flex-col items-center justify-center snap-center transition-all duration-300 ease-out active:scale-95 ${
-                  active ? 'scale-100 z-1' : 'scale-95 opacity-70 hover:scale-100 hover:opacity-100'
+                  disabled
+                    ? 'cursor-not-allowed border-dashed opacity-50'
+                    : active
+                      ? 'scale-100 z-1'
+                      : 'scale-95 opacity-70 hover:scale-100 hover:opacity-100'
                 }`}
                 style={{
                   width: '92px',

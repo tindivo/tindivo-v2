@@ -17,6 +17,7 @@ export function AmountForm({
   onPaysWithChange,
   mixedOk,
   change,
+  disabled = false,
 }: {
   payment: Payment
   amount: string
@@ -29,46 +30,50 @@ export function AmountForm({
   onPaysWithChange: (v: string) => void
   mixedOk: boolean
   change: number
+  disabled?: boolean
 }) {
   const isCashish = payment === 'pending_cash' || payment === 'pending_mixed'
   const amountN = num(amount)
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-4">
+    <div
+      className={`rounded-2xl border border-border bg-card p-4 transition-all ${disabled ? 'opacity-60 pointer-events-none' : ''}`}
+    >
       <div className="mb-2.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
         Monto del pedido
       </div>
-      {/* 0129 · El rótulo dice DELIVERY + COMIDA porque eso es exactamente lo que
-          se manda ahora. Antes decía "Total del pedido" y se enviaba como solo
-          comida: la cajera escribía el total que le había dicho al cliente por
-          teléfono y el backend le sumaba el envío otra vez. */}
-      <label className="mb-1 block font-mono text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
+      <p className="mb-1 block font-mono text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
         Total a cobrar · delivery + comida (S/)
-      </label>
+      </p>
       <input
-        className="h-11 w-full rounded-xl border border-border bg-card px-3 font-mono text-xl font-bold text-ink outline-none focus:border-brand"
+        disabled={disabled}
+        className={`h-11 w-full rounded-xl border px-3 font-mono text-xl font-bold outline-none transition-all ${
+          disabled
+            ? 'border-dashed border-border bg-ink/[0.04] text-ink-muted cursor-not-allowed'
+            : 'border-border bg-card text-ink focus:border-brand'
+        }`}
         value={amount}
         onChange={(e) => onAmountChange(e.target.value)}
-        placeholder="0.00"
+        placeholder={disabled ? 'Primero ingresa el teléfono' : '0.00'}
         inputMode="decimal"
       />
       <p className="mt-1 text-xs text-ink-muted">
         El mismo número que le dijiste al cliente. Es lo que va a cobrar el motorizado.
       </p>
 
-      {payment === 'prepaid' && (
+      {!disabled && payment === 'prepaid' && (
         <div className="mt-3 flex items-center gap-2 rounded-xl bg-sky-100 p-3 text-[13px] text-sky-800">
           <Icon name="verified" size={18} filled />
           El cliente ya pagó — el motorizado solo entrega, no cobra.
         </div>
       )}
 
-      {payment === 'pending_mixed' && (
+      {!disabled && payment === 'pending_mixed' && (
         <div className="mt-3 grid grid-cols-2 gap-2.5">
           <div>
-            <label className="mb-1 block font-mono text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
+            <p className="mb-1 block font-mono text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
               Billetera (S/)
-            </label>
+            </p>
             <input
               className="h-11 w-full rounded-xl border border-border bg-card px-3 font-mono text-[15px] text-ink outline-none focus:border-brand"
               value={walletPart}
@@ -77,9 +82,9 @@ export function AmountForm({
             />
           </div>
           <div>
-            <label className="mb-1 block font-mono text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
+            <p className="mb-1 block font-mono text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
               Efectivo (S/)
-            </label>
+            </p>
             <input
               className="h-11 w-full rounded-xl border border-border bg-card px-3 font-mono text-[15px] text-ink outline-none focus:border-brand"
               value={cashPart}
@@ -100,11 +105,11 @@ export function AmountForm({
         </div>
       )}
 
-      {isCashish && (
+      {!disabled && isCashish && (
         <div className="mt-3">
-          <label className="mb-1 block font-mono text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
+          <p className="mb-1 block font-mono text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
             Cliente paga con (S/)
-          </label>
+          </p>
           <input
             className="h-11 w-full rounded-xl border border-border bg-card px-3 font-mono text-xl font-bold text-ink outline-none focus:border-brand"
             value={paysWith}
@@ -115,7 +120,7 @@ export function AmountForm({
         </div>
       )}
 
-      {isCashish && change > 0 && (
+      {!disabled && isCashish && change > 0 && (
         <div className="mt-3 flex items-start gap-2.5 rounded-xl bg-success-soft p-3 text-sm text-green-900">
           <Icon name="payments" size={20} filled className="mt-0.5 shrink-0" />
           <p className="font-semibold">
