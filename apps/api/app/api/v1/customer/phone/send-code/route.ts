@@ -91,8 +91,14 @@ export async function POST(req: Request): Promise<Response> {
         })
     } catch (twilioErr) {
       const e = twilioErr as { code?: number; status?: number; message?: string }
+      // El 60200 de Twilio dice "Invalid parameter" y NO dice cuál, así que el
+      // log tiene que enseñar los tres candidatos. El teléfono va entero (es del
+      // propio usuario y ya está en la petición); del SID solo el prefijo y el
+      // largo, que basta para reconocer un valor equivocado sin filtrarlo.
       console.error(
-        `[twilio] verificación rechazada · code=${e.code} status=${e.status} · ${e.message}`,
+        `[twilio] verificación rechazada · code=${e.code} status=${e.status} · ${e.message}` +
+          ` · to=${fullPhone} channel=sms locale=es` +
+          ` · serviceSid=${VERIFY_SERVICE_SID.slice(0, 2)}…(${VERIFY_SERVICE_SID.length})`,
       )
       return problem('internal_error', {
         detail:
