@@ -1,27 +1,12 @@
 'use client'
 
 import { Icon, IconButton } from '@tindivo/ui'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { DirectoryAddress } from '../hooks/use-address-lookup'
 import { formatPhone, initialOf, relativeLastUsed, timesUsedLabel } from '../lib/address-format'
 
 /**
- * Selector cuando un teléfono tiene varias direcciones (spec_ui_cajera.md B3).
- *
- * NO ES UN RINCÓN QUE SE PORTA POR COMPLETITUD. Medido en el directorio real:
- * 72 de 616 teléfonos (11,7%) tienen más de una dirección, y su peso sobre los
- * pedidos es mayor todavía, porque el cliente con varias direcciones es el
- * frecuente — el mismo que concentra el volumen. Es camino regular.
- *
- * Y ELEGIR MAL MANDA EL PEDIDO A LA CASA EQUIVOCADA (B3-bis). De ahí las dos
- * decisiones que gobiernan este componente:
- *
- *   · LA REFERENCIA NO SE TRUNCA NUNCA. Las reales son largas y lo que las
- *     distingue está AL FINAL: "SAN JOSE BAJO - LADO A BUSTAMANTE" contra
- *     "SAN JOSE BAJO - RECTA DEL KINDER". Una elipsis borra justo el trozo que
- *     permite elegir bien. Se envuelve en varias líneas y se acabó.
- *   · Los metadatos (última vez, cuántos pedidos, GPS) están para desempatar
- *     cuando dos referencias se parecen.
+ * Selector cuando un teléfono tiene direcciones registradas (spec_ui_cajera.md B3 y paridad tindivo-delivery).
  */
 export function AddressPickerModal({
   addresses,
@@ -35,12 +20,22 @@ export function AddressPickerModal({
   onWriteNew: () => void
   onClose: () => void
 }) {
-  // Primera preseleccionada. El RPC ya las devuelve ordenadas
-  // (is_default DESC, last_used_at DESC), así que la primera es la más probable.
   const [selectedId, setSelectedId] = useState<string>(addresses[0]?.id ?? '')
 
   const customerName = addresses.find((a) => a.customerName)?.customerName ?? null
   const phone = addresses[0]?.phone ?? ''
+  const isMultiple = addresses.length >= 2
+
+  // Escuchar tecla Escape para cerrar
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [onClose])
 
   const confirm = () => {
     if (selectedId === NEW_ADDRESS) {
@@ -52,119 +47,159 @@ export function AddressPickerModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/45 p-4">
-      <div className="flex w-full max-w-[560px] flex-col overflow-hidden rounded-2xl bg-card max-h-[85vh]">
-        {/* Encabezado con el cliente: la cajera confirma en voz alta con quién
-            habla antes de elegir dónde manda la moto. */}
-        <div className="flex items-center gap-3 border-b border-ink/[0.06] px-4 py-3.5">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand/10 font-display text-lg font-bold text-brand">
-            {initialOf(customerName)}
-          </div>
-          <div className="min-w-0 flex-1">
-            <h2 className="truncate text-[16px] font-bold text-ink">
-              {customerName ?? 'Cliente sin nombre'}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 sm:p-6 animate-in fade-in duration-200">
+      {/* Clic fuera del contenedor para cerrar */}
+      <div className="absolute inset-0" onClick={onClose} aria-hidden="true" />
+
+      {/* Contenedor principal del modal */}
+      <div className="relative flex w-full max-w-md sm:max-w-lg max-h-[90vh] flex-col overflow-hidden rounded-[28px] border border-border/40 bg-card shadow-2xl animate-in fade-in zoom-in-95 duration-200 z-10">
+        {/* Encabezado */}
+        <div className="flex items-center justify-between border-b border-border/40 px-5 py-4">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand/10 text-brand">
+              <Icon name={isMultiple ? 'fact_check' : 'contact_phone'} size={22} />
+            </div>
+            <h2 className="text-base sm:text-lg font-bold tracking-tight text-ink">
+              {isMultiple
+                ? 'Este cliente tiene varias direcciones'
+                : 'Cliente frecuente encontrado'}
             </h2>
-            <p className="font-mono text-[12px] text-ink-muted">{formatPhone(phone)}</p>
           </div>
-          <IconButton size="sm" onClick={onClose} aria-label="Cerrar">
+          <IconButton
+            size="sm"
+            onClick={onClose}
+            aria-label="Cerrar"
+            className="text-ink-muted hover:text-ink"
+          >
             <Icon name="close" size={20} />
           </IconButton>
         </div>
 
-        {/* El texto se adapta al caso de UNA dirección, que es el 88% de los
-            clientes conocidos. "1 direcciones guardadas" delata que nadie miró
-            esta pantalla con datos reales. */}
-        <div className="border-b border-ink/[0.06] bg-ink/[0.02] px-4 py-2">
-          <p className="text-[13px] font-semibold text-ink">
-            {addresses.length === 1
-              ? 'Este cliente tiene una dirección guardada'
-              : `Este cliente tiene ${addresses.length} direcciones guardadas`}
-          </p>
-          <p className="text-[12px] text-ink-muted">
-            {addresses.length === 1
-              ? 'Confirma con el cliente si el pedido va ahí.'
-              : 'Pregúntale a cuál va el pedido.'}
-          </p>
-        </div>
+        {/* Contenido desplazable */}
+        <div className="flex flex-col overflow-y-auto p-5 gap-3.5">
+          {/* Tarjeta con datos del cliente */}
+          <div className="flex items-center gap-3.5 rounded-2xl bg-ink/[0.03] border border-ink/[0.04] p-3.5">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand/10 font-display text-sm font-bold text-brand">
+              {initialOf(customerName)}
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className="block font-mono text-[10px] font-bold uppercase tracking-wider text-ink-muted">
+                Cliente
+              </span>
+              <h3 className="truncate text-sm sm:text-base font-bold text-ink">
+                {customerName ?? 'Cliente sin nombre'}
+              </h3>
+              <p className="font-mono text-[11px] font-medium text-ink-muted">
+                Celular: {formatPhone(phone)}
+              </p>
+            </div>
+          </div>
 
-        <div className="flex flex-col gap-2 overflow-y-auto p-3.5">
-          {addresses.map((address) => {
-            const selected = address.id === selectedId
-            const used = timesUsedLabel(address.timesUsed)
-            return (
-              <button
-                key={address.id}
-                type="button"
-                onClick={() => setSelectedId(address.id)}
-                className={`flex w-full cursor-pointer gap-3 rounded-xl border p-3 text-left transition-colors ${
-                  selected ? 'border-brand bg-brand/[0.06]' : 'border-ink/[0.08] bg-card'
-                }`}
-              >
-                {/* Radio con el color primario. En el legacy era azul y rompía
-                    la paleta naranja/coral de la app (FIX #5). */}
-                <span
-                  className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
-                    selected ? 'border-brand' : 'border-ink/25'
+          {/* Subtítulo descriptivo */}
+          <p className="text-xs sm:text-sm font-medium text-ink-muted px-1">
+            {isMultiple
+              ? 'Selecciona la dirección donde desea recibir el pedido actual:'
+              : 'Confirma con el cliente si el pedido va a esta dirección:'}
+          </p>
+
+          {/* Lista de direcciones */}
+          <div className="flex flex-col gap-2.5 max-h-[320px] overflow-y-auto pr-0.5">
+            {addresses.map((address) => {
+              const selected = address.id === selectedId
+              const used = timesUsedLabel(address.timesUsed)
+              return (
+                <button
+                  key={address.id}
+                  type="button"
+                  onClick={() => setSelectedId(address.id)}
+                  className={`flex w-full cursor-pointer items-start gap-3 rounded-2xl border p-3.5 text-left transition-all ${
+                    selected
+                      ? 'border-brand bg-brand/[0.05] shadow-xs'
+                      : address.isDefault
+                        ? 'border-amber-500/30 bg-amber-500/[0.03] hover:border-amber-500/50'
+                        : 'border-border/60 bg-card hover:border-border hover:bg-surface/60'
                   }`}
                 >
-                  {selected && <span className="h-2.5 w-2.5 rounded-full bg-brand" />}
-                </span>
-
-                <span className="min-w-0 flex-1">
-                  {/* `break-words` y sin `truncate`: ver B3-bis arriba. */}
-                  <span className="block break-words text-[14px] font-semibold leading-snug text-ink">
-                    {address.reference}
+                  {/* Radio button personalizado */}
+                  <span
+                    className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-all ${
+                      selected ? 'border-brand bg-brand' : 'border-ink/30 bg-card'
+                    }`}
+                  >
+                    {selected && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
                   </span>
 
-                  <span className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-ink-muted">
-                    {address.customerName && (
-                      <span className="font-semibold text-ink-muted">{address.customerName}</span>
-                    )}
-                    <span>{relativeLastUsed(address.lastUsedAt)}</span>
-                    {used && <span>· {used}</span>}
-                    {/* El badge SOLO si de verdad lleva coordenada. Mentir aquí
-                        se paga en la calle: el motorizado cuenta con ese mapa. */}
-                    {address.hasGps && (
-                      <span className="inline-flex items-center gap-0.5 rounded-full bg-success-soft px-1.5 py-0.5 font-semibold text-success">
-                        <Icon name="my_location" size={11} filled /> GPS
-                      </span>
-                    )}
-                    {address.isDefault && (
-                      <span className="rounded-full bg-ink/[0.06] px-1.5 py-0.5 font-semibold">
-                        Principal
-                      </span>
-                    )}
-                  </span>
-                </span>
-              </button>
-            )
-          })}
+                  <span className="min-w-0 flex-1 space-y-1">
+                    <span className="block break-words text-xs sm:text-sm font-bold leading-snug text-ink">
+                      {address.reference}
+                    </span>
 
-          {/* Última opción, siempre. El cliente puede estar pidiendo a un sitio
-              nuevo y no hay que obligarlo a cancelar para escribirlo. */}
-          <button
-            type="button"
-            onClick={() => setSelectedId(NEW_ADDRESS)}
-            className={`flex w-full cursor-pointer items-center gap-3 rounded-xl border border-dashed p-3 text-left transition-colors ${
-              selectedId === NEW_ADDRESS ? 'border-brand bg-brand/[0.06]' : 'border-ink/20 bg-card'
-            }`}
-          >
-            <span
-              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
-                selectedId === NEW_ADDRESS ? 'border-brand' : 'border-ink/25'
+                    <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] font-medium text-ink-muted">
+                      {address.customerName && (
+                        <span className="uppercase text-ink-muted/90">{address.customerName}</span>
+                      )}
+                      <span>•</span>
+                      <span>{relativeLastUsed(address.lastUsedAt)}</span>
+                      {used && (
+                        <>
+                          <span>•</span>
+                          <span className="font-semibold text-brand">{used}</span>
+                        </>
+                      )}
+                      {address.hasGps && (
+                        <>
+                          <span>•</span>
+                          <span className="inline-flex items-center gap-0.5 font-semibold text-brand">
+                            <Icon name="gps_fixed" size={11} /> GPS
+                          </span>
+                        </>
+                      )}
+                      {address.isDefault && (
+                        <span className="ml-1 inline-flex items-center gap-0.5 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-700 border border-amber-500/20">
+                          <Icon name="star" size={10} filled /> Principal
+                        </span>
+                      )}
+                    </span>
+                  </span>
+                </button>
+              )
+            })}
+
+            {/* Opción para escribir una dirección nueva */}
+            <button
+              type="button"
+              onClick={() => setSelectedId(NEW_ADDRESS)}
+              className={`flex w-full cursor-pointer items-center gap-3 rounded-2xl border p-3.5 text-left transition-all ${
+                selectedId === NEW_ADDRESS
+                  ? 'border-brand bg-brand/[0.05] shadow-xs'
+                  : 'border-dashed border-border/70 bg-card hover:border-border hover:bg-surface/60'
               }`}
             >
-              {selectedId === NEW_ADDRESS && <span className="h-2.5 w-2.5 rounded-full bg-brand" />}
-            </span>
-            <span className="text-[14px] font-semibold text-ink">Escribir dirección nueva</span>
-          </button>
+              <span
+                className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-all ${
+                  selectedId === NEW_ADDRESS ? 'border-brand bg-brand' : 'border-ink/30 bg-card'
+                }`}
+              >
+                {selectedId === NEW_ADDRESS && (
+                  <span className="h-1.5 w-1.5 rounded-full bg-white" />
+                )}
+              </span>
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Icon name="add" size={16} className="text-ink-muted shrink-0" />
+                <span className="text-xs sm:text-sm font-bold text-ink">
+                  Escribir dirección nueva
+                </span>
+              </div>
+            </button>
+          </div>
         </div>
 
-        <div className="flex gap-2 border-t border-ink/[0.06] px-3.5 py-3">
+        {/* Acciones de Footer */}
+        <div className="flex gap-3 border-t border-border/40 p-4 sm:px-5">
           <button
             type="button"
             onClick={onClose}
-            className="h-11 flex-1 cursor-pointer rounded-full border border-ink/[0.12] bg-card text-[15px] font-semibold text-ink transition-colors hover:bg-ink/[0.04]"
+            className="h-12 flex-1 cursor-pointer rounded-full border border-border bg-card text-xs sm:text-sm font-bold text-ink transition-colors hover:bg-surface active:scale-[0.98]"
           >
             Cancelar
           </button>
@@ -172,7 +207,7 @@ export function AddressPickerModal({
             type="button"
             onClick={confirm}
             disabled={!selectedId}
-            className="h-11 flex-[2] cursor-pointer rounded-full bg-brand text-[15px] font-bold text-white transition-all active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50"
+            className="h-12 flex-1 cursor-pointer rounded-full bg-brand text-xs sm:text-sm font-bold text-white shadow-md shadow-brand/20 transition-all hover:bg-brand/90 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50"
           >
             Confirmar
           </button>
@@ -182,6 +217,5 @@ export function AddressPickerModal({
   )
 }
 
-/** Centinela de "dirección nueva" en el estado de selección. No es un id real,
- *  así que no puede colisionar con el uuid de una fila del directorio. */
+/** Centinela de "dirección nueva" en el estado de selección. */
 const NEW_ADDRESS = '__new__'

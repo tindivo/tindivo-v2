@@ -118,8 +118,11 @@ export function NuevoForm() {
   const cleanPhone = phone.replace(/\D/g, '')
   const isPhoneBlacklisted =
     cleanPhone.length > 0 && BLACKLISTED_PHONES.includes(cleanPhone as unknown as never)
-  const phoneFormatOk = cleanPhone === '' || /^9\d{8}$/.test(cleanPhone)
-  const phoneOk = phoneFormatOk && !isPhoneBlacklisted
+  const isPhoneComplete = cleanPhone.length === 9 && /^9\d{8}$/.test(cleanPhone)
+  const phoneFormatOk = cleanPhone === '' || isPhoneComplete
+  const isPhoneValid = isPhoneComplete && !isPhoneBlacklisted
+  const fieldsDisabled = !isPhoneValid
+  const phoneOk = isPhoneValid
   const referenceOk = isReferenceValid(reference, deliveryMethod)
 
   // Desde la 0129 `amount` ES el total con envío incluido, así que estas dos
@@ -183,17 +186,17 @@ export function NuevoForm() {
             isBlacklisted={isPhoneBlacklisted}
             phoneFormatOk={phoneFormatOk}
             lookup={lookup}
-            disabled={!phoneFormatOk}
+            disabled={fieldsDisabled}
           />
           <ReferenceForm
             reference={reference}
             onChange={setReference}
             isValid={referenceOk}
             origin={origin}
-            disabled={!phoneFormatOk}
+            disabled={fieldsDisabled}
           />
-          <PrepSelector value={prep} onChange={setPrep} disabled={!phoneFormatOk} />
-          <PaymentSelector value={payment} onChange={setPayment} disabled={!phoneFormatOk} />
+          <PrepSelector value={prep} onChange={setPrep} disabled={fieldsDisabled} />
+          <PaymentSelector value={payment} onChange={setPayment} disabled={fieldsDisabled} />
           <AmountForm
             payment={payment}
             amount={amount}
@@ -206,9 +209,9 @@ export function NuevoForm() {
             onPaysWithChange={setPaysWith}
             mixedOk={mixedOk}
             change={change}
-            disabled={!phoneFormatOk}
+            disabled={fieldsDisabled}
           />
-          <BandSelector value={band} onChange={setBand} disabled={!phoneFormatOk} />
+          <BandSelector value={band} onChange={setBand} disabled={fieldsDisabled} />
 
           {error && (
             <div className="flex items-center gap-2 rounded-xl bg-danger-soft p-3 text-[13px] font-semibold text-danger">
