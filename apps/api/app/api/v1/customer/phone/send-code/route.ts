@@ -72,13 +72,41 @@ export async function POST(req: Request): Promise<Response> {
     }
 
     // Enviar OTP via Twilio Verify (WhatsApp primario, SMS fallback automático).
-    const verification = await twilioClient.verify.v2
-      .services(VERIFY_SERVICE_SID)
-      .verifications.create({
-        to: fullPhone,
-        channel: 'sms',
-        locale: 'es',
+    //
+    // EL FALLO DE TWILIO NO PUEDE SALIR COMO "error interno" A SECAS. Sin este
+    // catch, cualquier rechazo suyo subía al `handleError` de abajo y el vecino
+    // leía "Ocurrió un error interno", que no dice nada ni a él ni a quien mira
+    // el log. Y los motivos son mundanos y accionables: cuenta de prueba que
+    // solo escribe a números verificados, permisos geográficos de Perú sin
+    // habilitar, o el servicio Verify mal apuntado. El código de Twilio queda
+    // en el log; el vecino recibe algo que puede entender.
+    let verification: { channel: string }
+    try {
+      verification = await twilioClient.verify.v2
+        .services(VERIFY_SERVICE_SID)
+        .verifications.create({
+          to: fullPhone,
+          channel: 'sms',
+          locale: 'es',
+        })
+    } catch (twilioErr) {
+      const e = twilioErr as { code?: number; status?: number; message?: string }
+      // El 60200 de Twilio dice "Invalid parameter" y NO dice cuál, así que el
+      // log tiene que enseñar los tres candidatos. El teléfono va entero (es del
+      // propio usuario y ya está en la petición); del SID solo el prefijo y el
+      // largo, que basta para reconocer un valor equivocado sin filtrarlo.
+      console.error(
+        `[twilio] verificación rechazada · code=${e.code} status=${e.status} · ${e.message}` +
+          ` · to=${fullPhone} channel=sms locale=es` +
+          ` · serviceSid=${VERIFY_SERVICE_SID.slice(0, 2)}…(${VERIFY_SERVICE_SID.length})`,
+      )
+      return problem('internal_error', {
+        detail:
+          'No pudimos enviarte el SMS. Escríbenos por WhatsApp y te verificamos el número a mano.',
+        requestId,
+        headers: corsHeaders(req),
       })
+    }
 
     // Registrar intento para rate limiting.
     await service.from('customer_otp_attempts').insert({
