@@ -83,6 +83,7 @@ export function ProductModal({ item, onClose, onAdd }: ProductModalProps) {
             <ModifierGroup
               key={g.id}
               group={g}
+              basePrice={item.base_price}
               selected={g.selection_type === 'single' ? (single[g.id] ?? '') : (multi[g.id] ?? [])}
               missing={missing.includes(g)}
               onToggle={toggle}

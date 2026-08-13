@@ -1,6 +1,6 @@
 import { Icon } from '@tindivo/ui'
 import { soles } from '@/components/dashboard/primitives'
-import { itemMinPrice } from '../lib/utils'
+import { itemMinPrice, optionDisplayPrice } from '../lib/utils'
 import type { FormData, ModifierGroup, ModifierOption } from '../types'
 
 interface CustomerPreviewPanelProps {
@@ -12,10 +12,14 @@ interface CustomerPreviewPanelProps {
 
 function CustomerOptionPill({
   opt,
+  price,
+  isTotal,
   selected,
   multi,
 }: {
   opt: ModifierOption
+  price: number
+  isTotal: boolean
   selected: boolean
   multi: boolean
 }) {
@@ -42,9 +46,13 @@ function CustomerOptionPill({
         {opt.name}
         {!opt.is_available && <span className="ml-1.5 text-[11px] text-ink-subtle">Agotado</span>}
       </span>
-      {opt.additional_price > 0 ? (
+      {isTotal ? (
+        <span className="shrink-0 font-mono text-[13px] font-semibold text-ink">
+          {soles(price)}
+        </span>
+      ) : price > 0 ? (
         <span className="shrink-0 font-mono text-[13px] font-semibold text-ink-muted">
-          +{soles(opt.additional_price)}
+          +{soles(price)}
         </span>
       ) : (
         <span className="shrink-0 text-[12px] font-semibold text-success">Incluido</span>
@@ -53,7 +61,7 @@ function CustomerOptionPill({
   )
 }
 
-function CustomerModifierGroup({ group }: { group: ModifierGroup }) {
+function CustomerModifierGroup({ group, basePrice }: { group: ModifierGroup; basePrice: number }) {
   const isRequired = group.is_required
   const ruleLabel = isRequired
     ? group.max_selections === 1
@@ -86,6 +94,8 @@ function CustomerModifierGroup({ group }: { group: ModifierGroup }) {
         <CustomerOptionPill
           key={opt.localId}
           opt={opt}
+          price={optionDisplayPrice(basePrice, group, opt)}
+          isTotal={group.price_display === 'total'}
           selected={i === 0 && isRequired}
           multi={(group.max_selections ?? 1) > 1}
         />
@@ -167,7 +177,7 @@ export function CustomerPreviewPanel({
             </div>
           ) : (
             visibleGroups.map((group) => (
-              <CustomerModifierGroup key={group.localId} group={group} />
+              <CustomerModifierGroup key={group.localId} group={group} basePrice={basePrice} />
             ))
           )}
         </div>

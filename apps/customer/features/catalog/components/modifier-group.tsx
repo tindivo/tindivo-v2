@@ -6,13 +6,22 @@ import type { ModGroupData, ModOption } from '@/features/catalog/types'
 
 interface ModifierGroupProps {
   group: ModGroupData
+  /** Precio base del plato: en modo `total` la opción se muestra sumada a él. */
+  basePrice: number
   selected: string | string[]
   missing?: boolean
   onToggle: (g: ModGroupData, opt: ModOption) => void
 }
 
-export function ModifierGroup({ group, selected, missing, onToggle }: ModifierGroupProps) {
+export function ModifierGroup({
+  group,
+  basePrice,
+  selected,
+  missing,
+  onToggle,
+}: ModifierGroupProps) {
   const isSingle = group.selection_type === 'single'
+  const isTotal = group.price_display === 'total'
   const count = isSingle ? (selected ? 1 : 0) : (selected as string[]).length
 
   return (
@@ -75,12 +84,14 @@ export function ModifierGroup({ group, selected, missing, onToggle }: ModifierGr
               </span>
               <span
                 className={`font-medium text-[14px] ${
-                  Number(opt.additional_price) > 0 ? 'text-ink' : 'text-ink/45'
+                  isTotal || Number(opt.additional_price) > 0 ? 'text-ink' : 'text-ink/45'
                 }`}
               >
-                {Number(opt.additional_price) > 0
-                  ? `+${soles(Number(opt.additional_price))}`
-                  : 'Incluido'}
+                {isTotal
+                  ? soles(basePrice + Number(opt.additional_price))
+                  : Number(opt.additional_price) > 0
+                    ? `+${soles(Number(opt.additional_price))}`
+                    : 'Incluido'}
               </span>
             </button>
           )

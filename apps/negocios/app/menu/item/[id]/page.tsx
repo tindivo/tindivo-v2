@@ -73,6 +73,7 @@ export default function MenuItemEditorPage() {
         imageBusy={editor.imageBusy}
         onFormChange={editor.patchForm}
         onGroupChange={editor.patchGroup}
+        onGroupPriceDisplayChange={editor.setGroupPriceDisplay}
         onGroupToggleExpand={editor.toggleGroupExpand}
         onGroupDelete={editor.deleteGroup}
         onGroupAddOption={editor.addOptionToGroup}
@@ -114,6 +115,7 @@ export default function MenuItemEditorPage() {
         imageBusy={editor.imageBusy}
         onFormChange={editor.patchForm}
         onGroupChange={editor.patchGroup}
+        onGroupPriceDisplayChange={editor.setGroupPriceDisplay}
         onGroupToggleExpand={editor.toggleGroupExpand}
         onGroupDelete={editor.deleteGroup}
         onGroupAddOption={editor.addOptionToGroup}

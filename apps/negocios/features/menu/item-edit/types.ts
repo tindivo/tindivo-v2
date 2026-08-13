@@ -1,5 +1,16 @@
 export type RuleMode = 'required-one' | 'required-many' | 'optional-one' | 'optional-many'
 
+/**
+ * Cómo se escribe y se muestra el precio de las opciones del grupo. NO cambia
+ * la aritmética: `additional_price` siempre guarda un delta sobre el precio
+ * base y el servidor siempre suma (ver migración 0156).
+ *
+ * - `delta`: "+ S/ 3.00". Para recargos de verdad (salsas, extras).
+ * - `total`: "S/ 26.00". Para grupos donde la opción ES el precio del plato
+ *   (tamaños). El precio base queda atado a la opción más barata.
+ */
+export type PriceDisplay = 'delta' | 'total'
+
 export interface ModifierOption {
   id: string
   localId: string
@@ -19,6 +30,7 @@ export interface ModifierGroup {
   is_required: boolean
   min_selections: number
   max_selections: number | null
+  price_display: PriceDisplay
   display_order: number
   options: ModifierOption[]
   isNew?: boolean

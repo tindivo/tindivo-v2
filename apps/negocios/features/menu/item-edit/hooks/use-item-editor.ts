@@ -4,8 +4,8 @@ import { notifySuccess } from '@/components/dashboard/toast'
 import { compressImage } from '@/lib/images/compress'
 import { UPLOAD_CACHE_CONTROL, validateImageInput } from '@/lib/images/upload'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
-import { makeLocalId } from '../lib/utils'
-import type { Category, FormData, ModifierGroup } from '../types'
+import { acceptsTotalPricing, applyTotalPrices, currentTotals, makeLocalId } from '../lib/utils'
+import type { Category, FormData, ModifierGroup, PriceDisplay } from '../types'
 
 export function useItemEditor() {
   const params = useParams()
@@ -130,7 +130,7 @@ export function useItemEditor() {
           const { data: groupsData } = await supabase
             .from('menu_modifier_groups')
             .select(
-              'id,name,selection_type,is_required,min_selections,max_selections,display_order',
+              'id,name,selection_type,is_required,min_selections,max_selections,price_display,display_order',
             )
             .in('id', groupIds)
 
@@ -159,6 +159,7 @@ export function useItemEditor() {
                 is_required: g.is_required,
                 min_selections: g.min_selections,
                 max_selections: g.max_selections,
+                price_display: (g.price_display as PriceDisplay | null) ?? 'delta',
                 display_order: j.display_order,
                 isExpanded: false,
                 options: (optsByGroup[g.id] ?? []).map((o) => ({
@@ -197,8 +198,48 @@ export function useItemEditor() {
   }
 
   function patchGroup(localId: string, patch: Partial<ModifierGroup>) {
-    setGroups((prev) => prev.map((g) => (g.localId === localId ? { ...g, ...patch } : g)))
+    setGroups((prev) =>
+      prev.map((g) => {
+        if (g.localId !== localId) return g
+        const next = { ...g, ...patch }
+        // Cambiar la regla a "opcional" o a "elegir varios" deja el modo
+        // "precio total" sin sentido, así que vuelve solo a recargos. Los
+        // deltas guardados no se tocan: lo que el cliente paga no cambia,
+        // solo cómo se escribe.
+        if (next.price_display === 'total' && !acceptsTotalPricing(next)) {
+          next.price_display = 'delta'
+        }
+        return next
+      }),
+    )
     setHasUnsaved(true)
+  }
+
+  /**
+   * El precio base vive en `formData` y los deltas en `groups`, así que
+   * cualquier edición en modo "precio total" mueve los dos estados a la vez.
+   */
+  function applyTotals(group: ModifierGroup, totals: Map<string, number>) {
+    const fallbackBase = Number.parseFloat(formData.base_price) || 0
+    const { basePrice, group: next } = applyTotalPrices(group, totals, fallbackBase)
+    setGroups((prev) => prev.map((g) => (g.localId === group.localId ? next : g)))
+    setFormData((f) => ({ ...f, base_price: basePrice.toFixed(2) }))
+    setHasUnsaved(true)
+  }
+
+  function setGroupPriceDisplay(localId: string, mode: PriceDisplay) {
+    const group = groups.find((g) => g.localId === localId)
+    if (!group) return
+    if (mode !== 'total') {
+      patchGroup(localId, { price_display: 'delta' })
+      return
+    }
+    // Al encender el switch, los precios finales que ya cobraba el plato se
+    // quedan tal cual; lo único que se renormaliza es el reparto entre precio
+    // base y deltas. Si el plato estaba mal cargado (base 13 + "Pequeña" +13),
+    // aquí se hace visible el precio real que estaba pagando el cliente: 26.
+    const base = Number.parseFloat(formData.base_price) || 0
+    applyTotals({ ...group, price_display: 'total' }, currentTotals(base, group))
   }
 
   function toggleGroupExpand(localId: string) {
@@ -221,6 +262,7 @@ export function useItemEditor() {
       is_required: true,
       min_selections: 1,
       max_selections: 1,
+      price_display: 'delta',
       display_order: groups.filter((g) => !g.isDeleted).length,
       options: [],
       isNew: true,
@@ -250,6 +292,22 @@ export function useItemEditor() {
   }
 
   function deleteOption(groupLocalId: string, optLocalId: string) {
+    const group = groups.find((g) => g.localId === groupLocalId)
+    const marked = group && {
+      ...group,
+      options: group.options.map((o) => (o.localId === optLocalId ? { ...o, isDeleted: true } : o)),
+    }
+
+    // Borrar la opción más barata de un grupo de precio total sube el precio
+    // base del plato: si no se recalculara, el "Desde S/ 13" seguiría vivo sin
+    // ninguna pizza de 13.
+    if (marked && group.price_display === 'total') {
+      const totals = currentTotals(Number.parseFloat(formData.base_price) || 0, group)
+      totals.delete(optLocalId)
+      applyTotals(marked, totals)
+      return
+    }
+
     setGroups((prev) =>
       prev.map((g) => {
         if (g.localId !== groupLocalId) return g
@@ -262,11 +320,31 @@ export function useItemEditor() {
     setHasUnsaved(true)
   }
 
+  /**
+   * En modo "precio total", `patch.additional_price` NO es un delta: es el
+   * precio final que la cajera acaba de escribir. Se traduce aquí, en el único
+   * sitio que ve a la vez el grupo entero y el precio base.
+   */
   function changeOption(
     groupLocalId: string,
     optLocalId: string,
     patch: Partial<{ name: string; additional_price: number; is_available: boolean }>,
   ) {
+    const group = groups.find((g) => g.localId === groupLocalId)
+    if (group && group.price_display === 'total' && patch.additional_price !== undefined) {
+      const totals = currentTotals(Number.parseFloat(formData.base_price) || 0, group)
+      totals.set(optLocalId, patch.additional_price)
+      const { additional_price: _typedTotal, ...rest } = patch
+      applyTotals(
+        {
+          ...group,
+          options: group.options.map((o) => (o.localId === optLocalId ? { ...o, ...rest } : o)),
+        },
+        totals,
+      )
+      return
+    }
+
     setGroups((prev) =>
       prev.map((g) => {
         if (g.localId !== groupLocalId) return g
@@ -508,6 +586,7 @@ export function useItemEditor() {
               is_required: g.is_required,
               min_selections: g.min_selections,
               max_selections: g.max_selections,
+              price_display: g.price_display,
               display_order: g.display_order,
             })
             .select('id')
@@ -535,6 +614,7 @@ export function useItemEditor() {
               is_required: g.is_required,
               min_selections: g.min_selections,
               max_selections: g.max_selections,
+              price_display: g.price_display,
               display_order: g.display_order,
             })
             .eq('id', groupId)
@@ -682,6 +762,7 @@ export function useItemEditor() {
     pendingNavRef,
     patchForm,
     patchGroup,
+    setGroupPriceDisplay,
     toggleGroupExpand,
     deleteGroup,
     addGroup,

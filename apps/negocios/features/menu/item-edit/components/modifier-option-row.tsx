@@ -1,8 +1,16 @@
 import { Icon } from '@tindivo/ui'
-import type { ModifierOption } from '../types'
+import type { ModifierOption, PriceDisplay } from '../types'
 
 interface ModifierOptionRowProps {
   opt: ModifierOption
+  /**
+   * Lo que se escribe en la casilla de precio: el delta en modo `delta`, el
+   * precio final del plato en modo `total`. Se recibe ya calculado porque el
+   * precio base no vive aquí, y `onChange` devuelve el número tal cual lo
+   * escribió el negocio: traducirlo a delta es cosa del hook.
+   */
+  priceValue: number
+  priceDisplay: PriceDisplay
   onChange: (patch: Partial<ModifierOption>) => void
   onDelete: () => void
   onMoveUp: () => void
@@ -13,6 +21,8 @@ interface ModifierOptionRowProps {
 
 export function ModifierOptionRow({
   opt,
+  priceValue,
+  priceDisplay,
   onChange,
   onDelete,
   onMoveUp,
@@ -20,6 +30,7 @@ export function ModifierOptionRow({
   isFirst,
   isLast,
 }: ModifierOptionRowProps) {
+  const isTotal = priceDisplay === 'total'
   return (
     <div
       className={`flex items-center gap-2 border-b border-ink/[0.06] py-2 ${
@@ -59,10 +70,12 @@ export function ModifierOptionRow({
           type="number"
           min={0}
           step={0.5}
-          className={`w-full rounded-lg border border-ink/[0.06] bg-surface px-2.5 py-1.5 text-right font-mono text-[13px] font-semibold outline-none focus:border-ink ${
-            opt.additional_price > 0 ? 'text-success' : ''
-          }`}
-          value={opt.additional_price === 0 ? '' : opt.additional_price}
+          inputMode="decimal"
+          aria-label={isTotal ? `Precio de ${opt.name || 'la opción'}` : 'Precio adicional'}
+          className={`w-full rounded-lg border bg-surface px-2.5 py-1.5 text-right font-mono text-[13px] font-semibold outline-none focus:border-ink ${
+            isTotal ? 'border-info/30 text-ink' : 'border-ink/[0.06]'
+          } ${!isTotal && priceValue > 0 ? 'text-success' : ''}`}
+          value={priceValue === 0 ? '' : priceValue}
           placeholder="0"
           onChange={(e) => onChange({ additional_price: Number.parseFloat(e.target.value) || 0 })}
         />
