@@ -38,6 +38,13 @@ export function useItemEditor() {
   const [imageError, setImageError] = useState<string | null>(null)
   const [imageBusy, setImageBusy] = useState(false)
   const previewUrlRef = useRef<string | null>(null)
+  /**
+   * "Quitar foto" solo cambia el formulario; el archivo no se toca hasta que
+   * el negocio guarda. Si se borrara al pulsar el botón, quien se arrepiente y
+   * sale sin guardar se quedaría con un plato apuntando a un objeto que ya no
+   * existe.
+   */
+  const imageRemovedRef = useRef(false)
   const [groups, setGroups] = useState<ModifierGroup[]>([])
   const [hasUnsaved, setHasUnsaved] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -350,6 +357,9 @@ export function useItemEditor() {
       // Se comprime al elegir, no al guardar: el preview enseña exactamente la
       // imagen que verá el cliente, y el botón "Guardar" no se queda colgado.
       const optimized = await compressImage(file, 'product')
+      // Si quitó la foto y acto seguido eligió otra, no hay nada que borrar:
+      // la nueva sobrescribe el mismo objeto.
+      imageRemovedRef.current = false
       setPendingImageFile(optimized)
       replacePreview(URL.createObjectURL(optimized))
       setHasUnsaved(true)
@@ -361,6 +371,7 @@ export function useItemEditor() {
   }
 
   function onClearImage() {
+    if (formData.image_url) imageRemovedRef.current = true
     setPendingImageFile(null)
     replacePreview(null)
     setImageError(null)
@@ -461,6 +472,11 @@ export function useItemEditor() {
         setFormData((f) => ({ ...f, image_url: versionedUrl }))
         setPendingImageFile(null)
         replacePreview(null)
+      } else if (imageRemovedRef.current) {
+        // La fila ya guardó `image_url: null` más arriba, así que el objeto se
+        // quedó sin quien lo referencie. Se va ahora.
+        await supabase.storage.from('menu-items').remove([`${bizId}/items/${savedItemId}`])
+        imageRemovedRef.current = false
       }
 
       for (let i = 0; i < groups.length; i++) {
@@ -589,6 +605,15 @@ export function useItemEditor() {
     if (!bizId || isNew) return
     setSaving(true)
     const supabase = getSupabaseBrowser()
+
+    // Primero la foto: al irse la fila desaparece la única referencia al
+    // objeto, y ya nadie sabría que ese archivo sobra. Si el borrado falla no
+    // se aborta nada — un archivo huérfano molesta menos que un plato que el
+    // negocio no consigue quitar de la carta.
+    if (formData.image_url) {
+      await supabase.storage.from('menu-items').remove([`${bizId}/items/${itemId}`])
+    }
+
     const groupIds = groups.filter((g) => g.id).map((g) => g.id)
     if (groupIds.length > 0) {
       await supabase.from('menu_modifier_options').delete().in('group_id', groupIds)
