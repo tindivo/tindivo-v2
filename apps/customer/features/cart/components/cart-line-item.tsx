@@ -30,6 +30,7 @@ export function CartLineItem({ line, isFirst }: CartLineItemProps) {
         <img
           src={line.imageUrl}
           alt={line.name}
+          decoding="async"
           className="h-12 w-12 shrink-0 rounded-xl object-cover"
         />
       ) : (

@@ -17,6 +17,8 @@ export function BusinessCard({ business }: BusinessCardProps) {
         <img
           src={b.logo_url}
           alt={b.name}
+          loading="lazy"
+          decoding="async"
           className="h-[72px] w-[72px] shrink-0 rounded-2xl object-cover"
         />
       ) : (

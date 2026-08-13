@@ -40,7 +40,12 @@ export function ProductModal({ item, onClose, onAdd }: ProductModalProps) {
           style={{ background: `oklch(0.92 0.04 ${hue})` }}
         >
           {item.image_url ? (
-            <img src={item.image_url} alt={item.name} className="h-full w-full object-cover" />
+            <img
+              src={item.image_url}
+              alt={item.name}
+              decoding="async"
+              className="h-full w-full object-cover"
+            />
           ) : (
             <span
               className="relative z-[1] font-mono text-[11px] tracking-[0.06em]"

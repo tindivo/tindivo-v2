@@ -32,7 +32,14 @@ export function CategoryCircles({ categories = CATEGORIES }: { categories?: Cate
           >
             <div className="relative h-[72px] w-[72px] overflow-hidden rounded-full bg-surface-low ring-1 ring-ink/[0.06] transition-transform hover:scale-105">
               {c.imageUrl ? (
-                <img src={c.imageUrl} alt={c.label} className="h-full w-full object-cover" />
+                // Sin `lazy`: los círculos de categoría abren la home y son de
+                // lo primero que se ve. Diferirlos retrasaría el LCP.
+                <img
+                  src={c.imageUrl}
+                  alt={c.label}
+                  decoding="async"
+                  className="h-full w-full object-cover"
+                />
               ) : (
                 <div className="flex h-full w-full items-center justify-center">
                   <Icon name={c.icon} size={28} className="text-brand" />

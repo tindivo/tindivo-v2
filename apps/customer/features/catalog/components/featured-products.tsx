@@ -68,7 +68,13 @@ export function FeaturedProducts({ products = SAMPLE_PRODUCTS }: { products?: Pr
             {/* Imagen */}
             <div className="relative h-[110px] w-full overflow-hidden bg-surface-low">
               {p.imageUrl ? (
-                <img src={p.imageUrl} alt={p.name} className="h-full w-full object-cover" />
+                <img
+                  src={p.imageUrl}
+                  alt={p.name}
+                  loading="lazy"
+                  decoding="async"
+                  className="h-full w-full object-cover"
+                />
               ) : (
                 <div className="flex h-full w-full items-center justify-center">
                   <Icon name="restaurant" size={32} className="text-ink/20" />
