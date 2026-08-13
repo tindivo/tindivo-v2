@@ -19,6 +19,13 @@ export const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
  */
 export const MAX_INPUT_BYTES = 15 * 1024 * 1024
 
+/**
+ * Espejo del `file_size_limit` que la migración 0151 puso en los buckets
+ * `business-logos`, `business-qrs` y `menu-items`. Si estos dos números se
+ * separan, Storage empieza a rechazar subidas con un error que no dice nada.
+ */
+export const MAX_UPLOAD_BYTES = 3 * 1024 * 1024
+
 export function validateImageInput(file: File): string | null {
   if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
     return 'Formato no permitido. Usa JPG, PNG o WebP.'

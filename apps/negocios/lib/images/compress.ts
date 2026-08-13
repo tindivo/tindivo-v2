@@ -1,4 +1,5 @@
 import { fitWithin, type ImageProfile, PROFILES } from './profiles'
+import { MAX_UPLOAD_BYTES } from './upload'
 
 /**
  * Comprime una imagen en el navegador ANTES de subirla a Storage.
@@ -24,8 +25,9 @@ export async function compressImage(file: File, profile: ImageProfile): Promise<
       : await encodeLossy(canvas, spec.quality)
 
     // Reescalar y recomprimir un archivo ya ligero puede engordarlo. En ese
-    // caso el original es la mejor versión que tenemos.
-    if (encoded.size >= file.size) return file
+    // caso el original es la mejor versión que tenemos... salvo que no quepa
+    // en el bucket, y entonces el comprimido es lo único que va a entrar.
+    if (encoded.size >= file.size && file.size <= MAX_UPLOAD_BYTES) return file
 
     return new File([encoded], renameFor(file.name, encoded.type), {
       type: encoded.type,
