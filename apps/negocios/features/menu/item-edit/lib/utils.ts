@@ -1,15 +1,5 @@
 import type { ModifierGroup, RuleMode } from '../types'
 
-export function validateProductImage(file: File): string | null {
-  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-    return 'Formato no permitido. Usa JPG, PNG o WebP.'
-  }
-  if (file.size > 5 * 1024 * 1024) {
-    return 'La imagen supera el máximo de 5 MB.'
-  }
-  return null
-}
-
 export function ruleToMode(g: ModifierGroup): RuleMode {
   if (g.is_required && g.max_selections === 1) return 'required-one'
   if (g.is_required && (g.max_selections ?? 2) > 1) return 'required-many'

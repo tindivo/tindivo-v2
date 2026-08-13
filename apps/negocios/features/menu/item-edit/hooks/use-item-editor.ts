@@ -1,20 +1,11 @@
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { notifySuccess } from '@/components/dashboard/toast'
+import { compressImage } from '@/lib/images/compress'
+import { UPLOAD_CACHE_CONTROL, validateImageInput } from '@/lib/images/upload'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
-import { ALLOWED_IMAGE_TYPES, MAX_IMAGE_BYTES } from '../lib/constants'
 import { makeLocalId } from '../lib/utils'
 import type { Category, FormData, ModifierGroup } from '../types'
-
-function validateProductImage(file: File): string | null {
-  if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-    return 'Formato no permitido. Usa JPG, PNG o WebP.'
-  }
-  if (file.size > MAX_IMAGE_BYTES) {
-    return 'La imagen supera el máximo de 5 MB.'
-  }
-  return null
-}
 
 export function useItemEditor() {
   const params = useParams()
@@ -45,6 +36,8 @@ export function useItemEditor() {
   const [pendingImageFile, setPendingImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [imageError, setImageError] = useState<string | null>(null)
+  const [imageBusy, setImageBusy] = useState(false)
+  const previewUrlRef = useRef<string | null>(null)
   const [groups, setGroups] = useState<ModifierGroup[]>([])
   const [hasUnsaved, setHasUnsaved] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -334,21 +327,42 @@ export function useItemEditor() {
     setHasUnsaved(true)
   }
 
-  function onPickImage(file: File) {
-    const err = validateProductImage(file)
+  /**
+   * Revoca el objectURL anterior antes de soltar el nuevo. Sin esto cada
+   * "Reemplazar" dejaba una foto entera retenida en memoria hasta recargar la
+   * página, y aquí se reemplaza mucho desde el celular.
+   */
+  function replacePreview(next: string | null) {
+    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current)
+    previewUrlRef.current = next
+    setImagePreview(next)
+  }
+
+  async function onPickImage(file: File) {
+    const err = validateImageInput(file)
     if (err) {
       setImageError(err)
       return
     }
     setImageError(null)
-    setPendingImageFile(file)
-    setImagePreview(URL.createObjectURL(file))
-    setHasUnsaved(true)
+    setImageBusy(true)
+    try {
+      // Se comprime al elegir, no al guardar: el preview enseña exactamente la
+      // imagen que verá el cliente, y el botón "Guardar" no se queda colgado.
+      const optimized = await compressImage(file, 'product')
+      setPendingImageFile(optimized)
+      replacePreview(URL.createObjectURL(optimized))
+      setHasUnsaved(true)
+    } catch (err) {
+      setImageError(err instanceof Error ? err.message : 'No pudimos procesar la imagen.')
+    } finally {
+      setImageBusy(false)
+    }
   }
 
   function onClearImage() {
     setPendingImageFile(null)
-    setImagePreview(null)
+    replacePreview(null)
     setImageError(null)
     setFormData((f) => ({ ...f, image_url: null }))
     setHasUnsaved(true)
@@ -425,6 +439,7 @@ export function useItemEditor() {
           .upload(path, pendingImageFile, {
             upsert: true,
             contentType: pendingImageFile.type,
+            cacheControl: UPLOAD_CACHE_CONTROL,
           })
         if (upErr) {
           setSaveError(`No se pudo subir la imagen: ${upErr.message}`)
@@ -445,7 +460,7 @@ export function useItemEditor() {
         }
         setFormData((f) => ({ ...f, image_url: versionedUrl }))
         setPendingImageFile(null)
-        setImagePreview(null)
+        replacePreview(null)
       }
 
       for (let i = 0; i < groups.length; i++) {
@@ -625,6 +640,7 @@ export function useItemEditor() {
     saveError,
     imagePreview,
     imageError,
+    imageBusy,
     pendingNavRef,
     patchForm,
     patchGroup,

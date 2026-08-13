@@ -3,6 +3,8 @@ import { Icon } from '@tindivo/ui'
 import { useState } from 'react'
 import { useDashboard } from '@/components/dashboard/shell'
 import { api } from '@/lib/api'
+import { compressImage } from '@/lib/images/compress'
+import { UPLOAD_CACHE_CONTROL, validateImageInput } from '@/lib/images/upload'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
 interface ProfileImageUploaderProps {
@@ -34,21 +36,30 @@ export function ProfileImageUploader({
     const file = e.target.files?.[0]
     e.target.value = ''
     if (!file) return
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-      setError('Formato no permitido. Usa JPG, PNG o WebP.')
-      return
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setError('La imagen supera el máximo de 5 MB.')
+    const invalid = validateImageInput(file)
+    if (invalid) {
+      setError(invalid)
       return
     }
     setBusy(true)
     setError(null)
+
+    let optimized: File
+    try {
+      optimized = await compressImage(file, field === 'logoUrl' ? 'logo' : 'banner')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No pudimos procesar la imagen.')
+      setBusy(false)
+      return
+    }
+
     const supabase = getSupabaseBrowser()
     const path = `${bizId}/${pathSuffix}`
-    const { error: upErr } = await supabase.storage
-      .from(bucket)
-      .upload(path, file, { upsert: true, contentType: file.type })
+    const { error: upErr } = await supabase.storage.from(bucket).upload(path, optimized, {
+      upsert: true,
+      contentType: optimized.type,
+      cacheControl: UPLOAD_CACHE_CONTROL,
+    })
     if (upErr) {
       setError(upErr.message)
       setBusy(false)

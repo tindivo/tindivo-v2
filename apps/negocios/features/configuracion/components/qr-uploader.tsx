@@ -3,6 +3,8 @@ import { Icon } from '@tindivo/ui'
 import { useState } from 'react'
 import { useDashboard } from '@/components/dashboard/shell'
 import { api } from '@/lib/api'
+import { compressImage } from '@/lib/images/compress'
+import { UPLOAD_CACHE_CONTROL, validateImageInput } from '@/lib/images/upload'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
 interface QrUploaderProps {
@@ -20,13 +22,32 @@ export function QrUploader({ qrUrl, onUploaded, size }: QrUploaderProps) {
     const file = e.target.files?.[0]
     e.target.value = ''
     if (!file) return
+    const invalid = validateImageInput(file)
+    if (invalid) {
+      setError(invalid)
+      return
+    }
     setBusy(true)
     setError(null)
+
+    // Perfil 'qr': se reescala pero se guarda SIN pérdida. Un código con
+    // artefactos de compresión es un cliente que no puede yapear.
+    let optimized: File
+    try {
+      optimized = await compressImage(file, 'qr')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No pudimos procesar el QR.')
+      setBusy(false)
+      return
+    }
+
     const supabase = getSupabaseBrowser()
     const path = `${bizId}/qr`
-    const { error: upErr } = await supabase.storage
-      .from('business-qrs')
-      .upload(path, file, { upsert: true, contentType: file.type })
+    const { error: upErr } = await supabase.storage.from('business-qrs').upload(path, optimized, {
+      upsert: true,
+      contentType: optimized.type,
+      cacheControl: UPLOAD_CACHE_CONTROL,
+    })
     if (upErr) {
       setError(upErr.message)
       setBusy(false)

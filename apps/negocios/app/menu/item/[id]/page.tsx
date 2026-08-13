@@ -65,6 +65,7 @@ export default function MenuItemEditorPage() {
         groups={editor.groups}
         imageSrc={imageSrc}
         imageError={editor.imageError}
+        imageBusy={editor.imageBusy}
         onFormChange={editor.patchForm}
         onGroupChange={editor.patchGroup}
         onGroupToggleExpand={editor.toggleGroupExpand}
@@ -104,6 +105,7 @@ export default function MenuItemEditorPage() {
         groups={editor.groups}
         imageSrc={imageSrc}
         imageError={editor.imageError}
+        imageBusy={editor.imageBusy}
         onFormChange={editor.patchForm}
         onGroupChange={editor.patchGroup}
         onGroupToggleExpand={editor.toggleGroupExpand}

@@ -31,6 +31,7 @@ export interface EditorFormProps {
   onDeleteItem: () => void
   imageSrc: string | null
   imageError: string | null
+  imageBusy: boolean
   onPickImage: (file: File) => void
   onClearImage: () => void
 }
@@ -60,6 +61,7 @@ export function EditorForm({
   onDeleteItem,
   imageSrc,
   imageError,
+  imageBusy,
   onPickImage,
   onClearImage,
 }: EditorFormProps) {
@@ -91,15 +93,18 @@ export function EditorForm({
               </div>
             )}
             <div className="flex flex-col gap-1.5">
-              <label className="block cursor-pointer">
+              <label
+                className={`block cursor-pointer ${imageBusy ? 'pointer-events-none opacity-50' : ''}`}
+              >
                 <span className="inline-flex h-9 items-center gap-2 rounded-full border border-ink/[0.08] bg-card px-3 text-sm font-bold text-ink transition-all active:scale-[0.97] hover:bg-surface">
                   <Icon name="upload" size={14} />
-                  {imageSrc ? 'Reemplazar' : 'Subir foto'}
+                  {imageBusy ? 'Optimizando…' : imageSrc ? 'Reemplazar' : 'Subir foto'}
                 </span>
                 <input
                   type="file"
                   accept="image/*"
                   className="sr-only"
+                  disabled={imageBusy}
                   onChange={(e) => {
                     const f = e.target.files?.[0]
                     e.target.value = ''
