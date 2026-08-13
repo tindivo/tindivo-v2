@@ -22,7 +22,20 @@ export interface ScheduleDayRow {
 export type OpenStatus =
   | { kind: 'no_schedule' }
   | { kind: 'open'; closesAt: string }
-  | { kind: 'closed'; opensAt: string | null; opensToday: boolean }
+  | {
+      kind: 'closed'
+      opensAt: string | null
+      opensToday: boolean
+      /**
+       * Presente solo cuando el cierre NO se explica por el horario: su horario
+       * dice que abre, pero nadie del local ha confirmado que hoy atienden. El
+       * cliente necesita ahí un mensaje distinto al de un día no laborable.
+       *
+       * Ausente = cerrado por horario, que es el caso normal y no necesita
+       * etiqueta.
+       */
+      reason?: 'not_confirmed'
+    }
 
 const HHMM_RE = /^(\d{2}):(\d{2})$/
 
@@ -100,8 +113,38 @@ const DAY_MIN = 24 * 60
  * Estado de atención del negocio en el instante `now` (America/Lima).
  * Sin filas → `no_schedule` (se trata como siempre abierto y sin UI de horario).
  * Semántica de turno: `[start, end)` — apertura inclusiva, cierre exclusivo.
+ *
+ * `openingConfirmed` es la declaración de la jornada (migración 0154). El
+ * horario dice cuándo PODRÍA abrir; esto, si abrió. Con `false` el negocio
+ * queda cerrado aunque el horario diga lo contrario, que es justo el caso del
+ * día que no atienden y nadie se acordó de cambiar el horario semanal.
+ *
+ * `undefined`/`null` = no se sabe (llamada antigua o consulta fallida) y manda
+ * solo el horario, para que un fallo transitorio no cierre a nadie.
  */
-export function getOpenStatus(days: ScheduleDayRow[], now: Date): OpenStatus {
+export function getOpenStatus(
+  days: ScheduleDayRow[],
+  now: Date,
+  openingConfirmed?: boolean | null,
+): OpenStatus {
+  const byScheduleOnly = statusFromSchedule(days, now)
+
+  // Sin horario configurado la confirmación no aplica: ese negocio no tiene
+  // jornada que declarar y se sigue tratando como siempre abierto.
+  if (byScheduleOnly.kind === 'no_schedule') return byScheduleOnly
+
+  // Cerrado por horario: se devuelve tal cual, sin `reason`. Etiquetarlo no
+  // aporta nada y cambiaría la forma del objeto para todos los consumidores.
+  if (byScheduleOnly.kind === 'closed') return byScheduleOnly
+
+  // Está dentro de su horario, pero hoy nadie ha levantado la persiana.
+  if (openingConfirmed === false) {
+    return { kind: 'closed', opensAt: null, opensToday: false, reason: 'not_confirmed' }
+  }
+  return byScheduleOnly
+}
+
+function statusFromSchedule(days: ScheduleDayRow[], now: Date): OpenStatus {
   if (days.length === 0) return { kind: 'no_schedule' }
   const byDay = new Map(days.map((d) => [d.day_of_week, d]))
   const { dayIdx, minutes } = limaParts(now)

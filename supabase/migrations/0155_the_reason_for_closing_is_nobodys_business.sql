@@ -1,0 +1,22 @@
+-- =============================================================================
+-- 0155 · Quitar la lectura pública de business_service_days
+-- Idempotente.
+--
+-- La 0154 creó `bsd_public_read` con `using (true)`, pensando en que el
+-- catálogo tendría que consultar si el negocio abrió. Es demasiado: la RLS
+-- filtra FILAS, no columnas, así que esa policy dejaba a cualquiera con la
+-- anon key leer también:
+--
+--   · `note`          — texto interno del negocio ("corte de luz", "velorio").
+--                       El propio spec lo describe como visible solo en el panel.
+--   · `confirmed_by`  — el uuid del usuario que declaró la apertura.
+--
+-- Y no hacía falta: el catálogo público no lee estas tablas directamente, va
+-- por `/api/v1/public/businesses`, que usa `service_role` y por tanto ignora
+-- la RLS. Igual que ya hace con `business_schedule`.
+--
+-- Quedan las dos policies que sí se usan: el dueño sobre sus filas y el admin
+-- sobre todas.
+-- =============================================================================
+
+drop policy if exists "bsd_public_read" on public.business_service_days;

@@ -7,6 +7,7 @@ import { findCompletedReplay, withIdempotency } from '@/lib/http/idempotency'
 import { handleError, problem } from '@/lib/http/problem'
 import { getRequestId } from '@/lib/http/request-id'
 import { sendOrderCreated, sendOrderValidation } from '@/lib/inngest/client'
+import { hasConfirmedOpening } from '@/lib/opening/service-day'
 import { isPhoneAllowed, PILOT_REJECTION_DETAIL } from '@/lib/pilot/gate'
 import { createServiceClient } from '@/lib/supabase/service'
 
@@ -211,6 +212,22 @@ export async function POST(req: Request): Promise<Response> {
           openStatus.opensToday && openStatus.opensAt
             ? `El restaurante está cerrado ahora. Abre hoy a las ${openStatus.opensAt}.`
             : 'El restaurante está cerrado ahora. Revisa su horario de atención.',
+        requestId,
+        headers: corsHeaders(req),
+      })
+    }
+
+    // Apertura del día: estar dentro del horario no basta, alguien del negocio
+    // tiene que haber confirmado que hoy atienden. Es lo que evita que entren
+    // pedidos a un local que ese día no abrió.
+    //
+    // `null` = no se pudo consultar. En ese caso se deja pasar a propósito: un
+    // fallo transitorio de la base no puede dejar al negocio sin vender, y el
+    // pedido sin aceptar expira solo a los 15 minutos.
+    const openingConfirmed = await hasConfirmedOpening(service, body.businessId)
+    if (openingConfirmed === false) {
+      return problem('conflict', {
+        detail: 'El restaurante todavía no ha confirmado que atiende hoy. Inténtalo más tarde.',
         requestId,
         headers: corsHeaders(req),
       })

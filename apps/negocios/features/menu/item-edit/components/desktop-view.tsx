@@ -21,6 +21,8 @@ interface DesktopViewProps extends EditorFormProps {
   pendingOrders: number
   onShowDeleteModal: (v: boolean) => void
   onShowUnsavedModal: (v: boolean) => void
+  /** Ejecuta el borrado. Distinto de `onDeleteItem`, que solo abre el diálogo. */
+  onConfirmDelete: () => void
   onSave: () => void
   onBack: () => void
   onSaveAndExit: () => void
@@ -43,6 +45,7 @@ export function DesktopView(props: DesktopViewProps) {
     pendingOrders,
     onShowDeleteModal,
     onShowUnsavedModal,
+    onConfirmDelete,
     onSave,
     onBack,
     onSaveAndExit,
@@ -59,7 +62,7 @@ export function DesktopView(props: DesktopViewProps) {
       {showDeleteModal && (
         <ConfirmDeleteModal
           itemName={formData.name}
-          onConfirm={formProps.onDeleteItem}
+          onConfirm={onConfirmDelete}
           onCancel={() => onShowDeleteModal(false)}
         />
       )}

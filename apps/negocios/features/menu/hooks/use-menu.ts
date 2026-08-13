@@ -20,6 +20,7 @@ async function loadMenu(businessId: string): Promise<MenuCategory[]> {
           'id,category_id,name,base_price,is_available,is_compact,badges,image_url,display_order',
         )
         .eq('business_id', businessId)
+        .is('deleted_at', null)
         .order('display_order'),
       supabase.from('menu_item_modifier_groups').select('item_id,group_id'),
       supabase

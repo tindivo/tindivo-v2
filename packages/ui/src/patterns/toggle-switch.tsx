@@ -40,6 +40,9 @@ export function ToggleSwitch({
       <button
         type="button"
         role="switch"
+        // El texto del switch vive en un <p> aparte, así que sin esto el botón
+        // llega al lector de pantalla como "conmutador" a secas.
+        aria-label={label}
         aria-checked={checked}
         disabled={disabled}
         onClick={() => onChange(!checked)}

@@ -36,6 +36,11 @@ export default function MenuItemEditorPage() {
     }
   }
 
+  async function handleConfirmDelete() {
+    setShowDeleteModal(false)
+    await editor.handleDeleteItem()
+  }
+
   async function handleSaveAndExit() {
     const ok = await editor.handleSave()
     if (ok) editor.handleSaveAndExit()
@@ -65,8 +70,10 @@ export default function MenuItemEditorPage() {
         groups={editor.groups}
         imageSrc={imageSrc}
         imageError={editor.imageError}
+        imageBusy={editor.imageBusy}
         onFormChange={editor.patchForm}
         onGroupChange={editor.patchGroup}
+        onGroupPriceDisplayChange={editor.setGroupPriceDisplay}
         onGroupToggleExpand={editor.toggleGroupExpand}
         onGroupDelete={editor.deleteGroup}
         onGroupAddOption={editor.addOptionToGroup}
@@ -77,6 +84,7 @@ export default function MenuItemEditorPage() {
         onGroupMoveDown={editor.moveGroupDown}
         onAddGroup={editor.addGroup}
         onDeleteItem={() => setShowDeleteModal(true)}
+        onConfirmDelete={handleConfirmDelete}
         onPickImage={editor.onPickImage}
         onClearImage={editor.onClearImage}
       />
@@ -104,8 +112,10 @@ export default function MenuItemEditorPage() {
         groups={editor.groups}
         imageSrc={imageSrc}
         imageError={editor.imageError}
+        imageBusy={editor.imageBusy}
         onFormChange={editor.patchForm}
         onGroupChange={editor.patchGroup}
+        onGroupPriceDisplayChange={editor.setGroupPriceDisplay}
         onGroupToggleExpand={editor.toggleGroupExpand}
         onGroupDelete={editor.deleteGroup}
         onGroupAddOption={editor.addOptionToGroup}
@@ -116,6 +126,7 @@ export default function MenuItemEditorPage() {
         onGroupMoveDown={editor.moveGroupDown}
         onAddGroup={editor.addGroup}
         onDeleteItem={() => setShowDeleteModal(true)}
+        onConfirmDelete={handleConfirmDelete}
         onPickImage={editor.onPickImage}
         onClearImage={editor.onClearImage}
       />

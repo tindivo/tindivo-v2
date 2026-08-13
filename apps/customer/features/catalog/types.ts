@@ -14,6 +14,15 @@ export interface ModGroupData {
   is_required: boolean
   min_selections: number
   max_selections: number | null
+  /**
+   * Cómo se muestra el precio de las opciones. `additional_price` siempre es
+   * un delta sobre `base_price` y el total lo sigue calculando el servidor:
+   *
+   * - `delta`: "+ S/ 3.00" / "Incluido". Recargos (salsas, extras).
+   * - `total`: "S/ 26.00". Grupos donde la opción es el precio del plato
+   *   (tamaños). Ahí "Incluido" mentía: la pizza pequeña sí cuesta.
+   */
+  price_display: 'delta' | 'total'
   options: ModOption[]
 }
 
@@ -55,6 +64,11 @@ export interface BusinessDetail {
   }
   categories: Category[]
   schedule: ScheduleDayRow[]
+  /**
+   * Si el negocio confirmó hoy que atiende. `null` = no se pudo consultar, y
+   * entonces manda solo el horario (ver `getOpenStatus`).
+   */
+  opening_confirmed?: boolean | null
 }
 
 export interface PublicBusiness {

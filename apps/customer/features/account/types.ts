@@ -20,4 +20,13 @@ export interface Profile {
   name: string
   email: string
   phone: string
+  phone_verified_at?: string | null
+}
+
+export interface ProfileStep {
+  id: 'name' | 'phone' | 'address'
+  title: string
+  description: string
+  isCompleted: boolean
+  actionLabel: string
 }

@@ -1,6 +1,7 @@
 import { corsHeaders, handleOptions } from '@/lib/http/cors'
 import { handleError, ok, problem } from '@/lib/http/problem'
 import { getRequestId } from '@/lib/http/request-id'
+import { hasConfirmedOpening } from '@/lib/opening/service-day'
 import { createServiceClient } from '@/lib/supabase/service'
 
 export const dynamic = 'force-dynamic'
@@ -61,10 +62,13 @@ export async function GET(
           'id,category_id,name,description,base_price,image_url,image_hue,is_available,is_compact,badges,display_order',
         )
         .eq('business_id', id)
+        .is('deleted_at', null)
         .order('display_order'),
       supabase
         .from('menu_modifier_groups')
-        .select('id,name,selection_type,is_required,min_selections,max_selections,display_order')
+        .select(
+          'id,name,selection_type,is_required,min_selections,max_selections,price_display,display_order',
+        )
         .eq('business_id', id)
         .order('display_order'),
       supabase
@@ -105,6 +109,10 @@ export async function GET(
           is_required: g.is_required,
           min_selections: g.min_selections,
           max_selections: g.max_selections,
+          // Solo cambia cómo se muestra el precio de las opciones: 'total'
+          // enseña el precio final del plato en vez de "+ S/ x" (migración
+          // 0156). La suma que cobra el servidor es la misma.
+          price_display: g.price_display ?? 'delta',
           options: optionsByGroup(g.id),
         }))
 
@@ -121,8 +129,12 @@ export async function GET(
       // No mostrar categorías vacías al cliente (una categoría sin platos no aporta).
       .filter((category) => category.items.length > 0)
 
+    // Apertura declarada de hoy. `null` = no se pudo consultar; el cliente lo
+    // trata como "manda solo el horario" (ver getOpenStatus).
+    const openingConfirmed = await hasConfirmedOpening(supabase, id)
+
     return ok(
-      { business, categories: menu, schedule: schedule ?? [] },
+      { business, categories: menu, schedule: schedule ?? [], opening_confirmed: openingConfirmed },
       { headers: corsHeaders(req) },
     )
   } catch (err) {

@@ -1,15 +1,20 @@
 import { Icon } from '@tindivo/ui'
-import { groupRuleLabel } from '../lib/utils'
-import type { ModifierGroup } from '../types'
+import { acceptsTotalPricing, groupRuleLabel, optionDisplayPrice } from '../lib/utils'
+import type { ModifierGroup, PriceDisplay } from '../types'
 import { GroupRuleSelector } from './group-rule-selector'
 import { ModifierOptionRow } from './modifier-option-row'
+import { PriceDisplaySwitch } from './price-display-switch'
 
 interface ModifierGroupCardProps {
   group: ModifierGroup
   index: number
   total: number
+  basePrice: number
+  /** Nombre del otro grupo que ya manda sobre el precio, si lo hay. */
+  totalPricingTakenBy: string | null
   onToggleExpand: () => void
   onChange: (patch: Partial<ModifierGroup>) => void
+  onPriceDisplayChange: (mode: PriceDisplay) => void
   onDelete: () => void
   onAddOption: () => void
   onDeleteOption: (optLocalId: string) => void
@@ -23,8 +28,11 @@ export function ModifierGroupCard({
   group,
   index,
   total,
+  basePrice,
+  totalPricingTakenBy,
   onToggleExpand,
   onChange,
+  onPriceDisplayChange,
   onDelete,
   onAddOption,
   onDeleteOption,
@@ -34,6 +42,7 @@ export function ModifierGroupCard({
   onMoveDown,
 }: ModifierGroupCardProps) {
   const isRequired = group.is_required
+  const isTotal = group.price_display === 'total'
   const visibleOptions = group.options.filter((o) => !o.isDeleted)
 
   return (
@@ -60,6 +69,7 @@ export function ModifierGroupCard({
             className={`mt-0.5 text-[11px] font-semibold ${isRequired ? 'text-info' : 'text-ink-muted'}`}
           >
             {groupRuleLabel(group)}
+            {isTotal && ' · define el precio'}
           </div>
           {!group.isExpanded && (
             <div className="mt-0.5 text-[11px] text-ink-muted">
@@ -126,13 +136,21 @@ export function ModifierGroupCard({
 
           <GroupRuleSelector group={group} onChange={onChange} />
 
+          {(acceptsTotalPricing(group) || isTotal) && (
+            <PriceDisplaySwitch
+              value={group.price_display}
+              blockedBy={isTotal ? null : totalPricingTakenBy}
+              onChange={onPriceDisplayChange}
+            />
+          )}
+
           <div className="mb-2 font-mono text-[11px] font-semibold uppercase tracking-wide text-ink/55">
             Opciones
           </div>
           <div className="mb-2">
             <div className="ml-6 grid grid-cols-[1fr_90px_34px_28px] gap-2 pb-1 text-[9px] font-bold uppercase tracking-wider text-ink/55">
               <span>Nombre</span>
-              <span className="text-right">+ Precio</span>
+              <span className="text-right">{isTotal ? 'Precio S/' : '+ Precio'}</span>
               <span />
               <span />
             </div>
@@ -140,6 +158,8 @@ export function ModifierGroupCard({
               <ModifierOptionRow
                 key={opt.localId}
                 opt={opt}
+                priceValue={optionDisplayPrice(basePrice, group, opt)}
+                priceDisplay={group.price_display}
                 onChange={(patch) => onChangeOption(opt.localId, patch)}
                 onDelete={() => onDeleteOption(opt.localId)}
                 onMoveUp={() => onMoveOption(opt.localId, -1)}

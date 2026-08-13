@@ -63,9 +63,12 @@ export function PromoCarousel({ promos = SAMPLE_PROMOS }: { promos?: Promo[] }) 
             {/* Imagen promo */}
             <div className="relative h-[140px] w-full overflow-hidden bg-ink">
               {promo.imageUrl ? (
+                // Sin `lazy` a propósito: el carrusel va arriba del todo y su
+                // primera lámina es la candidata a LCP de la home.
                 <img
                   src={promo.imageUrl}
                   alt={promo.title}
+                  decoding="async"
                   className="h-full w-full object-cover"
                 />
               ) : (

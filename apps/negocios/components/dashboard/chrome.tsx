@@ -27,6 +27,7 @@ import {
   pauseMinutesLeft,
   toOrderVM,
 } from '@/lib/orders/view-model'
+import { OpeningControls } from '@/features/apertura/components/opening-controls'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import { speak, unlockAudio, useDashboardSounds } from '@/lib/use-audio-alert'
 import { DashboardSkeleton } from './dashboard-skeleton'
@@ -950,6 +951,12 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
               <span>Cerrar sesión</span>
             </button>
           </header>
+
+          {/* Va dentro del Provider (necesita el bizId del contexto) y en el
+              flujo del layout, para que la franja de estado empuje el
+              contenido en vez de taparlo. El modal que renderiza es `fixed`, así
+              que no le afecta estar aquí. */}
+          {!gateShown && <OpeningControls />}
 
           {catalogOnly && legacyOrdersVisible && (
             <div className="flex items-center gap-2 bg-warning-soft px-4 py-2 text-[13px] font-semibold text-amber-800">

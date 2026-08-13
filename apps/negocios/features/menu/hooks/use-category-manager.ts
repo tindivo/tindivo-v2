@@ -20,7 +20,11 @@ export function useCategoryManager(bizId: string | null, open: boolean, onChange
         .select('id,name,blurb,display_order,is_active')
         .eq('business_id', bizId)
         .order('display_order'),
-      supabase.from('menu_items').select('category_id').eq('business_id', bizId),
+      supabase
+        .from('menu_items')
+        .select('category_id')
+        .eq('business_id', bizId)
+        .is('deleted_at', null),
     ])
     if (catErr) {
       setError(catErr.message)

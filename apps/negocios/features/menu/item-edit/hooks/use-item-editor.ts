@@ -1,20 +1,11 @@
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { notifySuccess } from '@/components/dashboard/toast'
+import { compressImage } from '@/lib/images/compress'
+import { UPLOAD_CACHE_CONTROL, validateImageInput } from '@/lib/images/upload'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
-import { ALLOWED_IMAGE_TYPES, MAX_IMAGE_BYTES } from '../lib/constants'
-import { makeLocalId } from '../lib/utils'
-import type { Category, FormData, ModifierGroup } from '../types'
-
-function validateProductImage(file: File): string | null {
-  if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-    return 'Formato no permitido. Usa JPG, PNG o WebP.'
-  }
-  if (file.size > MAX_IMAGE_BYTES) {
-    return 'La imagen supera el máximo de 5 MB.'
-  }
-  return null
-}
+import { acceptsTotalPricing, applyTotalPrices, currentTotals, makeLocalId } from '../lib/utils'
+import type { Category, FormData, ModifierGroup, PriceDisplay } from '../types'
 
 export function useItemEditor() {
   const params = useParams()
@@ -45,6 +36,15 @@ export function useItemEditor() {
   const [pendingImageFile, setPendingImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [imageError, setImageError] = useState<string | null>(null)
+  const [imageBusy, setImageBusy] = useState(false)
+  const previewUrlRef = useRef<string | null>(null)
+  /**
+   * "Quitar foto" solo cambia el formulario; el archivo no se toca hasta que
+   * el negocio guarda. Si se borrara al pulsar el botón, quien se arrepiente y
+   * sale sin guardar se quedaría con un plato apuntando a un objeto que ya no
+   * existe.
+   */
+  const imageRemovedRef = useRef(false)
   const [groups, setGroups] = useState<ModifierGroup[]>([])
   const [hasUnsaved, setHasUnsaved] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -100,7 +100,8 @@ export function useItemEditor() {
           )
           .eq('id', itemId)
           .eq('business_id', biz.id)
-          .single()
+          .is('deleted_at', null)
+          .maybeSingle()
 
         if (!item) {
           router.replace('/menu')
@@ -129,7 +130,7 @@ export function useItemEditor() {
           const { data: groupsData } = await supabase
             .from('menu_modifier_groups')
             .select(
-              'id,name,selection_type,is_required,min_selections,max_selections,display_order',
+              'id,name,selection_type,is_required,min_selections,max_selections,price_display,display_order',
             )
             .in('id', groupIds)
 
@@ -158,6 +159,7 @@ export function useItemEditor() {
                 is_required: g.is_required,
                 min_selections: g.min_selections,
                 max_selections: g.max_selections,
+                price_display: (g.price_display as PriceDisplay | null) ?? 'delta',
                 display_order: j.display_order,
                 isExpanded: false,
                 options: (optsByGroup[g.id] ?? []).map((o) => ({
@@ -196,8 +198,48 @@ export function useItemEditor() {
   }
 
   function patchGroup(localId: string, patch: Partial<ModifierGroup>) {
-    setGroups((prev) => prev.map((g) => (g.localId === localId ? { ...g, ...patch } : g)))
+    setGroups((prev) =>
+      prev.map((g) => {
+        if (g.localId !== localId) return g
+        const next = { ...g, ...patch }
+        // Cambiar la regla a "opcional" o a "elegir varios" deja el modo
+        // "precio total" sin sentido, así que vuelve solo a recargos. Los
+        // deltas guardados no se tocan: lo que el cliente paga no cambia,
+        // solo cómo se escribe.
+        if (next.price_display === 'total' && !acceptsTotalPricing(next)) {
+          next.price_display = 'delta'
+        }
+        return next
+      }),
+    )
     setHasUnsaved(true)
+  }
+
+  /**
+   * El precio base vive en `formData` y los deltas en `groups`, así que
+   * cualquier edición en modo "precio total" mueve los dos estados a la vez.
+   */
+  function applyTotals(group: ModifierGroup, totals: Map<string, number>) {
+    const fallbackBase = Number.parseFloat(formData.base_price) || 0
+    const { basePrice, group: next } = applyTotalPrices(group, totals, fallbackBase)
+    setGroups((prev) => prev.map((g) => (g.localId === group.localId ? next : g)))
+    setFormData((f) => ({ ...f, base_price: basePrice.toFixed(2) }))
+    setHasUnsaved(true)
+  }
+
+  function setGroupPriceDisplay(localId: string, mode: PriceDisplay) {
+    const group = groups.find((g) => g.localId === localId)
+    if (!group) return
+    if (mode !== 'total') {
+      patchGroup(localId, { price_display: 'delta' })
+      return
+    }
+    // Al encender el switch, los precios finales que ya cobraba el plato se
+    // quedan tal cual; lo único que se renormaliza es el reparto entre precio
+    // base y deltas. Si el plato estaba mal cargado (base 13 + "Pequeña" +13),
+    // aquí se hace visible el precio real que estaba pagando el cliente: 26.
+    const base = Number.parseFloat(formData.base_price) || 0
+    applyTotals({ ...group, price_display: 'total' }, currentTotals(base, group))
   }
 
   function toggleGroupExpand(localId: string) {
@@ -220,6 +262,7 @@ export function useItemEditor() {
       is_required: true,
       min_selections: 1,
       max_selections: 1,
+      price_display: 'delta',
       display_order: groups.filter((g) => !g.isDeleted).length,
       options: [],
       isNew: true,
@@ -249,6 +292,22 @@ export function useItemEditor() {
   }
 
   function deleteOption(groupLocalId: string, optLocalId: string) {
+    const group = groups.find((g) => g.localId === groupLocalId)
+    const marked = group && {
+      ...group,
+      options: group.options.map((o) => (o.localId === optLocalId ? { ...o, isDeleted: true } : o)),
+    }
+
+    // Borrar la opción más barata de un grupo de precio total sube el precio
+    // base del plato: si no se recalculara, el "Desde S/ 13" seguiría vivo sin
+    // ninguna pizza de 13.
+    if (marked && group.price_display === 'total') {
+      const totals = currentTotals(Number.parseFloat(formData.base_price) || 0, group)
+      totals.delete(optLocalId)
+      applyTotals(marked, totals)
+      return
+    }
+
     setGroups((prev) =>
       prev.map((g) => {
         if (g.localId !== groupLocalId) return g
@@ -261,11 +320,31 @@ export function useItemEditor() {
     setHasUnsaved(true)
   }
 
+  /**
+   * En modo "precio total", `patch.additional_price` NO es un delta: es el
+   * precio final que la cajera acaba de escribir. Se traduce aquí, en el único
+   * sitio que ve a la vez el grupo entero y el precio base.
+   */
   function changeOption(
     groupLocalId: string,
     optLocalId: string,
     patch: Partial<{ name: string; additional_price: number; is_available: boolean }>,
   ) {
+    const group = groups.find((g) => g.localId === groupLocalId)
+    if (group && group.price_display === 'total' && patch.additional_price !== undefined) {
+      const totals = currentTotals(Number.parseFloat(formData.base_price) || 0, group)
+      totals.set(optLocalId, patch.additional_price)
+      const { additional_price: _typedTotal, ...rest } = patch
+      applyTotals(
+        {
+          ...group,
+          options: group.options.map((o) => (o.localId === optLocalId ? { ...o, ...rest } : o)),
+        },
+        totals,
+      )
+      return
+    }
+
     setGroups((prev) =>
       prev.map((g) => {
         if (g.localId !== groupLocalId) return g
@@ -334,21 +413,46 @@ export function useItemEditor() {
     setHasUnsaved(true)
   }
 
-  function onPickImage(file: File) {
-    const err = validateProductImage(file)
+  /**
+   * Revoca el objectURL anterior antes de soltar el nuevo. Sin esto cada
+   * "Reemplazar" dejaba una foto entera retenida en memoria hasta recargar la
+   * página, y aquí se reemplaza mucho desde el celular.
+   */
+  function replacePreview(next: string | null) {
+    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current)
+    previewUrlRef.current = next
+    setImagePreview(next)
+  }
+
+  async function onPickImage(file: File) {
+    const err = validateImageInput(file)
     if (err) {
       setImageError(err)
       return
     }
     setImageError(null)
-    setPendingImageFile(file)
-    setImagePreview(URL.createObjectURL(file))
-    setHasUnsaved(true)
+    setImageBusy(true)
+    try {
+      // Se comprime al elegir, no al guardar: el preview enseña exactamente la
+      // imagen que verá el cliente, y el botón "Guardar" no se queda colgado.
+      const optimized = await compressImage(file, 'product')
+      // Si quitó la foto y acto seguido eligió otra, no hay nada que borrar:
+      // la nueva sobrescribe el mismo objeto.
+      imageRemovedRef.current = false
+      setPendingImageFile(optimized)
+      replacePreview(URL.createObjectURL(optimized))
+      setHasUnsaved(true)
+    } catch (err) {
+      setImageError(err instanceof Error ? err.message : 'No pudimos procesar la imagen.')
+    } finally {
+      setImageBusy(false)
+    }
   }
 
   function onClearImage() {
+    if (formData.image_url) imageRemovedRef.current = true
     setPendingImageFile(null)
-    setImagePreview(null)
+    replacePreview(null)
     setImageError(null)
     setFormData((f) => ({ ...f, image_url: null }))
     setHasUnsaved(true)
@@ -425,6 +529,7 @@ export function useItemEditor() {
           .upload(path, pendingImageFile, {
             upsert: true,
             contentType: pendingImageFile.type,
+            cacheControl: UPLOAD_CACHE_CONTROL,
           })
         if (upErr) {
           setSaveError(`No se pudo subir la imagen: ${upErr.message}`)
@@ -445,7 +550,12 @@ export function useItemEditor() {
         }
         setFormData((f) => ({ ...f, image_url: versionedUrl }))
         setPendingImageFile(null)
-        setImagePreview(null)
+        replacePreview(null)
+      } else if (imageRemovedRef.current) {
+        // La fila ya guardó `image_url: null` más arriba, así que el objeto se
+        // quedó sin quien lo referencie. Se va ahora.
+        await supabase.storage.from('menu-items').remove([`${bizId}/items/${savedItemId}`])
+        imageRemovedRef.current = false
       }
 
       for (let i = 0; i < groups.length; i++) {
@@ -476,6 +586,7 @@ export function useItemEditor() {
               is_required: g.is_required,
               min_selections: g.min_selections,
               max_selections: g.max_selections,
+              price_display: g.price_display,
               display_order: g.display_order,
             })
             .select('id')
@@ -503,6 +614,7 @@ export function useItemEditor() {
               is_required: g.is_required,
               min_selections: g.min_selections,
               max_selections: g.max_selections,
+              price_display: g.price_display,
               display_order: g.display_order,
             })
             .eq('id', groupId)
@@ -570,17 +682,38 @@ export function useItemEditor() {
     return true
   }
 
+  /**
+   * Retira el plato de la carta sin borrar la fila: las líneas de pedido
+   * apuntan a ella y `customer_order_items.menu_item_id` es NO ACTION, así que
+   * un DELETE real reventaría en cuanto el plato se hubiera vendido una vez.
+   *
+   * Los grupos de modificadores no se tocan. Si se borrasen, un plato que
+   * vuelve a la carta volvería sin sus opciones.
+   */
   async function handleDeleteItem() {
     if (!bizId || isNew) return
     setSaving(true)
     const supabase = getSupabaseBrowser()
-    const groupIds = groups.filter((g) => g.id).map((g) => g.id)
-    if (groupIds.length > 0) {
-      await supabase.from('menu_modifier_options').delete().in('group_id', groupIds)
-      await supabase.from('menu_item_modifier_groups').delete().eq('item_id', itemId)
-      await supabase.from('menu_modifier_groups').delete().in('id', groupIds)
+
+    const { error: delErr } = await supabase
+      .from('menu_items')
+      .update({ deleted_at: new Date().toISOString(), image_url: null })
+      .eq('id', itemId)
+      .eq('business_id', bizId)
+
+    if (delErr) {
+      setSaveError(`No se pudo eliminar el plato: ${delErr.message}`)
+      setSaving(false)
+      return
     }
-    await supabase.from('menu_items').delete().eq('id', itemId).eq('business_id', bizId)
+
+    // La foto va después y sin bloquear: el plato ya está fuera de la carta,
+    // y un archivo que sobra molesta menos que un error en la cara de la
+    // cajera por algo que, para ella, ya salió bien.
+    if (formData.image_url) {
+      await supabase.storage.from('menu-items').remove([`${bizId}/items/${itemId}`])
+    }
+
     router.replace('/menu')
   }
 
@@ -625,9 +758,11 @@ export function useItemEditor() {
     saveError,
     imagePreview,
     imageError,
+    imageBusy,
     pendingNavRef,
     patchForm,
     patchGroup,
+    setGroupPriceDisplay,
     toggleGroupExpand,
     deleteGroup,
     addGroup,

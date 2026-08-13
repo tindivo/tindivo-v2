@@ -202,3 +202,43 @@ describe('getOpenStatus', () => {
     expect(getOpenStatus([day(0)], utcNow)).toEqual({ kind: 'open', closesAt: '23:00' })
   })
 })
+
+describe('getOpenStatus · apertura declarada del día', () => {
+  const week = [0, 1, 2, 3, 4, 5, 6].map((d) => day(d))
+
+  it('dentro del horario pero sin confirmar → cerrado, con motivo', () => {
+    // El caso del jueves sin luz: el horario dice que atiende, pero nadie
+    // levantó la persiana.
+    expect(getOpenStatus(week, at(MON, '20:00'), false)).toEqual({
+      kind: 'closed',
+      opensAt: null,
+      opensToday: false,
+      reason: 'not_confirmed',
+    })
+  })
+
+  it('dentro del horario y confirmado → abierto', () => {
+    expect(getOpenStatus(week, at(MON, '20:00'), true)).toEqual({
+      kind: 'open',
+      closesAt: '23:00',
+    })
+  })
+
+  it('sin dato de confirmación manda solo el horario', () => {
+    // `undefined` (llamada antigua) y `null` (consulta fallida) no pueden
+    // cerrar a nadie: un fallo transitorio dejaría al negocio sin vender.
+    expect(getOpenStatus(week, at(MON, '20:00')).kind).toBe('open')
+    expect(getOpenStatus(week, at(MON, '20:00'), null).kind).toBe('open')
+  })
+
+  it('fuera del horario, confirmar no abre nada', () => {
+    const status = getOpenStatus(week, at(MON, '15:00'), true)
+    expect(status.kind).toBe('closed')
+    // Sin `reason`: el cierre se explica por el horario y no necesita etiqueta.
+    if (status.kind === 'closed') expect(status.reason).toBeUndefined()
+  })
+
+  it('sin horario configurado la confirmación no aplica', () => {
+    expect(getOpenStatus([], at(MON, '20:00'), false)).toEqual({ kind: 'no_schedule' })
+  })
+})

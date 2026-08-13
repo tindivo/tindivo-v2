@@ -3,11 +3,12 @@
 import { ScreenHeader } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { PhoneGateModal } from '@/components/gates/phone-gate-modal'
 import { AccountMenu } from '@/features/account/components/account-menu'
 import { AccountSkeleton } from '@/features/account/components/account-skeleton'
 import { AccountToast } from '@/features/account/components/account-toast'
 import { AddressSheet } from '@/features/account/components/address-sheet'
-import { DefaultAddressCard } from '@/features/account/components/default-address-card'
+import { AddressesList } from '@/features/account/components/addresses-list'
 import { ProfileEditSheet } from '@/features/account/components/profile-edit-sheet'
 import { ProfileHero } from '@/features/account/components/profile-hero'
 import { QuickActionsGrid } from '@/features/account/components/quick-actions-grid'
@@ -26,15 +27,16 @@ export default function CuentaPage() {
     stats,
     progress,
     loadData,
+    reloadProfile,
+    setDefault,
     remove,
     updateName,
     signOut,
   } = useAccountPage()
   const [editing, setEditing] = useState<Address | 'new' | null>(null)
   const [editingProfile, setEditingProfile] = useState(false)
+  const [verifyingPhone, setVerifyingPhone] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
-
-  const defaultAddress = addresses.find((a) => a.is_default)
 
   async function handleUpdateName(name: string) {
     await updateName(name)
@@ -48,8 +50,13 @@ export default function CuentaPage() {
     }
   }
 
+  async function handleSetDefault(id: string) {
+    await setDefault(id)
+    setToast('Dirección predeterminada actualizada')
+  }
+
   return (
-    <main className="mx-auto min-h-dvh max-w-[768px] bg-surface pb-4 lg:max-w-[880px]">
+    <main className="mx-auto min-h-dvh max-w-[768px] bg-surface pb-6 lg:max-w-[880px]">
       <ScreenHeader title="Mi cuenta" onBack={() => router.push('/')} />
 
       {!ready ? (
@@ -60,16 +67,20 @@ export default function CuentaPage() {
             name={profile.name}
             email={profile.email}
             phone={profile.phone}
+            phoneVerified={Boolean(profile.phone && profile.phone_verified_at)}
             progress={progress}
             onEdit={() => setEditingProfile(true)}
+            onVerifyPhone={() => setVerifyingPhone(true)}
+            onAddAddress={() => setEditing('new')}
           />
 
           <QuickActionsGrid stats={stats} appeals={appeals} />
 
-          <DefaultAddressCard
-            address={defaultAddress}
+          <AddressesList
+            addresses={addresses}
             onAdd={() => setEditing('new')}
             onEdit={setEditing}
+            onSetDefault={handleSetDefault}
           />
 
           <RecentOrdersPreview orders={orders} />
@@ -81,11 +92,12 @@ export default function CuentaPage() {
       {editing && (
         <AddressSheet
           address={editing === 'new' ? null : editing}
+          isFirst={addresses.length === 0}
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null)
             loadData()
-            setToast('Dirección guardada')
+            setToast(editing === 'new' ? 'Dirección añadida' : 'Dirección guardada')
           }}
           onDelete={
             editing !== 'new'
@@ -103,6 +115,17 @@ export default function CuentaPage() {
           name={profile.name}
           onClose={() => setEditingProfile(false)}
           onSave={handleUpdateName}
+        />
+      )}
+
+      {verifyingPhone && (
+        <PhoneGateModal
+          onComplete={async () => {
+            setVerifyingPhone(false)
+            await reloadProfile()
+            setToast('Celular verificado con éxito')
+          }}
+          onClose={() => setVerifyingPhone(false)}
         />
       )}
 

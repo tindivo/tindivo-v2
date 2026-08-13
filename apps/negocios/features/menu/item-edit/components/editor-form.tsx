@@ -1,7 +1,8 @@
 import { Icon } from '@tindivo/ui'
 import { useState } from 'react'
 import { BADGE_PRESETS } from '../lib/constants'
-import type { Category, FormData, ModifierGroup } from '../types'
+import { findTotalPricingGroup } from '../lib/utils'
+import type { Category, FormData, ModifierGroup, PriceDisplay } from '../types'
 import { AddGroupButton } from './add-group-button'
 import { DangerZone } from './danger-zone'
 import { ModifierGroupCard } from './modifier-group-card'
@@ -15,6 +16,7 @@ export interface EditorFormProps {
   isNew: boolean
   onFormChange: (patch: Partial<FormData>) => void
   onGroupChange: (localId: string, patch: Partial<ModifierGroup>) => void
+  onGroupPriceDisplayChange: (localId: string, mode: PriceDisplay) => void
   onGroupToggleExpand: (localId: string) => void
   onGroupDelete: (localId: string) => void
   onGroupAddOption: (groupLocalId: string) => void
@@ -31,6 +33,7 @@ export interface EditorFormProps {
   onDeleteItem: () => void
   imageSrc: string | null
   imageError: string | null
+  imageBusy: boolean
   onPickImage: (file: File) => void
   onClearImage: () => void
 }
@@ -48,6 +51,7 @@ export function EditorForm({
   isNew,
   onFormChange,
   onGroupChange,
+  onGroupPriceDisplayChange,
   onGroupToggleExpand,
   onGroupDelete,
   onGroupAddOption,
@@ -60,11 +64,13 @@ export function EditorForm({
   onDeleteItem,
   imageSrc,
   imageError,
+  imageBusy,
   onPickImage,
   onClearImage,
 }: EditorFormProps) {
   const basePrice = Number.parseFloat(formData.base_price) || 0
   const visibleGroups = groups.filter((g) => !g.isDeleted)
+  const totalPricingGroup = findTotalPricingGroup(groups)
   const [badgeInput, setBadgeInput] = useState('')
 
   return (
@@ -91,15 +97,18 @@ export function EditorForm({
               </div>
             )}
             <div className="flex flex-col gap-1.5">
-              <label className="block cursor-pointer">
+              <label
+                className={`block cursor-pointer ${imageBusy ? 'pointer-events-none opacity-50' : ''}`}
+              >
                 <span className="inline-flex h-9 items-center gap-2 rounded-full border border-ink/[0.08] bg-card px-3 text-sm font-bold text-ink transition-all active:scale-[0.97] hover:bg-surface">
                   <Icon name="upload" size={14} />
-                  {imageSrc ? 'Reemplazar' : 'Subir foto'}
+                  {imageBusy ? 'Optimizando…' : imageSrc ? 'Reemplazar' : 'Subir foto'}
                 </span>
                 <input
                   type="file"
                   accept="image/*"
                   className="sr-only"
+                  disabled={imageBusy}
                   onChange={(e) => {
                     const f = e.target.files?.[0]
                     e.target.value = ''
@@ -220,20 +229,37 @@ export function EditorForm({
           <div>
             {/* biome-ignore lint/a11y/noLabelWithoutControl: input asociado como hermano */}
             <label className={labelCls}>Precio base (S/)</label>
-            <input
-              className={`${inputMonoCls} text-[18px] font-bold`}
-              type="number"
-              min={0}
-              step={0.5}
-              value={formData.base_price}
-              onChange={(e) => onFormChange({ base_price: e.target.value })}
-              placeholder="0.00"
-              inputMode="decimal"
-            />
-            {visibleGroups.length > 0 && (
-              <div className="mt-1 text-[11px] text-ink-muted">
-                Debe ser el precio de la opción más barata del grupo principal.
+            <div className="relative">
+              <input
+                className={`${inputMonoCls} text-[18px] font-bold ${
+                  totalPricingGroup ? 'pr-10 text-ink-muted' : ''
+                }`}
+                type="number"
+                min={0}
+                step={0.5}
+                value={formData.base_price}
+                onChange={(e) => onFormChange({ base_price: e.target.value })}
+                placeholder="0.00"
+                inputMode="decimal"
+                readOnly={totalPricingGroup !== undefined}
+              />
+              {totalPricingGroup && (
+                <div className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2">
+                  <Icon name="lock" size={16} className="text-ink-subtle" />
+                </div>
+              )}
+            </div>
+            {totalPricingGroup ? (
+              <div className="mt-1 text-[11px] text-info">
+                Lo define &ldquo;{totalPricingGroup.name || 'el grupo'}&rdquo;: es el precio de su
+                opción más barata.
               </div>
+            ) : (
+              visibleGroups.length > 0 && (
+                <div className="mt-1 text-[11px] text-ink-muted">
+                  Debe ser el precio de la opción más barata del grupo principal.
+                </div>
+              )
             )}
           </div>
         </div>
@@ -318,8 +344,15 @@ export function EditorForm({
             group={g}
             index={i}
             total={visibleGroups.length}
+            basePrice={basePrice}
+            totalPricingTakenBy={
+              totalPricingGroup && totalPricingGroup.localId !== g.localId
+                ? totalPricingGroup.name || 'otro grupo'
+                : null
+            }
             onToggleExpand={() => onGroupToggleExpand(g.localId)}
             onChange={(patch) => onGroupChange(g.localId, patch)}
+            onPriceDisplayChange={(mode) => onGroupPriceDisplayChange(g.localId, mode)}
             onDelete={() => onGroupDelete(g.localId)}
             onAddOption={() => onGroupAddOption(g.localId)}
             onDeleteOption={(optLocalId) => onGroupDeleteOption(g.localId, optLocalId)}
