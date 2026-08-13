@@ -38,6 +38,7 @@ gpp_bad
 gps_fixed
 gps_off
 history
+home
 hourglass_top
 inbox
 info
