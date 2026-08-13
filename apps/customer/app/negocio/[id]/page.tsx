@@ -68,10 +68,12 @@ export default function NegocioPage({ params }: { params: Promise<{ id: string }
   }
 
   const { business, categories, schedule } = data
+  const openingConfirmed = data.opening_confirmed ?? null
   const count = cart.count()
   const subtotal = cart.subtotal()
   const isCatalogOnly = !business.accepts_web_delivery && !business.accepts_web_pickup
-  const closedForOrders = !isCatalogOnly && getOpenStatus(schedule, now).kind === 'closed'
+  const closedForOrders =
+    !isCatalogOnly && getOpenStatus(schedule, now, openingConfirmed).kind === 'closed'
 
   return (
     <main className="mx-auto min-h-dvh max-w-[768px] bg-surface pb-32 md:max-w-[860px] lg:grid lg:max-w-7xl lg:grid-cols-[1fr_380px] lg:items-start lg:gap-8 lg:px-6 lg:pt-6">
@@ -82,9 +84,16 @@ export default function NegocioPage({ params }: { params: Promise<{ id: string }
             businessName={business.name}
           />
         )}
-        <BusinessHero business={business} schedule={schedule} now={now} />
+        <BusinessHero
+          business={business}
+          schedule={schedule}
+          now={now}
+          openingConfirmed={openingConfirmed}
+        />
         <ScheduleRow schedule={schedule} now={now} />
-        {closedForOrders && <ClosedBanner schedule={schedule} now={now} />}
+        {closedForOrders && (
+          <ClosedBanner schedule={schedule} now={now} openingConfirmed={openingConfirmed} />
+        )}
 
         <CategoryTabs categories={categories} active={active} onSelect={jumpTo} />
 

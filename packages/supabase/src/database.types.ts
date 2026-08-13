@@ -1334,6 +1334,7 @@ export type Database = {
           max_selections: number | null
           min_selections: number
           name: string
+          price_display: string
           selection_type: string
           updated_at: string
         }
@@ -1346,6 +1347,7 @@ export type Database = {
           max_selections?: number | null
           min_selections?: number
           name: string
+          price_display?: string
           selection_type: string
           updated_at?: string
         }
@@ -1358,6 +1360,7 @@ export type Database = {
           max_selections?: number | null
           min_selections?: number
           name?: string
+          price_display?: string
           selection_type?: string
           updated_at?: string
         }

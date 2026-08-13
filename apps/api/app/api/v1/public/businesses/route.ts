@@ -2,6 +2,7 @@ import { getOpenStatus, type ScheduleDayRow } from '@tindivo/contracts'
 import { corsHeaders, handleOptions } from '@/lib/http/cors'
 import { handleError, ok } from '@/lib/http/problem'
 import { getRequestId } from '@/lib/http/request-id'
+import { confirmedOpenBusinesses } from '@/lib/opening/service-day'
 import { createServiceClient } from '@/lib/supabase/service'
 
 export const dynamic = 'force-dynamic'
@@ -48,13 +49,22 @@ export async function GET(req: Request): Promise<Response> {
         return acc
       }, scheduleByBiz)
     }
+    // Apertura declarada de hoy. El horario dice cuándo PODRÍA abrir; esto, si
+    // abrió. `null` = no se pudo consultar, y entonces manda solo el horario:
+    // un fallo transitorio no puede cerrar el catálogo entero.
+    const confirmed = await confirmedOpenBusinesses(
+      supabase,
+      rows.map((b) => b.id),
+    )
+
     const now = new Date()
     const withOpenState = rows.map((b) => {
       const schedule = scheduleByBiz.get(b.id)
-      return {
-        ...b,
-        is_open_now: schedule ? getOpenStatus(schedule, now).kind === 'open' : null,
-      }
+      if (!schedule) return { ...b, is_open_now: null }
+      // `confirmed === null` (consulta fallida) se pasa como `null` para que
+      // getOpenStatus caiga en "manda solo el horario".
+      const opening = confirmed === null ? null : confirmed.has(b.id)
+      return { ...b, is_open_now: getOpenStatus(schedule, now, opening).kind === 'open' }
     })
     return ok(withOpenState, { headers: corsHeaders(req) })
   } catch (err) {

@@ -8,10 +8,11 @@ interface BusinessHeroProps {
   business: BusinessDetail['business']
   schedule: BusinessDetail['schedule']
   now: Date
+  openingConfirmed?: boolean | null
 }
 
-export function BusinessHero({ business, schedule, now }: BusinessHeroProps) {
-  const openStatus = getOpenStatus(schedule, now)
+export function BusinessHero({ business, schedule, now, openingConfirmed }: BusinessHeroProps) {
+  const openStatus = getOpenStatus(schedule, now, openingConfirmed)
   const isCatalogOnly = !business.accepts_web_delivery && !business.accepts_web_pickup
 
   return (
