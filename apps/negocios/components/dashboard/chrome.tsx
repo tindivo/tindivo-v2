@@ -96,6 +96,7 @@ export interface DashboardCtx {
   toggleSound: () => void
   refetchOrders: () => Promise<void>
   refetchBiz: () => Promise<void>
+  signOut: () => void
 }
 
 const Ctx = createContext<DashboardCtx | null>(null)
@@ -266,20 +267,14 @@ function Sidebar({ active, onSignOut }: { active: NavId; onSignOut: () => void }
               : 'RECIBIENDO PEDIDOS'}
         </div>
       </div>
-      <div className="flex items-center gap-2.5 border-t border-border px-1.5 py-2">
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-soft text-[13px] font-bold text-brand-dark">
-          {bizName[0] ?? 'T'}
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="text-[13px] font-semibold text-ink">Caja</div>
-        </div>
+      <div className="mt-2.5 border-t border-border pt-2.5">
         <button
           type="button"
           onClick={onSignOut}
-          title="Salir"
-          className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border-none bg-ink/[0.06] transition-colors hover:bg-ink/[0.10]"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-danger-soft px-3 py-2.5 text-[13px] font-semibold text-danger transition-transform active:scale-[0.98] hover:bg-danger/20"
         >
           <Icon name="logout" size={18} />
+          <span>Cerrar sesión</span>
         </button>
       </div>
     </aside>
@@ -881,6 +876,7 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
       toggleSound,
       refetchOrders,
       refetchBiz,
+      signOut: onSignOut,
     }
   }, [
     bizId,
@@ -895,6 +891,7 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
     toggleSound,
     refetchOrders,
     refetchBiz,
+    onSignOut,
   ])
 
   // La carga TERMINÓ y aun así no hay negocio: eso ya no es "cargando", es un
@@ -931,6 +928,29 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
           <Sidebar active={active} onSignOut={onSignOut} />
         </div>
         <div className="flex min-w-0 flex-1 flex-col h-dvh">
+          {/* Header móvil con nombre del local y botón visible de Cerrar sesión */}
+          <header className="flex shrink-0 items-center justify-between border-b border-border bg-white px-3.5 py-2.5 lg:hidden">
+            <div className="flex items-center gap-2 min-w-0">
+              <div
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white"
+                style={{ background: value.accent || ACCENT_DEFAULT }}
+              >
+                {value.bizName[0] ?? 'T'}
+              </div>
+              <span className="truncate font-display text-sm font-bold text-ink">
+                {value.bizName}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={onSignOut}
+              className="flex shrink-0 items-center gap-1.5 rounded-xl bg-danger-soft px-3 py-1.5 text-xs font-semibold text-danger active:scale-95 transition-transform"
+            >
+              <Icon name="logout" size={16} />
+              <span>Cerrar sesión</span>
+            </button>
+          </header>
+
           {catalogOnly && legacyOrdersVisible && (
             <div className="flex items-center gap-2 bg-warning-soft px-4 py-2 text-[13px] font-semibold text-amber-800">
               <Icon name="info" size={16} filled />

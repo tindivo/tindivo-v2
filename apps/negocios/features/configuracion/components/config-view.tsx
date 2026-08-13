@@ -50,7 +50,7 @@ export function ConfigView({
   bannerUrl,
   onBannerUploaded,
 }: ConfigViewProps) {
-  const { bizName } = useDashboard()
+  const { bizName, signOut } = useDashboard()
   const [activeSection, setActiveSection] = useState<SectionId>('datos')
   const contentRef = useRef<HTMLDivElement>(null)
 
@@ -247,6 +247,17 @@ export function ConfigView({
 
         <div className="mt-4 border-t border-ink/[0.06] pt-4">
           <SaveButton saving={saving} block />
+        </div>
+
+        <div className="mt-6 border-t border-border pt-5">
+          <button
+            type="button"
+            onClick={signOut}
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-danger-soft px-4 py-3.5 text-[15px] font-bold text-danger transition-transform active:scale-[0.98] hover:bg-danger/20"
+          >
+            <Icon name="logout" size={20} />
+            Cerrar sesión del negocio
+          </button>
         </div>
       </div>
 
