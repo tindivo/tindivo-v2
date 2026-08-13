@@ -61,6 +61,7 @@ export async function GET(
           'id,category_id,name,description,base_price,image_url,image_hue,is_available,is_compact,badges,display_order',
         )
         .eq('business_id', id)
+        .is('deleted_at', null)
         .order('display_order'),
       supabase
         .from('menu_modifier_groups')

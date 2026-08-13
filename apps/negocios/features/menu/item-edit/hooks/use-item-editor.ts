@@ -100,7 +100,8 @@ export function useItemEditor() {
           )
           .eq('id', itemId)
           .eq('business_id', biz.id)
-          .single()
+          .is('deleted_at', null)
+          .maybeSingle()
 
         if (!item) {
           router.replace('/menu')
@@ -601,26 +602,38 @@ export function useItemEditor() {
     return true
   }
 
+  /**
+   * Retira el plato de la carta sin borrar la fila: las líneas de pedido
+   * apuntan a ella y `customer_order_items.menu_item_id` es NO ACTION, así que
+   * un DELETE real reventaría en cuanto el plato se hubiera vendido una vez.
+   *
+   * Los grupos de modificadores no se tocan. Si se borrasen, un plato que
+   * vuelve a la carta volvería sin sus opciones.
+   */
   async function handleDeleteItem() {
     if (!bizId || isNew) return
     setSaving(true)
     const supabase = getSupabaseBrowser()
 
-    // Primero la foto: al irse la fila desaparece la única referencia al
-    // objeto, y ya nadie sabría que ese archivo sobra. Si el borrado falla no
-    // se aborta nada — un archivo huérfano molesta menos que un plato que el
-    // negocio no consigue quitar de la carta.
+    const { error: delErr } = await supabase
+      .from('menu_items')
+      .update({ deleted_at: new Date().toISOString(), image_url: null })
+      .eq('id', itemId)
+      .eq('business_id', bizId)
+
+    if (delErr) {
+      setSaveError(`No se pudo eliminar el plato: ${delErr.message}`)
+      setSaving(false)
+      return
+    }
+
+    // La foto va después y sin bloquear: el plato ya está fuera de la carta,
+    // y un archivo que sobra molesta menos que un error en la cara de la
+    // cajera por algo que, para ella, ya salió bien.
     if (formData.image_url) {
       await supabase.storage.from('menu-items').remove([`${bizId}/items/${itemId}`])
     }
 
-    const groupIds = groups.filter((g) => g.id).map((g) => g.id)
-    if (groupIds.length > 0) {
-      await supabase.from('menu_modifier_options').delete().in('group_id', groupIds)
-      await supabase.from('menu_item_modifier_groups').delete().eq('item_id', itemId)
-      await supabase.from('menu_modifier_groups').delete().in('id', groupIds)
-    }
-    await supabase.from('menu_items').delete().eq('id', itemId).eq('business_id', bizId)
     router.replace('/menu')
   }
 

@@ -1217,6 +1217,7 @@ export type Database = {
           business_id: string
           category_id: string
           created_at: string
+          deleted_at: string | null
           description: string | null
           display_order: number
           id: string
@@ -1233,6 +1234,7 @@ export type Database = {
           business_id: string
           category_id: string
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           display_order?: number
           id?: string
@@ -1249,6 +1251,7 @@ export type Database = {
           business_id?: string
           category_id?: string
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           display_order?: number
           id?: string
