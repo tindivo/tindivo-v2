@@ -50,9 +50,10 @@ export default function Home() {
 
       {!search.active && (
         <>
-          <PromoCarousel />
-          <CategoryCircles />
-          <FeaturedProducts />
+          {/* Secciones decorativas comentadas — solo dejamos el listado funcional de restaurantes */}
+          {/* <PromoCarousel /> */}
+          {/* <CategoryCircles /> */}
+          {/* <FeaturedProducts /> */}
           <BusinessGrid businesses={items} error={error} />
         </>
       )}

@@ -65,9 +65,7 @@ export function CashSelector({
 
       {/* Avisos de límite: estático + dinámico */}
       <div className="mt-1.5 flex flex-col gap-0.5">
-        <p className="text-[11px] text-ink-subtle">
-          Máximo {soles(maxChange)} de vuelto.
-        </p>
+        <p className="text-[11px] text-ink-subtle">Máximo {soles(maxChange)} de vuelto.</p>
         <p className="text-[11px] text-ink-subtle">
           Puedes pagar hasta con {soles(maxDeclarable)}.
         </p>
@@ -128,11 +126,7 @@ export function CashSelector({
 
       <p
         className={`mt-3 text-[13px] font-medium tabular-nums ${
-          isValid
-            ? cashChange > 0
-              ? 'text-success'
-              : 'text-ink-muted'
-            : 'text-danger'
+          isValid ? (cashChange > 0 ? 'text-success' : 'text-ink-muted') : 'text-danger'
         }`}
       >
         {isValid
