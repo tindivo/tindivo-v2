@@ -4,6 +4,7 @@ import { BottomSheet, Icon, ScreenHeader } from '@tindivo/ui'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { labelEmoji } from '@/components/address-fields'
+import { AddressSheet } from '@/features/account/components/address-sheet'
 import { useOnboarding } from '@/lib/onboarding-store'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
@@ -21,17 +22,13 @@ const CITY = 'San Jacinto, Áncash'
  * Barra de dirección de la topbar (estilo apps de delivery): muestra la dirección por
  * defecto del usuario con un chevron; al tocar, abre un selector para cambiarla. Si no
  * hay sesión o direcciones, muestra la etiqueta de la ciudad (comportamiento previo).
- *
- * IMPORTANTE: NO consultamos Supabase dentro del callback de `onAuthStateChange` (eso
- * provoca un deadlock en supabase-js: la query espera el mismo lock que retiene el
- * callback). En su lugar, el callback solo guarda el `userId` y un efecto separado hace
- * la query.
  */
 export function AddressBar() {
   const [userId, setUserId] = useState<string | null>(null)
   const [addresses, setAddresses] = useState<Addr[]>([])
   const [refreshTick, setRefreshTick] = useState(0)
   const [open, setOpen] = useState(false)
+  const [addingNew, setAddingNew] = useState(false)
   const onboardingOpen = useOnboarding((s) => s.open)
 
   // 1) Seguimiento de sesión: solo setState, sin llamadas a Supabase (evita deadlock).
@@ -49,7 +46,7 @@ export function AddressBar() {
     }
   }, [])
 
-  // 2) Carga de direcciones FUERA del callback de auth (seguro). Re-consulta con refreshTick.
+  // 2) Carga de direcciones FUERA del callback de auth. Re-consulta con refreshTick.
   useEffect(() => {
     if (!userId) {
       setAddresses([])
@@ -68,8 +65,7 @@ export function AddressBar() {
     }
   }, [userId, refreshTick])
 
-  // 3) Al cerrar el onboarding (p.ej. tras guardar la primera dirección), re-consultar
-  // para que la dirección aparezca en la topbar sin recargar.
+  // 3) Al cerrar el onboarding, re-consultar
   useEffect(() => {
     if (!onboardingOpen) setRefreshTick((t) => t + 1)
   }, [onboardingOpen])
@@ -77,10 +73,11 @@ export function AddressBar() {
   const selected = addresses.find((a) => a.is_default) ?? addresses[0]
 
   async function choose(id: string) {
+    if (!userId) return
     const supabase = getSupabaseBrowser()
-    await supabase.from('customer_addresses').update({ is_default: false }).neq('id', id)
-    await supabase.from('customer_addresses').update({ is_default: true }).eq('id', id)
     setAddresses((prev) => prev.map((a) => ({ ...a, is_default: a.id === id })))
+    await supabase.from('customer_addresses').update({ is_default: false }).eq('user_id', userId)
+    await supabase.from('customer_addresses').update({ is_default: true }).eq('id', id)
     setOpen(false)
   }
 
@@ -97,7 +94,7 @@ export function AddressBar() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex w-full min-w-0 items-center gap-1.5 text-left"
+        className="flex w-full min-w-0 items-center gap-1.5 text-left group"
         aria-label="Cambiar dirección de entrega"
       >
         <span className="shrink-0 text-brand">
@@ -111,7 +108,10 @@ export function AddressBar() {
             <span className="truncate">
               {labelEmoji(selected.label)} {selected.line || selected.reference}
             </span>
-            <span aria-hidden className="shrink-0 text-ink-subtle">
+            <span
+              aria-hidden
+              className="shrink-0 text-ink-subtle transition-transform group-hover:translate-y-0.5"
+            >
               ⌄
             </span>
           </span>
@@ -121,48 +121,90 @@ export function AddressBar() {
       {open && (
         <BottomSheet open onClose={() => setOpen(false)}>
           <ScreenHeader title="Entregar en" onBack={() => setOpen(false)} />
-          <div className="flex-1 overflow-y-auto px-4 pt-1 pb-6 scrollbar-hide">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pt-1 pb-6">
             <div className="flex flex-col gap-2.5">
-              {addresses.map((a) => (
-                <button
-                  key={a.id}
-                  type="button"
-                  onClick={() => choose(a.id)}
-                  className={`flex items-start gap-3 rounded-[18px] bg-card p-3.5 text-left ${
-                    a.is_default ? 'border-2 border-brand' : 'border border-ink/[0.04]'
-                  }`}
-                >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-[18px]">
-                    {labelEmoji(a.label)}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-semibold text-[14px] text-ink">{a.label}</span>
-                      {a.is_default && (
-                        <span className="rounded-[5px] bg-brand-soft px-1.5 py-0.5 font-bold text-[9px] uppercase text-brand">
-                          Por defecto
-                        </span>
-                      )}
+              {addresses.map((a) => {
+                const isSelected = a.is_default || addresses.length === 1
+                return (
+                  <button
+                    key={a.id}
+                    type="button"
+                    onClick={() => choose(a.id)}
+                    className={`flex items-start gap-3 rounded-[20px] p-3.5 text-left transition-all ${
+                      isSelected
+                        ? 'border-2 border-brand bg-card shadow-elev-1 ring-1 ring-brand/20'
+                        : 'border border-border bg-card hover:border-brand/30 hover:shadow-elev-1 active:scale-[0.99]'
+                    }`}
+                  >
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-[18px]">
+                      {labelEmoji(a.label)}
                     </div>
-                    {a.line && <div className="text-[13px] text-ink-muted">{a.line}</div>}
-                    <div className="mt-0.5 text-[12px] text-ink-muted">{a.reference}</div>
-                  </div>
-                  {a.is_default && (
-                    <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full bg-brand text-white">
-                      <Icon name="check" size={20} />
-                    </span>
-                  )}
-                </button>
-              ))}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-[14px] text-ink">{a.label}</span>
+                        {a.is_default && (
+                          <span className="rounded-[6px] bg-brand-soft px-1.5 py-0.5 font-bold text-[9px] uppercase tracking-wide text-brand">
+                            Predeterminada
+                          </span>
+                        )}
+                      </div>
+                      {a.line && (
+                        <div className="mt-0.5 text-[13px] font-medium text-ink truncate">
+                          {a.line}
+                        </div>
+                      )}
+                      <div className="mt-0.5 text-[12px] text-ink-muted line-clamp-2">
+                        {a.reference}
+                      </div>
+                    </div>
+                    {isSelected ? (
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand text-white shadow-sm">
+                        <Icon name="check" size={15} />
+                      </span>
+                    ) : (
+                      <span className="h-6 w-6 shrink-0 rounded-full border border-ink/20" />
+                    )}
+                  </button>
+                )
+              })}
+
+              <button
+                type="button"
+                onClick={() => {
+                  setAddingNew(true)
+                }}
+                className="mt-1 flex items-center justify-center gap-2 rounded-[18px] border-[1.5px] border-dashed border-brand/35 bg-brand-soft/60 p-3.5 text-brand-dark transition-all hover:bg-brand-soft hover:shadow-elev-2 active:scale-[0.99]"
+              >
+                <Icon name="add" size={18} />
+                <span className="font-semibold text-[13px]">Añadir nueva dirección</span>
+              </button>
             </div>
-            <Link
-              href="/cuenta"
-              className="mt-3 inline-flex items-center gap-1.5 font-semibold text-[13px] text-brand"
-            >
-              <Icon name="add" size={14} /> Gestionar direcciones
-            </Link>
+
+            <div className="mt-4 pt-3 border-t border-border flex justify-between items-center text-[12px]">
+              <span className="text-ink-muted">¿Quieres editar tus direcciones?</span>
+              <Link
+                href="/cuenta"
+                onClick={() => setOpen(false)}
+                className="font-semibold text-brand hover:text-brand-dark transition-colors"
+              >
+                Gestionar en mi cuenta →
+              </Link>
+            </div>
           </div>
         </BottomSheet>
+      )}
+
+      {addingNew && (
+        <AddressSheet
+          address={null}
+          isFirst={addresses.length === 0}
+          onClose={() => setAddingNew(false)}
+          onSaved={() => {
+            setAddingNew(false)
+            setRefreshTick((t) => t + 1)
+            setOpen(false)
+          }}
+        />
       )}
     </>
   )

@@ -4,7 +4,7 @@ import type { ApiEnvelope } from '@tindivo/api-client'
 import { ACTIVE_ORDER_STATUSES, type CustomerAppealListResponse } from '@tindivo/contracts'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import type { Address, OrderRow, Profile } from '@/features/account/types'
+import type { Address, OrderRow, Profile, ProfileStep } from '@/features/account/types'
 import { api } from '@/lib/api'
 import { clearOnboardingResume } from '@/lib/onboarding-store'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
@@ -20,12 +20,18 @@ export interface ProfileProgress {
   total: number
   completed: number
   missing: string[]
+  steps: ProfileStep[]
 }
 
 export function useAccountPage() {
   const router = useRouter()
   const [ready, setReady] = useState(false)
-  const [profile, setProfile] = useState<Profile>({ name: '', email: '', phone: '' })
+  const [profile, setProfile] = useState<Profile>({
+    name: '',
+    email: '',
+    phone: '',
+    phone_verified_at: null,
+  })
   const [addresses, setAddresses] = useState<Address[]>([])
   const [orders, setOrders] = useState<OrderRow[]>([])
   const [activeOrdersCount, setActiveOrdersCount] = useState(0)
@@ -62,6 +68,24 @@ export function useAccountPage() {
     setAppeals(appealsRes?.data.items ?? [])
   }, [])
 
+  const reloadProfile = useCallback(async () => {
+    const supabase = getSupabaseBrowser()
+    const { data: session } = await supabase.auth.getSession()
+    if (!session.session) return
+    const meta = session.session.user.user_metadata as { full_name?: string } | undefined
+    const { data: prof } = await supabase
+      .from('customer_profiles')
+      .select('full_name,phone,phone_verified_at')
+      .maybeSingle()
+
+    setProfile({
+      name: prof?.full_name ?? meta?.full_name ?? '',
+      email: session.session.user.email ?? '',
+      phone: prof?.phone ?? '',
+      phone_verified_at: prof?.phone_verified_at ?? null,
+    })
+  }, [])
+
   useEffect(() => {
     const supabase = getSupabaseBrowser()
     supabase.auth.getSession().then(async ({ data }) => {
@@ -72,12 +96,13 @@ export function useAccountPage() {
       const meta = data.session.user.user_metadata as { full_name?: string } | undefined
       const { data: prof } = await supabase
         .from('customer_profiles')
-        .select('full_name,phone')
+        .select('full_name,phone,phone_verified_at')
         .maybeSingle()
       setProfile({
         name: prof?.full_name ?? meta?.full_name ?? '',
         email: data.session.user.email ?? '',
         phone: prof?.phone ?? '',
+        phone_verified_at: prof?.phone_verified_at ?? null,
       })
       await loadData()
       setReady(true)
@@ -100,17 +125,67 @@ export function useAccountPage() {
   }, [activeOrdersCount, appeals])
 
   const progress = useMemo<ProfileProgress>(() => {
+    const hasName = Boolean(profile.name.trim())
+    const isPhoneVerified = Boolean(profile.phone.trim() && profile.phone_verified_at)
+    const defaultAddr =
+      addresses.find((a) => a.is_default) ?? (addresses.length > 0 ? addresses[0] : null)
+    const hasAddress = addresses.length > 0 && Boolean(defaultAddr)
+
+    const steps: ProfileStep[] = [
+      {
+        id: 'name',
+        title: 'Nombre completo',
+        description: hasName ? profile.name : 'Indícanos cómo llamarte',
+        isCompleted: hasName,
+        actionLabel: hasName ? 'Editar' : 'Completar',
+      },
+      {
+        id: 'phone',
+        title: 'Celular verificado',
+        description: isPhoneVerified
+          ? `+51 ${profile.phone}`
+          : profile.phone.trim()
+            ? `+51 ${profile.phone} (sin verificar)`
+            : 'Para coordinar la entrega de tus pedidos',
+        isCompleted: isPhoneVerified,
+        actionLabel: isPhoneVerified ? 'Verificado' : 'Verificar',
+      },
+      {
+        id: 'address',
+        title: 'Dirección de entrega',
+        description: hasAddress
+          ? `${defaultAddr?.label ? `${defaultAddr.label} · ` : ''}${defaultAddr?.line || defaultAddr?.reference || 'Dirección guardada'}`
+          : 'Guarda tu casa o trabajo para recibir pedidos',
+        isCompleted: hasAddress,
+        actionLabel: hasAddress ? 'Gestionar' : 'Agregar',
+      },
+    ]
+
     const missing: string[] = []
-    if (!profile.name.trim()) missing.push('Añade tu nombre')
-    if (!profile.phone.trim()) missing.push('Verifica tu celular')
-    if (!addresses.some((a) => a.is_default)) missing.push('Elige una dirección por defecto')
-    const total = 3
-    return { total, completed: total - missing.length, missing }
+    if (!hasName) missing.push('Añade tu nombre')
+    if (!isPhoneVerified) missing.push('Verifica tu celular')
+    if (!hasAddress) missing.push('Añade una dirección de entrega')
+
+    const total = steps.length
+    const completed = steps.filter((s) => s.isCompleted).length
+
+    return { total, completed, missing, steps }
   }, [profile, addresses])
 
   async function setDefault(id: string) {
     const supabase = getSupabaseBrowser()
-    await supabase.from('customer_addresses').update({ is_default: false }).neq('id', id)
+    const { data: session } = await supabase.auth.getSession()
+    const userId = session.session?.user.id
+    if (!userId) return
+
+    setAddresses((prev) =>
+      prev.map((a) => ({
+        ...a,
+        is_default: a.id === id,
+      })),
+    )
+
+    await supabase.from('customer_addresses').update({ is_default: false }).eq('user_id', userId)
     await supabase.from('customer_addresses').update({ is_default: true }).eq('id', id)
     await loadData()
   }
@@ -145,6 +220,7 @@ export function useAccountPage() {
     stats,
     progress,
     loadData,
+    reloadProfile,
     setDefault,
     remove,
     updateName,
