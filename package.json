@@ -19,7 +19,7 @@
     "test": "turbo run test",
     "clean": "turbo run clean && rimraf node_modules",
     "db:types": "supabase gen types typescript --project-id zpnipajgwfthxhdtzhly --schema public > packages/supabase/src/database.types.ts",
-    "db:lint": "supabase db lint --project-id zpnipajgwfthxhdtzhly",
+    "db:lint": "supabase db lint --linked --schema public --level warning",
     "db:seed:e2e": "node apps/api/scripts/seed-e2e.ts",
     "db:seed:e2e:clean": "node apps/api/scripts/seed-e2e-clean.ts",
     "db:seed:demo": "node apps/api/scripts/seed-demo-board.ts",

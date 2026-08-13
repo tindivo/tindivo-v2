@@ -23,8 +23,19 @@ export function OPTIONS(req: Request): Response {
 
 /**
  * POST /customer/phone/send-code
- * Envía un código OTP vía Twilio Verify (WhatsApp primario, SMS fallback).
+ * Envía un código OTP vía Twilio Verify por SMS.
  * Rate limit: 3 intentos por usuario en las últimas 24 horas.
+ *
+ * SMS Y SOLO SMS, aunque el canal caro sea ese. Aquí ponía "WhatsApp primario,
+ * SMS fallback" y la llamada siempre ha dicho `channel: 'sms'`: el comentario
+ * describía una intención, no el código. El canal de WhatsApp de Twilio Verify
+ * exige un remitente de WhatsApp aprobado —trámite aparte, no basta con tener
+ * cuenta—, así que hoy no está disponible.
+ *
+ * Importa dejarlo escrito porque en San Jacinto no es un detalle: con mala
+ * cobertura WhatsApp llega donde el SMS no, y además sale más barato. Si algún
+ * día se aprueba el remitente, esto pasa a `channel: 'whatsapp'` con SMS de
+ * reserva — y entonces el comentario de antes será verdad.
  */
 export async function POST(req: Request): Promise<Response> {
   const requestId = getRequestId(req)
