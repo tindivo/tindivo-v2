@@ -65,20 +65,18 @@ Lo que tiene que ser verdad cuando esto esté hecho:
 
 ---
 
-## 3 · Las cuatro capas
+## 3 · Las tres capas
 
-El error de partida era tratar esto como una sola regla. Son cuatro, con dueño
-y duración distintos, y se evalúan **en este orden**:
+El error de partida era tratar esto como una sola regla. Son tres, con dueño y
+duración distintos, y se evalúan **en este orden**:
 
 | # | Capa | Responde a | Dueño | Dura |
 |---|---|---|---|---|
-| 1 | Ventana de plataforma | ¿hay motorizado repartiendo? | Tindivo | permanente |
-| 2 | Horario semanal | ¿qué días y a qué hora abre? | negocio | permanente |
-| 3 | Apertura del día | ¿hoy sí atienden? | negocio | un turno |
-| 4 | Pausa corta | ¿pueden ahora mismo? | negocio | minutos |
+| 1 | Horario semanal | ¿qué días y a qué hora abre? | negocio | permanente |
+| 2 | Apertura del día | ¿hoy sí atienden? | negocio | un turno |
+| 3 | Pausa corta | ¿pueden ahora mismo? | negocio | minutos |
 
 ```
-¿la plataforma opera a esta hora?      → no: cerrado (fuera de servicio)
 ¿el horario semanal dice abierto hoy?  → no: cerrado (con próxima apertura)
 ¿confirmaron la apertura de hoy?       → no: cerrado (sin confirmar)
 ¿está en pausa corta?                  → sí: pausado (con hora de vuelta)
@@ -88,38 +86,50 @@ y duración distintos, y se evalúan **en este orden**:
 Cada "cerrado" lleva su motivo. Eso es lo que hoy no se puede hacer y lo que
 permite cumplir **G5**.
 
+### 3.1 · La ventana de plataforma se descarta
+
+Hubo una cuarta capa candidata —una franja global 18:00–23:00, las horas en que
+hay motorizado— y se descartó **a propósito**. La plataforma queda habilitada
+las 24 horas y la única verdad es el horario de cada negocio.
+
+Razones:
+
+1. Es lo que la migración `0092` ya decidió. Reintroducirla sería deshacer esa
+   decisión sin que haya cambiado nada que lo justifique.
+2. Está muerta en tres niveles a la vez, no solo neutralizada: la RPC no la
+   comprueba, los settings valen `00:00`–`23:59`, y los hooks del frontend
+   están desconectados (`useIntakeStatus` no lo llama nadie;
+   `usePlatformSchedule` devuelve un objeto hardcodeado con `isOpen: true`).
+3. Dos verdades sobre "¿está abierto?" acaban contradiciéndose. Con una sola
+   capa, el panel del negocio y el catálogo del cliente no pueden discrepar.
+
+**Lo que se pierde, dicho claro:** nada impide que un negocio configure
+`12:00–15:00`, cuando no hay quien reparta. Con dos negocios que el admin
+conoce, eso se resuelve hablando. Es deuda consciente.
+
+**Cuándo volver a mirarlo:** cuando entre un negocio cuyo horario no sea
+nocturno, o cuando dejen de caber todos los negocios en la cabeza de una
+persona. La forma correcta entonces probablemente no sea una franja fija sino
+derivarlo de `driver_availability`, que ya existe y refleja la disponibilidad
+real en vez de una suposición horaria.
+
 ---
 
 ## 4 · Reglas
 
-### Capa 1 · Ventana de plataforma
+### R1–R4 · Descartadas
 
-- **R1** · La ventana es **18:00–23:00**, los siete días, y vive en
-  `app_settings.platform_schedule`. No se hardcodea.
-- **R1-bis** · **Corte único.** No se separa la hora de dejar de recibir de la
-  de dejar de operar: a las 23:00 se cierra la recepción, y lo que ya entró se
-  termina por R16. En consecuencia `app_settings.order_intake_cutoff` sobra y
-  se elimina — hoy vale `"23:59"` y solo lo lee
-  `is_within_order_intake_window`. Dejarlo sería una segunda hora de cierre
-  compitiendo con la primera.
-- **R2** · Actúa como **techo de configuración**: al guardar su horario semanal,
-  un negocio no puede salirse de la ventana. Si intenta `12:00–15:00`, se
-  rechaza indicando la ventana vigente.
-- **R3** · **No** actúa como portero de pedidos. Quien decide si se puede pedir
-  es la cadena completa (capas 2–4).
-  *Motivo:* si la ventana bloquease pedidos por su cuenta, un horario mal
-  guardado produciría el peor bug posible — el negocio se ve abierto en su
-  panel y el cliente no puede pedirle. Una sola fuente de verdad.
-- **R4** · Cambiar la ventana **no** reescribe horarios ya guardados. Los deja
-  fuera de rango y los marca como inválidos para que el negocio los corrija.
+Eran las reglas de la ventana de plataforma. Se retiran enteras: ver §3.1. La
+numeración no se reutiliza para que las referencias de este documento sigan
+apuntando a lo mismo.
 
-### Capa 2 · Horario semanal
+### Horario semanal
 
 - **R5** · Sigue siendo `business_schedule` tal cual está. No se toca el modelo.
 - **R6** · Sin horario configurado = abierto (comportamiento actual de
   `getOpenStatus`, que devuelve `no_schedule`). Se mantiene.
 
-### Capa 3 · Apertura del día
+### Apertura del día
 
 - **R7** · Un negocio aparece **cerrado** hasta que confirma la apertura del
   día, aunque su horario semanal diga que abre.
@@ -134,7 +144,7 @@ permite cumplir **G5**.
   para un turno que cruza medianoche (18:00–01:00), la madrugada pertenece al
   día anterior. Coincide con el *spillover* que `getOpenStatus` ya implementa.
 
-### Capa 4 · Pausa corta
+### Pausa corta
 
 - **R12** · Sin cambios. `accepting_orders_until` sigue funcionando igual.
 - **R13** · La pausa **no** sustituye a R10: es para minutos, no para una noche.
@@ -211,7 +221,6 @@ Cada regla, con cómo se comprueba:
 
 | Caso | Esperado |
 |---|---|
-| Guardar horario 12:00–15:00 | rechazado, mensaje con la ventana (R2) |
 | Horario válido, sin confirmar, dentro de hora | cerrado, motivo "sin confirmar" (R7) |
 | Confirmar a las 17:40, consultar a las 18:05 | abierto (R8) |
 | Confirmado ayer, consultar hoy a las 18:05 | cerrado (R9) |
@@ -220,7 +229,6 @@ Cada regla, con cómo se comprueba:
 | Pedido creado 22:55, cierre 23:00 | se acepta, prepara y entrega sin cortes (R16) |
 | Pedido creado 22:59, aceptado 23:10 | permitido; solo lo corta el timer de 15 min (R18) |
 | Aceptado 20:30, se adelanta el cierre a 21:00 | el pedido llega a entregado sin cambios (R19) |
-| Guardar horario 18:00–23:30 | rechazado: la ventana termina a las 23:00 (R1, R2) |
 | Nadie confirma a las 18:00 | push al negocio (R14) |
 | Nadie confirma a las 18:00 + N | alerta en admin (R15) |
 
@@ -232,12 +240,11 @@ de la noche.
 
 ## 7 · Decisiones tomadas
 
+- **Plataforma abierta 24 h.** La única verdad es el horario de cada negocio.
+  Se descarta la ventana global (§3.1).
 - Apertura **opt-in** diaria, no opt-out. Se asume el riesgo de que un olvido
   cueste ventas, a cambio de que "abierto" sea siempre cierto y de crear el
   hábito. R8, R14 y R15 existen para que el olvido sea difícil.
-- Ventana **18:00–23:00**, corte único, y `order_intake_cutoff` se elimina
-  (R1, R1-bis).
-- Ventana de plataforma como **techo de configuración**, no como portero (R3).
 - Push al negocio **y** alerta al admin a los 30 min de su apertura (R14, R15).
 - Cerrar antes no abandona lo ya aceptado (R19).
 
@@ -245,12 +252,31 @@ de la noche.
 
 - Qué ve exactamente el cliente en cada motivo de cierre (copy).
 
-## 9 · Trampa para quien implemente esto
+## 9 · Limpieza que habilita esta decisión
 
-Hoy `platform_schedule` vale `00:00`–`23:59` y **todas** las filas de
-`business_schedule` están a `00:00`–`23:59`. Con esos datos ninguna de estas
-reglas llega a evaluarse nunca: todo parece funcionar porque nada se dispara.
+Descartar la ventana deja una cadena entera de código muerto, de la DB al
+navegador. Ninguna pieza tiene un consumidor vivo:
 
-Antes de dar por buena una sola prueba, poner datos reales — ventana
-`18:00`–`23:00` y un horario de negocio dentro de ella. Si no, la suite pasará
-en verde sin haber ejercitado nada.
+| Pieza | Estado |
+|---|---|
+| `app_settings.platform_schedule` | solo la lee la función de abajo |
+| `app_settings.order_intake_cutoff` | ídem |
+| `is_within_order_intake_window()` | solo la llama `get_order_intake_status` |
+| `get_order_intake_status()` | solo la llama `/public/schedule` |
+| `GET /api/v1/public/schedule` | solo lo llama `useIntakeStatus` |
+| `apps/negocios/.../use-intake-status.ts` | **nadie lo llama** |
+| `apps/negocios/features/nuevo/types.ts` → `IntakeStatus` | solo el hook muerto |
+| `apps/customer/hooks/use-platform-schedule.ts` | **nadie lo llama**; devuelve un objeto hardcodeado |
+
+Es una cadena, no un grafo: se puede tirar de un extremo y cae entera. No es
+urgente y no bloquea nada — pero mientras siga ahí, cualquiera que lea
+`platform_schedule` creerá que la plataforma tiene horario.
+
+## 10 · Trampa para quien implemente esto
+
+**Todas** las filas de `business_schedule` están hoy a `00:00`–`23:59`. Con
+esos datos ninguna de estas reglas llega a evaluarse nunca: todo parece
+funcionar porque nada se dispara.
+
+Antes de dar por buena una sola prueba, poner un horario de negocio realista.
+Si no, la suite pasará en verde sin haber ejercitado nada.
