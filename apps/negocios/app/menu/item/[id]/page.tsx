@@ -36,6 +36,11 @@ export default function MenuItemEditorPage() {
     }
   }
 
+  async function handleConfirmDelete() {
+    setShowDeleteModal(false)
+    await editor.handleDeleteItem()
+  }
+
   async function handleSaveAndExit() {
     const ok = await editor.handleSave()
     if (ok) editor.handleSaveAndExit()
@@ -78,6 +83,7 @@ export default function MenuItemEditorPage() {
         onGroupMoveDown={editor.moveGroupDown}
         onAddGroup={editor.addGroup}
         onDeleteItem={() => setShowDeleteModal(true)}
+        onConfirmDelete={handleConfirmDelete}
         onPickImage={editor.onPickImage}
         onClearImage={editor.onClearImage}
       />
@@ -118,6 +124,7 @@ export default function MenuItemEditorPage() {
         onGroupMoveDown={editor.moveGroupDown}
         onAddGroup={editor.addGroup}
         onDeleteItem={() => setShowDeleteModal(true)}
+        onConfirmDelete={handleConfirmDelete}
         onPickImage={editor.onPickImage}
         onClearImage={editor.onClearImage}
       />

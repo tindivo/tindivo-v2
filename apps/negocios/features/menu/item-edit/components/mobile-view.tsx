@@ -18,6 +18,8 @@ interface MobileViewProps extends EditorFormProps {
   onShowDeleteModal: (v: boolean) => void
   onShowUnsavedModal: (v: boolean) => void
   onShowPreviewMobile: (v: boolean) => void
+  /** Ejecuta el borrado. Distinto de `onDeleteItem`, que solo abre el diálogo. */
+  onConfirmDelete: () => void
   onSave: () => void
   onBack: () => void
   onSaveAndExit: () => void
@@ -37,6 +39,7 @@ export function MobileView(props: MobileViewProps) {
     onShowDeleteModal,
     onShowUnsavedModal,
     onShowPreviewMobile,
+    onConfirmDelete,
     onSave,
     onBack,
     onSaveAndExit,
@@ -52,7 +55,7 @@ export function MobileView(props: MobileViewProps) {
       {showDeleteModal && (
         <ConfirmDeleteModal
           itemName={formData.name}
-          onConfirm={formProps.onDeleteItem}
+          onConfirm={onConfirmDelete}
           onCancel={() => onShowDeleteModal(false)}
         />
       )}
