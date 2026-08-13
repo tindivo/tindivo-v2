@@ -26,9 +26,17 @@ export function OpeningPrompt() {
         </span>
 
         <h3 className="mb-2 text-[17px] font-bold text-ink">¿Abren hoy?</h3>
+        {/*
+          El copy NO promete que esto cambie lo que ve el cliente, porque
+          todavía no lo hace: la declaración se guarda pero aún no está atada
+          al catálogo ni al alta de pedidos. Cuando se ate (ver el spec de
+          horarios), aquí va "Los clientes solo te verán abierto cuando lo
+          confirmes" — y no antes: prometerlo hoy sería enseñarle al negocio a
+          desconfiar del panel la primera vez que le entre un pedido tras
+          haber dicho que no atendía.
+        */}
         <p className="mb-5 text-[14px] leading-relaxed text-ink-muted">
-          Confírmanos si van a atender esta noche. Los clientes solo te verán abierto cuando lo
-          confirmes.
+          Confírmanos si van a atender esta noche.
         </p>
 
         <div className="flex flex-col gap-2.5">
