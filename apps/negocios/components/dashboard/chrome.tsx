@@ -27,7 +27,7 @@ import {
   pauseMinutesLeft,
   toOrderVM,
 } from '@/lib/orders/view-model'
-import { OpeningPrompt } from '@/features/apertura/components/opening-prompt'
+import { OpeningControls } from '@/features/apertura/components/opening-controls'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import { speak, unlockAudio, useDashboardSounds } from '@/lib/use-audio-alert'
 import { DashboardSkeleton } from './dashboard-skeleton'
@@ -924,8 +924,6 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
   return (
     <Ctx.Provider value={value}>
       {gateShown && <NotificationGate onActivate={handleActivateNotifications} />}
-      {/* Va dentro del Provider: `useOpeningDay` necesita el bizId del contexto. */}
-      {!gateShown && <OpeningPrompt />}
       <div className="flex h-dvh bg-surface">
         <div className="hidden shrink-0 lg:block">
           <Sidebar active={active} onSignOut={onSignOut} />
@@ -953,6 +951,12 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
               <span>Cerrar sesión</span>
             </button>
           </header>
+
+          {/* Va dentro del Provider (necesita el bizId del contexto) y en el
+              flujo del layout, para que la franja de estado empuje el
+              contenido en vez de taparlo. El modal que renderiza es `fixed`, así
+              que no le afecta estar aquí. */}
+          {!gateShown && <OpeningControls />}
 
           {catalogOnly && legacyOrdersVisible && (
             <div className="flex items-center gap-2 bg-warning-soft px-4 py-2 text-[13px] font-semibold text-amber-800">

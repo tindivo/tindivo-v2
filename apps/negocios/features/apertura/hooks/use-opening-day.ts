@@ -1,5 +1,6 @@
 'use client'
 
+import { getOpenStatus, type ScheduleDayRow } from '@tindivo/contracts'
 import { useCallback, useEffect, useState } from 'react'
 import { useDashboard } from '@/components/dashboard/shell'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
@@ -7,14 +8,18 @@ import { getSupabaseBrowser } from '@/lib/supabase/client'
 export type DayStatus = 'open' | 'closed'
 
 interface OpeningDay {
-  /** null = todavía no se sabe (cargando) o el negocio no ha declarado nada. */
+  /** null = el negocio todavía no ha declarado nada para esta jornada. */
   status: DayStatus | null
+  /**
+   * Si el horario semanal dice que a esta hora debería estar atendiendo. Es lo
+   * que decide si tiene sentido preguntar: a las diez de la mañana el negocio
+   * está cambiando precios, no abriendo.
+   */
+  withinSchedule: boolean
   loading: boolean
   saving: boolean
   error: string | null
-  /** Jornada operativa vigente (no siempre la fecha de hoy: ver 0154). */
-  serviceDate: string | null
-  declare: (status: DayStatus, note?: string) => Promise<boolean>
+  declare: (status: DayStatus) => Promise<boolean>
 }
 
 /**
@@ -28,6 +33,7 @@ export function useOpeningDay(): OpeningDay {
   const { bizId } = useDashboard()
   const [status, setStatus] = useState<DayStatus | null>(null)
   const [serviceDate, setServiceDate] = useState<string | null>(null)
+  const [schedule, setSchedule] = useState<ScheduleDayRow[] | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -38,7 +44,13 @@ export function useOpeningDay(): OpeningDay {
     const supabase = getSupabaseBrowser()
 
     async function load() {
-      const { data: today, error: dateErr } = await supabase.rpc('current_service_date')
+      const [{ data: today, error: dateErr }, { data: days }] = await Promise.all([
+        supabase.rpc('current_service_date'),
+        supabase
+          .from('business_schedule')
+          .select('day_of_week,is_open,shift1_start,shift1_end,shift2_start,shift2_end')
+          .eq('business_id', bizId as string),
+      ])
       if (cancelled) return
       if (dateErr || !today) {
         setError('No pudimos consultar la fecha de servicio.')
@@ -46,11 +58,12 @@ export function useOpeningDay(): OpeningDay {
         return
       }
       setServiceDate(today)
+      setSchedule((days ?? []) as ScheduleDayRow[])
 
       const { data } = await supabase
         .from('business_service_days')
         .select('status')
-        .eq('business_id', bizId)
+        .eq('business_id', bizId as string)
         .eq('service_date', today)
         .maybeSingle()
 
@@ -66,7 +79,7 @@ export function useOpeningDay(): OpeningDay {
   }, [bizId])
 
   const declare = useCallback(
-    async (next: DayStatus, note?: string): Promise<boolean> => {
+    async (next: DayStatus): Promise<boolean> => {
       if (!bizId || !serviceDate) return false
       setSaving(true)
       setError(null)
@@ -78,7 +91,6 @@ export function useOpeningDay(): OpeningDay {
           business_id: bizId,
           service_date: serviceDate,
           status: next,
-          note: note ?? null,
           confirmed_at: new Date().toISOString(),
           confirmed_by: auth.user?.id ?? null,
         },
@@ -97,5 +109,11 @@ export function useOpeningDay(): OpeningDay {
     [bizId, serviceDate],
   )
 
-  return { status, loading, saving, error, serviceDate, declare }
+  // Se pregunta por la declaración solo dentro del horario del negocio. Un
+  // local sin horario configurado no tiene hora de apertura que esperar, así
+  // que ahí siempre aplica.
+  const withinSchedule =
+    schedule === null ? false : getOpenStatus(schedule, new Date()).kind !== 'closed'
+
+  return { status, withinSchedule, loading, saving, error, declare }
 }
