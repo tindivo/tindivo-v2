@@ -27,6 +27,7 @@ import {
   pauseMinutesLeft,
   toOrderVM,
 } from '@/lib/orders/view-model'
+import { OpeningPrompt } from '@/features/apertura/components/opening-prompt'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import { speak, unlockAudio, useDashboardSounds } from '@/lib/use-audio-alert'
 import { DashboardSkeleton } from './dashboard-skeleton'
@@ -923,6 +924,8 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
   return (
     <Ctx.Provider value={value}>
       {gateShown && <NotificationGate onActivate={handleActivateNotifications} />}
+      {/* Va dentro del Provider: `useOpeningDay` necesita el bizId del contexto. */}
+      {!gateShown && <OpeningPrompt />}
       <div className="flex h-dvh bg-surface">
         <div className="hidden shrink-0 lg:block">
           <Sidebar active={active} onSignOut={onSignOut} />

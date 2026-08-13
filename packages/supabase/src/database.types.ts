@@ -264,6 +264,51 @@ export type Database = {
           },
         ]
       }
+      business_service_days: {
+        Row: {
+          business_id: string
+          closes_early_at: string | null
+          confirmed_at: string
+          confirmed_by: string | null
+          note: string | null
+          service_date: string
+          status: string
+        }
+        Insert: {
+          business_id: string
+          closes_early_at?: string | null
+          confirmed_at?: string
+          confirmed_by?: string | null
+          note?: string | null
+          service_date: string
+          status: string
+        }
+        Update: {
+          business_id?: string
+          closes_early_at?: string | null
+          confirmed_at?: string
+          confirmed_by?: string | null
+          note?: string | null
+          service_date?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_service_days_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_service_days_confirmed_by_fkey"
+            columns: ["confirmed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       businesses: {
         Row: {
           accent_color: string
@@ -2511,6 +2556,7 @@ export type Database = {
       }
       current_business_id: { Args: never; Returns: string }
       current_driver_id: { Args: never; Returns: string }
+      current_service_date: { Args: { p_at?: string }; Returns: string }
       current_user_has_role: {
         Args: { p_role: Database["public"]["Enums"]["user_role"] }
         Returns: boolean
