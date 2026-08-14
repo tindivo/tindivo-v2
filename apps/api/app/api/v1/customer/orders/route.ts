@@ -167,13 +167,22 @@ export async function POST(req: Request): Promise<Response> {
       })
     }
 
-    // Busy mode: si el negocio está pausado, no aceptamos pedidos web nuevos.
+    // Negocio inactivo, bloqueado o inexistente: no recibe pedidos.
     const { data: biz } = await service
       .from('businesses')
-      .select('accepting_orders_until,accepts_web_delivery,accepts_web_pickup')
+      .select('accepting_orders_until,accepts_web_delivery,accepts_web_pickup,is_active,is_blocked')
       .eq('id', body.businessId)
       .maybeSingle()
-    if (isBusinessPaused(biz?.accepting_orders_until ?? null)) {
+
+    if (!biz || !biz.is_active || biz.is_blocked) {
+      return problem('conflict', {
+        detail: 'Este restaurante no está disponible para recibir pedidos.',
+        requestId,
+        headers: corsHeaders(req),
+      })
+    }
+
+    if (isBusinessPaused(biz.accepting_orders_until ?? null)) {
       return problem('forbidden', {
         detail: 'El restaurante está pausado temporalmente. Vuelve a intentar en unos minutos.',
         requestId,
