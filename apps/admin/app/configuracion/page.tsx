@@ -206,7 +206,7 @@ function SupportCard({ value, save }: { value: Cfg; save: SaveFn }) {
 function CoverageCard({ polygon, coverage, save }: { polygon: Cfg; coverage: Cfg; save: SaveFn }) {
   const initial = (polygon as { polygon?: LatLng[] } | null)?.polygon ?? null
   const cov = (coverage ?? {}) as { centerLat?: number; centerLng?: number }
-  const center: LatLng = { lat: cov.centerLat ?? -9.1547, lng: cov.centerLng ?? -78.5042 }
+  const center: LatLng = { lat: cov.centerLat ?? -9.1465, lng: cov.centerLng ?? -78.2779 }
   const [ring, setRing] = useState<LatLng[] | null>(initial)
   const count = ring?.length ?? 0
   const canSave = count >= 3

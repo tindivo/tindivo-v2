@@ -901,6 +901,47 @@ export type Database = {
           },
         ]
       }
+      delivery_zones: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          kind: string
+          name: string
+          polygon: Json
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          kind?: string
+          name: string
+          polygon: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          kind?: string
+          name?: string
+          polygon?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_zones_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       domain_events: {
         Row: {
           aggregate_id: string
@@ -2568,6 +2609,10 @@ export type Database = {
         Args: { p_driver_user_id: string; p_order_id: string }
         Returns: Json
       }
+      delivery_band_for_point: {
+        Args: { p_lat: number; p_lng: number }
+        Returns: Database["public"]["Enums"]["distance_band"]
+      }
       derive_business_primary_capability: {
         Args: {
           p_accepts_web_delivery: boolean
@@ -2643,6 +2688,10 @@ export type Database = {
       }
       point_in_coverage_polygon: {
         Args: { p_lat: number; p_lng: number }
+        Returns: boolean
+      }
+      point_in_ring: {
+        Args: { p_lat: number; p_lng: number; p_ring: Json }
         Returns: boolean
       }
       queue_lead_minutes: { Args: never; Returns: number }
