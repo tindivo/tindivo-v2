@@ -227,7 +227,7 @@ En el checkout, el toggle **Delivery / Pick-up** se renderiza condicional:
 
 ## 9. Diferencias con el sistema v1
 
-Resumidas para que el lector entienda qué cambia respecto al sistema actual (`C:\Users\mauri\Documents\Tindivo`):
+Resumidas para que el lector entienda qué cambia respecto al sistema actual (`../tindivo-delivery`):
 
 | Tema | v1 (actual) | v2 (este doc) |
 |---|---|---|
