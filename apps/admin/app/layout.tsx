@@ -29,6 +29,10 @@ const jetbrains = JetBrains_Mono({
 export const metadata: Metadata = {
   title: 'Tindivo · Admin',
   description: 'Sala de control de Tindivo',
+  icons: {
+    icon: '/favicon.ico',
+    apple: '/apple-touch-icon.png',
+  },
 }
 
 import { EnvBanner } from '@tindivo/ui'
