@@ -24,6 +24,10 @@ const jetbrains = JetBrains_Mono({
 export const metadata: Metadata = {
   title: 'Tindivo · Negocio',
   description: 'Panel del negocio en Tindivo',
+  icons: {
+    icon: '/favicon.ico',
+    apple: '/apple-touch-icon.png',
+  },
 }
 
 export default function RootLayout({ children }: { children: ReactNode }) {

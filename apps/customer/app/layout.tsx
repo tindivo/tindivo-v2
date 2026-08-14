@@ -31,6 +31,10 @@ const jetbrains = JetBrains_Mono({
 export const metadata: Metadata = {
   title: 'Tindivo — Delivery de tu barrio',
   description: 'Pide de los negocios de San Jacinto y recíbelo en tu puerta.',
+  icons: {
+    icon: '/favicon.ico',
+    apple: '/apple-touch-icon.png',
+  },
 }
 
 export const viewport: Viewport = {
