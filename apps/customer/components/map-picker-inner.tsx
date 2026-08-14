@@ -36,9 +36,12 @@ const ZONE_STYLE = {
   fillOpacity: 0.12,
 } as const
 
+/** Tocar el mapa mueve el pin y centra suavemente la vista en la nueva ubicación. */
 function TapToMove({ onChange }: { onChange: (c: LatLng) => void }) {
+  const map = useMap()
   useMapEvents({
     click(e) {
+      map.panTo([e.latlng.lat, e.latlng.lng], { animate: true })
       onChange({ lat: e.latlng.lat, lng: e.latlng.lng })
     },
   })
@@ -46,8 +49,8 @@ function TapToMove({ onChange }: { onChange: (c: LatLng) => void }) {
 }
 
 /**
- * Reposiciona la vista al pin cuando `token` cambia (lo dispara "Usar mi ubicación").
- * Guardado por token para NO recentrar al arrastrar el pin (eso sería brusco).
+ * Reposiciona y centra la vista al pin con animación fluida (flyTo).
+ * Se dispara al presionar "Usar mi ubicación" o al cambiar el token.
  */
 function Recenter({ position, token }: { position: LatLng; token: number }) {
   const map = useMap()
@@ -55,36 +58,11 @@ function Recenter({ position, token }: { position: LatLng; token: number }) {
   useEffect(() => {
     if (token === last.current) return
     last.current = token
-    map.setView([position.lat, position.lng], Math.max(map.getZoom(), 16))
+    map.flyTo([position.lat, position.lng], Math.max(map.getZoom(), 16), {
+      animate: true,
+      duration: 1.0,
+    })
   }, [token, position, map])
-  return null
-}
-
-/** Encuadra la vista a la zona de cobertura (una sola vez), para mostrar todo San Jacinto. */
-function FitZone({
-  polygon,
-  circle,
-}: {
-  polygon: LatLng[] | null
-  circle: { center: LatLng; radiusKm: number } | null
-}) {
-  const map = useMap()
-  const fitted = useRef(false)
-  useEffect(() => {
-    if (fitted.current) return
-    if (polygon && polygon.length >= 3) {
-      map.fitBounds(L.latLngBounds(polygon.map((p) => [p.lat, p.lng] as [number, number])), {
-        padding: [18, 18],
-      })
-      fitted.current = true
-    } else if (circle) {
-      map.fitBounds(
-        L.latLng(circle.center.lat, circle.center.lng).toBounds(circle.radiusKm * 2000),
-        { padding: [18, 18] },
-      )
-      fitted.current = true
-    }
-  }, [map, polygon, circle])
   return null
 }
 
@@ -105,7 +83,7 @@ export default function MapPickerInner({
   return (
     <MapContainer
       center={[position.lat, position.lng]}
-      zoom={15}
+      zoom={16}
       zoomControl={false}
       className="h-full w-full"
     >
@@ -125,7 +103,6 @@ export default function MapPickerInner({
           pathOptions={ZONE_STYLE}
         />
       ) : null}
-      <FitZone polygon={polygon} circle={circle} />
       <Recenter position={position} token={recenterToken} />
       <TapToMove onChange={onChange} />
       <Marker
