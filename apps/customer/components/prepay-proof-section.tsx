@@ -229,31 +229,29 @@ export function PrepayProofSection({ orderId, proofAttempt, onProofUploaded }: P
 
       {/* QR (si existe) */}
       {info?.qrUrl && (
-        <div className="mt-3 flex flex-col items-center rounded-xl bg-surface p-3 text-center">
-          <div className="relative h-36 w-36 overflow-hidden rounded-lg">
-            {/*
-              `next/image` NO sirve aquí, por dos motivos:
-
-              1. El QR vive en Supabase Storage, un host externo, y ningún
-                 next.config declara `images.remotePatterns`. Sin eso el
-                 optimizador rechaza la URL y la imagen no llega a pintarse:
-                 el cliente se queda sin QR que escanear para pagar.
-              2. Aunque se declarase, el optimizador reencoda a WebP con
-                 pérdida. Es justo lo que el compresor del dashboard evita al
-                 subirlo (perfil 'qr', sin pérdida): un código con artefactos
-                 es un cliente que no puede yapear.
-
-              El QR ya sale optimizado de origen, así que no hay nada que
-              optimizar aquí. Y `<img>` es lo que usa el resto del catálogo.
-            */}
+        <div className="mt-3 flex flex-col items-center rounded-xl border border-ink/[0.06] bg-surface p-3 text-center">
+          <button
+            type="button"
+            onClick={() => setZoomUrl(info.qrUrl)}
+            className="group relative h-40 w-40 overflow-hidden rounded-xl bg-white p-2 shadow-xs transition-all hover:scale-105 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-brand"
+            aria-label="Agrandar código QR"
+          >
             <img
               src={info.qrUrl}
               alt="QR Yape/Plin"
               className="h-full w-full object-contain"
               decoding="async"
             />
-          </div>
-          <span className="mt-1 text-[11px] text-ink-muted">Escanea para pagar</span>
+            <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 transition-opacity group-hover:opacity-100 rounded-xl">
+              <span className="rounded-full bg-black/75 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur-xs">
+                Agrandar 🔍
+              </span>
+            </div>
+          </button>
+          <span className="mt-2 text-[12px] font-medium text-ink-muted">
+            Escanea para pagar •{' '}
+            <span className="text-brand font-semibold">Toca para agrandar</span>
+          </span>
         </div>
       )}
 
