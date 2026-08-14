@@ -63,7 +63,7 @@ function NegociosBaseCard({
     <div
       {...clickProps(order, onOpen)}
       className={cn(
-        'group relative cursor-pointer rounded-xl border transition-all duration-150 hover:shadow-elev-2 text-left overflow-hidden',
+        'group relative cursor-pointer rounded-xl border transition-all duration-150 hover:shadow-elev-2 text-left overflow-hidden shrink-0',
         compact ? 'px-3 py-2.5' : 'px-3.5 py-3',
         TONE_BORDER[vm.tone],
       )}

@@ -42,7 +42,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         />
         <link rel="stylesheet" href="/fonts/material-symbols.css" />
       </head>
-      <body className="min-h-dvh bg-surface font-sans text-ink antialiased">
+      <body className="flex h-dvh flex-col overflow-hidden bg-surface font-sans text-ink antialiased">
         <EnvBanner />
         <DashboardChrome>{children}</DashboardChrome>
         <PushManager />

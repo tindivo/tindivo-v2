@@ -76,16 +76,16 @@ export function useOrderDetail(
         }
       }
 
-      if (selSource === 'customer_pwa') {
+      try {
         const { data } = await supabase
           .from('customer_order_items')
           .select(
             'item_name_snapshot,quantity,unit_price,line_total,note,customer_order_item_modifiers(option_name_snapshot)',
           )
           .eq('order_id', selectedId)
-        if (!cancel)
+        if (!cancel && data && data.length > 0) {
           setDetailItems(
-            (data ?? []).map((r) => {
+            data.map((r) => {
               const mods = (
                 (r.customer_order_item_modifiers ?? []) as { option_name_snapshot: string }[]
               )
@@ -100,6 +100,9 @@ export function useOrderDetail(
               }
             }),
           )
+        }
+      } catch {
+        /* fail-open */
       }
 
       if (freshPath) {

@@ -252,11 +252,9 @@ export function DetailScreen({
   const isOnline = order.source === 'web'
   const acceptDisabled = busy || isLoadingActions
   const isPrepaidAwaitingProof =
-    isPrepaid &&
-    !proofUrl &&
-    !isLoadingActions &&
-    (order.status === 'pending_acceptance' || order.status === 'validando')
-  const isValidandoPrepaid = isPrepaid && Boolean(proofUrl) && !isLoadingActions
+    isPrepaid && !proofUrl && !isLoadingActions && order.status === 'pending_acceptance'
+  const isValidandoPrepaid =
+    isPrepaid && (Boolean(proofUrl) || order.status === 'validando') && !isLoadingActions
 
   const rejectReasons = isPrepaid
     ? [
@@ -408,14 +406,16 @@ export function DetailScreen({
             <PayBadgeMini payment={order.payment} />
           </div>
         </div>
-        <span
-          className={cn(
-            'shrink-0 font-mono font-bold text-ink',
-            mobile ? 'text-[18px]' : 'text-[20px]',
-          )}
-        >
-          {soles(order.total)}
-        </span>
+        <div className="shrink-0 flex items-center">
+          <span
+            className={cn(
+              'font-mono font-extrabold text-ink tracking-tight',
+              mobile ? 'text-[20px]' : 'text-[24px]',
+            )}
+          >
+            {soles(order.total)}
+          </span>
+        </div>
         {!mobile && (
           <button
             type="button"
@@ -612,7 +612,12 @@ export function DetailScreen({
               <div className="mt-2.5 flex flex-col gap-1 border-t border-dashed border-border pt-2.5">
                 <DetailRow label="Subtotal" value={soles(order.subtotal)} mono />
                 <DetailRow label="Delivery" value={soles(order.deliveryFee)} mono />
-                <DetailRow label="Total" value={soles(order.total)} mono bold />
+                <div className="mt-1 flex items-center justify-between border-t border-ink/10 pt-2 text-[15px]">
+                  <span className="font-bold text-ink">Total</span>
+                  <span className="font-mono text-[18px] font-extrabold text-ink">
+                    {soles(order.total)}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -625,8 +630,12 @@ export function DetailScreen({
             <div className="mt-2 flex flex-col gap-[5px]">
               <DetailRow label="Total del pedido" value={soles(order.amount)} mono />
               <DetailRow label="Delivery" value={soles(order.deliveryFee)} mono />
-              <div className="my-0.5 h-px bg-border" />
-              <DetailRow label="Total a cobrar" value={soles(order.total)} mono bold />
+              <div className="mt-1 flex items-center justify-between border-t border-ink/10 pt-2 text-[15px]">
+                <span className="font-bold text-ink">Total a cobrar</span>
+                <span className="font-mono text-[18px] font-extrabold text-ink">
+                  {soles(order.total)}
+                </span>
+              </div>
             </div>
           </div>
         )}

@@ -188,7 +188,7 @@ function Sidebar({ active, onSignOut }: { active: NavId; onSignOut: () => void }
   const catalogNav: NavId[] = hasActiveOrders ? ['pedidos', ...CATALOG_ONLY_NAV] : CATALOG_ONLY_NAV
   const navItems = catalogOnly ? NAV_ITEMS.filter((it) => catalogNav.includes(it.id)) : NAV_ITEMS
   return (
-    <aside className="flex h-dvh w-[240px] shrink-0 flex-col border-r border-border bg-white px-3.5 py-5 pb-4">
+    <aside className="flex h-full w-[240px] shrink-0 flex-col border-r border-border bg-white px-3.5 py-5 pb-4">
       <div className="flex items-center gap-2.5 px-1.5 pb-[18px]">
         <div
           className="flex h-[38px] w-[38px] items-center justify-center rounded-xl text-[17px] font-bold text-white"
@@ -924,11 +924,11 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
   return (
     <Ctx.Provider value={value}>
       {gateShown && <NotificationGate onActivate={handleActivateNotifications} />}
-      <div className="flex h-dvh bg-surface">
-        <div className="hidden shrink-0 lg:block">
+      <div className="flex flex-1 min-h-0 bg-surface">
+        <div className="hidden shrink-0 lg:block h-full">
           <Sidebar active={active} onSignOut={onSignOut} />
         </div>
-        <div className="flex min-w-0 flex-1 flex-col h-dvh">
+        <div className="flex min-w-0 flex-1 flex-col min-h-0">
           {/* Header móvil con nombre del local y botón visible de Cerrar sesión */}
           <header className="flex shrink-0 items-center justify-between border-b border-border bg-white px-3.5 py-2.5 lg:hidden">
             <div className="flex items-center gap-2 min-w-0">
