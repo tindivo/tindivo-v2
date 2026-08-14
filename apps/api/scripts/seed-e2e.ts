@@ -208,6 +208,27 @@ async function main(): Promise<void> {
     'id',
   )
 
+  // Apertura declarada de HOY. Desde la 0154 el horario semanal no basta:
+  // alguien del local tiene que confirmar que ese día atienden, o el negocio
+  // figura cerrado y no entra ni un pedido. Sin esta fila, cualquier e2e que
+  // haga un pedido falla con el catálogo deshabilitado y un error que apunta
+  // al sitio equivocado.
+  //
+  // La fecha la calcula la base (`current_service_date`) y no este script: la
+  // jornada arranca a las 05:00 de Lima, así que a la medianoche la fecha de
+  // servicio y la del calendario no coinciden.
+  const { data: serviceDate, error: sdErr } = await raw.rpc('current_service_date')
+  if (sdErr || !serviceDate) throw new Error(`current_service_date falló: ${sdErr?.message}`)
+  await upsert(
+    'business_service_days',
+    [E2E.BUSINESS_ID, E2E.BUSINESS_2_ID].map((businessId) => ({
+      business_id: businessId,
+      service_date: serviceDate,
+      status: 'open',
+    })),
+    'business_id,service_date',
+  )
+
   // ── 4. Menú: 3 productos, uno con grupo de modificadores ───────────────────
   console.log('\nmenú')
   await upsert(

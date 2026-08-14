@@ -71,3 +71,27 @@ export function clearOptimistic(orderId: string) {
 export function getOptimistic(): Record<string, string> {
   return read<Record<string, string>>(OPTIMISTIC_KEY, {})
 }
+
+/**
+ * Borra los estados optimistas que ya no tienen transición encolada detrás.
+ *
+ * Un optimista huérfano no es cosmético: en el board pisa al estado real, así
+ * que el pedido deja de ser `waiting_driver` y sale de "disponibles"; y como en
+ * la base sigue sin motorizado, tampoco entra en "mis pedidos". Desaparece de
+ * las tres listas y nadie lo puede tomar, con la comida enfriándose.
+ *
+ * Devuelve cuántos limpió.
+ */
+export function reconcileOptimistic(): number {
+  const map = read<Record<string, string>>(OPTIMISTIC_KEY, {})
+  const pending = new Set(peekAll().map((i) => i.orderId))
+  let cleaned = 0
+  for (const orderId of Object.keys(map)) {
+    if (!pending.has(orderId)) {
+      delete map[orderId]
+      cleaned++
+    }
+  }
+  if (cleaned > 0) write(OPTIMISTIC_KEY, map)
+  return cleaned
+}
