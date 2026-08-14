@@ -7,7 +7,7 @@
  * producto. Ajustar cuando tengamos el inventario completo de anchos.
  */
 
-export type ImageProfile = 'logo' | 'banner' | 'product' | 'qr'
+export type ImageProfile = 'logo' | 'banner' | 'product' | 'qr' | 'proof'
 
 export interface ProfileSpec {
   /** Lado mayor máximo en px. Nunca se amplía una imagen que ya sea menor. */
@@ -29,6 +29,12 @@ export const PROFILES: Record<ImageProfile, ProfileSpec> = {
   // El QR se guarda sin pérdida. Se reescala igualmente porque una foto de
   // 4000px en lossless pesa varios MB sin ganar un solo píxel de legibilidad.
   qr: { maxEdge: 1400, quality: 1, lossless: true },
+  // Comprobante de Yape/Plin. Más calidad y más lado que una foto de plato
+  // porque esto no se mira, se LEE: la cajera comprueba el nombre, el monto y
+  // la hora para validar el pago, y un dígito emborronado es una llamada. Es
+  // una captura de pantalla —texto nítido sobre fondo plano—, y ahí los
+  // artefactos de compresión se ven mucho más que en una fotografía.
+  proof: { maxEdge: 1600, quality: 0.92, lossless: false },
 }
 
 /**

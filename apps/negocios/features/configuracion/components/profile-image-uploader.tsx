@@ -1,10 +1,9 @@
 import { ApiError } from '@tindivo/api-client'
+import { compressImage, UPLOAD_CACHE_CONTROL, validateImageInput } from '@tindivo/images'
 import { Icon } from '@tindivo/ui'
 import { useState } from 'react'
 import { useDashboard } from '@/components/dashboard/shell'
 import { api } from '@/lib/api'
-import { compressImage } from '@/lib/images/compress'
-import { UPLOAD_CACHE_CONTROL, validateImageInput } from '@/lib/images/upload'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
 interface ProfileImageUploaderProps {

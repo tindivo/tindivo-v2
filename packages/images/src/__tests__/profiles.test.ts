@@ -33,9 +33,16 @@ describe('PROFILES', () => {
   })
 
   it('comprime con pérdida el resto de imágenes', () => {
-    for (const profile of ['logo', 'banner', 'product'] as const) {
+    for (const profile of ['logo', 'banner', 'product', 'proof'] as const) {
       expect(PROFILES[profile].lossless).toBe(false)
       expect(PROFILES[profile].quality).toBeLessThan(1)
     }
+  })
+
+  it('el comprobante va con más calidad que una foto de plato', () => {
+    // La cajera LEE el comprobante (nombre, monto, hora) para validar el pago;
+    // la foto del plato solo se mira.
+    expect(PROFILES.proof.quality).toBeGreaterThan(PROFILES.product.quality)
+    expect(PROFILES.proof.maxEdge).toBeGreaterThanOrEqual(PROFILES.product.maxEdge)
   })
 })

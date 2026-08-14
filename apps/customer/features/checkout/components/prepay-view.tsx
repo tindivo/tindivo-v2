@@ -2,6 +2,7 @@
 
 import type { ApiEnvelope } from '@tindivo/api-client'
 import { ApiError } from '@tindivo/api-client'
+import { compressImage, UPLOAD_CACHE_CONTROL, validateImageInput } from '@tindivo/images'
 import { Button, Icon } from '@tindivo/ui'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
@@ -15,6 +16,8 @@ export function PrepayView({ result }: { result: OrderResult }) {
   const [seconds, setSeconds] = useState(600)
   const [sent, setSent] = useState(false)
   const [uploading, setUploading] = useState(false)
+  /** Comprimiendo la captura recién elegida, antes de que exista preview. */
+  const [preparing, setPreparing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   // El comprobante se previsualiza antes de enviarse (envío explícito).
   const [pendingFile, setPendingFile] = useState<File | null>(null)
@@ -43,17 +46,33 @@ export function PrepayView({ result }: { result: OrderResult }) {
     }
   }, [previewUrl])
 
-  function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
-    if (!file) return
-    setError(null)
-    setPreviewUrl((prev) => {
-      if (prev) URL.revokeObjectURL(prev)
-      return URL.createObjectURL(file)
-    })
-    setPendingFile(file)
     // Permite re-seleccionar el mismo archivo tras "Cambiar imagen".
     e.target.value = ''
+    if (!file) return
+    const invalid = validateImageInput(file)
+    if (invalid) {
+      setError(invalid)
+      return
+    }
+    setError(null)
+    setPreparing(true)
+    try {
+      // Se comprime aquí y no al enviar: el cliente está en datos móviles y una
+      // captura de Yape sale del celular pesando megas. Además el preview
+      // enseña exactamente lo que se va a subir.
+      const optimized = await compressImage(file, 'proof')
+      setPreviewUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev)
+        return URL.createObjectURL(optimized)
+      })
+      setPendingFile(optimized)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No pudimos procesar la imagen.')
+    } finally {
+      setPreparing(false)
+    }
   }
 
   async function submitProof() {
@@ -66,7 +85,11 @@ export function PrepayView({ result }: { result: OrderResult }) {
     const path = `${userId}/${result.id}`
     const { error: upErr } = await supabase.storage
       .from('payment-proofs')
-      .upload(path, pendingFile, { upsert: true, contentType: pendingFile.type })
+      .upload(path, pendingFile, {
+        upsert: true,
+        contentType: pendingFile.type,
+        cacheControl: UPLOAD_CACHE_CONTROL,
+      })
     if (upErr) {
       setError(upErr.message)
       setUploading(false)
@@ -180,14 +203,16 @@ export function PrepayView({ result }: { result: OrderResult }) {
               </div>
             </div>
           ) : (
-            <label className="mt-5 inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-gradient-to-br from-[#ff6b35] to-[#ff8c42] px-6 py-3 font-sans text-base font-bold text-white shadow-[0_8px_24px_rgba(242,98,65,0.22)] transition-all hover:shadow-[0_12px_40px_rgba(255,107,53,0.32)] active:scale-[0.97]">
-              Subir comprobante
+            <label
+              className={`mt-5 inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-gradient-to-br from-[#ff6b35] to-[#ff8c42] px-6 py-3 font-sans text-base font-bold text-white shadow-[0_8px_24px_rgba(242,98,65,0.22)] transition-all hover:shadow-[0_12px_40px_rgba(255,107,53,0.32)] active:scale-[0.97] ${preparing ? 'pointer-events-none opacity-60' : ''}`}
+            >
+              {preparing ? 'Preparando imagen…' : 'Subir comprobante'}
               <input
                 type="file"
                 accept="image/*"
                 className="hidden"
                 onChange={onFile}
-                disabled={uploading || expired}
+                disabled={uploading || expired || preparing}
               />
             </label>
           )}
