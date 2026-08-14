@@ -37,6 +37,8 @@ export function PrepayProofSection({ orderId, proofAttempt, onProofUploaded }: P
   const [preparing, setPreparing] = useState(false)
   /** URL firmada del comprobante ya enviado (el bucket es privado). */
   const [sentProofUrl, setSentProofUrl] = useState<string | null>(null)
+  /** URL de imagen para zoom en modal lightbox. */
+  const [zoomUrl, setZoomUrl] = useState<string | null>(null)
 
   const loadInfo = useCallback(async () => {
     try {
@@ -259,15 +261,22 @@ export function PrepayProofSection({ orderId, proofAttempt, onProofUploaded }: P
           que mandó la captura correcta mientras la cajera la revisa. */}
       {sentProofUrl && (
         <div className="mt-3.5 rounded-xl border border-emerald-200 bg-emerald-50 p-3">
-          <span className="mb-2 block text-[12px] font-semibold text-emerald-900">
-            Comprobante enviado
-          </span>
-          <img
-            src={sentProofUrl}
-            alt="Comprobante enviado"
-            decoding="async"
-            className="max-h-48 w-full rounded-lg bg-white object-contain"
-          />
+          <div className="flex items-center justify-between pb-1.5 text-[12px] font-semibold text-emerald-900">
+            <span>Comprobante enviado</span>
+            <span className="text-[11px] font-normal text-emerald-700">Toca para agrandar 🔍</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setZoomUrl(sentProofUrl)}
+            className="group relative block w-full overflow-hidden rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          >
+            <img
+              src={sentProofUrl}
+              alt="Comprobante enviado"
+              decoding="async"
+              className="max-h-48 w-full object-contain p-1 transition-transform group-hover:scale-[1.02]"
+            />
+          </button>
         </div>
       )}
 
@@ -282,7 +291,12 @@ export function PrepayProofSection({ orderId, proofAttempt, onProofUploaded }: P
         {previewUrl ? (
           <div className="relative overflow-hidden rounded-xl bg-surface">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={previewUrl} alt="Vista previa" className="max-h-48 w-full object-contain" />
+            <img
+              src={previewUrl}
+              alt="Vista previa"
+              onClick={() => setZoomUrl(previewUrl)}
+              className="max-h-48 w-full cursor-zoom-in object-contain"
+            />
             <button
               type="button"
               onClick={() => {
@@ -343,6 +357,38 @@ export function PrepayProofSection({ orderId, proofAttempt, onProofUploaded }: P
       >
         {uploading ? 'Enviando comprobante...' : 'Enviar comprobante'}
       </Button>
+
+      {/* Lightbox Zoom Modal */}
+      {zoomUrl && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Comprobante ampliado"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm"
+        >
+          <button
+            type="button"
+            className="fixed inset-0 h-full w-full cursor-default bg-transparent border-0"
+            onClick={() => setZoomUrl(null)}
+            aria-label="Cerrar modal"
+          />
+          <div className="relative z-10 flex max-h-[90vh] max-w-[95vw] flex-col items-center justify-center pointer-events-auto">
+            <button
+              type="button"
+              onClick={() => setZoomUrl(null)}
+              className="absolute -top-12 right-0 flex h-9 w-9 items-center justify-center rounded-full bg-white/20 text-[18px] font-bold text-white transition-colors hover:bg-white/40 focus:outline-none"
+              aria-label="Cerrar"
+            >
+              ✕
+            </button>
+            <img
+              src={zoomUrl}
+              alt="Comprobante ampliado"
+              className="max-h-[85vh] max-w-full rounded-2xl bg-white object-contain shadow-2xl"
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
