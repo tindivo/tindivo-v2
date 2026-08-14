@@ -50,6 +50,7 @@ export async function POST(
         comprobante_prepago_url: body.path,
         payment_proof_status: 'pending',
         proof_attempt: order.proof_attempt + 1,
+        validating_at: new Date().toISOString(),
       } as any)
       .eq('id', id)
     await service.from('order_event_log').insert({
