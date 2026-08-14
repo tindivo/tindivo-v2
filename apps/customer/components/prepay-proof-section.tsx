@@ -288,13 +288,15 @@ export function PrepayProofSection({ orderId, proofAttempt, onProofUploaded }: P
       <div className="mt-4">
         {previewUrl ? (
           <div className="relative overflow-hidden rounded-xl bg-surface">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={previewUrl}
-              alt="Vista previa"
+            <button
+              type="button"
               onClick={() => setZoomUrl(previewUrl)}
-              className="max-h-48 w-full cursor-zoom-in object-contain"
-            />
+              className="block w-full cursor-zoom-in"
+              aria-label="Agrandar vista previa"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={previewUrl} alt="Vista previa" className="max-h-48 w-full object-contain" />
+            </button>
             <button
               type="button"
               onClick={() => {
