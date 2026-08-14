@@ -2,7 +2,6 @@
 
 import { ApiError } from '@tindivo/api-client'
 import { Button } from '@tindivo/ui'
-import Image from 'next/image'
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '@/lib/api'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
@@ -179,7 +178,27 @@ export function PrepayProofSection({ orderId, proofAttempt, onProofUploaded }: P
       {info?.qrUrl && (
         <div className="mt-3 flex flex-col items-center rounded-xl bg-surface p-3 text-center">
           <div className="relative h-36 w-36 overflow-hidden rounded-lg">
-            <Image src={info.qrUrl} alt="QR Yape/Plin" fill className="object-contain" />
+            {/*
+              `next/image` NO sirve aquí, por dos motivos:
+
+              1. El QR vive en Supabase Storage, un host externo, y ningún
+                 next.config declara `images.remotePatterns`. Sin eso el
+                 optimizador rechaza la URL y la imagen no llega a pintarse:
+                 el cliente se queda sin QR que escanear para pagar.
+              2. Aunque se declarase, el optimizador reencoda a WebP con
+                 pérdida. Es justo lo que el compresor del dashboard evita al
+                 subirlo (perfil 'qr', sin pérdida): un código con artefactos
+                 es un cliente que no puede yapear.
+
+              El QR ya sale optimizado de origen, así que no hay nada que
+              optimizar aquí. Y `<img>` es lo que usa el resto del catálogo.
+            */}
+            <img
+              src={info.qrUrl}
+              alt="QR Yape/Plin"
+              className="h-full w-full object-contain"
+              decoding="async"
+            />
           </div>
           <span className="mt-1 text-[11px] text-ink-muted">Escanea para pagar</span>
         </div>
