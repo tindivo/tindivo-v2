@@ -1,6 +1,6 @@
 # 07 · Flujo del cliente final · tindivo.com
 
-> Flujo end-to-end de la PWA del cliente final. Replica fiel del demo en `C:\Users\mauri\Downloads\jesus`. 13 pantallas con reglas de negocio detalladas. Fuente canónica: `REQUIREMENTS.md` del demo.
+> Flujo end-to-end de la PWA del cliente final. Replica fiel del demo, hoy en `../Tindivo page (2)`. 13 pantallas con reglas de negocio detalladas. El `REQUIREMENTS.md` del demo que se citaba como fuente canónica se quedó en la máquina del dev anterior y no está en esa carpeta: la fuente viva es este documento.
 
 ---
 

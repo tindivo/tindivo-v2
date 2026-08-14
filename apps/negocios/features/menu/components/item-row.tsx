@@ -5,18 +5,42 @@ import type { MenuItem } from '../types'
 
 interface ItemRowProps {
   item: MenuItem
+  onToggleAvailability?: (itemId: string, nextAvailable: boolean) => void
 }
 
-export function ItemRow({ item }: ItemRowProps) {
+export function ItemRow({ item, onToggleAvailability }: ItemRowProps) {
   const hasGroups = item.modifierGroups.length > 0
   const agotadoCount = countAgotadoOptions(item)
 
   return (
     <div
-      className={`flex items-center gap-3 rounded-2xl border border-ink/[0.06] bg-card p-3 transition-opacity ${
-        item.is_available ? '' : 'opacity-65'
+      className={`flex items-center gap-3 rounded-2xl border border-ink/[0.06] bg-card p-3 transition-all ${
+        item.is_available ? '' : 'opacity-70 bg-surface-low/30'
       }`}
     >
+      {/* Switch de disponibilidad rápida */}
+      <button
+        type="button"
+        role="switch"
+        aria-checked={item.is_available}
+        aria-label={
+          item.is_available
+            ? `Desactivar ${item.name} (marcar agotado)`
+            : `Activar ${item.name} (marcar disponible)`
+        }
+        title={item.is_available ? 'Desactivar plato' : 'Activar plato'}
+        onClick={() => onToggleAvailability?.(item.id, !item.is_available)}
+        className={`relative h-6 w-11 shrink-0 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-brand/30 ${
+          item.is_available ? 'bg-brand' : 'bg-ink/20'
+        }`}
+      >
+        <span
+          className={`absolute top-[3px] left-[3px] h-[18px] w-[18px] rounded-full bg-white shadow-sm transition-transform duration-200 ${
+            item.is_available ? 'translate-x-5' : 'translate-x-0'
+          }`}
+        />
+      </button>
+
       {item.imageUrl ? (
         <img
           src={item.imageUrl}

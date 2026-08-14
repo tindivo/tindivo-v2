@@ -31,7 +31,7 @@
 
 ## Parte 1 · Cliente final (tindivo.com)
 
-Cliente final que pide comida via PWA pública en `tindivo.com`. Fuente canónica: `REQUIREMENTS.md` del demo en `C:\Users\mauri\Downloads\jesus\`.
+Cliente final que pide comida via PWA pública en `tindivo.com`. Fuente canónica: `REQUIREMENTS.md` del demo, que estaba en `C:\Users\mauri\Downloads\jesus\` — máquina del dev anterior. Lo que sobrevive del demo es `../Tindivo page (2)` (los `.jsx` y `.html` de las pantallas); **el `REQUIREMENTS.md` no está ahí**, así que no lo busques: la fuente viva son estos `Docs/`.
 
 ### EPIC-C-1 · Exploración sin cuenta
 

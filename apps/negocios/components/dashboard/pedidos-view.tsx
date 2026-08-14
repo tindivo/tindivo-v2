@@ -327,8 +327,8 @@ function KanbanCol({
   children: React.ReactNode
 }) {
   return (
-    <div className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-surface">
-      <div className="flex items-center gap-2 border-b border-border px-3 py-2.5">
+    <div className="flex min-w-0 min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-border bg-surface">
+      <div className="flex items-center gap-2 border-b border-border px-3 py-2.5 shrink-0 bg-white">
         <span className={`h-2 w-2 shrink-0 rounded-full ${dotClass}`} />
         <div className="min-w-0 flex-1">
           <div className="text-[13px] font-bold">{title}</div>
@@ -342,7 +342,9 @@ function KanbanCol({
           {count}
         </span>
       </div>
-      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-2.5">{children}</div>
+      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-2.5 pb-4">
+        {children}
+      </div>
     </div>
   )
 }
@@ -352,7 +354,7 @@ export function PedidosDesktop(p: PedidosViewProps) {
   const hasWaiting = p.cookingOrders.some((o) => o.state === 'waiting')
 
   return (
-    <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden bg-surface">
+    <div className="relative flex min-w-0 min-h-0 flex-1 flex-col overflow-hidden bg-surface h-full">
       {p.showPauseModal && (
         <PausarModal busy={p.detailBusy} onClose={p.onClosePause} onConfirm={p.onConfirmPause} />
       )}
@@ -464,7 +466,7 @@ export function PedidosDesktop(p: PedidosViewProps) {
       )}
 
       {/* Kanban 3 columnas */}
-      <div className="grid min-h-0 flex-1 grid-cols-[1fr_1.4fr_0.9fr] gap-3 overflow-hidden p-5">
+      <div className="grid min-h-0 flex-1 grid-cols-[1fr_1.4fr_0.9fr] grid-rows-[1fr] gap-3 overflow-hidden p-5">
         <KanbanCol
           title="Nuevos"
           count={p.counts.new}

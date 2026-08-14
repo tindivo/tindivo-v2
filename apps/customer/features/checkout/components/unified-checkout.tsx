@@ -41,6 +41,7 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
     total,
     subtotal,
     deliveryFee,
+    distanceBand,
     cart,
     loading,
     locating,
@@ -291,7 +292,12 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
               <span className="tabular-nums">{soles(subtotal)}</span>
             </div>
             <div className="flex justify-between text-[14px] text-ink-muted">
-              <span>Delivery</span>
+              <span>
+                Delivery
+                {distanceBand === 'far' && deliveryMethod !== 'pickup' && (
+                  <span className="ml-1.5 text-[11px] font-medium text-brand">(zona lejana)</span>
+                )}
+              </span>
               <span className="tabular-nums">
                 {deliveryMethod === 'pickup' ? 'S/ 0.00' : soles(deliveryFee)}
               </span>

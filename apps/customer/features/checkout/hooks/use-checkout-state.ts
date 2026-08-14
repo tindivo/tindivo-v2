@@ -12,11 +12,18 @@ import {
   DEFAULT_MAX_CHANGE,
   DEFAULT_PREPAY_THRESHOLD,
   type GeoBlockKind,
-  NEAR_DELIVERY_FEE,
   type OrderResult,
 } from '@/features/checkout/types'
 import { useBusinessOrdering } from '@/lib/business-ordering'
 import { type CartState, useCart, useCartHydrated } from '@/lib/cart'
+import type { LatLng } from '@/lib/coverage'
+import {
+  bandForPoint,
+  type DeliveryBands,
+  type DistanceBand,
+  getDeliveryBands,
+  getFarZones,
+} from '@/lib/delivery-fee'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
 export interface CheckoutState {
@@ -84,6 +91,7 @@ export interface CheckoutState {
 
   subtotal: number
   deliveryFee: number
+  distanceBand: DistanceBand
   total: number
   isNewUser: boolean
   exceedsCashCap: boolean
@@ -128,9 +136,29 @@ export function useCheckoutState(): CheckoutState {
   const [confirmed, setConfirmed] = useState<OrderResult | null>(null)
   const [blocked, setBlocked] = useState(false)
   const [showOtpSheet, setShowOtpSheet] = useState(false)
+  const [bands, setBands] = useState<DeliveryBands>({ near: 2.0, far: 2.5 })
+  const [farZones, setFarZones] = useState<LatLng[][]>([])
+
+  useEffect(() => {
+    getDeliveryBands().then(setBands)
+    getFarZones().then(setFarZones)
+  }, [])
+
+  const selectedAddress = addresses.find((a) => a.id === addressId)
+
+  const distanceBand = useMemo((): DistanceBand => {
+    const coords =
+      selectedAddress &&
+      selectedAddress.coordinates_lat != null &&
+      selectedAddress.coordinates_lng != null
+        ? { lat: selectedAddress.coordinates_lat, lng: selectedAddress.coordinates_lng }
+        : manualAddr.coords
+    return bandForPoint(coords, farZones)
+  }, [selectedAddress, manualAddr.coords, farZones])
 
   const subtotal = cart.subtotal()
-  const deliveryFee = deliveryMethod === 'pickup' ? 0 : NEAR_DELIVERY_FEE
+  const deliveryFee =
+    deliveryMethod === 'pickup' ? 0 : distanceBand === 'far' ? bands.far : bands.near
   const total = useMemo(
     () => Math.round((subtotal + deliveryFee) * 100) / 100,
     [subtotal, deliveryFee],
@@ -188,7 +216,6 @@ export function useCheckoutState(): CheckoutState {
     if (mustPrepay && payment !== 'prepaid') setPayment('prepaid')
   }, [mustPrepay, payment])
 
-  const selectedAddress = addresses.find((a) => a.id === addressId)
   const reference =
     deliveryMethod === 'delivery' ? (selectedAddress?.reference ?? manualAddr.reference) : ''
   const line = deliveryMethod === 'delivery' ? (selectedAddress?.line ?? manualAddr.line) : ''
@@ -261,6 +288,7 @@ export function useCheckoutState(): CheckoutState {
     setShowOtpSheet,
     subtotal,
     deliveryFee,
+    distanceBand,
     total,
     isNewUser,
     exceedsCashCap,

@@ -136,5 +136,43 @@ export function useMenu() {
     })
   }, [router, load])
 
-  return { cats, bizId, ready, reload: load }
+  const toggleItemAvailability = useCallback(
+    async (itemId: string, nextAvailable: boolean) => {
+      if (!bizId) return false
+      // Actualización optimista inmediata en la UI
+      setCats((prevCats) =>
+        prevCats.map((cat) => ({
+          ...cat,
+          items: cat.items.map((item) =>
+            item.id === itemId ? { ...item, is_available: nextAvailable } : item,
+          ),
+        })),
+      )
+
+      const supabase = getSupabaseBrowser()
+      const { error } = await supabase
+        .from('menu_items')
+        .update({ is_available: nextAvailable })
+        .eq('id', itemId)
+        .eq('business_id', bizId)
+
+      if (error) {
+        console.error('[menu] no se pudo actualizar la disponibilidad del plato:', error.message)
+        // Revertir en caso de error
+        setCats((prevCats) =>
+          prevCats.map((cat) => ({
+            ...cat,
+            items: cat.items.map((item) =>
+              item.id === itemId ? { ...item, is_available: !nextAvailable } : item,
+            ),
+          })),
+        )
+        return false
+      }
+      return true
+    },
+    [bizId],
+  )
+
+  return { cats, bizId, ready, reload: load, toggleItemAvailability }
 }

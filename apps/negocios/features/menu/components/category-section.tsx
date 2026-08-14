@@ -5,9 +5,10 @@ import { ItemRow } from './item-row'
 
 interface CategorySectionProps {
   cat: MenuCategory
+  onToggleAvailability?: (itemId: string, nextAvailable: boolean) => void
 }
 
-export function CategorySection({ cat }: CategorySectionProps) {
+export function CategorySection({ cat, onToggleAvailability }: CategorySectionProps) {
   const unavailable = cat.items.filter((i) => !i.is_available).length
   const withGroups = cat.items.filter((i) => i.modifierGroups.length > 0).length
 
@@ -39,7 +40,7 @@ export function CategorySection({ cat }: CategorySectionProps) {
 
       <div className="flex flex-col gap-1.5">
         {cat.items.map((item) => (
-          <ItemRow key={item.id} item={item} />
+          <ItemRow key={item.id} item={item} onToggleAvailability={onToggleAvailability} />
         ))}
       </div>
     </div>

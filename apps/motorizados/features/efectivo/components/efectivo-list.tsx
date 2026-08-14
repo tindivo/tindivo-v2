@@ -1,9 +1,9 @@
 'use client'
 
 import { Badge, Button, Card, EmptyState, Icon, SkeletonList } from '@tindivo/ui'
-import { type FormEvent, useState } from 'react'
+import { useState } from 'react'
 import { soles } from '@/lib/format'
-import { type SettlementOrder, type TodayRow, useCashSummary } from '../hooks/use-cash-summary'
+import { type CashBusinessGroup, type CashOrder, useCashSummary } from '../hooks/use-cash-summary'
 import { useDeliverCash } from '../hooks/use-deliver-cash'
 
 const horaLima = new Intl.DateTimeFormat('es-PE', {
@@ -12,28 +12,96 @@ const horaLima = new Intl.DateTimeFormat('es-PE', {
   hour12: false,
   timeZone: 'America/Lima',
 })
-const horaDe = (iso: string | null) => (iso ? horaLima.format(Date.parse(iso)) : null)
+const diaLima = new Intl.DateTimeFormat('es-PE', {
+  day: 'numeric',
+  month: 'short',
+  timeZone: 'America/Lima',
+})
+const fechaLima = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' })
+
+/**
+ * La hora del pedido, y el día SOLO cuando no es hoy.
+ *
+ * Un pedido cobrado ayer y todavía sin cerrar sigue en esta lista a propósito
+ * (la confirmación es humana y nadie la fuerza a las 24h). Pero mezclado con los
+ * de esta noche y mostrando solo «19:40», se lee como uno de hoy. El día lo
+ * separa sin sacarlo de la lista.
+ */
+function cuando(iso: string | null): { hora: string; dia: string | null } | null {
+  if (!iso) return null
+  const t = Date.parse(iso)
+  if (Number.isNaN(t)) return null
+  const hoy = fechaLima.format(new Date())
+  const suyo = fechaLima.format(t)
+  if (suyo === hoy) return { hora: horaLima.format(t), dia: null }
+  const ayer = fechaLima.format(Date.now() - 86_400_000)
+  return { hora: horaLima.format(t), dia: suyo === ayer ? 'ayer' : diaLima.format(t) }
+}
 
 export function EfectivoList() {
-  const { today, loading, error, reload } = useCashSummary()
-  const { deliver, busy } = useDeliverCash()
+  const { businesses, loading, error, reload } = useCashSummary()
+  const { deliver, busyIds } = useDeliverCash()
 
-  if (loading) {
-    return <SkeletonList count={2} />
+  /**
+   * Pedidos ya enviados cuya respuesta todavía no ha vuelto en un `reload`.
+   *
+   * Sin esto la línea vuelve un instante a «Entregar» entre que el POST termina
+   * y la recarga llega, y ese parpadeo delante de la cajera invita al segundo
+   * tap. (El segundo tap no cobra dos veces —la RPC es idempotente por
+   * `orders.cash_settlement_id`— pero igual no hay que provocarlo.)
+   */
+  const [enviados, setEnviados] = useState<ReadonlySet<string>>(new Set())
+  const [errorPorPedido, setErrorPorPedido] = useState<Record<string, string>>({})
+
+  async function entregar(orderId: string) {
+    setErrorPorPedido((e) => {
+      const { [orderId]: _, ...resto } = e
+      return resto
+    })
+    setEnviados((s) => new Set(s).add(orderId))
+    try {
+      await deliver(orderId)
+      reload()
+    } catch (err) {
+      setEnviados((s) => {
+        const next = new Set(s)
+        next.delete(orderId)
+        return next
+      })
+      setErrorPorPedido((e) => ({
+        ...e,
+        [orderId]: err instanceof Error ? err.message : 'Error',
+      }))
+    }
   }
 
-  const porEntregar = today.filter((t) => t.kind === 'pending')
-  const esperandoConfirmar = today.filter((t) => t.kind === 'awaiting')
-  const totalPorEntregar = porEntregar.reduce((s, t) => s + t.expected, 0)
-  const totalPedidos = porEntregar.reduce((s, t) => s + t.orderCount, 0)
+  if (loading) return <SkeletonList count={2} />
+
+  // Los totales se derivan de las MISMAS líneas que pinta la lista, descontando
+  // lo recién enviado. Leerlos de `pendingTotal` —que viene del servidor— dejaba
+  // el número grande diciendo S/ 100 mientras las dos líneas de abajo ya decían
+  // «Entregando…», hasta que llegara la recarga. Un total que contradice a su
+  // propio desglose es exactamente lo que no puede pasar en esta pantalla.
+  const enBolsillo = businesses.flatMap((b) =>
+    b.orders.filter((o) => o.state === 'pending' && !enviados.has(o.orderId)),
+  )
+  const totalPorEntregar = enBolsillo.reduce((s, o) => s + o.cashOwed, 0)
+  const pedidosPorEntregar = enBolsillo.length
+  const negociosConPendiente = businesses.filter((b) =>
+    b.orders.some((o) => o.state === 'pending' && !enviados.has(o.orderId)),
+  ).length
+  const esperando = businesses.reduce(
+    (s, b) => s + b.orders.filter((o) => o.state !== 'pending' || enviados.has(o.orderId)).length,
+    0,
+  )
 
   return (
     <>
       {error && <p className="mt-3 text-[13px] text-danger">{error}</p>}
 
-      {/* Total que el motorizado lleva encima ahora mismo. Es el número que
-            tiene que cuadrar con el fajo de su bolsillo. */}
-      {porEntregar.length > 0 && (
+      {/* El número que tiene que cuadrar con el fajo de su bolsillo. Cuenta solo
+          lo que TODAVÍA lleva encima: lo entregado ya no es suyo. */}
+      {pedidosPorEntregar > 0 && (
         <Card className="mt-4 border-none bg-brand p-5 text-white shadow-none">
           <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-white/80">
             Efectivo por entregar
@@ -42,205 +110,199 @@ export function EfectivoList() {
             {soles(totalPorEntregar)}
           </p>
           <p className="mt-2 text-[12px] text-white/85">
-            {totalPedidos} {totalPedidos === 1 ? 'pedido' : 'pedidos'} · {porEntregar.length}{' '}
-            {porEntregar.length === 1 ? 'restaurante' : 'restaurantes'}
+            {pedidosPorEntregar} {pedidosPorEntregar === 1 ? 'pedido' : 'pedidos'} ·{' '}
+            {negociosConPendiente} {negociosConPendiente === 1 ? 'restaurante' : 'restaurantes'}
           </p>
         </Card>
       )}
 
-      <h2 className="font-mono mt-6 mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/55">
-        A entregar
-      </h2>
-      {porEntregar.length === 0 ? (
-        <EmptyState
-          icon="payments"
-          heading="Sin efectivo por entregar"
-          description={
-            esperandoConfirmar.length > 0
-              ? 'Ya entregaste todo el efectivo que tenías.'
-              : 'Cuando cobres en efectivo aparecerá aquí.'
-          }
-        />
+      {businesses.length === 0 ? (
+        <div className="mt-4">
+          <EmptyState
+            icon="payments"
+            heading="Sin efectivo por entregar"
+            description="Cuando cobres en efectivo aparecerá aquí, cliente por cliente."
+          />
+        </div>
       ) : (
-        <div className="flex flex-col gap-2.5">
-          {porEntregar.map((t) => (
-            <CashDeliverCard
-              key={t.businessId}
-              row={t}
-              onDone={reload}
-              deliver={deliver}
-              busy={busy}
+        <div className="mt-5 flex flex-col gap-3">
+          {businesses.map((b) => (
+            <NegocioCard
+              key={b.businessId}
+              group={b}
+              onEntregar={entregar}
+              busyIds={busyIds}
+              enviados={enviados}
+              errores={errorPorPedido}
             />
           ))}
         </div>
       )}
 
-      {esperandoConfirmar.length > 0 && (
-        <>
-          <h2 className="font-mono mt-6 mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/55">
-            Esperando confirmación del local
-          </h2>
-          <div className="flex flex-col gap-2.5">
-            {esperandoConfirmar.map((t) => (
-              <AwaitingCard key={t.settlementId} row={t} />
-            ))}
-          </div>
-        </>
+      {pedidosPorEntregar === 0 && esperando > 0 && (
+        <p className="mt-4 text-center text-[13px] text-ink-muted">
+          Ya entregaste todo. Falta que el local lo confirme.
+        </p>
       )}
     </>
   )
 }
 
-function CashDeliverCard({
-  row,
-  onDone,
-  deliver,
-  busy,
+/**
+ * Un restaurante, con sus clientes debajo.
+ *
+ * La tarjeta ya no tiene un botón propio: la entrega es cliente por cliente,
+ * porque así es como se dice en el local —«de Lucía 30, de Martha 30»— y porque
+ * un botón de «entregar todo» vuelve a convertir en un bulto lo único que hace
+ * que una diferencia se pueda atribuir a alguien.
+ */
+function NegocioCard({
+  group,
+  onEntregar,
+  busyIds,
+  enviados,
+  errores,
 }: {
-  row: TodayRow
-  onDone: () => void
-  deliver: (businessId: string, deliveredAmount: number) => Promise<void>
-  busy: boolean
+  group: CashBusinessGroup
+  onEntregar: (orderId: string) => void
+  busyIds: ReadonlySet<string>
+  enviados: ReadonlySet<string>
+  errores: Record<string, string>
 }) {
-  const [amount, setAmount] = useState(String(row.expected.toFixed(2)))
-  const [localError, setLocalError] = useState<string | null>(null)
-
-  async function submit(e: FormEvent) {
-    e.preventDefault()
-    setLocalError(null)
-    try {
-      await deliver(row.businessId, Number(amount))
-      onDone()
-    } catch (err) {
-      setLocalError(err instanceof Error ? err.message : 'Error')
-    }
-  }
+  const porEntregar = group.orders.filter((o) => o.state === 'pending' && !enviados.has(o.orderId))
+  const enEspera = group.orders.filter((o) => o.state !== 'pending' || enviados.has(o.orderId))
+  const adelanto = group.orders.reduce((s, o) => s + (o.breakdown?.advance ?? 0), 0)
 
   return (
-    <Card className="p-[18px]">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="font-semibold text-[16px]">{row.businessName}</p>
-          <p className="mt-0.5 text-[13px] text-ink-muted">
-            {row.orderCount} pedido{row.orderCount === 1 ? '' : 's'} en efectivo
+    <Card className="overflow-hidden p-0">
+      <div className="flex items-baseline justify-between gap-2 px-[18px] pt-[18px]">
+        <p className="min-w-0 flex-1 truncate font-semibold text-[16px]">{group.businessName}</p>
+        {porEntregar.length > 0 ? (
+          <p className="font-display shrink-0 text-[20px] font-bold tabular-nums tracking-tight">
+            {soles(porEntregar.reduce((s, o) => s + o.cashOwed, 0))}
           </p>
-        </div>
+        ) : (
+          // Sin nada que entregar, el importe que importa es el que está en el
+          // aire. Va apagado: no es dinero suyo ni exige que haga nada.
+          <p className="font-mono shrink-0 text-[13px] font-semibold tabular-nums text-ink-muted">
+            {soles(enEspera.reduce((s, o) => s + o.cashOwed, 0))} por confirmar
+          </p>
+        )}
       </div>
 
-      <p className="font-display mt-2 text-[24px] font-bold tracking-tight tabular-nums">
-        {soles(row.expected)}
-      </p>
+      {porEntregar.length > 0 && (
+        <ul className="mt-2.5 flex flex-col">
+          {porEntregar.map((o) => (
+            <PedidoRow
+              key={o.orderId}
+              order={o}
+              onEntregar={onEntregar}
+              busy={busyIds.has(o.orderId)}
+              error={errores[o.orderId]}
+            />
+          ))}
+        </ul>
+      )}
 
-      <OrderBreakdown orders={row.orders} />
+      {enEspera.length > 0 && (
+        <>
+          <p className="font-mono mt-2 border-t border-ink/[0.06] px-[18px] pt-2.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink/50">
+            Esperando confirmación del local
+          </p>
+          <ul className="flex flex-col">
+            {enEspera.map((o) => (
+              <PedidoRow key={o.orderId} order={o} entregado />
+            ))}
+          </ul>
+        </>
+      )}
 
-      <form onSubmit={submit} className="mt-3 flex items-center gap-2">
-        <span className="rounded-2xl border border-border bg-card px-3 py-3.5 font-mono text-[15px] text-ink-muted">
-          S/
-        </span>
-        <input
-          className="w-full flex-1 rounded-2xl border border-ink/[0.06] bg-card px-4 py-3.5 text-center font-mono text-base font-medium text-ink outline-none transition-all placeholder:text-ink/45 focus:border-ink focus:ring-4 focus:ring-ink/8"
-          inputMode="decimal"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-        />
-        <Button size="md" disabled={busy}>
-          {busy ? '…' : 'Entregar'}
-        </Button>
-      </form>
-
-      {localError && <p className="mt-2 text-[13px] text-danger">{localError}</p>}
+      {adelanto > 0 && (
+        <div className="mx-[18px] mb-[18px] mt-2 flex items-start gap-2 rounded-[12px] bg-warning-soft px-3 py-2 text-[12px] text-amber-900">
+          <Icon name="info" size={15} filled className="mt-px shrink-0" />
+          <span>
+            Incluye <strong className="font-semibold tabular-nums">{soles(adelanto)}</strong> de
+            sencillo que te adelantó el local. Ese dinero es suyo, hayas cobrado en efectivo o no.
+          </span>
+        </div>
+      )}
+      {adelanto === 0 && <div className="h-[18px]" />}
     </Card>
   )
 }
 
 /**
- * Los pedidos que componen el importe.
+ * Un cliente: nombre · cuándo · monto · acción.
  *
- * POR QUÉ NO VA COLAPSADO. El legacy lo esconde tras un "Ver pedidos (3)"; aquí
- * va abierto. Con ~10 pedidos por noche repartidos entre pocos negocios, la
- * lista cabe, y el momento en que se usa es justo cuando la cajera está contando
- * el fajo delante: un toque de más ahí es un toque que no se da.
- *
- * Cada línea es NOMBRE (o #código) · HORA · IMPORTE. La hora es lo que ordena la
- * conversación cuando algo no cuadra — "el de las 19:40, el de Carmen" — y es lo
- * único de esta lista que el legacy no tiene.
+ * El monto va en su propia columna y no dentro del botón. El motorizado lee la
+ * cifra en voz alta mientras la cajera cuenta («de Lucía, treinta»), así que
+ * tiene que poder recorrer la columna de importes de arriba abajo sin leer
+ * cuatro veces la palabra «Entregar».
  */
-function OrderBreakdown({ orders }: { orders: SettlementOrder[] }) {
-  if (orders.length === 0) return null
+function PedidoRow({
+  order,
+  onEntregar,
+  busy,
+  error,
+  entregado = false,
+}: {
+  order: CashOrder
+  onEntregar?: (orderId: string) => void
+  busy?: boolean
+  error?: string
+  entregado?: boolean
+}) {
+  const t = cuando(order.deliveredAt)
+  const nombre = order.customerName?.trim()
+  const enDisputa = order.state === 'disputed'
 
   return (
-    <ul className="mt-3 flex flex-col gap-1.5 border-t border-ink/[0.06] pt-3">
-      {orders.map((o) => {
-        const hora = horaDe(o.deliveredAt)
-        const nombre = o.customerName?.trim()
-        return (
-          <li key={o.orderId} className="flex items-baseline gap-2 text-[13px]">
-            <span className="min-w-0 flex-1 truncate">
-              <span className="text-ink">{nombre || `#${o.shortId}`}</span>
-              {hora && <span className="ml-1.5 font-mono text-[11px] text-ink-muted">{hora}</span>}
-            </span>
-            <span className="shrink-0 font-mono font-semibold tabular-nums text-ink">
-              {soles(o.cashOwed)}
-            </span>
-          </li>
-        )
-      })}
-      {orders.some((o) => o.breakdown) && <AdvanceNote orders={orders} />}
-    </ul>
-  )
-}
+    <li className="border-t border-ink/[0.04] first:border-t-0">
+      <div className="flex min-h-[52px] items-center gap-3 px-[18px] py-2">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[15px] text-ink">{nombre || `#${order.shortId}`}</p>
+          {t && (
+            <p className="font-mono text-[11px] text-ink-muted">
+              {t.dia && <span className="font-semibold text-amber-700">{t.dia} </span>}
+              {t.hora}
+            </p>
+          )}
+        </div>
 
-/**
- * La explicación del adelanto, y solo cuando lo hay.
- *
- * Sin esto el motorizado ve "Yape · S/ 8.00" y lo lee como un error del sistema
- * — un pedido que no cobró en efectivo pero por el que se le pide dinero. La
- * respuesta es que ese sencillo se lo dio la caja antes de salir.
- */
-function AdvanceNote({ orders }: { orders: SettlementOrder[] }) {
-  const total = orders.reduce((s, o) => s + (o.breakdown?.advance ?? 0), 0)
-  return (
-    <li className="mt-1 flex items-start gap-2 rounded-[12px] bg-warning-soft px-3 py-2 text-[12px] text-amber-900">
-      <Icon name="info" size={15} filled className="mt-px shrink-0" />
-      <span>
-        Incluye <strong className="font-semibold tabular-nums">{soles(total)}</strong> de sencillo
-        que te adelantó el local. Ese dinero es suyo, hayas cobrado en efectivo o no.
-      </span>
+        <p
+          className={`font-mono shrink-0 text-[15px] font-bold tabular-nums ${
+            entregado ? 'text-ink-muted' : 'text-ink'
+          }`}
+        >
+          {soles(order.cashOwed)}
+        </p>
+
+        <div className="flex w-[104px] shrink-0 justify-end">
+          {entregado ? (
+            enDisputa ? (
+              <Badge variant="danger" size="sm">
+                Diferencia
+              </Badge>
+            ) : (
+              <span className="flex items-center gap-1.5 text-[12px] font-semibold text-ink-muted">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-warning" />
+                Entregando…
+              </span>
+            )
+          ) : (
+            <Button size="sm" disabled={busy} onClick={() => onEntregar?.(order.orderId)}>
+              {busy ? '…' : 'Entregar'}
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {enDisputa && (
+        <p className="px-[18px] pb-2 text-[12px] text-ink-muted">
+          El local reportó una diferencia en este pedido. Tindivo lo está revisando.
+        </p>
+      )}
+      {error && <p className="px-[18px] pb-2 text-[12px] text-danger">{error}</p>}
     </li>
-  )
-}
-
-/** Dinero ya entregado al local, a la espera de que lo cuenten y lo confirmen.
- *  Sin acción: el motorizado ya hizo su parte. */
-function AwaitingCard({ row }: { row: TodayRow }) {
-  const disputada = row.status === 'disputed'
-  return (
-    <Card className="p-[18px]">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="truncate font-semibold text-[16px]">{row.businessName}</p>
-          <p className="mt-0.5 text-[13px] text-ink-muted">
-            {row.orderCount} pedido{row.orderCount === 1 ? '' : 's'} entregados
-          </p>
-        </div>
-        <Badge variant={disputada ? 'danger' : 'warning'} size="sm">
-          {disputada ? 'Diferencia' : 'Por confirmar'}
-        </Badge>
-      </div>
-
-      <p className="font-display mt-2 text-[24px] font-bold tracking-tight tabular-nums">
-        {soles(row.deliveredAmount ?? 0)}
-      </p>
-
-      {/* El desglose sigue disponible DESPUÉS de entregar: es justo cuando la
-          cajera cuenta el fajo y hace falta poder señalar un pedido. */}
-      <OrderBreakdown orders={row.orders} />
-
-      <p className="mt-2 text-[12px] text-ink-muted">
-        {disputada
-          ? 'El local reportó una diferencia. Tindivo lo está revisando.'
-          : 'Esperando que el local cuente el efectivo y lo confirme.'}
-      </p>
-    </Card>
   )
 }

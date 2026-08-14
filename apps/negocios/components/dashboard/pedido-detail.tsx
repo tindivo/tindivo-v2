@@ -5,14 +5,9 @@ import { cn, Icon } from '@tindivo/ui'
 import { useEffect, useState } from 'react'
 import { formatReadyDelta, type OrderVM } from '@/lib/orders/view-model'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
-import {
-  CANCEL_REASONS,
-  PREP_PRESETS,
-  REJECT_REASONS_BASE,
-  REJECT_REASONS_TAIL,
-} from './pedido-detail/constants'
+import { CANCEL_REASONS, REJECT_REASONS_BASE, REJECT_REASONS_TAIL } from './pedido-detail/constants'
 import { DetailRow } from './pedido-detail/detail-row'
-import { PrepTimeModal, ReasonModal } from './pedido-detail/modals'
+import { ComandaModal, PrepTimeModal, ReasonModal } from './pedido-detail/modals'
 import { PaySectionCash, PaySectionMixed, PaySectionWallet } from './pedido-detail/pay-sections'
 import type { DetailItem, RejectReason } from './pedido-detail/types'
 import { mmss, PayBadgeMini, SourceBadgeMini, soles } from './primitives'
@@ -216,10 +211,9 @@ export function DetailScreen({
   mobile?: boolean
   actions: DetailActions
 }) {
-  const [prep, setPrep] = useState(20)
   const [modal, setModal] = useState<null | 'reject' | 'cancel'>(null)
-  const [itemsOpen, setItemsOpen] = useState(order.status !== 'validando')
   const [showPrepModal, setShowPrepModal] = useState(false)
+  const [showComandaModal, setShowComandaModal] = useState(false)
   const [hasAppeal, setHasAppeal] = useState(false)
   // Confirmación en dos pasos antes de declarar la comida lista, como en prod:
   // avisar al motorizado de que entre a recoger y que no esté lista se paga en
@@ -258,12 +252,9 @@ export function DetailScreen({
   const isOnline = order.source === 'web'
   const acceptDisabled = busy || isLoadingActions
   const isPrepaidAwaitingProof =
-    isPrepaid &&
-    !proofUrl &&
-    !isLoadingActions &&
-    (order.status === 'pending_acceptance' || order.status === 'validando')
-  const isValidandoPrepaid = isPrepaid && Boolean(proofUrl) && !isLoadingActions
-  const showPrepPicker = isPending && !isPrepaid
+    isPrepaid && !proofUrl && !isLoadingActions && order.status === 'pending_acceptance'
+  const isValidandoPrepaid =
+    isPrepaid && (Boolean(proofUrl) || order.status === 'validando') && !isLoadingActions
 
   const rejectReasons = isPrepaid
     ? [
@@ -314,6 +305,9 @@ export function DetailScreen({
             actions.onAccept(prepTime)
           }}
         />
+      )}
+      {showComandaModal && items && (
+        <ComandaModal order={order} items={items} onClose={() => setShowComandaModal(false)} />
       )}
 
       {/* Header flotante/fijo */}
@@ -412,14 +406,16 @@ export function DetailScreen({
             <PayBadgeMini payment={order.payment} />
           </div>
         </div>
-        <span
-          className={cn(
-            'shrink-0 font-mono font-bold text-ink',
-            mobile ? 'text-[18px]' : 'text-[20px]',
-          )}
-        >
-          {soles(order.total)}
-        </span>
+        <div className="shrink-0 flex items-center">
+          <span
+            className={cn(
+              'font-mono font-extrabold text-ink tracking-tight',
+              mobile ? 'text-[20px]' : 'text-[24px]',
+            )}
+          >
+            {soles(order.total)}
+          </span>
+        </div>
         {!mobile && (
           <button
             type="button"
@@ -557,50 +553,53 @@ export function DetailScreen({
 
         {/* Items (Online) o Cobro (Directo) */}
         {isOnline && items && items.length > 0 ? (
-          <details
-            open={itemsOpen}
-            onToggle={(e) => setItemsOpen(e.currentTarget.open)}
+          <div
             className={cn(
-              'shrink-0 rounded-md bg-surface',
-              isValidandoPrepaid ? 'px-3 py-2.5' : 'px-3.5 py-3',
+              'shrink-0 rounded-xl border border-border/80 bg-white p-3.5 shadow-xs',
+              isValidandoPrepaid ? 'p-3' : 'p-3.5',
             )}
           >
-            <summary className="flex list-none cursor-pointer select-none items-center justify-between text-[13px] font-bold">
+            <div className="mb-2.5 flex items-center justify-between border-b border-border/70 pb-2">
               <div className="flex items-center gap-1.5">
-                <Icon weight={500} name="shopping_bag" size={16} />
-                <span>
-                  Pedido ({items.length} {items.length === 1 ? 'ítem' : 'ítems'})
+                <Icon weight={500} name="restaurant_menu" size={16} className="text-brand" />
+                <span className="text-[13px] font-bold text-ink">
+                  Comanda ({items.length} {items.length === 1 ? 'ítem' : 'ítems'})
                 </span>
               </div>
-              <div className="flex items-center gap-1">
-                <span className="font-mono">{soles(order.total)}</span>
-                <Icon
-                  weight={500}
-                  name={itemsOpen ? 'expand_less' : 'expand_more'}
-                  size={18}
-                  className="text-ink-muted"
-                />
-              </div>
-            </summary>
-            <div className="mt-2 border-t border-border pt-2">
+              <button
+                type="button"
+                onClick={() => setShowComandaModal(true)}
+                className="inline-flex items-center gap-1 rounded-lg bg-surface px-2.5 py-1 text-[11px] font-semibold text-ink-muted transition-colors hover:bg-surface-high hover:text-ink"
+              >
+                <Icon weight={500} name="fullscreen" size={14} />
+                <span>Ver en grande</span>
+              </button>
+            </div>
+            <div className="flex flex-col divide-y divide-border/60">
               {items.map((it, i) => (
-                <div
-                  key={i}
-                  className={cn(
-                    'py-[5px]',
-                    i < items.length - 1 ? 'border-b border-border' : 'border-b border-transparent',
-                  )}
-                >
-                  <div className="flex gap-2">
-                    <span className="w-[22px] shrink-0 font-mono font-bold text-ink-muted">
+                <div key={i} className="py-2.5 first:pt-0.5 last:pb-0.5">
+                  <div className="flex items-start gap-2.5">
+                    <span className="flex h-6 min-w-[24px] shrink-0 items-center justify-center rounded-md bg-ink px-1.5 font-mono text-[12px] font-bold text-white shadow-xs">
                       {it.qty}×
                     </span>
-                    <div className="flex-1">
-                      <div className="text-[14px] font-semibold">{it.name}</div>
-                      {it.mods && <div className="text-[12px] text-ink-muted">{it.mods}</div>}
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[14px] font-bold leading-snug text-ink">{it.name}</div>
+                      {it.mods && (
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          <span className="inline-block rounded bg-surface px-1.5 py-0.5 text-[11px] font-medium text-ink-muted border border-border/50">
+                            {it.mods}
+                          </span>
+                        </div>
+                      )}
                       {it.note && (
-                        <div className="mt-0.5 text-[12px] text-warning">
-                          <Icon weight={500} name="info" size={11} /> {it.note}
+                        <div className="mt-1.5 flex items-start gap-1.5 rounded-lg border border-amber-300/80 bg-amber-50 px-2.5 py-1.5 text-[11px] font-semibold text-amber-900 shadow-xs">
+                          <Icon
+                            weight={500}
+                            name="priority_high"
+                            size={14}
+                            className="mt-0.5 shrink-0 text-amber-700"
+                          />
+                          <span className="leading-tight">Nota: {it.note}</span>
                         </div>
                       )}
                     </div>
@@ -610,44 +609,35 @@ export function DetailScreen({
                   </div>
                 </div>
               ))}
-              <div className="mt-2.5 flex flex-col gap-1 border-t border-border pt-2">
+              <div className="mt-2.5 flex flex-col gap-1 border-t border-dashed border-border pt-2.5">
                 <DetailRow label="Subtotal" value={soles(order.subtotal)} mono />
                 <DetailRow label="Delivery" value={soles(order.deliveryFee)} mono />
-                <DetailRow label="Total" value={soles(order.total)} mono bold />
+                <div className="mt-1 flex items-center justify-between border-t border-ink/10 pt-2 text-[15px]">
+                  <span className="font-bold text-ink">Total</span>
+                  <span className="font-mono text-[18px] font-extrabold text-ink">
+                    {soles(order.total)}
+                  </span>
+                </div>
               </div>
             </div>
-          </details>
+          </div>
         ) : (
-          <details
-            open={itemsOpen}
-            onToggle={(e) => setItemsOpen(e.currentTarget.open)}
-            className={cn(
-              'shrink-0 rounded-md bg-surface',
-              isValidandoPrepaid ? 'px-3 py-2.5' : 'px-3.5 py-3',
-            )}
-          >
-            <summary className="flex list-none cursor-pointer select-none items-center justify-between text-[13px] font-bold">
-              <div className="flex items-center gap-1.5">
-                <Icon weight={500} name="payments" size={16} />
-                <span>Cobro</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="font-mono">{soles(order.total)}</span>
-                <Icon
-                  weight={500}
-                  name={itemsOpen ? 'expand_less' : 'expand_more'}
-                  size={18}
-                  className="text-ink-muted"
-                />
-              </div>
-            </summary>
-            <div className="mt-2 flex flex-col gap-[5px] border-t border-border pt-2">
+          <div className="shrink-0 rounded-xl border border-border/80 bg-white p-3.5 shadow-xs">
+            <div className="flex items-center gap-1.5 border-b border-border/70 pb-2 text-[13px] font-bold text-ink">
+              <Icon weight={500} name="payments" size={16} className="text-brand" />
+              <span>Cobro</span>
+            </div>
+            <div className="mt-2 flex flex-col gap-[5px]">
               <DetailRow label="Total del pedido" value={soles(order.amount)} mono />
               <DetailRow label="Delivery" value={soles(order.deliveryFee)} mono />
-              <div className="my-0.5 h-px bg-border" />
-              <DetailRow label="Total a cobrar" value={soles(order.total)} mono bold />
+              <div className="mt-1 flex items-center justify-between border-t border-ink/10 pt-2 text-[15px]">
+                <span className="font-bold text-ink">Total a cobrar</span>
+                <span className="font-mono text-[18px] font-extrabold text-ink">
+                  {soles(order.total)}
+                </span>
+              </div>
             </div>
-          </details>
+          </div>
         )}
 
         {/* Sección de pago */}
@@ -709,32 +699,6 @@ export function DetailScreen({
           </>
         )}
         {order.payment === 'pending_mixed' && <PaySectionMixed order={order} qrUrl={qrUrl} />}
-
-        {/* Prep picker (al aceptar) */}
-        {showPrepPicker && (
-          <div className="shrink-0 rounded-md bg-surface px-3.5 py-3">
-            <div className="mb-2 font-mono text-[11px] font-semibold uppercase tracking-wide text-ink-muted">
-              Tiempo de preparación
-            </div>
-            <div className="flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
-              {PREP_PRESETS.map((m) => (
-                <button
-                  type="button"
-                  key={m}
-                  onClick={() => setPrep(m)}
-                  className={cn(
-                    'min-w-[50px] shrink-0 cursor-pointer rounded-md py-2.5 font-mono text-[14px] font-bold',
-                    m === prep
-                      ? 'bg-ink text-white border-transparent'
-                      : 'bg-white text-ink border border-border',
-                  )}
-                >
-                  {m}m
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Extensión de preparación */}
         {order.state === 'cooking' && !order.extensionUsed && (
@@ -842,12 +806,18 @@ export function DetailScreen({
                 </button>
                 <button
                   type="button"
-                  onClick={() => actions.onAccept(isPrepaid ? 20 : prep)}
+                  onClick={() => {
+                    if (isPrepaid) {
+                      actions.onAccept(20)
+                    } else {
+                      setShowPrepModal(true)
+                    }
+                  }}
                   disabled={acceptDisabled}
                   className="inline-flex flex-[2] items-center justify-center gap-2 rounded-xl bg-brand px-5 py-3 text-[15px] font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-50"
                 >
                   <Icon weight={500} name="check" size={18} filled />
-                  {isPrepaid ? 'Aceptar disponibilidad' : `Aceptar · ${prep}m`}
+                  {isPrepaid ? 'Aceptar disponibilidad' : 'Aceptar pedido'}
                 </button>
               </div>
               {isPrepaid && (
@@ -923,7 +893,7 @@ export function DetailScreen({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="flex h-screen max-h-screen w-[420px] max-w-[100vw] flex-col overflow-hidden bg-white shadow-elev-3"
+        className="flex h-screen max-h-screen w-[440px] max-w-[100vw] flex-col overflow-hidden bg-white shadow-elev-3"
       >
         {content}
       </div>

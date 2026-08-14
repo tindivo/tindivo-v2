@@ -72,19 +72,38 @@ export const orderValidationTimeout: InngestFunction.Any = inngest.createFunctio
   },
   async ({ event, step }) => {
     const { orderId, sleepMs: override } = event.data as OrderValidationData
-    const sleepMs = await step.run('resolve-deadline', async () => {
-      if (typeof override === 'number') return override
+    const { sleepMs, reason } = await step.run('resolve-deadline', async () => {
+      if (typeof override === 'number')
+        return { sleepMs: override, reason: 'validation_timeout' as const }
       const svc = createServiceClient()
-      const { data } = await svc.from('app_settings').select('value').eq('key', 'timers').single()
-      const minutes = (data?.value as { validationMinutes?: number } | null)?.validationMinutes ?? 5
-      return minutes * 60_000
+      const [orderRes, settingsRes] = await Promise.all([
+        svc
+          .from('orders')
+          .select('payment_intent,validation_context')
+          .eq('id', orderId)
+          .maybeSingle(),
+        svc.from('app_settings').select('value').eq('key', 'timers').single(),
+      ])
+      const isProof =
+        orderRes.data?.validation_context === 'proof' || orderRes.data?.payment_intent === 'prepaid'
+      const timers = settingsRes.data?.value as {
+        validationMinutes?: number
+        prepayVerificationMinutes?: number
+      } | null
+      const minutes = isProof
+        ? (timers?.prepayVerificationMinutes ?? 10)
+        : (timers?.validationMinutes ?? 5)
+      return {
+        sleepMs: minutes * 60_000,
+        reason: isProof ? ('prepay_timeout' as const) : ('validation_timeout' as const),
+      }
     })
     await step.sleep('validation-window', sleepMs)
     return await step.run('expire-if-still-validando', async () => {
       const svc = createServiceClient()
       const { data, error } = await svc.rpc('expire_order', {
         p_order_id: orderId,
-        p_reason: 'validation_timeout',
+        p_reason: reason,
       })
       if (error) throw new Error(error.message)
       return data

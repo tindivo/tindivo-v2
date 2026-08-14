@@ -9,7 +9,17 @@ Plataforma de delivery hiper-local para pueblos del Perú. Piloto: San Jacinto,
 Áncash · 1 restaurante (La Florencia) · de noche · 1 motorizado · equilibrio
 ~10 pedidos/noche. Antifraude **humano** (la cajera llama). Tindivo **no retiene
 fondos** (Yape/Plin/efectivo directo al negocio). Reconstrucción desde cero del
-v1 (`C:\Users\mauri\Documents\Tindivo`), que tenía deuda técnica.
+v1, que tenía deuda técnica.
+
+**Dónde está el v1.** En `../tindivo-delivery`, hermano de este repo. (El demo de
+la PWA del cliente es el otro hermano, `../Tindivo page (2)`.) Cualquier ruta
+`C:\Users\mauri\...` que sobreviva en la documentación es de la máquina del dev
+anterior y **no existe aquí**: se conserva solo como nota histórica, nunca como
+sitio al que ir. El legacy es un monorepo pnpm + Turbo (`apps/{api,web,customer}`,
+`supabase/{migrations,functions}`) con migraciones por timestamp, no con la
+numeración `NNNN_` de v2. Su propia migración `20260512200200` avisa de que parte
+de las policies de RLS se aplicaron por MCP y no están en los archivos: el estado
+real de su RLS **no** es reproducible desde sus migraciones.
 
 ## Arquitectura (resumen — detalle en `DECISIONS.md §3`)
 

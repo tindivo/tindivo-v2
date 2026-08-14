@@ -3,8 +3,9 @@
 import { cn, Icon } from '@tindivo/ui'
 import { useState } from 'react'
 import type { OrderVM } from '@/lib/orders/view-model'
+import { soles } from '../primitives'
 import { PREP_PRESETS } from './constants'
-import type { RejectReason } from './types'
+import type { DetailItem, RejectReason } from './types'
 
 export function ReasonModal({
   title,
@@ -246,6 +247,100 @@ export function PausarModal({
             ? `Confirmar pausa de ${PAUSE_OPTS[sel]?.label.toLowerCase()}`
             : 'Confirmar pausa'}
         </button>
+      </div>
+    </div>
+  )
+}
+
+export function ComandaModal({
+  order,
+  items,
+  onClose,
+}: {
+  order: OrderVM
+  items: DetailItem[]
+  onClose: () => void
+}) {
+  return (
+    <div className="fixed inset-0 z-[400] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+      <div className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-elev-4">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-border bg-surface px-5 py-4">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand/10 text-brand">
+              <Icon weight={500} name="restaurant_menu" size={20} />
+            </div>
+            <div>
+              <div className="text-[16px] font-bold text-ink">Comanda de cocina</div>
+              <div className="text-[12px] font-medium text-ink-muted">
+                #{order.id} · {order.customer ?? 'Cliente'} ({items.length}{' '}
+                {items.length === 1 ? 'ítem' : 'ítems'})
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border-none bg-ink/[0.06] text-ink hover:bg-ink/[0.12]"
+          >
+            <Icon weight={500} name="close" size={18} />
+          </button>
+        </div>
+
+        {/* Items scroll */}
+        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-5">
+          {items.map((it, idx) => (
+            <div
+              key={idx}
+              className="flex flex-col gap-1.5 rounded-xl border border-border/80 bg-surface/50 p-3.5"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="flex h-7 min-w-[28px] items-center justify-center rounded-lg bg-ink px-2 font-mono text-[14px] font-black text-white">
+                    {it.qty}×
+                  </span>
+                  <span className="text-[16px] font-bold text-ink">{it.name}</span>
+                </div>
+                <span className="font-mono text-[14px] font-semibold text-ink-muted">
+                  {soles(it.price)}
+                </span>
+              </div>
+              {it.mods && (
+                <div className="pl-9 text-[13px] text-ink-muted">
+                  <span className="font-semibold text-ink-subtle">Opciones:</span> {it.mods}
+                </div>
+              )}
+              {it.note && (
+                <div className="mt-1 flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-[13px] font-bold text-amber-950">
+                  <Icon
+                    weight={500}
+                    name="priority_high"
+                    size={16}
+                    className="mt-0.5 shrink-0 text-amber-800"
+                  />
+                  <span>NOTA: {it.note}</span>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between border-t border-border bg-surface px-5 py-3.5">
+          <div className="flex items-baseline gap-2">
+            <span className="text-[12px] font-semibold uppercase text-ink-muted">
+              Total pedido:
+            </span>
+            <span className="font-mono text-[18px] font-bold text-ink">{soles(order.total)}</span>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl bg-ink px-5 py-2.5 text-[14px] font-semibold text-white transition-transform active:scale-[0.98]"
+          >
+            Cerrar comanda
+          </button>
+        </div>
       </div>
     </div>
   )

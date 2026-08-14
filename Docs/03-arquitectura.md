@@ -144,7 +144,7 @@ Cada app es un proyecto Next.js independiente con su propio `package.json`, `nex
 ### 4.2 `apps/customer` (tindivo.com)
 
 - PWA pública del cliente final.
-- Replica exacta del demo en `C:\Users\mauri\Downloads\jesus`.
+- Replica exacta del demo, hoy en `../Tindivo page (2)`.
 - Estructura: `app/(public)/` para landing + tracking, `app/cuenta/` para autenticados.
 - Manifest scope: `/`.
 - SW: Serwist.

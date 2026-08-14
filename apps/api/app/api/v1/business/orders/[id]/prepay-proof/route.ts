@@ -35,6 +35,13 @@ export async function GET(
       throw new DomainError('Pedido no encontrado', 'not_found')
     if (!order.comprobante_prepago_url) return ok({ url: null }, { headers: corsHeaders(req) })
 
+    if (
+      order.comprobante_prepago_url.startsWith('http://') ||
+      order.comprobante_prepago_url.startsWith('https://')
+    ) {
+      return ok({ url: order.comprobante_prepago_url }, { headers: corsHeaders(req) })
+    }
+
     const { data: signed } = await service.storage
       .from('payment-proofs')
       .createSignedUrl(order.comprobante_prepago_url, 120)

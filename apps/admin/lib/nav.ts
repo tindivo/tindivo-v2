@@ -47,6 +47,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: '/negocios', label: 'Negocios', icon: Ico.store },
       { href: '/motorizados', label: 'Motorizados', icon: Ico.truck },
       { href: '/agenda', label: 'Agenda', icon: Ico.contacts },
+      { href: '/zonas', label: 'Zonas de cobro', icon: Ico.store },
     ],
   },
   {

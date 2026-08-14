@@ -7,6 +7,13 @@ import { EmptyState, fieldSm, Ico, SectionHeader } from '@/components/admin'
 import { api, errMsg } from '@/lib/api'
 import { soles } from '@/lib/format'
 
+interface DisputedOrder {
+  id: string
+  short_id: string
+  customer_name: string | null
+  delivered_at: string | null
+}
+
 interface CashDisputeRow {
   id: string
   settlement_date: string
@@ -17,6 +24,50 @@ interface CashDisputeRow {
   dispute_note: string | null
   businesses: { name: string } | null
   drivers: { full_name: string } | null
+  /** Desde 0157 la disputa es de UN cliente. Las filas viejas traen varios. */
+  orders: DisputedOrder[] | null
+}
+
+const horaLima = new Intl.DateTimeFormat('es-PE', {
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+  timeZone: 'America/Lima',
+})
+
+/**
+ * De quién es la disputa.
+ *
+ * Es la línea que faltaba. La entrega de efectivo pasó a ser por cliente
+ * justamente para que una diferencia se pueda atribuir a alguien, y el admin
+ * —el único que puede resolverla— era el único que no veía el nombre.
+ */
+function DeQuien({ orders }: { orders: DisputedOrder[] | null }) {
+  const list = orders ?? []
+  if (list.length === 0) return null
+
+  if (list.length === 1) {
+    const o = list[0]
+    if (!o) return null
+    const hora = o.delivered_at ? horaLima.format(Date.parse(o.delivered_at)) : null
+    return (
+      <p className="mt-1 text-[14px] font-medium text-ink">
+        {o.customer_name?.trim() || `#${o.short_id}`}
+        {hora && <span className="ml-1.5 font-mono text-[12px] text-ink-muted">{hora}</span>}
+      </p>
+    )
+  }
+
+  // Fila anterior a 0157: la liquidación cubría varios pedidos de golpe y la
+  // diferencia no se puede atribuir a ninguno. Se listan todos.
+  return (
+    <p className="mt-1 text-[14px] text-ink">
+      {list.length} pedidos ·{' '}
+      <span className="text-ink-muted">
+        {list.map((o) => o.customer_name?.trim() || `#${o.short_id}`).join(', ')}
+      </span>
+    </p>
+  )
 }
 
 export default function EfectivoPage() {
@@ -86,12 +137,32 @@ export default function EfectivoPage() {
         <ul className="space-y-3">
           {rows.map((r) => (
             <li key={r.id} className="t-card">
-              <p className="font-medium text-[15px] text-ink">
-                {r.businesses?.name ?? '—'} ↔ {r.drivers?.full_name ?? 'Motorizado'}
+              <p className="text-[13px] text-ink-muted">
+                {r.businesses?.name ?? '—'} ↔ {r.drivers?.full_name ?? 'Motorizado'} ·{' '}
+                {r.settlement_date}
               </p>
-              <p className="mt-0.5 text-[13px] text-ink-muted">
-                {r.settlement_date} · driver declaró {soles(r.delivered_amount)} · negocio contó{' '}
-                {soles(r.reported_amount)} · esperado {soles(r.total_cash)}
+
+              <DeQuien orders={r.orders} />
+
+              {/* Los dos números que de verdad se contradicen. `total_cash` se
+                  omite cuando coincide con lo declarado, que desde 0157 es
+                  SIEMPRE: ambos salen de `order_cash_owed` del mismo pedido, y
+                  repetir la cifra empujaba el ojo hacia lo que no discrepa. */}
+              <p className="mt-1.5 text-[14px]">
+                <span className="text-ink-muted">Entregó</span>{' '}
+                <span className="font-mono font-semibold tabular-nums">
+                  {soles(r.delivered_amount)}
+                </span>
+                <span className="mx-2 text-ink-subtle">·</span>
+                <span className="text-ink-muted">Contaron</span>{' '}
+                <span className="font-mono font-semibold tabular-nums text-danger">
+                  {soles(r.reported_amount)}
+                </span>
+                {Number(r.total_cash) !== Number(r.delivered_amount ?? 0) && (
+                  <span className="ml-2 text-[13px] text-ink-subtle">
+                    (el sistema esperaba {soles(r.total_cash)})
+                  </span>
+                )}
               </p>
               {r.dispute_note && (
                 <p className="mt-1 text-[13px] text-ink-subtle">“{r.dispute_note}”</p>

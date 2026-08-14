@@ -1,17 +1,20 @@
 /**
- * La pantalla de Efectivo enseña lo MISMO que la liquidación va a cobrar.
+ * La pantalla de Efectivo enseña lo MISMO que la entrega va a mover, y NO se
+ * vacía a medianoche.
  *
- * EL DESFASE QUE ESTO AMARRA. `create_cash_settlement` liquida todos los
- * pedidos sin rendir de ese par motorizado-negocio, sin mirar la fecha ("es el
- * conjunto que define la rendición: no la fecha", 0141). El GET de
- * `/driver/cash-settlements` sí filtraba por el día de Lima.
+ * EL DESFASE QUE ESTO AMARRA. La rendición nunca miró la fecha —lo que define el
+ * corte es el conjunto de pedidos sin cerrar, no el día (0141, y desde 0157 el
+ * pedido suelto)— pero el GET de `/driver/cash-settlements` sí filtraba por el
+ * día de Lima. Con efectivo de ayer sin rendir, las dos cifras dejaban de
+ * coincidir: la pantalla mostraba solo lo de hoy, el RPC movía el total real, y
+ * la diferencia le llegaba a la cajera como un faltante que nadie le había
+ * mostrado. En el piloto eso es una llamada de veinte minutos por un descuadre
+ * que no existe.
  *
- * Con efectivo de ayer sin rendir, las dos cifras dejaban de coincidir: la
- * pantalla mostraba solo lo de hoy y pre-rellenaba el formulario con ese
- * número, el RPC guardaba el total real en `total_cash`, y la diferencia le
- * llegaba a la cajera como un faltante de dinero que nadie le había mostrado.
- * En el piloto eso es una llamada de veinte minutos por un descuadre que no
- * existe.
+ * LA OTRA MITAD, y es requisito explícito: un pedido ENTREGADO que la cajera no
+ * confirmó ayer sigue pendiente hoy. La confirmación es humana y nada la fuerza
+ * a las 24h (0112), así que ese dinero no puede desaparecer de ninguna de las
+ * dos pantallas por el mero hecho de que cambie el día.
  *
  * Se llama al route handler real con un JWT real, como
  * `pilot-whitelist.integration.test.ts`: el filtro vivía en la consulta del
@@ -44,21 +47,25 @@ const E2E_PASSWORD = 'e2e-password-12345'
 /** El seeder crea 50 + 2 de envío. */
 const TOTAL = 52
 
-interface SettlementOrder {
+interface CashOrder {
   orderId: string
   shortId: string
   customerName: string | null
   deliveredAt: string | null
   cashOwed: number
   breakdown?: { collected: number; advance: number }
+  state: 'pending' | 'delivering' | 'disputed'
+  settlementId: string | null
 }
 
-interface TodayRow {
+interface CashBusinessGroup {
   businessId: string
-  expected: number
-  orderCount: number
-  kind: 'pending' | 'awaiting'
-  orders: SettlementOrder[]
+  businessName: string
+  pendingTotal: number
+  pendingCount: number
+  deliveringTotal: number
+  deliveringCount: number
+  orders: CashOrder[]
 }
 
 let driverToken = ''
@@ -86,6 +93,15 @@ async function deliveredAt(deliveredAt: Date) {
   return orderId
 }
 
+async function entregarEfectivo(orderId: string) {
+  const { data, error } = await db.rpc('deliver_order_cash', {
+    p_driver_user_id: E2E.DRIVER_USER_ID,
+    p_order_id: orderId,
+  })
+  if (error) throw new Error(`deliver_order_cash failed: ${error.message}`)
+  return data as { id: string; amount: number }
+}
+
 /**
  * Saca de en medio lo que hayan dejado otros tests del mismo par.
  *
@@ -108,20 +124,29 @@ async function parkPending() {
     .eq('status', 'delivered')
     .is('cash_settlement_id', null)
     .in('customer_phone', TELEFONOS_FIXTURE)
+
+  // Los ciclos abiertos del par también estorban: sus pedidos siguen saliendo en
+  // la pantalla como `delivering`. Se cierran, que es el estado terminal normal.
+  await db
+    .from('cash_settlements')
+    .update({ status: 'confirmed', confirmed_at: new Date().toISOString() })
+    .eq('driver_id', E2E.DRIVER_ID)
+    .eq('business_id', E2E.BUSINESS_ID)
+    .in('status', ['pending_confirmation', 'disputed'])
 }
 
-async function pendingRow(): Promise<TodayRow | undefined> {
+async function grupo(): Promise<CashBusinessGroup | undefined> {
   const res = await cashSummary(
     new Request('http://localhost:3001/api/v1/driver/cash-settlements', {
       headers: { authorization: `Bearer ${driverToken}` },
     }),
   )
   expect(res.status).toBe(200)
-  const body = (await res.json()) as { data: { today: TodayRow[] } }
-  return body.data.today.find((r) => r.kind === 'pending' && r.businessId === E2E.BUSINESS_ID)
+  const body = (await res.json()) as { data: { businesses: CashBusinessGroup[] } }
+  return body.data.businesses.find((b) => b.businessId === E2E.BUSINESS_ID)
 }
 
-describe('lo que la pantalla enseña es lo que la rendición cobra', () => {
+describe('lo que la pantalla enseña es lo que la entrega mueve', () => {
   beforeAll(async () => {
     const { count } = await db
       .from('drivers')
@@ -144,69 +169,93 @@ describe('lo que la pantalla enseña es lo que la rendición cobra', () => {
 
   it('el efectivo de ayer sin rendir sigue en la pantalla', async () => {
     const ayer = new Date(Date.now() - 26 * 60 * 60 * 1000)
-    await deliveredAt(ayer)
+    const id = await deliveredAt(ayer)
 
-    const row = await pendingRow()
-    expect(row).toBeDefined()
-    expect(Number(row?.expected)).toBe(TOTAL)
+    const g = await grupo()
+    expect(g).toBeDefined()
+    const linea = g?.orders.find((o) => o.orderId === id)
+    expect(linea?.state).toBe('pending')
+    expect(Number(linea?.cashOwed)).toBe(TOTAL)
+    // Y suma al total de la pantalla, que es lo que el motorizado lee.
+    expect(Number(g?.pendingTotal)).toBeGreaterThanOrEqual(TOTAL)
   })
 
   // EL TEST QUE IMPORTA. Los dos números tienen que ser el mismo, porque el
-  // motorizado confirma el de la pantalla y la cajera cuenta contra el del RPC.
-  it('el total de la pantalla coincide con el que liquida el RPC', async () => {
-    await deliveredAt(new Date(Date.now() - 26 * 60 * 60 * 1000)) // ayer
-    await deliveredAt(new Date()) // hoy
+  // motorizado lee el de la pantalla en voz alta y la cajera cuenta contra el
+  // que la RPC acaba de mover.
+  it('el importe de cada línea es el que la RPC mueve', async () => {
+    const ayer = await deliveredAt(new Date(Date.now() - 26 * 60 * 60 * 1000))
+    const hoy = await deliveredAt(new Date())
 
-    const row = await pendingRow()
-    expect(Number(row?.expected)).toBe(TOTAL * 2)
-    expect(row?.orderCount).toBe(2)
+    const g = await grupo()
+    // Los dos entran, y el desglose del grupo suma lo suyo. Se comprueba sobre
+    // ESTOS pedidos y no sobre el total del grupo: el mundo e2e es compartido y
+    // cualquier pedido entregado que otro deje ahí desplazaría un total absoluto
+    // sin que nada de esta regla se hubiera roto.
+    const mios = [ayer, hoy].map((id) => g?.orders.find((o) => o.orderId === id))
+    expect(mios.every((o) => o?.state === 'pending')).toBe(true)
+    expect(mios.reduce((s, o) => s + Number(o?.cashOwed ?? 0), 0)).toBe(TOTAL * 2)
 
-    const { data, error } = await db.rpc('create_cash_settlement', {
-      p_driver_user_id: E2E.DRIVER_USER_ID,
-      p_business_id: E2E.BUSINESS_ID,
-      p_settlement_date: new Date().toISOString().slice(0, 10),
-    })
-    if (error) throw new Error(`settle failed: ${error.message}`)
-    const settlement = data as { expected: number; orderCount: number }
-
-    expect(Number(settlement.expected)).toBe(Number(row?.expected))
-    expect(settlement.orderCount).toBe(row?.orderCount)
+    for (const orderId of [ayer, hoy]) {
+      const enPantalla = g?.orders.find((o) => o.orderId === orderId)
+      const movido = await entregarEfectivo(orderId)
+      expect(Number(movido.amount)).toBe(Number(enPantalla?.cashOwed))
+    }
   })
 
-  // Un ciclo que la cajera no confirmó no se evapora a medianoche: ese dinero
-  // sigue sin cerrar y el motorizado tiene que verlo.
-  it('un ciclo abierto de ayer sigue visible hoy', async () => {
-    await deliveredAt(new Date())
-    const { error } = await db.rpc('create_cash_settlement', {
-      p_driver_user_id: E2E.DRIVER_USER_ID,
-      p_business_id: E2E.BUSINESS_ID,
-      p_settlement_date: new Date().toISOString().slice(0, 10),
-    })
-    if (error) throw new Error(`settle failed: ${error.message}`)
+  // REQUISITO EXPLÍCITO: lo entregado y sin confirmar no se evapora a
+  // medianoche. Ese dinero sigue sin cerrar y el motorizado tiene que verlo.
+  it('un pedido entregado ayer y sin confirmar sigue visible hoy', async () => {
+    const id = await deliveredAt(new Date(Date.now() - 26 * 60 * 60 * 1000))
+    const s = await entregarEfectivo(id)
 
-    // Se envejece el ciclo: entregado ayer, aún sin confirmar.
+    // Se envejece la liquidación: entregada ayer, aún sin confirmar.
     await db
       .from('cash_settlements')
       .update({
         settlement_date: new Date(Date.now() - 26 * 60 * 60 * 1000).toISOString().slice(0, 10),
+        delivered_at_ts: new Date(Date.now() - 26 * 60 * 60 * 1000).toISOString(),
       })
-      .eq('driver_id', E2E.DRIVER_ID)
-      .eq('business_id', E2E.BUSINESS_ID)
-      .eq('status', 'pending_confirmation')
+      .eq('id', s.id)
 
-    const res = await cashSummary(
-      new Request('http://localhost:3001/api/v1/driver/cash-settlements', {
-        headers: { authorization: `Bearer ${driverToken}` },
-      }),
-    )
-    const body = (await res.json()) as { data: { today: TodayRow[] } }
-    const awaiting = body.data.today.filter(
-      (r) => r.kind === 'awaiting' && r.businessId === E2E.BUSINESS_ID,
-    )
-    expect(awaiting.length).toBeGreaterThan(0)
-    // El desglose sobrevive a declarar la entrega: es lo que permite señalar
-    // CUÁL pedido no cuadra cuando la cajera cuenta el fajo.
-    expect(awaiting[0]?.orders.length).toBeGreaterThan(0)
+    const g = await grupo()
+    const linea = g?.orders.find((o) => o.orderId === id)
+    expect(linea?.state).toBe('delivering')
+    expect(linea?.settlementId).toBe(s.id)
+    // Y ya no cuenta como dinero encima: lo entregó. Se comprueba que ESTE
+    // pedido salió del bucket `pending`, no que el total del grupo sea cero —
+    // el mundo e2e es compartido.
+    expect(g?.orders.filter((o) => o.state === 'pending').map((o) => o.orderId)).not.toContain(id)
+    expect(Number(g?.deliveringTotal)).toBeGreaterThanOrEqual(TOTAL)
+  })
+
+  it('una liquidación en disputa se marca como tal, no desaparece', async () => {
+    const id = await deliveredAt(new Date())
+    const s = await entregarEfectivo(id)
+    const { error } = await db.rpc('dispute_cash_settlement', {
+      p_id: s.id,
+      p_business_user_id: E2E.BUSINESS_USER_ID,
+      p_reported_amount: 10,
+      p_note: 'faltaba plata',
+    })
+    if (error) throw new Error(`dispute failed: ${error.message}`)
+
+    const g = await grupo()
+    expect(g?.orders.find((o) => o.orderId === id)?.state).toBe('disputed')
+  })
+
+  // Lo confirmado sale de la pantalla: ese dinero ya no es problema de nadie, y
+  // arrastrarlo por la lista es lo que hace difícil ver lo que falta.
+  it('lo confirmado ya no aparece', async () => {
+    const id = await deliveredAt(new Date())
+    const s = await entregarEfectivo(id)
+    await db.rpc('confirm_order_cash', {
+      p_settlement_id: s.id,
+      p_business_user_id: E2E.BUSINESS_USER_ID,
+    })
+
+    const g = await grupo()
+    expect(g?.orders.find((o) => o.orderId === id)).toBeUndefined()
   })
 
   describe('el desglose por pedido', () => {
@@ -214,8 +263,8 @@ describe('lo que la pantalla enseña es lo que la rendición cobra', () => {
       const id = await deliveredAt(new Date())
       await db.from('orders').update({ customer_name: 'Carmen' }).eq('id', id)
 
-      const row = await pendingRow()
-      const order = row?.orders.find((o) => o.orderId === id)
+      const g = await grupo()
+      const order = g?.orders.find((o) => o.orderId === id)
       expect(order).toBeDefined()
       expect(order?.customerName).toBe('Carmen')
       expect(order?.deliveredAt).toBeTruthy()
@@ -224,9 +273,9 @@ describe('lo que la pantalla enseña es lo que la rendición cobra', () => {
 
     it('el nombre puede faltar: la pantalla cae al código', async () => {
       const id = await deliveredAt(new Date())
-      const row = await pendingRow()
-      expect(row?.orders.find((o) => o.orderId === id)?.customerName).toBeNull()
-      expect(row?.orders.find((o) => o.orderId === id)?.shortId).toHaveLength(8)
+      const g = await grupo()
+      expect(g?.orders.find((o) => o.orderId === id)?.customerName).toBeNull()
+      expect(g?.orders.find((o) => o.orderId === id)?.shortId).toHaveLength(8)
     })
 
     // LA PREGUNTA QUE EL DESGLOSE VIENE A RESPONDER: "¿por qué debo S/ 8 de un
@@ -253,12 +302,12 @@ describe('lo que la pantalla enseña es lo que la rendición cobra', () => {
 
       const sinAdelanto = await deliveredAt(new Date())
 
-      const row = await pendingRow()
-      const conAdelanto = row?.orders.find((o) => o.orderId === yapeId)
+      const g = await grupo()
+      const conAdelanto = g?.orders.find((o) => o.orderId === yapeId)
       expect(conAdelanto?.cashOwed).toBe(8)
       expect(conAdelanto?.breakdown).toEqual({ collected: 0, advance: 8 })
 
-      expect(row?.orders.find((o) => o.orderId === sinAdelanto)?.breakdown).toBeUndefined()
+      expect(g?.orders.find((o) => o.orderId === sinAdelanto)?.breakdown).toBeUndefined()
     })
 
     // El desglose tiene que sumar el total, o la pantalla se contradice sola.
@@ -266,10 +315,10 @@ describe('lo que la pantalla enseña es lo que la rendición cobra', () => {
       await deliveredAt(new Date())
       await deliveredAt(new Date())
 
-      const row = await pendingRow()
-      const suma = row?.orders.reduce((s, o) => s + o.cashOwed, 0)
-      expect(suma).toBe(row?.expected)
-      expect(row?.orders.length).toBe(row?.orderCount)
+      const g = await grupo()
+      const pendientes = g?.orders.filter((o) => o.state === 'pending') ?? []
+      expect(pendientes.reduce((s, o) => s + o.cashOwed, 0)).toBe(g?.pendingTotal)
+      expect(pendientes.length).toBe(g?.pendingCount)
     })
   })
 })

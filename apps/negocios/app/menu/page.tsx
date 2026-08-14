@@ -10,7 +10,7 @@ import { EmptyState } from '@/features/menu/components/empty-state'
 import { useMenu } from '@/features/menu/hooks/use-menu'
 
 export default function MenuPage() {
-  const { cats, bizId, ready, reload } = useMenu()
+  const { cats, bizId, ready, reload, toggleItemAvailability } = useMenu()
   const [activeCatId, setActiveCatId] = useState<string | null>(null)
   const [catManagerOpen, setCatManagerOpen] = useState(false)
 
@@ -68,7 +68,11 @@ export default function MenuPage() {
 
           <div className="flex flex-col gap-1 lg:hidden">
             {cats.map((cat) => (
-              <CategorySection key={cat.id} cat={cat} />
+              <CategorySection
+                key={cat.id}
+                cat={cat}
+                onToggleAvailability={toggleItemAvailability}
+              />
             ))}
           </div>
 
@@ -80,7 +84,11 @@ export default function MenuPage() {
             />
             <div>
               {cats.map((cat) => (
-                <CategorySection key={cat.id} cat={cat} />
+                <CategorySection
+                  key={cat.id}
+                  cat={cat}
+                  onToggleAvailability={toggleItemAvailability}
+                />
               ))}
             </div>
           </div>

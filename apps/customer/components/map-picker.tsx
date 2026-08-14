@@ -4,6 +4,7 @@ import { Spinner } from '@tindivo/ui'
 import dynamic from 'next/dynamic'
 import { useEffect, useMemo, useState } from 'react'
 import { getCoverage, getCoveragePolygon, haversineKm, pointInPolygon } from '@/lib/coverage'
+import { bandForPoint, type DeliveryBands, getDeliveryBands, getFarZones } from '@/lib/delivery-fee'
 import {
   type GeoFix,
   GeolocationError,
@@ -51,16 +52,22 @@ export function MapPicker({
   const [locating, setLocating] = useState(false)
   const [accuracyM, setAccuracyM] = useState<number | null>(null)
   const [locateError, setLocateError] = useState<string | null>(null)
+  const [bands, setBands] = useState<DeliveryBands>({ near: 2.0, far: 2.5 })
+  const [farZones, setFarZones] = useState<LatLng[][]>([])
 
   useEffect(() => {
     let on = true
-    Promise.all([getCoverage(), getCoveragePolygon()]).then(([cov, poly]) => {
-      if (!on) return
-      setCenter({ lat: cov.centerLat, lng: cov.centerLng })
-      setRadiusKm(cov.radiusKm)
-      setPolygon(poly?.polygon ?? null)
-      setLoaded(true)
-    })
+    Promise.all([getCoverage(), getCoveragePolygon(), getDeliveryBands(), getFarZones()]).then(
+      ([cov, poly, b, fz]) => {
+        if (!on) return
+        setCenter({ lat: cov.centerLat, lng: cov.centerLng })
+        setRadiusKm(cov.radiusKm)
+        setPolygon(poly?.polygon ?? null)
+        setBands(b)
+        setFarZones(fz)
+        setLoaded(true)
+      },
+    )
     return () => {
       on = false
     }
@@ -113,6 +120,9 @@ export function MapPicker({
     }
   }
 
+  const currentBand = useMemo(() => bandForPoint(pos, farZones), [pos, farZones])
+  const currentFee = currentBand === 'far' ? bands.far : bands.near
+
   return (
     <div>
       <div
@@ -148,7 +158,7 @@ export function MapPicker({
       </div>
       <div
         className={`mt-1.5 flex items-center gap-1.5 font-mono text-[11px] ${
-          locateError ? 'text-danger' : inside ? 'text-ink/55' : 'text-brand-dark'
+          locateError ? 'text-danger' : inside ? 'text-ink/70' : 'text-brand-dark'
         }`}
       >
         <span
@@ -166,9 +176,13 @@ export function MapPicker({
         ) : !inside ? (
           'Fuera de la zona de reparto de San Jacinto'
         ) : accuracyM != null ? (
-          `Ubicación obtenida · precisión ±${accuracyM} m`
+          `Ubicación GPS (±${accuracyM} m) · Envío S/ ${currentFee.toFixed(2)}${
+            currentBand === 'far' ? ' (zona lejana)' : ''
+          }`
         ) : (
-          `${pos.lat.toFixed(4)}, ${pos.lng.toFixed(4)} · San Jacinto, Áncash`
+          `${pos.lat.toFixed(4)}, ${pos.lng.toFixed(4)} · Envío S/ ${currentFee.toFixed(2)}${
+            currentBand === 'far' ? ' (zona lejana)' : ''
+          }`
         )}
       </div>
     </div>

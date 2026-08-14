@@ -42,6 +42,9 @@ export interface Tracking {
   amount: number
   deliveryFee: number
   total: number
+  createdAt?: string | null
+  awaitingPaymentAt?: string | null
+  validatingAt?: string | null
   proofAttempt?: number
   proofUrl?: string | null
   items: TrackingItem[]
