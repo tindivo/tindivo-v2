@@ -1,6 +1,6 @@
 import type { Payment } from '../types'
 
-export const PREP_PRESETS = [10, 15, 20, 25, 30, 35, 40, 45, 50]
+export const PREP_PRESETS = [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60]
 
 /**
  * `tile` es el degradado de la pastilla del icono. Cada método tiene el suyo

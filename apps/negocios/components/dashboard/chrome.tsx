@@ -15,6 +15,7 @@ import {
   useRef,
   useState,
 } from 'react'
+import { OpeningControls } from '@/features/apertura/components/opening-controls'
 import { getBackoffDelayMs, useChannelHealth } from '@/hooks/use-channel-health'
 import { useIconFontReady } from '@/hooks/use-icon-font-ready'
 import { usePolledQuery } from '@/hooks/use-polled-query'
@@ -27,7 +28,6 @@ import {
   pauseMinutesLeft,
   toOrderVM,
 } from '@/lib/orders/view-model'
-import { OpeningControls } from '@/features/apertura/components/opening-controls'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import { speak, unlockAudio, useDashboardSounds } from '@/lib/use-audio-alert'
 import { DashboardSkeleton } from './dashboard-skeleton'

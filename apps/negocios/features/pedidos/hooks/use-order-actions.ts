@@ -65,7 +65,7 @@ export function useOrderActions({
             pass: true,
             prepTimeMinutes: prep,
           })) as { status?: string }
-          if (res?.status === 'pending_acceptance' || isPrepaid) {
+          if (res?.status === 'pending_acceptance') {
             await post(`/business/orders/${id}/transition`, {
               action: 'accept',
               prepTimeMinutes: prep,

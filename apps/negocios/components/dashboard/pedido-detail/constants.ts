@@ -1,4 +1,4 @@
-export const PREP_PRESETS = [10, 15, 20, 25, 30, 35, 40, 45, 50]
+export const PREP_PRESETS = [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60]
 
 export const REJECT_REASONS_BASE = [
   { code: 'out_of_stock', label: 'Producto agotado' },

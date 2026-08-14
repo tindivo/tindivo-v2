@@ -530,11 +530,13 @@
   "528": "Lo que intenté y NO funcionó",
   "529": "map-picker-inner.tsx",
   "530": "business-card.tsx",
-  "531": "modal.spec.ts",
-  "532": "promo-carousel.tsx",
+  "531": "shell.tsx",
+  "532": "page.tsx",
   "533": "map-picker-inner.tsx",
   "534": "profile-card.tsx",
-  "535": "proof-thumbnail.tsx",
-  "536": "12. Pantalla · Prepago Yape",
-  "537": "17. Pantalla · Editor de direcciones"
+  "535": "driver-shell.tsx",
+  "536": "whatsapp-templates.ts",
+  "537": "17. Pantalla · Editor de direcciones",
+  "538": "featured-products.tsx",
+  "539": "9. Crons"
 }
