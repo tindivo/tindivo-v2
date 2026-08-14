@@ -2420,12 +2420,8 @@ export type Database = {
         }[]
       }
       close_drivers_outside_schedule: { Args: never; Returns: number }
-      confirm_cash_settlement: {
-        Args: {
-          p_business_user_id: string
-          p_confirmed_amount: number
-          p_id: string
-        }
+      confirm_order_cash: {
+        Args: { p_business_user_id: string; p_settlement_id: string }
         Returns: Json
       }
       create_appeal_report:
@@ -2456,15 +2452,6 @@ export type Database = {
           p_prep_time_minutes?: number
           p_total_amount: number
           p_yape_amount?: number
-        }
-        Returns: Json
-      }
-      create_cash_settlement: {
-        Args: {
-          p_business_id: string
-          p_delivered_amount?: number
-          p_driver_user_id: string
-          p_settlement_date: string
         }
         Returns: Json
       }
@@ -2576,6 +2563,10 @@ export type Database = {
       customer_requires_prepayment: {
         Args: { p_phone: string; p_reference: string; p_user_id: string }
         Returns: boolean
+      }
+      deliver_order_cash: {
+        Args: { p_driver_user_id: string; p_order_id: string }
+        Returns: Json
       }
       derive_business_primary_capability: {
         Args: {
@@ -3216,3 +3207,4 @@ export const Constants = {
     },
   },
 } as const
+

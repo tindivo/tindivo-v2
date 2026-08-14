@@ -3,9 +3,13 @@
 import { type ApiEnvelope, ApiError } from '@tindivo/api-client'
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '@/lib/api'
+import { getSupabaseBrowser } from '@/lib/supabase/client'
 
-/** Un pedido dentro de la rendición. Lo que permite rendir comprobando. */
-export interface SettlementOrder {
+/** En qué punto del camino está el efectivo de un pedido. */
+export type CashState = 'pending' | 'delivering' | 'disputed'
+
+/** Un pedido de la pantalla de efectivo. La unidad de entrega desde 0157. */
+export interface CashOrder {
   orderId: string
   shortId: string
   /** Puede faltar: la pantalla cae al `#shortId`. */
@@ -14,31 +18,31 @@ export interface SettlementOrder {
   cashOwed: number
   /** Solo cuando hubo adelanto de vuelto, para poder explicar el importe. */
   breakdown?: { collected: number; advance: number }
+  state: CashState
+  /** Null mientras no lo haya entregado. */
+  settlementId: string | null
 }
 
-export interface TodayRow {
+export interface CashBusinessGroup {
   businessId: string
   businessName: string
-  expected: number
-  orderCount: number
-  kind: 'pending' | 'awaiting'
-  settlementId: string | null
-  status: string | null
-  deliveredAmount: number | null
-  orders: SettlementOrder[]
+  pendingTotal: number
+  pendingCount: number
+  deliveringTotal: number
+  deliveringCount: number
+  orders: CashOrder[]
 }
 
 export function useCashSummary() {
-  const [today, setToday] = useState<TodayRow[]>([])
+  const [businesses, setBusinesses] = useState<CashBusinessGroup[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(() => {
-    setLoading(true)
     api
-      .get<ApiEnvelope<{ today: TodayRow[] }>>('/driver/cash-settlements')
+      .get<ApiEnvelope<{ businesses: CashBusinessGroup[] }>>('/driver/cash-settlements')
       .then((r) => {
-        setToday(r.data.today)
+        setBusinesses(r.data.businesses)
         setError(null)
       })
       .catch((e) => {
@@ -53,5 +57,30 @@ export function useCashSummary() {
     load()
   }, [load])
 
-  return { today, loading, error, reload: load }
+  /**
+   * La confirmación de la cajera llega sola.
+   *
+   * Antes esta pantalla solo se recargaba al montarse: el motorizado entregaba,
+   * la cajera confirmaba delante de él, y su teléfono seguía diciendo
+   * "Entregando…" hasta que saliera y volviera a entrar. Con la entrega pedido a
+   * pedido eso se nota mucho más —son varias líneas esperando a la vez— y es
+   * justo el momento en que los dos están mirando la pantalla.
+   *
+   * Sin filtro por `driver_id`: la policy `cs_driver_read` ya acota lo que este
+   * usuario puede ver, y el canal solo dispara una recarga.
+   */
+  useEffect(() => {
+    const supabase = getSupabaseBrowser()
+    const channel = supabase
+      .channel('drv-cash')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cash_settlements' }, () =>
+        load(),
+      )
+      .subscribe()
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [load])
+
+  return { businesses, loading, error, reload: load }
 }

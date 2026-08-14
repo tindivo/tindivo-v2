@@ -84,6 +84,37 @@ async function driverUserId(driverId: unknown): Promise<string | null> {
 }
 
 /**
+ * Cuánto efectivo queda ABIERTO entre un motorizado y un negocio, ahora mismo.
+ *
+ * Lo que sostiene a las notificaciones de efectivo colapsadas. Desde 0157 hay
+ * una liquidación por pedido, así que una entrega de cuatro clientes son cuatro
+ * eventos y cuatro llamadas a esta función. Cada notificación reemplaza a la
+ * anterior (mismo `tag`) y describe el ESTADO, no el delta — por eso da igual en
+ * qué orden lleguen: la última en pintarse dice la verdad de ese momento.
+ *
+ * `disputed` cuenta como abierto: ese dinero tampoco está cerrado.
+ */
+async function openCashTotal(
+  driverId: unknown,
+  businessId: unknown,
+): Promise<{ total: number; count: number }> {
+  if (typeof driverId !== 'string' || typeof businessId !== 'string') {
+    return { total: 0, count: 0 }
+  }
+  const { data } = await db
+    .from('cash_settlements')
+    .select('delivered_amount')
+    .eq('driver_id', driverId)
+    .eq('business_id', businessId)
+    .in('status', ['pending_confirmation', 'disputed'])
+  const rows = data ?? []
+  return {
+    total: rows.reduce((s: number, r) => s + Number(r.delivered_amount ?? 0), 0),
+    count: rows.length,
+  }
+}
+
+/**
  * `user_id` de todos los motorizados activos, opcionalmente sin uno.
  *
  * NOTIFICAR NO ES ASIGNAR: igual que en la rama `ready`, no se filtra por
@@ -526,7 +557,9 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
   ) {
     const { data: cs } = await db
       .from('cash_settlements')
-      .select('driver_id,delivered_amount,reported_amount,resolved_amount,confirmed_amount')
+      .select(
+        'driver_id,business_id,delivered_amount,reported_amount,resolved_amount,confirmed_amount',
+      )
       .eq('id', aggregateId)
       .maybeSingle()
     const driverUser = await driverUserId(cs?.driver_id)
@@ -534,11 +567,21 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
       const money = (n: unknown) => `S/ ${Number(n ?? 0).toFixed(2)}`
       const base = { userId: driverUser, url: '/efectivo', vibrate: false }
       if (eventType === 'CashConfirmed') {
+        // COLAPSADA POR (motorizado, negocio). Desde 0157 la cajera confirma
+        // cliente por cliente, así que cuatro confirmaciones seguidas son cuatro
+        // eventos. Con un tag por liquidación, el motorizado recibía cuatro
+        // notificaciones apiladas diciendo casi lo mismo; con este tag la
+        // notificación se REEMPLAZA y el cuerpo describe el estado actual —
+        // cuánto le queda abierto— en vez del último delta.
+        const abierto = await openCashTotal(cs?.driver_id, cs?.business_id)
         out.push({
           ...base,
           title: 'Efectivo confirmado',
-          body: `El negocio confirmó ${money(cs?.confirmed_amount)}. Cuenta cerrada.`,
-          tag: `CashConfirmed-${aggregateId}`,
+          body:
+            abierto.count === 0
+              ? `El negocio confirmó ${money(cs?.confirmed_amount)}. No queda nada por confirmar.`
+              : `El negocio confirmó ${money(cs?.confirmed_amount)}. Te quedan ${money(abierto.total)} por confirmar (${abierto.count}).`,
+          tag: `CashConfirmed-${cs?.driver_id}-${cs?.business_id}`,
           requireInteraction: false,
         })
       } else if (eventType === 'CashDisputed') {
@@ -562,16 +605,29 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
   } else if (eventType === 'CashDelivered') {
     const { data: cs } = await db
       .from('cash_settlements')
-      .select('delivered_amount,businesses(user_id)')
+      .select('driver_id,business_id,delivered_amount,businesses(user_id),drivers(full_name)')
       .eq('id', aggregateId)
       .maybeSingle()
     const bizUser = (cs?.businesses as { user_id?: string } | null)?.user_id ?? null
     if (bizUser) {
+      // COLAPSADA POR (motorizado, negocio) — ver el comentario de CashConfirmed.
+      // El motorizado entrega nombrando clientes uno tras otro; sin colapsar,
+      // la cajera recibía una notificación por cada nombre mientras él seguía
+      // hablando. El cuerpo dice el TOTAL abierto, no el último pedido, así que
+      // la última notificación que sobrevive al reemplazo sigue siendo correcta
+      // aunque las anteriores lleguen desordenadas.
+      const abierto = await openCashTotal(cs?.driver_id, cs?.business_id)
+      const quien = (cs?.drivers as { full_name?: string } | null)?.full_name ?? 'El motorizado'
+      const cliente = (payload?.customerName as string | null) ?? null
+      const monto = `S/ ${Number(cs?.delivered_amount ?? 0).toFixed(2)}`
       out.push({
         userId: bizUser,
         title: 'Efectivo por confirmar',
-        body: `El motorizado dice que te entregó S/ ${Number(cs?.delivered_amount ?? 0).toFixed(2)}`,
-        tag: `CashDelivered-${aggregateId}`,
+        body:
+          abierto.count > 1
+            ? `${quien} te entregó S/ ${abierto.total.toFixed(2)} · ${abierto.count} pedidos por confirmar`
+            : `${quien} te entregó ${monto}${cliente ? ` de ${cliente}` : ''}`,
+        tag: `CashDelivered-${cs?.driver_id}-${cs?.business_id}`,
         url: '/efectivo',
         requireInteraction: true,
         vibrate: false,

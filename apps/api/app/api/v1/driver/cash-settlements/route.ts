@@ -8,24 +8,29 @@ import { createServiceClient } from '@/lib/supabase/service'
 
 export const dynamic = 'force-dynamic'
 
-const Schema = z.object({
-  businessId: z.uuid(),
-  settlementDate: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
-  deliveredAmount: z.number().nonnegative().optional(),
-})
+/**
+ * El motorizado entrega el efectivo de UN pedido (0157).
+ *
+ * Antes el cuerpo era `{ businessId, deliveredAmount }`: se rendía el negocio
+ * entero y el importe lo TECLEABA el motorizado, sin que nadie lo comparara
+ * nunca con lo que el servidor había calculado. Ahora el importe no viaja — lo
+ * pone la RPC leyendo el pedido — así que no hay forma de que la pantalla mande
+ * un número distinto del real.
+ */
+const Schema = z.object({ orderId: z.uuid() })
 
 export function OPTIONS(req: Request): Response {
   return handleOptions(req)
 }
 
-/** Un pedido dentro de la rendición de un negocio. */
-interface SettlementOrder {
+/** En qué punto del camino está el efectivo de un pedido. */
+type CashState = 'pending' | 'delivering' | 'disputed'
+
+/** Un pedido en la pantalla de efectivo del motorizado. */
+interface CashOrder {
   orderId: string
   shortId: string
-  /** Cae al `#shortId` en la pantalla cuando el pedido no trae nombre. */
+  /** Puede faltar: la pantalla cae al `#shortId`. */
   customerName: string | null
   deliveredAt: string | null
   cashOwed: number
@@ -35,17 +40,27 @@ interface SettlementOrder {
    * Yape?"— sin que nadie tenga que reconstruir la cuenta a mano.
    */
   breakdown?: { collected: number; advance: number }
+  state: CashState
+  /** Null mientras no lo haya entregado. Es lo que la cajera confirma. */
+  settlementId: string | null
 }
 
-/**
- * Fila de `orders` tal y como la piden las dos consultas de abajo.
- *
- * ⚠️ TEMPORAL. `database.types.ts` se genera contra el REMOTO (`pnpm db:types`)
- * y `change_advanced` entra ahí con el `db push` de la 0146. Hasta entonces el
- * tipado generado no conoce la columna y el `select` se resuelve como error.
- * En cuanto se regeneren los tipos, esta interfaz y sus dos casts se borran y
- * la inferencia vuelve a hacer el trabajo.
- */
+interface CashBusinessGroup {
+  businessId: string
+  businessName: string
+  /** Lo que todavía lleva encima. */
+  pendingTotal: number
+  pendingCount: number
+  /** Lo que ya entregó y está esperando que le confirmen. */
+  deliveringTotal: number
+  deliveringCount: number
+  /** `pending` primero, luego `delivering`/`disputed`. Cada bloque, del más
+   *  reciente al más antiguo: el motorizado repasa el fajo empezando por el
+   *  último pedido, que es el que tiene fresco. */
+  orders: CashOrder[]
+}
+
+/** Fila de `orders` tal y como la piden las dos consultas de abajo. */
 interface OrderCashRow {
   id: string
   short_id: string
@@ -55,7 +70,7 @@ interface OrderCashRow {
   change_advanced: number | null
 }
 
-function toSettlementOrder(o: OrderCashRow): SettlementOrder {
+function toCashOrder(o: OrderCashRow, state: CashState, settlementId: string | null): CashOrder {
   const cashOwed = Number(o.cash_owed_at_delivery ?? 0)
   const advance = Number(o.change_advanced ?? 0)
   return {
@@ -66,17 +81,27 @@ function toSettlementOrder(o: OrderCashRow): SettlementOrder {
     cashOwed,
     // `collected` no se lee: se deriva de la misma resta que define la fórmula,
     // así que no puede contradecir al total. Guardarlo aparte habría creado una
-    // quinta copia de la regla del corte de caja.
+    // copia más de la regla del corte de caja.
     ...(advance > 0 ? { breakdown: { collected: cashOwed - advance, advance } } : {}),
+    state,
+    settlementId,
   }
 }
 
+const recienteAntes = (a: CashOrder, b: CashOrder) =>
+  (b.deliveredAt ?? '').localeCompare(a.deliveredAt ?? '')
+
 /**
- * Resumen de efectivo del motorizado, agregado por negocio.
+ * El efectivo del motorizado, pedido por pedido y agrupado por negocio.
  *
- * Devuelve TODO lo pendiente, no lo de hoy: lo que define el corte es el
- * conjunto de pedidos sin rendir, igual que en `create_cash_settlement`. Ver el
- * comentario de la consulta.
+ * SIN FILTRO DE FECHA, y no es un olvido. Lo que define el corte es el conjunto
+ * de pedidos sin cerrar, no el día: un pedido cobrado ayer que sigue en el
+ * bolsillo —o entregado ayer y que la cajera no confirmó— es dinero abierto hoy.
+ * Cuando esta consulta sí filtraba por el día de Lima, ese dinero desaparecía de
+ * la pantalla a medianoche sin que nada hubiera pasado.
+ *
+ * Lo confirmado NO se devuelve: ese dinero ya no es problema de nadie, y
+ * arrastrarlo por la pantalla es justo lo que hacía difícil ver lo que falta.
  */
 export async function GET(req: Request): Promise<Response> {
   const requestId = getRequestId(req)
@@ -88,19 +113,31 @@ export async function GET(req: Request): Promise<Response> {
       .select('id')
       .eq('user_id', user.id)
       .maybeSingle()
-    if (!drv) return ok({ today: [] }, { headers: corsHeaders(req) })
+    if (!drv) return ok({ businesses: [] }, { headers: corsHeaders(req) })
 
-    // LEE `cash_owed_at_delivery`, NO DEDUCE DEL MÉTODO (0141).
+    const groups = new Map<string, CashBusinessGroup>()
+    const grupo = (businessId: string, businessName: string): CashBusinessGroup => {
+      const g = groups.get(businessId) ?? {
+        businessId,
+        businessName,
+        pendingTotal: 0,
+        pendingCount: 0,
+        deliveringTotal: 0,
+        deliveringCount: 0,
+        orders: [],
+      }
+      groups.set(businessId, g)
+      return g
+    }
+
+    // ── 1. Lo que todavía lleva encima ───────────────────────────────────────
     //
-    // Filtraba `payment_real = 'paid_cash'` y sumaba el total del pedido: la
-    // misma regla que el RPC de liquidación, escrita otra vez. Con un cobro
-    // mixto las dos copias mentían igual —el pedido no salía, y el motorizado
-    // veía menos de lo que llevaba encima— y al divergir, la pantalla habría
-    // dicho un número y el corte otro.
-    //
-    // `> 0` en vez de un filtro por método: lo que define si entra al corte es
-    // llevar efectivo, no cómo se llame el cobro.
-    const { data: rawOrders } = await service
+    // LEE `cash_owed_at_delivery`, NO DEDUCE DEL MÉTODO (0141). Filtrar por
+    // `payment_real = 'paid_cash'` dejaba fuera un cobro mixto por el que el
+    // motorizado sí lleva su parte en efectivo. `> 0` en vez de un filtro por
+    // método: lo que define si entra al corte es llevar dinero, no cómo se llame
+    // el cobro.
+    const { data: sinRendir } = await service
       .from('orders')
       .select(
         'id, short_id, customer_name, delivered_at, business_id, cash_owed_at_delivery, change_advanced, businesses(name)',
@@ -108,165 +145,97 @@ export async function GET(req: Request): Promise<Response> {
       .eq('driver_id', drv.id)
       .eq('status', 'delivered')
       .gt('cash_owed_at_delivery', 0)
-      // Solo lo que AÚN no ha rendido. Antes sumaba todo lo cobrado hoy, así
-      // que tras la primera rendición seguía mostrando el total del día y
-      // pre-rellenaba el formulario con dinero que ya había entregado.
-      //
-      // SIN FILTRO DE FECHA, y no es un olvido. `create_cash_settlement` liquida
-      // TODO lo no rendido a ese negocio sin mirar el día ("es el conjunto que
-      // define la rendición: no la fecha", 0141). Cuando esta consulta sí
-      // filtraba por el día de Lima, el efectivo de ayer sin rendir era
-      // invisible aquí pero entraba igual en la liquidación: el motorizado
-      // confirmaba el total de hoy, el RPC guardaba el total real, y la
-      // diferencia le aparecía a la cajera como un faltante de dinero que la
-      // pantalla nunca le mostró.
       .is('cash_settlement_id', null)
 
-    // Ver `OrderCashRow`: el cast se va con `pnpm db:types` tras el push.
-    const orders = (rawOrders ?? []) as unknown as (OrderCashRow & {
-      business_id: string
-      businesses: { name?: string } | null
-    })[]
-
-    const byBiz = new Map<
-      string,
-      {
-        businessId: string
-        businessName: string
-        expected: number
-        orderCount: number
-        orders: SettlementOrder[]
+    for (const row of sinRendir ?? []) {
+      const o = row as unknown as OrderCashRow & {
+        business_id: string
+        businesses: { name?: string } | null
       }
-    >()
-    for (const o of orders) {
-      const name = o.businesses?.name ?? '—'
-      const e = byBiz.get(o.business_id) ?? {
-        businessId: o.business_id,
-        businessName: name,
-        expected: 0,
-        orderCount: 0,
-        orders: [],
-      }
-      e.expected += Number(o.cash_owed_at_delivery)
-      e.orderCount += 1
-      e.orders.push(toSettlementOrder(o))
-      byBiz.set(o.business_id, e)
+      const g = grupo(o.business_id, o.businesses?.name ?? '—')
+      g.pendingTotal += Number(o.cash_owed_at_delivery ?? 0)
+      g.pendingCount += 1
+      g.orders.push(toCashOrder(o, 'pending', null))
     }
 
-    // Del más reciente al más antiguo. El motorizado repasa el fajo empezando
-    // por el último pedido, que es el que tiene fresco.
-    for (const e of byBiz.values()) {
-      e.orders.sort((a, b) => (b.deliveredAt ?? '').localeCompare(a.deliveredAt ?? ''))
-    }
-
-    const abiertos = ['pending_confirmation', 'disputed'] as const
-
-    // Los settlements ABIERTOS alimentan el bucket "Esperando confirmación". El
-    // historial ya no se expone por este endpoint.
+    // ── 2. Lo que ya entregó y sigue abierto ─────────────────────────────────
     //
-    // Tampoco se acotan al día: un ciclo que la cajera no confirmó ayer sigue
-    // abierto hoy, y es dinero del motorizado pendiente de cerrar. Filtrarlo por
-    // fecha lo hacía desaparecer de su pantalla a medianoche sin que nada
-    // hubiera pasado.
-    const { data: settlements } = await service
+    // Desde 0157 hay una liquidación POR PEDIDO, así que estos ciclos son
+    // siempre de un pedido. Las filas viejas con `order_count > 1` siguen
+    // funcionando: se leen por el mismo enlace `orders.cash_settlement_id`, y
+    // cada uno de sus pedidos aparece como una línea con el mismo estado.
+    const { data: abiertos } = await service
       .from('cash_settlements')
-      .select(
-        'id, business_id, settlement_date, status, delivered_amount, total_cash, order_count, businesses(name)',
-      )
+      .select('id, business_id, status, businesses(name)')
       .eq('driver_id', drv.id)
-      .in('status', abiertos)
+      .in('status', ['pending_confirmation', 'disputed'])
 
-    // Desde 0111 puede haber VARIOS ciclos por negocio y día, y desde que esta
-    // consulta dejó de acotarse al día también los hay de días distintos: el de
-    // ayer que la cajera no confirmó y el de hoy. Se listan TODOS los abiertos.
-    // Colapsarlos en un `Map` por negocio —como se hacía— dejaba uno arbitrario
-    // y borraba de la pantalla dinero que sigue pendiente de cerrar.
-    const abiertosDelDriver = settlements ?? []
+    const porSettlement = new Map<string, { businessId: string; name: string; state: CashState }>()
+    for (const s of abiertos ?? []) {
+      porSettlement.set(s.id, {
+        businessId: s.business_id,
+        name: (s.businesses as { name?: string } | null)?.name ?? '—',
+        state: s.status === 'disputed' ? 'disputed' : 'delivering',
+      })
+    }
 
-    // Los pedidos de cada ciclo abierto. Siguen haciendo falta después de
-    // declarar la entrega: si la cajera cuenta el fajo y sale distinto, la
-    // conversación es sobre CUÁL pedido no cuadra, y sin el desglose solo queda
-    // disputar el total.
-    const ordersBySettlement = new Map<string, SettlementOrder[]>()
-    const idsAbiertos = abiertosDelDriver.map((s) => s.id)
-    if (idsAbiertos.length > 0) {
-      const { data: rawLinked } = await service
+    if (porSettlement.size > 0) {
+      const { data: enlazados } = await service
         .from('orders')
         .select(
           'id, short_id, customer_name, delivered_at, cash_owed_at_delivery, change_advanced, cash_settlement_id',
         )
-        .in('cash_settlement_id', idsAbiertos)
-      // Ver `OrderCashRow`: el cast se va con `pnpm db:types` tras el push.
-      const linked = (rawLinked ?? []) as unknown as (OrderCashRow & {
-        cash_settlement_id: string | null
-      })[]
-      for (const o of linked) {
-        if (!o.cash_settlement_id) continue
-        const list = ordersBySettlement.get(o.cash_settlement_id) ?? []
-        list.push(toSettlementOrder(o))
-        ordersBySettlement.set(o.cash_settlement_id, list)
-      }
-      for (const list of ordersBySettlement.values()) {
-        list.sort((a, b) => (b.deliveredAt ?? '').localeCompare(a.deliveredAt ?? ''))
+        .in('cash_settlement_id', [...porSettlement.keys()])
+
+      for (const row of enlazados ?? []) {
+        const o = row as unknown as OrderCashRow & { cash_settlement_id: string | null }
+        const meta = o.cash_settlement_id ? porSettlement.get(o.cash_settlement_id) : undefined
+        if (!meta || !o.cash_settlement_id) continue
+        const g = grupo(meta.businessId, meta.name)
+        g.deliveringTotal += Number(o.cash_owed_at_delivery ?? 0)
+        g.deliveringCount += 1
+        g.orders.push(toCashOrder(o, meta.state, o.cash_settlement_id))
       }
     }
 
-    // Dos buckets distintos, como en producción — un negocio puede aparecer en
-    // los dos a la vez y son cosas diferentes:
-    //
-    //   'pending'  -> efectivo cobrado y aún no entregado. Lleva botón.
-    //   'awaiting' -> ya entregado, esperando que la cajera lo confirme. Solo
-    //                 informativo; ese dinero ya no lo tiene el motorizado.
-    //
-    // Fusionarlos en una sola fila hacía desaparecer el botón en cuanto había
-    // un ciclo sin confirmar, y el motorizado no podía rendir lo nuevo.
-    const today = [
-      ...[...byBiz.values()].map((b) => ({
-        ...b,
-        kind: 'pending' as const,
-        settlementId: null as string | null,
-        status: null as string | null,
-        deliveredAmount: null as number | null,
-      })),
-      ...abiertosDelDriver.map((s) => ({
-        businessId: s.business_id,
-        businessName: (s.businesses as { name?: string } | null)?.name ?? '—',
-        expected: Number(s.total_cash ?? 0),
-        orderCount: s.order_count ?? 0,
-        kind: 'awaiting' as const,
-        settlementId: s.id as string | null,
-        status: s.status as string | null,
-        deliveredAmount: s.delivered_amount as number | null,
-        orders: ordersBySettlement.get(s.id) ?? [],
-      })),
-    ]
-    return ok({ today }, { headers: corsHeaders(req) })
+    // Dentro de cada negocio: primero lo que hay que entregar (es lo accionable),
+    // debajo lo que está esperando confirmación. Mezclarlos por hora dejaba el
+    // botón perdido entre líneas sin acción.
+    const businesses = [...groups.values()]
+    for (const g of businesses) {
+      const pendientes = g.orders.filter((o) => o.state === 'pending').sort(recienteAntes)
+      const entregados = g.orders.filter((o) => o.state !== 'pending').sort(recienteAntes)
+      g.orders = [...pendientes, ...entregados]
+    }
+    // El negocio con más dinero por entregar, primero.
+    businesses.sort((a, b) => b.pendingTotal - a.pendingTotal)
+
+    return ok({ businesses }, { headers: corsHeaders(req) })
   } catch (err) {
     return handleError(err, requestId, req)
   }
 }
 
-/** El motorizado declara la entrega de efectivo del día a un negocio. */
+/** El motorizado entrega el efectivo de un pedido. */
 export async function POST(req: Request): Promise<Response> {
   const requestId = getRequestId(req)
   try {
     const { user } = await requireRole(req, 'driver')
     const body = Schema.parse(await req.json())
-    const date =
-      body.settlementDate ?? new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' })
     const service = createServiceClient()
-    const { data, error } = await service.rpc('create_cash_settlement', {
+    const { data, error } = await service.rpc('deliver_order_cash', {
       p_driver_user_id: user.id,
-      p_business_id: body.businessId,
-      p_settlement_date: date,
-      p_delivered_amount: body.deliveredAmount ?? undefined,
+      p_order_id: body.orderId,
     })
     if (error) {
+      if (error.code === 'P0002') throw new DomainError(error.message, 'not_found')
       if (error.code === 'P0001') throw new DomainError(error.message, 'validation_error')
       throw new Error(error.message)
     }
-    // La confirmación es SIEMPRE humana: la cajera cuenta el dinero. Ya no se
-    // agenda auto-confirmación a las 24h (0112).
+    // La confirmación es SIEMPRE humana: la cajera cuenta el dinero. No se
+    // agenda auto-confirmación a las 24h (0112), así que un pedido entregado y
+    // sin confirmar sigue visible en las dos pantallas hasta que alguien lo
+    // cierre, aunque cambie el día.
     return ok(data, { status: 201, headers: corsHeaders(req) })
   } catch (err) {
     return handleError(err, requestId, req)

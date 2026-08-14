@@ -37,7 +37,7 @@ export function SettlementCard({ row, onDone }: { row: CashRow; onDone: () => vo
   async function handleConfirm() {
     setLocalError(null)
     try {
-      await confirm(row.id, row.delivered_amount ?? 0)
+      await confirm(row.id)
       onDone()
     } catch (err) {
       setLocalError(err instanceof Error ? err.message : 'Error')
