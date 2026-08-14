@@ -1,6 +1,7 @@
 'use client'
 
 import { ApiError } from '@tindivo/api-client'
+import { compressImage, UPLOAD_CACHE_CONTROL, validateImageInput } from '@tindivo/images'
 import { Button } from '@tindivo/ui'
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '@/lib/api'
@@ -32,6 +33,10 @@ export function PrepayProofSection({ orderId, proofAttempt, onProofUploaded }: P
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  /** Comprimiendo la captura recién elegida, antes de que exista preview. */
+  const [preparing, setPreparing] = useState(false)
+  /** URL firmada del comprobante ya enviado (el bucket es privado). */
+  const [sentProofUrl, setSentProofUrl] = useState<string | null>(null)
 
   const loadInfo = useCallback(async () => {
     try {
@@ -45,6 +50,30 @@ export function PrepayProofSection({ orderId, proofAttempt, onProofUploaded }: P
   useEffect(() => {
     loadInfo()
   }, [loadInfo])
+
+  // Comprobante ya enviado: `comprobante_prepago_url` guarda la RUTA dentro de
+  // `payment-proofs`, que es un bucket privado. Sin firmar esa ruta no hay nada
+  // que pintar, y el cliente se quedaba sin ver lo que había mandado —ni para
+  // comprobar que subió la captura correcta, ni mientras la cajera la revisa.
+  // La RLS de storage deja al usuario leer su propia carpeta, así que la firma
+  // se puede pedir desde el navegador con su sesión.
+  useEffect(() => {
+    const path = info?.comprobantePrepagoUrl
+    if (!path) {
+      setSentProofUrl(null)
+      return
+    }
+    let cancelled = false
+    getSupabaseBrowser()
+      .storage.from('payment-proofs')
+      .createSignedUrl(path, 600)
+      .then(({ data }) => {
+        if (!cancelled) setSentProofUrl(data?.signedUrl ?? null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [info?.comprobantePrepagoUrl])
 
   // Countdown timer de 10 min basado en timestamp real de DB
   useEffect(() => {
@@ -68,12 +97,31 @@ export function PrepayProofSection({ orderId, proofAttempt, onProofUploaded }: P
     return `${m}:${s.toString().padStart(2, '0')}`
   }
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0]
+    e.target.value = ''
     if (!f) return
-    setPendingFile(f)
-    setPreviewUrl(URL.createObjectURL(f))
+    const invalid = validateImageInput(f)
+    if (invalid) {
+      setError(invalid)
+      return
+    }
     setError(null)
+    setPreparing(true)
+    try {
+      // El cliente sube desde datos móviles: una captura de Yape sin comprimir
+      // sale del celular pesando megas.
+      const optimized = await compressImage(f, 'proof')
+      setPendingFile(optimized)
+      setPreviewUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev)
+        return URL.createObjectURL(optimized)
+      })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No pudimos procesar la imagen.')
+    } finally {
+      setPreparing(false)
+    }
   }
 
   function copyYape() {
@@ -110,7 +158,10 @@ export function PrepayProofSection({ orderId, proofAttempt, onProofUploaded }: P
       const path = `${userId}/${orderId}/attempt-${attempt}-${ts}.${ext}`
       const { error: upErr } = await supabase.storage
         .from('payment-proofs')
-        .upload(path, pendingFile, { contentType: pendingFile.type })
+        .upload(path, pendingFile, {
+          contentType: pendingFile.type,
+          cacheControl: UPLOAD_CACHE_CONTROL,
+        })
 
       if (upErr) throw upErr
 
@@ -204,6 +255,22 @@ export function PrepayProofSection({ orderId, proofAttempt, onProofUploaded }: P
         </div>
       )}
 
+      {/* Comprobante ya enviado. Se muestra para que el cliente pueda comprobar
+          que mandó la captura correcta mientras la cajera la revisa. */}
+      {sentProofUrl && (
+        <div className="mt-3.5 rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+          <span className="mb-2 block text-[12px] font-semibold text-emerald-900">
+            Comprobante enviado
+          </span>
+          <img
+            src={sentProofUrl}
+            alt="Comprobante enviado"
+            decoding="async"
+            className="max-h-48 w-full rounded-lg bg-white object-contain"
+          />
+        </div>
+      )}
+
       {/* Regla de comprobante visible */}
       <div className="mt-3.5 rounded-xl border border-sky-200 bg-sky-50 p-3 text-[12px] leading-relaxed text-sky-800">
         📌 <strong>Regla de validación:</strong> Tu comprobante debe ser posterior a la hora del
@@ -249,9 +316,15 @@ export function PrepayProofSection({ orderId, proofAttempt, onProofUploaded }: P
               Adjuntar comprobante de pago
             </span>
             <span className="text-[11px] text-ink-subtle">
-              Formatos JPG, PNG (Captura de pantalla)
+              {preparing ? 'Preparando imagen…' : 'Formatos JPG, PNG (Captura de pantalla)'}
             </span>
-            <input type="file" accept="image/*" className="sr-only" onChange={handleFileChange} />
+            <input
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              disabled={preparing}
+              onChange={handleFileChange}
+            />
           </label>
         )}
       </div>

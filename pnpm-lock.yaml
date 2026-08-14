@@ -256,6 +256,9 @@ importers:
       '@tindivo/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@tindivo/images':
+        specifier: workspace:*
+        version: link:../../packages/images
       '@tindivo/supabase':
         specifier: workspace:*
         version: link:../../packages/supabase
@@ -393,6 +396,9 @@ importers:
       '@tindivo/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@tindivo/images':
+        specifier: workspace:*
+        version: link:../../packages/images
       '@tindivo/supabase':
         specifier: workspace:*
         version: link:../../packages/supabase
@@ -472,6 +478,18 @@ importers:
       '@tindivo/supabase':
         specifier: workspace:*
         version: link:../supabase
+      '@tindivo/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.7(@opentelemetry/api@1.9.1)(@types/node@24.12.4)(vite@8.0.14(@types/node@24.12.4)(jiti@2.7.0)(yaml@2.9.0))
+
+  packages/images:
+    devDependencies:
       '@tindivo/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig

@@ -1,0 +1,11 @@
+{
+  "extends": "@tindivo/tsconfig/base.json",
+  "compilerOptions": {
+    // Este paquete corre SOLO en el navegador: canvas, File, createImageBitmap.
+    // El base no trae los tipos del DOM porque el resto de paquetes son de
+    // servidor (contracts lo consume la API en Node).
+    "lib": ["ES2022", "DOM", "DOM.Iterable"]
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
+}
