@@ -173,8 +173,11 @@ describe('lo que la pantalla enseña es lo que la entrega mueve', () => {
 
     const g = await grupo()
     expect(g).toBeDefined()
-    expect(Number(g?.pendingTotal)).toBe(TOTAL)
-    expect(g?.orders.find((o) => o.orderId === id)?.state).toBe('pending')
+    const linea = g?.orders.find((o) => o.orderId === id)
+    expect(linea?.state).toBe('pending')
+    expect(Number(linea?.cashOwed)).toBe(TOTAL)
+    // Y suma al total de la pantalla, que es lo que el motorizado lee.
+    expect(Number(g?.pendingTotal)).toBeGreaterThanOrEqual(TOTAL)
   })
 
   // EL TEST QUE IMPORTA. Los dos números tienen que ser el mismo, porque el
@@ -185,8 +188,13 @@ describe('lo que la pantalla enseña es lo que la entrega mueve', () => {
     const hoy = await deliveredAt(new Date())
 
     const g = await grupo()
-    expect(Number(g?.pendingTotal)).toBe(TOTAL * 2)
-    expect(g?.pendingCount).toBe(2)
+    // Los dos entran, y el desglose del grupo suma lo suyo. Se comprueba sobre
+    // ESTOS pedidos y no sobre el total del grupo: el mundo e2e es compartido y
+    // cualquier pedido entregado que otro deje ahí desplazaría un total absoluto
+    // sin que nada de esta regla se hubiera roto.
+    const mios = [ayer, hoy].map((id) => g?.orders.find((o) => o.orderId === id))
+    expect(mios.every((o) => o?.state === 'pending')).toBe(true)
+    expect(mios.reduce((s, o) => s + Number(o?.cashOwed ?? 0), 0)).toBe(TOTAL * 2)
 
     for (const orderId of [ayer, hoy]) {
       const enPantalla = g?.orders.find((o) => o.orderId === orderId)
@@ -214,9 +222,11 @@ describe('lo que la pantalla enseña es lo que la entrega mueve', () => {
     const linea = g?.orders.find((o) => o.orderId === id)
     expect(linea?.state).toBe('delivering')
     expect(linea?.settlementId).toBe(s.id)
-    // Y ya no cuenta como dinero encima: lo entregó.
-    expect(Number(g?.deliveringTotal)).toBe(TOTAL)
-    expect(Number(g?.pendingTotal)).toBe(0)
+    // Y ya no cuenta como dinero encima: lo entregó. Se comprueba que ESTE
+    // pedido salió del bucket `pending`, no que el total del grupo sea cero —
+    // el mundo e2e es compartido.
+    expect(g?.orders.filter((o) => o.state === 'pending').map((o) => o.orderId)).not.toContain(id)
+    expect(Number(g?.deliveringTotal)).toBeGreaterThanOrEqual(TOTAL)
   })
 
   it('una liquidación en disputa se marca como tal, no desaparece', async () => {

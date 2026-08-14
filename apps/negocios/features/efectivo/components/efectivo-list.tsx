@@ -1,22 +1,34 @@
 'use client'
 
 import { EmptyState, Icon, SkeletonList } from '@tindivo/ui'
+import { soles } from '@/components/dashboard/primitives'
 import { useCashSettlements } from '../hooks/use-cash-settlements'
 import { CashSummary } from './cash-summary'
-import { PendingDriversList } from './pending-drivers-list'
-import { SettlementCard } from './settlement-card'
+import { DriverCard } from './driver-card'
+import { HistorialNoches } from './historial-noches'
 
+/**
+ * El efectivo de la noche, organizado por MOTORIZADO.
+ *
+ * Antes eran cinco secciones apiladas por estado del sistema —«Pendiente del
+ * motorizado», «Por confirmar ahora», «En disputa», «Historial»— y la cajera
+ * tenía que cruzar nombres entre ellas para reconstruir a quién tenía delante.
+ * Ahora cada persona es una tarjeta y sus tres estados van dentro, en orden de
+ * urgencia. Solo el historial queda fuera: ya no es de nadie que esté ahí.
+ */
 export function EfectivoList() {
-  const { rows, pendingCash, loading, error, reload } = useCashSettlements()
+  const { drivers, historial, loading, error, reload } = useCashSettlements()
 
-  if (loading) {
-    return <SkeletonList count={3} />
-  }
+  if (loading) return <SkeletonList count={3} />
 
-  const pending = rows.filter((r) => r.status === 'pending_confirmation')
-  const disputed = rows.filter((r) => r.status === 'disputed')
-  const settled = rows.filter((r) => r.status !== 'pending_confirmation' && r.status !== 'disputed')
-  const totalToday = rows.reduce((sum, r) => sum + (r.delivered_amount ?? 0), 0)
+  const porConfirmar = drivers.flatMap((d) => d.porConfirmar)
+  const enCamino = drivers.flatMap((d) => d.porEntregar)
+  const enDisputa = drivers.reduce((s, d) => s + d.enDisputa.length, 0)
+  const recibidoHoy = drivers.reduce((s, d) => s + d.confirmadoHoy.total, 0)
+  const arrastre = drivers.reduce((s, d) => s + d.arrastre, 0)
+  const conAlgo = drivers.filter(
+    (d) => d.porConfirmar.length + d.enDisputa.length + d.porEntregar.length > 0,
+  )
 
   return (
     <>
@@ -25,90 +37,62 @@ export function EfectivoList() {
       )}
 
       <CashSummary
-        totalToday={totalToday}
-        pendingCount={pending.length}
-        disputedCount={disputed.length}
-        pendingAmount={pending.reduce((s, r) => s + (r.delivered_amount ?? 0), 0)}
-        totalCount={rows.length}
+        porConfirmar={porConfirmar.reduce((s, l) => s + l.cashOwed, 0)}
+        porConfirmarCount={porConfirmar.length}
+        enCamino={enCamino.reduce((s, l) => s + l.cashOwed, 0)}
+        enCaminoCount={enCamino.length}
+        recibidoHoy={recibidoHoy}
+        enDisputa={enDisputa}
       />
 
-      {/* Pending alert banner */}
-      {pending.length > 0 && (
-        <div className="mb-4 flex items-center gap-2.5 rounded-xl bg-warning-soft p-3 text-sm font-semibold text-amber-900">
-          <Icon name="warning" size={18} filled />
-          <div className="flex-1">
-            Tienes <strong>{pending.length}</strong>{' '}
-            {pending.length === 1 ? 'cierre pendiente' : 'cierres pendientes'} de confirmar
+      {/* Una sola llamada a la acción, y solo cuando la hay. El banner viejo
+          avisaba de «N cierres pendientes» encima de una lista que ya los
+          mostraba; este añade lo que la lista NO puede decir de un vistazo: que
+          parte de ese dinero lleva más de una noche esperando. */}
+      {porConfirmar.length > 0 && (
+        <div className="mb-4 flex items-start gap-2.5 rounded-xl bg-warning-soft p-3 text-sm text-amber-900">
+          <Icon name="payments" size={18} filled className="mt-px shrink-0" />
+          <div>
+            <strong className="font-semibold">
+              Cuenta {soles(porConfirmar.reduce((s, l) => s + l.cashOwed, 0))} antes de confirmar.
+            </strong>{' '}
+            No se confirman solas.
+            {arrastre > 0 && (
+              <>
+                {' '}
+                <span className="font-semibold">
+                  {soles(arrastre)} vienen de noches anteriores.
+                </span>
+              </>
+            )}
           </div>
         </div>
       )}
 
-      {/* Empty state */}
-      {rows.length === 0 && pendingCash.length === 0 && (
+      {conAlgo.length === 0 ? (
         <EmptyState
           icon="payments"
-          heading="Sin cierres de efectivo"
-          description="Aparecerán aquí cuando el motorizado entregue efectivo."
+          heading="Sin efectivo pendiente"
+          description="Aparecerá aquí, cliente por cliente, en cuanto un motorizado cobre en efectivo."
         />
-      )}
-
-      {/* Pendiente del motorizado */}
-      {pendingCash.length > 0 && <PendingDriversList drivers={pendingCash} />}
-
-      {/* Por confirmar ahora */}
-      {pending.length > 0 && (
-        <div className="mb-6">
-          <div className="mb-3 flex items-center gap-2.5">
-            <Icon name="warning" size={20} filled className="text-warning" />
-            <div className="text-base font-bold">Por confirmar ahora</div>
-            <span className="rounded-full bg-warning-soft px-2 py-0.5 text-xs font-bold text-amber-900">
-              {pending.length}
-            </span>
-            <div className="flex-1" />
-            <div className="text-xs text-ink-muted">
-              Cuenta el efectivo y confirma. No se confirman solas.
-            </div>
-          </div>
-          <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2">
-            {pending.map((r) => (
-              <SettlementCard key={r.id} row={r} onDone={reload} />
-            ))}
-          </div>
+      ) : (
+        // Dos columnas SOLO con dos o más motorizados. El piloto tiene uno, y
+        // una rejilla de dos columnas dejaba media pantalla en blanco al lado de
+        // la única tarjeta — se lee como si algo no hubiera cargado.
+        <div
+          className={
+            conAlgo.length > 1
+              ? 'flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:items-start'
+              : 'flex flex-col gap-3 lg:max-w-2xl'
+          }
+        >
+          {conAlgo.map((d) => (
+            <DriverCard key={d.driverId} driver={d} onDone={reload} />
+          ))}
         </div>
       )}
 
-      {/* En disputa */}
-      {disputed.length > 0 && (
-        <div className="mb-6">
-          <div className="mb-3 flex items-center gap-2.5">
-            <Icon name="gavel" size={20} className="text-danger" />
-            <div className="text-base font-bold">En disputa</div>
-            <span className="rounded-full bg-danger-soft px-2 py-0.5 text-xs font-bold text-danger">
-              {disputed.length}
-            </span>
-          </div>
-          <div className="flex flex-col gap-3">
-            {disputed.map((r) => (
-              <SettlementCard key={r.id} row={r} onDone={reload} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Historial */}
-      {settled.length > 0 && (
-        <div>
-          <div className="mb-3 flex items-center gap-2.5">
-            <Icon name="history" size={20} className="text-ink-muted" />
-            <div className="text-base font-bold">Historial</div>
-          </div>
-          <div className="flex flex-col gap-3">
-            {settled.map((r) => (
-              <SettlementCard key={r.id} row={r} onDone={reload} />
-            ))}
-          </div>
-        </div>
-      )}
+      <HistorialNoches noches={historial} />
     </>
   )
 }
