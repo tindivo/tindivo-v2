@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { isToday } from '@/lib/format'
-import { getOptimistic } from '@/lib/offline-queue'
+import { getOptimistic, queueSize } from '@/lib/offline-queue'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
+import { flushQueue } from '@/lib/transitions'
 import type { BoardOrder, DriverBusiness } from '@/lib/types'
 import { orderUrgency } from '@/lib/urgency'
 
@@ -119,7 +120,16 @@ export function useDriverOrders(now: number): DriverBoard {
     let poll: ReturnType<typeof setInterval> | null = null
     const arranquePoll = setTimeout(() => {
       poll = setInterval(() => {
-        if (document.visibilityState === 'visible') void refetch()
+        if (document.visibilityState !== 'visible') return
+        // La cola se reintenta AQUÍ y no solo con el evento `online`, porque ese
+        // evento habla del dispositivo, no del servidor. Cuando quien falla es
+        // la API —un despliegue, un 502 pasajero— el celular nunca se queda sin
+        // red, `online` no dispara nunca y la transición se queda encolada para
+        // siempre. Con ella, el estado optimista deja el pedido invisible en el
+        // board: ni disponible ni mío. Reintentar con el poll cierra ese agujero
+        // sin añadir temporizadores nuevos.
+        if (queueSize() > 0) void flushQueue()
+        void refetch()
       }, POLL_MS)
     }, POLL_OFFSET_MS)
 

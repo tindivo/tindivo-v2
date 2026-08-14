@@ -2,7 +2,14 @@
 
 import { ApiError } from '@tindivo/api-client'
 import { api } from './api'
-import { clearOptimistic, enqueue, peekAll, remove, setOptimistic } from './offline-queue'
+import {
+  clearOptimistic,
+  enqueue,
+  peekAll,
+  reconcileOptimistic,
+  remove,
+  setOptimistic,
+} from './offline-queue'
 
 /** Estado destino optimista por acción (para pintar la UI sin red). */
 const NEXT_STATUS: Record<string, string> = {
@@ -63,10 +70,13 @@ export async function flushQueue(): Promise<void> {
           clearOptimistic(item.orderId)
           continue
         }
-        break // sigue sin red: reintentar en el próximo evento online
+        break // sigue sin red: reintentar en el próximo intento
       }
     }
   } finally {
+    // Última red: si quedó algún optimista sin transición detrás, fuera. Sin
+    // esto el pedido se vuelve invisible en el board de forma permanente.
+    reconcileOptimistic()
     flushing = false
   }
 }
