@@ -73,17 +73,23 @@ export const orderValidationTimeout: InngestFunction.Any = inngest.createFunctio
   async ({ event, step }) => {
     const { orderId, sleepMs: override } = event.data as OrderValidationData
     const { sleepMs, reason } = await step.run('resolve-deadline', async () => {
-      if (typeof override === 'number') return { sleepMs: override, reason: 'validation_timeout' as const }
+      if (typeof override === 'number')
+        return { sleepMs: override, reason: 'validation_timeout' as const }
       const svc = createServiceClient()
       const [orderRes, settingsRes] = await Promise.all([
-        svc.from('orders').select('payment_intent,validation_context').eq('id', orderId).maybeSingle(),
+        svc
+          .from('orders')
+          .select('payment_intent,validation_context')
+          .eq('id', orderId)
+          .maybeSingle(),
         svc.from('app_settings').select('value').eq('key', 'timers').single(),
       ])
       const isProof =
         orderRes.data?.validation_context === 'proof' || orderRes.data?.payment_intent === 'prepaid'
-      const timers = settingsRes.data?.value as
-        | { validationMinutes?: number; prepayVerificationMinutes?: number }
-        | null
+      const timers = settingsRes.data?.value as {
+        validationMinutes?: number
+        prepayVerificationMinutes?: number
+      } | null
       const minutes = isProof
         ? (timers?.prepayVerificationMinutes ?? 10)
         : (timers?.validationMinutes ?? 5)

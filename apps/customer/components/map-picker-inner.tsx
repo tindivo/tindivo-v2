@@ -66,6 +66,16 @@ function Recenter({ position, token }: { position: LatLng; token: number }) {
   return null
 }
 
+function InvalidateSize() {
+  const map = useMap()
+  useEffect(() => {
+    map.invalidateSize()
+    const t = setTimeout(() => map.invalidateSize(), 200)
+    return () => clearTimeout(t)
+  }, [map])
+  return null
+}
+
 /** Mapa Leaflet/OSM con pin arrastrable + zona de cobertura. Cargar solo vía next/dynamic ssr:false. */
 export default function MapPickerInner({
   position,
@@ -104,6 +114,7 @@ export default function MapPickerInner({
         />
       ) : null}
       <Recenter position={position} token={recenterToken} />
+      <InvalidateSize />
       <TapToMove onChange={onChange} />
       <Marker
         position={[position.lat, position.lng]}

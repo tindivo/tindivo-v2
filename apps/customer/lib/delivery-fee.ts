@@ -64,6 +64,7 @@ async function fetchFarZones(): Promise<LatLng[][]> {
       .from('delivery_zones')
       .select('polygon')
       .eq('kind', 'far')
+      .eq('active', true)
     return (data ?? [])
       .map((z) => {
         const raw = z.polygon
