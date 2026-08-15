@@ -1,27 +1,29 @@
-"use client";
+'use client'
 
-import { ActiveOrderBanner } from "@/features/catalog/components/active-order-banner";
-import { BusinessGrid } from "@/features/catalog/components/business-grid";
-import { HomeCarousel } from "@/features/catalog/components/home-carousel";
-import { HomeHeader } from "@/features/catalog/components/home-header";
-import { SearchBar } from "@/features/catalog/components/search-bar";
-import { SearchResults } from "@/features/catalog/components/search-results";
-import { useHomeData } from "@/features/catalog/hooks/use-home-data";
-import { firstName } from "@/features/catalog/lib/format";
-import type { PublicBusiness } from "@/features/catalog/types";
-import { PilotWall } from "@/features/pilot/components/pilot-wall";
-import { useCatalogSearch } from "@/lib/use-search";
+import { ActiveOrderBanner } from '@/features/catalog/components/active-order-banner'
+import { BusinessGrid } from '@/features/catalog/components/business-grid'
+import { HomeCarousel } from '@/features/catalog/components/home-carousel'
+import { HomeHeader } from '@/features/catalog/components/home-header'
+import { SearchBar } from '@/features/catalog/components/search-bar'
+import { SearchResults } from '@/features/catalog/components/search-results'
+import { useHomeData } from '@/features/catalog/hooks/use-home-data'
+import { firstName } from '@/features/catalog/lib/format'
+import type { CatalogUser, PublicBusiness } from '@/features/catalog/types'
+import { PilotWall } from '@/features/pilot/components/pilot-wall'
+import { useCatalogSearch } from '@/lib/use-search'
 
 interface HomeShellProps {
-  initialBusinesses: PublicBusiness[] | null;
+  initialBusinesses: PublicBusiness[] | null
+  initialUser?: CatalogUser | null
 }
 
-export function HomeShell({ initialBusinesses }: HomeShellProps) {
+export function HomeShell({ initialBusinesses, initialUser }: HomeShellProps) {
   const { items, error, user, activeOrders } = useHomeData({
     initialBusinesses,
-  });
-  const search = useCatalogSearch();
-  const greetingName = firstName(user.name);
+    initialUser,
+  })
+  const search = useCatalogSearch()
+  const greetingName = firstName(user.name)
 
   return (
     <main className="mx-auto min-h-dvh max-w-[768px] bg-surface md:max-w-[880px] lg:max-w-6xl xl:max-w-7xl">
@@ -48,9 +50,7 @@ export function HomeShell({ initialBusinesses }: HomeShellProps) {
         </h1>
       </div>
 
-      {user.signedIn && activeOrders.length > 0 && (
-        <ActiveOrderBanner orders={activeOrders} />
-      )}
+      {user.signedIn && activeOrders.length > 0 && <ActiveOrderBanner orders={activeOrders} />}
 
       <SearchBar query={search.query} onChange={search.setQuery} />
       <SearchResults search={search} businesses={items} />
@@ -71,5 +71,5 @@ export function HomeShell({ initialBusinesses }: HomeShellProps) {
         </div>
       </div>
     </main>
-  );
+  )
 }

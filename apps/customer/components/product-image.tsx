@@ -1,5 +1,7 @@
 'use client'
 
+import Image from 'next/image'
+
 /**
  * Imagen de producto. Si hay `src` (foto subida por el negocio) la renderiza
  * cubriendo el recuadro; si no, cae al placeholder rayado derivado del `hue`.
@@ -32,11 +34,15 @@ export function ProductImage({
         }}
       />
       {src ? (
-        <img
+        <Image
           src={src}
           alt={label ?? ''}
+          width={size}
+          height={size}
+          sizes={`${size}px`}
           loading="lazy"
           decoding="async"
+          draggable={false}
           className="absolute inset-0 h-full w-full object-cover"
         />
       ) : (

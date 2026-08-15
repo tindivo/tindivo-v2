@@ -25,14 +25,25 @@ export async function GET(
     const { id } = await params
     const supabase = createServiceClient()
 
-    const { data: business, error: bizError } = await supabase
-      .from('businesses')
-      .select(BUSINESS_COLUMNS)
-      .eq('id', id)
-      .eq('publishes_catalog', true)
-      .eq('is_active', true)
-      .eq('is_blocked', false)
-      .maybeSingle()
+    // 1) Negocio y fecha de servicio en paralelo. La fecha no depende del
+    // negocio, así que se lanza al mismo tiempo. Si falla, seguimos con
+    // openingConfirmed = null (un fallo transitorio no puede cerrar el catálogo).
+    const [businessResult, serviceDateResult] = await Promise.allSettled([
+      supabase
+        .from('businesses')
+        .select(BUSINESS_COLUMNS)
+        .eq('id', id)
+        .eq('publishes_catalog', true)
+        .eq('is_active', true)
+        .eq('is_blocked', false)
+        .maybeSingle(),
+      supabase.rpc('current_service_date'),
+    ])
+
+    if (businessResult.status === 'rejected') {
+      throw new Error(String(businessResult.reason))
+    }
+    const { data: business, error: bizError } = businessResult.value
     if (bizError) throw new Error(bizError.message)
     if (!business) {
       return problem('not_found', {
@@ -42,6 +53,12 @@ export async function GET(
       })
     }
 
+    const serviceDate =
+      serviceDateResult.status === 'fulfilled' ? serviceDateResult.value.data : null
+
+    // 2) Categorías, ítems, grupos, horario, opciones y links en paralelo.
+    // Las tablas de opciones/links no tienen business_id propio; se filtran
+    // vía join con menu_modifier_groups para evitar descargar TODO el catálogo.
     const [
       { data: categories, error: catError },
       { data: items, error: itemError },
@@ -49,6 +66,7 @@ export async function GET(
       { data: options },
       { data: links },
       { data: schedule },
+      openingConfirmed,
     ] = await Promise.all([
       supabase
         .from('menu_categories')
@@ -73,15 +91,23 @@ export async function GET(
         .order('display_order'),
       supabase
         .from('menu_modifier_options')
-        .select('id,group_id,name,description,additional_price,display_order,is_available')
+        .select(
+          'id,group_id,name,description,additional_price,display_order,is_available,menu_modifier_groups!inner(business_id)',
+        )
+        .eq('menu_modifier_groups.business_id', id)
         .order('display_order'),
-      supabase.from('menu_item_modifier_groups').select('item_id,group_id,display_order'),
+      supabase
+        .from('menu_item_modifier_groups')
+        .select('item_id,group_id,display_order,menu_modifier_groups!inner(business_id)')
+        .eq('menu_modifier_groups.business_id', id)
+        .order('display_order'),
       // Horario semanal (informativo + estado abierto/cerrado; el cliente lo computa).
       supabase
         .from('business_schedule')
         .select('day_of_week,is_open,shift1_start,shift1_end,shift2_start,shift2_end')
         .eq('business_id', id)
         .order('day_of_week'),
+      hasConfirmedOpening(supabase, id, serviceDate),
     ])
     if (catError) throw new Error(catError.message)
     if (itemError) throw new Error(itemError.message)
@@ -129,13 +155,13 @@ export async function GET(
       // No mostrar categorías vacías al cliente (una categoría sin platos no aporta).
       .filter((category) => category.items.length > 0)
 
-    // Apertura declarada de hoy. `null` = no se pudo consultar; el cliente lo
-    // trata como "manda solo el horario" (ver getOpenStatus).
-    const openingConfirmed = await hasConfirmedOpening(supabase, id)
-
+    const cacheHeaders = {
+      'Cache-Control': 'public, s-maxage=15, stale-while-revalidate=45',
+      Vary: 'Accept-Encoding',
+    }
     return ok(
       { business, categories: menu, schedule: schedule ?? [], opening_confirmed: openingConfirmed },
-      { headers: corsHeaders(req) },
+      { headers: { ...corsHeaders(req), ...cacheHeaders } },
     )
   } catch (err) {
     return handleError(err, requestId, req)

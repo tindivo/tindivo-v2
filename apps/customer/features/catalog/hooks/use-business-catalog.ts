@@ -6,8 +6,12 @@ import type { BusinessDetail } from '@/features/catalog/types'
 import { api } from '@/lib/api'
 import { useCart } from '@/lib/cart'
 
-export function useBusinessCatalog(id: string) {
-  const [data, setData] = useState<BusinessDetail | null>(null)
+interface UseBusinessCatalogOptions {
+  initialData?: BusinessDetail | null
+}
+
+export function useBusinessCatalog(id: string, options: UseBusinessCatalogOptions = {}) {
+  const [data, setData] = useState<BusinessDetail | null>(options.initialData ?? null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
