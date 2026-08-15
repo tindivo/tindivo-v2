@@ -74,8 +74,8 @@ export function MapSheet({
             target="_blank"
             rel="noopener noreferrer"
           >
-            <Icon name="map" size={20} />
-            Abrir en Google Maps
+            <Icon name="near_me" size={20} />
+            Ir a la ubicación en Google Maps
           </Button>
         </div>
       </div>

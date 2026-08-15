@@ -1,3 +1,5 @@
+import { SAN_JACINTO_CENTER } from './geo'
+
 /** Deep links nativos del flujo del motorizado (Maps / teléfono / WhatsApp). */
 
 const peDigits = (phone: string) => {
@@ -7,6 +9,9 @@ const peDigits = (phone: string) => {
 
 export const mapsDirToCoords = (lat: number, lng: number) =>
   `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`
+
+export const mapsCenterSanJacinto = () =>
+  `https://www.google.com/maps/@${SAN_JACINTO_CENTER.lat},${SAN_JACINTO_CENTER.lng},16z`
 
 export const mapsSearchAddress = (address: string) =>
   `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`
