@@ -2,6 +2,7 @@
 
 import { ActiveOrderBanner } from '@/features/catalog/components/active-order-banner'
 import { BusinessGrid } from '@/features/catalog/components/business-grid'
+import { HomeCarousel } from '@/features/catalog/components/home-carousel'
 import { HomeHeader } from '@/features/catalog/components/home-header'
 import { SearchBar } from '@/features/catalog/components/search-bar'
 import { SearchResults } from '@/features/catalog/components/search-results'
@@ -47,10 +48,7 @@ export default function Home() {
 
       {!search.active && (
         <>
-          {/* Secciones decorativas comentadas — solo dejamos el listado funcional de restaurantes */}
-          {/* <PromoCarousel /> */}
-          {/* <CategoryCircles /> */}
-          {/* <FeaturedProducts /> */}
+          <HomeCarousel />
           <BusinessGrid businesses={items} error={error} />
         </>
       )}
