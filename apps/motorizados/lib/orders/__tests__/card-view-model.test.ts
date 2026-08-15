@@ -75,10 +75,10 @@ describe('identidad', () => {
     expect(v.identity).toBe('#A3K2M9XY')
   })
 
-  it('en Equipo la identidad es el companero, con icono que lo desambigua', () => {
-    const v = vm({ variant: 'team', ownerName: 'Juan Ríos' })
-    expect(v.identity).toBe('Juan Ríos')
-    expect(v.identityIcon).toBe('directions_bike')
+  it('en Equipo la identidad sigue siendo el cliente (el companero vive en la cabecera)', () => {
+    const v = vm({ variant: 'team', order: order({ customer_name: 'María Flores' }) })
+    expect(v.identity).toBe('María Flores')
+    expect(v.identityIcon).toBeNull()
   })
 })
 

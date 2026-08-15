@@ -412,12 +412,10 @@ export function buildCardVM(input: CardVMInput): CardVM {
   const badge = buildBadge(input)
   const isTeam = variant === 'team'
 
-  // LA IDENTIDAD ES EL NOMBRE, y por eso tiene un plan B explícito: el canal
-  // manual —el 100% del piloto— declara el nombre opcional
-  // (`create_business_manual_order`, 0032), así que puede no haberlo. Cuando
-  // falta, el código corto sube a identidad y desaparece de la cejilla: sirve
-  // de identificador de repuesto sin salir dos veces en la misma tarjeta.
-  const name = isTeam ? ownerName : order.customer_name
+  // LA IDENTIDAD ES EL NOMBRE DEL CLIENTE (o el código corto si no hay).
+  // En Equipo, el nombre del compañero ya vive en la cabecera del grupo,
+  // por lo que la tarjeta conserva la identidad del pedido/cliente.
+  const name = order.customer_name
   const hasName = Boolean(name?.trim())
   const identity = hasName ? (name as string).trim() : `#${order.short_id}`
 
@@ -426,7 +424,7 @@ export function buildCardVM(input: CardVMInput): CardVM {
     shortId: hasName ? order.short_id : null,
     clock,
     identity,
-    identityIcon: isTeam ? 'directions_bike' : null,
+    identityIcon: null,
     badge,
     reference: order.delivery_reference ?? order.delivery_address,
     band: BAND_LABEL[order.delivery_distance_band ?? ''] ?? null,
