@@ -45,7 +45,7 @@ export default function MotorizadosPage() {
     load()
     api
       .get<ApiEnvelope<BizRow[]>>('/admin/businesses')
-      .then((r) => setLocales(r.data.filter((b) => b.is_active)))
+      .then((r) => setLocales(r.data))
       .catch((e) => setError(errMsg(e)))
   }, [load])
 
@@ -119,7 +119,11 @@ export default function MotorizadosPage() {
             const asignados = d.driver_restaurants ?? []
             const sinLocales = asignados.length === 0
             const nombres = asignados
-              .map((r) => locales.find((b) => b.id === r.business_id)?.name)
+              .map((r) => {
+                const b = locales.find((l) => l.id === r.business_id)
+                if (!b) return null
+                return b.is_active ? b.name : `${b.name} (inactivo)`
+              })
               .filter(Boolean)
             return (
               <li key={d.id} className="t-card">
@@ -180,7 +184,7 @@ export default function MotorizadosPage() {
                       Locales que atiende
                     </p>
                     {locales.length === 0 ? (
-                      <p className="text-[13px] text-ink-subtle">No hay negocios activos.</p>
+                      <p className="text-[13px] text-ink-subtle">No hay negocios registrados.</p>
                     ) : (
                       <div className="grid gap-1.5 sm:grid-cols-2">
                         {locales.map((b) => (
@@ -198,7 +202,14 @@ export default function MotorizadosPage() {
                                 setSeleccion(s)
                               }}
                             />
-                            {b.name}
+                            <span className={b.is_active ? 'text-ink font-medium' : 'text-ink-muted'}>
+                              {b.name}
+                              {!b.is_active && (
+                                <span className="ml-1.5 rounded-full bg-ink/[0.06] px-1.5 py-0.5 text-[10px] font-mono font-medium text-ink-subtle">
+                                  inactivo
+                                </span>
+                              )}
+                            </span>
                           </label>
                         ))}
                       </div>

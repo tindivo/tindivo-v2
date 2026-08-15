@@ -2,7 +2,7 @@
 
 import { Button, Card, Icon } from '@tindivo/ui'
 import { useState } from 'react'
-import { mapsDirToCoords, mapsSearchAddress } from '@/lib/deeplinks'
+import { mapsCenterSanJacinto, mapsDirToCoords } from '@/lib/deeplinks'
 import { BAND_LABEL } from '@/lib/orders/presentation'
 import type { OrderDetailResponse } from '@/lib/types'
 import { MapSheet } from './map-sheet'
@@ -30,14 +30,6 @@ export function DestinationCard({ detail }: { detail: OrderDetailResponse }) {
 
   // Si no hay ni dirección ni referencia ni coordenadas, omitir.
   if (!cleanAddress && !reference && !hasCoords) return null
-
-  const searchTarget = (reference ?? cleanAddress) || 'San Jacinto Ancash'
-  const mapsHref = hasCoords
-    ? mapsDirToCoords(
-        order.deliveryCoordinatesLat as number,
-        order.deliveryCoordinatesLng as number,
-      )
-    : mapsSearchAddress(searchTarget)
 
   return (
     <>
@@ -105,7 +97,7 @@ export function DestinationCard({ detail }: { detail: OrderDetailResponse }) {
           )}
         </div>
 
-        {/* 3. Botón de mapa (hoja interactiva si hay coordenadas, o Google Maps si no hay) */}
+        {/* 3. Botón de mapa: "Ir a la ubicación del cliente" si hay GPS, o "Ubicarse en Google Maps" si no hay */}
         {hasCoords ? (
           <Button
             size="sm"
@@ -113,8 +105,8 @@ export function DestinationCard({ detail }: { detail: OrderDetailResponse }) {
             className="mt-3.5 w-full"
             onClick={() => setMapOpen(true)}
           >
-            <Icon name="map" size={18} />
-            Ver en el mapa
+            <Icon name="near_me" size={18} />
+            Ir a la ubicación del cliente
           </Button>
         ) : (
           <Button
@@ -122,17 +114,17 @@ export function DestinationCard({ detail }: { detail: OrderDetailResponse }) {
             variant="outline"
             className="mt-3.5 w-full"
             as="a"
-            href={mapsHref}
+            href={mapsCenterSanJacinto()}
             target="_blank"
             rel="noopener noreferrer"
           >
             <Icon name="map" size={18} />
-            Buscar en Google Maps
+            Ubicarse en Google Maps
           </Button>
         )}
       </Card>
 
-      {/* Sheet interactivo de Leaflet al presionar "Ver en el mapa" */}
+      {/* Sheet interactivo de Leaflet al presionar "Ir a la ubicación del cliente" */}
       {mapOpen && hasCoords && (
         <MapSheet
           lat={order.deliveryCoordinatesLat as number}

@@ -1,7 +1,8 @@
 'use client'
 
 import L from 'leaflet'
-import { MapContainer, Marker, TileLayer } from 'react-leaflet'
+import { useEffect } from 'react'
+import { MapContainer, Marker, TileLayer, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 
 // Pin idéntico al del customer (los PNG default de Leaflet se rompen con bundlers).
@@ -14,6 +15,24 @@ const pinIcon = L.divIcon({
   iconSize: [34, 44],
   iconAnchor: [17, 42],
 })
+
+function InvalidateSize() {
+  const map = useMap()
+  useEffect(() => {
+    map.invalidateSize()
+    const t = setTimeout(() => map.invalidateSize(), 200)
+    return () => clearTimeout(t)
+  }, [map])
+  return null
+}
+
+function Recenter({ lat, lng }: { lat: number; lng: number }) {
+  const map = useMap()
+  useEffect(() => {
+    map.setView([lat, lng], map.getZoom())
+  }, [lat, lng, map])
+  return null
+}
 
 /** Mapa Leaflet de solo lectura (pin fijo). Cargar vía next/dynamic ssr:false. */
 export default function MapReadonlyInner({ lat, lng }: { lat: number; lng: number }) {
@@ -29,6 +48,8 @@ export default function MapReadonlyInner({ lat, lng }: { lat: number; lng: numbe
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
       />
+      <InvalidateSize />
+      <Recenter lat={lat} lng={lng} />
       <Marker position={[lat, lng]} icon={pinIcon} />
     </MapContainer>
   )
