@@ -1,7 +1,8 @@
 'use client'
 
 import L from 'leaflet'
-import { MapContainer, Marker, TileLayer, useMapEvents } from 'react-leaflet'
+import { useEffect } from 'react'
+import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 
 /**
@@ -31,14 +32,38 @@ const draggableIcon = L.divIcon({
   iconAnchor: [17, 42],
 })
 
-/** Tocar el mapa mueve el pin. En un móvil, con una mano, es más fácil que
- *  arrastrar con precisión — pero se conservan las dos formas. */
+/** Tocar el mapa mueve el pin y centra suavemente la vista. */
 function TapToMove({ onPick }: { onPick: (lat: number, lng: number) => void }) {
+  const map = useMap()
   useMapEvents({
     click(e) {
+      map.panTo([e.latlng.lat, e.latlng.lng], { animate: true })
       onPick(e.latlng.lat, e.latlng.lng)
     },
   })
+  return null
+}
+
+/** Centra la vista del mapa con animación cada vez que cambian las coordenadas (GPS o clic). */
+function Recenter({ lat, lng }: { lat: number; lng: number }) {
+  const map = useMap()
+  useEffect(() => {
+    map.flyTo([lat, lng], Math.max(map.getZoom(), 17), {
+      animate: true,
+      duration: 0.8,
+    })
+  }, [lat, lng, map])
+  return null
+}
+
+/** Invalida el tamaño del contenedor para asegurar que los tiles se pinten bien al abrir el sheet. */
+function InvalidateSize() {
+  const map = useMap()
+  useEffect(() => {
+    map.invalidateSize()
+    const t = setTimeout(() => map.invalidateSize(), 200)
+    return () => clearTimeout(t)
+  }, [map])
   return null
 }
 
@@ -66,6 +91,8 @@ export default function MapPickerInner({
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         maxZoom={19}
       />
+      <InvalidateSize />
+      <Recenter lat={lat} lng={lng} />
       <TapToMove onPick={onPick} />
       <Marker
         position={[lat, lng]}
