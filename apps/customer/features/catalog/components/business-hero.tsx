@@ -1,5 +1,6 @@
 import { getOpenStatus } from '@tindivo/contracts'
 import { Icon } from '@tindivo/ui'
+import Image from 'next/image'
 import Link from 'next/link'
 import { CartButton } from '@/components/cart-sheet'
 import type { BusinessDetail } from '@/features/catalog/types'
@@ -18,10 +19,14 @@ export function BusinessHero({ business, schedule, now, openingConfirmed }: Busi
   return (
     <div className="relative h-[280px] overflow-hidden text-white lg:h-[320px] lg:rounded-[32px]">
       {business.banner_url ? (
-        <img
+        <Image
           src={business.banner_url}
           alt=""
-          className="absolute inset-0 h-full w-full object-cover"
+          fill
+          sizes="100vw"
+          priority
+          draggable={false}
+          className="object-cover"
         />
       ) : (
         <div
