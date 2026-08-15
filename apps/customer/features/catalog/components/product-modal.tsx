@@ -34,9 +34,20 @@ export function ProductModal({ item, onClose, onAdd }: ProductModalProps) {
 
   return (
     <BottomSheet open onClose={onClose}>
-      <div className="relative">
+      <div className="relative flex-1 overflow-y-auto scrollbar-hide">
+        {/* Botón de cerrar fijo en la esquina superior derecha */}
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute top-3.5 right-3.5 z-20 flex h-9 w-9 items-center justify-center rounded-full border border-white/[0.12] bg-white/[0.85] text-ink shadow-elev-2 backdrop-blur-2xl transition-transform active:scale-95"
+          aria-label="Cerrar"
+        >
+          <Icon name="close" size={18} />
+        </button>
+
+        {/* Imagen dentro del scroll con altura optimizada */}
         <div
-          className="flex h-[280px] w-full items-center justify-center overflow-hidden rounded-none"
+          className="relative flex h-[170px] w-full items-center justify-center overflow-hidden rounded-none sm:h-[200px]"
           style={{ background: `oklch(0.92 0.04 ${hue})` }}
         >
           {item.image_url ? (
@@ -54,18 +65,8 @@ export function ProductModal({ item, onClose, onAdd }: ProductModalProps) {
               [ {item.name.toUpperCase()} ]
             </span>
           )}
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-surface/40 via-transparent to-black/20" />
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute top-3.5 right-3.5 flex h-9 w-9 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.78] text-ink shadow-elev-2 backdrop-blur-2xl"
-          aria-label="Cerrar"
-        >
-          <Icon name="close" size={18} />
-        </button>
-      </div>
-
-      <div className="flex-1 overflow-y-auto scrollbar-hide">
         <div className="px-5 pt-5 pb-1.5">
           <div className="font-display text-[26px] font-bold leading-[1.1] tracking-tight">
             {item.name}

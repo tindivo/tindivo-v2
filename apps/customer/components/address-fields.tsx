@@ -79,7 +79,7 @@ export function AddressFields({
   onChange,
   onValidityChange,
   showLabelPicker = true,
-  mapHeightPx = 170,
+  mapHeightPx = 250,
 }: {
   value: AddressValue
   onChange: (patch: Partial<AddressValue>) => void

@@ -106,7 +106,7 @@ export function AddressSheet({
             value={addr}
             onChange={patch}
             onValidityChange={setInsideZone}
-            mapHeightPx={160}
+            mapHeightPx={250}
           />
         </div>
 
