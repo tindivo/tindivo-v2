@@ -36,7 +36,7 @@ export function MapPicker({
   onChange,
   onValidityChange,
   onLocate,
-  heightPx = 180,
+  heightPx = 250,
 }: {
   value: LatLng | null
   onChange: (c: LatLng) => void
@@ -146,44 +146,48 @@ export function MapPicker({
         <span className="pointer-events-none absolute top-2.5 left-2.5 z-[1000] rounded-md bg-white/95 px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-[0.1em] shadow-sm">
           Arrastra para ajustar
         </span>
+      </div>
+
+      <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <button
           type="button"
           onClick={useMyLocation}
           disabled={locating || !loaded}
-          className="absolute right-2.5 bottom-2.5 z-[1000] flex items-center gap-1.5 rounded-full bg-white px-3 py-2 font-semibold text-[12px] text-brand-dark shadow-md disabled:opacity-60"
+          className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-brand/20 bg-brand/5 px-3 py-2 font-semibold text-[13px] text-brand-dark transition-all hover:bg-brand/10 active:scale-[0.98] disabled:opacity-60"
         >
           <span aria-hidden>📍</span>
-          {locating ? 'Ubicando…' : 'Usar mi ubicación'}
+          {locating ? 'Obteniendo GPS…' : 'Usar mi ubicación'}
         </button>
-      </div>
-      <div
-        className={`mt-1.5 flex items-center gap-1.5 font-mono text-[11px] ${
-          locateError ? 'text-danger' : inside ? 'text-ink/70' : 'text-brand-dark'
-        }`}
-      >
-        <span
-          aria-hidden
-          className={`inline-block h-1.5 w-1.5 rounded-full ${
-            locateError || !inside ? 'bg-danger' : 'bg-brand'
+
+        <div
+          className={`flex items-center gap-1.5 font-mono text-[11px] ${
+            locateError ? 'text-danger' : inside ? 'text-ink/70' : 'text-brand-dark'
           }`}
-        />
-        {locateError ? (
-          locateError
-        ) : !pos ? (
-          <span className="inline-flex items-center gap-1.5">
-            <Spinner size="xs" variant="brand" /> Cargando mapa…
+        >
+          <span
+            aria-hidden
+            className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${
+              locateError || !inside ? 'bg-danger' : 'bg-brand'
+            }`}
+          />
+          <span className="truncate">
+            {locateError ? (
+              locateError
+            ) : !pos ? (
+              <span className="inline-flex items-center gap-1.5">
+                <Spinner size="xs" variant="brand" /> Cargando mapa…
+              </span>
+            ) : !inside ? (
+              'Fuera de la zona de reparto de San Jacinto'
+            ) : accuracyM != null ? (
+              `GPS (±${accuracyM} m) · Envío S/ ${currentFee.toFixed(2)}${
+                currentBand === 'far' ? ' (lejana)' : ''
+              }`
+            ) : (
+              `Envío S/ ${currentFee.toFixed(2)}${currentBand === 'far' ? ' (zona lejana)' : ''}`
+            )}
           </span>
-        ) : !inside ? (
-          'Fuera de la zona de reparto de San Jacinto'
-        ) : accuracyM != null ? (
-          `Ubicación GPS (±${accuracyM} m) · Envío S/ ${currentFee.toFixed(2)}${
-            currentBand === 'far' ? ' (zona lejana)' : ''
-          }`
-        ) : (
-          `${pos.lat.toFixed(4)}, ${pos.lng.toFixed(4)} · Envío S/ ${currentFee.toFixed(2)}${
-            currentBand === 'far' ? ' (zona lejana)' : ''
-          }`
-        )}
+        </div>
       </div>
     </div>
   )
