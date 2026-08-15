@@ -7,8 +7,12 @@ import type { ActiveOrder, CatalogUser, PublicBusiness } from '@/features/catalo
 import { api } from '@/lib/api'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
-export function useHomeData() {
-  const [items, setItems] = useState<PublicBusiness[] | null>(null)
+interface UseHomeDataOptions {
+  initialBusinesses?: PublicBusiness[] | null
+}
+
+export function useHomeData(options: UseHomeDataOptions = {}) {
+  const [items, setItems] = useState<PublicBusiness[] | null>(options.initialBusinesses ?? null)
   const [error, setError] = useState<string | null>(null)
   const [user, setUser] = useState<CatalogUser>({
     signedIn: false,

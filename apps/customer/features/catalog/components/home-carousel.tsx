@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 
@@ -100,14 +101,19 @@ export function HomeCarousel({ banners = DEFAULT_BANNERS }: { banners?: HomeBann
         style={{ scrollSnapType: 'x mandatory' }}
       >
         {banners.map((banner, index) => {
+          const isFirst = index === 0
           const content = (
             <div className="relative aspect-[2/1] w-full overflow-hidden rounded-2xl bg-ink/[0.04] shadow-sm transition-transform duration-200 active:scale-[0.99] sm:aspect-[2.4/1]">
-              <img
+              <Image
                 src={banner.imageUrl}
                 alt={banner.title}
+                fill
+                sizes="100vw"
                 decoding="async"
-                loading={index === 0 ? 'eager' : 'lazy'}
-                className="h-full w-full object-cover select-none"
+                draggable={false}
+                priority={isFirst}
+                loading={isFirst ? undefined : 'lazy'}
+                className="object-cover select-none"
               />
             </div>
           )

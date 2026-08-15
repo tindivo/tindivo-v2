@@ -1,66 +1,22 @@
-'use client'
+import { HomeShell } from '@/features/catalog/components/home-shell'
+import type { PublicBusiness } from '@/features/catalog/types'
 
-import { ActiveOrderBanner } from '@/features/catalog/components/active-order-banner'
-import { BusinessGrid } from '@/features/catalog/components/business-grid'
-import { HomeCarousel } from '@/features/catalog/components/home-carousel'
-import { HomeHeader } from '@/features/catalog/components/home-header'
-import { SearchBar } from '@/features/catalog/components/search-bar'
-import { SearchResults } from '@/features/catalog/components/search-results'
-import { useHomeData } from '@/features/catalog/hooks/use-home-data'
-import { firstName } from '@/features/catalog/lib/format'
-import { PilotWall } from '@/features/pilot/components/pilot-wall'
-import { useCatalogSearch } from '@/lib/use-search'
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1'
 
-export default function Home() {
-  const { items, error, user, activeOrders } = useHomeData()
-  const search = useCatalogSearch()
-  const greetingName = firstName(user.name)
+async function fetchInitialBusinesses(): Promise<PublicBusiness[] | null> {
+  try {
+    const res = await fetch(`${API_BASE}/public/businesses`, {
+      next: { revalidate: 15 },
+    })
+    if (!res.ok) return null
+    const envelope = (await res.json()) as { data: PublicBusiness[] | null }
+    return envelope.data ?? null
+  } catch {
+    return null
+  }
+}
 
-  return (
-    <main className="mx-auto min-h-dvh max-w-[768px] bg-surface md:max-w-[880px] lg:max-w-6xl xl:max-w-7xl">
-      {/* Muro del piloto. Se autodesmonta en PILOT_LAUNCH_AT; después no renderiza nada. */}
-      <PilotWall />
-
-      <HomeHeader user={user} />
-
-      <div className="px-4 pt-4 pb-5">
-        <h1 className="font-display text-[32px] font-bold leading-[1.05] tracking-[-0.03em] lg:text-[40px]">
-          {user.signedIn ? (
-            <>
-              Buenas noches,
-              <br />
-              {greetingName} <span aria-hidden>🍕</span>
-            </>
-          ) : (
-            <>
-              ¿Qué pedimos
-              <br />
-              hoy en la noche?
-            </>
-          )}
-        </h1>
-      </div>
-
-      {user.signedIn && activeOrders.length > 0 && <ActiveOrderBanner orders={activeOrders} />}
-
-      <SearchBar query={search.query} onChange={search.setQuery} />
-      <SearchResults search={search} businesses={items} />
-
-      {!search.active && (
-        <>
-          <HomeCarousel />
-          <BusinessGrid businesses={items} error={error} />
-        </>
-      )}
-
-      <div className="px-4 pt-6 pb-24 text-center">
-        <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-ink-muted">
-          tindivo · piloto
-        </div>
-        <div className="mt-1 text-[11px] text-ink-subtle">
-          Pedidos directos desde San Jacinto. Hecho en Áncash.
-        </div>
-      </div>
-    </main>
-  )
+export default async function Home() {
+  const initialBusinesses = await fetchInitialBusinesses()
+  return <HomeShell initialBusinesses={initialBusinesses} />
 }
