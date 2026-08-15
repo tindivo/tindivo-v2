@@ -4,7 +4,6 @@ import { requireRole } from '@/lib/http/auth'
 import { corsHeaders, handleOptions } from '@/lib/http/cors'
 import { handleError, ok, problem } from '@/lib/http/problem'
 import { getRequestId } from '@/lib/http/request-id'
-import { isPhoneAllowed, PILOT_REJECTION_DETAIL } from '@/lib/pilot/gate'
 import { createServiceClient } from '@/lib/supabase/service'
 import { twilioClient, VERIFY_SERVICE_SID } from '@/lib/twilio/client'
 
@@ -44,18 +43,7 @@ export async function POST(req: Request): Promise<Response> {
     const { phone } = SendCodeSchema.parse(await req.json())
     const fullPhone = `+51${phone}`
 
-    // Gate del piloto cerrado. ANTES de Twilio: un número no invitado no debe
-    // quemar un SMS. `phone` ya son los 9 dígitos canónicos de PhonePeSchema,
-    // que es justo el formato de `pilot_whitelist`.
-    // Pasado PILOT_LAUNCH_AT esto pasa siempre y no consulta la tabla.
     const service = createServiceClient()
-    if (!(await isPhoneAllowed(service, phone))) {
-      return problem('forbidden', {
-        detail: PILOT_REJECTION_DETAIL,
-        requestId,
-        headers: corsHeaders(req),
-      })
-    }
 
     if (!twilioClient) {
       return problem('internal_error', {

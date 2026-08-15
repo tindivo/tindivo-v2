@@ -23,8 +23,8 @@ export const PILOT_LAUNCH_AT = new Date('2026-08-14T23:00:00Z')
  *
  * `now` es inyectable para poder simular el reloj en tests sin tocar globales.
  */
-export function isPilotActive(now: Date = new Date()): boolean {
-  return now.getTime() < PILOT_LAUNCH_AT.getTime()
+export function isPilotActive(_now: Date = new Date()): boolean {
+  return false
 }
 
 /**

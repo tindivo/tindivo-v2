@@ -278,6 +278,7 @@ export interface TeamResponse {
     businessName: string | null
     /** Dónde va. Único dato del cliente que viaja: decide si te queda de camino. */
     deliveryReference: string | null
+    customerName: string | null
     accentColor: string | null
     transferable: boolean
   }[]

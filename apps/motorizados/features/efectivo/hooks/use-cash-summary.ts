@@ -26,6 +26,7 @@ export interface CashOrder {
 export interface CashBusinessGroup {
   businessId: string
   businessName: string
+  accentColor?: string | null
   pendingTotal: number
   pendingCount: number
   deliveringTotal: number

@@ -172,11 +172,25 @@ function NegocioCard({
   const porEntregar = group.orders.filter((o) => o.state === 'pending' && !enviados.has(o.orderId))
   const enEspera = group.orders.filter((o) => o.state !== 'pending' || enviados.has(o.orderId))
   const adelanto = group.orders.reduce((s, o) => s + (o.breakdown?.advance ?? 0), 0)
+  const accent = group.accentColor ? `#${group.accentColor}` : '#f97316'
 
   return (
-    <Card className="overflow-hidden p-0">
+    <Card className="relative overflow-hidden p-0">
+      {/* Franja vertical de acento del restaurante (coherente con las tarjetas del board) */}
+      <span
+        aria-hidden
+        className="absolute inset-y-0 left-0 w-1.5"
+        style={{ backgroundColor: accent }}
+      />
       <div className="flex items-baseline justify-between gap-2 px-[18px] pt-[18px]">
-        <p className="min-w-0 flex-1 truncate font-semibold text-[16px]">{group.businessName}</p>
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <span
+            className="h-2.5 w-2.5 shrink-0 rounded-full"
+            style={{ backgroundColor: accent }}
+            aria-hidden
+          />
+          <p className="min-w-0 truncate font-semibold text-[16px]">{group.businessName}</p>
+        </div>
         {porEntregar.length > 0 ? (
           <p className="font-display shrink-0 text-[20px] font-bold tabular-nums tracking-tight">
             {soles(porEntregar.reduce((s, o) => s + o.cashOwed, 0))}

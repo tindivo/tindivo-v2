@@ -31,7 +31,7 @@ function teamOrderToCard(o: TeamResponse['teamOrders'][number]): CardOrder {
     source: o.source,
     // Da el reloj de las tarjetas que todavía se pueden pedir. Ver `teamAgeMs`.
     created_at: o.createdAt,
-    customer_name: null,
+    customer_name: o.customerName ?? null,
     delivery_address: null,
     delivery_reference: o.deliveryReference,
     // OJO: el importe va ENTERO en `order_amount` y el envío a 0, a propósito.

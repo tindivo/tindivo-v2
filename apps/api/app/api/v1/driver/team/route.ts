@@ -65,7 +65,7 @@ export async function GET(req: Request): Promise<Response> {
             // razón para NO quedárselo. Y sin él, la mitad de las tarjetas de
             // Equipo salían sin tiempo mientras todas las demás de la app lo
             // tienen.
-            'id,short_id,status,source,delivery_reference,order_amount,delivery_fee,occupancy_slots,urgent_since,created_at,picked_up_at,driver_id,drivers(id,full_name,vehicle_type),businesses(name,accent_color)',
+            'id,short_id,status,source,delivery_reference,customer_name,order_amount,delivery_fee,occupancy_slots,urgent_since,created_at,picked_up_at,driver_id,drivers(id,full_name,vehicle_type),businesses(name,accent_color)',
           )
           .neq('driver_id', driver.id)
           .not('driver_id', 'is', null)
@@ -122,6 +122,7 @@ export async function GET(req: Request): Promise<Response> {
           // Franja de color del local: identifica el negocio de un vistazo,
           // igual que en las otras bandejas.
           accentColor: o.businesses?.accent_color ?? null,
+          customerName: o.customer_name ?? null,
           transferable: TRANSFERABLE.has(o.status),
         })),
         sentRequests: (pending ?? [])

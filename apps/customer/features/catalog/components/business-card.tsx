@@ -1,4 +1,5 @@
 import { Card, Icon } from '@tindivo/ui'
+import Image from 'next/image'
 import type { PublicBusiness } from '@/features/catalog/types'
 
 interface BusinessCardProps {
@@ -14,9 +15,12 @@ export function BusinessCard({ business }: BusinessCardProps) {
       className="flex items-center gap-3 p-3 transition-all hover:-translate-y-0.5 hover:shadow-elev-2 active:translate-y-0 active:scale-[0.985]"
     >
       {b.logo_url ? (
-        <img
+        <Image
           src={b.logo_url}
           alt={b.name}
+          width={72}
+          height={72}
+          sizes="72px"
           loading="lazy"
           decoding="async"
           className="h-[72px] w-[72px] shrink-0 rounded-2xl object-cover"

@@ -8,7 +8,6 @@ import { handleError, problem } from '@/lib/http/problem'
 import { getRequestId } from '@/lib/http/request-id'
 import { sendOrderCreated, sendOrderValidation } from '@/lib/inngest/client'
 import { hasConfirmedOpening } from '@/lib/opening/service-day'
-import { isPhoneAllowed, PILOT_REJECTION_DETAIL } from '@/lib/pilot/gate'
 import { createServiceClient } from '@/lib/supabase/service'
 
 export const dynamic = 'force-dynamic'
@@ -53,23 +52,6 @@ export async function POST(req: Request): Promise<Response> {
     if (!profile?.phone_verified_at) {
       return problem('forbidden', {
         detail: 'Verifica tu número de WhatsApp antes de hacer un pedido.',
-        requestId,
-        headers: corsHeaders(req),
-      })
-    }
-
-    // Gate del piloto cerrado. Este es el enforcement de verdad: una cuenta ya
-    // verificada nunca vuelve a pasar por send-code, así que sin esto el muro
-    // solo detendría a las cuentas nuevas.
-    //
-    // Se enforcea `profile.phone` (E.164, lo escribió /customer/phone/verify tras
-    // el OTP de Twilio) y NO `body.customerPhone`: ese último lo teclea el cliente
-    // en el checkout y puede poner cualquier cosa, así que gatear sobre él sería
-    // pedirle al candado que lo abra quien quiere entrar.
-    // `isPhoneAllowed` le quita el `+51` para comparar contra `pilot_whitelist`.
-    if (!(await isPhoneAllowed(service, profile.phone))) {
-      return problem('forbidden', {
-        detail: PILOT_REJECTION_DETAIL,
         requestId,
         headers: corsHeaders(req),
       })

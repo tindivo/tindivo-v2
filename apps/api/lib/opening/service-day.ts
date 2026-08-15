@@ -25,17 +25,23 @@ type Client = SupabaseClient<any, any, any>
 export async function confirmedOpenBusinesses(
   supabase: Client,
   businessIds: string[],
+  serviceDate?: string | null,
 ): Promise<Set<string> | null> {
   if (businessIds.length === 0) return new Set()
 
-  const { data: serviceDate, error: dateErr } = await supabase.rpc('current_service_date')
-  if (dateErr || !serviceDate) return null
+  let date = serviceDate
+  if (date === undefined) {
+    const { data: rpcDate, error: dateErr } = await supabase.rpc('current_service_date')
+    if (dateErr || !rpcDate) return null
+    date = rpcDate
+  }
+  if (!date) return null
 
   const { data, error } = await supabase
     .from('business_service_days')
     .select('business_id')
     .in('business_id', businessIds)
-    .eq('service_date', serviceDate)
+    .eq('service_date', date)
     .eq('status', 'open')
 
   if (error) return null
