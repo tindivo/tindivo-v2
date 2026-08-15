@@ -52,7 +52,8 @@ export async function confirmedOpenBusinesses(
 export async function hasConfirmedOpening(
   supabase: Client,
   businessId: string,
+  serviceDate?: string | null,
 ): Promise<boolean | null> {
-  const set = await confirmedOpenBusinesses(supabase, [businessId])
+  const set = await confirmedOpenBusinesses(supabase, [businessId], serviceDate)
   return set === null ? null : set.has(businessId)
 }
