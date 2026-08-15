@@ -118,7 +118,7 @@ export function DestinationCard({ detail }: { detail: OrderDetailResponse }) {
             target="_blank"
             rel="noopener noreferrer"
           >
-            <Icon name="explore" size={18} />
+            <Icon name="map" size={18} />
             Ubicarse en Google Maps
           </Button>
         )}
