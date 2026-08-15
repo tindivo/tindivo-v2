@@ -9,16 +9,31 @@ import { getSupabaseBrowser } from '@/lib/supabase/client'
 
 interface UseHomeDataOptions {
   initialBusinesses?: PublicBusiness[] | null
+  initialUser?: CatalogUser | null
+}
+
+function buildCatalogUser(
+  session: { user: { id: string; user_metadata: unknown; email?: string } } | null,
+): CatalogUser {
+  if (!session) return { signedIn: false, name: '', userId: null }
+  const meta = session.user.user_metadata as { full_name?: string } | undefined
+  return {
+    signedIn: true,
+    name: meta?.full_name ?? session.user.email ?? '',
+    userId: session.user.id,
+  }
 }
 
 export function useHomeData(options: UseHomeDataOptions = {}) {
   const [items, setItems] = useState<PublicBusiness[] | null>(options.initialBusinesses ?? null)
   const [error, setError] = useState<string | null>(null)
-  const [user, setUser] = useState<CatalogUser>({
-    signedIn: false,
-    name: '',
-    userId: null,
-  })
+  const [user, setUser] = useState<CatalogUser>(
+    options.initialUser ?? {
+      signedIn: false,
+      name: '',
+      userId: null,
+    },
+  )
   const [activeOrders, setActiveOrders] = useState<ActiveOrder[]>([])
 
   useEffect(() => {
@@ -37,16 +52,7 @@ export function useHomeData(options: UseHomeDataOptions = {}) {
       session: { user: { id: string; user_metadata: unknown; email?: string } } | null,
     ) => {
       if (!active) return
-      if (!session) {
-        setUser({ signedIn: false, name: '', userId: null })
-        return
-      }
-      const meta = session.user.user_metadata as { full_name?: string } | undefined
-      setUser({
-        signedIn: true,
-        name: meta?.full_name ?? session.user.email ?? '',
-        userId: session.user.id,
-      })
+      setUser(buildCatalogUser(session))
     }
     supabase.auth.getSession().then(({ data }) => applySession(data.session))
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) =>
