@@ -48,6 +48,7 @@ interface CashOrder {
 interface CashBusinessGroup {
   businessId: string
   businessName: string
+  accentColor: string | null
   /** Lo que todavía lleva encima. */
   pendingTotal: number
   pendingCount: number
@@ -116,16 +117,22 @@ export async function GET(req: Request): Promise<Response> {
     if (!drv) return ok({ businesses: [] }, { headers: corsHeaders(req) })
 
     const groups = new Map<string, CashBusinessGroup>()
-    const grupo = (businessId: string, businessName: string): CashBusinessGroup => {
+    const grupo = (
+      businessId: string,
+      businessName: string,
+      accentColor?: string | null,
+    ): CashBusinessGroup => {
       const g = groups.get(businessId) ?? {
         businessId,
         businessName,
+        accentColor: accentColor ?? null,
         pendingTotal: 0,
         pendingCount: 0,
         deliveringTotal: 0,
         deliveringCount: 0,
         orders: [],
       }
+      if (accentColor && !g.accentColor) g.accentColor = accentColor
       groups.set(businessId, g)
       return g
     }
@@ -140,7 +147,7 @@ export async function GET(req: Request): Promise<Response> {
     const { data: sinRendir } = await service
       .from('orders')
       .select(
-        'id, short_id, customer_name, delivered_at, business_id, cash_owed_at_delivery, change_advanced, businesses(name)',
+        'id, short_id, customer_name, delivered_at, business_id, cash_owed_at_delivery, change_advanced, businesses(name, accent_color)',
       )
       .eq('driver_id', drv.id)
       .eq('status', 'delivered')
@@ -150,9 +157,9 @@ export async function GET(req: Request): Promise<Response> {
     for (const row of sinRendir ?? []) {
       const o = row as unknown as OrderCashRow & {
         business_id: string
-        businesses: { name?: string } | null
+        businesses: { name?: string; accent_color?: string } | null
       }
-      const g = grupo(o.business_id, o.businesses?.name ?? '—')
+      const g = grupo(o.business_id, o.businesses?.name ?? '—', o.businesses?.accent_color ?? null)
       g.pendingTotal += Number(o.cash_owed_at_delivery ?? 0)
       g.pendingCount += 1
       g.orders.push(toCashOrder(o, 'pending', null))
@@ -166,15 +173,20 @@ export async function GET(req: Request): Promise<Response> {
     // cada uno de sus pedidos aparece como una línea con el mismo estado.
     const { data: abiertos } = await service
       .from('cash_settlements')
-      .select('id, business_id, status, businesses(name)')
+      .select('id, business_id, status, businesses(name, accent_color)')
       .eq('driver_id', drv.id)
       .in('status', ['pending_confirmation', 'disputed'])
 
-    const porSettlement = new Map<string, { businessId: string; name: string; state: CashState }>()
+    const porSettlement = new Map<
+      string,
+      { businessId: string; name: string; accentColor: string | null; state: CashState }
+    >()
     for (const s of abiertos ?? []) {
+      const b = s.businesses as { name?: string; accent_color?: string } | null
       porSettlement.set(s.id, {
         businessId: s.business_id,
-        name: (s.businesses as { name?: string } | null)?.name ?? '—',
+        name: b?.name ?? '—',
+        accentColor: b?.accent_color ?? null,
         state: s.status === 'disputed' ? 'disputed' : 'delivering',
       })
     }
@@ -191,7 +203,7 @@ export async function GET(req: Request): Promise<Response> {
         const o = row as unknown as OrderCashRow & { cash_settlement_id: string | null }
         const meta = o.cash_settlement_id ? porSettlement.get(o.cash_settlement_id) : undefined
         if (!meta || !o.cash_settlement_id) continue
-        const g = grupo(meta.businessId, meta.name)
+        const g = grupo(meta.businessId, meta.name, meta.accentColor)
         g.deliveringTotal += Number(o.cash_owed_at_delivery ?? 0)
         g.deliveringCount += 1
         g.orders.push(toCashOrder(o, meta.state, o.cash_settlement_id))
