@@ -36,7 +36,16 @@ export function BusinessHero({ business, schedule, now, openingConfirmed }: Busi
           }}
         />
       )}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/15 via-transparent via-35% from-55% to-black/75" />
+      {/*
+        Dos velos, no uno. Un degradado único de arriba a abajo obliga a elegir
+        entre oscurecer la foto entera o dejar sin cubrir alguna de las dos zonas
+        con texto blanco. Separándolos, el centro del banner queda intacto y cada
+        extremo lleva el negro que su contenido necesita.
+      */}
+      {/* Arriba: la flecha de volver y el botón del carrito son blancos. */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[132px] bg-gradient-to-b from-black/60 via-black/25 to-transparent" />
+      {/* Abajo: aquí vive todo el bloque de texto, así que baja hasta casi negro. */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[80%] bg-gradient-to-t from-black/92 via-black/75 via-45% to-transparent" />
 
       <div className="relative flex items-center justify-between px-4 pt-12">
         <Link
@@ -50,33 +59,33 @@ export function BusinessHero({ business, schedule, now, openingConfirmed }: Busi
       </div>
 
       <div className="absolute right-0 bottom-0 left-0 px-5 pb-5">
-        <div className="font-display text-[38px] font-bold leading-[1.05] tracking-tight text-shadow-[0_2px_12px_rgba(0,0,0,0.3)]">
+        <div className="font-display text-[38px] font-bold leading-[1.05] tracking-tight text-shadow-[0_2px_14px_rgba(0,0,0,0.75)]">
           {business.name}
         </div>
         {business.tagline && (
-          <div className="mt-1.5 text-[13px] opacity-90 text-shadow-[0_1px_6px_rgba(0,0,0,0.4)]">
+          <div className="mt-1.5 text-[13px] opacity-90 text-shadow-[0_1px_8px_rgba(0,0,0,0.7)]">
             {business.tagline}
           </div>
         )}
         <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1.5 text-[13px]">
           {isCatalogOnly ? (
-            <span className="inline-flex items-center gap-1.5 text-shadow-[0_1px_4px_rgba(0,0,0,0.5)]">
+            <span className="inline-flex items-center gap-1.5 text-shadow-[0_1px_6px_rgba(0,0,0,0.7)]">
               <Icon name="chat" size={18} /> Pedidos por WhatsApp
             </span>
           ) : (
             <>
-              <span className="inline-flex items-center gap-1.5 text-shadow-[0_1px_4px_rgba(0,0,0,0.5)]">
+              <span className="inline-flex items-center gap-1.5 text-shadow-[0_1px_6px_rgba(0,0,0,0.7)]">
                 <Icon name="schedule" size={18} /> {business.estimated_eta_min}–
                 {business.estimated_eta_max} min
               </span>
               <span className="w-px bg-white/30" />
-              <span className="inline-flex items-center gap-1.5 text-shadow-[0_1px_4px_rgba(0,0,0,0.5)]">
+              <span className="inline-flex items-center gap-1.5 text-shadow-[0_1px_6px_rgba(0,0,0,0.7)]">
                 <Icon name="local_shipping" size={18} /> Delivery
               </span>
               {openStatus.kind !== 'no_schedule' && (
                 <>
                   <span className="w-px bg-white/30" />
-                  <span className="inline-flex items-center gap-1.5 font-semibold text-shadow-[0_1px_4px_rgba(0,0,0,0.5)]">
+                  <span className="inline-flex items-center gap-1.5 font-semibold text-shadow-[0_1px_6px_rgba(0,0,0,0.7)]">
                     <span
                       aria-hidden
                       className={`h-2 w-2 rounded-full ${openStatus.kind === 'open' ? 'bg-success' : 'bg-danger'}`}
