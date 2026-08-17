@@ -37,15 +37,19 @@ export function BusinessHero({ business, schedule, now, openingConfirmed }: Busi
         />
       )}
       {/*
-        Dos velos, no uno. Un degradado único de arriba a abajo obliga a elegir
-        entre oscurecer la foto entera o dejar sin cubrir alguna de las dos zonas
-        con texto blanco. Separándolos, el centro del banner queda intacto y cada
-        extremo lleva el negro que su contenido necesita.
+        Velo oscuro base general para asegurar alto contraste contra fondos claros o blancos.
+      */}
+      <div className="pointer-events-none absolute inset-0 bg-black/35" />
+
+      {/*
+        Dos velos degradados adicionales:
+        - Arriba: para la flecha de volver y el botón del carrito.
+        - Abajo: velo denso para el bloque de texto (nombre, etiquetas, horarios).
       */}
       {/* Arriba: la flecha de volver y el botón del carrito son blancos. */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[132px] bg-gradient-to-b from-black/60 via-black/25 to-transparent" />
-      {/* Abajo: aquí vive todo el bloque de texto, así que baja hasta casi negro. */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[80%] bg-gradient-to-t from-black/92 via-black/75 via-45% to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[140px] bg-gradient-to-b from-black/75 via-black/40 to-transparent" />
+      {/* Abajo: aquí vive todo el bloque de texto, reforzamos el fondo oscuro para garantizar contraste legible */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[85%] bg-gradient-to-t from-black/95 via-black/85 via-50% to-transparent" />
 
       <div className="relative flex items-center justify-between px-4 pt-12">
         <Link
