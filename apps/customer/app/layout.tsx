@@ -10,6 +10,7 @@ import {
   PILOT_QUERY_PARAM,
 } from '@/features/pilot/lib/bypass'
 import { CartHydrator } from '@/lib/cart'
+import { SITE_DESCRIPTION, SITE_NAME, SITE_OG_LOCALE, SITE_TITLE, SITE_URL } from '@/lib/seo'
 import './globals.css'
 
 // Tipografía unificada del design system Tindivo (igual que motorizados y negocios):
@@ -29,12 +30,61 @@ const jetbrains = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Tindivo — Delivery de tu barrio',
-  description: 'Pide de los negocios de San Jacinto y recíbelo en tu puerta.',
+  // Raíz de toda URL relativa de metadata. Sin esto, las imágenes de Open Graph
+  // no se emiten y el enlace se comparte pelado. Ver `lib/seo.ts`.
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: SITE_TITLE,
+    // Cada página manda solo su nombre ("La Florencia") y el sufijo lo pone
+    // esta plantilla, en vez de repetirlo a mano en cada `metadata`.
+    template: `%s — ${SITE_NAME}`,
+  },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  alternates: { canonical: '/' },
+  keywords: [
+    'delivery San Jacinto',
+    'comida a domicilio San Jacinto',
+    'delivery Áncash',
+    'restaurantes San Jacinto',
+    'pedir comida Nepeña',
+    'Tindivo',
+  ],
+  authors: [{ name: SITE_NAME, url: SITE_URL }],
+  creator: SITE_NAME,
+  publisher: SITE_NAME,
+  category: 'food',
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      // Sin esto Google recorta la miniatura a un tamaño diminuto en resultados.
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+      'max-video-preview': -1,
+    },
+  },
+  openGraph: {
+    type: 'website',
+    siteName: SITE_NAME,
+    locale: SITE_OG_LOCALE,
+    url: '/',
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    // `images` lo inyecta Next solo, desde `app/opengraph-image.tsx`.
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+  },
   icons: {
     icon: '/favicon.ico',
     apple: '/apple-touch-icon.png',
   },
+  manifest: '/manifest.webmanifest',
 }
 
 export const viewport: Viewport = {

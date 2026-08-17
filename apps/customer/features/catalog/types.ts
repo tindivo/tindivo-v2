@@ -61,6 +61,19 @@ export interface BusinessDetail {
     estimated_eta_max: number
     accepts_web_pickup: boolean
     accepts_web_delivery: boolean
+    /**
+     * Los cinco de abajo ya venían en `BUSINESS_COLUMNS` del endpoint público;
+     * este tipo simplemente no los declaraba. Los consume el JSON-LD de
+     * `schema.org/Restaurant` en la página del negocio. Opcionales a propósito:
+     * declararlos obligatorios rompería cualquier objeto de prueba existente,
+     * y el JSON-LD ya sabe omitir lo que falte.
+     */
+    logo_url?: string | null
+    address?: string | null
+    coordinates_lat?: number | null
+    coordinates_lng?: number | null
+    /** `text[]` en la DB (hasta 2), NO un string. Suele llegar como `[]`. */
+    categoria?: string[] | null
   }
   categories: Category[]
   schedule: ScheduleDayRow[]
