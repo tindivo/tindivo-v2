@@ -61,11 +61,16 @@ async function fetchBannerDataUri(url: string | null | undefined): Promise<strin
     // 828 y no 1200 a propósito. `ImageResponse` SOLO emite PNG, y un PNG de
     // 1200x630 con una foto encima pesaba 1.74 MB — tamaño con el que WhatsApp
     // se arriesga a descartar la vista previa, que es justo lo que este archivo
-    // existe para evitar. Partir de una fuente más pequeña y algo más suave
-    // baja mucho la entropía y con ella el peso del PNG; a 1200x630 de salida
-    // la diferencia de nitidez no se aprecia en una miniatura de chat.
+    // existe para evitar. Partir de una fuente más pequeña baja la entropía y
+    // con ella el peso del PNG; a 1200x630 de salida la diferencia de nitidez
+    // no se aprecia en una miniatura de chat.
+    //
+    // `q` SE QUEDA EN 75. Next 16 valida la calidad contra `images.qualities`,
+    // que por defecto es solo `[75]`: pedir `q=60` devuelve **400**, el fetch
+    // falla y la tarjeta sale sin foto. Ya pasó. Si algún día hace falta otra
+    // calidad, hay que declararla en `next.config.ts` primero.
     {
-      href: `${SITE_URL}/_next/image?url=${encodeURIComponent(url)}&w=828&q=60`,
+      href: `${SITE_URL}/_next/image?url=${encodeURIComponent(url)}&w=828&q=75`,
       accept: 'image/jpeg',
     },
     // Directo, por si algún día los banners se suben ya en PNG/JPEG.
