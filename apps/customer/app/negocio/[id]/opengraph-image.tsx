@@ -148,8 +148,11 @@ export default async function BusinessOpengraphImage({
           width: size.width,
           height: size.height,
           display: 'flex',
+          // Se apaga a transparente al 62%: por encima de eso la foto se ve tal
+          // cual. Un velo que cubre la imagen entera hace ilegible lo único que
+          // vende aquí, que es la comida.
           background: banner
-            ? 'linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.70) 42%, rgba(0,0,0,0.10) 100%)'
+            ? 'linear-gradient(to top, rgba(0,0,0,0.90) 0%, rgba(0,0,0,0.62) 30%, rgba(0,0,0,0) 62%)'
             : 'linear-gradient(to top, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0) 100%)',
         }}
       />
