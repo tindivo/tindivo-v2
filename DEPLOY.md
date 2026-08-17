@@ -20,7 +20,7 @@ Copia `.env.example` → `.env.local` (o configúralas en Vercel) por proyecto. 
 | `NEXT_PUBLIC_SUPABASE_URL` | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `NEXT_PUBLIC_API_URL` (= `https://api.tindivo.com/api/v1`) | ✓ | ✓ | ✓ | ✓ | — |
-| `NEXT_PUBLIC_APP_URL` (= `https://tindivo.com`) | ✓ | — | — | — | — |
+| `NEXT_PUBLIC_APP_URL` (= `https://www.tindivo.com`) | ✓ | — | — | — | — |
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | ✓ | ✓ | ✓ | ✓ | — |
 | `NEXT_PUBLIC_SUPPORT_WHATSAPP` (= número real) | ✓ | — | — | — | — |
 | `SUPABASE_SERVICE_ROLE_KEY` (**secreto**) | — | — | — | — | ✓ |
@@ -30,8 +30,12 @@ Copia `.env.example` → `.env.local` (o configúralas en Vercel) por proyecto. 
 
 > `NEXT_PUBLIC_APP_URL` es lo que `customer` usa como `metadataBase`: de ahí salen las URLs
 > canónicas, las de Open Graph y las del `sitemap.xml`. Si apunta a otro dominio, el enlace
-> compartido y lo que indexe Google apuntan ahí. Sin la variable cae en `https://tindivo.com`,
+> compartido y lo que indexe Google apuntan ahí. Sin la variable cae en `https://www.tindivo.com`,
 > que es el valor correcto en producción — el riesgo es dejarla puesta a un preview de Vercel.
+>
+> Va con `www` porque el apex `tindivo.com` responde **307 hacia `www.tindivo.com`**: ese es el
+> dominio canónico real, aunque la tabla de proyectos de abajo diga "apex". Si algún día el
+> redirect se invierte, esta variable y el defecto de `apps/customer/lib/seo.ts` cambian juntos.
 
 ## 2. Edge Function secrets (Web Push) **[tú]**
 

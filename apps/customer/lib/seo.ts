@@ -7,8 +7,13 @@ import type { Metadata } from 'next'
  * exige URLs ABSOLUTAS. Sin `metadataBase`, una ruta relativa en
  * `openGraph.images` no se resuelve y Next directamente no emite la etiqueta —
  * el enlace se comparte sin imagen y sin que nada falle de forma visible.
+ *
+ * El defecto lleva `www` a propósito: el apex `tindivo.com` responde 307 hacia
+ * `www.tindivo.com`, así que el dominio canónico real es el segundo. Apuntar
+ * ahí evita que cada `<link rel="canonical">` y cada `og:url` señalen a una
+ * URL que redirige.
  */
-export const SITE_URL = (process.env.NEXT_PUBLIC_APP_URL ?? 'https://tindivo.com').replace(
+export const SITE_URL = (process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.tindivo.com').replace(
   /\/+$/,
   '',
 )
