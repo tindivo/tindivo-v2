@@ -1,7 +1,8 @@
 'use client'
 
 import type { BusinessPrimaryCapability } from '@tindivo/contracts'
-import { Button, Card, CardBody, Icon } from '@tindivo/ui'
+import { signOutLocal } from '@tindivo/supabase'
+import { BottomSheet, Button, Card, CardBody, Icon } from '@tindivo/ui'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -316,7 +317,8 @@ function FabLink({ href, children }: { href: string; children: React.ReactNode }
 }
 
 function BottomNav({ active }: { active: NavId }) {
-  const { capability, counts } = useDashboard()
+  const { capability, counts, soundOn, toggleSound, signOut, bizName } = useDashboard()
+  const [moreOpen, setMoreOpen] = useState(false)
   const mas = active === 'historial' || active === 'deuda' || active === 'config'
 
   // Modo catálogo: solo Menú y Configuración (sin FAB "pedir moto").
@@ -344,27 +346,173 @@ function BottomNav({ active }: { active: NavId }) {
   }
 
   return (
-    <nav className="grid grid-cols-5 border-t border-border bg-white px-1 pb-[max(18px,env(safe-area-inset-bottom))] pt-1.5 lg:hidden">
-      <NavLink href="/" active={active === 'pedidos'}>
-        <Icon name="receipt_long" size={22} filled={active === 'pedidos'} />
-        <span>Pedidos</span>
-      </NavLink>
-      <NavLink href="/menu" active={active === 'menu'}>
-        <Icon name="restaurant_menu" size={22} filled={active === 'menu'} />
-        <span>Menú</span>
-      </NavLink>
-      <FabLink href="/nuevo">
-        <Icon name="add" size={28} filled />
-      </FabLink>
-      <NavLink href="/efectivo" active={active === 'efectivo'}>
-        <Icon name="payments" size={22} filled={active === 'efectivo'} />
-        <span>Efectivo</span>
-      </NavLink>
-      <NavLink href="/configuracion" active={mas}>
-        <Icon name="more_horiz" size={22} filled={mas} />
-        <span>Más</span>
-      </NavLink>
-    </nav>
+    <>
+      <nav className="grid grid-cols-5 border-t border-border bg-white px-1 pb-[max(18px,env(safe-area-inset-bottom))] pt-1.5 lg:hidden">
+        <NavLink href="/" active={active === 'pedidos'}>
+          <Icon name="receipt_long" size={22} filled={active === 'pedidos'} />
+          <span>Pedidos</span>
+        </NavLink>
+        <NavLink href="/menu" active={active === 'menu'}>
+          <Icon name="restaurant_menu" size={22} filled={active === 'menu'} />
+          <span>Menú</span>
+        </NavLink>
+        <FabLink href="/nuevo">
+          <Icon name="add" size={28} filled />
+        </FabLink>
+        <NavLink href="/efectivo" active={active === 'efectivo'}>
+          <Icon name="payments" size={22} filled={active === 'efectivo'} />
+          <span>Efectivo</span>
+        </NavLink>
+        <button
+          type="button"
+          onClick={() => setMoreOpen(true)}
+          className={`flex flex-col items-center gap-0.5 rounded-[10px] px-1 py-1.5 text-[10px] font-semibold cursor-pointer ${
+            mas ? 'text-brand' : 'text-ink-muted'
+          }`}
+        >
+          <Icon name="more_horiz" size={22} filled={mas} />
+          <span>Más</span>
+        </button>
+      </nav>
+
+      {moreOpen && (
+        <BottomSheet open onClose={() => setMoreOpen(false)}>
+          <div className="flex flex-col px-5 pt-2 pb-7">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <div className="min-w-0">
+                <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-muted">
+                  Panel del negocio
+                </span>
+                <h3 className="truncate font-display text-[17px] font-bold text-ink">{bizName}</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMoreOpen(false)}
+                aria-label="Cerrar menú"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ink/[0.06] text-ink-muted hover:bg-ink/[0.12]"
+              >
+                <Icon name="close" size={18} />
+              </button>
+            </div>
+
+            <div className="mt-3 flex flex-col gap-1.5">
+              <Link
+                href="/historial"
+                onClick={() => setMoreOpen(false)}
+                className={`flex items-center gap-3.5 rounded-2xl p-3 transition-colors ${
+                  active === 'historial'
+                    ? 'bg-ink text-white'
+                    : 'bg-surface hover:bg-ink/[0.04] text-ink'
+                }`}
+              >
+                <span
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                    active === 'historial' ? 'bg-white/15 text-white' : 'bg-ink/[0.06] text-ink'
+                  }`}
+                >
+                  <Icon name="history" size={22} filled={active === 'historial'} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[14px] font-semibold leading-tight">Historial de pedidos</div>
+                  <div
+                    className={`mt-0.5 text-[12px] ${
+                      active === 'historial' ? 'text-white/70' : 'text-ink-muted'
+                    }`}
+                  >
+                    Pedidos pasados, entregas y reclamos
+                  </div>
+                </div>
+              </Link>
+
+              <Link
+                href="/deuda"
+                onClick={() => setMoreOpen(false)}
+                className={`flex items-center gap-3.5 rounded-2xl p-3 transition-colors ${
+                  active === 'deuda'
+                    ? 'bg-ink text-white'
+                    : 'bg-surface hover:bg-ink/[0.04] text-ink'
+                }`}
+              >
+                <span
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                    active === 'deuda' ? 'bg-white/15 text-white' : 'bg-ink/[0.06] text-ink'
+                  }`}
+                >
+                  <Icon name="account_balance_wallet" size={22} filled={active === 'deuda'} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[14px] font-semibold leading-tight">Mi cuenta / Deuda</div>
+                  <div
+                    className={`mt-0.5 text-[12px] ${
+                      active === 'deuda' ? 'text-white/70' : 'text-ink-muted'
+                    }`}
+                  >
+                    Balance de comisiones, saldo y devoluciones
+                  </div>
+                </div>
+              </Link>
+
+              <Link
+                href="/configuracion"
+                onClick={() => setMoreOpen(false)}
+                className={`flex items-center gap-3.5 rounded-2xl p-3 transition-colors ${
+                  active === 'config'
+                    ? 'bg-ink text-white'
+                    : 'bg-surface hover:bg-ink/[0.04] text-ink'
+                }`}
+              >
+                <span
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                    active === 'config' ? 'bg-white/15 text-white' : 'bg-ink/[0.06] text-ink'
+                  }`}
+                >
+                  <Icon name="settings" size={22} filled={active === 'config'} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[14px] font-semibold leading-tight">Configuración</div>
+                  <div
+                    className={`mt-0.5 text-[12px] ${
+                      active === 'config' ? 'text-white/70' : 'text-ink-muted'
+                    }`}
+                  >
+                    Horarios, métodos de pago y datos del local
+                  </div>
+                </div>
+              </Link>
+            </div>
+
+            <div className="mt-4 border-t border-border pt-3.5 flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={toggleSound}
+                className={`flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-[14px] font-semibold transition-transform active:scale-[0.98] ${
+                  soundOn ? 'bg-brand text-white' : 'bg-ink/[0.06] text-ink'
+                }`}
+              >
+                <Icon
+                  name={soundOn ? 'notifications_active' : 'notifications_off'}
+                  size={18}
+                  filled={soundOn}
+                />
+                Alertas de sonido {soundOn ? 'ON' : 'OFF'}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setMoreOpen(false)
+                  signOut()
+                }}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-danger-soft py-2.5 text-[14px] font-semibold text-danger transition-colors hover:bg-danger/20 cursor-pointer"
+              >
+                <Icon name="logout" size={18} />
+                Cerrar sesión
+              </button>
+            </div>
+          </div>
+        </BottomSheet>
+      )}
+    </>
   )
 }
 
@@ -1015,7 +1163,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
   return (
     <AuthedChrome
       onSignOut={async () => {
-        await getSupabaseBrowser().auth.signOut()
+        await signOutLocal(getSupabaseBrowser())
         setAuthed(false)
       }}
     >
