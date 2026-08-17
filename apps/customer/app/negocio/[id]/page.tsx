@@ -62,15 +62,14 @@ export async function generateMetadata({
       url: path,
       title: socialTitle,
       description,
-      images: b.banner_url
-        ? [{ url: b.banner_url, width: 1200, height: 630, alt: `Portada de ${b.name}` }]
-        : undefined,
+      // `images` lo inyecta Next desde `./opengraph-image.tsx`. NO apuntar aquí
+      // a `banner_url` directamente: los banners son WebP y WhatsApp no los
+      // renderiza en la vista previa. Ver el comentario de ese archivo.
     },
     twitter: {
       card: 'summary_large_image',
       title: socialTitle,
       description,
-      images: b.banner_url ? [b.banner_url] : undefined,
     },
   }
 }
