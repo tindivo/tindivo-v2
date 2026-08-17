@@ -1,6 +1,13 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 
-export const metadata = { title: 'Términos y Condiciones — Tindivo' }
+// El sufijo "— Tindivo" lo pone la plantilla de `app/layout.tsx`.
+export const metadata: Metadata = {
+  title: 'Términos y Condiciones',
+  description:
+    'Condiciones de uso de Tindivo: pedidos, pagos por Yape, Plin y efectivo, y responsabilidades del cliente y del negocio.',
+  alternates: { canonical: '/terminos' },
+}
 
 const SECTIONS: { h: string; p: string }[] = [
   {

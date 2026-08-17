@@ -1,6 +1,13 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 
-export const metadata = { title: 'Política de Privacidad — Tindivo' }
+// El sufijo "— Tindivo" lo pone la plantilla de `app/layout.tsx`.
+export const metadata: Metadata = {
+  title: 'Política de Privacidad',
+  description:
+    'Qué datos guarda Tindivo, para qué los usa y cómo ejercer tus derechos sobre ellos.',
+  alternates: { canonical: '/privacidad' },
+}
 
 const SECTIONS: { h: string; p: string }[] = [
   {
