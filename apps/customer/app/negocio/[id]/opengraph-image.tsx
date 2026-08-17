@@ -56,9 +56,16 @@ async function fetchBannerDataUri(url: string | null | undefined): Promise<strin
   if (!url) return null
 
   const candidates = [
-    // Optimizador de Next: transcodifica a JPEG y de paso reescala a 1200.
+    // Optimizador de Next: transcodifica a JPEG y de paso reescala.
+    //
+    // 828 y no 1200 a propósito. `ImageResponse` SOLO emite PNG, y un PNG de
+    // 1200x630 con una foto encima pesaba 1.74 MB — tamaño con el que WhatsApp
+    // se arriesga a descartar la vista previa, que es justo lo que este archivo
+    // existe para evitar. Partir de una fuente más pequeña y algo más suave
+    // baja mucho la entropía y con ella el peso del PNG; a 1200x630 de salida
+    // la diferencia de nitidez no se aprecia en una miniatura de chat.
     {
-      href: `${SITE_URL}/_next/image?url=${encodeURIComponent(url)}&w=1200&q=75`,
+      href: `${SITE_URL}/_next/image?url=${encodeURIComponent(url)}&w=828&q=60`,
       accept: 'image/jpeg',
     },
     // Directo, por si algún día los banners se suben ya en PNG/JPEG.
@@ -116,18 +123,25 @@ export default async function BusinessOpengraphImage({
           alt=""
           width={size.width}
           height={size.height}
-          style={{ position: 'absolute', inset: 0, objectFit: 'cover' }}
+          style={{ position: 'absolute', top: 0, left: 0, objectFit: 'cover' }}
         />
       )}
 
       {/*
         El mismo velo inferior que la portada del negocio en la app: el nombre
         es texto blanco y el banner puede ser una foto clara.
+
+        Va con `top/left/width/height` y NO con `inset: 0`: Satori no soporta la
+        abreviatura, el div se colapsaba a 0x0 y el velo no se pintaba. Se veía
+        bien solo porque la foto de prueba era oscura.
       */}
       <div
         style={{
           position: 'absolute',
-          inset: 0,
+          top: 0,
+          left: 0,
+          width: size.width,
+          height: size.height,
           display: 'flex',
           background: banner
             ? 'linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.70) 42%, rgba(0,0,0,0.10) 100%)'
