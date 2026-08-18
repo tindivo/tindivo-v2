@@ -168,31 +168,32 @@ test.describe('camino feliz — cliente hasta el punto de pago', () => {
 
     // El pedido existe cuando aparece en la DB. Se espera por la fila en vez de
     // por un elemento de UI: es el hecho que importa y no depende del render.
+    //
+    // Se pide EL MÁS RECIENTE, no «el único». Con `.maybeSingle()` bastaba con que
+    // el cliente e2e arrastrase un pedido de otra corrida para que PostgREST
+    // devolviese null por tener dos filas, y entonces el poll agotaba su tiempo
+    // con el mensaje «el pedido no apareció en la DB» — justo lo contrario de lo
+    // que pasaba. Un fallo que señala al sitio equivocado cuesta más que uno que
+    // no ocurre.
+    const leerUltimoPedido = async () => {
+      const { data } = await db
+        .from('orders')
+        .select('id, short_id, status, order_amount, delivery_fee, business_id')
+        .eq('customer_user_id', E2E.CUSTOMER_USER_ID)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      return data
+    }
+
     const order = await expect
-      .poll(
-        async () => {
-          const { data } = await db
-            .from('orders')
-            .select('id, short_id, status, order_amount, delivery_fee, business_id')
-            .eq('customer_user_id', E2E.CUSTOMER_USER_ID)
-            .maybeSingle()
-          return data
-        },
-        {
-          timeout: 20_000,
-          message: () =>
-            `el pedido no apareció en la DB. Fallos de API: ${fallosApi.join(' | ') || '(ninguno)'}`,
-        },
-      )
-      .not.toBeNull()
-      .then(async () => {
-        const { data } = await db
-          .from('orders')
-          .select('id, short_id, status, order_amount, delivery_fee, business_id')
-          .eq('customer_user_id', E2E.CUSTOMER_USER_ID)
-          .single()
-        return data
+      .poll(leerUltimoPedido, {
+        timeout: 20_000,
+        message: () =>
+          `el pedido no apareció en la DB. Fallos de API: ${fallosApi.join(' | ') || '(ninguno)'}`,
       })
+      .not.toBeNull()
+      .then(leerUltimoPedido)
 
     // ASSERT del estado inicial y de los montos.
     expect(order.status).toBe('pending_acceptance')
