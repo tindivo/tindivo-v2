@@ -1,5 +1,6 @@
 'use client'
 
+import { signOutLocal } from '@tindivo/supabase'
 import { Button, Card, Icon, Skeleton } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
@@ -7,7 +8,15 @@ import { ToggleSwitch } from '@/components/toggle-switch'
 import { useAvailability } from '@/hooks/use-availability'
 import type { SubscribeFailReason } from '@/hooks/use-push-subscription'
 import { usePushSubscription } from '@/hooks/use-push-subscription'
+import { signOutEverywhereDevice } from '@/lib/sign-out'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
+
+/**
+ * Techo de espera para la baja del push al cerrar sesión. Generoso para una
+ * llamada que normalmente tarda decenas de ms, y corto comparado con lo que
+ * aguanta alguien que acaba de pulsar «cerrar sesión».
+ */
+const PUSH_CLEANUP_TIMEOUT_MS = 3_000
 
 interface DriverProfile {
   fullName: string
@@ -35,6 +44,7 @@ export default function PerfilPage() {
   const [profile, setProfile] = useState<DriverProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [pushError, setPushError] = useState<string | null>(null)
+  const [loggingOutEverywhere, setLoggingOutEverywhere] = useState(false)
   const availability = useAvailability()
   const push = usePushSubscription()
 
@@ -90,10 +100,62 @@ export default function PerfilPage() {
     }
   }
 
+  /**
+   * El orden es obligatorio: PRIMERO la baja del push, DESPUÉS la sesión.
+   *
+   * `DELETE /push/subscriptions` va autenticado, así que después de cerrar
+   * sesión ya no hay JWT con el que llamarlo y la fila se quedaría viva: el
+   * teléfono seguiría sonando con pedidos que este motorizado ya no puede
+   * abrir, hasta que el navegador rotara el endpoint.
+   *
+   * Un fallo de la baja NO bloquea el logout — quien pulsa «cerrar sesión»
+   * tiene que salir aunque no haya red. La fila huérfana que quede se recicla
+   * sola: el siguiente que entre en este dispositivo reclama el endpoint en el
+   * POST (`cleanup-foreign`), y si nadie entra el proveedor acaba dando 410.
+   */
   async function handleLogout() {
     if (!confirm('¿Cerrar sesión?')) return
-    await getSupabaseBrowser().auth.signOut()
+    try {
+      // La carrera contra el reloj NO es paranoia: `unsubscribe()` espera a
+      // `navigator.serviceWorker.ready`, que no resuelve NUNCA —no rechaza— si
+      // el service worker no llegó a registrarse (404 de `/sw.js`, modo
+      // privado, un navegador sin soporte). Sin este límite, ese caso deja al
+      // motorizado pulsando «cerrar sesión» sin que pase nada.
+      await Promise.race([
+        push.unsubscribe(),
+        new Promise((resolve) => setTimeout(resolve, PUSH_CLEANUP_TIMEOUT_MS)),
+      ])
+    } catch (err) {
+      console.error('[perfil] no se pudo dar de baja el push al salir', err)
+    }
+    await signOutLocal(getSupabaseBrowser())
     router.replace('/')
+  }
+
+  /**
+   * Salida de emergencia: para cuando se pierde el teléfono.
+   *
+   * Va detrás de un `confirm` que dice exactamente lo que hace, porque echa al
+   * motorizado de equipos que no tiene delante — incluido, si se equivoca, el
+   * que está usando en mitad de un turno.
+   */
+  async function handleLogoutEverywhere() {
+    const ok = confirm(
+      '¿Cerrar sesión en TODOS los dispositivos?\n\n' +
+        'Saldrás también de cualquier otro teléfono donde tengas esta cuenta abierta, ' +
+        'y esos equipos dejarán de recibir avisos.\n\n' +
+        'Úsalo si perdiste un teléfono.',
+    )
+    if (!ok) return
+    setLoggingOutEverywhere(true)
+    try {
+      await signOutEverywhereDevice()
+      router.replace('/')
+    } catch (err) {
+      console.error('[perfil] no se pudo cerrar sesión en todos los dispositivos', err)
+      setLoggingOutEverywhere(false)
+      alert('No se pudo completar. Revisa tu conexión e intenta de nuevo.')
+    }
   }
 
   return (
@@ -213,6 +275,19 @@ export default function PerfilPage() {
             <Icon name="logout" />
             Cerrar sesión
           </Button>
+
+          {/* Deliberadamente discreto y debajo: es la salida de emergencia, no
+              la de todos los días. Quien la busca sabe lo que busca. */}
+          <button
+            type="button"
+            onClick={handleLogoutEverywhere}
+            disabled={loggingOutEverywhere}
+            className="w-full py-2 text-center text-[13px] text-ink-muted underline underline-offset-4 disabled:opacity-50"
+          >
+            {loggingOutEverywhere
+              ? 'Cerrando en todos…'
+              : 'Perdí mi teléfono · cerrar sesión en todos los dispositivos'}
+          </button>
         </div>
       )}
     </main>

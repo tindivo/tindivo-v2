@@ -89,6 +89,17 @@ function deleteSub(token: string | null, endpoint: string): Promise<Response> {
   )
 }
 
+/** Baja de TODOS los dispositivos del usuario (acompaña a `signOutEverywhere`). */
+function deleteAllSubs(token: string | null): Promise<Response> {
+  return DELETE(
+    new Request(`${BASE}/push/subscriptions`, {
+      method: 'DELETE',
+      headers: headers(token),
+      body: JSON.stringify({ all: true }),
+    }),
+  )
+}
+
 function getMe(token: string | null, endpoint?: string): Promise<Response> {
   const qs = endpoint === undefined ? '' : `?endpoint=${encodeURIComponent(endpoint)}`
   return GET(new Request(`${BASE}/push/subscriptions/me${qs}`, { headers: headers(token) }))
@@ -298,6 +309,66 @@ describe('push/subscriptions — endpoints de suscripción', () => {
   it('T13 DELETE sin auth devuelve 401', async () => {
     const res = await deleteSub(null, EP('a1'))
     expect(res.status).toBe(401)
+  })
+
+  // ── DELETE { all: true } ────────────────────────────────────────────────────
+  // Acompaña a `signOutEverywhere`. Sin esto, revocar las sesiones deja al
+  // dispositivo perdido sin acceso pero AÚN recibiendo notificaciones con el
+  // nombre y la dirección del cliente en la vista previa.
+  it('T20 all borra TODOS los dispositivos del usuario', async () => {
+    await postSub(userA.token, subBody(EP('a1'), UA_CHROME))
+    await postSub(userA.token, subBody(EP('b1'), UA_SAFARI))
+    expect(await rowsOf(userA.id)).toHaveLength(2)
+
+    const res = await deleteAllSubs(userA.token)
+    expect(res.status).toBe(200)
+
+    expect(await rowsOf(userA.id)).toHaveLength(0)
+  })
+
+  // LA ASERCIÓN QUE SOSTIENE EL ENDPOINT: el acotado por `user_id` de la rama
+  // `all`, que corre con service_role y por tanto sin RLS que la frene.
+  //
+  // Verificado por mutación el 2026-08-17: quitando ese `.eq('user_id', …)` el
+  // test se pone rojo. El modo de fallo resultó ser distinto del esperado —
+  // PostgREST rechaza un DELETE sin ningún filtro, así que la petición revienta
+  // en vez de vaciar la tabla— pero un filtro EQUIVOCADO (otra columna, otro
+  // id) sí borraría filas ajenas, y eso es lo que este test vigila.
+  it('T21 all NO toca las suscripciones de otro usuario', async () => {
+    await postSub(userA.token, subBody(EP('a1'), UA_CHROME))
+    await postSub(userB.token, subBody(EP('b1'), UA_CHROME))
+
+    await deleteAllSubs(userA.token)
+
+    expect(await rowsOf(userA.id)).toHaveLength(0)
+    const deB = await rowsOf(userB.id)
+    expect(deB).toHaveLength(1)
+    expect(deB[0]?.endpoint).toBe(EP('b1'))
+  })
+
+  it('T22 all sin auth devuelve 401 y no borra nada', async () => {
+    await postSub(userA.token, subBody(EP('a1'), UA_CHROME))
+
+    const res = await deleteAllSubs(null)
+    expect(res.status).toBe(401)
+
+    expect(await rowsOf(userA.id)).toHaveLength(1)
+  })
+
+  it('T23 un body que no es ni endpoint ni all devuelve 4xx, no 500', async () => {
+    const res = await DELETE(
+      new Request(`${BASE}/push/subscriptions`, {
+        method: 'DELETE',
+        headers: headers(userA.token),
+        // `all: false` no vale: la baja masiva se pide explícitamente o no se pide.
+        body: JSON.stringify({ all: false }),
+      }),
+    )
+    expect(res.status).toBeGreaterThanOrEqual(400)
+    expect(res.status).toBeLessThan(500)
+
+    const body = await res.json()
+    expect(body.code).toBe('validation_error')
   })
 
   // ── GET /me ─────────────────────────────────────────────────────────────────

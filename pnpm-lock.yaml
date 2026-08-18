@@ -502,6 +502,9 @@ importers:
 
   packages/supabase:
     dependencies:
+      '@supabase/ssr':
+        specifier: 'catalog:'
+        version: 0.10.3(@supabase/supabase-js@2.106.2)
       '@supabase/supabase-js':
         specifier: 'catalog:'
         version: 2.106.2

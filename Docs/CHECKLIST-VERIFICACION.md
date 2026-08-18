@@ -122,12 +122,18 @@ Recorrido real cliente → negocio → motorizado → admin sobre el pedido **WK
 ## Transversal (push / realtime / PWA / auth / legal)
 
 - [x] **Pipeline de push**: outbox `domain_events` → trigger `dispatch_event` → `net.http_post` → Edge Function `send-push` → HTTP 200 (resuelve destinatarios). ✅ e2e. `[11 §4/§7]`
-- [x] Endpoints `POST/DELETE /push/subscriptions`. ✅ build. `[11 §3]`
+- [x] Endpoints `POST/DELETE /push/subscriptions`. ✅ 23 tests de integración. `[11 §3]`
+- [x] El logout da de baja el push del dispositivo ANTES de cerrar la sesión (el DELETE va autenticado). ✅ las 4 apps, vía su `lib/sign-out.ts`. `[01 HU-X-005]`
+- [x] `DELETE /push/subscriptions` con `{ all: true }` borra las de todos los equipos, acotado por `user_id`. ✅ T20-T23, incluida verificación por mutación. `[01 HU-X-011]`
 - [x] Tag de push compuesto `${event_type}-…-${shortId}`. ✅ (en el Edge Function). `[DECISIONS §11]`
 - [⛔] **Entrega real de push** (mostrar la notificación) requiere HTTPS → se valida en preview de Vercel (Fase J). `[02 RNF-PWA]`
 - [x] Realtime cliente (tracking) + negocios/efectivo. ✅ `[01 HU-X-009]`
 - [x] **PWA**: las 4 apps con `manifest.webmanifest` (standalone, theme `#F97316`) + service worker + `<PushManager/>`. ✅ build + `/manifest.webmanifest` servido. `[02 RNF-PWA-01/02]`
-- [x] Auth email/contraseña directo a Supabase; `signOut` por dispositivo. ✅ `[05 §2]`
+- [x] Auth email/contraseña directo a Supabase; `signOut` por dispositivo. ✅ e2e `driver/logout-local.spec.ts` (dos contextos, logout en uno, se canjea el refresh token del otro contra el servidor de auth). `[05 §2]`
+      ⚠️ Esta línea estuvo marcada en verde **sin ser cierta** desde el inicio hasta el 2026-08-17: 5 de los 6 sitios llamaban a `auth.signOut()` a secas, o sea `scope: 'global'`, y cerrar sesión en un dispositivo echaba al usuario de todos. Se detectó en producción, con dos teléfonos y una cuenta de motorizado. Ahora la única vía es `signOutLocal()` de `@tindivo/supabase`, y el e2e lo sostiene. No volver a marcar esta casilla sin un test que canjee el token del segundo dispositivo: mirar la pantalla no vale, el access token dura una hora y disimula la revocación.
+- [x] **`pnpm check:auth`**: falla si aparece un `auth.signOut(`, un `scope: 'global'` o un `createBrowserClient(` fuera de sus módulos autorizados. ✅ verificado por mutación (las 3 reglas disparan). `[03 §14.4]`
+- [x] Cerrar sesión en TODOS los dispositivos (teléfono perdido) en motorizados y cliente. ✅ e2e: sesión del otro equipo revocada **y** sus suscripciones push borradas. `[01 HU-X-011]`
+- [ ] La misma opción en negocios y admin → **no hecha a propósito**: son equipos fijos del local, no teléfonos personales. Si algún día se pierde una tablet, el helper y el endpoint ya existen; solo falta la UI.
 - [x] Endpoints validan rol (401 sin JWT / 403 sin permiso). ✅ `[05 §2]`
 - [x] Idempotencia (header `Idempotency-Key`, replay 24h). ✅ verificado e2e previo. `[01 HU-X-004]`
 - [x] CORS de los 4 orígenes frontend + localhost. ✅ `[cors.ts]`

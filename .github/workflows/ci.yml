@@ -40,6 +40,12 @@ jobs:
       - name: Design system (superficies de botón fuera de @tindivo/ui)
         run: pnpm check:ds
 
+      # El scope del signOut no lo ve ni Biome ni el type-check: un
+      # `auth.signOut()` a secas compila, pasa lint y cierra la sesión del
+      # usuario en TODOS sus dispositivos. Este paso es lo único que lo para.
+      - name: Límites de sesión (signOut local · cliente de navegador)
+        run: pnpm check:auth
+
       - name: Type-check (incluye el drift de enums compile-time)
         run: pnpm type-check
 

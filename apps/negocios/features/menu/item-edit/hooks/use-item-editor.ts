@@ -2,6 +2,7 @@ import { compressImage, UPLOAD_CACHE_CONTROL, validateImageInput } from '@tindiv
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { notifySuccess } from '@/components/dashboard/toast'
+import { signOutDevice } from '@/lib/sign-out'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import { acceptsTotalPricing, applyTotalPrices, currentTotals, makeLocalId } from '../lib/utils'
 import type { Category, FormData, ModifierGroup, PriceDisplay } from '../types'
@@ -737,7 +738,7 @@ export function useItemEditor() {
   }
 
   async function signOut() {
-    await getSupabaseBrowser().auth.signOut()
+    await signOutDevice()
     router.replace('/')
   }
 
