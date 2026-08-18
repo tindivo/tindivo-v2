@@ -13,7 +13,7 @@ Una sesión nueva añade su archivo y actualiza la tabla de abajo.
 
 | Archivo | De qué va | Estado al cerrar |
 |---|---|---|
-| [`2026-08-18-el-dia-que-el-arbol-se-vacio.md`](./2026-08-18-el-dia-que-el-arbol-se-vacio.md) | Las dos sesiones del 17-ago dejaron **todo sin commitear** y con ello `apps/api` sin compilar un día entero · `0165` tenía dos defectos que solo aparecen contra producción (`0166`, `0167`) · primera corrida completa de la e2e | Seis commits, árbol limpio, e2e **21/21**. Cerradas de paso las deudas 4 y 7 del handoff del logout. Los slugs están en la base de producción pero **no en la web**: falta el merge a `main`. **`0167` sin desplegar.** |
+| [`2026-08-18-el-dia-que-el-arbol-se-vacio.md`](./2026-08-18-el-dia-que-el-arbol-se-vacio.md) | Las dos sesiones del 17-ago dejaron **todo sin commitear** y con ello `apps/api` sin compilar un día entero · `0165` tenía dos defectos que solo aparecen contra producción (`0166`, `0167`) · primera corrida completa de la e2e | Nueve commits, árbol limpio. Verde **toda la cadena de CI** por primera vez (lint · ds · auth · types · 443 tests · build · e2e 21/21). Cerradas las deudas 4 y 7 del logout, y dos fallos que habrían roto la puesta en producción. Los slugs están en la base de producción pero **no en la web**: falta el merge a `main`. **`0167` sin desplegar.** |
 | [`2026-08-17-el-logout-que-echaba-a-todos.md`](./2026-08-17-el-logout-que-echaba-a-todos.md) | Cerrar sesión en un dispositivo echaba al usuario de **todos**: 5 de 6 sitios llamaban a `auth.signOut()` a secas, o sea `scope: 'global'` · helper `signOutLocal`/`signOutEverywhere`, `pnpm check:auth`, baja del push al salir, HU-X-011 | Todo verde (build 5/5, tests 7/7, e2e 9/9) y **nada commiteado**. El 500 de `apps/customer` bloquea el `test:e2e` completo. |
 | [`2026-08-17-el-enlace-que-no-se-podia-compartir.md`](./2026-08-17-el-enlace-que-no-se-podia-compartir.md) | La app no tenía **ni una etiqueta Open Graph**: compartir por WhatsApp daba texto pelado · Open Graph, JSON-LD, `robots`, `sitemap`, canónicas y `noindex` en rutas privadas · slugs (`0165`) a medias | SEO desplegado y verificado en producción. **Los slugs quedan sin terminar y el Supabase local caído**: la sección 6 de `0165` reemplaza `search_catalog` y no se ha ejecutado nunca. |
 | [`2026-08-11-los-momentos-sin-aviso.md`](./2026-08-11-los-momentos-sin-aviso.md) | Seis momentos que resolvían a cero destinatarios · había **dos caminos de push en paralelo** y el aviso de la cajera colgaba del muerto · `0136`/`0137`/`0138` | Todo desplegado en producción. **Sigue sin verificarse en un celular**, y la suscripción de la cajera no tiene ninguna evidencia. |
@@ -55,6 +55,12 @@ handoff; esto es solo para reconocerlos antes de perder una hora.
 
 **Sobre el frontend**
 
+- **Un tipo obligatorio no hace aparecer un campo que llega por HTTP.** Entre dos
+  servicios que despliegan por separado (aquí `api` y `customer`, proyectos de
+  Vercel distintos), el contrato es lo que el otro manda HOY. `slug: string` no
+  impidió que todas las tarjetas apuntaran a `/negocio/undefined`.
+- **Un 404 es reversible; un 301 `permanent` cacheado, no.** Retirar el redirect
+  después no deshace lo que los navegadores ya guardaron.
 - **Satori (`next/og`) no decodifica WebP** — lanza `TypeError: u2 is not
   iterable` y la ruta entera responde "failed to pipe response". Los banners de
   Storage son WebP: hay que pasarlos por el optimizador de Next.
@@ -83,6 +89,10 @@ handoff; esto es solo para reconocerlos antes de perder una hora.
   que la app no declara en `transpilePackages`.** Los tipos se borran al
   compilar; el import no. Pasa 11/11 con el fallo dentro y **solo `pnpm build` lo
   detecta**. Si conviertes un `import type` en un import normal, compila.
+- **Un gate que no llega a ejecutarse no protege nada.** CI aborta en el primer
+  paso rojo: `lint` y `check:ds` fallaban de base, así que `check:auth`,
+  `type-check`, `test` y `build` no corrieron en CI ni una vez. Antes de fiarte
+  de un chequeo en CI, comprueba que el pipeline LLEGA hasta él.
 - **Un spec no es un guardarraíl.** `Docs/05-api-rest.md` prohibía
   `auth.signOut()` directo desde el día uno y 5 de 6 sitios lo usaban. Si la
   regla importa, que la compruebe un script en CI.

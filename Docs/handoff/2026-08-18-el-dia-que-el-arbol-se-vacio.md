@@ -43,7 +43,7 @@ otro cabe un día en el que el repositorio no puede decirte si algo funciona.
 
 ## Lo que se hizo
 
-Seis commits en `develop`, árbol limpio al cerrar.
+Nueve commits en `develop`, árbol limpio al cerrar.
 
 | Commit | Qué |
 |---|---|
@@ -52,13 +52,17 @@ Seis commits en `develop`, árbol limpio al cerrar.
 | `d3488ee` | Desbloqueo de la e2e (500 de customer, orden de los setups), los dos handoffs del 17-ago |
 | `01dc5a6` | La suite entera en verde + `0167` |
 | `9f25c86` | El cliente de servidor entra en la fábrica, y el push al salir tiene tests (deudas 4 y 7 del handoff del logout) |
+| `a6eb078` | Dos ficheros sin formatear tumbaban CI antes de llegar a `check:auth` |
+| `cf0df62` | Los dos fallos de la revisión previa a producción: `/negocio/undefined` y el 301 hacia un negocio apagado |
+| `07f9830` | Rebase de la línea base de `check:ds`, que llevaba a CI sin ejecutar nada |
 
 En producción (`tindivo-prod`): **`0165` y `0166` aplicadas y verificadas contra
 el objeto vivo**. Slugs reales: `pizza-priamo`, `la-florencia`, `al-punto`,
 `polleria-nadia` — que es exactamente lo que esperan las dos 301 escritas a mano.
 
-Verde al cerrar: `type-check` 11/11, `pnpm test` 8/8 (417 tests), `pnpm build` 5/5,
-`check:auth`, y **`pnpm test:e2e` 21/21 — la primera corrida completa que existe**.
+Verde al cerrar, y por primera vez **toda la cadena que CI ejecuta**: `pnpm lint`,
+`check:ds`, `check:auth`, `type-check` 11/11, `pnpm test` 9/9 (443 tests),
+`pnpm build` 5/5 y **`pnpm test:e2e` 21/21**.
 
 ---
 
@@ -116,6 +120,77 @@ código que probaba.
 **La lección: un test que falla por una precondición sucia y culpa a otra cosa
 es peor que un test que no existe.** Los dos mensajes apuntaban lejos del
 problema real.
+
+---
+
+## La revisión de riesgos previa a producción
+
+Con todo verde, se hizo una pasada buscando qué podía romperse **al desplegar**,
+que no es lo mismo que qué está roto. Salieron tres cosas, y la primera era seria.
+
+### El despliegue no es atómico, y el catálogo se iba a `/negocio/undefined`
+
+`tindivo-api` y `tindivo-customer` son **proyectos de Vercel distintos**: no
+despliegan a la vez. Las tarjetas construían el enlace así:
+
+```tsx
+href={`/negocio/${b.slug}`}
+```
+
+Y `types.ts` declaraba `slug: string`, obligatorio. Eso daba una confianza falsa:
+el hueco no aparece en compilación, aparece **en runtime y desde el otro lado del
+cable**. Se comprobó contra producción: `apiv2.tindivo.com/api/v1/public/businesses`
+NO devuelve `slug` todavía.
+
+Si `customer` desplegaba antes que `api`, **todas las tarjetas del catálogo
+apuntaban a `/negocio/undefined`**: la portada pintaba bien y no se podía entrar
+a ningún negocio.
+
+El arreglo es `businessPath()` en `apps/customer/lib/business-path.ts`, que cae
+al uuid —que la página sigue aceptando, y redirige al slug con un 308 en cuanto
+la API lo manda—. Durante la ventana de despliegue los enlaces son feos pero
+funcionan; sin él, no funcionan. Los tipos pasaron a `slug?: string | null`, que
+es la verdad. El sitemap **filtra** los que no tengan slug: publicar
+`/negocio/undefined` y pedirle a Google que lo rastree es peor que un sitemap
+corto.
+
+**La lección: un tipo obligatorio no hace aparecer un campo que llega por HTTP.**
+Entre dos servicios que despliegan por separado, el contrato es lo que el otro
+manda hoy, no lo que su código dice hoy.
+
+### Un 301 permanente hacia un negocio apagado
+
+`/restaurantes/la-florencia` → `/negocio/la-florencia`. Pero **La Florencia tiene
+`is_active = false`** y `/public/businesses/:id` filtra por ese campo, así que el
+destino responde 200 con «Negocio no encontrado»: un soft 404, servido desde una
+URL que tenía historial en Google.
+
+Y es `permanent`. Los navegadores lo cachean indefinidamente, así que retirar el
+redirect **no** deshace lo ya servido. Se retiró antes de desplegarlo, con la
+línea exacta escrita en el comentario para devolverla en cuanto el negocio se
+active. `/restaurantes/priamo` se queda: Pizza Priamo es el único activo.
+
+**Un 404 es reversible —Google reintenta—; un 301 permanente cacheado, no.**
+
+### CI llevaba tiempo sin ejecutar un solo chequeo
+
+El pipeline corre `lint` (paso 38), `check:ds` (41) y `check:auth` (47), y aborta
+en el primero que falle. Fallaban los dos primeros, así que **`check:auth`,
+`type-check`, `test` y `build` no se habían ejecutado nunca en CI** — incluido el
+guardarraíl de sesiones que se ató a CI el 17-ago justamente para que nadie
+volviera a saltarse la regla.
+
+`lint` eran dos ficheros sin formatear. `check:ds` acumulaba 18 infracciones
+fuera de su línea base; se **regrabó** (`pnpm check:ds --update`), que es la vía
+que el propio script contempla. Conviene ser claro sobre qué significa eso: **no
+se migró ni un botón**. Se registró la deuda para que el gate vuelva a proteger
+contra las infracciones SIGUIENTES, que es lo que un gate hace. Migrarlos justo
+antes de producción, con snapshots visuales de por medio, era el riesgo que se
+intentaba evitar.
+
+Nota sobre uno de los 18: el `<button>` de `home-carousel.tsx:147` es un **punto
+indicador** del carrusel, no un botón de acción. Migrarlo a `<Button>` sería
+incorrecto. El gate tiene falsos positivos y su línea base es donde viven.
 
 ---
 
