@@ -166,7 +166,15 @@ export function getStatusMessage(data: Tracking, current: TrackingStep | null): 
   if (current === 'delivered') return '¡Tu pedido fue entregado! Buen provecho.'
 
   if (data.paymentIntent === 'prepaid') {
-    if (data.status === 'pending_acceptance' || (data.status === 'validando' && !data.proofUrl)) {
+    // Solo en `pending_acceptance` se ofrece cancelar, y el mensaje lo dice: es
+    // la única fase del prepago sin dinero de por medio (`0169`). En
+    // `validando` sin comprobante la frase es la misma sin esa última parte,
+    // porque ahí la RPC ya no deja — prometerlo sería mandar al cliente contra
+    // un botón que no existe.
+    if (data.status === 'pending_acceptance') {
+      return 'El restaurante confirmará disponibilidad para que puedas realizar el pago. Aún puedes cancelarlo.'
+    }
+    if (data.status === 'validando' && !data.proofUrl) {
       return 'El restaurante confirmará disponibilidad para que puedas realizar el pago.'
     }
     if (data.status === 'awaiting_payment') {
@@ -192,13 +200,24 @@ export function getStatusMessage(data: Tracking, current: TrackingStep | null): 
   return 'Tu pedido ya está en preparación y no puede cancelarse.'
 }
 
-/** La ventana de cancelación del cliente es ANTES de la confirmación del negocio
- *  (DECISIONS §5). Se basa en el estado crudo, no en el bucket "recibido" (que ya
- *  incluye `confirmed`), para no ofrecer cancelar un pedido ya confirmado. */
+/**
+ * La ventana de cancelación del cliente es ANTES de la confirmación del negocio
+ * (DECISIONS §5). Se basa en el estado crudo, no en el bucket "recibido" (que ya
+ * incluye `confirmed`), para no ofrecer cancelar un pedido ya confirmado.
+ *
+ * El prepago se corta antes que el efectivo, y por eso la condición no es
+ * simétrica: solo en `pending_acceptance`. En ese estado el negocio aún está
+ * confirmando disponibilidad y el cliente no ha abierto su billetera, así que
+ * cancelar no deja dinero en el aire. En `validando` sí lo dejaría: ahí ya hay
+ * una captura de Yape subida, y la devolución de un prepago la resuelve soporte,
+ * no un botón (`0046`, afinado en `0169`).
+ *
+ * **Tiene que decir lo mismo que `cancel_customer_order`.** Si aquí se ofrece
+ * más de lo que la RPC permite, el botón aparece y la cancelación falla con un
+ * error; si se ofrece menos, hay clientes atrapados sin saber que podían salir.
+ */
 export function isCancellable(data: Tracking, ownedId: string | null): boolean {
-  return (
-    (data.status === 'validando' || data.status === 'pending_acceptance') &&
-    Boolean(ownedId) &&
-    data.paymentIntent !== 'prepaid'
-  )
+  if (!ownedId) return false
+  if (data.paymentIntent === 'prepaid') return data.status === 'pending_acceptance'
+  return data.status === 'validando' || data.status === 'pending_acceptance'
 }
