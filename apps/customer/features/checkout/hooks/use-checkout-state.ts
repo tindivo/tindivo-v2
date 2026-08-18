@@ -220,9 +220,25 @@ export function useCheckoutState(): CheckoutState {
       })
   }, [])
 
+  // NO forzar nada antes de saber quién es el cliente. `hasDeliveryHistory`
+  // arranca en `false` y lo resuelve un RPC, así que sin este guard la secuencia
+  // es: monta → `mustPrepay` true → fuerza `prepaid` → llega la respuesta →
+  // `mustPrepay` pasa a false → y el pago se queda en `prepaid`, porque este
+  // efecto solo empuja hacia el prepago, nunca de vuelta.
+  //
+  // Resultado: el vecino conocido llegaba a la pantalla de pago con "Pago
+  // adelantado" ya marcado y sin banner que lo explicara —las otras opciones
+  // habilitadas pero sin elegir—, que es justo lo que la 0171 viene a evitar.
+  // El efecto corre aunque la página muestre el esqueleto: `checkout/page.tsx`
+  // no monta `UnifiedCheckout` hasta `authReady`, pero los hooks ya corrieron.
+  //
+  // Todo camino que llega a la pantalla de pago resuelve el historial ANTES de
+  // `setAuthReady(true)`; el único que no lo hace es el del cliente bloqueado,
+  // que va a `BlockedView` y no tiene pantalla de pago.
   useEffect(() => {
+    if (!authReady) return
     if (mustPrepay && payment !== 'prepaid') setPayment('prepaid')
-  }, [mustPrepay, payment])
+  }, [authReady, mustPrepay, payment])
 
   const reference =
     deliveryMethod === 'delivery' ? (selectedAddress?.reference ?? manualAddr.reference) : ''
