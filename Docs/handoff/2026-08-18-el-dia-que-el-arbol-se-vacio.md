@@ -268,6 +268,86 @@ orden real fue el contrario.
 
 ---
 
+## Lo que Google estaba publicando
+
+Ya con todo desplegado, una búsqueda `site:tindivo.com` destapó dos cosas que
+ningún chequeo del repo puede ver, porque no están rotas: están mal leídas.
+
+### Los nombres de los iconos, dentro de las frases
+
+El snippet de la portada se publicaba así:
+
+> ...para disfrutar en un gran ambiente.**Cerradoschedule** 25–50 min**local_shipping**
+
+No era un error de Google: era el texto real de la página. Material Symbols
+dibuja el glifo con una **ligadura**, o sea que el elemento contiene la palabra
+«schedule» y la fuente la sustituye por el reloj. En pantalla se ve bien —y por
+eso llevaba ahí desde el principio sin que nadie lo mirara dos veces— pero la
+palabra está de verdad en el DOM. Ocho en la portada: `shopping_bag`, `person`,
+`search`, `schedule`, `local_shipping`, `home`, `receipt_long`.
+
+El arreglo saca el nombre del texto: viaja en la custom property `--icon-glyph`
+y lo materializa un `::before` en `theme.css`. Mismo glifo, misma ligadura, cero
+texto.
+
+**Se descartó la vía de los codepoints** —sustituir «schedule» por ``—
+porque `name` llega muchas veces de un view-model (`<Icon name={vm.badge.icon} />`):
+una tabla de codepoints solo habría cubierto los literales, y hay 96 de esos más
+un número desconocido de dinámicos.
+
+Efecto secundario bueno: desaparece el fallo que el propio comentario del
+componente describía — con la fuente caída ya no se lee «two_wheeler» suelto.
+
+### El favicon no era caché: Google lo estaba rechazando
+
+Los resultados salían con el triángulo de Vercel **teniendo el sitio su icono
+propio, bien declarado en `metadata.icons` y bien servido** (se comprobó: el
+`favicon.ico` de producción es byte a byte el del repo).
+
+La causa: **Google exige que el favicon sea múltiplo de 48px** (48, 96, 144,
+192...). El `.ico` es 256×256, y 256/48 = 5,33. Cuando el icono no le vale, cae
+al del hosting. Se generaron `icon-96x96.png` y `icon-192x192.png` desde
+`icon.svg` y se declaran primero.
+
+**La lección: «lo tengo declarado y lo sirvo bien» no es lo mismo que «lo
+aceptan».** El consumidor tiene requisitos propios que no fallan de forma
+visible — simplemente te ignora.
+
+### Cómo se verificó que el render no se movía
+
+El cambio de iconos toca las cuatro apps, así que lo que importaba era que **no
+cambiara ni un píxel**. La suite visual falla con 7 casos, pero se corrió **con y
+sin el cambio** y las diferencias son idénticas al píxel (198103, 209155, 268971,
+292798, 352412, 452498, 7841): son preexistentes.
+
+Comprobar que un fallo ya estaba ahí cuesta una corrida más y convierte «creo
+que no fui yo» en un dato.
+
+---
+
+## El merge que casi sale con el código por delante del esquema
+
+Al mergear a `main` la segunda vez, el merge arrastró `9b47468` —trabajo de otra
+sesión, de quince minutos antes— que sube la ventana de prepago de 10 a 15
+minutos. Traía la migración `0168`, **que no estaba en producción**.
+
+Si ese merge se empuja tal cual: `prepay-view.tsx` arranca el contador en
+`15 * 60` mientras `cancel_expired_prepay_orders()` sigue cortando a los 10. El
+cliente vería **5:00 restantes en pantalla con el pedido ya cancelado**, y
+justo en el paso de pagar.
+
+Es el desfase de esta mañana al revés: aquí el código iba por delante del
+esquema. Se aplicó `0168` primero y se verificó contra el objeto vivo que los
+**tres** relojes de esa función quedaban donde toca — `5 · 5 · 15 · 15 · 10 · 10`,
+o sea `pending_acceptance` 5, `awaiting_payment` 15 (el que cambia) y `validando`
+10, más `app_settings.timers.paymentMinutes` a 15. Solo entonces se empujó.
+
+**Lo que hizo falta no fue desconfiar del cambio ajeno, sino MIRARLO.** Los
+handoffs anteriores decían «se fueron commits de otra sesión, no los revisé».
+Revisar uno cuesta dos minutos y aquí evitó un bug en el flujo de pago.
+
+---
+
 ## Deuda registrada, sin implementar
 
 1. **Search Console: "VALIDAR CORRECCIÓN"** en *"Duplicada: el usuario no ha
