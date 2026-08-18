@@ -34,6 +34,14 @@ const MODULO_AUTORIZADO = 'packages/supabase/src/sign-out-local.ts'
 /** Único módulo autorizado a construir el cliente Supabase del navegador. */
 const FABRICA_DE_CLIENTE = 'packages/supabase/src/client-helpers.ts'
 
+/**
+ * Único módulo autorizado a construir el cliente Supabase del servidor.
+ *
+ * Vive aparte del de navegador para que la fábrica de servidor no viaje en el
+ * bundle del cliente.
+ */
+const FABRICA_DE_SERVIDOR = 'packages/supabase/src/server-helpers.ts'
+
 const REGLAS = [
   {
     id: 'signout-directo',
@@ -60,6 +68,17 @@ const REGLAS = [
       '    apps del mismo dominio se pisan la sesión (en local solo cambia el puerto).\n' +
       `    Usa \`createTindivoBrowserClient(storageKey)\` de @tindivo/supabase/client.`,
   },
+  {
+    id: 'cliente-servidor-suelto',
+    patron: /createServerClient\s*[<(]/,
+    exento: (rel) => rel === FABRICA_DE_SERVIDOR,
+    mensaje:
+      'construye su propio cliente de servidor. El `storageKey` decide el NOMBRE de\n' +
+      '    la cookie donde vive la sesión: sin él busca la de por defecto mientras el\n' +
+      '    navegador escribe en `tindivo-<app>-auth`, no encuentra nada y NO falla —\n' +
+      '    devuelve "no hay usuario", indistinguible de un visitante anónimo.\n' +
+      '    Usa `createTindivoServerClient({ storageKey })` de @tindivo/supabase/server.',
+  },
 ]
 
 /**
@@ -85,7 +104,7 @@ if (ficheros.length === 0) {
 // El fichero exento tiene que EXISTIR. Si alguien lo renombra o lo borra, la
 // exención pasaría a no cubrir nada y el guardarraíl seguiría en verde mientras
 // los helpers viven en otro sitio sin vigilancia.
-for (const exento of [MODULO_AUTORIZADO, FABRICA_DE_CLIENTE]) {
+for (const exento of [MODULO_AUTORIZADO, FABRICA_DE_CLIENTE, FABRICA_DE_SERVIDOR]) {
   if (existsSync(join(ROOT, exento))) continue
   console.error(`check:auth: no existe el módulo autorizado ${exento}.`)
   console.error('Si se movió, actualiza la ruta en scripts/check-auth-boundaries.mjs.')

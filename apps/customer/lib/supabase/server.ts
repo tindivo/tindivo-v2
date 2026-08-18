@@ -1,5 +1,4 @@
-import { createServerClient } from '@supabase/ssr'
-import type { Database } from '@tindivo/supabase'
+import { createTindivoServerClient, STORAGE_KEYS } from '@tindivo/supabase/server'
 import { cookies } from 'next/headers'
 
 export interface ServerUser {
@@ -15,10 +14,16 @@ export interface ServerUser {
 export async function getServerUser(): Promise<ServerUser | null> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  // La comprobación se queda aquí, antes de la fábrica: sin variables esta
+  // pantalla tiene que renderizar como visitante anónimo, no reventar. La
+  // fábrica lanza, que es lo correcto para quien no puede seguir sin sesión.
   if (!url || !key) return null
 
   const cookieStore = await cookies()
-  const supabase = createServerClient<Database>(url, key, {
+  const supabase = createTindivoServerClient({
+    url,
+    anonKey: key,
+    storageKey: STORAGE_KEYS.customer,
     cookies: {
       getAll() {
         return cookieStore.getAll()
@@ -27,7 +32,6 @@ export async function getServerUser(): Promise<ServerUser | null> {
         // Los Server Components no pueden modificar cookies.
       },
     },
-    auth: { storageKey: 'tindivo-customer-auth' },
   })
 
   try {

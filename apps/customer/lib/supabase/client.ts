@@ -1,6 +1,6 @@
 'use client'
 
-import { createTindivoBrowserClient } from '@tindivo/supabase/client'
+import { createTindivoBrowserClient, STORAGE_KEYS } from '@tindivo/supabase/client'
 
 let client: ReturnType<typeof createTindivoBrowserClient> | null = null
 
@@ -12,7 +12,7 @@ export function getSupabaseBrowser() {
     client = createTindivoBrowserClient({
       url: process.env.NEXT_PUBLIC_SUPABASE_URL,
       anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-      storageKey: 'tindivo-customer-auth',
+      storageKey: STORAGE_KEYS.customer,
     })
   return client
 }
