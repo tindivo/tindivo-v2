@@ -413,7 +413,9 @@ function BottomNav({ active }: { active: NavId }) {
                   <Icon name="history" size={22} filled={active === 'historial'} />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <div className="text-[14px] font-semibold leading-tight">Historial de pedidos</div>
+                  <div className="text-[14px] font-semibold leading-tight">
+                    Historial de pedidos
+                  </div>
                   <div
                     className={`mt-0.5 text-[12px] ${
                       active === 'historial' ? 'text-white/70' : 'text-ink-muted'

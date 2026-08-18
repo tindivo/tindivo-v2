@@ -202,7 +202,9 @@ export default function MotorizadosPage() {
                                 setSeleccion(s)
                               }}
                             />
-                            <span className={b.is_active ? 'text-ink font-medium' : 'text-ink-muted'}>
+                            <span
+                              className={b.is_active ? 'text-ink font-medium' : 'text-ink-muted'}
+                            >
                               {b.name}
                               {!b.is_active && (
                                 <span className="ml-1.5 rounded-full bg-ink/[0.06] px-1.5 py-0.5 text-[10px] font-mono font-medium text-ink-subtle">
