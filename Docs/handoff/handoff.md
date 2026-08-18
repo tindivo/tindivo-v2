@@ -13,6 +13,7 @@ Una sesión nueva añade su archivo y actualiza la tabla de abajo.
 
 | Archivo | De qué va | Estado al cerrar |
 |---|---|---|
+| [`2026-08-18-el-dia-que-el-arbol-se-vacio.md`](./2026-08-18-el-dia-que-el-arbol-se-vacio.md) | Las dos sesiones del 17-ago dejaron **todo sin commitear** y con ello `apps/api` sin compilar un día entero · `0165` tenía dos defectos que solo aparecen contra producción (`0166`, `0167`) · primera corrida completa de la e2e | Cinco commits, árbol limpio, e2e **21/21**. Los slugs están en la base de producción pero **no en la web**: falta el merge a `main`. **`0167` sin desplegar.** |
 | [`2026-08-17-el-logout-que-echaba-a-todos.md`](./2026-08-17-el-logout-que-echaba-a-todos.md) | Cerrar sesión en un dispositivo echaba al usuario de **todos**: 5 de 6 sitios llamaban a `auth.signOut()` a secas, o sea `scope: 'global'` · helper `signOutLocal`/`signOutEverywhere`, `pnpm check:auth`, baja del push al salir, HU-X-011 | Todo verde (build 5/5, tests 7/7, e2e 9/9) y **nada commiteado**. El 500 de `apps/customer` bloquea el `test:e2e` completo. |
 | [`2026-08-17-el-enlace-que-no-se-podia-compartir.md`](./2026-08-17-el-enlace-que-no-se-podia-compartir.md) | La app no tenía **ni una etiqueta Open Graph**: compartir por WhatsApp daba texto pelado · Open Graph, JSON-LD, `robots`, `sitemap`, canónicas y `noindex` en rutas privadas · slugs (`0165`) a medias | SEO desplegado y verificado en producción. **Los slugs quedan sin terminar y el Supabase local caído**: la sección 6 de `0165` reemplaza `search_catalog` y no se ha ejecutado nunca. |
 | [`2026-08-11-los-momentos-sin-aviso.md`](./2026-08-11-los-momentos-sin-aviso.md) | Seis momentos que resolvían a cero destinatarios · había **dos caminos de push en paralelo** y el aviso de la cajera colgaba del muerto · `0136`/`0137`/`0138` | Todo desplegado en producción. **Sigue sin verificarse en un celular**, y la suscripción de la cajera no tiene ninguna evidencia. |
@@ -43,6 +44,11 @@ handoff; esto es solo para reconocerlos antes de perder una hora.
 - **No metas SQL con backslashes por un heredoc.** `'\\'` llega al fichero como
   `'\'` y un `replace(x, '\', '\')` es un no-op silencioso que desactiva el
   escapado de `LIKE`. Usa la herramienta de escritura de ficheros, o `chr(92)`.
+- **Una columna `not null` SIN default sale como OBLIGATORIA en el tipo `Insert`
+  que genera `pnpm db:types`**, aunque un trigger la rellene: el generador lee el
+  esquema, no los triggers. Si el valor lo deriva la base, dale un default.
+- **Una función de trigger sin `search_path` fijado la elige el llamante.** No es
+  higiene del linter: el trigger corre con el `search_path` de quien inserta.
 - `unaccent` vive en el esquema `extensions` y es **STABLE, no IMMUTABLE**:
   llamarla desde una función con `SET search_path = ''` obliga a cualificar
   también el diccionario. Para quitar acentos en algo simple, `translate()`.
@@ -99,6 +105,14 @@ handoff; esto es solo para reconocerlos antes de perder una hora.
   comprobar que su test lo atrapa, el fallo llega por ahí y no por donde esperas.
 - **`pnpm biome check .` falla de base** (2 errores, ~92 warnings preexistentes).
   Filtra por tus ficheros o no distingues lo que rompiste tú.
+- **`.maybeSingle()` de PostgREST devuelve `null` cuando hay MÁS de una fila**, no
+  un error a la vista. Un test que lo usa sobre datos que se acumulan falla
+  diciendo «no apareció» justo cuando hay de sobra.
+- **Un `beforeAll` que falla arrastra a TODO su fichero.** Un solo seed roto
+  aparece en el reporte como «N did not run», sin decir por qué.
+- **`reuseExistingServer: true` no reutiliza un servidor que responde 500**: la
+  sonda exige < 400, así que Playwright arranca el suyo y muere con `EADDRINUSE`.
+  El mensaje habla del puerto y el problema es el 500.
 - Los pedidos de prueba en local **se borran solos**: `db:seed:e2e:clean` corre
   en el `afterAll` de Playwright.
 - `form_input` del navegador no dispara los eventos de React: hay que teclear.
@@ -106,6 +120,12 @@ handoff; esto es solo para reconocerlos antes de perder una hora.
 
 **Sobre el repositorio**
 
+- **`git add <directorio-ignorado>` falla, pero `git add <fichero-tracked>` de
+  dentro funciona** y deja todo preparado aunque el comando devuelva error. Se
+  cuelan en el commit siguiente sin que su mensaje los mencione.
+- **Un fichero que pertenece a varios commits se reparte escribiendo su estado
+  intermedio** antes de cada uno, no troceando hunks: así ningún commit
+  intermedio queda sin compilar.
 - **El árbol se edita en paralelo.** Antes de commitear, `git status` y atribuir
   cada fichero. Nunca captures trabajo ajeno a medias.
 - Las rutas de las apps están **en español** (`app/motorizados/`), el código en
