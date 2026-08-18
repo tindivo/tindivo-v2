@@ -80,8 +80,22 @@ export const metadata: Metadata = {
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
   },
+  /**
+   * Google exige que el favicon de los resultados sea **múltiplo de 48px**
+   * (48, 96, 144, 192...). El `favicon.ico` de este sitio es 256×256, que no lo
+   * es, y cuando el icono no le vale Google cae al del hosting: por eso los
+   * resultados de `tindivo.com` salían con el triángulo de Vercel teniendo el
+   * sitio su propio icono bien declarado y bien servido.
+   *
+   * Los PNG de 96 y 192 van PRIMERO por eso. El `.ico` se queda al final para
+   * los navegadores viejos que solo entienden ese formato.
+   */
   icons: {
-    icon: '/favicon.ico',
+    icon: [
+      { url: '/icon-96x96.png', sizes: '96x96', type: 'image/png' },
+      { url: '/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/favicon.ico', sizes: '256x256', type: 'image/x-icon' },
+    ],
     apple: '/apple-touch-icon.png',
   },
   manifest: '/manifest.webmanifest',

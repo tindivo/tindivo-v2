@@ -122,3 +122,31 @@
     transform: translateY(0);
   }
 }
+
+/**
+ * El glifo del icono entra por CSS, no como texto del DOM.
+ *
+ * Material Symbols dibuja el icono a partir de una LIGADURA: el elemento
+ * contiene el nombre en texto («schedule») y la fuente lo sustituye por el
+ * glifo. Para quien mira la pantalla es un reloj; para cualquiera que lea el
+ * texto de la página sin aplicar la fuente, es la palabra «schedule».
+ *
+ * Y eso incluye a Google. El 2026-08-18 el resultado de búsqueda de la portada
+ * se leía así:
+ *
+ *   «...para disfrutar en un gran ambiente.Cerradoschedule 25–50 minlocal_shipping»
+ *
+ * Los nombres de ocho iconos metidos entre las frases, en el escaparate del
+ * sitio. Lo mismo le llega a cualquier lector que no cargue la fuente.
+ *
+ * Con el nombre en una custom property, el DOM ya no lo contiene: viaja en el
+ * atributo `style` y solo se materializa como contenido generado, que la
+ * ligadura convierte igual. La accesibilidad no depende de esto — el elemento
+ * lleva `role="img"` y `aria-label` desde antes.
+ *
+ * El fallback vacío importa: si algún día alguien usa la clase a mano sin la
+ * variable, no se pinta nada en vez de la palabra «none».
+ */
+.material-symbols-rounded::before {
+  content: var(--icon-glyph, "");
+}
