@@ -19,7 +19,7 @@ Copia `.env.example` → `.env.local` (o configúralas en Vercel) por proyecto. 
 |---|:--:|:--:|:--:|:--:|:--:|
 | `NEXT_PUBLIC_SUPABASE_URL` | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✓ | ✓ | ✓ | ✓ | ✓ |
-| `NEXT_PUBLIC_API_URL` (= `https://api.tindivo.com/api/v1`) | ✓ | ✓ | ✓ | ✓ | — |
+| `NEXT_PUBLIC_API_URL` (= `https://apiv2.tindivo.com/api/v1`) | ✓ | ✓ | ✓ | ✓ | — |
 | `NEXT_PUBLIC_APP_URL` (= `https://www.tindivo.com`) | ✓ | — | — | — | — |
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | ✓ | ✓ | ✓ | ✓ | — |
 | `NEXT_PUBLIC_SUPPORT_WHATSAPP` (= número real) | ✓ | — | — | — | — |
@@ -76,7 +76,7 @@ Un proyecto por app, todos con root del monorepo y build filtrado:
 
 | Proyecto | Root / build command | Dominio |
 |---|---|---|
-| tindivo-api | `pnpm --filter @tindivo/api build` | `api.tindivo.com` |
+| tindivo-api | `pnpm --filter @tindivo/api build` | `apiv2.tindivo.com` (**no** `api.`) |
 | tindivo-customer | `pnpm --filter @tindivo/customer build` | `tindivo.com` (apex) |
 | tindivo-negocios | `pnpm --filter @tindivo/negocios build` | `negocios.tindivo.com` |
 | tindivo-motorizados | `pnpm --filter @tindivo/motorizados build` | `motorizados.tindivo.com` |
@@ -91,7 +91,7 @@ Apunta el apex `tindivo.com` + los CNAME `api`/`negocios`/`motorizados`/`admin` 
 
 ## 5. Inngest Cloud **[tú]**
 
-- Sirve el endpoint `https://api.tindivo.com/api/inngest`.
+- Sirve el endpoint `https://apiv2.tindivo.com/api/inngest`.
 - Registra la app en Inngest Cloud con la signing key. Quita `INNGEST_DEV=1` en prod.
 - Funciones: `order-acceptance-timeout`, `cash-settlement-auto-confirm`, `order-validation-timeout`, `order-prepay-timeout`.
 
@@ -115,7 +115,7 @@ asesoría legal antes de operar (cláusula de adelanto del fondo para restaurant
 
 ## 8. Smoke post-deploy
 
-1. `GET https://api.tindivo.com/api/v1/health` → 200.
+1. `GET https://apiv2.tindivo.com/api/v1/health` → 200.
 2. Las 4 apps cargan + se pueden instalar (PWA) en Android Chrome.
 3. Flujo real: cliente nuevo → validación por llamada → aceptar → preparar → recoger → entregar (efectivo)
    → liquidación diaria (confirmar) → push recibido en cada paso (requiere HTTPS, ya disponible en prod).

@@ -904,6 +904,29 @@ Reglas y comportamientos que aplican a más de un rol.
 **CA**:
 - `signOutLocal()` cierra solo el dispositivo actual.
 - Otras sesiones del usuario siguen activas.
+- Antes de cerrar, el dispositivo se da de baja del push: si no, sigue recibiendo
+  avisos de una cuenta de la que ya salió.
+- Cubierto por `e2e/driver/logout-local.spec.ts` y por `pnpm check:auth`.
+
+**HU-X-011 · Cerrar sesión en todos los dispositivos · P1**
+> Como usuario que perdió el teléfono,
+> quiero cortar el acceso de todos mis dispositivos,
+> para que nadie entre con mi cuenta.
+
+**CA**:
+- Acción explícita y con confirmación, aparte del botón de cerrar sesión. En
+  `/perfil` (motorizado) y `/cuenta` (cliente).
+- `signOutEverywhere()` revoca TODAS las sesiones, la actual incluida.
+- Borra TAMBIÉN todas las suscripciones push (`DELETE /push/subscriptions`
+  con `{ all: true }`). Revocar la sesión sin esto deja al equipo perdido sin
+  poder abrir la app pero aún recibiendo notificaciones, y la vista previa lleva
+  nombre y dirección del cliente: se corta el acceso y la fuga sigue.
+- Cubierto por `e2e/driver/logout-local.spec.ts` (segundo caso).
+
+> **Pendiente**: no existe cambio de contraseña. La contraseña solo se fija al
+> crear la cuenta desde administración, así que tras un robo el usuario puede
+> cortar las sesiones vivas pero no impedir que alguien que conozca la
+> contraseña vuelva a entrar.
 
 **HU-X-006 · Multi-rol con selector · P1**
 **CA**:

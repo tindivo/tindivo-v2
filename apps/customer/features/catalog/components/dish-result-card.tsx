@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { ProductImage } from '@/components/product-image'
 import { soles } from '@/features/catalog/lib/format'
+import { businessPath } from '@/lib/business-path'
 import type { SearchItem } from '@/lib/use-search'
 
 interface DishResultCardProps {
@@ -12,7 +13,7 @@ interface DishResultCardProps {
 export function DishResultCard({ item }: DishResultCardProps) {
   return (
     <Link
-      href={`/negocio/${item.business_id}`}
+      href={businessPath({ slug: item.business_slug, id: item.business_id })}
       className="flex items-center gap-3.5 rounded-[20px] border border-border bg-white p-3"
     >
       <ProductImage label={item.name} hue={item.image_hue ?? 14} size={64} src={item.image_url} />

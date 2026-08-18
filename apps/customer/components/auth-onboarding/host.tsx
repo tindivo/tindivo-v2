@@ -1,5 +1,6 @@
 'use client'
 
+import { signOutLocal } from '@tindivo/supabase'
 import { useEffect } from 'react'
 import { clearOnboardingResume, readOnboardingResume, useOnboarding } from '@/lib/onboarding-store'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
@@ -19,7 +20,10 @@ export async function resumeOnboardingIfPending(): Promise<boolean> {
   const { data } = await supabase.auth.getUser()
   const user = data.user
   if (!user) {
-    await supabase.auth.signOut().catch(() => {})
+    // Local: es una limpieza de esta pestaña, no un logout. Con scope global,
+    // un resume caducado aquí cerraría la sesión del cliente en sus otros
+    // dispositivos.
+    await signOutLocal(supabase).catch(() => {})
     return false
   }
 

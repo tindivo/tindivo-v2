@@ -6,44 +6,44 @@ import type { AccountSummaryData } from '../types'
 
 export function DeudaSummary({ summary }: { summary: AccountSummaryData['summary'] }) {
   return (
-    <div className="grid grid-cols-3 gap-2 lg:gap-3">
-      <Card className="flex flex-col justify-between p-3">
-        <div className="flex items-center gap-1.5">
-          <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
+    <div className="grid grid-cols-3 gap-2 sm:gap-3">
+      <Card className="flex flex-col justify-between p-2.5 sm:p-3">
+        <div className="flex items-center justify-between gap-1">
+          <span className="font-mono text-[9.5px] sm:text-[10px] font-bold uppercase tracking-wider text-ink-muted truncate">
             Comisiones
           </span>
-          <Icon name="inventory_2" size={14} className="text-brand" />
+          <Icon name="inventory_2" size={15} className="shrink-0 text-brand" />
         </div>
-        <div className="font-mono text-lg font-bold leading-none text-ink lg:text-xl">
+        <div className="mt-2 font-mono text-[15px] sm:text-xl font-bold leading-none text-ink truncate">
           {soles(summary.totalCommissions)}
         </div>
       </Card>
 
-      <Card className="flex flex-col justify-between p-3">
-        <div className="flex items-center gap-1.5">
-          <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
-            Delivery fees
+      <Card className="flex flex-col justify-between p-2.5 sm:p-3">
+        <div className="flex items-center justify-between gap-1">
+          <span className="font-mono text-[9.5px] sm:text-[10px] font-bold uppercase tracking-wider text-ink-muted truncate">
+            Delivery
           </span>
-          <Icon name="two_wheeler" size={14} className="text-info" />
+          <Icon name="two_wheeler" size={15} className="shrink-0 text-info" />
         </div>
-        <div className="font-mono text-lg font-bold leading-none text-ink lg:text-xl">
+        <div className="mt-2 font-mono text-[15px] sm:text-xl font-bold leading-none text-ink truncate">
           {soles(summary.totalDeliveryFees)}
         </div>
       </Card>
 
-      <Card className="flex flex-col justify-between p-3">
-        <div className="flex items-center gap-1.5">
-          <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
+      <Card className="flex flex-col justify-between p-2.5 sm:p-3">
+        <div className="flex items-center justify-between gap-1">
+          <span className="font-mono text-[9.5px] sm:text-[10px] font-bold uppercase tracking-wider text-ink-muted truncate">
             Devoluciones
           </span>
           <Icon
             name="replay"
-            size={14}
-            className={summary.totalRefunds > 0 ? 'text-danger' : 'text-ink-subtle'}
+            size={15}
+            className={`shrink-0 ${summary.totalRefunds > 0 ? 'text-danger' : 'text-ink-subtle'}`}
           />
         </div>
         <div
-          className={`font-mono text-lg font-bold leading-none lg:text-xl ${
+          className={`mt-2 font-mono text-[15px] sm:text-xl font-bold leading-none truncate ${
             summary.totalRefunds > 0 ? 'text-danger' : 'text-ink'
           }`}
         >

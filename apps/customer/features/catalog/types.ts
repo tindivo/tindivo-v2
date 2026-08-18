@@ -53,6 +53,15 @@ export interface Category {
 export interface BusinessDetail {
   business: {
     id: string
+    /**
+     * Identificador legible de la URL pública (`0165`).
+     *
+     * **Opcional a propósito.** Lo manda `apps/api`, que despliega por separado:
+     * un `customer` nuevo contra una `api` vieja no lo recibe. Declararlo
+     * obligatorio no lo hace aparecer, solo esconde el hueco. Para construir el
+     * enlace, `businessPath()` de `@/lib/business-path`.
+     */
+    slug?: string | null
     name: string
     tagline: string | null
     accent_color: string
@@ -86,6 +95,15 @@ export interface BusinessDetail {
 
 export interface PublicBusiness {
   id: string
+  /**
+   * Identificador legible de la URL pública (`0165`).
+   *
+   * **Opcional a propósito.** Lo manda `apps/api`, que despliega por separado:
+   * un `customer` nuevo contra una `api` vieja no lo recibe. Declararlo
+   * obligatorio no lo hace aparecer, solo esconde el hueco. Para construir el
+   * enlace, `businessPath()` de `@/lib/business-path`.
+   */
+  slug?: string | null
   name: string
   tagline: string | null
   accent_color: string

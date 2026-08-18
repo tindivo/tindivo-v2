@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Address, OrderRow, Profile, ProfileStep } from '@/features/account/types'
 import { api } from '@/lib/api'
 import { clearOnboardingResume } from '@/lib/onboarding-store'
+import { signOutDevice, signOutEverywhereDevice } from '@/lib/sign-out'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
 export interface AccountStats {
@@ -206,7 +207,23 @@ export function useAccountPage() {
   }
 
   async function signOut() {
-    await getSupabaseBrowser().auth.signOut({ scope: 'local' })
+    await signOutDevice()
+    clearOnboardingResume()
+    router.replace('/')
+  }
+
+  /**
+   * Salida de emergencia (teléfono perdido). Confirma antes porque echa a la
+   * persona de equipos que no tiene delante, incluido el que está usando.
+   */
+  async function signOutEverywhere() {
+    const ok = confirm(
+      '¿Cerrar sesión en TODOS los dispositivos?\n\n' +
+        'Saldrás también de cualquier otro teléfono o navegador donde tengas la cuenta abierta, ' +
+        'y esos equipos dejarán de recibir avisos de tus pedidos.',
+    )
+    if (!ok) return
+    await signOutEverywhereDevice()
     clearOnboardingResume()
     router.replace('/')
   }
@@ -225,5 +242,6 @@ export function useAccountPage() {
     remove,
     updateName,
     signOut,
+    signOutEverywhere,
   }
 }

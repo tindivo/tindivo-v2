@@ -1,5 +1,6 @@
 'use client'
 
+import { signOutLocal } from '@tindivo/supabase'
 import { useEffect, useRef } from 'react'
 import type { CheckoutState } from '@/features/checkout/hooks/use-checkout-state'
 import type { CustomerProfile } from '@/features/checkout/types'
@@ -52,8 +53,11 @@ export function useCheckoutAuth(state: CheckoutState) {
           return
         }
         if (!ob.open) {
-          // Limpia cualquier sesión local obsoleta antes de pedir login de nuevo.
-          await supabase.auth.signOut().catch(() => {})
+          // Limpia la sesión obsoleta de ESTE dispositivo antes de pedir login
+          // otra vez. Tiene que ser local: esto no es un logout que haya pedido
+          // nadie, y con scope global una sesión rancia en el móvil echaría al
+          // cliente de los demás dispositivos sin que tocara nada.
+          await signOutLocal(supabase).catch(() => {})
           openedSheetRef.current = true
           ob.openSheet({ next: '/checkout', inPlace: true })
         }

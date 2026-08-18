@@ -13,9 +13,21 @@ const SubSchema = z.object({
   userAgent: z.string().max(400).optional(),
 })
 
-const UnsubSchema = z.object({
-  endpoint: z.string().url().max(1000),
-})
+/**
+ * Dar de baja acepta dos formas, y son excluyentes a propósito:
+ *
+ *   { endpoint }   → este dispositivo. Es el caso de cerrar sesión aquí.
+ *   { all: true }  → TODOS los dispositivos del usuario.
+ *
+ * `all` existe para acompañar a `signOutEverywhere`. Revocar las sesiones sin
+ * borrar las suscripciones dejaría al dispositivo perdido sin poder abrir nada
+ * pero AÚN recibiendo notificaciones, que llevan nombre y dirección del cliente
+ * en la vista previa: el acceso se corta y la fuga de datos sigue.
+ */
+const UnsubSchema = z.union([
+  z.object({ endpoint: z.string().url().max(1000) }),
+  z.object({ all: z.literal(true) }),
+])
 
 export function OPTIONS(req: Request): Response {
   return handleOptions(req)
@@ -82,7 +94,7 @@ export async function POST(req: Request): Promise<Response> {
   }
 }
 
-/** Da de baja la suscripción de este dispositivo (al revocar permiso o cerrar sesión). */
+/** Da de baja la suscripción de este dispositivo, o la de todos (`{ all: true }`). */
 export async function DELETE(req: Request): Promise<Response> {
   const requestId = getRequestId(req)
   try {
@@ -90,17 +102,16 @@ export async function DELETE(req: Request): Promise<Response> {
     const body = UnsubSchema.parse(await req.json())
     const service = createServiceClient()
 
-    const { error } = await service
-      .from('push_subscriptions')
-      .delete()
-      .eq('user_id', user.id)
-      .eq('endpoint', body.endpoint)
+    // El filtro por `user_id` va SIEMPRE, también en la rama `all`: sin él,
+    // `all` borraría las suscripciones de todo el mundo.
+    const base = service.from('push_subscriptions').delete().eq('user_id', user.id)
+    const { error } = 'all' in body ? await base : await base.eq('endpoint', body.endpoint)
 
     if (error) throw new Error(error.message)
 
     console.log('[push:unsubscribe] ok', {
       userId: user.id,
-      endpointHead: body.endpoint.slice(0, 40),
+      alcance: 'all' in body ? 'todos' : body.endpoint.slice(0, 40),
     })
 
     return ok({ unsubscribed: true }, { headers: corsHeaders(req) })

@@ -21,9 +21,12 @@ export { Skeleton, SkeletonCard, SkeletonList, type SkeletonProps } from './prim
 export { Spinner, type SpinnerProps } from './primitives/spinner'
 export { Toast, type ToastProps } from './primitives/toast'
 export {
+  dropLocalPushSubscription,
   type PushSubscriptionPayload,
   pushSupported,
   registerServiceWorker,
   type SubscribeResult,
   subscribeToPush,
+  type UnsubscribeResult,
+  unsubscribeFromPush,
 } from './push'

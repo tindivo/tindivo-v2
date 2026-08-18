@@ -1,7 +1,6 @@
 'use client'
 
 import type { BusinessPrimaryCapability } from '@tindivo/contracts'
-import { signOutLocal } from '@tindivo/supabase'
 import { BottomSheet, Button, Card, CardBody, Icon } from '@tindivo/ui'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -29,6 +28,7 @@ import {
   pauseMinutesLeft,
   toOrderVM,
 } from '@/lib/orders/view-model'
+import { signOutDevice } from '@/lib/sign-out'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import { speak, unlockAudio, useDashboardSounds } from '@/lib/use-audio-alert'
 import { DashboardSkeleton } from './dashboard-skeleton'
@@ -413,7 +413,9 @@ function BottomNav({ active }: { active: NavId }) {
                   <Icon name="history" size={22} filled={active === 'historial'} />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <div className="text-[14px] font-semibold leading-tight">Historial de pedidos</div>
+                  <div className="text-[14px] font-semibold leading-tight">
+                    Historial de pedidos
+                  </div>
                   <div
                     className={`mt-0.5 text-[12px] ${
                       active === 'historial' ? 'text-white/70' : 'text-ink-muted'
@@ -1077,28 +1079,30 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
           <Sidebar active={active} onSignOut={onSignOut} />
         </div>
         <div className="flex min-w-0 flex-1 flex-col min-h-0">
-          {/* Header móvil con nombre del local y botón visible de Cerrar sesión */}
-          <header className="flex shrink-0 items-center justify-between border-b border-border bg-white px-3.5 py-2.5 lg:hidden">
-            <div className="flex items-center gap-2 min-w-0">
-              <div
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white"
-                style={{ background: value.accent || ACCENT_DEFAULT }}
-              >
-                {value.bizName[0] ?? 'T'}
+          {/* Header móvil con nombre del local y botón de cerrar sesión (solo en vista principal de pedidos para evitar doble header con DashboardShell) */}
+          {active === 'pedidos' && (
+            <header className="flex shrink-0 items-center justify-between border-b border-border bg-white px-3.5 py-2.5 lg:hidden">
+              <div className="flex items-center gap-2 min-w-0">
+                <div
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white"
+                  style={{ background: value.accent || ACCENT_DEFAULT }}
+                >
+                  {value.bizName[0] ?? 'T'}
+                </div>
+                <span className="truncate font-display text-sm font-bold text-ink">
+                  {value.bizName}
+                </span>
               </div>
-              <span className="truncate font-display text-sm font-bold text-ink">
-                {value.bizName}
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={onSignOut}
-              className="flex shrink-0 items-center gap-1.5 rounded-xl bg-danger-soft px-3 py-1.5 text-xs font-semibold text-danger active:scale-95 transition-transform"
-            >
-              <Icon name="logout" size={16} />
-              <span>Cerrar sesión</span>
-            </button>
-          </header>
+              <button
+                type="button"
+                onClick={onSignOut}
+                className="flex shrink-0 items-center gap-1.5 rounded-xl bg-danger-soft px-3 py-1.5 text-xs font-semibold text-danger active:scale-95 transition-transform"
+              >
+                <Icon name="logout" size={16} />
+                <span>Cerrar sesión</span>
+              </button>
+            </header>
+          )}
 
           {/* Va dentro del Provider (necesita el bizId del contexto) y en el
               flujo del layout, para que la franja de estado empuje el
@@ -1163,7 +1167,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
   return (
     <AuthedChrome
       onSignOut={async () => {
-        await signOutLocal(getSupabaseBrowser())
+        await signOutDevice()
         setAuthed(false)
       }}
     >

@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { type ReactNode, useCallback, useEffect, useState } from 'react'
 import { api } from '@/lib/api'
 import { NAV_SECTIONS } from '@/lib/nav'
-import { getSupabaseBrowser } from '@/lib/supabase/client'
+import { signOutDevice } from '@/lib/sign-out'
 import { AlertsBell } from './admin/alerts-bell'
 import { Ico } from './admin/icons'
 
@@ -96,10 +96,21 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
 }
 
 function SignOutButton() {
+  // No hay `setAuthed` que tocar: `AuthGate` está suscrito a `onAuthStateChange`
+  // y devuelve el login solo. Lo que sí importa es esperar al `signOutLocal`
+  // para que un fallo no se pierda en una promesa sin dueño.
+  async function handleSignOut() {
+    try {
+      await signOutDevice()
+    } catch (err) {
+      console.error('[admin] fallo al cerrar sesión', err)
+    }
+  }
+
   return (
     <button
       type="button"
-      onClick={() => getSupabaseBrowser().auth.signOut()}
+      onClick={() => void handleSignOut()}
       className="mt-2 flex items-center gap-3 rounded-[14px] px-3 py-2.5 text-[14px] text-ink-muted transition-colors hover:bg-ink/[0.04] hover:text-ink"
     >
       <Ico.logout className="h-[18px] w-[18px]" />

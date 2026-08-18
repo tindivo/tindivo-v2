@@ -32,6 +32,7 @@ export default function CuentaPage() {
     remove,
     updateName,
     signOut,
+    signOutEverywhere,
   } = useAccountPage()
   const [editing, setEditing] = useState<Address | 'new' | null>(null)
   const [editingProfile, setEditingProfile] = useState(false)
@@ -85,7 +86,7 @@ export default function CuentaPage() {
 
           <RecentOrdersPreview orders={orders} />
 
-          <AccountMenu onSignOut={signOut} />
+          <AccountMenu onSignOut={signOut} onSignOutEverywhere={signOutEverywhere} />
         </div>
       )}
 

@@ -33,8 +33,18 @@ export default defineConfig({
 
   projects: [
     // Flujos funcionales (customer). No tocan el panel de negocios.
+    //
+    // Depende de LOS DOS setups aunque la mayoría de sus specs no usen sesión:
+    // `viaje-pedido-online.spec.ts` abre la cajera y el motorizado con los
+    // `storageState` que dejan en disco. Sin declararlo, Playwright corría este
+    // proyecto ANTES que los setups y el test consumía las sesiones de la
+    // corrida anterior — que un `supabase db reset` deja con el refresh token
+    // revocado. El síntoma es `Invalid Refresh Token` en el panel de negocios y
+    // una cajera que nunca ve el pedido; y como los setups sí corren después,
+    // el siguiente intento pasa y lo disfraza de flake.
     {
       name: 'chromium',
+      dependencies: ['setup-negocios', 'setup-motorizados'],
       use: { ...devices['Desktop Chrome'] },
       testIgnore: [/visual[\\/]/, /driver[\\/]/],
     },

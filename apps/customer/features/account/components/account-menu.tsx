@@ -6,9 +6,10 @@ import { getSupportWhatsapp } from '@/lib/support'
 
 interface AccountMenuProps {
   onSignOut: () => void
+  onSignOutEverywhere: () => void
 }
 
-export function AccountMenu({ onSignOut }: AccountMenuProps) {
+export function AccountMenu({ onSignOut, onSignOutEverywhere }: AccountMenuProps) {
   const [wa, setWa] = useState(TINDIVO_SUPPORT_WHATSAPP)
 
   useEffect(() => {
@@ -37,6 +38,16 @@ export function AccountMenu({ onSignOut }: AccountMenuProps) {
           <span className="flex-1">Cerrar sesión</span>
         </button>
       </div>
+
+      {/* Fuera de la tarjeta y en pequeño: es la salida de emergencia, no la de
+          todos los días. Quien perdió el teléfono la busca; el resto no la ve. */}
+      <button
+        type="button"
+        onClick={onSignOutEverywhere}
+        className="mt-3 w-full py-2 text-center text-[13px] text-ink-subtle underline underline-offset-4"
+      >
+        Perdí mi teléfono · cerrar sesión en todos los dispositivos
+      </button>
     </div>
   )
 }

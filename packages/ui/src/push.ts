@@ -36,6 +36,22 @@ export async function registerServiceWorker(): Promise<void> {
   }
 }
 
+/**
+ * Techo de espera para `serviceWorker.ready`, que NO resuelve nunca —tampoco
+ * rechaza— si el SW no llegó a registrarse: 404 de `/sw.js`, modo privado, o un
+ * navegador sin soporte. Sin él, dar de baja el push cuelga para siempre a quien
+ * lo llame, y quien lo llama es el botón de cerrar sesión.
+ */
+const SW_READY_TIMEOUT_MS = 3_000
+
+/** `serviceWorker.ready` acotado: `null` si no hay registro a tiempo. */
+async function registroListo(): Promise<ServiceWorkerRegistration | null> {
+  return Promise.race([
+    navigator.serviceWorker.ready,
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), SW_READY_TIMEOUT_MS)),
+  ])
+}
+
 export type SubscribeResult = 'subscribed' | 'denied' | 'unsupported'
 
 /**
@@ -67,4 +83,66 @@ export async function subscribeToPush(
     userAgent: navigator.userAgent,
   })
   return 'subscribed'
+}
+
+/**
+ * Suelta la suscripción de ESTE navegador sin avisar al backend.
+ *
+ * Para el flujo de «cerrar sesión en todos los dispositivos», donde las filas
+ * ya se borran de golpe en el servidor con `{ all: true }` y lo único que falta
+ * es que este navegador deje de tener una suscripción viva. Llamar al DELETE
+ * por endpoint además del masivo sería una petición de más contra una fila que
+ * ya no existe.
+ *
+ * Nunca lanza.
+ */
+export async function dropLocalPushSubscription(): Promise<boolean> {
+  if (!pushSupported()) return false
+  try {
+    const reg = await registroListo()
+    if (!reg) return false
+    const sub = await reg.pushManager.getSubscription()
+    if (!sub) return false
+    return await sub.unsubscribe()
+  } catch {
+    return false
+  }
+}
+
+export type UnsubscribeResult = 'unsubscribed' | 'nothing-to-do' | 'failed' | 'unsupported'
+
+/**
+ * Da de baja el push de ESTE dispositivo: primero en el backend, después en el
+ * navegador.
+ *
+ * Pensado para llamarse al cerrar sesión, y ANTES del `signOutLocal`: el
+ * `DELETE /push/subscriptions` va autenticado, así que sin sesión ya no hay JWT
+ * con el que borrar la fila. Si no se llama, el dispositivo se queda con una
+ * suscripción viva y sigue recibiendo avisos de una cuenta de la que el usuario
+ * acaba de salir.
+ *
+ * El orden importa y es el mismo que ya aprendió el hook del motorizado: si el
+ * DELETE falla y aun así hiciéramos `sub.unsubscribe()`, quedaría una fila viva
+ * apuntando a un endpoint muerto y el backend seguiría intentando enviarle hasta
+ * que el proveedor devolviera 410. Ante un DELETE fallido no se toca nada local:
+ * devuelve `'failed'` y la verdad sigue siendo "suscrito".
+ *
+ * Nunca lanza: cerrar sesión tiene que funcionar aunque no haya red.
+ */
+export async function unsubscribeFromPush(
+  del: (endpoint: string) => Promise<unknown>,
+): Promise<UnsubscribeResult> {
+  if (!pushSupported()) return 'unsupported'
+  try {
+    const reg = await registroListo()
+    if (!reg) return 'nothing-to-do'
+    const sub = await reg.pushManager.getSubscription()
+    if (!sub) return 'nothing-to-do'
+
+    await del(sub.endpoint)
+    await sub.unsubscribe()
+    return 'unsubscribed'
+  } catch {
+    return 'failed'
+  }
 }

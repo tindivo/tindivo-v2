@@ -274,11 +274,16 @@ export const ordersApi = {
 ```
 packages/supabase/
 ├── src/
-│   ├── types.gen.ts               # Generated via `pnpm db:types`
-│   ├── sign-out-local.ts          # signOutLocal() helper
-│   └── client-helpers.ts          # createBrowserClient / createServerClient wrappers
+│   ├── database.types.ts          # Generated via `pnpm db:types`
+│   ├── sign-out-local.ts          # signOutLocal() + signOutEverywhere()
+│   ├── service-client.ts          # createServiceRoleClient() — SOLO server-side
+│   └── index.ts
 └── package.json
 ```
+
+> El `client-helpers.ts` que este árbol prescribía nunca se escribió: cada app
+> construye su propio `lib/supabase/client.ts` (~20 líneas idénticas salvo el
+> `storageKey`). Sigue pendiente unificarlo.
 
 ### 5.5 `packages/ui` — UI compartida
 
@@ -709,16 +714,40 @@ Cada opción redirige al subdominio correspondiente con la sesión ya iniciada (
 
 ### 14.4 Logout
 
-`signOutLocal()` del package `@tindivo/supabase`:
+Dos salidas, y solo dos, ambas en `@tindivo/supabase`:
 
 ```ts
-import { signOutLocal } from '@tindivo/supabase'
+import { signOutEverywhere, signOutLocal } from '@tindivo/supabase'
 
-await signOutLocal()
-// Limpia la cookie httpOnly de ESTE dispositivo.
-// NUNCA usar supabase.auth.signOut() directo: el default scope:'global'
-// cierra TODAS las sesiones del usuario en TODOS los dispositivos.
+await signOutLocal(client)
+// Cierra la sesión de ESTE dispositivo. Es lo que hace el botón «cerrar sesión».
+
+await signOutEverywhere(client)
+// Revoca TODAS las sesiones del usuario. Solo detrás de una acción explícita
+// del usuario y con confirmación («perdí mi teléfono»).
 ```
+
+**NUNCA `supabase.auth.signOut()` directo**: sin argumentos usa `scope: 'global'`
+y cierra la sesión en todos los dispositivos. El scope es por USUARIO, no por
+app, así que en multi-rol también se lleva por delante la sesión de cliente.
+
+Esto se comprueba solo: `pnpm check:auth` (`scripts/check-auth-boundaries.mjs`)
+falla si aparece un `auth.signOut(` o un `scope: 'global'` fuera de
+`packages/supabase/src/sign-out-local.ts`.
+
+**Antes del logout, dar de baja el push.** `DELETE /push/subscriptions` va
+autenticado: después de cerrar sesión ya no hay JWT con el que borrar la fila, y
+el dispositivo se queda recibiendo avisos de una cuenta de la que ya se salió.
+Cada frontend lo orquesta en su `lib/sign-out.ts`. Para el caso de todos los
+dispositivos, el endpoint acepta `{ all: true }`: revocar las sesiones sin
+borrar las suscripciones deja al equipo perdido sin acceso pero aún recibiendo
+notificaciones con datos del cliente en la vista previa.
+
+> **Historia.** Esta sección describía ya lo correcto desde el principio y aun
+> así 5 de los 6 sitios llamaban a `auth.signOut()` a secas. Se detectó en
+> producción el 2026-08-17 (dos teléfonos, una cuenta de motorizado). Un spec no
+> es un guardarraíl: de ahí `pnpm check:auth` y el e2e
+> `e2e/driver/logout-local.spec.ts`.
 
 ---
 

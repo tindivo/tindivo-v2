@@ -298,7 +298,11 @@ test('un pedido online viaja de la app del cliente hasta entregado', async ({ br
   })
   if (errVal) throw new Error(`validate_order falló: ${errVal.message}`)
   console.log(`  → estado: ${await estado(shortId)}`)
-  await verEstadoEnTablero(pCajera, shortId, /Pagado y verificado/)
+  // La etiqueta es «Pagado · no cobrar», no «Pagado y verificado»: lo que la
+  // cajera necesita saber de un prepago verificado no es que esté verificado,
+  // es que NO le cobre al cliente. La fija `card-view-model.ts` y la sostiene
+  // `view-model.test.ts`. Este test pedía una cadena que la app nunca pintó.
+  await verEstadoEnTablero(pCajera, shortId, /Pagado · no cobrar/)
   await foto(pCajera, 'cajera-en-cocina')
 
   // ── PARADA 4 · El motorizado lo ve en la cola y lo toma ─────────────────────
