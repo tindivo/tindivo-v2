@@ -42,14 +42,17 @@ export function TrackingPrepay({ data, ownedId, onProofUploaded }: TrackingPrepa
     }
   }, [data.proofUrl])
 
-  // Temporizador regresivo de 10 minutos en validando
+  // Temporizador regresivo en validando. Los minutos los decide
+  // `app_settings.timers.prepayVerificationMinutes`, que es editable desde el
+  // panel admin y viaja en el tracking desde `0170`. El 10 es solo el fallback
+  // para una respuesta que aún no lo traiga.
   useEffect(() => {
     if (data.status !== 'validando') return
     const baseTime = data.validatingAt ?? data.createdAt
     if (!baseTime) return
 
     const startMs = new Date(baseTime).getTime()
-    const deadlineMs = startMs + 10 * 60 * 1000
+    const deadlineMs = startMs + (data.prepayVerificationMinutes ?? 10) * 60 * 1000
 
     const updateTimer = () => {
       const remaining = Math.max(0, Math.ceil((deadlineMs - Date.now()) / 1000))
@@ -59,7 +62,7 @@ export function TrackingPrepay({ data, ownedId, onProofUploaded }: TrackingPrepa
     updateTimer()
     const timer = setInterval(updateTimer, 1000)
     return () => clearInterval(timer)
-  }, [data.status, data.validatingAt, data.createdAt])
+  }, [data.status, data.validatingAt, data.createdAt, data.prepayVerificationMinutes])
 
   // Cerrar modal con Escape
   useEffect(() => {

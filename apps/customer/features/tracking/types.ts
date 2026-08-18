@@ -39,6 +39,13 @@ export interface Tracking {
   readyEarlyAt?: string | null
   /** Rango de trayecto publicado, de `app_settings.timers` (0117). */
   travelMinutes?: { min: number; max: number }
+  /**
+   * Minutos que tiene la cajera para validar el comprobante, de
+   * `app_settings.timers` (0170). Es editable desde /admin/configuracion, así
+   * que el cliente NO puede tenerlo escrito a mano: su cuenta atrás se
+   * calculaba con un 10 fijo y habría mentido en cuanto alguien lo cambiara.
+   */
+  prepayVerificationMinutes?: number
   amount: number
   deliveryFee: number
   total: number
