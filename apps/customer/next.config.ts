@@ -17,21 +17,31 @@ const config: NextConfig = {
    * tiene indexadas y hoy salen como 404 en Search Console; un 301 traslada al
    * destino nuevo lo que esas páginas tenían ganado.
    *
-   * SOLO las dos que corresponden a un negocio que existe en v2. Los otros seis
-   * slugs del v1 (`veneburguer`, `sumaq-restaurante`, `almuerzos-don-chipi`,
-   * `el-nidito-restobar`, `club-de-bienestar-nutret`, `polleria-la-nonna`) no
-   * migraron: para esos el 404 es la respuesta honesta. Mandarlos todos a la
-   * portada con un comodín sería peor — Google lo trata como soft 404 y además
-   * al visitante le mentiría sobre lo que iba a encontrar.
+   * SOLO las que corresponden a un negocio **activo**. Un 301 es `permanent`:
+   * los navegadores lo cachean indefinidamente y Google lo trata como
+   * definitivo, así que mandar una URL con historial a una página que responde
+   * «Negocio no encontrado» convierte el rescate en lo contrario — y no se
+   * puede deshacer retirando el redirect, porque el cacheado ya salió.
+   *
+   * `la-florencia` estuvo aquí y se retiró: el negocio existe en la base pero
+   * tiene `is_active = false`, y `/public/businesses/:id` filtra por ese campo,
+   * así que el destino responde 200 con «no encontrado» — un soft 404. **En
+   * cuanto La Florencia vuelva a estar activa, esta línea vuelve:**
+   *
+   *   { source: '/restaurantes/la-florencia', destination: '/negocio/la-florencia', permanent: true },
+   *
+   * Mientras tanto el 404 es la respuesta honesta y, a diferencia del 301, es
+   * reversible: Google reintenta esa URL, un permanente cacheado no.
+   *
+   * Los otros seis slugs del v1 (`veneburguer`, `sumaq-restaurante`,
+   * `almuerzos-don-chipi`, `el-nidito-restobar`, `club-de-bienestar-nutret`,
+   * `polleria-la-nonna`) no migraron: para esos el 404 es definitivo. Mandarlos
+   * todos a la portada con un comodín sería peor — Google lo trata como soft
+   * 404 y además al visitante le mentiría sobre lo que iba a encontrar.
    */
   async redirects() {
     return [
       { source: '/restaurantes/priamo', destination: '/negocio/pizza-priamo', permanent: true },
-      {
-        source: '/restaurantes/la-florencia',
-        destination: '/negocio/la-florencia',
-        permanent: true,
-      },
     ]
   },
   images: {

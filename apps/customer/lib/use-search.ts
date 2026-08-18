@@ -6,8 +6,15 @@ import { api } from '@/lib/api'
 
 export interface SearchBusiness {
   id: string
-  /** Identificador legible de la URL pública. Ver migración 0165. */
-  slug: string
+  /**
+   * Identificador legible de la URL pública (`0165`).
+   *
+   * **Opcional a propósito.** Lo manda `apps/api`, que despliega por separado:
+   * un `customer` nuevo contra una `api` vieja no lo recibe. Declararlo
+   * obligatorio no lo hace aparecer, solo esconde el hueco. Para construir el
+   * enlace, `businessPath()` de `@/lib/business-path`.
+   */
+  slug?: string | null
   name: string
   tagline: string | null
   accent_color: string
@@ -20,8 +27,11 @@ export interface SearchBusiness {
 export interface SearchItem {
   id: string
   business_id: string
-  /** Slug del negocio dueño del plato: el enlace del resultado va directo ahí. */
-  business_slug: string
+  /**
+   * Slug del negocio dueño del plato. Opcional por el mismo motivo que `slug`:
+   * lo añadió `search_catalog` en `0165` y la API vieja no lo devuelve.
+   */
+  business_slug?: string | null
   business_name: string
   name: string
   description: string | null

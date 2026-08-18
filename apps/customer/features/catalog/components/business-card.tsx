@@ -1,6 +1,7 @@
 import { Card, Icon } from '@tindivo/ui'
 import Image from 'next/image'
 import type { PublicBusiness } from '@/features/catalog/types'
+import { businessPath } from '@/lib/business-path'
 
 interface BusinessCardProps {
   business: PublicBusiness
@@ -11,7 +12,7 @@ export function BusinessCard({ business }: BusinessCardProps) {
   return (
     <Card
       as="a"
-      href={`/negocio/${b.slug}`}
+      href={businessPath(b)}
       className="flex items-center gap-3 p-3 transition-all hover:-translate-y-0.5 hover:shadow-elev-2 active:translate-y-0 active:scale-[0.985]"
     >
       {b.logo_url ? (

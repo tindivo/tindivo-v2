@@ -31,12 +31,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'daily',
       priority: 1,
     },
-    ...businesses.map((b) => ({
-      url: absoluteUrl(`/negocio/${b.slug}`),
-      lastModified: now,
-      changeFrequency: 'daily' as const,
-      priority: 0.8,
-    })),
+    // Solo los que YA tienen slug. Si la API todavía no lo manda (despliega
+    // aparte de esta app), la alternativa sería publicar `/negocio/undefined`
+    // en el sitemap y pedirle a Google que lo rastree: un sitemap corto es
+    // mejor, y en la próxima revalidación (1 h) entran solos.
+    ...businesses
+      .filter((b) => Boolean(b.slug))
+      .map((b) => ({
+        url: absoluteUrl(`/negocio/${b.slug}`),
+        lastModified: now,
+        changeFrequency: 'daily' as const,
+        priority: 0.8,
+      })),
     {
       url: absoluteUrl('/terminos'),
       changeFrequency: 'yearly' as const,

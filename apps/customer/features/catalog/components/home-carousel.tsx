@@ -22,6 +22,12 @@ const DEFAULT_BANNERS: HomeBanner[] = [
     id: 'priamo',
     title: 'Priamo — Conoce sus especialidades y promociones',
     imageUrl: '/banners/banner-priamo.png',
+    // Slug escrito a mano, y a propósito: un banner de portada no puede
+    // depender de una consulta. Se sostiene en que el slug NO sigue al nombre
+    // (diseño de `0165`), así que renombrar el negocio no lo mueve. Lo único
+    // que lo rompería es poner su `slug` a NULL para regenerarlo; si algún día
+    // se hace, hay que revisar también este banner y los `redirects` de
+    // `next.config.ts`.
     href: '/negocio/pizza-priamo',
   },
 ]

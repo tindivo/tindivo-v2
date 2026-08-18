@@ -4,6 +4,7 @@ import { permanentRedirect } from 'next/navigation'
 import { cache } from 'react'
 import { NegocioShell } from '@/features/catalog/components/negocio-shell'
 import type { BusinessDetail } from '@/features/catalog/types'
+import { businessPath } from '@/lib/business-path'
 import { absoluteUrl, SITE_NAME } from '@/lib/seo'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1'
@@ -51,8 +52,10 @@ export async function generateMetadata({
 
   const b = data.business
   // Siempre el slug, aunque hayan entrado por uuid: la canónica no puede
-  // depender de por cuál de las dos formas llegó la visita.
-  const path = `/negocio/${b.slug ?? id}`
+  // depender de por cuál de las dos formas llegó la visita. Si la API todavía
+  // no manda `slug` (despliega aparte), cae al uuid: una canónica fea es
+  // recuperable, `/negocio/undefined` no.
+  const path = businessPath(b)
   const description =
     b.tagline?.trim() ||
     `Pide de ${b.name} en San Jacinto y recíbelo en tu puerta en ${b.estimated_eta_min}–${b.estimated_eta_max} minutos. Paga por Yape, Plin o en efectivo.`
@@ -89,7 +92,7 @@ export async function generateMetadata({
  * que no tengamos: un JSON-LD con nulos vale menos que uno corto.
  */
 function restaurantJsonLd(b: BusinessDetail['business']): string {
-  const url = absoluteUrl(`/negocio/${b.slug}`)
+  const url = absoluteUrl(businessPath(b))
   const jsonLd: Record<string, unknown> = {
     '@context': 'https://schema.org',
     '@type': 'Restaurant',
