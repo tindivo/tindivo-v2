@@ -1,60 +1,18 @@
 'use client'
 
-import { Button, Card, Icon } from '@tindivo/ui'
-import { hourOf, soles } from '@/lib/format'
+import { Card, Icon } from '@tindivo/ui'
+import { hourOf } from '@/lib/format'
 import type { OrderDetailResponse } from '@/lib/types'
 import { OrderDetail } from './order-detail'
 
-/** Pantalla de entrega completada (recién entregado o modo lectura del historial). */
+/** Pantalla de entrega completada (modo lectura del historial). */
 export function DeliveredScreen({
   detail,
-  justDelivered,
 }: {
   detail: OrderDetailResponse
-  justDelivered: boolean
+  justDelivered?: boolean
 }) {
   const { order } = detail
-
-  /**
-   * CUÁNTO EFECTIVO LLEVAS, no cuánto costó el pedido.
-   *
-   * Decía `paymentReal === 'paid_cash' || paymentIntent === 'pending_cash'` y
-   * enseñaba el TOTAL. Ese `||` es el fallo: un pedido planeado en efectivo que
-   * el cliente pagó por Yape seguía anunciando "llevas S/ 52 para liquidar",
-   * porque bastaba con la INTENCIÓN. Y en un mixto el número era el total,
-   * cuando de ese pedido solo se lleva la parte en efectivo.
-   *
-   * `cashOwedAtDelivery` (0140) responde exactamente esto y es lo que suma el
-   * corte de caja, así que la frase y la liquidación no pueden discrepar.
-   */
-  const cashOwed = order.cashOwedAtDelivery ?? 0
-  const cash = cashOwed > 0
-
-  if (justDelivered) {
-    return (
-      <main className="mx-auto flex min-h-dvh max-w-[480px] flex-col px-6">
-        <div className="flex flex-1 flex-col items-center justify-center text-center">
-          <span className="flex h-20 w-20 items-center justify-center rounded-full bg-success text-white">
-            <Icon name="check" size={36} />
-          </span>
-          <p className="mt-5 font-mono text-meta font-semibold uppercase tracking-[0.14em] text-success">
-            Pedido #{order.shortId}
-          </p>
-          <h1 className="mt-1.5 font-display text-display font-bold tracking-tight">¡Entregado!</h1>
-          <p className="mt-2 max-w-[300px] text-body text-ink-muted">
-            {cash
-              ? `Recuerda: llevas ${soles(cashOwed)} en efectivo para liquidar hoy.`
-              : 'Buen trabajo. Vuelve al inicio para tomar otro pedido.'}
-          </p>
-        </div>
-        <div className="pb-8">
-          <Button size="lg" className="w-full" as="a" href="/">
-            Volver al inicio
-          </Button>
-        </div>
-      </main>
-    )
-  }
 
   // Modo lectura (desde el historial del turno).
   return (

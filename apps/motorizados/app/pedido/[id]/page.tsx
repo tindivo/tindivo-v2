@@ -4,6 +4,7 @@ import { ApiError } from '@tindivo/api-client'
 import { BottomActionBar, Button, Icon, ScreenHeader } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { use, useCallback, useEffect, useState } from 'react'
+import { notifyDriverSuccess } from '@/components/driver-toast'
 import { AddressCaptureSheet } from '@/components/order/address-capture-sheet'
 import { BusinessCard } from '@/components/order/business-card'
 import { ChangeHeadsUp } from '@/components/order/change-heads-up'
@@ -23,6 +24,7 @@ import { useDriverOrders } from '@/hooks/use-driver-orders'
 import { useNow } from '@/hooks/use-now'
 import { api } from '@/lib/api'
 import { isValidPePhone, waLink } from '@/lib/deeplinks'
+import { soles } from '@/lib/format'
 import { getOptimistic } from '@/lib/offline-queue'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import { postTransition } from '@/lib/transitions'
@@ -51,7 +53,6 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
   const [loadError, setLoadError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const [justDelivered, setJustDelivered] = useState(false)
 
   const [readyPromptOpen, setReadyPromptOpen] = useState(false)
   const [pickupOpen, setPickupOpen] = useState(false)
@@ -155,7 +156,25 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
     setBusy(true)
     try {
       const result = await postTransition(id, action, params)
-      if (action === 'deliver') setJustDelivered(true)
+      if (action === 'deliver') {
+        const shortId = detail?.order.shortId ?? ''
+        const paymentReal = (params.paymentReal as string) ?? detail?.order.paymentIntent
+        let cashOwed = 0
+        if (paymentReal === 'paid_cash') {
+          cashOwed = (detail?.order.orderAmount ?? 0) + (detail?.order.deliveryFee ?? 0)
+        } else if (paymentReal === 'paid_mixed') {
+          cashOwed = Number(params.cashAmount ?? detail?.order.cashAmount ?? 0)
+        }
+
+        const msg =
+          cashOwed > 0
+            ? `Pedido #${shortId} entregado · Cobraste ${soles(cashOwed)} en efectivo`
+            : `Pedido #${shortId} entregado con éxito`
+
+        notifyDriverSuccess(msg)
+        router.replace('/')
+        return
+      }
 
       // Sugerencia no bloqueante de WhatsApp post-recogida (A.5) o al llegar (A.6)
       if (action === 'pickup' || action === 'arrived_customer') {
@@ -272,7 +291,6 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
   )
 
   if (mode === 'delivered') {
-    if (justDelivered) return <DeliveredScreen detail={detail} justDelivered />
     return (
       <main className="mx-auto min-h-dvh max-w-[480px] bg-surface px-4 pb-10">
         <ScreenHeader title={headerTitle} onBack={() => router.push('/')} />

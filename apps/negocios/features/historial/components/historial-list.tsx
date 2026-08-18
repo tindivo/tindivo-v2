@@ -2,6 +2,9 @@
 
 import { Icon } from '@tindivo/ui'
 import { useMemo, useState } from 'react'
+import { DetailScreen } from '@/components/dashboard/pedido-detail'
+import { useOrderDetail } from '@/features/pedidos/hooks/use-order-detail'
+import { toOrderVM } from '@/lib/orders/view-model'
 import { useHistory } from '../hooks/use-history'
 import { toDisplay } from '../lib/format'
 import type { HistDisplay, HistFilter } from '../types'
@@ -33,6 +36,25 @@ export function HistorialList() {
   const [filter, setFilter] = useState<HistFilter>('all')
   const [search, setSearch] = useState('')
   const [claimOpen, setClaimOpen] = useState(false)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+
+  const selRow = useMemo(
+    () => (selectedId ? (rows.find((r) => r.id === selectedId) ?? null) : null),
+    [selectedId, rows],
+  )
+  const selectedVM = useMemo(() => (selRow ? toOrderVM(selRow) : null), [selRow])
+
+  const { detailItems, detailProofUrl, isLoadingActions, reset } = useOrderDetail(
+    selectedId,
+    selRow?.source ?? null,
+    selectedVM?.payment === 'prepaid',
+    selRow?.comprobante_prepago_url ?? null,
+  )
+
+  function handleSelect(id: string) {
+    reset()
+    setSelectedId(id)
+  }
 
   const allDisplayRows = rows.map(toDisplay)
   const visibleRows = useMemo(
@@ -59,6 +81,27 @@ export function HistorialList() {
 
   return (
     <>
+      {selectedVM && (
+        <DetailScreen
+          order={selectedVM}
+          items={detailItems}
+          proofUrl={detailProofUrl}
+          qrUrl={null}
+          busy={false}
+          isLoadingActions={isLoadingActions}
+          actions={{
+            onClose: () => setSelectedId(null),
+            onAccept: () => {},
+            onReject: () => {},
+            onVerifyProof: () => {},
+            onRejectProof: () => {},
+            onExtend: () => {},
+            onReady: () => {},
+            onCancel: () => {},
+          }}
+        />
+      )}
+
       {error && (
         <div className="mb-4 rounded-xl bg-danger-soft p-3 text-sm text-danger">{error}</div>
       )}
@@ -106,7 +149,7 @@ export function HistorialList() {
         </div>
       </div>
 
-      <HistoryList rows={visibleRows} />
+      <HistoryList rows={visibleRows} onSelect={handleSelect} />
     </>
   )
 }

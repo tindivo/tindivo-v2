@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useDashboard } from '@/components/dashboard/shell'
+import { ORDER_SELECT } from '@/lib/orders/view-model'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import type { HistRow } from '../types'
 
@@ -34,9 +35,7 @@ export function useHistory() {
     try {
       const { data, error: e } = await getSupabaseBrowser()
         .from('orders')
-        .select(
-          'id,short_id,status,source,customer_name,order_amount,delivery_fee,payment_intent,delivered_at,cancelled_at,cancel_note,created_at',
-        )
+        .select(ORDER_SELECT)
         .eq('business_id', bizId)
         .in('status', ['delivered', 'cancelled'])
         .gte('created_at', start)
@@ -47,7 +46,7 @@ export function useHistory() {
       if (e) {
         setError(e.message)
       } else {
-        setRows((data ?? []) as HistRow[])
+        setRows((data ?? []) as unknown as HistRow[])
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar el historial')

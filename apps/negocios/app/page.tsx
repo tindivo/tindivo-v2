@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { PedidosDesktop, PedidosMobile } from '@/components/dashboard/pedidos-view'
 import { useDashboard } from '@/components/dashboard/shell'
 import { useOrderActions } from '@/features/pedidos/hooks/use-order-actions'
@@ -56,6 +56,16 @@ export default function NegocioPedidosPage() {
       proofAttempt: freshOrder.proof_attempt ?? selectedBase.proofAttempt,
     }
   }, [selectedBase, freshOrder])
+
+  // Si el pedido seleccionado vence o es cancelado (sale del flujo activo),
+  // cerramos el sidebar automáticamente para evitar que la cajera quede atrapada
+  // en un pedido que ya no existe en el tablero.
+  useEffect(() => {
+    if (!selectedId) return
+    if (!selectedBase || selected?.status === 'cancelled') {
+      setSelectedId(null)
+    }
+  }, [selectedId, selectedBase, selected?.status])
 
   const { actions, busy, error, supportPhone, onConfirmPause, onResume } = useOrderActions({
     selected,

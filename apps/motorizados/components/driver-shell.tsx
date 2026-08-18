@@ -2,24 +2,44 @@
 
 import { GlassTopBar, Icon } from '@tindivo/ui'
 import Link from 'next/link'
-import type { ReactNode } from 'react'
+import { type ReactNode, useMemo } from 'react'
+import { useCashSummary } from '@/features/efectivo/hooks/use-cash-summary'
 import { BottomNav, type BottomNavItem } from './bottom-nav'
 import { CapacityIndicator } from './capacity-indicator'
-
-const NAV_ITEMS: BottomNavItem[] = [
-  { href: '/', label: 'Pedidos', icon: 'receipt_long' },
-  { href: '/efectivo', label: 'Efectivo', icon: 'payments' },
-  { href: '/historial', label: 'Historial', icon: 'history' },
-  { href: '/perfil', label: 'Perfil', icon: 'person' },
-]
+import { DriverToastHost } from './driver-toast'
 
 /**
  * Shell de la app del motorizado: glass top bar + bottom navigation.
  * Inspirado en tindivo-delivery, adaptado a la arquitectura de tindivo-v2.
  */
 export function DriverShell({ children }: { children: ReactNode }) {
+  const { businesses } = useCashSummary()
+
+  // Conteo de pedidos en efectivo pendientes de liquidar por el motorizado
+  const pendingCashCount = useMemo(
+    () => businesses.flatMap((b) => b.orders.filter((o) => o.state === 'pending')).length,
+    [businesses],
+  )
+
+  const navItems: BottomNavItem[] = useMemo(
+    () => [
+      { href: '/', label: 'Pedidos', icon: 'receipt_long' },
+      {
+        href: '/efectivo',
+        label: 'Efectivo',
+        icon: 'payments',
+        badge: pendingCashCount > 0 ? pendingCashCount : undefined,
+        badgeColor: 'danger',
+      },
+      { href: '/historial', label: 'Historial', icon: 'history' },
+      { href: '/perfil', label: 'Perfil', icon: 'person' },
+    ],
+    [pendingCashCount],
+  )
+
   return (
     <div className="min-h-dvh bg-surface pb-28">
+      <DriverToastHost />
       <GlassTopBar
         title="TINDIVO"
         subtitle="Motorizado"
@@ -35,7 +55,7 @@ export function DriverShell({ children }: { children: ReactNode }) {
         right={<CapacityIndicator />}
       />
       {children}
-      <BottomNav items={NAV_ITEMS} />
+      <BottomNav items={navItems} />
     </div>
   )
 }

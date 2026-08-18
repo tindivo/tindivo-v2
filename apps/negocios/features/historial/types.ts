@@ -1,22 +1,9 @@
-import type { UiPayment, UiSource } from '@/lib/orders/view-model'
+import type { OrderRow, UiPayment, UiSource } from '@/lib/orders/view-model'
 
 export type HistFilter = 'all' | 'delivered' | 'cancelled' | 'web' | 'manual'
 
-/** Fila cruda tal como viene de Supabase. */
-export interface HistRow {
-  id: string
-  short_id: string
-  status: string
-  source: string
-  customer_name: string | null
-  order_amount: number
-  delivery_fee: number
-  payment_intent: string
-  delivered_at: string | null
-  cancelled_at: string | null
-  cancel_note: string | null
-  created_at: string
-}
+/** Fila cruda tal como viene de Supabase (alineada con OrderRow). */
+export type HistRow = OrderRow
 
 /** Versión lista para pintar en la UI. */
 export interface HistDisplay {
