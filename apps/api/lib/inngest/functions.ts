@@ -113,7 +113,7 @@ export const orderValidationTimeout: InngestFunction.Any = inngest.createFunctio
 
 /**
  * Timeout de pago: si el cliente no sube su comprobante en `awaiting_payment` dentro de
- * `timers.paymentMinutes` (10 min), se auto-cancela con `prepay_timeout`.
+ * `timers.paymentMinutes` (15 min), se auto-cancela con `prepay_timeout`.
  * `cancelOn` cancela ejecuciones anteriores si se reemite el evento o se sube comprobante.
  */
 export const orderPaymentTimeout: InngestFunction.Any = inngest.createFunction(
@@ -132,7 +132,7 @@ export const orderPaymentTimeout: InngestFunction.Any = inngest.createFunction(
       if (typeof override === 'number') return override
       const svc = createServiceClient()
       const { data } = await svc.from('app_settings').select('value').eq('key', 'timers').single()
-      const minutes = (data?.value as { paymentMinutes?: number } | null)?.paymentMinutes ?? 10
+      const minutes = (data?.value as { paymentMinutes?: number } | null)?.paymentMinutes ?? 15
       return minutes * 60_000
     })
     await step.sleep('payment-window', sleepMs)

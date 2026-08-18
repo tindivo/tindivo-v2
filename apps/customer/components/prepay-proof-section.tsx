@@ -27,7 +27,7 @@ interface Props {
 
 export function PrepayProofSection({ orderId, proofAttempt, onProofUploaded }: Props) {
   const [info, setInfo] = useState<PrepayInfo | null>(null)
-  const [seconds, setSeconds] = useState(600)
+  const [seconds, setSeconds] = useState(15 * 60)
   const [uploading, setUploading] = useState(false)
   const [pendingFile, setPendingFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -77,11 +77,11 @@ export function PrepayProofSection({ orderId, proofAttempt, onProofUploaded }: P
     }
   }, [info?.comprobantePrepagoUrl])
 
-  // Countdown timer de 10 min basado en timestamp real de DB
+  // Countdown timer de 15 min basado en timestamp real de DB
   useEffect(() => {
     if (!info?.awaitingPaymentAt) return
     const startMs = new Date(info.awaitingPaymentAt).getTime()
-    const deadlineMs = startMs + 10 * 60 * 1000
+    const deadlineMs = startMs + 15 * 60 * 1000
 
     const updateTimer = () => {
       const remaining = Math.max(0, Math.ceil((deadlineMs - Date.now()) / 1000))

@@ -13,7 +13,7 @@ import { getSupabaseBrowser } from '@/lib/supabase/client'
 
 export function PrepayView({ result }: { result: OrderResult }) {
   const [info, setInfo] = useState<PrepayInfo | null>(null)
-  const [seconds, setSeconds] = useState(600)
+  const [seconds, setSeconds] = useState(15 * 60)
   const [sent, setSent] = useState(false)
   const [uploading, setUploading] = useState(false)
   /** Comprimiendo la captura recién elegida, antes de que exista preview. */
