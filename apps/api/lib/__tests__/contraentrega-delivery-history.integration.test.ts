@@ -32,6 +32,7 @@
  * sus propias cuentas con teléfonos únicos y las borra al final.
  */
 import { createClient } from '@supabase/supabase-js'
+import { signOutLocal } from '@tindivo/supabase'
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { localClient as db } from './helpers/local-db'
 
@@ -301,7 +302,10 @@ describe('0171 · el historial de entregas del teléfono abre la contraentrega',
     })
     expect(prohibido?.message ?? '').toMatch(/permission denied|does not exist/i)
 
-    await navegador.auth.signOut()
+    // `signOutLocal`, no `auth.signOut()`: a secas usa scope GLOBAL, y
+    // `pnpm check:auth` lo rechaza en todo el repo — tambien en los tests, para
+    // que nadie copie de aqui el patron que la regla existe para impedir.
+    await signOutLocal(navegador)
   })
 
   it('`contraentrega_blocked` gana al historial', async () => {
