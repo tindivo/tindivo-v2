@@ -6,6 +6,8 @@ import { api } from '@/lib/api'
 
 export interface SearchBusiness {
   id: string
+  /** Identificador legible de la URL pública. Ver migración 0165. */
+  slug: string
   name: string
   tagline: string | null
   accent_color: string
@@ -18,6 +20,8 @@ export interface SearchBusiness {
 export interface SearchItem {
   id: string
   business_id: string
+  /** Slug del negocio dueño del plato: el enlace del resultado va directo ahí. */
+  business_slug: string
   business_name: string
   name: string
   description: string | null

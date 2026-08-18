@@ -32,7 +32,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 1,
     },
     ...businesses.map((b) => ({
-      url: absoluteUrl(`/negocio/${b.id}`),
+      url: absoluteUrl(`/negocio/${b.slug}`),
       lastModified: now,
       changeFrequency: 'daily' as const,
       priority: 0.8,

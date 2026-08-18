@@ -1,11 +1,18 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { permanentRedirect } from 'next/navigation'
 import { cache } from 'react'
 import { NegocioShell } from '@/features/catalog/components/negocio-shell'
 import type { BusinessDetail } from '@/features/catalog/types'
 import { absoluteUrl, SITE_NAME } from '@/lib/seo'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1'
+
+/**
+ * El segmento acepta uuid y slug. Se distinguen por forma: `slugify` (0165)
+ * solo produce `[a-z0-9-]` y nunca los guiones en estas posiciones.
+ */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 /**
  * `cache()` porque Next llama primero a `generateMetadata` y después al
@@ -43,7 +50,9 @@ export async function generateMetadata({
   }
 
   const b = data.business
-  const path = `/negocio/${id}`
+  // Siempre el slug, aunque hayan entrado por uuid: la canónica no puede
+  // depender de por cuál de las dos formas llegó la visita.
+  const path = `/negocio/${b.slug ?? id}`
   const description =
     b.tagline?.trim() ||
     `Pide de ${b.name} en San Jacinto y recíbelo en tu puerta en ${b.estimated_eta_min}–${b.estimated_eta_max} minutos. Paga por Yape, Plin o en efectivo.`
@@ -79,13 +88,14 @@ export async function generateMetadata({
  * (nombre, foto, horario) en vez de un enlace azul suelto. Se omite todo campo
  * que no tengamos: un JSON-LD con nulos vale menos que uno corto.
  */
-function restaurantJsonLd(id: string, b: BusinessDetail['business']): string {
+function restaurantJsonLd(b: BusinessDetail['business']): string {
+  const url = absoluteUrl(`/negocio/${b.slug}`)
   const jsonLd: Record<string, unknown> = {
     '@context': 'https://schema.org',
     '@type': 'Restaurant',
-    '@id': absoluteUrl(`/negocio/${id}`),
+    '@id': url,
     name: b.name,
-    url: absoluteUrl(`/negocio/${id}`),
+    url,
     priceRange: 'S/',
     currenciesAccepted: 'PEN',
     paymentAccepted: 'Efectivo, Yape, Plin',
@@ -139,12 +149,20 @@ export default async function NegocioPage({ params }: { params: Promise<{ id: st
     )
   }
 
+  // Una sola URL por negocio. Los enlaces con uuid repartidos por WhatsApp
+  // siguen abriendo, pero acaban en el slug con un 308 permanente: si ambas
+  // formas sirvieran un 200, Google las contaría como contenido duplicado —
+  // que es justo el aviso que ya llegó por el apex y el www.
+  if (UUID_RE.test(id) && initialData.business.slug && initialData.business.slug !== id) {
+    permanentRedirect(`/negocio/${initialData.business.slug}`)
+  }
+
   return (
     <>
       {/* JSON-LD serializado con JSON.stringify, no HTML de usuario. */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: restaurantJsonLd(id, initialData.business) }}
+        dangerouslySetInnerHTML={{ __html: restaurantJsonLd(initialData.business) }}
       />
       <NegocioShell id={id} initialData={initialData} />
     </>

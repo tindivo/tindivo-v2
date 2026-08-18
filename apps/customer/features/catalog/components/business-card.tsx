@@ -11,7 +11,7 @@ export function BusinessCard({ business }: BusinessCardProps) {
   return (
     <Card
       as="a"
-      href={`/negocio/${b.id}`}
+      href={`/negocio/${b.slug}`}
       className="flex items-center gap-3 p-3 transition-all hover:-translate-y-0.5 hover:shadow-elev-2 active:translate-y-0 active:scale-[0.985]"
     >
       {b.logo_url ? (

@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic'
 // yape_number / balance_due / comisiones / phone). whatsapp_number SÍ es
 // público: es el contacto opt-in para pedidos por WhatsApp en modo catálogo.
 const PUBLIC_COLUMNS =
-  'id,name,accent_color,logo_url,banner_url,tagline,categoria,primary_capability,estimated_eta_min,estimated_eta_max,coordinates_lat,coordinates_lng,address,publishes_catalog,accepts_web_pickup,accepts_web_delivery,whatsapp_number'
+  'id,slug,name,accent_color,logo_url,banner_url,tagline,categoria,primary_capability,estimated_eta_min,estimated_eta_max,coordinates_lat,coordinates_lng,address,publishes_catalog,accepts_web_pickup,accepts_web_delivery,whatsapp_number'
 
 export function OPTIONS(req: Request): Response {
   return handleOptions(req)

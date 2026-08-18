@@ -343,6 +343,7 @@ export type Database = {
             | null
           publishes_catalog: boolean
           qr_url: string | null
+          slug: string
           tagline: string | null
           updated_at: string
           user_id: string
@@ -383,6 +384,7 @@ export type Database = {
             | null
           publishes_catalog?: boolean
           qr_url?: string | null
+          slug?: string
           tagline?: string | null
           updated_at?: string
           user_id: string
@@ -423,6 +425,7 @@ export type Database = {
             | null
           publishes_catalog?: boolean
           qr_url?: string | null
+          slug?: string
           tagline?: string | null
           updated_at?: string
           user_id?: string
@@ -2919,6 +2922,7 @@ export type Database = {
         }
         Returns: Json
       }
+      slugify: { Args: { p_text: string }; Returns: string }
       unblock_business: { Args: { p_by: string; p_id: string }; Returns: Json }
       validate_order: {
         Args: {

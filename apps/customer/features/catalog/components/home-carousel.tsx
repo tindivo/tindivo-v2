@@ -22,7 +22,7 @@ const DEFAULT_BANNERS: HomeBanner[] = [
     id: 'priamo',
     title: 'Priamo — Conoce sus especialidades y promociones',
     imageUrl: '/banners/banner-priamo.png',
-    href: '/negocio/be47c407-37c2-4ad0-b0bc-7ed24b162cf7',
+    href: '/negocio/pizza-priamo',
   },
 ]
 

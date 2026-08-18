@@ -53,6 +53,8 @@ export interface Category {
 export interface BusinessDetail {
   business: {
     id: string
+    /** Identificador legible de la URL pública. Ver migración 0165. */
+    slug: string
     name: string
     tagline: string | null
     accent_color: string
@@ -86,6 +88,8 @@ export interface BusinessDetail {
 
 export interface PublicBusiness {
   id: string
+  /** Identificador legible de la URL pública. Ver migración 0165. */
+  slug: string
   name: string
   tagline: string | null
   accent_color: string

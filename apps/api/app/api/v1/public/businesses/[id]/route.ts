@@ -9,7 +9,18 @@ export const dynamic = 'force-dynamic'
 // Columnas seguras (sin yape_number/balance — el Yape se entrega al confirmar
 // prepago). whatsapp_number es el contacto público opt-in del modo catálogo.
 const BUSINESS_COLUMNS =
-  'id,name,accent_color,logo_url,banner_url,tagline,categoria,primary_capability,estimated_eta_min,estimated_eta_max,coordinates_lat,coordinates_lng,address,accepts_web_pickup,accepts_web_delivery,whatsapp_number'
+  'id,slug,name,accent_color,logo_url,banner_url,tagline,categoria,primary_capability,estimated_eta_min,estimated_eta_max,coordinates_lat,coordinates_lng,address,accepts_web_pickup,accepts_web_delivery,whatsapp_number'
+
+/**
+ * El segmento `[id]` acepta las DOS formas: el uuid y el slug público
+ * (`/negocio/pizza-priamo`). Se distinguen por forma, no consultando dos veces:
+ * un slug nunca tiene el formato de un uuid porque `slugify` solo deja
+ * `[a-z0-9-]` y jamás produce los cuatro guiones en esas posiciones.
+ *
+ * Sigue aceptando uuid a propósito: hay enlaces repartidos por WhatsApp con esa
+ * forma y tienen que seguir abriendo. El front los redirige al slug (301).
+ */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export function OPTIONS(req: Request): Response {
   return handleOptions(req)
@@ -32,7 +43,7 @@ export async function GET(
       supabase
         .from('businesses')
         .select(BUSINESS_COLUMNS)
-        .eq('id', id)
+        .eq(UUID_RE.test(id) ? 'id' : 'slug', id)
         .eq('publishes_catalog', true)
         .eq('is_active', true)
         .eq('is_blocked', false)
@@ -53,6 +64,12 @@ export async function GET(
       })
     }
 
+    // A partir de aquí SIEMPRE el uuid resuelto, nunca el segmento de la URL:
+    // `id` puede ser un slug, y `business_id` es una columna uuid. Compararla
+    // contra 'pizza-priamo' no devuelve vacío, revienta la consulta entera
+    // (22P02) y la página del negocio responde 500.
+    const businessId = business.id
+
     const serviceDate =
       serviceDateResult.status === 'fulfilled' ? serviceDateResult.value.data : null
 
@@ -71,7 +88,7 @@ export async function GET(
       supabase
         .from('menu_categories')
         .select('id,name,blurb,display_order')
-        .eq('business_id', id)
+        .eq('business_id', businessId)
         .eq('is_active', true)
         .order('display_order'),
       supabase
@@ -79,7 +96,7 @@ export async function GET(
         .select(
           'id,category_id,name,description,base_price,image_url,image_hue,is_available,is_compact,badges,display_order',
         )
-        .eq('business_id', id)
+        .eq('business_id', businessId)
         .is('deleted_at', null)
         .order('display_order'),
       supabase
@@ -87,27 +104,27 @@ export async function GET(
         .select(
           'id,name,selection_type,is_required,min_selections,max_selections,price_display,display_order',
         )
-        .eq('business_id', id)
+        .eq('business_id', businessId)
         .order('display_order'),
       supabase
         .from('menu_modifier_options')
         .select(
           'id,group_id,name,description,additional_price,display_order,is_available,menu_modifier_groups!inner(business_id)',
         )
-        .eq('menu_modifier_groups.business_id', id)
+        .eq('menu_modifier_groups.business_id', businessId)
         .order('display_order'),
       supabase
         .from('menu_item_modifier_groups')
         .select('item_id,group_id,display_order,menu_modifier_groups!inner(business_id)')
-        .eq('menu_modifier_groups.business_id', id)
+        .eq('menu_modifier_groups.business_id', businessId)
         .order('display_order'),
       // Horario semanal (informativo + estado abierto/cerrado; el cliente lo computa).
       supabase
         .from('business_schedule')
         .select('day_of_week,is_open,shift1_start,shift1_end,shift2_start,shift2_end')
-        .eq('business_id', id)
+        .eq('business_id', businessId)
         .order('day_of_week'),
-      hasConfirmedOpening(supabase, id, serviceDate),
+      hasConfirmedOpening(supabase, businessId, serviceDate),
     ])
     if (catError) throw new Error(catError.message)
     if (itemError) throw new Error(itemError.message)
