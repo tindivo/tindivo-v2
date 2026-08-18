@@ -37,19 +37,12 @@ export function BusinessHero({ business, schedule, now, openingConfirmed }: Busi
         />
       )}
       {/*
-        Velo oscuro base general para asegurar alto contraste contra fondos claros o blancos.
+        Velos degradados sutiles:
+        - Arriba: sombra suave para la barra de navegación.
+        - Abajo: degradado enfocado en la base para dar legibilidad al texto sin opacar la foto de portada.
       */}
-      <div className="pointer-events-none absolute inset-0 bg-black/35" />
-
-      {/*
-        Dos velos degradados adicionales:
-        - Arriba: para la flecha de volver y el botón del carrito.
-        - Abajo: velo denso para el bloque de texto (nombre, etiquetas, horarios).
-      */}
-      {/* Arriba: la flecha de volver y el botón del carrito son blancos. */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[140px] bg-gradient-to-b from-black/75 via-black/40 to-transparent" />
-      {/* Abajo: aquí vive todo el bloque de texto, reforzamos el fondo oscuro para garantizar contraste legible */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[85%] bg-gradient-to-t from-black/95 via-black/85 via-50% to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/50 via-black/20 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[65%] bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
 
       <div className="relative flex items-center justify-between px-4 pt-12">
         <Link
