@@ -2,6 +2,8 @@
 
 import { Button, Card, Icon } from '@tindivo/ui'
 import { useEffect, useState } from 'react'
+import { useDriverTimers } from '@/hooks/use-queue-lead'
+import { computeNoShowCountdown } from '@/lib/orders/no-show'
 import type { OrderDetailResponse } from '@/lib/types'
 import { CollectCard } from './collect-card'
 import { CustomerCard } from './customer-card'
@@ -31,14 +33,20 @@ export function MomentPickedUp({
     return () => clearInterval(interval)
   }, [order.arrivedAtCustomerAt])
 
-  const arrivedAt = order.arrivedAtCustomerAt ? Date.parse(order.arrivedAtCustomerAt) : null
-  const noShowDurationMs = 5 * 60 * 1000
-  const remainingMs = arrivedAt ? Math.max(0, arrivedAt + noShowDurationMs - now) : 0
-  const remainingSec = Math.ceil(remainingMs / 1000)
-  const minLeft = Math.floor(remainingSec / 60)
-  const secLeft = remainingSec % 60
-  const countdownFormatted = `${minLeft}:${secLeft.toString().padStart(2, '0')}`
-  const canNoShow = arrivedAt != null && remainingMs === 0
+  // El umbral lo decide `app_settings.timers.noShowWaitMinutes`, NO el codigo.
+  //
+  // Estuvo escrito a mano (`5 * 60 * 1000`) mientras el panel admin ya lo
+  // ofrecia como «Espera no-show (min)», y esta cuenta atras no solo muestra:
+  // es la que HABILITA el boton. `advance_order` valida ese mismo ajuste contra
+  // `arrived_at_customer_at` y rechaza el reporte si no ha pasado, asi que
+  // subirlo dejaba al motorizado pulsando un boton que el servidor le negaba
+  // — de pie en la puerta del cliente. Bajarlo le hacia esperar de mas.
+  const { noShowWaitMinutes } = useDriverTimers()
+  const { formatted: countdownFormatted, canReport: canNoShow } = computeNoShowCountdown(
+    order.arrivedAtCustomerAt,
+    noShowWaitMinutes,
+    now,
+  )
 
   return (
     <div>
