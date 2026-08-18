@@ -666,7 +666,7 @@ export function DetailScreen({
                     </div>
                     <div className="text-[12px] leading-[1.4] text-brand-dark">
                       Confirma la disponibilidad de insumos para este pedido. Una vez aceptado, el
-                      cliente tendrá 10 minutos para transferir por Yape/Plin y adjuntar el
+                      cliente tendrá 15 minutos para transferir por Yape/Plin y adjuntar el
                       comprobante.
                     </div>
                   </div>
@@ -687,7 +687,7 @@ export function DetailScreen({
                       </div>
                     </div>
                     <div className="text-[12px] leading-[1.4] text-brand-dark">
-                      Disponibilidad confirmada. El cliente tiene 10 minutos para realizar la
+                      Disponibilidad confirmada. El cliente tiene 15 minutos para realizar la
                       transferencia por Yape/Plin y adjuntar el comprobante.
                     </div>
                   </div>

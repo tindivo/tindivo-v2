@@ -156,7 +156,7 @@ export type ReportStatus = z.infer<typeof ReportStatusSchema>
 export const CANCEL_REASONS = [
   'pending_acceptance_timeout', // negocio no aceptó en 5 min
   'validation_timeout', // cajera no validó al cliente nuevo/strike en 5 min
-  'prepay_timeout', // cliente no subió comprobante en 10 min
+  'prepay_timeout', // cliente no subió comprobante en 15 min
   'business_cancelled',
   'admin_cancelled',
   'customer_cancelled', // solo antes de la aceptación o dentro de 2 min

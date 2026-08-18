@@ -174,9 +174,17 @@ export interface OrderVM {
 
 // Timeouts canónicos (DECISIONS.md §10). Configurables en app_settings.timers;
 // para la Fase 1 los defaults coinciden.
+//
+// Los dos relojes del prepago son DISTINTOS y estuvieron compartiendo constante:
+// el cliente tiene 15 min para pagar y subir la captura (`awaiting_payment`,
+// `timers.paymentMinutes`, migración 0168) y la cajera 10 para revisarla
+// (`validando`, `timers.prepayVerificationMinutes`). Con un solo valor, subir la
+// ventana del cliente le pintaba a la cajera una cuenta de 15 min sobre un
+// pedido que el cron `auto-cancel-prepay-validation-timeout` mata a los 10.
 const ACCEPT_SEC = 5 * 60
 const VALIDATE_SEC = 5 * 60
-const PREPAY_SEC = 10 * 60
+const AWAITING_PAYMENT_SEC = 15 * 60
+const PREPAY_VALIDATION_SEC = 10 * 60
 
 /**
  * Formatea los segundos hasta/desde `estimated_ready_at` en `mm:ss` con signo.
@@ -317,13 +325,13 @@ export function toOrderVM(row: OrderRow, now: number = Date.now()): OrderVM {
       : row.status === 'awaiting_payment'
         ? secondsUntil(
             row.awaiting_payment_at ?? row.validating_at ?? row.created_at,
-            PREPAY_SEC,
+            AWAITING_PAYMENT_SEC,
             now,
           )
         : row.status === 'validando'
           ? secondsUntil(
               row.validating_at ?? row.created_at,
-              row.payment_intent === 'prepaid' ? PREPAY_SEC : VALIDATE_SEC,
+              row.payment_intent === 'prepaid' ? PREPAY_VALIDATION_SEC : VALIDATE_SEC,
               now,
             )
           : 0
