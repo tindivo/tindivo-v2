@@ -59,14 +59,25 @@ export async function POST(req: Request): Promise<Response> {
 
     // Guardia de contraentrega: verificar elegibilidad si el pago es contraentrega
     if (body.paymentIntent === 'pending_cash' || body.paymentIntent === 'pending_yape') {
-      // 1. Verificar historial
-      const { count } = await service
-        .from('orders')
-        .select('id', { count: 'exact', head: true })
-        .eq('customer_user_id', user.id)
-        .eq('status', 'delivered')
+      // 1. Verificar historial — DELEGADO, no reimplementado.
+      //
+      // Aquí vivía una TERCERA copia de la regla: `count` de pedidos
+      // `delivered` de esta cuenta. Cuando la 0171 amplió qué cuenta como
+      // historial —las entregas del teléfono verificado, incluidas las de los
+      // pedidos que tomó la cajera, y las del v1 en el directorio—, esta copia
+      // se quedó con el criterio viejo y rechazaba con 403 pedidos que la RPC
+      // sí aceptaba. El vecino conocido veía la contraentrega en pantalla y se
+      // estrellaba al confirmar.
+      //
+      // "Defensa en profundidad" no puede significar reimplementar la regla:
+      // significa volver a preguntarla. Ahora las dos capas llaman al mismo
+      // predicado, así que no pueden divergir otra vez.
+      const { data: confiable, error: confiableError } = await service.rpc(
+        'customer_trusted_for_contraentrega',
+        { p_customer_user_id: user.id },
+      )
 
-      if ((count ?? 0) < 1) {
+      if (confiableError || confiable !== true) {
         return problem('forbidden', {
           detail: 'Tu primer pedido debe ser con pago adelantado.',
           requestId,
