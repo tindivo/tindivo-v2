@@ -2,7 +2,6 @@
 
 import { OtpVerificationSheet } from '@/components/otp-verification-sheet'
 import { BlockedView } from '@/features/checkout/components/blocked-view'
-import { ConfirmedView } from '@/features/checkout/components/confirmed-view'
 import { GeoBlockView } from '@/features/checkout/components/geo-block-view'
 import { UnifiedCheckout } from '@/features/checkout/components/unified-checkout'
 import { useCheckout } from '@/features/checkout/hooks/use-checkout'
@@ -43,7 +42,17 @@ export default function CheckoutPage() {
         }}
       />
     )
-  if (confirmed) return <ConfirmedView result={confirmed} />
+  // El pedido ya existe y `placeOrder` lanzó la navegación al tracking, que es
+  // donde el cliente ve el estado en vivo y puede cancelar. Esto es solo el
+  // relevo hasta que la ruta nueva monta: sin él se vería por un instante el
+  // checkout con el carrito ya vacío.
+  if (confirmed)
+    return (
+      <main className="mx-auto flex min-h-dvh max-w-[480px] flex-col items-center justify-center gap-3 px-6">
+        <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-ink/10 border-t-brand" />
+        <p className="text-[15px] text-ink-muted">Abriendo tu pedido…</p>
+      </main>
+    )
   if (!authReady)
     return (
       <main className="mx-auto max-w-[768px] px-4 pt-16">

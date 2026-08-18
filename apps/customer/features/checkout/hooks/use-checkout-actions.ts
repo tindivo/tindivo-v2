@@ -20,6 +20,28 @@ export interface CheckoutActions {
   placeOrder: (options?: { paymentIntent?: PaymentIntent; skipGps?: boolean }) => Promise<void>
 }
 
+/**
+ * Qué pasa justo después de crear el pedido.
+ *
+ * Antes había una pantalla intermedia (`ConfirmedView`) con el código y un botón
+ * «Ver seguimiento». Se quitó porque cobraba un clic por nada: el tracking ya
+ * enseña el `#código` en su cabecera y además trae lo único que el cliente puede
+ * necesitar en ese momento — **el botón de cancelar**, mientras el restaurante no
+ * acepte. Quien enviaba un pedido «para probar» y volvía al inicio desde esa
+ * pantalla no llegaba a saber que podía deshacerlo.
+ *
+ * En prepago también es el destino correcto: subir el comprobante de Yape vive
+ * en el tracking (`tracking-prepay.tsx`), no en el checkout.
+ *
+ * `replace` y no `push`: el checkout se queda sin carrito en cuanto el pedido
+ * existe (`cart.clear()`), así que dejarlo en el historial solo sirve para que
+ * «atrás» lleve a una pantalla vacía que rebota sola.
+ *
+ * `setConfirmed` se mantiene aunque ya no pinte nada: es el guard que impide que
+ * los efectos de «carrito vacío» y «negocio en modo catálogo» redirijan durante
+ * el instante que va desde que se limpia el carrito hasta que la navegación
+ * ocurre.
+ */
 export function useCheckoutActions(state: CheckoutState): CheckoutActions {
   const {
     cart,
@@ -39,6 +61,7 @@ export function useCheckoutActions(state: CheckoutState): CheckoutActions {
     setLocating,
     setGeoBlock,
     setConfirmed,
+    router,
     setBlocked,
     setShowOtpSheet,
     maxCashBill,
@@ -222,6 +245,7 @@ export function useCheckoutActions(state: CheckoutState): CheckoutActions {
       setConfirmed(res.data)
       cart.clear()
       regenerateIdempotencyKey()
+      router.replace(`/pedido/${res.data.shortId}`)
     } catch (err) {
       if (err instanceof ApiError) {
         if (
@@ -238,6 +262,7 @@ export function useCheckoutActions(state: CheckoutState): CheckoutActions {
             setConfirmed(res.data)
             cart.clear()
             regenerateIdempotencyKey()
+            router.replace(`/pedido/${res.data.shortId}`)
             return
           } catch (retryErr) {
             if (retryErr instanceof ApiError && retryErr.status >= 400 && retryErr.status < 500) {
