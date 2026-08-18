@@ -16,7 +16,7 @@ export function useCheckoutAuth(state: CheckoutState) {
     setBlocked,
     setAuthReady,
     setPrepayOnlyByRisk,
-    setDeliveredCount,
+    setHasDeliveryHistory,
     setUserId,
     setName,
     setPhone,
@@ -97,12 +97,22 @@ export function useCheckoutAuth(state: CheckoutState) {
         return
       }
       setPrepayOnlyByRisk(Boolean(profile?.contraentrega_blocked))
-      const { count } = await supabase
-        .from('orders')
-        .select('id', { count: 'exact', head: true })
-        .eq('customer_user_id', sessionUser.id)
-        .eq('status', 'delivered')
-      setDeliveredCount(count ?? 0)
+
+      // ¿Contraentrega sin prepago? Lo decide la DB (0171). Antes se contaban
+      // aquí los pedidos `delivered` DE ESTA CUENTA, y así el piloto entero
+      // pasaba por prepago: sus entregas están atadas al TELÉFONO, no a la
+      // cuenta —las tomó la cajera— o vienen del directorio del v1. Nada de eso
+      // es visible desde el navegador, y no debe serlo: el RPC no acepta a quién
+      // preguntar, solo responde por `auth.uid()`.
+      //
+      // Ante un fallo se queda en `false`, que es el lado seguro: pide prepago.
+      // El guard de la RPC de creación manda igual, así que un false de más
+      // cuesta fricción, nunca un pedido cobrado de menos.
+      const { data: trusted, error: trustedError } = await supabase.rpc(
+        'current_customer_trusted_for_contraentrega',
+      )
+      if (trustedError) console.error('[checkout] historial de entregas:', trustedError.message)
+      setHasDeliveryHistory(trusted === true)
       setUserId(sessionUser.id)
       setName(profile?.full_name ?? meta?.full_name ?? '')
       if (profile?.phone) {

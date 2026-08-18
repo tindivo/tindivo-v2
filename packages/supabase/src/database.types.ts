@@ -2577,6 +2577,7 @@ export type Database = {
         Args: { p_role: Database["public"]["Enums"]["user_role"] }
         Returns: boolean
       }
+      current_customer_trusted_for_contraentrega: { Args: never; Returns: boolean }
       current_user_role: { Args: never; Returns: string }
       customer_contraentrega_blocked: {
         Args: { p_phone: string; p_reference: string }
@@ -2588,6 +2589,10 @@ export type Database = {
       }
       customer_requires_prepayment: {
         Args: { p_phone: string; p_reference: string; p_user_id: string }
+        Returns: boolean
+      }
+      customer_trusted_for_contraentrega: {
+        Args: { p_customer_user_id: string }
         Returns: boolean
       }
       deliver_order_cash: {

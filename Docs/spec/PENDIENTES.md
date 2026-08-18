@@ -130,6 +130,36 @@ Documentado en `Docs/10-flujo-motorizados.md §7`.
 
 ---
 
+## 🟡 ANTIFRAUDE — el teléfono del pedido no está atado a la cuenta
+
+**Encontrado al escribir la `0171`.** No lo introduce esa migración; es de antes
+y sigue abierto.
+
+`create_customer_order` recibe `p_customer_phone` del navegador y **nunca** lo
+compara contra `customer_profiles.phone`. Su guard de OTP (`0056`) solo
+comprueba que la cuenta tenga **algún** teléfono verificado, no que sea ése. Y
+los strikes se anclan al teléfono que llega por parámetro
+(`0162:465`, `customer_strikes.phone`).
+
+**La consecuencia:** un cliente con strikes puede esquivarlos escribiendo otro
+número al pedir. El ancla antifraude es un campo que el sancionado controla.
+
+**Lo que NO está afectado.** La `0171` no monta nada sobre `p_customer_phone`:
+resuelve el teléfono desde el perfil verificado, precisamente por esto. Así que
+el historial de entregas no se hereda tecleando el número del vecino — hay test
+que lo amarra (`contraentrega-delivery-history.integration.test.ts`).
+
+**Por qué no se cerró ahí.** Forzar `p_customer_phone = perfil.phone` toca las
+tres anclas del antifraude (cuenta, teléfono, dirección), el alta manual de la
+cajera —que legítimamente teclea el número de un tercero, sin cuenta— y los
+pedidos con `customer_user_id NULL`. Es un cambio de diseño del antifraude, no
+un guard más.
+
+**Decisión pendiente:** ¿el teléfono del pedido B2C se fuerza al del perfil, o
+los strikes se re-anclan a la cuenta cuando la hay?
+
+---
+
 ## 🟡 SPEC DEL MOTORIZADO — no escrito
 
 Decidido pero sin spec. **Requiere levantamiento previo de `apps/motorizados`**

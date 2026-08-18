@@ -71,8 +71,16 @@ export interface CheckoutState {
   maxDeclarable: number
   prepayOnlyByRisk: boolean
   setPrepayOnlyByRisk: (v: boolean) => void
-  deliveredCount: number
-  setDeliveredCount: (v: number) => void
+  /**
+   * ¿Puede este cliente pagar contraentrega sin prepago? Lo decide la DB
+   * (`current_customer_trusted_for_contraentrega`, migración 0171), no el
+   * navegador: cuentan las entregas de su cuenta, las de su teléfono verificado
+   * en v2 —incluidos los pedidos que tomó la cajera— y las del v1 congeladas en
+   * el directorio. Antes esto era un `count` de pedidos propios `delivered`, que
+   * en el piloto casi nadie tiene.
+   */
+  hasDeliveryHistory: boolean
+  setHasDeliveryHistory: (v: boolean) => void
 
   locating: boolean
   setLocating: (v: boolean) => void
@@ -129,7 +137,7 @@ export function useCheckoutState(): CheckoutState {
   const [maxCashBill, setMaxCashBill] = useState(DEFAULT_MAX_CASH_BILL)
   const [maxChange, setMaxChange] = useState(DEFAULT_MAX_CHANGE)
   const [prepayOnlyByRisk, setPrepayOnlyByRisk] = useState(false)
-  const [deliveredCount, setDeliveredCount] = useState(0)
+  const [hasDeliveryHistory, setHasDeliveryHistory] = useState(false)
   const [locating, setLocating] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -163,7 +171,7 @@ export function useCheckoutState(): CheckoutState {
     () => Math.round((subtotal + deliveryFee) * 100) / 100,
     [subtotal, deliveryFee],
   )
-  const isNewUser = deliveredCount < 1
+  const isNewUser = !hasDeliveryHistory
   const exceedsCashCap = total > prepayThreshold
   const isBlocked = prepayOnlyByRisk
 
@@ -270,8 +278,8 @@ export function useCheckoutState(): CheckoutState {
     maxDeclarable,
     prepayOnlyByRisk,
     setPrepayOnlyByRisk,
-    deliveredCount,
-    setDeliveredCount,
+    hasDeliveryHistory,
+    setHasDeliveryHistory,
     locating,
     setLocating,
     loading,
