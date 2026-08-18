@@ -43,7 +43,7 @@ otro cabe un día en el que el repositorio no puede decirte si algo funciona.
 
 ## Lo que se hizo
 
-Cinco commits en `develop`, árbol limpio al cerrar.
+Seis commits en `develop`, árbol limpio al cerrar.
 
 | Commit | Qué |
 |---|---|
@@ -51,12 +51,13 @@ Cinco commits en `develop`, árbol limpio al cerrar.
 | `f842960` | Los slugs: `0165` + `0166`, rutas de API, 308 uuid→slug, 301 del v1, `DEPLOY.md` |
 | `d3488ee` | Desbloqueo de la e2e (500 de customer, orden de los setups), los dos handoffs del 17-ago |
 | `01dc5a6` | La suite entera en verde + `0167` |
+| `9f25c86` | El cliente de servidor entra en la fábrica, y el push al salir tiene tests (deudas 4 y 7 del handoff del logout) |
 
 En producción (`tindivo-prod`): **`0165` y `0166` aplicadas y verificadas contra
 el objeto vivo**. Slugs reales: `pizza-priamo`, `la-florencia`, `al-punto`,
 `polleria-nadia` — que es exactamente lo que esperan las dos 301 escritas a mano.
 
-Verde al cerrar: `type-check` 11/11, `pnpm test` 7/7, `pnpm build` 5/5,
+Verde al cerrar: `type-check` 11/11, `pnpm test` 8/8 (417 tests), `pnpm build` 5/5,
 `check:auth`, y **`pnpm test:e2e` 21/21 — la primera corrida completa que existe**.
 
 ---
@@ -170,17 +171,24 @@ deja ningún commit intermedio que no compile.
    `features/pilot/`, `packages/contracts/src/pilot.ts`). No hace daño — se
    autodesmonta por fecha y ya no consulta ninguna tabla — pero es código de una
    feature retirada cuya tabla borró `0164`.
-7. **`unsubscribeFromPush()` de `@tindivo/ui` sigue sin un solo test.** Lo usan
-   las cuatro apps al cerrar sesión; el e2e del motorizado ejercita su propio
-   hook, no el helper compartido.
-8. **No existe cambio de contraseña.** Tras un robo se pueden cortar las sesiones
-   (HU-X-011) pero no impedir que quien sepa la contraseña vuelva a entrar.
-9. **El cliente de servidor sigue suelto** (`apps/customer/lib/supabase/server.ts`),
-   y `check:auth` no lo alcanza: vigila `createBrowserClient`, no el de servidor.
-10. **Verificar el logout con dos teléfonos de verdad contra producción**, que es
-    como apareció el bug. El e2e prueba la revocación contra el auth local.
+7. **No existe cambio de contraseña.** Tras un robo se pueden cortar las sesiones
+   (HU-X-011) pero no impedir que quien sepa la contraseña vuelva a entrar. Es la
+   mitad que le falta a «perdí mi teléfono».
+8. **Verificar el logout con dos teléfonos de verdad contra producción**, que es
+   como apareció el bug. El e2e prueba la revocación contra el auth local.
 
 ---
+
+### Cerrado después de escribir este handoff
+
+Las deudas 4 y 7 del handoff del logout (el test de `unsubscribeFromPush` y el
+cliente de servidor suelto) se cerraron en `9f25c86`, ya dentro de esta misma
+sesión. Con ellas se fue un tercer hallazgo: `apps/api/lib/supabase/server.ts`
+era código muerto que se construía **sin `storageKey`**, así que buscaba la
+cookie por defecto mientras el navegador escribe en `tindivo-<app>-auth`. No
+fallaba: decía «no hay usuario». Un cliente de sesión muerto es peor que
+ninguno, porque el día que alguien lo use va a depurar RLS buscando un fallo que
+está en el nombre de una cookie. Borrado.
 
 ## Siguiente paso que yo daría
 
