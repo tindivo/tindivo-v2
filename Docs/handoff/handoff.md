@@ -55,6 +55,11 @@ handoff; esto es solo para reconocerlos antes de perder una hora.
 
 **Sobre el frontend**
 
+- **Los iconos de Material Symbols meten su NOMBRE en el texto de la página.** La
+  ligadura los dibuja, pero «schedule» está de verdad en el DOM y Google lo
+  publica dentro de las frases. El nombre va en `--icon-glyph` + `::before`.
+- **Google rechaza el favicon si no es múltiplo de 48px** y cae al del hosting.
+  Tener el icono declarado y servido no basta: 256×256 no le vale.
 - **Un tipo obligatorio no hace aparecer un campo que llega por HTTP.** Entre dos
   servicios que despliegan por separado (aquí `api` y `customer`, proyectos de
   Vercel distintos), el contrato es lo que el otro manda HOY. `slug: string` no
@@ -113,6 +118,8 @@ handoff; esto es solo para reconocerlos antes de perder una hora.
   `/auth/v1/token` (200 = vivo, 400 = revocado).
 - **PostgREST rechaza un `DELETE` sin ningún filtro.** Al mutar un endpoint para
   comprobar que su test lo atrapa, el fallo llega por ahí y no por donde esperas.
+- **Antes de culparte de un fallo visual, córrelo sin tu cambio.** Los 7 de la
+  suite visual dan diferencias idénticas al píxel con y sin: son preexistentes.
 - **`pnpm biome check .` falla de base** (2 errores, ~92 warnings preexistentes).
   Filtra por tus ficheros o no distingues lo que rompiste tú.
 - **`.maybeSingle()` de PostgREST devuelve `null` cuando hay MÁS de una fila**, no
@@ -136,6 +143,10 @@ handoff; esto es solo para reconocerlos antes de perder una hora.
 - **Un fichero que pertenece a varios commits se reparte escribiendo su estado
   intermedio** antes de cada uno, no troceando hunks: así ningún commit
   intermedio queda sin compilar.
+- **Un merge a `main` arrastra los commits ajenos que ya estaban en `develop`.**
+  El 18-ago uno traía una migración sin aplicar (`0168`) y su código habría
+  prometido 15 minutos de pago mientras la base cortaba a los 10. Revisar el
+  commit ajeno cuesta dos minutos; `git log main..develop` antes de mergear.
 - **El árbol se edita en paralelo.** Antes de commitear, `git status` y atribuir
   cada fichero. Nunca captures trabajo ajeno a medias.
 - Las rutas de las apps están **en español** (`app/motorizados/`), el código en
