@@ -9,16 +9,27 @@
 
 ## Lo urgente (si solo lees una cosa)
 
-**Los slugs están en la base de producción pero NO en la web.** `0165`, `0166` y
-la columna viven en `tindivo-prod`; el frontend que los usa está en `develop` y
-**producción sale de `main`**. Hoy `www.tindivo.com/negocio/<uuid>` responde 200
-sin redirigir, porque sirve el código de antes. El merge a `main` está sin hacer
-**a propósito**: es la decisión que quedó pendiente de aprobación.
+**Desplegado y verificado en producción.** `main` lleva los 12 commits, las tres
+migraciones (`0165`, `0166`, `0167`) están en `tindivo-prod`, y los slugs ya
+funcionan de cara al público:
 
-Lo segundo: **`0167` no llegó a producción.** El push fue bloqueado por el
-clasificador de permisos de la sesión. Está aplicada y verificada en local, y
-commiteada. Mientras no se empuje, `slugify()` y `businesses_set_slug()` corren
-en `tindivo-prod` con el `search_path` heredado del llamante.
+```
+/negocio/be47c407-37c2-4ad0-b0bc-7ed24b162cf7  → 308  /negocio/pizza-priamo
+/restaurantes/priamo                            → 308  /negocio/pizza-priamo
+/restaurantes/la-florencia                      → 404  (retirado a propósito)
+```
+
+Quedan **dos cosas por comprobar** que no se podían hacer desde aquí:
+
+1. **Entrar con Google.** Se reescribió `/auth/callback` para que pase por la
+   fábrica de clientes. El diff es idéntico en comportamiento y el `storageKey`
+   está congelado por un test, pero **el flujo OAuth no lo ejercita ningún
+   test** — el e2e entra con correo y contraseña. Son diez segundos.
+2. **El sitemap, dentro de una hora.** Se regeneró mientras la API aún no mandaba
+   `slug`, así que el filtro dejó fuera a Pizza Priamo y ahora mismo lista solo
+   las rutas fijas. Con `revalidate = 3600` entra solo; si en una hora
+   `sitemap.xml` sigue sin `/negocio/pizza-priamo`, entonces sí hay algo que
+   mirar.
 
 ---
 
@@ -229,27 +240,52 @@ deja ningún commit intermedio que no compile.
 
 ---
 
+## El despliegue, y la ventana que se vio en directo
+
+El orden fue: `0167` a la base, merge a `main`, y verificación contra el sitio
+vivo. La cadena completa se corrió **en `main`** antes de empujar, no solo en
+`develop`: es la rama que despliega, y fiarse de que otra estaba verde es
+justamente el tipo de suposición que este handoff viene documentando.
+
+Lo interesante pasó en medio. `tindivo-customer` desplegó **antes** que
+`tindivo-api`, y durante varios minutos se pudo observar el desfase exacto que
+el fallback estaba puesto para cubrir:
+
+| Momento | API manda `slug` | Enlace de la tarjeta |
+|---|---|---|
+| Justo tras el merge | no | `/negocio/be47c407-...` (uuid) |
+| Tras desplegar `api` | sí | `/negocio/pizza-priamo` |
+
+Cero apariciones de `undefined` en ninguno de los dos momentos. **Sin el arreglo
+de esa misma sesión, el catálogo habría estado inaccesible durante esa ventana**
+— no roto de forma visible: la portada pintando con normalidad y cada tarjeta
+llevando a una página que no existe.
+
+No fue una prueba montada: fue el despliegue real, y confirmó tanto el riesgo
+como el arreglo. Vale la pena registrarlo porque el riesgo era fácil de
+descartar sobre el papel («basta con desplegar la API primero») y resultó que el
+orden real fue el contrario.
+
+---
+
 ## Deuda registrada, sin implementar
 
-1. **Merge a `main`.** Los slugs están en la base y no en la web. Es lo único que
-   falta para cerrar el trabajo del 17-ago, y necesita aprobación.
-2. **`0167` sin desplegar** (ver "Lo urgente").
-3. **Search Console: "VALIDAR CORRECCIÓN"** en *"Duplicada: el usuario no ha
+1. **Search Console: "VALIDAR CORRECCIÓN"** en *"Duplicada: el usuario no ha
    indicado ninguna versión canónica"*, y comprobar que las 16 páginas 404 del v1
    se reducen a las que de verdad no migraron.
-4. **La prueba de WhatsApp sigue sin hacerse.** Diez segundos, y es la única duda
+2. **La prueba de WhatsApp sigue sin hacerse.** Diez segundos, y es la única duda
    abierta sobre el SEO ya desplegado: si la tarjeta de ~1,4 MB se descarta por
    tamaño, hay que bajar el ancho de origen a `w=640`.
-5. **`NEXT_PUBLIC_APP_URL` no está en Vercel.** Producción cae en el valor por
+3. **`NEXT_PUBLIC_APP_URL` no está en Vercel.** Producción cae en el valor por
    defecto del código.
-6. **El muro del piloto sigue montado en el cliente** (`PilotWall`,
+4. **El muro del piloto sigue montado en el cliente** (`PilotWall`,
    `features/pilot/`, `packages/contracts/src/pilot.ts`). No hace daño — se
    autodesmonta por fecha y ya no consulta ninguna tabla — pero es código de una
    feature retirada cuya tabla borró `0164`.
-7. **No existe cambio de contraseña.** Tras un robo se pueden cortar las sesiones
+5. **No existe cambio de contraseña.** Tras un robo se pueden cortar las sesiones
    (HU-X-011) pero no impedir que quien sepa la contraseña vuelva a entrar. Es la
    mitad que le falta a «perdí mi teléfono».
-8. **Verificar el logout con dos teléfonos de verdad contra producción**, que es
+6. **Verificar el logout con dos teléfonos de verdad contra producción**, que es
    como apareció el bug. El e2e prueba la revocación contra el auth local.
 
 ---
@@ -267,11 +303,12 @@ está en el nombre de una cookie. Borrado.
 
 ## Siguiente paso que yo daría
 
-1. **Mergear a `main`** y verificar en producción:
-   `curl -sI https://www.tindivo.com/negocio/be47c407-37c2-4ad0-b0bc-7ed24b162cf7`
-   → 308 hacia `/negocio/pizza-priamo`.
-2. **Empujar `0167`**, que es lo único de esta sesión que quedó a medio camino.
-3. **Search Console y la prueba de WhatsApp**, que cierran el trabajo del 17-ago
-   sin escribir una línea de código.
-4. **Google Business Profile.** Sigue siendo lo que más mueve la aguja: el
+1. **Entrar con Google en producción**, que es lo único desplegado hoy sin
+   cobertura automática.
+2. **Search Console: VALIDAR CORRECCIÓN** en «Duplicada: el usuario no ha
+   indicado ninguna versión canónica», y comprobar que las 404 del v1 bajan.
+3. **La prueba de WhatsApp**, diez segundos, única duda abierta del SEO.
+4. **`check:ds` de verdad**: 141 superficies de botón conocidas. Ahora que el
+   gate está verde, cada migración baja el número y ninguna nueva se cuela.
+5. **Google Business Profile**, que sigue siendo lo que más mueve la aguja: el
    problema del piloto no es posicionamiento, es descubrimiento.
