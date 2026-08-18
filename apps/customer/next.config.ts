@@ -41,6 +41,26 @@ const config: NextConfig = {
         hostname: '**.supabase.co',
         pathname: '/storage/v1/object/public/**',
       },
+      /**
+       * El Storage local sirve por `http://127.0.0.1:54321`, que no casa con el
+       * patrón de arriba: `next/image` responde `Invalid src prop` y la portada
+       * devuelve 500. Eso tumbaba `pnpm test:e2e` ENTERO, porque la sonda de
+       * arranque de Playwright exige que esta app conteste < 400 aunque los
+       * tests que corras no la usen.
+       *
+       * Solo fuera de producción: ahí este host no existe y no hay motivo para
+       * declararlo como origen de imágenes permitido.
+       */
+      ...(process.env.NODE_ENV === 'production'
+        ? []
+        : [
+            {
+              protocol: 'http' as const,
+              hostname: '127.0.0.1',
+              port: '54321',
+              pathname: '/storage/v1/object/public/**',
+            },
+          ]),
     ],
   },
 }
