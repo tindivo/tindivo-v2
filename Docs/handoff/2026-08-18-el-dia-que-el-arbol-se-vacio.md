@@ -313,6 +313,47 @@ al del hosting. Se generaron `icon-96x96.png` y `icon-192x192.png` desde
 aceptan».** El consumidor tiene requisitos propios que no fallan de forma
 visible — simplemente te ignora.
 
+
+### El `Disallow` que impedía salir del índice
+
+`/entrar` seguía saliendo en los resultados de «tindivo» semanas después de
+ponerle `noindex`. El motivo estaba en `robots.ts`, y se leía como prudencia:
+
+```
+disallow: ['/checkout', '/cuenta', '/pedidos', '/pedido/', '/entrar', '/auth/']
+// «el segundo cinturón, para el crawler que ni siquiera llega a renderizarlas»
+```
+
+**Los dos cinturones no se suman: se anulan.** Un `Disallow` impide RASTREAR, no
+INDEXAR. Si Google no puede entrar, nunca llega a leer el `noindex` que le espera
+dentro, así que una URL ya indexada se queda ahí indefinidamente mostrando lo
+que recuerde. El bloqueo no protegía la página: **le impedía salir del índice**.
+
+Ahora se quedan solo con `noindex`, que es la orden que sí desindexa. Se
+verificó en producción una por una que las cinco la mandan antes de quitar el
+bloqueo, porque a partir de ahora es lo único que las cubre. `/auth/` se queda
+bloqueado: no es una página, es el callback de OAuth, y no devuelve HTML donde
+poner un `noindex`.
+
+### El logo que no era el logo
+
+Al generar el favicon válido partí de `public/icon.svg` **sin abrirlo**. Era una
+T blanca sobre naranja —un placeholder viejo—, no el logo. Con eso sobrescribí
+`icon-192x192.png`, que estaba BIEN, y publiqué una T en la pestaña del
+navegador. Lo detectó el usuario, no ningún chequeo.
+
+El logo real (la casita naranja y gris) ya estaba correcto desde el 14-ago en
+`favicon.ico`, `apple-touch-icon.png`, `icon-192x192.png` e `icon-512x512.png`.
+Se restauró el 192 desde `56d7e43` y se regeneró el 96 desde el 512.
+
+Se borraron los cuatro `icon.svg` (uno por app): no los referenciaba nadie —ni
+el manifest ni `metadata.icons`— y contenían algo que no es el logo.
+
+**La lección: el fichero vectorial no es automáticamente la fuente de verdad.**
+Un fichero que se llama «el icono del sitio», que no usa nadie, y que dentro
+tiene otra cosa, es una trampa esperando al siguiente. Mira lo que vas a copiar
+antes de copiarlo.
+
 ### Cómo se verificó que el render no se movía
 
 El cambio de iconos toca las cuatro apps, así que lo que importaba era que **no

@@ -58,6 +58,12 @@ handoff; esto es solo para reconocerlos antes de perder una hora.
 - **Los iconos de Material Symbols meten su NOMBRE en el texto de la página.** La
   ligadura los dibuja, pero «schedule» está de verdad en el DOM y Google lo
   publica dentro de las frases. El nombre va en `--icon-glyph` + `::before`.
+- **`Disallow` + `noindex` juntos se ANULAN.** El bloqueo impide rastrear, así
+  que Google nunca lee el `noindex` y la URL ya indexada no sale nunca. Para
+  desindexar: solo `noindex`, sin `Disallow`.
+- **Antes de copiar un icono, ÁBRELO.** `public/icon.svg` era una T, no el logo;
+  generar desde ahí publicó una T en la pestaña. El fichero vectorial no es
+  automáticamente la fuente de verdad.
 - **Google rechaza el favicon si no es múltiplo de 48px** y cae al del hosting.
   Tener el icono declarado y servido no basta: 256×256 no le vale.
 - **Un tipo obligatorio no hace aparecer un campo que llega por HTTP.** Entre dos
