@@ -1,5 +1,6 @@
 'use client'
 
+import { canalUnico } from '@tindivo/supabase'
 import { useCallback, useEffect, useState } from 'react'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
@@ -285,8 +286,12 @@ export function useCashSettlements() {
 
   useEffect(() => {
     load()
+    // Nombre único POR SUSCRIPCIÓN. Con `'biz-cash'` fijo, un remontaje dentro
+    // de la ventana asíncrona de `removeChannel` recibía el canal anterior
+    // todavía conectado y el `.on()` lanzaba «cannot add postgres_changes
+    // callbacks ... after subscribe()». Ver `canalUnico` en `@tindivo/supabase`.
     const channel = getSupabaseBrowser()
-      .channel('biz-cash')
+      .channel(canalUnico('biz-cash'))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'cash_settlements' }, () =>
         load(),
       )

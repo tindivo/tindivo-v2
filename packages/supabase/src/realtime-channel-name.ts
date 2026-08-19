@@ -37,7 +37,31 @@
  * `useDriverOrders`: el ref sobrevive al ciclo desmontar-montar de StrictMode,
  * así que la segunda suscripción pide exactamente el mismo nombre que la
  * primera. Tiene que generarse DENTRO del efecto, una vez por suscripción.
+ *
+ * QUÉ NO ARREGLA. El nombre único evita la COLISIÓN, no releva de darse de baja:
+ * el `useEffect` sigue necesitando su `removeChannel` en el cierre, o se acumulan
+ * canales vivos y cada evento llega duplicado.
+ *
+ * VIVE EN `packages/supabase` Y NO EN UNA APP porque el mismo choque estaba en
+ * los cuatro frontends: `drv-cash`, `biz-cash`, `home-orders-*` y `order-*`. Un
+ * helper por app habría sido cuatro copias de esta explicación.
  */
+/**
+ * UN CONTADOR, NO `crypto.randomUUID()`. Dos motivos, y el segundo es el bueno:
+ *
+ *   · Este paquete lo comparten los cuatro frontends y `apps/api`, y compila sin
+ *     los tipos del DOM: `crypto` no existe para TypeScript aquí.
+ *   · La unicidad que hace falta es DENTRO de un `RealtimeClient` —es su
+ *     `getChannels().find()` el que hay que dejar sin resultados—, no global. Un
+ *     contador la garantiza; un UUID solo la hace improbable.
+ *
+ * El módulo es un singleton por bundle, igual que el cliente de Supabase al que
+ * acompaña, así que el contador vive exactamente lo mismo que la lista de
+ * canales sobre la que decide.
+ */
+let secuencia = 0
+
 export function canalUnico(prefijo: string): string {
-  return `${prefijo}-${crypto.randomUUID()}`
+  secuencia += 1
+  return `${prefijo}-${secuencia}`
 }

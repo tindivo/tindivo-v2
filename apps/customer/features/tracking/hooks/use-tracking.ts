@@ -1,6 +1,7 @@
 'use client'
 
 import { ApiError } from '@tindivo/api-client'
+import { canalUnico } from '@tindivo/supabase'
 import { useCallback, useEffect, useState } from 'react'
 import type { CancelState, Tracking } from '@/features/tracking/types'
 import { api } from '@/lib/api'
@@ -57,8 +58,11 @@ export function useTracking(shortId: string): UseTrackingResult {
   useEffect(() => {
     if (!ownedId) return
     const supabase = getSupabaseBrowser()
+    // Único por suscripción, no por pedido: volver a abrir el MISMO seguimiento
+    // reusaba el topic mientras el canal anterior seguía dándose de baja, y el
+    // `.on()` lanzaba. Ver `canalUnico` en `@tindivo/supabase`.
     const channel = supabase
-      .channel(`order-${ownedId}`)
+      .channel(canalUnico(`order-${ownedId}`))
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${ownedId}` },

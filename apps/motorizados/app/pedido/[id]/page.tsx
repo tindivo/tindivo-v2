@@ -1,6 +1,7 @@
 'use client'
 
 import { ApiError } from '@tindivo/api-client'
+import { canalUnico } from '@tindivo/supabase'
 import { BottomActionBar, Button, Icon, ScreenHeader } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { use, useCallback, useEffect, useState } from 'react'
@@ -26,7 +27,6 @@ import { api } from '@/lib/api'
 import { isValidPePhone, waLink } from '@/lib/deeplinks'
 import { soles } from '@/lib/format'
 import { getOptimistic } from '@/lib/offline-queue'
-import { canalUnico } from '@/lib/realtime'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import { postTransition } from '@/lib/transitions'
 import type { OrderDetailResponse } from '@/lib/types'
@@ -95,7 +95,7 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
     const supabase = getSupabaseBrowser()
     // Único por suscripción, no por pedido: volver a abrir el MISMO pedido
     // reusaba el topic mientras el canal anterior seguía dándose de baja, y el
-    // `.on()` lanzaba. Ver `lib/realtime.ts`.
+    // `.on()` lanzaba. Ver `canalUnico` en `@tindivo/supabase`.
     const channel = supabase
       .channel(canalUnico(`drv-order-${id}`))
       .on(

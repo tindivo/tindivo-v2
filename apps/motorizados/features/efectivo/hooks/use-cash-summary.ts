@@ -1,9 +1,9 @@
 'use client'
 
 import { type ApiEnvelope, ApiError } from '@tindivo/api-client'
+import { canalUnico } from '@tindivo/supabase'
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '@/lib/api'
-import { canalUnico } from '@/lib/realtime'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
 /** En qué punto del camino está el efectivo de un pedido. */

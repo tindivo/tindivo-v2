@@ -2,6 +2,7 @@
 
 import { type ApiEnvelope, ApiError } from '@tindivo/api-client'
 import { ACTIVE_ORDER_STATUSES } from '@tindivo/contracts'
+import { canalUnico } from '@tindivo/supabase'
 import { useEffect, useState } from 'react'
 import type { ActiveOrder, CatalogUser, PublicBusiness } from '@/features/catalog/types'
 import { api } from '@/lib/api'
@@ -91,8 +92,12 @@ export function useHomeData(options: UseHomeDataOptions = {}) {
         })
     }
     loadActive()
+    // Único por suscripción, no por usuario: el cliente entra y sale del inicio
+    // constantemente, y si remonta dentro de la ventana asíncrona de
+    // `removeChannel` recibía el canal anterior todavía conectado y el `.on()`
+    // lanzaba. Ver `canalUnico` en `@tindivo/supabase`.
     const channel = supabase
-      .channel(`home-orders-${uid}`)
+      .channel(canalUnico(`home-orders-${uid}`))
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'orders', filter: `customer_user_id=eq.${uid}` },

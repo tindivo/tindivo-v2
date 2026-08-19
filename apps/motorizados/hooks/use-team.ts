@@ -1,8 +1,8 @@
 'use client'
 
+import { canalUnico } from '@tindivo/supabase'
 import { useSyncExternalStore } from 'react'
 import { api } from '@/lib/api'
-import { canalUnico } from '@/lib/realtime'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import type { TeamResponse } from '@/lib/types'
 
@@ -173,7 +173,7 @@ function openChannel(): void {
   // anterior, pero `removeChannel` es asíncrono y el canal sigue registrado un
   // instante más: pedir `'drv-team'` otra vez devolvía ESE, todavía conectado, y
   // el `.on()` lanzaba. Aquí no hace falta remontar nada para provocarlo — basta
-  // un `TOKEN_REFRESHED`, o sea una vez por hora. Ver `lib/realtime.ts`.
+  // un `TOKEN_REFRESHED`, o sea una vez por hora. Ver `canalUnico` en `@tindivo/supabase`.
   channel = supabase
     .channel(canalUnico('drv-team'))
     .on(

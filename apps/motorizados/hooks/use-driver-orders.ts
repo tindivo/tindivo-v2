@@ -1,9 +1,9 @@
 'use client'
 
+import { canalUnico } from '@tindivo/supabase'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { isToday } from '@/lib/format'
 import { getOptimistic, queueSize } from '@/lib/offline-queue'
-import { canalUnico } from '@/lib/realtime'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import { flushQueue } from '@/lib/transitions'
 import type { BoardOrder, DriverBusiness } from '@/lib/types'
@@ -90,7 +90,7 @@ export function useDriverOrders(now: number): DriverBoard {
     // El nombre se genera DENTRO del efecto. Estaba en un `useRef`, y un ref
     // sobrevive al ciclo desmontar-montar de StrictMode: la segunda suscripción
     // pedía exactamente el mismo topic que la primera, que aún no había
-    // terminado de darse de baja. Ver `lib/realtime.ts`.
+    // terminado de darse de baja. Ver `canalUnico` en `@tindivo/supabase`.
     const channel = supabase
       .channel(canalUnico('drv-orders'))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {

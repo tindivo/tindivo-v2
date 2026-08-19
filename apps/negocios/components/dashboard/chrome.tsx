@@ -1,6 +1,7 @@
 'use client'
 
 import type { BusinessPrimaryCapability } from '@tindivo/contracts'
+import { canalUnico } from '@tindivo/supabase'
 import { BottomSheet, Button, Card, CardBody, Icon } from '@tindivo/ui'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -848,8 +849,14 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
         activeChannel = null
       }
 
+      // Nombre único POR APERTURA, y aquí importa más que en ningún otro sitio:
+      // esta función ES la reconexión. Acaba de pedir la baja del canal anterior,
+      // pero `removeChannel` es asíncrono, así que pedir `biz-orders-${bizId}`
+      // otra vez devolvía ESE, todavía conectado, y el `.on()` lanzaba — o sea
+      // que cada reintento moría justo cuando la conexión ya iba mal.
+      // Ver `canalUnico` en `@tindivo/supabase`.
       const channel = supabase
-        .channel(`biz-orders-${bizId}`)
+        .channel(canalUnico(`biz-orders-${bizId}`))
         .on(
           'postgres_changes',
           {
