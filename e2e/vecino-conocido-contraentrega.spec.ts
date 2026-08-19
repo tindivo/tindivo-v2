@@ -95,7 +95,10 @@ test.describe('0171 · al vecino conocido la pantalla le ofrece contraentrega', 
     // —`delivered` incluido, que es el que sedimenta— y toda fila de directorio
     // de sus teléfonos.
     for (const c of [VECINO, DESCONOCIDO]) {
-      const { data: pedidos } = await db.from('orders').select('id').eq('customer_user_id', c.userId)
+      const { data: pedidos } = await db
+        .from('orders')
+        .select('id')
+        .eq('customer_user_id', c.userId)
       for (const p of pedidos ?? []) {
         await db.from('domain_events').delete().eq('aggregate_id', p.id)
         await db.from('order_event_log').delete().eq('order_id', p.id)
@@ -191,7 +194,8 @@ test.describe('0171 · al vecino conocido la pantalla le ofrece contraentrega', 
     const pedido = await expect
       .poll(leerUltimo, {
         timeout: 20_000,
-        message: () => `el pedido no apareció. Fallos de API: ${fallosApi.join(' | ') || '(ninguno)'}`,
+        message: () =>
+          `el pedido no apareció. Fallos de API: ${fallosApi.join(' | ') || '(ninguno)'}`,
       })
       .not.toBeNull()
       .then(leerUltimo)
