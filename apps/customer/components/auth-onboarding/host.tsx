@@ -1,6 +1,6 @@
 'use client'
 
-import { signOutLocal } from '@tindivo/supabase'
+import { shouldClearStaleSession, signOutLocal } from '@tindivo/supabase'
 import { useEffect } from 'react'
 import { clearOnboardingResume, readOnboardingResume, useOnboarding } from '@/lib/onboarding-store'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
@@ -17,13 +17,20 @@ export async function resumeOnboardingIfPending(): Promise<boolean> {
   // getUser() valida contra el servidor: una sesión obsoleta de un usuario borrado
   // no debe reabrir el onboarding (escribiría con un user_id inexistente → FK).
   const supabase = getSupabaseBrowser()
-  const { data } = await supabase.auth.getUser()
+  const { data, error } = await supabase.auth.getUser()
   const user = data.user
   if (!user) {
-    // Local: es una limpieza de esta pestaña, no un logout. Con scope global,
-    // un resume caducado aquí cerraría la sesión del cliente en sus otros
-    // dispositivos.
-    await signOutLocal(supabase).catch(() => {})
+    // `user: null` NO significa «sesión mala»: también sale así cuando no se
+    // pudo preguntar. Solo se limpia cuando el servidor de auth respondió y
+    // desmintió la sesión; si simplemente no hubo red, se deja como está y ya
+    // se reintentará. Ver `sessionVerdict`.
+    //
+    // Local y no global: es una limpieza de esta pestaña, no un logout. Con
+    // scope global, un resume caducado aquí cerraría la sesión del cliente en
+    // sus otros dispositivos.
+    if (shouldClearStaleSession({ data, error })) {
+      await signOutLocal(supabase).catch(() => {})
+    }
     return false
   }
 

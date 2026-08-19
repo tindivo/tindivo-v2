@@ -1,6 +1,6 @@
 'use client'
 
-import { signOutLocal } from '@tindivo/supabase'
+import { sessionVerdict, shouldClearStaleSession, signOutLocal } from '@tindivo/supabase'
 import { useEffect, useRef } from 'react'
 import type { CheckoutState } from '@/features/checkout/hooks/use-checkout-state'
 import type { CustomerProfile } from '@/features/checkout/types'
@@ -43,8 +43,20 @@ export function useCheckoutAuth(state: CheckoutState) {
     // una sesión obsoleta de un usuario borrado pasaría getSession() pero fallaría
     // aquí, evitando que el onboarding escriba con un user_id inexistente
     // (FK violation en terms_acceptance/customer_profiles).
-    supabase.auth.getUser().then(async ({ data: userData }) => {
-      const sessionUser = userData.user
+    supabase.auth.getUser().then(async ({ data: userData, error }) => {
+      let sessionUser = userData.user
+
+      // Sin confirmación del servidor de auth, la sesión guardada NO se da por
+      // muerta: `getUser()` devuelve `user: null` tanto si la sesión no vale
+      // como si no hubo forma de preguntar, y en un móvil con datos flojos lo
+      // segundo pasa a menudo. Se sigue con la sesión que hay en el
+      // dispositivo; si de verdad ya no sirve, la primera consulta que haga
+      // fallará y eso sí es un 401 del servidor, no una suposición nuestra.
+      if (!sessionUser && sessionVerdict({ data: userData, error }) === 'unreachable') {
+        const { data: enCache } = await supabase.auth.getSession()
+        sessionUser = enCache.session?.user ?? null
+      }
+
       if (!sessionUser) {
         const ob = useOnboarding.getState()
         if (openedSheetRef.current && !ob.open) {
@@ -54,10 +66,13 @@ export function useCheckoutAuth(state: CheckoutState) {
         }
         if (!ob.open) {
           // Limpia la sesión obsoleta de ESTE dispositivo antes de pedir login
-          // otra vez. Tiene que ser local: esto no es un logout que haya pedido
-          // nadie, y con scope global una sesión rancia en el móvil echaría al
-          // cliente de los demás dispositivos sin que tocara nada.
-          await signOutLocal(supabase).catch(() => {})
+          // otra vez — SOLO si el servidor la desmintió. Tiene que ser local:
+          // esto no es un logout que haya pedido nadie, y con scope global una
+          // sesión rancia en el móvil echaría al cliente de los demás
+          // dispositivos sin que tocara nada.
+          if (shouldClearStaleSession({ data: userData, error })) {
+            await signOutLocal(supabase).catch(() => {})
+          }
           openedSheetRef.current = true
           ob.openSheet({ next: '/checkout', inPlace: true })
         }
