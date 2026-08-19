@@ -49,6 +49,12 @@ const USUARIOS_FIXTURE = [
   'Ledger Test Driver',
   'Test Business Owner',
   'Test Admin',
+  // contraentrega-delivery-history: crea un cliente por caso porque necesita
+  // gente SIN historial, y los del seed acumulan `delivered` para siempre.
+  // Faltaba aquí y se colaba por partida doble: su `afterAll` borraba el
+  // usuario de `auth` pero no el espejo de `public.users` —no hay FK entre las
+  // dos—, así que dejaba una fila muerta por caso. 116 medidas el 2026-08-19.
+  'Vecino Integración',
 ]
 
 /** PostgREST mete los `.in()` en la URL: con miles de UUID revienta con un 414. */
@@ -63,6 +69,7 @@ interface Barrido {
   usuarios: number
   pedidos: number
   ciclos: number
+  eventos: number
 }
 
 async function barrer(): Promise<Barrido> {
@@ -187,20 +194,51 @@ async function barrer(): Promise<Barrido> {
   // "User not found" y no hay nada que arreglar.
   for (const id of userIds) await db.auth.admin.deleteUser(id)
 
+  // 6. Eventos de pedidos que ya no existen.
+  //
+  // `domain_events` apunta al agregado por `aggregate_id` y SIN foreign key, así
+  // que cualquier borrado de pedidos que no lo contemple —el `afterEach` de un
+  // test, una purga a mano— deja el evento vivo para siempre. No es inerte:
+  // nace con `published_at NULL`, o sea que el outbox lo seguirá tomando como
+  // pendiente de publicar.
+  //
+  // Se acota a `aggregate_type = 'order'`: los demás agregados
+  // (`cash_settlement`) tienen su propio ciclo de vida y no se tocan aquí.
+  const { data: eventos, error: evErr } = await db
+    .from('domain_events')
+    .select('id, aggregate_id')
+    .eq('aggregate_type', 'order')
+  if (evErr) throw new Error(`barrido: leer domain_events falló: ${evErr.message}`)
+
+  const { data: pedidosVivos, error: pvErr } = await db.from('orders').select('id')
+  if (pvErr) throw new Error(`barrido: leer orders vivos falló: ${pvErr.message}`)
+  const idsVivos = new Set((pedidosVivos ?? []).map((o) => o.id))
+
+  const eventosHuerfanos = (eventos ?? [])
+    .filter((e) => !idsVivos.has(e.aggregate_id))
+    .map((e) => e.id)
+
+  await enLotes(eventosHuerfanos, async (lote) => {
+    const { error } = await db.from('domain_events').delete().in('id', lote)
+    if (error) throw new Error(`barrido: borrar domain_events huérfanos falló: ${error.message}`)
+  })
+
   return {
     negocios: bizIds.length,
     usuarios: userIds.length,
     pedidos: huerfanos.length,
     ciclos: vacios.length,
+    eventos: eventosHuerfanos.length,
   }
 }
 
 async function barrerYReportar(momento: 'antes' | 'después'): Promise<void> {
-  const { negocios, usuarios, pedidos, ciclos } = await barrer()
-  if (negocios > 0 || usuarios > 0 || pedidos > 0 || ciclos > 0) {
+  const { negocios, usuarios, pedidos, ciclos, eventos } = await barrer()
+  if (negocios > 0 || usuarios > 0 || pedidos > 0 || ciclos > 0 || eventos > 0) {
     console.log(
       `🧹 [${momento}] restos de test borrados: ${negocios} negocios, ` +
-        `${usuarios} usuarios, ${pedidos} pedidos, ${ciclos} ciclos de caja`,
+        `${usuarios} usuarios, ${pedidos} pedidos, ${ciclos} ciclos de caja, ` +
+        `${eventos} eventos huérfanos`,
     )
   }
 }

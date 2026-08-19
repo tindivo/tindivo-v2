@@ -6,17 +6,28 @@
  * motorizado, cliente, settings): tras correr esto, el e2e puede volver a
  * ejecutarse sin re-sembrar.
  *
- * MARCADOR: `orders.customer_user_id IN E2E_CUSTOMER_USER_IDS`.
- * Son ids fijos y exclusivos de los clientes de prueba, así que no pueden
- * arrastrar pedidos reales por accidente. Se prefiere a heurísticas por texto
- * o por fecha.
+ * DOS MARCADORES, y hacen falta los dos:
+ *   1. `orders.customer_user_id IN E2E_CUSTOMER_USER_IDS`
+ *   2. `orders.business_id      IN E2E_BUSINESS_IDS`
+ *
+ * El primero solo alcanza los pedidos hechos DESDE UNA CUENTA. Los specs del
+ * motorizado crean pedidos MANUALES, que llevan `customer_user_id NULL` porque
+ * los teclea la cajera y no hay cuenta detrás; ese filtro no los veía y se
+ * quedaban en la base para siempre. Medido el 2026-08-19: 27 pedidos
+ * acumulados en `heading_to_restaurant`, más un `delivered` —y ése no es solo
+ * ruido visual, porque `delivered` es terminal y convierte al cliente de prueba
+ * en alguien "con historial", lo que hace pasar por el motivo equivocado a
+ * cualquier test que necesite un cliente nuevo.
+ *
+ * Los dos son ids fijos y exclusivos del mundo e2e, así que no pueden arrastrar
+ * pedidos reales por accidente. Se prefieren a heurísticas por texto o fecha.
  *
  * GUARD ANTI-PRODUCCIÓN: heredado de `local-db.ts` (aborta si no es 127.0.0.1).
  *
  * Uso:  pnpm db:seed:e2e:clean
  */
 import { localClient as db } from '../lib/__tests__/helpers/local-db.ts'
-import { E2E_CUSTOMER_USER_IDS } from './e2e-fixtures.ts'
+import { E2E_BUSINESS_IDS, E2E_CUSTOMER_USER_IDS } from './e2e-fixtures.ts'
 
 // biome-ignore lint/suspicious/noExplicitAny: database.types.ts está desactualizado
 const raw = db as any
@@ -24,14 +35,26 @@ const raw = db as any
 async function main(): Promise<void> {
   console.log('\nLimpieza e2e — solo transaccionales\n')
 
-  // 1. Localizar los pedidos de los clientes de prueba (el marcador).
-  const { data: orders, error: selErr } = await raw
+  // 1. Localizar los pedidos de prueba por LOS DOS marcadores. Van en dos
+  //    consultas y no en un `.or()` porque PostgREST exige serializar las
+  //    listas a mano dentro de `or(...)`, y una lista mal escapada ahí no
+  //    falla: filtra de menos, en silencio.
+  const idsPorCliente = await raw
     .from('orders')
-    .select('id, short_id')
+    .select('id')
     .in('customer_user_id', E2E_CUSTOMER_USER_IDS)
-  if (selErr) throw new Error(`leer orders falló: ${selErr.message}`)
+  if (idsPorCliente.error) throw new Error(`leer orders (cliente) falló: ${idsPorCliente.error.message}`)
 
-  const orderIds: string[] = (orders ?? []).map((o: { id: string }) => o.id)
+  const idsPorNegocio = await raw.from('orders').select('id').in('business_id', E2E_BUSINESS_IDS)
+  if (idsPorNegocio.error) throw new Error(`leer orders (negocio) falló: ${idsPorNegocio.error.message}`)
+
+  const orderIds: string[] = [
+    ...new Set(
+      [...(idsPorCliente.data ?? []), ...(idsPorNegocio.data ?? [])].map(
+        (o: { id: string }) => o.id,
+      ),
+    ),
+  ]
 
   if (orderIds.length === 0) {
     console.log('  No hay pedidos de prueba que borrar.\n')

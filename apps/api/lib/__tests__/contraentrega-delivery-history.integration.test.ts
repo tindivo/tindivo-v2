@@ -192,6 +192,10 @@ describe('0171 · el historial de entregas del teléfono abre la contraentrega',
   afterAll(async () => {
     for (const c of clientesCreados.splice(0)) {
       await db.from('customer_profiles').delete().eq('user_id', c.id)
+      // LAS DOS TABLAS. `public.users` NO tiene foreign key a `auth.users`, así
+      // que borrar el de auth deja el espejo vivo — y con él su `user_roles`.
+      // Aquí se dejaban 116 filas muertas antes de que nadie lo mirara.
+      await db.from('users').delete().eq('id', c.id)
       await db.auth.admin.deleteUser(c.id)
     }
   })

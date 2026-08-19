@@ -144,6 +144,21 @@ export const E2E = {
 export const E2E_CUSTOMER_USER_IDS: readonly string[] = E2E.CUSTOMERS.map((c) => c.userId)
 
 /**
+ * Ids de los negocios de prueba. SEGUNDO marcador de limpieza, y hace falta.
+ *
+ * El de clientes no basta: los specs del motorizado crean pedidos MANUALES, que
+ * van con `customer_user_id NULL` por definición (los teclea la cajera, no hay
+ * cuenta detrás). Ningún filtro por cliente los alcanza, así que se acumulaban
+ * corrida tras corrida —27 medidos el 2026-08-19, todos en
+ * `heading_to_restaurant`— hasta ensuciar el tablero de cualquiera que abriera
+ * el panel en local.
+ *
+ * Es igual de seguro que el otro: son uuids fijos y exclusivos del mundo e2e,
+ * así que un pedido colgado de ellos es de prueba por definición.
+ */
+export const E2E_BUSINESS_IDS: readonly string[] = [E2E.BUSINESS_ID, E2E.BUSINESS_2_ID]
+
+/**
  * Anon key del stack local de Supabase CLI. Es pública y está en su
  * documentación, igual que la service_role que hardcodea
  * `lib/__tests__/helpers/local-db.ts`. Se lee del entorno si está definida para
