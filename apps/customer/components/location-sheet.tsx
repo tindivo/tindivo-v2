@@ -161,8 +161,8 @@ export function LocationSheet({
               value={mode}
               onChange={onModeChange}
               options={[
-                { value: 'satellite', label: 'Satélite' },
                 { value: 'street', label: 'Mapa' },
+                { value: 'satellite', label: 'Satélite' },
               ]}
             />
           </div>

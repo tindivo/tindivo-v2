@@ -98,7 +98,9 @@ export function MapPicker({
   const [accuracyM, setAccuracyM] = useState<number | null>(null)
   const [locating, setLocating] = useState(false)
   const [locateError, setLocateError] = useState<string | null>(null)
-  const [mode, setMode] = useState<MapMode>('satellite')
+  // Abre en calles: es lo que orienta primero. El satélite está a un toque para
+  // quien necesite reconocer su techo, y la elección se conserva al volver.
+  const [mode, setMode] = useState<MapMode>('street')
   const [sheetOpen, setSheetOpen] = useState(false)
 
   // Si al montar ya había un punto guardado, no se pide el GPS: la dirección

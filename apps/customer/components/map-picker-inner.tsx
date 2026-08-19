@@ -30,10 +30,9 @@ const ZONE_STYLE = {
  * Dos fondos para el mismo mapa, y los dos sirven para algo distinto.
  *
  * OSM tiene San Jacinto mejor mapeado de lo que uno esperaría —calles con
- * nombre, la Posta Médica—, así que la vista de calles orienta bien. Lo que no
- * hace es decirte CUÁL es tu casa: eso solo lo resuelve la foto, donde la gente
- * reconoce su propio techo. Por eso el satélite es el fondo por defecto y lleva
- * encima la capa de etiquetas de Esri, que devuelve los nombres sin tapar nada.
+ * nombre, la Posta Médica—, así que la vista de calles orienta bien y es la que
+ * abre por defecto. Lo que no hace es decirte CUÁL es tu casa: eso solo lo
+ * resuelve la foto, donde la gente reconoce su propio techo.
  */
 const TILES: Record<MapMode, { url: string; attribution: string; maxNativeZoom: number }> = {
   street: {
@@ -44,9 +43,21 @@ const TILES: Record<MapMode, { url: string; attribution: string; maxNativeZoom: 
   satellite: {
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
     attribution: 'Imágenes &copy; Esri',
-    // Esri no siempre sirve z19 en zona rural. Con `maxNativeZoom` el z19 se
-    // consigue escalando el z18 en vez de quedarse en blanco.
-    maxNativeZoom: 18,
+    /**
+     * 17 Y NO MÁS. Medido contra el servicio, no supuesto: sobre San Jacinto,
+     * World_Imagery devuelve foto de verdad hasta z17 (~21 KB por tile) y a
+     * partir de z18 el MISMO placeholder de 2521 bytes que dice «Map data not
+     * yet available». Lo sirve con HTTP 200, así que Leaflet lo da por bueno y
+     * lo pinta: por eso acercarse llenaba la pantalla de ese texto en vez de
+     * quedarse en la última foto buena. El servicio «Clarity» de Esri topa en
+     * el mismo z17 (z18 ya es 404), o sea que no hay más resolución gratuita
+     * disponible en la zona.
+     *
+     * Con `maxNativeZoom` en 17, Leaflet deja de pedir tiles que no existen y
+     * escala el z17 para z18/z19. Se ve más blando al acercar, pero se sigue
+     * viendo el techo — que es de lo que va esta capa.
+     */
+    maxNativeZoom: 17,
   },
 }
 
@@ -285,7 +296,10 @@ export default function MapCanvas({
           maxZoom={19}
         />
         {mode === 'satellite' && (
-          <TileLayer key="sat-labels" url={SATELLITE_LABELS} maxNativeZoom={18} maxZoom={19} />
+          // La capa de referencia sí responde hasta z19 (tiles de 872 bytes:
+          // transparentes donde no hay nada que rotular), así que no necesita
+          // el tope de la imagen.
+          <TileLayer key="sat-labels" url={SATELLITE_LABELS} maxNativeZoom={19} maxZoom={19} />
         )}
         {polygon ? (
           <Polygon
