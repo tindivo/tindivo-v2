@@ -130,33 +130,59 @@ Documentado en `Docs/10-flujo-motorizados.md §7`.
 
 ---
 
-## 🟡 ANTIFRAUDE — el teléfono del pedido no está atado a la cuenta
+## ✅ ANTIFRAUDE — los strikes YA se anclan a la cuenta
 
-**Encontrado al escribir la `0171`.** No lo introduce esa migración; es de antes
-y sigue abierto.
+**Esta sección decía que un cliente podía esquivar sus strikes cambiando el
+número que escribe. ES FALSO, y se comprobó midiendo.** Se conserva corregida
+porque el error mandaba a construir algo que ya existe.
 
-`create_customer_order` recibe `p_customer_phone` del navegador y **nunca** lo
-compara contra `customer_profiles.phone`. Su guard de OTP (`0056`) solo
-comprueba que la cuenta tenga **algún** teléfono verificado, no que sea ése. Y
-los strikes se anclan al teléfono que llega por parámetro
-(`0162:465`, `customer_strikes.phone`).
+**Lo que de verdad hay.** `customer_strikes` guarda `customer_user_id` además
+del teléfono (`advance_order`, rama `no_show`). Y sobre esa tabla hay un trigger
+**habilitado**, `trg_customer_strikes_refresh_risk`, que en cada alta llama a
+`refresh_customer_profile_risk(customer_user_id, phone)`. Esa función cuenta:
 
-**La consecuencia:** un cliente con strikes puede esquivarlos escribiendo otro
-número al pedir. El ancla antifraude es un campo que el sancionado controla.
+```sql
+where s.customer_user_id = v_profile.user_id
+   or (v_profile.phone is not null and s.phone = v_profile.phone)
+```
 
-**Lo que NO está afectado.** La `0171` no monta nada sobre `p_customer_phone`:
-resuelve el teléfono desde el perfil verificado, precisamente por esto. Así que
-el historial de entregas no se hereda tecleando el número del vecino — hay test
-que lo amarra (`contraentrega-delivery-history.integration.test.ts`).
+O sea **cuenta OR teléfono**, y con ese total fija `strikes`,
+`contraentrega_blocked` y `blocked_until` en el perfil.
 
-**Por qué no se cerró ahí.** Forzar `p_customer_phone = perfil.phone` toca las
-tres anclas del antifraude (cuenta, teléfono, dirección), el alta manual de la
-cajera —que legítimamente teclea el número de un tercero, sin cuenta— y los
-pedidos con `customer_user_id NULL`. Es un cambio de diseño del antifraude, no
-un guard más.
+**Medido el 2026-08-19** contra la base local, con un usuario cuyos dos strikes
+se registraron en DOS teléfonos distintos, ninguno el de su perfil:
 
-**Decisión pendiente:** ¿el teléfono del pedido B2C se fuerza al del perfil, o
-los strikes se re-anclan a la cuenta cuando la hay?
+```
+1 strike (telefono B, misma cuenta)    strikes=1 bloqueado=false
+2 strikes (telefono C, misma cuenta)   strikes=2 bloqueado=true
+```
+
+Se bloqueó solo. El ancla de cuenta funciona.
+
+**Lo que sigue siendo cierto, y es inherente:**
+
+1. **Los pedidos manuales no tienen cuenta a la que anclar.** La cajera teclea el
+   número, `customer_user_id` va NULL y el teléfono es la única ancla posible.
+   Quien pida por teléfono dando un número distinto cada vez no acumula strikes.
+   No tiene arreglo técnico: lo cubre que la cajera sea humana y reconozca a sus
+   clientes.
+
+2. **Un detalle cosmético en `advance_order`.** Tras insertar el strike —y por
+   tanto después de que el trigger ya calculó bien— la rama `no_show` hace su
+   propio `UPDATE ... SET strikes = (count where phone = X)`, que puede escribir
+   un número MENOR que el real si los strikes están repartidos entre teléfonos.
+   Solo toca el contador, nunca desbloquea: ese `UPDATE` está dentro de un
+   `IF v_blocked`, así que jamás pone `contraentrega_blocked` en false. Es una
+   imprecisión de lo que ve el admin, no un agujero. Corregirlo obliga a
+   redefinir `advance_order` entera por un contador.
+
+**Lo que NO se cerró y sigue abierto de verdad:** `create_customer_order` nunca
+compara `p_customer_phone` contra `customer_profiles.phone`, así que el pedido
+puede salir con un número que no es el del cliente y el motorizado llamar a otro
+sitio. Es un problema de DATOS DE CONTACTO, no de antifraude — el bloqueo ya no
+depende de ese campo. La `0171` tampoco depende de él: resuelve el teléfono desde
+el perfil verificado, y hay test que lo amarra
+(`contraentrega-delivery-history.integration.test.ts`).
 
 ---
 
