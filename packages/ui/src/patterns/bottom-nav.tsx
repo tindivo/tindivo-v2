@@ -75,12 +75,12 @@ export function BottomNav({ items, variant = 'default', className }: BottomNavPr
                     role="status"
                     aria-label={`${item.badge} pendientes`}
                     className={cn(
-                      'absolute -top-1.5 -right-2.5 inline-flex min-h-[18px] min-w-[18px] items-center justify-center rounded-full border-[1.5px] px-1 text-[10px] font-black leading-none shadow-sm',
-                      item.badgeColor === 'brand'
-                        ? active
+                      'absolute -top-1.5 -right-2 inline-flex min-h-[18px] min-w-[18px] items-center justify-center rounded-full border-[1.5px] px-1 text-[10px] font-black leading-none shadow-sm',
+                      item.badgeColor === 'danger'
+                        ? 'border-white bg-danger text-white'
+                        : active
                           ? 'border-white bg-white text-brand'
-                          : 'border-white bg-brand text-white'
-                        : 'border-white bg-danger text-white',
+                          : 'border-white bg-brand text-white',
                     )}
                   >
                     {item.badge > 9 ? '9+' : item.badge}
