@@ -2571,13 +2571,16 @@ export type Database = {
         }
       }
       current_business_id: { Args: never; Returns: string }
+      current_customer_trusted_for_contraentrega: {
+        Args: never
+        Returns: boolean
+      }
       current_driver_id: { Args: never; Returns: string }
       current_service_date: { Args: { p_at?: string }; Returns: string }
       current_user_has_role: {
         Args: { p_role: Database["public"]["Enums"]["user_role"] }
         Returns: boolean
       }
-      current_customer_trusted_for_contraentrega: { Args: never; Returns: boolean }
       current_user_role: { Args: never; Returns: string }
       customer_contraentrega_blocked: {
         Args: { p_phone: string; p_reference: string }
