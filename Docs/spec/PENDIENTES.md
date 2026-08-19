@@ -40,9 +40,22 @@ Detalle completo en `Docs/spec/spec-fase-2-ledger-y-sprint.md`.
 
 ## 🟡 PENDIENTE DEL ETL DE DIRECCIONES
 
-Todo lo que quedó fuera de `0122` a propósito.
+**Estado reverificado el 2026-08-19** contra el código vivo y contra prod.
+**Cinco de los siete ya estaban resueltos** y esta sección seguía pidiéndolos.
+No es un detalle de higiene: leyendo esta lista se mandó a corregir un bug que
+ya no existía (§5) y se recomendó crear un índice que hoy sería dañino (§1).
 
-### 1. Índice único anti-duplicados — NO creado
+| # | qué | estado |
+|---|---|---|
+| 1 | Índice único anti-duplicados | ⛔ **no hacerlo** — ver abajo |
+| 2 | Lookup por referencia antes de INSERT | ✅ hecho (`0145`, vivo en `0163`) |
+| 3 | RPC `search_address_directory` | ✅ hecho (`0144`), con su grant |
+| 4 | Constantes del mapa | ✅ hechas (`apps/motorizados/lib/geo.ts`) |
+| 5 | Bug de `point_in_coverage_polygon` | ✅ corregido |
+| 6 | Validación geográfica del directorio | ✅ **corrida** — 1 de 388 |
+| 7 | Casi-duplicados | 🟡 abierto (es de UI, no de datos) |
+
+### 1. Índice único anti-duplicados — NO crearlo
 
 ```sql
 CREATE UNIQUE INDEX address_directory_phone_reference_unique
@@ -50,69 +63,67 @@ CREATE UNIQUE INDEX address_directory_phone_reference_unique
   (phone, lower(btrim(regexp_replace(reference, '\s+', ' ', 'g'))));
 ```
 
-**No se crea hasta que el lookup por referencia esté implementado.** Al revés se
-rompe en producción: el motorizado intenta crear una dirección que normaliza
-igual a una existente, el INSERT viola la unicidad, y como la captura va en un
-`try/catch` no bloqueante, **la dirección se pierde en silencio**.
+Estaba bloqueado por §2, §2 ya está hecho, y aun así **no debe crearse**. Las
+precondiciones se comprobaron y salen bien —0 duplicados en 705 filas, 0
+referencias vacías, una sola ruta de inserción viva, y su normalización es
+idéntica a la del índice—, pero falta lo importante:
 
-### 2. Lookup por referencia antes de INSERT — obligatorio
+**`create_manual_order` no tiene ningún `EXCEPTION WHEN`.** Una violación de
+unicidad no perdería la dirección: **abortaría la creación del pedido entero**,
+con la cajera al teléfono con el cliente.
 
-El legacy ya lo resuelve (`mark-delivered.use-case.ts:213-233`): busca
-coincidencia por referencia case-insensitive y **actualiza en vez de insertar**.
+Y la duplicación que el índice previene **no ocurre**: 705 filas, 4 meses, 97
+pedidos manuales en la última semana, cero duplicados, porque desde `0145` el
+lookup por referencia va antes del INSERT. La única forma de duplicar hoy es una
+carrera entre el lookup y el insert — que es exactamente el único escenario donde
+el índice dispararía.
 
-```
-1. Normalizar la referencia igual que el índice
-2. SELECT … WHERE phone = ? AND normalizada = ?
-3. Si existe → UPDATE (coordenadas, accuracy, source, updated_by)
-4. Si no     → INSERT
-```
+O sea que el índice convierte un fallo benigno y recuperable (dos direcciones
+casi iguales en el popup) en uno que se come el pedido. Solo valdría la pena
+junto con un `ON CONFLICT DO NOTHING` + re-select en `create_manual_order`, y eso
+es redefinir una función grande para blindar una carrera que nunca ha ocurrido.
 
-### 3. RPC `search_address_directory` — definido, no implementado
+### 4. Constantes del mapa — hechas, pero duplicadas
 
-Está escrito en `spec_manual.md §1.5`. `SECURITY INVOKER`, exige teléfono exacto
-de 9 dígitos, devuelve `has_gps` en vez de `accuracy_m`.
+`SAN_JACINTO_CENTER` y `SAN_JACINTO_DEFAULT_ZOOM` existen en
+`apps/motorizados/lib/geo.ts` con los valores del spec (`-9.148104, -78.280353`,
+zoom 15).
 
-**Necesita grant declarado** en el manifiesto: `0009_function_grants.sql` revoca
-execute a `anon` y `authenticated`, así que sin declararlo queda inaccesible
-desde el cliente.
+**Ojo:** `apps/admin/components/agenda/agenda-map-inner.tsx:13` define su PROPIO
+`SAN_JACINTO_CENTER` con otras coordenadas (`-9.1465, -78.2805`). Dos constantes
+con el mismo nombre y distinto valor. Hoy solo centra un mapa, así que no rompe
+nada; pero es la clase de duplicado que diverge y luego nadie sabe cuál manda.
 
-### 4. Constantes del mapa — CREAR, no existen en v2
-
-| constante | valor |
-|---|---|
-| `SAN_JACINTO_CENTER` | `-9.148104, -78.280353` |
-| `SAN_JACINTO_DEFAULT_ZOOM` | `15` |
-
-Mediana medida de las 351 direcciones con GPS. La caja mide 1,97 × 1,29 km.
-
-**Son para centrar el mapa cuando NO hay coordenada previa. NO usarlas como
-fallback cuando el GPS falla** — ese es el defecto que produjo las 18
-direcciones falsas del legacy.
-
-### 5. 🐛 Bug latente en `point_in_coverage_polygon`
-
-Fallback hardcodeado en `-9.1547, -78.5042` con radio 15 km. **Esa longitud está
-~24 km al oeste de San Jacinto** (real: `-78.28`): con radio de 15 km, **el
-pueblo entero queda fuera de cobertura y todo pedido se rechaza**.
-
-Hoy no se dispara porque las claves de `app_settings` existen. Si alguien limpia
-esa tabla, el sistema se cae en silencio.
-
-Corregir a `-9.148104, -78.280353` con radio 3 km. **Una línea.**
-
-### 6. Validación geográfica del directorio — sin correr
+### 6. Validación geográfica — CORRIDA el 2026-08-19
 
 ```sql
-SELECT id, phone, reference, lat, lng, source
-FROM address_directory
+SELECT ... FROM address_directory
 WHERE lat IS NOT NULL
-  AND NOT public.point_in_coverage_polygon(lat::numeric, lng::numeric)
-ORDER BY reference;
+  AND NOT public.point_in_coverage_polygon(lat::numeric, lng::numeric);
 ```
 
-El polígono es **no convexo**: puede haber direcciones dentro del bounding box
-pero fuera del polígono. **No borrar las que salgan** — son direcciones reales
-a las que se entregó. Listarlas y revisarlas con Jesús.
+**Resultado: 1 de 388 direcciones con GPS cae fuera del polígono** (51 vértices).
+La calidad del directorio es buena. Pero esa una merece decisión humana:
+
+| | |
+|---|---|
+| referencia | «Vista alegre» |
+| distancia al centro | **1,04 km** (el respaldo circular son 3 km) |
+| `accuracy_m` | 48 — lectura real del sensor, no un centinela |
+| `source` | **`driver_verified`** — un motorizado estuvo en esa puerta |
+| origen | del ETL del v1: hubo entrega real |
+| vecinos en 300 m | 0 · pedidos en v2 cerca: 0 |
+
+La casa es buena; **el polígono es el que la excluye**. Si ese cliente abre la
+app y marca su casa, `create_customer_order` lo rechaza con «Dirección fuera de
+la zona de reparto».
+
+**Decisión de negocio, no técnica:** ¿Vista alegre entra en la zona de reparto?
+Si sí, el polígono se amplía desde /admin. Si no, la entrega del v1 fue una
+excepción y el rechazo es correcto. Nadie más que Jesús puede responderlo.
+
+Y el modo de fallo a tener presente: **quien es rechazado no se queja, no pide.**
+Un polígono demasiado ajustado no genera incidencias, genera silencio.
 
 ### 7. Casi-duplicados — problema de UI, no de datos
 
