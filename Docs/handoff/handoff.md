@@ -124,6 +124,13 @@ handoff; esto es solo para reconocerlos antes de perder una hora.
   `/auth/v1/token` (200 = vivo, 400 = revocado).
 - **PostgREST rechaza un `DELETE` sin ningún filtro.** Al mutar un endpoint para
   comprobar que su test lo atrapa, el fallo llega por ahí y no por donde esperas.
+- **Vitest no lee los `paths` del tsconfig.** Sin `vitest.config.ts` con el alias
+  `@/`, no se puede probar ningún módulo que lo use ni en sus imports internos, y
+  TypeScript no lo detecta. Si un test falla con «Cannot find package '@/...'»,
+  falta el config, no el módulo.
+- **Un umbral configurable escrito a mano en el front es una bomba de relojería**:
+  no falla hasta que alguien toca el panel admin, y entonces falla en el sitio
+  equivocado. Peor si HABILITA algo en vez de solo mostrarlo.
 - **Antes de culparte de un fallo visual, córrelo sin tu cambio.** Los 7 de la
   suite visual dan diferencias idénticas al píxel con y sin: son preexistentes.
 - **`pnpm biome check .` falla de base** (2 errores, ~92 warnings preexistentes).

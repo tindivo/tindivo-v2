@@ -389,6 +389,63 @@ Revisar uno cuesta dos minutos y aquí evitó un bug en el flujo de pago.
 
 ---
 
+## La tanda del cliente, y la auditoría que salió de ella
+
+El encargo fue quitar fricción al enviar un pedido y poder cancelarlo. Lo
+segundo **ya existía**: `cancel_customer_order` y su botón llevaban ahí desde
+`0046`. Lo que no existía era **llegar** a verlo: al confirmar, el cliente caía
+en una pantalla intermedia con un enlace «Volver al inicio» que lo sacaba del
+flujo antes de descubrir que podía deshacer el pedido. Quitando la pantalla, la
+cancelación aparece sola.
+
+Y una decisión del usuario que mejoró la propuesta: permitir cancelar el prepago
+**solo en `pending_acceptance`**. Yo había planteado «mientras no haya subido el
+comprobante», y eso tiene un agujero — en `awaiting_payment` el cliente pudo
+haber yapeado sin subir la foto todavía: el dinero salió aunque la app no lo
+sepa. «Antes de que el negocio acepte» no tiene ese agujero (`0169`).
+
+### Lo que apareció al auditar
+
+Tirando del hilo de un fallo de infraestructura salieron cuatro cosas más:
+
+**Vitest no resolvía el alias `@/` en tres de las cinco apps.** Sin él no se
+puede probar ningún módulo que use el alias **ni directamente ni en sus imports
+internos**, que es la parte que muerde. TypeScript no lo detecta (resuelve por
+`paths`), así que el síntoma solo sale al ejecutar y se lee como si el módulo
+bajo prueba estuviera roto. Medido: **63 ficheros en `negocios` y 49 en
+`motorizados`** sin posibilidad de cobertura — incluidos sus `lib/sign-out.ts`,
+que figuraban como «sin test» en el handoff del logout cuando en realidad **no se
+podían escribir**. `apps/api` ya tenía la solución documentada en su propio
+config; nadie la había propagado.
+
+**Dos umbrales configurables escritos a mano en el front.** El de validación
+(`0170`) y, más grave, `noShowWaitMinutes`: ese no solo muestra un número,
+**habilita el botón de no-show**, y `advance_order` valida el mismo ajuste por su
+cuenta. Subirlo desde el panel dejaba al motorizado pulsando un botón que el
+servidor le negaba — de pie en la puerta del cliente. El proyecto ya tenía la
+norma escrita, con test propio («el umbral de reparto sale de app_settings, no
+del código»); ese umbral se había quedado fuera.
+
+**Once componentes que no renderiza nadie** (~940 líneas), misma familia que
+`prepay-view.tsx` y los `icon.svg`.
+
+**Un falso positivo que descarté a tiempo:** vi `useState(600)` y creí que el
+cambio de 15 minutos estaba a medias. No: son dos relojes distintos y los dos
+correctos. Justo lo que advertía `0168`.
+
+### El guardarraíl cobró su primera pieza ajena
+
+`check:auth` se puso rojo por un commit de otra sesión: un test nuevo llamaba a
+`auth.signOut()` a secas. La regla no exime a los tests **a propósito** — son
+documentación ejecutable, y de ahí se copia; el bug de agosto venía de cinco
+sitios que hacían exactamente eso.
+
+Y `lint` se cayó **dos veces** por ficheros sin formatear de commits ajenos. El
+coste no es cosmético: CI aborta en el primer paso rojo, así que un formato
+descuidado deja sin ejecutar los cinco pasos siguientes.
+
+---
+
 ## Deuda registrada, sin implementar
 
 1. **Search Console: "VALIDAR CORRECCIÓN"** en *"Duplicada: el usuario no ha
