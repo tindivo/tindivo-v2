@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore } from 'react'
 import { api } from '@/lib/api'
+import { canalUnico } from '@/lib/realtime'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import type { TeamResponse } from '@/lib/types'
 
@@ -168,8 +169,13 @@ function openChannel(): void {
   teardownChannel()
   hasSession = true
   const supabase = getSupabaseBrowser()
+  // Nombre único POR APERTURA. `teardownChannel()` acaba de pedir la baja del
+  // anterior, pero `removeChannel` es asíncrono y el canal sigue registrado un
+  // instante más: pedir `'drv-team'` otra vez devolvía ESE, todavía conectado, y
+  // el `.on()` lanzaba. Aquí no hace falta remontar nada para provocarlo — basta
+  // un `TOKEN_REFRESHED`, o sea una vez por hora. Ver `lib/realtime.ts`.
   channel = supabase
-    .channel('drv-team')
+    .channel(canalUnico('drv-team'))
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'order_transfer_requests' },

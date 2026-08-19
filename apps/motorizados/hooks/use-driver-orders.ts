@@ -1,8 +1,9 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { isToday } from '@/lib/format'
 import { getOptimistic, queueSize } from '@/lib/offline-queue'
+import { canalUnico } from '@/lib/realtime'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import { flushQueue } from '@/lib/transitions'
 import type { BoardOrder, DriverBusiness } from '@/lib/types'
@@ -39,7 +40,6 @@ export function useDriverOrders(now: number): DriverBoard {
   const [myDriverId, setMyDriverId] = useState<string | null>(null)
   const [lastSyncOk, setLastSyncOk] = useState(true)
   const [loading, setLoading] = useState(true)
-  const channelNameRef = useRef(`drv-orders-${crypto.randomUUID()}`)
 
   const refetch = useCallback(async () => {
     const supabase = getSupabaseBrowser()
@@ -87,8 +87,12 @@ export function useDriverOrders(now: number): DriverBoard {
       .maybeSingle()
       .then(({ data }) => setMyDriverId(data?.id ?? null))
     void refetch()
+    // El nombre se genera DENTRO del efecto. Estaba en un `useRef`, y un ref
+    // sobrevive al ciclo desmontar-montar de StrictMode: la segunda suscripción
+    // pedía exactamente el mismo topic que la primera, que aún no había
+    // terminado de darse de baja. Ver `lib/realtime.ts`.
     const channel = supabase
-      .channel(channelNameRef.current)
+      .channel(canalUnico('drv-orders'))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
         void refetch()
       })

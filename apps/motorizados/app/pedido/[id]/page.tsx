@@ -26,6 +26,7 @@ import { api } from '@/lib/api'
 import { isValidPePhone, waLink } from '@/lib/deeplinks'
 import { soles } from '@/lib/format'
 import { getOptimistic } from '@/lib/offline-queue'
+import { canalUnico } from '@/lib/realtime'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import { postTransition } from '@/lib/transitions'
 import type { OrderDetailResponse } from '@/lib/types'
@@ -92,8 +93,11 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
   useEffect(() => {
     void load()
     const supabase = getSupabaseBrowser()
+    // Único por suscripción, no por pedido: volver a abrir el MISMO pedido
+    // reusaba el topic mientras el canal anterior seguía dándose de baja, y el
+    // `.on()` lanzaba. Ver `lib/realtime.ts`.
     const channel = supabase
-      .channel(`drv-order-${id}`)
+      .channel(canalUnico(`drv-order-${id}`))
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${id}` },

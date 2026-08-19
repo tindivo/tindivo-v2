@@ -3,6 +3,7 @@
 import { type ApiEnvelope, ApiError } from '@tindivo/api-client'
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '@/lib/api'
+import { canalUnico } from '@/lib/realtime'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
 /** En qué punto del camino está el efectivo de un pedido. */
@@ -72,8 +73,13 @@ export function useCashSummary() {
    */
   useEffect(() => {
     const supabase = getSupabaseBrowser()
+    // Nombre único POR SUSCRIPCIÓN, no fijo: con `'drv-cash'` a secas, un
+    // remontaje dentro de la ventana asíncrona de `removeChannel` recibía el
+    // canal anterior todavía conectado y el `.on()` lanzaba
+    // «cannot add postgres_changes callbacks ... after subscribe()». Ver
+    // `lib/realtime.ts`.
     const channel = supabase
-      .channel('drv-cash')
+      .channel(canalUnico('drv-cash'))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'cash_settlements' }, () =>
         load(),
       )
