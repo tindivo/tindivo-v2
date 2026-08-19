@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { DEFAULT_PREPAY_THRESHOLD } from '@/lib/prepay'
 
 // El sufijo "— Tindivo" lo pone la plantilla de `app/layout.tsx`.
 export const metadata: Metadata = {
@@ -20,7 +21,18 @@ const SECTIONS: { h: string; p: string }[] = [
   },
   {
     h: '3. Pagos',
-    p: 'Aceptamos Yape/Plin por adelantado, Yape/Plin al recibir y efectivo al recibir, según lo habilite cada negocio. Los pedidos de S/100 a más requieren prepago por Yape/Plin. Tú eres responsable de pagar el monto acordado al recibir tu pedido.',
+    // El umbral NO se escribe a mano aquí: sale de la misma constante que usa la
+    // pantalla de pago. Ver `lib/prepay.ts`.
+    //
+    // El texto anterior fallaba en TRES cosas a la vez, y las tres se corrigen
+    // contra el guard de `create_customer_order`
+    // (`if v_order_amount + v_delivery_fee > v_threshold`):
+    //   · el número: decía S/100, el sistema aplica S/80;
+    //   · el operador: «de S/100 a más» es >=, y la regla es > estricto, así que
+    //     un pedido de exactamente S/80 NO necesita prepago;
+    //   · la base de cálculo: la regla mira el TOTAL con delivery incluido, no
+    //     el importe de la comida.
+    p: `Aceptamos Yape/Plin por adelantado, Yape/Plin al recibir y efectivo al recibir, según lo habilite cada negocio. Los pedidos cuyo total (incluido el delivery) supere S/${DEFAULT_PREPAY_THRESHOLD} requieren prepago por Yape/Plin. Tú eres responsable de pagar el monto acordado al recibir tu pedido.`,
   },
   {
     h: '4. Responsabilidad por tus datos',

@@ -1,6 +1,9 @@
 import type { PaymentIntent } from '@tindivo/contracts'
 
-export const DEFAULT_PREPAY_THRESHOLD = 80
+// Vive en `lib/` porque los términos y condiciones prometen este mismo número y
+// no pueden importar de una feature. Ver `lib/prepay.ts`.
+export { DEFAULT_PREPAY_THRESHOLD } from '@/lib/prepay'
+
 export const DEFAULT_MAX_CASH_BILL = 100
 export const DEFAULT_MAX_CHANGE = 50
 export const CASH_STEP = 0.5 // redondeo del input libre: múltiplos de S/0.50
