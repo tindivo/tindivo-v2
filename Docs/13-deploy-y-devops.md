@@ -420,18 +420,42 @@ SELECT cron.schedule(
 
 ### Lista completa de crons
 
+> **Reconstruida el 2026-08-20 leyendo `cron.job`, no el diseño original.** La
+> tabla que había aquí antes nombraba cinco jobs que nunca llegaron a existir con
+> ese nombre (`enqueue-overdue-orders-failsafe`, `auto-close-drivers`,
+> `enqueue-ready-for-drivers-failsafe`…) y se saltaba la mitad de los que sí
+> corren. Para comprobar el estado real:
+>
+> ```sql
+> select jobname, schedule, active from cron.job order by jobname;
+> select jobname, status, count(*)      -- ¿alguno falla en silencio?
+>   from cron.job_run_details d join cron.job j on j.jobid = d.jobid
+>  where d.start_time > now() - interval '24 hours'
+>  group by 1, 2;
+> ```
+
 | Cron | Frecuencia | Propósito |
 |---|---|---|
-| `enqueue-overdue-orders-failsafe` | `*/5 * * * *` | Failsafe de Inngest checkOrderOverdue |
-| `process-expired-transfer-requests-failsafe` | `*/5 * * * *` | Failsafe de Inngest processTransferTimeout |
-| `auto-cancel-pending-acceptance` | `* * * * *` | Cancela pending_acceptance >5min |
-| `auto-close-drivers` | `* * * * *` | Cierra disponibilidad fuera de turno |
-| `enqueue-ready-for-drivers-failsafe` | `*/5 * * * *` | Emite OrderReadyForDrivers cuando appears_in_queue_at <= now() |
-| `prune-stale-push-subscriptions` | `0 4 * * *` | Limpia suscripciones inactivas >14d |
-| `prune-idempotency-keys` | `0 5 * * *` | Limpia keys vencidas (TTL 24h) |
-| `prune-expired-rejections` | `0 5 * * *` | Limpia rejections vencidos (TTL 6h) |
-| `prune-domain-events` | `0 6 * * *` | Limpia events >90d (Edge Function) |
-| `prune-push-delivery-log` | `0 6 * * *` | Limpia logs >30d |
+| `auto-cancel-prepay-timeout` | `* * * * *` | `cancel_expired_prepay_orders()`. **Los cuatro plazos de cancelación**, con los minutos de `app_settings.timers` (0174) |
+| `announce-queued-orders` | `* * * * *` | `enqueue_queued_orders()`. Anuncia a los motorizados los pedidos en `preparing` que entran en cola |
+| `flag-overdue-orders` | `* * * * *` | `enqueue_overdue_orders()`. Marca urgentes los que llevan más de `assignment_rules.urgentAfterMinutes` sin dueño |
+| `expire-order-transfers` | `* * * * *` | `expire_order_transfers()`. Caduca las transferencias moto→moto pendientes |
+| `close-driver-shifts` | `*/15 * * * *` | `close_drivers_outside_schedule()`. Apaga la disponibilidad fuera del horario de plataforma |
+| `prune-stale-push-subscriptions` | `0 4 * * *` | Borra suscripciones push con fallos acumulados |
+| `prune-idempotency-keys` | `0 5 * * *` | Borra `idempotency_keys` vencidas |
+| `prune-expired-rejections` | `0 5 * * *` | Borra `order_assignment_rejections` vencidos |
+| `prune-domain-events` | `0 6 * * *` | Borra `domain_events` de más de 90 días |
+| `prune-outbox-events` | `0 6 * * *` | Borra `outbox_events` ya entregados |
+| `prune-push-delivery-log` | `0 6 * * *` | Borra `push_delivery_log` de más de 30 días |
+
+**Desprogramados y por qué**, para que nadie los resucite al ver que faltan:
+
+| Cron | Lo quitó | Motivo |
+|---|---|---|
+| `mark-settlements-overdue` | `0173` | La `0124` borró `public.settlements`. Llevaba 14 ejecuciones y 14 fallos seguidos |
+| `auto-cancel-pending-acceptance` | `0174` | Duplicaba el bloque 1 de `cancel_expired_prepay_orders()` con otro `cancel_reason` |
+| `auto-cancel-validando` | `0174` | Idem, bloque 3. Además filtraba por `validation_context = 'call'`, un valor que el CHECK no admite |
+| `auto-cancel-prepay-validation-timeout` | `0174` | Idem, bloque 4 |
 
 ---
 

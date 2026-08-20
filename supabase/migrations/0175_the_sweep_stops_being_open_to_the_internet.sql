@@ -1,0 +1,44 @@
+-- =============================================================================
+-- 0175 · El barrido de vencidos deja de estar abierto a internet
+-- =============================================================================
+--
+-- QUÉ CAMBIA
+-- `cancel_expired_prepay_orders()` deja de ser ejecutable sin iniciar sesión.
+-- Pasa a exigir `authenticated` o `service_role`.
+--
+-- POR QUÉ
+-- El advisor `anon_security_definer_function_executable` la marcaba: cualquiera
+-- podía hacer `POST /rest/v1/rpc/cancel_expired_prepay_orders` sin cuenta y
+-- disparar el barrido de toda la tabla `orders`.
+--
+-- El daño posible es pequeño y conviene decirlo con precisión, para no tratar
+-- esto como más grave de lo que es: la función no devuelve datos —solo un
+-- entero con cuántas filas tocó— y únicamente cancela pedidos que YA pasaron su
+-- plazo. Lo máximo que consigue quien la llame es adelantar hasta 59 segundos
+-- una cancelación que el pg_cron iba a hacer igual en el siguiente minuto.
+--
+-- Aun así el `anon` sobra, y sobraba desde la 0098 que puso el GRANT. Los dos
+-- que la llaman de verdad son:
+--   · el pg_cron `auto-cancel-prepay-timeout`, que corre dentro de Postgres y
+--     no pasa por PostgREST, así que no necesita GRANT ninguno;
+--   · el panel de la cajera (`apps/negocios/components/dashboard/chrome.tsx`),
+--     que la invoca desde el navegador CON sesión iniciada → `authenticated`.
+-- Ninguno pierde nada con esto.
+--
+-- OJO CON EL `REVOKE ... FROM anon` A SECAS: NO HABRÍA BASTADO
+-- Postgres concede `EXECUTE` a `PUBLIC` por defecto al crear una función, y el
+-- ACL de esta lo enseñaba —el `=X/postgres` sin destinatario del principio—:
+--
+--   {=X/postgres, postgres=X/postgres, anon=X/postgres,
+--    authenticated=X/postgres, service_role=X/postgres}
+--
+-- Quitándoselo solo a `anon`, el rol seguiría pudiendo ejecutarla heredando el
+-- permiso de `PUBLIC`, y el advisor seguiría encendido con toda la razón. Por
+-- eso primero se revoca a `PUBLIC` y después se conceden los dos roles que sí
+-- la necesitan.
+--
+-- REVERSIBILIDAD: supabase/rollbacks/0175_the_sweep_stops_being_open_to_the_internet.rollback.sql
+
+REVOKE ALL ON FUNCTION public.cancel_expired_prepay_orders() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.cancel_expired_prepay_orders() FROM anon;
+GRANT EXECUTE ON FUNCTION public.cancel_expired_prepay_orders() TO authenticated, service_role;
