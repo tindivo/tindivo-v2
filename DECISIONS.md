@@ -204,6 +204,16 @@ Codificado en `@tindivo/contracts` (`order-status.ts`: `ORDER_TRANSITIONS`, `STA
 | Transferencia driver→driver (post-Fase 1) | TTL 30s, timeout-as-accept |
 | Auto-confirmación de liquidación de efectivo | **24h** (`auto_assumed_confirmed`) |
 
+- **Dónde viven estos números (migración `0174`).** Los cuatro primeros salen de
+  `app_settings.timers` y de ningún otro sitio. Los aplica una sola función,
+  `cancel_expired_prepay_orders()`, que corre cada minuto por el pg_cron
+  `auto-cancel-prepay-timeout` y que llama también el panel de la cajera para
+  barrer al instante. Los leen además `get_tracking` (contador del cliente) y
+  `useBusinessTimers` (contador de la cajera). Antes de la 0174 estaban
+  escritos a mano en el SQL de cuatro cron distintos y `app_settings` era
+  decorativo: por eso la `0113` pudo subir `acceptanceMinutes` a 15 sin que la
+  base cambiara de comportamiento. **Si añades un plazo, que lo lea de ahí.**
+
 - En Fase 1 (1 motorizado, despacho inmediato manual) **NO se activa** la cola urgente ni R1-R5. El modelo (`urgent_since`) se conserva para post-piloto (>5 min = urgente, >8 min = alerta).
 
 ---

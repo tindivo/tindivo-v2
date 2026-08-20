@@ -180,7 +180,7 @@ export interface OrderVM {
 // `timers.paymentMinutes`, migración 0168) y la cajera 10 para revisarla
 // (`validando`, `timers.prepayVerificationMinutes`). Con un solo valor, subir la
 // ventana del cliente le pintaba a la cajera una cuenta de 15 min sobre un
-// pedido que el cron `auto-cancel-prepay-validation-timeout` mata a los 10.
+// pedido que la base mata a los 10 (bloque 4 de `cancel_expired_prepay_orders`).
 /**
  * Los cuatro plazos que decide `app_settings.timers`, en MINUTOS.
  *

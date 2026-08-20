@@ -15,8 +15,9 @@
  *
  * El reingreso ocurre en `validate_order` (0095): un prepago que pasa la validación
  * antifraude vuelve de 'validando' a 'pending_acceptance'. Como el reloj nunca se
- * reinició, el cron `auto-cancel-pending-acceptance` (5 min sobre pending_acceptance_at)
- * lo cancela de inmediato — el restaurante no llega a verlo.
+ * reinició, el barrido de vencidos (hoy `cancel_expired_prepay_orders`, bloque 1;
+ * entonces el cron `auto-cancel-pending-acceptance`) lo cancela de inmediato — el
+ * restaurante no llega a verlo.
  *
  * DECISIÓN DE NEGOCIO (opción A, ya tomada): al reingresar debe refrescarse a now().
  *

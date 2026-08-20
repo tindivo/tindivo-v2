@@ -4,9 +4,9 @@ import { activeDeadline, countdownView } from '../deadline'
 
 /**
  * `activeDeadline` decide qué contador ve el cliente, y **tiene que coincidir
- * con lo que cancela de verdad en la base**: los pg_cron
- * `auto-cancel-pending-acceptance` (5 min) y `cancel_expired_prepay_orders`
- * (15 min en `awaiting_payment`, 10 en `validando`).
+ * con lo que cancela de verdad en la base**: `cancel_expired_prepay_orders()`,
+ * que desde la `0174` es la única que cancela por tiempo (5 min de aceptación,
+ * 15 de pago, 5 de validación humana, 10 de comprobante).
  *
  * El riesgo aquí no es que el contador se vea feo. Es que prometa tiempo que la
  * base no da: el cliente vería 12:30 sobre un pedido que ya está cancelado, y

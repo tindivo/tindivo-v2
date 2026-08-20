@@ -16,10 +16,11 @@ import type { Tracking } from '@/features/tracking/types'
  * panel, enseñando un plazo que la base ya no respeta. Los `??` son solo la red
  * para una respuesta vieja en caché, no el sitio donde vive la verdad.
  *
- * **Cada `at` tiene que coincidir con lo que cancela de verdad**, que hoy son
- * los pg_cron `auto-cancel-pending-acceptance` y `cancel_expired_prepay_orders`.
- * Si esta función promete más tiempo del que da la base, el cliente ve un
- * contador corriendo sobre un pedido ya muerto.
+ * **Cada `at` tiene que coincidir con lo que cancela de verdad**, que desde la
+ * `0174` es una sola función: `cancel_expired_prepay_orders()`, que corre cada
+ * minuto por pg_cron y lee esos mismos minutos de `app_settings`. Si esta
+ * función promete más tiempo del que da la base, el cliente ve un contador
+ * corriendo sobre un pedido ya muerto.
  */
 export type DeadlineKind = 'acceptance' | 'payment' | 'verification'
 
