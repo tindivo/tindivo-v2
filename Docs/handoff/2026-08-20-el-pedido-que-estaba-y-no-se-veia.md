@@ -12,8 +12,25 @@
 
 ## Lo urgente (si solo lees una cosa)
 
-El síntoma original está **arreglado y commiteado** (`6fe4fd0`, sin pushear).
-Todo lo demás de este handoff está **investigado y planificado, sin escribir**.
+Todo hecho y commiteado en `develop`, **nada pusheado y nada en producción**:
+
+| Commit | Qué |
+|---|---|
+| `6fe4fd0` | El síntoma original: el pedido manual no aparecía en cocina |
+| `b30b8a0` | Este handoff |
+| `74dd6dd` | `0176` + `serviceDate()`: una noche es un día, en toda la app |
+| `39e3b8e` | `0177`: cinco índices que nadie puede usar |
+| `50bcd57` | El contador de doce días y el chip que no cuadraba con su lista |
+
+**`0176` y `0177` están aplicadas SOLO en local** (`supabase migration up`), con
+sus guards en verde y verificadas contra el objeto vivo. Faltan tres cosas, en
+este orden:
+
+1. `supabase db push` a `tindivo-prod`.
+2. `pnpm db:types` — **después** del push, que apunta al remoto.
+3. Comprobar que `drivers_user_id_key` y `businesses_user_id_key` empiezan a
+   sumar escaneos: es la confirmación de que el gemelo tomó el relevo de los
+   índices borrados. Ver la sección de índices.
 
 Y una cosa que conviene saber antes de tocar nada: **el Realtime de `negocios`
 se deja eventos**, medido contra producción. No es que el canal esté caído — se
@@ -275,38 +292,69 @@ Una migración posterior pudo cambiarlo, y `pg_policy` es la única fuente.
 
 ---
 
-## Lo que queda planificado y sin escribir
+## Lo que se hizo con todo eso
 
-**Migración 0176 — la jornada como definición única.** `deliver_order_cash` y
-`generate_settlements` pasan a `current_service_date(...)`; backfill de
-`cash_settlements.settlement_date` (cambia 0 filas hoy, que es justo el punto);
-guard que aborte si algún sitio queda con el cast viejo. No se toca el backfill
-histórico de la 0111. `create_cash_settlement` queda marcado como muerto con un
-`comment on function`, sin borrar.
+**`0176` — la jornada como definición única.** `deliver_order_cash` y
+`generate_settlements` pasan a `current_service_date(...)`, más el backfill de
+`cash_settlements.settlement_date` (0 filas hoy, que es justo el punto) y guards
+que abortan si algún sitio queda con el cast viejo. No se toca el backfill
+histórico de la 0111.
 
-**Migración 0177 — índices.** Drop de los cinco, idempotente y con rollback en
-`supabase/rollbacks/`. Más el `(select auth.uid())` de `business_charges`.
+**`serviceDate()` en `packages/contracts`**, espejo exacto de la función de la
+base, con tests de los dos bordes (04:59 y 05:01) y del cambio de mes y de año.
+Lo consumen `use-cash-settlements.ts`, `driver-card.tsx`,
+`motorizados/efectivo-list.tsx` y el tablero. Y **dos tests de integración
+nuevos** fabrican la entrega de madrugada que en producción todavía no puede
+ocurrir: son la red que sujeta el arreglo cuando alguien configure un cierre
+después de medianoche.
 
-**TS — un solo helper compartido.** `serviceDate()` en `packages/contracts`
-(junto a `schedule.ts`, que ya tiene la lógica de Lima), espejo exacto de
-`current_service_date`, con tests de los bordes (04:59 y 05:01). Lo consumen
-`use-cash-settlements.ts`, `driver-card.tsx`, `motorizados/efectivo-list.tsx` y
-el tablero.
+**`0177` — los cinco índices** y el `(select auth.uid())` de `business_charges`.
 
-**El tablero, segunda tanda.** La consulta se parte en dos (`Promise.all`):
-activos sin ventana de tiempo (`ACTIVE_ORDER_STATUSES`, que ya existe en
-contracts) y cerrados de la jornada. Ambas con `.eq('business_id', bizId)` — hoy
-la consulta se fía solo de la RLS, y `ord_admin_all` es `for all`: el día que esa
-cuenta reciba el rol `admin`, el tablero enseñaría pedidos de otros negocios.
-Fuera el `.slice(0, 40)`. El rótulo "hoy" **se queda**: bajo la jornada deja de
-ser mentira sin cambiar la palabra.
+**El tablero, segunda tanda.** La consulta partida en dos (`Promise.all`):
+activos sin ventana de tiempo (`ACTIVE_ORDER_STATUSES`, que ya existía en
+contracts) y cerrados de la jornada, ambas con `.eq('business_id', bizId)`. Fuera
+el `.slice(0, 40)`. El rótulo "hoy" **se quedó**: bajo la jornada deja de ser
+mentira sin cambiar la palabra.
 
-**Los dos `default` que se tragan estados nuevos.** `getColumn` cae a
-`'entregados'` y `getUiState` a `'cancelled'`; comprobados los 11 valores del
-enum `order_status`, hoy están todos cubiertos, así que es fragilidad latente. Se
-cierran tipando por `OrderStatus` de contracts y un chequeo `never`, para que el
-día que alguien añada un estado **falle `pnpm type-check`** en vez de aparecer en
-silencio en el historial.
+**Los dos `default` que se tragaban estados nuevos**, cerrados con `switch`
+exhaustivo sobre `OrderStatus` y chequeo `never`. Tipar `status` destapó de paso
+que `useOrderDetail` metía un `string` sin validar dentro del view-model — o sea
+que por ahí entraba al tablero un estado que se saltaba toda la exhaustividad.
+Ahora se valida con zod al rehidratar, y el `catch` fail-open que ya existía
+cubre el caso raro.
+
+### Una corrección al propio handoff
+
+Más arriba esta página decía que `create_cash_settlement` era "código muerto".
+**No es código muerto: no existe.** La 0157 la borró (`drop function`, línea
+228). Se descubrió al intentar ponerle un `comment on function` y ver reventar la
+migración. Conviene saberlo porque su código sigue leyéndose entero en la 0111 y
+da toda la impresión de estar vivo.
+
+### Lo que costó dos intentos
+
+La primera versión de `0176` abortaba en su propio guard. El guard comprueba que
+`deliver_order_cash` ya no contenga el cast de fecha natural, buscando esa cadena
+en `pg_get_functiondef`... y **`pg_get_functiondef` incluye los comentarios del
+cuerpo**. El comentario que explicaba qué se estaba cambiando citaba el cast
+literal, así que la función fallaba por su propia explicación.
+
+Y el guard tenía un segundo defecto que no llegó a dispararse: comparaba
+`settlement_date` contra CADA pedido enlazado, mientras el backfill escribe un
+`min(...)` por liquidación. Una liquidación de la época multi-pedido (0111) que
+cubriera dos jornadas habría hecho abortar una migración que hizo exactamente lo
+que debía. **En local las hay**, porque los tests de efectivo llamaban de verdad
+a `create_cash_settlement` cuando existía. Ahora el guard agrega igual que el
+backfill.
+
+### Verificación
+
+`pnpm type-check` 11/11, `pnpm test` 9/9 (**146 tests en `apps/api`**, dos más
+que antes: los de madrugada), `pnpm lint` sin errores (92 warnings, la línea base
+conocida) y `pnpm build` 5/5. Las dos migraciones aplicadas en local y
+comprobadas **contra el objeto vivo**, no contra el fichero: las dos funciones
+usan `current_service_date`, los cinco índices no están, los cuatro únicos que
+los cubren sí, y la policy quedó envuelta.
 
 ---
 
@@ -316,28 +364,30 @@ silencio en el historial.
    motorizados, que no pierde eventos. Hipótesis sin comprobar; el método de
    medición está en la sección de arriba.
 2. **Las 54 policies permisivas múltiples.** Cirugía de RLS, sesión propia.
-3. **`create_cash_settlement` (0018/0111) es código muerto** desde la 0157.
-   Marcarlo no es borrarlo.
-4. **`generate_settlements` (0017) no lo llama nadie.** La factura de comisiones
-   negocio→Tindivo no está cableada a ninguna pantalla.
-5. **`apps/negocios` no tiene entorno DOM en los tests.** Los dos ficheros de
+3. **`generate_settlements` (0017) no lo llama nadie.** La factura de comisiones
+   negocio→Tindivo no está cableada a ninguna pantalla. La 0176 ya la dejó
+   contando por jornada, para que el día que se cablee no arrastre el defecto.
+4. **`apps/negocios` no tiene entorno DOM en los tests.** Los dos ficheros de
    `hooks/__tests__/` que parecen probar `usePolledQuery` **no importan el hook**:
    reimplementan la lógica y prueban la copia. Para cobertura real hace falta
    `@testing-library/react` + jsdom.
-6. **`CLAUDE.md` dice "commits en inglés"** y los últimos 25 commits son en
+5. **`CLAUDE.md` dice "commits en inglés"** y los últimos 25 commits son en
    español. La convención viva es el español; conviene corregir la línea.
 
 ---
 
 ## Siguiente paso que yo daría
 
-1. **Terminar las dos migraciones y la tanda de TS** de la sección "planificado".
-   El backfill de la jornada es gratis hoy y deja de serlo en cuanto un negocio
-   configure un cierre después de medianoche.
-2. **Comprobar los contadores de índices después de aplicar la 0177**: que
+1. **Pushear y desplegar**, en este orden: `supabase db push` a `tindivo-prod`,
+   luego `pnpm db:types` (apunta al remoto), luego el merge. Cinco commits
+   viviendo solo en local es exactamente la situación que le costó un día entero
+   a la sesión del 18-ago.
+2. **Comprobar los contadores de índices** tras la 0177: que
    `drivers_user_id_key` y `businesses_user_id_key` empiecen a sumar escaneos es
-   la confirmación de que el gemelo tomó el relevo.
-3. **Medir el canal filtrado** con el método de `edge_logs`, que es la única
-   pregunta abierta del arreglo del tablero.
-4. **Pushear.** `6fe4fd0` sigue solo en local, y este repo ya tuvo un día entero
-   de trabajo verificado viviendo en el working tree.
+   la confirmación de que el gemelo tomó el relevo. Es la única parte del cambio
+   de índices que no puede verificarse antes de aplicarlo.
+3. **Mirar el tablero de la cajera esta noche.** El contador ya no puede mentir
+   por construcción, pero nadie ha visto todavía la pantalla con la consulta
+   nueva y datos reales.
+4. **Medir el canal filtrado** con el método de `edge_logs`, que es la única
+   pregunta abierta que deja el arreglo del tablero.

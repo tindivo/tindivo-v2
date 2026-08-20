@@ -13,7 +13,7 @@ Una sesión nueva añade su archivo y actualiza la tabla de abajo.
 
 | Archivo | De qué va | Estado al cerrar |
 |---|---|---|
-| [`2026-08-20-el-pedido-que-estaba-y-no-se-veia.md`](./2026-08-20-el-pedido-que-estaba-y-no-se-veia.md) | El pedido manual no aparecía en cocina: **crear era la única mutación que no refrescaba el tablero**, y el Realtime de `negocios` pierde la mitad de los eventos (medido) · el contador "entregados hoy" lleva doce días sumando · `current_service_date` existe desde la 0154 y **no la usa nadie** · cuatro índices duplicados que el linter no ve | Síntoma original **arreglado y commiteado** (`6fe4fd0`, sin pushear). Las dos migraciones (`0176` jornada, `0177` índices) y la tanda de TS quedan **planificadas y sin escribir**. |
+| [`2026-08-20-el-pedido-que-estaba-y-no-se-veia.md`](./2026-08-20-el-pedido-que-estaba-y-no-se-veia.md) | El pedido manual no aparecía en cocina: **crear era la única mutación que no refrescaba el tablero**, y el Realtime de `negocios` pierde la mitad de los eventos (medido) · el contador "entregados hoy" lleva doce días sumando · `current_service_date` existe desde la 0154 y **no la usa nadie** · cuatro índices duplicados que el linter no ve | Todo hecho y commiteado en `develop` (5 commits), **nada pusheado**. `0176` y `0177` aplicadas SOLO en local, con guards verdes y verificadas contra el objeto vivo. Falta `db push` a prod, `pnpm db:types` **después**, y comprobar que los índices únicos toman el relevo de los borrados. |
 | [`2026-08-18-el-dia-que-el-arbol-se-vacio.md`](./2026-08-18-el-dia-que-el-arbol-se-vacio.md) | Las dos sesiones del 17-ago dejaron **todo sin commitear** y con ello `apps/api` sin compilar un día entero · `0165` tenía dos defectos que solo aparecen contra producción (`0166`, `0167`) · primera corrida completa de la e2e | **Desplegado y verificado en producción**: 12 commits en `main`, `0165`/`0166`/`0167` en `tindivo-prod`, y el 308 uuid→slug vivo. Verde toda la cadena de CI por primera vez. Falta comprobar el login con Google a mano. Los slugs están en la base de producción pero **no en la web**: falta el merge a `main`. **`0167` sin desplegar.** |
 | [`2026-08-17-el-logout-que-echaba-a-todos.md`](./2026-08-17-el-logout-que-echaba-a-todos.md) | Cerrar sesión en un dispositivo echaba al usuario de **todos**: 5 de 6 sitios llamaban a `auth.signOut()` a secas, o sea `scope: 'global'` · helper `signOutLocal`/`signOutEverywhere`, `pnpm check:auth`, baja del push al salir, HU-X-011 | Todo verde (build 5/5, tests 7/7, e2e 9/9) y **nada commiteado**. El 500 de `apps/customer` bloquea el `test:e2e` completo. |
 | [`2026-08-17-el-enlace-que-no-se-podia-compartir.md`](./2026-08-17-el-enlace-que-no-se-podia-compartir.md) | La app no tenía **ni una etiqueta Open Graph**: compartir por WhatsApp daba texto pelado · Open Graph, JSON-LD, `robots`, `sitemap`, canónicas y `noindex` en rutas privadas · slugs (`0165`) a medias | SEO desplegado y verificado en producción. **Los slugs quedan sin terminar y el Supabase local caído**: la sección 6 de `0165` reemplaza `search_catalog` y no se ha ejecutado nunca. |
@@ -50,6 +50,15 @@ handoff; esto es solo para reconocerlos antes de perder una hora.
   esquema, no los triggers. Si el valor lo deriva la base, dale un default.
 - **Una función de trigger sin `search_path` fijado la elige el llamante.** No es
   higiene del linter: el trigger corre con el `search_path` de quien inserta.
+- **`pg_get_functiondef` INCLUYE los comentarios del cuerpo.** Un guard que
+  comprueba «esta función ya no contiene la cadena X» buscando en su definición
+  falla si el comentario que explica el cambio cita esa misma X. La 0176 abortó
+  por su propia explicación.
+- **Un guard tiene que agregar igual que el backfill que comprueba.** Si el
+  backfill escribe un `min(...)` por grupo y el guard compara fila a fila, un
+  grupo legítimamente heterogéneo hace abortar una migración que hizo justo lo
+  que debía. Y el caso raro existe en local aunque no en producción, porque los
+  tests generan formas de dato que la app ya no produce.
 - **El `CREATE POLICY` de una migración NO es el estado de la base.** La 0073
   crea una policy `FOR ALL USING(true)` sin `TO`, o sea a PUBLIC — un agujero de
   libro. La 0101 ya la había restringido a `service_role`. `pg_policy` es la
