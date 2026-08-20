@@ -2,6 +2,8 @@
 // y el detalle del dashboard. Aquí vive la lógica de columnas, buffer gradual y
 // la generalización de pagos (Yape/Plin → "billetera digital").
 
+import type { OrderStatus } from '@tindivo/contracts'
+
 export type UiSource = 'web' | 'manual'
 export type UiPayment = 'pending_cash' | 'pending_wallet' | 'prepaid' | 'pending_mixed'
 export type UiState =
@@ -46,7 +48,7 @@ function fmtTime(iso: string | null): string | null {
 export interface OrderRow {
   id: string
   short_id: string
-  status: string
+  status: OrderStatus
   source: string
   customer_name: string | null
   customer_phone: string | null
@@ -90,7 +92,9 @@ export interface OrderVM {
   id: string
   source: UiSource
   payment: UiPayment
-  status: string
+  /** El estado CANÓNICO, no un string suelto: es lo que hace exhaustivo a
+   *  `getColumn` y lo que rompe la compilación si el enum crece. */
+  status: OrderStatus
   state: UiState
   customer: string | null
   phone: string | null
@@ -291,21 +295,42 @@ export function mapPayment(intent: string): UiPayment {
   return 'pending_cash'
 }
 
-export function getColumn(status: string): OrderColumn {
-  if (status === 'pending_acceptance' || status === 'awaiting_payment' || status === 'validando')
-    return 'nuevos'
-  if (
-    [
-      'confirmed',
-      'preparing',
-      'waiting_driver',
-      'heading_to_restaurant',
-      'waiting_at_restaurant',
-    ].includes(status)
-  )
-    return 'cocina'
-  if (status === 'picked_up') return 'reparto'
-  return 'entregados'
+/**
+ * Columna del kanban para un estado. EXHAUSTIVO A PROPÓSITO.
+ *
+ * Era una cadena de `if` que acababa en `return 'entregados'` como cajón de
+ * sastre: cualquier estado no contemplado —incluido uno NUEVO que alguien añada
+ * al enum— aparecía en el historial, en silencio, como si el pedido estuviera
+ * cerrado. Hoy los once valores de `order_status` están cubiertos, así que el
+ * cajón nunca se usa; el problema es el día que dejen de ser once.
+ *
+ * Con el `switch` sobre `OrderStatus` y el `never` del final, ese día el fallo
+ * llega donde tiene que llegar: `pnpm type-check` en rojo, antes de desplegar.
+ */
+export function getColumn(status: OrderStatus): OrderColumn {
+  switch (status) {
+    case 'pending_acceptance':
+    case 'awaiting_payment':
+    case 'validando':
+      return 'nuevos'
+    case 'confirmed':
+    case 'preparing':
+    case 'waiting_driver':
+    case 'heading_to_restaurant':
+    case 'waiting_at_restaurant':
+      return 'cocina'
+    case 'picked_up':
+      return 'reparto'
+    case 'delivered':
+    case 'cancelled':
+      return 'entregados'
+    default: {
+      // Si esto deja de compilar es que el enum creció y hay que decidir a qué
+      // columna va el estado nuevo. No lo adivines aquí.
+      const _exhaustivo: never = status
+      return 'entregados'
+    }
+  }
 }
 
 /** Las cuatro pestañas del tablero en móvil. Espejo de `OrderColumn`. */
@@ -362,8 +387,16 @@ function getUiState(row: OrderRow, now: number): UiState {
       return 'picked_up'
     case 'delivered':
       return 'delivered'
-    default:
+    case 'cancelled':
       return 'cancelled'
+    default: {
+      // ESTE `default` ERA PEOR QUE EL DE `getColumn`: caía en `'cancelled'`, o
+      // sea que un estado desconocido se pintaba al cliente como un pedido
+      // CANCELADO — tachado, en gris y con su motivo vacío. Ahora `cancelled`
+      // es un caso explícito y lo desconocido no compila.
+      const _exhaustivo: never = row.status
+      return 'cancelled'
+    }
   }
 }
 

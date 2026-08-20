@@ -33,7 +33,13 @@ export default function NegocioPedidosPage() {
   const cookingOrders = useMemo(() => vms.filter((v) => getColumn(v.status) === 'cocina'), [vms])
   const routeOrders = useMemo(() => vms.filter((v) => getColumn(v.status) === 'reparto'), [vms])
   const history = useMemo(
-    () => vms.filter((v) => getColumn(v.status) === 'entregados').slice(0, 40),
+    // SIN RECORTE. El `.slice(0, 40)` que había aquí hacía de tapadera de una
+    // consulta sin ventana: traía cerrados de días y luego escondía todos menos
+    // los 40 primeros, mientras el chip de arriba anunciaba el total sin
+    // recortar. Dos números distintos para la misma lista. Ahora la consulta
+    // trae solo la jornada, que es una lista corta y completa; el contenedor ya
+    // scrollea.
+    () => vms.filter((v) => getColumn(v.status) === 'entregados'),
     [vms],
   )
 

@@ -18,7 +18,7 @@ export interface PedidosViewProps {
   onToggleSound: () => void
   onOpenPause: () => void
   onResume: () => void
-  counts: { new: number; cooking: number; route: number; today: number }
+  counts: { new: number; cooking: number; route: number; delivered: number; cancelled: number }
   newOrders: OrderVM[]
   cookingOrders: OrderVM[]
   routeOrders: OrderVM[]
@@ -95,8 +95,19 @@ function ColEmpty({ tab }: { tab: 'new' | 'cooking' | 'route' | 'today' }) {
 
 function HistoryList({ history }: { history: OrderVM[] }) {
   if (history.length === 0) return <ColEmpty tab="today" />
+  // Los dos números se DERIVAN de la misma lista que se pinta debajo, no de
+  // `counts`. El chip de la pestaña cuenta solo entregados —se llama
+  // "Entregados", contar cancelados ahí sería mentir— y la lista enseña las dos
+  // cosas; esa diferencia no estaba explicada en ningún sitio y se leía como un
+  // descuadre. Derivarla aquí garantiza que no pueda contradecir a las filas.
+  const cancelados = history.filter((h) => h.status === 'cancelled').length
+  const entregados = history.length - cancelados
   return (
     <div className="flex flex-col gap-2">
+      <p className="px-0.5 text-[12px] text-ink-muted">
+        {entregados} {entregados === 1 ? 'entregado' : 'entregados'}
+        {cancelados > 0 && ` · ${cancelados} ${cancelados === 1 ? 'cancelado' : 'cancelados'}`}
+      </p>
       {history.map((h) => {
         const cancelled = h.status === 'cancelled'
         return (
@@ -149,7 +160,7 @@ export function PedidosMobile(p: PedidosViewProps) {
     { id: 'new' as const, label: 'Nuevos', count: p.counts.new, alert: p.counts.new > 0 },
     { id: 'cooking' as const, label: 'En cocina', count: p.counts.cooking, alert: false },
     { id: 'route' as const, label: 'Reparto', count: p.counts.route, alert: false },
-    { id: 'today' as const, label: 'Entregados', count: p.counts.today, alert: false },
+    { id: 'today' as const, label: 'Entregados', count: p.counts.delivered, alert: false },
   ]
 
   return (
@@ -206,7 +217,7 @@ export function PedidosMobile(p: PedidosViewProps) {
               {p.bizName}
             </div>
             <div className="mt-0.5 text-[11px] text-ink-muted">
-              {p.counts.new + p.counts.cooking + p.counts.route} activos · {p.counts.today}{' '}
+              {p.counts.new + p.counts.cooking + p.counts.route} activos · {p.counts.delivered}{' '}
               entregados hoy
             </div>
           </div>
@@ -405,7 +416,7 @@ export function PedidosDesktop(p: PedidosViewProps) {
               </span>
               {' · '}
               {p.counts.new} nuevos · {p.counts.cooking} cocina · {p.counts.route} reparto ·{' '}
-              {p.counts.today} hoy
+              {p.counts.delivered} hoy
             </div>
           </div>
         </div>
