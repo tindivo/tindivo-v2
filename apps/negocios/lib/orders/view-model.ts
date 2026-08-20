@@ -285,6 +285,39 @@ export function getColumn(status: string): OrderColumn {
   return 'entregados'
 }
 
+/** Las cuatro pestañas del tablero en móvil. Espejo de `OrderColumn`. */
+export type MobileTab = 'new' | 'cooking' | 'route' | 'today'
+
+/**
+ * La pestaña que se PINTA, que no siempre es la que está guardada.
+ *
+ * EL ESTADO MUERTO QUE ESTO MATA. La pestaña "Nuevos" arranca seleccionada y su
+ * chip NO se dibuja cuando el contador está a cero (es deliberado: sin pedidos
+ * nuevos no hay nada que ofrecer). Las dos cosas juntas dan una pantalla sin
+ * salida: la lista dice "Sin pedidos nuevos · te avisaremos cuando lleguen", y
+ * arriba las tres pestañas que sí se ven —cocina, reparto, entregados— aparecen
+ * TODAS sin seleccionar, porque la seleccionada es una que no está.
+ *
+ * Y el camino más corto para llegar ahí es justo el peor: crear un pedido
+ * manual. El `tab` vive en el componente de la vista, que está en la PÁGINA y
+ * no en el layout, así que volver de `/nuevo` lo resetea a `'new'`. Pero el
+ * pedido manual nace en `preparing` —lo teclea la cajera, no hay nada que
+ * aceptar—, o sea que va a "En cocina" y deja "Nuevos" en cero. La cajera
+ * mandaba el pedido y volvía a una pantalla que le decía que no había nada.
+ *
+ * Se resuelve en la derivación y no en la navegación a propósito: así cubre
+ * también el otro camino, el de quedarse mirando "Nuevos" cuando el último
+ * pedido nuevo pasa a cocina y el chip desaparece bajo los pies.
+ *
+ * El fallback es "cocina" porque es donde acaba de caer lo que se estaba
+ * mirando —el pedido aceptado, el pedido recién creado—, no una pestaña
+ * arbitraria. Y como solo se deriva, en cuanto entre un pedido nuevo de verdad
+ * la pestaña guardada vuelve a mandar y la cajera lo ve sin tocar nada.
+ */
+export function resolveMobileTab(selected: MobileTab, newCount: number): MobileTab {
+  return selected === 'new' && newCount === 0 ? 'cooking' : selected
+}
+
 function getUiState(row: OrderRow, now: number): UiState {
   switch (row.status) {
     case 'pending_acceptance':

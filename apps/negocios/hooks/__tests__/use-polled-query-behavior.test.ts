@@ -9,7 +9,7 @@ describe('usePolledQuery - Comportamiento de Polling y Fake Timers', () => {
     vi.useRealTimers()
   })
 
-  it('Test 1: Canal sano (90s) -> avanzar 200s de tiempo simulado -> 2 ticks de polling', async () => {
+  it('Test 1: Canal sano (30s) -> avanzar 100s de tiempo simulado -> 3 ticks de polling', async () => {
     let fetchCalls = 0
     const mockQueryFn = vi.fn().mockImplementation(async () => {
       fetchCalls++
@@ -17,7 +17,7 @@ describe('usePolledQuery - Comportamiento de Polling y Fake Timers', () => {
     })
 
     let intervalId: any = null
-    const refetchInterval = 90000
+    const refetchInterval = 30000
     const inFlight = { current: false }
 
     const executeFetch = async () => {
@@ -31,21 +31,21 @@ describe('usePolledQuery - Comportamiento de Polling y Fake Timers', () => {
     await executeFetch()
     expect(fetchCalls).toBe(1)
 
-    // Configurar setInterval adaptativo a 90s (canal sano)
+    // Configurar setInterval adaptativo a 30s (canal sano)
     intervalId = setInterval(() => {
       void executeFetch()
     }, refetchInterval)
 
-    // Avanzar 200s (200,000 ms). Ticks en t=90s (call 2) y t=180s (call 3)
-    await vi.advanceTimersByTimeAsync(200000)
+    // Avanzar 100s (100,000 ms). Ticks en t=30s, t=60s y t=90s
+    await vi.advanceTimersByTimeAsync(100000)
 
-    // Total = 1 inicial + 2 ticks por polling = 3 llamadas en total (2 llamadas por interval)
-    expect(fetchCalls).toBe(3)
+    // Total = 1 inicial + 3 ticks por polling = 4 llamadas
+    expect(fetchCalls).toBe(4)
 
     clearInterval(intervalId)
   })
 
-  it('Test 2: Canal cambia de 90s a 20s (degraded) -> avanzar 60s -> 3 llamadas adicionales por interval', async () => {
+  it('Test 2: Canal cambia de 30s a 20s (degraded) -> avanzar 60s -> 3 llamadas adicionales por interval', async () => {
     let fetchCalls = 0
     const mockQueryFn = vi.fn().mockImplementation(async () => {
       fetchCalls++
@@ -53,7 +53,7 @@ describe('usePolledQuery - Comportamiento de Polling y Fake Timers', () => {
     })
 
     let intervalId: any = null
-    let refetchInterval = 90000
+    let refetchInterval = 30000
 
     const executeFetch = async () => {
       await mockQueryFn()

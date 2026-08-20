@@ -97,7 +97,15 @@ export interface DashboardCtx {
   now: number
   soundOn: boolean
   toggleSound: () => void
-  refetchOrders: () => Promise<void>
+  /**
+   * `force` salta el cooldown de deduplicación de `usePolledQuery`.
+   *
+   * Lo necesita quien acaba de ESCRIBIR y sabe que el servidor ya tiene el
+   * cambio: aplazar un segundo la lectura que confirma tu propia mutación es
+   * exactamente el parpadeo que se quiere evitar. El resto (poll, Realtime,
+   * visibilitychange) debe seguir pasando por el cooldown.
+   */
+  refetchOrders: (options?: { force?: boolean }) => Promise<void>
   refetchBiz: () => Promise<void>
   signOut: () => void
 }
@@ -841,6 +849,20 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null
     let retryAttempt = 0
     let destroyed = false
+    /**
+     * ¿Este `SUBSCRIBED` es el primero o una RECONEXIÓN?
+     *
+     * Importa porque un canal que vuelve no trae lo que se perdió mientras
+     * estuvo caído: `postgres_changes` no reenvía nada, empieza a escuchar
+     * desde el momento en que se suscribe. Con el backoff llegando a 30s, el
+     * agujero es de hasta medio minuto de cambios invisibles, y hasta ahora
+     * solo lo cerraba el siguiente tick del poll.
+     *
+     * En el PRIMER `SUBSCRIBED` no hay nada que recuperar: `usePolledQuery` ya
+     * hizo la carga inicial. Refrescar ahí sería una petición de más en cada
+     * arranque.
+     */
+    let reconnecting = false
 
     function subscribeChannel() {
       if (destroyed) return
@@ -883,15 +905,22 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
         setChannelState(status)
         if (status === 'SUBSCRIBED') {
           retryAttempt = 0 // Reset de contador al conectar exitosamente
+          // Recuperar el hueco: ver `reconnecting`.
+          if (reconnecting) {
+            reconnecting = false
+            void refetchOrders({ force: true })
+            void refetchBiz()
+          }
           console.log(
             '[realtime] suscrito a',
             `biz-orders-${bizId}`,
             'Salud:',
-            'healthy (90s polling)',
+            'healthy (30s polling)',
           )
         } else if (status === 'CHANNEL_ERROR' || status === 'CLOSED' || status === 'TIMED_OUT') {
           const delayMs = getBackoffDelayMs(retryAttempt)
           retryAttempt++
+          reconnecting = true
           console.warn(
             `[realtime] estado degradado: ${status} (intento ${retryAttempt}). Re-creando en ${delayMs / 1000}s...`,
             err,
@@ -918,7 +947,14 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
       }
       setChannelState('CLOSED')
     }
-  }, [bizId, debouncedRefetchOrders, debouncedRefetchBiz, setChannelState])
+  }, [
+    bizId,
+    debouncedRefetchOrders,
+    debouncedRefetchBiz,
+    refetchOrders,
+    refetchBiz,
+    setChannelState,
+  ])
 
   const vms = useMemo(() => rows.map((r) => toOrderVM(r, now)), [rows, now])
   const counts = useMemo(() => {

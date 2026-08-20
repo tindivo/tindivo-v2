@@ -3,8 +3,8 @@
 import { Icon } from '@tindivo/ui'
 import Link from 'next/link'
 import { useState } from 'react'
-import type { OrderVM } from '@/lib/orders/view-model'
-import { sortCooking } from '@/lib/orders/view-model'
+import type { MobileTab, OrderVM } from '@/lib/orders/view-model'
+import { resolveMobileTab, sortCooking } from '@/lib/orders/view-model'
 import { CocinaCard, NuevoCard, RepartoCard } from './cards'
 import { type DetailActions, type DetailItem, DetailScreen, PausarModal } from './pedido-detail'
 import { SourceBadgeMini, soles } from './primitives'
@@ -138,7 +138,10 @@ function HistoryList({ history }: { history: OrderVM[] }) {
 
 // ── MOBILE ────────────────────────────────────────────────────────────────────
 export function PedidosMobile(p: PedidosViewProps) {
-  const [tab, setTab] = useState<'new' | 'cooking' | 'route' | 'today'>('new')
+  // La guardada y la que se pinta son distintas cuando "Nuevos" está vacía.
+  // Ver `resolveMobileTab`.
+  const [selectedTab, setTab] = useState<MobileTab>('new')
+  const tab = resolveMobileTab(selectedTab, p.counts.new)
   const cooking = [...p.cookingOrders].sort(sortCooking)
   const hasWaiting = p.cookingOrders.some((o) => o.state === 'waiting')
 
