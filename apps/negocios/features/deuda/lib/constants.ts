@@ -2,12 +2,25 @@
  * El techo de deuda que se le enseña al negocio en su pantalla de saldo:
  * la barra de «Límite de crédito» y el «X% del límite alcanzado».
  *
- * **Es un número informativo, no una regla que se aplique sola.** Nadie bloquea
- * a un negocio al llegar aquí: `blocked_for_debt` solo se APAGA automáticamente
- * (lo hacen `settle_business_charges` y `unblock_business` cuando el negocio
- * paga), y encenderlo es una acción manual del admin desde su panel. Así que
- * subir o bajar este valor cambia lo que ve la cajera y el momento en que la
- * barra se pone roja —nada más—.
+ * **Es un número informativo, no una regla que se aplique sola.** Verificado
+ * leyendo los cuerpos de las funciones en la base:
+ *
+ *   · `recalc_business_balance` corre en CADA cargo y solo vuelve a sumar el
+ *     ledger. No compara la deuda con ningún tope.
+ *   · `block_business(id, motivo, por)` no recibe ni consulta importe alguno:
+ *     la dispara el admin desde `POST /admin/businesses/:id/block`.
+ *   · No hay cron ni Inngest que barra deudores.
+ *
+ * El bloqueo en sí **sí funciona**: pone `is_blocked`, y `is_published_business`
+ * exige `is_blocked = false`, así que el negocio desaparece del catálogo y deja
+ * de recibir pedidos. Lo que no existe es el automatismo por monto. Subir o
+ * bajar este valor cambia lo que ve la cajera y cuándo la barra se pone roja
+ * (a partir del 80%) — nada más.
+ *
+ * Ojo con `blocked_for_debt`, que es OTRA columna: hoy no la enciende ni una
+ * sola línea de producción (solo `settle_business_charges` y `unblock_business`
+ * la apagan al pagar). El estado «Cuenta suspendida» de esta pantalla viene de
+ * `is_blocked`, no de ella.
  *
  * Si algún día se automatiza la suspensión por mora, el umbral tiene que salir
  * de `app_settings` y leerlo los dos lados; no de aquí.
