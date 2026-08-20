@@ -13,6 +13,7 @@ Una sesión nueva añade su archivo y actualiza la tabla de abajo.
 
 | Archivo | De qué va | Estado al cerrar |
 |---|---|---|
+| [`2026-08-20-el-pedido-que-estaba-y-no-se-veia.md`](./2026-08-20-el-pedido-que-estaba-y-no-se-veia.md) | El pedido manual no aparecía en cocina: **crear era la única mutación que no refrescaba el tablero**, y el Realtime de `negocios` pierde la mitad de los eventos (medido) · el contador "entregados hoy" lleva doce días sumando · `current_service_date` existe desde la 0154 y **no la usa nadie** · cuatro índices duplicados que el linter no ve | Síntoma original **arreglado y commiteado** (`6fe4fd0`, sin pushear). Las dos migraciones (`0176` jornada, `0177` índices) y la tanda de TS quedan **planificadas y sin escribir**. |
 | [`2026-08-18-el-dia-que-el-arbol-se-vacio.md`](./2026-08-18-el-dia-que-el-arbol-se-vacio.md) | Las dos sesiones del 17-ago dejaron **todo sin commitear** y con ello `apps/api` sin compilar un día entero · `0165` tenía dos defectos que solo aparecen contra producción (`0166`, `0167`) · primera corrida completa de la e2e | **Desplegado y verificado en producción**: 12 commits en `main`, `0165`/`0166`/`0167` en `tindivo-prod`, y el 308 uuid→slug vivo. Verde toda la cadena de CI por primera vez. Falta comprobar el login con Google a mano. Los slugs están en la base de producción pero **no en la web**: falta el merge a `main`. **`0167` sin desplegar.** |
 | [`2026-08-17-el-logout-que-echaba-a-todos.md`](./2026-08-17-el-logout-que-echaba-a-todos.md) | Cerrar sesión en un dispositivo echaba al usuario de **todos**: 5 de 6 sitios llamaban a `auth.signOut()` a secas, o sea `scope: 'global'` · helper `signOutLocal`/`signOutEverywhere`, `pnpm check:auth`, baja del push al salir, HU-X-011 | Todo verde (build 5/5, tests 7/7, e2e 9/9) y **nada commiteado**. El 500 de `apps/customer` bloquea el `test:e2e` completo. |
 | [`2026-08-17-el-enlace-que-no-se-podia-compartir.md`](./2026-08-17-el-enlace-que-no-se-podia-compartir.md) | La app no tenía **ni una etiqueta Open Graph**: compartir por WhatsApp daba texto pelado · Open Graph, JSON-LD, `robots`, `sitemap`, canónicas y `noindex` en rutas privadas · slugs (`0165`) a medias | SEO desplegado y verificado en producción. **Los slugs quedan sin terminar y el Supabase local caído**: la sección 6 de `0165` reemplaza `search_catalog` y no se ha ejecutado nunca. |
@@ -49,6 +50,20 @@ handoff; esto es solo para reconocerlos antes de perder una hora.
   esquema, no los triggers. Si el valor lo deriva la base, dale un default.
 - **Una función de trigger sin `search_path` fijado la elige el llamante.** No es
   higiene del linter: el trigger corre con el `search_path` de quien inserta.
+- **El `CREATE POLICY` de una migración NO es el estado de la base.** La 0073
+  crea una policy `FOR ALL USING(true)` sin `TO`, o sea a PUBLIC — un agujero de
+  libro. La 0101 ya la había restringido a `service_role`. `pg_policy` es la
+  única fuente; el fichero solo dice lo que alguien intentó un día.
+- **El linter de Supabase no detecta índices duplicados.** Hay que buscarlos a
+  mano sobre `pg_index` comparando columnas, método y predicado. Había cuatro, y
+  los dos índices más escaneados de la base estaban entre ellos.
+- **Un índice con 0 escaneos puede ser el gemelo del que sí se usa.** Con dos
+  btrees equivalentes el planner elige uno y se queda; el otro marca 0 sin estar
+  muerto. Leer ese 0 como "sobra" es exactamente al revés.
+- **"Unused index" en una tabla de 143 filas significa "tabla pequeña", no
+  "índice sobrante".** El planner hace seq scan y no usa ninguno. La excepción
+  real es un índice que NINGUNA forma de consulta del repo puede aprovechar —un
+  GIN sobre jsonb sin un solo `@>`, por ejemplo—: ese sobra a cualquier tamaño.
 - `unaccent` vive en el esquema `extensions` y es **STABLE, no IMMUTABLE**:
   llamarla desde una función con `SET search_path = ''` obliga a cualificar
   también el diccionario. Para quitar acentos en algo simple, `translate()`.
@@ -81,6 +96,19 @@ handoff; esto es solo para reconocerlos antes de perder una hora.
   solo `[75]`**: cualquier otra calidad devuelve **400**.
 - En Tailwind, un degradado con las paradas en orden inválido (`via-35%` después
   de `from-55%`) **no falla**: CSS recorta la posición y el degradado sale mal.
+- **Con el estado en el layout, navegar a otra pantalla NO refresca nada.** El
+  chrome de `negocios` persiste entre rutas, así que `/nuevo → /` no lo remonta
+  ni dispara ninguna consulta: el tablero se queda como estaba. Si una pantalla
+  muta algo, tiene que refrescar ella.
+- **Realtime de Supabase se deja eventos sueltos, con el canal reportándose
+  sano.** Medido en producción: la mitad de los pedidos manuales no dispararon
+  refresco. Nada que dependa SOLO de `postgres_changes` está al día; hace falta
+  poll de respaldo, y al reconectar hay que refrescar a mano porque
+  `postgres_changes` no reenvía el hueco.
+- **Un refetch descartado no se reintenta solo.** Los guardas de solapamiento y
+  cooldown que hacen `return` a secas son inofensivos para un `setInterval` (que
+  vuelve) y fatales para un evento de Realtime (que ocurre una vez). Aplazar,
+  no descartar.
 
 **Sobre verificar**
 
