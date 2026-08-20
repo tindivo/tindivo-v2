@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { DEFAULT_ORDER_TIMERS, type OrderTimers } from '@/lib/orders/view-model'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
 /**
@@ -21,14 +22,18 @@ import { getSupabaseBrowser } from '@/lib/supabase/client'
  * todavía no volvió, la tarjeta pinta con el mismo criterio que el servidor en
  * vez de con cero.
  */
-export interface BusinessTimers {
+export interface BusinessTimers extends OrderTimers {
   /** §23. Margen tras "Pedido listo" antes de escalar a rojo. */
   queueLeadMinutes: number
   /** 0139. A partir de aquí, el reloj de reparto se pone rojo. */
   deliveryLateMinutes: number
 }
 
-const DEFAULTS: BusinessTimers = { queueLeadMinutes: 10, deliveryLateMinutes: 20 }
+const DEFAULTS: BusinessTimers = {
+  queueLeadMinutes: 10,
+  deliveryLateMinutes: 20,
+  ...DEFAULT_ORDER_TIMERS,
+}
 
 export function useBusinessTimers(): BusinessTimers {
   const [timers, setTimers] = useState<BusinessTimers>(DEFAULTS)
@@ -41,15 +46,21 @@ export function useBusinessTimers(): BusinessTimers {
       .maybeSingle()
       .then(({ data }) => {
         const v = data?.value as Partial<BusinessTimers> | null
+        const leer = (clave: keyof BusinessTimers): number => {
+          const bruto = v?.[clave]
+          return typeof bruto === 'number' && bruto > 0 ? bruto : DEFAULTS[clave]
+        }
         setTimers({
-          queueLeadMinutes:
-            typeof v?.queueLeadMinutes === 'number' && v.queueLeadMinutes > 0
-              ? v.queueLeadMinutes
-              : DEFAULTS.queueLeadMinutes,
-          deliveryLateMinutes:
-            typeof v?.deliveryLateMinutes === 'number' && v.deliveryLateMinutes > 0
-              ? v.deliveryLateMinutes
-              : DEFAULTS.deliveryLateMinutes,
+          queueLeadMinutes: leer('queueLeadMinutes'),
+          deliveryLateMinutes: leer('deliveryLateMinutes'),
+          // Los cuatro plazos de cancelación, que hasta la 0174 estaban clavados
+          // en `view-model.ts`. Se leen aquí porque salen de la MISMA fila que
+          // los dos umbrales de arriba: un hook aparte habría repetido la
+          // consulta por cada tarjeta montada.
+          acceptanceMinutes: leer('acceptanceMinutes'),
+          validationMinutes: leer('validationMinutes'),
+          paymentMinutes: leer('paymentMinutes'),
+          prepayVerificationMinutes: leer('prepayVerificationMinutes'),
         })
       })
   }, [])

@@ -1,0 +1,10 @@
+-- ROLLBACK de 0173 — deliberadamente VACÍO.
+--
+-- La 0173 desprogramó `mark-settlements-overdue`, un cron que hacía `update
+-- public.settlements` sobre una tabla que la 0124 borró. Reprogramarlo no
+-- restauraría ninguna funcionalidad: devolvería exactamente lo que había, que
+-- era un fallo diario a las 07:00 con `relation "public.settlements" does not
+-- exist`.
+--
+-- Si alguna vez vuelve el módulo de liquidaciones, el cron se crea junto con la
+-- tabla en esa migración, no resucitando este.

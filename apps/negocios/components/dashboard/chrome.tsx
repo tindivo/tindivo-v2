@@ -20,6 +20,7 @@ import { OpeningControls } from '@/features/apertura/components/opening-controls
 import { getBackoffDelayMs, useChannelHealth } from '@/hooks/use-channel-health'
 import { useIconFontReady } from '@/hooks/use-icon-font-ready'
 import { usePolledQuery } from '@/hooks/use-polled-query'
+import { useBusinessTimers } from '@/hooks/use-queue-lead'
 import {
   getColumn,
   isBusinessPaused,
@@ -956,7 +957,11 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
     setChannelState,
   ])
 
-  const vms = useMemo(() => rows.map((r) => toOrderVM(r, now)), [rows, now])
+  // Los plazos que decide `app_settings.timers` (0174). Sin esto el tablero
+  // contaba con sus propias constantes, y la cajera podía estar mirando un reloj
+  // distinto del que usa la base para cancelarle el pedido.
+  const timers = useBusinessTimers()
+  const vms = useMemo(() => rows.map((r) => toOrderVM(r, now, timers)), [rows, now, timers])
   const counts = useMemo(() => {
     const n = { new: 0, cooking: 0, route: 0, today: 0 }
     for (const v of vms) {

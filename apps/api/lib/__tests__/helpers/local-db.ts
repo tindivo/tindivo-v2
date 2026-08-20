@@ -282,7 +282,7 @@ export async function readOrderTimestamps(orderId: string): Promise<OrderTimesta
 // host, para que no haya deriva entre el contenedor y la máquina que corre el test.
 export async function backdateTimestamp(
   orderId: string,
-  column: 'pending_acceptance_at' | 'awaiting_payment_at',
+  column: 'pending_acceptance_at' | 'awaiting_payment_at' | 'validating_at',
   fromDbTimestamp: string,
   minutesBack: number,
 ): Promise<string> {

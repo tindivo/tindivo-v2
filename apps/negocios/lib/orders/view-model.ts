@@ -181,10 +181,33 @@ export interface OrderVM {
 // (`validando`, `timers.prepayVerificationMinutes`). Con un solo valor, subir la
 // ventana del cliente le pintaba a la cajera una cuenta de 15 min sobre un
 // pedido que el cron `auto-cancel-prepay-validation-timeout` mata a los 10.
-const ACCEPT_SEC = 5 * 60
-const VALIDATE_SEC = 5 * 60
-const AWAITING_PAYMENT_SEC = 15 * 60
-const PREPAY_VALIDATION_SEC = 10 * 60
+/**
+ * Los cuatro plazos que decide `app_settings.timers`, en MINUTOS.
+ *
+ * Estaban aquí como constantes, y eso era una copia a mano de lo que decide la
+ * base. Desde la 0174 los cuatro cron de cancelación leen esa misma fila, así
+ * que ahora hay un solo número y tres pantallas que lo miran (la cajera, el
+ * cliente y la propia base) en vez de tres números que casualmente coincidían.
+ *
+ * Importa porque el contador de la cajera no es decorativo: es lo que le dice
+ * cuánto le queda para aceptar antes de que el pedido se cancele solo. Si el
+ * panel contara 15 y la base cancelara a los 5, la cajera perdería pedidos
+ * mirando un reloj que le sobraba tiempo.
+ */
+export interface OrderTimers {
+  acceptanceMinutes: number
+  validationMinutes: number
+  paymentMinutes: number
+  prepayVerificationMinutes: number
+}
+
+/** Los valores de `DECISIONS.md §10`, para cuando la consulta aún no volvió. */
+export const DEFAULT_ORDER_TIMERS: OrderTimers = {
+  acceptanceMinutes: 5,
+  validationMinutes: 5,
+  paymentMinutes: 15,
+  prepayVerificationMinutes: 10,
+}
 
 /**
  * Formatea los segundos hasta/desde `estimated_ready_at` en `mm:ss` con signo.
@@ -344,8 +367,18 @@ function getUiState(row: OrderRow, now: number): UiState {
   }
 }
 
-/** Convierte una fila de `orders` en el view-model que consume la UI. */
-export function toOrderVM(row: OrderRow, now: number = Date.now()): OrderVM {
+/**
+ * Convierte una fila de `orders` en el view-model que consume la UI.
+ *
+ * `timers` es opcional para no obligar a las pantallas que no pintan contadores
+ * (el historial, por ejemplo) a ir a buscarlos. Quien sí los pinta —el tablero
+ * de la cajera— los pasa desde `useBusinessTimers`.
+ */
+export function toOrderVM(
+  row: OrderRow,
+  now: number = Date.now(),
+  timers: OrderTimers = DEFAULT_ORDER_TIMERS,
+): OrderVM {
   const state = getUiState(row, now)
   const source: UiSource = row.source === 'business_manual' ? 'manual' : 'web'
   const payment = mapPayment(row.payment_intent)
@@ -354,17 +387,23 @@ export function toOrderVM(row: OrderRow, now: number = Date.now()): OrderVM {
 
   const countdownSec =
     row.status === 'pending_acceptance'
-      ? secondsUntil(row.pending_acceptance_at ?? row.created_at, ACCEPT_SEC, now)
+      ? secondsUntil(
+          row.pending_acceptance_at ?? row.created_at,
+          timers.acceptanceMinutes * 60,
+          now,
+        )
       : row.status === 'awaiting_payment'
         ? secondsUntil(
             row.awaiting_payment_at ?? row.validating_at ?? row.created_at,
-            AWAITING_PAYMENT_SEC,
+            timers.paymentMinutes * 60,
             now,
           )
         : row.status === 'validando'
           ? secondsUntil(
               row.validating_at ?? row.created_at,
-              row.payment_intent === 'prepaid' ? PREPAY_VALIDATION_SEC : VALIDATE_SEC,
+              (row.payment_intent === 'prepaid'
+                ? timers.prepayVerificationMinutes
+                : timers.validationMinutes) * 60,
               now,
             )
           : 0
