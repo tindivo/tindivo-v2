@@ -1,5 +1,6 @@
 'use client'
 
+import { serviceDate } from '@tindivo/contracts'
 import { Badge, Button, Card, EmptyState, Icon, SkeletonList } from '@tindivo/ui'
 import { useState } from 'react'
 import { soles } from '@/lib/format'
@@ -17,24 +18,29 @@ const diaLima = new Intl.DateTimeFormat('es-PE', {
   month: 'short',
   timeZone: 'America/Lima',
 })
-const fechaLima = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' })
-
 /**
- * La hora del pedido, y el día SOLO cuando no es hoy.
+ * La hora del pedido, y el día SOLO cuando no es de esta noche.
  *
  * Un pedido cobrado ayer y todavía sin cerrar sigue en esta lista a propósito
  * (la confirmación es humana y nadie la fuerza a las 24h). Pero mezclado con los
  * de esta noche y mostrando solo «19:40», se lee como uno de hoy. El día lo
  * separa sin sacarlo de la lista.
+ *
+ * SE COMPARA POR JORNADA, NO POR FECHA DE CALENDARIO. El endpoint que alimenta
+ * esta pantalla ya lleva escrito por qué no filtra por el día de Lima —"ese
+ * dinero desaparecía de la pantalla a medianoche sin que nada hubiera pasado"—
+ * y aquí quedaba la otra mitad: a las 00:00, con el motorizado todavía
+ * repartiendo, todo lo de esa noche se rotulaba «ayer». `serviceDate` corta a
+ * las 05:00, igual que `current_service_date` en la base.
  */
 function cuando(iso: string | null): { hora: string; dia: string | null } | null {
   if (!iso) return null
   const t = Date.parse(iso)
   if (Number.isNaN(t)) return null
-  const hoy = fechaLima.format(new Date())
-  const suyo = fechaLima.format(t)
+  const hoy = serviceDate()
+  const suyo = serviceDate(new Date(t))
   if (suyo === hoy) return { hora: horaLima.format(t), dia: null }
-  const ayer = fechaLima.format(Date.now() - 86_400_000)
+  const ayer = serviceDate(new Date(Date.now() - 86_400_000))
   return { hora: horaLima.format(t), dia: suyo === ayer ? 'ayer' : diaLima.format(t) }
 }
 

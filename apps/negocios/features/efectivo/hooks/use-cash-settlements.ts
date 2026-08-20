@@ -1,12 +1,31 @@
 'use client'
 
+import { serviceDate } from '@tindivo/contracts'
 import { canalUnico } from '@tindivo/supabase'
 import { useCallback, useEffect, useState } from 'react'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
-/** Fecha de Lima de hoy, en `YYYY-MM-DD`, para comparar con `settlement_date`. */
-const fechaLima = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' })
-export const hoyLima = () => fechaLima.format(new Date())
+/**
+ * La JORNADA en curso, para comparar con `settlement_date`.
+ *
+ * ERA LA FECHA DE CALENDARIO DE LIMA, y eso se rompía a medianoche EN PLENA
+ * FAENA. El servicio va de ~18:00 a ~01:00, así que a las 00:00 lo cobrado esa
+ * misma noche dejaba de ser "hoy": lo pendiente de confirmar pasaba a contarse
+ * como `arrastre` —dinero que se arrastra de noches anteriores, que es
+ * precisamente lo que la cajera mira para preocuparse— y lo ya confirmado
+ * saltaba de la tarjeta del motorizado al historial de "noches anteriores".
+ * Nada había pasado salvo que el reloj marcó las doce.
+ *
+ * El mismo fallo ya lo tuvo la pantalla del motorizado y allí está documentado:
+ * "Cuando esta consulta sí filtraba por el día de Lima, ese dinero desaparecía
+ * de la pantalla a medianoche sin que nada hubiera pasado". Se arregló ahí y se
+ * quedó aquí.
+ *
+ * `serviceDate` corta a las 05:00 y es espejo de `current_service_date` de la
+ * base, que desde la 0176 es también quien decide `settlement_date`. Las dos
+ * mitades de la comparación hablan por fin del mismo día.
+ */
+export const jornadaActual = () => serviceDate()
 
 /** En qué punto del camino está el efectivo de un pedido. */
 export type CashLineState = 'pending' | 'delivering' | 'disputed' | 'confirmed'
@@ -126,7 +145,7 @@ export function useCashSettlements() {
   const load = useCallback(async () => {
     setError(null)
     const supabase = getSupabaseBrowser()
-    const hoy = hoyLima()
+    const hoy = jornadaActual()
 
     try {
       // ── 1. Lo ABIERTO: sin límite y sin filtro de fecha ──────────────────
