@@ -12,6 +12,14 @@ interface TrackingHeroProps {
   progress: number
 }
 
+/**
+ * El estado del pedido, y nada más.
+ *
+ * Los contadores NO viven aquí, aunque el hero sea el sitio más visible: cada
+ * uno está pegado a la acción que lo apaga —el de aceptación en la fila de
+ * cancelar, justo debajo; el de pago junto al botón de subir la captura— porque
+ * un reloj lejos de su botón solo comunica prisa, no qué hacer con ella.
+ */
 export function TrackingHero({ data, step, currentIdx, progress }: TrackingHeroProps) {
   const isDelivered = step.key === 'delivered'
   // `null` = no hay base para dar un número. Antes se inventaba uno.

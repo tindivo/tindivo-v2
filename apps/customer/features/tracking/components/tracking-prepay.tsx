@@ -1,19 +1,27 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { Icon } from '@tindivo/ui'
+import { useEffect, useState } from 'react'
 import { PrepayProofSection } from '@/components/prepay-proof-section'
+import { CountdownPill } from '@/features/tracking/components/tracking-countdown'
+import type { CountdownView } from '@/features/tracking/lib/deadline'
 import type { Tracking } from '@/features/tracking/types'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
 interface TrackingPrepayProps {
   data: Tracking
   ownedId: string | null
+  /**
+   * El plazo activo, calculado una sola vez en la página. Antes este componente
+   * montaba su propio `setInterval` de un segundo con el deadline escrito a
+   * mano; ahora los tres relojes salen de `activeDeadline` y solo late uno.
+   */
+  countdown: CountdownView | null
   onProofUploaded: () => void
 }
 
-export function TrackingPrepay({ data, ownedId, onProofUploaded }: TrackingPrepayProps) {
+export function TrackingPrepay({ data, ownedId, countdown, onProofUploaded }: TrackingPrepayProps) {
   const [signedUrl, setSignedUrl] = useState<string | null>(null)
-  const [seconds, setSeconds] = useState(600)
   const [zoomOpen, setZoomOpen] = useState(false)
 
   // Obtener URL firmada del comprobante para visualización
@@ -42,28 +50,6 @@ export function TrackingPrepay({ data, ownedId, onProofUploaded }: TrackingPrepa
     }
   }, [data.proofUrl])
 
-  // Temporizador regresivo en validando. Los minutos los decide
-  // `app_settings.timers.prepayVerificationMinutes`, que es editable desde el
-  // panel admin y viaja en el tracking desde `0170`. El 10 es solo el fallback
-  // para una respuesta que aún no lo traiga.
-  useEffect(() => {
-    if (data.status !== 'validando') return
-    const baseTime = data.validatingAt ?? data.createdAt
-    if (!baseTime) return
-
-    const startMs = new Date(baseTime).getTime()
-    const deadlineMs = startMs + (data.prepayVerificationMinutes ?? 10) * 60 * 1000
-
-    const updateTimer = () => {
-      const remaining = Math.max(0, Math.ceil((deadlineMs - Date.now()) / 1000))
-      setSeconds(remaining)
-    }
-
-    updateTimer()
-    const timer = setInterval(updateTimer, 1000)
-    return () => clearInterval(timer)
-  }, [data.status, data.validatingAt, data.createdAt, data.prepayVerificationMinutes])
-
   // Cerrar modal con Escape
   useEffect(() => {
     if (!zoomOpen) return
@@ -74,32 +60,36 @@ export function TrackingPrepay({ data, ownedId, onProofUploaded }: TrackingPrepa
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [zoomOpen])
 
-  const formatTime = useCallback((sec: number) => {
-    const m = Math.floor(sec / 60)
-    const s = sec % 60
-    return `${m}:${s.toString().padStart(2, '0')}`
-  }, [])
-
   if (data.paymentIntent !== 'prepaid') return null
+
+  const minutosParaPagar = data.paymentMinutes ?? 15
 
   return (
     <>
-      {/* 1. pending_acceptance o validando SIN comprobante: Esperando confirmación */}
+      {/* 1. pending_acceptance o validando SIN comprobante: qué viene después.
+          El «estamos confirmando» y su contador ya están en la fila de cancelar,
+          justo encima; repetirlos aquí solo alargaba la pantalla. Lo que esta
+          tarjeta aporta es lo único que el cliente todavía no sabe: que en
+          cuanto le confirmen le empieza a correr un plazo para pagar. */}
       {(data.status === 'pending_acceptance' ||
         (data.status === 'validando' && !data.proofUrl)) && (
-        <div className="mt-3.5 rounded-[22px] border border-brand/20 bg-brand-soft p-4 text-left text-brand-dark">
-          <div className="flex items-center gap-2 text-[14px] font-semibold">
-            <span className="h-2 w-2 animate-pulse rounded-full bg-brand" />
-            Esperando confirmación del restaurante
+        <div className="mt-3.5 flex items-start gap-2.5 rounded-[22px] border border-brand/20 bg-brand-soft p-4 text-left">
+          <Icon name="account_balance_wallet" size={20} className="mt-px shrink-0 text-brand" />
+          <div>
+            <div className="text-[14px] font-semibold text-brand-dark">Ten tu Yape a la mano</div>
+            <p className="mt-1 text-[13px] leading-relaxed text-ink-muted">
+              Cuando el restaurante confirme que tiene tu pedido, te avisaremos aquí y tendrás{' '}
+              <strong>{minutosParaPagar} minutos</strong> para pagar y subir tu captura.
+            </p>
           </div>
-          <p className="mt-1 text-[13px] text-ink-muted">
-            El restaurante está verificando disponibilidad de tu pedido. Te avisaremos aquí para
-            realizar el pago.
-          </p>
         </div>
       )}
 
-      {/* 2 & 4. awaiting_payment: Subida de captura (intento 0 o 1) */}
+      {/* 2 & 4. awaiting_payment: subida de captura.
+          El reloj NO se pinta aquí sino dentro de `PrepayProofSection`, que ya
+          tenía el suyo arriba del todo. Enseñar dos contadores del mismo plazo,
+          uno encima del otro, no es el doble de aviso: es el cliente
+          preguntándose cuál de los dos es el bueno. */}
       {data.status === 'awaiting_payment' && (
         <div>
           {data.proofAttempt === 1 && (
@@ -111,12 +101,21 @@ export function TrackingPrepay({ data, ownedId, onProofUploaded }: TrackingPrepa
           <PrepayProofSection
             orderId={ownedId ?? data.shortId}
             proofAttempt={data.proofAttempt ?? 0}
+            countdown={
+              countdown
+                ? {
+                    label: countdown.label,
+                    urgent: countdown.kind === 'running' && countdown.urgent,
+                  }
+                : null
+            }
             onProofUploaded={onProofUploaded}
           />
         </div>
       )}
 
-      {/* 3. validando CON comprobante subido: En revisión con Countdown y Comprobante agrandable */}
+      {/* 3. validando CON comprobante subido: en revisión, con contador y con la
+          captura ampliable. */}
       {data.status === 'validando' && Boolean(data.proofUrl) && (
         <div className="mt-3.5 rounded-[22px] border border-sky-200 bg-sky-50/70 p-4 text-left text-sky-900 shadow-sm">
           <div className="flex items-center justify-between gap-2">
@@ -125,31 +124,13 @@ export function TrackingPrepay({ data, ownedId, onProofUploaded }: TrackingPrepa
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-500 opacity-75" />
                 <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-sky-600" />
               </span>
-              Verificando tu pago...
+              Verificando tu pago…
             </div>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 font-mono text-[12px] font-bold text-sky-800 shadow-xs border border-sky-200">
-              <svg
-                className="h-3.5 w-3.5 text-sky-600"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                role="img"
-                aria-label="Temporizador"
-              >
-                <title>Temporizador</title>
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              {formatTime(seconds)}
-            </span>
+            {countdown && <CountdownPill view={countdown} />}
           </div>
 
           <p className="mt-2 text-[13px] leading-relaxed text-sky-800/90">
-            El restaurante está revisando tu comprobante de pago. Te notificaremos apenas sea
+            El restaurante está revisando tu comprobante de pago. Te avisamos aquí apenas quede
             verificado.
           </p>
 

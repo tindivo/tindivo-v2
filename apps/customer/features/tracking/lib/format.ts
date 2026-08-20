@@ -3,11 +3,28 @@ import type { Tracking } from '@/features/tracking/types'
 
 export { soles } from '@/lib/format'
 
-export const STEPS: { key: TrackingStep; label: string; sub: string }[] = [
-  { key: 'received', label: 'Pedido recibido', sub: 'El restaurante te llamará para confirmar' },
-  { key: 'preparing', label: 'Preparando', sub: 'Tu pedido está en cocina' },
-  { key: 'ontheway', label: 'En camino', sub: 'Repartidor en ruta' },
-  { key: 'delivered', label: 'Entregado', sub: '¡Buen provecho!' },
+/**
+ * Los cuatro pasos que ve el cliente. `short` es para el stepper horizontal, que
+ * tiene un cuarto del ancho de la pantalla por etiqueta.
+ *
+ * El subtítulo de `received` NO promete una llamada. Decía «El restaurante te
+ * llamará para confirmar» y se lo enseñaba a todo el mundo, cuando la llamada
+ * antifraude solo alcanza a contraentrega de cliente nuevo, con strike o de monto
+ * grande (`DECISIONS.md §7`) — al prepago no se le llama nunca. O sea que se lo
+ * prometíamos a casi todos y lo cumplíamos con casi ninguno, que es la peor
+ * combinación: el que no recibe la llamada se queda esperando un teléfono que no
+ * va a sonar en vez de mirar su pedido.
+ */
+export const STEPS: { key: TrackingStep; label: string; short: string; sub: string }[] = [
+  {
+    key: 'received',
+    label: 'Pedido recibido',
+    short: 'Recibido',
+    sub: 'Estamos confirmándolo con el restaurante',
+  },
+  { key: 'preparing', label: 'Preparando', short: 'Preparando', sub: 'Tu pedido está en cocina' },
+  { key: 'ontheway', label: 'En camino', short: 'En camino', sub: 'El motorizado va en ruta' },
+  { key: 'delivered', label: 'Entregado', short: 'Entregado', sub: '¡Buen provecho!' },
 ]
 
 /**
@@ -149,7 +166,12 @@ export function etaLabel(data: Tracking, now: number = Date.now()): string | nul
   return `${v.min}–${v.max} min`
 }
 
-export function getStepSub(s: (typeof STEPS)[0], data: Tracking): string {
+/**
+ * El subtítulo del paso, afinado por estado. Pide solo `key` y `sub` y no el
+ * `STEPS[0]` entero: el hero construye un paso de emergencia si el índice se
+ * sale de la lista, y ese no tiene por qué traer la etiqueta corta del stepper.
+ */
+export function getStepSub(s: Pick<(typeof STEPS)[0], 'key' | 'sub'>, data: Tracking): string {
   if (s.key === 'received' && data.paymentIntent === 'prepaid') {
     if (data.status === 'pending_acceptance' || (data.status === 'validando' && !data.proofUrl)) {
       return 'Esperando confirmación de disponibilidad'
@@ -164,6 +186,19 @@ export function getStepSub(s: (typeof STEPS)[0], data: Tracking): string {
 /** Mensaje informativo del footer según estado y método de pago. */
 export function getStatusMessage(data: Tracking, current: TrackingStep | null): string {
   if (current === 'delivered') return '¡Tu pedido fue entregado! Buen provecho.'
+
+  // El pedido ya salió del local. Estos dos casos caían al mensaje genérico del
+  // final, que decía «ya está en preparación» con el motorizado tocando el
+  // timbre. Van antes que la rama de prepago porque un prepago en camino
+  // también se comía ese texto.
+  if (data.arrivedAtCustomerAt) {
+    return 'El motorizado ya llegó a tu domicilio y te está esperando.'
+  }
+  if (current === 'ontheway') {
+    return data.paymentIntent === 'pending_cash'
+      ? 'Tu pedido ya salió del restaurante. Ten listo tu pago.'
+      : 'Tu pedido ya salió del restaurante y va en camino.'
+  }
 
   if (data.paymentIntent === 'prepaid') {
     // Solo en `pending_acceptance` se ofrece cancelar, y el mensaje lo dice: es
@@ -190,8 +225,12 @@ export function getStatusMessage(data: Tracking, current: TrackingStep | null): 
   // afirmaba dos cosas falsas: que estaba en preparación (está en `validando`)
   // y que no podía cancelarse (cancel_customer_order SÍ admite `validando`
   // para no-prepago, 0046:25-27).
+  //
+  // Tampoco anuncia ya una llamada. El estado sigue existiendo y la cajera sigue
+  // resolviéndolo desde su panel; lo que se retira es la promesa de que el
+  // teléfono va a sonar, que no se cumple para la mayoría.
   if (data.status === 'validando') {
-    return 'El restaurante te llamará para confirmar tu pedido antes de prepararlo. Aún puedes cancelarlo.'
+    return 'Estamos confirmando tu pedido antes de mandarlo a cocina. Aún puedes cancelarlo.'
   }
   if (data.status === 'pending_acceptance') {
     return 'El restaurante está confirmando tu pedido. Aún puedes cancelarlo.'
