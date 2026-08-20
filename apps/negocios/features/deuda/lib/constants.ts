@@ -1,4 +1,18 @@
-export const BLOCK_THRESHOLD = 300
+/**
+ * El techo de deuda que se le enseña al negocio en su pantalla de saldo:
+ * la barra de «Límite de crédito» y el «X% del límite alcanzado».
+ *
+ * **Es un número informativo, no una regla que se aplique sola.** Nadie bloquea
+ * a un negocio al llegar aquí: `blocked_for_debt` solo se APAGA automáticamente
+ * (lo hacen `settle_business_charges` y `unblock_business` cuando el negocio
+ * paga), y encenderlo es una acción manual del admin desde su panel. Así que
+ * subir o bajar este valor cambia lo que ve la cajera y el momento en que la
+ * barra se pone roja —nada más—.
+ *
+ * Si algún día se automatiza la suspensión por mora, el umbral tiene que salir
+ * de `app_settings` y leerlo los dos lados; no de aquí.
+ */
+export const BLOCK_THRESHOLD = 500
 
 export const REJECTION_LABELS: Record<string, string> = {
   invalid_proof: 'Comprobante de pago inválido',
