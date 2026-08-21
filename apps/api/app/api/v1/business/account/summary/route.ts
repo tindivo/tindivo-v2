@@ -43,11 +43,11 @@ export async function GET(req: Request): Promise<Response> {
 
     const supportPhone = supportCfg?.value ? String(supportCfg.value).replace(/"/g, '') : null
 
-    // 2-bis. El límite de crédito, que desde la 0178 NO es decorativo: al
-    // alcanzarlo, `recalc_business_balance` suspende al negocio y deja de
-    // entrarle pedidos. Viaja desde `app_settings` para que la barra de la
-    // pantalla de saldo enseñe el mismo número que aplica la base; escrito a
-    // mano en el front, dejaría de coincidir el día que alguien lo cambie.
+    // 2-bis. El límite de crédito que pinta la barra de la pantalla de saldo.
+    // Es INFORMATIVO: alcanzarlo no suspende a nadie (la 0178 lo conectó con la
+    // suspensión automática y la 0179 lo revirtió). Viaja desde `app_settings`
+    // igualmente, porque escrito a mano en el front dejaría de coincidir con lo
+    // que se anuncia el día que alguien lo cambie.
     const { data: umbralCfg } = await service
       .from('app_settings')
       .select('value')

@@ -1,17 +1,16 @@
 /**
- * Fallback del límite de crédito, para el instante en que la pantalla todavía
- * no recibió la respuesta del endpoint de saldo.
+ * Fallback del límite de crédito, para el instante en que la pantalla todavía no
+ * recibió la respuesta del endpoint de saldo.
  *
- * **El valor que manda vive en `app_settings.debt_block_threshold`** y lo aplica
- * `recalc_business_balance` (migración 0178): al alcanzarlo, el negocio queda
- * suspendido y el trigger `trg_orders_business_not_blocked` le impide recibir
- * pedidos nuevos — también por enlace directo, que era por donde se colaban
- * antes. Al bajar del umbral se le levanta la suspensión solo, sin tener que
- * pagar la deuda entera.
+ * **El valor que se pinta vive en `app_settings.debt_block_threshold`**, y es
+ * informativo: alcanzarlo NO suspende a nadie. La `0178` llegó a conectarlo con
+ * la suspensión automática y la `0179` lo revirtió — en el piloto, cortar solo
+ * significaba que un negocio podía quedarse sin vender un viernes por la noche
+ * sin que nadie lo decidiera, y en silencio, porque `dispatch_event` no
+ * convierte `BusinessBlocked` en push. Suspender lo sigue decidiendo el admin.
  *
- * Este número era `BLOCK_THRESHOLD` y no hacía nada: pintaba la barra y punto.
- * Si alguna vez vuelve a divergir del de `app_settings`, lo que ve la cajera
- * dejará de ser lo que le van a aplicar.
+ * Así que este número mueve el cartel y el porcentaje de la barra. Nada más.
+ * Lo que SÍ corta pedidos es `is_blocked`, lo ponga quien lo ponga.
  */
 export const DEFAULT_BLOCK_THRESHOLD = 600
 

@@ -6,9 +6,9 @@ import { DEFAULT_BLOCK_THRESHOLD } from '../lib/constants'
 
 /**
  * `threshold` llega del endpoint de saldo, que lo lee de
- * `app_settings.debt_block_threshold`. Desde la 0178 ese número SUSPENDE de
- * verdad al negocio, así que la barra tiene que enseñar el mismo que aplica la
- * base y no una copia suya.
+ * `app_settings.debt_block_threshold`. Es un límite ANUNCIADO, no aplicado:
+ * pasarse de él no suspende al negocio (ver `constants.ts`). Viaja desde la base
+ * para que el cartel y el porcentaje no se separen del número oficial.
  */
 export function DeudaHero({
   balance,

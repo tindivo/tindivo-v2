@@ -1,0 +1,13 @@
+-- ROLLBACK de 0179 — vuelve el corte automático por deuda de la 0178.
+--
+-- ANTES DE APLICARLO, lee el motivo por el que se revirtió: la suspensión
+-- automática es SILENCIOSA. `dispatch_event` trata `BusinessBlocked` como
+-- evento de auditoría y no lo convierte en push, así que el negocio se entera
+-- de que dejó de vender porque el tablero se le queda quieto.
+--
+-- Si vas a reactivarlo, mete `BusinessBlocked` en la lista de eventos que
+-- viajan de `dispatch_event` PRIMERO. Los negocios del piloto tienen push
+-- activo, así que el aviso llegaría.
+--
+-- La forma de reactivarlo es reaplicar el cuerpo de la 0178, no este fichero:
+--   supabase/migrations/0178_the_debt_closes_the_shutter_by_itself.sql
