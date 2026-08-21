@@ -40,7 +40,7 @@ export function DeudaList({
         </div>
       )}
 
-      <DeudaHero balance={balance} isBlocked={data.isBlocked} />
+      <DeudaHero balance={balance} isBlocked={data.isBlocked} threshold={data.debtBlockThreshold} />
       <DeudaSummary summary={data.summary} />
 
       {/* Botón WhatsApp contextual */}

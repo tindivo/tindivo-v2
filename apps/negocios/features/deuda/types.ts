@@ -87,6 +87,8 @@ export interface AccountSummaryData {
   balanceDue: number
   isBlocked: boolean
   blockedForDebt: boolean
+  /** Límite de crédito vigente (`app_settings.debt_block_threshold`, 0178). */
+  debtBlockThreshold: number
   supportPhone: string | null
   summary: {
     totalCommissions: number

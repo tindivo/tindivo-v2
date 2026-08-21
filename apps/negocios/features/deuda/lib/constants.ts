@@ -1,31 +1,19 @@
 /**
- * El techo de deuda que se le enseña al negocio en su pantalla de saldo:
- * la barra de «Límite de crédito» y el «X% del límite alcanzado».
+ * Fallback del límite de crédito, para el instante en que la pantalla todavía
+ * no recibió la respuesta del endpoint de saldo.
  *
- * **Es un número informativo, no una regla que se aplique sola.** Verificado
- * leyendo los cuerpos de las funciones en la base:
+ * **El valor que manda vive en `app_settings.debt_block_threshold`** y lo aplica
+ * `recalc_business_balance` (migración 0178): al alcanzarlo, el negocio queda
+ * suspendido y el trigger `trg_orders_business_not_blocked` le impide recibir
+ * pedidos nuevos — también por enlace directo, que era por donde se colaban
+ * antes. Al bajar del umbral se le levanta la suspensión solo, sin tener que
+ * pagar la deuda entera.
  *
- *   · `recalc_business_balance` corre en CADA cargo y solo vuelve a sumar el
- *     ledger. No compara la deuda con ningún tope.
- *   · `block_business(id, motivo, por)` no recibe ni consulta importe alguno:
- *     la dispara el admin desde `POST /admin/businesses/:id/block`.
- *   · No hay cron ni Inngest que barra deudores.
- *
- * El bloqueo en sí **sí funciona**: pone `is_blocked`, y `is_published_business`
- * exige `is_blocked = false`, así que el negocio desaparece del catálogo y deja
- * de recibir pedidos. Lo que no existe es el automatismo por monto. Subir o
- * bajar este valor cambia lo que ve la cajera y cuándo la barra se pone roja
- * (a partir del 80%) — nada más.
- *
- * Ojo con `blocked_for_debt`, que es OTRA columna: hoy no la enciende ni una
- * sola línea de producción (solo `settle_business_charges` y `unblock_business`
- * la apagan al pagar). El estado «Cuenta suspendida» de esta pantalla viene de
- * `is_blocked`, no de ella.
- *
- * Si algún día se automatiza la suspensión por mora, el umbral tiene que salir
- * de `app_settings` y leerlo los dos lados; no de aquí.
+ * Este número era `BLOCK_THRESHOLD` y no hacía nada: pintaba la barra y punto.
+ * Si alguna vez vuelve a divergir del de `app_settings`, lo que ve la cajera
+ * dejará de ser lo que le van a aplicar.
  */
-export const BLOCK_THRESHOLD = 500
+export const DEFAULT_BLOCK_THRESHOLD = 600
 
 export const REJECTION_LABELS: Record<string, string> = {
   invalid_proof: 'Comprobante de pago inválido',

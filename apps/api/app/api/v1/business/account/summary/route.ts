@@ -43,6 +43,19 @@ export async function GET(req: Request): Promise<Response> {
 
     const supportPhone = supportCfg?.value ? String(supportCfg.value).replace(/"/g, '') : null
 
+    // 2-bis. El límite de crédito, que desde la 0178 NO es decorativo: al
+    // alcanzarlo, `recalc_business_balance` suspende al negocio y deja de
+    // entrarle pedidos. Viaja desde `app_settings` para que la barra de la
+    // pantalla de saldo enseñe el mismo número que aplica la base; escrito a
+    // mano en el front, dejaría de coincidir el día que alguien lo cambie.
+    const { data: umbralCfg } = await service
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'debt_block_threshold')
+      .maybeSingle()
+
+    const debtBlockThreshold = Number(umbralCfg?.value ?? 600) || 600
+
     // 3. Obtener cargos pendientes (created_at DESC)
     // biome-ignore lint/suspicious/noExplicitAny: business_charges table
     const { data: rawCharges, error: chargeError } = await (service as any)
@@ -148,6 +161,7 @@ export async function GET(req: Request): Promise<Response> {
         balanceDue: Number(biz.balance_due) || 0,
         isBlocked: Boolean(biz.is_blocked),
         blockedForDebt: Boolean(biz.blocked_for_debt),
+        debtBlockThreshold,
         supportPhone,
         summary: {
           totalCommissions,
