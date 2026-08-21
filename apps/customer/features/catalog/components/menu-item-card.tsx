@@ -1,15 +1,32 @@
 import { Icon } from '@tindivo/ui'
 import { ProductImage } from '@/components/product-image'
+import { HighlightedText } from '@/features/catalog/components/highlighted-text'
 import { soles } from '@/features/catalog/lib/format'
+import type { MatchRange } from '@/features/catalog/lib/menu-search'
 import type { MenuItem } from '@/features/catalog/types'
 
 interface MenuItemCardProps {
   item: MenuItem
   disabled?: boolean
   onClick: (item: MenuItem) => void
+  /**
+   * Los tres de abajo solo los manda la búsqueda. En la carta normal la
+   * categoría ya la dice el encabezado de la sección y no hay nada que
+   * resaltar, así que la tarjeta se pinta igual que siempre.
+   */
+  categoryLabel?: string
+  nameRanges?: MatchRange[]
+  descriptionRanges?: MatchRange[]
 }
 
-export function MenuItemCard({ item, disabled, onClick }: MenuItemCardProps) {
+export function MenuItemCard({
+  item,
+  disabled,
+  onClick,
+  categoryLabel,
+  nameRanges,
+  descriptionRanges,
+}: MenuItemCardProps) {
   const groups = item.modifier_groups ?? []
   const hasOptions = groups.some((g) => g.options.length > 0)
   const hasPaidOptions = groups.some((g) => g.options.some((o) => Number(o.additional_price) > 0))
@@ -23,8 +40,13 @@ export function MenuItemCard({ item, disabled, onClick }: MenuItemCardProps) {
     >
       <div className="flex min-w-0 flex-1 flex-col justify-between">
         <div>
-          {(item.is_compact || item.badges?.[0]) && (
+          {(categoryLabel || item.is_compact || item.badges?.[0]) && (
             <span className="mb-1.5 flex flex-wrap gap-1.5">
+              {categoryLabel && (
+                <span className="inline-block rounded-md bg-ink/[0.05] px-2 py-[3px] font-bold text-[10px] uppercase tracking-[0.08em] text-ink-muted">
+                  {categoryLabel}
+                </span>
+              )}
               {item.is_compact && (
                 <span className="inline-flex items-center gap-1 rounded-md bg-brand/8 px-2 py-[3px] font-bold text-[10px] uppercase tracking-[0.08em] text-brand">
                   <Icon name="star" size={12} filled /> Destacado
@@ -37,10 +59,12 @@ export function MenuItemCard({ item, disabled, onClick }: MenuItemCardProps) {
               )}
             </span>
           )}
-          <div className="mb-1 font-display text-[16px] font-bold tracking-tight">{item.name}</div>
+          <div className="mb-1 font-display text-[16px] font-bold tracking-tight">
+            <HighlightedText text={item.name} ranges={nameRanges} />
+          </div>
           {item.description && (
             <div className="line-clamp-2 text-[12px] leading-[1.4] text-ink-muted">
-              {item.description}
+              <HighlightedText text={item.description} ranges={descriptionRanges} />
             </div>
           )}
         </div>

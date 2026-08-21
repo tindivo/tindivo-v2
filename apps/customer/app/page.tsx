@@ -51,16 +51,26 @@ function siteJsonLd(): string {
   })
 }
 
-export default async function Home() {
-  const [initialBusinesses, serverUser] = await Promise.all([
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string | string[] }>
+}) {
+  const [initialBusinesses, serverUser, params] = await Promise.all([
     fetchInitialBusinesses(),
     getServerUser(),
+    searchParams,
   ])
+  const q = Array.isArray(params.q) ? params.q[0] : params.q
   return (
     <>
       {/* JSON-LD serializado con JSON.stringify, no HTML de usuario. */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: siteJsonLd() }} />
-      <HomeShell initialBusinesses={initialBusinesses} initialUser={buildInitialUser(serverUser)} />
+      <HomeShell
+        initialBusinesses={initialBusinesses}
+        initialUser={buildInitialUser(serverUser)}
+        initialQuery={q ?? ''}
+      />
     </>
   )
 }

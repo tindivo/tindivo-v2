@@ -15,14 +15,16 @@ import { useCatalogSearch } from '@/lib/use-search'
 interface HomeShellProps {
   initialBusinesses: PublicBusiness[] | null
   initialUser?: CatalogUser | null
+  /** `?q=`: llega desde el estado vacío del buscador de una carta. */
+  initialQuery?: string
 }
 
-export function HomeShell({ initialBusinesses, initialUser }: HomeShellProps) {
+export function HomeShell({ initialBusinesses, initialUser, initialQuery }: HomeShellProps) {
   const { items, error, user, activeOrders } = useHomeData({
     initialBusinesses,
     initialUser,
   })
-  const search = useCatalogSearch()
+  const search = useCatalogSearch(initialQuery)
   const greetingName = firstName(user.name)
 
   return (

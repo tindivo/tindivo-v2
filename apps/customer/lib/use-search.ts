@@ -52,9 +52,13 @@ const MIN_CHARS = 2
  * Búsqueda del catálogo (negocios + platos) con debounce y cancelación.
  * El AbortController cubre a la vez el debounce cancelado y las respuestas
  * fuera de orden. La insensibilidad a mayúsculas/tildes es server-side.
+ *
+ * `initialQuery` viene de `?q=` y lo usa el estado vacío del buscador de una
+ * carta: si el plato no está en ese negocio, el usuario llega aquí con lo que
+ * ya había escrito en vez de tener que teclearlo de nuevo.
  */
-export function useCatalogSearch() {
-  const [query, setQuery] = useState('')
+export function useCatalogSearch(initialQuery = '') {
+  const [query, setQuery] = useState(initialQuery)
   const [results, setResults] = useState<SearchResults | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)

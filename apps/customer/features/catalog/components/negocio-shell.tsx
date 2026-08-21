@@ -8,22 +8,30 @@ import { ActiveOrderBlockBanner } from '@/features/catalog/components/active-ord
 import { AddedToast } from '@/features/catalog/components/added-toast'
 import { BusinessHero } from '@/features/catalog/components/business-hero'
 import { CartReplaceSheet } from '@/features/catalog/components/cart-replace-sheet'
-import { CategoryTabs } from '@/features/catalog/components/category-tabs'
 import { ClosedBanner } from '@/features/catalog/components/closed-banner'
+import { MenuSearchResults } from '@/features/catalog/components/menu-search-results'
 import { MenuSection } from '@/features/catalog/components/menu-section'
+import { MenuToolbar } from '@/features/catalog/components/menu-toolbar'
 import { ProductModal } from '@/features/catalog/components/product-modal'
 import { ScheduleRow } from '@/features/catalog/components/schedule-row'
 import { useActiveOrders } from '@/features/catalog/hooks/use-active-order'
 import { useBusinessCatalog } from '@/features/catalog/hooks/use-business-catalog'
 import { useCatalogCart } from '@/features/catalog/hooks/use-catalog-cart'
 import { useCatalogNow } from '@/features/catalog/hooks/use-catalog-now'
+import { useMenuSearch } from '@/features/catalog/hooks/use-menu-search'
 import { soles } from '@/features/catalog/lib/format'
-import type { BusinessDetail } from '@/features/catalog/types'
+import type { BusinessDetail, Category } from '@/features/catalog/types'
 
 interface NegocioShellProps {
   id: string
   initialData: BusinessDetail | null
 }
+
+/**
+ * Referencia estable para el primer render, cuando `data` todavía es null.
+ * Un `[]` nuevo en cada render invalidaría los `useMemo` de `useMenuSearch`.
+ */
+const SIN_CATEGORIAS: Category[] = []
 
 export function NegocioShell({ id, initialData }: NegocioShellProps) {
   const now = useCatalogNow()
@@ -42,6 +50,7 @@ export function NegocioShell({ id, initialData }: NegocioShellProps) {
     handleAdd,
     confirmReplace,
   } = useCatalogCart(data?.business.id, data?.business.name)
+  const search = useMenuSearch(data?.categories ?? SIN_CATEGORIAS)
   const isBlockedByActiveOrder = activeOrders.some((o) => o.businessId === id)
 
   useEffect(() => {
@@ -100,20 +109,44 @@ export function NegocioShell({ id, initialData }: NegocioShellProps) {
           <ClosedBanner schedule={schedule} now={now} openingConfirmed={openingConfirmed} />
         )}
 
-        <CategoryTabs categories={categories} active={active} onSelect={jumpTo} />
+        {/* Ancla de altura cero: marca dónde empieza la zona que la búsqueda
+            sustituye, para poder devolver ahí el scroll. */}
+        <div ref={search.anchorRef} aria-hidden />
+
+        <MenuToolbar
+          categories={categories}
+          active={active}
+          onSelect={jumpTo}
+          searchEnabled={search.enabled}
+          searchOpen={search.open}
+          query={search.query}
+          onQueryChange={search.setQuery}
+          onOpenSearch={search.openSearch}
+          onCloseSearch={search.closeSearch}
+        />
 
         <div className="px-4 pt-2">
-          {categories.map((sec) => (
-            <MenuSection
-              key={sec.id}
-              category={sec}
+          {search.active ? (
+            <MenuSearchResults
+              query={search.query}
+              hits={search.hits}
+              businessName={business.name}
               disabled={closedForOrders || isBlockedByActiveOrder}
-              sectionRef={(el) => {
-                sectionRefs.current[sec.id] = el
-              }}
               onItemClick={setModalItem}
             />
-          ))}
+          ) : (
+            categories.map((sec) => (
+              <MenuSection
+                key={sec.id}
+                category={sec}
+                disabled={closedForOrders || isBlockedByActiveOrder}
+                sectionRef={(el) => {
+                  sectionRefs.current[sec.id] = el
+                }}
+                onItemClick={setModalItem}
+              />
+            ))
+          )}
         </div>
       </div>
 
