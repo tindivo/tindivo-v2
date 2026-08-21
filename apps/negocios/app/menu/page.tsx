@@ -1,7 +1,7 @@
 'use client'
 
 import { Icon, LoadingState } from '@tindivo/ui'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { DashboardShell } from '@/components/dashboard/shell'
 import { CategoryManagerModal } from '@/features/menu/components/category-manager-modal'
 import { CategorySection } from '@/features/menu/components/category-section'
@@ -23,8 +23,51 @@ export default function MenuPage() {
   function handleCatClick(id: string) {
     setActiveCatId(id)
     const el = document.getElementById(`cat-${id}`)
-    el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    if (!el) return
+    const container = el.closest('main')
+    if (container) {
+      const containerRect = container.getBoundingClientRect()
+      const elRect = el.getBoundingClientRect()
+      const currentScroll = container.scrollTop
+      const targetScroll = currentScroll + (elRect.top - containerRect.top) - 12
+      container.scrollTo({ top: Math.max(0, targetScroll), behavior: 'smooth' })
+    } else {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
   }
+
+  // Resalta automáticamente la categoría activa en el panel lateral al desplazarse por el menú
+  useEffect(() => {
+    if (!ready || cats.length === 0) return
+
+    const mainEl = document.querySelector('main')
+    if (!mainEl) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            const catId = entry.target.id.replace('cat-', '')
+            setActiveCatId(catId)
+          }
+        }
+      },
+      {
+        root: mainEl,
+        rootMargin: '-5% 0px -75% 0px',
+        threshold: 0,
+      },
+    )
+
+    cats.forEach((cat) => {
+      const el = document.getElementById(`cat-${cat.id}`)
+      if (el) observer.observe(el)
+    })
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [ready, cats])
 
   const subtitle =
     ready && cats.length > 0
