@@ -7,7 +7,12 @@ import { formatReadyDelta, type OrderVM } from '@/lib/orders/view-model'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import { CANCEL_REASONS, REJECT_REASONS_BASE, REJECT_REASONS_TAIL } from './pedido-detail/constants'
 import { DetailRow } from './pedido-detail/detail-row'
-import { ComandaModal, PrepTimeModal, ReasonModal } from './pedido-detail/modals'
+import {
+  ComandaModal,
+  ConfirmDirectPaymentModal,
+  PrepTimeModal,
+  ReasonModal,
+} from './pedido-detail/modals'
 import { PaySectionCash, PaySectionMixed, PaySectionWallet } from './pedido-detail/pay-sections'
 import type { DetailItem, RejectReason } from './pedido-detail/types'
 import { mmss, PayBadgeMini, SourceBadgeMini, soles } from './primitives'
@@ -21,6 +26,8 @@ export interface DetailActions {
   onReject: (code: string, text: string) => void | Promise<void>
   onVerifyProof: () => void | Promise<void>
   onRejectProof: () => void | Promise<void>
+  /** La cajera ya vio el dinero en su cuenta y confirma sin esperar la captura. */
+  onConfirmDirectPayment: (prepMinutes: number) => void | Promise<void>
   onExtend: () => void | Promise<void>
   onReady: () => void | Promise<void>
   onCancel: (code: string, text: string) => void | Promise<void>
@@ -213,6 +220,7 @@ export function DetailScreen({
 }) {
   const [modal, setModal] = useState<null | 'reject' | 'cancel'>(null)
   const [showPrepModal, setShowPrepModal] = useState(false)
+  const [showDirectPayModal, setShowDirectPayModal] = useState(false)
   const [showComandaModal, setShowComandaModal] = useState(false)
   const [hasAppeal, setHasAppeal] = useState(false)
   // Confirmación en dos pasos antes de declarar la comida lista, como en prod:
@@ -303,6 +311,16 @@ export function DetailScreen({
           onConfirm={(prepTime) => {
             setShowPrepModal(false)
             actions.onAccept(prepTime)
+          }}
+        />
+      )}
+      {showDirectPayModal && (
+        <ConfirmDirectPaymentModal
+          order={order}
+          onClose={() => setShowDirectPayModal(false)}
+          onConfirm={(prepTime) => {
+            setShowDirectPayModal(false)
+            actions.onConfirmDirectPayment(prepTime)
           }}
         />
       )}
@@ -780,19 +798,35 @@ export function DetailScreen({
               </button>
             </div>
           ) : order.status === 'awaiting_payment' && isPrepaid ? (
-            <div className="flex gap-2.5">
-              <button
-                type="button"
-                onClick={() => setModal('cancel')}
-                disabled={busy}
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-ink/[0.06] px-5 py-3 text-[15px] font-semibold text-danger transition-transform active:scale-[0.98] disabled:opacity-50"
-              >
-                <Icon weight={500} name="close" size={18} /> Cancelar
-              </button>
-              <div className="inline-flex flex-[2] cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-ink/[0.06] px-5 py-3 text-[15px] font-semibold text-ink-subtle pointer-events-none">
-                Esperando pago...
+            /* Esperar la captura era la ÚNICA salida y aquí había un botón
+               muerto que lo decía. Pero el dinero llega a la cuenta del negocio
+               antes que la foto: cuando la cajera ya lo vio, la captura solo
+               sirve para hacerle perder el turno al cliente — y si tarda más de
+               `paymentMinutes`, el barrido cancela un pedido ya pagado.
+               El botón le da la salida que el mostrador ya usaba por WhatsApp. */
+            <>
+              <div className="flex gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setModal('cancel')}
+                  disabled={busy}
+                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-ink/[0.06] px-5 py-3 text-[15px] font-semibold text-danger transition-transform active:scale-[0.98] disabled:opacity-50"
+                >
+                  <Icon weight={500} name="close" size={18} /> Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowDirectPayModal(true)}
+                  disabled={busy}
+                  className="inline-flex flex-[2] items-center justify-center gap-2 rounded-xl bg-success px-5 py-3 text-[15px] font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-50"
+                >
+                  <Icon weight={500} name="check_circle" size={18} filled /> Confirmar pago recibido
+                </button>
               </div>
-            </div>
+              <div className="text-center text-[11px] text-ink-muted">
+                Solo si ya viste el dinero en tu cuenta de Yape/Plin. Si no, espera su comprobante.
+              </div>
+            </>
           ) : (
             <>
               <div className="flex gap-2.5">

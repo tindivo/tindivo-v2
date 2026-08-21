@@ -20,6 +20,7 @@ export interface OrderActions {
   onReject: (code: string, text: string) => Promise<void>
   onVerifyProof: () => Promise<void>
   onRejectProof: () => Promise<void>
+  onConfirmDirectPayment: (prepTimeMinutes: number) => Promise<void>
   onExtend: () => Promise<void>
   onReady: () => Promise<void>
   onCancel: (code: string, text: string) => Promise<void>
@@ -108,6 +109,25 @@ export function useOrderActions({
       await run(async () => {
         if (!selected) return
         await post(`/business/orders/${selected.rowId}/validate`, { pass: true })
+        await refetchOrders()
+      })
+    },
+    /**
+     * Confirmación directa del prepago desde `awaiting_payment`: el mismo
+     * endpoint de validación, que desde la 0181 acepta ese estado y manda el
+     * pedido a cocina marcando el pago como verificado.
+     *
+     * `onDone?.()` cierra el detalle: el pedido cambia de columna y quedarse
+     * mirando la ficha vieja es la vía rápida a pulsar dos veces.
+     */
+    onConfirmDirectPayment: async (prep) => {
+      await run(async () => {
+        if (!selected) return
+        await post(`/business/orders/${selected.rowId}/validate`, {
+          pass: true,
+          prepTimeMinutes: prep,
+        })
+        onDone?.()
         await refetchOrders()
       })
     },

@@ -95,6 +95,7 @@ export function HistorialList() {
             onReject: () => {},
             onVerifyProof: () => {},
             onRejectProof: () => {},
+            onConfirmDirectPayment: () => {},
             onExtend: () => {},
             onReady: () => {},
             onCancel: () => {},

@@ -38,14 +38,23 @@ export const STEPS: { key: TrackingStep; label: string; short: string; sub: stri
  */
 export function cancelledCopy(
   reason: string | null,
-  opts?: { paymentIntent?: string; proofUrl?: string | null },
+  opts?: { paymentIntent?: string; proofUrl?: string | null; paymentVerifiedAt?: string | null },
 ): {
   eyebrow: string
   title: string
   body: string
 } {
-  // Pagó de verdad: prepago con comprobante subido.
-  const yaPago = opts?.paymentIntent === 'prepaid' && Boolean(opts?.proofUrl)
+  // Pagó de verdad: prepago con comprobante subido, O con el negocio dando el
+  // pago por recibido en su cuenta sin captura de por medio (0181).
+  //
+  // La segunda mitad NO es un caso raro y tiene que estar: el trigger de
+  // devolución (0124) decide por `payment_proof_status = 'verified'`, así que
+  // en ese escenario Tindivo le carga al restaurante la devolución mientras
+  // esta pantalla —si mirase solo la captura— le dice al cliente que no se le
+  // cobró nada. Las dos frases sobre el mismo dinero, y opuestas.
+  const yaPago =
+    opts?.paymentIntent === 'prepaid' &&
+    (Boolean(opts?.proofUrl) || Boolean(opts?.paymentVerifiedAt))
 
   switch (reason) {
     case 'customer_cancelled':

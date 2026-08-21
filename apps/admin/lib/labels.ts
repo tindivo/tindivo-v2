@@ -86,6 +86,9 @@ export const TIMELINE_EVENT_LABEL: Record<string, string> = {
   'order.prep_extended': 'El negocio extendió la preparación',
   'order.prepay_proof_uploaded': 'El cliente subió su comprobante',
   'order.proof_verified': 'Comprobante verificado',
+  // Sin comprobante de por medio: el negocio confirmó contra su propia cuenta
+  // (0181). La etiqueta lo dice porque en la ficha NO habrá captura que abrir.
+  'order.payment_confirmed_direct': 'El negocio confirmó el pago en su cuenta',
   'order.validation_failed_retry': 'Comprobante rechazado · puede reintentar',
   'order.active_order_block': 'Intentó otro pedido en el mismo negocio',
   'order.transfer_requested': 'Traspaso solicitado',

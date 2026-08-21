@@ -12,6 +12,7 @@ export function CancelledView({ data }: CancelledViewProps) {
   const c = cancelledCopy(data.cancelReason, {
     paymentIntent: data.paymentIntent,
     proofUrl: data.proofUrl,
+    paymentVerifiedAt: data.paymentVerifiedAt,
   })
   // `schedule` se reserva para los vencimientos por tiempo. Todo lo demás —
   // cancelación de una de las partes, comprobante rechazado, no-show — es un

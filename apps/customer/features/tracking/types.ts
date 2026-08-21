@@ -74,6 +74,13 @@ export interface Tracking {
   validatingAt?: string | null
   proofAttempt?: number
   proofUrl?: string | null
+  /**
+   * Cuándo el negocio dio el pago por recibido. Es la única señal fiable de que
+   * el dinero del cliente ya salió: desde la 0181 la cajera puede confirmarlo
+   * contra su propia cuenta, así que puede haber pago SIN captura y `proofUrl`
+   * dejó de servir para responder esa pregunta.
+   */
+  paymentVerifiedAt?: string | null
   items: TrackingItem[]
 }
 

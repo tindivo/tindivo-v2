@@ -175,6 +175,111 @@ export function PrepTimeModal({
   )
 }
 
+/**
+ * Confirmación directa del prepago: la cajera ya vio la plata en su cuenta de
+ * Yape/Plin y no espera la captura del cliente.
+ *
+ * Es el ÚNICO botón del panel que mueve dinero por la palabra de quien lo
+ * pulsa: no hay comprobante que mirar después, y `preparing` ya no se deshace
+ * solo. De ahí que el aviso vaya en rojo y no como nota al pie, y que el botón
+ * diga qué se está afirmando ("pago recibido") en vez de un "confirmar" que no
+ * compromete a nada.
+ */
+export function ConfirmDirectPaymentModal({
+  order,
+  onClose,
+  onConfirm,
+}: {
+  order: OrderVM
+  onClose: () => void
+  onConfirm: (prep: number) => void
+}) {
+  const [sel, setSel] = useState(20)
+  return (
+    <div className="absolute inset-0 z-[300] flex items-end justify-center bg-black/50">
+      <div className="max-h-full w-full max-w-[440px] overflow-y-auto rounded-t-[20px] bg-white p-5 pb-7 shadow-elev-3">
+        <div className="mb-4 flex items-center gap-2.5">
+          <div className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[10px] bg-success-soft text-success">
+            <Icon weight={500} name="account_balance_wallet" size={20} filled />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-base font-bold">¿Confirmar pago recibido?</div>
+            <div className="mt-px text-xs text-ink-muted">
+              #{order.id} · {order.customer ?? 'Cliente'}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-[30px] w-[30px] cursor-pointer items-center justify-center rounded-lg border-none bg-ink/[0.06]"
+          >
+            <Icon weight={500} name="close" size={16} />
+          </button>
+        </div>
+
+        <div className="mb-3 flex items-center justify-between rounded-xl border border-success/40 bg-success/10 px-3.5 py-3">
+          <span className="text-[13px] font-semibold text-success">Monto por Yape / Plin</span>
+          <span className="font-mono text-[20px] font-extrabold text-success">
+            {soles(order.total)}
+          </span>
+        </div>
+
+        <div className="mb-4 flex gap-2 rounded-xl border border-danger/30 bg-danger-soft px-3.5 py-3">
+          <Icon
+            weight={500}
+            name="warning"
+            size={18}
+            filled
+            className="mt-px shrink-0 text-danger"
+          />
+          <div className="text-[12px] leading-[1.45] text-danger">
+            Revisa tu cuenta y asegúrate de que el dinero <strong>ya entró</strong> antes de
+            continuar. El pedido pasa directo a cocina y no habrá comprobante que revisar después.
+          </div>
+        </div>
+
+        <div className="mb-2.5 text-xs font-bold uppercase tracking-[0.06em] text-ink-muted">
+          Tiempo estimado de preparación
+        </div>
+        <div className="mb-5 grid grid-cols-3 gap-2">
+          {PREP_PRESETS.map((m) => (
+            <button
+              type="button"
+              key={m}
+              onClick={() => setSel(m)}
+              className={cn(
+                'cursor-pointer rounded-xl py-3 text-sm font-bold transition-all',
+                m === sel
+                  ? 'border-transparent bg-ink text-white'
+                  : 'border border-border bg-white text-ink',
+              )}
+            >
+              {m} min
+            </button>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-[1fr_2fr] gap-2.5">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-ink/[0.06] px-5 py-3 text-[15px] font-semibold text-ink transition-transform active:scale-[0.98] disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={() => onConfirm(sel)}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-success px-5 py-3 text-[15px] font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-50"
+          >
+            <Icon weight={500} name="check_circle" size={18} filled /> Sí, pago recibido
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 const PAUSE_OPTS: { label: string; sub: string; min: number | null; default?: boolean }[] = [
   { label: '15 minutos', sub: 'Para un pico rápido', min: 15 },
   { label: '30 minutos', sub: 'La opción más común', min: 30, default: true },
