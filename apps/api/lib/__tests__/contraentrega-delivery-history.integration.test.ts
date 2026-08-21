@@ -1,5 +1,5 @@
 /**
- * El vecino que el pueblo ya conoce paga contraentrega. (Migración 0171)
+ * El vecino que el pueblo ya conoce paga contraentrega. (Migraciones 0171 y 0182)
  *
  * QUÉ AMARRA. `create_customer_order` exigía prepago a todo el que no tuviera un
  * pedido `delivered` ATADO A SU CUENTA. En el piloto eso es casi todo el mundo:
@@ -10,11 +10,19 @@
  *
  * LOS TRES CASOS QUE NO SON DE ADORNO:
  *
- *  · La fila de directorio NACIDA EN V2 no vale. La 0145 hace que la cajera cree
- *    la fila al TOMAR el pedido, no al entregarlo. Si "estar en el directorio"
- *    bastara, cualquiera se acuñaría confianza llamando una vez al restaurante.
- *    Sin este test, "simplificar" el predicado a `exists(address_directory)`
- *    también pasaría.
+ *  · ESTAR EN EL DIRECTORIO BASTA, VENGA LA FILA DE DONDE VENGA (migración 0182).
+ *    0171 exigía `legacy_address_id IS NOT NULL`, o sea que del directorio solo
+ *    valía el ETL cerrado del v1. 0182 quita ese filtro por decisión de
+ *    producto: cuentan igual `backfill`, `driver_verified`, `admin_curated` y
+ *    `business_created`.
+ *
+ *    Eso ABRE a sabiendas el agujero que 0171 describía: la 0145 hace que la
+ *    cajera cree la fila al TOMAR el pedido, no al entregarlo, así que figurar
+ *    en el directorio es acuñable con una llamada. Lo que lo acota es el bloque
+ *    de riesgo, no el historial — y por eso los dos casos de abajo
+ *    (`los strikes ... aunque solo figure en el directorio` y
+ *    `contraentrega_blocked`) dejan de ser adorno y pasan a ser el único freno.
+ *    Si alguien los borra por redundantes, el agujero se queda sin fondo.
  *
  *  · `p_customer_phone` NO decide. Lo manda el navegador y la función nunca lo
  *    compara contra el perfil. En un pueblo donde te sabes el número del vecino,
@@ -137,16 +145,25 @@ async function sembrarEntregaManual(tel9: string, opts: { conCuenta?: string } =
   return data
 }
 
-/** Una fila de directorio. `legacy` decide si es del ETL del v1 o nacida aquí. */
-async function sembrarDirectorio(tel9: string, legacy: boolean) {
+/**
+ * Una fila de directorio. `source` decide por dónde entró la dirección; solo
+ * `backfill` viene del ETL y por tanto lleva `legacy_address_id`. Desde 0182 el
+ * predicado no mira ninguna de las dos cosas, y estos tests existen para que se
+ * note si alguna vuelve a decidir.
+ */
+async function sembrarDirectorio(
+  tel9: string,
+  source: 'backfill' | 'business_created' | 'driver_verified' | 'admin_curated',
+) {
+  const esDelEtl = source === 'backfill'
   const { data, error } = await db
     .from('address_directory')
     .insert({
       phone: tel9,
       reference: 'Casa de dos pisos junto a la bodega',
-      source: legacy ? 'backfill' : 'business_created',
-      legacy_address_id: legacy ? crypto.randomUUID() : null,
-      imported_at: legacy ? new Date().toISOString() : null,
+      source,
+      legacy_address_id: esDelEtl ? crypto.randomUUID() : null,
+      imported_at: esDelEtl ? new Date().toISOString() : null,
     })
     .select('id')
     .single()
@@ -170,7 +187,7 @@ async function borrarPedido(id: string) {
   await db.from('orders').delete().eq('id', id)
 }
 
-describe('0171 · el historial de entregas del teléfono abre la contraentrega', () => {
+describe('0171/0182 · el historial del teléfono y el directorio abren la contraentrega', () => {
   beforeAll(async () => {
     const { count } = await db
       .from('businesses')
@@ -222,24 +239,23 @@ describe('0171 · el historial de entregas del teléfono abre la contraentrega',
     expect(creado.status).toBe('pending_acceptance')
   })
 
-  it('una fila del directorio VENIDA DEL ETL le abre la contraentrega', async () => {
+  // 0182: CUALQUIER fila del directorio abre la contraentrega. Antes solo lo
+  // hacía `backfill`, que es el único con `legacy_address_id`; los otros tres
+  // valores del enum se quedaban fuera aunque la fila la hubiera verificado el
+  // motorizado en la puerta.
+  it.each([
+    ['backfill', 'el ETL cerrado del v1'],
+    ['driver_verified', 'el motorizado, parado en la puerta'],
+    ['admin_curated', 'un admin, a mano'],
+    ['business_created', 'la cajera, al TOMAR el pedido'],
+  ] as const)('una fila del directorio con source=%s le abre la contraentrega (la puso %s)', async (source) => {
     const cliente = await crearCliente()
-    await sembrarDirectorio(cliente.tel9, true)
+    await sembrarDirectorio(cliente.tel9, source)
 
     const { data, error } = await pedirContraentrega(cliente)
 
     expect(error, `debería entrar: ${error?.message}`).toBeNull()
     pedidosCreados.push((data as { id: string }).id)
-  })
-
-  it('una fila del directorio NACIDA EN V2 no le abre nada', async () => {
-    const cliente = await crearCliente()
-    // Lo que crea la cajera al TOMAR el pedido. No prueba que se entregara.
-    await sembrarDirectorio(cliente.tel9, false)
-
-    const { error } = await pedirContraentrega(cliente)
-
-    expect(error?.message).toContain('Pago adelantado requerido')
   })
 
   it('teclear el teléfono del vecino conocido no hereda su historial', async () => {
@@ -274,6 +290,28 @@ describe('0171 · el historial de entregas del teléfono abre la contraentrega',
     const { error } = await pedirContraentrega(cliente)
 
     expect(error?.message).toContain('Pago adelantado requerido')
+  })
+
+  /**
+   * EL CASO QUE SOSTIENE LA 0182. Desde que estar en el directorio basta, la
+   * fila `business_created` es acuñable con una llamada al restaurante: pides,
+   * cancelas, y ya figuras. Lo único que impide que eso sea barra libre es que
+   * `customer_requires_prepayment` corre ANTES que las tres cláusulas de
+   * historial, así que el agujero da UN no-show y no más.
+   *
+   * Si este test se pone rojo, la 0182 dejó de tener fondo: no lo "arregles"
+   * relajando la expectativa.
+   */
+  it('los strikes ganan aunque el cliente solo figure en el directorio', async () => {
+    const cliente = await crearCliente()
+    await sembrarDirectorio(cliente.tel9, 'business_created')
+    await sembrarStrikes(cliente.tel9, 2)
+
+    const { error } = await pedirContraentrega(cliente)
+
+    expect(error?.message, 'el riesgo debe ganar al directorio').toContain(
+      'Pago adelantado requerido',
+    )
   })
 
   /**
