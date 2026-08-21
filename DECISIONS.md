@@ -191,6 +191,31 @@ Codificado en `@tindivo/contracts` (`order-status.ts`: `ORDER_TRANSITIONS`, `STA
 
 ---
 
+### Límite de crédito del negocio — es un AVISO, no un corte
+
+`app_settings.debt_block_threshold` (**S/600**) es el número que ve el negocio en
+su pantalla de saldo: la barra de «Límite de crédito» y el porcentaje consumido.
+Editable desde `/admin/configuracion`.
+
+**Alcanzarlo no suspende a nadie.** Suspender lo decide un admin, con su botón y
+su motivo (`block_business` → `is_blocked`). La migración `0178` llegó a
+conectarlo con la suspensión automática y la `0179` lo revirtió: en el piloto,
+cortar solo significaba que un negocio podía quedarse sin vender un viernes por
+la noche sin que ninguna persona lo hubiera decidido — y en silencio, porque
+`dispatch_event` clasifica `BusinessBlocked` como evento de auditoría y no lo
+convierte en push.
+
+Lo que sí es firme desde la `0178`: un negocio **ya suspendido** no recibe
+pedidos nuevos, ni por enlace directo. Lo garantiza el trigger
+`trg_orders_business_not_blocked` sobre `orders`, porque `create_customer_order`
+solo miraba el bloqueo del cliente y la página del negocio se comparte por slug
+desde la `0165`.
+
+Si algún día se automatiza: el umbral ya está en `app_settings`, pero mete
+`BusinessBlocked` en los eventos que viajan por push **antes** de encenderlo.
+
+---
+
 ## 10. Reglas de tiempo
 
 | Regla | Valor |

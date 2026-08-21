@@ -121,23 +121,31 @@ function ScheduleCard({ value, save }: { value: Cfg; save: SaveFn }) {
 function ThresholdsCard({
   prepay,
   validation,
+  debtLimit,
   save,
 }: {
   prepay: unknown
   validation: Cfg
+  debtLimit: unknown
   save: SaveFn
 }) {
   const [pre, setPre] = useState(String(typeof prepay === 'number' ? prepay : ''))
   const [amt, setAmt] = useState(
     String((validation as { amountThreshold?: number })?.amountThreshold ?? ''),
   )
+  const [deuda, setDeuda] = useState(String(typeof debtLimit === 'number' ? debtLimit : ''))
   return (
     <div className="t-card">
       <p className="t-display mb-3 text-[15px] text-ink">Umbrales (S/)</p>
       <div className="grid grid-cols-2 gap-2">
         <NumberField label="Prepago forzado ≥" value={pre} onChange={setPre} />
         <NumberField label="Validación por monto ≥" value={amt} onChange={setAmt} />
+        <NumberField label="Límite de crédito (aviso)" value={deuda} onChange={setDeuda} />
       </div>
+      <p className="mt-1.5 text-[12px] leading-snug text-ink-subtle">
+        El límite de crédito es el número que ve el negocio en su pantalla de saldo. Es un aviso:
+        pasarse de él NO suspende la cuenta — eso lo sigue decidiendo un admin.
+      </p>
       <div className="mt-3 flex gap-2">
         <Button size="sm" onClick={() => save('prepay_threshold', Number(pre))}>
           Guardar prepago
@@ -148,6 +156,13 @@ function ThresholdsCard({
           onClick={() => save('validation', { amountThreshold: Number(amt) })}
         >
           Guardar validación
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => save('debt_block_threshold', Number(deuda))}
+        >
+          Guardar límite
         </Button>
       </div>
     </div>
@@ -282,6 +297,7 @@ export default function ConfiguracionPage() {
           <ThresholdsCard
             prepay={settings.prepay_threshold}
             validation={settings.validation as Cfg}
+            debtLimit={settings.debt_block_threshold}
             save={save}
           />
           <TimersCard value={settings.timers as Cfg} save={save} />

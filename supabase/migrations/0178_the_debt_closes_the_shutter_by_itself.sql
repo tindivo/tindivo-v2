@@ -2,6 +2,17 @@
 -- 0178 · La deuda baja la persiana sola a los S/600
 -- =============================================================================
 --
+-- ⚠️  REVERTIDA POR LA 0179. NO LA APLIQUES SOLA.
+--     El corte automático se dio marcha atrás por decisión de producto: dejaba a
+--     un negocio sin vender sin que nadie lo decidiera, y en silencio, porque
+--     `dispatch_event` no convierte `BusinessBlocked` en push. Las dos van
+--     siempre juntas; si un `db push` se corta entre ellas, comprueba con
+--     `select prosrc from pg_proc where proname = 'recalc_business_balance'`
+--     que la función NO menciona `debt_block_threshold`, y aplica la 0179.
+--
+--     Para reactivarlo a propósito: mete `BusinessBlocked` en la lista de
+--     eventos que viajan de `dispatch_event` ANTES de nada más.
+--
 -- QUÉ CAMBIA
 --   1. Nueva clave `app_settings.debt_block_threshold` = 600.
 --   2. `recalc_business_balance()` —el trigger que ya corre en CADA cargo— pasa
