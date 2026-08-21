@@ -166,3 +166,62 @@ describe('límite de crédito y suspensión (integración)', () => {
     })
   })
 })
+
+/**
+ * La marca «por deuda» de la suspensión (migración 0180).
+ *
+ * `blocked_for_debt` era una columna huérfana: se apagaba sola pero nadie la
+ * encendía en producción. Eso dejaba inalcanzables dos comportamientos que ya
+ * estaban escritos — el mensaje «suspendida por deuda acumulada» del panel del
+ * negocio, y el desbloqueo automático al liquidar.
+ */
+describe('la suspensión sabe si es por deuda (integración)', () => {
+  let seed: SeededOrder
+
+  beforeAll(async () => {
+    seed = await seedPrepaidOrder({ status: 'pending_acceptance' })
+  })
+
+  afterAll(async () => {
+    await localClient
+      .from('businesses')
+      .update({ is_blocked: false, blocked_for_debt: false, block_reason: null })
+      .eq('id', seed.businessId)
+    await cleanup(seed)
+  })
+
+  it('sin marcar, la suspensión NO es por deuda', async () => {
+    // La firma de tres argumentos sigue viva: `p_for_debt` es opcional.
+    const { error } = await localClient.rpc('block_business', {
+      p_id: seed.businessId,
+      p_reason: 'Fraude en revision',
+      p_by: seed.userId,
+      // biome-ignore lint/suspicious/noExplicitAny: database.types.ts aún no trae p_for_debt
+    } as any)
+    expect(error).toBeNull()
+
+    const b = await leerNegocio(seed.businessId)
+    expect(b.is_blocked).toBe(true)
+    expect(b.blocked_for_debt).toBe(false)
+  })
+
+  it('marcándola, queda registrada como deuda', async () => {
+    const { error } = await localClient.rpc('block_business', {
+      p_id: seed.businessId,
+      p_reason: 'Saldo pendiente',
+      p_by: seed.userId,
+      p_for_debt: true,
+      // biome-ignore lint/suspicious/noExplicitAny: database.types.ts aún no trae p_for_debt
+    } as any)
+    expect(error).toBeNull()
+
+    const b = await leerNegocio(seed.businessId)
+    expect(b.is_blocked).toBe(true)
+    expect(b.blocked_for_debt).toBe(true)
+  })
+
+  it('y suspendido tampoco recibe pedidos', async () => {
+    const { error } = await intentarPedido(seed.businessId)
+    expect(error).not.toBeNull()
+  })
+})

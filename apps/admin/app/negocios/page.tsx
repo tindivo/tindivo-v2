@@ -61,6 +61,7 @@ export default function NegociosPage() {
   const [error, setError] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [blockId, setBlockId] = useState<string | null>(null)
+  const [forDebt, setForDebt] = useState(false)
   const [reason, setReason] = useState('')
   const [modeId, setModeId] = useState<string | null>(null)
   const [modePreset, setModePreset] = useState<ModePresetKey>('delivery')
@@ -217,23 +218,39 @@ export default function NegociosPage() {
                 </div>
               </div>
               {blockId === b.id && (
-                <div className="mt-3 flex gap-2">
-                  <input
-                    className={`${fieldSm} flex-1`}
-                    placeholder="Motivo del bloqueo (obligatorio)"
-                    value={reason}
-                    onChange={(e) => setReason(e.target.value)}
-                  />
-                  <Button
-                    size="sm"
-                    variant="danger"
-                    disabled={busyId === b.id || reason.trim().length < 3}
-                    onClick={() =>
-                      act(() => api.post(`/admin/businesses/${b.id}/block`, { reason }), b.id)
-                    }
-                  >
-                    Confirmar
-                  </Button>
+                <div className="mt-3 space-y-2">
+                  <div className="flex gap-2">
+                    <input
+                      className={`${fieldSm} flex-1`}
+                      placeholder="Motivo del bloqueo (obligatorio)"
+                      value={reason}
+                      onChange={(e) => setReason(e.target.value)}
+                    />
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      disabled={busyId === b.id || reason.trim().length < 3}
+                      onClick={() =>
+                        act(
+                          () => api.post(`/admin/businesses/${b.id}/block`, { reason, forDebt }),
+                          b.id,
+                        )
+                      }
+                    >
+                      Confirmar
+                    </Button>
+                  </div>
+                  {/* Marcar la deuda no es cosmético: decide el mensaje que lee
+                      el negocio y hace que al pagar se le levante la suspensión
+                      solo (`settle_business_charges` exige `blocked_for_debt`). */}
+                  <label className="flex items-center gap-2 text-[13px] text-ink-muted">
+                    <input
+                      type="checkbox"
+                      checked={forDebt}
+                      onChange={(e) => setForDebt(e.target.checked)}
+                    />
+                    Es por deuda — se reactiva sola en cuanto liquide
+                  </label>
                 </div>
               )}
               {modeId === b.id && (

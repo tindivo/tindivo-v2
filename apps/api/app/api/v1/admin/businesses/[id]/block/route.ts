@@ -8,7 +8,15 @@ import { createServiceClient } from '@/lib/supabase/service'
 
 export const dynamic = 'force-dynamic'
 
-const Schema = z.object({ reason: z.string().trim().min(1).max(200) })
+const Schema = z.object({
+  reason: z.string().trim().min(1).max(200),
+  /**
+   * Marca la suspensión como «por deuda» (0180). Decide dos cosas río abajo: el
+   * mensaje que lee el negocio en su pantalla de saldo, y si al pagar se le
+   * levanta la suspensión solo (`settle_business_charges` exige esta marca).
+   */
+  forDebt: z.boolean().optional().default(false),
+})
 
 export function OPTIONS(req: Request): Response {
   return handleOptions(req)
@@ -25,10 +33,12 @@ export async function POST(
     const { id } = await params
     const body = Schema.parse(await req.json())
     const service = createServiceClient()
-    const { data, error } = await service.rpc('block_business', {
+    // biome-ignore lint/suspicious/noExplicitAny: database.types.ts aún no trae p_for_debt
+    const { data, error } = await (service as any).rpc('block_business', {
       p_id: id,
       p_reason: body.reason,
       p_by: user.id,
+      p_for_debt: body.forDebt,
     })
     if (error) {
       if (error.code === 'P0002') throw new DomainError(error.message, 'not_found')
