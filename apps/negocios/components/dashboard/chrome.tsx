@@ -1,6 +1,10 @@
 'use client'
 
-import type { BusinessPrimaryCapability } from '@tindivo/contracts'
+import {
+  ACTIVE_ORDER_STATUSES,
+  type BusinessPrimaryCapability,
+  serviceDayStart,
+} from '@tindivo/contracts'
 import { canalUnico } from '@tindivo/supabase'
 import { BottomSheet, Button, Card, CardBody, Icon } from '@tindivo/ui'
 import Link from 'next/link'
@@ -20,6 +24,7 @@ import { OpeningControls } from '@/features/apertura/components/opening-controls
 import { getBackoffDelayMs, useChannelHealth } from '@/hooks/use-channel-health'
 import { useIconFontReady } from '@/hooks/use-icon-font-ready'
 import { usePolledQuery } from '@/hooks/use-polled-query'
+import { useBusinessTimers } from '@/hooks/use-queue-lead'
 import {
   getColumn,
   isBusinessPaused,
@@ -93,11 +98,31 @@ export interface DashboardCtx {
   blockReason: string | null
   rows: OrderRow[]
   vms: OrderVM[]
-  counts: { new: number; cooking: number; route: number; today: number }
+  /**
+   * `delivered` y `cancelled` son los de LA JORNADA, no los de todos los
+   * tiempos, y lo son por construcción: `fetchOrdersQuery` solo trae los
+   * cerrados de esta noche. Ver allí por qué el contador antiguo (`today`)
+   * mentía.
+   */
+  counts: {
+    new: number
+    cooking: number
+    route: number
+    delivered: number
+    cancelled: number
+  }
   now: number
   soundOn: boolean
   toggleSound: () => void
-  refetchOrders: () => Promise<void>
+  /**
+   * `force` salta el cooldown de deduplicación de `usePolledQuery`.
+   *
+   * Lo necesita quien acaba de ESCRIBIR y sabe que el servidor ya tiene el
+   * cambio: aplazar un segundo la lectura que confirma tu propia mutación es
+   * exactamente el parpadeo que se quiere evitar. El resto (poll, Realtime,
+   * visibilitychange) debe seguir pasando por el cooldown.
+   */
+  refetchOrders: (options?: { force?: boolean }) => Promise<void>
   refetchBiz: () => Promise<void>
   signOut: () => void
 }
@@ -806,16 +831,72 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
 
   const { setChannelState, refetchIntervalMs, healthStatus } = useChannelHealth()
 
+  /**
+   * DOS CONSULTAS, PORQUE SON DOS COSAS CON REGLAS DISTINTAS.
+   *
+   * Era una sola: "las 100 más recientes", sin filtro de negocio ni de fecha. De
+   * ahí salían los dos defectos que esto arregla:
+   *
+   *   · El contador rotulado "entregados hoy" no contaba hoy: contaba TODOS los
+   *     entregados que cupieran en esas 100 filas. En producción decía 80 cuando
+   *     lo de hoy eran 0, y el más viejo que sumaba era de doce días antes. Peor
+   *     todavía, habría dejado de moverse al llegar a 100 sin avisar de nada.
+   *   · El chip "Entregados" contaba una cosa (solo `delivered`, sin recortar) y
+   *     la lista de debajo enseñaba otra (`delivered` + `cancelled`, recortada a
+   *     40). Dos números distintos para el mismo conjunto.
+   *
+   * Se arregla el DATO, no el contador: si lo que se trae ya es la jornada, el
+   * contador es correcto por construcción y la vista no necesita saber nada de
+   * fechas.
+   *
+   * ACTIVOS: sin ventana de tiempo, a propósito. Un pedido vivo tiene que verse
+   * aunque lleve dos días atascado — es justo entonces cuando más importa. El
+   * `limit(100)` es una barandilla que no debería tocar nunca: cien pedidos
+   * activos a la vez ya sería la anomalía.
+   *
+   * CERRADOS: solo los de la jornada en curso (`serviceDate`, que corta a las
+   * 05:00 y es espejo de `current_service_date`). Se filtra por `created_at` y
+   * no por `delivered_at`/`cancelled_at` porque es UNA columna, tiene índice
+   * (`orders_business_idx`) y —con el corte a las 05:00— da la misma jornada que
+   * la entrega para cualquier pedido real: nadie crea a las 04:50 y entrega a
+   * las 05:10.
+   *
+   * Y LAS DOS FILTRAN POR `business_id`. Antes se confiaba solo en la RLS, y
+   * `ord_admin_all` es `for all`: el día que esta cuenta reciba también el rol
+   * admin —ya pasó con `businesses`, ver `refetchBiz`— el tablero enseñaría
+   * pedidos de otros negocios. Decirlo en la consulta lo hace correcto para
+   * cualquier combinación de roles.
+   */
   const fetchOrdersQuery = useCallback(async () => {
-    const { data } = await getSupabaseBrowser()
-      .from('orders')
-      .select(ORDER_SELECT)
-      .order('created_at', { ascending: false })
-      .limit(100)
-    const fetched = (data ?? []) as unknown as OrderRow[]
+    if (!bizId) return [] as OrderRow[]
+    const supabase = getSupabaseBrowser()
+    const desdeLaJornada = serviceDayStart()
+
+    const [activos, cerrados] = await Promise.all([
+      supabase
+        .from('orders')
+        .select(ORDER_SELECT)
+        .eq('business_id', bizId)
+        .in('status', ACTIVE_ORDER_STATUSES)
+        .order('created_at', { ascending: false })
+        .limit(100),
+      supabase
+        .from('orders')
+        .select(ORDER_SELECT)
+        .eq('business_id', bizId)
+        .in('status', ['delivered', 'cancelled'])
+        .gte('created_at', desdeLaJornada)
+        .order('created_at', { ascending: false })
+        .limit(200),
+    ])
+
+    const fetched = [
+      ...((activos.data ?? []) as unknown as OrderRow[]),
+      ...((cerrados.data ?? []) as unknown as OrderRow[]),
+    ]
     setRows(fetched)
     return fetched
-  }, [])
+  }, [bizId])
 
   const { refetch: refetchOrders } = usePolledQuery({
     queryKey: `biz-orders-${bizId ?? 'none'}`,
@@ -841,6 +922,20 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null
     let retryAttempt = 0
     let destroyed = false
+    /**
+     * ¿Este `SUBSCRIBED` es el primero o una RECONEXIÓN?
+     *
+     * Importa porque un canal que vuelve no trae lo que se perdió mientras
+     * estuvo caído: `postgres_changes` no reenvía nada, empieza a escuchar
+     * desde el momento en que se suscribe. Con el backoff llegando a 30s, el
+     * agujero es de hasta medio minuto de cambios invisibles, y hasta ahora
+     * solo lo cerraba el siguiente tick del poll.
+     *
+     * En el PRIMER `SUBSCRIBED` no hay nada que recuperar: `usePolledQuery` ya
+     * hizo la carga inicial. Refrescar ahí sería una petición de más en cada
+     * arranque.
+     */
+    let reconnecting = false
 
     function subscribeChannel() {
       if (destroyed) return
@@ -883,15 +978,22 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
         setChannelState(status)
         if (status === 'SUBSCRIBED') {
           retryAttempt = 0 // Reset de contador al conectar exitosamente
+          // Recuperar el hueco: ver `reconnecting`.
+          if (reconnecting) {
+            reconnecting = false
+            void refetchOrders({ force: true })
+            void refetchBiz()
+          }
           console.log(
             '[realtime] suscrito a',
             `biz-orders-${bizId}`,
             'Salud:',
-            'healthy (90s polling)',
+            'healthy (30s polling)',
           )
         } else if (status === 'CHANNEL_ERROR' || status === 'CLOSED' || status === 'TIMED_OUT') {
           const delayMs = getBackoffDelayMs(retryAttempt)
           retryAttempt++
+          reconnecting = true
           console.warn(
             `[realtime] estado degradado: ${status} (intento ${retryAttempt}). Re-creando en ${delayMs / 1000}s...`,
             err,
@@ -918,17 +1020,29 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
       }
       setChannelState('CLOSED')
     }
-  }, [bizId, debouncedRefetchOrders, debouncedRefetchBiz, setChannelState])
+  }, [
+    bizId,
+    debouncedRefetchOrders,
+    debouncedRefetchBiz,
+    refetchOrders,
+    refetchBiz,
+    setChannelState,
+  ])
 
-  const vms = useMemo(() => rows.map((r) => toOrderVM(r, now)), [rows, now])
+  // Los plazos que decide `app_settings.timers` (0174). Sin esto el tablero
+  // contaba con sus propias constantes, y la cajera podía estar mirando un reloj
+  // distinto del que usa la base para cancelarle el pedido.
+  const timers = useBusinessTimers()
+  const vms = useMemo(() => rows.map((r) => toOrderVM(r, now, timers)), [rows, now, timers])
   const counts = useMemo(() => {
-    const n = { new: 0, cooking: 0, route: 0, today: 0 }
+    const n = { new: 0, cooking: 0, route: 0, delivered: 0, cancelled: 0 }
     for (const v of vms) {
       const col = getColumn(v.status)
       if (col === 'nuevos') n.new++
       else if (col === 'cocina') n.cooking++
       else if (col === 'reparto') n.route++
-      if (v.status === 'delivered') n.today++
+      if (v.status === 'delivered') n.delivered++
+      else if (v.status === 'cancelled') n.cancelled++
     }
     return n
   }, [vms])

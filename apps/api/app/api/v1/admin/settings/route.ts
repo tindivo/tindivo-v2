@@ -24,6 +24,11 @@ const EDITABLE: Record<string, z.ZodTypeAny> = {
   commissions: z.object({ delivery: money, pickup: money }),
   delivery_bands: z.object({ near: money, far: money }),
   prepay_threshold: z.number().positive().max(10000),
+  // Límite de crédito que se le ANUNCIA al negocio en su pantalla de saldo.
+  // Es informativo: alcanzarlo no suspende a nadie (la 0178 lo conectó con la
+  // suspensión automática y la 0179 lo revirtió). Editable desde el panel para
+  // poder mover el cartel sin desplegar.
+  debt_block_threshold: z.number().positive().max(100000),
   validation: z.object({ amountThreshold: money }),
   support_whatsapp: z.string().trim().min(7).max(20),
   timers: z.object({

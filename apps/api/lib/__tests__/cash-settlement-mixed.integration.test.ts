@@ -205,11 +205,16 @@ describe('la entrega es por pedido y de un solo dueño (0157)', () => {
   })
 
   /**
-   * La fecha del dinero es la de la ENTREGA al cliente, en hora Lima. El turno
-   * es nocturno: calcularla con `now()` en UTC —como hacía el legacy— empujaba
-   * al día siguiente todo lo cobrado después de las 19:00 hora Perú.
+   * La fecha del dinero es la de la ENTREGA al cliente, y desde la 0176 es la
+   * JORNADA (`current_service_date`, corte a las 05:00 de Lima) y no la fecha de
+   * calendario.
+   *
+   * Dos correcciones sucesivas del mismo sitio: la 0157 dejó de calcularla con
+   * `now()` en UTC —eso empujaba al día siguiente todo lo cobrado después de las
+   * 19:00 hora Perú— y la 0176 dejó de usar la fecha natural, que partía cada
+   * noche en dos a las 00:00.
    */
-  it('settlement_date sale del delivered_at del pedido, en hora Lima', async () => {
+  it('settlement_date sale del delivered_at del pedido, en jornada de Lima', async () => {
     const orderId = await delivered({ paymentReal: 'paid_cash' })
     // 21:30 hora Lima del 10 de agosto = 02:30 UTC del 11. En UTC caería en el 11.
     await db.from('orders').update({ delivered_at: '2026-08-11T02:30:00Z' }).eq('id', orderId)
@@ -221,6 +226,47 @@ describe('la entrega es por pedido y de un solo dueño (0157)', () => {
       .eq('id', s.id)
       .single()
     expect(cs?.settlement_date).toBe('2026-08-10')
+  })
+
+  /**
+   * EL CASO QUE LA 0176 VINO A ARREGLAR, y el que nadie podía provocar todavía:
+   * ningún negocio tiene hoy un turno que cruce medianoche, así que en
+   * producción no hay ni una entrega entre las 00:00 y las 05:00. Aquí se
+   * fabrica.
+   *
+   * Con la fecha de calendario, este pedido —entregado a las 00:30 de la noche
+   * del 10, con la cajera todavía trabajando— caía en el día 11: la misma noche
+   * repartida entre dos cortes de caja, y el historial de la cajera partido en
+   * dos "noches" que en realidad fueron una.
+   */
+  it('una entrega de madrugada sigue perteneciendo a la noche anterior', async () => {
+    const orderId = await delivered({ paymentReal: 'paid_cash' })
+    // 00:30 hora Lima del 11 de agosto = 05:30 UTC del 11. Sigue siendo la
+    // jornada del 10: el corte está a las 05:00 de Lima, no a medianoche.
+    await db.from('orders').update({ delivered_at: '2026-08-11T05:30:00Z' }).eq('id', orderId)
+
+    const s = await entregarOk(orderId)
+    const { data: cs } = await db
+      .from('cash_settlements')
+      .select('settlement_date')
+      .eq('id', s.id)
+      .single()
+    expect(cs?.settlement_date).toBe('2026-08-10')
+  })
+
+  /** Y el otro lado del corte: pasadas las 05:00 ya es la jornada siguiente. */
+  it('pasadas las 05:00 de Lima la jornada ya es la del día siguiente', async () => {
+    const orderId = await delivered({ paymentReal: 'paid_cash' })
+    // 05:30 hora Lima del 11 = 10:30 UTC del 11.
+    await db.from('orders').update({ delivered_at: '2026-08-11T10:30:00Z' }).eq('id', orderId)
+
+    const s = await entregarOk(orderId)
+    const { data: cs } = await db
+      .from('cash_settlements')
+      .select('settlement_date')
+      .eq('id', s.id)
+      .single()
+    expect(cs?.settlement_date).toBe('2026-08-11')
   })
 
   /** El monto de la confirmación lo DERIVA la RPC: la pantalla ya no puede

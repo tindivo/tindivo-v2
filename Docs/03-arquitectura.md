@@ -511,6 +511,13 @@ export const checkOrderOverdue = inngest.createFunction(
 
 ### 9.4 Failsafe crons
 
+> ⚠️ **Esto es el DISEÑO ORIGINAL, no lo que corre hoy.** Los nombres de job de
+> aquí abajo nunca llegaron a existir tal cual, y los de cancelación se
+> consolidaron en uno solo (`auto-cancel-prepay-timeout` →
+> `cancel_expired_prepay_orders()`, migración `0174`). **El inventario real está
+> en `Docs/13-deploy-y-devops.md § Lista completa de crons`**, y los plazos en
+> `DECISIONS.md §10`.
+
 Los crons de Supabase quedan como red de seguridad cada 5 min:
 - `enqueue-overdue-orders-failsafe`
 - `process-expired-transfer-requests-failsafe`

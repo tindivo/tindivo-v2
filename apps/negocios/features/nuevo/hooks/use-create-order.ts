@@ -3,6 +3,7 @@
 import { ApiError } from '@tindivo/api-client'
 import { useRouter } from 'next/navigation'
 import { useRef, useState } from 'react'
+import { useDashboard } from '@/components/dashboard/chrome'
 import { api } from '@/lib/api'
 import {
   clearIdempotencyKey,
@@ -58,6 +59,29 @@ export function useCreateOrder() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  /**
+   * CREAR ES LA ÚNICA MUTACIÓN QUE NO REFRESCABA EL TABLERO, Y POR ESO EL
+   * PEDIDO RECIÉN HECHO "NO ESTABA".
+   *
+   * Las nueve acciones de `use-order-actions.ts` llaman a `refetchOrders()`
+   * después de mutar. Esta no: hacía `router.replace('/')` y ya. Y como el
+   * chrome del dashboard —que es quien tiene el estado `rows`— vive en el
+   * LAYOUT, navegar `/nuevo → /` no lo remonta ni dispara ninguna consulta. El
+   * tablero se quedaba tal cual estaba antes de abrir el formulario.
+   *
+   * Así que el pedido solo aparecía si llegaba el evento de Realtime. Y
+   * Realtime se deja eventos por el camino: correlacionando en los logs de
+   * producción la hora de cada pedido manual con el siguiente refresco del
+   * tablero, del mismo negocio y en la misma sesión, unos salieron en ~1s y
+   * otros tardaron 97s y 393s — el tiempo que tardaba el poll de respaldo en
+   * pasar por ahí. El motorizado mientras tanto sí lo veía, porque su app
+   * sondea cada 15s y recibe push.
+   *
+   * Esto lo vuelve determinista: el pedido está en `rows` ANTES de que el
+   * tablero se pinte, sin depender de que llegue ningún evento.
+   */
+  const { refetchOrders } = useDashboard()
+
   const submit = async (payload: CreateOrderPayload, canSubmit: boolean) => {
     if (submittingRef.current || !canSubmit) return
     submittingRef.current = true
@@ -91,6 +115,11 @@ export function useCreateOrder() {
     try {
       await api.post('/business/orders', orderPayload, idempotencyKey)
       clearIdempotencyKey()
+      // `force` porque el cooldown de 1s no aplica aquí: acabamos de escribir y
+      // sabemos que el servidor ya lo tiene. `refetchOrders` no rechaza nunca
+      // —`usePolledQuery` se traga sus propios errores—, así que un fallo de red
+      // deja el tablero como estaba pero NO atrapa a la cajera en el formulario.
+      await refetchOrders({ force: true })
       router.replace('/')
     } catch (err) {
       if (err instanceof ApiError) {
@@ -102,6 +131,7 @@ export function useCreateOrder() {
           try {
             await api.post('/business/orders', orderPayload, freshKey)
             clearIdempotencyKey()
+            await refetchOrders({ force: true })
             router.replace('/')
             return
           } catch (retryErr) {

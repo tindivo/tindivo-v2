@@ -40,6 +40,19 @@ export interface Tracking {
   /** Rango de trayecto publicado, de `app_settings.timers` (0117). */
   travelMinutes?: { min: number; max: number }
   /**
+   * Minutos que tiene el NEGOCIO para confirmar disponibilidad, de
+   * `app_settings.timers` (0172). Ojo: hasta esa migración esta clave decía 15
+   * mientras los crons cancelaban a los 5. Ahora dice 5, que es la verdad.
+   */
+  acceptanceMinutes?: number
+  /**
+   * Minutos que tiene el CLIENTE para yapear y subir la captura, de
+   * `app_settings.timers` (0172). Son 15, no 10: los 10 son el plazo de la
+   * cajera para revisarla (`prepayVerificationMinutes`). Confundirlos le
+   * recortaría al cliente un tercio de su ventana.
+   */
+  paymentMinutes?: number
+  /**
    * Minutos que tiene la cajera para validar el comprobante, de
    * `app_settings.timers` (0170). Es editable desde /admin/configuracion, así
    * que el cliente NO puede tenerlo escrito a mano: su cuenta atrás se
@@ -50,6 +63,13 @@ export interface Tracking {
   deliveryFee: number
   total: number
   createdAt?: string | null
+  /**
+   * Cuándo entró en `pending_acceptance` (0172). No es intercambiable con
+   * `createdAt`: un pedido que pasó antes por `validando` lleva entre las dos
+   * marcas los minutos que tardó la cajera, y contar desde `createdAt` le
+   * restaría ese tiempo a la ventana del negocio.
+   */
+  pendingAcceptanceAt?: string | null
   awaitingPaymentAt?: string | null
   validatingAt?: string | null
   proofAttempt?: number

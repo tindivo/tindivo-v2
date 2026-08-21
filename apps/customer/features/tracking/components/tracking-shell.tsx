@@ -9,10 +9,12 @@ interface TrackingShellProps {
   onBack: () => void
   error: string | null
   data: Tracking | null
+  /** El interruptor de sonido, a la derecha del título. */
+  right?: React.ReactNode
   children: React.ReactNode
 }
 
-export function TrackingShell({ title, onBack, error, data, children }: TrackingShellProps) {
+export function TrackingShell({ title, onBack, error, data, right, children }: TrackingShellProps) {
   if (error && !data) {
     return (
       <main className="mx-auto max-w-[768px] px-4 pt-16 text-center">
@@ -34,7 +36,7 @@ export function TrackingShell({ title, onBack, error, data, children }: Tracking
 
   return (
     <main className="mx-auto min-h-dvh max-w-[768px] bg-surface pb-16 lg:max-w-[1040px]">
-      <ScreenHeader title={title} onBack={onBack} />
+      <ScreenHeader title={title} onBack={onBack} right={right} />
       {children}
     </main>
   )

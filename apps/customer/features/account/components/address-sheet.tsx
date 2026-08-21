@@ -102,12 +102,7 @@ export function AddressSheet({
         className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pt-2 pb-6"
       >
         <div className="mb-4">
-          <AddressFields
-            value={addr}
-            onChange={patch}
-            onValidityChange={setInsideZone}
-            mapHeightPx={250}
-          />
+          <AddressFields value={addr} onChange={patch} onValidityChange={setInsideZone} />
         </div>
 
         <button

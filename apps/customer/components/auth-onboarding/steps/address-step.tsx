@@ -68,7 +68,7 @@ export function AddressStep({
           de entrega
         </h2>
         <p className="mt-1.5 text-[14px] text-ink-muted">
-          Elige una etiqueta y marca tu casa en el mapa, o toca "Usar mi ubicación".
+          Buscamos tu ubicación con el GPS. Toca el mapa si necesitas afinar el punto.
         </p>
 
         <div className="mt-4">

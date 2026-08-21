@@ -1,5 +1,6 @@
 'use client'
 
+import { type OrderStatus, OrderStatusSchema } from '@tindivo/contracts'
 import { useEffect, useState } from 'react'
 import { api } from '@/lib/api'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
@@ -14,7 +15,13 @@ export interface DetailItem {
 
 export interface FreshOrder {
   id: string
-  status: string
+  /**
+   * El estado CANÓNICO. Era `string`, y ese string acababa pisando el
+   * `status` del view-model en `app/page.tsx` — o sea que por aquí entraba al
+   * tablero un estado sin validar, saltándose la exhaustividad de `getColumn`.
+   * Se valida al rehidratar (ver abajo) en vez de castear a ciegas.
+   */
+  status: OrderStatus
   payment_proof_status: string | null
   proof_attempt: number | null
   comprobante_prepago_url: string | null
@@ -60,7 +67,12 @@ export function useOrderDetail(
             const typedData = data as FreshOrder
             setFreshOrder({
               id: String(typedData.id),
-              status: String(typedData.status),
+              // `parse` y no un cast. Un estado que esta versión del front no
+              // conozca hace saltar el `catch` de abajo, que es fail-open: se
+              // sigue con los datos que ya había en memoria. Eso es mejor que
+              // meterlo en el view-model, donde `getUiState` lo pintaría como
+              // CANCELADO —tachado y en gris— sobre un pedido que sigue vivo.
+              status: OrderStatusSchema.parse(typedData.status),
               payment_proof_status: typedData.payment_proof_status ?? null,
               proof_attempt:
                 typedData.proof_attempt != null ? Number(typedData.proof_attempt) : null,

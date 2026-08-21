@@ -30,17 +30,22 @@ export function DeudaList({
 
   return (
     <div className="flex flex-col gap-3.5 pb-6">
+      {/* El motivo lo decide `blockedForDebt`, no `isBlocked`. Antes se daba por
+          hecho que toda suspensión era por deuda, así que a un negocio bloqueado
+          por fraude se le decía que debía dinero — y se le mandaba a pagar algo
+          que no le iba a devolver el servicio. */}
       {data.isBlocked && (
         <div className="flex items-center gap-2.5 rounded-xl border border-danger/20 bg-danger-soft p-3 text-sm font-semibold text-danger">
           <Icon name="block" size={18} filled className="shrink-0" />
           <span>
-            Tu cuenta está suspendida por deuda acumulada. Coordina tu pago para reactivar el
-            servicio.
+            {data.blockedForDebt
+              ? 'Tu cuenta está suspendida por deuda acumulada. Coordina tu pago para reactivar el servicio.'
+              : 'Tu cuenta está suspendida. Escríbenos para saber qué pasó y cómo reactivarla.'}
           </span>
         </div>
       )}
 
-      <DeudaHero balance={balance} isBlocked={data.isBlocked} />
+      <DeudaHero balance={balance} isBlocked={data.isBlocked} threshold={data.debtBlockThreshold} />
       <DeudaSummary summary={data.summary} />
 
       {/* Botón WhatsApp contextual */}

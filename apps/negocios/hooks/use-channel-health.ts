@@ -7,7 +7,7 @@ import { getSupabaseBrowser } from '@/lib/supabase/client'
 export type ChannelHealthStatus = 'healthy' | 'degraded' | 'disconnected'
 
 export interface ChannelHealthConfig {
-  healthyIntervalMs?: number // default 90000 (90s)
+  healthyIntervalMs?: number // default 30000 (30s)
   degradedIntervalMs?: number // default 20000 (20s)
 }
 
@@ -20,13 +20,31 @@ export interface UseChannelHealthResult {
 
 /**
  * Hook para monitorear la salud de un canal de Realtime y derivar
- * el intervalo de polling adaptativo (90s sano / 20s degradado).
+ * el intervalo de polling adaptativo (30s sano / 20s degradado).
+ *
+ * POR QUÉ 30s Y NO 90s. El intervalo "sano" no es el ritmo al que se refresca el
+ * tablero —eso lo hace Realtime, en menos de un segundo— sino EL TIEMPO QUE LA
+ * CAJERA SE QUEDA CIEGA CUANDO REALTIME FALLA. Y falla: correlacionando en los
+ * logs de producción la hora de cada pedido manual con el siguiente refresco del
+ * tablero, del mismo negocio y en la misma sesión, unos cuantos se refrescaron
+ * en ~1s y otros tuvieron que esperar al poll (97s, 393s). El canal no está
+ * muerto —por eso `healthStatus` lo ve sano y no degrada a 20s—, se le escapan
+ * eventos sueltos.
+ *
+ * 90 segundos era una eternidad para lo que hay al otro lado: un pedido web
+ * entra en `pending_acceptance` y SE AUTOCANCELA A LOS 5 MINUTOS. Perderse un
+ * evento gastaba casi un tercio de ese plazo antes de que la cajera pudiera
+ * siquiera enterarse.
+ *
+ * El costo es despreciable en el piloto: 4 negocios, ~10 pedidos/noche, una
+ * consulta que ya está acotada a 100 filas. Si algún día pesa, lo que hay que
+ * arreglar es por qué se pierden los eventos, no volver a subir este número.
  */
 export function useChannelHealth(
   initialStatus: string = 'CLOSED',
   config: ChannelHealthConfig = {},
 ): UseChannelHealthResult {
-  const healthyIntervalMs = config.healthyIntervalMs ?? 90000
+  const healthyIntervalMs = config.healthyIntervalMs ?? 30000
   const degradedIntervalMs = config.degradedIntervalMs ?? 20000
 
   const [channelStatus, setChannelStatus] = useState<string>(initialStatus)

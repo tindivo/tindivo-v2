@@ -2,6 +2,8 @@
 // y el detalle del dashboard. Aquí vive la lógica de columnas, buffer gradual y
 // la generalización de pagos (Yape/Plin → "billetera digital").
 
+import type { OrderStatus } from '@tindivo/contracts'
+
 export type UiSource = 'web' | 'manual'
 export type UiPayment = 'pending_cash' | 'pending_wallet' | 'prepaid' | 'pending_mixed'
 export type UiState =
@@ -46,7 +48,7 @@ function fmtTime(iso: string | null): string | null {
 export interface OrderRow {
   id: string
   short_id: string
-  status: string
+  status: OrderStatus
   source: string
   customer_name: string | null
   customer_phone: string | null
@@ -90,7 +92,9 @@ export interface OrderVM {
   id: string
   source: UiSource
   payment: UiPayment
-  status: string
+  /** El estado CANÓNICO, no un string suelto: es lo que hace exhaustivo a
+   *  `getColumn` y lo que rompe la compilación si el enum crece. */
+  status: OrderStatus
   state: UiState
   customer: string | null
   phone: string | null
@@ -180,11 +184,34 @@ export interface OrderVM {
 // `timers.paymentMinutes`, migración 0168) y la cajera 10 para revisarla
 // (`validando`, `timers.prepayVerificationMinutes`). Con un solo valor, subir la
 // ventana del cliente le pintaba a la cajera una cuenta de 15 min sobre un
-// pedido que el cron `auto-cancel-prepay-validation-timeout` mata a los 10.
-const ACCEPT_SEC = 5 * 60
-const VALIDATE_SEC = 5 * 60
-const AWAITING_PAYMENT_SEC = 15 * 60
-const PREPAY_VALIDATION_SEC = 10 * 60
+// pedido que la base mata a los 10 (bloque 4 de `cancel_expired_prepay_orders`).
+/**
+ * Los cuatro plazos que decide `app_settings.timers`, en MINUTOS.
+ *
+ * Estaban aquí como constantes, y eso era una copia a mano de lo que decide la
+ * base. Desde la 0174 los cuatro cron de cancelación leen esa misma fila, así
+ * que ahora hay un solo número y tres pantallas que lo miran (la cajera, el
+ * cliente y la propia base) en vez de tres números que casualmente coincidían.
+ *
+ * Importa porque el contador de la cajera no es decorativo: es lo que le dice
+ * cuánto le queda para aceptar antes de que el pedido se cancele solo. Si el
+ * panel contara 15 y la base cancelara a los 5, la cajera perdería pedidos
+ * mirando un reloj que le sobraba tiempo.
+ */
+export interface OrderTimers {
+  acceptanceMinutes: number
+  validationMinutes: number
+  paymentMinutes: number
+  prepayVerificationMinutes: number
+}
+
+/** Los valores de `DECISIONS.md §10`, para cuando la consulta aún no volvió. */
+export const DEFAULT_ORDER_TIMERS: OrderTimers = {
+  acceptanceMinutes: 5,
+  validationMinutes: 5,
+  paymentMinutes: 15,
+  prepayVerificationMinutes: 10,
+}
 
 /**
  * Formatea los segundos hasta/desde `estimated_ready_at` en `mm:ss` con signo.
@@ -268,21 +295,75 @@ export function mapPayment(intent: string): UiPayment {
   return 'pending_cash'
 }
 
-export function getColumn(status: string): OrderColumn {
-  if (status === 'pending_acceptance' || status === 'awaiting_payment' || status === 'validando')
-    return 'nuevos'
-  if (
-    [
-      'confirmed',
-      'preparing',
-      'waiting_driver',
-      'heading_to_restaurant',
-      'waiting_at_restaurant',
-    ].includes(status)
-  )
-    return 'cocina'
-  if (status === 'picked_up') return 'reparto'
-  return 'entregados'
+/**
+ * Columna del kanban para un estado. EXHAUSTIVO A PROPÓSITO.
+ *
+ * Era una cadena de `if` que acababa en `return 'entregados'` como cajón de
+ * sastre: cualquier estado no contemplado —incluido uno NUEVO que alguien añada
+ * al enum— aparecía en el historial, en silencio, como si el pedido estuviera
+ * cerrado. Hoy los once valores de `order_status` están cubiertos, así que el
+ * cajón nunca se usa; el problema es el día que dejen de ser once.
+ *
+ * Con el `switch` sobre `OrderStatus` y el `never` del final, ese día el fallo
+ * llega donde tiene que llegar: `pnpm type-check` en rojo, antes de desplegar.
+ */
+export function getColumn(status: OrderStatus): OrderColumn {
+  switch (status) {
+    case 'pending_acceptance':
+    case 'awaiting_payment':
+    case 'validando':
+      return 'nuevos'
+    case 'confirmed':
+    case 'preparing':
+    case 'waiting_driver':
+    case 'heading_to_restaurant':
+    case 'waiting_at_restaurant':
+      return 'cocina'
+    case 'picked_up':
+      return 'reparto'
+    case 'delivered':
+    case 'cancelled':
+      return 'entregados'
+    default: {
+      // Si esto deja de compilar es que el enum creció y hay que decidir a qué
+      // columna va el estado nuevo. No lo adivines aquí.
+      const _exhaustivo: never = status
+      return 'entregados'
+    }
+  }
+}
+
+/** Las cuatro pestañas del tablero en móvil. Espejo de `OrderColumn`. */
+export type MobileTab = 'new' | 'cooking' | 'route' | 'today'
+
+/**
+ * La pestaña que se PINTA, que no siempre es la que está guardada.
+ *
+ * EL ESTADO MUERTO QUE ESTO MATA. La pestaña "Nuevos" arranca seleccionada y su
+ * chip NO se dibuja cuando el contador está a cero (es deliberado: sin pedidos
+ * nuevos no hay nada que ofrecer). Las dos cosas juntas dan una pantalla sin
+ * salida: la lista dice "Sin pedidos nuevos · te avisaremos cuando lleguen", y
+ * arriba las tres pestañas que sí se ven —cocina, reparto, entregados— aparecen
+ * TODAS sin seleccionar, porque la seleccionada es una que no está.
+ *
+ * Y el camino más corto para llegar ahí es justo el peor: crear un pedido
+ * manual. El `tab` vive en el componente de la vista, que está en la PÁGINA y
+ * no en el layout, así que volver de `/nuevo` lo resetea a `'new'`. Pero el
+ * pedido manual nace en `preparing` —lo teclea la cajera, no hay nada que
+ * aceptar—, o sea que va a "En cocina" y deja "Nuevos" en cero. La cajera
+ * mandaba el pedido y volvía a una pantalla que le decía que no había nada.
+ *
+ * Se resuelve en la derivación y no en la navegación a propósito: así cubre
+ * también el otro camino, el de quedarse mirando "Nuevos" cuando el último
+ * pedido nuevo pasa a cocina y el chip desaparece bajo los pies.
+ *
+ * El fallback es "cocina" porque es donde acaba de caer lo que se estaba
+ * mirando —el pedido aceptado, el pedido recién creado—, no una pestaña
+ * arbitraria. Y como solo se deriva, en cuanto entre un pedido nuevo de verdad
+ * la pestaña guardada vuelve a mandar y la cajera lo ve sin tocar nada.
+ */
+export function resolveMobileTab(selected: MobileTab, newCount: number): MobileTab {
+  return selected === 'new' && newCount === 0 ? 'cooking' : selected
 }
 
 function getUiState(row: OrderRow, now: number): UiState {
@@ -306,13 +387,31 @@ function getUiState(row: OrderRow, now: number): UiState {
       return 'picked_up'
     case 'delivered':
       return 'delivered'
-    default:
+    case 'cancelled':
       return 'cancelled'
+    default: {
+      // ESTE `default` ERA PEOR QUE EL DE `getColumn`: caía en `'cancelled'`, o
+      // sea que un estado desconocido se pintaba al cliente como un pedido
+      // CANCELADO — tachado, en gris y con su motivo vacío. Ahora `cancelled`
+      // es un caso explícito y lo desconocido no compila.
+      const _exhaustivo: never = row.status
+      return 'cancelled'
+    }
   }
 }
 
-/** Convierte una fila de `orders` en el view-model que consume la UI. */
-export function toOrderVM(row: OrderRow, now: number = Date.now()): OrderVM {
+/**
+ * Convierte una fila de `orders` en el view-model que consume la UI.
+ *
+ * `timers` es opcional para no obligar a las pantallas que no pintan contadores
+ * (el historial, por ejemplo) a ir a buscarlos. Quien sí los pinta —el tablero
+ * de la cajera— los pasa desde `useBusinessTimers`.
+ */
+export function toOrderVM(
+  row: OrderRow,
+  now: number = Date.now(),
+  timers: OrderTimers = DEFAULT_ORDER_TIMERS,
+): OrderVM {
   const state = getUiState(row, now)
   const source: UiSource = row.source === 'business_manual' ? 'manual' : 'web'
   const payment = mapPayment(row.payment_intent)
@@ -321,17 +420,23 @@ export function toOrderVM(row: OrderRow, now: number = Date.now()): OrderVM {
 
   const countdownSec =
     row.status === 'pending_acceptance'
-      ? secondsUntil(row.pending_acceptance_at ?? row.created_at, ACCEPT_SEC, now)
+      ? secondsUntil(
+          row.pending_acceptance_at ?? row.created_at,
+          timers.acceptanceMinutes * 60,
+          now,
+        )
       : row.status === 'awaiting_payment'
         ? secondsUntil(
             row.awaiting_payment_at ?? row.validating_at ?? row.created_at,
-            AWAITING_PAYMENT_SEC,
+            timers.paymentMinutes * 60,
             now,
           )
         : row.status === 'validando'
           ? secondsUntil(
               row.validating_at ?? row.created_at,
-              row.payment_intent === 'prepaid' ? PREPAY_VALIDATION_SEC : VALIDATE_SEC,
+              (row.payment_intent === 'prepaid'
+                ? timers.prepayVerificationMinutes
+                : timers.validationMinutes) * 60,
               now,
             )
           : 0

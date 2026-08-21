@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { buildNegociosCardVM } from '../card-view-model'
 import type { OrderRow } from '../view-model'
-import { formatReadyDelta, toOrderVM } from '../view-model'
+import { formatReadyDelta, resolveMobileTab, toOrderVM } from '../view-model'
 
 function mockOrderRow(overrides: Partial<OrderRow> = {}): OrderRow {
   return {
@@ -684,5 +684,25 @@ describe('buildNegociosCardVM', () => {
     const cardVm = buildNegociosCardVM(toOrderVM(row, baseNow), { supportPhone: '999111222' })
     expect(cardVm.primaryAction?.type).toBe('callDriver')
     expect(cardVm.primaryAction?.label).toBe('Pedir motorizado YA')
+  })
+})
+
+describe('resolveMobileTab', () => {
+  it('cae a "cocina" cuando "Nuevos" está seleccionada y vacía (el estado muerto)', () => {
+    // El caso del pedido manual: nace en `preparing`, así que "Nuevos" queda en
+    // cero, y su chip no se dibuja. Sin este fallback la cajera volvía de crear
+    // el pedido a una pantalla que decía "Sin pedidos nuevos".
+    expect(resolveMobileTab('new', 0)).toBe('cooking')
+  })
+
+  it('respeta "Nuevos" en cuanto hay algo que atender', () => {
+    expect(resolveMobileTab('new', 1)).toBe('new')
+    expect(resolveMobileTab('new', 3)).toBe('new')
+  })
+
+  it('no toca ninguna otra pestaña, ni siquiera con "Nuevos" vacía', () => {
+    expect(resolveMobileTab('cooking', 0)).toBe('cooking')
+    expect(resolveMobileTab('route', 0)).toBe('route')
+    expect(resolveMobileTab('today', 0)).toBe('today')
   })
 })

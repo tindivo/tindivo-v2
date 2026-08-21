@@ -2,10 +2,24 @@
 
 import { Icon } from '@tindivo/ui'
 import { soles } from '@/components/dashboard/primitives'
-import { BLOCK_THRESHOLD } from '../lib/constants'
+import { DEFAULT_BLOCK_THRESHOLD } from '../lib/constants'
 
-export function DeudaHero({ balance, isBlocked }: { balance: number; isBlocked: boolean }) {
-  const pct = Math.min(Math.max(balance / BLOCK_THRESHOLD, 0), 1) * 100
+/**
+ * `threshold` llega del endpoint de saldo, que lo lee de
+ * `app_settings.debt_block_threshold`. Es un límite ANUNCIADO, no aplicado:
+ * pasarse de él no suspende al negocio (ver `constants.ts`). Viaja desde la base
+ * para que el cartel y el porcentaje no se separen del número oficial.
+ */
+export function DeudaHero({
+  balance,
+  isBlocked,
+  threshold = DEFAULT_BLOCK_THRESHOLD,
+}: {
+  balance: number
+  isBlocked: boolean
+  threshold?: number
+}) {
+  const pct = Math.min(Math.max(balance / threshold, 0), 1) * 100
   const isZero = balance <= 0
 
   return (
@@ -53,7 +67,7 @@ export function DeudaHero({ balance, isBlocked }: { balance: number; isBlocked: 
       <div className="relative z-1 mt-4">
         <div className="mb-1.5 flex items-center justify-between text-[11px] font-medium text-white/70">
           <span>Límite de crédito</span>
-          <span className="font-mono">{soles(BLOCK_THRESHOLD)} máx.</span>
+          <span className="font-mono">{soles(threshold)} máx.</span>
         </div>
         <div className="h-2 overflow-hidden rounded-full bg-white/12">
           <div

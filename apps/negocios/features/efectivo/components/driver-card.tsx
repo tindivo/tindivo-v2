@@ -1,10 +1,11 @@
 'use client'
 
+import { serviceDate } from '@tindivo/contracts'
 import { Badge, Button, Card, Icon } from '@tindivo/ui'
 import { type FormEvent, useState } from 'react'
 import { soles } from '@/components/dashboard/primitives'
 import type { CashLine, DriverCash } from '../hooks/use-cash-settlements'
-import { hoyLima } from '../hooks/use-cash-settlements'
+import { jornadaActual } from '../hooks/use-cash-settlements'
 import { useConfirmCash } from '../hooks/use-confirm-cash'
 import { useDisputeCash } from '../hooks/use-dispute-cash'
 
@@ -19,22 +20,25 @@ const diaLima = new Intl.DateTimeFormat('es-PE', {
   month: 'short',
   timeZone: 'America/Lima',
 })
-const fechaLima = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' })
-
 /**
- * La hora del pedido, y el día SOLO cuando no es hoy.
+ * La hora del pedido, y el día SOLO cuando no es de esta noche.
  *
  * Lo entregado y sin confirmar no se evapora a medianoche: la confirmación es
  * humana y nada la fuerza a las 24h. Pero mezclado con lo de esta noche y
  * mostrando solo «19:40», se lee como de hoy. El día lo separa sin sacarlo.
+ *
+ * SE COMPARA POR JORNADA, NO POR FECHA DE CALENDARIO. Con la fecha natural, a
+ * las 00:00 y con la cajera todavía trabajando, todo lo de esa misma noche
+ * empezaba a rotularse «ayer» — que es exactamente la confusión que esta función
+ * existe para evitar, servida al revés. `serviceDate` corta a las 05:00.
  */
 function cuando(iso: string | null): { hora: string; dia: string | null } | null {
   if (!iso) return null
   const t = Date.parse(iso)
   if (Number.isNaN(t)) return null
-  const suyo = fechaLima.format(t)
-  if (suyo === hoyLima()) return { hora: horaLima.format(t), dia: null }
-  const ayer = fechaLima.format(Date.now() - 86_400_000)
+  const suyo = serviceDate(new Date(t))
+  if (suyo === jornadaActual()) return { hora: horaLima.format(t), dia: null }
+  const ayer = serviceDate(new Date(Date.now() - 86_400_000))
   return { hora: horaLima.format(t), dia: suyo === ayer ? 'ayer' : diaLima.format(t) }
 }
 

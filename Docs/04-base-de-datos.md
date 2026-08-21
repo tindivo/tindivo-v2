@@ -1326,6 +1326,17 @@ CREATE POLICY "Admin all storage" ON storage.objects
 
 ## 14. pg_cron schedule
 
+> ⚠️ **Esto es el DISEÑO ORIGINAL, no lo que corre hoy.** Los nombres de job de
+> aquí abajo nunca llegaron a existir tal cual, y los de cancelación se
+> consolidaron en uno solo (`auto-cancel-prepay-timeout` →
+> `cancel_expired_prepay_orders()`, migración `0174`). **El inventario real está
+> en `Docs/13-deploy-y-devops.md § Lista completa de crons`**, y los plazos en
+> `DECISIONS.md §10`.
+>
+> El `UPDATE` de abajo además ya no correría: escribe una FRASE en
+> `cancel_reason`, que hoy es un valor acotado (`pending_acceptance_timeout`,
+> `prepay_timeout`…). **No copies este SQL a una migración.**
+
 ```sql
 SELECT cron.schedule('auto-cancel-pending-acceptance', '* * * * *', $$
   UPDATE orders

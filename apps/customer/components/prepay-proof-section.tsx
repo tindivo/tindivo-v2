@@ -16,18 +16,30 @@ interface PrepayInfo {
   hasProof: boolean
   proofAttempt: number
   comprobantePrepagoUrl: string | null
-  awaitingPaymentAt?: string | null
 }
 
 interface Props {
   orderId: string
   proofAttempt: number
+  /**
+   * El tiempo que le queda al cliente para pagar, ya formateado.
+   *
+   * Antes se calculaba aqui dentro con `startMs + 15 * 60 * 1000`. El 15 era
+   * correcto pero estaba clavado, que es el problema que la migracion 0170 ya
+   * habia corregido en el contador hermano: `paymentMinutes` se edita desde
+   * /admin/configuracion, y en cuanto alguien lo tocara este contador habria
+   * seguido diciendo quince. Ahora el plazo lo decide `activeDeadline` a partir
+   * de lo que publica `get_tracking`, y aqui solo se pinta.
+   *
+   * El tipo es estructural a proposito: este componente vive en `components/` y
+   * no debe importar de `features/tracking`.
+   */
+  countdown: { label: string; urgent: boolean } | null
   onProofUploaded: () => void
 }
 
-export function PrepayProofSection({ orderId, proofAttempt, onProofUploaded }: Props) {
+export function PrepayProofSection({ orderId, proofAttempt, countdown, onProofUploaded }: Props) {
   const [info, setInfo] = useState<PrepayInfo | null>(null)
-  const [seconds, setSeconds] = useState(15 * 60)
   const [uploading, setUploading] = useState(false)
   const [pendingFile, setPendingFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -76,28 +88,6 @@ export function PrepayProofSection({ orderId, proofAttempt, onProofUploaded }: P
       cancelled = true
     }
   }, [info?.comprobantePrepagoUrl])
-
-  // Countdown timer de 15 min basado en timestamp real de DB
-  useEffect(() => {
-    if (!info?.awaitingPaymentAt) return
-    const startMs = new Date(info.awaitingPaymentAt).getTime()
-    const deadlineMs = startMs + 15 * 60 * 1000
-
-    const updateTimer = () => {
-      const remaining = Math.max(0, Math.ceil((deadlineMs - Date.now()) / 1000))
-      setSeconds(remaining)
-    }
-
-    updateTimer()
-    const timer = setInterval(updateTimer, 1000)
-    return () => clearInterval(timer)
-  }, [info?.awaitingPaymentAt])
-
-  function formatTime(sec: number) {
-    const m = Math.floor(sec / 60)
-    const s = sec % 60
-    return `${m}:${s.toString().padStart(2, '0')}`
-  }
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0]
@@ -185,10 +175,22 @@ export function PrepayProofSection({ orderId, proofAttempt, onProofUploaded }: P
   return (
     <div className="mt-4 rounded-[22px] border border-brand/20 bg-white p-5 text-left shadow-[0_4px_20px_rgba(0,0,0,0.04)]">
       <div className="flex items-center justify-between">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-soft px-3 py-1 font-mono text-[11px] font-medium text-brand-dark">
-          <span className="h-2 w-2 animate-ping rounded-full bg-orange-500" />
-          Tiempo para pagar: {formatTime(seconds)}
-        </span>
+        {countdown ? (
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-mono text-[11px] font-bold ${
+              countdown.urgent ? 'bg-danger-soft text-danger' : 'bg-brand-soft text-brand-dark'
+            }`}
+          >
+            <span
+              className={`h-2 w-2 animate-ping rounded-full ${
+                countdown.urgent ? 'bg-danger' : 'bg-orange-500'
+              }`}
+            />
+            Tiempo para pagar: {countdown.label}
+          </span>
+        ) : (
+          <span />
+        )}
         {proofAttempt === 1 && (
           <span className="rounded-full bg-danger-soft px-2.5 py-0.5 font-sans text-[11px] font-bold text-danger">
             Reintento final (1/2)

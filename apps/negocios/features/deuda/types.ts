@@ -87,6 +87,8 @@ export interface AccountSummaryData {
   balanceDue: number
   isBlocked: boolean
   blockedForDebt: boolean
+  /** Límite de crédito que se le enseña al negocio. Informativo: no suspende (0179). */
+  debtBlockThreshold: number
   supportPhone: string | null
   summary: {
     totalCommissions: number

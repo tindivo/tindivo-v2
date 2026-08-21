@@ -191,6 +191,31 @@ Codificado en `@tindivo/contracts` (`order-status.ts`: `ORDER_TRANSITIONS`, `STA
 
 ---
 
+### Límite de crédito del negocio — es un AVISO, no un corte
+
+`app_settings.debt_block_threshold` (**S/600**) es el número que ve el negocio en
+su pantalla de saldo: la barra de «Límite de crédito» y el porcentaje consumido.
+Editable desde `/admin/configuracion`.
+
+**Alcanzarlo no suspende a nadie.** Suspender lo decide un admin, con su botón y
+su motivo (`block_business` → `is_blocked`). La migración `0178` llegó a
+conectarlo con la suspensión automática y la `0179` lo revirtió: en el piloto,
+cortar solo significaba que un negocio podía quedarse sin vender un viernes por
+la noche sin que ninguna persona lo hubiera decidido — y en silencio, porque
+`dispatch_event` clasifica `BusinessBlocked` como evento de auditoría y no lo
+convierte en push.
+
+Lo que sí es firme desde la `0178`: un negocio **ya suspendido** no recibe
+pedidos nuevos, ni por enlace directo. Lo garantiza el trigger
+`trg_orders_business_not_blocked` sobre `orders`, porque `create_customer_order`
+solo miraba el bloqueo del cliente y la página del negocio se comparte por slug
+desde la `0165`.
+
+Si algún día se automatiza: el umbral ya está en `app_settings`, pero mete
+`BusinessBlocked` en los eventos que viajan por push **antes** de encenderlo.
+
+---
+
 ## 10. Reglas de tiempo
 
 | Regla | Valor |
@@ -203,6 +228,16 @@ Codificado en `@tindivo/contracts` (`order-status.ts`: `ORDER_TRANSITIONS`, `STA
 | Espera del motorizado en puerta (no-show) | **5 min** |
 | Transferencia driver→driver (post-Fase 1) | TTL 30s, timeout-as-accept |
 | Auto-confirmación de liquidación de efectivo | **24h** (`auto_assumed_confirmed`) |
+
+- **Dónde viven estos números (migración `0174`).** Los cuatro primeros salen de
+  `app_settings.timers` y de ningún otro sitio. Los aplica una sola función,
+  `cancel_expired_prepay_orders()`, que corre cada minuto por el pg_cron
+  `auto-cancel-prepay-timeout` y que llama también el panel de la cajera para
+  barrer al instante. Los leen además `get_tracking` (contador del cliente) y
+  `useBusinessTimers` (contador de la cajera). Antes de la 0174 estaban
+  escritos a mano en el SQL de cuatro cron distintos y `app_settings` era
+  decorativo: por eso la `0113` pudo subir `acceptanceMinutes` a 15 sin que la
+  base cambiara de comportamiento. **Si añades un plazo, que lo lea de ahí.**
 
 - En Fase 1 (1 motorizado, despacho inmediato manual) **NO se activa** la cola urgente ni R1-R5. El modelo (`urgent_since`) se conserva para post-piloto (>5 min = urgente, >8 min = alerta).
 

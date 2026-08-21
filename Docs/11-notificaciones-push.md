@@ -413,6 +413,13 @@ Inngest documenta `step.sleepUntil()` con precisión ~2-5 segundos. Suficiente p
 
 Aunque Inngest sea confiable, mantenemos red de seguridad. Cada 5 min:
 
+> ⚠️ **Esto es el DISEÑO ORIGINAL, no lo que corre hoy.** Los nombres de job de
+> aquí abajo nunca llegaron a existir tal cual, y los de cancelación se
+> consolidaron en uno solo (`auto-cancel-prepay-timeout` →
+> `cancel_expired_prepay_orders()`, migración `0174`). **El inventario real está
+> en `Docs/13-deploy-y-devops.md § Lista completa de crons`**, y los plazos en
+> `DECISIONS.md §10`.
+
 | Cron | Reemplaza | Función |
 |---|---|---|
 | `enqueue-overdue-orders-failsafe` | `check-order-overdue` | SELECT orders WHERE status='waiting_driver' AND estimated_ready_at < now() - 5min AND driver_id IS NULL AND not_yet_marked_overdue |

@@ -70,16 +70,20 @@ export function isLineOk(line: string | null): boolean {
 }
 
 /**
- * Bloque de captura de dirección reutilizable: etiqueta (Casa/Trabajo/Otro) + mapa con
- * "Usar mi ubicación" + Calle/Jirón + Referencia con contador y mínimo visible.
- * Controlado: el padre posee el estado y maneja su propia persistencia.
+ * Bloque de captura de dirección reutilizable: etiqueta (Casa/Trabajo/Otro) +
+ * vista previa de la ubicación + Calle/Jirón + Referencia con contador y mínimo
+ * visible. Controlado: el padre posee el estado y maneja su propia persistencia.
+ *
+ * El mapa que se ve aquí NO es interactivo: es una postal que abre la pantalla
+ * completa de `MapPicker`. Un Leaflet vivo dentro de este formulario se quedaba
+ * con cualquier arrastre que empezara encima y la hoja parecía trabada.
  */
 export function AddressFields({
   value,
   onChange,
   onValidityChange,
   showLabelPicker = true,
-  mapHeightPx = 250,
+  mapHeightPx = 180,
 }: {
   value: AddressValue
   onChange: (patch: Partial<AddressValue>) => void
@@ -125,11 +129,8 @@ export function AddressFields({
         </span>
         <MapPicker
           value={value.coords}
-          onChange={(c) => onChange({ coords: c })}
+          onChange={(coords, accuracyM) => onChange({ coords, accuracyM })}
           onValidityChange={onValidityChange}
-          onLocate={(fix) =>
-            onChange({ coords: { lat: fix.lat, lng: fix.lng }, accuracyM: fix.accuracyM })
-          }
           heightPx={mapHeightPx}
         />
       </div>
