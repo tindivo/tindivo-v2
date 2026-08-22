@@ -477,7 +477,9 @@ La Edge Function `send-push` corre con `verify_jwt`, y la anon key vale como JWT
 - `businesses.default_payment_qr_slot`: **un puntero**, no un `is_default` por fila. Un booleano por fila admite estados imposibles (dos principales, ninguno) y pide triggers para defenderlos; el puntero no puede estar en dos sitios y, si señala un slot borrado, la lectura cae al que quede.
 - `businesses.qr_url` queda **DEPRECADA** y sin lectores. No se borró a propósito: es la red de vuelta atrás mientras esto se asienta en producción. Bórrala en una migración posterior.
 
-Consumidores al día: panel del negocio (alta, edición, elegir principal), motorizado (pestañas en `yape-qr.tsx`), prepago del cliente (`payment-method-picker.tsx`) y panel de la cajera (`pay-sections.tsx`, que ahora enseña también contra qué cuenta concilia).
+Consumidores al día: panel del negocio (alta, edición, elegir principal), motorizado (pestañas en `yape-qr.tsx`), prepago del cliente (`payment-account-card.tsx`) y panel de la cajera (`pay-sections.tsx`, que ahora enseña también contra qué cuenta concilia).
+
+**El cliente ve una sola cuenta: la principal.** Las pestañas son del motorizado, no suyas. El repuesto existe para la puerta —el QR impreso se mojó, no escanea, y hay que cobrar en el acto—; prepagando desde casa no hay esa urgencia, y ofrecerle dos cuentas solo abre el camino a que pague a la que la cajera no está conciliando. `prepay-info` le manda `paymentQr` (una), no la lista.
 
 ---
 

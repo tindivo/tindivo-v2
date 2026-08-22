@@ -6,33 +6,34 @@ import { useState } from 'react'
 /**
  * A quién le paga el cliente cuando prepaga (0184).
  *
- * El local puede tener hasta dos cuentas, y no tienen por qué ser de la misma
- * app: por eso hay pestañas y por eso cada una dice su billetera. El cliente
- * abre Yape o Plin según lo que diga la pestaña.
+ * Una sola cuenta: la principal del local. El negocio puede tener dada de alta
+ * una segunda, pero esa es el repuesto de la puerta —si el QR impreso no
+ * escanea, el motorizado tiene que poder cobrar igual—. Prepagando desde casa
+ * no hay esa urgencia, y ofrecer dos cuentas solo abre la puerta a que el
+ * cliente pague a la que la cajera no está conciliando.
  *
  * El nombre del titular no es adorno. Al transferir por número, Yape y Plin
  * enseñan a quién le estás pagando justo antes de confirmar; sin ese nombre a
  * la vista, el cliente no tiene contra qué compararlo y solo puede confiar en
  * que tecleó bien los nueve dígitos.
  */
-export function PaymentMethodPicker({
-  methods,
+export function PaymentAccountCard({
+  method,
   fallbackNumber,
   onZoom,
 }: {
-  methods: PaymentQrView[]
+  /** La cuenta principal del local, o `null` si no hay ninguna dada de alta. */
+  method: PaymentQrView | null
   /** Número suelto del negocio, para locales sin métodos dados de alta. */
   fallbackNumber: string | null
   onZoom: (url: string) => void
 }) {
-  const [active, setActive] = useState(0)
   const [copied, setCopied] = useState(false)
 
-  const current = methods[active] ?? methods[0] ?? null
-  const numero = current?.accountNumber ?? fallbackNumber
+  const numero = method?.accountNumber ?? fallbackNumber
   if (!numero) return null
 
-  const marca = current ? walletLabel(current.wallet) : 'Yape / Plin'
+  const marca = method ? walletLabel(method.wallet) : 'Yape / Plin'
 
   function copy() {
     if (!numero) return
@@ -43,36 +44,13 @@ export function PaymentMethodPicker({
 
   return (
     <div className="mt-3 rounded-[16px] border border-ink/[0.06] bg-surface p-3.5">
-      {methods.length > 1 && (
-        <div className="mb-3 flex gap-1 rounded-xl bg-ink/[0.05] p-1">
-          {methods.map((m, i) => (
-            <button
-              key={m.slot}
-              type="button"
-              onClick={() => {
-                setActive(i)
-                setCopied(false)
-              }}
-              aria-pressed={i === active}
-              className={`flex-1 rounded-lg py-1.5 text-[13px] font-bold transition-colors ${
-                i === active ? 'bg-white text-brand shadow-sm' : 'text-ink-muted'
-              }`}
-            >
-              {walletLabel(m.wallet)}
-              {methods.filter((x) => x.wallet === m.wallet).length > 1 &&
-                ` ·${m.accountNumber.slice(-3)}`}
-            </button>
-          ))}
-        </div>
-      )}
-
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="text-[11px] uppercase tracking-wider text-ink-muted">{marca}</div>
           <div className="font-mono text-[16px] font-bold text-brand">{numero}</div>
-          {current && (
+          {method && (
             <div className="truncate text-[12px] text-ink-muted">
-              A nombre de <span className="font-semibold text-ink">{current.accountName}</span>
+              A nombre de <span className="font-semibold text-ink">{method.accountName}</span>
             </div>
           )}
         </div>
@@ -85,16 +63,16 @@ export function PaymentMethodPicker({
         </button>
       </div>
 
-      {current?.qrUrl && (
+      {method?.qrUrl && (
         <div className="mt-3 flex flex-col items-center text-center">
           <button
             type="button"
-            onClick={() => onZoom(current.qrUrl as string)}
+            onClick={() => onZoom(method.qrUrl as string)}
             className="group relative h-40 w-40 overflow-hidden rounded-xl bg-white p-2 shadow-xs transition-all hover:scale-105 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-brand"
             aria-label={`Agrandar código QR de ${marca}`}
           >
             <img
-              src={current.qrUrl}
+              src={method.qrUrl}
               alt={`QR de ${marca}`}
               className="h-full w-full object-contain"
               decoding="async"
@@ -113,7 +91,7 @@ export function PaymentMethodPicker({
       )}
 
       {/* Un método puede existir sin imagen: se cobra dictando el número. */}
-      {current && !current.qrUrl && (
+      {method && !method.qrUrl && (
         <p className="mt-2 text-[12px] text-ink-muted">
           Esta cuenta no tiene QR: transfiere al número desde {marca}.
         </p>

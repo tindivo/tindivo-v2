@@ -42,20 +42,21 @@ export async function GET(
         .select(PAYMENT_QR_COLUMNS)
         .eq('business_id', order.business_id),
     ])
-    // El negocio puede tener dos (0184): el principal y el de repuesto para
-    // cuando el primero no escanea. Van los dos, ya ordenados, y el cliente
-    // elige en pantalla.
-    const paymentQrs = toPaymentQrViews(qrRows, biz?.default_payment_qr_slot ?? 1)
-    const primaryQr = paymentQrs[0] ?? null
+    // El negocio puede tener dos cuentas dadas de alta (0184), pero al cliente
+    // solo le va la principal. El repuesto es para la puerta: si el QR impreso
+    // no escanea, el motorizado necesita otra vía en el acto. Prepagando desde
+    // casa no existe esa urgencia, y sí el riesgo de que el cliente pague a la
+    // cuenta contra la que la cajera no está conciliando.
+    const paymentQr = toPaymentQrViews(qrRows, biz?.default_payment_qr_slot ?? 1)[0] ?? null
     return ok(
       {
         businessName: biz?.name ?? '',
         // Se mantiene por compatibilidad: es el número del método principal, y
         // solo cae a las columnas sueltas del negocio si no hay ninguno dado
         // de alta todavía.
-        yapeNumber: primaryQr?.accountNumber ?? biz?.yape_number ?? biz?.plin_number ?? null,
-        qrUrl: primaryQr?.qrUrl ?? null,
-        paymentQrs,
+        yapeNumber: paymentQr?.accountNumber ?? biz?.yape_number ?? biz?.plin_number ?? null,
+        qrUrl: paymentQr?.qrUrl ?? null,
+        paymentQr,
         total: Number(order.order_amount) + Number(order.delivery_fee),
         status: order.status,
         hasProof: Boolean(order.comprobante_prepago_url),

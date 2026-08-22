@@ -331,6 +331,8 @@ vez, y si senala un slot borrado la lectura cae al que quede
 **RLS.** Dueno y admin escriben; el motorizado LEE las de los negocios que tiene
 asignados —lo necesita para cobrar en la puerta—. El cliente no tiene policy: su prepago
 se sirve por API con `service_role`, que es donde ya se comprueba que el pedido es suyo.
+Y por esa via le llega **solo la principal**: las dos cuentas son la red del motorizado
+en la puerta, no una eleccion del cliente.
 
 ### drivers
 

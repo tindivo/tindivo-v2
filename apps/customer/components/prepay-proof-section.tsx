@@ -7,14 +7,14 @@ import { Button } from '@tindivo/ui'
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '@/lib/api'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
-import { PaymentMethodPicker } from './payment-method-picker'
+import { PaymentAccountCard } from './payment-account-card'
 
 interface PrepayInfo {
   businessName: string
   yapeNumber: string | null
   qrUrl: string | null
-  /** Cuentas de cobro del local (Yape/Plin), principal primero (0184). */
-  paymentQrs: PaymentQrView[]
+  /** La cuenta de cobro principal del local (Yape/Plin), la única que ve el cliente (0184). */
+  paymentQr: PaymentQrView | null
   total: number
   status: string
   hasProof: boolean
@@ -207,10 +207,10 @@ export function PrepayProofSection({ orderId, proofAttempt, countdown, onProofUp
         </div>
       </div>
 
-      {/* A quién se le paga: cuenta, titular y QR. Si el local dio de alta dos,
-          el cliente cambia de pestaña cuando el primero no le escanea. */}
-      <PaymentMethodPicker
-        methods={info?.paymentQrs ?? []}
+      {/* A quién se le paga: cuenta, titular y QR. Siempre la principal, que es
+          contra la que la cajera concilia; el repuesto es cosa de la puerta. */}
+      <PaymentAccountCard
+        method={info?.paymentQr ?? null}
         fallbackNumber={info?.yapeNumber ?? null}
         onZoom={setZoomUrl}
       />
