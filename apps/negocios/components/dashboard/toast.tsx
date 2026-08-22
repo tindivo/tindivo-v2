@@ -16,7 +16,9 @@ export function notifySuccess(text: string): void {
 /**
  * Host único del toast de éxito. Vive en el chrome persistente, así el toast
  * sobrevive navegaciones (p. ej. "Plato creado" tras router.replace('/menu')).
- * Offset bajo NewOrderToast (top 14) para no solaparse si coinciden.
+ * Offset bajo `AttentionBanner` (top 12 + ~44 de alto) para no solaparse si
+ * coinciden: el banner es persistente, así que coincidir es lo normal, no la
+ * excepción que era con el toast de pedido nuevo.
  */
 export function SuccessToastHost() {
   const [toast, setToast] = useState<{ text: string; id: number } | null>(null)

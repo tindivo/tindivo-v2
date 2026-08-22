@@ -457,29 +457,6 @@ export function PedidosDesktop(p: PedidosViewProps) {
         </div>
       </header>
 
-      {/* Urgent bar */}
-      {p.counts.new > 0 && (
-        <div className="mx-5 mt-2.5 flex items-center gap-3 rounded-xl border border-danger/30 bg-white px-4 py-2">
-          <Icon
-            name="notifications_active"
-            size={20}
-            weight={500}
-            filled
-            className="shrink-0 text-danger"
-          />
-          <div className="flex-1">
-            <div className="text-[14px] font-bold">
-              {p.counts.new}{' '}
-              {p.counts.new === 1 ? 'pedido nuevo requiere' : 'pedidos nuevos requieren'} revisión
-            </div>
-            <div className="text-[12px] text-ink-muted">
-              Toca cada card para ver el detalle y aceptar o rechazar. Se cancelan automáticamente
-              en 5 min.
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Kanban 3 columnas */}
       <div className="grid min-h-0 flex-1 grid-cols-[1fr_1.4fr_0.9fr] grid-rows-[1fr] gap-3 overflow-hidden p-5">
         <KanbanCol

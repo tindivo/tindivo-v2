@@ -22,10 +22,12 @@ import {
   useState,
 } from 'react'
 import { OpeningControls } from '@/features/apertura/components/opening-controls'
+import { AttentionBanner } from '@/features/pedidos/components/attention-banner'
 import { getBackoffDelayMs, useChannelHealth } from '@/hooks/use-channel-health'
 import { useIconFontReady } from '@/hooks/use-icon-font-ready'
 import { usePolledQuery } from '@/hooks/use-polled-query'
 import { useBusinessTimers } from '@/hooks/use-queue-lead'
+import { attentionState } from '@/lib/orders/attention'
 import {
   getColumn,
   isBusinessPaused,
@@ -543,35 +545,6 @@ function BottomNav({ active }: { active: NavId }) {
         </BottomSheet>
       )}
     </>
-  )
-}
-
-// ── Toast de pedido nuevo (notificación visual en cualquier sección) ──────────
-function NewOrderToast({ count }: { count: number }) {
-  const prev = useRef(count)
-  const [show, setShow] = useState(false)
-  const [n, setN] = useState(0)
-  useEffect(() => {
-    if (count > prev.current) {
-      setN(count - prev.current)
-      setShow(true)
-      const t = setTimeout(() => setShow(false), 6000)
-      prev.current = count
-      return () => clearTimeout(t)
-    }
-    prev.current = count
-    return undefined
-  }, [count])
-  if (!show) return null
-  return (
-    <Link
-      href="/"
-      onClick={() => setShow(false)}
-      className="fixed left-1/2 top-3.5 z-[300] flex -translate-x-1/2 animate-pulse items-center gap-2 rounded-full bg-brand px-4 py-2.5 text-sm font-bold text-white no-underline shadow-[0_8px_24px_-6px_rgba(249,115,22,0.6)]"
-    >
-      <Icon name="notifications_active" size={18} filled />
-      {n === 1 ? 'Nuevo pedido' : `${n} pedidos nuevos`} · ver
-    </Link>
   )
 }
 
@@ -1127,15 +1100,17 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
   const pauseMin = pauseMinutesLeft(biz.until, now)
   const hasWaiting = vms.some((o) => o.state === 'waiting')
   const hasBufferP3 = vms.some((o) => o.state === 'buffer_p2' || o.state === 'buffer_p3')
-  const actionRequiredCount = useMemo(
-    () => vms.filter((o) => o.status === 'pending_acceptance' || o.status === 'validando').length,
-    [vms],
-  )
+  // LA MISMA EXPRESIÓN QUE ENCIENDE EL SONIDO Y QUE PINTA EL BANNER.
+  //
+  // Estaba aquí como filtro suelto, y el banner no existía: el sonido era global
+  // y lo visible vivía solo en `app/page.tsx`. Eso costó `JMAXL98Z` en
+  // producción. Ver `lib/orders/attention.ts`.
+  const attention = useMemo(() => attentionState(vms), [vms])
 
   // Sonido persistente (corre en el chrome → suena en cualquier sección).
   useDashboardSounds({
-    hasPending: actionRequiredCount > 0,
-    pendingCount: actionRequiredCount,
+    hasPending: attention.hasPending,
+    pendingCount: attention.pendingCount,
     hasWaiting,
     hasBufferP3,
     soundOn,
@@ -1267,7 +1242,7 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
           </div>
         </div>
       </div>
-      <NewOrderToast count={counts.new} />
+      <AttentionBanner vm={attention.banner} />
       <SuccessToastHost />
     </Ctx.Provider>
   )
