@@ -86,7 +86,7 @@ export function HistorialList() {
           order={selectedVM}
           items={detailItems}
           proofUrl={detailProofUrl}
-          qrUrl={null}
+          paymentQrs={[]}
           busy={false}
           isLoadingActions={isLoadingActions}
           actions={{

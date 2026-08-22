@@ -12,7 +12,7 @@ export default function NegocioPedidosPage() {
   const {
     bizName,
     accent,
-    qrUrl,
+    paymentQrs,
     paused,
     pauseMinLeft,
     blocked,
@@ -104,7 +104,7 @@ export default function NegocioPedidosPage() {
     selected,
     detailItems,
     detailProofUrl,
-    qrUrl,
+    paymentQrs,
     detailBusy: busy,
     detailLoadingActions: isLoadingActions,
     actions,

@@ -1,5 +1,7 @@
 /** Tipos del dominio visto por el motorizado. */
 
+import type { PaymentQrView } from '@tindivo/contracts'
+
 export type DriverOrderStatus =
   | 'preparing'
   | 'waiting_driver'
@@ -237,8 +239,12 @@ export interface OrderDetailResponse {
     phone: string | null
     coordinatesLat: number | null
     coordinatesLng: number | null
+    /** @deprecated Es el número del método principal. Usa `paymentQrs`. */
     yapeNumber: string | null
+    /** @deprecated Es el QR del método principal. Usa `paymentQrs`. */
     qrUrl: string | null
+    /** Métodos de cobro del local (Yape/Plin), principal primero (0184). */
+    paymentQrs: PaymentQrView[]
     accentColor: string | null
     logoUrl: string | null
   } | null

@@ -475,7 +475,7 @@ mira cuál está poblado.
 | 3 | Reparto en `Yape + Efectivo` | Levantamiento del legacy |
 | 4 | Dispositivo de la cajera | Jesús / Yolvi |
 | 5 | Cuándo subir `commissions` si hace falta | Jesús, con datos del piloto |
-| 6 | Soporte para 2do QR de Yape (QR alternativo/secundario en `businesses`) | Backlog UI/DB — portar tabs de `tindivo-delivery/yape-qr-card.tsx` cuando se agregue la columna `qr_url_secondary` |
+| 6 | Soporte para 2do QR de Yape (QR alternativo/secundario) | ✅ HECHO — migración 0184: tabla `business_payment_qrs` (máx. 2, con billetera/número/titular) + puntero `businesses.default_payment_qr_slot`. Pestañas ya portadas en motorizado y cliente |
 
 ---
 

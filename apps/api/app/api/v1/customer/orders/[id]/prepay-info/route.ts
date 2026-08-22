@@ -3,6 +3,7 @@ import { requireRole } from '@/lib/http/auth'
 import { corsHeaders, handleOptions } from '@/lib/http/cors'
 import { handleError, ok } from '@/lib/http/problem'
 import { getRequestId } from '@/lib/http/request-id'
+import { PAYMENT_QR_COLUMNS, toPaymentQrViews } from '@/lib/mappers/payment-qr'
 import { createServiceClient } from '@/lib/supabase/service'
 
 export const dynamic = 'force-dynamic'
@@ -30,16 +31,31 @@ export async function GET(
       .maybeSingle()
     if (!order || order.customer_user_id !== user.id)
       throw new DomainError('Pedido no encontrado', 'not_found')
-    const { data: biz } = await service
-      .from('businesses')
-      .select('name,yape_number,plin_number,qr_url')
-      .eq('id', order.business_id)
-      .single()
+    const [{ data: biz }, { data: qrRows }] = await Promise.all([
+      service
+        .from('businesses')
+        .select('name,yape_number,plin_number,default_payment_qr_slot')
+        .eq('id', order.business_id)
+        .single(),
+      service
+        .from('business_payment_qrs')
+        .select(PAYMENT_QR_COLUMNS)
+        .eq('business_id', order.business_id),
+    ])
+    // El negocio puede tener dos (0184): el principal y el de repuesto para
+    // cuando el primero no escanea. Van los dos, ya ordenados, y el cliente
+    // elige en pantalla.
+    const paymentQrs = toPaymentQrViews(qrRows, biz?.default_payment_qr_slot ?? 1)
+    const primaryQr = paymentQrs[0] ?? null
     return ok(
       {
         businessName: biz?.name ?? '',
-        yapeNumber: biz?.yape_number ?? biz?.plin_number ?? null,
-        qrUrl: biz?.qr_url ?? null,
+        // Se mantiene por compatibilidad: es el número del método principal, y
+        // solo cae a las columnas sueltas del negocio si no hay ninguno dado
+        // de alta todavía.
+        yapeNumber: primaryQr?.accountNumber ?? biz?.yape_number ?? biz?.plin_number ?? null,
+        qrUrl: primaryQr?.qrUrl ?? null,
+        paymentQrs,
         total: Number(order.order_amount) + Number(order.delivery_fee),
         status: order.status,
         hasProof: Boolean(order.comprobante_prepago_url),

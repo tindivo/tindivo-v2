@@ -79,8 +79,8 @@ export function CollectCard({ detail }: { detail: OrderDetailResponse }) {
           móvil ajeno de noche. */}
       <div className="mt-3">
         <YapeQr
-          qrUrl={business?.qrUrl}
-          yapeNumber={business?.yapeNumber}
+          qrs={business?.paymentQrs}
+          fallbackNumber={business?.yapeNumber}
           businessName={business?.name}
           amount={order.paymentIntent === 'pending_mixed' ? (order.yapeAmount ?? total) : total}
         />

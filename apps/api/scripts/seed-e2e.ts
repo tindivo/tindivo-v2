@@ -182,6 +182,52 @@ async function main(): Promise<void> {
     'id',
   )
 
+  // ── 3-bis. Cuentas de cobro del negocio (0184) ────────────────────────────
+  //
+  // DOS, y a propósito de distinta billetera. No es adorno de demo: el mundo
+  // base tiene que traer las dos porque lo que hay que poder probar es
+  // justamente el salto de una a la otra —el QR que no escanea en la puerta del
+  // cliente—, y con una sola cuenta esa mitad de la feature es invisible.
+  //
+  // Van aquí y no en `seed-demo-board.ts` para que el mundo sea el mismo en
+  // local y en CI: sembradas desde el board, una máquina recién reseteada las
+  // tendría solo si a alguien se le ocurrió correr el seeder de demo, y los
+  // tests pasarían o fallarían según eso.
+  const qrDe = (n: string) =>
+    `https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&margin=8&data=${encodeURIComponent(
+      `yape://p2p?n=${n}`,
+    )}`
+  await upsert(
+    'business_payment_qrs',
+    [
+      {
+        business_id: E2E.BUSINESS_ID,
+        slot: 1,
+        wallet: 'yape',
+        account_number: '900000001',
+        account_name: E2E.BUSINESS_NAME,
+        qr_url: qrDe('900000001'),
+      },
+      {
+        business_id: E2E.BUSINESS_ID,
+        slot: 2,
+        wallet: 'plin',
+        account_number: '955512345',
+        account_name: E2E.BUSINESS_NAME,
+        qr_url: qrDe('955512345'),
+      },
+      {
+        business_id: E2E.BUSINESS_2_ID,
+        slot: 1,
+        wallet: 'yape',
+        account_number: '900000011',
+        account_name: E2E.BUSINESS_2_NAME,
+        qr_url: qrDe('900000011'),
+      },
+    ],
+    'business_id,slot',
+  )
+
   // Abierto los 7 días, 24h: el e2e no depende de la hora a la que se ejecute.
   await upsert(
     'business_schedule',

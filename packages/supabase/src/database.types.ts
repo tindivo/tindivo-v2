@@ -217,6 +217,50 @@ export type Database = {
           },
         ]
       }
+      business_payment_qrs: {
+        Row: {
+          account_name: string
+          account_number: string
+          business_id: string
+          created_at: string
+          id: string
+          qr_url: string | null
+          slot: number
+          updated_at: string
+          wallet: Database["public"]["Enums"]["payment_wallet"]
+        }
+        Insert: {
+          account_name: string
+          account_number: string
+          business_id: string
+          created_at?: string
+          id?: string
+          qr_url?: string | null
+          slot: number
+          updated_at?: string
+          wallet?: Database["public"]["Enums"]["payment_wallet"]
+        }
+        Update: {
+          account_name?: string
+          account_number?: string
+          business_id?: string
+          created_at?: string
+          id?: string
+          qr_url?: string | null
+          slot?: number
+          updated_at?: string
+          wallet?: Database["public"]["Enums"]["payment_wallet"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_payment_qrs_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_schedule: {
         Row: {
           business_id: string
@@ -326,6 +370,7 @@ export type Database = {
           coordinates_lat: number | null
           coordinates_lng: number | null
           created_at: string
+          default_payment_qr_slot: number
           delivery_fee: number
           estimated_eta_max: number
           estimated_eta_min: number
@@ -367,6 +412,7 @@ export type Database = {
           coordinates_lat?: number | null
           coordinates_lng?: number | null
           created_at?: string
+          default_payment_qr_slot?: number
           delivery_fee?: number
           estimated_eta_max?: number
           estimated_eta_min?: number
@@ -408,6 +454,7 @@ export type Database = {
           coordinates_lat?: number | null
           coordinates_lng?: number | null
           created_at?: string
+          default_payment_qr_slot?: number
           delivery_fee?: number
           estimated_eta_max?: number
           estimated_eta_min?: number
@@ -3024,6 +3071,7 @@ export type Database = {
         | "paid_mixed"
         | "unpaid"
         | "refunded"
+      payment_wallet: "yape" | "plin"
       report_status: "open" | "resolved" | "dismissed"
       report_type:
         | "no_show"
@@ -3241,6 +3289,7 @@ export const Constants = {
         "unpaid",
         "refunded",
       ],
+      payment_wallet: ["yape", "plin"],
       report_status: ["open", "resolved", "dismissed"],
       report_type: [
         "no_show",

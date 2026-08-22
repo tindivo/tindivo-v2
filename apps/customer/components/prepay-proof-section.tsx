@@ -1,16 +1,20 @@
 'use client'
 
 import { ApiError } from '@tindivo/api-client'
+import type { PaymentQrView } from '@tindivo/contracts'
 import { compressImage, UPLOAD_CACHE_CONTROL, validateImageInput } from '@tindivo/images'
 import { Button } from '@tindivo/ui'
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '@/lib/api'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
+import { PaymentMethodPicker } from './payment-method-picker'
 
 interface PrepayInfo {
   businessName: string
   yapeNumber: string | null
   qrUrl: string | null
+  /** Cuentas de cobro del local (Yape/Plin), principal primero (0184). */
+  paymentQrs: PaymentQrView[]
   total: number
   status: string
   hasProof: boolean
@@ -44,7 +48,6 @@ export function PrepayProofSection({ orderId, proofAttempt, countdown, onProofUp
   const [pendingFile, setPendingFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [copied, setCopied] = useState(false)
   /** Comprimiendo la captura recién elegida, antes de que exista preview. */
   const [preparing, setPreparing] = useState(false)
   /** URL firmada del comprobante ya enviado (el bucket es privado). */
@@ -113,14 +116,6 @@ export function PrepayProofSection({ orderId, proofAttempt, countdown, onProofUp
       setError(err instanceof Error ? err.message : 'No pudimos procesar la imagen.')
     } finally {
       setPreparing(false)
-    }
-  }
-
-  function copyYape() {
-    if (info?.yapeNumber) {
-      navigator.clipboard.writeText(info.yapeNumber)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
     }
   }
 
@@ -204,58 +199,21 @@ export function PrepayProofSection({ orderId, proofAttempt, countdown, onProofUp
         confirmó disponibilidad. Paga el monto exacto y sube tu comprobante.
       </p>
 
-      {/* Monto y Yape */}
-      <div className="mt-3.5 flex items-center justify-between rounded-[16px] border border-ink/[0.06] bg-surface p-3.5">
-        <div>
-          <div className="text-[11px] uppercase tracking-wider text-ink-muted">Monto total</div>
-          <div className="font-mono text-[22px] font-bold text-ink">
-            S/ {info?.total ? info.total.toFixed(2) : '0.00'}
-          </div>
+      {/* Monto */}
+      <div className="mt-3.5 rounded-[16px] border border-ink/[0.06] bg-surface p-3.5">
+        <div className="text-[11px] uppercase tracking-wider text-ink-muted">Monto total</div>
+        <div className="font-mono text-[22px] font-bold text-ink">
+          S/ {info?.total ? info.total.toFixed(2) : '0.00'}
         </div>
-        {info?.yapeNumber && (
-          <div className="text-right">
-            <div className="text-[11px] uppercase tracking-wider text-ink-muted">Yape / Plin</div>
-            <div className="flex items-center gap-1.5">
-              <span className="font-mono text-[16px] font-bold text-brand">{info.yapeNumber}</span>
-              <button
-                type="button"
-                onClick={copyYape}
-                className="rounded-md bg-white px-2 py-0.5 font-sans text-[11px] font-medium text-ink shadow-sm"
-              >
-                {copied ? '¡Copiado!' : 'Copiar'}
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* QR (si existe) */}
-      {info?.qrUrl && (
-        <div className="mt-3 flex flex-col items-center rounded-xl border border-ink/[0.06] bg-surface p-3 text-center">
-          <button
-            type="button"
-            onClick={() => setZoomUrl(info.qrUrl)}
-            className="group relative h-40 w-40 overflow-hidden rounded-xl bg-white p-2 shadow-xs transition-all hover:scale-105 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-brand"
-            aria-label="Agrandar código QR"
-          >
-            <img
-              src={info.qrUrl}
-              alt="QR Yape/Plin"
-              className="h-full w-full object-contain"
-              decoding="async"
-            />
-            <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 transition-opacity group-hover:opacity-100 rounded-xl">
-              <span className="rounded-full bg-black/75 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur-xs">
-                Agrandar 🔍
-              </span>
-            </div>
-          </button>
-          <span className="mt-2 text-[12px] font-medium text-ink-muted">
-            Escanea para pagar •{' '}
-            <span className="text-brand font-semibold">Toca para agrandar</span>
-          </span>
-        </div>
-      )}
+      {/* A quién se le paga: cuenta, titular y QR. Si el local dio de alta dos,
+          el cliente cambia de pestaña cuando el primero no le escanea. */}
+      <PaymentMethodPicker
+        methods={info?.paymentQrs ?? []}
+        fallbackNumber={info?.yapeNumber ?? null}
+        onZoom={setZoomUrl}
+      />
 
       {/* Comprobante ya enviado. Se muestra para que el cliente pueda comprobar
           que mandó la captura correcta mientras la cajera la revisa. */}

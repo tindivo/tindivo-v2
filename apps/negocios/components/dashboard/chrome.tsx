@@ -3,6 +3,7 @@
 import {
   ACTIVE_ORDER_STATUSES,
   type BusinessPrimaryCapability,
+  type PaymentQrView,
   serviceDayStart,
 } from '@tindivo/contracts'
 import { canalUnico } from '@tindivo/supabase'
@@ -90,7 +91,8 @@ export interface DashboardCtx {
   bizId: string
   bizName: string
   accent: string
-  qrUrl: string | null
+  /** Cuentas de cobro del local, principal primero (0184). */
+  paymentQrs: PaymentQrView[]
   capability: BusinessPrimaryCapability | null
   paused: boolean
   pauseMinLeft: number | null
@@ -138,7 +140,7 @@ export function useDashboard(): DashboardCtx {
 interface BizState {
   name: string
   accent: string
-  qrUrl: string | null
+  paymentQrs: PaymentQrView[]
   capability: BusinessPrimaryCapability | null
   until: string | null
   blocked: boolean
@@ -710,7 +712,7 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
   const [biz, setBiz] = useState<BizState>({
     name: 'Mi negocio',
     accent: ACCENT_DEFAULT,
-    qrUrl: null,
+    paymentQrs: [],
     capability: null,
     until: null,
     blocked: false,
@@ -789,7 +791,7 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
     const { data, error } = await supabase
       .from('businesses')
       .select(
-        'id,name,accent_color,qr_url,primary_capability,accepting_orders_until,is_blocked,block_reason',
+        'id,name,accent_color,primary_capability,accepting_orders_until,is_blocked,block_reason,default_payment_qr_slot',
       )
       .eq('user_id', userId)
       .maybeSingle()
@@ -817,10 +819,32 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
     setBizError(null)
     if (data) {
       setBizId(data.id as string)
+      // Las cuentas de cobro viven en su propia tabla (0184). La cajera concilia
+      // contra la que el motorizado está enseñando, así que el orden importa y
+      // se resuelve igual que en la API: el slot que apunta el negocio primero,
+      // y si ese slot ya no existe manda el más bajo.
+      const defaultSlot = (data.default_payment_qr_slot as number | null) ?? 1
+      const { data: qrRows } = await supabase
+        .from('business_payment_qrs')
+        .select('slot,wallet,account_number,account_name,qr_url')
+        .eq('business_id', data.id as string)
+      const paymentQrs: PaymentQrView[] = [...(qrRows ?? [])]
+        .sort(
+          (a, b) =>
+            Number(b.slot === defaultSlot) - Number(a.slot === defaultSlot) || a.slot - b.slot,
+        )
+        .map((r, i) => ({
+          slot: r.slot,
+          wallet: r.wallet,
+          accountNumber: r.account_number,
+          accountName: r.account_name,
+          qrUrl: r.qr_url,
+          isDefault: i === 0,
+        }))
       setBiz({
         name: (data.name as string | null) ?? 'Mi negocio',
         accent: data.accent_color ? `#${data.accent_color}` : ACCENT_DEFAULT,
-        qrUrl: (data.qr_url as string | null) ?? null,
+        paymentQrs,
         capability: (data.primary_capability as BusinessPrimaryCapability | null) ?? null,
         until: (data.accepting_orders_until as string | null) ?? null,
         blocked: (data.is_blocked as boolean | null) ?? false,
@@ -1134,7 +1158,7 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
       bizId,
       bizName: biz.name,
       accent: biz.accent,
-      qrUrl: biz.qrUrl,
+      paymentQrs: biz.paymentQrs,
       capability: biz.capability,
       paused,
       pauseMinLeft: pauseMin,

@@ -3,6 +3,7 @@ import { requireRole } from '@/lib/http/auth'
 import { corsHeaders, handleOptions } from '@/lib/http/cors'
 import { handleError, ok } from '@/lib/http/problem'
 import { getRequestId } from '@/lib/http/request-id'
+import { PAYMENT_QR_COLUMNS, toPaymentQrViews } from '@/lib/mappers/payment-qr'
 import { createServiceClient } from '@/lib/supabase/service'
 
 export const dynamic = 'force-dynamic'
@@ -64,7 +65,7 @@ export async function GET(
       isPreview = true
     }
 
-    const [{ data: items, error: itemsErr }, { data: biz }, { data: transfers }] =
+    const [{ data: items, error: itemsErr }, { data: biz }, { data: transfers }, { data: qrRows }] =
       await Promise.all([
         service
           .from('customer_order_items')
@@ -76,7 +77,7 @@ export async function GET(
         service
           .from('businesses')
           .select(
-            'id,name,address,phone,coordinates_lat,coordinates_lng,yape_number,qr_url,accent_color,logo_url',
+            'id,name,address,phone,coordinates_lat,coordinates_lng,yape_number,accent_color,logo_url,default_payment_qr_slot',
           )
           .eq('id', order.business_id)
           .maybeSingle(),
@@ -86,8 +87,17 @@ export async function GET(
           .eq('order_id', id)
           .eq('status', 'pending')
           .gt('expires_at', new Date().toISOString()),
+        service
+          .from('business_payment_qrs')
+          .select(PAYMENT_QR_COLUMNS)
+          .eq('business_id', order.business_id),
       ])
     if (itemsErr) throw new Error(itemsErr.message)
+
+    // Los métodos de cobro del local, principal primero (0184). El motorizado
+    // cobra en la puerta: si el QR de arriba no escanea necesita el otro AHÍ,
+    // no una llamada al restaurante.
+    const paymentQrs = toPaymentQrViews(qrRows, biz?.default_payment_qr_slot ?? 1)
 
     const pending = transfers ?? []
     const incoming = pending.find((t) => t.from_driver_id === driver.id) ?? null
@@ -173,8 +183,11 @@ export async function GET(
               phone: biz.phone,
               coordinatesLat: biz.coordinates_lat == null ? null : Number(biz.coordinates_lat),
               coordinatesLng: biz.coordinates_lng == null ? null : Number(biz.coordinates_lng),
-              yapeNumber: biz.yape_number,
-              qrUrl: biz.qr_url,
+              // `yapeNumber` y `qrUrl` siguen saliendo por compatibilidad, ya
+              // apuntando al método principal; `paymentQrs` es la fuente buena.
+              yapeNumber: paymentQrs[0]?.accountNumber ?? biz.yape_number,
+              qrUrl: paymentQrs[0]?.qrUrl ?? null,
+              paymentQrs,
               // Identidad del local. El board ya la usaba para la franja de
               // color de cada tarjeta; sin esto el detalle no podía continuar
               // esa señal y todos los restaurantes se veían iguales.

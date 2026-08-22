@@ -1,5 +1,6 @@
 'use client'
 
+import { type PaymentQrView, walletLabel } from '@tindivo/contracts'
 import { Icon } from '@tindivo/ui'
 import type { OrderVM } from '@/lib/orders/view-model'
 import { soles } from '../primitives'
@@ -49,8 +50,10 @@ export function PaySectionCash({ order }: { order: OrderVM }) {
 }
 
 /** Sin `order`: al salir el total, lo único que queda propio de este método es
- *  el QR del local, que no depende del pedido. */
-export function PaySectionWallet({ qrUrl }: { qrUrl: string | null }) {
+ *  la cuenta de cobro del local, que no depende del pedido. */
+export function PaySectionWallet({ qrs }: { qrs: PaymentQrView[] }) {
+  const main = qrs[0] ?? null
+  const spare = qrs[1] ?? null
   return (
     <div className="shrink-0 rounded-xl border border-info/30 bg-info/10 p-3">
       <div className="mb-2.5 flex items-center gap-1.5">
@@ -58,16 +61,16 @@ export function PaySectionWallet({ qrUrl }: { qrUrl: string | null }) {
         <div className="text-[13px] font-bold text-info">Cobrar con billetera digital</div>
       </div>
       {/* Sin «Total a cobrar»: está en la cabecera de «Cobro», aquí arriba. Lo
-          propio de este método es el QR, y es lo que se enseña. */}
+          propio de este método es la cuenta, y es lo que se enseña. */}
       <div className="rounded-[10px] bg-white p-2.5 text-center">
         <div className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.06em] text-ink-muted">
-          QR del restaurante
+          {main ? `${walletLabel(main.wallet)} del restaurante` : 'QR del restaurante'}
         </div>
-        {qrUrl ? (
+        {main?.qrUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={qrUrl}
-            alt="QR del restaurante"
+            src={main.qrUrl}
+            alt={`QR de ${walletLabel(main.wallet)} del restaurante`}
             className="mx-auto mb-2 h-[90px] w-[90px] rounded-[10px] object-contain"
           />
         ) : (
@@ -77,12 +80,26 @@ export function PaySectionWallet({ qrUrl }: { qrUrl: string | null }) {
             </span>
           </div>
         )}
+        {/* La cuenta contra la que la cajera concilia. Sin esto tendría que
+            acordarse de cuál de las dos está enseñando el motorizado. */}
+        {main && (
+          <div className="text-[11px] leading-tight text-ink-muted">
+            <div className="font-mono font-bold text-ink">{main.accountNumber}</div>
+            <div className="truncate">{main.accountName}</div>
+          </div>
+        )}
       </div>
+      {spare && (
+        <p className="mt-1.5 text-center text-[10px] text-ink-muted">
+          Repuesto: {walletLabel(spare.wallet)} ·{spare.accountNumber.slice(-3)}
+        </p>
+      )}
     </div>
   )
 }
 
-export function PaySectionMixed({ order, qrUrl }: { order: OrderVM; qrUrl: string | null }) {
+export function PaySectionMixed({ order, qrs }: { order: OrderVM; qrs: PaymentQrView[] }) {
+  const main = qrs[0] ?? null
   return (
     <div className="shrink-0 rounded-xl border border-warning/40 bg-warning-soft p-3">
       <div className="mb-2.5 flex items-center gap-1.5">
@@ -105,14 +122,15 @@ export function PaySectionMixed({ order, qrUrl }: { order: OrderVM; qrUrl: strin
           </div>
         )}
       </div>
-      {qrUrl && (
+      {main?.qrUrl && (
         <div className="mt-2.5 rounded-[10px] bg-white p-2.5 text-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={qrUrl}
-            alt="QR del restaurante"
+            src={main.qrUrl}
+            alt={`QR de ${walletLabel(main.wallet)} del restaurante`}
             className="mx-auto h-20 w-20 rounded-lg object-contain"
           />
+          <div className="mt-1 font-mono text-[11px] font-bold text-ink">{main.accountNumber}</div>
         </div>
       )}
     </div>

@@ -1,5 +1,6 @@
 'use client'
 
+import type { PaymentQrView } from '@tindivo/contracts'
 import { Icon } from '@tindivo/ui'
 import Link from 'next/link'
 import { useState } from 'react'
@@ -31,7 +32,7 @@ export interface PedidosViewProps {
   selected: OrderVM | null
   detailItems: DetailItem[] | null
   detailProofUrl: string | null
-  qrUrl: string | null
+  paymentQrs: PaymentQrView[]
   detailBusy: boolean
   detailLoadingActions?: boolean
   actions: DetailActions
@@ -173,7 +174,7 @@ export function PedidosMobile(p: PedidosViewProps) {
           order={p.selected}
           items={p.detailItems}
           proofUrl={p.detailProofUrl}
-          qrUrl={p.qrUrl}
+          paymentQrs={p.paymentQrs}
           busy={p.detailBusy}
           isLoadingActions={p.detailLoadingActions}
           mobile
@@ -544,7 +545,7 @@ export function PedidosDesktop(p: PedidosViewProps) {
           order={p.selected}
           items={p.detailItems}
           proofUrl={p.detailProofUrl}
-          qrUrl={p.qrUrl}
+          paymentQrs={p.paymentQrs}
           busy={p.detailBusy}
           isLoadingActions={p.detailLoadingActions}
           actions={p.actions}

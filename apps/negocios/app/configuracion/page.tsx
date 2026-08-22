@@ -7,20 +7,8 @@ import { ConfigView } from '@/features/configuracion/components/config-view'
 import { useBusinessConfig } from '@/features/configuracion/hooks/use-business-config'
 
 export default function ConfiguracionPage() {
-  const {
-    form,
-    capability,
-    qrUrl,
-    logoUrl,
-    bannerUrl,
-    msg,
-    saving,
-    save,
-    set,
-    setQrUrl,
-    setLogoUrl,
-    setBannerUrl,
-  } = useBusinessConfig()
+  const { form, capability, logoUrl, bannerUrl, msg, saving, save, set, setLogoUrl, setBannerUrl } =
+    useBusinessConfig()
 
   return (
     <DashboardShell
@@ -44,11 +32,6 @@ export default function ConfiguracionPage() {
             msg={msg}
             onSave={save}
             set={set}
-            qrUrl={qrUrl}
-            onQrUploaded={(url) => {
-              setQrUrl(url)
-              notifySuccess('Imagen actualizada')
-            }}
             logoUrl={logoUrl}
             onLogoUploaded={(url) => {
               setLogoUrl(url)

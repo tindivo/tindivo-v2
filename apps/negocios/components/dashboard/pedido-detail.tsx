@@ -1,5 +1,6 @@
 'use client'
 
+import type { PaymentQrView } from '@tindivo/contracts'
 import { cn, Icon } from '@tindivo/ui'
 
 import { useEffect, useState } from 'react'
@@ -203,7 +204,7 @@ export function DetailScreen({
   order,
   items,
   proofUrl,
-  qrUrl,
+  paymentQrs,
   busy,
   isLoadingActions = false,
   mobile = false,
@@ -212,7 +213,7 @@ export function DetailScreen({
   order: OrderVM
   items: DetailItem[] | null
   proofUrl: string | null
-  qrUrl: string | null
+  paymentQrs: PaymentQrView[]
   busy: boolean
   isLoadingActions?: boolean
   mobile?: boolean
@@ -660,7 +661,7 @@ export function DetailScreen({
 
         {/* Sección de pago */}
         {order.payment === 'pending_cash' && <PaySectionCash order={order} />}
-        {order.payment === 'pending_wallet' && <PaySectionWallet qrUrl={qrUrl} />}
+        {order.payment === 'pending_wallet' && <PaySectionWallet qrs={paymentQrs} />}
         {order.payment === 'prepaid' && (
           <>
             {isLoadingActions ? (
@@ -716,7 +717,7 @@ export function DetailScreen({
             )}
           </>
         )}
-        {order.payment === 'pending_mixed' && <PaySectionMixed order={order} qrUrl={qrUrl} />}
+        {order.payment === 'pending_mixed' && <PaySectionMixed order={order} qrs={paymentQrs} />}
 
         {/* Extensión de preparación */}
         {order.state === 'cooking' && !order.extensionUsed && (

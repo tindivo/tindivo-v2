@@ -101,6 +101,12 @@ export const PAYMENT_REALS = [
 export const PaymentRealSchema = z.enum(PAYMENT_REALS)
 export type PaymentReal = z.infer<typeof PaymentRealSchema>
 
+// --- Billetera del QR de cobro del negocio (0184) ---
+// El rótulo NO es cosmético: el cliente abre una app u otra según lo que diga.
+export const PAYMENT_WALLETS = ['yape', 'plin'] as const
+export const PaymentWalletSchema = z.enum(PAYMENT_WALLETS)
+export type PaymentWallet = z.infer<typeof PaymentWalletSchema>
+
 // --- Banda de distancia (Documento Maestro: 2 bandas, NO las 3 del spec) ---
 export const DISTANCE_BANDS = ['near', 'far'] as const
 export const DistanceBandSchema = z.enum(DISTANCE_BANDS)

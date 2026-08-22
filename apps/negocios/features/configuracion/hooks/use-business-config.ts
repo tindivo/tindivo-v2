@@ -17,7 +17,6 @@ export interface ConfigMessage {
 export function useBusinessConfig() {
   const [form, setForm] = useState<Form | null>(null)
   const [capability, setCapability] = useState<string>('')
-  const [qrUrl, setQrUrl] = useState<string | null>(null)
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [bannerUrl, setBannerUrl] = useState<string | null>(null)
   const [msg, setMsg] = useState<ConfigMessage | null>(null)
@@ -37,14 +36,13 @@ export function useBusinessConfig() {
       const { data: biz, error } = await supabase
         .from('businesses')
         .select(
-          'name,phone,whatsapp_number,yape_number,tagline,accent_color,estimated_eta_min,estimated_eta_max,delivery_fee,publishes_catalog,accepts_web_pickup,accepts_web_delivery,uses_tindivo_drivers,primary_capability,qr_url,logo_url,banner_url',
+          'name,phone,whatsapp_number,yape_number,tagline,accent_color,estimated_eta_min,estimated_eta_max,delivery_fee,publishes_catalog,accepts_web_pickup,accepts_web_delivery,uses_tindivo_drivers,primary_capability,logo_url,banner_url',
         )
         .eq('user_id', userId)
         .maybeSingle()
       if (error) console.error('[configuracion] no se pudo resolver el negocio:', error.message)
       if (!biz) return
 
-      setQrUrl(biz.qr_url ?? null)
       setLogoUrl(biz.logo_url ?? null)
       setBannerUrl(biz.banner_url ?? null)
       setForm({
@@ -119,14 +117,12 @@ export function useBusinessConfig() {
   return {
     form,
     capability,
-    qrUrl,
     logoUrl,
     bannerUrl,
     msg,
     saving,
     save,
     set,
-    setQrUrl,
     setLogoUrl,
     setBannerUrl,
   }

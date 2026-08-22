@@ -268,8 +268,8 @@ export function DeliverSheet({
                 {(method === 'paid_yape' || method === 'paid_mixed') && (
                   <div className="mt-3">
                     <YapeQr
-                      qrUrl={business?.qrUrl}
-                      yapeNumber={business?.yapeNumber}
+                      qrs={business?.paymentQrs}
+                      fallbackNumber={business?.yapeNumber}
                       businessName={business?.name}
                     />
                   </div>

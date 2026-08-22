@@ -11,8 +11,8 @@ import { CapabilityNotes } from './capability-notes'
 import { Field } from './field'
 import { HeroCard } from './hero-card'
 import { MobileSectionTitle } from './mobile-section-title'
+import { PaymentQrsSection } from './payment-qrs-section'
 import { ProfileImageUploader } from './profile-image-uploader'
-import { QrUploader } from './qr-uploader'
 import { SaveButton } from './save-button'
 import { SectionCard } from './section-card'
 import { SectionNav } from './section-nav'
@@ -24,8 +24,6 @@ interface ConfigViewProps {
   msg: ConfigMessage | null
   onSave: (e: FormEvent) => void
   set: (patch: Partial<Form>) => void
-  qrUrl: string | null
-  onQrUploaded: (url: string) => void
   logoUrl: string | null
   onLogoUploaded: (url: string) => void
   bannerUrl: string | null
@@ -43,8 +41,6 @@ export function ConfigView({
   msg,
   onSave,
   set,
-  qrUrl,
-  onQrUploaded,
   logoUrl,
   onLogoUploaded,
   bannerUrl,
@@ -152,9 +148,9 @@ export function ConfigView({
 
         {showSection('yape') && (
           <>
-            <MobileSectionTitle>Pago Yape</MobileSectionTitle>
+            <MobileSectionTitle>Cobros</MobileSectionTitle>
             <div className="flex flex-col gap-3">
-              <Field label="Número de Yape">
+              <Field label="Número de Yape (respaldo)">
                 <input
                   className={inputMonoCls}
                   value={form.yapeNumber}
@@ -162,15 +158,14 @@ export function ConfigView({
                 />
               </Field>
               <Card className="p-3">
-                <span className="mb-2 block font-mono text-[11px] font-semibold uppercase tracking-wide text-ink/55">
-                  QR de Yape
+                <span className="mb-1 block font-mono text-[11px] font-semibold uppercase tracking-wide text-ink/55">
+                  Cuentas de cobro
                 </span>
-                <div className="flex items-start gap-4">
-                  <QrUploader qrUrl={qrUrl} onUploaded={onQrUploaded} size={96} />
-                  <p className="flex-1 text-[13px] text-ink-muted">
-                    Sube tu QR para que el cliente escanee al hacer un pedido prepago.
-                  </p>
-                </div>
+                <p className="mb-3 text-[13px] text-ink-muted">
+                  El cliente ve la principal al pagar. Carga una de repuesto por si el QR no
+                  escanea. El titular debe ser el nombre que sale en la app.
+                </p>
+                <PaymentQrsSection />
               </Card>
             </div>
           </>
@@ -358,30 +353,25 @@ export function ConfigView({
           </SectionCard>
 
           {showSection('yape') && (
-            <SectionCard title="Pago por Yape" icon="qr_code_2" id="yape">
-              <div className="grid grid-cols-[1fr_200px] items-start gap-4">
-                <div className="flex flex-col gap-3">
-                  <Field label="Número de Yape">
-                    <input
-                      className={inputMonoCls}
-                      value={form.yapeNumber}
-                      onChange={(e) => set({ yapeNumber: e.target.value })}
-                    />
-                  </Field>
-                  <div className="flex gap-2 rounded-xl bg-info/10 px-3 py-2.5 text-[13px] font-medium text-info">
-                    <Icon name="info" size={16} className="mt-0.5 shrink-0" />
-                    <span>
-                      Los clientes verán este número y tu QR cuando paguen por Yape antes del
-                      pedido.
-                    </span>
-                  </div>
-                </div>
-                <div>
-                  <span className="mb-2 block font-mono text-[11px] font-semibold uppercase tracking-wide text-ink/55">
-                    QR de Yape
+            <SectionCard title="Cobros por Yape y Plin" icon="qr_code_2" id="yape">
+              <div className="flex flex-col gap-4">
+                <Field label="Número de Yape (respaldo)">
+                  <input
+                    className={inputMonoCls}
+                    value={form.yapeNumber}
+                    onChange={(e) => set({ yapeNumber: e.target.value })}
+                  />
+                </Field>
+                <div className="flex gap-2 rounded-xl bg-info/10 px-3 py-2.5 text-[13px] font-medium text-info">
+                  <Icon name="info" size={16} className="mt-0.5 shrink-0" />
+                  <span>
+                    El cliente y el motorizado ven tu cuenta <strong>principal</strong> al pagar.
+                    Carga una segunda como repuesto: si el QR de la primera no escanea, se cambia de
+                    pestaña sin llamar a nadie. Escribe el titular tal como aparece en la app — es
+                    el nombre que el cliente ve antes de confirmar, y si no coincide, cancela.
                   </span>
-                  <QrUploader qrUrl={qrUrl} onUploaded={onQrUploaded} size={160} />
                 </div>
+                <PaymentQrsSection />
               </div>
             </SectionCard>
           )}

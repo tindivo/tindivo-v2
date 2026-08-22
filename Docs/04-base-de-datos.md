@@ -69,6 +69,13 @@ CREATE TYPE payment_status AS ENUM (
   'pending_mixed'
 );
 
+-- Billetera del QR de cobro del negocio (0184).
+-- El rotulo no es cosmetico: el cliente abre una app u otra segun lo que diga.
+CREATE TYPE payment_wallet AS ENUM (
+  'yape',
+  'plin'
+);
+
 -- Origen del pedido
 CREATE TYPE order_source AS ENUM (
   'customer_pwa',
@@ -185,9 +192,10 @@ CREATE TABLE businesses (
   uses_tindivo_drivers boolean DEFAULT false,      -- usa motorizados para web delivery y/o pedidos manuales
   primary_capability business_primary_capability,  -- derivada al onboarding o al cambio
 
-  -- Pago Yape
-  yape_number text,
-  qr_url text,
+  -- Cobro digital
+  yape_number text,                                -- respaldo: solo se usa si el negocio no dio de alta ninguna cuenta
+  qr_url text,                                     -- DEPRECADA (0184) — el QR vive en business_payment_qrs
+  default_payment_qr_slot smallint DEFAULT 1,      -- puntero al slot que se ensena primero (0184)
 
   -- Identidad visual
   accent_color text DEFAULT 'f97316',              -- hex sin #
@@ -284,6 +292,45 @@ CREATE INDEX businesses_web_pickup_idx ON businesses (accepts_web_pickup) WHERE 
 CREATE INDEX businesses_web_delivery_idx ON businesses (accepts_web_delivery) WHERE accepts_web_delivery = true;
 CREATE INDEX businesses_primary_capability_idx ON businesses (primary_capability);
 ```
+
+### business_payment_qrs (0184)
+
+Las cuentas de cobro digital del negocio. **Maximo dos** (`check (slot in (1,2))`), y el
+negocio elige cual es la principal.
+
+Por que es una tabla y no dos columnas mas en `businesses`: un QR de cobro no es una
+imagen, es **billetera + numero + titular + imagen**. La billetera porque el cliente abre
+Yape o Plin segun lo que diga el rotulo; el titular porque es el nombre que ambas apps
+ensenan justo antes de confirmar, y es contra lo que el que paga comprueba que le esta
+pagando a quien debe. Cuatro campos por cuenta y dos cuentas serian ocho columnas nuevas
+y la palabra «secondary» repetida por todo el esquema.
+
+```sql
+CREATE TABLE business_payment_qrs (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  business_id uuid NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  slot smallint NOT NULL,                          -- 1 o 2: el hueco, no el orden
+  wallet payment_wallet NOT NULL DEFAULT 'yape',   -- 'yape' | 'plin'
+  account_number text NOT NULL,                    -- celular peruano, ^9[0-9]{8}$
+  account_name text NOT NULL,                      -- titular tal como sale en la app
+  qr_url text,                                     -- puede faltar: un metodo solo-numero sirve
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT bpq_slot_range CHECK (slot IN (1, 2)),
+  CONSTRAINT bpq_one_per_slot UNIQUE (business_id, slot)
+);
+CREATE INDEX idx_bpq_business ON business_payment_qrs (business_id);
+```
+
+**Quien es la principal.** `businesses.default_payment_qr_slot`, un **puntero**, no un
+`is_default` por fila. Un booleano por fila admite estados imposibles —dos principales,
+ninguno— y pide triggers para defenderlos. El puntero no puede estar en dos sitios a la
+vez, y si senala un slot borrado la lectura cae al que quede
+(`apps/api/lib/mappers/payment-qr.ts`). Cero triggers, cero invariantes que vigilar.
+
+**RLS.** Dueno y admin escriben; el motorizado LEE las de los negocios que tiene
+asignados —lo necesita para cobrar en la puerta—. El cliente no tiene policy: su prepago
+se sirve por API con `service_role`, que es donde ya se comprueba que el pedido es suyo.
 
 ### drivers
 

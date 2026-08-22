@@ -468,15 +468,16 @@ La Edge Function `send-push` corre con `verify_jwt`, y la anon key vale como JWT
 
 ### DEUDA-09 · QR alternativo de Yape, para cuando el principal no escanea
 
-**🟡 P2 — el legacy lo tenía, v2 no**
+**✅ DONE — migración 0184 (21-ago-2026)**
 `tindivo-delivery` (`yape-qr-card.tsx`) permitía **dos** QR por restaurante —principal y alternativo— con pestañas para cambiar de uno a otro. El motivo estaba escrito ahí y es de campo: el QR impreso se moja, se raya o se sube mal escaneado, y en la puerta del cliente no hay segunda oportunidad. Con uno solo, un QR malo deja al motorizado cobrando a mano por número, que es más lento y más propenso a error de tipeo.
 
-**Qué falta en v2**, en este orden:
-1. Columna `qr_url_secondary` en `businesses` (hoy solo existe `qr_url`).
-2. Subida en el panel de admin, junto a la del principal.
-3. Las pestañas en `apps/motorizados/components/order/yape-qr.tsx`, que ya está portado y preparado para recibirlo — el componente y su nota lo mencionan explícitamente.
+**Lo que se hizo, y en qué se apartó del plan de arriba.** El plan original era una columna `qr_url_secondary` al lado de `qr_url`. No se hizo así, porque por el camino el alcance creció y el cambio lo justifica: un QR de cobro no es una imagen suelta, es **billetera + número + titular + imagen**. La billetera porque el cliente abre Yape o Plin según lo que diga el rótulo, y el titular porque es el nombre que ambas apps enseñan justo antes de confirmar — sin él, el que paga no tiene contra qué comparar. Cuatro campos por cuenta y dos cuentas serían ocho columnas nuevas en `businesses`, así que van a tabla propia:
 
-**Por qué no se hizo ahora:** el resto del portado (pantalla completa, cuadrado a ancho completo, zona de silencio blanca, caída al número) resuelve el grueso de la escaneabilidad sin tocar el esquema ni el admin. Esto es la red de seguridad del caso raro, y pide migración + pantalla nueva.
+- `business_payment_qrs` (`slot` 1-2, `wallet`, `account_number`, `account_name`, `qr_url`), con RLS para dueño, admin y motorizado asignado. El cliente NO la lee: su prepago se sirve por API.
+- `businesses.default_payment_qr_slot`: **un puntero**, no un `is_default` por fila. Un booleano por fila admite estados imposibles (dos principales, ninguno) y pide triggers para defenderlos; el puntero no puede estar en dos sitios y, si señala un slot borrado, la lectura cae al que quede.
+- `businesses.qr_url` queda **DEPRECADA** y sin lectores. No se borró a propósito: es la red de vuelta atrás mientras esto se asienta en producción. Bórrala en una migración posterior.
+
+Consumidores al día: panel del negocio (alta, edición, elegir principal), motorizado (pestañas en `yape-qr.tsx`), prepago del cliente (`payment-method-picker.tsx`) y panel de la cajera (`pay-sections.tsx`, que ahora enseña también contra qué cuenta concilia).
 
 ---
 
