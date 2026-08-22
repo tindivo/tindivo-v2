@@ -88,6 +88,62 @@ export function demandsCashier(o: Pick<OrderVM, 'status'>): boolean {
 }
 
 /**
+ * LO QUE DICE LA CABECERA DE «NUEVOS», QUE NO ES LO QUE CUENTA SU CHIP.
+ *
+ * El chip cuenta la columna entera —es lo que promete la palabra «Nuevos»— y ahí
+ * caben pedidos que no son cosa suya: un prepago aceptado esperando a que el
+ * cliente pague sigue siendo nuevo. Con el chip en rojo marcando 4, la cajera
+ * lee cuatro cosas por hacer cuando puede que solo dos lo sean.
+ *
+ * El subtítulo reparte ese número. Decía «Revisar antes de aceptar», que es una
+ * instrucción y siempre la misma; ahora dice cuántos la esperan a ella y cuántos
+ * esperan al cliente, y sale del mismo predicado que ordena la columna, enciende
+ * el sonido y hace latir la tarjeta.
+ */
+export function newColumnSubtitle(nuevos: readonly OrderVM[]): string {
+  const mios = nuevos.filter(demandsCashier).length
+  const suyos = nuevos.length - mios
+
+  if (mios === 0 && suyos === 0) return 'Revisar antes de aceptar'
+
+  const parteMia = mios === 1 ? '1 te espera' : `${mios} te esperan`
+  const parteSuya = suyos === 1 ? '1 esperando al cliente' : `${suyos} esperando al cliente`
+
+  if (mios === 0) return parteSuya
+  if (suyos === 0) return parteMia
+  return `${parteMia} · ${parteSuya}`
+}
+
+/**
+ * EL ORDEN DE LA COLUMNA «NUEVOS»: PRIMERO EL QUE SE MUERE ANTES.
+ *
+ * La columna salía en el orden en que la llegaban las filas, y la consulta pide
+ * `created_at DESC` (`chrome.tsx`): o sea el pedido MÁS RECIENTE arriba y el que
+ * está a punto de autocancelarse ABAJO, justo al revés de lo que hay que
+ * atender. Con cuatro tarjetas y una columna que scrollea, al que le quedan
+ * treinta segundos podía no verse sin bajar.
+ *
+ * Dos criterios, en este orden:
+ *
+ *   1. Quién tiene la pelota (`demandsCashier`). Un `awaiting_payment` nunca se
+ *      pone por delante de algo que ella tiene que atender, por muy poco tiempo
+ *      que le quede: ese reloj lo corre el cliente.
+ *   2. Dentro de cada grupo, el que menos tiempo tiene. No el más antiguo: un
+ *      `pending_acceptance` (5 min) y un `validando` de prepago (10 min) no
+ *      caducan al mismo ritmo, y el que llegó después puede morirse antes. Es el
+ *      mismo criterio con el que `attentionState` elige a quién apunta el
+ *      banner, y conviene que la primera tarjeta de la columna sea esa misma.
+ *
+ * VIVE AQUÍ Y NO JUNTO A `sortCooking` (en `view-model.ts`) porque necesita el
+ * predicado, y `view-model` es la capa de abajo: hacerla importar de aquí
+ * invertiría las capas para ahorrarse un fichero.
+ */
+export function sortNew(a: OrderVM, b: OrderVM): number {
+  const mia = Number(demandsCashier(b)) - Number(demandsCashier(a))
+  return mia !== 0 ? mia : a.countdownSec - b.countdownSec
+}
+
+/**
  * Qué reclama a la cajera y cómo se le enseña.
  *
  * Qué entra lo decide `demandsCashier`; aquí solo se ordena y se redacta. Los

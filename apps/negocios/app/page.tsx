@@ -6,6 +6,7 @@ import { useDashboard } from '@/components/dashboard/shell'
 import { useOrderActions } from '@/features/pedidos/hooks/use-order-actions'
 import { useOrderDetail } from '@/features/pedidos/hooks/use-order-detail'
 import { useSupportPhone } from '@/features/pedidos/hooks/use-support-phone'
+import { sortNew } from '@/lib/orders/attention'
 import { getColumn } from '@/lib/orders/view-model'
 
 export default function NegocioPedidosPage() {
@@ -29,7 +30,13 @@ export default function NegocioPedidosPage() {
   const [showPause, setShowPause] = useState(false)
   const supportWhatsapp = useSupportPhone()
 
-  const newOrders = useMemo(() => vms.filter((v) => getColumn(v.status) === 'nuevos'), [vms])
+  // Ordenada aquí, y no en la vista: la columna se pinta DOS veces —escritorio y
+  // móvil— y son dos listas que tienen que decir lo mismo. Ver `sortNew` para
+  // por qué el orden de llegada no servía.
+  const newOrders = useMemo(
+    () => vms.filter((v) => getColumn(v.status) === 'nuevos').sort(sortNew),
+    [vms],
+  )
   const cookingOrders = useMemo(() => vms.filter((v) => getColumn(v.status) === 'cocina'), [vms])
   const routeOrders = useMemo(() => vms.filter((v) => getColumn(v.status) === 'reparto'), [vms])
   const history = useMemo(

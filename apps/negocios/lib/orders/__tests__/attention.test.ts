@@ -1,8 +1,8 @@
 import { ORDER_STATUSES, type OrderStatus } from '@tindivo/contracts'
 import { describe, expect, it } from 'vitest'
-import { attentionState } from '../attention'
+import { attentionState, newColumnSubtitle, sortNew } from '../attention'
 import { buildNegociosCardVM } from '../card-view-model'
-import { DEFAULT_ORDER_TIMERS, type OrderRow, toOrderVM } from '../view-model'
+import { DEFAULT_ORDER_TIMERS, type OrderRow, type OrderVM, toOrderVM } from '../view-model'
 
 const NOW = Date.parse('2026-08-21T19:40:00Z')
 
@@ -247,5 +247,109 @@ describe('el latido de la tarjeta · «oye, atiende a esto»', () => {
     const card = buildNegociosCardVM(tardio, { deliveryLateMin: 20 })
     expect(card.clock?.tone).toBe('danger')
     expect(card.pulse).toBe('none')
+  })
+})
+
+/**
+ * EL ORDEN DE LA COLUMNA «NUEVOS».
+ *
+ * La consulta trae `created_at DESC`, así que sin ordenar la columna enseñaba el
+ * pedido más reciente arriba y el que está a punto de autocancelarse abajo.
+ */
+describe('sortNew · primero lo que se muere antes', () => {
+  const ids = (vms: OrderVM[]) => [...vms].sort(sortNew).map((v) => v.id)
+
+  it('lo que la reclama va por delante, aunque haya llegado después', () => {
+    // El `awaiting_payment` lleva más rato y le queda menos margen relativo,
+    // pero ese reloj lo corre el cliente: ella no tiene nada que hacer con él.
+    const esperandoPago = vm({
+      id: 'a',
+      short_id: 'PAGOAAAA',
+      status: 'awaiting_payment',
+      awaiting_payment_at: '2026-08-21T19:30:00Z',
+    })
+    const porAceptar = vm({
+      id: 'b',
+      short_id: 'NUEVBBBB',
+      pending_acceptance_at: '2026-08-21T19:39:30Z',
+    })
+    expect(ids([esperandoPago, porAceptar])).toEqual(['NUEVBBBB', 'PAGOAAAA'])
+  })
+
+  it('entre dos que la reclaman manda el reloj, no la antigüedad', () => {
+    // El `validando` de prepago tiene 10 minutos y llegó antes; el
+    // `pending_acceptance` tiene 5 y llegó después, y se muere primero.
+    const viejo = vm({
+      id: 'a',
+      short_id: 'VIEJAAAA',
+      status: 'validando',
+      payment_intent: 'prepaid',
+      validating_at: '2026-08-21T19:36:00Z',
+    })
+    const reciente = vm({
+      id: 'b',
+      short_id: 'RECIBBBB',
+      pending_acceptance_at: '2026-08-21T19:38:00Z',
+    })
+    expect(viejo.countdownSec).toBeGreaterThan(reciente.countdownSec)
+    expect(ids([viejo, reciente])).toEqual(['RECIBBBB', 'VIEJAAAA'])
+  })
+
+  it('la primera tarjeta es la misma a la que apunta el banner', () => {
+    // Si discreparan, el banner mandaría a la cajera a un pedido y la columna le
+    // enseñaría otro arriba del todo.
+    const lista = [
+      vm({ id: 'a', short_id: 'AAAA1111', pending_acceptance_at: '2026-08-21T19:39:00Z' }),
+      vm({
+        id: 'b',
+        short_id: 'BBBB2222',
+        status: 'awaiting_payment',
+        awaiting_payment_at: '2026-08-21T19:38:00Z',
+      }),
+      vm({ id: 'c', short_id: 'CCCC3333', pending_acceptance_at: '2026-08-21T19:36:30Z' }),
+    ]
+    expect(ids(lista)[0]).toBe(attentionState(lista).banner?.target.id)
+  })
+
+  it('los que no la reclaman también se ordenan por reloj entre ellos', () => {
+    const tarde = vm({
+      id: 'a',
+      short_id: 'TARDAAAA',
+      status: 'awaiting_payment',
+      awaiting_payment_at: '2026-08-21T19:39:00Z',
+    })
+    const pronto = vm({
+      id: 'b',
+      short_id: 'PRONBBBB',
+      status: 'awaiting_payment',
+      awaiting_payment_at: '2026-08-21T19:31:00Z',
+    })
+    expect(ids([tarde, pronto])).toEqual(['PRONBBBB', 'TARDAAAA'])
+  })
+})
+
+describe('newColumnSubtitle · el chip cuenta la columna, el subtitulo la reparte', () => {
+  const esperandoPago = (id: string) =>
+    vm({ id, short_id: id.toUpperCase().padEnd(8, 'X'), status: 'awaiting_payment' })
+  const porAceptar = (id: string) => vm({ id, short_id: id.toUpperCase().padEnd(8, 'X') })
+
+  it('separa lo que le toca de lo que espera al cliente', () => {
+    expect(newColumnSubtitle([porAceptar('a'), porAceptar('b'), esperandoPago('c')])).toBe(
+      '2 te esperan · 1 esperando al cliente',
+    )
+  })
+
+  it('en singular no dice "1 te esperan"', () => {
+    expect(newColumnSubtitle([porAceptar('a')])).toBe('1 te espera')
+  })
+
+  it('sin nada suyo no la interpela', () => {
+    expect(newColumnSubtitle([esperandoPago('a'), esperandoPago('b')])).toBe(
+      '2 esperando al cliente',
+    )
+  })
+
+  it('con la columna vacía vuelve a la instrucción de siempre', () => {
+    expect(newColumnSubtitle([])).toBe('Revisar antes de aceptar')
   })
 })

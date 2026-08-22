@@ -4,6 +4,7 @@ import type { PaymentQrView } from '@tindivo/contracts'
 import { Icon } from '@tindivo/ui'
 import Link from 'next/link'
 import { useState } from 'react'
+import { newColumnSubtitle } from '@/lib/orders/attention'
 import type { MobileTab, OrderVM } from '@/lib/orders/view-model'
 import { resolveMobileTab, sortCooking } from '@/lib/orders/view-model'
 import { CocinaCard, NuevoCard, RepartoCard } from './cards'
@@ -295,6 +296,12 @@ export function PedidosMobile(p: PedidosViewProps) {
 
       {/* List */}
       <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-3.5 py-3">
+        {/* El mismo reparto que la cabecera de la columna en escritorio: cuántos
+            la esperan a ella y cuántos esperan al cliente. Las dos vistas tienen
+            que contar lo mismo, que para eso sale de una sola función. */}
+        {tab === 'new' && p.newOrders.length > 0 && (
+          <p className="px-0.5 text-[12px] text-ink-muted">{newColumnSubtitle(p.newOrders)}</p>
+        )}
         {tab === 'new' &&
           (p.newOrders.length > 0 ? (
             p.newOrders.map((o) => <NuevoCard key={o.rowId} order={o} onOpen={p.onOpen} />)
@@ -463,7 +470,7 @@ export function PedidosDesktop(p: PedidosViewProps) {
           title="Nuevos"
           count={p.counts.new}
           dotClass="bg-danger"
-          subtitle="Revisar antes de aceptar"
+          subtitle={newColumnSubtitle(p.newOrders)}
         >
           {p.newOrders.length > 0 ? (
             p.newOrders.map((o) => <NuevoCard key={o.rowId} order={o} compact onOpen={p.onOpen} />)
