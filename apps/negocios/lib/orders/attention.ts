@@ -61,12 +61,38 @@ export interface AttentionState {
 }
 
 /**
+ * ¿LE TOCA A LA CAJERA, AHORA MISMO?
+ *
+ * Es LA pregunta, y tiene un solo sitio donde contestarse. La responden a la
+ * vez el sonido, el banner de `attentionState` y el latido de la tarjeta
+ * (`buildNegociosCardVM`, campo `pulse`): tres superficies, un predicado. Si
+ * cada una se escribiera su propia condición, volveríamos a la asimetría que
+ * perdió a `JMAXL98Z` —sonaba una cosa y se veía otra— solo que repartida entre
+ * más sitios.
+ *
+ * El recorrido del pedido, visto desde aquí:
+ *
+ *   · `pending_acceptance` → SÍ. Hay que aceptarlo o rechazarlo, y el reloj corre.
+ *   · `awaiting_payment`   → NO. Aceptado y esperando al cliente, que es quien
+ *                            tiene que pagar y subir la captura. Despertarla
+ *                            aquí es alarma sin nada que hacer.
+ *   · `validando`          → SÍ, otra vez. Ya llegó la captura y toca mirarla
+ *                            (antifraude humano), o toca validar el riesgo.
+ *   · contraentrega        → al aceptar se va a cocina y no vuelve a reclamar.
+ *
+ * Ese ida y vuelta —reclama, se calma, vuelve a reclamar— es intencionado: lo
+ * que distingue una señal de un adorno es que se apague cuando no hace falta.
+ */
+export function demandsCashier(o: Pick<OrderVM, 'status'>): boolean {
+  return o.status === 'pending_acceptance' || o.status === 'validando'
+}
+
+/**
  * Qué reclama a la cajera y cómo se le enseña.
  *
- * · `pending_acceptance` — hay que aceptarlo o rechazarlo, y el reloj corre:
- *   `app_settings.timers.acceptanceMinutes` lo cancela solo.
- * · `validando` — hay que revisar la captura del prepago (antifraude humano,
- *   `DECISIONS.md`), y también se cancela solo.
+ * Qué entra lo decide `demandsCashier`; aquí solo se ordena y se redacta. Los
+ * dos estados que entran comparten lo que importa: hay algo que hacer y hay un
+ * reloj que los cancela solo si no se hace.
  *
  * La decisión visual vive aquí y no en el JSX —mismo patrón que
  * `buildNegociosCardVM`— porque "si suena, se ve" es una afirmación sobre dos
@@ -75,7 +101,7 @@ export interface AttentionState {
  * que se deja de comprobar.
  */
 export function attentionState(vms: readonly OrderVM[]): AttentionState {
-  const orders = vms.filter((o) => o.status === 'pending_acceptance' || o.status === 'validando')
+  const orders = vms.filter(demandsCashier)
 
   if (orders.length === 0) {
     return { orders, hasPending: false, pendingCount: 0, banner: null }

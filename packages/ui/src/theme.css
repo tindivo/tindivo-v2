@@ -124,6 +124,50 @@
 }
 
 /**
+ * EL LATIDO DE «ATIENDE A ESTO».
+ *
+ * Vive aqui y no en `animate-pulse` de Tailwind porque aquel baja solo hasta
+ * opacidad 0.5: sobre una tarjeta blanca el anillo nunca llega a apagarse y lo
+ * que se ve es un parpadeo timido. El aviso que tiene que sacar a la cajera de
+ * la comanda que esta escribiendo necesita recorrido, asi que baja a 0.25.
+ *
+ * Anima SOLO la opacidad, a proposito. El tablero de la cajera corre en una
+ * tablet barata y con diez tarjetas en pantalla; la opacidad la resuelve el
+ * compositor sin volver a maquetar ni repintar, un `box-shadow` animado no.
+ *
+ * La velocidad la elige quien lo usa (`animation-duration`): la misma respiracion
+ * lenta para «te toca» y una rapida para «te queda menos de un minuto».
+ */
+@keyframes t-attention {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/**
+ * El mismo latido, pero sin apagarse: para lo que ya es urgente.
+ *
+ * Con el recorrido completo (0.25) el valle del rojo se veia MAS palido que la
+ * cresta del naranja de al lado, asi que durante media respiracion la tarjeta a
+ * la que le quedan treinta segundos parecia mas tranquila que la que tiene
+ * cuatro minutos. La gravedad no puede depender del fotograma que te toque
+ * mirar: el rojo respira igual de rapido, pero nunca baja de medio gas.
+ */
+@keyframes t-attention-hard {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/**
  * El glifo del icono entra por CSS, no como texto del DOM.
  *
  * Material Symbols dibuja el icono a partir de una LIGADURA: el elemento

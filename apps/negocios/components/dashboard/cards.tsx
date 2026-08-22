@@ -68,11 +68,39 @@ function NegociosBaseCard({
         TONE_BORDER[vm.tone],
       )}
     >
-      {/* Sombra de aura roja difusa (idéntica a la del banner de Pedidos urgentes) */}
+      {/* ── EL AURA · GRAVEDAD ──
+          Se queda QUIETA. Antes latía, y latía en todo lo que pusiera el reloj
+          en rojo: también en el reparto que se pasa de veinte minutos y en el
+          prepago al que le queda un minuto de ventana. Ninguna de las dos es
+          cosa de la cajera —una está en la calle y la otra la tiene el
+          cliente—, así que el movimiento se gastaba en avisos que ella no puede
+          atender y dejaba de significar «atiende esto». El aura pesa; no pide. */}
       {vm.clock?.tone === 'danger' && (
         <span
           aria-hidden
-          className="pointer-events-none absolute inset-0 rounded-xl shadow-[0_0_20px_6px_rgba(220,38,38,0.55)] animate-pulse z-10"
+          className="pointer-events-none absolute inset-0 z-10 rounded-xl shadow-[0_0_20px_6px_rgba(220,38,38,0.55)]"
+        />
+      )}
+
+      {/* ── EL LATIDO · DE QUIÉN ES LA PELOTA ──
+          El anillo respira exactamente cuando el pedido la reclama a ella (ver
+          `CardPulse`, y `demandsCashier` para la condición, que es la misma que
+          enciende la alarma). El anillo va POR DENTRO porque la tarjeta recorta
+          lo que se salga (`overflow-hidden`), y con `motion-reduce` se queda
+          encendido y fijo: quien pidió no ver animaciones sigue viendo cuál es.
+
+          Late en `pending_acceptance`, se calla al aceptar mientras el cliente
+          paga, y vuelve a latir cuando sube el comprobante (`validando`). En
+          contraentrega no hay segunda vuelta: se acepta y se va a cocina. */}
+      {vm.pulse !== 'none' && (
+        <span
+          aria-hidden
+          className={cn(
+            'pointer-events-none absolute inset-0 z-10 rounded-xl motion-reduce:animate-none',
+            vm.pulse === 'urgent'
+              ? 'shadow-[inset_0_0_0_2px_var(--color-danger),inset_0_0_18px_rgba(220,38,38,0.35)] animate-[t-attention-hard_900ms_ease-in-out_infinite]'
+              : 'shadow-[inset_0_0_0_2px_var(--color-brand),inset_0_0_18px_rgba(249,115,22,0.28)] animate-[t-attention_2s_ease-in-out_infinite]',
+          )}
         />
       )}
       {/* ── 1 · Cejilla Superior ──

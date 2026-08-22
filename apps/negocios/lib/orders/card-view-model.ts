@@ -3,6 +3,7 @@
  * Función pura desacoplada del JSX, con 100% de testabilidad en Vitest.
  */
 
+import { demandsCashier } from './attention'
 import {
   formatReadyDelta,
   type OrderVM,
@@ -12,6 +13,24 @@ import {
 } from './view-model'
 
 export type CardTone = 'neutral' | 'warning' | 'danger' | 'brand'
+
+/**
+ * EL LATIDO: «OYE, ATIENDE A ESTO».
+ *
+ * El tono (`CardTone`) dice cómo de grave es la tarjeta; el latido dice de
+ * QUIÉN es la pelota. Son cosas distintas y por eso son dos campos: un reparto
+ * que se pasa de los veinte minutos es grave —y se pinta— pero la cajera no
+ * puede hacer nada con él desde el mostrador, así que no la interrumpe.
+ *
+ * · `none`      · no le toca a ella. La tarjeta está, quieta.
+ * · `attention` · le toca, y hay tiempo. Un anillo de marca que respira.
+ * · `urgent`    · le toca y queda menos de un minuto antes de que el cron lo
+ *                 cancele solo. Se pone rojo y late más rápido.
+ *
+ * El umbral del minuto es el mismo que ya usaban el reloj y el borde, para que
+ * la tarjeta no diga «rojo» en un sitio y «tranquilo» en otro.
+ */
+export type CardPulse = 'none' | 'attention' | 'urgent'
 
 export interface SourceBadge {
   label: 'Manual' | 'Online'
@@ -121,6 +140,8 @@ export interface NegociosCardVM {
   riskLabel: string | null
   primaryAction: CardPrimaryAction | null
   tone: CardTone
+  /** Ver `CardPulse`. Sale del mismo predicado que enciende la alarma. */
+  pulse: CardPulse
 }
 
 // ── Mapeos de Origen (Diferenciación Manual vs Online) ─────────────────────────
@@ -436,6 +457,18 @@ export function buildNegociosCardVM(
           ? 'warning'
           : 'neutral'
 
+  // 4-bis. El latido. Ver `CardPulse`.
+  //
+  // La condición NO se escribe aquí: se pide a `demandsCashier`, que es la misma
+  // llamada que enciende el sonido y el banner. Es el invariante «si suena, se
+  // ve» dicho una vez más —si late, suena; si suena, late— y con el predicado
+  // compartido no hay forma de que una de las tres se quede atrás.
+  const pulse: CardPulse = !demandsCashier(order)
+    ? 'none'
+    : order.countdownSec < 60
+      ? 'urgent'
+      : 'attention'
+
   // 5. Reloj
   /** El motorizado ya está en el local: el que espera es él, no al revés. */
   const esperaEnPuerta = order.state === 'waiting'
@@ -595,5 +628,6 @@ export function buildNegociosCardVM(
     riskLabel,
     primaryAction,
     tone,
+    pulse,
   }
 }

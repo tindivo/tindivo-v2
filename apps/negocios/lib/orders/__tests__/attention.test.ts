@@ -1,6 +1,7 @@
 import { ORDER_STATUSES, type OrderStatus } from '@tindivo/contracts'
 import { describe, expect, it } from 'vitest'
 import { attentionState } from '../attention'
+import { buildNegociosCardVM } from '../card-view-model'
 import { DEFAULT_ORDER_TIMERS, type OrderRow, toOrderVM } from '../view-model'
 
 const NOW = Date.parse('2026-08-21T19:40:00Z')
@@ -169,5 +170,82 @@ describe('attentionState · el banner', () => {
       DEFAULT_ORDER_TIMERS,
     )
     expect(attentionState([vencido]).banner?.countdownText).toBe('00:00')
+  })
+})
+
+/**
+ * EL LATIDO DE LA TARJETA, QUE ES EL MISMO HECHO UNA TERCERA VEZ.
+ *
+ * El sonido y el banner ya salían de la misma llamada. La tarjeta era la que
+ * faltaba: se veía, sí, pero se veía IGUAL que las otras nueve, y la cajera que
+ * está tecleando un pedido manual necesita que el tablero le diga cuál mirar,
+ * no que estén todos ahí.
+ *
+ * Estos tests atan el latido al mismo predicado (`demandsCashier`) para que no
+ * pueda irse por su cuenta: cualquiera que cambie qué reclama a la cajera mueve
+ * las tres superficies a la vez o rompe el primer test.
+ */
+describe('el latido de la tarjeta · «oye, atiende a esto»', () => {
+  const pulse = (o: Partial<OrderRow> = {}) => buildNegociosCardVM(vm(o)).pulse
+
+  it('para TODO estado del enum, la tarjeta late ⟺ suena la alarma', () => {
+    for (const status of ORDER_STATUSES satisfies readonly OrderStatus[]) {
+      const order = vm({ status })
+      expect(buildNegociosCardVM(order).pulse !== 'none', `estado ${status}`).toBe(
+        attentionState([order]).hasPending,
+      )
+    }
+  })
+
+  /** El viaje que pidió el piloto: late, se calma, vuelve a latir. */
+  it('el prepago late al entrar, se calma esperando al cliente y vuelve con el comprobante', () => {
+    expect(pulse({ status: 'pending_acceptance', payment_intent: 'prepaid' })).toBe('attention')
+
+    // Aceptado. La pelota es del cliente: paga y sube la captura.
+    expect(
+      pulse({
+        status: 'awaiting_payment',
+        payment_intent: 'prepaid',
+        awaiting_payment_at: '2026-08-21T19:39:00Z',
+      }),
+    ).toBe('none')
+
+    // Llegó la captura. Toca mirarla, y el latido vuelve.
+    expect(
+      pulse({
+        status: 'validando',
+        payment_intent: 'prepaid',
+        comprobante_prepago_url: 'proofs/ord_1.jpg',
+        validating_at: '2026-08-21T19:39:00Z',
+      }),
+    ).toBe('attention')
+  })
+
+  it('en contraentrega se acepta y se acabó: en cocina ya no late', () => {
+    expect(pulse({ status: 'pending_acceptance', payment_intent: 'pending_cash' })).toBe(
+      'attention',
+    )
+    expect(pulse({ status: 'preparing', payment_intent: 'pending_cash' })).toBe('none')
+  })
+
+  it('en el último minuto sube a urgente, el mismo umbral que el reloj y el borde', () => {
+    // 19:35:30 + 5 min = 19:40:30; a las 19:40:00 quedan 30 segundos.
+    const alFilo = vm({ pending_acceptance_at: '2026-08-21T19:35:30Z' })
+    expect(alFilo.countdownSec).toBeLessThan(60)
+    expect(buildNegociosCardVM(alFilo).pulse).toBe('urgent')
+    expect(buildNegociosCardVM(alFilo).tone).toBe('danger')
+  })
+
+  it('el reparto tardío NO late: es grave, pero no es cosa de la cajera', () => {
+    // Sigue poniendo el reloj en rojo —y con él el aura de la tarjeta—, que es
+    // justo la distinción: el aura pesa, el latido pide.
+    const tardio = vm({
+      status: 'picked_up',
+      picked_up_at: '2026-08-21T19:10:00Z',
+      estimated_ready_at: '2026-08-21T19:20:00Z',
+    })
+    const card = buildNegociosCardVM(tardio, { deliveryLateMin: 20 })
+    expect(card.clock?.tone).toBe('danger')
+    expect(card.pulse).toBe('none')
   })
 })
