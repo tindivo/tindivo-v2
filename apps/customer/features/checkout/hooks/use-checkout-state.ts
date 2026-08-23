@@ -68,6 +68,7 @@ export interface CheckoutState {
   setMaxCashBill: (v: number) => void
   maxChange: number
   setMaxChange: (v: number) => void
+  refreshMaxChange: () => Promise<number>
   maxDeclarable: number
   prepayOnlyByRisk: boolean
   setPrepayOnlyByRisk: (v: boolean) => void
@@ -228,6 +229,24 @@ export function useCheckoutState(): CheckoutState {
   //
   // Cero es una respuesta válida —"hoy solo pago exacto"—, así que el guard es
   // `Number.isFinite`, nunca un `if (v)` que lo confundiría con "no llegó".
+  const refreshMaxChange = useCallback(async (): Promise<number> => {
+    if (!cartHydrated || !cart.businessId) return maxChange
+    try {
+      const { data, error: rpcErr } = await getSupabaseBrowser().rpc('effective_max_change', {
+        p_business_id: cart.businessId,
+      })
+      if (rpcErr) return maxChange
+      const v = typeof data === 'number' ? data : Number(data)
+      if (Number.isFinite(v)) {
+        setMaxChange(v)
+        return v
+      }
+      return maxChange
+    } catch {
+      return maxChange
+    }
+  }, [cartHydrated, cart.businessId, maxChange])
+
   useEffect(() => {
     if (!cartHydrated || !cart.businessId) return
     let cancelled = false
@@ -314,6 +333,7 @@ export function useCheckoutState(): CheckoutState {
     setMaxCashBill,
     maxChange,
     setMaxChange,
+    refreshMaxChange,
     maxDeclarable,
     prepayOnlyByRisk,
     setPrepayOnlyByRisk,
