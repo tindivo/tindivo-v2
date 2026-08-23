@@ -131,6 +131,17 @@ export interface DashboardCtx {
   refetchBiz: () => Promise<void>
   signOut: () => void
   /**
+   * Cuántos pedidos RECLAMAN a la cajera, que no es lo mismo que `counts.new`.
+   *
+   * `counts.new` cuenta la columna «Nuevos» entera, y ahí caben prepagos
+   * aceptados esperando a que pague el cliente. Sirve para el chip de la
+   * columna, que se llama así; no sirve para interrumpirla desde la barra
+   * lateral. Sale del mismo predicado que el sonido, el banner y el latido.
+   */
+  attentionCount: number
+  /** ¿Está sonando la alarma AHORA? (hay algo sin acusar). */
+  alarmOn: boolean
+  /**
    * «Ya lo vi»: calla la alarma de ESE pedido, y solo la alarma. Lo llama quien
    * abre una tarjeta. Ver `useAcknowledged`.
    */
@@ -228,7 +239,17 @@ function Login({ onAuthed }: { onAuthed: () => void }) {
 
 // ── Sidebar (desktop, persistente) ────────────────────────────────────────────
 function Sidebar({ active, onSignOut }: { active: NavId; onSignOut: () => void }) {
-  const { bizName, accent, capability, paused, counts, soundOn, toggleSound } = useDashboard()
+  const {
+    bizName,
+    accent,
+    capability,
+    paused,
+    counts,
+    soundOn,
+    toggleSound,
+    attentionCount,
+    alarmOn,
+  } = useDashboard()
   const catalogOnly = capability === 'catalog_only'
   // Excepción (DECISIONS §18): con pedidos delivery en vuelo (de antes del
   // cambio de modo), Pedidos sigue accesible desde la nav para no perderlos.
@@ -256,7 +277,14 @@ function Sidebar({ active, onSignOut }: { active: NavId; onSignOut: () => void }
       <nav className="flex flex-col gap-0.5">
         {navItems.map((it) => {
           const on = it.id === active
-          const badge = it.id === 'pedidos' ? counts.new : undefined
+          // LO QUE LA RECLAMA, NO EL TAMAÑO DE LA COLUMNA.
+          //
+          // Marcaba `counts.new`, o sea también los prepagos que esperan al
+          // cliente. Un número rojo en la barra lateral es una interrupción, y
+          // decía «tienes cuatro cosas que hacer» cuando podían ser dos. El
+          // reparto completo lo cuenta el subtítulo de la columna, que es donde
+          // ella ya está mirando cuando le hace falta.
+          const badge = it.id === 'pedidos' ? attentionCount : undefined
           return (
             <Link
               key={it.id}
@@ -287,7 +315,7 @@ function Sidebar({ active, onSignOut }: { active: NavId; onSignOut: () => void }
         onClick={toggleSound}
         className={`mb-2.5 inline-flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2 text-[13px] font-semibold transition-transform active:scale-[0.98] ${
           soundOn ? 'bg-brand text-white' : 'bg-ink/[0.06] text-ink'
-        } ${counts.new > 0 && soundOn ? 'animate-pulse' : ''}`}
+        } ${alarmOn ? 'animate-pulse' : ''}`}
       >
         <Icon
           name={soundOn ? 'notifications_active' : 'notifications_off'}
@@ -1184,6 +1212,8 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
       refetchOrders,
       refetchBiz,
       signOut: onSignOut,
+      attentionCount: attention.orders.length,
+      alarmOn: attention.alarm.hasPending && soundOn,
       acknowledge,
       openRequestId,
       requestOpen,
@@ -1203,6 +1233,7 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
     refetchOrders,
     refetchBiz,
     onSignOut,
+    attention,
     acknowledge,
     openRequestId,
     requestOpen,

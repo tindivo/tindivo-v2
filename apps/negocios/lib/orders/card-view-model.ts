@@ -112,7 +112,21 @@ export interface MoneyInfo {
   cashChangeText: string | null
 }
 
-export type ActionType = 'accept' | 'validate' | 'ready' | 'callDriver' | 'deliver'
+/**
+ * Las acciones que la tarjeta SABE pintar. Ni una más.
+ *
+ * Declaraba también `'accept'`, `'validate'` y `'ready'`, que
+ * `buildNegociosCardVM` no produce nunca y que el JSX no sabe dibujar: tres
+ * ramas muertas que se leían como una promesa de la tarjeta. Es el mismo tipo
+ * de trampa que el `isUrgent` que se borró unas líneas más abajo —una segunda
+ * definición esperando a que alguien conecte la equivocada—, con el agravante
+ * de que aquí el nombre invita: quien busque «por qué no hay botón de aceptar
+ * en la tarjeta» encuentra el tipo y cree que el trabajo está a medias.
+ *
+ * Aceptar desde la tarjeta puede acabar existiendo. El día que exista, el valor
+ * se añade aquí junto con la rama que lo pinta, en el mismo cambio.
+ */
+export type ActionType = 'callDriver' | 'deliver'
 
 export interface CardPrimaryAction {
   type: ActionType
