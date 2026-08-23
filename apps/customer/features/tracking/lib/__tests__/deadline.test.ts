@@ -148,13 +148,13 @@ describe('activeDeadline', () => {
   })
 
   describe('fallbacks', () => {
-    it('valen 5, 15 y 10 si la respuesta no trae los minutos', () => {
+    it('valen 8, 15 y 10 si la respuesta no trae los minutos', () => {
       // Una respuesta vieja en caché no debe cambiar el plazo que se enseña.
       const base = '2026-08-20T20:00:00.000Z'
       expect(
         activeDeadline(pedido({ status: 'pending_acceptance', pendingAcceptanceAt: base }))
           ?.totalMs,
-      ).toBe(5 * 60_000)
+      ).toBe(8 * 60_000)
       expect(
         activeDeadline(
           pedido({ status: 'awaiting_payment', paymentIntent: 'prepaid', awaitingPaymentAt: base }),

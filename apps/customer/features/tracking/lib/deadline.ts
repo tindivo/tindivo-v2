@@ -6,7 +6,7 @@ import type { Tracking } from '@/features/tracking/types'
  * Un pedido prepago atraviesa TRES esperas con plazo, y se confunden con
  * facilidad porque las tres acaban en `cancelled` con el mismo `prepay_timeout`:
  *
- *   · `pending_acceptance` ·  5 min · el NEGOCIO confirma disponibilidad
+ *   · `pending_acceptance` ·  8 min · el NEGOCIO confirma disponibilidad
  *   · `awaiting_payment`   · 15 min · el CLIENTE yapea y sube la captura
  *   · `validando`          · 10 min · la CAJERA revisa esa captura
  *
@@ -61,7 +61,7 @@ export function activeDeadline(data: Tracking): Deadline | null {
       return build(
         'acceptance',
         data.pendingAcceptanceAt ?? data.createdAt,
-        data.acceptanceMinutes ?? 5,
+        data.acceptanceMinutes ?? 8,
       )
     case 'awaiting_payment':
       return build(

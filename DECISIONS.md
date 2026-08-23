@@ -220,9 +220,9 @@ Si algún día se automatiza: el umbral ya está en `app_settings`, pero mete
 
 | Regla | Valor |
 |---|---|
-| Ventana de aceptación del negocio | **5 min** → no acepta = auto-cancela (`pending_acceptance_timeout`) |
+| Ventana de aceptación del negocio | **8 min** → no acepta = auto-cancela (`pending_acceptance_timeout`); eran 5 hasta la migración 0186 |
 | Pago y subida de comprobante (prepago) | **15 min** (`awaiting_payment` → `prepay_timeout`); era 10 hasta la migración 0168 |
-| Validación de comprobante (prepago) | **10 min** (separado de los 5 de aceptación) |
+| Validación de comprobante (prepago) | **10 min** (separado de los 8 de aceptación) |
 | Validación por llamada (cliente nuevo/strike) | **5 min** → no valida = `validation_timeout` |
 | Extensión de prep del negocio | **+10 min**, máx **2 veces** (tope +20); notifica al motorizado |
 | Espera del motorizado en puerta (no-show) | **5 min** |

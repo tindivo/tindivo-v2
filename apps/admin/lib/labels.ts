@@ -107,7 +107,7 @@ export const CHARGE_TYPE_LABEL: Record<string, string> = {
 }
 
 export const ADVANCE_REASONS: { reason: string; actor: 'restaurante' | 'tindivo' }[] = [
-  { reason: 'Prepago: el restaurante no aceptó en 5 min', actor: 'restaurante' },
+  { reason: 'Prepago: el restaurante no aceptó en 8 min', actor: 'restaurante' },
   { reason: 'Prepago: el restaurante rechazó la captura sin razón válida', actor: 'restaurante' },
   { reason: 'Prepago: el restaurante no preparó a tiempo', actor: 'restaurante' },
   { reason: 'Prepago: el motorizado no recogió / abandonó el pedido', actor: 'tindivo' },

@@ -127,7 +127,7 @@ describe('cancel_expired_prepay_orders — los cuatro relojes (integración)', (
       original = (await leerTimers()).acceptanceMinutes ?? 5
       seed = await seedPrepaidOrder({ status: 'pending_acceptance' })
       const marca = await ahoraEnLaBase(seed.orderId, 'pending_acceptance_at')
-      // Diez minutos de antigüedad: vencido con la ventana normal de 5.
+      // Diez minutos de antigüedad: vencido con la ventana normal (8 desde la 0186).
       await backdateTimestamp(seed.orderId, 'pending_acceptance_at', marca, 10)
     })
 
@@ -142,7 +142,7 @@ describe('cancel_expired_prepay_orders — los cuatro relojes (integración)', (
       expect((await leer(seed.orderId)).status).toBe('pending_acceptance')
     })
 
-    it('y al devolverla a 5, cae', async () => {
+    it('y al bajarla a 5, cae', async () => {
       // Los dos asserts son el mismo pedido y el mismo barrido: lo único que
       // cambia entre uno y otro es la fila de `app_settings`. Si la función
       // volviera a llevar el número escrito a mano, el primero fallaría.

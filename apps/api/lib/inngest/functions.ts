@@ -42,7 +42,7 @@ export const orderAcceptanceTimeout: InngestFunction.Any = inngest.createFunctio
       if (typeof override === 'number') return override
       const svc = createServiceClient()
       const { data } = await svc.from('app_settings').select('value').eq('key', 'timers').single()
-      const minutes = (data?.value as { acceptanceMinutes?: number } | null)?.acceptanceMinutes ?? 5
+      const minutes = (data?.value as { acceptanceMinutes?: number } | null)?.acceptanceMinutes ?? 8
       return minutes * 60_000
     })
 

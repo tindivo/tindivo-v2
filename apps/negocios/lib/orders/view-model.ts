@@ -207,7 +207,7 @@ export interface OrderTimers {
 
 /** Los valores de `DECISIONS.md §10`, para cuando la consulta aún no volvió. */
 export const DEFAULT_ORDER_TIMERS: OrderTimers = {
-  acceptanceMinutes: 5,
+  acceptanceMinutes: 8,
   validationMinutes: 5,
   paymentMinutes: 15,
   prepayVerificationMinutes: 10,

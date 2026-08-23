@@ -1,0 +1,45 @@
+-- =============================================================================
+-- 0186 · El negocio tiene ocho minutos para aceptar, no cinco
+-- =============================================================================
+--
+-- QUÉ CAMBIA
+--   `app_settings.timers.acceptanceMinutes` pasa de 5 a 8. Nada más. Ni una
+--   función, ni un cron, ni una firma.
+--
+-- POR QUÉ ES UNA SOLA LÍNEA
+--   Desde la `0174` ese número vive en esta fila y en ningún otro sitio. Lo
+--   aplica `cancel_expired_prepay_orders()` (pg_cron `auto-cancel-prepay-timeout`
+--   cada minuto, y el barrido inmediato que dispara el panel de la cajera), y lo
+--   leen para pintar contadores `get_tracking` (cliente) y `useBusinessTimers`
+--   (cajera). Los tres miran la misma fila, así que con este UPDATE los tres
+--   cambian a la vez y sin deploy.
+--
+--   Antes de la 0174 esto no habría funcionado: los minutos estaban escritos a
+--   mano dentro del SQL de cuatro cron y `app_settings` era decorativo. Por eso
+--   la `0113` subió `acceptanceMinutes` a 15 y la base siguió cancelando a los 5
+--   durante meses. Si alguna vez vuelve a aparecer un `interval 'N minutes'`
+--   clavado en un cron, esta migración vuelve a mentir.
+--
+-- POR QUÉ 8
+--   La cajera de La Florencia atiende el mostrador y el panel a la vez, de
+--   noche. Cinco minutos es poco margen cuando entra un pedido mientras despacha
+--   presencialmente, y un `pending_acceptance_timeout` no es un pedido tarde: es
+--   un pedido perdido, con el cliente leyendo «No pudimos confirmar tu pedido».
+--
+--   El coste es la espera del cliente. Para contraentrega el peor caso sube de 5
+--   a 8 minutos antes de saber si hay pedido. Para prepago se encadena con los
+--   15 de `paymentMinutes`, así que el peor caso pasa de 20 a 23 minutos. Se
+--   asume: fallar por lento es recuperable, fallar por cancelado no.
+--
+-- LO QUE NO SE TOCA A PROPÓSITO
+--   Los `coalesce(..., 5)` que quedan dentro de `cancel_expired_prepay_orders`,
+--   `get_tracking` y los fallbacks del front. Son la red para una fila
+--   INCOMPLETA, no el sitio donde vive el número: solo se leen si la clave
+--   desapareciera, y en ese escenario un plazo corto de más es preferible a
+--   reescribir tres funciones enteras para cambiar un literal muerto.
+--
+-- REVERSIBILIDAD: supabase/rollbacks/0186_the_business_gets_eight_minutes_to_accept.rollback.sql
+
+UPDATE public.app_settings
+SET value = jsonb_set(value, '{acceptanceMinutes}', '8'::jsonb, true)
+WHERE key = 'timers';
