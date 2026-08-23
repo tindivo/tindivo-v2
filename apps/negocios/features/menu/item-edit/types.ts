@@ -36,6 +36,13 @@ export interface ModifierGroup {
   isNew?: boolean
   isDeleted?: boolean
   isExpanded: boolean
+  /**
+   * Cuántos OTROS platos usan este mismo grupo. Un grupo se arma una vez en el
+   * panel de Extras y se enlaza a varios platos, así que editarlo acá los toca
+   * a todos: la card lo avisa antes de que alguien cambie una salsa creyendo
+   * que solo afecta al plato que tiene abierto.
+   */
+  sharedWith?: number
 }
 
 export interface FormData {

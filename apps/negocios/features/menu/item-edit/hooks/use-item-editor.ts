@@ -147,6 +147,17 @@ export function useItemEditor() {
             optsByGroup[opt.group_id] = list
           }
 
+          // Los platos AJENOS que comparten cada grupo, para poder advertirlo.
+          const { data: sharedLinks } = await supabase
+            .from('menu_item_modifier_groups')
+            .select('group_id,item_id')
+            .in('group_id', groupIds)
+          const sharedByGroup: Record<string, number> = {}
+          for (const link of sharedLinks ?? []) {
+            if (link.item_id === itemId) continue
+            sharedByGroup[link.group_id] = (sharedByGroup[link.group_id] ?? 0) + 1
+          }
+
           const loadedGroups: ModifierGroup[] = (junctions ?? []).flatMap((j) => {
             const g = (groupsData ?? []).find((x) => x.id === j.group_id)
             if (!g) return []
@@ -162,6 +173,7 @@ export function useItemEditor() {
                 price_display: (g.price_display as PriceDisplay | null) ?? 'delta',
                 display_order: j.display_order,
                 isExpanded: false,
+                sharedWith: sharedByGroup[g.id] ?? 0,
                 options: (optsByGroup[g.id] ?? []).map((o) => ({
                   id: o.id,
                   localId: o.id,
@@ -564,13 +576,26 @@ export function useItemEditor() {
 
         if (g.isDeleted) {
           if (g.id) {
-            await supabase.from('menu_modifier_options').delete().eq('group_id', g.id)
+            // Quitar el grupo de ESTE plato es desenlazarlo, no borrarlo. Un
+            // grupo puede vivir en varios platos (se arma desde el panel de
+            // Extras), así que el DELETE de antes se llevaba las salsas de
+            // todos los demás sin avisar. Solo se borra la fila si el plato
+            // era el último que la usaba, para no dejar basura en la
+            // biblioteca cuando el grupo era exclusivo.
             await supabase
               .from('menu_item_modifier_groups')
               .delete()
               .eq('group_id', g.id)
               .eq('item_id', savedItemId)
-            await supabase.from('menu_modifier_groups').delete().eq('id', g.id)
+
+            const { count, error: countErr } = await supabase
+              .from('menu_item_modifier_groups')
+              .select('item_id', { count: 'exact', head: true })
+              .eq('group_id', g.id)
+            if (!countErr && count === 0) {
+              await supabase.from('menu_modifier_options').delete().eq('group_id', g.id)
+              await supabase.from('menu_modifier_groups').delete().eq('id', g.id)
+            }
           }
           continue
         }

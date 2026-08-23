@@ -71,6 +71,13 @@ export function ModifierGroupCard({
             {groupRuleLabel(group)}
             {isTotal && ' · define el precio'}
           </div>
+          {(group.sharedWith ?? 0) > 0 && (
+            <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5 text-[10px] font-bold text-warning">
+              <Icon name="link" size={10} />
+              Compartido con {group.sharedWith} plato{group.sharedWith === 1 ? '' : 's'} · lo que
+              cambies aquí les cambia a todos
+            </div>
+          )}
           {!group.isExpanded && (
             <div className="mt-0.5 text-[11px] text-ink-muted">
               {visibleOptions.length} opciones

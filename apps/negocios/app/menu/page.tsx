@@ -1,6 +1,6 @@
 'use client'
 
-import { Icon, LoadingState } from '@tindivo/ui'
+import { Button, Icon, LoadingState } from '@tindivo/ui'
 import { useEffect, useState } from 'react'
 import { DashboardShell } from '@/components/dashboard/shell'
 import { CategoryManagerModal } from '@/features/menu/components/category-manager-modal'
@@ -8,11 +8,13 @@ import { CategorySection } from '@/features/menu/components/category-section'
 import { DesktopCategoryRail } from '@/features/menu/components/desktop-category-rail'
 import { EmptyState } from '@/features/menu/components/empty-state'
 import { useMenu } from '@/features/menu/hooks/use-menu'
+import { ModifierLibraryModal } from '@/features/menu/modifiers/components/modifier-library-modal'
 
 export default function MenuPage() {
   const { cats, bizId, ready, reload, toggleItemAvailability } = useMenu()
   const [activeCatId, setActiveCatId] = useState<string | null>(null)
   const [catManagerOpen, setCatManagerOpen] = useState(false)
+  const [extrasOpen, setExtrasOpen] = useState(false)
 
   const totalItems = cats.flatMap((c) => c.items).length
   const unavailableTotal = cats.flatMap((c) => c.items).filter((i) => !i.is_available).length
@@ -75,14 +77,26 @@ export default function MenuPage() {
       : undefined
 
   const headerRight = (
-    <button
-      type="button"
-      onClick={() => setCatManagerOpen(true)}
-      className="inline-flex h-9 items-center gap-1.5 rounded-full bg-ink/[0.06] px-3 text-[13px] font-bold text-ink transition-colors hover:bg-ink/[0.1]"
-    >
-      <Icon name="category" size={16} />
-      Categorías
-    </button>
+    <div className="flex items-center gap-1.5">
+      <Button
+        variant="soft"
+        size="sm"
+        className="gap-1.5 text-[13px]"
+        onClick={() => setExtrasOpen(true)}
+      >
+        <Icon name="tune" size={16} />
+        Extras
+      </Button>
+      <Button
+        variant="soft"
+        size="sm"
+        className="gap-1.5 text-[13px]"
+        onClick={() => setCatManagerOpen(true)}
+      >
+        <Icon name="category" size={16} />
+        Categorías
+      </Button>
+    </div>
   )
 
   return (
@@ -138,12 +152,20 @@ export default function MenuPage() {
         </>
       )}
       {bizId && (
-        <CategoryManagerModal
-          open={catManagerOpen}
-          bizId={bizId}
-          onClose={() => setCatManagerOpen(false)}
-          onChanged={() => reload(bizId)}
-        />
+        <>
+          <CategoryManagerModal
+            open={catManagerOpen}
+            bizId={bizId}
+            onClose={() => setCatManagerOpen(false)}
+            onChanged={() => reload(bizId)}
+          />
+          <ModifierLibraryModal
+            open={extrasOpen}
+            bizId={bizId}
+            onClose={() => setExtrasOpen(false)}
+            onChanged={() => reload(bizId)}
+          />
+        </>
       )}
     </DashboardShell>
   )
