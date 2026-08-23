@@ -3,6 +3,7 @@
 import { Icon } from '@tindivo/ui'
 import { useState } from 'react'
 import { useOpeningDay } from '../hooks/use-opening-day'
+import { ChangeSheet } from './change-sheet'
 
 /**
  * Apertura de la jornada: la pregunta del principio y la franja para cambiar
@@ -17,8 +18,19 @@ import { useOpeningDay } from '../hooks/use-opening-day'
  * la cajera está cambiando precios, no abriendo el local.
  */
 export function OpeningControls() {
-  const { status, withinSchedule, loading, saving, error, declare } = useOpeningDay()
+  const {
+    status,
+    changeAvailable,
+    defaultChange,
+    withinSchedule,
+    loading,
+    saving,
+    error,
+    declare,
+    setChange,
+  } = useOpeningDay()
   const [postponed, setPostponed] = useState(false)
+  const [editingChange, setEditingChange] = useState(false)
 
   if (loading || !withinSchedule) return null
 
@@ -71,7 +83,23 @@ export function OpeningControls() {
         </div>
       )}
 
-      <OpeningBar status={status} saving={saving} onChange={declare} />
+      <OpeningBar
+        status={status}
+        saving={saving}
+        onChange={declare}
+        change={changeAvailable ?? defaultChange}
+        onEditChange={() => setEditingChange(true)}
+      />
+
+      {editingChange && (
+        <ChangeSheet
+          current={changeAvailable}
+          fallback={defaultChange}
+          saving={saving}
+          onClose={() => setEditingChange(false)}
+          onSave={setChange}
+        />
+      )}
     </>
   )
 }
@@ -84,10 +112,15 @@ function OpeningBar({
   status,
   saving,
   onChange,
+  change,
+  onEditChange,
 }: {
   status: 'open' | 'closed' | null
   saving: boolean
   onChange: (next: 'open' | 'closed') => void
+  /** Vuelto vigente esta noche: el declarado, o el global si no se declaró. */
+  change: number
+  onEditChange: () => void
 }) {
   if (status === 'open') {
     return (
@@ -96,14 +129,28 @@ function OpeningBar({
           <Icon name="check_circle" size={16} filled />
           Atendiendo hoy
         </span>
-        <button
-          type="button"
-          disabled={saving}
-          onClick={() => onChange('closed')}
-          className="shrink-0 rounded-full bg-ink/[0.06] px-3 py-1 font-bold text-ink transition-colors hover:bg-ink/[0.12] disabled:opacity-50"
-        >
-          Cerrar por hoy
-        </button>
+        <span className="flex shrink-0 items-center gap-1.5">
+          {/* El vuelto se toca a media faena, que es cuando se acaba: por eso
+              vive en la franja y no dentro del modal de apertura, que la cajera
+              ya cerró hace tres horas. */}
+          <button
+            type="button"
+            disabled={saving}
+            onClick={onEditChange}
+            className="inline-flex items-center gap-1 rounded-full bg-ink/[0.06] px-3 py-1 font-bold text-ink transition-colors hover:bg-ink/[0.12] disabled:opacity-50"
+          >
+            <Icon name="payments" size={14} filled />
+            {change <= 0 ? 'Sin vuelto' : `Vuelto S/${change.toFixed(0)}`}
+          </button>
+          <button
+            type="button"
+            disabled={saving}
+            onClick={() => onChange('closed')}
+            className="rounded-full bg-ink/[0.06] px-3 py-1 font-bold text-ink transition-colors hover:bg-ink/[0.12] disabled:opacity-50"
+          >
+            Cerrar por hoy
+          </button>
+        </span>
       </div>
     )
   }

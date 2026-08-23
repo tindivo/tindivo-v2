@@ -153,9 +153,15 @@ export function useCheckoutActions(state: CheckoutState): CheckoutActions {
       }
       const change = Math.round((paying - total) * 100) / 100
       if (change > maxChange) {
+        if (maxChange <= 0) {
+          setError(
+            `Esta noche el negocio no tiene vuelto: paga con S/ ${total.toFixed(2)} exactos o elige Yape.`,
+          )
+          return
+        }
         const maxCash = Math.floor((total + maxChange) * 100) / 100
         setError(
-          `El vuelto sería S/ ${change.toFixed(2)} y el máximo es S/ ${maxChange.toFixed(2)}. Paga con S/ ${maxCash.toFixed(2)} o menos, o elige Yape.`,
+          `El vuelto sería S/ ${change.toFixed(2)} y esta noche hay hasta S/ ${maxChange.toFixed(2)}. Paga con S/ ${maxCash.toFixed(2)} o menos, o elige Yape.`,
         )
         return
       }

@@ -311,6 +311,7 @@ export type Database = {
       business_service_days: {
         Row: {
           business_id: string
+          change_available: number | null
           closes_early_at: string | null
           confirmed_at: string
           confirmed_by: string | null
@@ -320,6 +321,7 @@ export type Database = {
         }
         Insert: {
           business_id: string
+          change_available?: number | null
           closes_early_at?: string | null
           confirmed_at?: string
           confirmed_by?: string | null
@@ -329,6 +331,7 @@ export type Database = {
         }
         Update: {
           business_id?: string
+          change_available?: number | null
           closes_early_at?: string | null
           confirmed_at?: string
           confirmed_by?: string | null
@@ -2688,6 +2691,7 @@ export type Database = {
           phone: string
         }[]
       }
+      effective_max_change: { Args: { p_business_id: string }; Returns: number }
       enqueue_overdue_orders: { Args: never; Returns: number }
       enqueue_queued_orders: { Args: never; Returns: number }
       expire_order: {

@@ -202,12 +202,13 @@ export function useCheckoutState(): CheckoutState {
     }
   }, [cartHydrated, confirmed, ordering.info, cart.businessId, router])
 
-  // Una sola query para las tres configuraciones de efectivo — no tres round-trips.
+  // Una sola query para las dos configuraciones globales de efectivo — no dos
+  // round-trips. `max_change` ya no está aquí: lo pone la caja del negocio.
   useEffect(() => {
     getSupabaseBrowser()
       .from('app_settings')
       .select('key, value')
-      .in('key', ['prepay_threshold', 'max_cash_bill', 'max_change'])
+      .in('key', ['prepay_threshold', 'max_cash_bill'])
       .then(({ data }) => {
         for (const row of data ?? []) {
           const raw = row.value
@@ -215,10 +216,32 @@ export function useCheckoutState(): CheckoutState {
           if (!v || !Number.isFinite(v)) continue
           if (row.key === 'prepay_threshold') setPrepayThreshold(v)
           else if (row.key === 'max_cash_bill') setMaxCashBill(v)
-          else if (row.key === 'max_change') setMaxChange(v)
         }
       })
   }, [])
+
+  // El techo de vuelto es de la noche y del negocio, no una constante global.
+  // Se pregunta por RPC en vez de leer `business_service_days` directo para que
+  // el fallback a `app_settings.max_change` lo resuelva el mismo código que usa
+  // `create_customer_order`: si el cliente lo calculara por su cuenta podría
+  // habilitar un chip que el servidor luego rechaza.
+  //
+  // Cero es una respuesta válida —"hoy solo pago exacto"—, así que el guard es
+  // `Number.isFinite`, nunca un `if (v)` que lo confundiría con "no llegó".
+  useEffect(() => {
+    if (!cartHydrated || !cart.businessId) return
+    let cancelled = false
+    getSupabaseBrowser()
+      .rpc('effective_max_change', { p_business_id: cart.businessId })
+      .then(({ data, error: rpcErr }) => {
+        if (cancelled || rpcErr) return
+        const v = typeof data === 'number' ? data : Number(data)
+        if (Number.isFinite(v)) setMaxChange(v)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [cartHydrated, cart.businessId])
 
   // NO forzar nada antes de saber quién es el cliente. `hasDeliveryHistory`
   // arranca en `false` y lo resuelve un RPC, así que sin este guard la secuencia
