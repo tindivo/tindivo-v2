@@ -9,7 +9,7 @@ import {
 import { canalUnico } from '@tindivo/supabase'
 import { BottomSheet, Button, Card, CardBody, Icon } from '@tindivo/ui'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import {
   createContext,
   type FormEvent,
@@ -23,6 +23,7 @@ import {
 } from 'react'
 import { OpeningControls } from '@/features/apertura/components/opening-controls'
 import { AttentionBanner } from '@/features/pedidos/components/attention-banner'
+import { useAcknowledged } from '@/features/pedidos/hooks/use-acknowledged'
 import { getBackoffDelayMs, useChannelHealth } from '@/hooks/use-channel-health'
 import { useIconFontReady } from '@/hooks/use-icon-font-ready'
 import { usePolledQuery } from '@/hooks/use-polled-query'
@@ -129,6 +130,22 @@ export interface DashboardCtx {
   refetchOrders: (options?: { force?: boolean }) => Promise<void>
   refetchBiz: () => Promise<void>
   signOut: () => void
+  /**
+   * «Ya lo vi»: calla la alarma de ESE pedido, y solo la alarma. Lo llama quien
+   * abre una tarjeta. Ver `useAcknowledged`.
+   */
+  acknowledge: (o: Pick<OrderVM, 'rowId' | 'status'>) => void
+  /**
+   * EL BANNER PIDE ABRIR UN PEDIDO QUE NO ES SUYO.
+   *
+   * El banner lo pinta el chrome —tiene que sobrevivir a los cambios de ruta— y
+   * la ficha del pedido vive en `app/page.tsx`. Sin este canal, el botón «Ver»
+   * solo podía navegar a `/` y dejarla a un toque de distancia todavía: el
+   * camino más directo para atender la alarma era el único que no la atendía.
+   */
+  openRequestId: string | null
+  requestOpen: (rowId: string) => void
+  clearOpenRequest: () => void
 }
 
 const Ctx = createContext<DashboardCtx | null>(null)
@@ -674,6 +691,7 @@ function BizLoadError({
 
 function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut: () => void }) {
   const pathname = usePathname()
+  const router = useRouter()
   const active = activeIdFor(pathname)
 
   const [ready, setReady] = useState(false)
@@ -1105,16 +1123,34 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
   // Estaba aquí como filtro suelto, y el banner no existía: el sonido era global
   // y lo visible vivía solo en `app/page.tsx`. Eso costó `JMAXL98Z` en
   // producción. Ver `lib/orders/attention.ts`.
-  const attention = useMemo(() => attentionState(vms), [vms])
+  // El acuse de recibo: qué pedidos ha abierto ya. Calla el sonido de esos y
+  // NADA más — el banner y el latido de la tarjeta no lo miran siquiera.
+  const { acknowledged, acknowledge } = useAcknowledged(vms)
+  const attention = useMemo(() => attentionState(vms, acknowledged), [vms, acknowledged])
 
   // Sonido persistente (corre en el chrome → suena en cualquier sección).
+  // Le entra `alarm`, no `orders`: lo que suena es lo que se ve MENOS lo acusado.
   useDashboardSounds({
-    hasPending: attention.hasPending,
-    pendingCount: attention.pendingCount,
+    hasPending: attention.alarm.hasPending,
+    pendingCount: attention.alarm.count,
+    urgent: attention.alarm.urgent,
     hasWaiting,
     hasBufferP3,
     soundOn,
   })
+
+  // Petición de apertura desde el banner. Ver `DashboardCtx.openRequestId`.
+  const [openRequestId, setOpenRequestId] = useState<string | null>(null)
+  const clearOpenRequest = useCallback(() => setOpenRequestId(null), [])
+  const requestOpen = useCallback(
+    (rowId: string) => {
+      setOpenRequestId(rowId)
+      // La ficha solo existe en el tablero; desde `/nuevo` o `/menu` hay que
+      // volver, y la petición espera montada a que `app/page.tsx` la recoja.
+      if (pathname !== '/') router.push('/')
+    },
+    [pathname, router],
+  )
 
   const toggleSound = useCallback(() => {
     setSoundOn((s) => {
@@ -1148,6 +1184,10 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
       refetchOrders,
       refetchBiz,
       signOut: onSignOut,
+      acknowledge,
+      openRequestId,
+      requestOpen,
+      clearOpenRequest,
     }
   }, [
     bizId,
@@ -1163,6 +1203,10 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
     refetchOrders,
     refetchBiz,
     onSignOut,
+    acknowledge,
+    openRequestId,
+    requestOpen,
+    clearOpenRequest,
   ])
 
   // La carga TERMINÓ y aun así no hay negocio: eso ya no es "cargando", es un
@@ -1242,7 +1286,16 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
           </div>
         </div>
       </div>
-      <AttentionBanner vm={attention.banner} />
+      {/* «Ver» ABRE el pedido, no lleva al tablero y se despide. Y abrirlo es el
+          acuse: la alarma de ese pedido se calla y el banner se queda, que es
+          justo el reparto que queremos —lo visible aguanta, el ruido no—. */}
+      <AttentionBanner
+        vm={attention.banner}
+        onOpen={(o) => {
+          acknowledge(o)
+          requestOpen(o.rowId)
+        }}
+      />
       <SuccessToastHost />
     </Ctx.Provider>
   )

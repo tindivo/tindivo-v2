@@ -7,7 +7,7 @@ import { useOrderActions } from '@/features/pedidos/hooks/use-order-actions'
 import { useOrderDetail } from '@/features/pedidos/hooks/use-order-detail'
 import { useSupportPhone } from '@/features/pedidos/hooks/use-support-phone'
 import { sortNew } from '@/lib/orders/attention'
-import { getColumn } from '@/lib/orders/view-model'
+import { getColumn, type OrderVM } from '@/lib/orders/view-model'
 
 export default function NegocioPedidosPage() {
   const {
@@ -24,6 +24,9 @@ export default function NegocioPedidosPage() {
     soundOn,
     toggleSound,
     refetchOrders,
+    acknowledge,
+    openRequestId,
+    clearOpenRequest,
   } = useDashboard()
 
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -80,6 +83,16 @@ export default function NegocioPedidosPage() {
     }
   }, [selectedId, selectedBase, selected?.status])
 
+  // El banner pidió abrir un pedido (posiblemente desde otra ruta, y entonces
+  // la petición llegó antes que esta pantalla). Se atiende al montar y se
+  // consume, para que no reabra la ficha cada vez que se vuelve al tablero.
+  useEffect(() => {
+    if (!openRequestId) return
+    reset()
+    setSelectedId(openRequestId)
+    clearOpenRequest()
+  }, [openRequestId, clearOpenRequest, reset])
+
   const { actions, busy, error, supportPhone, onConfirmPause, onResume } = useOrderActions({
     selected,
     supportWhatsapp,
@@ -102,7 +115,11 @@ export default function NegocioPedidosPage() {
     cookingOrders,
     routeOrders,
     history,
-    onOpen: (o: { rowId: string }) => {
+    // ABRIR ES ACUSAR RECIBO. La alarma de ese pedido se calla —solo la de ese,
+    // y solo la alarma: el latido de la tarjeta y el banner siguen hasta que lo
+    // resuelva—. Ver `useAcknowledged` y la cabecera de `lib/orders/attention.ts`.
+    onOpen: (o: Pick<OrderVM, 'rowId' | 'status'>) => {
+      acknowledge(o)
       reset()
       setSelectedId(o.rowId)
     },

@@ -1,6 +1,13 @@
 import { ORDER_STATUSES, type OrderStatus } from '@tindivo/contracts'
 import { describe, expect, it } from 'vitest'
-import { attentionState, newColumnSubtitle, sortNew } from '../attention'
+import {
+  attentionKey,
+  attentionState,
+  LAST_CALL_SEC,
+  newColumnSubtitle,
+  nextBeepDelay,
+  sortNew,
+} from '../attention'
 import { buildNegociosCardVM } from '../card-view-model'
 import { DEFAULT_ORDER_TIMERS, type OrderRow, type OrderVM, toOrderVM } from '../view-model'
 
@@ -53,6 +60,45 @@ function row(overrides: Partial<OrderRow> = {}): OrderRow {
 
 const vm = (o: Partial<OrderRow> = {}) => toOrderVM(row(o), NOW, DEFAULT_ORDER_TIMERS)
 
+/**
+ * SELLOS DERIVADOS DEL PLAZO, NO A LA INVERSA.
+ *
+ * La primera versión de estos tests escribía la hora a mano —«19:35:30, o sea
+ * treinta segundos»— y eso ataba cada assert a que la ventana de aceptación
+ * fuese de cinco minutos. El día que `app_settings` la subió a ocho (migración
+ * 0186), diez tests se pusieron rojos a la vez sin que nadie hubiera tocado lo
+ * que probaban. El plazo es un parámetro operativo y va a seguir moviéndose.
+ *
+ * Ahora se declara lo que importa —«a este le quedan treinta segundos»— y el
+ * sello se calcula desde `DEFAULT_ORDER_TIMERS`.
+ */
+const sello = (restanSec: number, plazoMin: number) =>
+  new Date(NOW - (plazoMin * 60 - restanSec) * 1000).toISOString()
+
+const T = DEFAULT_ORDER_TIMERS
+
+/** Un `pending_acceptance` al que le quedan `restanSec` segundos. */
+const porAceptar = (restanSec: number, extra: Partial<OrderRow> = {}) =>
+  vm({ pending_acceptance_at: sello(restanSec, T.acceptanceMinutes), ...extra })
+
+/** Un prepago en `validando` (la captura ya subida) al que le quedan `restanSec`. */
+const revisandoPago = (restanSec: number, extra: Partial<OrderRow> = {}) =>
+  vm({
+    status: 'validando',
+    payment_intent: 'prepaid',
+    comprobante_prepago_url: 'proofs/x.jpg',
+    validating_at: sello(restanSec, T.prepayVerificationMinutes),
+    ...extra,
+  })
+
+/** Un `awaiting_payment` (la pelota la tiene el cliente) al que le quedan `restanSec`. */
+const esperandoAlCliente = (restanSec: number, extra: Partial<OrderRow> = {}) =>
+  vm({
+    status: 'awaiting_payment',
+    awaiting_payment_at: sello(restanSec, T.paymentMinutes),
+    ...extra,
+  })
+
 describe('attentionState · el invariante "si suena, se ve"', () => {
   /**
    * EL TEST QUE JUSTIFICA EL MÓDULO.
@@ -66,37 +112,34 @@ describe('attentionState · el invariante "si suena, se ve"', () => {
    * enum crezca, el estado nuevo entre aquí solo y haya que decidir de qué lado
    * cae.
    */
-  it('para TODO estado del enum, hasPending ⟺ hay banner', () => {
+  it('para TODO estado del enum, sonar ⟺ hay banner', () => {
     for (const status of ORDER_STATUSES satisfies readonly OrderStatus[]) {
       const state = attentionState([vm({ status })])
-      expect(state.hasPending, `estado ${status}`).toBe(state.banner !== null)
-      expect(state.pendingCount, `estado ${status}`).toBe(state.orders.length)
+      expect(state.alarm.hasPending, `estado ${status}`).toBe(state.banner !== null)
+      expect(state.alarm.count, `estado ${status}`).toBe(state.orders.length)
     }
   })
 
   it('sin pedidos no hay alarma ni banner', () => {
     const state = attentionState([])
-    expect(state.hasPending).toBe(false)
-    expect(state.pendingCount).toBe(0)
+    expect(state.alarm.hasPending).toBe(false)
+    expect(state.alarm.count).toBe(0)
     expect(state.banner).toBeNull()
   })
 })
 
 describe('attentionState · qué reclama a la cajera', () => {
   it('reclama en pending_acceptance y en validando', () => {
-    expect(attentionState([vm({ status: 'pending_acceptance' })]).hasPending).toBe(true)
-    expect(
-      attentionState([vm({ status: 'validando', validating_at: '2026-08-21T19:38:08Z' })])
-        .hasPending,
-    ).toBe(true)
+    expect(attentionState([porAceptar(120)]).alarm.hasPending).toBe(true)
+    expect(attentionState([revisandoPago(120)]).alarm.hasPending).toBe(true)
   })
 
   it('NO reclama en awaiting_payment: la pelota la tiene el cliente', () => {
     // El pedido sí es "nuevo" para `getColumn` —y su tarjeta se ve— pero la
     // cajera no tiene nada que hacer hasta que llegue la captura. Despertarla
     // aquí sería alarma sin acción posible.
-    const state = attentionState([vm({ status: 'awaiting_payment' })])
-    expect(state.hasPending).toBe(false)
+    const state = attentionState([esperandoAlCliente(120)])
+    expect(state.alarm.hasPending).toBe(false)
     expect(state.banner).toBeNull()
   })
 
@@ -107,28 +150,16 @@ describe('attentionState · qué reclama a la cajera', () => {
       vm({ status: 'delivered' }),
       vm({ status: 'cancelled' }),
     ])
-    expect(state.hasPending).toBe(false)
+    expect(state.alarm.hasPending).toBe(false)
   })
 })
 
 describe('attentionState · el banner', () => {
   it('apunta al MÁS urgente, no al más antiguo', () => {
-    // El viejo tiene 10 min de ventana (prepago en validación); el reciente,
-    // 5 (aceptación). Al que hay que atender primero es al segundo, aunque
-    // llegara después.
-    const viejo = vm({
-      id: 'ord_viejo',
-      short_id: 'VIEJO111',
-      status: 'validando',
-      payment_intent: 'prepaid',
-      validating_at: '2026-08-21T19:35:00Z',
-    })
-    const urgente = vm({
-      id: 'ord_urgente',
-      short_id: 'URGE2222',
-      status: 'pending_acceptance',
-      pending_acceptance_at: '2026-08-21T19:38:08Z',
-    })
+    // El prepago en validación llegó antes y tiene ventana más larga; al que
+    // hay que atender primero es al otro, aunque entrara después.
+    const viejo = revisandoPago(300, { id: 'ord_viejo', short_id: 'VIEJO111' })
+    const urgente = porAceptar(90, { id: 'ord_urgente', short_id: 'URGE2222' })
     expect(viejo.countdownSec).toBeGreaterThan(urgente.countdownSec)
 
     const banner = attentionState([viejo, urgente]).banner
@@ -159,17 +190,11 @@ describe('attentionState · el banner', () => {
   })
 
   it('el reloj va en mm:ss y no baja de 00:00 aunque el cron llegue tarde', () => {
-    // 19:38:08 + 5 min = 19:43:08; a las 19:40:00 quedan 3m08s.
-    expect(attentionState([vm()]).banner?.countdownText).toBe('03:08')
+    expect(attentionState([porAceptar(188)]).banner?.countdownText).toBe('03:08')
 
     // Vencido hace rato: el cron lo mata en breve, pero mientras tanto la
     // cajera no debe ver un número negativo.
-    const vencido = toOrderVM(
-      row({ pending_acceptance_at: '2026-08-21T19:00:00Z' }),
-      NOW,
-      DEFAULT_ORDER_TIMERS,
-    )
-    expect(attentionState([vencido]).banner?.countdownText).toBe('00:00')
+    expect(attentionState([porAceptar(-600)]).banner?.countdownText).toBe('00:00')
   })
 })
 
@@ -188,50 +213,51 @@ describe('attentionState · el banner', () => {
 describe('el latido de la tarjeta · «oye, atiende a esto»', () => {
   const pulse = (o: Partial<OrderRow> = {}) => buildNegociosCardVM(vm(o)).pulse
 
-  it('para TODO estado del enum, la tarjeta late ⟺ suena la alarma', () => {
+  it('para TODO estado del enum, la tarjeta late ⟺ el pedido la reclama', () => {
     for (const status of ORDER_STATUSES satisfies readonly OrderStatus[]) {
       const order = vm({ status })
+      const st = attentionState([order])
       expect(buildNegociosCardVM(order).pulse !== 'none', `estado ${status}`).toBe(
-        attentionState([order]).hasPending,
+        st.orders.length > 0,
       )
+      // Y mientras no haya acuses de por medio, lo que se ve es exactamente lo
+      // que suena. El acuse solo puede quitar de un lado: ver más abajo.
+      expect(st.alarm.hasPending, `estado ${status}`).toBe(st.orders.length > 0)
     }
+  })
+
+  it('acusado el pedido, la tarjeta SIGUE latiendo aunque ya no suene', () => {
+    // El acuse dice «ya lo vi», no «ya lo resolví». Apagar el latido aquí sería
+    // dejar el pedido sin ninguna señal, que es el fallo que costó JMAXL98Z.
+    const pedido = porAceptar(240)
+    const st = attentionState([pedido], new Set([attentionKey(pedido)]))
+    expect(st.alarm.hasPending).toBe(false)
+    expect(buildNegociosCardVM(pedido).pulse).toBe('attention')
   })
 
   /** El viaje que pidió el piloto: late, se calma, vuelve a latir. */
   it('el prepago late al entrar, se calma esperando al cliente y vuelve con el comprobante', () => {
-    expect(pulse({ status: 'pending_acceptance', payment_intent: 'prepaid' })).toBe('attention')
+    expect(buildNegociosCardVM(porAceptar(200, { payment_intent: 'prepaid' })).pulse).toBe(
+      'attention',
+    )
 
     // Aceptado. La pelota es del cliente: paga y sube la captura.
-    expect(
-      pulse({
-        status: 'awaiting_payment',
-        payment_intent: 'prepaid',
-        awaiting_payment_at: '2026-08-21T19:39:00Z',
-      }),
-    ).toBe('none')
+    expect(buildNegociosCardVM(esperandoAlCliente(600)).pulse).toBe('none')
 
     // Llegó la captura. Toca mirarla, y el latido vuelve.
-    expect(
-      pulse({
-        status: 'validando',
-        payment_intent: 'prepaid',
-        comprobante_prepago_url: 'proofs/ord_1.jpg',
-        validating_at: '2026-08-21T19:39:00Z',
-      }),
-    ).toBe('attention')
+    expect(buildNegociosCardVM(revisandoPago(400)).pulse).toBe('attention')
   })
 
   it('en contraentrega se acepta y se acabó: en cocina ya no late', () => {
-    expect(pulse({ status: 'pending_acceptance', payment_intent: 'pending_cash' })).toBe(
+    expect(buildNegociosCardVM(porAceptar(200, { payment_intent: 'pending_cash' })).pulse).toBe(
       'attention',
     )
     expect(pulse({ status: 'preparing', payment_intent: 'pending_cash' })).toBe('none')
   })
 
   it('en el último minuto sube a urgente, el mismo umbral que el reloj y el borde', () => {
-    // 19:35:30 + 5 min = 19:40:30; a las 19:40:00 quedan 30 segundos.
-    const alFilo = vm({ pending_acceptance_at: '2026-08-21T19:35:30Z' })
-    expect(alFilo.countdownSec).toBeLessThan(60)
+    const alFilo = porAceptar(30)
+    expect(alFilo.countdownSec).toBeLessThan(LAST_CALL_SEC)
     expect(buildNegociosCardVM(alFilo).pulse).toBe('urgent')
     expect(buildNegociosCardVM(alFilo).tone).toBe('danger')
   })
@@ -260,37 +286,18 @@ describe('sortNew · primero lo que se muere antes', () => {
   const ids = (vms: OrderVM[]) => [...vms].sort(sortNew).map((v) => v.id)
 
   it('lo que la reclama va por delante, aunque haya llegado después', () => {
-    // El `awaiting_payment` lleva más rato y le queda menos margen relativo,
-    // pero ese reloj lo corre el cliente: ella no tiene nada que hacer con él.
-    const esperandoPago = vm({
-      id: 'a',
-      short_id: 'PAGOAAAA',
-      status: 'awaiting_payment',
-      awaiting_payment_at: '2026-08-21T19:30:00Z',
-    })
-    const porAceptar = vm({
-      id: 'b',
-      short_id: 'NUEVBBBB',
-      pending_acceptance_at: '2026-08-21T19:39:30Z',
-    })
-    expect(ids([esperandoPago, porAceptar])).toEqual(['NUEVBBBB', 'PAGOAAAA'])
+    // Al `awaiting_payment` le queda muchísimo menos, pero ese reloj lo corre el
+    // cliente: ella no tiene nada que hacer con él.
+    const suyo = esperandoAlCliente(45, { id: 'a', short_id: 'PAGOAAAA' })
+    const mio = porAceptar(400, { id: 'b', short_id: 'NUEVBBBB' })
+    expect(ids([suyo, mio])).toEqual(['NUEVBBBB', 'PAGOAAAA'])
   })
 
   it('entre dos que la reclaman manda el reloj, no la antigüedad', () => {
-    // El `validando` de prepago tiene 10 minutos y llegó antes; el
-    // `pending_acceptance` tiene 5 y llegó después, y se muere primero.
-    const viejo = vm({
-      id: 'a',
-      short_id: 'VIEJAAAA',
-      status: 'validando',
-      payment_intent: 'prepaid',
-      validating_at: '2026-08-21T19:36:00Z',
-    })
-    const reciente = vm({
-      id: 'b',
-      short_id: 'RECIBBBB',
-      pending_acceptance_at: '2026-08-21T19:38:00Z',
-    })
+    // El `validando` de prepago llegó antes y tiene ventana más larga; el
+    // `pending_acceptance` llegó después y se muere primero.
+    const viejo = revisandoPago(400, { id: 'a', short_id: 'VIEJAAAA' })
+    const reciente = porAceptar(120, { id: 'b', short_id: 'RECIBBBB' })
     expect(viejo.countdownSec).toBeGreaterThan(reciente.countdownSec)
     expect(ids([viejo, reciente])).toEqual(['RECIBBBB', 'VIEJAAAA'])
   })
@@ -299,57 +306,135 @@ describe('sortNew · primero lo que se muere antes', () => {
     // Si discreparan, el banner mandaría a la cajera a un pedido y la columna le
     // enseñaría otro arriba del todo.
     const lista = [
-      vm({ id: 'a', short_id: 'AAAA1111', pending_acceptance_at: '2026-08-21T19:39:00Z' }),
-      vm({
-        id: 'b',
-        short_id: 'BBBB2222',
-        status: 'awaiting_payment',
-        awaiting_payment_at: '2026-08-21T19:38:00Z',
-      }),
-      vm({ id: 'c', short_id: 'CCCC3333', pending_acceptance_at: '2026-08-21T19:36:30Z' }),
+      porAceptar(300, { id: 'a', short_id: 'AAAA1111' }),
+      esperandoAlCliente(200, { id: 'b', short_id: 'BBBB2222' }),
+      porAceptar(150, { id: 'c', short_id: 'CCCC3333' }),
     ]
     expect(ids(lista)[0]).toBe(attentionState(lista).banner?.target.id)
   })
 
   it('los que no la reclaman también se ordenan por reloj entre ellos', () => {
-    const tarde = vm({
-      id: 'a',
-      short_id: 'TARDAAAA',
-      status: 'awaiting_payment',
-      awaiting_payment_at: '2026-08-21T19:39:00Z',
-    })
-    const pronto = vm({
-      id: 'b',
-      short_id: 'PRONBBBB',
-      status: 'awaiting_payment',
-      awaiting_payment_at: '2026-08-21T19:31:00Z',
-    })
+    const tarde = esperandoAlCliente(600, { id: 'a', short_id: 'TARDAAAA' })
+    const pronto = esperandoAlCliente(120, { id: 'b', short_id: 'PRONBBBB' })
     expect(ids([tarde, pronto])).toEqual(['PRONBBBB', 'TARDAAAA'])
   })
 })
 
 describe('newColumnSubtitle · el chip cuenta la columna, el subtitulo la reparte', () => {
-  const esperandoPago = (id: string) =>
-    vm({ id, short_id: id.toUpperCase().padEnd(8, 'X'), status: 'awaiting_payment' })
-  const porAceptar = (id: string) => vm({ id, short_id: id.toUpperCase().padEnd(8, 'X') })
+  const suyo = (id: string) => esperandoAlCliente(300, { id, short_id: id.padEnd(8, 'X') })
+  const mio = (id: string) => porAceptar(300, { id, short_id: id.padEnd(8, 'X') })
 
   it('separa lo que le toca de lo que espera al cliente', () => {
-    expect(newColumnSubtitle([porAceptar('a'), porAceptar('b'), esperandoPago('c')])).toBe(
+    expect(newColumnSubtitle([mio('a'), mio('b'), suyo('c')])).toBe(
       '2 te esperan · 1 esperando al cliente',
     )
   })
 
   it('en singular no dice "1 te esperan"', () => {
-    expect(newColumnSubtitle([porAceptar('a')])).toBe('1 te espera')
+    expect(newColumnSubtitle([mio('a')])).toBe('1 te espera')
   })
 
   it('sin nada suyo no la interpela', () => {
-    expect(newColumnSubtitle([esperandoPago('a'), esperandoPago('b')])).toBe(
-      '2 esperando al cliente',
-    )
+    expect(newColumnSubtitle([suyo('a'), suyo('b')])).toBe('2 esperando al cliente')
   })
 
   it('con la columna vacía vuelve a la instrucción de siempre', () => {
     expect(newColumnSubtitle([])).toBe('Revisar antes de aceptar')
+  })
+})
+
+/**
+ * EL ACUSE DE RECIBO: ABRIR EL PEDIDO CALLA SU ALARMA, Y SOLO SU ALARMA.
+ *
+ * Del piloto volvió una queja sobre el aviso, y es la peor que puede volver:
+ * que suena demasiado. Sonaba cada tres segundos durante los cinco minutos del
+ * pedido, incluso mientras la cajera lo tenía abierto delante. La respuesta
+ * natural a eso es apagar las alertas, y ahí se pierde el siguiente pedido.
+ *
+ * Lo que estos tests fijan es el reparto: el acuse toca `alarm` y NUNCA
+ * `orders` ni `banner`. Si algún día alguien lo hace apagar lo visible, este
+ * fichero se pone rojo — que es justo el error que costó `JMAXL98Z`.
+ */
+describe('attentionState · el acuse de recibo', () => {
+  it('acusar calla el sonido y deja el banner y el latido intactos', () => {
+    const pedido = porAceptar(240)
+    const acusado = new Set([attentionKey(pedido)])
+
+    const antes = attentionState([pedido])
+    expect(antes.alarm.hasPending).toBe(true)
+
+    const despues = attentionState([pedido], acusado)
+    expect(despues.alarm.hasPending).toBe(false)
+    expect(despues.alarm.count).toBe(0)
+    // Lo visible no se entera de que existe el acuse.
+    expect(despues.orders).toHaveLength(1)
+    expect(despues.banner).not.toBeNull()
+    expect(despues.banner?.label).toBe(antes.banner?.label)
+  })
+
+  it('lo que suena nunca es más que lo que se ve', () => {
+    const lista = [porAceptar(240), revisandoPago(300), esperandoAlCliente(120)]
+    for (const acusados of [
+      new Set<string>(),
+      new Set([attentionKey(lista[0] as OrderVM)]),
+      new Set(lista.map(attentionKey)),
+    ]) {
+      const st = attentionState(lista, acusados)
+      expect(st.alarm.orders.length).toBeLessThanOrEqual(st.orders.length)
+      for (const o of st.alarm.orders) expect(st.orders).toContain(o)
+      if (st.alarm.hasPending) expect(st.banner).not.toBeNull()
+    }
+  })
+
+  it('acusar uno no calla al que entra después', () => {
+    const visto = porAceptar(240, { id: 'a', short_id: 'VISTAAAA' })
+    const nuevo = porAceptar(400, { id: 'b', short_id: 'NUEVBBBB' })
+    const st = attentionState([visto, nuevo], new Set([attentionKey(visto)]))
+    expect(st.alarm.count).toBe(1)
+    expect(st.alarm.orders[0]?.id).toBe('NUEVBBBB')
+  })
+
+  it('EN EL ÚLTIMO MINUTO el acuse ya no vale: vuelve a sonar', () => {
+    // Y esto es lo que impide que un «ya lo vi» de hace tres minutos deje morir
+    // el pedido en silencio, que es exactamente cómo se perdió JMAXL98Z.
+    const alFilo = porAceptar(LAST_CALL_SEC - 15)
+    const st = attentionState([alFilo], new Set([attentionKey(alFilo)]))
+    expect(st.alarm.hasPending).toBe(true)
+    expect(st.alarm.urgent).toBe(true)
+  })
+
+  it('el acuse muere con la situación, no con el pedido: el prepago vuelve a sonar', () => {
+    // Misma fila, dos momentos. Acusa el `pending_acceptance` (lo aceptó y con
+    // eso lo calló); cuando el cliente sube el comprobante, el pedido pasa a
+    // `validando` y esa situación no tiene acuse.
+    const aceptando = porAceptar(240, { id: 'ord_x', short_id: 'PREPXXXX' })
+    const acusado = new Set([attentionKey(aceptando)])
+    expect(attentionState([aceptando], acusado).alarm.hasPending).toBe(false)
+
+    const conComprobante = revisandoPago(500, { id: 'ord_x', short_id: 'PREPXXXX' })
+    expect(conComprobante.rowId).toBe(aceptando.rowId)
+    expect(attentionState([conComprobante], acusado).alarm.hasPending).toBe(true)
+  })
+
+  it('`urgent` mira solo lo que suena, no lo acusado que aún no está al filo', () => {
+    const tranquilo = porAceptar(300, { id: 'a', short_id: 'CALMAAAA' })
+    const st = attentionState([tranquilo], new Set([attentionKey(tranquilo)]))
+    expect(st.alarm.urgent).toBe(false)
+  })
+})
+
+describe('nextBeepDelay · el ritmo, que también sobraba', () => {
+  it('arranca rápido para engancharla', () => {
+    expect(nextBeepDelay({ elapsedMs: 0, urgent: false })).toBe(3_000)
+    expect(nextBeepDelay({ elapsedMs: 29_000, urgent: false })).toBe(3_000)
+  })
+
+  it('pasada la tanda de enganche se espacia: el pedido sigue viéndose', () => {
+    expect(nextBeepDelay({ elapsedMs: 30_000, urgent: false })).toBe(12_000)
+    expect(nextBeepDelay({ elapsedMs: 4 * 60_000, urgent: false })).toBe(12_000)
+  })
+
+  it('en el último minuto vuelve al ritmo rápido, lleve el rato que lleve', () => {
+    expect(nextBeepDelay({ elapsedMs: 4 * 60_000, urgent: true })).toBe(3_000)
   })
 })

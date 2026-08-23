@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import { nextBeepDelay, VOICE_EVERY_MS } from './orders/attention'
 
 let sharedCtx: AudioContext | null = null
 let audioBusyUntil = 0
@@ -129,68 +130,112 @@ function playToneSequence(
 
 /**
  * Alertas de audio del dashboard de negocios (PROPUESTAS_UX_PEDIDOS §7):
- *  · Tipo 1 — pedido nuevo: 880Hz + 1175Hz, doble bip, cada 3s mientras haya pendientes.
+ *  · Tipo 1 — pedido nuevo: 880Hz + 1175Hz, doble bip, con cadencia escalonada
+ *    (ver `nextBeepDelay`) mientras queden pedidos SIN ACUSAR.
  *  · Tipo 2 — motorizado llegó: 660-880-660Hz, triple bip suave, una vez al cambiar a `waiting`.
  *  · Tipo 3 — buffer fase 3 (5m+ sin moto): 440Hz, bip largo, cada 8s.
+ *
+ * QUÉ SUENA Y QUÉ NO LO DECIDE `attentionState`, no este hook. Aquí solo entra
+ * el recuento de lo que sigue reclamando a la cajera sin que ella lo haya
+ * abierto: el acuse de recibo se resuelve antes, y por eso este fichero no sabe
+ * nada de acuses. Lo único que decide aquí es el RITMO.
  */
 export function useDashboardSounds({
   hasPending,
   pendingCount,
+  urgent,
   hasWaiting,
   hasBufferP3,
   soundOn,
 }: {
+  /** Hay algo sin acusar. Es `attentionState(...).alarm.hasPending`. */
   hasPending: boolean
+  /** Cuántos sin acusar. Es lo que anuncia la voz. */
   pendingCount: number
+  /** Alguno en su último minuto: aprieta la cadencia y no admite acuse. */
+  urgent: boolean
   hasWaiting: boolean
   hasBufferP3: boolean
   soundOn: boolean
 }) {
-  const t1 = useRef<ReturnType<typeof setInterval> | null>(null)
+  const t1 = useRef<ReturnType<typeof setTimeout> | null>(null)
   const t3 = useRef<ReturnType<typeof setInterval> | null>(null)
-  const tVoice = useRef<ReturnType<typeof setInterval> | null>(null)
   const prevPendingCount = useRef(0)
   const prevWaiting = useRef(false)
+  const prevUrgent = useRef(false)
+  /** Cuándo empezó ESTA tanda: de ahí sale si toca ritmo de enganche o el lento. */
+  const startedAt = useRef(0)
+  const lastVoiceAt = useRef(0)
+  /** Leídos por el bucle, que vive fuera del render y no puede depender de props. */
+  const countRef = useRef(pendingCount)
+  const urgentRef = useRef(urgent)
+  countRef.current = pendingCount
+  urgentRef.current = urgent
 
-  // Tipo 1 — pedido nuevo
+  // Tipo 1 — pedido nuevo. Un bucle que se reprograma solo, en vez de un
+  // `setInterval` fijo: la cadencia cambia con el tiempo y con la urgencia, y un
+  // intervalo no se puede reajustar sin volver a montarlo entero.
   useEffect(() => {
     const stop = () => {
-      if (t1.current) clearInterval(t1.current)
+      if (t1.current) clearTimeout(t1.current)
       t1.current = null
     }
     if (!soundOn || !hasPending) {
       stop()
-      return stop
-    }
-    const play = () => playToneSequence([880, 1175], 0.18, 0.55, true)
-    play()
-    t1.current = setInterval(play, 3000)
-    return stop
-  }, [soundOn, hasPending])
-
-  // Anuncio por voz — cada 15s o inmediatamente al subir la cuenta
-  useEffect(() => {
-    const stop = () => {
-      if (tVoice.current) clearInterval(tVoice.current)
-      tVoice.current = null
-    }
-    if (!soundOn || !hasPending) {
-      stop()
+      startedAt.current = 0
+      lastVoiceAt.current = 0
       prevPendingCount.current = 0
       return stop
     }
 
+    // La voz de arranque la da el efecto del flanco (la cuenta acaba de subir de
+    // cero), así que el bucle no habla en su primer bip: si hablaran los dos, el
+    // segundo cancelaría al primero a media frase.
+    startedAt.current = Date.now()
+    lastVoiceAt.current = Date.now()
+    const tick = () => {
+      playToneSequence([880, 1175], 0.18, 0.55, true)
+      const ahora = Date.now()
+      if (ahora - lastVoiceAt.current >= VOICE_EVERY_MS) {
+        lastVoiceAt.current = ahora
+        speak(pendingAnnouncement(countRef.current), 450)
+      }
+      t1.current = setTimeout(
+        tick,
+        nextBeepDelay({ elapsedMs: ahora - startedAt.current, urgent: urgentRef.current }),
+      )
+    }
+    tick()
+    return stop
+    // `pendingCount` y `urgent` NO van en las dependencias a propósito: el bucle
+    // los lee por ref. Si fueran dependencias, cada pedido acusado remontaría el
+    // temporizador y dispararía un bip inmediato — castigando justo el gesto que
+    // queremos premiar.
+  }, [soundOn, hasPending])
+
+  // La voz sí va en el flanco: cuando la cuenta SUBE hay noticia, y esa no
+  // espera al siguiente bip. Además reinicia la tanda de enganche, porque un
+  // pedido nuevo merece el ritmo rápido aunque el anterior ya estuviera en el
+  // lento.
+  useEffect(() => {
+    if (!soundOn || !hasPending) return
     if (pendingCount > prevPendingCount.current) {
+      startedAt.current = Date.now()
+      lastVoiceAt.current = Date.now()
       speak(pendingAnnouncement(pendingCount), 450)
     }
     prevPendingCount.current = pendingCount
-
-    tVoice.current = setInterval(() => {
-      speak(pendingAnnouncement(pendingCount), 450)
-    }, 15000)
-
-    return stop
   }, [soundOn, hasPending, pendingCount])
+
+  // El último minuto no espera al siguiente bip del ritmo lento: si acaba de
+  // entrar en zona roja, suena YA. Es el aviso que la cajera no puede callar.
+  useEffect(() => {
+    if (soundOn && hasPending && urgent && !prevUrgent.current) {
+      playToneSequence([880, 1175], 0.18, 0.55, false)
+      startedAt.current = Date.now()
+    }
+    prevUrgent.current = urgent
+  }, [soundOn, hasPending, urgent])
 
   // Tipo 3 — buffer fase 3
   useEffect(() => {
