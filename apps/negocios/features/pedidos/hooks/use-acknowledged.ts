@@ -7,6 +7,35 @@ import type { OrderVM } from '@/lib/orders/view-model'
 const STORAGE_KEY = 'tindivo_acked_orders'
 
 /**
+ * Techo de acuses guardados. No es una optimización: es que este panel corre en
+ * una tablet que no se cierra nunca, y una lista que solo crece acaba llenando
+ * la cuota de `localStorage` y tirando la escritura entera —o sea, dejando de
+ * guardar acuses justo el día que más pedidos hubo—.
+ */
+const MAX_ACUSES = 40
+
+/**
+ * LA PODA, Y POR QUÉ NO PUEDE CORRER CON EL TABLERO VACÍO.
+ *
+ * Tira los acuses de situaciones que ya no existen. La primera versión lo hacía
+ * sin más, y con eso se comía a sí misma: al montar, `rows` arranca en `[]`
+ * —los pedidos llegan por la consulta, un instante después—, así que el primer
+ * pase encontraba CERO claves vivas y borraba todos los acuses recién leídos de
+ * `localStorage`. El efecto era que el acuse no sobrevivía a una recarga: la
+ * cajera volvía de un F5 (o de un despliegue) y la tanda de bips empezaba otra
+ * vez por pedidos que ya había visto. Justo el castigo que hace que alguien
+ * apague las alertas.
+ *
+ * Sin claves vivas no hay información para podar. No es que no quede nada: es
+ * que todavía no sabemos nada. Y la lista no crece sin techo aunque el tablero
+ * se pase la noche vacío, porque `MAX_ACUSES` la corta al insertar.
+ */
+export function pruneAcks(keys: readonly string[], vivas: ReadonlySet<string>): string[] {
+  if (vivas.size === 0) return [...keys]
+  return keys.filter((k) => vivas.has(k))
+}
+
+/**
  * EL ACUSE DE RECIBO DE LA CAJERA: «YA LO VI».
  *
  * Guarda qué pedidos ha abierto, para que la alarma deje de pitar por ellos.
@@ -48,16 +77,21 @@ export function useAcknowledged(vms: readonly OrderVM[]): {
 
   const acknowledge = useCallback((o: Pick<OrderVM, 'rowId' | 'status'>) => {
     const key = attentionKey(o)
-    setKeys((prev) => (prev.includes(key) ? prev : [...prev, key]))
+    setKeys((prev) => (prev.includes(key) ? prev : [...prev, key].slice(-MAX_ACUSES)))
   }, [])
 
   // Poda: fuera lo que ya no está en el tablero. Se compara contra las claves
   // vivas y no contra los `rowId`, para que el pedido que cambió de estado
-  // pierda su acuse viejo en cuanto deja de existir esa situación.
+  // pierda su acuse viejo en cuanto deja de existir esa situación. La regla de
+  // cuándo NO se puede podar vive en `pruneAcks`.
+  //
+  // Corre cada segundo, porque `vms` se recalcula con el tick de los relojes.
+  // Por eso devuelve el mismo array cuando no hay nada que tirar: así React
+  // aborta la actualización y esto no repinta el tablero entero cada segundo.
   const vivas = useMemo(() => new Set(vms.map(attentionKey)), [vms])
   useEffect(() => {
     setKeys((prev) => {
-      const podadas = prev.filter((k) => vivas.has(k))
+      const podadas = pruneAcks(prev, vivas)
       return podadas.length === prev.length ? prev : podadas
     })
   }, [vivas])

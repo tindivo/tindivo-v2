@@ -169,8 +169,10 @@ export function useDashboardSounds({
   /** Leídos por el bucle, que vive fuera del render y no puede depender de props. */
   const countRef = useRef(pendingCount)
   const urgentRef = useRef(urgent)
-  countRef.current = pendingCount
-  urgentRef.current = urgent
+  useEffect(() => {
+    countRef.current = pendingCount
+    urgentRef.current = urgent
+  })
 
   // Tipo 1 — pedido nuevo. Un bucle que se reprograma solo, en vez de un
   // `setInterval` fijo: la cadencia cambia con el tiempo y con la urgencia, y un
@@ -231,7 +233,12 @@ export function useDashboardSounds({
   // entrar en zona roja, suena YA. Es el aviso que la cajera no puede callar.
   useEffect(() => {
     if (soundOn && hasPending && urgent && !prevUrgent.current) {
-      playToneSequence([880, 1175], 0.18, 0.55, false)
+      // `isInterval: true` no es un descuido. Cuando un pedido ACUSADO entra en
+      // su último minuto pasan dos cosas a la vez: la alarma se enciende (y el
+      // bucle da su primer bip) y este flanco quiere sonar. Sin respetar el
+      // canal ocupado sonaban los dos, encadenados, y el aviso más importante
+      // del turno se oía como un tropezón.
+      playToneSequence([880, 1175], 0.18, 0.55, true)
       startedAt.current = Date.now()
     }
     prevUrgent.current = urgent
