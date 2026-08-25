@@ -25,8 +25,8 @@ export const SECTIONS: {
   hiddenFor?: string[]
 }[] = [
   { id: 'datos', icon: 'storefront', label: 'Datos' },
-  { id: 'yape', icon: 'qr_code_2', label: 'Cobros', hiddenFor: ['catalog_only'] },
-  { id: 'tiempos', icon: 'schedule', label: 'Tiempos y precio', hiddenFor: ['catalog_only'] },
+  { id: 'yape', icon: 'qr_code_2', label: 'Cobros' },
+  { id: 'tiempos', icon: 'schedule', label: 'Tiempos y precio' },
   { id: 'capacidades', icon: 'tune', label: 'Capacidades' },
   { id: 'horario', icon: 'calendar_month', label: 'Horario' },
 ]

@@ -82,12 +82,10 @@ export function useBusinessConfig() {
           phone: form.phone,
           whatsappNumber: waParsed?.success ? waParsed.data : null,
           tagline: form.tagline,
-          ...(capability !== 'catalog_only' && {
-            yapeNumber: form.yapeNumber,
-            estimatedEtaMin: form.estimatedEtaMin,
-            estimatedEtaMax: form.estimatedEtaMax,
-            deliveryFee: form.deliveryFee,
-          }),
+          yapeNumber: form.yapeNumber,
+          estimatedEtaMin: form.estimatedEtaMin,
+          estimatedEtaMax: form.estimatedEtaMax,
+          deliveryFee: form.deliveryFee,
         }
         const r = await api.patch<{ data: { primary_capability: string } }>(
           '/business/profile',

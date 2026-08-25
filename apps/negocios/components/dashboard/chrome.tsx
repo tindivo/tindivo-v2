@@ -72,10 +72,6 @@ const NAV_ITEMS: { id: NavId; label: string; icon: string; href: string }[] = [
   { id: 'config', label: 'Config', icon: 'settings', href: '/configuracion' },
 ]
 
-// Modo solo-catálogo (WhatsApp): el negocio no opera delivery en la plataforma,
-// así que su panel se reduce a gestionar el menú y la configuración.
-const CATALOG_ONLY_NAV: NavId[] = ['menu', 'config']
-
 const ACCENT_DEFAULT = 'var(--color-brand)'
 
 function activeIdFor(pathname: string): NavId {
@@ -251,11 +247,7 @@ function Sidebar({ active, onSignOut }: { active: NavId; onSignOut: () => void }
     alarmOn,
   } = useDashboard()
   const catalogOnly = capability === 'catalog_only'
-  // Excepción (DECISIONS §18): con pedidos delivery en vuelo (de antes del
-  // cambio de modo), Pedidos sigue accesible desde la nav para no perderlos.
-  const hasActiveOrders = counts.new + counts.cooking + counts.route > 0
-  const catalogNav: NavId[] = hasActiveOrders ? ['pedidos', ...CATALOG_ONLY_NAV] : CATALOG_ONLY_NAV
-  const navItems = catalogOnly ? NAV_ITEMS.filter((it) => catalogNav.includes(it.id)) : NAV_ITEMS
+  const navItems = NAV_ITEMS
   return (
     <aside className="flex h-full w-[240px] shrink-0 flex-col border-r border-border bg-white px-3.5 py-5 pb-4">
       <div className="flex items-center gap-2.5 px-1.5 pb-[18px]">
@@ -392,33 +384,9 @@ function FabLink({ href, children }: { href: string; children: React.ReactNode }
 }
 
 function BottomNav({ active }: { active: NavId }) {
-  const { capability, counts, soundOn, toggleSound, signOut, bizName } = useDashboard()
+  const { soundOn, toggleSound, signOut, bizName } = useDashboard()
   const [moreOpen, setMoreOpen] = useState(false)
   const mas = active === 'historial' || active === 'deuda' || active === 'config'
-
-  // Modo catálogo: solo Menú y Configuración (sin FAB "pedir moto").
-  // Excepción (DECISIONS §18): con pedidos delivery en vuelo, Pedidos sigue visible.
-  if (capability === 'catalog_only') {
-    const hasActiveOrders = counts.new + counts.cooking + counts.route > 0
-    return (
-      <nav className="grid grid-cols-3 border-t border-border bg-white px-1 pb-[max(18px,env(safe-area-inset-bottom))] pt-1.5 lg:hidden">
-        {hasActiveOrders && (
-          <NavLink href="/" active={active === 'pedidos'}>
-            <Icon name="receipt_long" size={22} filled={active === 'pedidos'} />
-            <span>Pedidos</span>
-          </NavLink>
-        )}
-        <NavLink href="/menu" active={active === 'menu'}>
-          <Icon name="restaurant_menu" size={22} filled={active === 'menu'} />
-          <span>Menú</span>
-        </NavLink>
-        <NavLink href="/configuracion" active={active === 'config'}>
-          <Icon name="settings" size={22} filled={active === 'config'} />
-          <span>Config</span>
-        </NavLink>
-      </nav>
-    )
-  }
 
   return (
     <>
@@ -594,37 +562,6 @@ function BottomNav({ active }: { active: NavId }) {
 }
 
 // ── Gate del modo catálogo ─────────────────────────────────────────────────────
-/** Secciones de operación delivery bloqueadas cuando el negocio está en modo
- *  solo-catálogo: los pedidos le llegan por WhatsApp, fuera de la plataforma. */
-function CatalogOnlyGate() {
-  return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
-      <span className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-soft text-brand-dark">
-        <Icon name="chat" size={30} filled />
-      </span>
-      <h1 className="font-display font-semibold text-[22px] text-ink">Modo catálogo activo</h1>
-      <p className="max-w-[420px] text-[14px] text-ink-muted">
-        Tu negocio publica su catálogo en Tindivo y los pedidos te llegan directo por WhatsApp. El
-        servicio de delivery de la plataforma no está disponible por ahora.
-      </p>
-      <div className="mt-2 flex gap-2">
-        <Link
-          href="/menu"
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand px-5 py-3 text-[15px] font-semibold text-white transition-transform active:scale-[0.98]"
-        >
-          <Icon name="restaurant_menu" size={16} /> Mi menú
-        </Link>
-        <Link
-          href="/configuracion"
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-ink/[0.06] px-5 py-3 text-[15px] font-semibold text-ink transition-transform active:scale-[0.98]"
-        >
-          <Icon name="settings" size={16} /> Configuración
-        </Link>
-      </div>
-    </main>
-  )
-}
-
 function NotificationGate({ onActivate }: { onActivate: () => void }) {
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/85 p-5">
@@ -1258,14 +1195,6 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
 
   if (!ready || !value || !fontsReady) return <DashboardSkeleton />
 
-  // Gate del modo catálogo: solo Menú y Config son operables. Excepción: si aún
-  // hay pedidos delivery en vuelo (de antes del cambio de modo), la sección de
-  // pedidos sigue visible con un aviso para no dejarlos inaccesibles.
-  const catalogOnly = value.capability === 'catalog_only'
-  const activeOrders = counts.new + counts.cooking + counts.route
-  const legacyOrdersVisible = active === 'pedidos' && activeOrders > 0
-  const gated = catalogOnly && !CATALOG_ONLY_NAV.includes(active) && !legacyOrdersVisible
-
   return (
     <Ctx.Provider value={value}>
       {gateShown && <NotificationGate onActivate={handleActivateNotifications} />}
@@ -1305,13 +1234,7 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
               que no le afecta estar aquí. */}
           {!gateShown && <OpeningControls />}
 
-          {catalogOnly && legacyOrdersVisible && (
-            <div className="flex items-center gap-2 bg-warning-soft px-4 py-2 text-[13px] font-semibold text-amber-800">
-              <Icon name="info" size={16} filled />
-              Modo catálogo activo: estos pedidos son del modo delivery anterior.
-            </div>
-          )}
-          {gated ? <CatalogOnlyGate /> : children}
+          {children}
           <div className="lg:hidden">
             <BottomNav active={active} />
           </div>
