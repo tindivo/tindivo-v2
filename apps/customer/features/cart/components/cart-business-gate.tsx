@@ -1,6 +1,6 @@
 'use client'
 
-import { Button, Icon } from '@tindivo/ui'
+import { Icon } from '@tindivo/ui'
 import { useEffect, useState } from 'react'
 import type { CartLayout } from '@/features/cart/types'
 import type { BusinessOrderingInfo } from '@/lib/business-ordering'

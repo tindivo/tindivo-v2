@@ -23,11 +23,22 @@ export function CartSidebar({ businessId, businessName }: CartSidebarProps) {
   return (
     <div className="rounded-[28px] border border-border bg-card p-5 shadow-elev-2">
       <div className="flex items-center justify-between gap-2">
-        <span className="font-display text-[18px] font-bold tracking-tight">Mi bolsa</span>
+        <div className="flex items-center gap-2">
+          <span className="font-display text-[18px] font-bold tracking-tight">Mi bolsa</span>
+          {showCart && (
+            <span className="inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-brand px-1.5 font-bold text-[12px] text-white tabular-nums">
+              {count}
+            </span>
+          )}
+        </div>
         {showCart && (
-          <span className="inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-brand px-1.5 font-bold text-[12px] text-white tabular-nums">
-            {count}
-          </span>
+          <button
+            type="button"
+            onClick={() => cart.clear()}
+            className="text-[12px] font-medium text-danger/80 hover:text-danger hover:underline transition-colors"
+          >
+            Vaciar
+          </button>
         )}
       </div>
       <div className="mt-1 flex items-center gap-2 font-semibold text-[13px] text-ink/60">
