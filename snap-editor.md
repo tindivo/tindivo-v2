@@ -1,0 +1,346 @@
+- generic [active] [ref=f28e1]:
+  - button "Open Next.js Dev Tools" [ref=f28e8] [cursor=pointer]:
+    - img [ref=f28e9]
+  - alert [ref=f28e12]
+  - generic [ref=f28e13]:
+    - complementary [ref=f28e15]:
+      - generic [ref=f28e16]:
+        - generic [ref=f28e17]: B
+        - generic [ref=f28e18]:
+          - generic [ref=f28e19]: Brasería Test QA
+          - generic [ref=f28e20]: SAN JACINTO · ÁNCASH
+      - navigation [ref=f28e21]:
+        - link "Pedidos" [ref=f28e22] [cursor=pointer]:
+          - /url: /
+          - generic [ref=f28e23]: receipt_long
+          - generic [ref=f28e24]: Pedidos
+        - link "Menú" [ref=f28e25] [cursor=pointer]:
+          - /url: /menu
+          - generic [ref=f28e26]: restaurant_menu
+          - generic [ref=f28e27]: Menú
+        - link "Pedir moto" [ref=f28e28] [cursor=pointer]:
+          - /url: /nuevo
+          - generic [ref=f28e29]: two_wheeler
+          - generic [ref=f28e30]: Pedir moto
+        - link "Efectivo" [ref=f28e31] [cursor=pointer]:
+          - /url: /efectivo
+          - generic [ref=f28e32]: payments
+          - generic [ref=f28e33]: Efectivo
+        - link "Historial" [ref=f28e34] [cursor=pointer]:
+          - /url: /historial
+          - generic [ref=f28e35]: history
+          - generic [ref=f28e36]: Historial
+        - link "Deuda" [ref=f28e37] [cursor=pointer]:
+          - /url: /deuda
+          - generic [ref=f28e38]: account_balance_wallet
+          - generic [ref=f28e39]: Deuda
+        - link "Config" [ref=f28e40] [cursor=pointer]:
+          - /url: /configuracion
+          - generic [ref=f28e41]: settings
+          - generic [ref=f28e42]: Config
+      - button "Alertas OFF" [ref=f28e44] [cursor=pointer]:
+        - generic [ref=f28e45]: notifications_off
+        - text: Alertas OFF
+      - generic [ref=f28e46]:
+        - generic [ref=f28e47]:
+          - generic [ref=f28e48]: circle
+          - generic [ref=f28e49]: Plataforma abierta
+        - generic [ref=f28e50]: RECIBIENDO PEDIDOS
+      - generic [ref=f28e51]:
+        - generic [ref=f28e52]: B
+        - generic [ref=f28e54]: Caja
+        - button "Salir" [ref=f28e55] [cursor=pointer]:
+          - generic [ref=f28e56]: logout
+    - generic [ref=f28e59]:
+      - generic [ref=f28e60]:
+        - button "Volver al menú" [ref=f28e61] [cursor=pointer]:
+          - generic [ref=f28e62]: arrow_back
+        - generic [ref=f28e63]:
+          - generic [ref=f28e64]: Editar · Pollo a la brasa entero
+          - generic [ref=f28e66]: Menú · Especiales
+        - button "Guardar cambios" [ref=f28e67] [cursor=pointer]:
+          - generic [ref=f28e68]: save
+          - text: Guardar cambios
+      - generic [ref=f28e69]:
+        - generic [ref=f28e71]:
+          - generic [ref=f28e72]:
+            - generic [ref=f28e73]: A · INFORMACIÓN BÁSICA
+            - generic [ref=f28e74]:
+              - generic [ref=f28e75]: FOTO DEL PLATO
+              - generic [ref=f28e76]:
+                - img "Foto del plato" [ref=f28e77]
+                - generic [ref=f28e78]:
+                  - generic [ref=f28e79] [cursor=pointer]:
+                    - generic [ref=f28e80]: upload
+                    - text: Reemplazar
+                  - button "Quitar foto" [ref=f28e81] [cursor=pointer]
+            - generic [ref=f28e82]:
+              - generic [ref=f28e83]: NOMBRE DEL PLATO
+              - 'textbox "Ej: Pizza Hawaiana" [ref=f28e84]': Pollo a la brasa entero
+            - generic [ref=f28e85]:
+              - generic [ref=f28e86]: DESCRIPCIÓN (OPCIONAL)
+              - textbox "Ingredientes y características del plato" [ref=f28e87]: Pollo entero a la brasa con papas fritas y ensalada criolla. Incluye cremas.
+            - generic [ref=f28e88]:
+              - generic [ref=f28e89]: ETIQUETAS (BADGES)
+              - generic [ref=f28e91]:
+                - text: más-pedido
+                - button "Quitar más-pedido" [ref=f28e92] [cursor=pointer]:
+                  - generic [ref=f28e93]: close
+              - generic [ref=f28e94]:
+                - button "+ nuevo" [ref=f28e95] [cursor=pointer]
+                - button "+ recomendado" [ref=f28e96] [cursor=pointer]
+                - button "+ picante" [ref=f28e97] [cursor=pointer]
+                - button "+ edición-perú" [ref=f28e98] [cursor=pointer]
+                - textbox "Etiqueta libre + Enter" [ref=f28e99]
+            - generic [ref=f28e100]:
+              - generic [ref=f28e101]:
+                - generic [ref=f28e102]: CATEGORÍA
+                - generic [ref=f28e103]:
+                  - combobox [ref=f28e104]:
+                    - option "Especiales" [selected]
+                    - option "Bebidas"
+                  - generic:
+                    - generic: expand_more
+              - generic [ref=f28e105]:
+                - generic [ref=f28e106]: PRECIO BASE (S/)
+                - spinbutton "0.00" [ref=f28e107]: "55.00"
+                - generic [ref=f28e108]: Debe ser el precio de la opción más barata del grupo principal.
+            - generic [ref=f28e109]:
+              - generic [ref=f28e110]:
+                - generic [ref=f28e111]: toggle_on
+                - generic [ref=f28e112]:
+                  - generic [ref=f28e113]: Disponible
+                  - generic [ref=f28e114]: Aparece en el menú del cliente
+                - button "Desactivar Disponible" [ref=f28e115] [cursor=pointer]
+              - generic [ref=f28e117]:
+                - generic [ref=f28e118]: star
+                - generic [ref=f28e119]:
+                  - generic [ref=f28e120]: Destacado
+                  - generic [ref=f28e121]: Se muestra primero y con badge
+                - button "Desactivar Destacado" [ref=f28e122] [cursor=pointer]
+          - generic [ref=f28e124]:
+            - generic [ref=f28e125]:
+              - generic [ref=f28e126]: B · GRUPOS DE OPCIONES
+              - generic [ref=f28e127]: 4 grupos
+            - generic [ref=f28e128]:
+              - generic [ref=f28e129]:
+                - generic [ref=f28e130]: drag_indicator
+                - button "Cremas a elección Opcional · elegir 1" [ref=f28e131] [cursor=pointer]:
+                  - generic [ref=f28e132]: Cremas a elección
+                  - generic [ref=f28e133]: Opcional · elegir 1
+                - generic [ref=f28e134]:
+                  - button "Bajar grupo" [ref=f28e135] [cursor=pointer]:
+                    - generic [ref=f28e136]: arrow_downward
+                  - button "Eliminar grupo" [ref=f28e137] [cursor=pointer]:
+                    - generic [ref=f28e138]: delete
+                  - button "Colapsar" [ref=f28e139] [cursor=pointer]:
+                    - generic [ref=f28e140]: expand_less
+              - generic [ref=f28e141]:
+                - generic [ref=f28e142]:
+                  - generic [ref=f28e143]: NOMBRE DEL GRUPO
+                  - 'textbox "Ej: Tamaño, Extras, Salsas" [ref=f28e144]': Cremas a elección
+                - generic [ref=f28e145]:
+                  - generic [ref=f28e146]: TIPO DE SELECCIÓN
+                  - generic [ref=f28e147]:
+                    - combobox [ref=f28e148] [cursor=pointer]:
+                      - option "Obligatorio, elegir 1"
+                      - option "Obligatorio, elegir varios"
+                      - option "Opcional, elegir 1" [selected]
+                      - option "Opcional, elegir varios"
+                    - generic:
+                      - generic: expand_more
+                - generic [ref=f28e149]: OPCIONES
+                - generic [ref=f28e150]:
+                  - generic [ref=f28e151]:
+                    - generic [ref=f28e152]: NOMBRE
+                    - generic [ref=f28e153]: + PRECIO
+                  - generic [ref=f28e156]:
+                    - generic [ref=f28e157]:
+                      - button "Subir opción" [disabled] [ref=f28e158]:
+                        - generic [ref=f28e159]: keyboard_arrow_up
+                      - button "Bajar opción" [ref=f28e160] [cursor=pointer]:
+                        - generic [ref=f28e161]: keyboard_arrow_down
+                    - textbox "Nombre de la opción" [ref=f28e163]: Salsa huancaína
+                    - spinbutton "0" [ref=f28e165]: "2"
+                    - button "Marcar como agotado" [ref=f28e166] [cursor=pointer]
+                    - button "Eliminar opción" [ref=f28e168] [cursor=pointer]:
+                      - generic [ref=f28e169]: close
+                  - generic [ref=f28e170]:
+                    - generic [ref=f28e171]:
+                      - button "Subir opción" [ref=f28e172] [cursor=pointer]:
+                        - generic [ref=f28e173]: keyboard_arrow_up
+                      - button "Bajar opción" [disabled] [ref=f28e174]:
+                        - generic [ref=f28e175]: keyboard_arrow_down
+                    - textbox "Nombre de la opción" [ref=f28e177]: Ají de la casa
+                    - spinbutton "0" [ref=f28e179]: "1"
+                    - button "Marcar como agotado" [ref=f28e180] [cursor=pointer]
+                    - button "Eliminar opción" [ref=f28e182] [cursor=pointer]:
+                      - generic [ref=f28e183]: close
+                - button "Agregar opción" [ref=f28e184] [cursor=pointer]:
+                  - generic [ref=f28e185]: add
+                  - text: Agregar opción
+            - generic [ref=f28e187]:
+              - generic [ref=f28e188]: drag_indicator
+              - button "Tamaño Obligatorio · elegir 1 3 opciones" [ref=f28e189] [cursor=pointer]:
+                - generic [ref=f28e190]: Tamaño
+                - generic [ref=f28e191]: Obligatorio · elegir 1
+                - generic [ref=f28e192]: 3 opciones
+              - generic [ref=f28e193]:
+                - button "Subir grupo" [ref=f28e194] [cursor=pointer]:
+                  - generic [ref=f28e195]: arrow_upward
+                - button "Bajar grupo" [ref=f28e196] [cursor=pointer]:
+                  - generic [ref=f28e197]: arrow_downward
+                - button "Eliminar grupo" [ref=f28e198] [cursor=pointer]:
+                  - generic [ref=f28e199]: delete
+                - button "Expandir" [ref=f28e200] [cursor=pointer]:
+                  - generic [ref=f28e201]: expand_more
+            - generic [ref=f28e203]:
+              - generic [ref=f28e204]: drag_indicator
+              - button "Cremas Obligatorio · elegir 1–2 3 opciones" [ref=f28e205] [cursor=pointer]:
+                - generic [ref=f28e206]: Cremas
+                - generic [ref=f28e207]: Obligatorio · elegir 1–2
+                - generic [ref=f28e208]: 3 opciones
+              - generic [ref=f28e209]:
+                - button "Subir grupo" [ref=f28e210] [cursor=pointer]:
+                  - generic [ref=f28e211]: arrow_upward
+                - button "Bajar grupo" [ref=f28e212] [cursor=pointer]:
+                  - generic [ref=f28e213]: arrow_downward
+                - button "Eliminar grupo" [ref=f28e214] [cursor=pointer]:
+                  - generic [ref=f28e215]: delete
+                - button "Expandir" [ref=f28e216] [cursor=pointer]:
+                  - generic [ref=f28e217]: expand_more
+            - generic [ref=f28e218]:
+              - generic [ref=f28e219]:
+                - generic [ref=f28e220]: drag_indicator
+                - button "Grupo sin nombre Obligatorio · elegir 1" [ref=f28e221] [cursor=pointer]:
+                  - generic [ref=f28e222]: Grupo sin nombre
+                  - generic [ref=f28e223]: Obligatorio · elegir 1
+                - generic [ref=f28e224]:
+                  - button "Subir grupo" [ref=f28e225] [cursor=pointer]:
+                    - generic [ref=f28e226]: arrow_upward
+                  - button "Eliminar grupo" [ref=f28e227] [cursor=pointer]:
+                    - generic [ref=f28e228]: delete
+                  - button "Colapsar" [ref=f28e229] [cursor=pointer]:
+                    - generic [ref=f28e230]: expand_less
+              - generic [ref=f28e231]:
+                - generic [ref=f28e232]:
+                  - generic [ref=f28e233]: NOMBRE DEL GRUPO
+                  - 'textbox "Ej: Tamaño, Extras, Salsas" [ref=f28e234]'
+                - generic [ref=f28e235]:
+                  - generic [ref=f28e236]: TIPO DE SELECCIÓN
+                  - generic [ref=f28e237]:
+                    - combobox [ref=f28e238] [cursor=pointer]:
+                      - option "Obligatorio, elegir 1" [selected]
+                      - option "Obligatorio, elegir varios"
+                      - option "Opcional, elegir 1"
+                      - option "Opcional, elegir varios"
+                    - generic:
+                      - generic: expand_more
+                - generic [ref=f28e239]: OPCIONES
+                - generic [ref=f28e241]:
+                  - generic [ref=f28e242]: NOMBRE
+                  - generic [ref=f28e243]: + PRECIO
+                - button "Agregar opción" [ref=f28e246] [cursor=pointer]:
+                  - generic [ref=f28e247]: add
+                  - text: Agregar opción
+            - button "Agregar grupo de opciones" [ref=f28e248] [cursor=pointer]:
+              - generic [ref=f28e250]: add
+              - text: Agregar grupo de opciones
+            - generic [ref=f28e251]:
+              - strong [ref=f28e252]: "Default al crear un grupo:"
+              - text: "\"Obligatorio, elegir 1\". Los grupos se evalúan en orden para el cliente."
+          - generic [ref=f28e253]:
+            - generic [ref=f28e254]: RESUMEN DE PRECIOS
+            - generic [ref=f28e255]:
+              - generic [ref=f28e256]:
+                - generic [ref=f28e257]: Precio base
+                - generic [ref=f28e258]: S/ 55
+              - generic [ref=f28e259]:
+                - generic [ref=f28e260]: Mínimo cliente paga
+                - generic [ref=f28e261]: S/ 55
+              - generic [ref=f28e262]:
+                - generic [ref=f28e263]: Máximo con extras
+                - generic [ref=f28e264]: S/ 77
+          - generic [ref=f28e265]:
+            - generic [ref=f28e266]: ZONA DE PELIGRO
+            - generic [ref=f28e267]:
+              - generic [ref=f28e268]:
+                - generic [ref=f28e269]: Eliminar plato
+                - generic [ref=f28e270]: Esta acción no se puede deshacer.
+              - button "Eliminar \"Pollo a la brasa entero\"" [ref=f28e271] [cursor=pointer]:
+                - generic [ref=f28e272]: delete
+                - text: Eliminar "Pollo a la brasa entero"
+        - generic [ref=f28e273]:
+          - generic [ref=f28e274]:
+            - generic [ref=f28e275]: edit_note
+            - generic [ref=f28e276]:
+              - generic [ref=f28e277]: Cambios sin guardar
+              - generic [ref=f28e278]: Presiona "Guardar cambios" para confirmar
+          - generic [ref=f28e280]:
+            - generic [ref=f28e281]:
+              - generic [ref=f28e282]: smartphone
+              - generic [ref=f28e283]: Vista del cliente · PWA Tindivo
+            - generic [ref=f28e284]:
+              - img "Pollo a la brasa entero" [ref=f28e285]
+              - generic [ref=f28e286]:
+                - generic [ref=f28e287]:
+                  - generic [ref=f28e288]:
+                    - generic [ref=f28e290]: más-pedido
+                    - generic [ref=f28e291]: Pollo a la brasa entero
+                    - generic [ref=f28e292]: Pollo entero a la brasa con papas fritas y ensalada criolla. Incluye cremas.
+                  - generic [ref=f28e293]: S/ 55
+                - generic [ref=f28e295]:
+                  - generic [ref=f28e296]:
+                    - generic [ref=f28e297]:
+                      - generic [ref=f28e298]: Cremas a elección
+                      - generic [ref=f28e299]: Elige 1 (opcional)
+                    - generic [ref=f28e300]: Opcional
+                  - generic [ref=f28e301]:
+                    - generic [ref=f28e303]: Salsa huancaína
+                    - generic [ref=f28e304]: +S/ 2
+                  - generic [ref=f28e305]:
+                    - generic [ref=f28e307]: Ají de la casa
+                    - generic [ref=f28e308]: +S/ 1
+                - generic [ref=f28e309]:
+                  - generic [ref=f28e310]:
+                    - generic [ref=f28e311]:
+                      - generic [ref=f28e312]: Tamaño
+                      - generic [ref=f28e313]: Elige 1 opción
+                    - generic [ref=f28e314]: Obligatorio
+                  - generic [ref=f28e315]:
+                    - generic [ref=f28e317]: check
+                    - generic [ref=f28e318]: Pequeño
+                    - generic [ref=f28e319]: Incluido
+                  - generic [ref=f28e320]:
+                    - generic [ref=f28e322]: Mediano
+                    - generic [ref=f28e323]: +S/ 10
+                  - generic [ref=f28e324]:
+                    - generic [ref=f28e326]: Grande
+                    - generic [ref=f28e327]: +S/ 20
+                - generic [ref=f28e328]:
+                  - generic [ref=f28e329]:
+                    - generic [ref=f28e330]:
+                      - generic [ref=f28e331]: Cremas
+                      - generic [ref=f28e332]: Elige 1–2 opciones
+                    - generic [ref=f28e333]: Obligatorio
+                  - generic [ref=f28e334]:
+                    - generic [ref=f28e336]: check
+                    - generic [ref=f28e337]: Mayonesa
+                    - generic [ref=f28e338]: Incluido
+                  - generic [ref=f28e339]:
+                    - generic [ref=f28e341]: Aceituna
+                    - generic [ref=f28e342]: Incluido
+                  - generic [ref=f28e343]:
+                    - generic [ref=f28e345]: Mostaza
+                    - generic [ref=f28e346]: Incluido
+            - generic [ref=f28e348]:
+              - generic [ref=f28e349]:
+                - button [ref=f28e350] [cursor=pointer]:
+                  - generic [ref=f28e351]: remove
+                - generic [ref=f28e352]: "1"
+                - button [ref=f28e353] [cursor=pointer]:
+                  - generic [ref=f28e354]: add
+              - button "Agregar al pedido S/ 55" [ref=f28e355] [cursor=pointer]:
+                - generic [ref=f28e356]: Agregar al pedido
+                - generic [ref=f28e357]: S/ 55
+  - button "🔔 Activar avisos" [ref=f28e358]
