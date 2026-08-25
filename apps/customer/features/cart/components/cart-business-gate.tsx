@@ -1,10 +1,17 @@
 'use client'
 
 import { Button, Icon } from '@tindivo/ui'
+import { useEffect, useState } from 'react'
 import type { CartLayout } from '@/features/cart/types'
 import type { BusinessOrderingInfo } from '@/lib/business-ordering'
 import { useCart } from '@/lib/cart'
-import { buildCartWhatsAppMessage, telLink, waOrderLink } from '@/lib/whatsapp'
+import { getSupabaseBrowser } from '@/lib/supabase/client'
+import {
+  buildCartWhatsAppMessage,
+  type CustomerContext,
+  telLink,
+  waOrderLink,
+} from '@/lib/whatsapp'
 
 interface CartBusinessGateProps {
   info: BusinessOrderingInfo
@@ -13,6 +20,49 @@ interface CartBusinessGateProps {
 
 export function CartBusinessGate({ info, layout }: CartBusinessGateProps) {
   const cart = useCart()
+  const [customer, setCustomer] = useState<CustomerContext | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    const supabase = getSupabaseBrowser()
+
+    async function loadCustomer() {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser()
+        if (!user || cancelled) return
+
+        const [{ data: userRow }, { data: addresses }] = await Promise.all([
+          supabase.from('users').select('full_name').eq('id', user.id).maybeSingle(),
+          supabase
+            .from('customer_addresses')
+            .select('line, reference')
+            .eq('user_id', user.id)
+            .eq('is_default', true)
+            .maybeSingle(),
+        ])
+
+        if (cancelled) return
+
+        const name =
+          userRow?.full_name || (user.user_metadata?.full_name as string | undefined) || null
+        const addressLine = addresses?.line ?? null
+        const addressReference = addresses?.reference ?? null
+
+        if (name || addressLine || addressReference) {
+          setCustomer({ name, addressLine, addressReference })
+        }
+      } catch {
+        // En caso de error de red/auth, se mantiene customer = null (mensaje limpio sin romper la UI)
+      }
+    }
+
+    loadCustomer()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   if (info.mode !== 'whatsapp') return null
 
@@ -26,7 +76,7 @@ export function CartBusinessGate({ info, layout }: CartBusinessGateProps) {
 
   const href = waOrderLink(
     info.whatsappNumber,
-    buildCartWhatsAppMessage(cart.businessName ?? 'negocio', cart.lines, cart.subtotal()),
+    buildCartWhatsAppMessage(cart.businessName ?? 'negocio', cart.lines, cart.subtotal(), customer),
   )
 
   return (

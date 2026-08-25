@@ -27,8 +27,11 @@ export function BusinessCard({ business }: BusinessCardProps) {
           className="h-[72px] w-[72px] shrink-0 rounded-2xl object-cover"
         />
       ) : (
-        <div className="flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-2xl bg-surface-low">
-          <Icon name="store" size={24} className="text-ink-subtle" />
+        <div
+          className="flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-2xl font-display text-[26px] font-bold text-white shadow-sm transition-transform group-hover:scale-105"
+          style={{ backgroundColor: b.accent_color || 'var(--color-brand)' }}
+        >
+          {b.name ? b.name.trim()[0]?.toUpperCase() : 'T'}
         </div>
       )}
       <div className="flex min-w-0 flex-1 flex-col justify-between self-stretch py-0.5">

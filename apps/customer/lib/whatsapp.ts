@@ -8,14 +8,22 @@ function peDigits(phone: string): string {
   return d.length === 9 ? `51${d}` : d
 }
 
+export interface CustomerContext {
+  name?: string | null
+  addressLine?: string | null
+  addressReference?: string | null
+}
+
 /**
  * Mensaje de pedido para WhatsApp a partir de la bolsa (modo catálogo).
  * `unitPrice` ya incluye modificadores; `*…*` es negrita en WhatsApp.
+ * Si el usuario tiene nombre o dirección predeterminada, se añaden condicionalmente.
  */
 export function buildCartWhatsAppMessage(
   businessName: string,
   lines: CartLine[],
   subtotal: number,
+  customer?: CustomerContext | null,
 ): string {
   const items = lines
     .map((line) => {
@@ -26,15 +34,33 @@ export function buildCartWhatsAppMessage(
     })
     .join('\n')
 
-  return [
+  const extraLines: string[] = []
+  if (customer?.name?.trim()) {
+    extraLines.push(`👤 ${customer.name.trim()}`)
+  }
+
+  const addrParts = [customer?.addressLine?.trim(), customer?.addressReference?.trim()].filter(
+    (p): p is string => Boolean(p && p.length > 0),
+  )
+  if (addrParts.length > 0) {
+    extraLines.push(`📍 ${addrParts.join(' — ')}`)
+  }
+
+  const messageBlocks: string[] = [
     `Hola ${businessName} 👋 Quiero hacer este pedido:`,
     '',
     items,
     '',
     `*Total: ${soles(subtotal)}*`,
-    '',
-    'Pedido armado en el catálogo de Tindivo 🛍️',
-  ].join('\n')
+  ]
+
+  if (extraLines.length > 0) {
+    messageBlocks.push('', ...extraLines)
+  }
+
+  messageBlocks.push('', 'Pedido armado en el catálogo de Tindivo 🛍️')
+
+  return messageBlocks.join('\n')
 }
 
 /** Deep-link de WhatsApp con el mensaje ya URL-encodeado (una sola vez).
