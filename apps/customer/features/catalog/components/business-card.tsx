@@ -39,17 +39,17 @@ export function BusinessCard({ business }: BusinessCardProps) {
           {b.tagline && <div className="mt-0.5 text-[13px] text-ink-muted">{b.tagline}</div>}
         </div>
         <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[12px] text-ink-muted">
+          {b.is_open_now === false && (
+            <span className="inline-flex items-center rounded-full bg-danger/10 px-2 py-[1px] font-semibold text-danger">
+              Cerrado
+            </span>
+          )}
           {b.primary_capability === 'catalog_only' ? (
             <span className="inline-flex items-center gap-1">
               <Icon name="chat" size={16} /> Pedidos por WhatsApp
             </span>
           ) : (
             <>
-              {b.is_open_now === false && (
-                <span className="inline-flex items-center rounded-full bg-danger/10 px-2 py-[1px] font-semibold text-danger">
-                  Cerrado
-                </span>
-              )}
               <span className="inline-flex items-center gap-1">
                 <Icon name="schedule" size={16} /> {b.estimated_eta_min}–{b.estimated_eta_max} min
               </span>
