@@ -1,6 +1,7 @@
-import { Icon, Skeleton } from '@tindivo/ui'
+import { Icon } from '@tindivo/ui'
 import type { PublicBusiness } from '@/features/catalog/types'
 import { BusinessCard } from './business-card'
+import { BusinessCardSkeleton } from './business-card-skeleton'
 
 interface BusinessGridProps {
   businesses: PublicBusiness[] | null
@@ -21,7 +22,7 @@ export function BusinessGrid({ businesses, error }: BusinessGridProps) {
 
       <div className="flex flex-col gap-3 px-4 md:grid md:grid-cols-2 md:gap-4 lg:grid-cols-3 lg:gap-5">
         {businesses === null && !error
-          ? [0, 1, 2].map((i) => <Skeleton key={i} className="h-[112px] rounded-[20px]" />)
+          ? [0, 1, 2].map((i) => <BusinessCardSkeleton key={i} />)
           : platformBusinesses?.map((b) => <BusinessCard key={b.id} business={b} />)}
         {platformBusinesses && platformBusinesses.length === 0 && (
           <p className="py-8 text-center text-[14px] text-ink-muted md:col-span-2 lg:col-span-3">

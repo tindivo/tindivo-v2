@@ -4,6 +4,7 @@ import { Icon } from '@tindivo/ui'
 import type { PublicBusiness } from '@/features/catalog/types'
 import type { SearchResults as SearchResultsData } from '@/lib/use-search'
 import { BusinessCard } from './business-card'
+import { BusinessCardSkeleton } from './business-card-skeleton'
 import { DishResultCard } from './dish-result-card'
 
 interface CatalogSearchState {
@@ -25,9 +26,9 @@ export function SearchResults({ search, businesses }: SearchResultsProps) {
   return (
     <div aria-live="polite">
       {search.loading && (
-        <div className="flex flex-col gap-2.5 px-4 pt-3 md:grid md:grid-cols-2 md:gap-4 lg:grid-cols-3 lg:gap-5">
+        <div className="flex flex-col gap-3 px-4 pt-3 md:grid md:grid-cols-2 md:gap-4 lg:grid-cols-3 lg:gap-5">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="h-[112px] animate-pulse rounded-[20px] bg-white" />
+            <BusinessCardSkeleton key={i} />
           ))}
         </div>
       )}
