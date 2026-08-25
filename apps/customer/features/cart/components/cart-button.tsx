@@ -6,12 +6,16 @@ import { useCart, useCartHydrated } from '@/lib/cart'
 
 interface CartButtonProps {
   tone?: CartButtonTone
+  businessId?: string
 }
 
-export function CartButton({ tone = 'light' }: CartButtonProps) {
+export function CartButton({ tone = 'light', businessId }: CartButtonProps) {
   const [open, setOpen] = useState(false)
   const hydrated = useCartHydrated()
-  const count = useCart((s) => s.lines.reduce((n, l) => n + l.quantity, 0))
+  const count = useCart((s) => {
+    if (businessId && s.businessId !== businessId) return 0
+    return s.lines.reduce((n, l) => n + l.quantity, 0)
+  })
   const badge = hydrated ? count : 0
   const isDark = tone === 'dark'
 

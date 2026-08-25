@@ -52,7 +52,7 @@ export function BusinessHero({ business, schedule, now, openingConfirmed }: Busi
         >
           <Icon name="arrow_back" size={20} />
         </Link>
-        <CartButton tone="dark" />
+        <CartButton tone="dark" businessId={business.id} />
       </div>
 
       <div className="absolute right-0 bottom-0 left-0 px-5 pb-5">

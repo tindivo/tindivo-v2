@@ -34,11 +34,12 @@ function limaDayIdx(now: Date): number {
 interface ScheduleRowProps {
   schedule: ScheduleDayRow[]
   now: Date
+  openingConfirmed?: boolean | null
 }
 
-export function ScheduleRow({ schedule, now }: ScheduleRowProps) {
+export function ScheduleRow({ schedule, now, openingConfirmed }: ScheduleRowProps) {
   const [expanded, setExpanded] = useState(false)
-  const status = getOpenStatus(schedule, now)
+  const status = getOpenStatus(schedule, now, openingConfirmed)
   if (status.kind === 'no_schedule') return null
 
   const todayIdx = limaDayIdx(now)

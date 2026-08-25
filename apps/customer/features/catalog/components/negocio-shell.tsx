@@ -83,8 +83,9 @@ export function NegocioShell({ id, initialData }: NegocioShellProps) {
 
   const { business, categories, schedule } = data
   const openingConfirmed = data.opening_confirmed ?? null
-  const count = cart.count()
-  const subtotal = cart.subtotal()
+  const isCurrentBusinessCart = cart.businessId === business.id
+  const count = isCurrentBusinessCart ? cart.count() : 0
+  const subtotal = isCurrentBusinessCart ? cart.subtotal() : 0
   const isCatalogOnly = !business.accepts_web_delivery && !business.accepts_web_pickup
   const closedForOrders =
     !isCatalogOnly && getOpenStatus(schedule, now, openingConfirmed).kind === 'closed'
@@ -104,7 +105,7 @@ export function NegocioShell({ id, initialData }: NegocioShellProps) {
           now={now}
           openingConfirmed={openingConfirmed}
         />
-        <ScheduleRow schedule={schedule} now={now} />
+        <ScheduleRow schedule={schedule} now={now} openingConfirmed={openingConfirmed} />
         {closedForOrders && (
           <ClosedBanner schedule={schedule} now={now} openingConfirmed={openingConfirmed} />
         )}
