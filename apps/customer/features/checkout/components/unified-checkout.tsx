@@ -3,6 +3,7 @@
 import type { PaymentIntent } from '@tindivo/contracts'
 import { Button, cn, Icon } from '@tindivo/ui'
 import { useState } from 'react'
+import { isLineOk } from '@/components/address-fields'
 import { OtpVerificationSheet } from '@/components/otp-verification-sheet'
 import { CartValidationBanner } from '@/features/cart/components/cart-validation-banner'
 import { CashSelector } from '@/features/checkout/components/cash-selector'
@@ -65,6 +66,8 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
   const [showAddressSelector, setShowAddressSelector] = useState(false)
   const [showOrderDetail, setShowOrderDetail] = useState(false)
 
+  const hasMissingLine = Boolean(selectedAddress && !isLineOk(selectedAddress.line))
+
   const ctaDisabled =
     loading ||
     locating ||
@@ -121,7 +124,9 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
             <button
               type="button"
               onClick={() => setShowAddressSelector(true)}
-              className="mt-3 flex w-full items-start gap-3 rounded-[16px] border border-ink/[0.04] bg-card p-3.5 text-left transition-shadow hover:shadow-elev-1"
+              className={`mt-3 flex w-full items-start gap-3 rounded-[16px] border bg-card p-3.5 text-left transition-shadow hover:shadow-elev-1 ${
+                hasMissingLine ? 'border-danger/40 ring-1 ring-danger/20' : 'border-ink/[0.04]'
+              }`}
             >
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-[18px]">
                 {selectedAddress ? '🏠' : '📍'}
@@ -129,11 +134,22 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
               <div className="min-w-0 flex-1">
                 {selectedAddress ? (
                   <>
-                    <div className="font-semibold text-[14px] text-ink">
-                      {selectedAddress.label}
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-semibold text-[14px] text-ink">
+                        {selectedAddress.label}
+                      </span>
+                      {hasMissingLine && (
+                        <span className="rounded-full bg-danger-soft px-1.5 py-0.5 text-[9px] font-bold uppercase text-danger">
+                          Falta calle
+                        </span>
+                      )}
                     </div>
-                    {selectedAddress.line && (
+                    {selectedAddress.line ? (
                       <div className="text-[13px] font-medium text-ink">{selectedAddress.line}</div>
+                    ) : (
+                      <div className="mt-0.5 text-[12px] font-medium text-danger">
+                        ⚠️ Falta ingresar tu calle/número. Toca para completar.
+                      </div>
                     )}
                     <div className="mt-0.5 text-[12px] text-ink-muted">
                       {selectedAddress.reference}

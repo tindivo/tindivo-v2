@@ -6,6 +6,8 @@ import {
   AddressFields,
   type AddressValue,
   EMPTY_ADDRESS,
+  isLineOk,
+  isReferenceOk,
   labelEmoji,
 } from '@/components/address-fields'
 import type { Address } from '@/features/checkout/types'
@@ -35,8 +37,10 @@ export function AddressSelectorSheet({
 
   if (!open) return null
 
+  const canSave = isLineOk(manualAddr.line) && isReferenceOk(manualAddr.reference) && manualInside
+
   async function saveNew() {
-    if (!manualAddr.line.trim() || !manualAddr.reference.trim() || !manualInside) return
+    if (!canSave) return
     setBusy(true)
     const supabase = getSupabaseBrowser()
     const { data: session } = await supabase.auth.getSession()
@@ -97,8 +101,19 @@ export function AddressSelectorSheet({
                           Por defecto
                         </span>
                       )}
+                      {!isLineOk(a.line) && (
+                        <span className="rounded-[5px] bg-danger-soft px-1.5 py-0.5 text-[9px] font-bold uppercase text-danger">
+                          Falta calle
+                        </span>
+                      )}
                     </div>
-                    {a.line && <div className="text-[13px] font-medium text-ink">{a.line}</div>}
+                    {a.line ? (
+                      <div className="text-[13px] font-medium text-ink">{a.line}</div>
+                    ) : (
+                      <div className="mt-0.5 text-[12px] font-medium text-danger">
+                        ⚠️ Falta calle/número
+                      </div>
+                    )}
                     <div className="mt-0.5 text-[12px] text-ink-muted">{a.reference}</div>
                   </div>
                   {sel && (
@@ -138,9 +153,7 @@ export function AddressSelectorSheet({
                 type="button"
                 variant="brand"
                 onClick={saveNew}
-                disabled={
-                  busy || !manualAddr.line.trim() || !manualAddr.reference.trim() || !manualInside
-                }
+                disabled={busy || !canSave}
                 className="flex-1"
               >
                 {busy ? 'Guardando…' : 'Guardar dirección'}

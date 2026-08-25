@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { isLineOk, isReferenceOk } from '@/components/address-fields'
 import { pointInPolygon } from '@/lib/coverage'
 import { type AppealData, type CancelledOrder, checkPaymentBlock } from '@/lib/payment-block'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
@@ -56,33 +57,33 @@ export function useOrderReadiness(): OrderReadiness {
 
       setProfile(prof)
 
-      // 2. Verificar dirección en zona
+      // 2. Verificar dirección en zona con línea y referencia válidas
       const { data: addresses } = await supabase
         .from('customer_addresses')
-        .select('coordinates_lat, coordinates_lng')
+        .select('line, reference, coordinates_lat, coordinates_lng')
         .eq('user_id', user.id)
 
       if (addresses && addresses.length > 0) {
         const { getCoveragePolygon } = await import('@/lib/coverage')
         const polygon = await getCoveragePolygon()
 
-        if (polygon) {
-          const anyInZone = addresses.some(
-            (addr) =>
-              addr.coordinates_lat != null &&
-              addr.coordinates_lng != null &&
-              pointInPolygon(
-                {
-                  lat: Number(addr.coordinates_lat),
-                  lng: Number(addr.coordinates_lng),
-                },
-                polygon.polygon,
-              ),
-          )
-          setHasValidAddress(anyInZone)
-        } else {
-          setHasValidAddress(true)
-        }
+        const anyValidInZone = addresses.some(
+          (addr) =>
+            isLineOk(addr.line) &&
+            isReferenceOk(addr.reference) &&
+            (polygon
+              ? addr.coordinates_lat != null &&
+                addr.coordinates_lng != null &&
+                pointInPolygon(
+                  {
+                    lat: Number(addr.coordinates_lat),
+                    lng: Number(addr.coordinates_lng),
+                  },
+                  polygon.polygon,
+                )
+              : true),
+        )
+        setHasValidAddress(anyValidInZone)
       } else {
         setHasValidAddress(false)
       }

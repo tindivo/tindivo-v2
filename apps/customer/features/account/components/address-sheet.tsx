@@ -3,7 +3,12 @@
 import { BottomSheet, Button, ScreenHeader } from '@tindivo/ui'
 import type { FormEvent } from 'react'
 import { useState } from 'react'
-import { AddressFields, type AddressValue, isReferenceOk } from '@/components/address-fields'
+import {
+  AddressFields,
+  type AddressValue,
+  isLineOk,
+  isReferenceOk,
+} from '@/components/address-fields'
 import type { Address } from '@/features/account/types'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
@@ -36,7 +41,7 @@ export function AddressSheet({
   const [insideZone, setInsideZone] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const canSave = isReferenceOk(addr.reference) && insideZone
+  const canSave = isLineOk(addr.line) && isReferenceOk(addr.reference) && insideZone
 
   function patch(p: Partial<AddressValue>) {
     setAddr((a) => ({ ...a, ...p }))
@@ -61,7 +66,7 @@ export function AddressSheet({
 
     const payload = {
       label: addr.label,
-      line: addr.line.trim() || null,
+      line: addr.line.trim(),
       reference: addr.reference.trim(),
       is_default: isDefault,
       coordinates_lat: addr.coords?.lat ?? null,
