@@ -50,7 +50,7 @@ export default function RestaurantesPage() {
           <Skeleton className="h-36 rounded-2xl" />
         </div>
       ) : businesses.length === 0 ? (
-        <Card className="p-8 text-center bg-surface-low border border-border">
+        <div className="rounded-2xl border border-border bg-white p-8 text-center shadow-xs">
           <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-ink/[0.06] text-ink-muted">
             <Icon name="storefront" size={32} />
           </div>
@@ -59,7 +59,7 @@ export default function RestaurantesPage() {
             Pide al administrador o al restaurante que te vincule para ver sus pedidos y datos de
             cobro.
           </p>
-        </Card>
+        </div>
       ) : (
         <div className="space-y-3.5">
           {businesses.map((biz) => {
@@ -70,62 +70,69 @@ export default function RestaurantesPage() {
               : null
 
             return (
-              <Card
+              <div
                 key={biz.id}
-                className="overflow-hidden border border-border/80 bg-surface shadow-xs transition-shadow hover:shadow-md"
+                className="overflow-hidden rounded-2xl border border-ink/[0.08] bg-white shadow-[0_2px_12px_rgba(26,22,20,0.04)] transition-all hover:shadow-[0_4px_20px_rgba(26,22,20,0.08)]"
               >
-                {/* Cabecera de la card con franja de color */}
-                <div
-                  className="h-2 w-full"
-                  style={{ backgroundColor: biz.accentColor || '#f97316' }}
-                />
-
                 <div className="p-4">
-                  <div className="flex items-start justify-between gap-3">
+                  {/* Cabecera: Avatar + Nombre + Badges de Métodos */}
+                  <div className="flex items-start gap-3">
+                    <div
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl font-display text-[17px] font-bold text-white shadow-xs"
+                      style={{ backgroundColor: biz.accentColor || '#f97316' }}
+                    >
+                      {biz.name.charAt(0).toUpperCase()}
+                    </div>
+
                     <div className="min-w-0 flex-1">
-                      <h2 className="truncate font-display text-[17px] font-bold text-ink">
-                        {biz.name}
-                      </h2>
-                      {biz.address && (
-                        <p className="mt-0.5 flex items-center gap-1 text-[12px] text-ink-muted">
+                      <div className="flex items-center justify-between gap-2">
+                        <h2 className="truncate font-display text-[17px] font-bold tracking-tight text-ink">
+                          {biz.name}
+                        </h2>
+
+                        {/* Badges de métodos de pago */}
+                        <div className="flex shrink-0 flex-wrap gap-1">
+                          {biz.paymentQrs.length > 0 ? (
+                            biz.paymentQrs.map((q) => (
+                              <span
+                                key={q.slot}
+                                className="inline-flex items-center gap-1 rounded-full bg-blue-50 border border-blue-200/70 px-2 py-0.5 text-[10px] font-bold text-blue-700 shadow-2xs"
+                              >
+                                <Icon name="qr_code_2" size={12} filled />
+                                {walletLabel(q.wallet)}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="inline-flex items-center rounded-full bg-ink/[0.05] px-2 py-0.5 text-[10px] font-medium text-ink-muted">
+                              Sin QR
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {biz.address ? (
+                        <p className="mt-1 flex items-center gap-1 text-[12px] text-ink-muted">
                           <Icon name="location_on" size={14} className="shrink-0 text-brand" />
                           <span className="truncate">{biz.address}</span>
                         </p>
-                      )}
-                    </div>
-
-                    {/* Insignias de QRs */}
-                    <div className="flex shrink-0 flex-wrap gap-1">
-                      {biz.paymentQrs.length > 0 ? (
-                        biz.paymentQrs.map((q) => (
-                          <span
-                            key={q.slot}
-                            className="inline-flex items-center gap-1 rounded-full bg-blue-50 border border-blue-200/60 px-2 py-0.5 text-[10px] font-bold text-blue-700"
-                          >
-                            <Icon name="qr_code_2" size={11} />
-                            {walletLabel(q.wallet)}
-                          </span>
-                        ))
                       ) : (
-                        <span className="inline-flex items-center rounded-full bg-ink/[0.05] px-2 py-0.5 text-[10px] font-medium text-ink-muted">
-                          Sin QR
-                        </span>
+                        <p className="mt-1 text-[12px] text-ink-muted">San Jacinto · Áncash</p>
                       )}
                     </div>
                   </div>
 
                   {/* Acciones de la Card */}
-                  <div className="mt-4 grid grid-cols-3 gap-2 border-t border-border/60 pt-3">
+                  <div className="mt-4 grid grid-cols-3 gap-2 border-t border-ink/[0.06] pt-3">
                     {hasPhone ? (
                       <a
                         href={telLink(phone)}
-                        className="flex h-9 items-center justify-center gap-1.5 rounded-xl bg-surface-low border border-border text-[12px] font-semibold text-ink hover:bg-ink/[0.06] active:scale-95 transition-transform"
+                        className="flex h-10 items-center justify-center gap-1.5 rounded-xl bg-surface-low border border-border/70 text-[12px] font-semibold text-ink hover:bg-ink/[0.06] active:scale-95 transition-transform"
                       >
                         <Icon name="call" size={16} className="text-emerald-600" />
                         Llamar
                       </a>
                     ) : (
-                      <span className="flex h-9 items-center justify-center rounded-xl bg-surface-low border border-border/50 text-[12px] text-ink-muted opacity-50">
+                      <span className="flex h-10 items-center justify-center rounded-xl bg-surface-low border border-border/40 text-[12px] text-ink-muted opacity-40">
                         Sin fono
                       </span>
                     )}
@@ -135,13 +142,13 @@ export default function RestaurantesPage() {
                         href={whatsapp}
                         target="_blank"
                         rel="noreferrer"
-                        className="flex h-9 items-center justify-center gap-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-[12px] font-semibold text-emerald-800 hover:bg-emerald-100 active:scale-95 transition-transform"
+                        className="flex h-10 items-center justify-center gap-1.5 rounded-xl bg-emerald-50 border border-emerald-200/80 text-[12px] font-semibold text-emerald-800 hover:bg-emerald-100 active:scale-95 transition-transform"
                       >
                         <Icon name="chat" size={16} className="text-emerald-600" />
                         WhatsApp
                       </a>
                     ) : (
-                      <span className="flex h-9 items-center justify-center rounded-xl bg-surface-low border border-border/50 text-[12px] text-ink-muted opacity-50">
+                      <span className="flex h-10 items-center justify-center rounded-xl bg-surface-low border border-border/40 text-[12px] text-ink-muted opacity-40">
                         Sin WA
                       </span>
                     )}
@@ -149,14 +156,14 @@ export default function RestaurantesPage() {
                     <button
                       type="button"
                       onClick={() => setSelectedBusiness(biz)}
-                      className="flex h-9 items-center justify-center gap-1 rounded-xl bg-brand px-2 text-[12px] font-bold text-white shadow-xs hover:bg-brand-dark active:scale-95 transition-transform cursor-pointer"
+                      className="flex h-10 items-center justify-center gap-1.5 rounded-xl bg-brand px-2 text-[12px] font-bold text-white shadow-xs hover:bg-brand-dark active:scale-95 transition-transform cursor-pointer"
                     >
-                      <Icon name="qr_code" size={16} />
+                      <Icon name="qr_code_2" size={16} filled />
                       Ver QRs
                     </button>
                   </div>
                 </div>
-              </Card>
+              </div>
             )
           })}
         </div>
