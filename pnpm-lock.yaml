@@ -39,6 +39,9 @@ catalogs:
     '@upstash/redis':
       specifier: ^1.38.0
       version: 1.38.0
+    '@vercel/analytics':
+      specifier: ^2.0.1
+      version: 2.0.1
     clsx:
       specifier: ^2.1.1
       version: 2.1.1
@@ -266,7 +269,7 @@ importers:
         specifier: workspace:*
         version: link:../../packages/ui
       '@vercel/analytics':
-        specifier: ^2.0.1
+        specifier: 'catalog:'
         version: 2.0.1(next@16.2.6(@opentelemetry/api@1.9.1)(@playwright/test@1.62.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(react@19.2.6)
       leaflet:
         specifier: 'catalog:'
