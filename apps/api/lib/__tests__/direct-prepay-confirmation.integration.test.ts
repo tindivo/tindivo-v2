@@ -293,6 +293,7 @@ describe('confirmación directa del prepago desde awaiting_payment (integración
     it('(F) sigue yendo a preparing con el pago verificado y su evento de siempre', async () => {
       expect(after.status).toBe('preparing')
       expect(after.payment_proof_status).toBe('verified')
+      expect(after.prep_time_minutes).toBe(25)
       const eventos = await readEventTypes(seed.orderId)
       expect(eventos).toContain('order.proof_verified')
       expect(eventos).not.toContain('order.payment_confirmed_direct')
