@@ -134,6 +134,7 @@ export interface DashboardCtx {
    * columna, que se llama así; no sirve para interrumpirla desde la barra
    * lateral. Sale del mismo predicado que el sonido, el banner y el latido.
    */
+  attentionCount: number
   /** Liquidaciones de efectivo pendientes de confirmación por la cajera. */
   pendingCashCount: number
   /** ¿Está sonando la alarma AHORA? (hay algo sin acusar). */
