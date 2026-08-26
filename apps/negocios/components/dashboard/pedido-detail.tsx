@@ -8,6 +8,7 @@ import { formatReadyDelta, type OrderVM } from '@/lib/orders/view-model'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import { CANCEL_REASONS, REJECT_REASONS_BASE, REJECT_REASONS_TAIL } from './pedido-detail/constants'
 import { DetailRow } from './pedido-detail/detail-row'
+import { EditarPedidoModal } from './pedido-detail/editar-modal'
 import {
   ComandaModal,
   ConfirmDirectPaymentModal,
@@ -35,6 +36,8 @@ export interface DetailActions {
   /** Escala a Tindivo por WhatsApp. Recibe el pedido: también lo llama la
    *  tarjeta del tablero, donde no hay ningún detalle abierto. */
   onCallDriver?: (o: OrderVM) => void
+  /** La cajera corrigio el pedido (0190): refresca el tablero. */
+  onEdited?: () => void
 }
 
 // ── Payment sections ──────────────────────────────────────────────────────────
@@ -220,6 +223,7 @@ export function DetailScreen({
   actions: DetailActions
 }) {
   const [modal, setModal] = useState<null | 'reject' | 'cancel'>(null)
+  const [showEditar, setShowEditar] = useState(false)
   const [showPrepModal, setShowPrepModal] = useState(false)
   const [showDirectPayModal, setShowDirectPayModal] = useState(false)
   const [showComandaModal, setShowComandaModal] = useState(false)
@@ -287,6 +291,16 @@ export function DetailScreen({
           onConfirm={(code, text) => {
             setModal(null)
             actions.onReject(code, text)
+          }}
+        />
+      )}
+      {showEditar && (
+        <EditarPedidoModal
+          order={order}
+          onClose={() => setShowEditar(false)}
+          onSaved={() => {
+            setShowEditar(false)
+            actions.onEdited?.()
           }}
         />
       )}
@@ -759,6 +773,20 @@ export function DetailScreen({
             <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.06em] text-ink-muted">
               Otras acciones
             </div>
+            {/* Corregir va ANTES de cancelar, y a proposito: cancelar y volver
+                a tipear era el apano que esta feature viene a sustituir -33% de
+                las cancelaciones manuales medidas en prod-. Si el boton nuevo
+                queda debajo del viejo, la costumbre gana. */}
+            {order.canEdit && (
+              <button
+                type="button"
+                onClick={() => setShowEditar(true)}
+                disabled={busy}
+                className="mb-2 inline-flex w-full items-center justify-center gap-2 rounded-xl border-[1.5px] border-ink/15 bg-transparent px-3 py-2 text-[13px] font-semibold text-ink transition-transform active:scale-[0.98] disabled:opacity-50"
+              >
+                <Icon weight={500} name="edit" size={14} /> Corregir este pedido
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setModal('cancel')}

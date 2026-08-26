@@ -7,10 +7,30 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -2800,6 +2820,17 @@ export type Database = {
         Returns: boolean
       }
       is_within_platform_schedule: { Args: never; Returns: boolean }
+      manual_order_money: {
+        Args: {
+          p_cash_amount: number
+          p_client_pays_with: number
+          p_delivery_fee: number
+          p_payment_intent: Database["public"]["Enums"]["payment_intent"]
+          p_total_amount: number
+          p_yape_amount: number
+        }
+        Returns: Json
+      }
       mark_appeal_in_review: { Args: { p_report_id: string }; Returns: Json }
       order_cash_owed: {
         Args: { o: Database["public"]["Tables"]["orders"]["Row"] }
@@ -3062,6 +3093,23 @@ export type Database = {
       }
       slugify: { Args: { p_text: string }; Returns: string }
       unblock_business: { Args: { p_by: string; p_id: string }; Returns: Json }
+      update_business_manual_order: {
+        Args: {
+          p_business_user_id: string
+          p_cash_amount?: number
+          p_client_pays_with?: number
+          p_customer_name?: string
+          p_customer_phone?: string
+          p_delivery_reference?: string
+          p_expected_updated_at: string
+          p_order_id: string
+          p_payment_intent: Database["public"]["Enums"]["payment_intent"]
+          p_reason?: string
+          p_total_amount: number
+          p_yape_amount?: number
+        }
+        Returns: Json
+      }
       validate_order: {
         Args: {
           p_actor_role: Database["public"]["Enums"]["user_role"]
@@ -3284,6 +3332,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       address_source: [
@@ -3382,3 +3433,4 @@ export const Constants = {
     },
   },
 } as const
+

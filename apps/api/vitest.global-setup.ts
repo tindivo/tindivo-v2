@@ -78,6 +78,18 @@ const USUARIOS_FIXTURE = [
  */
 const PREFIJO_TELEFONO_PROMO = '+51998'
 
+/**
+ * Prefijo de los pedidos manuales de `manual-order-edit`.
+ *
+ * Sin `+51` a propósito: `create_business_manual_order` normaliza el teléfono a
+ * nueve dígitos (`^9\d{8}$`), así que los `TELEFONOS_FIXTURE` con prefijo país
+ * ni siquiera pasarían su validación.
+ *
+ * Esos pedidos cuelgan del negocio del SEED, que no se borra, así que no caen
+ * por el paso 1 ni por el 3.
+ */
+const PREFIJO_TELEFONO_EDICION = '987654'
+
 /** PostgREST mete los `.in()` en la URL: con miles de UUID revienta con un 414. */
 const LOTE = 200
 
@@ -159,7 +171,27 @@ async function barrer(): Promise<Barrido> {
     .like('customer_phone', `${PREFIJO_TELEFONO_PROMO}%`)
   if (promoErr) throw new Error(`barrido: leer orders de promo falló: ${promoErr.message}`)
 
-  const huerfanos = [...new Set([...(pedidos ?? []), ...(pedidosPromo ?? [])].map((o) => o.id))]
+  const { data: pedidosEdicion, error: edErr } = await db
+    .from('orders')
+    .select('id')
+    .like('customer_phone', `${PREFIJO_TELEFONO_EDICION}%`)
+  if (edErr) throw new Error(`barrido: leer orders de edición falló: ${edErr.message}`)
+
+  const huerfanos = [
+    ...new Set(
+      [...(pedidos ?? []), ...(pedidosPromo ?? []), ...(pedidosEdicion ?? [])].map((o) => o.id),
+    ),
+  ]
+
+  // El directorio que dejaron esos manuales. No cuelga del pedido —sobrevive a
+  // su borrado a propósito, es memoria del pueblo— así que hay que barrerlo
+  // aparte o cada corrida deja direcciones de prueba que luego dan confianza de
+  // contraentrega a teléfonos inventados (0182).
+  const { error: dirErr } = await db
+    .from('address_directory')
+    .delete()
+    .like('phone', `${PREFIJO_TELEFONO_EDICION}%`)
+  if (dirErr) throw new Error(`barrido: borrar address_directory falló: ${dirErr.message}`)
 
   await enLotes(huerfanos, async (lote) => {
     // `business_charges` sujeta el pedido con una FK sin cascada, y

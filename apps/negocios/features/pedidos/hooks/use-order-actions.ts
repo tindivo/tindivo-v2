@@ -25,6 +25,8 @@ export interface OrderActions {
   onReady: () => Promise<void>
   onCancel: (code: string, text: string) => Promise<void>
   onCallDriver?: (o: OrderVM) => void
+  /** La cajera corrigio el pedido (0190). */
+  onEdited?: () => void
 }
 
 export function useOrderActions({
@@ -186,6 +188,13 @@ export function useOrderActions({
           window.open(url, '_blank', 'noopener,noreferrer')
         }
       : undefined,
+
+    // El modal ya guardo cuando esto corre: solo hay que traer la fila nueva.
+    // Sin esto la cajera cierra el modal y sigue viendo el importe viejo
+    // hasta el siguiente sondeo, dudando de si se guardo.
+    onEdited: () => {
+      void refetchOrders()
+    },
   }
 
   const onConfirmPause = useCallback(

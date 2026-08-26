@@ -30,7 +30,19 @@ export const ORDER_SELECT =
   'client_pays_with,change_to_give,' +
   'yape_amount,cash_amount,requires_validation,validation_reason_code,risk_flags,' +
   'driver_id,created_at,pending_acceptance_at,awaiting_payment_at,validating_at,' +
-  'waiting_driver_at,picked_up_at,delivered_at,cancelled_at,cancel_note,cancel_reason,driver:drivers(full_name)'
+  'waiting_driver_at,picked_up_at,delivered_at,cancelled_at,cancel_note,cancel_reason,updated_at,' +
+  'driver:drivers(full_name)'
+
+/**
+ * Estados en los que un pedido manual todavia admite edicion (0190). El techo
+ * es picked_up: ahi advance_order congela la comision y el envio.
+ */
+const EDITABLE_STATES = new Set<string>([
+  'preparing',
+  'waiting_driver',
+  'heading_to_restaurant',
+  'waiting_at_restaurant',
+])
 
 const limaTime = new Intl.DateTimeFormat('es-PE', {
   hour: '2-digit',
@@ -84,6 +96,7 @@ export interface OrderRow {
   cancelled_at: string | null
   cancel_note: string | null
   cancel_reason: string | null
+  updated_at: string
   driver?: { full_name: string | null } | null
 }
 
@@ -174,6 +187,19 @@ export interface OrderVM {
   closedAt: string | null
   cancelReason: string | null
   cancelReasonCode: string | null
+  /** Testigo de version para editar (0190): el updated_at que la cajera tenia delante. */
+  updatedAt: string
+  /**
+   * Las dos ventanas de 0190. El dinero se congela cuando el motorizado
+   * llega al local -ahi ya le dieron el sencillo en mano- y el contacto
+   * aguanta hasta que recoge.
+   *
+   * Se deriva aqui y no en el JSX para que las pantallas que lo necesitan no
+   * puedan contradecirse, como ya paso con comidaLista. Es SOLO para pintar:
+   * quien decide es la RPC.
+   */
+  canEdit: boolean
+  canEditMoney: boolean
 }
 
 // Timeouts canónicos (DECISIONS.md §10). Configurables en app_settings.timers;
@@ -543,6 +569,12 @@ export function toOrderVM(
     closedAt: fmtTime(row.delivered_at ?? row.cancelled_at),
     cancelReason: row.status === 'cancelled' ? row.cancel_note : null,
     cancelReasonCode: row.status === 'cancelled' ? row.cancel_reason : null,
+    updatedAt: row.updated_at,
+    canEdit: EDITABLE_STATES.has(row.status) && source === 'manual',
+    canEditMoney:
+      EDITABLE_STATES.has(row.status) &&
+      source === 'manual' &&
+      row.status !== 'waiting_at_restaurant',
   }
 }
 

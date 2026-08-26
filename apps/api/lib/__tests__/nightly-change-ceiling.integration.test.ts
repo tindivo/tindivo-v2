@@ -56,6 +56,18 @@ let tel9: string
 let serviceDate: string
 const pedidosCreados: string[] = []
 
+/**
+ * Las jornadas del negocio TAL COMO estaban antes de este fichero.
+ *
+ * Hace falta desde que `declararVuelto` pasó a `upsert`: antes hacía `UPDATE` y
+ * no podía crear nada, así que no había qué restaurar. Ahora puede crear la fila
+ * de HOY, y esa fila no es inerte — enciende el banner «Atendiendo hoy» en el
+ * chrome de negocios, que empuja el contenido de TODAS sus pantallas hacia
+ * abajo. Medido: dejarla puesta tumba los siete snapshots visuales del panel a
+ * la vez, y el fallo apunta a la UI en vez de a este fichero.
+ */
+let jornadasPrevias: { service_date: string; status: string; change_available: number | null }[] = []
+
 async function pagarCon(monto: number) {
   return db.rpc('create_customer_order', {
     p_customer_user_id: clienteId,
@@ -74,13 +86,31 @@ async function pagarCon(monto: number) {
   })
 }
 
-/** `null` deja la noche sin declarar, que es como la encuentra el seed. */
+/**
+ * `null` deja la noche sin declarar, que es como la encuentra el seed.
+ *
+ * UPSERT, no UPDATE. Era un UPDATE y eso lo hacía depender de que YA existiera
+ * la fila de la jornada, cosa que nadie garantiza: `business_service_days` la
+ * crea el negocio al confirmar apertura, no el seed. Cuando no existía, el
+ * UPDATE no casaba ninguna fila, PostgREST no lo considera un error, y la
+ * declaración se perdía en silencio: `effective_max_change` devolvía el global
+ * y los tres casos de este fichero fallaban con «expected 50 to be 80».
+ *
+ * El síntoma es de los que se curan solos y vuelven: pasa los días en que
+ * alguien confirmó la apertura y falla los demás. Visto en verde toda una
+ * sesión y en rojo al cruzar las 05:00 de Lima, cuando `current_service_date()`
+ * avanzó a una jornada sin fila.
+ */
 async function declararVuelto(monto: number | null, fecha?: string) {
-  const { error } = await db
-    .from('business_service_days')
-    .update({ change_available: monto })
-    .eq('business_id', BUSINESS_ID)
-    .eq('service_date', fecha ?? serviceDate)
+  const { error } = await db.from('business_service_days').upsert(
+    {
+      business_id: BUSINESS_ID,
+      service_date: fecha ?? serviceDate,
+      status: 'open',
+      change_available: monto,
+    },
+    { onConflict: 'business_id,service_date' },
+  )
   if (error) throw new Error(`no se pudo declarar el vuelto: ${error.message}`)
 }
 
@@ -101,6 +131,12 @@ describe('0185 · el vuelto de la noche manda sobre la constante', () => {
     const { data: hoy, error: sdErr } = await db.rpc('current_service_date')
     if (sdErr || !hoy) throw new Error(`current_service_date falló: ${sdErr?.message}`)
     serviceDate = hoy as string
+
+    const { data: jornadas } = await db
+      .from('business_service_days')
+      .select('service_date,status,change_available')
+      .eq('business_id', BUSINESS_ID)
+    jornadasPrevias = (jornadas ?? []) as typeof jornadasPrevias
 
     tel9 = `9${String(Math.floor(Math.random() * 1e8)).padStart(8, '0')}`
     const { data: auth, error: authErr } = await db.auth.admin.createUser({
@@ -170,6 +206,32 @@ describe('0185 · el vuelto de la noche manda sobre la constante', () => {
     }
     await db.from('customer_profiles').delete().eq('user_id', clienteId)
     await db.auth.admin.deleteUser(clienteId)
+
+    // Devolver las jornadas exactamente como estaban: borrar las que este
+    // fichero creó y restaurar el vuelto de las que ya existían. Ver la nota de
+    // `jornadasPrevias`.
+    const previas = new Set(jornadasPrevias.map((j) => j.service_date))
+    const { data: ahora } = await db
+      .from('business_service_days')
+      .select('service_date')
+      .eq('business_id', BUSINESS_ID)
+
+    for (const j of (ahora ?? []) as { service_date: string }[]) {
+      if (!previas.has(j.service_date)) {
+        await db
+          .from('business_service_days')
+          .delete()
+          .eq('business_id', BUSINESS_ID)
+          .eq('service_date', j.service_date)
+      }
+    }
+    for (const j of jornadasPrevias) {
+      await db
+        .from('business_service_days')
+        .update({ status: j.status, change_available: j.change_available })
+        .eq('business_id', BUSINESS_ID)
+        .eq('service_date', j.service_date)
+    }
   })
 
   it('sin declarar nada, manda `app_settings.max_change`', async () => {
