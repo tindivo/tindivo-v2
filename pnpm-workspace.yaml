@@ -50,6 +50,7 @@ catalog:
   '@upstash/redis': ^1.38.0
   web-push: ^3.6.7
   '@types/web-push': ^3.6.4
+  '@vercel/analytics': ^2.0.1
 
   # --- Tooling ---
   '@biomejs/biome': ^2.4.16
