@@ -551,6 +551,18 @@
   "549": "deadline.ts",
   "550": "whatsapp-templates.ts",
   "551": "route.ts",
+  "552": "cart-validation.ts",
   "553": "vitest.config.ts",
-  "554": "vitest.config.ts"
+  "554": "vitest.config.ts",
+  "555": "use-opening-day.ts",
+  "556": "shell.tsx",
+  "557": "database.types.ts",
+  "558": "transfers.spec.ts",
+  "559": "gps-fallback-prepaid.integration.test.ts",
+  "560": "9. Fondo de contingencia",
+  "561": "payment-qrs.spec.ts",
+  "562": "capability-notes.tsx",
+  "563": "mobile-section-title.tsx",
+  "564": "save-button.tsx",
+  "565": "6. CI/CD con GitHub Actions"
 }

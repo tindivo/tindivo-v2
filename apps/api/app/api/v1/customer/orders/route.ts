@@ -167,7 +167,7 @@ export async function POST(req: Request): Promise<Response> {
       .eq('id', body.businessId)
       .maybeSingle()
 
-    if (!biz || !biz.is_active || biz.is_blocked) {
+    if (!biz?.is_active || biz.is_blocked) {
       return problem('conflict', {
         detail: 'Este restaurante no está disponible para recibir pedidos.',
         requestId,
