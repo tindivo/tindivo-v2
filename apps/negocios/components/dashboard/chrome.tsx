@@ -1082,7 +1082,11 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
   const paused = isBusinessPaused(biz.until, now)
   const pauseMin = pauseMinutesLeft(biz.until, now)
   const hasWaiting = vms.some((o) => o.state === 'waiting')
-  const hasBufferP3 = vms.some((o) => o.state === 'buffer_p2' || o.state === 'buffer_p3')
+  const hasBufferP3 = vms.some(
+    (o) =>
+      (o.state === 'buffer_p2' || o.state === 'buffer_p3') &&
+      (o.comidaLista || (o.readySec != null && o.readySec < 0) || o.readySec == null),
+  )
   // LA MISMA EXPRESIÓN QUE ENCIENDE EL SONIDO Y QUE PINTA EL BANNER.
   //
   // Estaba aquí como filtro suelto, y el banner no existía: el sonido era global

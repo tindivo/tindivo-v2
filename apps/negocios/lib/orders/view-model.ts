@@ -377,8 +377,17 @@ function getUiState(row: OrderRow, now: number): UiState {
     case 'confirmed':
     case 'preparing':
       return 'cooking'
-    case 'waiting_driver':
-      return row.driver_id ? 'heading' : bufferPhase(minutesSince(row.waiting_driver_at, now))
+    case 'waiting_driver': {
+      if (row.driver_id) return 'heading'
+      // Si la comida aún no está lista y el tiempo de cocina no ha vencido (countdown > 0),
+      // el pedido se mantiene visualmente en 'cooking' sin escalar a buffer prematuro.
+      const readyAtMs = row.estimated_ready_at ? Date.parse(row.estimated_ready_at) : null
+      const isStillCooking = !row.ready_early_used && readyAtMs != null && readyAtMs > now
+      if (isStillCooking) {
+        return 'cooking'
+      }
+      return bufferPhase(minutesSince(row.waiting_driver_at ?? row.estimated_ready_at, now))
+    }
     case 'heading_to_restaurant':
       return 'heading'
     case 'waiting_at_restaurant':

@@ -604,12 +604,16 @@ export function buildNegociosCardVM(
       isUrgent: true,
     }
   } else if (order.state === 'buffer_p2' || order.state === 'buffer_p3') {
-    const alarma = order.state === 'buffer_p3'
-    primaryAction = {
-      type: 'callDriver',
-      label: alarma ? 'Pedir motorizado YA' : 'Pedir motorizado',
-      isUrgent: true,
-      phoneToCall: supportPhone ?? undefined,
+    const isLateOrReady =
+      order.comidaLista || (order.readySec != null && order.readySec < 0) || order.readySec == null
+    if (isLateOrReady) {
+      const alarma = order.state === 'buffer_p3'
+      primaryAction = {
+        type: 'callDriver',
+        label: alarma ? 'Pedir motorizado YA' : 'Pedir motorizado',
+        isUrgent: alarma,
+        phoneToCall: supportPhone ?? undefined,
+      }
     }
   }
 

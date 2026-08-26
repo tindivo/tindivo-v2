@@ -676,14 +676,36 @@ describe('buildNegociosCardVM', () => {
     expect(cardVm.primaryAction?.label).toContain('Carlos Chofer llegó · Entregar')
   })
 
-  it('asigna la acción 1-tap "Pedir motorizado YA" en buffer_p3', () => {
+  it('NO asigna la acción de "Pedir motorizado" ni pulso si el pedido aún se está cocinando (readySec > 0)', () => {
+    const row = mockOrderRow({
+      status: 'waiting_driver',
+      waiting_driver_at: '2026-08-05T15:00:00Z', // 15 min en espera de moto
+      estimated_ready_at: '2026-08-05T15:30:00Z', // faltan 15 min de cocina
+      ready_early_used: false,
+    })
+    const orderVm = toOrderVM(row, baseNow)
+    expect(orderVm.state).toBe('cooking')
+    expect(orderVm.readySec).toBeGreaterThan(0)
+
+    const cardVm = buildNegociosCardVM(orderVm, { supportPhone: '999111222' })
+    expect(cardVm.primaryAction).toBeNull()
+    expect(cardVm.pulse).toBe('none')
+    expect(cardVm.stateBadge.label).toBe('En cocina')
+  })
+
+  it('asigna la acción 1-tap "Pedir motorizado YA" solo cuando el tiempo de cocina se venció (readySec <= 0)', () => {
     const row = mockOrderRow({
       status: 'waiting_driver',
       waiting_driver_at: '2026-08-05T15:00:00Z', // 15 min esperando moto
+      estimated_ready_at: '2026-08-05T15:10:00Z', // vencido hace 5 min
     })
-    const cardVm = buildNegociosCardVM(toOrderVM(row, baseNow), { supportPhone: '999111222' })
+    const orderVm = toOrderVM(row, baseNow)
+    expect(orderVm.readySec).toBeLessThanOrEqual(0)
+
+    const cardVm = buildNegociosCardVM(orderVm, { supportPhone: '999111222' })
     expect(cardVm.primaryAction?.type).toBe('callDriver')
     expect(cardVm.primaryAction?.label).toBe('Pedir motorizado YA')
+    expect(cardVm.primaryAction?.isUrgent).toBe(true)
   })
 })
 
