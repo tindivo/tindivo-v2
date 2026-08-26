@@ -9,6 +9,11 @@ export type BottomNavItem = {
   onClick?: () => void
   label: string
   icon: string
+  /**
+   * Iniciales del motorizado. Cuando vienen, la pestaña pinta su avatar en vez
+   * del icono: es la pestaña «Tú», y una cara identifica mejor que un glifo.
+   */
+  initials?: string
   badge?: number | null
   badgeColor?: 'danger' | 'brand'
   active?: boolean
@@ -20,8 +25,33 @@ export interface BottomNavProps {
 }
 
 /**
- * Navegación inferior flotante (pill) del motorizado.
- * Soporta tanto enlaces directos (Link) como botones de acción (ej. modal "Más").
+ * TOPE DEL BADGE. Nueve liquidaciones pendientes y doce no son la misma noche,
+ * y el «9+» de antes borraba justo el dato por el que se entra a esa pantalla.
+ * Con dos cifras el badge sigue cabiendo sin empujar al icono de al lado.
+ */
+const BADGE_MAX = 99
+
+/**
+ * Navegación inferior del motorizado.
+ *
+ * EL ACTIVO NO PINTA SUPERFICIE, y ese es el cambio. Antes la pestaña activa
+ * era una píldora con degradado de marca y `shadow-glow-brand`: el bloque de
+ * color más pesado de la pantalla, por delante de la tarjeta que se está
+ * pasando de hora. Y la tarjeta ya habla en color —la franja del local, la
+ * insignia de estado, el borde rojo con aura de lo vencido, el verde que asoma
+ * al arrastrar para tomar—, así que la barra estaba gritando más fuerte que
+ * todo eso sin decir nada nuevo. Ahora el activo se marca rellenando el icono
+ * (eje FILL de Material Symbols) y subiendo el peso del label: cero superficie.
+ *
+ * LOS LABELS VAN EN CAJA DE FRASE. En versalitas de 10px con `tracking` todas
+ * las palabras tienen la misma silueta rectangular y hay que deletrearlas; esta
+ * barra se lee de reojo, con el casco puesto y una mano en el manillar.
+ *
+ * El inactivo usa `ink-muted` y no un gris más claro a propósito: 7,5:1 sobre
+ * el fondo de la barra. La diferencia con el activo la llevan el relleno y el
+ * tono, no el contraste — bajarlo penalizaría justo a quien lee al sol.
+ *
+ * Soporta enlaces (`href`) y botones de acción (`onClick`).
  */
 export function BottomNav({ items, className }: BottomNavProps) {
   const pathname = usePathname()
@@ -40,7 +70,7 @@ export function BottomNav({ items, className }: BottomNavProps) {
   return (
     <nav
       aria-label="Navegación principal"
-      className={`fixed bottom-0 left-0 right-0 z-30 flex items-stretch gap-1 px-3 backdrop-blur-2xl bg-white/[0.85] rounded-t-[32px] pt-3.5 shadow-[0_-4px_30px_rgba(26,22,20,0.08)] pb-[max(14px,env(safe-area-inset-bottom))] ${
+      className={`fixed right-0 bottom-0 left-0 z-30 flex items-stretch gap-0.5 border-t border-ink/[0.07] bg-white/[0.92] px-2 pt-2.5 backdrop-blur-2xl pb-[max(12px,env(safe-area-inset-bottom))] ${
         className ?? ''
       }`}
     >
@@ -51,32 +81,39 @@ export function BottomNav({ items, className }: BottomNavProps) {
         const content = (
           <>
             <span className="relative inline-flex items-center justify-center">
-              <Icon
-                name={item.icon}
-                size={24}
-                filled={active}
-                weight={active ? 500 : 400}
-                className="leading-none"
-              />
+              {item.initials ? (
+                <span
+                  aria-hidden
+                  className={`inline-flex h-[26px] w-[26px] items-center justify-center rounded-full bg-[linear-gradient(135deg,var(--color-brand),var(--gradient-brand-to))] text-[11px] font-bold text-white ${
+                    active ? 'ring-2 ring-brand' : ''
+                  }`}
+                >
+                  {item.initials}
+                </span>
+              ) : (
+                <Icon
+                  name={item.icon}
+                  size={26}
+                  filled={active}
+                  weight={active ? 500 : 400}
+                  className="leading-none"
+                />
+              )}
               {typeof item.badge === 'number' && item.badge > 0 && (
                 <span
                   role="status"
                   aria-label={`${item.badge} pendientes`}
-                  className={`absolute -top-1.5 -right-2 inline-flex min-h-[18px] min-w-[18px] items-center justify-center rounded-full border-[1.5px] px-1 text-[10px] font-black leading-none shadow-xs ${
-                    item.badgeColor === 'danger'
-                      ? 'border-white bg-danger text-white'
-                      : active
-                        ? 'border-white bg-white text-brand'
-                        : 'border-white bg-brand text-white'
+                  className={`-top-[5px] -right-[11px] absolute inline-flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[12px] font-bold text-white leading-none ${
+                    item.badgeColor === 'danger' ? 'bg-danger' : 'bg-brand'
                   }`}
                 >
-                  {item.badge > 9 ? '9+' : item.badge}
+                  {item.badge > BADGE_MAX ? `${BADGE_MAX}+` : item.badge}
                 </span>
               )}
             </span>
             <span
-              className={`mt-[5px] whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.08em] ${
-                active ? 'opacity-100' : 'opacity-75'
+              className={`whitespace-nowrap text-[11px] leading-none tracking-[-0.005em] ${
+                active ? 'font-bold' : 'font-medium'
               }`}
             >
               {item.label}
@@ -84,10 +121,8 @@ export function BottomNav({ items, className }: BottomNavProps) {
           </>
         )
 
-        const baseClass = `flex flex-1 flex-col items-center justify-center rounded-[22px] p-2.5 transition-all duration-300 active:scale-90 cursor-pointer ${
-          active
-            ? 'bg-[linear-gradient(135deg,var(--color-brand),var(--gradient-brand-to))] text-white shadow-glow-brand'
-            : 'text-ink-muted hover:text-ink'
+        const baseClass = `flex min-h-[52px] flex-1 cursor-pointer flex-col items-center justify-center gap-1 rounded-[14px] transition-[color,transform] duration-200 active:scale-[0.92] ${
+          active ? 'text-brand' : 'text-ink-muted'
         }`
 
         if (item.onClick) {

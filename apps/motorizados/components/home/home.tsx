@@ -5,10 +5,8 @@ import { useEffect, useState } from 'react'
 import { useDriverOrders } from '@/hooks/use-driver-orders'
 import { useNow } from '@/hooks/use-now'
 import { useTeam } from '@/hooks/use-team'
-import { getSupabaseBrowser } from '@/lib/supabase/client'
 import { AvailableTab } from './available-tab'
 import { MineTab } from './mine-tab'
-import { StatusIndicators } from './status-indicators'
 import { TeamTab } from './team-tab'
 
 type Tab = 'available' | 'mine' | 'team'
@@ -22,15 +20,6 @@ export function Home() {
   // llevarte a Equipo exigía que ya estuvieras en Equipo.
   const team = useTeam()
   const [tab, setTab] = useState<Tab>('available')
-  const [driverName, setDriverName] = useState<string | null>(null)
-
-  useEffect(() => {
-    getSupabaseBrowser()
-      .from('drivers')
-      .select('full_name')
-      .maybeSingle()
-      .then(({ data }) => setDriverName(data?.full_name ?? null))
-  }, [])
 
   // ── Pestaña de aterrizaje: donde hay trabajo, no siempre la primera.
   //
@@ -56,7 +45,6 @@ export function Home() {
     setInitialized(true)
   }, [initialized, resolved, board.mine.length])
 
-  const firstName = driverName?.split(' ')[0]
   // El badge de Equipo cuenta lo que la pestaña MUESTRA: pedidos de compañeros
   // que se pueden pedir. Las solicitudes entrantes viven en el banner y no se
   // cuentan aquí — un badge es censo, no alarma.
@@ -72,13 +60,9 @@ export function Home() {
       className="mx-auto max-w-[480px] px-4 pb-10"
       style={{ paddingTop: 'max(5rem, calc(var(--drv-transfer-h, 0px) + 0.75rem))' }}
     >
-      {firstName && (
-        <p className="mb-3 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/55">
-          Hola, <span className="text-ink">{firstName}</span>
-        </p>
-      )}
-
-      <StatusIndicators />
+      {/* El saludo y la fila de estado («Disponible», «Avisos activos») vivían
+          aquí y se han ido a la barra superior: se perdían al bajar por la
+          bandeja y no existían en Efectivo ni en Historial. Ver `ShiftStatus`. */}
 
       {/* Las pestañas se pegan por DEBAJO de la pila de solicitudes. Antes se
           quedaban fijas a 44px y la pila las cubría: el motorizado no podía

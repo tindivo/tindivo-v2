@@ -51,9 +51,9 @@ export function CapacityIndicator() {
       role="status"
       aria-label={palette.label}
       title={palette.label}
-      className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-bold ${palette.bg} ${palette.text}`}
+      className={`flex items-center gap-2 rounded-full py-2 pr-3 pl-2.5 text-sm font-bold ${palette.bg} ${palette.text}`}
     >
-      <Icon name={palette.icon} size={16} filled />
+      <Icon name={palette.icon} size={18} filled />
       <span className="font-mono tabular-nums leading-none tracking-[-0.01em]">
         {mySlots}/{MAX_SLOTS}
       </span>
