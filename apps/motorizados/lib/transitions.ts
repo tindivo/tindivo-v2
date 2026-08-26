@@ -13,7 +13,6 @@ import {
 
 /** Estado destino optimista por acción (para pintar la UI sin red). */
 const NEXT_STATUS: Record<string, string> = {
-  take: 'heading_to_restaurant',
   arrived: 'waiting_at_restaurant',
   pickup: 'picked_up',
   deliver: 'delivered',
@@ -21,9 +20,24 @@ const NEXT_STATUS: Record<string, string> = {
 }
 
 /**
+ * Acciones que NO se encolan aunque no haya red.
+ *
+ * `take` es la única transición que COMPITE: dos motorizados pueden ir a por el
+ * mismo pedido y solo uno se lo lleva. Encolarla y pintar el avance optimista le
+ * promete un viaje que quizá ya tiene dueño, y el desengaño no llega al volver
+ * la conexión sino minutos después, en el local. Sin red no se toma: se dice, y
+ * quien lo intentó vuelve a intentarlo.
+ *
+ * El motivo es de la ACCIÓN, no de la pantalla, así que vale igual para el
+ * gesto de la bandeja y para el botón de la ficha.
+ */
+const NEVER_QUEUED = new Set(['take'])
+
+/**
  * Postea una transición. Si falla por RED (no por validación del servidor),
  * la encola con su Idempotency-Key y devuelve 'queued' — la UI avanza optimista.
- * Los ApiError (4xx/5xx) se relanzan: son errores reales del dominio.
+ * Los ApiError (4xx/5xx) se relanzan: son errores reales del dominio, y las
+ * acciones de `NEVER_QUEUED` relanzan también los fallos de red.
  */
 export async function postTransition(
   orderId: string,
@@ -37,6 +51,7 @@ export async function postTransition(
     return 'ok'
   } catch (err) {
     if (err instanceof ApiError) throw err
+    if (NEVER_QUEUED.has(action)) throw err
     enqueue({ key, orderId, action, params, ts: Date.now() })
     const next = NEXT_STATUS[action]
     if (next) setOptimistic(orderId, next)

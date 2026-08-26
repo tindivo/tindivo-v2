@@ -119,6 +119,7 @@ export function Home() {
           lastSyncOk={board.lastSyncOk}
           loading={board.loading}
           now={now}
+          onTaken={board.refetch}
         />
       )}
       {tab === 'mine' && <MineTab mine={board.mine} loading={board.loading} now={now} />}
