@@ -3,7 +3,7 @@
 import { sessionVerdict, shouldClearStaleSession, signOutLocal } from '@tindivo/supabase'
 import { useEffect, useRef } from 'react'
 import type { CheckoutState } from '@/features/checkout/hooks/use-checkout-state'
-import type { CustomerProfile } from '@/features/checkout/types'
+import type { CustomerProfile, PromoReason } from '@/features/checkout/types'
 import { useOnboarding } from '@/lib/onboarding-store'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
@@ -17,6 +17,7 @@ export function useCheckoutAuth(state: CheckoutState) {
     setAuthReady,
     setPrepayOnlyByRisk,
     setHasDeliveryHistory,
+    setPromo,
     setUserId,
     setName,
     setPhone,
@@ -128,6 +129,28 @@ export function useCheckoutAuth(state: CheckoutState) {
       )
       if (trustedError) console.error('[checkout] historial de entregas:', trustedError.message)
       setHasDeliveryHistory(trusted === true)
+
+      // ¿Le toca el envío gratis de la promo de lanzamiento? (0187)
+      //
+      // Mismo reparto de responsabilidades que la línea de arriba: la RPC no
+      // acepta a quién preguntar, responde por `auth.uid()`, y ES SOLO PARA
+      // PINTAR — quien decide de verdad es `create_customer_order`, que reserva
+      // el cupo atómicamente. Un `eligible` obsoleto no regala nada.
+      //
+      // Ante fallo se queda en PROMO_DESCONOCIDA: cobra tarifa y no pinta
+      // cartel. Es el lado seguro, y el contrario al de la contraentrega —ver
+      // la nota en `types.ts`.
+      const { data: promo, error: promoError } = await supabase.rpc(
+        'current_customer_promo_free_delivery',
+      )
+      if (promoError) console.error('[checkout] promo de envío:', promoError.message)
+      else if (promo && typeof promo === 'object') {
+        const p = promo as { eligible?: boolean; reason?: string }
+        setPromo({
+          eligible: p.eligible === true,
+          reason: (p.reason ?? 'inactive') as PromoReason,
+        })
+      }
       setUserId(sessionUser.id)
       setName(profile?.full_name ?? meta?.full_name ?? '')
       if (profile?.phone) {

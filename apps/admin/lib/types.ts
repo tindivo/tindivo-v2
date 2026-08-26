@@ -63,3 +63,31 @@ export interface OrderRow {
   change_to_give: number | null
   created_at: string
 }
+
+/**
+ * Consumo de la promo de envío gratis (0187). Viene de `/admin/promo`.
+ *
+ * `configured: false` significa que la key `promo_free_delivery` no existe en
+ * `app_settings` — no hay promo montada, y el resto de campos no vienen. Es
+ * distinto de `activa: false`, que es una promo montada y apagada.
+ */
+export interface PromoStats {
+  configured: boolean
+  code?: string
+  activa?: boolean
+  from?: string
+  to?: string
+  maxRedemptions?: number
+  /** reserved + redeemed: lo que ya consume tope. Misma expresión que el candado. */
+  comprometidos?: number
+  cuposRestantes?: number
+  redimidos?: number
+  /** Primer pedido histórico del cliente (prior_delivered_count = 0). */
+  clientesNuevos?: number
+  clientesRecurrentes?: number
+  /** Reservas en vuelo: pedido creado, todavía no entregado ni cancelado. */
+  enCurso?: number
+  /** Cancelados: devolvieron el cupo al cliente y al tope. */
+  liberados?: number
+  costoPromo?: number
+}

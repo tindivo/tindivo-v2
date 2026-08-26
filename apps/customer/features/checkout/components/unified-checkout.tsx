@@ -11,7 +11,7 @@ import { OrderDetail } from '@/features/checkout/components/order-detail'
 import type { CheckoutViewModel } from '@/features/checkout/hooks/use-checkout'
 import type { UseCheckoutValidationReturn } from '@/features/checkout/hooks/use-checkout-validation'
 import { soles } from '@/features/checkout/lib/format'
-import { PAYMENT_OPTIONS, PICKUP_ENABLED } from '@/features/checkout/types'
+import { PAYMENT_OPTIONS, PICKUP_ENABLED, promoAviso } from '@/features/checkout/types'
 import { AddressSelectorSheet } from './address-selector-sheet'
 import { NameEditSheet } from './name-edit-sheet'
 
@@ -42,6 +42,9 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
     total,
     subtotal,
     deliveryFee,
+    nominalDeliveryFee,
+    promoApplies,
+    promo,
     distanceBand,
     cart,
     loading,
@@ -315,9 +318,36 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
                 )}
               </span>
               <span className="tabular-nums">
-                {deliveryMethod === 'pickup' ? 'S/ 0.00' : soles(deliveryFee)}
+                {deliveryMethod === 'pickup' ? (
+                  'S/ 0.00'
+                ) : promoApplies ? (
+                  <>
+                    <span className="mr-1.5 text-ink-muted/60 line-through">
+                      {soles(nominalDeliveryFee)}
+                    </span>
+                    <span className="font-semibold text-brand">GRATIS</span>
+                  </>
+                ) : (
+                  soles(deliveryFee)
+                )}
               </span>
             </div>
+            {/* El aviso de la promo. `promoAviso` devuelve null cuando la promo
+                no está viva (fuera de ventana, o apagada): en ese caso el
+                checkout se ve exactamente como antes de que existiera. Un
+                "promoción agotada" en septiembre hablaría de algo que ya no
+                existe. Ver la nota en `types.ts`. */}
+            {deliveryMethod !== 'pickup' && promoAviso(promo.reason) && (
+              <p
+                className={
+                  promo.reason === 'active'
+                    ? 'text-[12px] text-brand'
+                    : 'text-[12px] text-ink-muted'
+                }
+              >
+                {promoAviso(promo.reason)}
+              </p>
+            )}
             <div className="flex justify-between border-t border-ink/[0.08] pt-2 text-[17px] font-bold text-ink">
               <span>Total</span>
               <span className="tabular-nums">{soles(total)}</span>

@@ -30,6 +30,7 @@ const NEGOCIOS_FIXTURE = [
   'La Florencia (cash test)', // seedContraentregaOrder
   'La Florencia (timer test)', // seedPrepaidOrder
   'Test Restaurant Integration', // seedFraudClaim
+  'La Florencia (promo test)', // promo-free-delivery: la segunda sede del caso 12(a)
 ]
 /** `Ledger Test <hash>` — el hash es aleatorio, así que va por prefijo. */
 const PREFIJO_LEDGER = 'Ledger Test '
@@ -55,7 +56,27 @@ const USUARIOS_FIXTURE = [
   // usuario de `auth` pero no el espejo de `public.users` —no hay FK entre las
   // dos—, así que dejaba una fila muerta por caso. 116 medidas el 2026-08-19.
   'Vecino Integración',
+  // promo-free-delivery: crea una cuenta VERIFICADA por caso, y hasta 8 por
+  // ronda en el test de concurrencia (5 rondas = 40 en un solo caso). Es el
+  // fixture que más usuarios genera de toda la suite; sin barrerlo aquí, un
+  // Ctrl-C en mitad de esa prueba deja decenas de cuentas por corrida.
+  'Vecino Promo',
 ]
+
+/**
+ * Prefijo de teléfono de los clientes de `promo-free-delivery`.
+ *
+ * No pueden usar `TELEFONOS_FIXTURE`: el índice único por teléfono verificado
+ * es justo lo que esa suite prueba, así que cada cliente necesita un número
+ * propio. Y sus pedidos cuelgan de los negocios del SEED, que no se borran, así
+ * que no caen por el paso 1.
+ *
+ * Importa el ORDEN: `orders.customer_user_id` es NO ACTION, así que si estos
+ * pedidos siguen vivos cuando el paso 5 intenta borrar a 'Vecino Promo', el
+ * DELETE falla y tumba el barrido entero —y con él toda la suite, con un error
+ * que apunta a `users` y no a aquí.
+ */
+const PREFIJO_TELEFONO_PROMO = '+51998'
 
 /** PostgREST mete los `.in()` en la URL: con miles de UUID revienta con un 414. */
 const LOTE = 200
@@ -70,6 +91,7 @@ interface Barrido {
   pedidos: number
   ciclos: number
   eventos: number
+  promoApagada: boolean
 }
 
 async function barrer(): Promise<Barrido> {
@@ -127,14 +149,29 @@ async function barrer(): Promise<Barrido> {
     .in('business_id', NEGOCIOS_SEED)
     .in('customer_phone', TELEFONOS_FIXTURE)
   if (pedErr) throw new Error(`barrido: leer orders de fixture falló: ${pedErr.message}`)
-  const huerfanos = (pedidos ?? []).map((o) => o.id)
+
+  // Los de la promo van por prefijo, no por lista: cada cliente lleva su propio
+  // número. Se buscan en TODA la tabla, no solo en los negocios del seed: el
+  // test de concurrencia reparte entre los dos negocios e2e.
+  const { data: pedidosPromo, error: promoErr } = await db
+    .from('orders')
+    .select('id')
+    .like('customer_phone', `${PREFIJO_TELEFONO_PROMO}%`)
+  if (promoErr) throw new Error(`barrido: leer orders de promo falló: ${promoErr.message}`)
+
+  const huerfanos = [...new Set([...(pedidos ?? []), ...(pedidosPromo ?? [])].map((o) => o.id))]
 
   await enLotes(huerfanos, async (lote) => {
     // `business_charges` sujeta el pedido con una FK sin cascada, y
     // `domain_events` lo referencia sin FK ninguna: los dos, a mano.
+    // `promo_redemptions` sí cae por cascada al borrar el pedido (0187), pero
+    // se borra explícitamente por el mismo motivo que las otras: no depender de
+    // que la cascada siga ahí.
     for (const [tabla, col] of [
+      ['promo_redemptions', 'order_id'],
       ['business_charges', 'order_id'],
       ['domain_events', 'aggregate_id'],
+      ['order_event_log', 'order_id'],
       ['orders', 'id'],
     ] as const) {
       const { error } = await db.from(tabla).delete().in(col, lote)
@@ -223,22 +260,59 @@ async function barrer(): Promise<Barrido> {
     if (error) throw new Error(`barrido: borrar domain_events huérfanos falló: ${error.message}`)
   })
 
+  // 7. La promo de envío gratis, APAGADA.
+  //
+  // La 0187 siembra `promo_free_delivery` con `active: true` y la ventana del
+  // lanzamiento (25-28 ago 2026), porque eso es lo que tiene que ir a
+  // producción. El efecto colateral en local es que, DENTRO de esa ventana,
+  // todo pedido de cliente que cree cualquier suite sale con `delivery_fee = 0`
+  // — y los tests que afirman una tarifa (`delivery-zones`, los de efectivo,
+  // los del ledger) se caen por un motivo que no tiene nada que ver con ellos.
+  //
+  // Peor: sería INTERMITENTE. Fuera de la ventana la suite entera pasa, así que
+  // el 29 de agosto el problema desaparece solo y nadie entiende qué pasó.
+  //
+  // El estado compartido lo fija la suite, igual que con los negocios y los
+  // pedidos de arriba. Quien quiera la promo encendida la enciende en su propio
+  // test — es lo que hace `promo-free-delivery.integration.test.ts`.
+  const { data: promo } = await db
+    .from('app_settings')
+    .select('value')
+    .eq('key', 'promo_free_delivery')
+    .maybeSingle()
+  let promoApagada = false
+  if (promo?.value && (promo.value as { active?: boolean }).active === true) {
+    const { error } = await db
+      .from('app_settings')
+      .update({ value: { ...(promo.value as object), active: false } })
+      .eq('key', 'promo_free_delivery')
+    if (error) throw new Error(`barrido: apagar la promo falló: ${error.message}`)
+    promoApagada = true
+  }
+
   return {
     negocios: bizIds.length,
     usuarios: userIds.length,
     pedidos: huerfanos.length,
     ciclos: vacios.length,
     eventos: eventosHuerfanos.length,
+    promoApagada,
   }
 }
 
 async function barrerYReportar(momento: 'antes' | 'después'): Promise<void> {
-  const { negocios, usuarios, pedidos, ciclos, eventos } = await barrer()
+  const { negocios, usuarios, pedidos, ciclos, eventos, promoApagada } = await barrer()
   if (negocios > 0 || usuarios > 0 || pedidos > 0 || ciclos > 0 || eventos > 0) {
     console.log(
       `🧹 [${momento}] restos de test borrados: ${negocios} negocios, ` +
         `${usuarios} usuarios, ${pedidos} pedidos, ${ciclos} ciclos de caja, ` +
         `${eventos} eventos huérfanos`,
+    )
+  }
+  if (promoApagada) {
+    console.log(
+      `🎟️  [${momento}] promo de envío gratis APAGADA en la base local. ` +
+        `Para verla en la app: app_settings.promo_free_delivery -> active: true.`,
     )
   }
 }

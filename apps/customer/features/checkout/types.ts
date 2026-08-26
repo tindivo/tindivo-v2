@@ -26,6 +26,54 @@ export const NEAR_DELIVERY_FEE = 2.0
  */
 export const PICKUP_ENABLED = false as boolean
 
+/**
+ * Por qué el cliente tiene (o no tiene) el envío gratis de la promo (0187).
+ *
+ * Lo decide la DB, no el navegador: sale tal cual de
+ * `current_customer_promo_free_delivery()`. Aquí solo se traduce a copy.
+ */
+export type PromoReason =
+  | 'active'
+  | 'exhausted'
+  | 'already_redeemed'
+  | 'outside_window'
+  | 'inactive'
+
+export interface PromoState {
+  eligible: boolean
+  reason: PromoReason
+}
+
+/**
+ * Estado inicial y de fallo. `inactive` + `eligible: false` es el lado seguro,
+ * y aquí es el CONTRARIO al del caso de contraentrega: enseñar S/2 y que el
+ * servidor cobre S/0 es una sorpresa agradable; enseñar S/0 y que cobre S/2 es
+ * una queja a soporte. Y `inactive` no pinta ningún cartel, así que un timeout
+ * de red nunca anuncia "promoción agotada".
+ */
+export const PROMO_DESCONOCIDA: PromoState = { eligible: false, reason: 'inactive' }
+
+/**
+ * El aviso que ve el cliente para cada motivo.
+ *
+ * `outside_window` e `inactive` devuelven null A PROPÓSITO: cuando la promo no
+ * está viva, el checkout debe verse exactamente como antes de que existiera. Un
+ * "promoción agotada" en septiembre habla de algo que ya no existe, y hace
+ * parecer que el cliente llegó tarde a algo que sigue en pie.
+ */
+export function promoAviso(reason: PromoReason): string | null {
+  switch (reason) {
+    case 'active':
+      return 'Promo de lanzamiento: tu envío va por nuestra cuenta.'
+    case 'exhausted':
+      return 'La promo de envío gratis se agotó.'
+    case 'already_redeemed':
+      return 'Ya usaste tu envío gratis de lanzamiento.'
+    default:
+      return null
+  }
+}
+
 export interface Address {
   id: string
   label: string

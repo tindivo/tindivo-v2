@@ -7,10 +7,30 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -2103,6 +2123,69 @@ export type Database = {
         }
         Relationships: []
       }
+      promo_redemptions: {
+        Row: {
+          customer_user_id: string
+          distance_band: Database["public"]["Enums"]["distance_band"] | null
+          had_delivery_history: boolean
+          id: string
+          order_id: string
+          prior_delivered_count: number
+          promo_code: string
+          redeemed_at: string | null
+          released_at: string | null
+          reserved_at: string
+          status: string
+          verified_phone: string
+          waived_amount: number
+        }
+        Insert: {
+          customer_user_id: string
+          distance_band?: Database["public"]["Enums"]["distance_band"] | null
+          had_delivery_history: boolean
+          id?: string
+          order_id: string
+          prior_delivered_count: number
+          promo_code: string
+          redeemed_at?: string | null
+          released_at?: string | null
+          reserved_at?: string
+          status?: string
+          verified_phone: string
+          waived_amount: number
+        }
+        Update: {
+          customer_user_id?: string
+          distance_band?: Database["public"]["Enums"]["distance_band"] | null
+          had_delivery_history?: boolean
+          id?: string
+          order_id?: string
+          prior_delivered_count?: number
+          promo_code?: string
+          redeemed_at?: string | null
+          released_at?: string | null
+          reserved_at?: string
+          status?: string
+          verified_phone?: string
+          waived_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promo_redemptions_customer_user_id_fkey"
+            columns: ["customer_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promo_redemptions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       push_delivery_log: {
         Row: {
           at: string
@@ -2448,6 +2531,7 @@ export type Database = {
     }
     Functions: {
       admin_metrics: { Args: { p_from: string; p_to: string }; Returns: Json }
+      admin_promo_free_delivery_stats: { Args: never; Returns: Json }
       advance_order: {
         Args: {
           p_action: string
@@ -2626,6 +2710,7 @@ export type Database = {
         }
       }
       current_business_id: { Args: never; Returns: string }
+      current_customer_promo_free_delivery: { Args: never; Returns: Json }
       current_customer_trusted_for_contraentrega: {
         Args: never
         Returns: boolean
@@ -3219,6 +3304,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       address_source: [
@@ -3317,3 +3405,4 @@ export const Constants = {
     },
   },
 } as const
+

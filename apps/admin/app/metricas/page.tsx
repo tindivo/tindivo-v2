@@ -19,7 +19,7 @@ import { SalesChart } from '@/components/admin/sales-chart'
 import { api, errMsg } from '@/lib/api'
 import { num, sharePcts, soles } from '@/lib/format'
 import { CANCEL_LABEL, PAYMENT_REAL_LABEL } from '@/lib/labels'
-import type { Metrics } from '@/lib/types'
+import type { Metrics, PromoStats } from '@/lib/types'
 
 type SubTab = 'ventas' | 'negocios' | 'motorizados' | 'cancelaciones'
 
@@ -53,10 +53,89 @@ function dayLabel(b: string) {
   return b.includes('T') ? `${b.slice(11, 13)}h` : `${b.slice(8, 10)}/${b.slice(5, 7)}`
 }
 
+/**
+ * Consumo de la promo de envío gratis (0187).
+ *
+ * NO se esconde cuando la promo está apagada o agotada: el dato más útil de una
+ * promo terminada es cuánto costó y a quién trajo. Solo desaparece si no hay
+ * ninguna promo montada (`configured: false`), que es el estado de siempre fuera
+ * de una campaña.
+ *
+ * Y no depende del `range` de la página a propósito: la promo es su propia
+ * ventana de cuatro noches, así que recortarla por rango enseñaría un trozo de
+ * algo que se decide entero. Por eso lleva sus fechas escritas en el subtítulo.
+ */
+function PromoCard({ stats }: { stats: PromoStats | null }) {
+  if (!stats?.configured) return null
+
+  const max = stats.maxRedemptions ?? 0
+  const usados = stats.comprometidos ?? 0
+  const restantes = stats.cuposRestantes ?? 0
+  const pct = max > 0 ? Math.min(100, Math.round((usados / max) * 100)) : 0
+  const agotada = restantes <= 0
+
+  return (
+    <div className="t-card space-y-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <p className="t-display text-[15px] text-ink">Promo de envío gratis</p>
+        <span className="text-[11px] text-ink-subtle">
+          {stats.from} → {stats.to} ·{' '}
+          {stats.activa ? (
+            <span className="font-medium text-success">activa</span>
+          ) : (
+            <span className="font-medium text-ink-muted">apagada</span>
+          )}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <KpiCard
+          label="Cupos restantes"
+          value={num(restantes)}
+          tone={agotada ? 'danger' : 'brand'}
+          sub={`de ${num(max)}`}
+        />
+        <KpiCard
+          label="Redimidos"
+          value={num(stats.redimidos ?? 0)}
+          sub={`${num(stats.enCurso ?? 0)} en curso`}
+        />
+        <KpiCard
+          label="Nuevos / recurrentes"
+          value={`${num(stats.clientesNuevos ?? 0)} / ${num(stats.clientesRecurrentes ?? 0)}`}
+          sub="primer pedido vs. ya conocido"
+        />
+        <KpiCard
+          label="Costo de la promo"
+          value={soles(stats.costoPromo ?? 0)}
+          sub="envíos regalados, ya entregados"
+        />
+      </div>
+
+      <div>
+        <div className="h-2 w-full overflow-hidden rounded-full bg-ink/[0.07]">
+          <div
+            className={`h-full rounded-full ${agotada ? 'bg-danger' : 'bg-brand'}`}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+        <p className="mt-1.5 text-[11px] text-ink-subtle">
+          {agotada
+            ? 'Agotada: los pedidos nuevos ya pagan envío.'
+            : `${num(usados)} de ${num(max)} comprometidos (${pct}%).`}
+          {(stats.liberados ?? 0) > 0 &&
+            ` ${num(stats.liberados ?? 0)} liberados por cancelación devolvieron su cupo.`}
+        </p>
+      </div>
+    </div>
+  )
+}
+
 export default function MetricasPage() {
   const [range, setRange] = useState('7d')
   const [tab, setTab] = useState<SubTab>('ventas')
   const [m, setM] = useState<Metrics | null>(null)
+  const [promo, setPromo] = useState<PromoStats | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(() => {
@@ -69,6 +148,16 @@ export default function MetricasPage() {
   useEffect(() => {
     load()
   }, [load])
+
+  // La promo NO depende del `range`: es su propia ventana. Se pide una sola vez
+  // al montar, no en cada cambio de rango. Un fallo aquí deja la tarjeta oculta
+  // en vez de romper la página: es un dato de apoyo, no la métrica principal.
+  useEffect(() => {
+    api
+      .get<ApiEnvelope<PromoStats>>('/admin/promo')
+      .then((r) => setPromo(r.data))
+      .catch(() => setPromo(null))
+  }, [])
 
   const series = m?.series ?? []
   // Los métodos sin pedidos en el rango ya no vienen de la RPC (`group by`), así
@@ -114,6 +203,7 @@ export default function MetricasPage() {
                 <KpiCard label="Pedidos" value={num(m.kpis.orders)} />
                 <KpiCard label="Ticket prom." value={soles(m.kpis.avgTicket)} />
               </div>
+              <PromoCard stats={promo} />
               <ChartCard title="Evolución de GMV y comisión">
                 {series.length === 0 ? (
                   <EmptyState title="Sin datos en el rango" />

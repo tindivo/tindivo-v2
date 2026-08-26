@@ -13,6 +13,8 @@ import {
   DEFAULT_PREPAY_THRESHOLD,
   type GeoBlockKind,
   type OrderResult,
+  PROMO_DESCONOCIDA,
+  type PromoState,
 } from '@/features/checkout/types'
 import { useBusinessOrdering } from '@/lib/business-ordering'
 import { type CartState, useCart, useCartHydrated } from '@/lib/cart'
@@ -82,6 +84,13 @@ export interface CheckoutState {
    */
   hasDeliveryHistory: boolean
   setHasDeliveryHistory: (v: boolean) => void
+  /**
+   * Promo de envío gratis del lanzamiento (0187). Lo decide la DB
+   * (`current_customer_promo_free_delivery`), no el navegador. Es SOLO para
+   * pintar: quien la aplica y reserva el cupo es `create_customer_order`.
+   */
+  promo: PromoState
+  setPromo: (v: PromoState) => void
 
   locating: boolean
   setLocating: (v: boolean) => void
@@ -100,6 +109,9 @@ export interface CheckoutState {
 
   subtotal: number
   deliveryFee: number
+  /** Lo que costaría el envío sin la promo. Para el tachado. */
+  nominalDeliveryFee: number
+  promoApplies: boolean
   distanceBand: DistanceBand
   total: number
   isNewUser: boolean
@@ -139,6 +151,7 @@ export function useCheckoutState(): CheckoutState {
   const [maxChange, setMaxChange] = useState(DEFAULT_MAX_CHANGE)
   const [prepayOnlyByRisk, setPrepayOnlyByRisk] = useState(false)
   const [hasDeliveryHistory, setHasDeliveryHistory] = useState(false)
+  const [promo, setPromo] = useState<PromoState>(PROMO_DESCONOCIDA)
   const [locating, setLocating] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -166,8 +179,20 @@ export function useCheckoutState(): CheckoutState {
   }, [selectedAddress, manualAddr.coords, farZones])
 
   const subtotal = cart.subtotal()
-  const deliveryFee =
+
+  /** Tarifa que corresponde al pin, ANTES de la promo. Se pinta tachada. */
+  const nominalDeliveryFee =
     deliveryMethod === 'pickup' ? 0 : distanceBand === 'far' ? bands.far : bands.near
+
+  /**
+   * Promo de lanzamiento (0187): el envío va por cuenta de Tindivo.
+   *
+   * Solo aplica a `delivery`. En pickup el envío ya es 0 y regalar lo que es
+   * gratis quemaría el cupo del cliente — el servidor lo excluye igual, esto es
+   * para que la pantalla no diga "GRATIS por la promo" cuando no lo es.
+   */
+  const promoApplies = promo.eligible && deliveryMethod === 'delivery' && nominalDeliveryFee > 0
+  const deliveryFee = promoApplies ? 0 : nominalDeliveryFee
   const total = useMemo(
     () => Math.round((subtotal + deliveryFee) * 100) / 100,
     [subtotal, deliveryFee],
@@ -339,6 +364,8 @@ export function useCheckoutState(): CheckoutState {
     setPrepayOnlyByRisk,
     hasDeliveryHistory,
     setHasDeliveryHistory,
+    promo,
+    setPromo,
     locating,
     setLocating,
     loading,
@@ -355,6 +382,8 @@ export function useCheckoutState(): CheckoutState {
     setShowOtpSheet,
     subtotal,
     deliveryFee,
+    nominalDeliveryFee,
+    promoApplies,
     distanceBand,
     total,
     isNewUser,
