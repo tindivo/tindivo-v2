@@ -1,6 +1,7 @@
 'use client'
 
 import { cn, Icon } from '@tindivo/ui'
+import { prefetchProofUrl } from '@/features/pedidos/lib/proof-url'
 import { useBusinessTimers } from '@/hooks/use-queue-lead'
 import { buildNegociosCardVM, type CardTone } from '@/lib/orders/card-view-model'
 import type { OrderVM } from '@/lib/orders/view-model'
@@ -31,6 +32,13 @@ function clickProps(order: OrderVM, onOpen?: (o: OrderVM) => void) {
   return {
     role: 'button' as const,
     tabIndex: 0,
+    // Al APRETAR, no al soltar. Entre el `pointerdown` y el `click` que abre la
+    // ficha hay unas decenas de milisegundos regalados; con ellos la URL
+    // firmada del comprobante ya va en camino cuando la ficha monta. Solo
+    // prepagados: son los únicos que tienen comprobante que mirar.
+    onPointerDown: () => {
+      if (order.payment === 'prepaid') prefetchProofUrl(order.rowId, order.proofUrl)
+    },
     onClick: () => onOpen?.(order),
     onKeyDown: (e: React.KeyboardEvent) => {
       if (e.key === 'Enter' || e.key === ' ') {

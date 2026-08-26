@@ -2,7 +2,7 @@
 
 import { type OrderStatus, OrderStatusSchema } from '@tindivo/contracts'
 import { useEffect, useState } from 'react'
-import { api } from '@/lib/api'
+import { getProofUrl } from '@/features/pedidos/lib/proof-url'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
 export interface DetailItem {
@@ -38,17 +38,53 @@ export function useOrderDetail(
   const [detailProofUrl, setDetailProofUrl] = useState<string | null>(null)
   const [freshOrder, setFreshOrder] = useState<FreshOrder | null>(null)
   const [freshSettledFor, setFreshSettledFor] = useState<string | null>(null)
+  const [proofSettledFor, setProofSettledFor] = useState<string | null>(null)
 
   useEffect(() => {
     let cancel = false
     setDetailItems(null)
     setDetailProofUrl(null)
     setFreshOrder(null)
+    setProofSettledFor(null)
 
     if (!selectedId) return
 
     const supabase = getSupabaseBrowser()
-    void (async () => {
+    const id = selectedId
+
+    /**
+     * Pide la URL firmada y la deja lista. Se marca `settled` PASE LO QUE PASE:
+     * antes, un fallo aquí dejaba `detailProofUrl` en `null` para siempre y con
+     * él `isLoadingActions` en `true`, o sea los botones de aceptar y rechazar
+     * deshabilitados hasta que la cajera cerrara y volviera a abrir.
+     */
+    async function resolveProof(path: string) {
+      try {
+        const url = await getProofUrl(id, path)
+        if (!cancel) setDetailProofUrl(url)
+      } catch {
+        /* sin comprobante todavía */
+      } finally {
+        if (!cancel) setProofSettledFor(id)
+      }
+    }
+
+    /*
+      LAS TRES PETICIONES SALEN A LA VEZ, y antes iban en fila.
+
+      La imagen del comprobante era la última de la cola: no empezaba a bajar
+      hasta que habían vuelto la relectura del pedido y la lista de items — que
+      no tienen nada que ver con ella— y solo entonces se pedía la URL firmada.
+      Tres viajes de ida y vuelta antes del primer byte de la foto, con la
+      cajera mirando un hueco gris y los botones apagados.
+
+      La URL firmada no necesita la relectura: la fila de la tarjeta ya trae
+      `comprobante_prepago_url`. Se pide de entrada y la relectura solo la
+      rehace si resulta que el cliente subió un intento más nuevo.
+    */
+    const proofUpFront = isPrepaid && selProofPath ? resolveProof(selProofPath) : null
+
+    const readFresh = async () => {
       let freshPath: string | null = selProofPath
 
       if (isPrepaid) {
@@ -84,10 +120,18 @@ export function useOrderDetail(
         } catch {
           /* fail-open: continuar con datos en memoria si la red falla */
         } finally {
-          if (!cancel) setFreshSettledFor(selectedId)
+          if (!cancel) setFreshSettledFor(id)
         }
       }
 
+      // El cliente pudo subir un intento MÁS NUEVO que el que traía la tarjeta.
+      // Solo entonces hay que volver a firmar; si coincide, la petición que ya
+      // salió arriba vale.
+      if (freshPath && freshPath !== selProofPath) await resolveProof(freshPath)
+      else if (!freshPath && !cancel) setProofSettledFor(id)
+    }
+
+    const readItems = async () => {
       try {
         const { data } = await supabase
           .from('customer_order_items')
@@ -116,18 +160,9 @@ export function useOrderDetail(
       } catch {
         /* fail-open */
       }
+    }
 
-      if (freshPath) {
-        try {
-          const r = await api.get<{ data: { url: string | null } }>(
-            `/business/orders/${selectedId}/prepay-proof`,
-          )
-          if (!cancel) setDetailProofUrl(r.data.url)
-        } catch {
-          /* sin comprobante todavía */
-        }
-      }
-    })()
+    void Promise.all([proofUpFront, readFresh(), readItems()])
 
     return () => {
       cancel = true
@@ -136,7 +171,10 @@ export function useOrderDetail(
 
   const activeProofPath = freshOrder ? freshOrder.comprobante_prepago_url : selProofPath
   const isFreshLoading = isPrepaid && freshSettledFor !== selectedId
-  const isResolvingProof = isPrepaid && activeProofPath !== null && detailProofUrl === null
+  // Se mira si la petición TERMINÓ, no si trajo URL. Con `detailProofUrl ===
+  // null` como condición, un fallo de red dejaba los botones deshabilitados
+  // para siempre — no había segundo intento que pudiera desbloquearlos.
+  const isResolvingProof = isPrepaid && activeProofPath !== null && proofSettledFor !== selectedId
   const isLoadingActions = isFreshLoading || isResolvingProof
 
   return {
