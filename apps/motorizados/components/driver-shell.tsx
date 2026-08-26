@@ -2,24 +2,30 @@
 
 import { GlassTopBar, Icon } from '@tindivo/ui'
 import Link from 'next/link'
-import { type ReactNode, useMemo } from 'react'
+import { usePathname } from 'next/navigation'
+import { type ReactNode, useMemo, useState } from 'react'
 import { useCashSummary } from '@/features/efectivo/hooks/use-cash-summary'
 import { BottomNav, type BottomNavItem } from './bottom-nav'
 import { CapacityIndicator } from './capacity-indicator'
 import { DriverToastHost } from './driver-toast'
+import { MoreSheet } from './more-sheet'
 
 /**
- * Shell de la app del motorizado: glass top bar + bottom navigation.
+ * Shell de la app del motorizado: glass top bar + bottom navigation + MoreSheet modal.
  * Inspirado en tindivo-delivery, adaptado a la arquitectura de tindivo-v2.
  */
 export function DriverShell({ children }: { children: ReactNode }) {
+  const pathname = usePathname()
   const { businesses } = useCashSummary()
+  const [moreOpen, setMoreOpen] = useState(false)
 
   // Conteo de pedidos en efectivo pendientes de liquidar por el motorizado
   const pendingCashCount = useMemo(
     () => businesses.flatMap((b) => b.orders.filter((o) => o.state === 'pending')).length,
     [businesses],
   )
+
+  const isMoreActive = pathname === '/perfil' || pathname === '/restaurantes' || moreOpen
 
   const navItems: BottomNavItem[] = useMemo(
     () => [
@@ -32,9 +38,14 @@ export function DriverShell({ children }: { children: ReactNode }) {
         badgeColor: 'danger',
       },
       { href: '/historial', label: 'Historial', icon: 'history' },
-      { href: '/perfil', label: 'Perfil', icon: 'person' },
+      {
+        onClick: () => setMoreOpen(true),
+        label: 'Más',
+        icon: 'more_horiz',
+        active: isMoreActive,
+      },
     ],
-    [pendingCashCount],
+    [pendingCashCount, isMoreActive],
   )
 
   return (
@@ -56,6 +67,7 @@ export function DriverShell({ children }: { children: ReactNode }) {
       />
       {children}
       <BottomNav items={navItems} />
+      <MoreSheet open={moreOpen} onClose={() => setMoreOpen(false)} activePath={pathname} />
     </div>
   )
 }
