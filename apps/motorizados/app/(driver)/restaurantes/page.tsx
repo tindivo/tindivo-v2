@@ -2,7 +2,6 @@
 
 import { walletLabel } from '@tindivo/contracts'
 import { Card, Icon, Skeleton } from '@tindivo/ui'
-import Link from 'next/link'
 import { useState } from 'react'
 import { RestaurantDetailSheet } from '@/components/restaurants/restaurant-detail-sheet'
 import { type DriverBusiness, useDriverBusinesses } from '@/hooks/use-driver-businesses'
@@ -14,27 +13,20 @@ export default function RestaurantesPage() {
 
   return (
     <main className="mx-auto max-w-[480px] px-4 pt-20 pb-12">
-      {/* Header pegajoso */}
+      {/* Header pegajoso.
+
+          SIN FLECHA DE VUELTA, y es consecuencia de la barra inferior: esta
+          pantalla se abría desde el sheet de «Más», así que necesitaba una
+          salida propia. Ahora es la pestaña «Locales», o sea una raíz de la
+          navegación: la flecha a «/» sería un segundo camino a Pedidos justo
+          encima del primero, y ninguna de las otras raíces la lleva. */}
       <div className="sticky top-[calc(44px+env(safe-area-inset-top))] z-30 -mx-4 mb-4 bg-surface/95 px-4 py-2 backdrop-blur-sm">
-        <div className="flex items-center gap-3">
-          <Link
-            href="/"
-            aria-label="Volver a pedidos"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-ink/[0.06] text-ink hover:bg-ink/[0.1] active:scale-95 transition-transform"
-          >
-            <Icon name="arrow_back" size={22} />
-          </Link>
-          <div className="min-w-0 flex-1">
-            <h1 className="font-display text-[22px] font-bold tracking-tight text-ink">
-              Restaurantes
-            </h1>
-            <p className="text-[12px] font-medium text-ink-muted">
-              {loading
-                ? 'Cargando locales…'
-                : `${businesses.length} ${businesses.length === 1 ? 'restaurante asignado' : 'restaurantes asignados'}`}
-            </p>
-          </div>
-        </div>
+        <h1 className="font-display text-[22px] font-bold tracking-tight text-ink">Restaurantes</h1>
+        <p className="text-[12px] font-medium text-ink-muted">
+          {loading
+            ? 'Cargando locales…'
+            : `${businesses.length} ${businesses.length === 1 ? 'restaurante asignado' : 'restaurantes asignados'}`}
+        </p>
       </div>
 
       {error && (
