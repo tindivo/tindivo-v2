@@ -13,22 +13,10 @@ export interface HomeBanner {
 
 const DEFAULT_BANNERS: HomeBanner[] = [
   {
-    id: 'san-jacinto',
-    title: 'San Jacinto — Pide directo de los mejores negocios',
-    imageUrl: '/banners/banner-sanjacinto.png',
+    id: 'envio-gratis',
+    title: 'Envío gratis en tu primer pedido',
+    imageUrl: '/banners/envio_gratis.png',
     href: null,
-  },
-  {
-    id: 'priamo',
-    title: 'Priamo — Conoce sus especialidades y promociones',
-    imageUrl: '/banners/banner-priamo.png',
-    // Slug escrito a mano, y a propósito: un banner de portada no puede
-    // depender de una consulta. Se sostiene en que el slug NO sigue al nombre
-    // (diseño de `0165`), así que renombrar el negocio no lo mueve. Lo único
-    // que lo rompería es poner su `slug` a NULL para regenerarlo; si algún día
-    // se hace, hay que revisar también este banner y los `redirects` de
-    // `next.config.ts`.
-    href: '/negocio/pizza-priamo',
   },
 ]
 
@@ -109,12 +97,12 @@ export function HomeCarousel({ banners = DEFAULT_BANNERS }: { banners?: HomeBann
         {banners.map((banner, index) => {
           const isFirst = index === 0
           const content = (
-            <div className="relative aspect-[2/1] w-full overflow-hidden rounded-2xl bg-ink/[0.04] shadow-sm transition-transform duration-200 active:scale-[0.99] sm:aspect-[2.4/1]">
+            <div className="relative aspect-[2/1] w-full overflow-hidden rounded-2xl bg-ink/[0.04] shadow-sm transition-transform duration-200 active:scale-[0.99]">
               <Image
                 src={banner.imageUrl}
                 alt={banner.title}
                 fill
-                sizes="100vw"
+                sizes="(max-width: 768px) 100vw, 768px"
                 decoding="async"
                 draggable={false}
                 priority={isFirst}
