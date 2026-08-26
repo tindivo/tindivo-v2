@@ -61,32 +61,26 @@ export function PaySectionWallet({ qrs }: { qrs: PaymentQrView[] }) {
         <div className="text-[13px] font-bold text-info">Cobrar con billetera digital</div>
       </div>
       {/* Sin «Total a cobrar»: está en la cabecera de «Cobro», aquí arriba. Lo
-          propio de este método es la cuenta, y es lo que se enseña. */}
+          propio de este método es la cuenta, y es lo que se enseña.
+
+          SIN LA IMAGEN DEL QR, y a propósito. Este pedido se cobra EN LA PUERTA
+          y quien enseña el código es el motorizado, desde su teléfono: nadie
+          escanea nunca un QR de 90 px en la pantalla de la cajera. Lo que ella
+          necesita es contra QUÉ CUENTA va a entrar la plata, porque el negocio
+          puede tener dos configuradas y concilia contra la que el motorizado
+          esté enseñando. Eso lo dicen el número y el nombre, que ahora llevan
+          la sección en vez de ir de pie de foto. */}
       <div className="rounded-[10px] bg-white p-2.5 text-center">
         <div className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.06em] text-ink-muted">
-          {main ? `${walletLabel(main.wallet)} del restaurante` : 'QR del restaurante'}
+          {main ? `${walletLabel(main.wallet)} del restaurante` : 'Cuenta del restaurante'}
         </div>
-        {main?.qrUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={main.qrUrl}
-            alt={`QR de ${walletLabel(main.wallet)} del restaurante`}
-            className="mx-auto mb-2 h-[90px] w-[90px] rounded-[10px] object-contain"
-          />
+        {main ? (
+          <div className="leading-tight">
+            <div className="font-mono text-[13px] font-bold text-ink">{main.accountNumber}</div>
+            <div className="truncate text-[11px] text-ink-muted">{main.accountName}</div>
+          </div>
         ) : (
-          <div className="relative mx-auto mb-2 h-[90px] w-[90px] overflow-hidden rounded-[10px] bg-surface-low">
-            <span className="absolute inset-0 flex items-center justify-center px-1.5 text-center text-[10px] uppercase tracking-wide text-ink/50">
-              QR Yape/Plin
-            </span>
-          </div>
-        )}
-        {/* La cuenta contra la que la cajera concilia. Sin esto tendría que
-            acordarse de cuál de las dos está enseñando el motorizado. */}
-        {main && (
-          <div className="text-[11px] leading-tight text-ink-muted">
-            <div className="font-mono font-bold text-ink">{main.accountNumber}</div>
-            <div className="truncate">{main.accountName}</div>
-          </div>
+          <div className="text-[11px] text-ink-muted">Sin cuenta de cobro configurada</div>
         )}
       </div>
       {spare && (
@@ -109,6 +103,17 @@ export function PaySectionMixed({ order, qrs }: { order: OrderVM; qrs: PaymentQr
       <div className="flex flex-col gap-1">
         {/* El reparto ES lo propio del combinado; el total ya está en «Cobro». */}
         <DetailRow label="Billetera digital" value={soles(order.walletPart ?? 0)} mono />
+        {/* La cuenta va PEGADA a su importe, no en una caja aparte al final:
+            es el dato que dice dónde comprobar que entró esa parte. La imagen
+            del QR se fue por lo mismo que en «Cobrar con billetera digital» —
+            el código lo enseña el motorizado en la puerta, no esta pantalla. */}
+        {main && (
+          <DetailRow
+            label={`${walletLabel(main.wallet)} del local`}
+            value={main.accountNumber}
+            mono
+          />
+        )}
         <DetailRow label="Efectivo" value={soles(order.cashPart ?? 0)} mono />
         {order.paysWith != null && (
           <DetailRow label="Cliente paga efectivo con" value={soles(order.paysWith)} mono />
@@ -122,17 +127,6 @@ export function PaySectionMixed({ order, qrs }: { order: OrderVM; qrs: PaymentQr
           </div>
         )}
       </div>
-      {main?.qrUrl && (
-        <div className="mt-2.5 rounded-[10px] bg-white p-2.5 text-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={main.qrUrl}
-            alt={`QR de ${walletLabel(main.wallet)} del restaurante`}
-            className="mx-auto h-20 w-20 rounded-lg object-contain"
-          />
-          <div className="mt-1 font-mono text-[11px] font-bold text-ink">{main.accountNumber}</div>
-        </div>
-      )}
     </div>
   )
 }
