@@ -134,7 +134,8 @@ export interface DashboardCtx {
    * columna, que se llama así; no sirve para interrumpirla desde la barra
    * lateral. Sale del mismo predicado que el sonido, el banner y el latido.
    */
-  attentionCount: number
+  /** Liquidaciones de efectivo pendientes de confirmación por la cajera. */
+  pendingCashCount: number
   /** ¿Está sonando la alarma AHORA? (hay algo sin acusar). */
   alarmOn: boolean
   /**
@@ -244,6 +245,7 @@ function Sidebar({ active, onSignOut }: { active: NavId; onSignOut: () => void }
     soundOn,
     toggleSound,
     attentionCount,
+    pendingCashCount,
     alarmOn,
   } = useDashboard()
   const catalogOnly = capability === 'catalog_only'
@@ -276,7 +278,12 @@ function Sidebar({ active, onSignOut }: { active: NavId; onSignOut: () => void }
           // decía «tienes cuatro cosas que hacer» cuando podían ser dos. El
           // reparto completo lo cuenta el subtítulo de la columna, que es donde
           // ella ya está mirando cuando le hace falta.
-          const badge = it.id === 'pedidos' ? attentionCount : undefined
+          const badge =
+            it.id === 'pedidos'
+              ? attentionCount
+              : it.id === 'efectivo'
+                ? pendingCashCount
+                : undefined
           return (
             <Link
               key={it.id}
@@ -384,7 +391,7 @@ function FabLink({ href, children }: { href: string; children: React.ReactNode }
 }
 
 function BottomNav({ active }: { active: NavId }) {
-  const { soundOn, toggleSound, signOut, bizName } = useDashboard()
+  const { soundOn, toggleSound, signOut, bizName, pendingCashCount } = useDashboard()
   const [moreOpen, setMoreOpen] = useState(false)
   const mas = active === 'historial' || active === 'deuda' || active === 'config'
 
@@ -403,7 +410,20 @@ function BottomNav({ active }: { active: NavId }) {
           <Icon name="add" size={28} filled />
         </FabLink>
         <NavLink href="/efectivo" active={active === 'efectivo'}>
-          <Icon name="payments" size={22} filled={active === 'efectivo'} />
+          <span className="relative inline-flex items-center justify-center">
+            <Icon name="payments" size={22} filled={active === 'efectivo'} />
+            {pendingCashCount > 0 && (
+              <span
+                role="status"
+                aria-label={`${pendingCashCount} por confirmar`}
+                className={`absolute -top-1.5 -right-2 inline-flex min-h-[16px] min-w-[16px] items-center justify-center rounded-full px-1 text-[9px] font-black leading-none shadow-xs border border-white ${
+                  active === 'efectivo' ? 'bg-brand text-white' : 'bg-danger text-white'
+                }`}
+              >
+                {pendingCashCount > 9 ? '9+' : pendingCashCount}
+              </span>
+            )}
+          </span>
           <span>Efectivo</span>
         </NavLink>
         <button
@@ -1121,6 +1141,40 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
     [pathname, router],
   )
 
+  // Liquidaciones de efectivo por confirmar
+  const [pendingCashCount, setPendingCashCount] = useState(0)
+
+  const reloadPendingCash = useCallback(async () => {
+    if (!bizId) return
+    try {
+      const supabase = getSupabaseBrowser()
+      const { count, error } = await supabase
+        .from('cash_settlements')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'pending_confirmation')
+      if (!error && typeof count === 'number') {
+        setPendingCashCount(count)
+      }
+    } catch {}
+  }, [bizId])
+
+  useEffect(() => {
+    if (!bizId) return
+    reloadPendingCash()
+    const channel = getSupabaseBrowser()
+      .channel(canalUnico('biz-cash-badge'))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cash_settlements' }, () =>
+        reloadPendingCash(),
+      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () =>
+        reloadPendingCash(),
+      )
+      .subscribe()
+    return () => {
+      getSupabaseBrowser().removeChannel(channel)
+    }
+  }, [bizId, reloadPendingCash])
+
   const toggleSound = useCallback(() => {
     setSoundOn((s) => {
       const next = !s
@@ -1154,6 +1208,7 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
       refetchBiz,
       signOut: onSignOut,
       attentionCount: attention.orders.length,
+      pendingCashCount,
       alarmOn: attention.alarm.hasPending && soundOn,
       acknowledge,
       openRequestId,
@@ -1175,6 +1230,7 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
     refetchBiz,
     onSignOut,
     attention,
+    pendingCashCount,
     acknowledge,
     openRequestId,
     requestOpen,
