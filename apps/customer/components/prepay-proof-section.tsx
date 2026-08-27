@@ -4,7 +4,7 @@ import { ApiError } from '@tindivo/api-client'
 import type { PaymentQrView } from '@tindivo/contracts'
 import { compressImage, UPLOAD_CACHE_CONTROL, validateImageInput } from '@tindivo/images'
 import { Button, Icon } from '@tindivo/ui'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '@/lib/api'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import { CountdownBar, type CountdownBarView } from './countdown-bar'
@@ -57,6 +57,18 @@ export function PrepayProofSection({ orderId, proofAttempt, countdown, onProofUp
   const [sentProofUrl, setSentProofUrl] = useState<string | null>(null)
   /** URL de imagen para zoom en modal lightbox. */
   const [zoomUrl, setZoomUrl] = useState<string | null>(null)
+  /** El selector de archivo, disparable desde la barra fija y desde la zona grande. */
+  const inputRef = useRef<HTMLInputElement>(null)
+  /**
+   * El cliente se fue de la pestaña y volvió — casi seguro, a pagar.
+   *
+   * Es el momento exacto en que hoy se atasca: vuelve del Yape con la captura
+   * hecha, la pantalla está donde la dejó —a la altura del QR— y el botón de
+   * subir queda fuera de vista, más abajo. No sabe que hay algo más abajo, así
+   * que se queda mirando. La barra fija ya resuelve el fondo del problema; esto
+   * solo la hace latir un momento para que el ojo la encuentre sin buscarla.
+   */
+  const [volvioDePagar, setVolvioDePagar] = useState(false)
 
   const loadInfo = useCallback(async () => {
     try {
@@ -70,6 +82,30 @@ export function PrepayProofSection({ orderId, proofAttempt, countdown, onProofUp
   useEffect(() => {
     loadInfo()
   }, [loadInfo])
+
+  // Ida y vuelta a la billetera. Solo cuenta el viaje completo —oculta y luego
+  // visible—, no un `visibilitychange` suelto: bloquear la pantalla un segundo
+  // no es haber ido a pagar. El latido se apaga solo a los seis segundos para
+  // que no se quede parpadeando toda la espera.
+  useEffect(() => {
+    let sefue = false
+    let apagar: ReturnType<typeof setTimeout> | undefined
+    const alCambiar = () => {
+      if (document.visibilityState === 'hidden') {
+        sefue = true
+        return
+      }
+      if (!sefue) return
+      sefue = false
+      setVolvioDePagar(true)
+      apagar = setTimeout(() => setVolvioDePagar(false), 6000)
+    }
+    document.addEventListener('visibilitychange', alCambiar)
+    return () => {
+      document.removeEventListener('visibilitychange', alCambiar)
+      if (apagar) clearTimeout(apagar)
+    }
+  }, [])
 
   // Comprobante ya enviado: `comprobante_prepago_url` guarda la RUTA dentro de
   // `payment-proofs`, que es un bucket privado. Sin firmar esa ruta no hay nada
@@ -171,16 +207,17 @@ export function PrepayProofSection({ orderId, proofAttempt, countdown, onProofUp
   }
 
   return (
-    <div className="mt-4 rounded-[22px] border border-brand/20 bg-white p-5 text-left shadow-[0_4px_20px_rgba(0,0,0,0.04)]">
-      {proofAttempt === 1 && (
-        <div className="mb-2.5 flex justify-end">
-          <span className="rounded-full bg-danger-soft px-2.5 py-0.5 font-sans text-[11px] font-bold text-danger">
-            Reintento final (1/2)
-          </span>
-        </div>
-      )}
+    <>
+      <div className="mt-4 rounded-[22px] border border-brand/20 bg-white p-5 text-left shadow-[0_4px_20px_rgba(0,0,0,0.04)]">
+        {proofAttempt === 1 && (
+          <div className="mb-2.5 flex justify-end">
+            <span className="rounded-full bg-danger-soft px-2.5 py-0.5 font-sans text-[11px] font-bold text-danger">
+              Reintento final (1/2)
+            </span>
+          </div>
+        )}
 
-      {/* La luz verde, y por que es verde.
+        {/* La luz verde, y por que es verde.
           Este es el unico momento del prepago en que la pelota pasa al cliente,
           y hasta ahora lo anunciaba un parrafo gris que empezaba por el nombre
           del restaurante. El verde dice «adelante» de un vistazo, que es lo que
@@ -188,148 +225,180 @@ export function PrepayProofSection({ orderId, proofAttempt, countdown, onProofUp
           NO se usa para «ya pagaste» —eso lo dice el azul de la verificacion, en
           `TrackingPrepay`—: el mismo color para dos cosas opuestas es como se
           pierde la gente. */}
-      <div className="flex items-center gap-2.5 rounded-[16px] border border-success/25 bg-success-soft px-3.5 py-3">
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-success text-white">
-          <Icon name="check" size={17} filled />
-        </span>
-        <div className="min-w-0">
-          <h3 className="font-display text-[15px] font-bold tracking-tight text-emerald-900">
-            {info?.businessName ?? 'El restaurante'} confirmó tu pedido
-          </h3>
-          <p className="text-[12px] leading-snug text-emerald-800/80">
-            Ahora te toca pagar para que entre a cocina.
-          </p>
+        <div className="flex items-center gap-2.5 rounded-[16px] border border-success/25 bg-success-soft px-3.5 py-3">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-success text-white">
+            <Icon name="check" size={17} filled />
+          </span>
+          <div className="min-w-0">
+            <h3 className="font-display text-[15px] font-bold tracking-tight text-emerald-900">
+              {info?.businessName ?? 'El restaurante'} confirmó tu pedido
+            </h3>
+            <p className="text-[12px] leading-snug text-emerald-800/80">
+              Ahora te toca pagar para que entre a cocina.
+            </p>
+          </div>
         </div>
-      </div>
 
-      {/* El reloj, a ancho completo y con la barra. Antes era una pildora de 11
+        {/* El reloj, a ancho completo y con la barra. Antes era una pildora de 11
           px en la esquina, mas pequena incluso que la del pill compartido: el
           plazo con consecuencias mas duras del flujo —si vence, el pedido se
           cancela solo— era el dato mas discreto de la pantalla. */}
-      {countdown && (
-        <div className="mt-2.5">
-          <CountdownBar view={countdown} titulo="Tiempo para pagar" />
-        </div>
-      )}
+        {countdown && (
+          <div className="mt-2.5">
+            <CountdownBar view={countdown} titulo="Tiempo para pagar" />
+          </div>
+        )}
 
-      {/* Monto */}
-      <div className="mt-3.5 rounded-[16px] border border-ink/[0.06] bg-surface p-3.5">
-        <div className="text-[11px] uppercase tracking-wider text-ink-muted">Monto total</div>
-        <div className="font-mono text-[22px] font-bold text-ink">
-          S/ {info?.total ? info.total.toFixed(2) : '0.00'}
-        </div>
-      </div>
+        {/* Cuánto y a quién, en UNA caja y vestida con la marca de la billetera.
+          El monto vivía en un recuadro aparte, encima: son los dos datos que el
+          cliente se lleva a la otra app, y separarlos era pedirle que memorizara
+          en dos viajes. */}
+        <PaymentAccountCard
+          method={info?.paymentQr ?? null}
+          fallbackNumber={info?.yapeNumber ?? null}
+          total={info?.total ?? 0}
+          onZoom={setZoomUrl}
+        />
 
-      {/* A quién se le paga: cuenta, titular y QR. Siempre la principal, que es
-          contra la que la cajera concilia; el repuesto es cosa de la puerta. */}
-      <PaymentAccountCard
-        method={info?.paymentQr ?? null}
-        fallbackNumber={info?.yapeNumber ?? null}
-        onZoom={setZoomUrl}
-      />
-
-      {/* Comprobante ya enviado. Se muestra para que el cliente pueda comprobar
+        {/* Comprobante ya enviado. Se muestra para que el cliente pueda comprobar
           que mandó la captura correcta mientras la cajera la revisa. */}
-      {sentProofUrl && (
-        <div className="mt-3.5 rounded-xl border border-emerald-200 bg-emerald-50 p-3">
-          <div className="flex items-center justify-between pb-1.5 text-[12px] font-semibold text-emerald-900">
-            <span>Comprobante enviado</span>
-            <span className="text-[11px] font-normal text-emerald-700">Toca para agrandar 🔍</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setZoomUrl(sentProofUrl)}
-            className="group relative block w-full overflow-hidden rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          >
-            <img
-              src={sentProofUrl}
-              alt="Comprobante enviado"
-              decoding="async"
-              className="max-h-48 w-full object-contain p-1 transition-transform group-hover:scale-[1.02]"
-            />
-          </button>
-        </div>
-      )}
-
-      {/* Regla de comprobante visible */}
-      <div className="mt-3.5 rounded-xl border border-sky-200 bg-sky-50 p-3 text-[12px] leading-relaxed text-sky-800">
-        📌 <strong>Regla de validación:</strong> Tu comprobante debe ser posterior a la hora del
-        pedido y debe mostrar tu nombre visible.
-      </div>
-
-      {/* Selector y Previsualización de Imagen */}
-      <div className="mt-4">
-        {previewUrl ? (
-          <div className="relative overflow-hidden rounded-xl bg-surface">
+        {sentProofUrl && (
+          <div className="mt-3.5 rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+            <div className="flex items-center justify-between pb-1.5 text-[12px] font-semibold text-emerald-900">
+              <span>Comprobante enviado</span>
+              <span className="text-[11px] font-normal text-emerald-700">
+                Toca para agrandar 🔍
+              </span>
+            </div>
             <button
               type="button"
-              onClick={() => setZoomUrl(previewUrl)}
-              className="block w-full cursor-zoom-in"
-              aria-label="Agrandar vista previa"
+              onClick={() => setZoomUrl(sentProofUrl)}
+              className="group relative block w-full overflow-hidden rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={previewUrl} alt="Vista previa" className="max-h-48 w-full object-contain" />
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setPendingFile(null)
-                setPreviewUrl(null)
-              }}
-              className="absolute top-2 right-2 rounded-full bg-black/60 px-2 py-1 text-[11px] text-white backdrop-blur-sm"
-            >
-              Cambiar captura
-            </button>
-          </div>
-        ) : (
-          <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-brand-light bg-brand-soft p-4 transition-colors hover:bg-brand-soft/80">
-            <svg
-              className="h-8 w-8 text-brand"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              aria-label="Adjuntar comprobante"
-              role="img"
-            >
-              <title>Adjuntar comprobante</title>
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.8}
-                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+              <img
+                src={sentProofUrl}
+                alt="Comprobante enviado"
+                decoding="async"
+                className="max-h-48 w-full object-contain p-1 transition-transform group-hover:scale-[1.02]"
               />
-            </svg>
-            <span className="mt-2 text-[13px] font-semibold text-brand-dark">
-              Adjuntar comprobante de pago
-            </span>
-            <span className="text-[11px] text-ink-subtle">
-              {preparing ? 'Preparando imagen…' : 'Formatos JPG, PNG (Captura de pantalla)'}
-            </span>
-            <input
-              type="file"
-              accept="image/*"
-              className="sr-only"
+            </button>
+          </div>
+        )}
+
+        {/* El input vive aqui, escondido y con ref, para que lo pueda disparar
+          tanto esta zona como la barra fija de abajo. */}
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*"
+          className="sr-only"
+          disabled={preparing}
+          onChange={handleFileChange}
+        />
+
+        <div className="mt-3.5">
+          {previewUrl ? (
+            <div className="rounded-[18px] border border-ink/[0.06] bg-surface p-2.5">
+              <div className="flex items-center justify-between gap-2 px-1 pb-2">
+                <span className="text-[12px] font-bold text-ink">Tu captura</span>
+                <button
+                  type="button"
+                  onClick={() => inputRef.current?.click()}
+                  className="rounded-[10px] bg-white px-2.5 py-1.5 text-[11px] font-semibold text-ink-muted shadow-elev-1"
+                >
+                  Cambiar
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => setZoomUrl(previewUrl)}
+                className="block w-full cursor-zoom-in overflow-hidden rounded-[12px] bg-white"
+                aria-label="Agrandar vista previa"
+              >
+                <img
+                  src={previewUrl}
+                  alt="Vista previa"
+                  className="max-h-52 w-full object-contain"
+                />
+              </button>
+            </div>
+          ) : (
+            // La zona grande sigue estando para quien baje hasta aqui, pero ya no
+            // es la unica via: el boton de verdad es la barra fija.
+            <button
+              type="button"
+              onClick={() => inputRef.current?.click()}
               disabled={preparing}
-              onChange={handleFileChange}
-            />
-          </label>
+              className="flex w-full cursor-pointer flex-col items-center justify-center gap-1 rounded-[18px] border-2 border-dashed border-brand-light bg-brand-soft p-5 transition-colors hover:bg-brand-soft/70"
+            >
+              <Icon name="add_a_photo" size={26} className="text-brand" />
+              <span className="text-[14px] font-bold text-brand-dark">
+                {preparing ? 'Preparando imagen…' : 'Subir mi captura'}
+              </span>
+              {/* La regla de validacion, encogida. Era un recuadro azul de veinte
+                palabras que nadie leia; dicha en ocho y en el sitio donde se
+                elige la foto, llega justo cuando sirve. */}
+              <span className="text-[11px] text-ink-subtle">
+                Que se vea tu nombre y la hora del pago
+              </span>
+            </button>
+          )}
+        </div>
+
+        {error && (
+          <div className="mt-3 rounded-lg bg-danger-soft p-2.5 text-[12px] text-danger">
+            {error}
+          </div>
         )}
       </div>
 
-      {error && (
-        <div className="mt-3 rounded-lg bg-danger-soft p-2.5 text-[12px] text-danger">{error}</div>
-      )}
+      {/* Hueco para que la barra fija no tape el final de la pantalla. Va FUERA
+          de la tarjeta: dentro abría un vacío blanco de cien píxeles bajo la
+          zona de subida, como si algo se hubiera roto al maquetar. */}
+      <div className="h-24" aria-hidden="true" />
 
-      {/* Botón enviar */}
-      <Button
-        type="button"
-        variant="brand"
-        disabled={!pendingFile || uploading}
-        onClick={submitProof}
-        className="mt-4 w-full"
-      >
-        {uploading ? 'Enviando comprobante...' : 'Enviar comprobante'}
-      </Button>
+      {/*
+        LA BARRA FIJA · el arreglo de fondo de esta pantalla.
+
+        EL PROBLEMA. Pagar obliga a SALIR de la app: el cliente se va al Yape,
+        transfiere, hace la captura y vuelve. Al volver, el navegador lo deja
+        exactamente donde estaba —a la altura del QR— y el botón de subir queda
+        más abajo, fuera de pantalla. No sabe que hay algo más abajo, así que se
+        queda parado con la captura hecha y el reloj corriendo. La zona de subida
+        estaba ahí desde siempre; el problema nunca fue que faltara, sino que
+        había que ir a buscarla justo cuando el cliente ya no está leyendo.
+
+        LA SOLUCIÓN. La única acción de esta pantalla deja de estar en un sitio y
+        pasa a estar SIEMPRE al alcance del pulgar, encima de todo. Y cambia sola
+        con el momento: subir → enviar → enviando. El cliente nunca tiene que
+        decidir dónde tocar, porque solo hay un sitio donde tocar.
+
+        Va dentro del ancho de la pantalla (`max-w-[768px]`) y no a sangre para
+        no descolgarse del layout en tablet y escritorio.
+      */}
+      <div className="pb-safe fixed inset-x-0 bottom-0 z-40 border-t border-ink/[0.06] bg-white/90 backdrop-blur-md">
+        <div className="mx-auto max-w-[768px] px-4 py-3">
+          <Button
+            type="button"
+            variant="brand"
+            disabled={uploading || preparing}
+            onClick={() => (pendingFile ? submitProof() : inputRef.current?.click())}
+            className={`w-full ${
+              volvioDePagar && !pendingFile
+                ? 'animate-[t-attention_1.1s_ease-in-out_infinite] ring-4 ring-brand/30'
+                : ''
+            }`}
+          >
+            {uploading
+              ? 'Enviando…'
+              : preparing
+                ? 'Preparando imagen…'
+                : pendingFile
+                  ? 'Enviar mi comprobante'
+                  : 'Ya pagué · Subir captura'}
+          </Button>
+        </div>
+      </div>
 
       {/* Lightbox Zoom Modal */}
       {zoomUrl && (
@@ -362,6 +431,6 @@ export function PrepayProofSection({ orderId, proofAttempt, countdown, onProofUp
           </div>
         </div>
       )}
-    </div>
+    </>
   )
 }
