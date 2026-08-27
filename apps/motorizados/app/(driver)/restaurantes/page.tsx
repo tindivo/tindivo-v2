@@ -67,14 +67,22 @@ export default function RestaurantesPage() {
                 className="overflow-hidden rounded-2xl border border-ink/[0.08] bg-white shadow-[0_2px_12px_rgba(26,22,20,0.04)] transition-all hover:shadow-[0_4px_20px_rgba(26,22,20,0.08)]"
               >
                 <div className="p-4">
-                  {/* Cabecera: Avatar + Nombre + Badges de Métodos */}
+                  {/* Cabecera: Logo/Avatar + Nombre + Badges de Métodos */}
                   <div className="flex items-start gap-3">
-                    <div
-                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl font-display text-[17px] font-bold text-white shadow-xs"
-                      style={{ backgroundColor: biz.accentColor || '#f97316' }}
-                    >
-                      {biz.name.charAt(0).toUpperCase()}
-                    </div>
+                    {biz.logoUrl ? (
+                      <img
+                        src={biz.logoUrl}
+                        alt={biz.name}
+                        className="h-11 w-11 shrink-0 rounded-xl object-cover shadow-xs"
+                      />
+                    ) : (
+                      <div
+                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl font-display text-[17px] font-bold text-white shadow-xs"
+                        style={{ backgroundColor: biz.accentColor || '#f97316' }}
+                      >
+                        {biz.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
 
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">

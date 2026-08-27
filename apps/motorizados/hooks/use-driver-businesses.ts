@@ -10,6 +10,7 @@ export interface DriverBusiness {
   phone: string | null
   address: string | null
   accentColor: string | null
+  logoUrl: string | null
   coordinates: {
     lat: number | null
     lng: number | null
@@ -96,6 +97,7 @@ export function useDriverBusinesses() {
           phone: b.phone,
           address: b.address,
           accentColor: b.accent_color,
+          logoUrl: b.logo_url ?? null,
           coordinates: {
             lat: b.coordinates_lat ? Number(b.coordinates_lat) : null,
             lng: b.coordinates_lng ? Number(b.coordinates_lng) : null,

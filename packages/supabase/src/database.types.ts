@@ -2772,6 +2772,7 @@ export type Database = {
           coordinates_lat: number
           coordinates_lng: number
           id: string
+          logo_url: string
           name: string
           phone: string
         }[]
