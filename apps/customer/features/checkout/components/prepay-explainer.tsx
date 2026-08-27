@@ -1,4 +1,5 @@
 import { Icon } from '@tindivo/ui'
+import { useId, useState } from 'react'
 import type { PrepayTimers } from '@/features/checkout/types'
 
 interface PrepayExplainerProps {
@@ -6,21 +7,24 @@ interface PrepayExplainerProps {
 }
 
 /**
- * Qué pasa después de tocar «Confirmar pedido» si pagas por adelantado.
+ * Cómo funciona el pago adelantado — para quien quiera saberlo.
  *
- * EL PROBLEMA QUE RESUELVE
- *   El cliente elige prepago esperando pagar ahí mismo, no encuentra dónde, y
- *   se queda atascado. Y cuando por fin llega al seguimiento se encuentra un
- *   «Pedido recibido» que tampoco le dice que todavía no le toca. La causa está
- *   aquí, un paso antes: la pantalla de pago nunca dijo que el pago llega
- *   DESPUÉS, ni cuánto hay que esperar.
+ * QUÉ HACE Y QUÉ NO
+ *   NO carga con el mensaje importante. La única frase que el cliente tiene que
+ *   leer sí o sí —«No pagas nada ahora»— vive DENTRO de la opción marcada, en
+ *   `unified-checkout`, y se ve sin tocar nada. Esto es el detrás: la secuencia
+ *   completa, plegada.
  *
- * POR QUÉ TRES ICONOS Y NO UN PÁRRAFO
- *   Porque en el checkout nadie lee. La primera versión de esto eran noventa
- *   palabras explicando los tres pasos con su matiz cada uno, y era exactamente
- *   el tipo de bloque que el ojo salta. Quedan tres celdas de dos palabras y una
- *   sola frase completa —«No pagas nada ahora»—, que es la única que de verdad
- *   contesta la duda que trae el cliente a esta pantalla: ¿me toca hacer algo ya?
+ * POR QUÉ PLEGADO
+ *   Porque en el checkout la mayoría no lee: marca y manda. Una tarjeta abierta
+ *   con tres iconos, tres títulos, tres pies y un recuadro verde era, para ese
+ *   cliente, un muro que saltar — y para el que sí quería entender, información
+ *   que igual estaba disponible un toque más allá. Cerrado, la pantalla queda en
+ *   una línea; abierto, contesta entero.
+ *
+ *   Y cerrado por defecto, no abierto-la-primera-vez: un bloque que aparece solo
+ *   la primera vez es el que menos se entiende, porque llega justo cuando el
+ *   cliente todavía no sabe que tiene una duda.
  *
  * LOS MINUTOS NO ESTÁN ESCRITOS AQUÍ
  *   Entran por `timers`, que sale de `app_settings.timers` (whitelisted para
@@ -30,6 +34,9 @@ interface PrepayExplainerProps {
  *   `0172`.
  */
 export function PrepayExplainer({ timers }: PrepayExplainerProps) {
+  const [abierto, setAbierto] = useState(false)
+  const panelId = useId()
+
   const pasos = [
     {
       icono: 'schedule',
@@ -55,35 +62,46 @@ export function PrepayExplainer({ timers }: PrepayExplainerProps) {
   ]
 
   return (
-    <div className="mt-2.5 rounded-[18px] border border-ink/[0.04] bg-card p-4">
-      <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-subtle">
-        Lo que va a pasar
-      </div>
+    <div className="mt-2">
+      <button
+        type="button"
+        onClick={() => setAbierto((v) => !v)}
+        aria-expanded={abierto}
+        aria-controls={panelId}
+        className="flex w-full items-center gap-2 rounded-[14px] px-3 py-2.5 text-left transition-colors hover:bg-surface-low"
+      >
+        <Icon name="help" size={16} className="shrink-0 text-ink-subtle" />
+        <span className="flex-1 text-[13px] font-semibold text-ink-muted">¿Cómo funciona?</span>
+        <Icon
+          name="expand_more"
+          size={18}
+          className={`shrink-0 text-ink-subtle transition-transform ${abierto ? 'rotate-180' : ''}`}
+        />
+      </button>
 
-      <ol className="mt-3 grid grid-cols-3 gap-2">
-        {pasos.map((p) => (
-          <li key={p.titulo} className="flex flex-col items-center gap-1.5 text-center">
-            <span
-              className={`flex h-11 w-11 items-center justify-center rounded-full ${p.fondo}`}
-              aria-hidden="true"
-            >
-              <Icon name={p.icono} size={21} />
-            </span>
-            <span className="text-[13px] font-bold leading-tight">{p.titulo}</span>
-            <span
-              className={`text-[11px] text-ink-subtle ${p.mono ? 'font-mono tabular-nums' : ''}`}
-            >
-              {p.pie}
-            </span>
-          </li>
-        ))}
-      </ol>
-
-      {/* La única frase entera de la tarjeta, y la que contesta la duda real. */}
-      <div className="mt-3.5 flex items-center gap-2.5 rounded-[14px] border border-success/25 bg-success-soft px-3 py-2.5">
-        <Icon name="check" size={17} className="shrink-0 text-success" filled />
-        <span className="text-[13px] font-bold text-emerald-900">No pagas nada ahora</span>
-      </div>
+      {abierto && (
+        <ol
+          id={panelId}
+          className="mt-1 grid grid-cols-3 gap-2 rounded-[16px] border border-ink/[0.04] bg-card px-3 py-4"
+        >
+          {pasos.map((p) => (
+            <li key={p.titulo} className="flex flex-col items-center gap-1.5 text-center">
+              <span
+                className={`flex h-11 w-11 items-center justify-center rounded-full ${p.fondo}`}
+                aria-hidden="true"
+              >
+                <Icon name={p.icono} size={21} />
+              </span>
+              <span className="text-[13px] font-bold leading-tight">{p.titulo}</span>
+              <span
+                className={`text-[11px] text-ink-subtle ${p.mono ? 'font-mono tabular-nums' : ''}`}
+              >
+                {p.pie}
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
     </div>
   )
 }
