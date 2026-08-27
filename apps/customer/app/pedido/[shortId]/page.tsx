@@ -107,6 +107,7 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
                   currentIdx={currentIdx}
                   progress={progress}
                   countdown={plazoHuerfano ? countdown : null}
+                  pasoVisible={!etapaPrepago}
                 />
 
                 {/* De quién es el turno con el dinero. Va pegado al hero y sin
@@ -126,8 +127,21 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
                   onProofUploaded={load}
                 />
 
-                {/* 3 · Referencia */}
-                <TrackingSteps currentIdx={currentIdx} />
+                {/* 3 · Referencia
+                    Los dos rieles NUNCA coinciden en pantalla, y no es por
+                    estética: mientras el prepago está sin resolver, este de
+                    aquí no dice nada. `STATUS_TO_TRACKING` colapsa `validando`,
+                    `pending_acceptance`, `awaiting_payment` y `confirmed` en un
+                    solo «Recibido», así que durante las tres esperas se queda
+                    congelado en el paso 1 de 4 —justo lo que el hero ya escribe
+                    dos dedos más arriba— y lo único que aporta es un segundo
+                    stepper con la misma forma que el de arriba, a media pantalla
+                    de distancia. Dos barras de progreso obligan a averiguar cuál
+                    es la buena antes de leer ninguna.
+                    Se reparten el turno solos: `prepayStage` devuelve `null` de
+                    `preparing` en adelante, que es exactamente cuando este
+                    empieza a moverse y el otro deja de tener sujeto. */}
+                {!etapaPrepago && <TrackingSteps currentIdx={currentIdx} />}
               </>
             )}
           </div>

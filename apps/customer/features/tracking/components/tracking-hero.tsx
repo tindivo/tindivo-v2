@@ -16,6 +16,18 @@ interface TrackingHeroProps {
    * decide es la página, que es la única que sabe qué hay en pantalla.
    */
   countdown?: CountdownView | null
+  /**
+   * ¿Se enseña «Paso N de 4»?
+   *
+   * `false` mientras el riel del prepago está en pantalla, porque ese riel tiene
+   * TRES nodos y este contador habla de CUATRO pasos —los del pedido, no los del
+   * pago—. Juntos plantean una pregunta que no tiene respuesta útil: «¿por qué
+   * dice 4 si veo 3?». Y durante todo el prepago este número vale 1 y no se
+   * mueve (ver la nota de `TrackingSteps` en la página), así que no se pierde
+   * información al callarlo. La barra sí se queda: comunica «acabas de empezar»
+   * sin poner cifras que choquen.
+   */
+  pasoVisible?: boolean
 }
 
 /** El sujeto de cada reloj. Un contador sin sujeto es un cronómetro. */
@@ -52,6 +64,7 @@ export function TrackingHero({
   currentIdx,
   progress,
   countdown = null,
+  pasoVisible = true,
 }: TrackingHeroProps) {
   const isDelivered = step.key === 'delivered'
   // `null` = no hay base para dar un número. Antes se inventaba uno.
@@ -79,7 +92,7 @@ export function TrackingHero({
           />
         </div>
         <div className="mt-2 flex justify-between gap-3 text-[12px] text-white/60">
-          <span className="shrink-0">Paso {currentIdx + 1} de 4</span>
+          <span className="shrink-0">{pasoVisible ? `Paso ${currentIdx + 1} de 4` : ''}</span>
           {!isDelivered && eta ? (
             <span className="tabular-nums">
               {eta === 'Ya está listo' || eta === 'En cualquier momento' ? eta : `Llega en ${eta}`}
