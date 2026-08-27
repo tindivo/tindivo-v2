@@ -4,6 +4,7 @@ import { type OrderStatus, toTrackingStep } from '@tindivo/contracts'
 import { useRouter } from 'next/navigation'
 import { use } from 'react'
 import { CancelledView } from '@/features/tracking/components/cancelled-view'
+import { PrepayRail } from '@/features/tracking/components/prepay-rail'
 import { TrackingActions } from '@/features/tracking/components/tracking-actions'
 import { TrackingAlertToast } from '@/features/tracking/components/tracking-alert-toast'
 import { TrackingAppealView } from '@/features/tracking/components/tracking-appeal-view'
@@ -19,6 +20,7 @@ import { useCountdown } from '@/features/tracking/hooks/use-countdown'
 import { useStatusAlerts } from '@/features/tracking/hooks/use-status-alerts'
 import { useTracking } from '@/features/tracking/hooks/use-tracking'
 import { isCancellable, STEPS } from '@/features/tracking/lib/format'
+import { prepayStage } from '@/features/tracking/lib/prepay-stage'
 
 /**
  * El seguimiento del pedido, en tres zonas y en este orden:
@@ -58,6 +60,7 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
   const progress = ((currentIdx + 1) / STEPS.length) * 100
   const cancellable = data ? isCancellable(data, ownedId) : false
   const enRuta = current === 'ontheway' || current === 'delivered'
+  const etapaPrepago = data ? prepayStage(data) : null
 
   /**
    * ¿Hay algún plazo corriendo que NADIE esté pintando?
@@ -105,6 +108,12 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
                   progress={progress}
                   countdown={plazoHuerfano ? countdown : null}
                 />
+
+                {/* De quién es el turno con el dinero. Va pegado al hero y sin
+                    tarjeta porque es su pie, no una sección: dice lo único que
+                    el hero no puede decir —«esto lo hace el negocio, no tú»— y
+                    es justo lo que faltaba para que el prepago se entienda. */}
+                {etapaPrepago && <PrepayRail stage={etapaPrepago} />}
 
                 {/* 2 · Ahora mismo */}
                 {cancellable && (

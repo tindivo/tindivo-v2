@@ -34,6 +34,8 @@ export function PaymentAccountCard({
   if (!numero) return null
 
   const marca = method ? walletLabel(method.wallet) : 'Yape / Plin'
+  /** La billetera que el negocio NO usa, que es la que el cliente puede tener. */
+  const otraBilletera = method?.wallet === 'plin' ? 'Yape' : 'Plin'
 
   function copy() {
     if (!numero) return
@@ -62,6 +64,25 @@ export function PaymentAccountCard({
           {copied ? '¡Copiado!' : 'Copiar'}
         </button>
       </div>
+
+      {/* El cruce Yape/Plin.
+          La cuenta de destino la elige el negocio y es UNA (ver la nota de
+          arriba), pero la app desde la que paga el cliente no la elegimos: en
+          San Jacinto mucha gente tiene solo una de las dos. Sin esta línea, el
+          que ve una tarjeta morada y tiene Plin asume que no puede pagar y se
+          queda mirando el reloj —o escribe por WhatsApp, que es peor para la
+          cajera—.
+
+          OJO: la frase afirma que la transferencia cruzada por número funciona.
+          Es una afirmación sobre dinero de verdad, así que tiene que estar
+          comprobada contra las cuentas reales del piloto antes de publicarse;
+          si no lo estuviera, quitar el bloque —no suavizarlo— porque una
+          instrucción de pago a medias es peor que ninguna. */}
+      {method && (
+        <p className="mt-2.5 text-[12px] leading-snug text-ink-muted">
+          ¿Pagas desde <strong className="text-ink">{otraBilletera}</strong>? Es el mismo número.
+        </p>
+      )}
 
       {method?.qrUrl && (
         <div className="mt-3 flex flex-col items-center text-center">

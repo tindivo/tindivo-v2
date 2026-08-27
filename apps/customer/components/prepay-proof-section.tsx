@@ -3,7 +3,7 @@
 import { ApiError } from '@tindivo/api-client'
 import type { PaymentQrView } from '@tindivo/contracts'
 import { compressImage, UPLOAD_CACHE_CONTROL, validateImageInput } from '@tindivo/images'
-import { Button } from '@tindivo/ui'
+import { Button, Icon } from '@tindivo/ui'
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '@/lib/api'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
@@ -180,17 +180,37 @@ export function PrepayProofSection({ orderId, proofAttempt, countdown, onProofUp
         </div>
       )}
 
+      {/* La luz verde, y por que es verde.
+          Este es el unico momento del prepago en que la pelota pasa al cliente,
+          y hasta ahora lo anunciaba un parrafo gris que empezaba por el nombre
+          del restaurante. El verde dice «adelante» de un vistazo, que es lo que
+          hace falta para alguien que no va a leer.
+          NO se usa para «ya pagaste» —eso lo dice el azul de la verificacion, en
+          `TrackingPrepay`—: el mismo color para dos cosas opuestas es como se
+          pierde la gente. */}
+      <div className="flex items-center gap-2.5 rounded-[16px] border border-success/25 bg-success-soft px-3.5 py-3">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-success text-white">
+          <Icon name="check" size={17} filled />
+        </span>
+        <div className="min-w-0">
+          <h3 className="font-display text-[15px] font-bold tracking-tight text-emerald-900">
+            {info?.businessName ?? 'El restaurante'} confirmó tu pedido
+          </h3>
+          <p className="text-[12px] leading-snug text-emerald-800/80">
+            Ahora te toca pagar para que entre a cocina.
+          </p>
+        </div>
+      </div>
+
       {/* El reloj, a ancho completo y con la barra. Antes era una pildora de 11
           px en la esquina, mas pequena incluso que la del pill compartido: el
           plazo con consecuencias mas duras del flujo —si vence, el pedido se
           cancela solo— era el dato mas discreto de la pantalla. */}
-      {countdown && <CountdownBar view={countdown} titulo="Tiempo para pagar" />}
-
-      <h3 className="mt-3 font-display text-[18px] font-bold tracking-tight">Paga tu pedido</h3>
-      <p className="text-[13px] text-ink-muted">
-        El restaurante <strong className="text-ink">{info?.businessName ?? 'local'}</strong>{' '}
-        confirmó disponibilidad. Paga el monto exacto y sube tu comprobante.
-      </p>
+      {countdown && (
+        <div className="mt-2.5">
+          <CountdownBar view={countdown} titulo="Tiempo para pagar" />
+        </div>
+      )}
 
       {/* Monto */}
       <div className="mt-3.5 rounded-[16px] border border-ink/[0.06] bg-surface p-3.5">

@@ -68,18 +68,27 @@ export function TrackingPrepay({ data, ownedId, countdown, onProofUploaded }: Tr
     <>
       {/* 1. pending_acceptance o validando SIN comprobante: qué viene después.
           El «estamos confirmando» y su contador ya están en la fila de cancelar,
-          justo encima; repetirlos aquí solo alargaba la pantalla. Lo que esta
-          tarjeta aporta es lo único que el cliente todavía no sabe: que en
-          cuanto le confirmen le empieza a correr un plazo para pagar. */}
+          justo encima —y desde el riel de prepago, también de quién es el turno;
+          repetirlos aquí solo alargaba la pantalla. Lo que esta tarjeta aporta
+          es lo único que el cliente todavía no sabe: que en cuanto le confirmen
+          le empieza a correr un plazo para pagar.
+
+          El titular dice «Todavía no pagas» y no «Ten tu Yape a la mano» por dos
+          motivos. El primero es que la duda que trae el cliente a esta pantalla
+          es si le toca hacer algo YA, y un imperativo respondía que sí cuando la
+          respuesta es no. El segundo es que la app desde la que paga no la
+          elegimos nosotros: el negocio tiene una cuenta —Yape o Plin, la
+          principal— pero al cliente le sirve cualquiera de las dos para
+          transferirle, así que nombrar solo una deja fuera a media San Jacinto. */}
       {(data.status === 'pending_acceptance' ||
         (data.status === 'validando' && !data.proofUrl)) && (
         <div className="mt-3.5 flex items-start gap-2.5 rounded-[22px] border border-brand/20 bg-brand-soft p-4 text-left">
           <Icon name="account_balance_wallet" size={20} className="mt-px shrink-0 text-brand" />
           <div>
-            <div className="text-[14px] font-semibold text-brand-dark">Ten tu Yape a la mano</div>
+            <div className="text-[14px] font-semibold text-brand-dark">Todavía no pagas</div>
             <p className="mt-1 text-[13px] leading-relaxed text-ink-muted">
-              Cuando el restaurante confirme que tiene tu pedido, te avisaremos aquí y tendrás{' '}
-              <strong>{minutosParaPagar} minutos</strong> para pagar y subir tu captura.
+              Cuando confirmen tendrás <strong>{minutosParaPagar} minutos</strong> para pagar con
+              Yape o Plin. Te avisamos con sonido.
             </p>
           </div>
         </div>
