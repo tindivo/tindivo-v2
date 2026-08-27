@@ -11,9 +11,11 @@ import {
   DEFAULT_MAX_CASH_BILL,
   DEFAULT_MAX_CHANGE,
   DEFAULT_PREPAY_THRESHOLD,
+  DEFAULT_PREPAY_TIMERS,
   type GeoBlockKind,
   type OrderResult,
   PROMO_DESCONOCIDA,
+  type PrepayTimers,
   type PromoState,
 } from '@/features/checkout/types'
 import { useBusinessOrdering } from '@/lib/business-ordering'
@@ -66,6 +68,11 @@ export interface CheckoutState {
 
   prepayThreshold: number
   setPrepayThreshold: (v: number) => void
+  /**
+   * Los dos plazos del prepago, para poder prometerlos ANTES de pedir. Salen de
+   * `app_settings.timers`, no de una constante: ver `DEFAULT_PREPAY_TIMERS`.
+   */
+  prepayTimers: PrepayTimers
   maxCashBill: number
   setMaxCashBill: (v: number) => void
   maxChange: number
@@ -147,6 +154,7 @@ export function useCheckoutState(): CheckoutState {
   const [cashCustom, setCashCustom] = useState('')
   const [geoBlock, setGeoBlock] = useState<GeoBlockKind | null>(null)
   const [prepayThreshold, setPrepayThreshold] = useState(DEFAULT_PREPAY_THRESHOLD)
+  const [prepayTimers, setPrepayTimers] = useState<PrepayTimers>({ ...DEFAULT_PREPAY_TIMERS })
   const [maxCashBill, setMaxCashBill] = useState(DEFAULT_MAX_CASH_BILL)
   const [maxChange, setMaxChange] = useState(DEFAULT_MAX_CHANGE)
   const [prepayOnlyByRisk, setPrepayOnlyByRisk] = useState(false)
@@ -228,16 +236,37 @@ export function useCheckoutState(): CheckoutState {
     }
   }, [cartHydrated, confirmed, ordering.info, cart.businessId, router])
 
-  // Una sola query para las dos configuraciones globales de efectivo — no dos
-  // round-trips. `max_change` ya no está aquí: lo pone la caja del negocio.
+  // Una sola query para las configuraciones globales que necesita esta pantalla
+  // — no un round-trip por cada una. `max_change` ya no está aquí: lo pone la
+  // caja del negocio.
+  //
+  // `timers` entró con la `0193`, que lo añadió a la whitelist `as_public_read`.
+  // Sin esa migración esta fila vuelve VACÍA en silencio —sin error, sin fila— y
+  // los plazos se quedarían en el fallback para siempre.
   useEffect(() => {
     getSupabaseBrowser()
       .from('app_settings')
       .select('key, value')
-      .in('key', ['prepay_threshold', 'max_cash_bill'])
+      .in('key', ['prepay_threshold', 'max_cash_bill', 'timers'])
       .then(({ data }) => {
         for (const row of data ?? []) {
           const raw = row.value
+          // `timers` es un objeto, no un escalar: se trata antes de la coerción
+          // numérica de abajo, que lo convertiría en `NaN` y lo descartaría.
+          if (row.key === 'timers') {
+            if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+              const t = raw as Record<string, unknown>
+              const min = (k: string, porDefecto: number) => {
+                const n = typeof t[k] === 'number' ? (t[k] as number) : Number(t[k])
+                return Number.isFinite(n) && n > 0 ? n : porDefecto
+              }
+              setPrepayTimers({
+                acceptance: min('acceptanceMinutes', DEFAULT_PREPAY_TIMERS.acceptance),
+                payment: min('paymentMinutes', DEFAULT_PREPAY_TIMERS.payment),
+              })
+            }
+            continue
+          }
           const v = typeof raw === 'number' ? raw : typeof raw === 'string' ? Number(raw) : null
           if (!v || !Number.isFinite(v)) continue
           if (row.key === 'prepay_threshold') setPrepayThreshold(v)
@@ -354,6 +383,7 @@ export function useCheckoutState(): CheckoutState {
     setCashCustom,
     prepayThreshold,
     setPrepayThreshold,
+    prepayTimers,
     maxCashBill,
     setMaxCashBill,
     maxChange,

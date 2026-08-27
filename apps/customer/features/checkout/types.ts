@@ -4,6 +4,29 @@ import type { PaymentIntent } from '@tindivo/contracts'
 // no pueden importar de una feature. Ver `lib/prepay.ts`.
 export { DEFAULT_PREPAY_THRESHOLD } from '@/lib/prepay'
 
+/**
+ * Los dos plazos del prepago que el checkout le promete al cliente ANTES de
+ * pedir: cuánto tarda el negocio en confirmar y cuántos minutos tendrá él
+ * después para yapear.
+ *
+ * ESTO ES UN FALLBACK, NO LA VERDAD — igual que `DEFAULT_PREPAY_THRESHOLD`.
+ * La verdad vive en `app_settings.timers` desde la `0174` y se edita desde
+ * /admin/configuracion; el checkout la lee (la `0193` la puso en la whitelist
+ * de lectura pública) y usa estos números solo mientras la consulta no vuelve.
+ *
+ * Coinciden a propósito con los de `features/tracking/lib/deadline.ts`: son las
+ * dos únicas redes para la MISMA key, y si discreparan, el checkout prometería
+ * un plazo y el seguimiento contaría otro sobre el mismo pedido.
+ */
+export const DEFAULT_PREPAY_TIMERS = { acceptance: 8, payment: 15 } as const
+
+export interface PrepayTimers {
+  /** Minutos que tiene el NEGOCIO para confirmar disponibilidad. */
+  acceptance: number
+  /** Minutos que tiene el CLIENTE para pagar y subir la captura. */
+  payment: number
+}
+
 export const DEFAULT_MAX_CASH_BILL = 100
 export const DEFAULT_MAX_CHANGE = 50
 export const CASH_STEP = 0.5 // redondeo del input libre: múltiplos de S/0.50
@@ -148,8 +171,13 @@ export const PAYMENT_OPTIONS: PaymentOption[] = [
   },
   {
     value: 'prepaid',
-    label: 'Prepago con billetera digital',
-    desc: 'Paga ahora con Yape/Plin y sube tu comprobante',
+    // «Paga ahora con Yape/Plin y sube tu comprobante» era una instrucción, y
+    // falsa en el momento en que se lee: al elegir esta opción no se paga nada
+    // —el negocio tiene que confirmar disponibilidad primero—. El cliente la
+    // obedecía, buscaba dónde pagar, no lo encontraba y se quedaba atascado.
+    // El detalle de la secuencia lo cuenta `PrepayExplainer` al seleccionarla.
+    label: 'Yape o Plin por adelantado',
+    desc: 'Pagas después, no ahora',
     logos: ['yape', 'plin'],
   },
 ]

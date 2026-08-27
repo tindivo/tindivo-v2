@@ -8,6 +8,7 @@ import { OtpVerificationSheet } from '@/components/otp-verification-sheet'
 import { CartValidationBanner } from '@/features/cart/components/cart-validation-banner'
 import { CashSelector } from '@/features/checkout/components/cash-selector'
 import { OrderDetail } from '@/features/checkout/components/order-detail'
+import { PrepayExplainer } from '@/features/checkout/components/prepay-explainer'
 import type { CheckoutViewModel } from '@/features/checkout/hooks/use-checkout'
 import type { UseCheckoutValidationReturn } from '@/features/checkout/hooks/use-checkout-validation'
 import { soles } from '@/features/checkout/lib/format'
@@ -34,6 +35,7 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
     payment,
     setPayment,
     mustPrepay,
+    prepayTimers,
     prepayReason,
     cashChoice,
     setCashChoice,
@@ -254,6 +256,27 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
               )
             })}
           </div>
+
+          {/* Prepago elegido: qué va a pasar después. Va aquí, en paralelo al
+              `CashSelector` de abajo, porque las dos son lo mismo — el detalle
+              que solo aplica a la opción marcada— y así el bloque no se mete
+              entre las tarjetas de las opciones. */}
+          {payment === 'prepaid' && <PrepayExplainer timers={prepayTimers} />}
+
+          {/* Por qué faltan las otras dos opciones.
+              Cuando el pedido obliga a prepagar, el `.filter` de arriba las
+              quita del listado. Sin esta línea el cliente ve UNA sola forma de
+              pago y no sabe si es que la app no tiene más o es que a él se las
+              negaron; el aviso de `prepayReason` explica el motivo pero no que
+              existan alternativas. */}
+          {mustPrepay && (
+            <div className="mt-2.5 flex items-center gap-2.5 rounded-[14px] bg-surface-low px-3 py-2.5">
+              <Icon name="lock" size={15} className="shrink-0 text-ink-subtle" />
+              <span className="text-[12px] leading-snug text-ink-muted">
+                Efectivo y billetera al recibir no están disponibles en este pedido.
+              </span>
+            </div>
+          )}
 
           {payment === 'pending_cash' && (
             <div className="mt-3">
