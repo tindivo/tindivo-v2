@@ -106,6 +106,9 @@ export function TrackingPrepay({ data, ownedId, countdown, onProofUploaded }: Tr
                 ? {
                     label: countdown.label,
                     urgent: countdown.kind === 'running' && countdown.urgent,
+                    // `null` en plazo vencido: la barra no pinta una ventana que
+                    // ya no existe. Ver `CountdownBarView`.
+                    fraction: countdown.kind === 'running' ? countdown.fraction : null,
                   }
                 : null
             }

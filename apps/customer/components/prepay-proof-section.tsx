@@ -7,6 +7,7 @@ import { Button } from '@tindivo/ui'
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '@/lib/api'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
+import { CountdownBar, type CountdownBarView } from './countdown-bar'
 import { PaymentAccountCard } from './payment-account-card'
 
 interface PrepayInfo {
@@ -36,9 +37,11 @@ interface Props {
    * de lo que publica `get_tracking`, y aqui solo se pinta.
    *
    * El tipo es estructural a proposito: este componente vive en `components/` y
-   * no debe importar de `features/tracking`.
+   * no debe importar de `features/tracking`. `CountdownBarView` es ese mismo
+   * contrato estructural, ya con nombre, mas la fraccion que la barra necesita
+   * para representar la ventana.
    */
-  countdown: { label: string; urgent: boolean } | null
+  countdown: CountdownBarView | null
   onProofUploaded: () => void
 }
 
@@ -169,29 +172,19 @@ export function PrepayProofSection({ orderId, proofAttempt, countdown, onProofUp
 
   return (
     <div className="mt-4 rounded-[22px] border border-brand/20 bg-white p-5 text-left shadow-[0_4px_20px_rgba(0,0,0,0.04)]">
-      <div className="flex items-center justify-between">
-        {countdown ? (
-          <span
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-mono text-[11px] font-bold ${
-              countdown.urgent ? 'bg-danger-soft text-danger' : 'bg-brand-soft text-brand-dark'
-            }`}
-          >
-            <span
-              className={`h-2 w-2 animate-ping rounded-full ${
-                countdown.urgent ? 'bg-danger' : 'bg-orange-500'
-              }`}
-            />
-            Tiempo para pagar: {countdown.label}
-          </span>
-        ) : (
-          <span />
-        )}
-        {proofAttempt === 1 && (
+      {proofAttempt === 1 && (
+        <div className="mb-2.5 flex justify-end">
           <span className="rounded-full bg-danger-soft px-2.5 py-0.5 font-sans text-[11px] font-bold text-danger">
             Reintento final (1/2)
           </span>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* El reloj, a ancho completo y con la barra. Antes era una pildora de 11
+          px en la esquina, mas pequena incluso que la del pill compartido: el
+          plazo con consecuencias mas duras del flujo —si vence, el pedido se
+          cancela solo— era el dato mas discreto de la pantalla. */}
+      {countdown && <CountdownBar view={countdown} titulo="Tiempo para pagar" />}
 
       <h3 className="mt-3 font-display text-[18px] font-bold tracking-tight">Paga tu pedido</h3>
       <p className="text-[13px] text-ink-muted">

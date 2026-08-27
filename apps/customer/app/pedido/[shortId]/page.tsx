@@ -59,6 +59,24 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
   const cancellable = data ? isCancellable(data, ownedId) : false
   const enRuta = current === 'ontheway' || current === 'delivered'
 
+  /**
+   * ¿Hay algún plazo corriendo que NADIE esté pintando?
+   *
+   * Cada contador vive pegado a la acción que lo apaga (ver `TrackingHero`), y
+   * esa regla no cambia. Pero las dos piezas que los pintan son condicionales:
+   * la fila de cancelar solo aparece si `isCancellable`, y la tarjeta de
+   * prepago solo en sus dos estados. Un pedido abierto desde un enlace
+   * compartido —sin sesión, luego sin `ownedId`— mientras el negocio confirma
+   * no cumple ninguna de las dos, y el reloj desaparece de la pantalla entera.
+   *
+   * Esta es la comprobación de ese hueco, y vive aquí porque la página es la
+   * única que sabe qué está montado.
+   */
+  const prepagoPintaPlazo =
+    data?.paymentIntent === 'prepaid' &&
+    (data.status === 'awaiting_payment' || (data.status === 'validando' && Boolean(data.proofUrl)))
+  const plazoHuerfano = Boolean(countdown) && !cancellable && !prepagoPintaPlazo
+
   if (data?.status === 'cancelled' && data.cancelReason !== 'proof_rejected_final') {
     return <CancelledView data={data} />
   }
@@ -80,7 +98,13 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
             ) : (
               <>
                 {/* 1 · Estado */}
-                <TrackingHero data={data} step={step} currentIdx={currentIdx} progress={progress} />
+                <TrackingHero
+                  data={data}
+                  step={step}
+                  currentIdx={currentIdx}
+                  progress={progress}
+                  countdown={plazoHuerfano ? countdown : null}
+                />
 
                 {/* 2 · Ahora mismo */}
                 {cancellable && (

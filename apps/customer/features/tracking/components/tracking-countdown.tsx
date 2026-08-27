@@ -10,6 +10,12 @@ interface CountdownPillProps {
 /**
  * El contador, en `mm:ss` y con cifras de ancho fijo (`tabular-nums`): sin eso
  * el número baila a cada segundo y arrastra el texto de al lado.
+ *
+ * Es la versión de acompañamiento: cabe en una línea junto a otra frase («El
+ * restaurante confirma en») y a 12 px hace bien su papel de dato secundario.
+ * Cuando el reloj **es** la pantalla —los quince minutos para yapear, los diez
+ * de la revisión— va `CountdownBar` (`components/countdown-bar.tsx`), que
+ * además pinta cuánto queda de la ventana.
  */
 export function CountdownPill({ view, tono = 'light' }: CountdownPillProps) {
   const vencido = view.kind === 'grace'

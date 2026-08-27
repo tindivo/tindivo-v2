@@ -81,15 +81,48 @@ export function activeDeadline(data: Tracking): Deadline | null {
   }
 }
 
+/**
+ * Lo que se puede pintar de un plazo.
+ *
+ * `deadlineKind` viaja en las dos variantes porque quien pinta necesita saber
+ * DE QUÉ reloj se trata para redactar la frase que lo acompaña: «Responden en»,
+ * «Pagas en» y «Revisando» son tres sujetos distintos, y un contador sin sujeto
+ * es un cronómetro. Antes solo lo sabía la rama de plazo vencido, que ya
+ * elegía su texto con `GRACE_LABEL`; el resto de la pantalla tenía que
+ * deducirlo del estado del pedido por su cuenta.
+ */
 export type CountdownView =
   /** Quedan segundos: se pinta `mm:ss`. */
-  | { kind: 'running'; seconds: number; label: string; urgent: boolean }
+  | {
+      kind: 'running'
+      deadlineKind: DeadlineKind
+      seconds: number
+      label: string
+      urgent: boolean
+      /**
+       * Cuánto queda de la ventana, de 1 (recién empezada) a 0 (agotada).
+       *
+       * Es lo que hace pintable un plazo: un `mm:ss` obliga a leer dos números y
+       * a saber de cuánto se partía —«¿7:20 es mucho o poco?» no tiene respuesta
+       * sin conocer si la ventana era de ocho minutos o de quince—, mientras que
+       * un arco medio vacío se entiende sin leer. Y este flujo tiene tres
+       * ventanas de duraciones distintas seguidas, así que la pregunta se hace
+       * tres veces.
+       *
+       * Sale de `totalMs`, que `activeDeadline` ya calculaba y hasta ahora solo
+       * se usaba para decidir el umbral del rojo. Se acota a [0, 1]: el reloj
+       * del celular puede ir por delante del de la base y dar un `remaining`
+       * mayor que la ventana entera, y un arco pintado al 130% se sale del
+       * círculo.
+       */
+      fraction: number
+    }
   /**
    * El plazo venció y la base todavía no ha reaccionado. Los crons corren cada
    * minuto, así que hay hasta 60s de desfase — y un `0:00` congelado durante ese
    * minuto parece la app colgada. Se dice qué está pasando en vez de un cero.
    */
-  | { kind: 'grace'; label: string }
+  | { kind: 'grace'; deadlineKind: DeadlineKind; label: string }
 
 const GRACE_LABEL: Record<DeadlineKind, string> = {
   acceptance: 'Confirmando…',
@@ -104,15 +137,18 @@ function urgentThresholdMs(totalMs: number): number {
 
 export function countdownView(deadline: Deadline, now: number = Date.now()): CountdownView {
   const remaining = deadline.at - now
-  if (remaining <= 0) return { kind: 'grace', label: GRACE_LABEL[deadline.kind] }
+  if (remaining <= 0)
+    return { kind: 'grace', deadlineKind: deadline.kind, label: GRACE_LABEL[deadline.kind] }
 
   const seconds = Math.ceil(remaining / 1000)
   const m = Math.floor(seconds / 60)
   const s = seconds % 60
   return {
     kind: 'running',
+    deadlineKind: deadline.kind,
     seconds,
     label: `${m}:${s.toString().padStart(2, '0')}`,
     urgent: remaining <= urgentThresholdMs(deadline.totalMs),
+    fraction: deadline.totalMs > 0 ? Math.min(1, Math.max(0, remaining / deadline.totalMs)) : 0,
   }
 }

@@ -5,8 +5,8 @@ import { activeDeadline, countdownView } from '../deadline'
 /**
  * `activeDeadline` decide qué contador ve el cliente, y **tiene que coincidir
  * con lo que cancela de verdad en la base**: `cancel_expired_prepay_orders()`,
- * que desde la `0174` es la única que cancela por tiempo (5 min de aceptación,
- * 15 de pago, 5 de validación humana, 10 de comprobante).
+ * que desde la `0174` es la única que cancela por tiempo (8 min de aceptación
+ * desde la `0186`, 15 de pago, 5 de validación humana, 10 de comprobante).
  *
  * El riesgo aquí no es que el contador se vea feo. Es que prometa tiempo que la
  * base no da: el cliente vería 12:30 sobre un pedido que ya está cancelado, y
@@ -207,9 +207,61 @@ describe('countdownView', () => {
     // base reacciona. Un `0:00` quieto durante ese minuto parece la app colgada.
     expect(countdownView(cinco, T0 + 5 * 60_000)).toEqual({
       kind: 'grace',
+      deadlineKind: 'acceptance',
       label: 'Confirmando…',
     })
     expect(countdownView(cinco, T0 + 9 * 60_000).kind).toBe('grace')
+  })
+
+  it('dice de qué reloj se trata, corriendo y vencido', () => {
+    // Sin esto, quien pinta el contador tiene que deducir el sujeto de la frase
+    // («Responden en» / «Pagas en» / «Revisando») a partir del estado del
+    // pedido, por su cuenta y en paralelo a `activeDeadline`.
+    const pago = { kind: 'payment', at: T0 + 15 * 60_000, totalMs: 15 * 60_000 } as const
+    expect(countdownView(pago, T0).deadlineKind).toBe('payment')
+    expect(countdownView(pago, T0 + 16 * 60_000).deadlineKind).toBe('payment')
+  })
+
+  describe('fraction · lo que hace pintable el plazo', () => {
+    it('vale 1 al empezar y baja hasta 0', () => {
+      const alEmpezar = countdownView(cinco, T0)
+      const aMitad = countdownView(cinco, T0 + 2.5 * 60_000)
+      const alFinal = countdownView(cinco, T0 + 5 * 60_000 - 1)
+      expect(alEmpezar.kind === 'running' && alEmpezar.fraction).toBe(1)
+      expect(aMitad.kind === 'running' && aMitad.fraction).toBeCloseTo(0.5, 5)
+      expect(alFinal.kind === 'running' && alFinal.fraction).toBeCloseTo(0, 3)
+    })
+
+    it('es proporcional a SU ventana, no a los minutos en bruto', () => {
+      // Ocho minutos restantes son casi nada en la ventana de pago (15) y toda
+      // la ventana en la de aceptación (8). Un arco que no distinguiera las dos
+      // enseñaría la misma urgencia para dos situaciones opuestas, que es
+      // exactamente lo que un `mm:ss` a secas ya hace mal.
+      const aceptacion = { kind: 'acceptance', at: T0 + 8 * 60_000, totalMs: 8 * 60_000 } as const
+      const pago = { kind: 'payment', at: T0 + 15 * 60_000, totalMs: 15 * 60_000 } as const
+      const a = countdownView(aceptacion, T0)
+      const p = countdownView(pago, T0 + 7 * 60_000)
+      expect(a.kind === 'running' && a.fraction).toBe(1)
+      expect(p.kind === 'running' && p.fraction).toBeCloseTo(8 / 15, 5)
+    })
+
+    it('no se sale de [0,1] si el reloj del celular va adelantado', () => {
+      // El navegador cuenta con la hora del dispositivo y el plazo lo fija la
+      // base: un celular con la hora mal puede dar un `remaining` mayor que la
+      // ventana entera, y un arco al 130% se sale del círculo.
+      const v = countdownView(cinco, T0 - 10 * 60_000)
+      expect(v.kind === 'running' && v.fraction).toBe(1)
+    })
+
+    it('una ventana de cero no divide por cero', () => {
+      const v = countdownView({ kind: 'payment', at: T0 + 1000, totalMs: 0 }, T0)
+      expect(v.kind === 'running' && v.fraction).toBe(0)
+    })
+
+    it('vencido no trae fracción: ahí ya no hay nada que pintar', () => {
+      const v = countdownView(cinco, T0 + 6 * 60_000)
+      expect(v).not.toHaveProperty('fraction')
+    })
   })
 
   it('cada plazo vencido explica lo suyo', () => {
