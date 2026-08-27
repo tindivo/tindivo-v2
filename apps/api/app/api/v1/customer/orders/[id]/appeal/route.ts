@@ -85,7 +85,7 @@ export async function POST(
     const { data, error } = await client.rpc('create_appeal_report', {
       p_order_id: id,
       p_description: body.description ?? undefined,
-    } as any)
+    })
 
     if (error) {
       if (error.code === 'P0002') throw new DomainError(error.message, 'not_found')

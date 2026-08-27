@@ -19,7 +19,8 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: '/', label: 'Dashboard', icon: Ico.dashboard },
       { href: '/orders', label: 'Pedidos', icon: Ico.orders },
-      { href: '/metricas', label: 'Métricas', icon: Ico.metrics },
+      { href: '/monitoreo', label: 'Monitoreo Online', icon: Ico.metrics },
+      { href: '/metricas', label: 'Métricas', icon: Ico.audit },
     ],
   },
   {

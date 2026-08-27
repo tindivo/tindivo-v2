@@ -15,7 +15,7 @@ export async function GET(req: Request) {
   try {
     const supabase = createServiceClient()
 
-    const { data, error } = await (supabase.rpc as any)('get_order_intake_status')
+    const { data, error } = await supabase.rpc('get_order_intake_status')
 
     if (error || !data) {
       return ok(

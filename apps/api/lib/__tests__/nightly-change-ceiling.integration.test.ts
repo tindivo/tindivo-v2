@@ -66,7 +66,8 @@ const pedidosCreados: string[] = []
  * abajo. Medido: dejarla puesta tumba los siete snapshots visuales del panel a
  * la vez, y el fallo apunta a la UI en vez de a este fichero.
  */
-let jornadasPrevias: { service_date: string; status: string; change_available: number | null }[] = []
+let jornadasPrevias: { service_date: string; status: string; change_available: number | null }[] =
+  []
 
 async function pagarCon(monto: number) {
   return db.rpc('create_customer_order', {

@@ -2530,7 +2530,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_conversion_opportunity_stats: { Args: never; Returns: Json }
       admin_metrics: { Args: { p_from: string; p_to: string }; Returns: Json }
+      admin_online_orders_stats: {
+        Args: { p_from?: string; p_to?: string }
+        Returns: Json
+      }
       admin_promo_free_delivery_stats: { Args: never; Returns: Json }
       advance_order: {
         Args: {
