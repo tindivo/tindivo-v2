@@ -195,10 +195,15 @@ export const PAYMENT_OPTIONS: PaymentOption[] = [
   },
   {
     value: 'pending_yape',
-    // «Billetera digital» es palabra de banco. En San Jacinto se dice yapear, y
-    // con los dos logos al lado el título no necesita nombrar la categoría.
+    // «Billetera digital» es palabra de banco, y con los dos logos al lado el
+    // título no necesita nombrar la categoría.
+    //
+    // El subtítulo NO dice «le yapeas». Es el verbo que se usa en la calle, pero
+    // es de marca: convierte en Yape una opción que también es Plin, igual que
+    // hacía el «ten tu Yape a la mano» del seguimiento. «Transfieres» es neutral
+    // y vale para las dos.
     label: 'Yape o Plin',
-    desc: 'Le yapeas al motorizado en tu puerta',
+    desc: 'Le transfieres al motorizado en tu puerta',
     logos: ['yape', 'plin'],
     momento: 'al_recibir',
   },

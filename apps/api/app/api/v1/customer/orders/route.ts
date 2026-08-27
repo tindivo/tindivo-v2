@@ -136,8 +136,13 @@ export async function POST(req: Request): Promise<Response> {
 
       const calculatedTotal = calculatedSubtotal + deliveryFee
       if (calculatedTotal > threshold) {
+        // El mensaje nombra el ENVÍO porque el umbral se compara contra el total
+        // con delivery dentro, aquí y en `create_customer_order` (0194). Decir
+        // solo «pedidos mayores a S/80» dejaba fuera esa mitad: una bolsa de
+        // S/80 justos con S/2 de envío se rechaza, y el cliente mira su bolsa,
+        // ve 80, y el sistema le parece roto.
         return problem('forbidden', {
-          detail: `Pedidos mayores a S/${threshold} requieren pago adelantado.`,
+          detail: `El total con envío (S/ ${calculatedTotal.toFixed(2)}) pasa de S/ ${threshold}, así que el pago debe ser adelantado.`,
           requestId,
           headers: corsHeaders(req),
         })
