@@ -91,6 +91,9 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
       error={error}
       data={data}
       right={<TrackingSoundToggle activo={sonidoActivo} onToggle={alternarSonido} />}
+      // La barra fija de «subir captura» solo existe mientras el cliente tiene
+      // que pagar; solo entonces hace falta reservarle sitio al final.
+      pieFijo={data?.paymentIntent === 'prepaid' && data.status === 'awaiting_payment'}
     >
       <TrackingAlertToast alerta={alerta} onClose={descartar} />
       {data && (

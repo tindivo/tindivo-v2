@@ -352,11 +352,6 @@ export function PrepayProofSection({ orderId, proofAttempt, countdown, onProofUp
         )}
       </div>
 
-      {/* Hueco para que la barra fija no tape el final de la pantalla. Va FUERA
-          de la tarjeta: dentro abría un vacío blanco de cien píxeles bajo la
-          zona de subida, como si algo se hubiera roto al maquetar. */}
-      <div className="h-24" aria-hidden="true" />
-
       {/*
         LA BARRA FIJA · el arreglo de fondo de esta pantalla.
 
@@ -375,6 +370,14 @@ export function PrepayProofSection({ orderId, proofAttempt, countdown, onProofUp
 
         Va dentro del ancho de la pantalla (`max-w-[768px]`) y no a sangre para
         no descolgarse del layout en tablet y escritorio.
+
+        EL HUECO PARA QUE NO TAPE NADA LO RESERVA LA PÁGINA, no este componente.
+        Aquí había un espaciador de 96 px y estaba mal por construcción: esta
+        tarjeta se pinta A MEDIA PÁGINA —debajo van el detalle del pedido, el
+        motorizado y las acciones— así que el hueco no caía al final de la
+        pantalla, que es lo que la barra tapa, sino en mitad del scroll, como un
+        agujero entre dos tarjetas. Lo pone `TrackingShell` con `pieFijo`, que es
+        quien sabe dónde termina la página.
       */}
       <div className="pb-safe fixed inset-x-0 bottom-0 z-40 border-t border-ink/[0.06] bg-white/90 backdrop-blur-md">
         <div className="mx-auto max-w-[768px] px-4 py-3">
