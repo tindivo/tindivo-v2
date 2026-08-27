@@ -217,12 +217,30 @@ export function useCheckoutState(): CheckoutState {
     [maxCashBill, maxChange, total],
   )
 
+  /**
+   * Por qué este pedido no puede pagarse al recibir.
+   *
+   * Las tres frases evitan la palabra «contraentrega». Es vocabulario interno
+   * —lo usan la caja, el motorizado y las RPC— y en esta pantalla las opciones
+   * se llaman «al recibir»: dos nombres para lo mismo, a dos dedos de
+   * distancia, obligan al cliente a deducir que son sinónimos.
+   *
+   * La del umbral nombra el ENVÍO a propósito. `exceedsCashCap` compara contra
+   * `total`, que lleva el delivery dentro —y el servidor hace lo mismo
+   * (`v_order_amount + v_delivery_fee > v_threshold`)—, así que una bolsa de
+   * S/79 con S/2 de envío obliga a prepagar mientras el cartel decía «pedidos
+   * mayores a S/80». El cliente miraba su bolsa, veía 79, y no le cuadraba.
+   *
+   * La del bloqueo no acusa ni explica el motivo —es antifraude— pero deja una
+   * puerta: sin ella, «tu cuenta tiene restringido» es un callejón sin salida
+   * escrito en pasiva.
+   */
   const prepayReason = isBlocked
-    ? 'Tu cuenta tiene restringido el pago contraentrega.'
+    ? 'Por ahora tus pedidos van con pago adelantado. Si crees que es un error, escríbenos.'
     : isNewUser
-      ? 'En tu primer pedido el pago es adelantado. Después podrás pagar al recibir.'
+      ? 'Es tu primer pedido, así que va con pago adelantado. En el siguiente ya puedes pagar al recibir.'
       : exceedsCashCap
-        ? `Pedidos mayores a S/${prepayThreshold} requieren pago adelantado.`
+        ? `Tu total con envío pasa de S/${prepayThreshold}, así que el pago va adelantado.`
         : null
 
   // Modo catálogo: el negocio no acepta pedidos web — el pedido va por WhatsApp

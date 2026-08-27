@@ -12,7 +12,12 @@ import { PrepayExplainer } from '@/features/checkout/components/prepay-explainer
 import type { CheckoutViewModel } from '@/features/checkout/hooks/use-checkout'
 import type { UseCheckoutValidationReturn } from '@/features/checkout/hooks/use-checkout-validation'
 import { soles } from '@/features/checkout/lib/format'
-import { PAYMENT_OPTIONS, PICKUP_ENABLED, promoAviso } from '@/features/checkout/types'
+import {
+  PAYMENT_MOMENTS,
+  PAYMENT_OPTIONS,
+  PICKUP_ENABLED,
+  promoAviso,
+} from '@/features/checkout/types'
 import { AddressSelectorSheet } from './address-selector-sheet'
 import { NameEditSheet } from './name-edit-sheet'
 
@@ -213,58 +218,82 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
               {prepayReason}
             </div>
           )}
-          <div className="flex flex-col gap-2.5">
-            {PAYMENT_OPTIONS.filter((opt) => !mustPrepay || opt.value === 'prepaid').map((opt) => {
-              const disabled = mustPrepay && opt.value !== 'prepaid'
-              const sel = payment === opt.value
+          {/* La lista se agrupa por CUÁNDO se paga, que es la única pregunta que
+              el cliente trae a esta pantalla. Con la lista plana, «Yape o Plin
+              al recibir» y «Yape o Plin por adelantado» iban pegadas y con el
+              mismo par de logos: dos filas que de un vistazo son la misma, y la
+              diferencia escondida al final de la línea. Con la cabecera delante,
+              el momento se lee antes que el método. */}
+          <div className="flex flex-col gap-4">
+            {PAYMENT_MOMENTS.map((grupo) => {
+              const opciones = PAYMENT_OPTIONS.filter(
+                (opt) => opt.momento === grupo.momento && (!mustPrepay || opt.value === 'prepaid'),
+              )
+              if (opciones.length === 0) return null
+
               return (
-                <button
-                  key={opt.value}
-                  type="button"
-                  disabled={disabled}
-                  onClick={() => handlePaymentSelect(opt.value)}
-                  className={cn(
-                    'flex items-center gap-3 rounded-[18px] border bg-card p-4 text-left transition-shadow disabled:opacity-40',
-                    sel ? 'border-brand ring-2 ring-brand/30' : 'border-ink/[0.04]',
-                  )}
-                >
-                  <span
-                    className={cn(
-                      'flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-2',
-                      sel ? 'border-brand' : 'border-ink-subtle',
-                    )}
-                  >
-                    {sel && <span className="h-2.5 w-2.5 rounded-full bg-brand" />}
-                  </span>
-                  <span className="flex shrink-0 items-center gap-1">
-                    {opt.logos.map((logo) => (
-                      <img
-                        key={logo}
-                        src={`/pay/${logo}.svg`}
-                        alt={logo === 'cash' ? 'Efectivo' : logo === 'yape' ? 'Yape' : 'Plin'}
-                        width={34}
-                        height={34}
-                        className="rounded-[9px]"
-                      />
-                    ))}
-                  </span>
-                  <span className="flex-1">
-                    <span className="block font-semibold text-[15px] text-ink">{opt.label}</span>
-                    {/* Al marcar prepago, el subtítulo ASCIENDE de descripción a
-                        promesa. No se añade una línea: se sustituye. Las dos
-                        dicen lo mismo —«pagas después» y «no pagas nada ahora»—
-                        y apilarlas era pedirle al cliente que leyera dos veces
-                        la única frase que de verdad tiene que leer una. */}
-                    {sel && opt.value === 'prepaid' ? (
-                      <span className="mt-0.5 flex items-center gap-1 text-[12px] font-bold text-success">
-                        <Icon name="check" size={14} filled />
-                        No pagas nada ahora
-                      </span>
-                    ) : (
-                      <span className="block text-[12px] text-ink-muted">{opt.desc}</span>
-                    )}
-                  </span>
-                </button>
+                <div key={grupo.momento}>
+                  <div className="mb-2 px-1 text-[11px] font-bold uppercase tracking-[0.14em] text-ink-subtle">
+                    {grupo.titulo}
+                  </div>
+                  <div className="flex flex-col gap-2.5">
+                    {opciones.map((opt) => {
+                      const sel = payment === opt.value
+                      return (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => handlePaymentSelect(opt.value)}
+                          className={cn(
+                            'flex items-center gap-3 rounded-[18px] border bg-card p-4 text-left transition-shadow',
+                            sel ? 'border-brand ring-2 ring-brand/30' : 'border-ink/[0.04]',
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              'flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-2',
+                              sel ? 'border-brand' : 'border-ink-subtle',
+                            )}
+                          >
+                            {sel && <span className="h-2.5 w-2.5 rounded-full bg-brand" />}
+                          </span>
+                          <span className="flex shrink-0 items-center gap-1">
+                            {opt.logos.map((logo) => (
+                              <img
+                                key={logo}
+                                src={`/pay/${logo}.svg`}
+                                alt={
+                                  logo === 'cash' ? 'Efectivo' : logo === 'yape' ? 'Yape' : 'Plin'
+                                }
+                                width={34}
+                                height={34}
+                                className="rounded-[9px]"
+                              />
+                            ))}
+                          </span>
+                          <span className="flex-1">
+                            <span className="block font-semibold text-[15px] text-ink">
+                              {opt.label}
+                            </span>
+                            {/* Al marcar prepago, el subtítulo ASCIENDE de
+                                descripción a promesa. No se añade una línea: se
+                                sustituye. Apilar «pagas apenas confirmen» y «no
+                                pagas nada ahora» era pedirle al cliente que
+                                leyera dos veces la misma idea. */}
+                            {sel && opt.value === 'prepaid' ? (
+                              <span className="mt-0.5 flex items-center gap-1 text-[12px] font-bold text-success">
+                                <Icon name="check" size={14} filled />
+                                No pagas nada ahora
+                              </span>
+                            ) : (
+                              <span className="block text-[12px] text-ink-muted">{opt.desc}</span>
+                            )}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
               )
             })}
           </div>

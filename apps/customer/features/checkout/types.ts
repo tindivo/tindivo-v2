@@ -149,35 +149,75 @@ export interface PrepayInfo {
   hasProof: boolean
 }
 
+/**
+ * CUÁNDO paga el cliente. Es el eje que organiza la lista de métodos, y no el
+ * «con qué», porque es la única pregunta que el cliente se hace de verdad al
+ * llegar aquí: ¿saco la plata ahora o cuando llegue el motorizado?
+ *
+ * Antes la lista era plana y dos de las tres opciones —«Billetera digital al
+ * recibir» y «Prepago con billetera digital»— llevaban EL MISMO par de logos,
+ * Yape y Plin, una encima de la otra. El ojo escanea logos antes que texto, así
+ * que se leían como la misma fila repetida y lo único que las separaba, el
+ * momento, quedaba enterrado en la letra pequeña.
+ */
+export type PaymentMoment = 'al_recibir' | 'adelantado'
+
 export interface PaymentOption {
   value: PaymentIntent
   label: string
   desc: string
   logos: string[]
+  momento: PaymentMoment
 }
 
+/** Las cabeceras de la lista de pago, en el orden en que se pintan. */
+export const PAYMENT_MOMENTS: { momento: PaymentMoment; titulo: string }[] = [
+  { momento: 'al_recibir', titulo: 'Al recibir' },
+  { momento: 'adelantado', titulo: 'Por adelantado' },
+]
+
+/**
+ * Los títulos NO repiten el momento —«al recibir», «por adelantado»— porque ya
+ * lo dice la cabecera de su grupo. Repetirlo en cada fila era lo que obligaba a
+ * leer hasta el final de la línea para distinguir dos opciones que, de un
+ * vistazo, se ven idénticas.
+ *
+ * Los subtítulos dicen A QUIÉN se le paga, que es lo concreto: «al motorizado en
+ * tu puerta» se imagina, «al recibir tu pedido» no.
+ */
 export const PAYMENT_OPTIONS: PaymentOption[] = [
   {
     value: 'pending_cash',
-    label: 'Efectivo al recibir',
-    desc: 'Paga en efectivo al motorizado',
+    label: 'Efectivo',
+    desc: 'Le pagas al motorizado en tu puerta',
     logos: ['cash'],
+    momento: 'al_recibir',
   },
   {
     value: 'pending_yape',
-    label: 'Billetera digital al recibir',
-    desc: 'Yape o Plin al recibir tu pedido',
+    // «Billetera digital» es palabra de banco. En San Jacinto se dice yapear, y
+    // con los dos logos al lado el título no necesita nombrar la categoría.
+    label: 'Yape o Plin',
+    desc: 'Le yapeas al motorizado en tu puerta',
     logos: ['yape', 'plin'],
+    momento: 'al_recibir',
   },
   {
     value: 'prepaid',
-    // «Paga ahora con Yape/Plin y sube tu comprobante» era una instrucción, y
-    // falsa en el momento en que se lee: al elegir esta opción no se paga nada
-    // —el negocio tiene que confirmar disponibilidad primero—. El cliente la
-    // obedecía, buscaba dónde pagar, no lo encontraba y se quedaba atascado.
-    // El detalle de la secuencia lo cuenta `PrepayExplainer` al seleccionarla.
-    label: 'Yape o Plin por adelantado',
-    desc: 'Pagas después, no ahora',
+    // El subtítulo ha cambiado dos veces y las dos por el mismo motivo: decía
+    // algo cierto SOLO en el contexto en que se escribió.
+    //   · «Paga ahora con Yape/Plin y sube tu comprobante» era una instrucción
+    //     falsa en el instante en que se lee: al elegir esta opción no se paga
+    //     nada todavía, el negocio tiene que confirmar disponibilidad primero.
+    //   · «Pagas después, no ahora» se escribió cuando esta era la ÚNICA opción
+    //     en pantalla, contra un «paga ahora» que ya no existía. Con las tres a
+    //     la vista era peor: la opción de al recibir TAMBIÉN es «después», así
+    //     que la frase que debía distinguirlas las confundía.
+    // «Apenas el local confirme» ancla el pago a un hecho, no a un adverbio, y
+    // se sostiene solo con la lista entera delante.
+    label: 'Yape o Plin',
+    desc: 'Pagas apenas el local confirme',
     logos: ['yape', 'plin'],
+    momento: 'adelantado',
   },
 ]
