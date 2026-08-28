@@ -350,7 +350,7 @@ export default function MonitoreoPage() {
               <KpiCard
                 label="Cancelados"
                 value={num(onlineData.totals.cancelados)}
-                tone={onlineData.totals.cancelados > 0 ? 'danger' : 'neutral'}
+                tone={onlineData.totals.cancelados > 0 ? 'danger' : 'default'}
                 sub="Cancelados / abandonados"
               />
               <KpiCard
@@ -534,7 +534,7 @@ export default function MonitoreoPage() {
               <KpiCard
                 label="Cuentas sin Teléfono"
                 value={num(convData.summary.profiles_without_phone)}
-                tone="neutral"
+                tone="default"
                 sub="Perfiles no cruzables"
               />
             </div>
