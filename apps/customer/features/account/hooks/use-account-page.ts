@@ -1,11 +1,16 @@
 'use client'
 
-import type { ApiEnvelope } from '@tindivo/api-client'
-import { ACTIVE_ORDER_STATUSES, type CustomerAppealListResponse } from '@tindivo/contracts'
+import { AppealStatusSchema, RefundStatusSchema } from '@tindivo/contracts'
 import { useRouter } from 'next/navigation'
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import type { Address, OrderRow, Profile, ProfileStep } from '@/features/account/types'
-import { api } from '@/lib/api'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type {
+  Address,
+  AppealSummary,
+  OrderRow,
+  Profile,
+  ProfileStep,
+} from '@/features/account/types'
+import { useActiveOrders } from '@/lib/active-orders'
 import { clearOnboardingResume } from '@/lib/onboarding-store'
 import { signOutDevice, signOutEverywhereDevice } from '@/lib/sign-out'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
@@ -24,6 +29,41 @@ export interface ProfileProgress {
   steps: ProfileStep[]
 }
 
+/** Lo que hace falta de la sesión, leído una vez por carga de la página. */
+interface SessionInfo {
+  userId: string
+  email: string
+  metaName: string
+}
+
+/** Fila de `reports` tal como la devuelve el select del resumen de apelaciones. */
+interface AppealRow {
+  appeal_status: string | null
+  refund_status: string | null
+  orders: { short_id: string } | { short_id: string }[] | null
+}
+
+function toAppealSummaries(rows: AppealRow[]): AppealSummary[] {
+  const summaries: AppealSummary[] = []
+  for (const row of rows) {
+    const appealStatus = AppealStatusSchema.safeParse(row.appeal_status)
+    // Un report sin `appeal_status` todavía no es una apelación: no entra en los
+    // contadores. Se descarta en silencio en vez de lanzar, que es lo que hace
+    // la API. Allí el DTO es el producto y una fila incompleta es un bug que hay
+    // que ver; aquí es un número en un badge, y reventar por él dejaría toda la
+    // pantalla de cuenta en blanco.
+    if (!appealStatus.success) continue
+    const refundStatus = RefundStatusSchema.safeParse(row.refund_status)
+    const order = Array.isArray(row.orders) ? row.orders[0] : row.orders
+    summaries.push({
+      appealStatus: appealStatus.data,
+      refundStatus: refundStatus.success ? refundStatus.data : null,
+      orderShortId: order?.short_id ?? null,
+    })
+  }
+  return summaries
+}
+
 export function useAccountPage() {
   const router = useRouter()
   const [ready, setReady] = useState(false)
@@ -35,16 +75,56 @@ export function useAccountPage() {
   })
   const [addresses, setAddresses] = useState<Address[]>([])
   const [orders, setOrders] = useState<OrderRow[]>([])
-  const [activeOrdersCount, setActiveOrdersCount] = useState(0)
-  const [appeals, setAppeals] = useState<CustomerAppealListResponse['items']>([])
+  const [appeals, setAppeals] = useState<AppealSummary[]>([])
+
+  /**
+   * Los pedidos en curso salen del store compartido con la BottomNav, que ya
+   * los pide para su badge. Antes esta pantalla lanzaba su PROPIA consulta a
+   * `orders` con `{ count: 'exact', head: true }` y luego leía `data.length`
+   * — que con `head: true` es siempre `null`, así que el contador marcaba 0
+   * pasara lo que pasara, y la consulta se pagaba para nada.
+   */
+  const activeOrders = useActiveOrders()
+
+  const sessionRef = useRef<SessionInfo | null>(null)
+
+  /** La sesión, cacheada por carga: se pedía cuatro veces para leer lo mismo. */
+  const readSession = useCallback(async (): Promise<SessionInfo | null> => {
+    if (sessionRef.current) return sessionRef.current
+    const { data } = await getSupabaseBrowser().auth.getSession()
+    const session = data.session
+    if (!session) return null
+    const meta = session.user.user_metadata as { full_name?: string } | undefined
+    sessionRef.current = {
+      userId: session.user.id,
+      email: session.user.email ?? '',
+      metaName: meta?.full_name ?? '',
+    }
+    return sessionRef.current
+  }, [])
+
+  const reloadProfile = useCallback(async () => {
+    const session = await readSession()
+    if (!session) return
+    const { data: prof } = await getSupabaseBrowser()
+      .from('customer_profiles')
+      .select('full_name,phone,phone_verified_at')
+      .maybeSingle()
+
+    setProfile({
+      name: prof?.full_name ?? session.metaName,
+      email: session.email,
+      phone: prof?.phone ?? '',
+      phone_verified_at: prof?.phone_verified_at ?? null,
+    })
+  }, [readSession])
 
   const loadData = useCallback(async () => {
+    const session = await readSession()
+    if (!session) return
     const supabase = getSupabaseBrowser()
-    const { data: session } = await supabase.auth.getSession()
-    if (!session.session) return
-    const userId = session.session.user.id
 
-    const [{ data: addrs }, { data: ords }, { data: activeRows }, appealsRes] = await Promise.all([
+    const [{ data: addrs }, { data: ords }, { data: reportRows }] = await Promise.all([
       supabase
         .from('customer_addresses')
         .select('id,label,line,reference,is_default,coordinates_lat,coordinates_lng')
@@ -52,63 +132,60 @@ export function useAccountPage() {
       supabase
         .from('orders')
         .select('id,short_id,status,order_amount,created_at')
-        .eq('customer_user_id', userId)
+        .eq('customer_user_id', session.userId)
         .order('created_at', { ascending: false })
         .limit(3),
+      /**
+       * El resumen de apelaciones, directo por PostgREST.
+       *
+       * Antes era `GET apiv2.tindivo.com/customer/appeals`: un salto
+       * cross-origin (con su preflight) a una ruta que encadena `getUser` +
+       * `user_roles` + `reports` + una URL firmada POR CADA apelación, todo en
+       * serie y con `force-dynamic`. Medido contra producción: 470-750 ms solo
+       * para la ruta 401, que ni toca la base; PostgREST responde en ~300 ms. Y
+       * esa espera iba DENTRO del `Promise.all` que destapa la pantalla, así que
+       * el esqueleto duraba lo que durase el enlace más lento — casi siempre
+       * para acabar pintando «Sin reclamos».
+       *
+       * La policy `rep_participant_read` ya deja al cliente leer sus propios
+       * reports, y aquí solo se necesitan los contadores y a qué pedido enlazar.
+       * El comprobante de devolución (URL firmada, exige `service_role`) se ve
+       * en el detalle del pedido y ese sigue pasando por la API.
+       */
       supabase
-        .from('orders')
-        .select('id', { count: 'exact', head: true })
-        .eq('customer_user_id', userId)
-        .in('status', [...ACTIVE_ORDER_STATUSES]),
-      api.get<ApiEnvelope<CustomerAppealListResponse>>('/customer/appeals').catch(() => null),
+        .from('reports')
+        .select('appeal_status,refund_status,orders(short_id)')
+        .eq('type', 'rejected_proof_disputed')
+        .eq('customer_user_id', session.userId)
+        .order('created_at', { ascending: false }),
     ])
 
     setAddresses((addrs ?? []) as Address[])
     setOrders((ords ?? []) as OrderRow[])
-    setActiveOrdersCount(activeRows?.length ?? 0)
-    setAppeals(appealsRes?.data.items ?? [])
-  }, [])
-
-  const reloadProfile = useCallback(async () => {
-    const supabase = getSupabaseBrowser()
-    const { data: session } = await supabase.auth.getSession()
-    if (!session.session) return
-    const meta = session.session.user.user_metadata as { full_name?: string } | undefined
-    const { data: prof } = await supabase
-      .from('customer_profiles')
-      .select('full_name,phone,phone_verified_at')
-      .maybeSingle()
-
-    setProfile({
-      name: prof?.full_name ?? meta?.full_name ?? '',
-      email: session.session.user.email ?? '',
-      phone: prof?.phone ?? '',
-      phone_verified_at: prof?.phone_verified_at ?? null,
-    })
-  }, [])
+    setAppeals(toAppealSummaries((reportRows ?? []) as AppealRow[]))
+  }, [readSession])
 
   useEffect(() => {
-    const supabase = getSupabaseBrowser()
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (!data.session) {
+    let cancelled = false
+
+    void (async () => {
+      const session = await readSession()
+      if (!session) {
         router.replace('/entrar?next=/cuenta')
         return
       }
-      const meta = data.session.user.user_metadata as { full_name?: string } | undefined
-      const { data: prof } = await supabase
-        .from('customer_profiles')
-        .select('full_name,phone,phone_verified_at')
-        .maybeSingle()
-      setProfile({
-        name: prof?.full_name ?? meta?.full_name ?? '',
-        email: data.session.user.email ?? '',
-        phone: prof?.phone ?? '',
-        phone_verified_at: prof?.phone_verified_at ?? null,
-      })
-      await loadData()
+      // Perfil y datos salen a la vez. Antes el perfil iba primero y `loadData`
+      // no arrancaba hasta que volvía: un viaje de ida y vuelta entero de espera
+      // antes de empezar siquiera a pedir lo demás.
+      await Promise.all([reloadProfile(), loadData()])
+      if (cancelled) return
       setReady(true)
-    })
-  }, [router, loadData])
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [router, readSession, reloadProfile, loadData])
 
   const stats = useMemo<AccountStats>(() => {
     const pending = appeals.filter(
@@ -118,12 +195,12 @@ export function useAccountPage() {
       (a) => a.appealStatus === 'approved' && a.refundStatus === 'completed',
     ).length
     return {
-      activeOrdersCount,
+      activeOrdersCount: activeOrders.length,
       appealsCount: appeals.length,
       pendingAppealsCount: pending,
       completedAppealsCount: completed,
     }
-  }, [activeOrdersCount, appeals])
+  }, [activeOrders, appeals])
 
   const progress = useMemo<ProfileProgress>(() => {
     const hasName = Boolean(profile.name.trim())
@@ -174,10 +251,8 @@ export function useAccountPage() {
   }, [profile, addresses])
 
   async function setDefault(id: string) {
-    const supabase = getSupabaseBrowser()
-    const { data: session } = await supabase.auth.getSession()
-    const userId = session.session?.user.id
-    if (!userId) return
+    const session = await readSession()
+    if (!session) return
 
     setAddresses((prev) =>
       prev.map((a) => ({
@@ -186,7 +261,11 @@ export function useAccountPage() {
       })),
     )
 
-    await supabase.from('customer_addresses').update({ is_default: false }).eq('user_id', userId)
+    const supabase = getSupabaseBrowser()
+    await supabase
+      .from('customer_addresses')
+      .update({ is_default: false })
+      .eq('user_id', session.userId)
     await supabase.from('customer_addresses').update({ is_default: true }).eq('id', id)
     await loadData()
   }
@@ -197,12 +276,15 @@ export function useAccountPage() {
   }
 
   async function updateName(name: string) {
+    const session = await readSession()
+    if (!session) return
     const supabase = getSupabaseBrowser()
-    const { data: session } = await supabase.auth.getSession()
-    const userId = session.session?.user.id
-    if (!userId) return
-    await supabase.from('customer_profiles').upsert({ user_id: userId, full_name: name })
+    await supabase.from('customer_profiles').upsert({ user_id: session.userId, full_name: name })
     await supabase.auth.updateUser({ data: { full_name: name } })
+    // El nombre también vive en `user_metadata`, que es de donde sale el
+    // fallback mientras no haya fila de perfil: sin refrescar la copia cacheada,
+    // un `reloadProfile()` posterior lo devolvería al valor viejo.
+    sessionRef.current = { ...session, metaName: name }
     setProfile((p) => ({ ...p, name }))
   }
 

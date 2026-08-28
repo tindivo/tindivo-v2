@@ -14,13 +14,13 @@ import { MenuSection } from '@/features/catalog/components/menu-section'
 import { MenuToolbar } from '@/features/catalog/components/menu-toolbar'
 import { ProductModal } from '@/features/catalog/components/product-modal'
 import { ScheduleRow } from '@/features/catalog/components/schedule-row'
-import { useActiveOrders } from '@/features/catalog/hooks/use-active-order'
 import { useBusinessCatalog } from '@/features/catalog/hooks/use-business-catalog'
 import { useCatalogCart } from '@/features/catalog/hooks/use-catalog-cart'
 import { useCatalogNow } from '@/features/catalog/hooks/use-catalog-now'
 import { useMenuSearch } from '@/features/catalog/hooks/use-menu-search'
 import { soles } from '@/features/catalog/lib/format'
 import type { BusinessDetail, Category } from '@/features/catalog/types'
+import { useActiveOrders } from '@/lib/active-orders'
 
 interface NegocioShellProps {
   id: string

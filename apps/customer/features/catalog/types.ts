@@ -1,4 +1,5 @@
 import type { ScheduleDayRow } from '@tindivo/contracts'
+import type { ActiveOrder } from '@/lib/active-orders'
 
 export interface ModOption {
   id: string
@@ -121,11 +122,11 @@ export interface CatalogUser {
   userId: string | null
 }
 
-export interface ActiveOrder {
-  shortId: string
-  status: string
-  businessId: string
-  createdAt: string
-}
+/**
+ * `ActiveOrder` vive en `lib/active-orders.ts`, junto al store que lo produce y
+ * que comparten la BottomNav, la ficha del negocio y /cuenta. Se reexporta aquí
+ * para no reescribir los imports del catálogo, que ya lo pedían por este sitio.
+ */
+export type { ActiveOrder }
 
 export type ActiveOrders = ActiveOrder[]
