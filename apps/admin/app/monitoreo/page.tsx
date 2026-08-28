@@ -280,6 +280,10 @@ export default function MonitoreoPage() {
 
           {/* Selector de Rangos */}
           <div className="flex flex-wrap items-center gap-2">
+            {/* Excepción a check:ds — control segmentado, no un botón suelto. La
+                superficie `bg-brand` marca CUÁL de los cuatro está activo dentro
+                de un riel compartido; `<Button>` trae su propio alto y su radio
+                `rounded-full`, y convertiría el riel en cuatro píldoras sueltas. */}
             <div className="flex bg-card rounded-xl p-1 border border-border">
               {(['7d', '14d', '30d', 'custom'] as RangePreset[]).map((r) => (
                 <button
@@ -708,6 +712,9 @@ export default function MonitoreoPage() {
                         </span>
                       </div>
 
+                      {/* Excepción a check:ds — mismo caso que el selector de rango
+                          de arriba: riel segmentado, la superficie dice cuál está
+                          activo. */}
                       <div className="flex bg-surface rounded-xl p-0.5 border border-border text-xs">
                         {(['ALL', 'A', 'B'] as const).map((seg) => (
                           <button

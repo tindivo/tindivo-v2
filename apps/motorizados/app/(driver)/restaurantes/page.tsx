@@ -153,6 +153,10 @@ export default function RestaurantesPage() {
                       </span>
                     )}
 
+                    {/* Excepción a check:ds — comparte fila con los enlaces «Llamar»
+                        y «WhatsApp» y con sus chips vacíos, todos `h-10 rounded-xl`.
+                        `<Button>` es `rounded-full` con degradado y su `sm` mide h-9:
+                        rompería la alineación de la fila por 4px y por la forma. */}
                     <button
                       type="button"
                       onClick={() => setSelectedBusiness(biz)}

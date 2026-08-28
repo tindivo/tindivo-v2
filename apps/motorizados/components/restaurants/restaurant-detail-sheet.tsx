@@ -1,7 +1,7 @@
 'use client'
 
 import { walletLabel } from '@tindivo/contracts'
-import { BottomSheet, Button, Card, Icon } from '@tindivo/ui'
+import { BottomSheet, Button, Card, Icon, IconButton } from '@tindivo/ui'
 import { useState } from 'react'
 import type { DriverBusiness } from '@/hooks/use-driver-businesses'
 import { isValidPePhone, mapsDirToCoords, telLink, waLink } from '@/lib/deeplinks'
@@ -70,14 +70,16 @@ export function RestaurantDetailSheet({ business, onClose }: RestaurantDetailShe
                 </h3>
               </div>
             </div>
-            <button
+            <IconButton
               type="button"
+              variant="filled"
+              size="sm"
               onClick={onClose}
               aria-label="Cerrar detalle"
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ink/[0.06] text-ink-muted hover:bg-ink/[0.12] cursor-pointer"
+              className="h-8 w-8 shrink-0 text-ink-muted cursor-pointer"
             >
               <Icon name="close" size={18} />
-            </button>
+            </IconButton>
           </div>
 
           {/* Sección de QRs para Yape / Plin */}
@@ -147,6 +149,10 @@ export function RestaurantDetailSheet({ business, onClose }: RestaurantDetailShe
                     <span className="font-mono text-[17px] font-bold tracking-wider text-ink">
                       {currentQr.accountNumber}
                     </span>
+                    {/* Excepción a check:ds — chip de 28px dentro de la píldora del
+                        número de cuenta. El tamaño más pequeño de `<Button>` es h-9,
+                        que no cabe, y la superficie alterna a verde para confirmar el
+                        copiado: es feedback de estado, no una variante del sistema. */}
                     <button
                       type="button"
                       onClick={() => handleCopy(currentQr.accountNumber)}
