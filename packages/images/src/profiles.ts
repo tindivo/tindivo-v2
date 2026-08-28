@@ -1,3 +1,5 @@
+import { MAX_INPUT_BYTES, MAX_UPLOAD_BYTES } from './upload'
+
 /**
  * Perfiles de compresión por tipo de imagen del dashboard.
  *
@@ -20,21 +22,34 @@ export interface ProfileSpec {
    * flag prohíbe cualquier fallback con pérdida.
    */
   lossless: boolean
+  /**
+   * Cuánto se permite subir SIN COMPRIMIR cuando el canvas no da una imagen
+   * válida y hay que echar mano del original (ver `compressImage`).
+   *
+   * Es el límite del bucket, no una preferencia: por encima de esto Storage
+   * rechaza la subida, así que más vale un error claro. Y por eso `proof` es
+   * distinto — `payment-proofs` se quedó fuera de la migración 0151 y no tiene
+   * tope, o sea que ahí el único techo real es el de la entrada.
+   */
+  fallbackLimit: number
 }
 
 export const PROFILES: Record<ImageProfile, ProfileSpec> = {
-  logo: { maxEdge: 512, quality: 0.85, lossless: false },
-  banner: { maxEdge: 1600, quality: 0.82, lossless: false },
-  product: { maxEdge: 1200, quality: 0.82, lossless: false },
+  logo: { maxEdge: 512, quality: 0.85, lossless: false, fallbackLimit: MAX_UPLOAD_BYTES },
+  banner: { maxEdge: 1600, quality: 0.82, lossless: false, fallbackLimit: MAX_UPLOAD_BYTES },
+  product: { maxEdge: 1200, quality: 0.82, lossless: false, fallbackLimit: MAX_UPLOAD_BYTES },
   // El QR se guarda sin pérdida. Se reescala igualmente porque una foto de
   // 4000px en lossless pesa varios MB sin ganar un solo píxel de legibilidad.
-  qr: { maxEdge: 1400, quality: 1, lossless: true },
+  qr: { maxEdge: 1400, quality: 1, lossless: true, fallbackLimit: MAX_UPLOAD_BYTES },
   // Comprobante de Yape/Plin. Más calidad y más lado que una foto de plato
   // porque esto no se mira, se LEE: la cajera comprueba el nombre, el monto y
   // la hora para validar el pago, y un dígito emborronado es una llamada. Es
   // una captura de pantalla —texto nítido sobre fondo plano—, y ahí los
   // artefactos de compresión se ven mucho más que en una fotografía.
-  proof: { maxEdge: 1600, quality: 0.92, lossless: false },
+  //
+  // Y es el único perfil donde el último recurso llega hasta la entrada entera:
+  // que un cliente NO PUEDA PAGAR es peor que cualquier factura de datos.
+  proof: { maxEdge: 1600, quality: 0.92, lossless: false, fallbackLimit: MAX_INPUT_BYTES },
 }
 
 /**
