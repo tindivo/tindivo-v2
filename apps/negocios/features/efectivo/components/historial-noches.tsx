@@ -1,6 +1,6 @@
 'use client'
 
-import { BottomSheet, Button, EmptyState, Icon, SkeletonList } from '@tindivo/ui'
+import { BottomSheet, Button, EmptyState, Icon, IconButton, SkeletonList } from '@tindivo/ui'
 import { useState } from 'react'
 import { soles } from '@/components/dashboard/primitives'
 import type { NocheCerrada } from '../hooks/use-cash-settlements'
@@ -46,14 +46,16 @@ export function HistorialNochesSheet({ open, onClose }: { open: boolean; onClose
               <p className="text-xs text-ink-muted">Historial de liquidaciones anteriores</p>
             </div>
           </div>
-          <button
+          <IconButton
             type="button"
+            variant="ghost"
+            size="sm"
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-muted hover:bg-ink/[0.06] hover:text-ink"
+            className="h-8 w-8 rounded-lg text-ink-muted hover:text-ink"
             aria-label="Cerrar"
           >
             <Icon name="close" size={20} />
-          </button>
+          </IconButton>
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 py-4">

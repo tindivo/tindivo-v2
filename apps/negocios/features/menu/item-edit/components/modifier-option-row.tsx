@@ -80,6 +80,10 @@ export function ModifierOptionRow({
           onChange={(e) => onChange({ additional_price: Number.parseFloat(e.target.value) || 0 })}
         />
       </div>
+      {/* Excepción a check:ds — es un switch (`role="switch"`), no un botón: la
+          superficie ES el estado (verde disponible / gris agotado), y el `<span>`
+          de dentro es la perilla que se desplaza. No hay variante de `<Button>`
+          que sea eso. */}
       <button
         type="button"
         role="switch"

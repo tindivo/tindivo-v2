@@ -1,4 +1,4 @@
-import { Icon } from '@tindivo/ui'
+import { Button, Icon } from '@tindivo/ui'
 import { useState } from 'react'
 import { BADGE_PRESETS } from '../lib/constants'
 import { findTotalPricingGroup } from '../lib/utils'
@@ -299,6 +299,9 @@ export function EditorForm({
                   <div className="text-[14px] font-semibold text-ink">{t.label}</div>
                   <div className="text-[11px] text-ink-muted">{t.sub}</div>
                 </div>
+                {/* Excepción a check:ds — switch, igual que el de disponibilidad en
+                    modifier-option-row: la superficie es el estado y el `<span>` de
+                    dentro es la perilla. */}
                 <button
                   type="button"
                   role="switch"
@@ -346,14 +349,16 @@ export function EditorForm({
               Se agrega al carrito sin abrir ningún modal. Ideal para bebidas y platos simples.
             </div>
             {libraryGroups.length > 0 && onLinkLibraryGroup && (
-              <button
+              <Button
                 type="button"
+                variant="soft"
+                size="sm"
                 onClick={() => setAttachModalOpen(true)}
-                className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-brand/35 bg-brand-soft px-3.5 py-1.5 text-[12px] font-bold text-brand-dark transition-all hover:bg-brand/[0.1]"
+                className="mt-3 border border-brand/35 text-[12px]"
               >
                 <Icon name="link" size={14} />
                 Vincular grupo de Extras ({libraryGroups.length})
-              </button>
+              </Button>
             )}
           </div>
         )}
@@ -385,6 +390,13 @@ export function EditorForm({
           />
         ))}
 
+        {/* Excepción a check:ds para los dos de aquí abajo — son un PAR de bloques
+            «añadir», no dos CTA sueltos: ocupan el ancho, miden lo mismo y se leen
+            como dos huecos donde meter algo, uno sólido (crear) y otro punteado
+            (vincular). `<Button>` es una píldora `rounded-full` con degradado: los
+            separaría en dos botones que compiten en vez de dos opciones del mismo
+            gesto. Si algún día se hace un `<AddBlock>` en @tindivo/ui, estos dos
+            son sus dos primeros usos. */}
         <div className="flex flex-col gap-2 sm:flex-row">
           <button
             type="button"

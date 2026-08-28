@@ -1,6 +1,6 @@
 'use client'
 
-import { Button, Icon, LoadingState } from '@tindivo/ui'
+import { Button, Icon, IconButton, LoadingState } from '@tindivo/ui'
 import { useEffect, useMemo, useState } from 'react'
 import { DashboardShell } from '@/components/dashboard/shell'
 import { CategoryManagerModal } from '@/features/menu/components/category-manager-modal'
@@ -160,14 +160,16 @@ export default function MenuPage() {
                 className="h-11 w-full rounded-2xl border border-ink/[0.08] bg-card pl-10 pr-10 text-sm text-ink placeholder:text-ink/40 shadow-elev-1 transition-all focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
               />
               {searchQuery && (
-                <button
+                <IconButton
                   type="button"
+                  variant="filled"
+                  size="sm"
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-3 flex h-6 w-6 items-center justify-center rounded-full bg-ink/[0.06] text-ink-muted hover:bg-ink/[0.1] hover:text-ink"
+                  className="absolute right-3 h-6 w-6 text-ink-muted hover:text-ink"
                   aria-label="Limpiar búsqueda"
                 >
                   <Icon name="close" size={14} />
-                </button>
+                </IconButton>
               )}
             </div>
             {searchQuery && (
@@ -200,7 +202,11 @@ export default function MenuPage() {
             </span>
           </div>
 
-          {/* Barra de categorías horizontal en móvil */}
+          {/* Barra de categorías horizontal en móvil.
+              Excepción a check:ds — riel de chips de categoría, no botones sueltos.
+              La superficie `bg-ink` marca CUÁL está activo dentro de una fila que
+              scrollea; `<Button>` traería su propio alto y su degradado de marca, y
+              el riel dejaría de leerse como una sola cosa. */}
           {filteredCats.length > 1 && (
             <div className="mb-4 flex gap-1.5 overflow-x-auto pb-1 lg:hidden">
               {filteredCats.map((cat) => (
