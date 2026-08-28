@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { BADGE_PRESETS } from '../lib/constants'
 import { findTotalPricingGroup } from '../lib/utils'
 import type { Category, FormData, ModifierGroup, PriceDisplay } from '../types'
-import { AddGroupButton } from './add-group-button'
+import { AttachLibraryGroupModal } from './attach-library-group-modal'
 import { DangerZone } from './danger-zone'
 import { ModifierGroupCard } from './modifier-group-card'
 import { PriceLiveSummary } from './price-live-summary'
@@ -13,6 +13,7 @@ export interface EditorFormProps {
   formData: FormData
   cats: Category[]
   groups: ModifierGroup[]
+  libraryGroups?: ModifierGroup[]
   isNew: boolean
   onFormChange: (patch: Partial<FormData>) => void
   onGroupChange: (localId: string, patch: Partial<ModifierGroup>) => void
@@ -30,6 +31,7 @@ export interface EditorFormProps {
   onGroupMoveUp: (index: number) => void
   onGroupMoveDown: (index: number) => void
   onAddGroup: () => void
+  onLinkLibraryGroup?: (group: ModifierGroup) => void
   onDeleteItem: () => void
   imageSrc: string | null
   imageError: string | null
@@ -48,6 +50,7 @@ export function EditorForm({
   formData,
   cats,
   groups,
+  libraryGroups = [],
   isNew,
   onFormChange,
   onGroupChange,
@@ -61,6 +64,7 @@ export function EditorForm({
   onGroupMoveUp,
   onGroupMoveDown,
   onAddGroup,
+  onLinkLibraryGroup,
   onDeleteItem,
   imageSrc,
   imageError,
@@ -72,6 +76,7 @@ export function EditorForm({
   const visibleGroups = groups.filter((g) => !g.isDeleted)
   const totalPricingGroup = findTotalPricingGroup(groups)
   const [badgeInput, setBadgeInput] = useState('')
+  const [attachModalOpen, setAttachModalOpen] = useState(false)
 
   return (
     <div className="flex flex-col gap-3.5">
@@ -296,14 +301,19 @@ export function EditorForm({
                 </div>
                 <button
                   type="button"
+                  role="switch"
+                  aria-checked={on}
                   onClick={() => onFormChange({ [t.key]: !on })}
-                  className={`relative h-6 w-10 shrink-0 rounded-full transition-colors ${on ? 'bg-brand' : 'bg-ink/30'}`}
-                  aria-label={on ? `Desactivar ${t.label}` : `Activar ${t.label}`}
+                  className={`relative h-[24px] w-[44px] shrink-0 rounded-full transition-colors duration-200 ${
+                    on ? 'bg-brand' : 'bg-ink/20'
+                  }`}
+                  aria-label={t.label}
                 >
                   <span
-                    className={`absolute top-[3px] h-[18px] w-[18px] rounded-full bg-white transition-transform ${
-                      on ? 'translate-x-[18px]' : 'translate-x-[3px]'
-                    }`}
+                    className="absolute top-[3px] left-[3px] h-[18px] w-[18px] rounded-full bg-white shadow-sm transition-transform duration-200"
+                    style={{
+                      transform: on ? 'translateX(20px)' : 'translateX(0)',
+                    }}
                   />
                 </button>
               </div>
@@ -335,6 +345,16 @@ export function EditorForm({
             <div className="mx-auto mt-1 max-w-[320px] text-[12px] text-ink-muted">
               Se agrega al carrito sin abrir ningún modal. Ideal para bebidas y platos simples.
             </div>
+            {libraryGroups.length > 0 && onLinkLibraryGroup && (
+              <button
+                type="button"
+                onClick={() => setAttachModalOpen(true)}
+                className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-brand/35 bg-brand-soft px-3.5 py-1.5 text-[12px] font-bold text-brand-dark transition-all hover:bg-brand/[0.1]"
+              >
+                <Icon name="link" size={14} />
+                Vincular grupo de Extras ({libraryGroups.length})
+              </button>
+            )}
           </div>
         )}
 
@@ -365,7 +385,34 @@ export function EditorForm({
           />
         ))}
 
-        <AddGroupButton onClick={onAddGroup} />
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <button
+            type="button"
+            onClick={onAddGroup}
+            className="flex flex-1 items-center justify-center gap-2 rounded-2xl border-2 border-brand bg-brand-soft px-4 py-3 text-[14px] font-bold text-brand-dark transition-colors hover:bg-brand/[0.08]"
+          >
+            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-brand text-white">
+              <Icon name="add" size={16} />
+            </span>
+            Crear nuevo grupo
+          </button>
+
+          {onLinkLibraryGroup && (
+            <button
+              type="button"
+              onClick={() => setAttachModalOpen(true)}
+              className="flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-brand/35 bg-brand/[0.04] px-4 py-3 text-[14px] font-bold text-brand-dark transition-all hover:border-brand hover:bg-brand/[0.08]"
+            >
+              <Icon name="link" size={18} />
+              Vincular grupo de Extras
+              {libraryGroups.length > 0 && (
+                <span className="rounded-full bg-brand/15 px-2 py-0.5 text-[11px] font-bold text-brand-dark">
+                  {libraryGroups.length}
+                </span>
+              )}
+            </button>
+          )}
+        </div>
 
         <div className="mt-2.5 rounded-xl bg-surface p-2.5 text-[12px] leading-relaxed text-ink-muted">
           <strong>Default al crear un grupo:</strong> &ldquo;Obligatorio, elegir 1&rdquo;. Los
@@ -376,6 +423,16 @@ export function EditorForm({
       <PriceWarningCard basePrice={basePrice} groups={groups} />
       <PriceLiveSummary basePrice={basePrice} groups={groups} />
       <DangerZone itemName={formData.name} isNew={isNew} onDelete={onDeleteItem} />
+
+      {onLinkLibraryGroup && (
+        <AttachLibraryGroupModal
+          open={attachModalOpen}
+          libraryGroups={libraryGroups}
+          activeGroupIds={visibleGroups.map((g) => g.id).filter(Boolean)}
+          onAttach={onLinkLibraryGroup}
+          onClose={() => setAttachModalOpen(false)}
+        />
+      )}
     </div>
   )
 }

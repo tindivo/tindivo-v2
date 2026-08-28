@@ -46,6 +46,7 @@ export function useItemEditor() {
    */
   const imageRemovedRef = useRef(false)
   const [groups, setGroups] = useState<ModifierGroup[]>([])
+  const [libraryGroups, setLibraryGroups] = useState<ModifierGroup[]>([])
   const [hasUnsaved, setHasUnsaved] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -84,13 +85,89 @@ export function useItemEditor() {
         .eq('status', 'pending_acceptance')
       setPendingOrders(count ?? 0)
 
-      const { data: catsData } = await supabase
-        .from('menu_categories')
-        .select('id,name')
-        .eq('business_id', biz.id)
-        .order('display_order')
-      const loadedCats = catsData ?? []
+      const [catsRes, allGroupsRes] = await Promise.all([
+        supabase
+          .from('menu_categories')
+          .select('id,name')
+          .eq('business_id', biz.id)
+          .order('display_order'),
+        supabase
+          .from('menu_modifier_groups')
+          .select(
+            'id,name,selection_type,is_required,min_selections,max_selections,price_display,display_order',
+          )
+          .eq('business_id', biz.id)
+          .order('display_order'),
+      ])
+      const loadedCats = catsRes.data ?? []
       setCats(loadedCats)
+
+      const allGroupsData = allGroupsRes.data ?? []
+      const allGroupIds = allGroupsData.map((g) => g.id)
+      const allOptsByGroup: Record<
+        string,
+        {
+          id: string
+          name: string
+          additional_price: number
+          is_available: boolean
+          display_order: number
+        }[]
+      > = {}
+      const allSharedByGroup: Record<string, number> = {}
+
+      if (allGroupIds.length > 0) {
+        const [{ data: allOpts }, { data: allSharedLinks }] = await Promise.all([
+          supabase
+            .from('menu_modifier_options')
+            .select('id,group_id,name,additional_price,is_available,display_order')
+            .in('group_id', allGroupIds)
+            .order('display_order'),
+          supabase
+            .from('menu_item_modifier_groups')
+            .select('group_id,item_id')
+            .in('group_id', allGroupIds),
+        ])
+
+        for (const opt of allOpts ?? []) {
+          const list = allOptsByGroup[opt.group_id] ?? []
+          list.push({
+            id: opt.id,
+            name: opt.name,
+            additional_price: Number(opt.additional_price ?? 0),
+            is_available: opt.is_available,
+            display_order: opt.display_order,
+          })
+          allOptsByGroup[opt.group_id] = list
+        }
+
+        for (const link of allSharedLinks ?? []) {
+          allSharedByGroup[link.group_id] = (allSharedByGroup[link.group_id] ?? 0) + 1
+        }
+      }
+
+      const parsedLibraryGroups: ModifierGroup[] = allGroupsData.map((g) => ({
+        id: g.id,
+        localId: g.id,
+        name: g.name,
+        selection_type: g.selection_type as 'single' | 'multi',
+        is_required: g.is_required,
+        min_selections: g.min_selections,
+        max_selections: g.max_selections,
+        price_display: (g.price_display as PriceDisplay | null) ?? 'delta',
+        display_order: g.display_order,
+        isExpanded: false,
+        sharedWith: allSharedByGroup[g.id] ?? 0,
+        options: (allOptsByGroup[g.id] ?? []).map((o) => ({
+          id: o.id,
+          localId: o.id,
+          name: o.name,
+          additional_price: o.additional_price,
+          is_available: o.is_available,
+          display_order: o.display_order,
+        })),
+      }))
+      setLibraryGroups(parsedLibraryGroups)
 
       if (!isNew) {
         const { data: item } = await supabase
@@ -126,62 +203,17 @@ export function useItemEditor() {
           .order('display_order')
 
         if (junctions && junctions.length > 0) {
-          const groupIds = junctions.map((j) => j.group_id)
-          const { data: groupsData } = await supabase
-            .from('menu_modifier_groups')
-            .select(
-              'id,name,selection_type,is_required,min_selections,max_selections,price_display,display_order',
-            )
-            .in('id', groupIds)
-
-          const { data: optionsData } = await supabase
-            .from('menu_modifier_options')
-            .select('id,group_id,name,additional_price,is_available,display_order')
-            .in('group_id', groupIds)
-            .order('display_order')
-
-          const optsByGroup: Record<string, typeof optionsData> = {}
-          for (const opt of optionsData ?? []) {
-            const list = optsByGroup[opt.group_id] ?? []
-            list.push(opt)
-            optsByGroup[opt.group_id] = list
-          }
-
-          // Los platos AJENOS que comparten cada grupo, para poder advertirlo.
-          const { data: sharedLinks } = await supabase
-            .from('menu_item_modifier_groups')
-            .select('group_id,item_id')
-            .in('group_id', groupIds)
-          const sharedByGroup: Record<string, number> = {}
-          for (const link of sharedLinks ?? []) {
-            if (link.item_id === itemId) continue
-            sharedByGroup[link.group_id] = (sharedByGroup[link.group_id] ?? 0) + 1
-          }
-
-          const loadedGroups: ModifierGroup[] = (junctions ?? []).flatMap((j) => {
-            const g = (groupsData ?? []).find((x) => x.id === j.group_id)
+          const itemGroupMap = new Map(parsedLibraryGroups.map((g) => [g.id, g]))
+          const loadedGroups: ModifierGroup[] = junctions.flatMap((j) => {
+            const g = itemGroupMap.get(j.group_id)
             if (!g) return []
             return [
               {
-                id: g.id,
+                ...g,
                 localId: g.id,
-                name: g.name,
-                selection_type: g.selection_type as 'single' | 'multi',
-                is_required: g.is_required,
-                min_selections: g.min_selections,
-                max_selections: g.max_selections,
-                price_display: (g.price_display as PriceDisplay | null) ?? 'delta',
                 display_order: j.display_order,
-                isExpanded: false,
-                sharedWith: sharedByGroup[g.id] ?? 0,
-                options: (optsByGroup[g.id] ?? []).map((o) => ({
-                  id: o.id,
-                  localId: o.id,
-                  name: o.name,
-                  additional_price: Number(o.additional_price),
-                  is_available: o.is_available,
-                  display_order: o.display_order,
-                })),
+                sharedWith: Math.max(0, (allSharedByGroup[g.id] ?? 0) - 1),
+                options: g.options.map((o) => ({ ...o, localId: o.id })),
               },
             ]
           })
@@ -279,6 +311,24 @@ export function useItemEditor() {
       options: [],
       isNew: true,
       isExpanded: true,
+    }
+    setGroups((prev) => [...prev, newGroup])
+    setHasUnsaved(true)
+  }
+
+  function linkLibraryGroup(libGroup: ModifierGroup) {
+    const existing = groups.find((g) => g.id === libGroup.id && !g.isDeleted)
+    if (existing) {
+      setGroups((prev) => prev.map((g) => (g.id === libGroup.id ? { ...g, isExpanded: true } : g)))
+      return
+    }
+    const newGroup: ModifierGroup = {
+      ...libGroup,
+      localId: makeLocalId(),
+      isNew: false,
+      isExpanded: true,
+      display_order: groups.filter((g) => !g.isDeleted).length,
+      options: libGroup.options.map((o) => ({ ...o, localId: makeLocalId() })),
     }
     setGroups((prev) => [...prev, newGroup])
     setHasUnsaved(true)
@@ -649,11 +699,27 @@ export function useItemEditor() {
             return false
           }
 
-          await supabase
+          // Verificar si ya está enlazado a este plato o si es una nueva vinculación
+          const { data: existingLink } = await supabase
             .from('menu_item_modifier_groups')
-            .update({ display_order: i })
+            .select('item_id')
             .eq('item_id', savedItemId)
             .eq('group_id', groupId)
+            .maybeSingle()
+
+          if (!existingLink) {
+            await supabase.from('menu_item_modifier_groups').insert({
+              item_id: savedItemId,
+              group_id: groupId,
+              display_order: i,
+            })
+          } else {
+            await supabase
+              .from('menu_item_modifier_groups')
+              .update({ display_order: i })
+              .eq('item_id', savedItemId)
+              .eq('group_id', groupId)
+          }
         }
 
         for (let j = 0; j < g.options.length; j++) {
@@ -778,6 +844,7 @@ export function useItemEditor() {
     cats,
     formData,
     groups,
+    libraryGroups,
     hasUnsaved,
     saving,
     saveError,
@@ -791,6 +858,7 @@ export function useItemEditor() {
     toggleGroupExpand,
     deleteGroup,
     addGroup,
+    linkLibraryGroup,
     addOptionToGroup,
     deleteOption,
     changeOption,

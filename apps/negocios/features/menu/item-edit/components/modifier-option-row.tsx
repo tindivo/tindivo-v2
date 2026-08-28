@@ -82,16 +82,19 @@ export function ModifierOptionRow({
       </div>
       <button
         type="button"
+        role="switch"
+        aria-checked={opt.is_available}
         onClick={() => onChange({ is_available: !opt.is_available })}
-        className={`relative h-5 w-[34px] shrink-0 rounded-full transition-colors ${
+        className={`relative h-5 w-[34px] shrink-0 rounded-full transition-colors duration-200 ${
           opt.is_available ? 'bg-success' : 'bg-ink/30'
         }`}
         aria-label={opt.is_available ? 'Marcar como agotado' : 'Marcar como disponible'}
       >
         <span
-          className={`absolute top-[2px] h-4 w-4 rounded-full bg-white transition-transform ${
-            opt.is_available ? 'translate-x-4' : 'translate-x-[2px]'
-          }`}
+          className="absolute top-[2px] left-[2px] h-4 w-4 rounded-full bg-white shadow-sm transition-transform duration-200"
+          style={{
+            transform: opt.is_available ? 'translateX(14px)' : 'translateX(0)',
+          }}
         />
       </button>
       <button

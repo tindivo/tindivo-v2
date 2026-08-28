@@ -68,6 +68,7 @@ export default function MenuItemEditorPage() {
         formData={editor.formData}
         cats={editor.cats}
         groups={editor.groups}
+        libraryGroups={editor.libraryGroups}
         imageSrc={imageSrc}
         imageError={editor.imageError}
         imageBusy={editor.imageBusy}
@@ -83,6 +84,7 @@ export default function MenuItemEditorPage() {
         onGroupMoveUp={editor.moveGroupUp}
         onGroupMoveDown={editor.moveGroupDown}
         onAddGroup={editor.addGroup}
+        onLinkLibraryGroup={editor.linkLibraryGroup}
         onDeleteItem={() => setShowDeleteModal(true)}
         onConfirmDelete={handleConfirmDelete}
         onPickImage={editor.onPickImage}
@@ -110,6 +112,7 @@ export default function MenuItemEditorPage() {
         formData={editor.formData}
         cats={editor.cats}
         groups={editor.groups}
+        libraryGroups={editor.libraryGroups}
         imageSrc={imageSrc}
         imageError={editor.imageError}
         imageBusy={editor.imageBusy}
@@ -125,6 +128,7 @@ export default function MenuItemEditorPage() {
         onGroupMoveUp={editor.moveGroupUp}
         onGroupMoveDown={editor.moveGroupDown}
         onAddGroup={editor.addGroup}
+        onLinkLibraryGroup={editor.linkLibraryGroup}
         onDeleteItem={() => setShowDeleteModal(true)}
         onConfirmDelete={handleConfirmDelete}
         onPickImage={editor.onPickImage}
