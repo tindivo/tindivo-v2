@@ -8,10 +8,13 @@ import 'leaflet/dist/leaflet.css'
 // Pin idéntico al del customer (los PNG default de Leaflet se rompen con bundlers).
 const pinIcon = L.divIcon({
   className: '',
-  html: `<svg width="34" height="44" viewBox="0 0 34 44" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 4px 8px rgba(0,0,0,0.25))">
-    <path d="M17 2C9.3 2 3 8.2 3 15.9 3 26 17 42 17 42s14-16.1 14-26.1C31 8.2 24.7 2 17 2z" fill="#F97316" stroke="#fff" stroke-width="2.5"/>
-    <circle cx="17" cy="16" r="5" fill="#fff"/>
-  </svg>`,
+  html: `<div style="position:relative;width:34px;height:44px">
+    <span style="position:absolute;left:10px;bottom:0;width:14px;height:6px;border-radius:50%;background:rgba(26,22,20,0.35)"></span>
+    <svg width="34" height="44" viewBox="0 0 34 44" xmlns="http://www.w3.org/2000/svg" style="position:absolute;left:0;top:0">
+      <path d="M17 2C9.3 2 3 8.2 3 15.9 3 26 17 42 17 42s14-16.1 14-26.1C31 8.2 24.7 2 17 2z" fill="#F97316" stroke="#fff" stroke-width="2.5"/>
+      <circle cx="17" cy="16" r="5" fill="#fff"/>
+    </svg>
+  </div>`,
   iconSize: [34, 44],
   iconAnchor: [17, 42],
 })

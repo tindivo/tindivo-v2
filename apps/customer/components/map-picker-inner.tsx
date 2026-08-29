@@ -180,16 +180,26 @@ function InvalidateSize() {
  */
 function CenterPin({ moving }: { moving: boolean }) {
   return (
-    <div className="pointer-events-none absolute top-1/2 left-1/2 z-[500]">
+    <div
+      className="pointer-events-none absolute top-1/2 left-1/2 z-[700]"
+      style={{
+        transform: 'translate3d(-50%, -50%, 0)',
+        WebkitTransform: 'translate3d(-50%, -50%, 0)',
+      }}
+    >
+      {/* Sombra en el suelo */}
       <span
-        className="absolute rounded-[50%] bg-ink transition-all duration-200 ease-out"
+        className="absolute rounded-[50%] bg-ink/35 transition-all duration-200 ease-out"
         style={{
           width: moving ? 18 : 12,
           height: moving ? 7 : 5,
-          transform: 'translate(-50%, -50%)',
-          opacity: moving ? 0.3 : 0.45,
+          left: '50%',
+          top: '50%',
+          transform: 'translate3d(-50%, -50%, 0)',
+          WebkitTransform: 'translate3d(-50%, -50%, 0)',
         }}
       />
+      {/* Pin con gota */}
       <svg
         width="34"
         height="44"
@@ -198,18 +208,21 @@ function CenterPin({ moving }: { moving: boolean }) {
         aria-hidden
         className="absolute transition-transform duration-200 ease-out"
         style={{
-          transform: `translate(-50%, calc(-100% + ${moving ? -8 : 2}px))`,
-          filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.25))',
+          left: '50%',
+          bottom: 0,
+          transform: `translate3d(-50%, ${moving ? -8 : 0}px, 0)`,
+          WebkitTransform: `translate3d(-50%, ${moving ? -8 : 0}px, 0)`,
+          willChange: 'transform',
         }}
       >
         <title>Punto de entrega</title>
         <path
           d="M17 2C9.3 2 3 8.2 3 15.9 3 26 17 42 17 42s14-16.1 14-26.1C31 8.2 24.7 2 17 2z"
-          fill="var(--color-brand)"
-          stroke="#fff"
+          fill="#f97316"
+          stroke="#ffffff"
           strokeWidth="2.5"
         />
-        <circle cx="17" cy="16" r="5" fill="#fff" />
+        <circle cx="17" cy="16" r="5" fill="#ffffff" />
       </svg>
     </div>
   )

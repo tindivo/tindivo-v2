@@ -220,8 +220,8 @@ export function AddressCaptureSheet({
 
         <p className="pb-3 text-[13px] text-ink-muted">
           {hasInitial
-            ? 'Movés el pin si el que está guardado no es exacto.'
-            : 'Esta dirección no tiene ubicación guardada. Si la marcás ahora, la próxima vez sale sola.'}
+            ? 'Arrastrá el mapa para colocar el pin en la ubicación exacta.'
+            : 'Esta dirección no tiene ubicación guardada. Arrastrá el mapa para ubicar la casa.'}
         </p>
 
         {/* MAPA. Se centra en el pueblo cuando no hay punto, solo para orientar */}
@@ -229,19 +229,19 @@ export function AddressCaptureSheet({
           <MapPicker
             lat={coords?.lat ?? SAN_JACINTO_CENTER.lat}
             lng={coords?.lng ?? SAN_JACINTO_CENTER.lng}
-            onPick={(lat, lng) => {
-              // CORTAR LA ESCUCHA AL TOCAR EL MAPA. Si el GPS sigue afinando,
-              // la siguiente lectura pisaría el pin que el motorizado acaba de
-              // poner: le movería el punto de debajo del dedo. Al tocar el
-              // mapa, él decide y el sensor se calla.
-              stopWatch()
+            onPick={(lat, lng, byUser) => {
+              if (byUser) {
+                // CORTAR LA ESCUCHA AL MOVER EL MAPA CON EL DEDO. Si el GPS sigue afinando,
+                // no pisamos el punto que el motorizado acaba de acomodar.
+                stopWatch()
+              }
               setCoords({ lat, lng })
               setOutOfZone(!isInsideCoverage(lat, lng))
             }}
           />
           {coords === null && (
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-ink/75 px-3 py-2 text-center text-[12px] font-semibold text-white">
-              Tocá el mapa donde estás parado
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[800] bg-ink/75 px-3 py-2 text-center text-[12px] font-semibold text-white">
+              Arrastrá el mapa para centrar el pin donde estás
             </div>
           )}
         </div>
@@ -289,14 +289,14 @@ export function AddressCaptureSheet({
               <span>
                 Precisión del GPS: ~{sensor.accuracyM} m
                 {sensor.accuracyM > SUFICIENTE_M &&
-                  ' · flojo para una puerta. Si el pin no está en la casa, movelo.'}
+                  ' · flojo para una puerta. Si el pin no está en la casa, arrastrá el mapa.'}
               </span>
             </p>
           )}
           {movedByHand && (
             <p className="flex items-center gap-1 text-ink-muted">
               <Icon name="pan_tool" size={14} />
-              Pin movido a mano — se guarda sin precisión de GPS.
+              Ubicación ajustada a mano — se guarda sin precisión de GPS.
             </p>
           )}
         </div>
