@@ -46,9 +46,11 @@ test.describe('/cuenta — la pantalla de la cuenta', () => {
     await page.goto('/cuenta')
 
     // ── Lo que tiene que verse ───────────────────────────────────────────────
-    // Por texto y no por rol: `ScreenHeader` pinta el título en un `div`, así que
-    // «Mi cuenta» no es un heading (a diferencia de «Mis direcciones», que sí es h2).
-    await expect(page.getByText('Mi cuenta', { exact: true }).first()).toBeVisible()
+    // Por ROL y nivel, no por texto: el título de la pantalla tiene que ser el
+    // `h1` del documento. Estuvo en un `div` mientras «Mis direcciones» ya era
+    // `h2`, o sea con la jerarquía invertida — nivel 2 y ningún nivel 1—, y
+    // afirmarlo por texto habría dejado pasar la vuelta atrás sin enterarse.
+    await expect(page.getByRole('heading', { name: 'Mi cuenta', level: 1 })).toBeVisible()
 
     // Perfil: prueba que `customer_profiles` llegó y se pintó.
     await expect(page.getByText(E2E.CUSTOMER_NAME).first()).toBeVisible()

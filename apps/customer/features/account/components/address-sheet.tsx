@@ -101,7 +101,11 @@ export function AddressSheet({
 
   return (
     <BottomSheet open onClose={onClose}>
-      <ScreenHeader title={address ? 'Editar dirección' : 'Nueva dirección'} onBack={onClose} />
+      <ScreenHeader
+        title={address ? 'Editar dirección' : 'Nueva dirección'}
+        onBack={onClose}
+        as="h2"
+      />
       <form
         onSubmit={save}
         className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pt-2 pb-6"

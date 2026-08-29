@@ -24,7 +24,7 @@ export function NameEditSheet({ name, open, onClose, onSave }: NameEditSheetProp
   if (!open) return null
   return (
     <BottomSheet open onClose={onClose}>
-      <ScreenHeader title="Editar nombre" onBack={onClose} />
+      <ScreenHeader title="Editar nombre" onBack={onClose} as="h2" />
       <form
         onSubmit={handleSubmit}
         className="flex-1 overflow-y-auto px-4 pt-2 pb-6 scrollbar-hide"

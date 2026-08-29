@@ -72,7 +72,7 @@ export function AddressSelectorSheet({
 
   return (
     <BottomSheet open onClose={onClose}>
-      <ScreenHeader title="Entregar en" onBack={onClose} />
+      <ScreenHeader title="Entregar en" onBack={onClose} as="h2" />
       <div className="flex-1 overflow-y-auto px-4 pt-2 pb-6 scrollbar-hide">
         {!adding ? (
           <div className="flex flex-col gap-2.5">

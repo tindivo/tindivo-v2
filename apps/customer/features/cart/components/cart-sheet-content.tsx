@@ -21,6 +21,7 @@ export function CartSheetContent({ onClose }: CartSheetContentProps) {
     <BottomSheet open onClose={onClose}>
       <ScreenHeader
         title="Mi bolsa"
+        as="h2"
         onBack={onClose}
         right={
           count > 0 ? (
