@@ -157,8 +157,8 @@ export function ModifierGroupCard({
               <Icon name="lock" size={16} className="mt-0.5 shrink-0 text-warning" />
               <div className="text-[12px] leading-relaxed text-ink">
                 <strong>Este grupo es compartido.</strong> Lo usan {group.sharedWith} plato
-                {group.sharedWith === 1 ? '' : 's'} más, así que aquí se ve pero no se edita: lo
-                que cambiaras se les cambiaría a todos.
+                {group.sharedWith === 1 ? '' : 's'} más, así que aquí se ve pero no se edita: lo que
+                cambiaras se les cambiaría a todos.
                 <div className="mt-1 text-ink-muted">
                   Para que este plato lo tenga a su manera, quítalo con la papelera y crea uno
                   propio.

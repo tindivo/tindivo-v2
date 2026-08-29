@@ -25,7 +25,14 @@ import { grupoEditableDesdeElPlato } from '../utils'
  */
 
 function opt(name: string): ModifierOption {
-  return { id: name, localId: name, name, additional_price: 0, is_available: true, display_order: 0 }
+  return {
+    id: name,
+    localId: name,
+    name,
+    additional_price: 0,
+    is_available: true,
+    display_order: 0,
+  }
 }
 
 function group(over: Partial<ModifierGroup> = {}): ModifierGroup {
