@@ -173,6 +173,16 @@ export function ModifierGroupCard({
                   Para que este plato lo tenga a su manera, quítalo con la papelera y crea uno
                   propio.
                 </div>
+                {/* El motivo por el que Extras es una ruta y no un modal: aquí
+                    se puede enlazar, y con `?g=` se abre este grupo concreto en
+                    vez de dejar al dueño buscándolo en una lista. */}
+                <a
+                  href={`/menu/extras?g=${group.id}`}
+                  className="mt-1.5 inline-flex items-center gap-1 text-[12px] font-bold text-brand-dark hover:underline"
+                >
+                  <Icon name="open_in_new" size={13} />
+                  Editarlo en Extras
+                </a>
               </div>
             </div>
           </div>
