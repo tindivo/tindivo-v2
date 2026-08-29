@@ -119,7 +119,7 @@ export function AddressBar() {
       </button>
 
       {open && (
-        <BottomSheet open onClose={() => setOpen(false)}>
+        <BottomSheet open label="Entregar en" onClose={() => setOpen(false)}>
           <ScreenHeader title="Entregar en" onBack={() => setOpen(false)} as="h2" />
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pt-1 pb-6">
             <div className="flex flex-col gap-2.5">

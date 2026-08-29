@@ -23,7 +23,7 @@ export function NameEditSheet({ name, open, onClose, onSave }: NameEditSheetProp
 
   if (!open) return null
   return (
-    <BottomSheet open onClose={onClose}>
+    <BottomSheet open label="Editar nombre" onClose={onClose}>
       <ScreenHeader title="Editar nombre" onBack={onClose} as="h2" />
       <form
         onSubmit={handleSubmit}

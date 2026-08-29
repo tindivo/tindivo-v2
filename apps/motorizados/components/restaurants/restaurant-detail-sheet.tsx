@@ -42,7 +42,7 @@ export function RestaurantDetailSheet({ business, onClose }: RestaurantDetailShe
 
   return (
     <>
-      <BottomSheet open onClose={onClose}>
+      <BottomSheet open label={business.name} onClose={onClose}>
         <div className="flex flex-col px-5 pt-2 pb-8">
           {/* Header del modal */}
           <div className="flex items-center justify-between border-b border-border pb-3">

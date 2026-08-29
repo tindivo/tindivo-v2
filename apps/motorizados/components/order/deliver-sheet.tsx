@@ -140,12 +140,13 @@ export function DeliverSheet({
     })
   }
 
+  // Un solo sitio: lo pinta el encabezado y nombra el diálogo.
+  const titulo = prepaid ? 'Confirmar entrega' : '¿Cómo pagó el cliente?'
+
   return (
-    <BottomSheet open onClose={onClose}>
+    <BottomSheet open label={titulo} onClose={onClose}>
       <div className="max-h-[85vh] overflow-y-auto p-5 pb-7">
-        <h2 className="font-display text-title font-bold tracking-tight">
-          {prepaid ? 'Confirmar entrega' : '¿Cómo pagó el cliente?'}
-        </h2>
+        <h2 className="font-display text-title font-bold tracking-tight">{titulo}</h2>
 
         {prepaid ? (
           <p className="mt-1 text-body text-ink-muted">

@@ -99,13 +99,13 @@ export function AddressSheet({
     }
   }
 
+  // Un solo sitio para el título: lo pinta el header y nombra el diálogo. Si se
+  // escribiera dos veces, un cambio de copy dejaría el nombre accesible viejo.
+  const titulo = address ? 'Editar dirección' : 'Nueva dirección'
+
   return (
-    <BottomSheet open onClose={onClose}>
-      <ScreenHeader
-        title={address ? 'Editar dirección' : 'Nueva dirección'}
-        onBack={onClose}
-        as="h2"
-      />
+    <BottomSheet open label={titulo} onClose={onClose}>
+      <ScreenHeader title={titulo} onBack={onClose} as="h2" />
       <form
         onSubmit={save}
         className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pt-2 pb-6"

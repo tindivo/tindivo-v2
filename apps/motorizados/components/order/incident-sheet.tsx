@@ -12,6 +12,9 @@ const INCIDENT_TYPES: { value: string; label: string }[] = [
   { value: 'other', label: 'Otro' },
 ]
 
+/** Una sola fuente para el título: lo pinta la pantalla y nombra el diálogo. */
+const TITULO = '¿Qué problema hubo?'
+
 /** Reporte de incidente del motorizado (antifraude), con idempotencia. */
 export function IncidentSheet({ orderId, onClose }: { orderId: string; onClose: () => void }) {
   const [type, setType] = useState('')
@@ -39,7 +42,7 @@ export function IncidentSheet({ orderId, onClose }: { orderId: string; onClose: 
   }
 
   return (
-    <BottomSheet open onClose={onClose}>
+    <BottomSheet open label={TITULO} onClose={onClose}>
       <div className="p-5 pb-7">
         {done ? (
           <div className="py-4 text-center">
@@ -54,9 +57,7 @@ export function IncidentSheet({ orderId, onClose }: { orderId: string; onClose: 
           </div>
         ) : (
           <>
-            <h2 className="font-display text-title font-bold tracking-tight">
-              ¿Qué problema hubo?
-            </h2>
+            <h2 className="font-display text-title font-bold tracking-tight">{TITULO}</h2>
             <div className="mt-4 flex flex-wrap gap-2">
               {INCIDENT_TYPES.map((t) => (
                 <button

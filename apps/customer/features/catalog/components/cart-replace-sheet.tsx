@@ -11,6 +11,9 @@ interface CartReplaceSheetProps {
   onConfirm: (line: Omit<CartLine, 'key'>) => void
 }
 
+/** Una sola fuente para el título: lo pinta la pantalla y nombra el diálogo. */
+const TITULO = '¿Empezar una bolsa nueva?'
+
 export function CartReplaceSheet({
   currentBusinessName,
   newBusinessName,
@@ -19,10 +22,10 @@ export function CartReplaceSheet({
   onConfirm,
 }: CartReplaceSheetProps) {
   return (
-    <BottomSheet open onClose={onClose}>
+    <BottomSheet open label={TITULO} onClose={onClose}>
       <div className="px-5 pt-6 pb-7">
         <div className="font-display text-[20px] font-bold leading-[1.15] tracking-tight">
-          ¿Empezar una bolsa nueva?
+          {TITULO}
         </div>
         <p className="mt-2 text-[14px] text-ink/65">
           Tu bolsa tiene productos de <span className="font-semibold">{currentBusinessName}</span>.

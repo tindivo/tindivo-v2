@@ -46,12 +46,12 @@ export function RequestTransferSheet({
     }
   }
 
+  const titulo = `¿Pedirle este pedido a ${target.driverName}?`
+
   return (
-    <BottomSheet open onClose={onClose}>
+    <BottomSheet open label={titulo} onClose={onClose}>
       <div className="p-5 pb-7">
-        <h2 className="font-display font-bold tracking-tight text-[20px]">
-          ¿Pedirle este pedido a {target.driverName}?
-        </h2>
+        <h2 className="font-display font-bold tracking-tight text-[20px]">{titulo}</h2>
         <p className="mt-2 text-[14px] leading-relaxed text-ink/55">
           Le llegará una solicitud. Si no responde en 60 segundos, la solicitud caducará y el pedido
           continuará con su motorizado.

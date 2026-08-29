@@ -22,7 +22,7 @@ export function AddressGateModal({ onComplete, onClose }: Props) {
   }, [])
 
   return (
-    <BottomSheet open onClose={onClose}>
+    <BottomSheet open label="Añade tu dirección de entrega" onClose={onClose}>
       <div className="px-5 pt-4 pb-1">
         <p className="text-[13px] text-ink/50">¿Dónde te lo llevamos?</p>
       </div>

@@ -5,6 +5,9 @@ import { isValidPePhone, waLink } from '@/lib/deeplinks'
 import type { OrderDetailResponse } from '@/lib/types'
 import { WA_TEMPLATES } from '@/lib/whatsapp-templates'
 
+/** Una sola fuente para el título: lo pinta la pantalla y nombra el diálogo. */
+const TITULO = 'Enviar aviso por WhatsApp'
+
 export function WhatsAppSheet({
   detail,
   onClose,
@@ -31,13 +34,11 @@ export function WhatsAppSheet({
   }
 
   return (
-    <BottomSheet open onClose={onClose}>
+    <BottomSheet open label={TITULO} onClose={onClose}>
       <div className="p-5 pb-6">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="font-display text-title font-bold tracking-tight text-ink">
-              Enviar aviso por WhatsApp
-            </h2>
+            <h2 className="font-display text-title font-bold tracking-tight text-ink">{TITULO}</h2>
             <p className="mt-0.5 text-caption text-ink-muted">
               #{order.shortId} · {order.customerName ?? 'Cliente'}
             </p>

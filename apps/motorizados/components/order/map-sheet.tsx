@@ -35,17 +35,17 @@ export function MapSheet({
   subtitle?: string | null
   onClose: () => void
 }) {
+  const destino = title ?? 'Ubicación del cliente'
+
   return (
-    <BottomSheet open onClose={onClose}>
+    <BottomSheet open label={`Entregar en ${destino}`} onClose={onClose}>
       <div className="flex min-h-0 flex-col">
         <div className="flex items-start justify-between gap-3 px-5 pt-2 pb-3">
           <div className="min-w-0">
             <span className="font-mono text-meta font-semibold uppercase tracking-[0.14em] text-ink-muted">
               Entregar en
             </span>
-            <p className="mt-0.5 text-body-lg font-semibold leading-snug text-ink">
-              {title ?? 'Ubicación del cliente'}
-            </p>
+            <p className="mt-0.5 text-body-lg font-semibold leading-snug text-ink">{destino}</p>
             {subtitle && <p className="mt-0.5 text-caption text-ink-muted">{subtitle}</p>}
           </div>
           <button

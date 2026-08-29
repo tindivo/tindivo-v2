@@ -26,6 +26,9 @@ function fechaLarga(iso: string): string {
   }).format(new Date(Date.UTC(y, m - 1, d, 12)))
 }
 
+/** Una sola fuente para el título: lo pinta la pantalla y nombra el diálogo. */
+const TITULO = 'Noches cerradas'
+
 /**
  * Modal BottomSheet con el historial de noches cerradas, cargado bajo demanda.
  *
@@ -36,13 +39,13 @@ export function HistorialNochesSheet({ open, onClose }: { open: boolean; onClose
   const { noches, loading, error, reload } = useHistorialNoches(open)
 
   return (
-    <BottomSheet open={open} onClose={onClose}>
+    <BottomSheet open={open} label={TITULO} onClose={onClose}>
       <div className="flex max-h-[80vh] flex-col overflow-hidden">
         <div className="flex items-center justify-between border-b border-ink/[0.06] px-4 pb-3 pt-1">
           <div className="flex items-center gap-2">
             <Icon name="history" size={22} className="text-ink-muted" />
             <div>
-              <h2 className="text-[17px] font-bold">Noches cerradas</h2>
+              <h2 className="text-[17px] font-bold">{TITULO}</h2>
               <p className="text-xs text-ink-muted">Historial de liquidaciones anteriores</p>
             </div>
           </div>
