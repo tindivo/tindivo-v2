@@ -100,7 +100,7 @@ export function useItemEditor() {
         supabase
           .from('menu_modifier_groups')
           .select(
-            'id,name,selection_type,is_required,min_selections,max_selections,price_display,display_order',
+            'id,name,selection_type,is_required,min_selections,max_selections,price_display,display_order,is_library',
           )
           .eq('business_id', biz.id)
           .order('display_order'),
@@ -152,7 +152,16 @@ export function useItemEditor() {
         }
       }
 
-      const parsedLibraryGroups: ModifierGroup[] = allGroupsData.map((g) => ({
+      /**
+       * TODOS los grupos del negocio, sin filtrar.
+       *
+       * No se filtra aquí porque esta lista hace DOS trabajos, y solo uno de
+       * ellos quiere la biblioteca: más abajo se usa como mapa `id -> grupo`
+       * para resolver los grupos que ya tiene ESTE plato. Si se filtrara,
+       * los grupos propios del plato —que por definición no son de biblioteca—
+       * no se encontrarían en el mapa y desaparecerían del editor al abrirlo.
+       */
+      const parsedAllGroups: ModifierGroup[] = allGroupsData.map((g) => ({
         id: g.id,
         localId: g.id,
         name: g.name,
@@ -164,6 +173,7 @@ export function useItemEditor() {
         display_order: g.display_order,
         isExpanded: false,
         sharedWith: allSharedByGroup[g.id] ?? 0,
+        isLibrary: g.is_library,
         options: (allOptsByGroup[g.id] ?? []).map((o) => ({
           id: o.id,
           localId: o.id,
@@ -173,7 +183,17 @@ export function useItemEditor() {
           display_order: o.display_order,
         })),
       }))
-      setLibraryGroups(parsedLibraryGroups)
+
+      /**
+       * El buscador SOLO ofrece la biblioteca.
+       *
+       * Sin este filtro, «Vincular grupo de Extras» le abre al negocio todos
+       * sus grupos: a Pizza Priamo, 43 de los que ninguno se pensó para
+       * reutilizar —los 68 grupos que hay en prod entre los cuatro negocios
+       * están cada uno en un solo plato—. Un buscador que devuelve ruido se
+       * deja de usar a la segunda.
+       */
+      setLibraryGroups(parsedAllGroups.filter((g) => g.isLibrary))
 
       if (!isNew) {
         const { data: item } = await supabase
@@ -209,7 +229,9 @@ export function useItemEditor() {
           .order('display_order')
 
         if (junctions && junctions.length > 0) {
-          const itemGroupMap = new Map(parsedLibraryGroups.map((g) => [g.id, g]))
+          // Sobre TODOS los grupos, no sobre los de biblioteca: los propios de
+          // este plato tienen `is_library = false` y aquí tienen que aparecer.
+          const itemGroupMap = new Map(parsedAllGroups.map((g) => [g.id, g]))
           const loadedGroups: ModifierGroup[] = junctions.flatMap((j) => {
             const g = itemGroupMap.get(j.group_id)
             if (!g) return []
@@ -338,6 +360,43 @@ export function useItemEditor() {
     }
     setGroups((prev) => [...prev, newGroup])
     setHasUnsaved(true)
+  }
+
+  /**
+   * Sube un grupo propio del plato a la biblioteca de Extras.
+   *
+   * Este es el único camino por el que la biblioteca se llena, y por eso está
+   * aquí y no en un formulario de alta: al CREAR un grupo el dueño todavía no
+   * sabe si lo va a reutilizar —en prod hay once grupos «Salsas» con seis
+   * contenidos distintos, y cuatro «Parte» con cuatro—, así que preguntárselo
+   * entonces le pide una predicción. Cuando ya tiene el grupo montado y quiere
+   * el mismo en otro plato, la respuesta la sabe.
+   *
+   * Escribe directo en vez de esperar al guardado del plato: es un cambio de
+   * una columna que no depende de nada más del formulario, y si esperase el
+   * dueño tendría que guardar el plato para poder vincular el grupo en otro,
+   * que es justo lo que acaba de decir que quiere hacer.
+   */
+  async function promoteGroupToLibrary(groupLocalId: string) {
+    const g = groups.find((x) => x.localId === groupLocalId)
+    if (!g?.id || g.isNew) return
+
+    const { error } = await getSupabaseBrowser()
+      .from('menu_modifier_groups')
+      .update({ is_library: true })
+      .eq('id', g.id)
+
+    if (error) {
+      setSaveError(`No se pudo subir "${g.name}" a Extras: ${error.message}`)
+      return
+    }
+
+    setGroups((prev) =>
+      prev.map((x) => (x.localId === groupLocalId ? { ...x, isLibrary: true } : x)),
+    )
+    setLibraryGroups((prev) =>
+      prev.some((x) => x.id === g.id) ? prev : [...prev, { ...g, isLibrary: true }],
+    )
   }
 
   function addOptionToGroup(groupLocalId: string) {
@@ -673,6 +732,10 @@ export function useItemEditor() {
               max_selections: g.max_selections,
               price_display: g.price_display,
               display_order: g.display_order,
+              // Nace propio del plato. Sube a la biblioteca cuando el dueño lo
+              // decida, no cuando lo cree: al crearlo todavía no sabe si lo va a
+              // reutilizar, y si se le pregunta marcará «sí» por si acaso.
+              is_library: g.isLibrary ?? false,
             })
             .select('id')
             .single()
@@ -886,6 +949,7 @@ export function useItemEditor() {
     deleteGroup,
     addGroup,
     linkLibraryGroup,
+    promoteGroupToLibrary,
     addOptionToGroup,
     deleteOption,
     changeOption,

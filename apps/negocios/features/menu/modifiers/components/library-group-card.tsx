@@ -111,6 +111,24 @@ export function LibraryGroupCard({
           {linkCount === 0 ? 'Sin platos' : `En ${linkCount} plato${linkCount !== 1 ? 's' : ''}`}
         </Button>
 
+        {/* Qué es cada cosa. Sin esto el panel enseña mezclados los grupos de la
+            biblioteca y los que son propios de un plato —en prod, 43 de un solo
+            plato en Pizza Priamo— y el dueño no puede distinguirlos. */}
+        {group.isLibrary ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-brand/10 px-2 py-1 text-[10px] font-bold text-brand-dark">
+            <Icon name="library_books" size={11} />
+            En Extras
+          </span>
+        ) : (
+          <span
+            className="inline-flex items-center gap-1 rounded-full bg-ink/[0.06] px-2 py-1 text-[10px] font-bold text-ink-muted"
+            title="Se creó dentro de un plato. No aparece en el buscador de Extras de los demás platos."
+          >
+            <Icon name="restaurant" size={11} />
+            De un plato
+          </span>
+        )}
+
         {soldOut > 0 && (
           <span className="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2 py-1 text-[10px] font-bold text-warning">
             {soldOut} agotada{soldOut !== 1 ? 's' : ''}

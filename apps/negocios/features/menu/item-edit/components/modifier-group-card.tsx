@@ -1,4 +1,4 @@
-import { Icon } from '@tindivo/ui'
+import { Button, Icon } from '@tindivo/ui'
 import {
   acceptsTotalPricing,
   groupRuleLabel,
@@ -27,6 +27,8 @@ interface ModifierGroupCardProps {
   onMoveOption: (optLocalId: string, dir: -1 | 1) => void
   onMoveUp: () => void
   onMoveDown: () => void
+  /** Sube el grupo a la biblioteca de Extras del negocio. */
+  onPromoteToLibrary?: () => void
 }
 
 export function ModifierGroupCard({
@@ -45,6 +47,7 @@ export function ModifierGroupCard({
   onMoveOption,
   onMoveUp,
   onMoveDown,
+  onPromoteToLibrary,
 }: ModifierGroupCardProps) {
   const isRequired = group.is_required
   const isTotal = group.price_display === 'total'
@@ -68,6 +71,13 @@ export function ModifierGroupCard({
    * decisión de este plato y no toca a los demás.
    */
   const loUsanOtrosPlatos = !grupoEditableDesdeElPlato(group)
+
+  /**
+   * `isNew` marca los que aún no existen en la base: no hay fila que subir.
+   * `isLibrary` marca los que ya están arriba.
+   */
+  const puedeSubirseAExtras =
+    Boolean(onPromoteToLibrary) && Boolean(group.id) && !group.isNew && !group.isLibrary
 
   return (
     <div
@@ -266,6 +276,32 @@ export function ModifierGroupCard({
             <Icon name="add" size={15} />
             Agregar opción
           </button>
+
+          {/* La única puerta por la que entra algo a la biblioteca. Solo aparece
+              cuando el grupo ya está guardado (tiene id) y todavía es propio:
+              en un grupo sin guardar no habría fila que actualizar, y en uno que
+              ya está en Extras no hay nada que subir. */}
+          {puedeSubirseAExtras && (
+            <div className="mt-2.5 rounded-xl border border-brand/20 bg-brand/[0.04] p-3">
+              <div className="text-[12px] leading-relaxed text-ink">
+                <strong>¿Este grupo te sirve en otros platos?</strong>
+                <div className="mt-0.5 text-ink-muted">
+                  Súbelo a Extras y podrás buscarlo y vincularlo desde cualquier plato, sin volver a
+                  escribirlo. A partir de ahí se edita en Extras.
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="soft"
+                size="sm"
+                onClick={onPromoteToLibrary}
+                className="mt-2 text-[12px]"
+              >
+                <Icon name="library_add" size={15} />
+                Usar también en otros platos
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>

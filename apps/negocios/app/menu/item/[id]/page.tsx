@@ -85,6 +85,7 @@ export default function MenuItemEditorPage() {
         onGroupMoveDown={editor.moveGroupDown}
         onAddGroup={editor.addGroup}
         onLinkLibraryGroup={editor.linkLibraryGroup}
+        onPromoteGroupToLibrary={editor.promoteGroupToLibrary}
         onDeleteItem={() => setShowDeleteModal(true)}
         onConfirmDelete={handleConfirmDelete}
         onPickImage={editor.onPickImage}
@@ -129,6 +130,7 @@ export default function MenuItemEditorPage() {
         onGroupMoveDown={editor.moveGroupDown}
         onAddGroup={editor.addGroup}
         onLinkLibraryGroup={editor.linkLibraryGroup}
+        onPromoteGroupToLibrary={editor.promoteGroupToLibrary}
         onDeleteItem={() => setShowDeleteModal(true)}
         onConfirmDelete={handleConfirmDelete}
         onPickImage={editor.onPickImage}

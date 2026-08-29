@@ -13,7 +13,7 @@ async function loadLibrary(
       supabase
         .from('menu_modifier_groups')
         .select(
-          'id,name,selection_type,is_required,min_selections,max_selections,price_display,display_order',
+          'id,name,selection_type,is_required,min_selections,max_selections,price_display,display_order,is_library',
         )
         .eq('business_id', bizId)
         .order('display_order'),
@@ -81,6 +81,7 @@ async function loadLibrary(
       display_order: g.display_order,
       options: optionsByGroup[g.id] ?? [],
       itemIds: itemsByGroup[g.id] ?? [],
+      isLibrary: g.is_library,
     })),
     items: (itemRows ?? []).map((i) => ({
       id: i.id,
@@ -185,6 +186,13 @@ export function useModifierLibrary(bizId: string | null, open: boolean, onChange
         max_selections: 3,
         price_display: 'delta',
         display_order: nextOrder,
+        // Nace EN la biblioteca: se está creando desde el panel de Extras, que
+        // es la declaración de intención. Sin esto caería en `false` por el
+        // defecto de la columna y no saldría en el buscador de ningún plato —
+        // un grupo recién creado aquí tiene cero enlaces, así que deducir la
+        // pertenencia del número de platos lo dejaría invisible justo cuando el
+        // dueño lo acaba de crear y lo va a buscar.
+        is_library: true,
       }),
     )
   }

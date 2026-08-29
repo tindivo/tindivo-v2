@@ -43,6 +43,20 @@ export interface ModifierGroup {
    * que solo afecta al plato que tiene abierto.
    */
   sharedWith?: number
+  /**
+   * ¿Está en la biblioteca de Extras del negocio, o es propio del plato donde
+   * nació?
+   *
+   * Solo los de biblioteca salen en el buscador de «Vincular grupo de Extras».
+   * Un grupo creado desde el editor de un plato nace en `false` y sube a la
+   * biblioteca cuando el dueño lo decide — no se le pregunta al crearlo, porque
+   * en ese momento todavía no sabe la respuesta: en prod hay once grupos
+   * llamados «Salsas» con seis contenidos distintos.
+   *
+   * Undefined en un grupo recién creado en el formulario, que aún no ha pasado
+   * por la carga; se trata como `false`.
+   */
+  isLibrary?: boolean
 }
 
 export interface FormData {

@@ -32,6 +32,7 @@ export interface EditorFormProps {
   onGroupMoveDown: (index: number) => void
   onAddGroup: () => void
   onLinkLibraryGroup?: (group: ModifierGroup) => void
+  onPromoteGroupToLibrary?: (groupLocalId: string) => void
   onDeleteItem: () => void
   imageSrc: string | null
   imageError: string | null
@@ -65,6 +66,7 @@ export function EditorForm({
   onGroupMoveDown,
   onAddGroup,
   onLinkLibraryGroup,
+  onPromoteGroupToLibrary,
   onDeleteItem,
   imageSrc,
   imageError,
@@ -387,6 +389,9 @@ export function EditorForm({
             onMoveOption={(optLocalId, dir) => onGroupMoveOption(g.localId, optLocalId, dir)}
             onMoveUp={() => onGroupMoveUp(i)}
             onMoveDown={() => onGroupMoveDown(i)}
+            onPromoteToLibrary={
+              onPromoteGroupToLibrary ? () => onPromoteGroupToLibrary(g.localId) : undefined
+            }
           />
         ))}
 
