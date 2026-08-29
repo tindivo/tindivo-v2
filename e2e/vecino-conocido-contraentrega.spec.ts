@@ -6,9 +6,25 @@ import { E2E } from '../apps/api/scripts/e2e-fixtures.ts'
 // biome-ignore lint/suspicious/noExplicitAny: database.types.ts se genera contra el remoto
 const db = localClient as any
 
-/** Corre un script del monorepo. `pnpm` en Windows necesita shell. */
+/**
+ * Corre un script del monorepo. `pnpm` en Windows necesita shell.
+ *
+ * `stdio: 'pipe'` mantiene la salida fuera del reporte cuando todo va bien, pero
+ * también se la tragaba cuando NO: un seed caído llegaba como «Command failed:
+ * pnpm db:seed:e2e» y punto, sin el motivo, en un `beforeAll` que tumba los dos
+ * tests a la vez. La salida del proceso se rescata y se adjunta al error.
+ */
 function pnpm(script: string): void {
-  execFileSync('pnpm', [script], { stdio: 'pipe', shell: true })
+  try {
+    execFileSync('pnpm', [script], { stdio: 'pipe', shell: true })
+  } catch (e) {
+    const proceso = e as { stderr?: Buffer; stdout?: Buffer }
+    const salida = [proceso.stderr?.toString(), proceso.stdout?.toString()]
+      .filter(Boolean)
+      .join('\n')
+      .trim()
+    throw new Error(`\`pnpm ${script}\` falló:\n${salida || '(el proceso no dijo nada)'}`)
+  }
 }
 
 /**
@@ -42,6 +58,42 @@ function pnpm(script: string): void {
  * El `beforeAll` deja a los dos clientes en un estado declarado y lo AFIRMA
  * contra la RPC antes de abrir el navegador.
  */
+
+/**
+ * Los métodos de pago, localizados POR SU SUBTÍTULO y no por su título.
+ *
+ * No es una manía: desde que las opciones se ordenan por CUÁNDO se paga, DOS de
+ * las tres se titulan igual, «Yape o Plin», y lo único que las distingue es el
+ * subtítulo —«Le transfieres al motorizado en tu puerta» contra «Pagas apenas el
+ * local confirme»—. Un localizador por título casaría con las dos.
+ *
+ * Y es lo que este test quiere afirmar de verdad: no cómo se llama el botón,
+ * sino a quién y cuándo se le paga. La fuente es `PAYMENT_OPTIONS` en
+ * `apps/customer/features/checkout/types.ts`; si estos patrones dejan de casar,
+ * ahí está el cambio.
+ *
+ * (Los anteriores —«Efectivo al recibir», «Prepago con billetera», «Billetera
+ * digital al recibir»— eran títulos que ya no existen, y por eso este test se
+ * puso rojo sin que el producto tuviera nada mal.)
+ */
+const PAGO = {
+  efectivo: /Le pagas al motorizado/,
+  yapeAlRecibir: /Le transfieres al motorizado/,
+  // El prepago tiene DOS subtítulos y depende de si está marcado: al marcarlo,
+  // `unified-checkout` sustituye la descripción por la promesa «No pagas nada
+  // ahora». Los dos tests de aquí lo pillan en estados distintos —al vecino le
+  // viene marcado el efectivo, al desconocido le viene marcado el prepago—, así
+  // que el patrón cubre los dos o uno de los dos sale rojo.
+  prepago: /Pagas apenas el local confirme|No pagas nada ahora/,
+} as const
+
+/**
+ * Las tres frases con que la pantalla EXPLICA un prepago forzado (`prepayReason`
+ * en `use-checkout-state.ts`): bloqueo antifraude, primer pedido y tope de
+ * efectivo. Deliberadamente no casa con «Por adelantado», que es la cabecera del
+ * grupo y se muestra a todo el mundo.
+ */
+const RE_MOTIVO_PREPAGO = /pago (va )?adelantado/
 
 /** El del ETL del v1: 9 dígitos, como `address_directory.phone`. */
 const VECINO = E2E.CUSTOMERS[0]
@@ -158,13 +210,17 @@ test.describe('0171 · al vecino conocido la pantalla le ofrece contraentrega', 
     await llegarAlCheckout(page)
 
     // Al vecino conocido no se le explica ningún prepago: no hay motivo que dar.
-    await expect(page.getByText(/pago es adelantado|requieren pago adelantado/)).toHaveCount(0)
+    // El patrón cubre las TRES variantes de `prepayReason` (bloqueo, primer
+    // pedido y tope de efectivo), que son las únicas frases que dicen «pago
+    // adelantado». No casa con «Por adelantado», que es la cabecera del grupo y
+    // al vecino sí se le muestra: su tercera opción vive ahí.
+    await expect(page.getByText(RE_MOTIVO_PREPAGO)).toHaveCount(0)
 
     // Las tres opciones existen. Con `mustPrepay` las otras dos ni se renderizan
     // (`unified-checkout.tsx` las filtra), así que verlas ya prueba que la 0171
     // llegó a la pantalla.
-    await expect(page.getByRole('button', { name: /Efectivo al recibir/ })).toBeVisible()
-    await expect(page.getByRole('button', { name: /Prepago con billetera/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: PAGO.efectivo })).toBeVisible()
+    await expect(page.getByRole('button', { name: PAGO.prepago })).toBeVisible()
 
     // SIN TOCAR NADA: se confirma con lo que la pantalla trajo marcado.
     const confirmar = page.getByRole('button', { name: /Confirmar pedido/ })
@@ -224,11 +280,11 @@ test.describe('0171 · al vecino conocido la pantalla le ofrece contraentrega', 
     await llegarAlCheckout(page)
 
     // El motivo se le dice, y es el del primer pedido.
-    await expect(page.getByText(/En tu primer pedido el pago es adelantado/)).toBeVisible()
+    await expect(page.getByText(/primer pedido.*adelantado/)).toBeVisible()
 
     // Y las opciones de contraentrega NO están: `mustPrepay` las filtra.
-    await expect(page.getByRole('button', { name: /Prepago con billetera/ })).toBeVisible()
-    await expect(page.getByRole('button', { name: /Efectivo al recibir/ })).toHaveCount(0)
-    await expect(page.getByRole('button', { name: /Billetera digital al recibir/ })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: PAGO.prepago })).toBeVisible()
+    await expect(page.getByRole('button', { name: PAGO.efectivo })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: PAGO.yapeAlRecibir })).toHaveCount(0)
   })
 })
