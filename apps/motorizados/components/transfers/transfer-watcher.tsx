@@ -52,7 +52,12 @@ export function TransferWatcher() {
   }
 
   return (
-    <div className="fixed inset-0 z-[90] flex flex-col overflow-y-auto bg-ink/95 p-4 backdrop-blur-sm">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Solicitudes de traspaso"
+      className="fixed inset-0 z-[90] flex flex-col overflow-y-auto bg-ink/95 p-4 backdrop-blur-sm"
+    >
       <div className="mx-auto flex w-full max-w-[480px] flex-col justify-center gap-3 py-6 min-h-full">
         {receivedRequests.map((request) => (
           <RequestModal key={request.id} request={request} onRespond={respond} />

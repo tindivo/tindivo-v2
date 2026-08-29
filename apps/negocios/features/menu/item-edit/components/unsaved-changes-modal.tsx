@@ -12,7 +12,12 @@ export function UnsavedChangesModal({
   onCancel,
 }: UnsavedChangesModalProps) {
   return (
-    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-ink/45 p-5">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Tienes cambios sin guardar"
+      className="fixed inset-0 z-[300] flex items-center justify-center bg-ink/45 p-5"
+    >
       <div className="w-full max-w-[360px] rounded-[20px] bg-card p-6 text-center shadow-elev-4">
         <span className="mx-auto mb-3.5 flex h-[52px] w-[52px] items-center justify-center rounded-2xl bg-warning/10 text-warning">
           <Icon name="edit_note" size={26} filled />

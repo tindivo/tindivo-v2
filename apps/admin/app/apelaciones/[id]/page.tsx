@@ -43,6 +43,7 @@ function Lightbox({ src, alt, onClose }: { src: string; alt: string; onClose: ()
     <div
       role="button"
       tabIndex={0}
+      aria-label="Cerrar la evidencia ampliada"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
       onClick={onClose}
       onKeyDown={(e) => {

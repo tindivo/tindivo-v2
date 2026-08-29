@@ -57,6 +57,9 @@ function PaySectionPrepaid({ order, proofUrl }: { order: OrderVM; proofUrl: stri
     <>
       {zoom && proofUrl && (
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Comprobante ampliado"
           onClick={() => setZoom(false)}
           className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/85 p-5 backdrop-blur-sm"
         >
@@ -943,11 +946,21 @@ export function DetailScreen({
   )
 
   if (mobile) {
-    return <div className="fixed inset-0 z-[200] bg-white">{content}</div>
+    return (
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Detalle del pedido"
+        className="fixed inset-0 z-[200] bg-white"
+      >
+        {content}
+      </div>
+    )
   }
 
   return (
     <div
+      role="presentation"
       onClick={actions.onClose}
       className="fixed inset-0 z-[200] flex justify-end bg-black/45 backdrop-blur-[2px]"
     >

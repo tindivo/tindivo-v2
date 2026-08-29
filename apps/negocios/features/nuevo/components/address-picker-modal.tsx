@@ -47,7 +47,12 @@ export function AddressPickerModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 sm:p-6 animate-in fade-in duration-200">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Elegir dirección de entrega"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 sm:p-6 animate-in fade-in duration-200"
+    >
       {/* Clic fuera del contenedor para cerrar */}
       <div className="absolute inset-0" onClick={onClose} aria-hidden="true" />
 

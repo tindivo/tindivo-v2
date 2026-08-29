@@ -53,7 +53,12 @@ export function LinkItemsSheet({ group, items, busy, onCancel, onSave }: LinkIte
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={`¿Dónde va “${group.name}”?`}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4"
+    >
       <div className="flex w-full max-w-[480px] flex-col overflow-hidden rounded-2xl bg-card max-h-[85vh]">
         <div className="flex items-center justify-between border-b border-ink/[0.06] px-4 py-3.5">
           <div className="min-w-0">

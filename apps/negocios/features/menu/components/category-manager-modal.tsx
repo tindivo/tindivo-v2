@@ -36,7 +36,12 @@ export function CategoryManagerModal({
     'w-full rounded-xl border border-ink/[0.06] bg-card px-3 py-2 text-[15px] font-medium text-ink outline-none transition-all placeholder:text-ink/45 focus:border-ink focus:ring-4 focus:ring-ink/[0.08]'
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/45 p-4">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Gestionar categorías"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/45 p-4"
+    >
       <div className="flex w-full max-w-[560px] flex-col overflow-hidden rounded-2xl bg-card max-h-[85vh]">
         <div className="flex items-center justify-between border-b border-ink/[0.06] px-4 py-3.5">
           <h2 className="text-[16px] font-bold text-ink">Gestionar categorías</h2>
@@ -155,7 +160,12 @@ function DeleteConfirm({
   onConfirm: () => void
 }) {
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-ink/50 p-4">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Eliminar “${row.name}”`}
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-ink/50 p-4"
+    >
       <div className="w-full max-w-[380px] rounded-2xl bg-card p-5">
         <h3 className="mb-2 text-[15px] font-bold text-ink">Eliminar “{row.name}”</h3>
         <p className="mb-4 text-[13px] text-ink-muted">

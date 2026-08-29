@@ -184,7 +184,12 @@ export function EditarPedidoModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/45 backdrop-blur-[2px] sm:items-center">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Editar pedido"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-ink/45 backdrop-blur-[2px] sm:items-center"
+    >
       <div className="flex max-h-[92vh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl bg-surface shadow-elev-4 sm:rounded-3xl">
         {/* Cabecera fija: el importe vivo manda, como en el detalle */}
         <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border bg-white px-4 py-3.5">
