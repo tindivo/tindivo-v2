@@ -1,18 +1,23 @@
 'use client'
 
 import { Icon } from '@tindivo/ui'
-import { useDriverOrders } from '@/hooks/use-driver-orders'
-import { useNow } from '@/hooks/use-now'
+import { useMySlots } from '@/hooks/use-driver-orders'
 
 const MAX_SLOTS = 3
 
 /**
  * Indicador compacto de ocupación de mochila (slots) para el GlassTopBar.
  * Verde si hay capacidad, amarillo en 2/3, rojo cuando está llena.
+ *
+ * SIN RELOJ. Este componente cuelga de `DriverShell`, o sea que está montado en
+ * todas las rutas del grupo `(driver)`. Pedía `useNow()` solo para poder llamar
+ * a `useDriverOrders(now)`, y el precio eran dos cosas: un board entero por su
+ * cuenta —50 pedidos cada 15s en `/perfil` o `/restaurantes`, donde no hay
+ * ningún tablero— y un repintado por segundo de un número que no cambia con el
+ * tiempo. `useMySlots()` lee del mismo store sin ninguna de las dos.
  */
 export function CapacityIndicator() {
-  const now = useNow()
-  const { mySlots } = useDriverOrders(now)
+  const mySlots = useMySlots()
 
   const isOverflow = mySlots > MAX_SLOTS
   const isFull = mySlots >= MAX_SLOTS
