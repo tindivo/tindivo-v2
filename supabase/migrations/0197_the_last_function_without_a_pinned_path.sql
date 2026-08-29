@@ -1,0 +1,33 @@
+-- 0197 · La última función sin el path clavado
+--
+-- QUÉ CAMBIA
+--   `public.point_in_ring(numeric, numeric, jsonb)` pasa a llevar
+--   `SET search_path = ''`, como el resto. Ni una línea de su cuerpo cambia.
+--
+-- POR QUÉ
+--   Era la única que quedaba con el search_path mutable, y el invariante 3 del
+--   CLAUDE.md dice que se clava. Los advisors de Supabase la marcan
+--   (`function_search_path_mutable`), y mientras siga ahí ese aviso hay que
+--   leerlo cada vez para acordarse de que «esa es la de siempre» — un aviso
+--   permanente es un aviso que se deja de mirar.
+--
+-- LO QUE NO ERA
+--   No es un agujero. `point_in_ring` NO es SECURITY DEFINER: corre con los
+--   privilegios de quien llama, así que envenenar el search_path no da nada que
+--   no se tuviera ya. Por eso esto es higiene y no un `fix`.
+--
+--   De hecho ya se ejecutaba con el path vacío en el único camino que importa:
+--   la llama `point_in_coverage_polygon`, que sí es SECURITY DEFINER con
+--   `SET search_path = ''`, y ese ajuste rige durante toda la llamada. Clavarlo
+--   aquí solo hace explícito lo que ya pasaba, y lo extiende al caso de que
+--   alguien la llame suelta.
+--
+-- POR QUÉ NO SE ROMPE CON EL PATH VACÍO
+--   El cuerpo solo usa builtins de `pg_catalog` —`jsonb_typeof`,
+--   `jsonb_array_length`, los operadores `->`/`->>`, el cast a numeric— y
+--   `pg_catalog` se busca siempre, esté o no en el search_path. No toca ni una
+--   tabla, así que no hay nada que cualificar con `public.`.
+--
+-- IDEMPOTENTE: `ALTER FUNCTION ... SET` es convergente.
+
+ALTER FUNCTION public.point_in_ring(numeric, numeric, jsonb) SET search_path = '';
