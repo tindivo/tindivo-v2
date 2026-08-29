@@ -58,7 +58,7 @@ export default defineConfig({
       name: 'chromium',
       dependencies: ['precalentar', 'setup-negocios', 'setup-motorizados'],
       use: { ...devices['Desktop Chrome'] },
-      testIgnore: [/visual[\\/]/, /driver[\\/]/],
+      testIgnore: [/visual[\\/]/, /driver[\\/]/, /negocios[\\/]/],
     },
     // Sesión del motorizado: corre una vez y deja la cookie en disco, igual que
     // la de negocios. Vive en `visual/` por cercanía con su gemela, pero su
@@ -79,6 +79,24 @@ export default defineConfig({
       use: {
         ...devices['Desktop Chrome'],
         storageState: 'e2e/.auth/motorizados.json',
+      },
+    },
+    // Flujos del panel del negocio. Separados de `visual` porque no comparan
+    // capturas, y de `chromium` porque necesitan la sesión de la cajera. El
+    // gemelo de `driver`, al otro lado del mostrador.
+    {
+      name: 'negocios',
+      dependencies: ['precalentar', 'setup-negocios'],
+      testMatch: /negocios[\\/].*\.spec\.ts/,
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: 'e2e/.auth/negocios.json',
+        // `baseURL` PROPIO, y no la constante con la URL absoluta que usan los
+        // specs de `driver`. El global apunta al cliente (:3000), así que un
+        // `goto('/menu/extras')` sin prefijo se va al puerto equivocado y
+        // devuelve un 404 que parece un fallo de la pantalla. Declararlo aquí
+        // hace ese error imposible para los specs que vengan.
+        baseURL: 'http://localhost:3002',
       },
     },
     // Sesión de negocios: corre una vez y deja la cookie en disco.
