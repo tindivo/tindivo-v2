@@ -190,6 +190,27 @@ export function makeLocalId() {
  * decisión de este plato y siempre se puede; lo que no se puede es cambiarle el
  * nombre, las reglas o las opciones a algo que es de otros.
  */
-export function grupoEditableDesdeElPlato(group: Pick<ModifierGroup, 'sharedWith'>): boolean {
-  return (group.sharedWith ?? 0) === 0
+export function grupoEditableDesdeElPlato(
+  group: Pick<ModifierGroup, 'sharedWith' | 'isLibrary'>,
+): boolean {
+  // Dos motivos distintos para no dejar editar aquí, y conviene no mezclarlos
+  // al explicárselo al dueño (ver `motivoDeSoloLectura`):
+  //
+  //   · lo usan otros platos  -> editarlo aquí se los cambia a ellos. Es el
+  //     que evita corromper datos.
+  //   · está en la biblioteca -> aunque hoy lo use un solo plato, es un grupo
+  //     del negocio y su sitio de edición es Extras. Si se editara aquí, el día
+  //     que se vincule a cinco platos más el cambio ya habría viajado con él.
+  if ((group.sharedWith ?? 0) > 0) return false
+  if (group.isLibrary) return false
+  return true
+}
+
+/** Por qué este grupo no se edita desde el plato, o `null` si sí se edita. */
+export function motivoDeSoloLectura(
+  group: Pick<ModifierGroup, 'sharedWith' | 'isLibrary'>,
+): 'compartido' | 'biblioteca' | null {
+  if ((group.sharedWith ?? 0) > 0) return 'compartido'
+  if (group.isLibrary) return 'biblioteca'
+  return null
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ModifierGroup, ModifierOption } from '../../types'
-import { grupoEditableDesdeElPlato } from '../utils'
+import { grupoEditableDesdeElPlato, motivoDeSoloLectura } from '../utils'
 
 /**
  * REGRESIÓN QUE ESTO FIJA
@@ -80,5 +80,39 @@ describe('grupo compartido · quién puede escribirle el contenido', () => {
     // arriba («solo usa este plato») empezaría a fallar, que es justo la señal
     // que se quiere.
     expect(grupoEditableDesdeElPlato(group({ sharedWith: 0 }))).toBe(true)
+  })
+})
+
+describe('grupo de la biblioteca · aunque solo lo use este plato', () => {
+  it('un grupo de Extras no se edita desde el plato', () => {
+    // Aunque `sharedWith` sea 0. Es del negocio, y su sitio de edición es
+    // Extras: si se editara aquí, el día que se vincule a cinco platos más el
+    // cambio ya habría viajado con él sin que nadie lo decidiera.
+    expect(grupoEditableDesdeElPlato(group({ sharedWith: 0, isLibrary: true }))).toBe(false)
+  })
+
+  it('el grupo propio de un plato sí', () => {
+    expect(grupoEditableDesdeElPlato(group({ sharedWith: 0, isLibrary: false }))).toBe(true)
+  })
+
+  it('sin `isLibrary` se trata como propio', () => {
+    expect(grupoEditableDesdeElPlato(group({ sharedWith: 0 }))).toBe(true)
+  })
+})
+
+describe('el motivo se distingue, porque al dueño se le explica distinto', () => {
+  it('compartido manda sobre biblioteca cuando se dan los dos', () => {
+    // Un grupo de Extras usado por varios platos es las dos cosas. Se enseña
+    // «compartido» porque es el motivo que le importa: lo que cambie afecta a
+    // otros platos suyos, no a una regla de organización.
+    expect(motivoDeSoloLectura(group({ sharedWith: 3, isLibrary: true }))).toBe('compartido')
+  })
+
+  it('solo biblioteca', () => {
+    expect(motivoDeSoloLectura(group({ sharedWith: 0, isLibrary: true }))).toBe('biblioteca')
+  })
+
+  it('propio y de nadie más: no hay motivo, se edita', () => {
+    expect(motivoDeSoloLectura(group({ sharedWith: 0, isLibrary: false }))).toBeNull()
   })
 })

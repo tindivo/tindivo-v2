@@ -313,6 +313,27 @@ export function useModifierLibrary(bizId: string | null, open: boolean, onChange
       }
     }
 
+    /**
+     * Un grupo que usan dos platos ES de la biblioteca, se llame como se llame.
+     *
+     * Sin esto queda un estado incoherente y alcanzable: coges un grupo propio
+     * de un plato, lo vinculas a un segundo desde aquí, y pasa a ser compartido
+     * —de solo lectura en los dos platos, porque editarlo ahí los tocaría a los
+     * dos— pero sigue sin salir en el buscador de «Vincular grupo de Extras».
+     * O sea, compartido y a la vez inencontrable: para ponerlo en un tercer
+     * plato habría que volver aquí, cuando el camino natural es el buscador.
+     *
+     * Es la misma regla que aplica el backfill de la 0195 a los datos que ya
+     * existían; esto la mantiene de aquí en adelante.
+     */
+    if (!group.isLibrary && nextItemIds.length >= 2) {
+      const { error: libErr } = await supabase
+        .from('menu_modifier_groups')
+        .update({ is_library: true })
+        .eq('id', group.id)
+      if (libErr) setError(libErr.message)
+    }
+
     setBusy(false)
     await reload()
     onChanged()

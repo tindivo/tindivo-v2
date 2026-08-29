@@ -3,6 +3,7 @@ import {
   acceptsTotalPricing,
   groupRuleLabel,
   grupoEditableDesdeElPlato,
+  motivoDeSoloLectura,
   optionDisplayPrice,
 } from '../lib/utils'
 import type { ModifierGroup, PriceDisplay } from '../types'
@@ -71,6 +72,7 @@ export function ModifierGroupCard({
    * decisión de este plato y no toca a los demás.
    */
   const loUsanOtrosPlatos = !grupoEditableDesdeElPlato(group)
+  const motivo = motivoDeSoloLectura(group)
 
   /**
    * `isNew` marca los que aún no existen en la base: no hay fila que subir.
@@ -105,11 +107,17 @@ export function ModifierGroupCard({
             {groupRuleLabel(group)}
             {isTotal && ' · define el precio'}
           </div>
-          {(group.sharedWith ?? 0) > 0 && (
+          {motivo === 'compartido' && (
             <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5 text-[10px] font-bold text-warning">
               <Icon name="link" size={10} />
               Compartido con {group.sharedWith} plato{group.sharedWith === 1 ? '' : 's'} · aquí se
               ve, no se edita
+            </div>
+          )}
+          {motivo === 'biblioteca' && (
+            <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-bold text-brand-dark">
+              <Icon name="library_books" size={10} />
+              De Extras · aquí se ve, no se edita
             </div>
           )}
           {!group.isExpanded && (
@@ -166,9 +174,18 @@ export function ModifierGroupCard({
             <div className="flex items-start gap-2">
               <Icon name="lock" size={16} className="mt-0.5 shrink-0 text-warning" />
               <div className="text-[12px] leading-relaxed text-ink">
-                <strong>Este grupo es compartido.</strong> Lo usan {group.sharedWith} plato
-                {group.sharedWith === 1 ? '' : 's'} más, así que aquí se ve pero no se edita: lo que
-                cambiaras se les cambiaría a todos.
+                {motivo === 'compartido' ? (
+                  <>
+                    <strong>Este grupo es compartido.</strong> Lo usan {group.sharedWith} plato
+                    {group.sharedWith === 1 ? '' : 's'} más, así que aquí se ve pero no se edita: lo
+                    que cambiaras se les cambiaría a todos.
+                  </>
+                ) : (
+                  <>
+                    <strong>Este grupo está en Extras.</strong> Es del negocio, no de este plato,
+                    así que aquí se ve pero no se edita — aunque de momento solo lo uses aquí.
+                  </>
+                )}
                 <div className="mt-1 text-ink-muted">
                   Para que este plato lo tenga a su manera, quítalo con la papelera y crea uno
                   propio.
