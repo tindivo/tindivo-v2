@@ -168,3 +168,28 @@ export function priceWarning(
 export function makeLocalId() {
   return Math.random().toString(36).slice(2)
 }
+
+/**
+ * ¿Este grupo se edita desde el plato, o solo se mira?
+ *
+ * `menu_modifier_groups` y `menu_modifier_options` cuelgan del NEGOCIO
+ * (`business_id`), no del plato. El plato solo tiene una fila en la tabla
+ * puente `menu_item_modifier_groups`. O sea que escribir el contenido de un
+ * grupo desde el editor de un plato se lo escribe a TODOS los platos que lo
+ * usen.
+ *
+ * Eso no fue un problema mientras no se podían compartir grupos —en prod los 68
+ * grupos de los cuatro negocios están cada uno en un solo plato—, pero el modal
+ * de «Vincular grupo de Extras» es exactamente lo que los vuelve compartidos.
+ * El bug se activa con el primer uso de esa función.
+ *
+ * `sharedWith` cuenta los OTROS platos (se calcula al cargar restando este), así
+ * que cero significa «este grupo es de este plato y de nadie más».
+ *
+ * Ojo: esto NO decide si se puede desenlazar. Quitar el grupo del plato es una
+ * decisión de este plato y siempre se puede; lo que no se puede es cambiarle el
+ * nombre, las reglas o las opciones a algo que es de otros.
+ */
+export function grupoEditableDesdeElPlato(group: Pick<ModifierGroup, 'sharedWith'>): boolean {
+  return (group.sharedWith ?? 0) === 0
+}

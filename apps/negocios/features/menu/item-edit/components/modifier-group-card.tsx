@@ -1,5 +1,10 @@
 import { Icon } from '@tindivo/ui'
-import { acceptsTotalPricing, groupRuleLabel, optionDisplayPrice } from '../lib/utils'
+import {
+  acceptsTotalPricing,
+  groupRuleLabel,
+  grupoEditableDesdeElPlato,
+  optionDisplayPrice,
+} from '../lib/utils'
 import type { ModifierGroup, PriceDisplay } from '../types'
 import { GroupRuleSelector } from './group-rule-selector'
 import { ModifierOptionRow } from './modifier-option-row'
@@ -45,6 +50,25 @@ export function ModifierGroupCard({
   const isTotal = group.price_display === 'total'
   const visibleOptions = group.options.filter((o) => !o.isDeleted)
 
+  /**
+   * Si OTROS platos usan este grupo, aquí no se edita.
+   *
+   * No es una preferencia de UI: el guardado escribe sobre
+   * `menu_modifier_groups` y `menu_modifier_options`, que son del NEGOCIO, no
+   * del plato. Editar «Cremas» desde la hamburguesa le cambiaba el nombre, las
+   * reglas y las opciones a los otros seis platos que la usan, y borrar «ají»
+   * aquí lo borraba del menú entero — el borrado del grupo sí cuenta
+   * referencias antes de tirar la fila, el de las opciones no contaba nada.
+   *
+   * Se corta en los dos sitios a propósito: aquí para que nadie escriba lo que
+   * luego se va a ignorar, y en `use-item-editor` para que el dato quede a
+   * salvo aunque otra pantalla llame al guardado.
+   *
+   * Lo que SÍ se puede desde aquí es quitarlo del plato: desenlazar es una
+   * decisión de este plato y no toca a los demás.
+   */
+  const loUsanOtrosPlatos = !grupoEditableDesdeElPlato(group)
+
   return (
     <div
       className={`mb-2.5 overflow-hidden rounded-2xl border-[1.5px] bg-card ${
@@ -74,8 +98,8 @@ export function ModifierGroupCard({
           {(group.sharedWith ?? 0) > 0 && (
             <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5 text-[10px] font-bold text-warning">
               <Icon name="link" size={10} />
-              Compartido con {group.sharedWith} plato{group.sharedWith === 1 ? '' : 's'} · lo que
-              cambies aquí les cambia a todos
+              Compartido con {group.sharedWith} plato{group.sharedWith === 1 ? '' : 's'} · aquí se
+              ve, no se edita
             </div>
           )}
           {!group.isExpanded && (
@@ -126,7 +150,65 @@ export function ModifierGroupCard({
         </div>
       </div>
 
-      {group.isExpanded && (
+      {group.isExpanded && loUsanOtrosPlatos && (
+        <div className="p-3.5">
+          <div className="mb-3 rounded-xl border border-warning/25 bg-warning/[0.06] p-3">
+            <div className="flex items-start gap-2">
+              <Icon name="lock" size={16} className="mt-0.5 shrink-0 text-warning" />
+              <div className="text-[12px] leading-relaxed text-ink">
+                <strong>Este grupo es compartido.</strong> Lo usan {group.sharedWith} plato
+                {group.sharedWith === 1 ? '' : 's'} más, así que aquí se ve pero no se edita: lo
+                que cambiaras se les cambiaría a todos.
+                <div className="mt-1 text-ink-muted">
+                  Para que este plato lo tenga a su manera, quítalo con la papelera y crea uno
+                  propio.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mb-3">
+            <div className="mb-2 font-mono text-[11px] font-semibold uppercase tracking-wide text-ink/55">
+              Nombre del grupo
+            </div>
+            <div className="rounded-2xl border border-ink/[0.06] bg-surface px-4 py-3 text-[15px] font-medium text-ink-muted">
+              {group.name}
+            </div>
+          </div>
+
+          <div className="mb-3">
+            <div className="mb-2 font-mono text-[11px] font-semibold uppercase tracking-wide text-ink/55">
+              Regla
+            </div>
+            <div className="rounded-2xl border border-ink/[0.06] bg-surface px-4 py-3 text-[13px] text-ink-muted">
+              {groupRuleLabel(group)}
+              {isTotal && ' · define el precio'}
+            </div>
+          </div>
+
+          <div className="mb-2 font-mono text-[11px] font-semibold uppercase tracking-wide text-ink/55">
+            Opciones
+          </div>
+          <div className="overflow-hidden rounded-2xl border border-ink/[0.06]">
+            {visibleOptions.map((opt) => (
+              <div
+                key={opt.localId}
+                className="flex items-center justify-between gap-2 border-b border-ink/[0.04] bg-surface px-4 py-2.5 text-[13px] last:border-b-0"
+              >
+                <span className={opt.is_available ? 'text-ink' : 'text-ink-muted line-through'}>
+                  {opt.name}
+                </span>
+                <span className="shrink-0 font-mono text-[12px] text-ink-muted">
+                  {isTotal ? 'S/ ' : '+ S/ '}
+                  {optionDisplayPrice(basePrice, group, opt).toFixed(2)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {group.isExpanded && !loUsanOtrosPlatos && (
         <div className="p-3.5">
           <div className="mb-3">
             {/* biome-ignore lint/a11y/noLabelWithoutControl: input asociado como hermano */}

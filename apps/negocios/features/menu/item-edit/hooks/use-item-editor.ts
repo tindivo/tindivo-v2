@@ -4,7 +4,13 @@ import { useEffect, useRef, useState } from 'react'
 import { notifySuccess } from '@/components/dashboard/toast'
 import { signOutDevice } from '@/lib/sign-out'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
-import { acceptsTotalPricing, applyTotalPrices, currentTotals, makeLocalId } from '../lib/utils'
+import {
+  acceptsTotalPricing,
+  applyTotalPrices,
+  currentTotals,
+  grupoEditableDesdeElPlato,
+  makeLocalId,
+} from '../lib/utils'
 import type { Category, FormData, ModifierGroup, PriceDisplay } from '../types'
 
 export function useItemEditor() {
@@ -624,6 +630,10 @@ export function useItemEditor() {
         const g = groups[i]
         if (!g) continue
 
+        // Mismo predicado que usa la card para pintarse de solo lectura, para
+        // que la UI y el guardado no puedan discrepar.
+        const loUsanOtrosPlatos = !grupoEditableDesdeElPlato(g)
+
         if (g.isDeleted) {
           if (g.id) {
             // Quitar el grupo de ESTE plato es desenlazarlo, no borrarlo. Un
@@ -681,22 +691,32 @@ export function useItemEditor() {
             display_order: i,
           })
         } else {
-          const { error: gUpdErr } = await supabase
-            .from('menu_modifier_groups')
-            .update({
-              name: g.name.trim() || 'Grupo',
-              selection_type: g.selection_type,
-              is_required: g.is_required,
-              min_selections: g.min_selections,
-              max_selections: g.max_selections,
-              price_display: g.price_display,
-              display_order: g.display_order,
-            })
-            .eq('id', groupId)
-          if (gUpdErr) {
-            setSaveError(gUpdErr.message)
-            setSaving(false)
-            return false
+          // `menu_modifier_groups` y `menu_modifier_options` son del NEGOCIO, no
+          // del plato: si otros platos usan este grupo, escribir aquí les cambia
+          // el suyo. La card ya lo pinta de solo lectura, pero el corte tiene que
+          // estar TAMBIÉN aquí — la UI evita que alguien escriba, esto evita que
+          // se guarde si el estado llegara editado por otra vía.
+          //
+          // Lo que sí se sigue haciendo abajo es el enlace y el orden, que viven
+          // en la tabla puente y son de este plato.
+          if (!loUsanOtrosPlatos) {
+            const { error: gUpdErr } = await supabase
+              .from('menu_modifier_groups')
+              .update({
+                name: g.name.trim() || 'Grupo',
+                selection_type: g.selection_type,
+                is_required: g.is_required,
+                min_selections: g.min_selections,
+                max_selections: g.max_selections,
+                price_display: g.price_display,
+                display_order: g.display_order,
+              })
+              .eq('id', groupId)
+            if (gUpdErr) {
+              setSaveError(gUpdErr.message)
+              setSaving(false)
+              return false
+            }
           }
 
           // Verificar si ya está enlazado a este plato o si es una nueva vinculación
@@ -721,6 +741,13 @@ export function useItemEditor() {
               .eq('group_id', groupId)
           }
         }
+
+        // Las opciones son del grupo, y el grupo es del negocio. En un grupo
+        // compartido, borrar una opción aquí la borraba del menú entero: el
+        // `delete` de abajo va por `id` de opción, sin contar referencias ni
+        // preguntar. Quitar «ají» desde una hamburguesa se lo quitaba a los
+        // otros seis platos que usan «Cremas».
+        if (loUsanOtrosPlatos) continue
 
         for (let j = 0; j < g.options.length; j++) {
           const opt = g.options[j]
