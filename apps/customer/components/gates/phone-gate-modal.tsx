@@ -40,7 +40,7 @@ export function PhoneGateModal({ onComplete, onClose }: Props) {
   }, [])
 
   return (
-    <BottomSheet open onClose={onClose}>
+    <BottomSheet open label="Verifica tu celular" onClose={onClose}>
       <div className="px-5 pt-4 pb-1">
         <p className="text-[13px] text-ink/50">
           Para hacer tu pedido, necesitamos verificar tu celular

@@ -197,7 +197,6 @@ describe('el reloj', () => {
   it('en Equipo el reloj de reparto informa, no alarma', () => {
     const v = vm({
       variant: 'team',
-      ownerName: 'Juan',
       order: order({ status: 'picked_up', picked_up_at: new Date(NOW - min(90)).toISOString() }),
     })
     expect(v.clock?.tone).toBe('neutral')
@@ -211,7 +210,6 @@ describe('el reloj', () => {
   it('en Equipo hay insignia de estado pero NO reloj: no viaja', () => {
     const v = vm({
       variant: 'team',
-      ownerName: 'Juan',
       order: order({ status: 'picked_up', estimated_ready_at: null }),
     })
     expect(v.clock).toBeNull()
@@ -300,7 +298,7 @@ describe('tono del borde', () => {
   })
 
   it('Equipo se queda neutro', () => {
-    expect(vm({ variant: 'team', ownerName: 'Juan' }).tone).toBe('neutral')
+    expect(vm({ variant: 'team' }).tone).toBe('neutral')
   })
 })
 
@@ -386,7 +384,7 @@ describe('el cobro, en dos alturas', () => {
   })
 
   it('de un pedido ajeno solo viaja el importe', () => {
-    const v = vm({ variant: 'team', ownerName: 'Juan', order: order({ payment_intent: null }) })
+    const v = vm({ variant: 'team', order: order({ payment_intent: null }) })
     expect(v.money).toEqual({
       headline: 'S/ 45.00',
       detail: 'importe del pedido',
@@ -429,7 +427,6 @@ describe('la insignia es el ESTADO DEL PEDIDO', () => {
   it('en Equipo habla en tercera persona: el nombre es el del companero', () => {
     const v = vm({
       variant: 'team',
-      ownerName: 'Juan',
       order: order({ status: 'heading_to_restaurant', estimated_ready_at: null }),
     })
     expect(v.badge?.text).toBe('Va al local')
@@ -501,7 +498,6 @@ describe('la alarma solo por debajo de cero', () => {
     for (const [status, variant] of casos) {
       const v = vm({
         variant,
-        ownerName: 'Juan',
         order: order({ status, delivered_at: new Date(NOW).toISOString() }),
       })
       expect(alarma, `${variant}/${status}`).not.toContain(v.badge?.tone)
@@ -539,7 +535,6 @@ describe('el reloj de un pedido ajeno', () => {
   it('en reparto cuenta desde que el companero lo recogio', () => {
     const v = vm({
       variant: 'team',
-      ownerName: 'Juan',
       order: order({
         status: 'picked_up',
         picked_up_at: new Date(NOW - min(7)).toISOString(),
@@ -553,7 +548,6 @@ describe('el reloj de un pedido ajeno', () => {
   it('sin recoger cuenta la EDAD del pedido, no el tiempo de cocina', () => {
     const v = vm({
       variant: 'team',
-      ownerName: 'Juan',
       order: order({
         status: 'waiting_at_restaurant',
         created_at: new Date(NOW - min(12)).toISOString(),
@@ -568,7 +562,6 @@ describe('el reloj de un pedido ajeno', () => {
   it('el tiempo de cocina ajeno NUNCA manda, ni cuando esta vencido', () => {
     const v = vm({
       variant: 'team',
-      ownerName: 'Juan',
       order: order({
         status: 'heading_to_restaurant',
         created_at: new Date(NOW - min(3)).toISOString(),
@@ -651,6 +644,6 @@ describe('coste del viaje', () => {
       delivery_coordinates_lng: null,
     })
     expect(vm({ variant: 'mine', order: sinCoords }).noLocation).toBe(false)
-    expect(vm({ variant: 'team', ownerName: 'Juan', order: sinCoords }).noLocation).toBe(false)
+    expect(vm({ variant: 'team', order: sinCoords }).noLocation).toBe(false)
   })
 })

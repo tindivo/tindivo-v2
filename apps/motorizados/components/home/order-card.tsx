@@ -135,12 +135,10 @@ export function OrderCard({
   blocked = false,
   blockedReason,
   incomingRequest = null,
-  ownerName,
 }: {
   order: CardOrder
   now: number
   variant?: CardVariant
-  ownerName?: string
   incomingRequest?: IncomingRequest | null
   blocked?: boolean
   blockedReason?: string
@@ -153,7 +151,6 @@ export function OrderCard({
     variant,
     queueLeadMinutes,
     deliveryLateMinutes,
-    ownerName,
     blocked,
     blockedReason,
   })

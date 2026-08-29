@@ -55,13 +55,19 @@ real de su RLS **no** es reproducible desde sus migraciones.
    `validate_order`, `create_customer_order`) y contra el único `.update()`
    directo del API (`prepay-proof/route.ts`, que exige `awaiting_payment`):
    **ninguna puede sacar un pedido de `delivered`.**
-   Consecuencia: la rama de reversión de `generate_delivery_charges`
-   (`0074:262-271`) es **código inalcanzable**. Contiene un defecto latente —
-   borra los cargos con `status = 'pending'` pero decrementa `balance_due` por
-   el monto COMPLETO, así que si los cargos ya estaban liquidados el saldo baja
-   sin contrapartida. Hoy no puede dispararse.
-   **Si alguna vez se añade un camino para revertir una entrega, ese defecto se
-   activa con él: corrígelo ANTES de abrir el camino, no después.**
+   Consecuencia: la rama de reversión de `generate_delivery_charges` sigue
+   siendo **código inalcanzable**.
+   **El defecto latente que aquí se documentaba ya NO existe** (verificado el
+   2026-08-29 contra la definición viva en `tindivo-prod`). Decía que esa rama
+   borraba los cargos `pending` pero restaba `balance_due` por el monto
+   COMPLETO. Lo arregló la **`0124`**, que volvió `balance_due` derivado: hoy lo
+   mantiene `trg_business_charges_recalc_balance` y la función ya no escribe esa
+   columna, así que el `DELETE` de los cargos dispara el recálculo y no hay
+   resta a mano que pueda descuadrar.
+   Lo que sigue vigente es lo de fondo: si alguna vez se abre un camino para
+   sacar un pedido de `delivered`, esa rama pasa a ejecutarse de verdad —
+   **repásala entera antes de abrir el camino**, empezando por qué pasa con los
+   cargos que ya no están en `pending` y que el `DELETE` no toca.
 
 ## Comandos
 

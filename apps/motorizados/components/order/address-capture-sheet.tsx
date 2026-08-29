@@ -208,14 +208,14 @@ export function AddressCaptureSheet({
 
   const canSave = coords !== null && !outOfZone && refValid && !busy
 
+  const titulo = hasInitial ? 'Ajustar la ubicación' : '¿Dónde queda la casa?'
+
   return (
-    <BottomSheet open onClose={onSkip}>
+    <BottomSheet open label={titulo} onClose={onSkip}>
       <div className="overflow-y-auto px-5 pt-1 pb-6 max-h-[85vh]">
         <div className="flex items-center gap-2 pb-2">
           <Icon name="my_location" size={20} filled className="text-brand shrink-0" />
-          <h2 className="flex-1 font-display text-lg font-bold text-ink">
-            {hasInitial ? 'Ajustar la ubicación' : '¿Dónde queda la casa?'}
-          </h2>
+          <h2 className="flex-1 font-display text-lg font-bold text-ink">{titulo}</h2>
         </div>
 
         <p className="pb-3 text-[13px] text-ink-muted">

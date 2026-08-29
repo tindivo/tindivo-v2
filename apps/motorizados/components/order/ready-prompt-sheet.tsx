@@ -2,6 +2,9 @@
 
 import { BottomSheet, Button, Icon } from '@tindivo/ui'
 
+/** Una sola fuente para el título: lo pinta la pantalla y nombra el diálogo. */
+const TITULO = '¿El pedido ya está listo?'
+
 /**
  * Al llegar al local: ¿el pedido ya salió de cocina? (HU-D-020).
  *
@@ -19,11 +22,9 @@ export function ReadyPromptSheet({
   onWaiting: () => void
 }) {
   return (
-    <BottomSheet open onClose={onWaiting}>
+    <BottomSheet open label={TITULO} onClose={onWaiting}>
       <div className="p-5 pb-7">
-        <h2 className="font-display text-title font-bold tracking-tight">
-          ¿El pedido ya está listo?
-        </h2>
+        <h2 className="font-display text-title font-bold tracking-tight">{TITULO}</h2>
         <p className="mt-1.5 text-body text-ink-muted">Pregunta en el mostrador antes de marcar.</p>
         <div className="mt-4 grid grid-cols-2 gap-2.5">
           <Button className="w-full" onClick={onReady}>

@@ -65,7 +65,6 @@ export function useCheckoutActions(state: CheckoutState): CheckoutActions {
     setBlocked,
     setShowOtpSheet,
     maxCashBill,
-    maxChange,
     refreshMaxChange,
   } = state
 

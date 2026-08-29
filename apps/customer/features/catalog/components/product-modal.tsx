@@ -33,7 +33,7 @@ export function ProductModal({ item, onClose, onAdd }: ProductModalProps) {
   }
 
   return (
-    <BottomSheet open onClose={onClose}>
+    <BottomSheet open label={item.name} onClose={onClose}>
       <div className="relative flex-1 overflow-y-auto scrollbar-hide">
         {/* Botón de cerrar fijo en la esquina superior derecha */}
         <button

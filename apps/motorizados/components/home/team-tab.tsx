@@ -153,12 +153,7 @@ export function TeamTab({ mySlots }: { mySlots: number }) {
                     dibujaba sus propias `Card`: otra tipografía, sin franja del
                     local y sin la referencia de entrega, o sea sin el dato que
                     de verdad decide si pides el traspaso. */}
-                <OrderCard
-                  order={teamOrderToCard(o)}
-                  now={now}
-                  variant="team"
-                  ownerName={group.name}
-                />
+                <OrderCard order={teamOrderToCard(o)} now={now} variant="team" />
                 {/* El estado ya lo lleva la ranura de la tarjeta. Aquí se
                     pintaba por TERCERA vez (píldora + verbo + esta línea), y
                     una de las tres mentía: el verbo decía "Entregar a Juan"

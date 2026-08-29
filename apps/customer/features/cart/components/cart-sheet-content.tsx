@@ -18,9 +18,10 @@ export function CartSheetContent({ onClose }: CartSheetContentProps) {
   const subtotal = cart.subtotal()
 
   return (
-    <BottomSheet open onClose={onClose}>
+    <BottomSheet open label="Mi bolsa" onClose={onClose}>
       <ScreenHeader
         title="Mi bolsa"
+        as="h2"
         onBack={onClose}
         right={
           count > 0 ? (

@@ -1,14 +1,14 @@
-import type { CustomerAppealListItemDto } from '@tindivo/contracts'
 import { TINDIVO_SUPPORT_WHATSAPP } from '@tindivo/core'
 import { Icon } from '@tindivo/ui'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import type { AccountStats } from '@/features/account/hooks/use-account-page'
+import type { AppealSummary } from '@/features/account/types'
 import { getSupportWhatsapp } from '@/lib/support'
 
 interface QuickActionsGridProps {
   stats: AccountStats
-  appeals: CustomerAppealListItemDto[]
+  appeals: AppealSummary[]
 }
 
 export function QuickActionsGrid({ stats, appeals }: QuickActionsGridProps) {

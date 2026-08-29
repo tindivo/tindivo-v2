@@ -8,17 +8,20 @@ type Props = {
   onClose: () => void
 }
 
+/** Una sola fuente para el título: lo pinta la pantalla y nombra el diálogo. */
+const TITULO = 'Tienes un caso de pago pendiente'
+
 export function PaymentResolutionGateModal({ shortId, onClose }: Props) {
   const router = useRouter()
 
   return (
-    <BottomSheet open onClose={onClose}>
+    <BottomSheet open label={TITULO} onClose={onClose}>
       <div className="flex flex-col items-center px-5 pt-4 pb-8 text-center">
         <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100">
           <span className="text-2xl">⚠️</span>
         </div>
 
-        <h2 className="text-[18px] font-bold text-ink">Tienes un caso de pago pendiente</h2>
+        <h2 className="text-[18px] font-bold text-ink">{TITULO}</h2>
 
         <p className="mt-2 text-[14px] text-ink-muted">
           No puedes crear nuevos pedidos hasta que se resuelva tu caso de pago del pedido{' '}

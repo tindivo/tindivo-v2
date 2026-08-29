@@ -1,10 +1,9 @@
 'use client'
 
 import { type ApiEnvelope, ApiError } from '@tindivo/api-client'
-import { ACTIVE_ORDER_STATUSES } from '@tindivo/contracts'
-import { canalUnico } from '@tindivo/supabase'
 import { useEffect, useState } from 'react'
-import type { ActiveOrder, CatalogUser, PublicBusiness } from '@/features/catalog/types'
+import type { CatalogUser, PublicBusiness } from '@/features/catalog/types'
+import { useActiveOrders } from '@/lib/active-orders'
 import { api } from '@/lib/api'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
@@ -35,7 +34,14 @@ export function useHomeData(options: UseHomeDataOptions = {}) {
       userId: null,
     },
   )
-  const [activeOrders, setActiveOrders] = useState<ActiveOrder[]>([])
+  /**
+   * Los pedidos activos ya no se piden aquí. Los tenía este hook con su propia
+   * consulta y su propio canal de Realtime, pero la `BottomNav` del layout —que
+   * está montada en esta misma pantalla— pedía exactamente lo mismo para su
+   * badge: dos consultas a `orders` por cada visita a la portada. Ahora las dos
+   * leen del store compartido, que conserva el Realtime para todos.
+   */
+  const activeOrders = useActiveOrders()
 
   useEffect(() => {
     let active = true
@@ -64,51 +70,6 @@ export function useHomeData(options: UseHomeDataOptions = {}) {
       sub.subscription.unsubscribe()
     }
   }, [])
-
-  useEffect(() => {
-    const uid = user.userId
-    if (!uid) {
-      setActiveOrders([])
-      return
-    }
-    let active = true
-    const supabase = getSupabaseBrowser()
-    const loadActive = () => {
-      supabase
-        .from('orders')
-        .select('short_id,status,business_id,created_at')
-        .in('status', [...ACTIVE_ORDER_STATUSES])
-        .order('created_at', { ascending: false })
-        .then(({ data }) => {
-          if (!active) return
-          setActiveOrders(
-            (data ?? []).map((o) => ({
-              shortId: o.short_id,
-              status: o.status,
-              businessId: o.business_id,
-              createdAt: o.created_at,
-            })),
-          )
-        })
-    }
-    loadActive()
-    // Único por suscripción, no por usuario: el cliente entra y sale del inicio
-    // constantemente, y si remonta dentro de la ventana asíncrona de
-    // `removeChannel` recibía el canal anterior todavía conectado y el `.on()`
-    // lanzaba. Ver `canalUnico` en `@tindivo/supabase`.
-    const channel = supabase
-      .channel(canalUnico(`home-orders-${uid}`))
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'orders', filter: `customer_user_id=eq.${uid}` },
-        () => loadActive(),
-      )
-      .subscribe()
-    return () => {
-      active = false
-      supabase.removeChannel(channel)
-    }
-  }, [user.userId])
 
   return { items, error, user, activeOrders }
 }

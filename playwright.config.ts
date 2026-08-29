@@ -32,6 +32,18 @@ export default defineConfig({
   },
 
   projects: [
+    /**
+     * Precalentado. Todo depende de esto, directa o indirectamente.
+     *
+     * `webServer` solo espera a UNA ruta por app; Next compila las demás dentro
+     * del primer test que las toca, y eso costaba hasta 5s por ruta. El detalle
+     * y las mediciones, en `e2e/precalentar.setup.ts`.
+     */
+    {
+      name: 'precalentar',
+      testMatch: /precalentar\.setup\.ts/,
+      use: { ...devices['Desktop Chrome'] },
+    },
     // Flujos funcionales (customer). No tocan el panel de negocios.
     //
     // Depende de LOS DOS setups aunque la mayoría de sus specs no usen sesión:
@@ -44,7 +56,7 @@ export default defineConfig({
     // el siguiente intento pasa y lo disfraza de flake.
     {
       name: 'chromium',
-      dependencies: ['setup-negocios', 'setup-motorizados'],
+      dependencies: ['precalentar', 'setup-negocios', 'setup-motorizados'],
       use: { ...devices['Desktop Chrome'] },
       testIgnore: [/visual[\\/]/, /driver[\\/]/],
     },
@@ -54,6 +66,7 @@ export default defineConfig({
     // `visual`, que usa OTRA sesión.
     {
       name: 'setup-motorizados',
+      dependencies: ['precalentar'],
       use: { ...devices['Desktop Chrome'] },
       testMatch: /visual[\\/]motorizados\.setup\.ts/,
     },
@@ -71,6 +84,7 @@ export default defineConfig({
     // Sesión de negocios: corre una vez y deja la cookie en disco.
     {
       name: 'setup-negocios',
+      dependencies: ['precalentar'],
       use: { ...devices['Desktop Chrome'] },
       testMatch: /visual[\\/]negocios\.setup\.ts/,
     },

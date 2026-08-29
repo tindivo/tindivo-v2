@@ -1,9 +1,10 @@
 'use client'
 
-import { Icon } from '@tindivo/ui'
+import { BottomSheet, Button, EmptyState, Icon, IconButton, SkeletonList } from '@tindivo/ui'
 import { useState } from 'react'
 import { soles } from '@/components/dashboard/primitives'
 import type { NocheCerrada } from '../hooks/use-cash-settlements'
+import { useHistorialNoches } from '../hooks/use-historial-noches'
 
 const horaLima = new Intl.DateTimeFormat('es-PE', {
   hour: '2-digit',
@@ -25,30 +26,67 @@ function fechaLarga(iso: string): string {
   }).format(new Date(Date.UTC(y, m - 1, d, 12)))
 }
 
+/** Una sola fuente para el título: lo pinta la pantalla y nombra el diálogo. */
+const TITULO = 'Noches cerradas'
+
 /**
- * Las noches ya cerradas, una fila por (motorizado, noche).
+ * Modal BottomSheet con el historial de noches cerradas, cargado bajo demanda.
  *
- * NO una tarjeta por liquidación. Desde 0157 hay una liquidación por cliente, y
- * la lista plana que había antes —una tarjeta grande por fila— pasaba de tres
- * tarjetas por semana a setenta. El historial se consulta para responder «¿cuánto
- * cerró Ernesto el martes?», que es exactamente esta agrupación; el detalle por
- * cliente sigue estando, a un toque.
+ * No se consulta con cada carga de la pantalla principal de liquidaciones:
+ * solo cuando la cajera pulsa el botón para consultar jornadas pasadas.
  */
-export function HistorialNoches({ noches }: { noches: NocheCerrada[] }) {
-  if (noches.length === 0) return null
+export function HistorialNochesSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { noches, loading, error, reload } = useHistorialNoches(open)
 
   return (
-    <div className="mt-6">
-      <div className="mb-3 flex items-center gap-2.5">
-        <Icon name="history" size={20} className="text-ink-muted" />
-        <div className="text-base font-bold">Noches cerradas</div>
+    <BottomSheet open={open} label={TITULO} onClose={onClose}>
+      <div className="flex max-h-[80vh] flex-col overflow-hidden">
+        <div className="flex items-center justify-between border-b border-ink/[0.06] px-4 pb-3 pt-1">
+          <div className="flex items-center gap-2">
+            <Icon name="history" size={22} className="text-ink-muted" />
+            <div>
+              <h2 className="text-[17px] font-bold">{TITULO}</h2>
+              <p className="text-xs text-ink-muted">Historial de liquidaciones anteriores</p>
+            </div>
+          </div>
+          <IconButton
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            className="h-8 w-8 rounded-lg text-ink-muted hover:text-ink"
+            aria-label="Cerrar"
+          >
+            <Icon name="close" size={20} />
+          </IconButton>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-4 py-4">
+          {loading ? (
+            <SkeletonList count={3} />
+          ) : error ? (
+            <div className="flex flex-col items-center gap-3 rounded-xl bg-danger-soft p-4 text-center text-sm text-danger">
+              <p>{error}</p>
+              <Button size="sm" variant="outline" onClick={reload}>
+                Reintentar
+              </Button>
+            </div>
+          ) : noches.length === 0 ? (
+            <EmptyState
+              icon="history"
+              heading="Sin noches cerradas"
+              description="Las liquidaciones de jornadas anteriores aparecerán aquí una vez confirmadas."
+            />
+          ) : (
+            <div className="flex flex-col gap-2.5">
+              {noches.map((n) => (
+                <FilaNoche key={n.key} noche={n} />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
-      <div className="flex flex-col gap-2">
-        {noches.map((n) => (
-          <FilaNoche key={n.key} noche={n} />
-        ))}
-      </div>
-    </div>
+    </BottomSheet>
   )
 }
 
@@ -56,12 +94,12 @@ function FilaNoche({ noche }: { noche: NocheCerrada }) {
   const [abierto, setAbierto] = useState(false)
 
   return (
-    <div className="rounded-2xl border border-ink/[0.04] bg-card shadow-elev-1">
+    <div className="rounded-2xl border border-ink/[0.06] bg-card shadow-elev-1 transition-all">
       <button
         type="button"
         onClick={() => setAbierto((v) => !v)}
         aria-expanded={abierto}
-        className="flex w-full items-center gap-3 px-4 py-3 text-left"
+        className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-ink/[0.02]"
       >
         <Icon name="check_circle" size={18} filled className="shrink-0 text-success" />
         <div className="min-w-0 flex-1">
@@ -77,7 +115,7 @@ function FilaNoche({ noche }: { noche: NocheCerrada }) {
       </button>
 
       {abierto && (
-        <ul className="flex flex-col gap-1.5 border-t border-ink/[0.04] px-4 py-2.5">
+        <ul className="flex flex-col gap-1.5 border-t border-ink/[0.04] bg-surface-subtle/50 px-4 py-2.5">
           {noche.lines.map((l) => (
             <li key={l.orderId} className="flex items-baseline gap-2 text-[13px]">
               <span className="min-w-0 flex-1 truncate">

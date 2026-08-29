@@ -117,7 +117,7 @@ export function OtpVerificationSheet({ open, phone, onVerified, onClose }: Props
   const maskedPhone = phone.length === 9 ? `${phone.slice(0, 3)} *** ${phone.slice(-3)}` : phone
 
   return (
-    <BottomSheet open={open} onClose={onClose}>
+    <BottomSheet open={open} label="Verificación por código" onClose={onClose}>
       <div className="flex h-[min(450px,60dvh)] flex-col">
         {phase === 'sending' ? (
           <div className="flex flex-1 flex-col items-center justify-center p-6 text-center">

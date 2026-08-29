@@ -2,7 +2,7 @@
 
 import { BottomNav as BottomNavPattern } from '@tindivo/ui'
 import { usePathname } from 'next/navigation'
-import { useActiveOrders } from '@/features/catalog/hooks/use-active-order'
+import { useActiveOrders } from '@/lib/active-orders'
 
 const ROUTES = [
   { href: '/', label: 'Inicio', icon: 'home' },

@@ -144,8 +144,6 @@ export interface CardVMInput {
   queueLeadMinutes: number
   /** 0139. A partir de aquí el reloj de REPARTO se pone rojo. */
   deliveryLateMinutes: number
-  /** Nombre del compañero dueño del pedido. Solo en Equipo. */
-  ownerName?: string
   blocked?: boolean
   blockedReason?: string
 }
@@ -406,7 +404,7 @@ function buildMoney(input: CardVMInput): MoneyLine | null {
 }
 
 export function buildCardVM(input: CardVMInput): CardVM {
-  const { order, variant, ownerName, blocked, blockedReason } = input
+  const { order, variant, blocked, blockedReason } = input
 
   const clock = buildClock(input)
   const badge = buildBadge(input)

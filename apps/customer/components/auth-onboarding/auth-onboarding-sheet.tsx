@@ -99,8 +99,13 @@ export function AuthOnboardingSheet() {
 
   const canDismiss = SKIPPABLE.includes(ob.step)
 
+  // Se reaprovecha el rótulo que el paso ya tiene en vez de escribir otro mapa.
+  // Los tres pasos donde es `null` (nombre, celular, dirección) son justo los de
+  // completar el perfil, así que ese es su nombre.
+  const titulo = headerLabel ?? 'Completa tu perfil'
+
   return (
-    <BottomSheet open onClose={canDismiss ? (userId ? finish : abandon) : undefined}>
+    <BottomSheet open label={titulo} onClose={canDismiss ? (userId ? finish : abandon) : undefined}>
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
         <div className="flex items-center gap-2.5">

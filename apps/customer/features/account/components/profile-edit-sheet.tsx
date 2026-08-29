@@ -27,8 +27,8 @@ export function ProfileEditSheet({ name, onClose, onSave }: ProfileEditSheetProp
   }
 
   return (
-    <BottomSheet open onClose={onClose}>
-      <ScreenHeader title="Editar perfil" onBack={onClose} />
+    <BottomSheet open label="Editar perfil" onClose={onClose}>
+      <ScreenHeader title="Editar perfil" onBack={onClose} as="h2" />
       <form
         onSubmit={handleSubmit}
         className="flex-1 overflow-y-auto scrollbar-hide px-4 pt-2 pb-6"

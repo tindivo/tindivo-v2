@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 describe('usePolledQuery - Deduplication & Cooldown', () => {
   it('deduplicates rapid consecutive calls within dedupeIntervalMs window', async () => {

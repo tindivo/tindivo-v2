@@ -63,5 +63,28 @@ export default defineConfig({
      * convertir la contención en rojos intermitentes.
      */
     testTimeout: 15_000,
+
+    /**
+     * `hookTimeout` se quedó en los 10s por defecto cuando `testTimeout` subió
+     * a 15s, y eso es justo al revés de lo que estas suites necesitan: el hook
+     * hace MÁS trabajo que cualquier test suyo.
+     *
+     * Un `beforeAll`/`afterAll` de integración no ejercita un endpoint: monta y
+     * desmonta un mundo. El de `promo-free-delivery` restaura `app_settings`,
+     * borra pedidos, redenciones, la sede 2 con su carta, y luego recorre los
+     * clientes que creó llamando a `auth.admin.deleteUser` UNO A UNO. Ese
+     * bucle crece con cada test que añada un cliente, y cada borrado de Auth
+     * es una llamada de red.
+     *
+     * Medido el 2026-08-28: ese `afterAll` pasó de los 10s y tumbó el fichero
+     * entero —`Hook timed out in 10000ms`— con sus 17 tests en verde. Un rojo
+     * de suite cuyos tests pasan todos apunta al sitio equivocado: se busca el
+     * fallo en la lógica de la promo y no está ahí.
+     *
+     * No se arregla en la suite con un timeout suelto porque no es un problema
+     * de esa suite: es el techo de todos los teardown de integración, y la
+     * siguiente que crezca lo va a tocar igual.
+     */
+    hookTimeout: 30_000,
   },
 })

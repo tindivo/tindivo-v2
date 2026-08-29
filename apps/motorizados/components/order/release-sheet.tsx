@@ -11,6 +11,9 @@ const RELEASE_REASONS: { value: string; label: string }[] = [
   { value: 'otro', label: 'Otro motivo' },
 ]
 
+/** Una sola fuente para el título: lo pinta la pantalla y nombra el diálogo. */
+const TITULO = '¿Soltar este pedido?'
+
 export function ReleaseSheet({
   onConfirm,
   onClose,
@@ -37,11 +40,9 @@ export function ReleaseSheet({
   }
 
   return (
-    <BottomSheet open onClose={onClose}>
+    <BottomSheet open label={TITULO} onClose={onClose}>
       <div className="p-5 pb-7">
-        <h2 className="font-display text-title font-bold tracking-tight text-danger">
-          ¿Soltar este pedido?
-        </h2>
+        <h2 className="font-display text-title font-bold tracking-tight text-danger">{TITULO}</h2>
         <p className="mt-1.5 text-body leading-relaxed text-ink-muted">
           El pedido volverá al pool para que lo tome otro motorizado. Selecciona el motivo
           obligatorio:

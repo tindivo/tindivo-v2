@@ -242,7 +242,6 @@ function Sidebar({ active, onSignOut }: { active: NavId; onSignOut: () => void }
     accent,
     capability,
     paused,
-    counts,
     soundOn,
     toggleSound,
     attentionCount,
@@ -440,7 +439,7 @@ function BottomNav({ active }: { active: NavId }) {
       </nav>
 
       {moreOpen && (
-        <BottomSheet open onClose={() => setMoreOpen(false)}>
+        <BottomSheet open label="Más opciones" onClose={() => setMoreOpen(false)}>
           <div className="flex flex-col px-5 pt-2 pb-7">
             <div className="flex items-center justify-between border-b border-border pb-3">
               <div className="min-w-0">
@@ -830,7 +829,7 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
     }
   }, [])
 
-  const { setChannelState, refetchIntervalMs, healthStatus } = useChannelHealth()
+  const { setChannelState, refetchIntervalMs } = useChannelHealth()
 
   /**
    * DOS CONSULTAS, PORQUE SON DOS COSAS CON REGLAS DISTINTAS.

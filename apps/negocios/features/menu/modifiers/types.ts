@@ -27,6 +27,12 @@ export interface LibraryGroup {
   display_order: number
   options: LibraryOption[]
   itemIds: string[]
+  /**
+   * ¿Está en la biblioteca, o es un grupo propio de un plato que se ve desde
+   * aquí? Solo los de biblioteca salen en el buscador «Vincular grupo de
+   * Extras» del editor de platos.
+   */
+  isLibrary: boolean
 }
 
 export interface LibraryItem {

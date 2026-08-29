@@ -1,23 +1,20 @@
 'use client'
 
-import { EmptyState, Icon, SkeletonList } from '@tindivo/ui'
+import { Button, EmptyState, Icon, SkeletonList } from '@tindivo/ui'
 import { soles } from '@/components/dashboard/primitives'
 import { useCashSettlements } from '../hooks/use-cash-settlements'
 import { CashSummary } from './cash-summary'
 import { DriverCard } from './driver-card'
-import { HistorialNoches } from './historial-noches'
 
 /**
  * El efectivo de la noche, organizado por MOTORIZADO.
  *
- * Antes eran cinco secciones apiladas por estado del sistema —«Pendiente del
- * motorizado», «Por confirmar ahora», «En disputa», «Historial»— y la cajera
- * tenía que cruzar nombres entre ellas para reconstruir a quién tenía delante.
- * Ahora cada persona es una tarjeta y sus tres estados van dentro, en orden de
- * urgencia. Solo el historial queda fuera: ya no es de nadie que esté ahí.
+ * Cada persona es una tarjeta y sus tres estados van dentro, en orden de
+ * urgencia. Las noches cerradas anteriores se consultan bajo demanda
+ * a través del botón de historial.
  */
-export function EfectivoList() {
-  const { drivers, historial, loading, error, reload } = useCashSettlements()
+export function EfectivoList({ onOpenHistorial }: { onOpenHistorial?: () => void }) {
+  const { drivers, loading, error, reload } = useCashSettlements()
 
   if (loading) return <SkeletonList count={3} />
 
@@ -92,7 +89,14 @@ export function EfectivoList() {
         </div>
       )}
 
-      <HistorialNoches noches={historial} />
+      {onOpenHistorial && (
+        <div className="mt-8 flex justify-center border-t border-ink/[0.06] pt-6">
+          <Button variant="outline" onClick={onOpenHistorial} className="gap-2">
+            <Icon name="history" size={18} />
+            Ver noches cerradas
+          </Button>
+        </div>
+      )}
     </>
   )
 }

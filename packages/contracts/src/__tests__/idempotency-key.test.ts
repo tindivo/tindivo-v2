@@ -9,7 +9,7 @@
  * these tests serve as the regression gate against re-introducing the
  * inverted-condition bug (typeof window === 'undefined' vs !==).
  */
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 
 interface Storage {
   getItem(key: string): string | null

@@ -676,61 +676,58 @@ export function DetailScreen({
         {/* Sección de pago */}
         {order.payment === 'pending_cash' && <PaySectionCash order={order} />}
         {order.payment === 'pending_wallet' && <PaySectionWallet qrs={paymentQrs} />}
-        {order.payment === 'prepaid' && (
-          <>
-            {isLoadingActions ? (
-              <div className="h-16 animate-pulse rounded-md border border-ink/[0.08] bg-ink/[0.06] px-3.5 py-3" />
-            ) : (
-              <>
-                {/* 1. Esperando comprobante del cliente (pending_acceptance o validando sin comprobante aún) */}
-                {isPrepaidAwaitingProof && (
-                  <div className="shrink-0 rounded-md border border-brand/30 bg-brand-soft px-3.5 py-3">
-                    <div className="mb-1 flex items-center gap-[7px]">
-                      <Icon
-                        weight={500}
-                        name="qr_code_2"
-                        size={18}
-                        filled
-                        className="text-brand-dark"
-                      />
-                      <div className="text-[13px] font-bold text-brand-dark">
-                        Pago por Yape / Plin
-                      </div>
-                    </div>
-                    <div className="text-[12px] leading-[1.4] text-brand-dark">
-                      Confirma la disponibilidad de insumos para este pedido. Una vez aceptado, el
-                      cliente tendrá 15 minutos para transferir por Yape/Plin y adjuntar el
-                      comprobante.
+        {order.payment === 'prepaid' &&
+          (isLoadingActions ? (
+            <div className="h-16 animate-pulse rounded-md border border-ink/[0.08] bg-ink/[0.06] px-3.5 py-3" />
+          ) : (
+            <>
+              {/* 1. Esperando comprobante del cliente (pending_acceptance o validando sin comprobante aún) */}
+              {isPrepaidAwaitingProof && (
+                <div className="shrink-0 rounded-md border border-brand/30 bg-brand-soft px-3.5 py-3">
+                  <div className="mb-1 flex items-center gap-[7px]">
+                    <Icon
+                      weight={500}
+                      name="qr_code_2"
+                      size={18}
+                      filled
+                      className="text-brand-dark"
+                    />
+                    <div className="text-[13px] font-bold text-brand-dark">
+                      Pago por Yape / Plin
                     </div>
                   </div>
-                )}
-                {/* 2. awaiting_payment: Banner de espera tras haber aceptado disponibilidad */}
-                {order.status === 'awaiting_payment' && (
-                  <div className="shrink-0 rounded-md border border-brand/30 bg-brand-soft px-3.5 py-3">
-                    <div className="mb-1 flex items-center gap-[7px]">
-                      <Icon
-                        weight={500}
-                        name="schedule"
-                        size={18}
-                        filled
-                        className="text-brand-dark"
-                      />
-                      <div className="text-[13px] font-bold text-brand-dark">
-                        Esperando pago del cliente
-                      </div>
-                    </div>
-                    <div className="text-[12px] leading-[1.4] text-brand-dark">
-                      Disponibilidad confirmada. El cliente tiene 15 minutos para realizar la
-                      transferencia por Yape/Plin y adjuntar el comprobante.
+                  <div className="text-[12px] leading-[1.4] text-brand-dark">
+                    Confirma la disponibilidad de insumos para este pedido. Una vez aceptado, el
+                    cliente tendrá 15 minutos para transferir por Yape/Plin y adjuntar el
+                    comprobante.
+                  </div>
+                </div>
+              )}
+              {/* 2. awaiting_payment: Banner de espera tras haber aceptado disponibilidad */}
+              {order.status === 'awaiting_payment' && (
+                <div className="shrink-0 rounded-md border border-brand/30 bg-brand-soft px-3.5 py-3">
+                  <div className="mb-1 flex items-center gap-[7px]">
+                    <Icon
+                      weight={500}
+                      name="schedule"
+                      size={18}
+                      filled
+                      className="text-brand-dark"
+                    />
+                    <div className="text-[13px] font-bold text-brand-dark">
+                      Esperando pago del cliente
                     </div>
                   </div>
-                )}
-                {/* 3. Con comprobante subido: Guía de validación + comprobante + botones */}
-                {isValidandoPrepaid && <PaySectionPrepaid order={order} proofUrl={proofUrl} />}
-              </>
-            )}
-          </>
-        )}
+                  <div className="text-[12px] leading-[1.4] text-brand-dark">
+                    Disponibilidad confirmada. El cliente tiene 15 minutos para realizar la
+                    transferencia por Yape/Plin y adjuntar el comprobante.
+                  </div>
+                </div>
+              )}
+              {/* 3. Con comprobante subido: Guía de validación + comprobante + botones */}
+              {isValidandoPrepaid && <PaySectionPrepaid order={order} proofUrl={proofUrl} />}
+            </>
+          ))}
         {order.payment === 'pending_mixed' && <PaySectionMixed order={order} qrs={paymentQrs} />}
 
         {/* Extensión de preparación */}

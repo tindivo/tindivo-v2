@@ -138,7 +138,6 @@ function toLine(
 
 export function useCashSettlements() {
   const [drivers, setDrivers] = useState<DriverCash[]>([])
-  const [historial, setHistorial] = useState<NocheCerrada[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -165,22 +164,24 @@ export function useCashSettlements() {
         .in('status', ABIERTOS)
       if (e1) throw new Error(e1.message)
 
-      // ── 2. El historial, paginado ────────────────────────────────────────
-      const { data: cerradosRaw } = await supabase
+      // ── 2. Lo confirmado HOY (solo la jornada activa para 'confirmadoHoy') ─
+      // El historial de noches anteriores ya no se consulta aquí; se carga
+      // bajo demanda al abrir el sheet de Noches Cerradas.
+      const { data: cerradosHoyRaw, error: e2 } = await supabase
         .from('cash_settlements')
         .select(
           'id,settlement_date,delivered_at_ts,delivered_amount,reported_amount,status,driver_id,drivers(full_name,phone)',
         )
         .in('status', CERRADOS)
-        .order('settlement_date', { ascending: false })
-        .limit(80)
+        .eq('settlement_date', hoy)
+      if (e2) throw new Error(e2.message)
 
       const abiertos = (abiertosRaw ?? []) as unknown as SettlementRow[]
-      const cerrados = (cerradosRaw ?? []) as unknown as SettlementRow[]
+      const cerradosHoy = (cerradosHoyRaw ?? []) as unknown as SettlementRow[]
       const settlements = new Map<string, SettlementRow>()
-      for (const s of [...abiertos, ...cerrados]) settlements.set(s.id, s)
+      for (const s of [...abiertos, ...cerradosHoy]) settlements.set(s.id, s)
 
-      // ── 3. Los pedidos de esas liquidaciones ─────────────────────────────
+      // ── 3. Los pedidos de esas liquidaciones activas ──────────────────────
       const ids = [...settlements.keys()]
       let enlazados: OrderRow[] = []
       if (ids.length > 0) {
@@ -241,8 +242,6 @@ export function useCashSettlements() {
         moto(o.driver_id, o.drivers).porEntregar.push(toLine(o, 'pending', null, null, null))
       }
 
-      const nochesCerradas = new Map<string, NocheCerrada>()
-
       for (const o of enlazados) {
         const s = o.cash_settlement_id ? settlements.get(o.cash_settlement_id) : undefined
         if (!s?.driver_id) continue
@@ -261,22 +260,6 @@ export function useCashSettlements() {
           const d = moto(s.driver_id, s.drivers ?? o.drivers)
           d.confirmadoHoy.count += 1
           d.confirmadoHoy.total += Number(o.cash_owed_at_delivery ?? 0)
-        } else {
-          // Noches anteriores: al historial, agrupado por (motorizado, noche).
-          const key = `${s.driver_id}|${s.settlement_date}`
-          const n = nochesCerradas.get(key) ?? {
-            key,
-            driverName: s.drivers?.full_name ?? o.drivers?.full_name ?? 'Motorizado',
-            fecha: s.settlement_date,
-            total: 0,
-            count: 0,
-            lines: [],
-          }
-          const line = toLine(o, 'confirmed', s.id, s.settlement_date, null)
-          n.total += line.cashOwed
-          n.count += 1
-          n.lines.push(line)
-          nochesCerradas.set(key, n)
         }
       }
 
@@ -285,7 +268,6 @@ export function useCashSettlements() {
         d.enDisputa.sort(recienteAntes)
         d.porEntregar.sort(recienteAntes)
       }
-      for (const n of nochesCerradas.values()) n.lines.sort(recienteAntes)
 
       // Primero quien exige acción; entre ellos, el que trae más dinero.
       setDrivers(
@@ -295,7 +277,6 @@ export function useCashSettlements() {
             b.totalPorConfirmar - a.totalPorConfirmar,
         ),
       )
-      setHistorial([...nochesCerradas.values()].sort((a, b) => b.fecha.localeCompare(a.fecha)))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error')
     } finally {
@@ -323,5 +304,5 @@ export function useCashSettlements() {
     }
   }, [load])
 
-  return { drivers, historial, loading, error, reload: load }
+  return { drivers, loading, error, reload: load }
 }

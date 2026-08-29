@@ -7,6 +7,9 @@ import { soles } from '@/components/dashboard/primitives'
 import { api } from '@/lib/api'
 import type { HistDisplay } from '../types'
 
+/** Una sola fuente para el título: lo pinta la pantalla y nombra el diálogo. */
+const TITULO = 'Reclamar cobertura por fraude'
+
 export function ClaimSheet({
   orders,
   open,
@@ -50,7 +53,7 @@ export function ClaimSheet({
   }
 
   return (
-    <BottomSheet open={open} onClose={onClose}>
+    <BottomSheet open={open} label={TITULO} onClose={onClose}>
       <div className="px-4 pb-6">
         {done ? (
           <div className="py-3 text-center">
@@ -65,7 +68,7 @@ export function ClaimSheet({
           </div>
         ) : (
           <>
-            <div className="text-[17px] font-bold">Reclamar cobertura por fraude</div>
+            <div className="text-[17px] font-bold">{TITULO}</div>
             <div className="mb-4 text-[13px] text-ink-muted">
               Si perdiste dinero por un pedido cancelado, solicita cobertura del fondo.
             </div>

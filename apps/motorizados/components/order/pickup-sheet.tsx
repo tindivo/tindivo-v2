@@ -4,6 +4,9 @@ import { BottomSheet, Button, Icon } from '@tindivo/ui'
 import { soles } from '@/lib/format'
 import type { OrderDetailResponse } from '@/lib/types'
 
+/** Una sola fuente para el título: lo pinta la pantalla y nombra el diálogo. */
+const TITULO = 'Confirmar recogida'
+
 /**
  * Confirmación de recogida.
  *
@@ -43,9 +46,9 @@ export function PickupSheet({
   const cobra = order.paymentIntent !== 'prepaid'
 
   return (
-    <BottomSheet open onClose={onClose}>
+    <BottomSheet open label={TITULO} onClose={onClose}>
       <div className="p-5 pb-2">
-        <h2 className="font-display text-title font-bold tracking-tight">Confirmar recogida</h2>
+        <h2 className="font-display text-title font-bold tracking-tight">{TITULO}</h2>
         <p className="mt-0.5 text-caption text-ink-muted">
           #{order.shortId} · {business?.name ?? 'Restaurante'}
         </p>

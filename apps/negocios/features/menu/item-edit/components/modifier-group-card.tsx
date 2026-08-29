@@ -1,5 +1,11 @@
-import { Icon } from '@tindivo/ui'
-import { acceptsTotalPricing, groupRuleLabel, optionDisplayPrice } from '../lib/utils'
+import { Button, Icon } from '@tindivo/ui'
+import {
+  acceptsTotalPricing,
+  groupRuleLabel,
+  grupoEditableDesdeElPlato,
+  motivoDeSoloLectura,
+  optionDisplayPrice,
+} from '../lib/utils'
 import type { ModifierGroup, PriceDisplay } from '../types'
 import { GroupRuleSelector } from './group-rule-selector'
 import { ModifierOptionRow } from './modifier-option-row'
@@ -22,6 +28,8 @@ interface ModifierGroupCardProps {
   onMoveOption: (optLocalId: string, dir: -1 | 1) => void
   onMoveUp: () => void
   onMoveDown: () => void
+  /** Sube el grupo a la biblioteca de Extras del negocio. */
+  onPromoteToLibrary?: () => void
 }
 
 export function ModifierGroupCard({
@@ -40,10 +48,38 @@ export function ModifierGroupCard({
   onMoveOption,
   onMoveUp,
   onMoveDown,
+  onPromoteToLibrary,
 }: ModifierGroupCardProps) {
   const isRequired = group.is_required
   const isTotal = group.price_display === 'total'
   const visibleOptions = group.options.filter((o) => !o.isDeleted)
+
+  /**
+   * Si OTROS platos usan este grupo, aquí no se edita.
+   *
+   * No es una preferencia de UI: el guardado escribe sobre
+   * `menu_modifier_groups` y `menu_modifier_options`, que son del NEGOCIO, no
+   * del plato. Editar «Cremas» desde la hamburguesa le cambiaba el nombre, las
+   * reglas y las opciones a los otros seis platos que la usan, y borrar «ají»
+   * aquí lo borraba del menú entero — el borrado del grupo sí cuenta
+   * referencias antes de tirar la fila, el de las opciones no contaba nada.
+   *
+   * Se corta en los dos sitios a propósito: aquí para que nadie escriba lo que
+   * luego se va a ignorar, y en `use-item-editor` para que el dato quede a
+   * salvo aunque otra pantalla llame al guardado.
+   *
+   * Lo que SÍ se puede desde aquí es quitarlo del plato: desenlazar es una
+   * decisión de este plato y no toca a los demás.
+   */
+  const loUsanOtrosPlatos = !grupoEditableDesdeElPlato(group)
+  const motivo = motivoDeSoloLectura(group)
+
+  /**
+   * `isNew` marca los que aún no existen en la base: no hay fila que subir.
+   * `isLibrary` marca los que ya están arriba.
+   */
+  const puedeSubirseAExtras =
+    Boolean(onPromoteToLibrary) && Boolean(group.id) && !group.isNew && !group.isLibrary
 
   return (
     <div
@@ -71,11 +107,17 @@ export function ModifierGroupCard({
             {groupRuleLabel(group)}
             {isTotal && ' · define el precio'}
           </div>
-          {(group.sharedWith ?? 0) > 0 && (
+          {motivo === 'compartido' && (
             <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5 text-[10px] font-bold text-warning">
               <Icon name="link" size={10} />
-              Compartido con {group.sharedWith} plato{group.sharedWith === 1 ? '' : 's'} · lo que
-              cambies aquí les cambia a todos
+              Compartido con {group.sharedWith} plato{group.sharedWith === 1 ? '' : 's'} · aquí se
+              ve, no se edita
+            </div>
+          )}
+          {motivo === 'biblioteca' && (
+            <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-bold text-brand-dark">
+              <Icon name="library_books" size={10} />
+              De Extras · aquí se ve, no se edita
             </div>
           )}
           {!group.isExpanded && (
@@ -126,7 +168,84 @@ export function ModifierGroupCard({
         </div>
       </div>
 
-      {group.isExpanded && (
+      {group.isExpanded && loUsanOtrosPlatos && (
+        <div className="p-3.5">
+          <div className="mb-3 rounded-xl border border-warning/25 bg-warning/[0.06] p-3">
+            <div className="flex items-start gap-2">
+              <Icon name="lock" size={16} className="mt-0.5 shrink-0 text-warning" />
+              <div className="text-[12px] leading-relaxed text-ink">
+                {motivo === 'compartido' ? (
+                  <>
+                    <strong>Este grupo es compartido.</strong> Lo usan {group.sharedWith} plato
+                    {group.sharedWith === 1 ? '' : 's'} más, así que aquí se ve pero no se edita: lo
+                    que cambiaras se les cambiaría a todos.
+                  </>
+                ) : (
+                  <>
+                    <strong>Este grupo está en Extras.</strong> Es del negocio, no de este plato,
+                    así que aquí se ve pero no se edita — aunque de momento solo lo uses aquí.
+                  </>
+                )}
+                <div className="mt-1 text-ink-muted">
+                  Para que este plato lo tenga a su manera, quítalo con la papelera y crea uno
+                  propio.
+                </div>
+                {/* El motivo por el que Extras es una ruta y no un modal: aquí
+                    se puede enlazar, y con `?g=` se abre este grupo concreto en
+                    vez de dejar al dueño buscándolo en una lista. */}
+                <a
+                  href={`/menu/extras?g=${group.id}`}
+                  className="mt-1.5 inline-flex items-center gap-1 text-[12px] font-bold text-brand-dark hover:underline"
+                >
+                  <Icon name="open_in_new" size={13} />
+                  Editarlo en Extras
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div className="mb-3">
+            <div className="mb-2 font-mono text-[11px] font-semibold uppercase tracking-wide text-ink/55">
+              Nombre del grupo
+            </div>
+            <div className="rounded-2xl border border-ink/[0.06] bg-surface px-4 py-3 text-[15px] font-medium text-ink-muted">
+              {group.name}
+            </div>
+          </div>
+
+          <div className="mb-3">
+            <div className="mb-2 font-mono text-[11px] font-semibold uppercase tracking-wide text-ink/55">
+              Regla
+            </div>
+            <div className="rounded-2xl border border-ink/[0.06] bg-surface px-4 py-3 text-[13px] text-ink-muted">
+              {groupRuleLabel(group)}
+              {isTotal && ' · define el precio'}
+            </div>
+          </div>
+
+          <div className="mb-2 font-mono text-[11px] font-semibold uppercase tracking-wide text-ink/55">
+            Opciones
+          </div>
+          <div className="overflow-hidden rounded-2xl border border-ink/[0.06]">
+            {visibleOptions.map((opt) => (
+              <div
+                key={opt.localId}
+                className="flex items-center justify-between gap-2 border-b border-ink/[0.04] bg-surface px-4 py-2.5 text-[13px] last:border-b-0"
+              >
+                <span className={opt.is_available ? 'text-ink' : 'text-ink-muted line-through'}>
+                  {opt.name}
+                </span>
+                <span className="shrink-0 font-mono text-[12px] text-ink-muted">
+                  {isTotal ? 'S/ ' : '+ S/ '}
+                  {optionDisplayPrice(basePrice, group, opt).toFixed(2)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {group.isExpanded && !loUsanOtrosPlatos && (
         <div className="p-3.5">
           <div className="mb-3">
             {/* biome-ignore lint/a11y/noLabelWithoutControl: input asociado como hermano */}
@@ -184,6 +303,32 @@ export function ModifierGroupCard({
             <Icon name="add" size={15} />
             Agregar opción
           </button>
+
+          {/* La única puerta por la que entra algo a la biblioteca. Solo aparece
+              cuando el grupo ya está guardado (tiene id) y todavía es propio:
+              en un grupo sin guardar no habría fila que actualizar, y en uno que
+              ya está en Extras no hay nada que subir. */}
+          {puedeSubirseAExtras && (
+            <div className="mt-2.5 rounded-xl border border-brand/20 bg-brand/[0.04] p-3">
+              <div className="text-[12px] leading-relaxed text-ink">
+                <strong>¿Este grupo te sirve en otros platos?</strong>
+                <div className="mt-0.5 text-ink-muted">
+                  Súbelo a Extras y podrás buscarlo y vincularlo desde cualquier plato, sin volver a
+                  escribirlo. A partir de ahí se edita en Extras.
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="soft"
+                size="sm"
+                onClick={onPromoteToLibrary}
+                className="mt-2 text-[12px]"
+              >
+                <Icon name="library_add" size={15} />
+                Usar también en otros platos
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>

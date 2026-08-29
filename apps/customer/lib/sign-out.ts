@@ -1,5 +1,6 @@
 import { signOutEverywhere, signOutLocal } from '@tindivo/supabase'
 import { dropLocalPushSubscription, unsubscribeFromPush } from '@tindivo/ui'
+import { useActiveOrdersStore } from './active-orders'
 import { api } from './api'
 import { getSupabaseBrowser } from './supabase/client'
 
@@ -26,6 +27,10 @@ export async function signOutDevice(): Promise<void> {
     console.error('[auth] no se pudo dar de baja el push al cerrar sesión')
   }
   await signOutLocal(getSupabaseBrowser())
+  // El store de pedidos activos sobrevive al logout (es memoria del módulo, no
+  // del árbol de React): sin esto el badge de la BottomNav seguiría mostrando
+  // los pedidos del que salió a quien entre después en el mismo navegador.
+  useActiveOrdersStore.getState().reset()
 }
 
 /**
@@ -46,4 +51,5 @@ export async function signOutEverywhereDevice(): Promise<void> {
   }
   await dropLocalPushSubscription()
   await signOutEverywhere(getSupabaseBrowser())
+  useActiveOrdersStore.getState().reset()
 }

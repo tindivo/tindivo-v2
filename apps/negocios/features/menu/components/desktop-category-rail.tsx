@@ -12,7 +12,7 @@ export function DesktopCategoryRail({ cats, activeCatId, onCatClick }: DesktopCa
   const totalItems = cats.flatMap((c) => c.items).length
 
   return (
-    <Card className="sticky top-0 self-start p-3.5">
+    <Card className="sticky top-0 self-start max-h-[calc(100vh-120px)] overflow-y-auto p-3.5">
       <p className="mb-2 px-1 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/55">
         Categorías
       </p>

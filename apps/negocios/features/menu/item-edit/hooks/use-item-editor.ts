@@ -4,7 +4,13 @@ import { useEffect, useRef, useState } from 'react'
 import { notifySuccess } from '@/components/dashboard/toast'
 import { signOutDevice } from '@/lib/sign-out'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
-import { acceptsTotalPricing, applyTotalPrices, currentTotals, makeLocalId } from '../lib/utils'
+import {
+  acceptsTotalPricing,
+  applyTotalPrices,
+  currentTotals,
+  grupoEditableDesdeElPlato,
+  makeLocalId,
+} from '../lib/utils'
 import type { Category, FormData, ModifierGroup, PriceDisplay } from '../types'
 
 export function useItemEditor() {
@@ -46,6 +52,7 @@ export function useItemEditor() {
    */
   const imageRemovedRef = useRef(false)
   const [groups, setGroups] = useState<ModifierGroup[]>([])
+  const [libraryGroups, setLibraryGroups] = useState<ModifierGroup[]>([])
   const [hasUnsaved, setHasUnsaved] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -84,13 +91,109 @@ export function useItemEditor() {
         .eq('status', 'pending_acceptance')
       setPendingOrders(count ?? 0)
 
-      const { data: catsData } = await supabase
-        .from('menu_categories')
-        .select('id,name')
-        .eq('business_id', biz.id)
-        .order('display_order')
-      const loadedCats = catsData ?? []
+      const [catsRes, allGroupsRes] = await Promise.all([
+        supabase
+          .from('menu_categories')
+          .select('id,name')
+          .eq('business_id', biz.id)
+          .order('display_order'),
+        supabase
+          .from('menu_modifier_groups')
+          .select(
+            'id,name,selection_type,is_required,min_selections,max_selections,price_display,display_order,is_library',
+          )
+          .eq('business_id', biz.id)
+          .order('display_order'),
+      ])
+      const loadedCats = catsRes.data ?? []
       setCats(loadedCats)
+
+      const allGroupsData = allGroupsRes.data ?? []
+      const allGroupIds = allGroupsData.map((g) => g.id)
+      const allOptsByGroup: Record<
+        string,
+        {
+          id: string
+          name: string
+          additional_price: number
+          is_available: boolean
+          display_order: number
+        }[]
+      > = {}
+      const allSharedByGroup: Record<string, number> = {}
+
+      if (allGroupIds.length > 0) {
+        const [{ data: allOpts }, { data: allSharedLinks }] = await Promise.all([
+          supabase
+            .from('menu_modifier_options')
+            .select('id,group_id,name,additional_price,is_available,display_order')
+            .in('group_id', allGroupIds)
+            .order('display_order'),
+          supabase
+            .from('menu_item_modifier_groups')
+            .select('group_id,item_id')
+            .in('group_id', allGroupIds),
+        ])
+
+        for (const opt of allOpts ?? []) {
+          const list = allOptsByGroup[opt.group_id] ?? []
+          list.push({
+            id: opt.id,
+            name: opt.name,
+            additional_price: Number(opt.additional_price ?? 0),
+            is_available: opt.is_available,
+            display_order: opt.display_order,
+          })
+          allOptsByGroup[opt.group_id] = list
+        }
+
+        for (const link of allSharedLinks ?? []) {
+          allSharedByGroup[link.group_id] = (allSharedByGroup[link.group_id] ?? 0) + 1
+        }
+      }
+
+      /**
+       * TODOS los grupos del negocio, sin filtrar.
+       *
+       * No se filtra aquí porque esta lista hace DOS trabajos, y solo uno de
+       * ellos quiere la biblioteca: más abajo se usa como mapa `id -> grupo`
+       * para resolver los grupos que ya tiene ESTE plato. Si se filtrara,
+       * los grupos propios del plato —que por definición no son de biblioteca—
+       * no se encontrarían en el mapa y desaparecerían del editor al abrirlo.
+       */
+      const parsedAllGroups: ModifierGroup[] = allGroupsData.map((g) => ({
+        id: g.id,
+        localId: g.id,
+        name: g.name,
+        selection_type: g.selection_type as 'single' | 'multi',
+        is_required: g.is_required,
+        min_selections: g.min_selections,
+        max_selections: g.max_selections,
+        price_display: (g.price_display as PriceDisplay | null) ?? 'delta',
+        display_order: g.display_order,
+        isExpanded: false,
+        sharedWith: allSharedByGroup[g.id] ?? 0,
+        isLibrary: g.is_library,
+        options: (allOptsByGroup[g.id] ?? []).map((o) => ({
+          id: o.id,
+          localId: o.id,
+          name: o.name,
+          additional_price: o.additional_price,
+          is_available: o.is_available,
+          display_order: o.display_order,
+        })),
+      }))
+
+      /**
+       * El buscador SOLO ofrece la biblioteca.
+       *
+       * Sin este filtro, «Vincular grupo de Extras» le abre al negocio todos
+       * sus grupos: a Pizza Priamo, 43 de los que ninguno se pensó para
+       * reutilizar —los 68 grupos que hay en prod entre los cuatro negocios
+       * están cada uno en un solo plato—. Un buscador que devuelve ruido se
+       * deja de usar a la segunda.
+       */
+      setLibraryGroups(parsedAllGroups.filter((g) => g.isLibrary))
 
       if (!isNew) {
         const { data: item } = await supabase
@@ -126,62 +229,19 @@ export function useItemEditor() {
           .order('display_order')
 
         if (junctions && junctions.length > 0) {
-          const groupIds = junctions.map((j) => j.group_id)
-          const { data: groupsData } = await supabase
-            .from('menu_modifier_groups')
-            .select(
-              'id,name,selection_type,is_required,min_selections,max_selections,price_display,display_order',
-            )
-            .in('id', groupIds)
-
-          const { data: optionsData } = await supabase
-            .from('menu_modifier_options')
-            .select('id,group_id,name,additional_price,is_available,display_order')
-            .in('group_id', groupIds)
-            .order('display_order')
-
-          const optsByGroup: Record<string, typeof optionsData> = {}
-          for (const opt of optionsData ?? []) {
-            const list = optsByGroup[opt.group_id] ?? []
-            list.push(opt)
-            optsByGroup[opt.group_id] = list
-          }
-
-          // Los platos AJENOS que comparten cada grupo, para poder advertirlo.
-          const { data: sharedLinks } = await supabase
-            .from('menu_item_modifier_groups')
-            .select('group_id,item_id')
-            .in('group_id', groupIds)
-          const sharedByGroup: Record<string, number> = {}
-          for (const link of sharedLinks ?? []) {
-            if (link.item_id === itemId) continue
-            sharedByGroup[link.group_id] = (sharedByGroup[link.group_id] ?? 0) + 1
-          }
-
-          const loadedGroups: ModifierGroup[] = (junctions ?? []).flatMap((j) => {
-            const g = (groupsData ?? []).find((x) => x.id === j.group_id)
+          // Sobre TODOS los grupos, no sobre los de biblioteca: los propios de
+          // este plato tienen `is_library = false` y aquí tienen que aparecer.
+          const itemGroupMap = new Map(parsedAllGroups.map((g) => [g.id, g]))
+          const loadedGroups: ModifierGroup[] = junctions.flatMap((j) => {
+            const g = itemGroupMap.get(j.group_id)
             if (!g) return []
             return [
               {
-                id: g.id,
+                ...g,
                 localId: g.id,
-                name: g.name,
-                selection_type: g.selection_type as 'single' | 'multi',
-                is_required: g.is_required,
-                min_selections: g.min_selections,
-                max_selections: g.max_selections,
-                price_display: (g.price_display as PriceDisplay | null) ?? 'delta',
                 display_order: j.display_order,
-                isExpanded: false,
-                sharedWith: sharedByGroup[g.id] ?? 0,
-                options: (optsByGroup[g.id] ?? []).map((o) => ({
-                  id: o.id,
-                  localId: o.id,
-                  name: o.name,
-                  additional_price: Number(o.additional_price),
-                  is_available: o.is_available,
-                  display_order: o.display_order,
-                })),
+                sharedWith: Math.max(0, (allSharedByGroup[g.id] ?? 0) - 1),
+                options: g.options.map((o) => ({ ...o, localId: o.id })),
               },
             ]
           })
@@ -282,6 +342,61 @@ export function useItemEditor() {
     }
     setGroups((prev) => [...prev, newGroup])
     setHasUnsaved(true)
+  }
+
+  function linkLibraryGroup(libGroup: ModifierGroup) {
+    const existing = groups.find((g) => g.id === libGroup.id && !g.isDeleted)
+    if (existing) {
+      setGroups((prev) => prev.map((g) => (g.id === libGroup.id ? { ...g, isExpanded: true } : g)))
+      return
+    }
+    const newGroup: ModifierGroup = {
+      ...libGroup,
+      localId: makeLocalId(),
+      isNew: false,
+      isExpanded: true,
+      display_order: groups.filter((g) => !g.isDeleted).length,
+      options: libGroup.options.map((o) => ({ ...o, localId: makeLocalId() })),
+    }
+    setGroups((prev) => [...prev, newGroup])
+    setHasUnsaved(true)
+  }
+
+  /**
+   * Sube un grupo propio del plato a la biblioteca de Extras.
+   *
+   * Este es el único camino por el que la biblioteca se llena, y por eso está
+   * aquí y no en un formulario de alta: al CREAR un grupo el dueño todavía no
+   * sabe si lo va a reutilizar —en prod hay once grupos «Salsas» con seis
+   * contenidos distintos, y cuatro «Parte» con cuatro—, así que preguntárselo
+   * entonces le pide una predicción. Cuando ya tiene el grupo montado y quiere
+   * el mismo en otro plato, la respuesta la sabe.
+   *
+   * Escribe directo en vez de esperar al guardado del plato: es un cambio de
+   * una columna que no depende de nada más del formulario, y si esperase el
+   * dueño tendría que guardar el plato para poder vincular el grupo en otro,
+   * que es justo lo que acaba de decir que quiere hacer.
+   */
+  async function promoteGroupToLibrary(groupLocalId: string) {
+    const g = groups.find((x) => x.localId === groupLocalId)
+    if (!g?.id || g.isNew) return
+
+    const { error } = await getSupabaseBrowser()
+      .from('menu_modifier_groups')
+      .update({ is_library: true })
+      .eq('id', g.id)
+
+    if (error) {
+      setSaveError(`No se pudo subir "${g.name}" a Extras: ${error.message}`)
+      return
+    }
+
+    setGroups((prev) =>
+      prev.map((x) => (x.localId === groupLocalId ? { ...x, isLibrary: true } : x)),
+    )
+    setLibraryGroups((prev) =>
+      prev.some((x) => x.id === g.id) ? prev : [...prev, { ...g, isLibrary: true }],
+    )
   }
 
   function addOptionToGroup(groupLocalId: string) {
@@ -574,6 +689,10 @@ export function useItemEditor() {
         const g = groups[i]
         if (!g) continue
 
+        // Mismo predicado que usa la card para pintarse de solo lectura, para
+        // que la UI y el guardado no puedan discrepar.
+        const loUsanOtrosPlatos = !grupoEditableDesdeElPlato(g)
+
         if (g.isDeleted) {
           if (g.id) {
             // Quitar el grupo de ESTE plato es desenlazarlo, no borrarlo. Un
@@ -613,6 +732,10 @@ export function useItemEditor() {
               max_selections: g.max_selections,
               price_display: g.price_display,
               display_order: g.display_order,
+              // Nace propio del plato. Sube a la biblioteca cuando el dueño lo
+              // decida, no cuando lo cree: al crearlo todavía no sabe si lo va a
+              // reutilizar, y si se le pregunta marcará «sí» por si acaso.
+              is_library: g.isLibrary ?? false,
             })
             .select('id')
             .single()
@@ -631,30 +754,63 @@ export function useItemEditor() {
             display_order: i,
           })
         } else {
-          const { error: gUpdErr } = await supabase
-            .from('menu_modifier_groups')
-            .update({
-              name: g.name.trim() || 'Grupo',
-              selection_type: g.selection_type,
-              is_required: g.is_required,
-              min_selections: g.min_selections,
-              max_selections: g.max_selections,
-              price_display: g.price_display,
-              display_order: g.display_order,
-            })
-            .eq('id', groupId)
-          if (gUpdErr) {
-            setSaveError(gUpdErr.message)
-            setSaving(false)
-            return false
+          // `menu_modifier_groups` y `menu_modifier_options` son del NEGOCIO, no
+          // del plato: si otros platos usan este grupo, escribir aquí les cambia
+          // el suyo. La card ya lo pinta de solo lectura, pero el corte tiene que
+          // estar TAMBIÉN aquí — la UI evita que alguien escriba, esto evita que
+          // se guarde si el estado llegara editado por otra vía.
+          //
+          // Lo que sí se sigue haciendo abajo es el enlace y el orden, que viven
+          // en la tabla puente y son de este plato.
+          if (!loUsanOtrosPlatos) {
+            const { error: gUpdErr } = await supabase
+              .from('menu_modifier_groups')
+              .update({
+                name: g.name.trim() || 'Grupo',
+                selection_type: g.selection_type,
+                is_required: g.is_required,
+                min_selections: g.min_selections,
+                max_selections: g.max_selections,
+                price_display: g.price_display,
+                display_order: g.display_order,
+              })
+              .eq('id', groupId)
+            if (gUpdErr) {
+              setSaveError(gUpdErr.message)
+              setSaving(false)
+              return false
+            }
           }
 
-          await supabase
+          // Verificar si ya está enlazado a este plato o si es una nueva vinculación
+          const { data: existingLink } = await supabase
             .from('menu_item_modifier_groups')
-            .update({ display_order: i })
+            .select('item_id')
             .eq('item_id', savedItemId)
             .eq('group_id', groupId)
+            .maybeSingle()
+
+          if (!existingLink) {
+            await supabase.from('menu_item_modifier_groups').insert({
+              item_id: savedItemId,
+              group_id: groupId,
+              display_order: i,
+            })
+          } else {
+            await supabase
+              .from('menu_item_modifier_groups')
+              .update({ display_order: i })
+              .eq('item_id', savedItemId)
+              .eq('group_id', groupId)
+          }
         }
+
+        // Las opciones son del grupo, y el grupo es del negocio. En un grupo
+        // compartido, borrar una opción aquí la borraba del menú entero: el
+        // `delete` de abajo va por `id` de opción, sin contar referencias ni
+        // preguntar. Quitar «ají» desde una hamburguesa se lo quitaba a los
+        // otros seis platos que usan «Cremas».
+        if (loUsanOtrosPlatos) continue
 
         for (let j = 0; j < g.options.length; j++) {
           const opt = g.options[j]
@@ -778,6 +934,7 @@ export function useItemEditor() {
     cats,
     formData,
     groups,
+    libraryGroups,
     hasUnsaved,
     saving,
     saveError,
@@ -791,6 +948,8 @@ export function useItemEditor() {
     toggleGroupExpand,
     deleteGroup,
     addGroup,
+    linkLibraryGroup,
+    promoteGroupToLibrary,
     addOptionToGroup,
     deleteOption,
     changeOption,
