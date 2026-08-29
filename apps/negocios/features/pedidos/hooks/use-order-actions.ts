@@ -61,7 +61,6 @@ export function useOrderActions({
       await run(async () => {
         if (!selected) return
         const id = selected.rowId
-        const isPrepaid = selected.payment === 'prepaid'
 
         if (selected.status === 'validando') {
           const res = (await post(`/business/orders/${id}/validate`, {

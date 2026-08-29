@@ -242,7 +242,6 @@ function Sidebar({ active, onSignOut }: { active: NavId; onSignOut: () => void }
     accent,
     capability,
     paused,
-    counts,
     soundOn,
     toggleSound,
     attentionCount,
@@ -830,7 +829,7 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
     }
   }, [])
 
-  const { setChannelState, refetchIntervalMs, healthStatus } = useChannelHealth()
+  const { setChannelState, refetchIntervalMs } = useChannelHealth()
 
   /**
    * DOS CONSULTAS, PORQUE SON DOS COSAS CON REGLAS DISTINTAS.

@@ -2,7 +2,7 @@
 
 import { Button, Card, Icon } from '@tindivo/ui'
 import { useState } from 'react'
-import { mapsCenterSanJacinto, mapsDirToCoords } from '@/lib/deeplinks'
+import { mapsCenterSanJacinto } from '@/lib/deeplinks'
 import { BAND_LABEL } from '@/lib/orders/presentation'
 import type { OrderDetailResponse } from '@/lib/types'
 import { MapSheet } from './map-sheet'
