@@ -1,9 +1,9 @@
 'use client'
 
 import { GlassTopBar, Icon } from '@tindivo/ui'
-import { type ReactNode, useEffect, useMemo, useState } from 'react'
+import { type ReactNode, useMemo } from 'react'
 import { useCashSummary } from '@/features/efectivo/hooks/use-cash-summary'
-import { getSupabaseBrowser } from '@/lib/supabase/client'
+import { useDriverName } from '@/hooks/use-driver-orders'
 import { BottomNav, type BottomNavItem } from './bottom-nav'
 import { CapacityIndicator } from './capacity-indicator'
 import { DriverToastHost } from './driver-toast'
@@ -29,18 +29,15 @@ function initialsOf(name: string): string {
  * El nombre del motorizado se lee AQUÍ y no en la home porque ahora lo usan dos
  * cosas de la shell: el saludo del turno y las iniciales del avatar. Antes lo
  * pedía `Home` para escribir «Hola, X» encima de la bandeja.
+ *
+ * Y ya no lo pide la shell por su cuenta: sale del store del board, que también
+ * necesita la fila de `drivers` para saber cuál es tu `driver_id`. Eran TRES
+ * consultas a la misma fila en cada montaje —dos por `id` (una por instancia del
+ * hook del board) y esta por `full_name`—; ahora es una.
  */
 export function DriverShell({ children }: { children: ReactNode }) {
   const { businesses } = useCashSummary()
-  const [driverName, setDriverName] = useState<string | null>(null)
-
-  useEffect(() => {
-    getSupabaseBrowser()
-      .from('drivers')
-      .select('full_name')
-      .maybeSingle()
-      .then(({ data }) => setDriverName(data?.full_name ?? null))
-  }, [])
+  const driverName = useDriverName()
 
   // Conteo de pedidos en efectivo pendientes de liquidar por el motorizado
   const pendingCashCount = useMemo(

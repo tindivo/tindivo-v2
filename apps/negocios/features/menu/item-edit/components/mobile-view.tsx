@@ -67,7 +67,12 @@ export function MobileView(props: MobileViewProps) {
         />
       )}
       {showPreviewMobile && (
-        <div className="fixed inset-0 z-[200] flex flex-col justify-end bg-ink/45">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Vista del cliente"
+          className="fixed inset-0 z-[200] flex flex-col justify-end bg-ink/45"
+        >
           <div className="flex h-[88%] max-h-[88%] flex-col overflow-hidden rounded-t-[24px] bg-card">
             <div className="flex justify-center py-2.5 pb-1">
               <div className="h-1 w-9 rounded-full bg-ink/20" />

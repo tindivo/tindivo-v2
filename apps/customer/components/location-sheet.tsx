@@ -130,7 +130,12 @@ export function LocationSheet({
     // deja la tarjeta de abajo. Con el mapa a sangre por detrás de la tarjeta,
     // el centro geométrico del lienzo (donde vive el pin) cae más abajo que el
     // centro de lo que la persona ve, y el punto que fija no es el que mira.
-    <div className="fixed inset-0 z-[95] flex flex-col bg-surface animate-[t-fade-in_180ms_ease]">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Ajustar la ubicación en el mapa"
+      className="fixed inset-0 z-[95] flex flex-col bg-surface animate-[t-fade-in_180ms_ease]"
+    >
       <div className="relative min-h-0 flex-1">
         <MapCanvas
           center={initial}

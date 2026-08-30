@@ -73,6 +73,7 @@ export function TrackingCancelRow({ data, countdown, cancel }: TrackingCancelRow
             className="mx-6 max-w-[360px] rounded-[22px] bg-surface p-6 text-center"
             role="dialog"
             aria-modal="true"
+            aria-label="¿Cancelar el pedido?"
           >
             <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-danger/10 text-danger">
               <Icon name="error" size={22} />

@@ -39,7 +39,12 @@ export function OpeningControls() {
   return (
     <>
       {askingFirstTime && (
-        <div className="fixed inset-0 z-[320] flex items-center justify-center bg-ink/45 p-5">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="¿Abren hoy?"
+          className="fixed inset-0 z-[320] flex items-center justify-center bg-ink/45 p-5"
+        >
           <div className="w-full max-w-[380px] rounded-[20px] bg-card p-6 text-center shadow-elev-4">
             <span className="mx-auto mb-3.5 flex h-[52px] w-[52px] items-center justify-center rounded-2xl bg-brand/10 text-brand">
               <Icon name="store" size={26} filled />

@@ -49,7 +49,12 @@ export function ChangeSheet({
   const customValid = Number.isFinite(parsed) && parsed >= 0
 
   return (
-    <div className="fixed inset-0 z-[320] flex items-end justify-center bg-ink/45 p-0 sm:items-center sm:p-5">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="¿Cuánto vuelto tienes?"
+      className="fixed inset-0 z-[320] flex items-end justify-center bg-ink/45 p-0 sm:items-center sm:p-5"
+    >
       <div className="w-full max-w-[420px] rounded-t-[20px] bg-card p-6 shadow-elev-4 sm:rounded-[20px]">
         <div className="mb-1 flex items-start justify-between gap-3">
           <h3 className="text-[17px] font-bold text-ink">¿Cuánto vuelto tienes?</h3>

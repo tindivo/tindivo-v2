@@ -8,7 +8,12 @@ interface ConfirmDeleteModalProps {
 
 export function ConfirmDeleteModal({ itemName, onConfirm, onCancel }: ConfirmDeleteModalProps) {
   return (
-    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-ink/45 p-5">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={`¿Eliminar “${itemName}”?`}
+      className="fixed inset-0 z-[300] flex items-center justify-center bg-ink/45 p-5"
+    >
       <div className="w-full max-w-[360px] rounded-[20px] bg-card p-6 text-center shadow-elev-4">
         <span className="mx-auto mb-3.5 flex h-[52px] w-[52px] items-center justify-center rounded-2xl bg-danger/10 text-danger">
           <Icon name="delete" size={26} filled />

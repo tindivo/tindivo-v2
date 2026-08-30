@@ -61,7 +61,9 @@ const RUTAS: Record<keyof typeof APPS, string[]> = {
     `/public/schedule?businessId=${E2E.BUSINESS_ID}`,
   ],
   customer: ['/', '/entrar', `/negocio/${E2E.BUSINESS_ID}`, '/checkout', '/cuenta', '/pedidos'],
-  negocios: ['/'],
+  // El editor de plato y el panel de Extras: los toca el spec de negocios y
+  // son de las rutas más caras de compilar.
+  negocios: ['/', '/menu', '/menu/extras'],
   motorizados: ['/'],
 }
 

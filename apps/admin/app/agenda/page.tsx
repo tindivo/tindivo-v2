@@ -1046,7 +1046,12 @@ export default function AgendaPage() {
       {/* POPUP / MODAL DE DIRECCIONES DEL CLIENTE                                   */}
       {/* ========================================================================= */}
       {activeViewingCustomer && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Direcciones de ${activeViewingCustomer.customer_name}`}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto"
+        >
           <div className="w-full max-w-xl rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-4 my-auto">
             <div className="flex items-center justify-between border-b border-border pb-3">
               <div>
@@ -1158,7 +1163,12 @@ export default function AgendaPage() {
       {/* MODAL DE CURACIÓN Y EDICIÓN CON MAPA LEAFLET INTERACTIVO                   */}
       {/* ========================================================================= */}
       {editingAddress && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Curar / Editar Dirección"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto"
+        >
           <div className="w-full max-w-xl rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-4 my-auto">
             <div className="flex items-center justify-between border-b border-border pb-3">
               <div>
@@ -1271,7 +1281,12 @@ export default function AgendaPage() {
 
       {/* Modal de Confirmación de Eliminación */}
       {deletingRecord && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="¿Eliminar registro de la agenda?"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4"
+        >
           <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-4">
             <h3 className="text-lg font-bold text-ink">¿Eliminar registro de la agenda?</h3>
             <p className="text-sm text-ink-muted">

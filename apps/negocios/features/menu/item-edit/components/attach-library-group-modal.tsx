@@ -36,7 +36,12 @@ export function AttachLibraryGroupModal({
   })
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/45 p-4 animate-[t-fade-in_150ms_ease]">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Vincular grupo de Extras"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/45 p-4 animate-[t-fade-in_150ms_ease]"
+    >
       <div className="flex w-full max-w-[540px] max-h-[85vh] flex-col overflow-hidden rounded-2xl bg-card shadow-elev-3">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-ink/[0.06] px-4 py-3.5">
