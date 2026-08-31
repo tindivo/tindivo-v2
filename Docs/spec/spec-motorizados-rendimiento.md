@@ -858,6 +858,47 @@ con `updated_at` o `last_successful_at` borrarías el teléfono que más funcion
   **el que dice**, no otro.
 - `apps/api` en verde, incluido `lib/__tests__/push-subscriptions.integration.test.ts`.
 
+### RESULTADO — 2026-08-31 · ✅ LA 6.2, HECHA. LA 6.3 Y LA 6.4 SIGUEN ABIERTAS
+
+**6.1 — cumplido por omisión.** No se tocó una sola fila de `push_subscriptions` en
+prod. La 0198 es `add column if not exists` más un índice parcial.
+
+**6.2 — HECHA.** `install_id` es la clave de la limpieza. `getInstallId()` vive en
+`packages/ui/src/push.ts` y lo mandan las cuatro apps: admin, customer y negocios por
+`subscribeToPush`, y motorizados desde su propio `use-push-subscription.ts`. Sin
+`installId` no se borra nada, y **no hay fallback al `user_agent`**: reintroducirlo
+dejaría el fallo vivo para los clientes viejos, y encima de forma asimétrica.
+
+El criterio de paso se verificó **como test, no a mano**, que es más fuerte porque
+queda corriendo: `T5-bis dos Android de la misma persona con el MISMO user_agent
+sobreviven` usa la cadena congelada real (`Android 10; K …Chrome/151…`) en las dos
+altas, con `install_id` distinto, y espera dos filas.
+
+Y se comprobó que **muerde**, que es lo que separa un test de un adorno. Con la clave
+vieja restaurada a mano:
+
+```
+× T5-bis dos Android … sobreviven
+  AssertionError: expected [ { …(8) } ] to have a length of 2 but got 1
+Tests  2 failed | 22 passed (24)
+```
+
+Esa `length of 1` es literalmente el fallo: la segunda alta se comió a la primera.
+Con la clave nueva, **24/24 en verde** y `pnpm type-check` 11/11.
+
+**LO QUE FALTA PARA CERRAR DEL TODO: la 0198 está aplicada en LOCAL pero NO en
+`tindivo-prod`** (remoto en 0197 el 2026-08-31). Hasta que se haga `supabase db push`,
+el arreglo no protege a nadie en producción. `packages/supabase/src/database.types.ts`
+lleva las tres líneas de `install_id` insertadas a mano —el `db:types` apunta al
+remoto— así que **tras el push toca `pnpm db:types` de verdad** para regenerarlo.
+
+Lo de "cerrar sesión en uno deja solo el otro" no cambió con este trabajo: sigue siendo
+el `DELETE` por endpoint de siempre, y sigue cubierto por sus tests.
+
+**6.3 y 6.4 — SIN EMPEZAR.** La lista de dispositivos en `/perfil` es el único arreglo
+honesto para el teléfono del cajón, y sigue pendiente. La 6.4 era opcional y lo sigue
+siendo.
+
 ---
 
 ## ANEXO — Techos que no son bugs todavía
