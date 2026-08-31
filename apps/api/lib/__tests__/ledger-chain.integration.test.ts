@@ -33,6 +33,7 @@ import {
   seedOrder,
 } from './helpers/ledger-fixtures'
 import { localClient } from './helpers/local-db'
+import { requirePresent } from './helpers/require-present'
 
 /** Liquida los cargos indicados. Devuelve el error crudo del RPC, si lo hubo. */
 async function liquidar(
@@ -143,9 +144,9 @@ describe('cadena del ledger — entrega, cargos y liquidación', () => {
         totalMentiroso,
       )
 
-      expect(error).not.toBeNull()
-      expect(error!.code).toBe('P0001')
-      expect(error!.message).toMatch(/no coincide con la suma de los cargos/)
+      const fallo = requirePresent(error, 'el error del RPC al liquidar con un total que no cuadra')
+      expect(fallo.code).toBe('P0001')
+      expect(fallo.message).toMatch(/no coincide con la suma de los cargos/)
 
       // Y no dejó nada a medias: los cargos siguen pending y el saldo intacto.
       const despues = await readBusinessCharges(world.businessId)
@@ -246,9 +247,12 @@ describe('cadena del ledger — entrega, cargos y liquidación', () => {
       const despues = await readBusinessCharges(world.businessId)
       expect(despues.every((c) => c.status === 'settled')).toBe(true)
 
-      const devolucion = despues.find((c) => c.charge_type === 'refund_charge')
-      expect(devolucion!.status).toBe('settled')
-      expect(devolucion!.payment_id).not.toBeNull()
+      const devolucion = requirePresent(
+        despues.find((c) => c.charge_type === 'refund_charge'),
+        'el cargo refund_charge tras liquidar',
+      )
+      expect(devolucion.status).toBe('settled')
+      expect(devolucion.payment_id).not.toBeNull()
       expect(await readBalanceDue(world.businessId)).toBe(0)
     } finally {
       await cleanupLedgerWorld(world)

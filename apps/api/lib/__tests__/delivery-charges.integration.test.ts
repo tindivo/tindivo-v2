@@ -26,6 +26,17 @@ import {
   seedLedgerWorld,
   seedOrder,
 } from './helpers/ledger-fixtures'
+import { requirePresent } from './helpers/require-present'
+
+/** Los dos cargos que mira este test. Falla con el tipo que falta, no con `undefined`. */
+const findCharge = (
+  cargos: Awaited<ReturnType<typeof readCharges>>,
+  type: 'delivery_fee' | 'commission',
+) =>
+  requirePresent(
+    cargos.find((c) => c.charge_type === type),
+    `el cargo ${type} del pedido`,
+  )
 
 describe('generate_delivery_charges — el trigger que alimenta el ledger', () => {
   // ── A1.1 ────────────────────────────────────────────────────────────────────
@@ -46,15 +57,13 @@ describe('generate_delivery_charges — el trigger que alimenta el ledger', () =
       const cargos = await readCharges(orderId)
       expect(cargos).toHaveLength(2)
 
-      const fee = cargos.find((c) => c.charge_type === 'delivery_fee')
-      const com = cargos.find((c) => c.charge_type === 'commission')
+      const fee = findCharge(cargos, 'delivery_fee')
+      const com = findCharge(cargos, 'commission')
 
-      expect(fee).toBeDefined()
-      expect(com).toBeDefined()
-      expect(fee!.amount).toBe(esperado.fee)
-      expect(com!.amount).toBe(esperado.commission)
-      expect(fee!.status).toBe('pending')
-      expect(com!.status).toBe('pending')
+      expect(fee.amount).toBe(esperado.fee)
+      expect(com.amount).toBe(esperado.commission)
+      expect(fee.status).toBe('pending')
+      expect(com.status).toBe('pending')
     } finally {
       await cleanupLedgerWorld(world)
     }
@@ -84,21 +93,21 @@ describe('generate_delivery_charges — el trigger que alimenta el ledger', () =
       expect(money.delivery_distance_band).toBe('far')
 
       const cargos = await readCharges(orderId)
-      const fee = cargos.find((c) => c.charge_type === 'delivery_fee')
-      const com = cargos.find((c) => c.charge_type === 'commission')
+      const fee = findCharge(cargos, 'delivery_fee')
+      const com = findCharge(cargos, 'commission')
 
-      expect(fee!.amount).toBe(esperado.fee)
-      expect(com!.amount).toBe(esperado.commission)
+      expect(fee.amount).toBe(esperado.fee)
+      expect(com.amount).toBe(esperado.commission)
 
       // El envío cobrado es el del pedido, NO `delivery_bands.far`.
-      expect(fee!.amount).toBe(2.0)
-      expect(fee!.amount).not.toBe(cfg.bands.far)
+      expect(fee.amount).toBe(2.0)
+      expect(fee.amount).not.toBe(cfg.bands.far)
 
       // Y desde la 0125, la comisión es PLANA: `far` cobra exactamente el mismo
       // `commissions.delivery` que `near`. Es la prueba de que el modelo nuevo
       // no reintrodujo diferencia por banda. Si la Parte D vuelve a cobrar más
       // por las lejanas, este es el test que tiene que cambiar a propósito.
-      expect(com!.amount).toBe(cfg.commissions.delivery)
+      expect(com.amount).toBe(cfg.commissions.delivery)
     } finally {
       await cleanupLedgerWorld(world)
     }
@@ -214,14 +223,14 @@ describe('generate_delivery_charges — el trigger que alimenta el ledger', () =
       })
 
       const cargos = await readCharges(orderId)
-      const com = cargos.find((c) => c.charge_type === 'commission')
+      const com = findCharge(cargos, 'commission')
 
-      expect(com!.amount).toBe(conOverride.commission)
-      expect(com!.amount).not.toBe(sinOverride.commission)
+      expect(com.amount).toBe(conOverride.commission)
+      expect(com.amount).not.toBe(sinOverride.commission)
 
       // El envío no lo toca el override: sigue saliendo del pedido.
-      const fee = cargos.find((c) => c.charge_type === 'delivery_fee')
-      expect(fee!.amount).toBe(conOverride.fee)
+      const fee = findCharge(cargos, 'delivery_fee')
+      expect(fee.amount).toBe(conOverride.fee)
 
       // Y A1.4 sigue cuadrando con el override puesto.
       const money = await readOrderMoney(orderId)

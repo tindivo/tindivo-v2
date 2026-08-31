@@ -25,6 +25,7 @@ import {
   seedFraudClaim,
   sumPendingLedgerDebt,
 } from './helpers/local-db'
+import { requirePresent } from './helpers/require-present'
 
 describe('resolve_fraud_claim — invariante contable (integración)', () => {
   let seed: SeedResult
@@ -75,10 +76,12 @@ describe('resolve_fraud_claim — invariante contable (integración)', () => {
 
     expect(error).toBeNull()
     expect(data).toHaveLength(1)
-    expect(data![0].charge_type).toBe('refund_charge')
-    expect(Number(data![0].amount)).toBe(seed.amount)
-    expect(data![0].status).toBe('pending')
-    expect(data![0].business_id).toBe(seed.businessId)
+
+    const cargo = requirePresent(data?.[0], 'el refund_charge del pedido del claim')
+    expect(cargo.charge_type).toBe('refund_charge')
+    expect(Number(cargo.amount)).toBe(seed.amount)
+    expect(cargo.status).toBe('pending')
+    expect(cargo.business_id).toBe(seed.businessId)
   })
 
   // ── Assert (C): balance_due subió exactamente una vez ───────────────────────
@@ -95,7 +98,7 @@ describe('resolve_fraud_claim — invariante contable (integración)', () => {
       .single()
 
     expect(error).toBeNull()
-    const balanceAfter = Number(bizAfter!.balance_due)
+    const balanceAfter = Number(requirePresent(bizAfter, 'el negocio del claim').balance_due)
     expect(balanceAfter).toBe(balanceBefore + seed.amount)
   })
 
