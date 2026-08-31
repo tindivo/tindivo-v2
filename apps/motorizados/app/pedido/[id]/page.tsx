@@ -297,7 +297,10 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
   if (mode === 'delivered') {
     return (
       <main className="mx-auto min-h-dvh max-w-[480px] bg-surface px-4 pb-10">
-        <ScreenHeader title={headerTitle} onBack={() => router.push('/')} />
+        <ScreenHeader
+          title={headerTitle}
+          onBack={() => (window.history.length > 1 ? router.back() : router.push('/historial'))}
+        />
         <DeliveredScreen detail={detail} justDelivered={false} />
       </main>
     )
