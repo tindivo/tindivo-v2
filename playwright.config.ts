@@ -99,6 +99,18 @@ export default defineConfig({
         baseURL: 'http://localhost:3002',
       },
     },
+    /**
+     * Repone el mundo antes de capturar. `visual` depende de esto porque
+     * `business_service_days` caduca a medianoche y sin la fila de hoy el panel
+     * abre el modal «¿Abren hoy?» encima de todo: doce capturas rojas por algo
+     * que no es la UI. El detalle, en `e2e/visual/mundo-determinista.setup.ts`.
+     */
+    {
+      name: 'mundo-visual',
+      dependencies: ['precalentar'],
+      testMatch: /visual[/]mundo-determinista\.setup\.ts/,
+      use: { ...devices['Desktop Chrome'] },
+    },
     // Sesión de negocios: corre una vez y deja la cookie en disco.
     {
       name: 'setup-negocios',
@@ -109,7 +121,7 @@ export default defineConfig({
     // Regresión visual: viewport FIJO — si cambia, cambian todas las capturas.
     {
       name: 'visual',
-      dependencies: ['setup-negocios'],
+      dependencies: ['mundo-visual', 'setup-negocios'],
       testMatch: /visual[\\/].*\.spec\.ts/,
       use: {
         ...devices['Desktop Chrome'],
