@@ -508,6 +508,63 @@ Esta parte toca código compartido por las cuatro apps. Si `requireRole` cambia,
 suites de `admin`, `negocios` y `customer` tienen que correr también**. No la cierres
 con solo los tests de motorizados.
 
+### RESULTADO — 2026-08-31 · ✅ SOLO LA 4.4, Y LAS OTRAS TRES SE DESCARTAN
+
+Hecha la **4.4** y nada más. `requireRole` **no se ha tocado**, así que el aviso de
+alcance de arriba no llegó a aplicar: las suites de `admin`, `negocios` y `customer`
+no hacía falta correrlas.
+
+**Qué cambió.** El `select` suelto a `drivers` que resolvía el nombre del solicitante
+desaparece; ahora viaja embebido en la consulta de `order_transfer_requests`. Un salto
+en serie menos en `/driver/team`, que se llama cada 15 s.
+
+El embed necesita nombrar la constraint
+(`drivers!order_transfer_requests_to_driver_id_fkey`) porque la tabla tiene **dos** FK
+a `drivers`. Sin nombrarla, PostgREST responde **300 / `PGRST201`** — comprobado a
+propósito como control negativo, y su propio `hint` nombra la constraint que se usó.
+La cardinalidad que declara es `many-to-one`, o sea objeto y no array, que es lo que
+el mapeo asume.
+
+**Verificación funcional (la que importa).** No había ni hay ningún test que cubra
+`/driver/team`, así que se verificó contra el endpoint vivo con un JWT de motorizado
+real y una solicitud pendiente sembrada a mano:
+
+```
+{ "shortId": "PERFTEST", "total": 42, "businessName": "La Florencia E2E",
+  "deliveryReference": "Jr. Los Pinos, casa azul",
+  "requesterName": "Motorizado 2 E2E", "reason": "me queda de camino" }
+```
+
+`apps/api` en verde, **225/225** (27 archivos). `type-check` y `biome` limpios.
+El pedido y la solicitud sembrados se borraron, confirmado con un `select`, no con el
+204 del `DELETE`.
+
+**La medición p50, y por qué no dice lo que parecía decir.** Primera pasada:
+213 ms antes → 173 ms después. Segunda pasada, invirtiendo el orden para descartar
+sesgo de calentamiento: **185 ms antes → 190 ms después**. O sea que los 40 ms de la
+primera eran **ruido, no señal**, y hay que decirlo así.
+
+Medido el salto que se elimina por separado, contra el Postgres **local**:
+`p50 = 13 ms` (p90 34 ms, n=40). Está por debajo de la banda de ruido de Next en modo
+dev (±20-40 ms end-to-end), y por eso el A/B no lo resuelve. **La mejora es real y
+estructural —una ida y vuelta menos— pero en local no es medible; donde se nota es en
+prod, donde API y base no comparten máquina.** Ojo con esto antes de pedir un número
+de mejora end-to-end en esta caja.
+
+**Lo que NO se hizo, y por qué (decisión, no olvido):**
+
+- **4.1 (verificar el JWT en proceso con `jose` + JWKS)** — es el que más rinde por
+  petición de todo el spec, y el único cambio que puede tumbar `admin`, `negocios` y
+  `customer` a la vez. El piso de 470-750 ms no es lo que le duele al motorizado con
+  10 pedidos por noche. Riesgo/beneficio malo **hoy**; el día que haya volumen, esta
+  es la primera que hay que retomar.
+- **4.2 (cachear el rol por token)** — barata de escribir y cara de razonar: hay que
+  decidir qué pasa cuando a alguien se le revoca un rol y su token sigue vivo 30-60 s.
+  Con 1-2 motorizados, una ráfaga de polls cada 15 s no justifica abrir esa puerta.
+- **4.3 (fusionar `drivers` en el `Promise.all`)** — **no se puede**, y el propio spec
+  ya lo decía: en `/driver/team` el `id` del driver condiciona los filtros de las dos
+  consultas siguientes, así que no hay nada que paralelizar.
+
 ---
 
 ## PARTE 5 — Render
