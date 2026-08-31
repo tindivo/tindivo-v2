@@ -56,6 +56,27 @@ let authSub: { unsubscribe: () => void } | null = null
 let visibilityBound = false
 /** Usuario para el que ya se cargó, para no repetir por cada evento de auth. */
 let loadedFor: string | null = null
+/**
+ * Carga en vuelo. `start()` pide una vez y, unos milisegundos después,
+ * `onAuthStateChange` entrega `INITIAL_SESSION` con `loadedFor` todavía en
+ * `null`, así que pedía OTRA. Eran dos `GET /driver/availability` idénticos con
+ * 23 ms de separación en cada arranque — medidos en build de producción, porque
+ * en dev el remontaje de StrictMode los tapaba dentro de un tercero.
+ *
+ * `loadedFor` no bastaba para cerrarlo: se fija DENTRO del callback de auth, y
+ * para entonces la primera carga solo está en vuelo, no terminada. Esto une las
+ * dos a la misma promesa sin quitar ninguno de los dos caminos, que existen por
+ * razones distintas y documentadas (arranque en frío vs. sesión que llega tarde).
+ */
+let inFlight: Promise<void> | null = null
+
+/** `load()` compartido: si ya hay una carga en vuelo, se engancha a ella. */
+function loadShared(): Promise<void> {
+  inFlight ??= load().finally(() => {
+    inFlight = null
+  })
+  return inFlight
+}
 
 function emit(next: Snapshot): void {
   snapshot = next
@@ -89,11 +110,11 @@ function onVisibility(): void {
   // Revalidar al volver a primer plano: el cron `close_drivers_outside_schedule`
   // puede haber apagado al motorizado mientras la app estaba en background, y
   // la pantalla seguiría mostrando "disponible" hasta el siguiente toque.
-  if (document.visibilityState === 'visible') void load()
+  if (document.visibilityState === 'visible') void loadShared()
 }
 
 function start(): void {
-  void load()
+  void loadShared()
 
   // La sesión puede hidratarse (o renovarse, o llegar tras el login) después de
   // arrancar. Este es el reintento que convierte el skeleton en estado real.
@@ -110,7 +131,7 @@ function start(): void {
     }
     if (loadedFor === session.user.id) return
     loadedFor = session.user.id
-    void load()
+    void loadShared()
   })
   authSub = data.subscription
 
@@ -140,6 +161,9 @@ async function setAvailable(next: boolean): Promise<boolean> {
       return false
     }
     await api.post('/driver/availability', { available: next })
+    // `load()` a pelo, NO `loadShared()`: aquí acaba de cambiar el estado en el
+    // servidor y hace falta una lectura NUEVA. Engancharse a una carga en vuelo
+    // devolvería el valor de ANTES del POST.
     await load()
     return true
   } catch (err) {

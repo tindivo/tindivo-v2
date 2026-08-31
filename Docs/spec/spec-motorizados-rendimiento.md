@@ -352,6 +352,30 @@ seguidos en un turno, y comprobar que el séptimo se oye.
 corre e2e en paralelo te quedas sin montaje a media medición — y el tablero vacío
 parece una regresión tuya cuando no lo es.
 
+#### ADENDA — 2026-08-31 · la reserva del `AudioContext` sigue abierta, y por qué
+
+No se pudo cerrar con una prueba automática, así que se deja dicho en vez de darla por
+buena.
+
+Lo que **sí** está establecido, por lectura: el contexto es un `let ctx` de módulo y
+`getCtx()` abre con `if (ctx !== null) return ctx`. Son seis líneas con un memo; N
+pitidos construyen **un** contexto, y el límite de 6 por documento de Chrome no se
+alcanza nunca.
+
+Lo que **no** se pudo montar fue el ensayo de las 7 alertas contra la app viva, por dos
+estorbos del entorno, ninguno del código:
+
+- La base local es **compartida con otro agente**, que lanzó una limpieza a mitad del
+  ensayo y se llevó por delante los pedidos sembrados (la tabla `orders` quedó en 0).
+- La pestaña automatizada corre con `document.visibilityState = 'hidden'`, y ahí Chrome
+  estrangula los timers a ~1/min: la cadencia de 5 s de la alarma deja de ser la que se
+  quiere medir.
+
+**Lo que queda es una comprobación humana, y no por pereza:** lo único que un test no
+puede cubrir aquí es que el pitido SUENE en la alerta número 7, y eso pide un oído.
+Disparar 7 alarmas seguidas y confirmar que la última se oye. Todo lo demás ya está
+cubierto por lectura.
+
 ### Nota sobre el reloj de la base
 
 Para forzar un `overdue` en local: los relojes de `orders` **no se siembran en el
@@ -439,6 +463,51 @@ detrás de la transición 0→1 del `refCount`.
 de color de la barra superior sin recargar. Es el único cambio de comportamiento
 observable de esta parte (antes funcionaba por accidente, con dos instancias
 recargando por su cuenta; ahora las dos leen el mismo snapshot).
+
+#### ADENDA — 2026-08-31 · comprobado en build de producción, y apareció un duplicado más
+
+**El punto de color: ✅ comprobado.** Apagar el turno desde `/perfil` deja la barra
+superior en `● NO DISPONIBLE` en el mismo render, sin recargar, y volver a encenderlo
+la devuelve a `● DISPONIBLE`. Las dos direcciones.
+
+**Los conteos, ya en `next build` + `next start` (sin StrictMode):**
+
+| Petición | Antes (dev) | Ahora (prod) | |
+|---|---|---|---|
+| `/rest/v1/orders` (el board, PARTE 1) | 2 | **1** | ✅ |
+| `/driver/cash-settlements` (PARTE 3) | 2 | **1** | ✅ |
+| `/driver/availability` (PARTE 3) | 3 | **1** | ✅ *tras el arreglo de abajo* |
+| `/push/subscriptions/me` | — | 2 | esperado: `usePushSubscription` NO se convirtió |
+| `/driver/team` | 2 | 2 | ver nota |
+
+**El duplicado que el build de producción destapó.** `useAvailability` seguía pidiendo
+**dos veces** en cada arranque, con 23 ms de separación, y en dev quedaba escondido
+dentro de un tercero que sí era de StrictMode. El mecanismo, con la traza en la mano:
+
+1. `start()` llama a `load()`.
+2. Acto seguido registra `onAuthStateChange`, y Supabase entrega `INITIAL_SESSION`
+   desde `_emitInitialSession` unos milisegundos después.
+3. En ese instante `loadedFor` todavía es `null` —se fija DENTRO del callback, y la
+   primera carga solo está EN VUELO, no terminada—, así que el guard no ve nada y
+   dispara un `GET` idéntico.
+
+Arreglado con un guard de promesa en vuelo (`loadShared()`), que une las dos llamadas
+a la misma petición **sin quitar ninguno de los dos caminos**: existen por razones
+distintas y las dos están documentadas en el fichero (arranque en frío vs. sesión que
+llega tarde). `setAvailable` sigue usando `load()` a pelo a propósito: después de su
+`POST` necesita una lectura NUEVA, y engancharse a una carga en vuelo le devolvería el
+valor de antes.
+
+Verificado en producción por partida doble: la traza muestra un solo `load()` con el
+segundo `loadShared()` recibiendo `inFlight = true` desde `_emitInitialSession`, y en
+`/perfil` —donde los DOS consumidores están montados a la vez— sale **una** petición
+al montar.
+
+**Nota sobre `/driver/team`: 2, y NO es de esta parte.** Salen del canal de realtime,
+que se cierra y se reabre en el arranque (`canal CLOSED` → `SUBSCRIBED` en la consola)
+y cada apertura hace `void refresh()`. `useTeam` ya era store antes de este spec, así
+que queda fuera de su alcance; el camino que duplica es además el mismo que reabre el
+canal, o sea que tocarlo es tocar la entrega de eventos. Anotado, no arreglado.
 
 ---
 
@@ -803,11 +872,18 @@ se calcula filtrando esas 50 filas **en cliente**. Todavía cabe. El margen es u
 buena. El día que se acerque, el arreglo es un filtro `created_at >= today` en la
 consulta, no subir el límite.
 
-**A2 · El canal de `orders` no lleva filtro.**
+**A2 · El canal de `orders` no lleva filtro.** *(visto en vivo el 2026-08-31)*
 `use-driver-orders.ts:96` escucha `event: '*'` sobre la tabla entera. La RLS acota lo
 que llega, así que es **correcto** — pero cualquier cambio en una fila visible provoca
 un refetch de las 50, no un parche de esa fila. Con un solo restaurante en el piloto
 da igual. Con cinco, no.
+
+Se vio ocurrir, y conviene tenerlo escrito: mientras otro agente sembraba pedidos en la
+base local, la app registró **81 refetches del board en 11 segundos**. No es un fallo
+—cada uno es un evento legítimo sobre una fila visible— pero es la forma exacta que
+tendrá el problema cuando el volumen suba: una ráfaga de escrituras se convierte en una
+ráfaga de consultas de 50 filas. El arreglo sigue siendo el de arriba (parchear la fila
+del evento en vez de repedir las 50), no subir el `.limit`.
 
 ---
 
