@@ -11,6 +11,12 @@ const SubSchema = z.object({
   endpoint: z.string().url().max(1000),
   keys: z.object({ p256dh: z.string().min(1).max(300), auth: z.string().min(1).max(300) }),
   userAgent: z.string().max(400).optional(),
+  /**
+   * UUID por instalación de PWA, generado y guardado por el cliente. Es la
+   * identidad REAL del dispositivo; `userAgent` no lo es (ver el paso 2).
+   * Opcional porque un cliente sin actualizar no lo manda todavía.
+   */
+  installId: z.string().min(8).max(64).optional(),
 })
 
 /**
@@ -54,15 +60,35 @@ export async function POST(req: Request): Promise<Response> {
       .neq('user_id', user.id)
     if (e1) console.error('[push:subscribe] cleanup-foreign failed', e1.message)
 
-    // 2) Zombies del MISMO usuario en el MISMO navegador.
-    // Mismo user_agent + endpoint distinto = endpoint rotado.
+    // 2) Zombies del MISMO usuario en el MISMO DISPOSITIVO.
+    // Mismo install_id + endpoint distinto = endpoint rotado.
     // Conservamos el actual (se upserta abajo), borramos el resto.
-    if (body.userAgent) {
+    //
+    // LA CLAVE ES `install_id` Y NO `user_agent`, Y ESO NO ES UN DETALLE.
+    //
+    // Con `user_agent` esto borraba de más. Desde la *UA reduction* de Chrome,
+    // el UA de Android está congelado en `Android 10; K` y es idéntico byte a
+    // byte entre teléfonos distintos: en `tindivo-prod` hay nueve dispositivos
+    // de nueve usuarios compartiendo la misma cadena exacta. Entre usuarios no
+    // había daño (el borrado va acotado con `user_id`), pero DENTRO de un
+    // usuario dos Android se borraban la suscripción mutuamente — el último en
+    // abrir la app dejaba al otro sin avisos, en silencio, y el otro no se
+    // enteraba hasta que un pedido no le sonaba. Justo el fallo que este
+    // endpoint existe para evitar.
+    //
+    // SIN `installId` NO SE BORRA NADA, y tampoco se cae de vuelta al
+    // `user_agent`. El fallback parece prudente y es lo contrario: dejaría el
+    // fallo vivo para los clientes viejos, y además de forma ASIMÉTRICA — un
+    // Android sin actualizar borraría al que sí manda `installId`, pero no al
+    // revés. Lo que se pierde es una fila rancia cuando un cliente viejo rota
+    // su endpoint; eso lo recoge la purga por 404/410 de `send-push` en el
+    // siguiente envío, y no le apaga los avisos a nadie mientras tanto.
+    if (body.installId) {
       const { error: e2 } = await service
         .from('push_subscriptions')
         .delete()
         .eq('user_id', user.id)
-        .eq('user_agent', body.userAgent)
+        .eq('install_id', body.installId)
         .neq('endpoint', body.endpoint)
       if (e2) console.error('[push:subscribe] cleanup-zombies failed', e2.message)
     }
@@ -75,7 +101,11 @@ export async function POST(req: Request): Promise<Response> {
         endpoint: body.endpoint,
         p256dh: body.keys.p256dh,
         auth: body.keys.auth,
+        // `user_agent` sigue guardándose, pero YA NO ES UNA CLAVE: vale como
+        // etiqueta legible para una persona que mire la tabla ("iPhone 18.1.1",
+        // "Android"), no para decidir qué fila borrar.
         user_agent: body.userAgent ?? null,
+        install_id: body.installId ?? null,
         failure_count: 0,
         last_failed_at: null,
       },

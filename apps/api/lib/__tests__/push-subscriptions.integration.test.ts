@@ -45,6 +45,16 @@ const ANY_RUN_PREFIX = `${FCM}/test-push-`
 const KEYS = { p256dh: 'p256dh-de-prueba', auth: 'auth-de-prueba' }
 const UA_CHROME = 'UA-Chrome'
 const UA_SAFARI = 'UA-Safari'
+/**
+ * El `user_agent` REAL que Chrome manda en cualquier Android desde la *UA
+ * reduction*. Nueve dispositivos de `tindivo-prod` comparten esta cadena byte a
+ * byte. Va literal a propósito: es la razón de que la limpieza no pueda usarlo
+ * como identidad de dispositivo.
+ */
+const UA_ANDROID =
+  'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Mobile Safari/537.36'
+const INSTALL_A = 'install-aaaaaaaa-1111'
+const INSTALL_B = 'install-bbbbbbbb-2222'
 const BASE = 'http://localhost:3001/api/v1'
 
 interface TestUser {
@@ -63,10 +73,11 @@ function headers(token: string | null): Record<string, string> {
   }
 }
 
-const subBody = (endpoint: string, userAgent?: string) => ({
+const subBody = (endpoint: string, userAgent?: string, installId?: string) => ({
   endpoint,
   keys: KEYS,
   ...(userAgent === undefined ? {} : { userAgent }),
+  ...(installId === undefined ? {} : { installId }),
 })
 
 function postSub(token: string | null, body: unknown): Promise<Response> {
@@ -112,6 +123,7 @@ interface SubRow {
   p256dh: string
   auth: string
   user_agent: string | null
+  install_id: string | null
   failure_count: number
   last_failed_at: string | null
 }
@@ -119,7 +131,9 @@ interface SubRow {
 async function rowsOfRun(): Promise<SubRow[]> {
   const { data, error } = await localClient
     .from('push_subscriptions')
-    .select('user_id, endpoint, p256dh, auth, user_agent, failure_count, last_failed_at')
+    .select(
+      'user_id, endpoint, p256dh, auth, user_agent, install_id, failure_count, last_failed_at',
+    )
     .like('endpoint', `${RUN_PREFIX}%`)
     .order('endpoint')
   if (error) throw new Error(`rowsOfRun failed: ${error.message}`)
@@ -225,23 +239,38 @@ describe('push/subscriptions — endpoints de suscripción', () => {
     expect(rows[0]?.last_failed_at).toBeNull()
   })
 
-  it('T4 endpoint rotado en el mismo navegador: la fila vieja se borra', async () => {
-    await postSub(userA.token, subBody(EP('a1'), UA_CHROME))
-    await postSub(userA.token, subBody(EP('a2'), UA_CHROME))
+  it('T4 endpoint rotado en el mismo dispositivo: la fila vieja se borra', async () => {
+    await postSub(userA.token, subBody(EP('a1'), UA_CHROME, INSTALL_A))
+    await postSub(userA.token, subBody(EP('a2'), UA_CHROME, INSTALL_A))
 
     const rows = await rowsOf(userA.id)
     expect(rows).toHaveLength(1)
     expect(rows[0]?.endpoint).toBe(EP('a2'))
+    expect(rows[0]?.install_id).toBe(INSTALL_A)
     expect(rows.map((r) => r.endpoint)).not.toContain(EP('a1'))
   })
 
-  it('T5 distinto user_agent NO se considera zombie', async () => {
-    await postSub(userA.token, subBody(EP('a1'), UA_CHROME))
-    await postSub(userA.token, subBody(EP('b1'), UA_SAFARI))
+  it('T5 distinto install_id NO se considera zombie', async () => {
+    await postSub(userA.token, subBody(EP('a1'), UA_CHROME, INSTALL_A))
+    await postSub(userA.token, subBody(EP('b1'), UA_SAFARI, INSTALL_B))
 
     const rows = await rowsOf(userA.id)
     expect(rows).toHaveLength(2)
     expect(rows.map((r) => r.endpoint).sort()).toEqual([EP('a1'), EP('b1')].sort())
+  })
+
+  it('T5-bis dos Android de la misma persona con el MISMO user_agent sobreviven', async () => {
+    // ESTE ES EL FALLO QUE CERRÓ LA 0198, y por eso el `user_agent` es idéntico
+    // en las dos altas: es lo que manda Chrome en cualquier Android. Mientras la
+    // limpieza usó esa cadena como identidad, el segundo teléfono borraba al
+    // primero y la persona se quedaba sin avisos en un equipo que sí usaba, sin
+    // enterarse hasta que un pedido no le sonaba.
+    await postSub(userA.token, subBody(EP('android1'), UA_ANDROID, INSTALL_A))
+    await postSub(userA.token, subBody(EP('android2'), UA_ANDROID, INSTALL_B))
+
+    const rows = await rowsOf(userA.id)
+    expect(rows).toHaveLength(2)
+    expect(rows.map((r) => r.install_id).sort()).toEqual([INSTALL_A, INSTALL_B].sort())
   })
 
   it('T6 endpoint reclamado por otro usuario cambia de dueño', async () => {
@@ -254,12 +283,17 @@ describe('push/subscriptions — endpoints de suscripción', () => {
     expect(await rowsOf(userA.id)).toHaveLength(0)
   })
 
-  it('T7 sin userAgent no revienta y no borra de más', async () => {
-    await postSub(userA.token, subBody(EP('a1'), UA_CHROME))
-    const res = await postSub(userA.token, subBody(EP('a2')))
+  it('T7 sin installId no borra nada, ni siquiera con el user_agent repetido', async () => {
+    // El fallback al `user_agent` para clientes viejos parece prudente y es lo
+    // contrario: dejaría el fallo vivo, y encima de forma asimétrica. Lo que se
+    // pierde es una fila rancia, que recoge la purga por 404/410 de `send-push`.
+    await postSub(userA.token, subBody(EP('a1'), UA_ANDROID))
+    const res = await postSub(userA.token, subBody(EP('a2'), UA_ANDROID))
     expect(res.status).toBe(201)
 
-    expect(await rowsOf(userA.id)).toHaveLength(2)
+    const rows = await rowsOf(userA.id)
+    expect(rows).toHaveLength(2)
+    expect(rows.every((r) => r.install_id === null)).toBe(true)
   })
 
   it('T8 POST sin auth devuelve 401 y no crea nada', async () => {

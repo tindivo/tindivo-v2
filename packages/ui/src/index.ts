@@ -22,6 +22,7 @@ export { Spinner, type SpinnerProps } from './primitives/spinner'
 export { Toast, type ToastProps } from './primitives/toast'
 export {
   dropLocalPushSubscription,
+  getInstallId,
   type PushSubscriptionPayload,
   pushSupported,
   registerServiceWorker,

@@ -1,6 +1,7 @@
 'use client'
 
 import { ApiError } from '@tindivo/api-client'
+import { getInstallId } from '@tindivo/ui'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '@/lib/api'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
@@ -130,6 +131,10 @@ export function usePushSubscription() {
           auth: json.keys.auth,
         },
         userAgent: navigator.userAgent.slice(0, 300),
+        // La identidad del dispositivo para la limpieza de zombis del servidor.
+        // El `userAgent` de arriba no sirve: entre dos Android es el mismo. Ver
+        // `getInstallId` en @tindivo/ui.
+        installId: getInstallId(),
       })
       rememberSentEndpoint(sub.endpoint)
     } catch (err) {

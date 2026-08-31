@@ -4,7 +4,58 @@
 export interface PushSubscriptionPayload {
   endpoint: string
   keys: { p256dh: string; auth: string }
+  /**
+   * Etiqueta legible para una persona que mire la tabla. NO identifica un
+   * dispositivo — para eso está `installId`.
+   */
   userAgent?: string
+  /** Identidad real de esta instalación. Ver `getInstallId`. */
+  installId?: string
+}
+
+/**
+ * Clave de `localStorage` del id de instalación. Vecina de
+ * `tindivo:push:last-sent-endpoint`, que guarda el motorizado.
+ */
+const INSTALL_ID_KEY = 'tindivo:push:install-id'
+
+/**
+ * ID ESTABLE DE ESTA INSTALACIÓN, Y POR QUÉ NO VALE EL `user_agent`.
+ *
+ * El servidor limpia suscripciones zombis antes de dar de alta: misma persona,
+ * mismo dispositivo, endpoint distinto = el endpoint rotó, se borra el viejo.
+ * Para eso hace falta saber que dos altas vienen del MISMO dispositivo, y el
+ * `user_agent` no lo dice: desde la *UA reduction* de Chrome, el de Android
+ * está congelado en `Android 10; K` y es idéntico byte a byte entre teléfonos
+ * distintos. En `tindivo-prod` hay nueve dispositivos compartiendo la cadena
+ * exacta. Con esa clave, dos Android de la misma persona se borraban la
+ * suscripción mutuamente: el último en abrir la app dejaba al otro sin avisos,
+ * en silencio.
+ *
+ * Este UUID lo genera el cliente una vez y vive en `localStorage`. Sobrevive a
+ * la rotación del endpoint —que es justo lo que hay que detectar— y no
+ * colisiona entre dos dispositivos.
+ *
+ * DEVUELVE `undefined` SI NO HAY DÓNDE GUARDARLO (modo privado, storage lleno,
+ * cookies de terceros bloqueadas). No se inventa uno en memoria: un id que
+ * cambia en cada carga es peor que ninguno, porque acumularía una fila por
+ * visita. Sin id, el servidor no limpia nada y la fila rancia la recoge la
+ * purga por 404/410 de `send-push`.
+ */
+export function getInstallId(): string | undefined {
+  if (typeof window === 'undefined') return undefined
+  try {
+    const guardado = window.localStorage.getItem(INSTALL_ID_KEY)
+    if (guardado) return guardado
+    const nuevo = crypto.randomUUID()
+    window.localStorage.setItem(INSTALL_ID_KEY, nuevo)
+    // Releer y no confiar en el `setItem`: en modo privado de Safari escribir
+    // puede no lanzar y aun así no persistir. Un id que no persiste es el caso
+    // de arriba, y se trata igual que no tenerlo.
+    return window.localStorage.getItem(INSTALL_ID_KEY) ?? undefined
+  } catch {
+    return undefined
+  }
 }
 
 function urlBase64ToUint8Array(base64: string): Uint8Array {
@@ -81,6 +132,7 @@ export async function subscribeToPush(
     endpoint: json.endpoint,
     keys: { p256dh: json.keys.p256dh, auth: json.keys.auth },
     userAgent: navigator.userAgent,
+    installId: getInstallId(),
   })
   return 'subscribed'
 }
