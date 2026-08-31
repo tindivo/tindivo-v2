@@ -2,10 +2,9 @@
 
 import { Badge, Card, EmptyState, Icon, SkeletonList } from '@tindivo/ui'
 import { useMemo } from 'react'
-import { useOverdueFeedback } from '@/hooks/use-overdue-feedback'
+import { overdueIdsOf } from '@/hooks/use-overdue-feedback'
 import { byReadyClock } from '@/lib/orders/sort'
 import type { BoardOrder } from '@/lib/types'
-import { orderUrgency } from '@/lib/urgency'
 import { OrderCard } from './order-card'
 import { OverdueBanner } from './overdue-banner'
 import { SwipeToTake } from './swipe-to-take'
@@ -36,19 +35,17 @@ export function AvailableTab({
 }) {
   const full = mySlots >= 3
 
-  const overdueSet = useMemo(() => {
-    const set = new Set<string>()
-    for (const o of available) {
-      if (orderUrgency(o, now) === 'overdue') set.add(o.id)
-    }
-    return set
-  }, [available, now])
+  // MISMA función que dispara la alarma (`overdueIdsOf`), no un filtro paralelo.
+  // Lo que se ve y lo que suena tienen que salir del mismo sitio: en `negocios`
+  // esas dos condiciones se escribieron por separado, se desincronizaron y
+  // costaron un pedido en producción.
+  const overdueSet = useMemo(() => overdueIdsOf(available, now), [available, now])
 
   const overdueCount = overdueSet.size
   const hasOverdue = overdueCount > 0
 
-  // Feedback háptico + audible cuando se detectan pedidos vencidos nuevos
-  useOverdueFeedback(overdueSet)
+  // La alarma YA NO se dispara aquí: vive en `DriverShell`, porque esta pestaña
+  // solo está montada cuando está activa y ahí se perdían los avisos.
 
   // Por el reloj, que es lo que la tarjeta enseña. La regla y su porqué viven
   // en `lib/orders/sort`, con tests: ya se rompió una vez y el síntoma no fue
@@ -84,7 +81,10 @@ export function AvailableTab({
 
       <div className="flex flex-col gap-3">
         {sorted.map((o, i) => {
-          const esUrgente = orderUrgency(o, now) === 'overdue'
+          // Del MISMO conjunto que pinta el banner y que dispara la alarma, no
+          // de un `orderUrgency` suelto: eran tres llamadas al mismo criterio y
+          // cualquiera de las tres podía quedarse atrás al tocar la regla.
+          const esUrgente = overdueSet.has(o.id)
           // DOS razones distintas para no poder tomar un pedido, y cada una dice
           // la suya. La mochila manda sobre la prioridad: si no te cabe, da
           // igual cuál sea el urgente.

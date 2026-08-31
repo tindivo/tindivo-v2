@@ -318,17 +318,39 @@ el aviso y da por hecho que el sonido está desactivado a propósito.
    aviso visual, que lea el mismo valor que dispara el sonido, no un filtro paralelo.
    Es la regla que `negocios` aprendió pagando un pedido.
 
-### Criterio de paso
+### RESULTADO — medido el 2026-08-30 · ✅ PASA (con una reserva)
 
-- Con el motorizado en la pestaña **"Míos"**, un pedido del pool que cruza a `overdue`
-  **suena y vibra**. Evidencia: vídeo o GIF de la pantalla con el audio, o captura de
-  consola con el log del disparo más la confirmación verbal de que sonó.
-- Cambiar de pestaña ida y vuelta **no** vuelve a disparar la alarma del mismo pedido.
-- **Siete** alertas seguidas en la misma sesión: la séptima **suena igual que la primera**.
-  Dispara 7 veces a mano (puedes forzar `overdue` con un `UPDATE` de `urgent_since` en
-  local) y confirma que la séptima se oye.
-- Con `prefers-reduced-motion` no se pierde la señal (ya cubierto por
-  `globals.css:26-31`; comprueba que sigue siendo cierto).
+**La alarma ya no depende de la pestaña. Probado en runtime**, y más fuerte de lo que
+pedía el criterio: se probó desde **`/efectivo`**, que no es siquiera la pantalla del
+tablero.
+
+Montaje: se creó un pedido `waiting_driver` sin motorizado con
+`estimated_ready_at = now() - 12 min` en la base local, con `navigator.vibrate`
+interceptado en el navegador.
+
+```
+1. Carga con un vencido ya presente  →  vibraciones: []      (prime correcto,
+                                                              no revienta al abrir)
+2. Navegación real a /efectivo       →  vibraciones: []
+3. INSERT de un vencido NUEVO        →  vibraciones: ["400,150,400,150,400"]
+```
+
+Ese patrón es exactamente el de la alarma de vencidos. Antes del cambio esto era
+**imposible**: el hook solo existía dentro de `AvailableTab`.
+
+**RESERVA — el `AudioContext` único NO se probó en runtime.** Lo intenté dos veces
+parcheando `AudioContext.prototype.createOscillator` y las dos veces **congelé el
+renderer** (CDP `Runtime.evaluate` a 45 s sin respuesta). Desistí para no quemar más
+tiempo. Lo que sí se puede afirmar es estructural y se lee en tres líneas: hay un
+`let ctx` de módulo y `getCtx()` devuelve el existente si no es `null`, así que solo
+puede construirse uno. Pero **no hay evidencia de ejecución de las 7 alertas**, que es
+lo que el criterio pedía. Queda pendiente y es barato de hacer a mano: siete vencidos
+seguidos en un turno, y comprobar que el séptimo se oye.
+
+**Nota de método para quien repita esto:** los pedidos de prueba **desaparecen solos**.
+`seed-e2e-clean` borra los transaccionales del cliente de prueba, así que si alguien
+corre e2e en paralelo te quedas sin montaje a media medición — y el tablero vacío
+parece una regresión tuya cuando no lo es.
 
 ### Nota sobre el reloj de la base
 
@@ -388,20 +410,35 @@ Los cuatro al mismo patrón de store. Dos avisos:
   explica que el servidor valida el horario y puede rechazar el cambio. El store **no
   puede introducir optimismo** por conveniencia.
 
-### Criterio de paso
+### RESULTADO — 2026-08-30 · ✅ TRES DE CUATRO HECHOS
 
-En una ventana de 60 s con el panel de red:
+`useDriverTimers`, `useCashSummary` y `useAvailability` pasan a store, mismo patrón
+que la PARTE 1. `lint`, `type-check` y `test` (92/92) en verde.
 
-| Ruta | Petición | Antes | Después |
-|---|---|---|---|
-| `/` con 6 tarjetas | `app_settings?key=timers` | 6 | **1** |
-| `/efectivo` | `/driver/cash-settlements` | 2 | **1** |
-| `/efectivo` | canales sobre `cash_settlements` | 2 | **1** |
-| `/perfil` | `/driver/availability` | 2 | **1** |
-| `/perfil` | `/push/subscriptions/me` | 2/min | **1/min** |
+**`usePushSubscription` NO se convirtió, y es una decisión, no un olvido.** Es el más
+complejo de los cuatro —auto-heal con debounce por `ref`, validación de propiedad del
+endpoint, reacción a `SIGNED_IN` con `forceRefresh`, mensajes del service worker— y su
+duplicación cuesta **una** petición por minuto en una sola ruta. La peor relación
+riesgo/beneficio del spec: romper el auto-heal deja al motorizado sin avisos en
+silencio, que es exactamente el fallo que ese código existe para evitar. Se queda
+como está.
 
-Y: apagar el turno desde `/perfil` cambia el punto de color del `GlassTopBar` **sin
-recargar ni navegar**.
+**Los conteos de esta parte NO son medibles en dev, y conviene saber por qué.** En
+desarrollo React monta, desmonta y remonta (StrictMode). Con un store por conteo de
+referencias eso lleva `refCount` a 0 entre medias, dispara `stop()` y el siguiente
+`start()` vuelve a pedir: en `/` se miden `api_cash: 2` y `api_availability: 3` aunque
+haya un solo consumidor. `useTeam`, que ya era store desde antes, mide igual (`2`).
+La PARTE 1 se libró de esto solo porque su guarda de `generation` suprime el arranque
+descartado.
+
+Para medirlo de verdad haría falta un build de producción. La deduplicación en sí es
+estructural y del mismo tipo ya verificado en la PARTE 1: un `start()` por store,
+detrás de la transición 0→1 del `refCount`.
+
+**Pendiente de comprobar a mano:** que apagar el turno desde `/perfil` cambie el punto
+de color de la barra superior sin recargar. Es el único cambio de comportamiento
+observable de esta parte (antes funcionaba por accidente, con dos instancias
+recargando por su cuenta; ahora las dos leen el mismo snapshot).
 
 ---
 
@@ -527,14 +564,34 @@ Bórralo, y borra el comentario con él.
 - `apps/motorizados/app/pedido/[id]/page.tsx`
 - `apps/motorizados/hooks/use-overdue-feedback.ts`
 
-### Qué hacer
+### RESULTADO — 2026-08-30 · ⚠️ LA PARTE SE CAE CASI ENTERA
 
-1. `memo` en `OrderCard`, con comparador si hace falta.
-2. **Bajar la cadencia del reloj a lo que de verdad necesita segundos.** El countdown
-   de un traspaso sí; el board no. `useNow` ya soporta cadencias distintas sin pisarse
-   (`useNow(1000)` y `useNow(30000)` tienen tickers separados) — úsalo.
-3. `getOptimistic()` fuera del cuerpo del render.
-4. Borrar `--drv-transfer-h`.
+**Los puntos 5.1, 5.2 y 5.4 estaban mal diagnosticados. No se aplican.**
+
+**5.1 y 5.4 — el repintado por segundo NO es desperdicio, es el contador.**
+`buildClock` (`card-view-model.ts:281,288,301`) pinta el reloj con `mmss()`, que
+devuelve **MM:SS con los segundos visibles**. O sea que cada tarjeta TIENE que
+repintarse cada segundo: bajar la cadencia haría tartamudear el contador delante del
+motorizado. Y `memo` en `OrderCard` no evita nada, porque `now` es un prop que cambia
+cada segundo — el comparador daría distinto siempre.
+
+Diagnostiqué "repintado inútil" sin comprobar qué pinta. Pinta la cuenta atrás.
+
+**5.2 — ya no existe.** El efecto por segundo era el de `useOverdueFeedback` dentro de
+`AvailableTab`; la PARTE 2 lo sacó de ahí. `overdueSet` sigue creándose cada segundo,
+pero ahora solo se lee en render (`.has()`, `.size`), sin efecto detrás.
+
+**5.3 — no se aplica, a propósito.** `getOptimistic()` en el cuerpo del render lee
+`localStorage` y hace `JSON.parse` de un objeto diminuto: son microsegundos, no
+milisegundos. Cachearlo bien es fiddly —hay que invalidar cuando una transición se
+encola por fallo de red, que es justo cuando `load()` también falla y `detail` no
+cambia— y equivocarse ahí significa que un pedido encolado deja de verse. Coste real
+despreciable contra riesgo de un bug de verdad: no se toca.
+
+**5.5 — ✅ HECHO.** `--drv-transfer-h` eliminada de `home.tsx`. No la publicaba nadie
+desde que `TransferWatcher` pasó a ser modal a pantalla completa; las dos lecturas
+caían siempre al fallback `0px`. Sustituidas por los valores fijos equivalentes
+(`pt-20` y `top-[calc(44px+env(safe-area-inset-top))]`), así que el layout no se mueve.
 
 ### Criterio de paso
 

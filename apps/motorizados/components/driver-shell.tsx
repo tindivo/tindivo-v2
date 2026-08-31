@@ -4,10 +4,31 @@ import { GlassTopBar, Icon } from '@tindivo/ui'
 import { type ReactNode, useMemo } from 'react'
 import { useCashSummary } from '@/features/efectivo/hooks/use-cash-summary'
 import { useDriverName } from '@/hooks/use-driver-orders'
+import { useOverdueFeedback } from '@/hooks/use-overdue-feedback'
 import { BottomNav, type BottomNavItem } from './bottom-nav'
 import { CapacityIndicator } from './capacity-indicator'
 import { DriverToastHost } from './driver-toast'
 import { ShiftStatus } from './shift-status'
+
+/**
+ * La alarma de vencidos, montada donde SIEMPRE está viva.
+ *
+ * Vivía dentro de `AvailableTab`, o sea que solo existía con la pestaña "En
+ * espera" activa: con el motorizado en "Míos" —donde la app lo deposita al
+ * arrancar si tiene trabajo— un pedido que entraba en rojo no sonaba, y al
+ * cambiar de pestaña tampoco, porque el hook se remontaba y daba por vistos los
+ * que ya había.
+ *
+ * ES UN COMPONENTE Y NO UNA LLAMADA DIRECTA EN `DriverShell` a propósito: la
+ * alarma necesita un reloj, y si el `useNow()` viviera en la shell, TODO lo que
+ * cuelga de ella se repintaría a esa cadencia. Aquí el ticker vive en un
+ * componente que devuelve `null`, así que el repintado no sale de estas cuatro
+ * líneas.
+ */
+function OverdueAlarm() {
+  useOverdueFeedback()
+  return null
+}
 
 /** «Jesús Castillo Vidal» → «JC». Con un solo nombre, una sola letra. */
 function initialsOf(name: string): string {
@@ -72,6 +93,7 @@ export function DriverShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-dvh bg-surface pb-24">
       <DriverToastHost />
+      <OverdueAlarm />
       <GlassTopBar
         // `h-10` fija la altura de la cabecera en los mismos 64px que tenía con
         // el botón de perfil de 40px, así que los `pt-20` y los `sticky top-…`

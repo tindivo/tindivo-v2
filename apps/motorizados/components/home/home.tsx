@@ -51,28 +51,21 @@ export function Home() {
   const transferableCount = team.teamOrders.filter((o) => o.transferable).length
 
   return (
-    // `--drv-transfer-h` la publica `TransferWatcher` con la altura real de la
-    // pila de solicitudes (`0px` si no hay ninguna). El `max()` mantiene el
-    // hueco de siempre para la barra superior y solo crece cuando la pila es más
-    // alta que ese hueco — así no aparece una franja vacía con una sola
-    // solicitud, ni el tablero queda debajo con tres.
-    <main
-      className="mx-auto max-w-[480px] px-4 pb-10"
-      style={{ paddingTop: 'max(5rem, calc(var(--drv-transfer-h, 0px) + 0.75rem))' }}
-    >
+    // NO HAY `--drv-transfer-h`. El comentario que vivía aquí decía que la
+    // publicaba `TransferWatcher` con la altura de la pila de solicitudes, y
+    // hace tiempo que no la publica nadie: ese componente pasó a ser un modal a
+    // pantalla completa y ya no mide nada. Las dos lecturas caían siempre al
+    // fallback `0px`, así que los `max()` daban el valor fijo de siempre —
+    // dos cálculos muertos y un comentario que mentía sobre el contrato.
+    <main className="mx-auto max-w-[480px] px-4 pt-20 pb-10">
       {/* El saludo y la fila de estado («Disponible», «Avisos activos») vivían
           aquí y se han ido a la barra superior: se perdían al bajar por la
           bandeja y no existían en Efectivo ni en Historial. Ver `ShiftStatus`. */}
 
-      {/* Las pestañas se pegan por DEBAJO de la pila de solicitudes. Antes se
-          quedaban fijas a 44px y la pila las cubría: el motorizado no podía
-          cambiar de bandeja mientras decidía. */}
-      <div
-        className="sticky z-30 -mx-4 mb-4 bg-surface/95 px-4 py-2 backdrop-blur-sm"
-        style={{
-          top: 'max(calc(44px + env(safe-area-inset-top)), calc(var(--drv-transfer-h, 0px) + 8px))',
-        }}
-      >
+      {/* Las pestañas se pegan bajo la barra superior. Ya no compiten con la
+          pila de solicitudes: desde que es un modal a pantalla completa, tapa el
+          tablero entero a propósito y no hay nada debajo que reposicionar. */}
+      <div className="sticky top-[calc(44px+env(safe-area-inset-top))] z-30 -mx-4 mb-4 bg-surface/95 px-4 py-2 backdrop-blur-sm">
         {/* `sm`: tres pestañas en 361px de ancho. La talla base deja "En espera"
             y "Equipo" pegados a sus bordes y el bloque pesa más que las tarjetas
             que hay debajo, que son lo que el motorizado viene a leer. */}
