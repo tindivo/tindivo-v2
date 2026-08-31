@@ -1109,7 +1109,16 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
 
   const paused = isBusinessPaused(biz.until, now)
   const pauseMin = pauseMinutesLeft(biz.until, now)
-  const hasWaiting = vms.some((o) => o.state === 'waiting')
+  // Los ids, no un booleano: el aviso de llegada es UNO POR PEDIDO y con un
+  // `some()` la segunda llegada al mismo local no sonaba nunca. Ver `newArrivals`.
+  const waitingIds = useMemo(
+    () =>
+      vms
+        .filter((o) => o.state === 'waiting')
+        .map((o) => o.rowId)
+        .sort(),
+    [vms],
+  )
   const hasBufferP3 = vms.some(
     (o) =>
       (o.state === 'buffer_p2' || o.state === 'buffer_p3') &&
@@ -1131,7 +1140,7 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
     hasPending: attention.alarm.hasPending,
     pendingCount: attention.alarm.count,
     urgent: attention.alarm.urgent,
-    hasWaiting,
+    waitingIds,
     hasBufferP3,
     soundOn,
   })
