@@ -185,4 +185,43 @@ export const Ico = {
       <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
     </svg>
   ),
+  maximize: (p: SVGProps<SVGSVGElement>) => (
+    <svg {...base} {...p} aria-hidden="true">
+      <path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3" />
+    </svg>
+  ),
+  minimize: (p: SVGProps<SVGSVGElement>) => (
+    <svg {...base} {...p} aria-hidden="true">
+      <path d="M4 14h6v6m10-10h-6V4m0 6l7-7M3 21l7-7" />
+    </svg>
+  ),
+  layers: (p: SVGProps<SVGSVGElement>) => (
+    <svg {...base} {...p} aria-hidden="true">
+      <polygon points="12 2 2 7 12 12 22 7 12 2" />
+      <polyline points="2 17 12 22 22 17" />
+      <polyline points="2 12 12 17 22 12" />
+    </svg>
+  ),
+  satellite: (p: SVGProps<SVGSVGElement>) => (
+    <svg {...base} {...p} aria-hidden="true">
+      <path d="M13 7 9 3 5 7l4 4" />
+      <path d="m17 11 4 4-4 4-4-4" />
+      <path d="m8 12 4 4 6-6-4-4Z" />
+      <path d="m16 8 3-3" />
+      <path d="M9 21a6 6 0 0 0-6-6" />
+    </svg>
+  ),
+  focus: (p: SVGProps<SVGSVGElement>) => (
+    <svg {...base} {...p} aria-hidden="true">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M3 12h3m12 0h3M12 3v3m0 12v3" />
+    </svg>
+  ),
+  map: (p: SVGProps<SVGSVGElement>) => (
+    <svg {...base} {...p} aria-hidden="true">
+      <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
+      <line x1="8" y1="2" x2="8" y2="18" />
+      <line x1="16" y1="6" x2="16" y2="22" />
+    </svg>
+  ),
 }

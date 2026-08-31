@@ -16,16 +16,29 @@ export function CoveragePolygonEditor({
   value,
   center,
   onChange,
-  heightPx = 320,
+  onSave,
+  isSaving,
+  heightPx = 360,
 }: {
   value: LatLng[] | null
   center: LatLng
   onChange: (ring: LatLng[]) => void
+  onSave?: (ring: LatLng[]) => void
+  isSaving?: boolean
   heightPx?: number
 }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-ink/10" style={{ height: heightPx }}>
-      <Inner value={value} center={center} onChange={onChange} />
+    <div
+      className="overflow-hidden rounded-2xl border border-ink/10 shadow-xs"
+      style={{ height: heightPx }}
+    >
+      <Inner
+        value={value}
+        center={center}
+        onChange={onChange}
+        onSave={onSave}
+        isSaving={isSaving}
+      />
     </div>
   )
 }

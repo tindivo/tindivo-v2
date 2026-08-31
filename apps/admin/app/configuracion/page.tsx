@@ -223,24 +223,48 @@ function CoverageCard({ polygon, coverage, save }: { polygon: Cfg; coverage: Cfg
   const cov = (coverage ?? {}) as { centerLat?: number; centerLng?: number }
   const center: LatLng = { lat: cov.centerLat ?? -9.1465, lng: cov.centerLng ?? -78.2779 }
   const [ring, setRing] = useState<LatLng[] | null>(initial)
+  const [saving, setSaving] = useState(false)
   const count = ring?.length ?? 0
   const canSave = count >= 3
+
+  const handleSave = async (polyToSave?: LatLng[]) => {
+    const target = polyToSave ?? ring
+    if (!target || target.length < 3) return
+    setSaving(true)
+    try {
+      await save('coverage_polygon', { polygon: target })
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
     <div className="t-card">
-      <p className="t-display mb-1 text-[15px] text-ink">Zona de cobertura (San Jacinto)</p>
-      <p className="mb-3 text-[13px] text-ink-muted">
-        Dibuja el polígono con la herramienta de la esquina del mapa. El cliente solo podrá elegir
-        su dirección dentro de esta zona; usa “editar” para mover los vértices.
-      </p>
-      <CoveragePolygonEditor value={initial} center={center} onChange={setRing} heightPx={340} />
-      <div className="mt-2 flex items-center justify-between">
-        <span className="text-[12px] text-ink-muted">{count} vértices (mínimo 3)</span>
-        <Button
-          size="sm"
-          disabled={!canSave}
-          onClick={() => canSave && ring && save('coverage_polygon', { polygon: ring })}
-        >
-          Guardar zona
+      <div className="mb-2 flex items-start justify-between">
+        <div>
+          <p className="t-display text-[15px] text-ink">Zona de cobertura (San Jacinto)</p>
+          <p className="text-[13px] text-ink-muted">
+            Dibuja o edita el polígono perimetral. Los clientes solo podrán pedir dentro de este
+            área.
+          </p>
+        </div>
+      </div>
+
+      <CoveragePolygonEditor
+        value={initial}
+        center={center}
+        onChange={setRing}
+        onSave={handleSave}
+        isSaving={saving}
+        heightPx={380}
+      />
+
+      <div className="mt-3 flex items-center justify-between">
+        <span className="text-[12px] text-ink-muted">
+          {count} {count === 1 ? 'vértice' : 'vértices'} (mínimo 3)
+        </span>
+        <Button size="sm" disabled={!canSave || saving} onClick={() => handleSave()}>
+          {saving ? 'Guardando...' : 'Guardar zona'}
         </Button>
       </div>
     </div>

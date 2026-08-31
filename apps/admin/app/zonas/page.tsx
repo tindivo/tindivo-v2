@@ -144,7 +144,7 @@ export default function ZonasPage() {
         </div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_320px] lg:items-start">
+      <div className="grid gap-4 lg:grid-cols-[1fr_340px] lg:items-start">
         <ZonesMap
           coverage={coverage}
           zones={shapes}
@@ -152,6 +152,13 @@ export default function ZonasPage() {
           onCreate={crear}
           onEdit={(id, ring) => actualizar(id, { polygon: ring })}
           onDelete={borrar}
+          onRename={(id, name) => actualizar(id, { name })}
+          onToggle={(id) => {
+            const z = zones?.find((x) => x.id === id)
+            if (z) actualizar(id, { active: !z.active })
+          }}
+          busy={busy}
+          heightPx={540}
         />
 
         <div className="t-card">
