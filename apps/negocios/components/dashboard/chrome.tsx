@@ -45,16 +45,19 @@ import { DashboardSkeleton } from './dashboard-skeleton'
 import { SuccessToastHost } from './toast'
 
 // ── Debounce hook ─────────────────────────────────────────────────────────────
-function useDebouncedCallback<T extends (...args: any[]) => void>(fn: T, delay: number): T {
+function useDebouncedCallback<Args extends unknown[]>(
+  fn: (...args: Args) => void,
+  delay: number,
+): (...args: Args) => void {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const fnRef = useRef(fn)
   fnRef.current = fn
 
   return useCallback(
-    ((...args: any[]) => {
+    (...args: Args) => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
       timeoutRef.current = setTimeout(() => fnRef.current(...args), delay)
-    }) as any as T,
+    },
     [delay],
   )
 }
@@ -918,7 +921,7 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
   useEffect(() => {
     if (!bizId) return
     const supabase = getSupabaseBrowser()
-    let activeChannel: any = null
+    let activeChannel: ReturnType<typeof supabase.channel> | null = null
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null
     let retryAttempt = 0
     let destroyed = false
@@ -1088,14 +1091,19 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
     if (hasExpired && Date.now() - lastExpireTriggerRef.current > 5000) {
       lastExpireTriggerRef.current = Date.now()
       const supabase = getSupabaseBrowser()
-      ;(supabase as any)
-        .rpc('cancel_expired_prepay_orders')
-        .then(() => {
+      // Pase lo que pase se refresca: si el RPC canceló algo, para verlo; si
+      // falló, porque el tablero no puede quedarse con las tarjetas vencidas.
+      // Va con los dos callbacks de `then` y no con `.catch`: el builder de
+      // PostgREST es un `PromiseLike`, no una Promise, y no expone `.catch`
+      // (antes lo tapaba el `as any` sobre el cliente).
+      supabase.rpc('cancel_expired_prepay_orders').then(
+        () => {
           debouncedRefetchOrders()
-        })
-        .catch(() => {
+        },
+        () => {
           debouncedRefetchOrders()
-        })
+        },
+      )
     }
   }, [vms, debouncedRefetchOrders])
 

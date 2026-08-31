@@ -419,6 +419,15 @@ export default function ApelacionDetallePage({ params }: { params: Promise<{ id:
         return
       }
 
+      // Los tres siempre los rellena `create_appeal_report`, y el mapper del API
+      // (`assertAdminAppealFields`) da por hecho lo mismo y lanza si faltan. Aquí
+      // se comprueba en vez de afirmarlo con `!`: una fila incompleta lo dice en
+      // pantalla en lugar de pintar campos vacíos.
+      if (!report.order_id || !report.business_id || !report.customer_user_id) {
+        setError('Apelación incompleta: le faltan los datos del pedido')
+        return
+      }
+
       // Query 2: datos del pedido (enriquecidos)
       let orderShortId: string | null = null
       let orderCreatedAt: string | null = null
@@ -456,16 +465,16 @@ export default function ApelacionDetallePage({ params }: { params: Promise<{ id:
             .maybeSingle()
 
           businessName = biz?.name ?? null
-          yapeNumber = (biz as any)?.yape_number ?? (biz as any)?.plin_number ?? null
+          yapeNumber = biz?.yape_number ?? biz?.plin_number ?? null
         }
       }
 
       setAppeal({
         id: report.id,
-        orderId: report.order_id!,
+        orderId: report.order_id,
         orderShortId,
-        businessId: report.business_id!,
-        customerUserId: report.customer_user_id!,
+        businessId: report.business_id,
+        customerUserId: report.customer_user_id,
         customerPhone: report.customer_phone ?? null,
         customerName,
         description: report.description ?? null,

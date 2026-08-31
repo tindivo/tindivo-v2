@@ -1,5 +1,6 @@
 'use client'
 
+import type { ApiEnvelope } from '@tindivo/api-client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { type ReactNode, useCallback, useEffect, useState } from 'react'
@@ -31,11 +32,15 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
   const [counts, setCounts] = useState<Record<string, number>>({})
 
   const loadCounts = useCallback(async () => {
-    const itemsWithCounts = NAV_SECTIONS.flatMap((s) => s.items).filter((it) => it.countEndpoint)
+    // El predicado de tipo es lo que quita el `!` de abajo: sin él, TS no sabe
+    // que el filtro ya garantizó `countEndpoint`.
+    const itemsWithCounts = NAV_SECTIONS.flatMap((s) => s.items).filter(
+      (it): it is typeof it & { countEndpoint: string } => Boolean(it.countEndpoint),
+    )
     const results = await Promise.allSettled(
       itemsWithCounts.map(async (it) => {
         try {
-          const res = await api.get<any>(it.countEndpoint!)
+          const res = await api.get<ApiEnvelope<{ total?: number }>>(it.countEndpoint)
           return { href: it.href, count: res?.data?.total ?? 0 }
         } catch {
           return { href: it.href, count: 0 }
