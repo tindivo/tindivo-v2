@@ -4,7 +4,13 @@ import { Card, Icon } from '@tindivo/ui'
 import { soles } from '@/components/dashboard/primitives'
 import type { HistDisplay } from '../types'
 
-export function HistorySummary({ rows }: { rows: HistDisplay[] }) {
+export function HistorySummary({
+  rows,
+  isTodayOnly = true,
+}: {
+  rows: HistDisplay[]
+  isTodayOnly?: boolean
+}) {
   const delivered = rows.filter((r) => !r.isCancel)
   const cancelled = rows.filter((r) => r.isCancel)
   const revenue = delivered.reduce((s, r) => s + r.total, 0)
@@ -17,7 +23,7 @@ export function HistorySummary({ rows }: { rows: HistDisplay[] }) {
       <Card className="flex flex-col justify-between p-3">
         <div className="flex items-center gap-1.5">
           <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
-            Ventas hoy
+            {isTodayOnly ? 'Ventas hoy' : 'Ventas del periodo'}
           </span>
           <Icon name="payments" size={14} className="text-brand" />
         </div>

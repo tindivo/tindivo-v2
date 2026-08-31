@@ -6,31 +6,20 @@ import { ORDER_SELECT } from '@/lib/orders/view-model'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import type { HistRow } from '../types'
 
-function todayLimaRange(): { start: string; end: string } {
-  const now = new Date()
-  const limaOffset = -5 * 60 // minutos
-  const limaMs = now.getTime() + (now.getTimezoneOffset() + limaOffset) * 60 * 1000
-  const lima = new Date(limaMs)
-  const y = lima.getFullYear()
-  const m = String(lima.getMonth() + 1).padStart(2, '0')
-  const d = String(lima.getDate()).padStart(2, '0')
-  return {
-    start: `${y}-${m}-${d}T00:00:00-05:00`,
-    end: `${y}-${m}-${d}T23:59:59-05:00`,
-  }
-}
-
-export function useHistory() {
+export function useHistory(startDate: string, endDate: string) {
   const { bizId } = useDashboard()
   const [rows, setRows] = useState<HistRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
+    if (!bizId) return
     setLoading(true)
     setError(null)
 
-    const { start, end } = todayLimaRange()
+    // Formatear timestamp exacto en hora local de Lima (UTC-5)
+    const startIso = `${startDate}T00:00:00-05:00`
+    const endIso = `${endDate}T23:59:59-05:00`
 
     try {
       const { data, error: e } = await getSupabaseBrowser()
@@ -38,10 +27,10 @@ export function useHistory() {
         .select(ORDER_SELECT)
         .eq('business_id', bizId)
         .in('status', ['delivered', 'cancelled'])
-        .gte('created_at', start)
-        .lte('created_at', end)
+        .gte('created_at', startIso)
+        .lte('created_at', endIso)
         .order('created_at', { ascending: false })
-        .limit(200)
+        .limit(1000)
 
       if (e) {
         setError(e.message)
@@ -53,7 +42,7 @@ export function useHistory() {
     } finally {
       setLoading(false)
     }
-  }, [bizId])
+  }, [bizId, startDate, endDate])
 
   useEffect(() => {
     load()

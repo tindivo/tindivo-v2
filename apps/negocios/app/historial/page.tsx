@@ -7,8 +7,8 @@ export default function NegocioHistorialPage() {
   return (
     <DashboardShell
       active="historial"
-      title="Historial del día"
-      subtitle="Pedidos completados y cancelados de la jornada — solo lectura"
+      title="Historial de pedidos"
+      subtitle="Pedidos completados y cancelados en el periodo seleccionado — solo lectura"
     >
       <HistorialList />
     </DashboardShell>
