@@ -7,6 +7,41 @@ import { createServiceClient } from '@/lib/supabase/service'
 
 export const dynamic = 'force-dynamic'
 
+/** Pedido asociado a la devolución, tal y como lo consume /deuda/devoluciones/[id]. */
+type RefundOrderDetail = {
+  id: string
+  shortId: string
+  orderAmount: number
+  createdAt: string
+  rejectionReasonCode: string | null
+  rejectionReasonText: string | null
+  customerName: string | null
+  customerPhone: string | null
+}
+
+/** Entrada del historial del pedido, con las URLs firmadas ya resueltas. */
+type RefundTimelineEvent = {
+  eventType: string
+  actorRole: string | null
+  createdAt: string
+  data: unknown
+  proofUrls: { url: string; label: string }[]
+}
+
+/** Claves de `data` que pueden traer un adjunto, en el orden en que se muestran. */
+const ATTACHMENT_KEYS = [
+  ['proof_path', 'Comprobante'],
+  ['proofPath', 'Comprobante de Devolución'],
+  ['evidence_url', 'Evidencia en Disputa'],
+] as const
+
+/** Los adjuntos viajan dentro de `order_event_log.data` (jsonb), sin forma garantizada. */
+function readAttachmentPath(data: unknown, key: string): string | null {
+  if (data === null || typeof data !== 'object' || Array.isArray(data)) return null
+  const value = (data as Record<string, unknown>)[key]
+  return typeof value === 'string' && value.length > 0 ? value : null
+}
+
 export function OPTIONS(req: Request): Response {
   return handleOptions(req)
 }
@@ -39,8 +74,7 @@ export async function GET(
     let reportId = id
     let targetOrderId: string | null = null
 
-    // biome-ignore lint/suspicious/noExplicitAny: business_charges table
-    const { data: charge } = await (service as any)
+    const { data: charge } = await service
       .from('business_charges')
       .select('id, order_id, report_id, amount, description, created_at')
       .or(`id.eq.${id},report_id.eq.${id}`)
@@ -55,8 +89,7 @@ export async function GET(
     }
 
     // 3. Buscar el reporte si existe
-    // biome-ignore lint/suspicious/noExplicitAny: reports table
-    const { data: report, error: repError } = await (service as any)
+    const { data: report, error: repError } = await service
       .from('reports')
       .select(
         'id, type, description, resolution_note, refund_proof_path, refund_amount, appeal_status, evidence_url, created_at, order_id, business_id',
@@ -92,8 +125,8 @@ export async function GET(
     }
 
     // 4. Buscar información del pedido si existe
-    let order: any = null
-    let events: any[] = []
+    let order: RefundOrderDetail | null = null
+    let events: RefundTimelineEvent[] = []
 
     if (targetOrderId) {
       const [{ data: rawOrder }, { data: rawLogs }] = await Promise.all([
@@ -104,8 +137,7 @@ export async function GET(
           )
           .eq('id', targetOrderId)
           .maybeSingle(),
-        // biome-ignore lint/suspicious/noExplicitAny: order_event_log table
-        (service as any)
+        service
           .from('order_event_log')
           .select('event_type, actor_role, created_at, data')
           .eq('order_id', targetOrderId)
@@ -126,28 +158,22 @@ export async function GET(
         : null
 
       events = await Promise.all(
-        (rawLogs || []).map(async (log: any) => {
+        (rawLogs ?? []).map(async (log) => {
           const proofUrls: { url: string; label: string }[] = []
-          const d = log.data || {}
+          const d = log.data
 
-          if (d.proof_path) {
-            const url = await getSignedUrl(d.proof_path)
-            if (url) proofUrls.push({ url, label: 'Comprobante' })
-          }
-          if (d.proofPath) {
-            const url = await getSignedUrl(d.proofPath)
-            if (url) proofUrls.push({ url, label: 'Comprobante de Devolución' })
-          }
-          if (d.evidence_url) {
-            const url = await getSignedUrl(d.evidence_url)
-            if (url) proofUrls.push({ url, label: 'Evidencia en Disputa' })
+          for (const [key, label] of ATTACHMENT_KEYS) {
+            const path = readAttachmentPath(d, key)
+            if (!path) continue
+            const url = await getSignedUrl(path)
+            if (url) proofUrls.push({ url, label })
           }
 
           return {
             eventType: log.event_type,
             actorRole: log.actor_role,
             createdAt: log.created_at,
-            data: d,
+            data: d ?? {},
             proofUrls,
           }
         }),
