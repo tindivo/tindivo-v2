@@ -2,8 +2,9 @@
 
 import type { DeliveryMethod } from '@tindivo/contracts'
 import { cn, Icon } from '@tindivo/ui'
+import { useId, useState } from 'react'
 import { isLineOk } from '@/components/address-fields'
-import { type Address, addressIcon } from '@/features/checkout/types'
+import { type Address, addressIcon, CUSTOMER_NOTE_MAX } from '@/features/checkout/types'
 
 interface DeliveryCardProps {
   businessName: string
@@ -17,6 +18,9 @@ interface DeliveryCardProps {
   phone: string
   onEditAddress: () => void
   onEditName: () => void
+  /** Nota libre para el motorizado. Vacía = no hay nota. */
+  note: string
+  onNote: (v: string) => void
 }
 
 /**
@@ -50,7 +54,14 @@ export function DeliveryCard({
   phone,
   onEditAddress,
   onEditName,
+  note,
+  onNote,
 }: DeliveryCardProps) {
+  const noteId = useId()
+  // Plegada mientras esté vacía: es opcional, y un textarea siempre abierto
+  // pesa lo mismo en la pantalla que la dirección, que sí es obligatoria. Si ya
+  // hay texto se queda abierta, para que no parezca que se perdió.
+  const [notaAbierta, setNotaAbierta] = useState(note.length > 0)
   const pickup = deliveryMethod === 'pickup'
   // La calle puede faltar en una dirección YA GUARDADA: el directorio del v1
   // trajo filas con referencia y sin línea. Eso se avisa siempre, sin esperar a
@@ -191,6 +202,75 @@ export function DeliveryCard({
           <Icon name="chevron_right" size={20} />
         </span>
       </button>
+
+      {/* ── Nota al motorizado ──
+          Va DENTRO de esta tarjeta y no en una sección propia porque habla de
+          lo mismo que la fila de arriba: cómo llegar a esa puerta. En pickup no
+          se pinta — no hay motorizado que la lea. */}
+      {!pickup && (
+        <div className="border-ink/[0.04] border-t">
+          {notaAbierta ? (
+            <div className="flex items-start gap-3 px-3.5 py-3">
+              <span className="flex w-9 shrink-0 justify-center">
+                <span
+                  aria-hidden
+                  className="flex h-9 w-9 items-center justify-center rounded-xl bg-surface-low text-ink-muted"
+                >
+                  <Icon name="chat_bubble" size={18} />
+                </span>
+              </span>
+              <div className="min-w-0 flex-1">
+                <label htmlFor={noteId} className="block font-semibold text-[13.5px] text-ink">
+                  Nota para el motorizado{' '}
+                  <span className="font-medium text-ink-subtle">· opcional</span>
+                </label>
+                <textarea
+                  id={noteId}
+                  rows={2}
+                  value={note}
+                  maxLength={CUSTOMER_NOTE_MAX}
+                  onChange={(e) => onNote(e.target.value)}
+                  placeholder="Ej. Toca el timbre dos veces; el perro ladra pero no muerde"
+                  className="mt-1.5 w-full resize-none rounded-[13px] border border-ink/[0.08] bg-surface px-3 py-2.5 text-[13px] text-ink leading-snug outline-none transition-colors placeholder:text-ink-subtle focus:border-ink focus:ring-4 focus:ring-ink/[0.06]"
+                />
+                <div className="mt-1 flex items-center justify-between gap-2">
+                  <span className="text-[11px] text-ink-subtle">
+                    La verá solo el motorizado, al salir a tu dirección.
+                  </span>
+                  {note.length > CUSTOMER_NOTE_MAX - 40 && (
+                    <span className="shrink-0 text-[11px] text-ink-subtle tabular-nums">
+                      {note.length}/{CUSTOMER_NOTE_MAX}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setNotaAbierta(true)}
+              className="flex w-full items-center gap-3 px-3.5 py-3 text-left transition-colors hover:bg-ink/[0.02]"
+            >
+              <span className="flex w-9 shrink-0 justify-center">
+                <span
+                  aria-hidden
+                  className="flex h-9 w-9 items-center justify-center rounded-xl bg-surface-low text-ink-subtle"
+                >
+                  <Icon name="add_comment" size={18} />
+                </span>
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-semibold text-[13.5px] text-ink-muted">
+                  Agregar nota para el motorizado
+                </span>
+                <span className="mt-0.5 block text-[11.5px] text-ink-subtle leading-snug">
+                  Opcional. Ej. «toca el timbre dos veces».
+                </span>
+              </span>
+            </button>
+          )}
+        </div>
+      )}
     </div>
   )
 }

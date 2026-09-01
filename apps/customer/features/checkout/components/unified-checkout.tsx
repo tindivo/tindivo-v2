@@ -66,6 +66,8 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
     maxDeclarable,
     geoBlock,
     setGeoBlock,
+    customerNote,
+    setCustomerNote,
   } = checkout
 
   const { cashAmount, cashChange, issue, focus, attempted, validate } = validation
@@ -245,6 +247,8 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
               setShowAddressSelector(true)
             }}
             onEditName={() => setShowNameEdit(true)}
+            note={customerNote}
+            onNote={setCustomerNote}
           />
         </section>
 

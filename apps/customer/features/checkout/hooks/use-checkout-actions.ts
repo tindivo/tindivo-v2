@@ -67,6 +67,7 @@ export function useCheckoutActions(state: CheckoutState): CheckoutActions {
     setShowOtpSheet,
     maxCashBill,
     refreshMaxChange,
+    customerNote,
   } = state
 
   const idempotencyKeyRef = useRef<string>(crypto.randomUUID())
@@ -208,6 +209,9 @@ export function useCheckoutActions(state: CheckoutState): CheckoutActions {
           : undefined,
       deliveryAddress: selectedAddress?.line ?? (manualAddr.line.trim() || undefined),
       deliveryReference: deliveryMethod === 'delivery' ? state.reference : undefined,
+      // Solo tiene sentido con delivery: en un recojo no hay motorizado que la
+      // lea. `undefined` y no `''` para que el contrato la trate como ausente.
+      customerNotes: deliveryMethod === 'delivery' ? customerNote.trim() || undefined : undefined,
       coordinates:
         deliveryMethod !== 'delivery'
           ? undefined

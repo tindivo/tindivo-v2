@@ -30,6 +30,14 @@ export interface PrepayTimers {
 export const DEFAULT_MAX_CASH_BILL = 100
 export const DEFAULT_MAX_CHANGE = 50
 export const CASH_STEP = 0.5 // redondeo del input libre: múltiplos de S/0.50
+
+/**
+ * Tope de la nota al motorizado. Coincide a propósito con el `max(200)` del
+ * contrato Zod y con el `left(..., 200)` de `create_customer_order` (0199): son
+ * tres redes para el mismo número, y si discreparan el cliente escribiría algo
+ * que el servidor recorta sin avisar.
+ */
+export const CUSTOMER_NOTE_MAX = 200
 export const NEAR_DELIVERY_FEE = 2.0
 
 /**

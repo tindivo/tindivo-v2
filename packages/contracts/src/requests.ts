@@ -54,6 +54,17 @@ export const CreateOrderRequestSchema = z
     gpsValidation: CustomerGpsValidationSchema.optional(),
     /** Cash on delivery: bill the customer pays with (server validates >= total). */
     cashPayingWith: z.number().positive().max(1000).optional(),
+    /**
+     * Optional free-text note for the DRIVER — "ring the bell twice", "blue
+     * gate", "there is a dog". Lands in `orders.customer_notes`, which the
+     * driver app already renders on the assigned-order screen.
+     *
+     * The 200-char cap is mirrored by `create_customer_order` (0199): this one
+     * gives the customer a clean 422 instead of a silent trim, but the function
+     * has the last word — a caller could skip this schema, and the column is
+     * unbounded `text`.
+     */
+    customerNotes: z.string().trim().max(200).optional(),
     items: z.array(CreateOrderItemSchema).min(1).max(50),
   })
   .refine(

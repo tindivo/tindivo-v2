@@ -66,6 +66,13 @@ export interface CheckoutState {
   setCashChoice: (v: CashChoice) => void
   cashCustom: string
   setCashCustom: (v: string) => void
+  /**
+   * Nota libre para el MOTORIZADO —«toca el timbre dos veces», «hay perro»—.
+   * Opcional: nunca bloquea el pedido. Viaja a `orders.customer_notes`, que la
+   * app de motorizados ya pinta desde antes; lo que faltaba era escribirla.
+   */
+  customerNote: string
+  setCustomerNote: (v: string) => void
 
   prepayThreshold: number
   setPrepayThreshold: (v: number) => void
@@ -153,6 +160,7 @@ export function useCheckoutState(): CheckoutState {
   const [payment, setPayment] = useState<PaymentIntent>('pending_cash')
   const [cashChoice, setCashChoice] = useState<CashChoice>('exact')
   const [cashCustom, setCashCustom] = useState('')
+  const [customerNote, setCustomerNote] = useState('')
   const [geoBlock, setGeoBlock] = useState<GeoBlockKind | null>(null)
   const [prepayThreshold, setPrepayThreshold] = useState(DEFAULT_PREPAY_THRESHOLD)
   const [prepayTimers, setPrepayTimers] = useState<PrepayTimers>({ ...DEFAULT_PREPAY_TIMERS })
@@ -401,6 +409,8 @@ export function useCheckoutState(): CheckoutState {
     setCashChoice,
     cashCustom,
     setCashCustom,
+    customerNote,
+    setCustomerNote,
     prepayThreshold,
     setPrepayThreshold,
     prepayTimers,

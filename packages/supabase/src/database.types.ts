@@ -2653,6 +2653,7 @@ export type Database = {
           p_customer_gps_lng?: number
           p_customer_gps_method?: string
           p_customer_name: string
+          p_customer_notes?: string
           p_customer_phone: string
           p_customer_user_id: string
           p_delivery_address: string

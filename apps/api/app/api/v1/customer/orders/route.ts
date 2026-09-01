@@ -270,6 +270,10 @@ export async function POST(req: Request): Promise<Response> {
           p_customer_gps_accuracy_m: body.gpsValidation?.accuracyM,
           p_customer_gps_distance_to_center_km: body.gpsValidation?.distanceToCenterKm,
           p_customer_gps_method: body.gpsValidation?.method,
+          // La nota al motorizado. El saneo de verdad —recorte, colapso de
+          // saltos de línea y tope de 200— lo hace la RPC (0199): aquí solo se
+          // pasa lo que el contrato ya validó.
+          p_customer_notes: body.customerNotes || undefined,
         })
         if (error) {
           // El guard de pedido activo no puede dejar su propio rastro: el RAISE
