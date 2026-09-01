@@ -5,6 +5,7 @@ import type { PaymentIntent } from '@tindivo/contracts'
 import { useRef } from 'react'
 import { saveAddress } from '@/components/auth-onboarding/persistence'
 import type { CheckoutState } from '@/features/checkout/hooks/use-checkout-state'
+import { cashError } from '@/features/checkout/lib/cash'
 import type { GeoBlockKind, GpsValidationPayload, OrderResult } from '@/features/checkout/types'
 import { api } from '@/lib/api'
 import { getLocationValidation, haversineKm } from '@/lib/coverage'
@@ -142,28 +143,14 @@ export function useCheckoutActions(state: CheckoutState): CheckoutActions {
     }
 
     if (selectedPayment === 'pending_cash') {
-      const paying = payingWithCash()
-      if (paying < total) {
-        setError('El monto con el que pagarás debe cubrir el total del pedido')
-        return
-      }
-      if (paying > maxCashBill) {
-        setError(`El monto máximo con el que puedes pagar es S/ ${maxCashBill.toFixed(2)}.`)
-        return
-      }
-      const change = Math.round((paying - total) * 100) / 100
+      // El techo se vuelve a PREGUNTAR aquí, no se reutiliza el que trajo la
+      // pantalla al montar: entre que el cliente eligió su billete y tocó
+      // confirmar, la cajera pudo declarar otro sencillo. Y la regla es la
+      // misma función que pinta el selector — ver `lib/cash.ts`.
       const freshMaxChange = await refreshMaxChange()
-      if (change > freshMaxChange) {
-        if (freshMaxChange <= 0) {
-          setError(
-            `Esta noche el negocio no tiene vuelto: paga con S/ ${total.toFixed(2)} exactos o elige Yape.`,
-          )
-          return
-        }
-        const maxCash = Math.floor((total + freshMaxChange) * 100) / 100
-        setError(
-          `El vuelto sería S/ ${change.toFixed(2)} y esta noche hay hasta S/ ${freshMaxChange.toFixed(2)}. Paga con S/ ${maxCash.toFixed(2)} o menos, o elige Yape.`,
-        )
+      const mal = cashError(payingWithCash(), { total, maxCashBill, maxChange: freshMaxChange })
+      if (mal) {
+        setError(mal)
         return
       }
     }

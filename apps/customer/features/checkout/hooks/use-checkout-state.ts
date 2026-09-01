@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { AddressValue } from '@/components/address-fields'
 import { EMPTY_ADDRESS } from '@/components/address-fields'
+import { maxDeclarable as maxDeclarableCash } from '@/features/checkout/lib/cash'
 import {
   type Address,
   type CashChoice,
@@ -211,9 +212,10 @@ export function useCheckoutState(): CheckoutState {
 
   const mustPrepay = isNewUser || exceedsCashCap || isBlocked
 
-  // Máximo declarable = mín(billete máximo, total + vuelto máximo)
+  // Máximo declarable = mín(billete máximo, total + vuelto máximo). La fórmula
+  // vive en `lib/cash.ts` con el resto de la regla del vuelto.
   const maxDeclarable = useMemo(
-    () => Math.min(maxCashBill, total + maxChange),
+    () => maxDeclarableCash({ total, maxCashBill, maxChange }),
     [maxCashBill, maxChange, total],
   )
 

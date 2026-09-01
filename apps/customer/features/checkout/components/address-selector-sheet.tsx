@@ -1,16 +1,15 @@
 'use client'
 
 import { BottomSheet, Button, Icon, ScreenHeader } from '@tindivo/ui'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   AddressFields,
   type AddressValue,
   EMPTY_ADDRESS,
   isLineOk,
   isReferenceOk,
-  labelEmoji,
 } from '@/components/address-fields'
-import type { Address } from '@/features/checkout/types'
+import { type Address, addressIcon } from '@/features/checkout/types'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
 interface AddressSelectorSheetProps {
@@ -20,6 +19,14 @@ interface AddressSelectorSheetProps {
   addressId: string | null
   onSelect: (id: string) => void
   onSaved: () => void
+  /**
+   * Abrir directamente en el formulario, saltándose la lista.
+   *
+   * Lo usa el CTA cuando el cliente NO tiene ninguna dirección guardada: en ese
+   * caso la lista está vacía y lo único que hay es el botón «Agregar nueva
+   * dirección», así que enseñarla es cobrar un toque por nada.
+   */
+  startAdding?: boolean
 }
 
 export function AddressSelectorSheet({
@@ -29,11 +36,18 @@ export function AddressSelectorSheet({
   addressId,
   onSelect,
   onSaved,
+  startAdding = false,
 }: AddressSelectorSheetProps) {
-  const [adding, setAdding] = useState(false)
+  const [adding, setAdding] = useState(startAdding)
   const [manualAddr, setManualAddr] = useState<AddressValue>(EMPTY_ADDRESS)
   const [manualInside, setManualInside] = useState(true)
   const [busy, setBusy] = useState(false)
+
+  // La hoja no se desmonta al cerrarse (`return null` con los hooks ya
+  // corridos), así que `adding` sobreviviría de una apertura a la siguiente.
+  useEffect(() => {
+    if (open) setAdding(startAdding)
+  }, [open, startAdding])
 
   if (!open) return null
 
@@ -90,8 +104,11 @@ export function AddressSelectorSheet({
                     sel ? 'border-brand ring-2 ring-brand/30' : 'border-ink/[0.04] shadow-elev-1'
                   }`}
                 >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-[18px]">
-                    {labelEmoji(a.label)}
+                  <div
+                    aria-hidden
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-brand-dark"
+                  >
+                    <Icon name={addressIcon(a.label)} size={20} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
@@ -110,8 +127,9 @@ export function AddressSelectorSheet({
                     {a.line ? (
                       <div className="text-[13px] font-medium text-ink">{a.line}</div>
                     ) : (
-                      <div className="mt-0.5 text-[12px] font-medium text-danger">
-                        ⚠️ Falta calle/número
+                      <div className="mt-0.5 flex items-center gap-1 font-medium text-[12px] text-danger">
+                        <Icon name="error" size={13} aria-hidden />
+                        Falta calle/número
                       </div>
                     )}
                     <div className="mt-0.5 text-[12px] text-ink-muted">{a.reference}</div>

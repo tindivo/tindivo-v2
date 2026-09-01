@@ -226,3 +226,44 @@ export const PAYMENT_OPTIONS: PaymentOption[] = [
     momento: 'adelantado',
   },
 ]
+
+/**
+ * El icono de una dirección guardada, por su etiqueta.
+ *
+ * Sustituye a `labelEmoji` SOLO en el checkout. Aquel devuelve 🏠/💼/📍 y sigue
+ * vivo en el selector de etiqueta del formulario de dirección, donde el emoji
+ * va dentro de un chip de texto y se lee como parte de la palabra. Aquí el
+ * icono va solo, dentro de un cuadrado de color, haciendo de icono: un emoji
+ * ahí se ve de otro tamaño en cada teléfono, no toma el color de la marca, y
+ * choca con la regla del propio DS —Material Symbols para iconografía— que ya
+ * existe por el incidente del 2026-08-18.
+ */
+export function addressIcon(label: string): string {
+  return label === 'Casa' ? 'home' : label === 'Trabajo' ? 'work' : 'location_on'
+}
+
+/**
+ * QUÉ FALTA PARA PODER CONFIRMAR.
+ *
+ * Antes esto era un `string | null` suelto (`error`) que solo existía DESPUÉS
+ * de tocar el CTA, y se pintaba al final del scroll: si faltaba la referencia
+ * de la dirección, el aviso salía a ~600 px del campo que lo causaba, con la
+ * pantalla ya scrolleada al fondo por el propio acto de tocar el botón.
+ *
+ * Con el campo dentro del objeto, la misma falta puede hacer tres cosas a la
+ * vez sin repetir la regla: nombrar el CTA, marcar la fila y decidir a dónde
+ * llevar al cliente.
+ */
+export type CheckoutField = 'cart' | 'address' | 'name' | 'phone' | 'cash'
+
+export interface CheckoutIssue {
+  field: CheckoutField
+  /** Lo que se pinta junto al campo que falla. */
+  message: string
+  /**
+   * Lo que dice el CTA mientras esta sea la primera falta. Es una ORDEN, no un
+   * diagnóstico: «Agrega tu dirección», no «Falta la dirección». El botón sigue
+   * siendo un botón, así que tiene que decir qué pasa al tocarlo.
+   */
+  cta: string
+}
