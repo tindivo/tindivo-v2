@@ -14,6 +14,17 @@ export interface BusinessOrderingInfo {
   whatsappNumber: string | null
   /** Horario semanal; vacío = sin horario configurado (siempre abierto). */
   schedule: ScheduleDayRow[]
+  /**
+   * Ventana de entrega estimada, en minutos. Sale de
+   * `businesses.estimated_eta_min/max` — el MISMO dato que ya enseñan la card
+   * del catálogo y la portada del negocio, no una estimación nueva. Se pasa por
+   * aquí y no por otra consulta porque esta respuesta ya lo trae.
+   *
+   * `null` cuando el negocio no lo tiene puesto: entonces no se pinta nada, en
+   * vez de inventar un rango.
+   */
+  etaMin: number | null
+  etaMax: number | null
 }
 
 interface DetailEnvelope {
@@ -22,6 +33,8 @@ interface DetailEnvelope {
       accepts_web_pickup?: boolean
       accepts_web_delivery?: boolean
       whatsapp_number?: string | null
+      estimated_eta_min?: number | null
+      estimated_eta_max?: number | null
     }
     schedule?: ScheduleDayRow[]
   }
@@ -42,6 +55,8 @@ async function fetchInfo(businessId: string): Promise<BusinessOrderingInfo | nul
       mode: !b.accepts_web_delivery && !b.accepts_web_pickup ? 'whatsapp' : 'delivery',
       whatsappNumber: b.whatsapp_number ?? null,
       schedule: res.data.schedule ?? [],
+      etaMin: b.estimated_eta_min ?? null,
+      etaMax: b.estimated_eta_max ?? null,
     }
     cache.set(businessId, { info, at: Date.now() })
     return info

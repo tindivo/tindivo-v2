@@ -135,6 +135,13 @@ export interface CheckoutState {
   mustPrepay: boolean
   prepayReason: string | null
 
+  /**
+   * Ventana de entrega que promete el negocio, en minutos, o `null` si no la
+   * tiene puesta. Sale de la MISMA respuesta que ya se pedía para saber si el
+   * negocio acepta pedidos web: cero peticiones nuevas.
+   */
+  eta: { min: number; max: number } | null
+
   selectedAddress: Address | undefined
   reference: string
   line: string
@@ -451,6 +458,10 @@ export function useCheckoutState(): CheckoutState {
     isBlocked,
     mustPrepay,
     prepayReason,
+    eta:
+      ordering.info?.etaMin != null && ordering.info?.etaMax != null
+        ? { min: ordering.info.etaMin, max: ordering.info.etaMax }
+        : null,
     selectedAddress,
     reference,
     line,

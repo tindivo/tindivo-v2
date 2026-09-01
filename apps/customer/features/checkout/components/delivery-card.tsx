@@ -87,8 +87,11 @@ export function DeliveryCard({
             >
               <Icon name="storefront" size={16} />
             </span>
+            {/* El punteado ES la ruta. Con `h-5` y un 13 % de opacidad casi no
+                se veía, y sin él las dos filas vuelven a leerse como una lista
+                de campos en vez de como un envío. */}
             {!pickup && (
-              <span aria-hidden className="mt-1 h-5 border-ink/[0.13] border-l-2 border-dashed" />
+              <span aria-hidden className="mt-1.5 h-6 border-ink/25 border-l-2 border-dotted" />
             )}
           </div>
           <div className="min-w-0 flex-1 pt-0.5">

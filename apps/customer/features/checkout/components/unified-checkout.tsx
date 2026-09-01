@@ -68,6 +68,7 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
     setGeoBlock,
     customerNote,
     setCustomerNote,
+    eta,
   } = checkout
 
   const { cashAmount, cashChange, issue, focus, attempted, validate } = validation
@@ -159,8 +160,24 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
     <main className="mx-auto flex min-h-dvh max-w-[768px] flex-col bg-surface lg:max-w-6xl">
       <div className="border-ink/[0.04] border-b px-4 pt-3.5 pb-3">
         <h1 className="font-display font-bold text-[22px] tracking-tight">Confirmar pedido</h1>
-        {cart.businessName && (
-          <p className="mt-0.5 text-[12px] text-ink-muted">{cart.businessName}</p>
+        {/* El negocio y, si lo tiene puesto, su ventana de entrega. Es el MISMO
+            `estimated_eta_min/max` que el cliente ya vio en la card del catálogo
+            y en la portada del negocio: si aquí desapareciera, el checkout sería
+            la única pantalla del camino que deja de decir cuándo llega. Sin el
+            dato no se pinta nada — nunca un rango inventado. */}
+        {(cart.businessName || eta) && (
+          <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] text-ink-muted">
+            {cart.businessName && <span>{cart.businessName}</span>}
+            {cart.businessName && eta && (
+              <span aria-hidden className="h-[3px] w-[3px] rounded-full bg-ink-subtle" />
+            )}
+            {eta && (
+              <span className="inline-flex items-center gap-1 font-semibold text-ink">
+                <Icon name="schedule" size={13} aria-hidden />
+                Llega en {eta.min}–{eta.max} min
+              </span>
+            )}
+          </p>
         )}
       </div>
 
