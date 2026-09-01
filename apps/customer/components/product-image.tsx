@@ -46,14 +46,23 @@ export function ProductImage({
           className="absolute inset-0 h-full w-full object-cover"
         />
       ) : (
+        /*
+         * Sin foto, el recuadro se queda liso.
+         *
+         * Antes escribía aquí el nombre del plato, que ya está a 14 px a la
+         * izquierda y con mejor tipografía: el mismo texto dos veces, el
+         * segundo más pequeño y peor contrastado. No se leía como «falta la
+         * foto», se leía como roto — y en una sección donde faltan seis fotos
+         * de once, como en Pescados y mariscos, se leía roto seis veces
+         * seguidas. El hueco tintado dice lo mismo sin fingir contenido.
+         *
+         * `label` sigue existiendo porque es el `alt` cuando SÍ hay foto.
+         */
         <div
-          className="absolute inset-0 flex items-center justify-center p-1.5 text-center font-sans text-[10px] tracking-wider"
-          style={{
-            color: `oklch(0.35 0.1 ${hue})`,
-          }}
-        >
-          {label}
-        </div>
+          className="absolute inset-0"
+          style={{ background: `oklch(0.88 0.035 ${hue})` }}
+          aria-hidden
+        />
       )}
     </div>
   )

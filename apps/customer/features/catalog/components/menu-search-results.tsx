@@ -12,6 +12,7 @@ interface MenuSearchResultsProps {
   businessName: string
   disabled?: boolean
   onItemClick: (item: MenuItem) => void
+  onQuickAdd: (item: MenuItem) => void
 }
 
 export function MenuSearchResults({
@@ -20,6 +21,7 @@ export function MenuSearchResults({
   businessName,
   disabled,
   onItemClick,
+  onQuickAdd,
 }: MenuSearchResultsProps) {
   const term = query.trim()
 
@@ -67,6 +69,7 @@ export function MenuSearchResults({
             item={hit.item}
             disabled={disabled}
             onClick={onItemClick}
+            onQuickAdd={onQuickAdd}
             categoryLabel={hit.categoryName}
             nameRanges={hit.nameRanges}
             descriptionRanges={hit.descriptionRanges}

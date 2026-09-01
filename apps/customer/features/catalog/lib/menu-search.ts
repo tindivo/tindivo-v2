@@ -55,9 +55,17 @@ const STOPWORDS = new Set([
  * roba altura de pantalla para resolver un problema que no existe. No va en
  * `app_settings` porque no es un parámetro operativo —la cajera no lo toca—,
  * es una decisión de presentación.
+ *
+ * Baja de 20/6 a 12/4 porque el corte anterior dejaba un escalón demasiado
+ * alto: una carta de 15 platos en 5 secciones ya es larga de recorrer y se
+ * quedaba sin buscador. Hoy no cambia a nadie —Al Punto (10 platos, 3
+ * secciones) y Pollería Nadia (6 y 3) siguen sin él, y con razón: sus cartas
+ * caben de un vistazo—, así que esto es para el negocio que crezca, no para
+ * los cuatro de ahora. Lo que sí arregla la falta de costumbre es que el campo
+ * ahora se parece al de la portada: no hay gesto nuevo que aprender.
  */
-const OFFER_SEARCH_MIN_ITEMS = 20
-const OFFER_SEARCH_MIN_CATEGORIES = 6
+const OFFER_SEARCH_MIN_ITEMS = 12
+const OFFER_SEARCH_MIN_CATEGORIES = 4
 
 /** Tramo `[start, end)` del texto ORIGINAL que casó con un término. */
 export interface MatchRange {

@@ -2,24 +2,27 @@
 
 import { getOpenStatus } from '@tindivo/contracts'
 import Link from 'next/link'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { CartSheet, CartSidebar } from '@/components/cart-sheet'
 import { ActiveOrderBlockBanner } from '@/features/catalog/components/active-order-block-banner'
 import { AddedToast } from '@/features/catalog/components/added-toast'
 import { BusinessHero } from '@/features/catalog/components/business-hero'
+import { BusinessIdentity } from '@/features/catalog/components/business-identity'
 import { CartReplaceSheet } from '@/features/catalog/components/cart-replace-sheet'
 import { ClosedBanner } from '@/features/catalog/components/closed-banner'
 import { MenuSearchResults } from '@/features/catalog/components/menu-search-results'
 import { MenuSection } from '@/features/catalog/components/menu-section'
 import { MenuToolbar } from '@/features/catalog/components/menu-toolbar'
 import { ProductModal } from '@/features/catalog/components/product-modal'
-import { ScheduleRow } from '@/features/catalog/components/schedule-row'
+import { SearchSuggestions } from '@/features/catalog/components/search-suggestions'
+import { SectionIndexSheet } from '@/features/catalog/components/section-index-sheet'
 import { useBusinessCatalog } from '@/features/catalog/hooks/use-business-catalog'
 import { useCatalogCart } from '@/features/catalog/hooks/use-catalog-cart'
 import { useCatalogNow } from '@/features/catalog/hooks/use-catalog-now'
 import { useMenuSearch } from '@/features/catalog/hooks/use-menu-search'
 import { soles } from '@/features/catalog/lib/format'
-import type { BusinessDetail, Category } from '@/features/catalog/types'
+import { plainLine } from '@/features/catalog/lib/menu-density'
+import type { BusinessDetail, Category, MenuItem } from '@/features/catalog/types'
 import { useActiveOrders } from '@/lib/active-orders'
 
 interface NegocioShellProps {
@@ -33,13 +36,27 @@ interface NegocioShellProps {
  */
 const SIN_CATEGORIAS: Category[] = []
 
+/** Alto de reserva mientras no se ha podido medir la barra fija. */
+const ALTO_BARRA_ESTIMADO = 96
+
+/**
+ * Cuánto callar al scroll-spy tras un salto. Con `behavior: 'smooth'` el
+ * navegador atraviesa las secciones intermedias, y sin esta pausa el subrayado
+ * las va encendiendo una a una: parpadea toda la tira antes de asentarse.
+ */
+const MS_DE_SALTO = 700
+
 export function NegocioShell({ id, initialData }: NegocioShellProps) {
   const now = useCatalogNow()
   const { data, error } = useBusinessCatalog(id, { initialData })
   const activeOrders = useActiveOrders()
   const [active, setActive] = useState('')
   const [cartOpen, setCartOpen] = useState(false)
+  const [indexOpen, setIndexOpen] = useState(false)
+  const [pendingJump, setPendingJump] = useState<string | null>(null)
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  const toolbarRef = useRef<HTMLDivElement | null>(null)
+  const jumpingUntil = useRef(0)
   const {
     cart,
     modalItem,
@@ -52,16 +69,89 @@ export function NegocioShell({ id, initialData }: NegocioShellProps) {
   } = useCatalogCart(data?.business.id, data?.business.name)
   const search = useMenuSearch(data?.categories ?? SIN_CATEGORIAS)
   const isBlockedByActiveOrder = activeOrders.some((o) => o.businessId === id)
+  const categories = data?.categories ?? SIN_CATEGORIAS
+  const searchReplacing = search.replacing
 
   useEffect(() => {
     if (data && !active) setActive(data.categories[0]?.id ?? '')
   }, [data, active])
 
-  function jumpTo(sid: string) {
-    setActive(sid)
-    const el = sectionRefs.current[sid]
-    if (el) window.scrollTo({ top: el.offsetTop - 70, behavior: 'smooth' })
-  }
+  /**
+   * Scroll-spy: el subrayado sigue a la lectura.
+   *
+   * Antes `active` solo cambiaba al tocar una pestaña, así que en una carta de
+   * catorce secciones la barra seguía marcando la primera mientras el usuario
+   * recorría las otras trece. Una barra que miente se deja de mirar, y con ella
+   * se pierden las secciones — que era el síntoma que había que resolver.
+   *
+   * No corre mientras la búsqueda ocupa el sitio de la carta: ahí abajo no hay
+   * secciones que espiar.
+   */
+  useEffect(() => {
+    if (searchReplacing || categories.length === 0) return
+    let frame = 0
+
+    function espiar() {
+      frame = 0
+      if (Date.now() < jumpingUntil.current) return
+      const guard = (toolbarRef.current?.offsetHeight ?? ALTO_BARRA_ESTIMADO) + 12
+      let current = categories[0]?.id ?? ''
+      for (const c of categories) {
+        const el = sectionRefs.current[c.id]
+        if (el && el.getBoundingClientRect().top <= guard) current = c.id
+      }
+      if (current) setActive((prev) => (prev === current ? prev : current))
+    }
+
+    function onScroll() {
+      if (frame) return
+      frame = requestAnimationFrame(espiar)
+    }
+
+    espiar()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      if (frame) cancelAnimationFrame(frame)
+    }
+  }, [categories, searchReplacing])
+
+  /**
+   * El salto se hace en un efecto y no en el handler porque puede venir desde
+   * las sugerencias, y entonces la carta todavía no está montada: en el handler
+   * la sección a la que queremos ir aún no existe.
+   */
+  useEffect(() => {
+    if (!pendingJump) return
+    const el = sectionRefs.current[pendingJump]
+    setPendingJump(null)
+    if (!el) return
+    const guard = toolbarRef.current?.offsetHeight ?? ALTO_BARRA_ESTIMADO
+    jumpingUntil.current = Date.now() + MS_DE_SALTO
+    window.scrollTo({
+      top: el.getBoundingClientRect().top + window.scrollY - guard,
+      behavior: 'smooth',
+    })
+  }, [pendingJump])
+
+  /**
+   * Añadir sin abrir el detalle. Solo lo llaman los platos SIN opciones: el
+   * «+» de una gaseosa no tiene nada que preguntar, y hasta ahora abría un
+   * modal en el que lo único posible era volver a pulsar «Agregar».
+   */
+  const quickAdd = useCallback((item: MenuItem) => handleAdd(plainLine(item)), [handleAdd])
+
+  const jumpTo = useCallback(
+    (sid: string) => {
+      setActive(sid)
+      setIndexOpen(false)
+      // Suelta el scroll guardado: si no, al cerrar la búsqueda el usuario
+      // volvería donde estaba antes de buscar y el salto se desharía solo.
+      search.closeForJump()
+      setPendingJump(sid)
+    },
+    [search.closeForJump],
+  )
 
   if (error) {
     return (
@@ -81,7 +171,7 @@ export function NegocioShell({ id, initialData }: NegocioShellProps) {
     )
   }
 
-  const { business, categories, schedule } = data
+  const { business, schedule } = data
   const openingConfirmed = data.opening_confirmed ?? null
   const isCurrentBusinessCart = cart.businessId === business.id
   const count = isCurrentBusinessCart ? cart.count() : 0
@@ -99,13 +189,13 @@ export function NegocioShell({ id, initialData }: NegocioShellProps) {
             businessName={business.name}
           />
         )}
-        <BusinessHero
+        <BusinessHero business={business} />
+        <BusinessIdentity
           business={business}
           schedule={schedule}
           now={now}
           openingConfirmed={openingConfirmed}
         />
-        <ScheduleRow schedule={schedule} now={now} openingConfirmed={openingConfirmed} />
         {closedForOrders && (
           <ClosedBanner schedule={schedule} now={now} openingConfirmed={openingConfirmed} />
         )}
@@ -115,40 +205,50 @@ export function NegocioShell({ id, initialData }: NegocioShellProps) {
         <div ref={search.anchorRef} aria-hidden />
 
         <MenuToolbar
+          containerRef={toolbarRef}
           categories={categories}
+          businessName={business.name}
           active={active}
           onSelect={jumpTo}
+          onOpenIndex={() => setIndexOpen(true)}
           searchEnabled={search.enabled}
-          searchOpen={search.open}
+          searchActive={searchReplacing}
           query={search.query}
           onQueryChange={search.setQuery}
-          onOpenSearch={search.openSearch}
-          onCloseSearch={search.closeSearch}
+          onSearchFocus={search.onFocus}
+          onSearchBlur={search.onBlur}
+          onSearchClear={search.clear}
         />
 
-        <div className="px-4 pt-2">
-          {search.active ? (
-            <MenuSearchResults
-              query={search.query}
-              hits={search.hits}
-              businessName={business.name}
-              disabled={closedForOrders || isBlockedByActiveOrder}
-              onItemClick={setModalItem}
-            />
-          ) : (
-            categories.map((sec) => (
-              <MenuSection
-                key={sec.id}
-                category={sec}
+        {search.suggesting && <SearchSuggestions categories={categories} onSelect={jumpTo} />}
+
+        {!search.suggesting && (
+          <div className="px-4 pt-2">
+            {search.active ? (
+              <MenuSearchResults
+                query={search.query}
+                hits={search.hits}
+                businessName={business.name}
                 disabled={closedForOrders || isBlockedByActiveOrder}
-                sectionRef={(el) => {
-                  sectionRefs.current[sec.id] = el
-                }}
                 onItemClick={setModalItem}
+                onQuickAdd={quickAdd}
               />
-            ))
-          )}
-        </div>
+            ) : (
+              categories.map((sec) => (
+                <MenuSection
+                  key={sec.id}
+                  category={sec}
+                  disabled={closedForOrders || isBlockedByActiveOrder}
+                  sectionRef={(el) => {
+                    sectionRefs.current[sec.id] = el
+                  }}
+                  onItemClick={setModalItem}
+                  onQuickAdd={quickAdd}
+                />
+              ))
+            )}
+          </div>
+        )}
       </div>
 
       <aside className="hidden lg:sticky lg:top-6 lg:block">
@@ -169,6 +269,14 @@ export function NegocioShell({ id, initialData }: NegocioShellProps) {
           </span>
           <span className="tabular-nums">{soles(subtotal)}</span>
         </button>
+      )}
+
+      {indexOpen && (
+        <SectionIndexSheet
+          categories={categories}
+          onSelect={jumpTo}
+          onClose={() => setIndexOpen(false)}
+        />
       )}
 
       {cartOpen && <CartSheet onClose={() => setCartOpen(false)} />}

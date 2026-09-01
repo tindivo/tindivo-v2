@@ -1,73 +1,107 @@
 'use client'
 
-import { Icon, IconButton } from '@tindivo/ui'
+import { Icon } from '@tindivo/ui'
+import type { RefObject } from 'react'
 import { CategoryTabs } from '@/features/catalog/components/category-tabs'
 import { MenuSearchField } from '@/features/catalog/components/menu-search-field'
 import type { Category } from '@/features/catalog/types'
 
 interface MenuToolbarProps {
+  containerRef: RefObject<HTMLDivElement | null>
   categories: Category[]
+  businessName: string
   active: string
   onSelect: (id: string) => void
+  onOpenIndex: () => void
   /** Falso en cartas cortas: ahí el buscador solo roba altura de pantalla. */
   searchEnabled: boolean
-  searchOpen: boolean
+  /** Con el buscador en uso las pestañas sobran: debajo no está la carta. */
+  searchActive: boolean
   query: string
   onQueryChange: (value: string) => void
-  onOpenSearch: () => void
-  onCloseSearch: () => void
+  onSearchFocus: () => void
+  onSearchBlur: () => void
+  onSearchClear: () => void
 }
 
 /**
- * La única barra fija de la carta: buscar y navegar por categorías comparten
- * fila. Son dos formas de hacer lo mismo —llegar a un plato— y en móvil no hay
- * presupuesto para dos filas pegadas arriba, así que la búsqueda **sustituye**
- * a los chips mientras está abierta en vez de apilarse sobre ellos.
+ * Con una sola sección no hay nada que navegar: la tira sobra y el subrayado
+ * no informa de nada. Al Punto y Pollería Nadia tienen tres, así que ahí sí.
+ */
+const MIN_SECCIONES_PARA_TIRA = 2
+
+/**
+ * El índice existe para las secciones que NO caben en la tira. Por debajo de
+ * este número caben todas, y el botón sería una puerta a la misma habitación
+ * en la que ya estás — además de decir «3» al lado de tres pestañas visibles.
+ */
+const MIN_SECCIONES_PARA_INDICE = 5
+
+/**
+ * La única barra fija de la carta. Dos filas, y cada una hace una cosa:
+ *
+ * 1. Buscar — un campo con su texto, del ancho de la pantalla.
+ * 2. Navegar — pestañas de sección, más el botón índice que abre las que no
+ *    caben. El índice NO se desplaza con la tira: si se fuera de la pantalla
+ *    dejaría de ser la salida de emergencia de una carta larga.
+ *
+ * Antes las dos compartían fila y la búsqueda sustituía a los chips mientras
+ * estaba abierta. La idea era ahorrar altura; el precio fue que ninguna de las
+ * dos se veía.
  */
 export function MenuToolbar({
+  containerRef,
   categories,
+  businessName,
   active,
   onSelect,
+  onOpenIndex,
   searchEnabled,
-  searchOpen,
+  searchActive,
   query,
   onQueryChange,
-  onOpenSearch,
-  onCloseSearch,
+  onSearchFocus,
+  onSearchBlur,
+  onSearchClear,
 }: MenuToolbarProps) {
-  if (categories.length === 0) return null
+  const hayTira = categories.length >= MIN_SECCIONES_PARA_TIRA
+  const hayIndice = categories.length >= MIN_SECCIONES_PARA_INDICE
+
+  // Sin secciones que navegar y sin buscador que ofrecer, la barra no pinta nada.
+  if (categories.length === 0 || (!hayTira && !searchEnabled)) return null
 
   return (
-    <div className="sticky top-0 z-10 border-b border-ink/[0.06] bg-surface/[0.95] backdrop-blur-md">
-      <div className="mx-auto flex max-w-[768px] items-center md:max-w-[860px]">
-        {searchOpen ? (
-          <MenuSearchField query={query} onChange={onQueryChange} onClose={onCloseSearch} />
-        ) : (
-          <>
-            {searchEnabled && (
-              <div className="flex shrink-0 items-center py-2.5 pr-2 pl-4">
-                <IconButton
-                  type="button"
-                  size="sm"
-                  onClick={onOpenSearch}
-                  aria-label="Buscar en la carta"
-                  aria-expanded={false}
-                  className="border border-ink/[0.08] bg-card shadow-elev-1 hover:border-ink/20 hover:bg-ink/[0.03]"
-                >
-                  <Icon name="search" size={19} />
-                </IconButton>
-                {/* Separa el buscador de los chips: sin él, con la tira
-                    desplazada, la lupa parece una categoría más. */}
-                <span aria-hidden className="ml-2 h-5 w-px bg-ink/[0.08]" />
-              </div>
+    <div
+      ref={containerRef}
+      className="sticky top-0 z-10 border-ink/[0.07] border-b bg-surface/[0.96] backdrop-blur-md"
+    >
+      <div className="mx-auto max-w-[768px] md:max-w-[860px]">
+        {searchEnabled && (
+          <MenuSearchField
+            query={query}
+            businessName={businessName}
+            onChange={onQueryChange}
+            onFocus={onSearchFocus}
+            onBlur={onSearchBlur}
+            onClear={onSearchClear}
+          />
+        )}
+
+        {hayTira && !searchActive && (
+          <div className="flex items-end pt-2">
+            <CategoryTabs categories={categories} active={active} onSelect={onSelect} />
+            {hayIndice && (
+              <button
+                type="button"
+                onClick={onOpenIndex}
+                aria-label={`Ver las ${categories.length} secciones de la carta`}
+                className="mr-4 mb-[5px] ml-0.5 flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-ink/15 bg-card px-2.5 font-bold text-[12.5px] shadow-elev-1 transition-all active:scale-[0.97] hover:border-ink/25"
+              >
+                <Icon name="grid_view" size={15} />
+                <span className="tabular-nums">{categories.length}</span>
+              </button>
             )}
-            <CategoryTabs
-              categories={categories}
-              active={active}
-              onSelect={onSelect}
-              tightStart={searchEnabled}
-            />
-          </>
+          </div>
         )}
       </div>
     </div>
