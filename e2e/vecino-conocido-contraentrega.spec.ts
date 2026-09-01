@@ -75,6 +75,17 @@ function pnpm(script: string): void {
  * (Los anteriores —«Efectivo al recibir», «Prepago con billetera», «Billetera
  * digital al recibir»— eran títulos que ya no existen, y por eso este test se
  * puso rojo sin que el producto tuviera nada mal.)
+ *
+ * EL ROL ES `radio`, NO `button`. Las opciones eran `<button>` con un `<span>`
+ * redondo dibujado a mano —sin `role`, sin `aria-checked`, sin flechas del
+ * teclado— y ahora son `<input type="radio">` de verdad dentro de un `<label>`.
+ * Este test se volvió a poner rojo por lo mismo que la vez anterior: cambió la
+ * forma, no el producto.
+ *
+ * Y se afirma sobre el ESTADO del control (`toBeEnabled` / `toBeDisabled` /
+ * `toBeChecked`), no sobre `toBeVisible`. El input va con `sr-only`, que es 1×1
+ * y recortado: «visible» ahí no significa nada. El estado sí, y además es lo
+ * que este test quiere decir.
  */
 const PAGO = {
   efectivo: /Le pagas al motorizado/,
@@ -216,11 +227,13 @@ test.describe('0171 · al vecino conocido la pantalla le ofrece contraentrega', 
     // al vecino sí se le muestra: su tercera opción vive ahí.
     await expect(page.getByText(RE_MOTIVO_PREPAGO)).toHaveCount(0)
 
-    // Las tres opciones existen. Con `mustPrepay` las otras dos ni se renderizan
-    // (`unified-checkout.tsx` las filtra), así que verlas ya prueba que la 0171
-    // llegó a la pantalla.
-    await expect(page.getByRole('button', { name: PAGO.efectivo })).toBeVisible()
-    await expect(page.getByRole('button', { name: PAGO.prepago })).toBeVisible()
+    // Al vecino conocido la contraentrega le llega ACCIONABLE, que es más que
+    // «existe»: desde que las opciones bloqueadas se apagan en vez de ocultarse,
+    // estar en el DOM ya no prueba que se puedan usar. `toBeEnabled` sí.
+    await expect(page.getByRole('radio', { name: PAGO.efectivo })).toBeEnabled()
+    await expect(page.getByRole('radio', { name: PAGO.prepago })).toBeEnabled()
+    // Y le viene marcada la de al recibir, que es lo que la 0171 le devuelve.
+    await expect(page.getByRole('radio', { name: PAGO.efectivo })).toBeChecked()
 
     // SIN TOCAR NADA: se confirma con lo que la pantalla trajo marcado.
     const confirmar = page.getByRole('button', { name: /Confirmar pedido/ })
@@ -282,9 +295,21 @@ test.describe('0171 · al vecino conocido la pantalla le ofrece contraentrega', 
     // El motivo se le dice, y es el del primer pedido.
     await expect(page.getByText(/primer pedido.*adelantado/)).toBeVisible()
 
-    // Y las opciones de contraentrega NO están: `mustPrepay` las filtra.
-    await expect(page.getByRole('button', { name: PAGO.prepago })).toBeVisible()
-    await expect(page.getByRole('button', { name: PAGO.efectivo })).toHaveCount(0)
-    await expect(page.getByRole('button', { name: PAGO.yapeAlRecibir })).toHaveCount(0)
+    // Y las opciones de contraentrega están APAGADAS, no ausentes.
+    //
+    // Antes se afirmaba `toHaveCount(0)` porque `unified-checkout` las filtraba,
+    // y en pantalla quedaba una sola fila con su radio ya marcado: una lista de
+    // un elemento no es una elección, y el cliente —que por definición es el de
+    // su primer pedido— no llegaba a saber que existen otras dos formas de pagar
+    // ni que las tendrá la próxima vez. Ahora se apagan y se explican, que es el
+    // mismo patrón de los chips de efectivo que no alcanzan el vuelto.
+    //
+    // El control negativo NO se debilita con el cambio: se refuerza. «No están»
+    // también daba verde si el bloque de pago entero dejaba de renderizarse;
+    // «están y no se pueden accionar» solo da verde si el guard de la 0171
+    // llegó de verdad a la pantalla.
+    await expect(page.getByRole('radio', { name: PAGO.prepago })).toBeChecked()
+    await expect(page.getByRole('radio', { name: PAGO.efectivo })).toBeDisabled()
+    await expect(page.getByRole('radio', { name: PAGO.yapeAlRecibir })).toBeDisabled()
   })
 })
