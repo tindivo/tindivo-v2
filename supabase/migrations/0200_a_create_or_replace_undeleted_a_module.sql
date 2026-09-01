@@ -1,0 +1,73 @@
+-- =============================================================================
+-- 0200 · Un `create or replace` resucitó un módulo borrado
+-- =============================================================================
+--
+-- `public.generate_settlements` está viva y ROTA: inserta en
+-- `public.settlements`, una tabla que ya no existe. Medido en local el
+-- 2026-09-01, llamándola:
+--
+--   > select public.generate_settlements('2026-08-01','2026-08-31','2026-09-10');
+--   ERROR:  relation "public.settlements" does not exist
+--   LINE 1: insert into public.settlements (
+--
+-- ─────────────────────────────────────────────────────────────────────────────
+-- CÓMO LLEGÓ AHÍ — Y POR QUÉ NO ES UN OLVIDO DE LA 0124
+--
+--   La `0124` hizo bien su trabajo. Borró el módulo entero, con nombre y firma:
+--
+--     0124:414  DROP FUNCTION IF EXISTS public.pay_settlement(uuid, uuid, text, text);
+--     0124:415  DROP FUNCTION IF EXISTS public.generate_settlements(date, date, date, uuid);
+--     0124:422  DROP TABLE IF EXISTS public.settlements;
+--
+--   Fue la `0176` la que la volvió a crear, dos meses después, sin querer. Esa
+--   migración era un barrido: pasar de fecha natural a JORNADA
+--   (`current_service_date`) en todo lo que contara días. Y `generate_settlements`
+--   estaba en la lista de «cosas que cuentan días» que alguien preparó leyendo el
+--   repo — donde su código sigue, en la `0017`— en vez de la base, donde ya no
+--   estaba.
+--
+--   El detalle que lo hace invisible: **`create or replace function` sobre una
+--   función que no existe la CREA**, sin avisar de nada. Un `alter` habría
+--   fallado; un `replace` no. La propia 0176 lo dice sin saber lo que estaba
+--   diciendo:
+--
+--     0176:165  -- Hoy no la llama ninguna pantalla, así que el cambio es
+--     0176:166  -- preventivo. Se hace ahora por lo mismo que el resto: cuando
+--     0176:167  -- se cablee, ya estará de acuerdo con todos los demás.
+--
+--   No es que no la llame ninguna pantalla: es que el módulo estaba BORRADO.
+--   El arreglo de jornada se aplicó a un cadáver y lo puso de pie.
+--
+-- ─────────────────────────────────────────────────────────────────────────────
+-- POR QUÉ SE BORRA Y NO SE ARREGLA
+--
+--   Arreglarla querría decir devolver la tabla `settlements`, y eso es
+--   exactamente lo que la 0124 decidió no tener: el ledger es
+--   `business_charges` y punto (`AGENTS.md §2.2`). `generate_settlements` sumaba
+--   `orders.tindivo_commission`, que era una TERCERA base de cálculo distinta
+--   del ledger y de `balance_due` — el motivo por el que se fue.
+--
+--   Medido antes de borrar:
+--     · llamadores en el repo: NINGUNO. El único rastro de su nombre fuera de
+--       las migraciones es `packages/supabase/src/database.types.ts`, que es
+--       generado.
+--     · ACL: {postgres=X/postgres, service_role=X/postgres} — nunca estuvo
+--       expuesta a `anon` ni a `authenticated`, así que no ha sido una puerta
+--       abierta, solo una promesa falsa en los tipos.
+--
+--   Si algún día se factura por período, se diseña de cero contra
+--   `business_charges`. Lo que NO debe hacerse es rescatar esta, por el mismo
+--   motivo que la 0127 dio al matar `p_notes`: su problema no era el nombre.
+--
+-- ─────────────────────────────────────────────────────────────────────────────
+-- LA LECCIÓN, PARA EL PRÓXIMO BARRIDO
+--
+--   Un barrido que aplica el mismo cambio a N funciones tiene que sacar la
+--   lista de N de la BASE (`pg_proc`), no del repo. El repo conserva el código
+--   de todo lo que existió alguna vez; la base sabe qué sigue vivo. Y
+--   `create or replace` no distingue entre «actualizar» y «resucitar».
+--
+-- =============================================================================
+
+
+DROP FUNCTION IF EXISTS public.generate_settlements(date, date, date, uuid);

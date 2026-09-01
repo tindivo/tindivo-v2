@@ -2785,15 +2785,6 @@ export type Database = {
         Returns: Json
       }
       f_unaccent: { Args: { p_text: string }; Returns: string }
-      generate_settlements: {
-        Args: {
-          p_created_by?: string
-          p_due_date: string
-          p_period_end: string
-          p_period_start: string
-        }
-        Returns: Json
-      }
       generate_short_id: { Args: never; Returns: string }
       geo_distance_km: {
         Args: { p_lat1: number; p_lat2: number; p_lng1: number; p_lng2: number }
