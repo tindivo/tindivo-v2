@@ -66,7 +66,10 @@ export type AdminAppealRow = Pick<
 
 // ── Validaciones separadas según el contexto ────────────────────────────────
 
-function assertCustomerAppealFields(row: CustomerAppealRow): void {
+/** Campos que el mapper de cliente da por presentes tras la validación. */
+type ValidCustomerAppealRow = CustomerAppealRow & { order_id: string }
+
+function assertCustomerAppealFields(row: CustomerAppealRow): asserts row is ValidCustomerAppealRow {
   const missing: string[] = []
   if (!row.order_id) missing.push('order_id')
   if (!row.appeal_status) missing.push('appeal_status')
@@ -75,7 +78,14 @@ function assertCustomerAppealFields(row: CustomerAppealRow): void {
   }
 }
 
-function assertAdminAppealFields(row: AdminAppealRow): void {
+/** Campos que el mapper de admin da por presentes tras la validación. */
+type ValidAdminAppealRow = AdminAppealRow & {
+  order_id: string
+  business_id: string
+  customer_user_id: string
+}
+
+function assertAdminAppealFields(row: AdminAppealRow): asserts row is ValidAdminAppealRow {
   const missing: string[] = []
   if (!row.order_id) missing.push('order_id')
   if (!row.business_id) missing.push('business_id')
@@ -92,7 +102,7 @@ export function toCustomerAppealDto(row: CustomerAppealRow): CustomerAppealDto {
   assertCustomerAppealFields(row)
   return {
     id: row.id,
-    orderId: row.order_id!,
+    orderId: row.order_id,
     appealStatus: AppealStatusSchema.parse(row.appeal_status),
     refundStatus: row.refund_status ? RefundStatusSchema.parse(row.refund_status) : null,
     refundAmount:
@@ -115,10 +125,10 @@ export function toAdminAppealDto(row: AdminAppealRow): AdminAppealDto {
   const biz = order?.businesses
   return {
     id: row.id,
-    orderId: row.order_id!,
+    orderId: row.order_id,
     orderShortId: order?.short_id ?? null,
-    businessId: row.business_id!,
-    customerUserId: row.customer_user_id!,
+    businessId: row.business_id,
+    customerUserId: row.customer_user_id,
     customerPhone: row.customer_phone ?? null,
     customerName: order?.customer_name ?? null,
     description: row.description ?? null,

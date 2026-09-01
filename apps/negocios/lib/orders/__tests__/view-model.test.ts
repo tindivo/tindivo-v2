@@ -76,8 +76,10 @@ describe('toOrderVM readySec calculation', () => {
       estimated_ready_at: '2026-08-05T15:20:00Z', // +5 min (300 sec)
     })
     const vm = toOrderVM(row, baseNow)
-    expect(vm.readySec).toBe(300)
-    expect(formatReadyDelta(vm.readySec!)).toBe('05:00')
+    const { readySec } = vm
+    expect(readySec).toBe(300)
+    if (readySec === null) throw new Error('readySec no puede ser null con estimated_ready_at')
+    expect(formatReadyDelta(readySec)).toBe('05:00')
   })
 
   it('2. estimated_ready_at en el pasado, ready_early_used=false -> readySec negativo en cooking, heading, y waiting', () => {
@@ -93,8 +95,11 @@ describe('toOrderVM readySec calculation', () => {
       baseNow,
     )
     expect(vmCooking.state).toBe('cooking')
-    expect(vmCooking.readySec).toBe(-165)
-    expect(formatReadyDelta(vmCooking.readySec!)).toBe('-02:45')
+    const { readySec: readySecCooking } = vmCooking
+    expect(readySecCooking).toBe(-165)
+    if (readySecCooking === null)
+      throw new Error('readySec no puede ser null con estimated_ready_at')
+    expect(formatReadyDelta(readySecCooking)).toBe('-02:45')
 
     // Estado heading (heading_to_restaurant o waiting_driver con driver_id)
     const vmHeading = toOrderVM(

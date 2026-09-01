@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useSyncExternalStore } from 'react'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
 /**
@@ -43,35 +43,62 @@ const DEFAULTS: DriverTimers = {
   noShowWaitMinutes: 5,
 }
 
-export function useDriverTimers(): DriverTimers {
-  const [timers, setTimers] = useState<DriverTimers>(DEFAULTS)
+// ─────────────────────────────────────────────────────────────────────────────
+// UNA CONSULTA PARA TODA LA APP, NO UNA POR TARJETA.
+//
+// La nota de arriba ya avisaba de que un hook gemelo repetiría la consulta «por
+// cada tarjeta montada». El razonamiento era correcto y estaba a medias: evitó
+// el hook gemelo, pero no el MONTAJE gemelo. `OrderCard` llama a este hook, así
+// que con 6 tarjetas en pantalla salían 6 consultas idénticas a `app_settings`,
+// y en `/historial` una por pedido entregado. Medido en dev: 6.
+//
+// Estos valores cambian cuando alguien toca el panel de admin, o sea casi nunca.
+// Se piden UNA vez por sesión y se comparten. No hay realtime ni poll: si el
+// ajuste cambia a mitad de turno, entra en el siguiente arranque de la app —
+// que es exactamente lo que pasaba antes, porque tampoco había refresco.
+// ─────────────────────────────────────────────────────────────────────────────
 
-  useEffect(() => {
+let snapshot: DriverTimers = DEFAULTS
+const listeners = new Set<() => void>()
+/** La consulta se lanza una sola vez, aunque monten veinte tarjetas a la vez. */
+let cargando = false
+
+function normaliza(v: Partial<DriverTimers> | null): DriverTimers {
+  const num = (x: unknown, porDefecto: number) => (typeof x === 'number' && x > 0 ? x : porDefecto)
+  return {
+    queueLeadMinutes: num(v?.queueLeadMinutes, DEFAULTS.queueLeadMinutes),
+    deliveryLateMinutes: num(v?.deliveryLateMinutes, DEFAULTS.deliveryLateMinutes),
+    noShowWaitMinutes: num(v?.noShowWaitMinutes, DEFAULTS.noShowWaitMinutes),
+  }
+}
+
+function subscribe(onChange: () => void): () => void {
+  listeners.add(onChange)
+  if (!cargando) {
+    cargando = true
     getSupabaseBrowser()
       .from('app_settings')
       .select('value')
       .eq('key', 'timers')
       .maybeSingle()
       .then(({ data }) => {
-        const v = data?.value as Partial<DriverTimers> | null
-        setTimers({
-          queueLeadMinutes:
-            typeof v?.queueLeadMinutes === 'number' && v.queueLeadMinutes > 0
-              ? v.queueLeadMinutes
-              : DEFAULTS.queueLeadMinutes,
-          deliveryLateMinutes:
-            typeof v?.deliveryLateMinutes === 'number' && v.deliveryLateMinutes > 0
-              ? v.deliveryLateMinutes
-              : DEFAULTS.deliveryLateMinutes,
-          noShowWaitMinutes:
-            typeof v?.noShowWaitMinutes === 'number' && v.noShowWaitMinutes > 0
-              ? v.noShowWaitMinutes
-              : DEFAULTS.noShowWaitMinutes,
-        })
+        snapshot = normaliza(data?.value as Partial<DriverTimers> | null)
+        for (const l of listeners) l()
       })
-  }, [])
+  }
+  return () => {
+    listeners.delete(onChange)
+    // `cargando` NO se reinicia: los valores ya están en `snapshot` y volver a
+    // pedirlos al montar la siguiente tarjeta reintroduciría el problema.
+  }
+}
 
-  return timers
+export function useDriverTimers(): DriverTimers {
+  return useSyncExternalStore(
+    subscribe,
+    () => snapshot,
+    () => DEFAULTS,
+  )
 }
 
 /** Compatibilidad: sigue habiendo llamadas que solo quieren este. */

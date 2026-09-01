@@ -79,7 +79,20 @@ export async function GET(req: Request): Promise<Response> {
             // "Jr. Los Pinos, casa azul" sí. Aquí NO hay problema de privacidad
             // como en `teamOrders`: estas solicitudes son sobre pedidos PROPIOS
             // de quien las recibe.
-            'id,order_id,from_driver_id,to_driver_id,status,reason,expires_at,created_at,orders(short_id,delivery_reference,order_amount,delivery_fee,businesses(name))',
+            //
+            // `to_driver` es el nombre del SOLICITANTE, sí, con `to_`: el RPC
+            // nombra los lados por el viaje del PEDIDO, no por el de la
+            // petición (0043:276 inserta `from = dueño actual`,
+            // `to = quien lo pide`). Viene embebido, y no en un `select`
+            // aparte, para ahorrar el cuarto salto en serie de un endpoint que
+            // se llama cada 15 s.
+            //
+            // El `!order_transfer_requests_to_driver_id_fkey` NO es adorno:
+            // esta tabla tiene DOS claves foráneas a `drivers`
+            // (`from_driver_id` y `to_driver_id`), así que sin nombrar la
+            // constraint PostgREST no sabe por cuál embeber y responde 300
+            // (ambiguous embed). Si alguna vez se renombra la FK, se renombra aquí.
+            'id,order_id,from_driver_id,to_driver_id,status,reason,expires_at,created_at,orders(short_id,delivery_reference,order_amount,delivery_fee,businesses(name)),to_driver:drivers!order_transfer_requests_to_driver_id_fkey(full_name)',
           )
           .eq('status', 'pending')
           .gt('expires_at', nowIso)
@@ -87,14 +100,6 @@ export async function GET(req: Request): Promise<Response> {
       ])
     if (teamErr) throw new Error(teamErr.message)
     if (pendErr) throw new Error(pendErr.message)
-
-    // Nombres de los drivers solicitantes (para el banner del dueño).
-    const requesterIds = [...new Set((pending ?? []).map((r) => r.to_driver_id))]
-    const { data: requesters } = requesterIds.length
-      ? await service.from('drivers').select('id,full_name').in('id', requesterIds)
-      : { data: [] }
-    const requesterName = (driverId: string) =>
-      (requesters ?? []).find((d) => d.id === driverId)?.full_name ?? 'Compañero'
 
     return ok(
       {
@@ -147,7 +152,7 @@ export async function GET(req: Request): Promise<Response> {
                 : Number(r.orders.order_amount) + Number(r.orders.delivery_fee),
             businessName: r.orders?.businesses?.name ?? null,
             deliveryReference: r.orders?.delivery_reference ?? null,
-            requesterName: requesterName(r.to_driver_id),
+            requesterName: r.to_driver?.full_name ?? 'Compañero',
             reason: r.reason,
             expiresAt: r.expires_at,
             // `createdAt` viaja para que el cliente pueda pintar la barra de

@@ -1,6 +1,7 @@
 'use client'
 
 import { ApiError } from '@tindivo/api-client'
+import { getInstallId } from '@tindivo/ui'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '@/lib/api'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
@@ -22,6 +23,25 @@ export type SubscribeFailReason =
   | `error:${string}`
 
 export type SubscribeResult = { ok: true } | { ok: false; reason: SubscribeFailReason }
+
+/**
+ * Un dispositivo suscrito del motorizado, tal y como lo cuenta el servidor.
+ *
+ * NO LLEVA EL `endpoint`, y no es un olvido: es una credencial de entrega y no
+ * pinta nada en el navegador. Para revocar basta el `id`, que no sirve para
+ * nada fuera de `DELETE /push/subscriptions`.
+ */
+export interface PushDevice {
+  id: string
+  platform: 'apple' | 'android' | 'windows' | 'otro'
+  /** El `user_agent` crudo. Etiqueta, no identidad: dos Android comparten uno. */
+  label: string | null
+  createdAt: string
+  /** Último aviso ENTREGADO, no último uso. Ver el comentario de `devices`. */
+  lastNotifiedAt: string | null
+  /** El que está mirando esta pantalla ahora mismo. */
+  current: boolean
+}
 
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? ''
 const AUTO_HEAL_MIN_INTERVAL_MS = 60_000
@@ -130,6 +150,10 @@ export function usePushSubscription() {
           auth: json.keys.auth,
         },
         userAgent: navigator.userAgent.slice(0, 300),
+        // La identidad del dispositivo para la limpieza de zombis del servidor.
+        // El `userAgent` de arriba no sirve: entre dos Android es el mismo. Ver
+        // `getInstallId` en @tindivo/ui.
+        installId: getInstallId(),
       })
       rememberSentEndpoint(sub.endpoint)
     } catch (err) {
@@ -372,5 +396,82 @@ export function usePushSubscription() {
     }
   }, [checkStatus])
 
-  return { status, loading, subscribe, unsubscribe, refresh: checkStatus, forceRefresh }
+  // ── Lista de dispositivos ───────────────────────────────────────────────────
+  //
+  // Va aparte del `status`: `status` responde «¿me llegan avisos AQUÍ?» y se
+  // consulta cada 60 s; esto responde «¿en qué otros sitios te llegan?» y solo
+  // interesa cuando alguien abre /perfil a mirar. Mezclarlas metería una
+  // consulta por minuto para una pantalla que se abre una vez al mes.
+  const [devices, setDevices] = useState<PushDevice[] | null>(null)
+  const [devicesLoading, setDevicesLoading] = useState(false)
+
+  const loadDevices = useCallback(async (): Promise<void> => {
+    if (!(await hasActiveSession())) return
+    setDevicesLoading(true)
+    try {
+      // El endpoint propio va como parámetro para que el servidor marque cuál
+      // de la lista es este teléfono. Si no hay suscripción viva aquí, no se
+      // manda y no se marca ninguno — que es la verdad, no un fallo.
+      let propio: string | null = null
+      try {
+        const reg = await navigator.serviceWorker.ready
+        propio = (await reg.pushManager.getSubscription())?.endpoint ?? null
+      } catch {
+        propio = null
+      }
+      const qs = propio ? `?endpoint=${encodeURIComponent(propio)}` : ''
+      const res = await api.get<{ data: { devices: PushDevice[] } }>(`/push/subscriptions${qs}`)
+      setDevices(res.data.devices)
+    } catch (err) {
+      console.error('[push] no se pudo listar los dispositivos', err)
+      // `null` es «no lo sé», que la UI pinta distinto de «no tienes ninguno».
+      setDevices(null)
+    } finally {
+      setDevicesLoading(false)
+    }
+  }, [])
+
+  /**
+   * Revoca UN dispositivo por su id.
+   *
+   * Devuelve `false` también cuando el servidor responde 200 pero `removed: 0`
+   * —un id que ya no está, o que no es tuyo—. Un 200 no es prueba de que se
+   * borrara algo, y quitar la fila de la pantalla sin haberla quitado de la
+   * base es la mentira que esta lista no se puede permitir: la persona se iría
+   * creyendo que apagó un teléfono que sigue recibiendo pedidos con el nombre
+   * y la dirección del cliente en la vista previa.
+   */
+  const revokeDevice = useCallback(
+    async (id: string): Promise<boolean> => {
+      try {
+        const res = await api.request<{ data: { removed: number } }>('/push/subscriptions', {
+          method: 'DELETE',
+          body: { id },
+        })
+        const borrado = res.data.removed > 0
+        await loadDevices()
+        // Revocar el propio deja este navegador suscrito contra una fila que ya
+        // no existe: `checkStatus` lo detecta y lo recoloca.
+        await checkStatus()
+        return borrado
+      } catch (err) {
+        console.error('[push] no se pudo revocar el dispositivo', err)
+        return false
+      }
+    },
+    [loadDevices, checkStatus],
+  )
+
+  return {
+    status,
+    loading,
+    subscribe,
+    unsubscribe,
+    refresh: checkStatus,
+    forceRefresh,
+    devices,
+    devicesLoading,
+    loadDevices,
+    revokeDevice,
+  }
 }

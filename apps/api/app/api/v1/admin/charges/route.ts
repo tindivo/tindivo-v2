@@ -23,8 +23,7 @@ export async function GET(req: Request): Promise<Response> {
     }
 
     const service = createServiceClient()
-    // biome-ignore lint/suspicious/noExplicitAny: business_charges table added in migration
-    const { data: charges, error } = await (service as any)
+    const { data: charges, error } = await service
       .from('business_charges')
       .select(
         'id, business_id, order_id, report_id, charge_type, amount, description, created_at, orders(short_id)',
@@ -56,11 +55,11 @@ export async function GET(req: Request): Promise<Response> {
     for (const c of charges) {
       const groupKey = c.order_id ? `order_${c.order_id}` : `charge_${c.id}`
       const amt = Number(c.amount) || 0
-      // Extract short_id safely
-      const shortId = (c.orders as unknown as { short_id: string } | null)?.short_id ?? null
+      const shortId = c.orders?.short_id ?? null
 
-      if (!groupedMap.has(groupKey)) {
-        groupedMap.set(groupKey, {
+      let grp = groupedMap.get(groupKey)
+      if (!grp) {
+        grp = {
           orderId: c.order_id,
           shortId,
           reportId: c.report_id,
@@ -68,10 +67,9 @@ export async function GET(req: Request): Promise<Response> {
           createdAt: c.created_at,
           charges: [],
           subtotal: 0,
-        })
+        }
+        groupedMap.set(groupKey, grp)
       }
-
-      const grp = groupedMap.get(groupKey)!
       grp.charges.push({
         id: c.id,
         type: c.charge_type,

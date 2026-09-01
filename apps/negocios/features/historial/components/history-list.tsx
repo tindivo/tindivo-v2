@@ -7,16 +7,22 @@ import type { HistDisplay } from '../types'
 export function HistoryList({
   rows,
   onSelect,
+  isTodayOnly = true,
 }: {
   rows: HistDisplay[]
   onSelect?: (id: string) => void
+  isTodayOnly?: boolean
 }) {
   if (rows.length === 0) {
     return (
       <EmptyState
         icon="history"
-        heading="Sin pedidos registrados hoy"
-        description="Los pedidos entregados y cancelados de la jornada aparecerán aquí."
+        heading={isTodayOnly ? 'Sin pedidos registrados hoy' : 'Sin pedidos en este periodo'}
+        description={
+          isTodayOnly
+            ? 'Los pedidos entregados y cancelados de la jornada aparecerán aquí.'
+            : 'No se encontraron pedidos entregados ni cancelados en el rango de fechas seleccionado.'
+        }
       />
     )
   }

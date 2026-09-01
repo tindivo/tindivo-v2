@@ -16,7 +16,7 @@ describe('usePolledQuery - Comportamiento de Polling y Fake Timers', () => {
       return { status: 'ok' }
     })
 
-    let intervalId: any = null
+    let intervalId: ReturnType<typeof setInterval> | null = null
     const refetchInterval = 30000
     const inFlight = { current: false }
 
@@ -52,7 +52,7 @@ describe('usePolledQuery - Comportamiento de Polling y Fake Timers', () => {
       return { status: 'ok' }
     })
 
-    let intervalId: any = null
+    let intervalId: ReturnType<typeof setInterval> | null = null
     let refetchInterval = 30000
 
     const executeFetch = async () => {
@@ -84,7 +84,7 @@ describe('usePolledQuery - Comportamiento de Polling y Fake Timers', () => {
       return { status: 'ok' }
     })
 
-    let intervalId: any = setInterval(() => {
+    let intervalId: ReturnType<typeof setInterval> | null = setInterval(() => {
       void mockQueryFn()
     }, 20000)
 

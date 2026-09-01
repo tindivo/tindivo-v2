@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { ToggleSwitch } from '@/components/toggle-switch'
 import { useAvailability } from '@/hooks/use-availability'
-import type { SubscribeFailReason } from '@/hooks/use-push-subscription'
+import type { PushDevice, SubscribeFailReason } from '@/hooks/use-push-subscription'
 import { usePushSubscription } from '@/hooks/use-push-subscription'
 import { signOutEverywhereDevice } from '@/lib/sign-out'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
@@ -39,6 +39,56 @@ function mapReason(reason: SubscribeFailReason): string {
   return 'No se pudo activar. Intenta de nuevo.'
 }
 
+/**
+ * Cómo se le llama a cada proveedor delante de una persona.
+ *
+ * Deliberadamente vago en `apple`: el endpoint dice que es de Apple, no si es
+ * un iPhone, un iPad o un Mac. Poner «iPhone» sería más bonito y a veces falso,
+ * y esta lista existe justamente para que alguien decida qué apagar mirándola.
+ */
+const PLATAFORMA: Record<PushDevice['platform'], { label: string; icon: string }> = {
+  apple: { label: 'iPhone o iPad', icon: 'phone_iphone' },
+  android: { label: 'Android', icon: 'smartphone' },
+  windows: { label: 'Windows', icon: 'computer' },
+  otro: { label: 'Otro navegador', icon: 'devices' },
+}
+
+const diaLima = new Intl.DateTimeFormat('es-PE', {
+  day: '2-digit',
+  month: 'short',
+  timeZone: 'America/Lima',
+})
+
+/** «12 ago». Sin hora: para «desde cuándo» la hora no aporta nada. */
+function dia(iso: string): string {
+  const t = Date.parse(iso)
+  return Number.isFinite(t) ? diaLima.format(t) : '—'
+}
+
+/**
+ * «hace 3 días», «hace 2 h», «hace un momento», o `null` si nunca recibió uno.
+ *
+ * Relativo y no una fecha exacta a propósito: lo que se decide con este dato es
+ * «¿este teléfono sigue vivo?», y para eso «hace 40 días» se lee de un vistazo
+ * y «22 jul» hay que restarlo mentalmente.
+ *
+ * CUIDADO CON LO QUE MIDE: es el último aviso ENTREGADO, no el último uso. Un
+ * teléfono olvidado en un cajón sigue aceptando entregas y aparece igual de
+ * fresco que el que se usa. Por eso decide la persona y no una regla de fechas.
+ */
+function desde(iso: string | null, ahora: number): string | null {
+  if (!iso) return null
+  const t = Date.parse(iso)
+  if (!Number.isFinite(t)) return null
+  const min = Math.floor((ahora - t) / 60_000)
+  if (min < 2) return 'hace un momento'
+  if (min < 60) return `hace ${min} min`
+  const h = Math.floor(min / 60)
+  if (h < 24) return `hace ${h} h`
+  const d = Math.floor(h / 24)
+  return d === 1 ? 'hace 1 día' : `hace ${d} días`
+}
+
 export default function PerfilPage() {
   const router = useRouter()
   const [profile, setProfile] = useState<DriverProfile | null>(null)
@@ -47,6 +97,17 @@ export default function PerfilPage() {
   const [loggingOutEverywhere, setLoggingOutEverywhere] = useState(false)
   const availability = useAvailability()
   const push = usePushSubscription()
+  /** Id a la espera de confirmación: quitar un aviso no tiene deshacer. */
+  const [porQuitar, setPorQuitar] = useState<string | null>(null)
+  const [quitando, setQuitando] = useState(false)
+
+  const { loadDevices } = push
+  useEffect(() => {
+    // Una sola vez al abrir. No hay polling: la lista no cambia sola, cambia
+    // cuando alguien instala la app en otro teléfono, y eso no pasa mientras
+    // miras esta pantalla.
+    void loadDevices()
+  }, [loadDevices])
 
   useEffect(() => {
     async function load() {
@@ -268,6 +329,40 @@ export default function PerfilPage() {
                 </div>
                 {pushError && <p className="mt-2 text-[13px] text-danger">{pushError}</p>}
               </div>
+
+              <div className="h-px bg-ink/[0.06]" />
+
+              {/* LA LISTA DE DISPOSITIVOS.
+                  Existe porque el sistema no puede distinguir un segundo
+                  teléfono que se usa de uno olvidado en un cajón: los dos
+                  aceptan los avisos y los dos parecen vivos. La persona sí lo
+                  sabe. Con uno o dos motorizados, enseñársela y dejar que
+                  decida es más barato y más fiable que cualquier heurística. */}
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-ink-muted">
+                  Dónde te llegan los avisos
+                </p>
+                <p className="mt-1 text-[13px] text-ink-muted">
+                  Si ves un equipo que ya no usas, quítalo: mientras esté aquí, sigue recibiendo los
+                  pedidos con el nombre y la dirección del cliente.
+                </p>
+
+                <div className="mt-3">
+                  <DeviceList
+                    devices={push.devices}
+                    loading={push.devicesLoading}
+                    porQuitar={porQuitar}
+                    quitando={quitando}
+                    onPedirConfirmacion={setPorQuitar}
+                    onConfirmar={async (id) => {
+                      setQuitando(true)
+                      await push.revokeDevice(id)
+                      setQuitando(false)
+                      setPorQuitar(null)
+                    }}
+                  />
+                </div>
+              </div>
             </div>
           </Card>
 
@@ -291,6 +386,115 @@ export default function PerfilPage() {
         </div>
       )}
     </main>
+  )
+}
+
+function DeviceList({
+  devices,
+  loading,
+  porQuitar,
+  quitando,
+  onPedirConfirmacion,
+  onConfirmar,
+}: {
+  /** `null` = todavía no se sabe (cargando o falló). Distinto de lista vacía. */
+  devices: PushDevice[] | null
+  loading: boolean
+  porQuitar: string | null
+  quitando: boolean
+  onPedirConfirmacion: (id: string | null) => void
+  onConfirmar: (id: string) => void | Promise<void>
+}) {
+  // `Date.now()` una vez por render y no por fila: si no, dos filas de la misma
+  // lista podrían caer a distinto lado de un minuto y contar tiempos distintos.
+  const ahora = Date.now()
+
+  if (devices === null) {
+    return loading ? (
+      <Skeleton className="h-14 w-full rounded-xl" />
+    ) : (
+      <p className="text-[13px] text-ink-muted">No se pudo leer la lista. Vuelve a entrar.</p>
+    )
+  }
+
+  if (devices.length === 0) {
+    return (
+      <p className="text-[13px] text-ink-muted">
+        Ninguno todavía. Activa las notificaciones arriba para recibir avisos en este equipo.
+      </p>
+    )
+  }
+
+  return (
+    <ul className="flex flex-col gap-2">
+      {devices.map((d) => {
+        const meta = PLATAFORMA[d.platform]
+        const ultimo = desde(d.lastNotifiedAt, ahora)
+        const confirmando = porQuitar === d.id
+        return (
+          <li
+            key={d.id}
+            className="flex items-center gap-3 rounded-xl border border-ink/[0.06] bg-surface-low p-3"
+          >
+            <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-card text-ink-muted">
+              <Icon name={meta.icon} size={20} />
+            </span>
+
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[14px] font-semibold text-ink">
+                {meta.label}
+                {d.current && (
+                  <span className="ml-1.5 text-[11px] font-bold uppercase tracking-wider text-brand">
+                    Este equipo
+                  </span>
+                )}
+              </p>
+              <p className="truncate text-[12px] text-ink-muted">
+                Desde el {dia(d.createdAt)}
+                {ultimo ? ` · último aviso ${ultimo}` : ' · sin avisos todavía'}
+              </p>
+            </div>
+
+            {/* EL EQUIPO ACTUAL NO LLEVA BOTÓN, y no es por prudencia: quitarlo
+                de la base deja viva la suscripción del navegador, y el
+                auto-arreglo del hook la vuelve a dar de alta en segundos. Sería
+                un botón que se deshace solo. Para apagarlos aquí está el
+                interruptor de arriba, que sí da de baja las dos partes. */}
+            {!d.current &&
+              (confirmando ? (
+                <div className="flex shrink-0 items-center gap-1">
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    disabled={quitando}
+                    onClick={() => void onConfirmar(d.id)}
+                  >
+                    {quitando ? 'Quitando…' : 'Sí, quitar'}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={quitando}
+                    onClick={() => onPedirConfirmacion(null)}
+                  >
+                    No
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="shrink-0"
+                  onClick={() => onPedirConfirmacion(d.id)}
+                  aria-label={`Quitar ${meta.label}`}
+                >
+                  Quitar
+                </Button>
+              ))}
+          </li>
+        )
+      })}
+    </ul>
   )
 }
 

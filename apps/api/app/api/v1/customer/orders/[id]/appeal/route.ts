@@ -94,7 +94,9 @@ export async function POST(
     }
 
     // Intentar despachar el outbox sin bloquear ni hacer fallar la respuesta HTTP del cliente
-    processPendingOutboxEvents().catch((err: any) => console.warn('Outbox dispatch warning:', err))
+    processPendingOutboxEvents().catch((err: unknown) =>
+      console.warn('Outbox dispatch warning:', err),
+    )
 
     return ok(data, { headers: corsHeaders(req) })
   } catch (err) {

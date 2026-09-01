@@ -318,17 +318,63 @@ el aviso y da por hecho que el sonido está desactivado a propósito.
    aviso visual, que lea el mismo valor que dispara el sonido, no un filtro paralelo.
    Es la regla que `negocios` aprendió pagando un pedido.
 
-### Criterio de paso
+### RESULTADO — medido el 2026-08-30 · ✅ PASA (con una reserva)
 
-- Con el motorizado en la pestaña **"Míos"**, un pedido del pool que cruza a `overdue`
-  **suena y vibra**. Evidencia: vídeo o GIF de la pantalla con el audio, o captura de
-  consola con el log del disparo más la confirmación verbal de que sonó.
-- Cambiar de pestaña ida y vuelta **no** vuelve a disparar la alarma del mismo pedido.
-- **Siete** alertas seguidas en la misma sesión: la séptima **suena igual que la primera**.
-  Dispara 7 veces a mano (puedes forzar `overdue` con un `UPDATE` de `urgent_since` en
-  local) y confirma que la séptima se oye.
-- Con `prefers-reduced-motion` no se pierde la señal (ya cubierto por
-  `globals.css:26-31`; comprueba que sigue siendo cierto).
+**La alarma ya no depende de la pestaña. Probado en runtime**, y más fuerte de lo que
+pedía el criterio: se probó desde **`/efectivo`**, que no es siquiera la pantalla del
+tablero.
+
+Montaje: se creó un pedido `waiting_driver` sin motorizado con
+`estimated_ready_at = now() - 12 min` en la base local, con `navigator.vibrate`
+interceptado en el navegador.
+
+```
+1. Carga con un vencido ya presente  →  vibraciones: []      (prime correcto,
+                                                              no revienta al abrir)
+2. Navegación real a /efectivo       →  vibraciones: []
+3. INSERT de un vencido NUEVO        →  vibraciones: ["400,150,400,150,400"]
+```
+
+Ese patrón es exactamente el de la alarma de vencidos. Antes del cambio esto era
+**imposible**: el hook solo existía dentro de `AvailableTab`.
+
+**RESERVA — el `AudioContext` único NO se probó en runtime.** Lo intenté dos veces
+parcheando `AudioContext.prototype.createOscillator` y las dos veces **congelé el
+renderer** (CDP `Runtime.evaluate` a 45 s sin respuesta). Desistí para no quemar más
+tiempo. Lo que sí se puede afirmar es estructural y se lee en tres líneas: hay un
+`let ctx` de módulo y `getCtx()` devuelve el existente si no es `null`, así que solo
+puede construirse uno. Pero **no hay evidencia de ejecución de las 7 alertas**, que es
+lo que el criterio pedía. Queda pendiente y es barato de hacer a mano: siete vencidos
+seguidos en un turno, y comprobar que el séptimo se oye.
+
+**Nota de método para quien repita esto:** los pedidos de prueba **desaparecen solos**.
+`seed-e2e-clean` borra los transaccionales del cliente de prueba, así que si alguien
+corre e2e en paralelo te quedas sin montaje a media medición — y el tablero vacío
+parece una regresión tuya cuando no lo es.
+
+#### ADENDA — 2026-08-31 · la reserva del `AudioContext` sigue abierta, y por qué
+
+No se pudo cerrar con una prueba automática, así que se deja dicho en vez de darla por
+buena.
+
+Lo que **sí** está establecido, por lectura: el contexto es un `let ctx` de módulo y
+`getCtx()` abre con `if (ctx !== null) return ctx`. Son seis líneas con un memo; N
+pitidos construyen **un** contexto, y el límite de 6 por documento de Chrome no se
+alcanza nunca.
+
+Lo que **no** se pudo montar fue el ensayo de las 7 alertas contra la app viva, por dos
+estorbos del entorno, ninguno del código:
+
+- La base local es **compartida con otro agente**, que lanzó una limpieza a mitad del
+  ensayo y se llevó por delante los pedidos sembrados (la tabla `orders` quedó en 0).
+- La pestaña automatizada corre con `document.visibilityState = 'hidden'`, y ahí Chrome
+  estrangula los timers a ~1/min: la cadencia de 5 s de la alarma deja de ser la que se
+  quiere medir.
+
+**Lo que queda es una comprobación humana, y no por pereza:** lo único que un test no
+puede cubrir aquí es que el pitido SUENE en la alerta número 7, y eso pide un oído.
+Disparar 7 alarmas seguidas y confirmar que la última se oye. Todo lo demás ya está
+cubierto por lectura.
 
 ### Nota sobre el reloj de la base
 
@@ -388,20 +434,80 @@ Los cuatro al mismo patrón de store. Dos avisos:
   explica que el servidor valida el horario y puede rechazar el cambio. El store **no
   puede introducir optimismo** por conveniencia.
 
-### Criterio de paso
+### RESULTADO — 2026-08-30 · ✅ TRES DE CUATRO HECHOS
 
-En una ventana de 60 s con el panel de red:
+`useDriverTimers`, `useCashSummary` y `useAvailability` pasan a store, mismo patrón
+que la PARTE 1. `lint`, `type-check` y `test` (92/92) en verde.
 
-| Ruta | Petición | Antes | Después |
+**`usePushSubscription` NO se convirtió, y es una decisión, no un olvido.** Es el más
+complejo de los cuatro —auto-heal con debounce por `ref`, validación de propiedad del
+endpoint, reacción a `SIGNED_IN` con `forceRefresh`, mensajes del service worker— y su
+duplicación cuesta **una** petición por minuto en una sola ruta. La peor relación
+riesgo/beneficio del spec: romper el auto-heal deja al motorizado sin avisos en
+silencio, que es exactamente el fallo que ese código existe para evitar. Se queda
+como está.
+
+**Los conteos de esta parte NO son medibles en dev, y conviene saber por qué.** En
+desarrollo React monta, desmonta y remonta (StrictMode). Con un store por conteo de
+referencias eso lleva `refCount` a 0 entre medias, dispara `stop()` y el siguiente
+`start()` vuelve a pedir: en `/` se miden `api_cash: 2` y `api_availability: 3` aunque
+haya un solo consumidor. `useTeam`, que ya era store desde antes, mide igual (`2`).
+La PARTE 1 se libró de esto solo porque su guarda de `generation` suprime el arranque
+descartado.
+
+Para medirlo de verdad haría falta un build de producción. La deduplicación en sí es
+estructural y del mismo tipo ya verificado en la PARTE 1: un `start()` por store,
+detrás de la transición 0→1 del `refCount`.
+
+**Pendiente de comprobar a mano:** que apagar el turno desde `/perfil` cambie el punto
+de color de la barra superior sin recargar. Es el único cambio de comportamiento
+observable de esta parte (antes funcionaba por accidente, con dos instancias
+recargando por su cuenta; ahora las dos leen el mismo snapshot).
+
+#### ADENDA — 2026-08-31 · comprobado en build de producción, y apareció un duplicado más
+
+**El punto de color: ✅ comprobado.** Apagar el turno desde `/perfil` deja la barra
+superior en `● NO DISPONIBLE` en el mismo render, sin recargar, y volver a encenderlo
+la devuelve a `● DISPONIBLE`. Las dos direcciones.
+
+**Los conteos, ya en `next build` + `next start` (sin StrictMode):**
+
+| Petición | Antes (dev) | Ahora (prod) | |
 |---|---|---|---|
-| `/` con 6 tarjetas | `app_settings?key=timers` | 6 | **1** |
-| `/efectivo` | `/driver/cash-settlements` | 2 | **1** |
-| `/efectivo` | canales sobre `cash_settlements` | 2 | **1** |
-| `/perfil` | `/driver/availability` | 2 | **1** |
-| `/perfil` | `/push/subscriptions/me` | 2/min | **1/min** |
+| `/rest/v1/orders` (el board, PARTE 1) | 2 | **1** | ✅ |
+| `/driver/cash-settlements` (PARTE 3) | 2 | **1** | ✅ |
+| `/driver/availability` (PARTE 3) | 3 | **1** | ✅ *tras el arreglo de abajo* |
+| `/push/subscriptions/me` | — | 2 | esperado: `usePushSubscription` NO se convirtió |
+| `/driver/team` | 2 | 2 | ver nota |
 
-Y: apagar el turno desde `/perfil` cambia el punto de color del `GlassTopBar` **sin
-recargar ni navegar**.
+**El duplicado que el build de producción destapó.** `useAvailability` seguía pidiendo
+**dos veces** en cada arranque, con 23 ms de separación, y en dev quedaba escondido
+dentro de un tercero que sí era de StrictMode. El mecanismo, con la traza en la mano:
+
+1. `start()` llama a `load()`.
+2. Acto seguido registra `onAuthStateChange`, y Supabase entrega `INITIAL_SESSION`
+   desde `_emitInitialSession` unos milisegundos después.
+3. En ese instante `loadedFor` todavía es `null` —se fija DENTRO del callback, y la
+   primera carga solo está EN VUELO, no terminada—, así que el guard no ve nada y
+   dispara un `GET` idéntico.
+
+Arreglado con un guard de promesa en vuelo (`loadShared()`), que une las dos llamadas
+a la misma petición **sin quitar ninguno de los dos caminos**: existen por razones
+distintas y las dos están documentadas en el fichero (arranque en frío vs. sesión que
+llega tarde). `setAvailable` sigue usando `load()` a pelo a propósito: después de su
+`POST` necesita una lectura NUEVA, y engancharse a una carga en vuelo le devolvería el
+valor de antes.
+
+Verificado en producción por partida doble: la traza muestra un solo `load()` con el
+segundo `loadShared()` recibiendo `inFlight = true` desde `_emitInitialSession`, y en
+`/perfil` —donde los DOS consumidores están montados a la vez— sale **una** petición
+al montar.
+
+**Nota sobre `/driver/team`: 2, y NO es de esta parte.** Salen del canal de realtime,
+que se cierra y se reabre en el arranque (`canal CLOSED` → `SUBSCRIBED` en la consola)
+y cada apertura hace `void refresh()`. `useTeam` ya era store antes de este spec, así
+que queda fuera de su alcance; el camino que duplica es además el mismo que reabre el
+canal, o sea que tocarlo es tocar la entrega de eventos. Anotado, no arreglado.
 
 ---
 
@@ -471,6 +577,63 @@ Esta parte toca código compartido por las cuatro apps. Si `requireRole` cambia,
 suites de `admin`, `negocios` y `customer` tienen que correr también**. No la cierres
 con solo los tests de motorizados.
 
+### RESULTADO — 2026-08-31 · ✅ SOLO LA 4.4, Y LAS OTRAS TRES SE DESCARTAN
+
+Hecha la **4.4** y nada más. `requireRole` **no se ha tocado**, así que el aviso de
+alcance de arriba no llegó a aplicar: las suites de `admin`, `negocios` y `customer`
+no hacía falta correrlas.
+
+**Qué cambió.** El `select` suelto a `drivers` que resolvía el nombre del solicitante
+desaparece; ahora viaja embebido en la consulta de `order_transfer_requests`. Un salto
+en serie menos en `/driver/team`, que se llama cada 15 s.
+
+El embed necesita nombrar la constraint
+(`drivers!order_transfer_requests_to_driver_id_fkey`) porque la tabla tiene **dos** FK
+a `drivers`. Sin nombrarla, PostgREST responde **300 / `PGRST201`** — comprobado a
+propósito como control negativo, y su propio `hint` nombra la constraint que se usó.
+La cardinalidad que declara es `many-to-one`, o sea objeto y no array, que es lo que
+el mapeo asume.
+
+**Verificación funcional (la que importa).** No había ni hay ningún test que cubra
+`/driver/team`, así que se verificó contra el endpoint vivo con un JWT de motorizado
+real y una solicitud pendiente sembrada a mano:
+
+```
+{ "shortId": "PERFTEST", "total": 42, "businessName": "La Florencia E2E",
+  "deliveryReference": "Jr. Los Pinos, casa azul",
+  "requesterName": "Motorizado 2 E2E", "reason": "me queda de camino" }
+```
+
+`apps/api` en verde, **225/225** (27 archivos). `type-check` y `biome` limpios.
+El pedido y la solicitud sembrados se borraron, confirmado con un `select`, no con el
+204 del `DELETE`.
+
+**La medición p50, y por qué no dice lo que parecía decir.** Primera pasada:
+213 ms antes → 173 ms después. Segunda pasada, invirtiendo el orden para descartar
+sesgo de calentamiento: **185 ms antes → 190 ms después**. O sea que los 40 ms de la
+primera eran **ruido, no señal**, y hay que decirlo así.
+
+Medido el salto que se elimina por separado, contra el Postgres **local**:
+`p50 = 13 ms` (p90 34 ms, n=40). Está por debajo de la banda de ruido de Next en modo
+dev (±20-40 ms end-to-end), y por eso el A/B no lo resuelve. **La mejora es real y
+estructural —una ida y vuelta menos— pero en local no es medible; donde se nota es en
+prod, donde API y base no comparten máquina.** Ojo con esto antes de pedir un número
+de mejora end-to-end en esta caja.
+
+**Lo que NO se hizo, y por qué (decisión, no olvido):**
+
+- **4.1 (verificar el JWT en proceso con `jose` + JWKS)** — es el que más rinde por
+  petición de todo el spec, y el único cambio que puede tumbar `admin`, `negocios` y
+  `customer` a la vez. El piso de 470-750 ms no es lo que le duele al motorizado con
+  10 pedidos por noche. Riesgo/beneficio malo **hoy**; el día que haya volumen, esta
+  es la primera que hay que retomar.
+- **4.2 (cachear el rol por token)** — barata de escribir y cara de razonar: hay que
+  decidir qué pasa cuando a alguien se le revoca un rol y su token sigue vivo 30-60 s.
+  Con 1-2 motorizados, una ráfaga de polls cada 15 s no justifica abrir esa puerta.
+- **4.3 (fusionar `drivers` en el `Promise.all`)** — **no se puede**, y el propio spec
+  ya lo decía: en `/driver/team` el `id` del driver condiciona los filtros de las dos
+  consultas siguientes, así que no hay nada que paralelizar.
+
 ---
 
 ## PARTE 5 — Render
@@ -527,14 +690,34 @@ Bórralo, y borra el comentario con él.
 - `apps/motorizados/app/pedido/[id]/page.tsx`
 - `apps/motorizados/hooks/use-overdue-feedback.ts`
 
-### Qué hacer
+### RESULTADO — 2026-08-30 · ⚠️ LA PARTE SE CAE CASI ENTERA
 
-1. `memo` en `OrderCard`, con comparador si hace falta.
-2. **Bajar la cadencia del reloj a lo que de verdad necesita segundos.** El countdown
-   de un traspaso sí; el board no. `useNow` ya soporta cadencias distintas sin pisarse
-   (`useNow(1000)` y `useNow(30000)` tienen tickers separados) — úsalo.
-3. `getOptimistic()` fuera del cuerpo del render.
-4. Borrar `--drv-transfer-h`.
+**Los puntos 5.1, 5.2 y 5.4 estaban mal diagnosticados. No se aplican.**
+
+**5.1 y 5.4 — el repintado por segundo NO es desperdicio, es el contador.**
+`buildClock` (`card-view-model.ts:281,288,301`) pinta el reloj con `mmss()`, que
+devuelve **MM:SS con los segundos visibles**. O sea que cada tarjeta TIENE que
+repintarse cada segundo: bajar la cadencia haría tartamudear el contador delante del
+motorizado. Y `memo` en `OrderCard` no evita nada, porque `now` es un prop que cambia
+cada segundo — el comparador daría distinto siempre.
+
+Diagnostiqué "repintado inútil" sin comprobar qué pinta. Pinta la cuenta atrás.
+
+**5.2 — ya no existe.** El efecto por segundo era el de `useOverdueFeedback` dentro de
+`AvailableTab`; la PARTE 2 lo sacó de ahí. `overdueSet` sigue creándose cada segundo,
+pero ahora solo se lee en render (`.has()`, `.size`), sin efecto detrás.
+
+**5.3 — no se aplica, a propósito.** `getOptimistic()` en el cuerpo del render lee
+`localStorage` y hace `JSON.parse` de un objeto diminuto: son microsegundos, no
+milisegundos. Cachearlo bien es fiddly —hay que invalidar cuando una transición se
+encola por fallo de red, que es justo cuando `load()` también falla y `detail` no
+cambia— y equivocarse ahí significa que un pedido encolado deja de verse. Coste real
+despreciable contra riesgo de un bug de verdad: no se toca.
+
+**5.5 — ✅ HECHO.** `--drv-transfer-h` eliminada de `home.tsx`. No la publicaba nadie
+desde que `TransferWatcher` pasó a ser modal a pantalla completa; las dos lecturas
+caían siempre al fallback `0px`. Sustituidas por los valores fijos equivalentes
+(`pt-20` y `top-[calc(44px+env(safe-area-inset-top))]`), así que el layout no se mueve.
 
 ### Criterio de paso
 
@@ -675,6 +858,47 @@ con `updated_at` o `last_successful_at` borrarías el teléfono que más funcion
   **el que dice**, no otro.
 - `apps/api` en verde, incluido `lib/__tests__/push-subscriptions.integration.test.ts`.
 
+### RESULTADO — 2026-08-31 · ✅ LA 6.2, HECHA. LA 6.3 Y LA 6.4 SIGUEN ABIERTAS
+
+**6.1 — cumplido por omisión.** No se tocó una sola fila de `push_subscriptions` en
+prod. La 0198 es `add column if not exists` más un índice parcial.
+
+**6.2 — HECHA.** `install_id` es la clave de la limpieza. `getInstallId()` vive en
+`packages/ui/src/push.ts` y lo mandan las cuatro apps: admin, customer y negocios por
+`subscribeToPush`, y motorizados desde su propio `use-push-subscription.ts`. Sin
+`installId` no se borra nada, y **no hay fallback al `user_agent`**: reintroducirlo
+dejaría el fallo vivo para los clientes viejos, y encima de forma asimétrica.
+
+El criterio de paso se verificó **como test, no a mano**, que es más fuerte porque
+queda corriendo: `T5-bis dos Android de la misma persona con el MISMO user_agent
+sobreviven` usa la cadena congelada real (`Android 10; K …Chrome/151…`) en las dos
+altas, con `install_id` distinto, y espera dos filas.
+
+Y se comprobó que **muerde**, que es lo que separa un test de un adorno. Con la clave
+vieja restaurada a mano:
+
+```
+× T5-bis dos Android … sobreviven
+  AssertionError: expected [ { …(8) } ] to have a length of 2 but got 1
+Tests  2 failed | 22 passed (24)
+```
+
+Esa `length of 1` es literalmente el fallo: la segunda alta se comió a la primera.
+Con la clave nueva, **24/24 en verde** y `pnpm type-check` 11/11.
+
+**LO QUE FALTA PARA CERRAR DEL TODO: la 0198 está aplicada en LOCAL pero NO en
+`tindivo-prod`** (remoto en 0197 el 2026-08-31). Hasta que se haga `supabase db push`,
+el arreglo no protege a nadie en producción. `packages/supabase/src/database.types.ts`
+lleva las tres líneas de `install_id` insertadas a mano —el `db:types` apunta al
+remoto— así que **tras el push toca `pnpm db:types` de verdad** para regenerarlo.
+
+Lo de "cerrar sesión en uno deja solo el otro" no cambió con este trabajo: sigue siendo
+el `DELETE` por endpoint de siempre, y sigue cubierto por sus tests.
+
+**6.3 y 6.4 — SIN EMPEZAR.** La lista de dispositivos en `/perfil` es el único arreglo
+honesto para el teléfono del cajón, y sigue pendiente. La 6.4 era opcional y lo sigue
+siendo.
+
 ---
 
 ## ANEXO — Techos que no son bugs todavía
@@ -689,11 +913,18 @@ se calcula filtrando esas 50 filas **en cliente**. Todavía cabe. El margen es u
 buena. El día que se acerque, el arreglo es un filtro `created_at >= today` en la
 consulta, no subir el límite.
 
-**A2 · El canal de `orders` no lleva filtro.**
+**A2 · El canal de `orders` no lleva filtro.** *(visto en vivo el 2026-08-31)*
 `use-driver-orders.ts:96` escucha `event: '*'` sobre la tabla entera. La RLS acota lo
 que llega, así que es **correcto** — pero cualquier cambio en una fila visible provoca
 un refetch de las 50, no un parche de esa fila. Con un solo restaurante en el piloto
 da igual. Con cinco, no.
+
+Se vio ocurrir, y conviene tenerlo escrito: mientras otro agente sembraba pedidos en la
+base local, la app registró **81 refetches del board en 11 segundos**. No es un fallo
+—cada uno es un evento legítimo sobre una fila visible— pero es la forma exacta que
+tendrá el problema cuando el volumen suba: una ráfaga de escrituras se convierte en una
+ráfaga de consultas de 50 filas. El arreglo sigue siendo el de arriba (parchear la fila
+del evento en vez de repedir las 50), no subir el `.limit`.
 
 ---
 

@@ -57,8 +57,7 @@ export async function GET(req: Request): Promise<Response> {
     const debtBlockThreshold = Number(umbralCfg?.value ?? 600) || 600
 
     // 3. Obtener cargos pendientes (created_at DESC)
-    // biome-ignore lint/suspicious/noExplicitAny: business_charges table
-    const { data: rawCharges, error: chargeError } = await (service as any)
+    const { data: rawCharges, error: chargeError } = await service
       .from('business_charges')
       .select('id, order_id, report_id, charge_type, amount, description, created_at')
       .eq('business_id', biz.id)
@@ -71,21 +70,21 @@ export async function GET(req: Request): Promise<Response> {
 
     // 4. Cargar sólo short_id de pedidos asociados (ligero)
     const orderIds = Array.from(
-      new Set(charges.map((c: any) => c.order_id).filter(Boolean)),
-    ) as string[]
+      new Set(charges.map((c) => c.order_id).filter((oid): oid is string => oid !== null)),
+    )
 
     const { data: rawOrders } =
       orderIds.length > 0
         ? await service.from('orders').select('id, short_id').in('id', orderIds)
         : { data: [] }
 
-    const ordersMap = new Map((rawOrders || []).map((o: any) => [o.id, o.short_id]))
+    const ordersMap = new Map((rawOrders ?? []).map((o) => [o.id, o.short_id] as const))
 
     let totalCommissions = 0
     let totalDeliveryFees = 0
     let totalRefunds = 0
 
-    const pendingCharges = charges.map((c: any) => {
+    const pendingCharges = charges.map((c) => {
       const amt = Number(c.amount) || 0
 
       if (c.charge_type === 'commission') {
@@ -109,8 +108,7 @@ export async function GET(req: Request): Promise<Response> {
     })
 
     // 5. Obtener historial de pagos confirmados desde restaurant_payments
-    // biome-ignore lint/suspicious/noExplicitAny: restaurant_payments table
-    const { data: rawPayments, error: payError } = await (service as any)
+    const { data: rawPayments, error: payError } = await service
       .from('restaurant_payments')
       .select('id, amount, payment_method, paid_at, note')
       .eq('business_id', biz.id)
@@ -120,28 +118,26 @@ export async function GET(req: Request): Promise<Response> {
     if (payError) throw new Error(payError.message)
 
     const payments = rawPayments || []
-    const paymentIds = payments.map((p: any) => p.id)
+    const paymentIds = payments.map((p) => p.id)
 
     // Cargar los cargos liquidados asociados a estos pagos (payment_id)
     const { data: settledCharges } =
       paymentIds.length > 0
-        ? // biome-ignore lint/suspicious/noExplicitAny: business_charges table
-          await (service as any)
+        ? await service
             .from('business_charges')
             .select('id, payment_id, order_id')
             .in('payment_id', paymentIds)
         : { data: [] }
 
     const settledByPaymentMap = new Map<string, Array<{ id: string; order_id: string | null }>>()
-    for (const sc of settledCharges || []) {
+    for (const sc of settledCharges ?? []) {
       if (!sc.payment_id) continue
-      if (!settledByPaymentMap.has(sc.payment_id)) {
-        settledByPaymentMap.set(sc.payment_id, [])
-      }
-      settledByPaymentMap.get(sc.payment_id)!.push({ id: sc.id, order_id: sc.order_id })
+      const bucket = settledByPaymentMap.get(sc.payment_id) ?? []
+      bucket.push({ id: sc.id, order_id: sc.order_id })
+      settledByPaymentMap.set(sc.payment_id, bucket)
     }
 
-    const paymentHistory = payments.map((p: any) => {
+    const paymentHistory = payments.map((p) => {
       const pCharges = settledByPaymentMap.get(p.id) || []
       const uniqueOrderIds = new Set(pCharges.map((ch) => ch.order_id).filter(Boolean))
 

@@ -129,10 +129,35 @@ function playToneSequence(
 }
 
 /**
+ * LOS QUE ACABAN DE LLEGAR: LOS QUE ESPERAN AHORA Y NO ESPERABAN ANTES.
+ *
+ * Esto era un booleano —"¿hay alguno esperando?"— y el aviso salía en su flanco
+ * de `false` a `true`. Con eso, la SEGUNDA llegada al mismo local no sonaba
+ * jamás: el booleano ya estaba en `true` por la primera, no había flanco, y la
+ * cajera no se enteraba de que había otro motorizado en la puerta. No sonaba
+ * tarde: no sonaba.
+ *
+ * Y no es un caso de laboratorio. En `tindivo-prod`, de 233 llegadas en 14 días
+ * (14-ago a 31-ago), 27 —el 11.6%— cayeron encima de otra que seguía esperando
+ * en el mismo negocio. Dos son de la noche del 30-ago en Pizza Priamo:
+ * `59FRVDYV` (20:34:14, con `CFNUT3CR` esperando desde las 20:31:50) y
+ * `P49NRWD8` (19:16:15, con `JNXLGNQ9` esperando desde las 19:10:23).
+ *
+ * La lección es la de siempre en este tablero: un aviso que habla de PEDIDOS no
+ * se puede representar con un booleano del negocio entero, porque colapsa
+ * varios hechos distintos en uno solo y pierde todos menos el primero.
+ */
+export function newArrivals(prev: readonly string[], curr: readonly string[]): string[] {
+  const antes = new Set(prev)
+  return curr.filter((id) => !antes.has(id))
+}
+
+/**
  * Alertas de audio del dashboard de negocios (PROPUESTAS_UX_PEDIDOS §7):
  *  · Tipo 1 — pedido nuevo: 880Hz + 1175Hz, doble bip, con cadencia escalonada
  *    (ver `nextBeepDelay`) mientras queden pedidos SIN ACUSAR.
- *  · Tipo 2 — motorizado llegó: 660-880-660Hz, triple bip suave, una vez al cambiar a `waiting`.
+ *  · Tipo 2 — motorizado llegó: 660-880-660Hz, triple bip suave, una vez POR
+ *    PEDIDO que entra en `waiting` (ver `newArrivals`).
  *  · Tipo 3 — buffer fase 3 (5m+ sin moto): 440Hz, bip largo, cada 8s.
  *
  * QUÉ SUENA Y QUÉ NO LO DECIDE `attentionState`, no este hook. Aquí solo entra
@@ -144,7 +169,7 @@ export function useDashboardSounds({
   hasPending,
   pendingCount,
   urgent,
-  hasWaiting,
+  waitingIds,
   hasBufferP3,
   soundOn,
 }: {
@@ -154,14 +179,18 @@ export function useDashboardSounds({
   pendingCount: number
   /** Alguno en su último minuto: aprieta la cadencia y no admite acuse. */
   urgent: boolean
-  hasWaiting: boolean
+  /**
+   * Los pedidos que AHORA MISMO tienen al motorizado esperando en el local.
+   * Son ids, no un booleano: ver `newArrivals`.
+   */
+  waitingIds: readonly string[]
   hasBufferP3: boolean
   soundOn: boolean
 }) {
   const t1 = useRef<ReturnType<typeof setTimeout> | null>(null)
   const t3 = useRef<ReturnType<typeof setInterval> | null>(null)
   const prevPendingCount = useRef(0)
-  const prevWaiting = useRef(false)
+  const prevWaitingIds = useRef<readonly string[]>([])
   const prevUrgent = useRef(false)
   /** Cuándo empezó ESTA tanda: de ahí sale si toca ritmo de enganche o el lento. */
   const startedAt = useRef(0)
@@ -260,12 +289,24 @@ export function useDashboardSounds({
     return stop
   }, [soundOn, hasBufferP3])
 
-  // Tipo 2 — motorizado llegó (evento único de alta prioridad)
+  // Tipo 2 — motorizado llegó (evento único de alta prioridad, UNO POR PEDIDO).
+  //
+  // La clave va por ids y no por el array: `vms` se reconstruye cada segundo con
+  // el tick del reloj, así que el array es nuevo en cada render aunque no haya
+  // cambiado nada. Con el array en las dependencias, el efecto correría sesenta
+  // veces por minuto para no hacer nada.
+  const waitingKey = waitingIds.join('|')
   useEffect(() => {
-    if (hasWaiting && !prevWaiting.current) {
+    // El único de los tres tipos que no miraba `soundOn`: sonaba con el sonido
+    // apagado, que es justo el ajuste que la cajera no puede desandar sola.
+    if (!soundOn) {
+      prevWaitingIds.current = waitingIds
+      return
+    }
+    if (newArrivals(prevWaitingIds.current, waitingIds).length > 0) {
       playToneSequence([660, 880, 660], 0.3, 0.22, false)
       speak('El motorizado llegó al local', 650)
     }
-    prevWaiting.current = hasWaiting
-  }, [hasWaiting])
+    prevWaitingIds.current = waitingIds
+  }, [soundOn, waitingKey])
 }

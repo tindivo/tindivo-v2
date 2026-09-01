@@ -89,13 +89,11 @@ export function useOrderDetail(
 
       if (isPrepaid) {
         try {
-          const { data } = await (
-            supabase
-              .from('orders')
-              .select(
-                'id, status, payment_proof_status, proof_attempt, comprobante_prepago_url, validation_context',
-              ) as any
-          )
+          const { data } = await supabase
+            .from('orders')
+            .select(
+              'id, status, payment_proof_status, proof_attempt, comprobante_prepago_url, validation_context',
+            )
             .eq('id', selectedId)
             .maybeSingle()
 

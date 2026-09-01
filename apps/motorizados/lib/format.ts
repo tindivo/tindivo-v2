@@ -58,3 +58,13 @@ export function prettyPhone(raw: string): string {
   const d = raw.replace(/\D/g, '').slice(-9)
   return d.length === 9 ? `+51 ${d.slice(0, 3)} ${d.slice(3, 6)} ${d.slice(6)}` : raw
 }
+
+export function formatDeliveryDate(iso: string): string {
+  const d = new Date(iso)
+  const timeStr = hourOf(iso)
+  if (isToday(iso)) {
+    return `Hoy a las ${timeStr}`
+  }
+  const dateStr = d.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' })
+  return `${dateStr} a las ${timeStr}`
+}

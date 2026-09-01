@@ -5,6 +5,33 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { localClient } from './helpers/local-db'
+import { requirePresent } from './helpers/require-present'
+
+// Las dos RPC de monitoreo devuelven `jsonb` (`Returns: Json` en los tipos
+// generados), así que TypeScript no sabe nada de su forma. El contrato que este
+// test da por bueno se escribe aquí en vez de con `any`: un campo mal escrito
+// en un assert pasa a ser error de compilación, y si la RPC cambia de forma
+// queda a la vista qué esperaba el test.
+
+type ConversionContact = {
+  phone: string
+  segment: string
+  orders_count: number
+  businesses: string[]
+}
+
+type ConversionStats = {
+  segments: { A: number; B: number; C: number; D: number }
+  actionable_contacts: ConversionContact[]
+  summary: { profiles_without_phone: number; with_account: number }
+}
+
+type OnlineOrdersStats = {
+  from: string
+  to: string
+  series: unknown[]
+  totals: { creados: number; entregados: number; cancelados: number; tasa_entrega: number }
+}
 
 describe('Monitoreo Online & Oportunidad de Conversión (0192)', () => {
   const testId = String(Math.floor(100000 + Math.random() * 900000))
@@ -305,32 +332,37 @@ describe('Monitoreo Online & Oportunidad de Conversión (0192)', () => {
   })
 
   it('admin_conversion_opportunity_stats: clasifica teléfono legacy en Segmento D y NO en A o B', async () => {
-    const { data, error } = await (localClient as any).rpc('admin_conversion_opportunity_stats')
+    const { data, error } = await localClient.rpc('admin_conversion_opportunity_stats')
     expect(error).toBeNull()
     expect(data).toBeDefined()
 
-    const segments = data.segments
-    const actionable = data.actionable_contacts
+    const stats = data as unknown as ConversionStats
+    const segments = stats.segments
+    const actionable = stats.actionable_contacts
 
     // El teléfono legacy (times_used = 25 pero 0 pedidos v2) NO debe aparecer en la lista accionable
-    const inActionable = actionable.find((c: any) => c.phone === phoneLegacyOnly)
+    const inActionable = actionable.find((c) => c.phone === phoneLegacyOnly)
     expect(inActionable).toBeUndefined()
 
     // El teléfono de Segmento A (5 pedidos v2) DEBE estar en la lista accionable como 'A'
-    const contactA = actionable.find((c: any) => c.phone === phoneSegA)
-    expect(contactA).toBeDefined()
+    const contactA = requirePresent(
+      actionable.find((c) => c.phone === phoneSegA),
+      `el contacto accionable ${phoneSegA} (Segmento A)`,
+    )
     expect(contactA.segment).toBe('A')
     expect(contactA.orders_count).toBe(5)
     expect(contactA.businesses).toContain(`Restaurante Test ${testId}`)
 
     // El teléfono de Segmento B (3 pedidos v2) DEBE estar en la lista accionable como 'B'
-    const contactB = actionable.find((c: any) => c.phone === phoneSegB)
-    expect(contactB).toBeDefined()
+    const contactB = requirePresent(
+      actionable.find((c) => c.phone === phoneSegB),
+      `el contacto accionable ${phoneSegB} (Segmento B)`,
+    )
     expect(contactB.segment).toBe('B')
     expect(contactB.orders_count).toBe(3)
 
     // El teléfono de Segmento C (1 pedido v2) NO debe estar en la lista accionable (A+B)
-    const contactC = actionable.find((c: any) => c.phone === phoneSegC)
+    const contactC = actionable.find((c) => c.phone === phoneSegC)
     expect(contactC).toBeUndefined()
 
     // Comprobar que hay conteo en D mayor a 0
@@ -341,33 +373,36 @@ describe('Monitoreo Online & Oportunidad de Conversión (0192)', () => {
   })
 
   it('admin_conversion_opportunity_stats: normaliza teléfonos en distintos formatos y cruza con cuenta', async () => {
-    const { data, error } = await (localClient as any).rpc('admin_conversion_opportunity_stats')
+    const { data, error } = await localClient.rpc('admin_conversion_opportunity_stats')
     expect(error).toBeNull()
+
+    const stats = data as unknown as ConversionStats
 
     // phoneMatched tiene cuenta en customer_profiles con formato "+51 955 ...", en directory "955..."
     // Por lo tanto NO debe figurar en actionable_contacts (ya tiene cuenta)
-    const matchedInActionable = data.actionable_contacts.find((c: any) => c.phone === phoneMatched)
+    const matchedInActionable = stats.actionable_contacts.find((c) => c.phone === phoneMatched)
     expect(matchedInActionable).toBeUndefined()
 
     // Perfiles sin teléfono debe ser al menos 1
-    expect(data.summary.profiles_without_phone).toBeGreaterThanOrEqual(1)
-    expect(data.summary.with_account).toBeGreaterThanOrEqual(1)
+    expect(stats.summary.profiles_without_phone).toBeGreaterThanOrEqual(1)
+    expect(stats.summary.with_account).toBeGreaterThanOrEqual(1)
   })
 
   it('admin_online_orders_stats: agrega pedidos customer_pwa por current_service_date y calcula tasa de entrega', async () => {
-    const { data, error } = await (localClient as any).rpc('admin_online_orders_stats')
+    const { data, error } = await localClient.rpc('admin_online_orders_stats')
     expect(error).toBeNull()
     expect(data).toBeDefined()
 
-    expect(data.from).toBeDefined()
-    expect(data.to).toBeDefined()
-    expect(Array.isArray(data.series)).toBe(true)
-    expect(data.totals).toBeDefined()
+    const stats = data as unknown as OnlineOrdersStats
+    expect(stats.from).toBeDefined()
+    expect(stats.to).toBeDefined()
+    expect(Array.isArray(stats.series)).toBe(true)
+    expect(stats.totals).toBeDefined()
 
     // Los 2 pedidos online sembrados deben reflejarse en los totales
-    expect(data.totals.creados).toBeGreaterThanOrEqual(2)
-    expect(data.totals.entregados).toBeGreaterThanOrEqual(1)
-    expect(data.totals.cancelados).toBeGreaterThanOrEqual(1)
-    expect(data.totals.tasa_entrega).toBeGreaterThan(0)
+    expect(stats.totals.creados).toBeGreaterThanOrEqual(2)
+    expect(stats.totals.entregados).toBeGreaterThanOrEqual(1)
+    expect(stats.totals.cancelados).toBeGreaterThanOrEqual(1)
+    expect(stats.totals.tasa_entrega).toBeGreaterThan(0)
   })
 })

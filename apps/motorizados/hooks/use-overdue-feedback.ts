@@ -1,76 +1,165 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
+import type { BoardOrder } from '@/lib/types'
+import { orderUrgency } from '@/lib/urgency'
+import { useDriverOrders } from './use-driver-orders'
+import { useNow } from './use-now'
 
 /**
- * Dispara beep + vibración cuando aparece un nuevo pedido en tier `overdue`
- * (zona roja). Da feedback audible/háptico inmediato al repartidor con la app abierta.
+ * QUÉ PEDIDOS ESTÁN EN ZONA ROJA. Fuente ÚNICA.
+ *
+ * La condición de SONAR y la de VER salen de aquí, de la misma función. No es
+ * estética: en `negocios` esas dos condiciones vivían escritas en dos sitios, se
+ * desincronizaron y costó un pedido en producción (ver `lib/orders/attention.ts`
+ * allí). Aquí el fallo era el mismo girado —el dato global y el sonido local—,
+ * así que la regla se escribe una vez y la leen los dos.
+ *
+ * Si añades una alarma nueva, sácala de aquí; no de un filtro suelto.
  */
-export function useOverdueFeedback(overdueIds: Set<string>) {
-  const seenRef = useRef<Set<string>>(new Set())
-  const primedRef = useRef<boolean>(false)
+export function overdueIdsOf(available: BoardOrder[], now: number): Set<string> {
+  const set = new Set<string>()
+  for (const o of available) {
+    if (orderUrgency(o, now) === 'overdue') set.add(o.id)
+  }
+  return set
+}
 
-  useEffect(() => {
-    if (!primedRef.current) {
-      primedRef.current = true
-      for (const id of overdueIds) seenRef.current.add(id)
-      return
-    }
+// ─────────────────────────────────────────────────────────────────────────────
+// ESTADO DE LA ALARMA, A NIVEL DE MÓDULO
+//
+// Estaba en dos `useRef` DENTRO del componente, y el componente era `AvailableTab`
+// — que solo se monta con la pestaña "En espera" activa. De ahí salían dos fallos
+// encadenados:
+//
+//   1. Con el motorizado en "Míos" (que es donde la propia app lo deposita al
+//      arrancar si tiene trabajo), un pedido que entraba en rojo no sonaba.
+//   2. Al cambiar a "En espera" tampoco: `primed` arrancaba en `false` y el
+//      efecto marcaba como YA VISTOS todos los vencidos que hubiera.
+//
+//   Neto: la alarma solo existía para pedidos que se ponían rojos mientras ya
+//   estabas mirando esa pestaña concreta. Cada cambio de pestaña, además,
+//   destruía el estado.
+//
+// Fuera del componente, el estado sobrevive al cambio de pestaña y de ruta.
+// ─────────────────────────────────────────────────────────────────────────────
 
-    const fresh: string[] = []
-    for (const id of overdueIds) {
-      if (!seenRef.current.has(id)) fresh.push(id)
-    }
-    if (fresh.length === 0) return
-    for (const id of fresh) seenRef.current.add(id)
+const seen = new Set<string>()
+let primed = false
 
-    try {
-      if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
-        navigator.vibrate([400, 150, 400, 150, 400])
-      }
-    } catch {
-      // Ignorar si no soporta vibración
-    }
+/** Olvida lo visto. Solo al desmontar la alarma de verdad (cierre de sesión). */
+function resetAlarm(): void {
+  seen.clear()
+  primed = false
+}
 
-    try {
-      playAlertBeep()
-    } catch {
-      // Ignorar si autoplay está bloqueado por el navegador
-    }
-  }, [overdueIds])
+// ─────────────────────────────────────────────────────────────────────────────
+// UN SOLO AudioContext
+//
+// `playAlertBeep` hacía `new AudioContext()` en CADA pitido y no lo cerraba
+// nunca; `osc.stop()` para el oscilador, no libera el contexto. Chrome limita a
+// 6 por documento: del séptimo en adelante el constructor lanza, el `try/catch`
+// se lo tragaba, y el resto del turno era MUDO sin ningún síntoma. La vibración
+// seguía funcionando, así que el motorizado daba por hecho que el sonido estaba
+// apagado a propósito.
+// ─────────────────────────────────────────────────────────────────────────────
+
+let ctx: AudioContext | null = null
+
+function getCtx(): AudioContext | null {
+  if (ctx !== null) return ctx
+  const AudioCtx =
+    window.AudioContext ??
+    (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+  if (!AudioCtx) return null
+  try {
+    ctx = new AudioCtx()
+    return ctx
+  } catch {
+    return null
+  }
+}
+
+/** Beep doble estilo "alerta" usando Web Audio API sin assets binarios. */
+function playAlertBeep(): void {
+  const c = getCtx()
+  if (c === null) return
+
+  // La política de autoplay deja el contexto en `suspended` hasta que hay un
+  // gesto del usuario. Reanudarlo es lo que hace que el primer aviso de la
+  // sesión suene en vez de perderse en silencio.
+  if (c.state === 'suspended') void c.resume().catch(() => null)
+
+  const now = c.currentTime
+  const tono = (freq: number, desde: number, dura: number, vol: number) => {
+    const osc = c.createOscillator()
+    const gain = c.createGain()
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(freq, now + desde)
+    gain.gain.setValueAtTime(vol, now + desde)
+    gain.gain.exponentialRampToValueAtTime(0.001, now + desde + dura)
+    osc.connect(gain)
+    gain.connect(c.destination)
+    osc.start(now + desde)
+    osc.stop(now + desde + dura)
+  }
+
+  tono(880, 0, 0.15, 0.15) // A5
+  tono(1174.66, 0.2, 0.2, 0.2) // D6
 }
 
 /**
- * Beep doble estilo "alerta" usando Web Audio API sin assets binarios.
+ * Cadencia de la alarma. NO hace falta un segundo: el umbral que vigila son
+ * minutos, y a 1s repintaría la shell entera 60 veces por minuto para nada.
  */
-function playAlertBeep(): void {
-  const AudioCtx =
-    window.AudioContext ||
-    (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
-  if (!AudioCtx) return
+const ALARM_TICK_MS = 5_000
 
-  const ctx = new AudioCtx()
-  const now = ctx.currentTime
+/**
+ * Beep + vibración cuando aparece un pedido nuevo en zona roja.
+ *
+ * VIVE EN EL CHROME, no en una pestaña. Se monta con `DriverShell`, así que
+ * suena en `/`, `/efectivo`, `/historial` y `/restaurantes` por igual, y
+ * sobrevive a los cambios de pestaña del tablero.
+ *
+ * No devuelve nada y quien lo llama no pinta nada: es un efecto puro.
+ */
+export function useOverdueFeedback(): void {
+  const now = useNow(ALARM_TICK_MS)
+  const { available } = useDriverOrders(now)
 
-  const osc1 = ctx.createOscillator()
-  const gain1 = ctx.createGain()
-  osc1.type = 'sine'
-  osc1.frequency.setValueAtTime(880, now) // A5
-  gain1.gain.setValueAtTime(0.15, now)
-  gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.15)
-  osc1.connect(gain1)
-  gain1.connect(ctx.destination)
-  osc1.start(now)
-  osc1.stop(now + 0.15)
+  useEffect(() => {
+    const overdue = overdueIdsOf(available, now)
 
-  const osc2 = ctx.createOscillator()
-  const gain2 = ctx.createGain()
-  osc2.type = 'sine'
-  osc2.frequency.setValueAtTime(1174.66, now + 0.2) // D6
-  gain2.gain.setValueAtTime(0.2, now + 0.2)
-  gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.4)
-  osc2.connect(gain2)
-  gain2.connect(ctx.destination)
-  osc2.start(now + 0.2)
-  osc2.stop(now + 0.4)
+    // Primera evaluación: lo que YA estaba en rojo al abrir no es novedad. Sin
+    // esto, abrir la app con tres vencidos dispararía tres alarmas de golpe por
+    // algo que el motorizado no acaba de recibir.
+    if (!primed) {
+      primed = true
+      for (const id of overdue) seen.add(id)
+      return
+    }
+
+    const nuevos: string[] = []
+    for (const id of overdue) {
+      if (!seen.has(id)) nuevos.push(id)
+    }
+    if (nuevos.length === 0) return
+    for (const id of nuevos) seen.add(id)
+
+    try {
+      navigator.vibrate?.([400, 150, 400, 150, 400])
+    } catch {
+      // Sin soporte de vibración: el beep sigue.
+    }
+    try {
+      playAlertBeep()
+    } catch {
+      // Autoplay bloqueado: la vibración ya avisó.
+    }
+  }, [available, now])
+
+  // Solo se desmonta al cerrar sesión (la shell entera se va y aparece `Login`).
+  // Los cambios de pestaña y de ruta dentro de `(driver)` NO pasan por aquí, que
+  // es justo lo que estaba roto.
+  useEffect(() => resetAlarm, [])
 }

@@ -19,7 +19,10 @@ export function ZonesMap({
   onCreate,
   onEdit,
   onDelete,
-  heightPx = 460,
+  onRename,
+  onToggle,
+  busy,
+  heightPx = 520,
 }: {
   coverage: LatLng[] | null
   zones: ZoneShape[]
@@ -27,10 +30,16 @@ export function ZonesMap({
   onCreate: (ring: LatLng[]) => void
   onEdit: (id: string, ring: LatLng[]) => void
   onDelete: (id: string) => void
+  onRename?: (id: string, name: string) => void
+  onToggle?: (id: string) => void
+  busy?: boolean
   heightPx?: number
 }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-ink/10" style={{ height: heightPx }}>
+    <div
+      className="overflow-hidden rounded-2xl border border-ink/10 shadow-xs"
+      style={{ height: heightPx }}
+    >
       <Inner
         coverage={coverage}
         zones={zones}
@@ -38,6 +47,9 @@ export function ZonesMap({
         onCreate={onCreate}
         onEdit={onEdit}
         onDelete={onDelete}
+        onRename={onRename}
+        onToggle={onToggle}
+        busy={busy}
       />
     </div>
   )

@@ -37,9 +37,12 @@ const Schema = z.object({
     .string()
     .trim()
     .max(20)
-    .refine((val) => !val || !BLACKLISTED_PHONES.includes(val.replace(/\D/g, '') as any), {
-      message: 'Número de teléfono de prueba no permitido',
-    })
+    .refine(
+      (val) => !val || !(BLACKLISTED_PHONES as readonly string[]).includes(val.replace(/\D/g, '')),
+      {
+        message: 'Número de teléfono de prueba no permitido',
+      },
+    )
     .optional(),
   deliveryReference: z.string().trim().max(500).optional(),
   // `notes` se retiró en la migración 0127 junto con `p_notes`: era un campo que
