@@ -378,7 +378,9 @@ export function useCheckoutState(): CheckoutState {
   const reloadAddresses = useCallback(async () => {
     const { data: addrs } = await getSupabaseBrowser()
       .from('customer_addresses')
-      .select('id,label,line,reference,is_default,coordinates_lat,coordinates_lng')
+      .select(
+        'id,label,line,reference,is_default,coordinates_lat,coordinates_lng,location_confirmed_at',
+      )
       .order('is_default', { ascending: false })
     setAddresses((addrs ?? []) as CheckoutState['addresses'])
     setAddressId((prev) => prev ?? addrs?.find((a) => a.is_default)?.id ?? addrs?.[0]?.id ?? null)

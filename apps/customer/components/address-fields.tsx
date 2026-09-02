@@ -5,8 +5,10 @@ import { MapPicker } from '@/components/map-picker'
 import {
   ADDRESS_LABELS,
   type AddressValue,
+  canSaveAddress,
   EMPTY_ADDRESS,
   getLineError,
+  getMissingLabel,
   getReferenceError,
   isLineOk,
   isReferenceOk,
@@ -16,8 +18,10 @@ import {
 export {
   ADDRESS_LABELS,
   type AddressValue,
+  canSaveAddress,
   EMPTY_ADDRESS,
   getLineError,
+  getMissingLabel,
   getReferenceError,
   isLineOk,
   isReferenceOk,
@@ -32,6 +36,9 @@ export {
  * El mapa que se ve aquí NO es interactivo: es una postal que abre la pantalla
  * completa de `MapPicker`. Un Leaflet vivo dentro de este formulario se quedaba
  * con cualquier arrastre que empezara encima y la hoja parecía trabada.
+ *
+ * La ubicación es un campo OBLIGATORIO como los otros dos, y por eso lleva el
+ * mismo asterisco. Quien decide si se puede guardar es `canSaveAddress`.
  */
 export function AddressFields({
   value,
@@ -80,7 +87,7 @@ export function AddressFields({
 
       <div className="mb-3.5">
         <span className="mb-2 block font-mono text-[12px] font-semibold uppercase tracking-wide text-ink-muted">
-          Tu ubicación en el mapa
+          Tu ubicación en el mapa <span className="text-brand">*</span>
         </span>
         <MapPicker
           value={value.coords}

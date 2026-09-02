@@ -113,6 +113,8 @@ export interface Address {
   is_default: boolean
   coordinates_lat: number | null
   coordinates_lng: number | null
+  /** NULL = ese punto no lo eligió nadie (ver migración 0202). */
+  location_confirmed_at: string | null
 }
 
 export interface OrderResult {

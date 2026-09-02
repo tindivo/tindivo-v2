@@ -66,3 +66,27 @@ export function getLineError(line: string | null): string | null {
 export function isLineOk(line: string | null): boolean {
   return getLineError(line) === null
 }
+
+/**
+ * Qué falta para poder guardar, dicho con las palabras que va a leer la persona
+ * en el botón deshabilitado.
+ *
+ * Vive aquí y no en cada pantalla porque estaba escrito tres veces —perfil,
+ * onboarding y checkout— y las tres se habían olvidado de lo mismo: las
+ * coordenadas. Alguien llenaba calle y referencia, el botón se ponía naranja y
+ * se guardaba el centro del pueblo como si fuera su casa.
+ *
+ * El orden es el de la reparación, no el del formulario: primero la ubicación,
+ * que es lo que nadie sabía que tenía que hacer.
+ */
+export function getMissingLabel(value: AddressValue, insideZone: boolean): string | null {
+  if (value.coords == null) return 'Falta marcar tu ubicación'
+  if (!insideZone) return 'Fuera de la zona de reparto'
+  if (!isLineOk(value.line)) return 'Falta tu dirección'
+  if (!isReferenceOk(value.reference)) return 'Falta la referencia'
+  return null
+}
+
+export function canSaveAddress(value: AddressValue, insideZone: boolean): boolean {
+  return getMissingLabel(value, insideZone) === null
+}

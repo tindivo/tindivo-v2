@@ -603,6 +603,8 @@ export type Database = {
           is_default: boolean
           label: string
           line: string | null
+          location_accuracy_m: number | null
+          location_confirmed_at: string | null
           reference: string
           updated_at: string
           user_id: string
@@ -615,6 +617,8 @@ export type Database = {
           is_default?: boolean
           label?: string
           line?: string | null
+          location_accuracy_m?: number | null
+          location_confirmed_at?: string | null
           reference: string
           updated_at?: string
           user_id: string
@@ -627,6 +631,8 @@ export type Database = {
           is_default?: boolean
           label?: string
           line?: string | null
+          location_accuracy_m?: number | null
+          location_confirmed_at?: string | null
           reference?: string
           updated_at?: string
           user_id?: string
@@ -2580,19 +2586,10 @@ export type Database = {
         Args: { p_business_user_id: string; p_settlement_id: string }
         Returns: Json
       }
-      create_appeal_report:
-        | {
-            Args: {
-              p_customer_user_id: string
-              p_description?: string
-              p_order_id: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: { p_description?: string; p_order_id: string }
-            Returns: Json
-          }
+      create_appeal_report: {
+        Args: { p_description?: string; p_order_id: string }
+        Returns: Json
+      }
       create_business_manual_order: {
         Args: {
           p_address_directory_id?: string

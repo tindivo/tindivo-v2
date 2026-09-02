@@ -5,9 +5,10 @@ import { useEffect, useState } from 'react'
 import {
   AddressFields,
   type AddressValue,
+  canSaveAddress,
   EMPTY_ADDRESS,
+  getMissingLabel,
   isLineOk,
-  isReferenceOk,
 } from '@/components/address-fields'
 import { type Address, addressIcon } from '@/features/checkout/types'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
@@ -51,7 +52,19 @@ export function AddressSelectorSheet({
 
   if (!open) return null
 
-  const canSave = isLineOk(manualAddr.line) && isReferenceOk(manualAddr.reference) && manualInside
+  const canSave = canSaveAddress(manualAddr, manualInside)
+  const falta = getMissingLabel(manualAddr, manualInside)
+  /**
+   * ESTA RAMA SE ABRE SOLA CUANDO NO HAY NINGUNA DIRECCIÓN (el checkout la pone
+   * en modo alta con `addresses.length === 0`), y el INSERT no ponía
+   * `is_default`, así que caía al `false` de la columna. Resultado medido en
+   * prod: dos de veintisiete usuarios con direcciones y ninguna predeterminada.
+   * A esos, `cart-business-gate` —que consulta `.eq('is_default', true)` sin
+   * plan B— les manda al negocio el mensaje de WhatsApp SIN dirección.
+   *
+   * No hace falta limpiar las demás: si es la primera, no hay otras.
+   */
+  const esPrimera = addresses.length === 0
 
   async function saveNew() {
     if (!canSave) return
@@ -72,6 +85,9 @@ export function AddressSelectorSheet({
         reference: manualAddr.reference.trim(),
         coordinates_lat: manualAddr.coords?.lat ?? null,
         coordinates_lng: manualAddr.coords?.lng ?? null,
+        location_confirmed_at: new Date().toISOString(),
+        location_accuracy_m: manualAddr.accuracyM,
+        is_default: esPrimera,
       })
       .select('id')
       .single()
@@ -101,7 +117,11 @@ export function AddressSelectorSheet({
                     onClose()
                   }}
                   className={`flex items-start gap-3 rounded-[18px] border bg-card p-3.5 text-left transition-all ${
-                    sel ? 'border-brand ring-2 ring-brand/30' : 'border-ink/[0.04] shadow-elev-1'
+                    sel
+                      ? 'border-brand ring-2 ring-brand/30'
+                      : a.location_confirmed_at == null
+                        ? 'border-warning/50 shadow-elev-1'
+                        : 'border-ink/[0.04] shadow-elev-1'
                   }`}
                 >
                   <div
@@ -123,6 +143,14 @@ export function AddressSelectorSheet({
                           Falta calle
                         </span>
                       )}
+                      {/* No bloquea el pedido: avisa. La cajera llama a todos
+                          igual, y quitarle el pedido a quien no entienda esta
+                          pantalla cuesta más que un punto flojo. */}
+                      {a.location_confirmed_at == null && (
+                        <span className="rounded-[5px] bg-warning-soft px-1.5 py-0.5 text-[9px] font-bold text-amber-900 uppercase">
+                          Sin ubicación
+                        </span>
+                      )}
                     </div>
                     {a.line ? (
                       <div className="text-[13px] font-medium text-ink">{a.line}</div>
@@ -133,6 +161,15 @@ export function AddressSelectorSheet({
                       </div>
                     )}
                     <div className="mt-0.5 text-[12px] text-ink-muted">{a.reference}</div>
+                    {a.location_confirmed_at == null && (
+                      <div className="mt-1.5 flex items-start gap-1.5 text-[11px] text-[#78350f] leading-snug">
+                        <Icon name="wrong_location" size={13} className="mt-px shrink-0" />
+                        <span>
+                          Sin punto en el mapa. Arréglala desde <strong>Mi cuenta</strong> para que
+                          el motorizado no se pierda.
+                        </span>
+                      </div>
+                    )}
                   </div>
                   {sel && (
                     <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full bg-brand text-white">
@@ -158,13 +195,10 @@ export function AddressSelectorSheet({
               onChange={(p) => setManualAddr((a) => ({ ...a, ...p }))}
               onValidityChange={setManualInside}
             />
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setAdding(false)}
-                className="flex-1"
-              >
+            {/* Anclado abajo por lo mismo que en el perfil: el botón tiene que
+                estar a la vista Y decir qué falta. */}
+            <div className="-mx-4 -mb-6 sticky bottom-0 flex gap-2 border-ink/[0.06] border-t bg-surface px-4 pt-3 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+              <Button type="button" variant="ghost" onClick={() => setAdding(false)}>
                 Cancelar
               </Button>
               <Button
@@ -174,7 +208,7 @@ export function AddressSelectorSheet({
                 disabled={busy || !canSave}
                 className="flex-1"
               >
-                {busy ? 'Guardando…' : 'Guardar dirección'}
+                {busy ? 'Guardando…' : (falta ?? 'Guardar dirección')}
               </Button>
             </div>
           </div>

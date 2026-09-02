@@ -209,6 +209,12 @@ export async function saveAddress(input: {
     coordinates_lat: input.lat,
     coordinates_lng: input.lng,
     is_default: true,
+    // Se llega aquí con un punto que salió de un gesto o del sensor: el
+    // formulario no deja guardar de otra forma (`canSaveAddress`). Por eso se
+    // sella confirmada, y la precisión viaja con ella — NULL significa que el
+    // pin se puso a mano, mismo convenio que `capture_delivery_address` (0147).
+    location_confirmed_at: new Date().toISOString(),
+    location_accuracy_m: input.accuracyM ?? null,
   })
   if (error) throw new Error(error.message)
 

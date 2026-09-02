@@ -84,12 +84,22 @@ function AddressCard({
   onEdit: () => void
   onSetDefault: () => void
 }) {
+  /**
+   * El punto de esta dirección no lo eligió nadie: lo plantó la app en el
+   * centro del pueblo (migración 0202). No se bloquea nada —se puede seguir
+   * pidiendo—, pero se dice y se ofrece arreglarlo en un toque, porque el
+   * motorizado sale hacia la plaza con ella.
+   */
+  const sinUbicacion = address.location_confirmed_at == null
+
   return (
     <Card
       className={`flex items-start gap-3.5 p-4 transition-all rounded-[20px] ${
-        address.is_default
-          ? 'border-brand/40 bg-card ring-1 ring-brand/20 shadow-elev-1'
-          : 'border-border bg-card hover:shadow-elev-1'
+        sinUbicacion
+          ? 'border-warning/50 bg-card shadow-elev-1'
+          : address.is_default
+            ? 'border-brand/40 bg-card ring-1 ring-brand/20 shadow-elev-1'
+            : 'border-border bg-card hover:shadow-elev-1'
       }`}
     >
       <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-soft text-[20px] shadow-sm">
@@ -104,6 +114,11 @@ function AddressCard({
               Predeterminada
             </Badge>
           )}
+          {sinUbicacion && (
+            <Badge variant="warning" size="sm" className="font-bold tracking-wide text-[10px]">
+              Sin ubicación
+            </Badge>
+          )}
         </div>
 
         {address.line && (
@@ -116,7 +131,26 @@ function AddressCard({
           {address.reference}
         </div>
 
+        {sinUbicacion && (
+          <div className="mt-2.5 flex items-start gap-2 rounded-[14px] bg-warning-soft px-3 py-2.5">
+            <Icon name="wrong_location" size={16} className="mt-px shrink-0 text-[#b45309]" />
+            <span className="min-w-0 flex-1 text-[12px] text-[#78350f] leading-snug">
+              No llegamos a saber en qué punto del mapa queda. El motorizado sale con el centro del
+              pueblo y puede perderse.
+            </span>
+          </div>
+        )}
+
         <div className="mt-3 flex flex-wrap items-center gap-2">
+          {sinUbicacion && (
+            <button
+              type="button"
+              onClick={onEdit}
+              className="inline-flex items-center gap-1 rounded-xl bg-[linear-gradient(135deg,#d97706,#f59e0b)] px-3 py-1.5 text-[12px] font-bold text-white transition-transform active:scale-95"
+            >
+              <Icon name="add_location_alt" size={14} /> Marcar en el mapa
+            </button>
+          )}
           <button
             type="button"
             onClick={onEdit}

@@ -6,8 +6,8 @@ import { useState } from 'react'
 import {
   AddressFields,
   type AddressValue,
-  isLineOk,
-  isReferenceOk,
+  canSaveAddress,
+  getMissingLabel,
 } from '@/components/address-fields'
 import type { Address } from '@/features/account/types'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
@@ -31,17 +31,39 @@ export function AddressSheet({
     label: address?.label ?? 'Casa',
     line: address?.line ?? '',
     reference: address?.reference ?? '',
+    // UNA DIRECCIÓN SIN CONFIRMAR ENTRA SIN PUNTO, aunque la fila tenga
+    // coordenadas. Son las tres que la 0202 marcó: la app las guardó solas en
+    // el centro del pueblo y nadie las eligió. Rehidratarlas dejaría el mapa en
+    // verde («ubicación confirmada») sobre una plaza que no es la casa de
+    // nadie, y guardar volvería a sellarla como buena. Entrando en blanco, el
+    // formulario pide lo único que falta, que es un gesto.
     coords:
-      address?.coordinates_lat != null && address?.coordinates_lng != null
+      address?.location_confirmed_at != null &&
+      address?.coordinates_lat != null &&
+      address?.coordinates_lng != null
         ? { lat: Number(address.coordinates_lat), lng: Number(address.coordinates_lng) }
         : null,
     accuracyM: null,
   })
-  const [isDefault, setIsDefault] = useState(address ? address.is_default : isFirst || true)
+  /**
+   * ANTES ESTO ERA `isFirst || true`, o sea `true` a secas: la prop `isFirst`
+   * llegaba de dos sitios y no la miraba nadie. Consecuencia: TODA dirección
+   * nueva abría con el interruptor encendido, y como `save()` empieza poniendo
+   * `is_default = false` a todas las del usuario, quien añadía «Trabajo» se
+   * quedaba con Trabajo como dirección por defecto de sus pedidos sin haberlo
+   * pedido ni enterarse.
+   *
+   * La primera dirección es un caso aparte: no es que convenga que sea la
+   * predeterminada, es que no puede ser otra cosa. Por eso ni se pregunta.
+   */
+  const [isDefault, setIsDefault] = useState(address ? address.is_default : isFirst)
   const [insideZone, setInsideZone] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const canSave = isLineOk(addr.line) && isReferenceOk(addr.reference) && insideZone
+  /** No hay otra dirección: esta será la predeterminada quiera o no. */
+  const esPrimera = address == null && isFirst
+  const canSave = canSaveAddress(addr, insideZone)
+  const falta = getMissingLabel(addr, insideZone)
 
   function patch(p: Partial<AddressValue>) {
     setAddr((a) => ({ ...a, ...p }))
@@ -60,7 +82,12 @@ export function AddressSheet({
       return
     }
 
-    if (isDefault) {
+    // `esPrimera` gana sobre el interruptor: es la única dirección que hay, así
+    // que dejarla sin marcar produciría un usuario con direcciones y ninguna
+    // predeterminada — el agujero que ya abrió el alta del checkout.
+    const seraPredeterminada = esPrimera || isDefault
+
+    if (seraPredeterminada) {
       await supabase.from('customer_addresses').update({ is_default: false }).eq('user_id', userId)
     }
 
@@ -68,9 +95,13 @@ export function AddressSheet({
       label: addr.label,
       line: addr.line.trim(),
       reference: addr.reference.trim(),
-      is_default: isDefault,
+      is_default: seraPredeterminada,
       coordinates_lat: addr.coords?.lat ?? null,
       coordinates_lng: addr.coords?.lng ?? null,
+      // Se sella sin condiciones porque no hay forma de llegar aquí sin punto:
+      // `canSaveAddress` lo exige y una fila sin confirmar entra en blanco.
+      location_confirmed_at: new Date().toISOString(),
+      location_accuracy_m: addr.accuracyM,
     }
 
     if (address) {
@@ -114,31 +145,33 @@ export function AddressSheet({
           <AddressFields value={addr} onChange={patch} onValidityChange={setInsideZone} />
         </div>
 
-        <button
-          type="button"
-          onClick={() => setIsDefault((d) => !d)}
-          className="flex w-full items-center gap-3 rounded-[16px] border border-border bg-card p-3.5 text-left transition-colors hover:bg-surface-low/50"
-        >
-          <span
-            className={`relative h-[22px] w-[38px] shrink-0 rounded-full transition-colors ${
-              isDefault ? 'bg-brand' : 'bg-ink/[0.15]'
-            }`}
+        {!esPrimera && (
+          <button
+            type="button"
+            onClick={() => setIsDefault((d) => !d)}
+            className="flex w-full items-center gap-3 rounded-[16px] border border-border bg-card p-3.5 text-left transition-colors hover:bg-surface-low/50"
           >
             <span
-              className={`absolute top-0.5 h-[18px] w-[18px] rounded-full bg-white shadow transition-all ${
-                isDefault ? 'left-[18px]' : 'left-0.5'
+              className={`relative h-[22px] w-[38px] shrink-0 rounded-full transition-colors ${
+                isDefault ? 'bg-brand' : 'bg-ink/[0.15]'
               }`}
-            />
-          </span>
-          <span className="flex-1 min-w-0">
-            <span className="block font-semibold text-[14px] text-ink">
-              Usar como predeterminada
+            >
+              <span
+                className={`absolute top-0.5 h-[18px] w-[18px] rounded-full bg-white shadow transition-all ${
+                  isDefault ? 'left-[18px]' : 'left-0.5'
+                }`}
+              />
             </span>
-            <span className="block text-[12px] text-ink-muted">
-              Se seleccionará automáticamente al hacer un pedido.
+            <span className="flex-1 min-w-0">
+              <span className="block font-semibold text-[14px] text-ink">
+                Usar como predeterminada
+              </span>
+              <span className="block text-[12px] text-ink-muted">
+                Se seleccionará automáticamente al hacer un pedido.
+              </span>
             </span>
-          </span>
-        </button>
+          </button>
+        )}
 
         {error && <p className="mt-3 text-danger text-sm">{error}</p>}
 
@@ -152,9 +185,19 @@ export function AddressSheet({
           </button>
         )}
 
-        <Button type="submit" variant="brand" className="mt-4 w-full" disabled={!canSave || busy}>
-          {busy ? 'Guardando…' : address ? 'Guardar cambios' : 'Guardar dirección'}
-        </Button>
+        {/*
+          ANCLADO ABAJO, NO AL FINAL DEL SCROLL.
+          Con el mapa arriba y el botón al final de la hoja, quien escribía la
+          referencia ya no veía el mapa y el botón ya estaba en naranja: nada lo
+          devolvía a marcar su ubicación. Pegado abajo el botón está siempre a
+          la vista y, cuando no se puede guardar, DICE qué falta en vez de
+          quedarse mudo y apagado.
+        */}
+        <div className="-mx-4 -mb-6 sticky bottom-0 mt-4 border-ink/[0.06] border-t bg-surface px-4 pt-3 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+          <Button type="submit" variant="brand" className="w-full" disabled={!canSave || busy}>
+            {busy ? 'Guardando…' : (falta ?? (address ? 'Guardar cambios' : 'Guardar dirección'))}
+          </Button>
+        </div>
       </form>
     </BottomSheet>
   )

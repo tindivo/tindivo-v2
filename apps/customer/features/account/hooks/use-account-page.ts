@@ -127,7 +127,9 @@ export function useAccountPage() {
     const [{ data: addrs }, { data: ords }, { data: reportRows }] = await Promise.all([
       supabase
         .from('customer_addresses')
-        .select('id,label,line,reference,is_default,coordinates_lat,coordinates_lng')
+        .select(
+          'id,label,line,reference,is_default,coordinates_lat,coordinates_lng,location_confirmed_at',
+        )
         .order('is_default', { ascending: false }),
       supabase
         .from('orders')
