@@ -1,5 +1,26 @@
 # PENDIENTES — inventario completo
 
+> ## ⚠️ DOCUMENTO HISTÓRICO — NO LEER COMO LISTA DE TAREAS
+>
+> **Comprobado contra prod y contra los ficheros el 2026-09-01.** Esta lista se
+> quedó en la migración `0126` y el repo va por la `0204`: son setenta y ocho
+> migraciones de distancia.
+>
+> Lo más engañoso es la sección **«🔴 BLOQUEA EL LAUNCH»**: sus cinco puntos
+> están **entregados enteros** (`0124` dejó `balance_due` derivado, `0125`
+> separó comisión de envío, `0126` le dio la banda a la cajera). Leerla hoy
+> manda a construir lo que ya existe.
+>
+> Y no sería la primera vez. El propio documento cuenta, en la sección del ETL,
+> que fiarse de él ya hizo que se mandara a corregir un bug inexistente (§5) y a
+> crear un índice que hoy sería dañino (§1). Esa advertencia se escribió el
+> 2026-08-19 para esa sección; hoy vale para el documento entero.
+>
+> **Dónde mirar en su lugar:** `supabase migration list` y los advisors de
+> Supabase para el estado de la base; `DECISIONS.md` para lo que está decidido.
+> Se conserva por el porqué de cada decisión, que sigue siendo bueno, no por su
+> estado.
+
 **Fecha:** 2026-08-04
 **Alcance:** todo lo que quedó abierto en la sesión de saneamiento + ETL, con su
 estado y quién lo cierra.
