@@ -161,9 +161,11 @@ function PaySectionPrepaid({ order, proofUrl }: { order: OrderVM; proofUrl: stri
               COMPROBANTE DEL CLIENTE
             </div>
             {proofUrl ? (
-              <div
+              <button
+                type="button"
                 onClick={() => setZoom(true)}
-                className="relative cursor-pointer overflow-hidden rounded-[10px] border border-border bg-surface-low"
+                aria-label="Ampliar el comprobante del cliente"
+                className="relative block w-full cursor-pointer overflow-hidden rounded-[10px] border border-border bg-surface-low text-left"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -185,7 +187,7 @@ function PaySectionPrepaid({ order, proofUrl }: { order: OrderVM; proofUrl: stri
                     />
                   </div>
                 )}
-              </div>
+              </button>
             ) : (
               <div className="relative h-[130px] w-full overflow-hidden rounded-[10px] bg-surface-low">
                 <span className="absolute inset-0 flex items-center justify-center px-1.5 text-center text-[10px] uppercase tracking-wide text-ink/50">

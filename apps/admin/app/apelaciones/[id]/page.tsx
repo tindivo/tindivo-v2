@@ -257,12 +257,16 @@ function RefundForm({
 
       {/* Monto */}
       <div>
-        <label className="mb-1.5 block text-[12px] font-semibold text-ink-muted">
+        <label
+          htmlFor="monto-devuelto"
+          className="mb-1.5 block text-[12px] font-semibold text-ink-muted"
+        >
           Monto devuelto
         </label>
         <div className="flex items-center rounded-[12px] border border-border bg-white ring-offset-1 focus-within:ring-2 focus-within:ring-brand/40">
           <span className="pl-3 text-[14px] font-semibold text-ink-subtle">S/</span>
           <input
+            id="monto-devuelto"
             type="number"
             step="0.01"
             value={refundAmount}
@@ -274,9 +278,9 @@ function RefundForm({
 
       {/* Dropzone / preview */}
       <div>
-        <label className="mb-1.5 block text-[12px] font-semibold text-ink-muted">
+        <span className="mb-1.5 block text-[12px] font-semibold text-ink-muted">
           Captura del Yape de devolución
-        </label>
+        </span>
 
         {refundFile && previewUrl ? (
           /* ── Preview state ── */
