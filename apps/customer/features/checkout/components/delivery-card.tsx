@@ -138,8 +138,19 @@ export function DeliveryCard({
                       {address.line}
                     </span>
                   ) : (
+                    /* «Toca para completarla» PROMETÍA ALGO QUE EL TOQUE NO
+                       HACE. La hoja que se abre solo deja ELEGIR otra dirección
+                       o AGREGAR una nueva: el `update` de una guardada existe,
+                       pero vive en Mi cuenta
+                       (`features/account/.../address-sheet.tsx`), no aquí. El
+                       cliente tocaba, no encontraba dónde completar, y se
+                       quedaba mirando la misma fila en rojo.
+                       Ahora la frase nombra la salida que SÍ existe desde este
+                       toque. Arreglar el fondo —editar en el sitio— es de la
+                       pasada de calidad de direcciones que está en curso. */
                     <span className="mt-0.5 block font-medium text-[12px] text-danger leading-snug">
-                      Sin la calle y el número el motorizado no te encuentra. Toca para completarla.
+                      Sin la calle y el número el motorizado no te encuentra. Toca y agrega una
+                      dirección completa.
                     </span>
                   )}
                   {address.reference && (
