@@ -109,7 +109,17 @@ export function AddressSelectorSheet({
         coordinates_lng: manualAddr.coords?.lng ?? null,
         // Un alta siempre sella ahora: no hay punto previo que conservar.
         ...sealLocation(null, manualAddr, new Date().toISOString()),
-        is_default: (count ?? 0) === 0,
+        /*
+          `count === 0` y no `(count ?? 0) === 0`: si la cuenta viniera vacia,
+          la duda se resuelve hacia el lado que NO puede romper nada. Marcar de
+          mas choca contra el indice unico parcial; marcar de menos deja como
+          mucho una libreta sin predeterminada, que es el estado viejo y que la
+          pantalla de Mi cuenta ya cura al borrar o al editar.
+          Medido con un JWT real contra PostgREST: el HEAD con `count=exact`
+          responde 200 con `content-range: 0-0/1`, asi que el caso normal llega
+          con numero.
+        */
+        is_default: count === 0,
       })
       .select('id')
       .single()
