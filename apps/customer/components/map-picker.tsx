@@ -111,11 +111,21 @@ function boundsFor(polygon: LatLng[] | null, center: LatLng, radiusKm: number): 
  */
 export function MapPicker({
   value,
+  initialAccuracyM = null,
   onChange,
   onValidityChange,
   heightPx = 180,
 }: {
   value: LatLng | null
+  /**
+   * Los metros del sensor que YA traía el punto guardado, si los traía.
+   *
+   * Sin esto la precisión empezaba siempre en `null`, o sea «ajustada a mano»:
+   * al editar una dirección confirmada por GPS el sello verde salía igual, pero
+   * el pie decía «ajustada a mano» y una lectura de ±60 m —que debería avisar
+   * en ámbar— entraba disfrazada de buena.
+   */
+  initialAccuracyM?: number | null
   /**
    * La coordenada Y su precisión viajan juntas: `null` significa que el punto
    * lo puso una persona moviendo el mapa, no el GPS. Separarlas en dos avisos
@@ -133,7 +143,7 @@ export function MapPicker({
   const [bands, setBands] = useState<DeliveryBands>({ near: 2.0, far: 2.5 })
   const [farZones, setFarZones] = useState<LatLng[][]>([])
 
-  const [accuracyM, setAccuracyM] = useState<number | null>(null)
+  const [accuracyM, setAccuracyM] = useState<number | null>(initialAccuracyM)
   const [gps, setGps] = useState<GpsState>({ kind: 'idle' })
   // Abre en calles: es lo que orienta primero. El satélite está a un toque para
   // quien necesite reconocer su techo, y la elección se conserva al volver.

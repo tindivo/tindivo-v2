@@ -91,6 +91,7 @@ export function AddressFields({
         </span>
         <MapPicker
           value={value.coords}
+          initialAccuracyM={value.accuracyM}
           onChange={(coords, accuracyM) => onChange({ coords, accuracyM })}
           onValidityChange={onValidityChange}
           heightPx={mapHeightPx}

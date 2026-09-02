@@ -10,6 +10,7 @@ import {
   getMissingLabel,
 } from '@/components/address-fields'
 import type { Address } from '@/features/account/types'
+import { sealLocation } from '@/lib/address-record'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
 interface AddressSheetProps {
@@ -27,23 +28,30 @@ export function AddressSheet({
   onSaved,
   onDelete,
 }: AddressSheetProps) {
+  /**
+   * UNA DIRECCIÓN SIN CONFIRMAR ENTRA SIN PUNTO, aunque la fila tenga
+   * coordenadas. Son las tres que la 0202 marcó: la app las guardó solas en el
+   * centro del pueblo y nadie las eligió. Rehidratarlas dejaría el mapa en
+   * verde («ubicación confirmada») sobre una plaza que no es la casa de nadie,
+   * y guardar volvería a sellarla como buena. Entrando en blanco, el formulario
+   * pide lo único que falta, que es un gesto.
+   */
+  const puntoConfirmado =
+    address?.location_confirmed_at != null &&
+    address.coordinates_lat != null &&
+    address.coordinates_lng != null
+      ? { lat: Number(address.coordinates_lat), lng: Number(address.coordinates_lng) }
+      : null
+
   const [addr, setAddr] = useState<AddressValue>({
     label: address?.label ?? 'Casa',
     line: address?.line ?? '',
     reference: address?.reference ?? '',
-    // UNA DIRECCIÓN SIN CONFIRMAR ENTRA SIN PUNTO, aunque la fila tenga
-    // coordenadas. Son las tres que la 0202 marcó: la app las guardó solas en
-    // el centro del pueblo y nadie las eligió. Rehidratarlas dejaría el mapa en
-    // verde («ubicación confirmada») sobre una plaza que no es la casa de
-    // nadie, y guardar volvería a sellarla como buena. Entrando en blanco, el
-    // formulario pide lo único que falta, que es un gesto.
-    coords:
-      address?.location_confirmed_at != null &&
-      address?.coordinates_lat != null &&
-      address?.coordinates_lng != null
-        ? { lat: Number(address.coordinates_lat), lng: Number(address.coordinates_lng) }
-        : null,
-    accuracyM: null,
+    coords: puntoConfirmado,
+    // La precisión viaja CON el punto. Entraba siempre en `null`, así que el
+    // mapa anunciaba «ajustada a mano» sobre un GPS de ±8 m y, peor, guardar
+    // escribía ese null encima de la medida buena.
+    accuracyM: puntoConfirmado ? (address?.location_accuracy_m ?? null) : null,
   })
   /**
    * ANTES ESTO ERA `isFirst || true`, o sea `true` a secas: la prop `isFirst`
@@ -98,10 +106,10 @@ export function AddressSheet({
       is_default: seraPredeterminada,
       coordinates_lat: addr.coords?.lat ?? null,
       coordinates_lng: addr.coords?.lng ?? null,
-      // Se sella sin condiciones porque no hay forma de llegar aquí sin punto:
-      // `canSaveAddress` lo exige y una fila sin confirmar entra en blanco.
-      location_confirmed_at: new Date().toISOString(),
-      location_accuracy_m: addr.accuracyM,
+      // El sello lo mueve el PUNTO, no el formulario: si la coordenada no
+      // cambió, la confirmación y los metros del sensor que ya había siguen
+      // siendo los buenos. Ver `sealLocation`.
+      ...sealLocation(address, addr, new Date().toISOString()),
     }
 
     if (address) {

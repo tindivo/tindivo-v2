@@ -19,6 +19,7 @@ import {
   type PrepayTimers,
   type PromoState,
 } from '@/features/checkout/types'
+import { pickDefaultAddress } from '@/lib/address-record'
 import { useBusinessOrdering } from '@/lib/business-ordering'
 import { type CartState, useCart, useCartHydrated } from '@/lib/cart'
 import type { LatLng } from '@/lib/coverage'
@@ -383,7 +384,7 @@ export function useCheckoutState(): CheckoutState {
       )
       .order('is_default', { ascending: false })
     setAddresses((addrs ?? []) as CheckoutState['addresses'])
-    setAddressId((prev) => prev ?? addrs?.find((a) => a.is_default)?.id ?? addrs?.[0]?.id ?? null)
+    setAddressId((prev) => prev ?? pickDefaultAddress(addrs ?? [])?.id ?? null)
   }, [])
 
   return {

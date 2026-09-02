@@ -11,6 +11,7 @@ import {
   isLineOk,
 } from '@/components/address-fields'
 import { type Address, addressIcon } from '@/features/checkout/types'
+import { sealLocation } from '@/lib/address-record'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
 interface AddressSelectorSheetProps {
@@ -43,40 +44,61 @@ export function AddressSelectorSheet({
   const [manualAddr, setManualAddr] = useState<AddressValue>(EMPTY_ADDRESS)
   const [manualInside, setManualInside] = useState(true)
   const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   // La hoja no se desmonta al cerrarse (`return null` con los hooks ya
   // corridos), así que `adding` sobreviviría de una apertura a la siguiente.
   useEffect(() => {
-    if (open) setAdding(startAdding)
+    if (open) {
+      setAdding(startAdding)
+      setError(null)
+    }
   }, [open, startAdding])
 
   if (!open) return null
 
   const canSave = canSaveAddress(manualAddr, manualInside)
   const falta = getMissingLabel(manualAddr, manualInside)
-  /**
-   * ESTA RAMA SE ABRE SOLA CUANDO NO HAY NINGUNA DIRECCIÓN (el checkout la pone
-   * en modo alta con `addresses.length === 0`), y el INSERT no ponía
-   * `is_default`, así que caía al `false` de la columna. Resultado medido en
-   * prod: dos de veintisiete usuarios con direcciones y ninguna predeterminada.
-   * A esos, `cart-business-gate` —que consulta `.eq('is_default', true)` sin
-   * plan B— les manda al negocio el mensaje de WhatsApp SIN dirección.
-   *
-   * No hace falta limpiar las demás: si es la primera, no hay otras.
-   */
-  const esPrimera = addresses.length === 0
 
   async function saveNew() {
     if (!canSave) return
     setBusy(true)
+    setError(null)
     const supabase = getSupabaseBrowser()
     const { data: session } = await supabase.auth.getSession()
     const userId = session.session?.user.id
     if (!userId) {
       setBusy(false)
+      setError('Se cerró tu sesión. Vuelve a entrar para guardar la dirección.')
       return
     }
-    const { data, error } = await supabase
+
+    /**
+     * «¿ES LA PRIMERA?» SE LE PREGUNTA A LA BASE, NO A LAS PROPS.
+     *
+     * Esta rama se abre SOLA cuando el checkout cree que no hay ninguna
+     * dirección (`addresses.length === 0`), y antes el INSERT ni siquiera ponía
+     * `is_default`: caía al `false` de la columna y dejaba a dos usuarios de
+     * veintisiete con direcciones y ninguna predeterminada —los que la 0203
+     * tuvo que reparar a mano—.
+     *
+     * Ponerlo desde `addresses.length` arreglaba el caso bueno y abría uno
+     * malo: si la carga de direcciones falló, la lista llega vacía aunque el
+     * usuario tenga varias, y marcar esta como predeterminada choca contra el
+     * índice único parcial. Un `count` recién leído no puede mentir sobre eso,
+     * y cuesta un viaje en una acción que se hace una vez por dirección.
+     */
+    const { count, error: countError } = await supabase
+      .from('customer_addresses')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+    if (countError) {
+      setBusy(false)
+      setError(countError.message)
+      return
+    }
+
+    const { data, error: insertError } = await supabase
       .from('customer_addresses')
       .insert({
         user_id: userId,
@@ -85,14 +107,23 @@ export function AddressSelectorSheet({
         reference: manualAddr.reference.trim(),
         coordinates_lat: manualAddr.coords?.lat ?? null,
         coordinates_lng: manualAddr.coords?.lng ?? null,
-        location_confirmed_at: new Date().toISOString(),
-        location_accuracy_m: manualAddr.accuracyM,
-        is_default: esPrimera,
+        // Un alta siempre sella ahora: no hay punto previo que conservar.
+        ...sealLocation(null, manualAddr, new Date().toISOString()),
+        is_default: (count ?? 0) === 0,
       })
       .select('id')
       .single()
     setBusy(false)
-    if (error || !data) return
+    /*
+      EL FALLO YA NO ES MUDO. Era `if (error || !data) return`: el botón dejaba
+      de girar, la hoja seguía abierta y no pasaba nada más. La hoja del perfil
+      sí pintaba `err.message` desde el primer día; esta no, y es la que se abre
+      cuando el cliente está a un toque de pedir.
+    */
+    if (insertError || !data) {
+      setError(insertError?.message ?? 'No pudimos guardar la dirección. Intenta de nuevo.')
+      return
+    }
     onSaved()
     onSelect(data.id)
     setAdding(false)
@@ -195,10 +226,22 @@ export function AddressSelectorSheet({
               onChange={(p) => setManualAddr((a) => ({ ...a, ...p }))}
               onValidityChange={setManualInside}
             />
+            {error && (
+              <p role="alert" className="-mt-1 text-danger text-sm">
+                {error}
+              </p>
+            )}
             {/* Anclado abajo por lo mismo que en el perfil: el botón tiene que
                 estar a la vista Y decir qué falta. */}
             <div className="-mx-4 -mb-6 sticky bottom-0 flex gap-2 border-ink/[0.06] border-t bg-surface px-4 pt-3 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
-              <Button type="button" variant="ghost" onClick={() => setAdding(false)}>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setAdding(false)
+                  setError(null)
+                }}
+              >
                 Cancelar
               </Button>
               <Button
