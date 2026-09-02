@@ -1,4 +1,4 @@
-import { Icon } from '@tindivo/ui'
+import { Icon, IconButton } from '@tindivo/ui'
 import { soles } from '@/features/catalog/lib/format'
 import { hasOptions } from '@/features/catalog/lib/menu-density'
 import type { MenuItem } from '@/features/catalog/types'
@@ -57,15 +57,17 @@ export function MenuCompactRow({ item, disabled, first, onOpen, onAdd }: MenuCom
       ) : (
         <span className="flex min-w-0 flex-1 items-center gap-3 py-1">{contenido}</span>
       )}
-      <button
+      {/* 30 px: la fila compacta cabe seis veces en pantalla y el botón del
+          componente (36) le come el alto a la línea del precio. */}
+      <IconButton
         type="button"
         disabled={bloqueado}
         onClick={() => (configurable ? onOpen(item) : onAdd(item))}
         aria-label={configurable ? `Elegir opciones de ${item.name}` : `Agregar ${item.name}`}
-        className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full border-[1.5px] border-brand/35 bg-brand-soft text-brand-dark transition-all active:scale-95 disabled:pointer-events-none hover:border-brand/60 hover:bg-brand/[0.12]"
+        className="h-[30px] w-[30px] shrink-0 border-[1.5px] border-brand/35 bg-brand-soft text-brand-dark hover:border-brand/60 hover:bg-brand/[0.12]"
       >
         <Icon name="add" size={17} />
-      </button>
+      </IconButton>
     </div>
   )
 }

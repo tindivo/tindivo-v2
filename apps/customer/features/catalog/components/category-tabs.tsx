@@ -1,6 +1,6 @@
 'use client'
 
-import { Icon } from '@tindivo/ui'
+import { Icon, IconButton } from '@tindivo/ui'
 import { useEffect, useRef, useState } from 'react'
 import type { Category } from '@/features/catalog/types'
 
@@ -89,14 +89,16 @@ export function CategoryTabs({ categories, active, onSelect }: CategoryTabsProps
           canScrollLeft ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
       >
-        <button
+        {/* 28 px y no los 36 del componente: la flecha va METIDA en una tira
+            de pestañas de 42 px de alto, y a tamaño completo la tapa. */}
+        <IconButton
           type="button"
           onClick={() => scroll('left')}
-          className="flex h-7 w-7 items-center justify-center rounded-full border border-ink/[0.08] bg-card text-ink shadow-elev-1 transition-transform hover:bg-ink/[0.04] active:scale-95"
+          className="h-7 w-7 border border-ink/[0.08] bg-card shadow-elev-1 hover:bg-ink/[0.04]"
           aria-label="Desplazar secciones hacia la izquierda"
         >
           <Icon name="chevron_left" size={18} />
-        </button>
+        </IconButton>
       </div>
 
       <div
@@ -108,6 +110,18 @@ export function CategoryTabs({ categories, active, onSelect }: CategoryTabsProps
         {categories.map((c) => {
           const isActive = active === c.id
           return (
+            /*
+             * EXENTA DE `check:ds`, y conviene decir por qué: el gate la marca
+             * por un falso positivo. Su regla busca «fondo de marca + forma
+             * redondeada» en el tag, y aquí las dos clases que la disparan
+             * —`after:bg-ink` y `after:rounded-full`— pintan el SUBRAYADO de
+             * 2,5 px del estado activo, no una superficie de botón. La pestaña
+             * en sí no tiene fondo ninguno: es texto con un indicador debajo.
+             *
+             * Tampoco es un `<Button>`: es un `role="tab"` dentro de un
+             * `role="tablist"`, y darle la píldora del design system rompería
+             * la tira de secciones, que se lee como una fila de texto.
+             */
             <button
               key={c.id}
               type="button"
@@ -136,14 +150,14 @@ export function CategoryTabs({ categories, active, onSelect }: CategoryTabsProps
           canScrollRight ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
       >
-        <button
+        <IconButton
           type="button"
           onClick={() => scroll('right')}
-          className="flex h-7 w-7 items-center justify-center rounded-full border border-ink/[0.08] bg-card text-ink shadow-elev-1 transition-transform hover:bg-ink/[0.04] active:scale-95"
+          className="h-7 w-7 border border-ink/[0.08] bg-card shadow-elev-1 hover:bg-ink/[0.04]"
           aria-label="Desplazar secciones hacia la derecha"
         >
           <Icon name="chevron_right" size={18} />
-        </button>
+        </IconButton>
       </div>
     </div>
   )

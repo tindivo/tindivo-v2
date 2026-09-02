@@ -1,6 +1,6 @@
 'use client'
 
-import { Icon } from '@tindivo/ui'
+import { Button, Icon } from '@tindivo/ui'
 import type { RefObject } from 'react'
 import { CategoryTabs } from '@/features/catalog/components/category-tabs'
 import { MenuSearchField } from '@/features/catalog/components/menu-search-field'
@@ -91,15 +91,19 @@ export function MenuToolbar({
           <div className="flex items-end pt-2">
             <CategoryTabs categories={categories} active={active} onSelect={onSelect} />
             {hayIndice && (
-              <button
+              // Neutro y no de marca por lo mismo que los chips del buscador:
+              // abre el índice, no compite con el botón de agregar al pedido.
+              <Button
                 type="button"
+                variant="outline"
+                size="sm"
                 onClick={onOpenIndex}
                 aria-label={`Ver las ${categories.length} secciones de la carta`}
-                className="mr-4 mb-[5px] ml-0.5 flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-ink/15 bg-card px-2.5 font-bold text-[12.5px] shadow-elev-1 transition-all active:scale-[0.97] hover:border-ink/25"
+                className="mr-4 mb-[5px] ml-0.5 h-8 shrink-0 gap-1.5 border-ink/15 px-2.5 font-bold text-[12.5px] text-ink shadow-elev-1 hover:border-ink/25"
               >
                 <Icon name="grid_view" size={15} />
                 <span className="tabular-nums">{categories.length}</span>
-              </button>
+              </Button>
             )}
           </div>
         )}

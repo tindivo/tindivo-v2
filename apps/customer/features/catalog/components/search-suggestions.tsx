@@ -1,5 +1,6 @@
 'use client'
 
+import { Button } from '@tindivo/ui'
 import type { Category } from '@/features/catalog/types'
 
 interface SearchSuggestionsProps {
@@ -32,20 +33,24 @@ export function SearchSuggestions({ categories, onSelect }: SearchSuggestionsPro
       </h2>
       <div className="mt-2.5 flex flex-wrap gap-2">
         {categories.map((c) => (
-          <button
+          // `outline` da la forma y el borde; el color se neutraliza porque
+          // estos chips son navegación, no una llamada a la acción de marca.
+          <Button
             key={c.id}
             type="button"
+            variant="outline"
+            size="sm"
             onMouseDown={(e) => {
               e.preventDefault()
               onSelect(c.id)
             }}
-            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-ink/[0.09] bg-card px-3.5 font-semibold text-[13.5px] tracking-[-0.01em] shadow-elev-1 transition-all select-none active:scale-[0.97] hover:border-ink/20"
+            className="gap-1.5 border-ink/[0.09] px-3.5 text-[13.5px] text-ink tracking-[-0.01em] shadow-elev-1 select-none hover:border-ink/20"
           >
             {c.name}
             <span className="font-semibold text-[11.5px] text-ink-subtle tabular-nums">
               {c.items.length}
             </span>
-          </button>
+          </Button>
         ))}
       </div>
     </div>

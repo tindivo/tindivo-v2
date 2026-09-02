@@ -1,6 +1,6 @@
 'use client'
 
-import { Icon } from '@tindivo/ui'
+import { Icon, IconButton } from '@tindivo/ui'
 import { soles } from '@/features/checkout/lib/format'
 import { useCart } from '@/lib/cart'
 
@@ -72,26 +72,28 @@ export function OrderDetail() {
 
             <div className="mt-2.5 flex items-center justify-between">
               <div className="inline-flex origin-left scale-90 items-center rounded-full bg-ink/[0.06] p-1">
-                <button
+                <IconButton
                   type="button"
+                  size="sm"
                   onClick={() => cart.setQty(line.key, line.quantity - 1)}
                   disabled={line.quantity <= 1}
                   aria-label={`Quitar uno de ${line.name}`}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-full font-semibold text-[20px] text-ink transition-colors hover:bg-ink/[0.08] active:scale-95 disabled:opacity-50"
+                  className="h-8 w-8 hover:bg-ink/[0.08]"
                 >
                   <Icon name="remove" size={20} />
-                </button>
+                </IconButton>
                 <span className="min-w-7 text-center font-semibold tabular-nums">
                   {line.quantity}
                 </span>
-                <button
+                <IconButton
                   type="button"
+                  size="sm"
                   onClick={() => cart.setQty(line.key, line.quantity + 1)}
                   aria-label={`Agregar uno de ${line.name}`}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-full font-semibold text-[20px] text-ink transition-colors hover:bg-ink/[0.08] active:scale-95"
+                  className="h-8 w-8 hover:bg-ink/[0.08]"
                 >
                   <Icon name="add" size={20} />
-                </button>
+                </IconButton>
               </div>
               <button
                 type="button"
