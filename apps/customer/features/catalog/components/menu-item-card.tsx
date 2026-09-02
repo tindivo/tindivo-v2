@@ -92,8 +92,12 @@ export function MenuItemCard({
           </div>
           <div className="mt-2 font-semibold text-[15px] tabular-nums">
             {hasPaidOptions ? `Desde ${soles(item.base_price)}` : soles(item.base_price)}
+            {/* `whitespace-nowrap`: en un Android de 360 px la columna se
+                estrecha lo justo para que el navegador rompa entre el «·» y la
+                palabra, y el separador se queda colgando al final de la línea
+                anterior. Así el trozo entero baja junto o no baja. */}
             {configurable && (
-              <span className="ml-1.5 font-normal text-[11px] text-ink-subtle">
+              <span className="ml-1.5 whitespace-nowrap font-normal text-[11px] text-ink-subtle">
                 · Personalizable
               </span>
             )}

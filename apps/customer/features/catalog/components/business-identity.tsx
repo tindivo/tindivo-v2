@@ -27,6 +27,11 @@ interface BusinessIdentityProps {
  * aquí es lo que confirma al usuario que entró donde quería, sobre todo en un
  * pueblo donde el local se reconoce por su letrero antes que por su nombre
  * escrito. Círculo y no cuadrado, que es como se lee un avatar de local.
+ *
+ * Tres líneas y ni una más: nombre, eslogan, y una fila con el estado y el
+ * tiempo. Una versión anterior metía cuatro cosas en la fila de datos y con el
+ * logo al lado envolvía a dos líneas — el bloque se apelmazaba contra el borde
+ * y no había forma de leerlo de un vistazo.
  */
 export function BusinessIdentity({
   business,
@@ -77,17 +82,39 @@ export function BusinessIdentity({
           <h1 className="truncate font-display font-extrabold text-[24px] leading-[1.1] tracking-[-0.03em]">
             {business.name}
           </h1>
-          {status.kind === 'no_schedule' ? (
-            business.tagline && (
-              <p className="mt-1 truncate text-[13px] text-ink-muted">{business.tagline}</p>
-            )
-          ) : (
+          {/*
+            El eslogan va aquí y NO condicionado al horario. Estuvo un rato
+            colgando solo de la rama `no_schedule`, así que en los cuatro
+            negocios —que sí tienen horario— desapareció de la ficha sin que
+            nadie lo decidiera.
+          */}
+          {business.tagline && (
+            <p className="mt-1 truncate text-[12.5px] text-ink-muted">{business.tagline}</p>
+          )}
+        </div>
+      </div>
+
+      {/*
+        Estado y logística comparten fila, y a ancho COMPLETO — no en la columna
+        del nombre, que con el logo al lado se queda en 288 px y obliga a
+        envolver. El estado va primero y en color porque de noche es el dato que
+        decide; el resto es apoyo.
+
+        Aquí NO va «Delivery»: en esta app todo es delivery, lo dice el nombre
+        del producto. El único negocio que necesita decir otra cosa es el de
+        catálogo, y tiene su propia rama. Quitarlo es lo que deja la fila por
+        debajo de los 360 px del Android más estrecho del piloto, incluso con el
+        estado largo («Cerrado · abre mañana 17:00»).
+      */}
+      <div className="flex items-center gap-2.5 pt-2.5 text-[12.5px] text-ink-muted">
+        {status.kind !== 'no_schedule' && (
+          <>
             <button
               type="button"
               onClick={() => setHorarioAbierto((v) => !v)}
               aria-expanded={horarioAbierto}
               data-expanded={horarioAbierto}
-              className={`mt-1 inline-flex min-h-[24px] items-center gap-1.5 font-semibold text-[13px] ${
+              className={`group inline-flex min-h-[24px] shrink-0 items-center gap-1.5 font-semibold ${
                 abierto ? 'text-success' : 'text-danger'
               }`}
             >
@@ -96,15 +123,40 @@ export function BusinessIdentity({
                 className={`h-[7px] w-[7px] rounded-full ${abierto ? 'bg-success' : 'bg-danger'}`}
               />
               {estado}
+              {/*
+                `group-data-*` y no `data-*` a secas: el atributo vive en el
+                botón y el icono es su hijo, así que la variante sin prefijo
+                buscaba `data-expanded` en un elemento que no lo tiene y la
+                flecha no giraba nunca. Y `aria-hidden` porque el botón ya se
+                anuncia con su texto y su `aria-expanded`; etiquetar también la
+                flecha lo hacía sonar dos veces.
+              */}
               <Icon
                 name="expand_more"
                 size={15}
-                className="opacity-70 transition-transform duration-160 ease-out data-[expanded=true]:rotate-180"
-                aria-label="Ver los horarios de la semana"
+                aria-hidden
+                className="opacity-70 transition-transform duration-160 ease-out group-data-[expanded=true]:rotate-180"
               />
             </button>
-          )}
-        </div>
+            <span aria-hidden className="h-3 w-px shrink-0 bg-ink/15" />
+          </>
+        )}
+        {isCatalogOnly ? (
+          <span className="inline-flex min-w-0 items-center gap-1.5">
+            <Icon name="chat" size={15} className="shrink-0" />
+            <span className="truncate">Pedidos por WhatsApp</span>
+          </span>
+        ) : (
+          <span className="inline-flex min-w-0 items-center gap-1.5">
+            <Icon name="schedule" size={15} className="shrink-0" />
+            <span className="truncate">
+              Llega en{' '}
+              <strong className="font-bold text-ink">
+                {business.estimated_eta_min}–{business.estimated_eta_max} min
+              </strong>
+            </span>
+          </span>
+        )}
       </div>
 
       {horarioAbierto && (
@@ -113,26 +165,7 @@ export function BusinessIdentity({
         </div>
       )}
 
-      <div className="flex items-center gap-2 whitespace-nowrap pt-2.5 pb-3.5 text-[12.5px] text-ink-muted">
-        {isCatalogOnly ? (
-          <span className="inline-flex items-center gap-1.5">
-            <Icon name="chat" size={15} /> Pedidos por WhatsApp
-          </span>
-        ) : (
-          <>
-            <span className="inline-flex items-center gap-1.5">
-              <Icon name="schedule" size={15} /> Llega en{' '}
-              <strong className="font-bold text-ink">
-                {business.estimated_eta_min}–{business.estimated_eta_max} min
-              </strong>
-            </span>
-            <span aria-hidden className="h-3 w-px shrink-0 bg-ink/15" />
-            <span className="inline-flex items-center gap-1.5">
-              <Icon name="local_shipping" size={15} /> Delivery
-            </span>
-          </>
-        )}
-      </div>
+      <div className="pb-3.5" />
     </div>
   )
 }
