@@ -588,5 +588,11 @@
   "586": "use-order-detail.ts",
   "587": "17. Pantalla · Editor de direcciones",
   "588": "direccion-exige-ubicacion.spec.ts",
-  "589": "pilot.ts"
+  "589": "pilot.ts",
+  "590": "search-results.tsx",
+  "591": "active-order-banner.tsx",
+  "592": "efectivo-list.tsx",
+  "593": "use-queue-lead.ts",
+  "594": "proof-thumbnail.tsx",
+  "595": "layout.tsx"
 }

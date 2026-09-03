@@ -55,8 +55,8 @@
     "semantic_hash": ""
   },
   "apps/admin/app/motorizados/page.tsx": {
-    "mtime": 1787075178.7338157,
-    "ast_hash": "cf7b02b0d60873f11306c0097c32ede2",
+    "mtime": 1788474462.5891674,
+    "ast_hash": "1db3307aff18f8d637746b1e962113c5",
     "semantic_hash": ""
   },
   "apps/admin/app/negocios/nuevo/page.tsx": {
@@ -220,8 +220,8 @@
     "semantic_hash": ""
   },
   "apps/admin/lib/nav.ts": {
-    "mtime": 1788035081.1819425,
-    "ast_hash": "0d3f8c2c2c3dd764058aea82b1c26518",
+    "mtime": 1788473890.8425925,
+    "ast_hash": "acab3951ac7390fe50f9ea9bd88df253",
     "semantic_hash": ""
   },
   "apps/admin/lib/supabase/client.ts": {
@@ -235,8 +235,8 @@
     "semantic_hash": ""
   },
   "apps/admin/next-env.d.ts": {
-    "mtime": 1788035122.4380436,
-    "ast_hash": "2a74d3909800ca5467fa83b0ab4a4890",
+    "mtime": 1788472930.1783178,
+    "ast_hash": "d0f8375ae1199dc7acd3977fc33b78b8",
     "semantic_hash": ""
   },
   "apps/admin/next.config.ts": {
@@ -1220,8 +1220,8 @@
     "semantic_hash": "a9d37350cf82b059d36d645807d993ec"
   },
   "packages/contracts/src/enums.ts": {
-    "mtime": 1787364830.8247077,
-    "ast_hash": "275752c9c93d6b6827a8cf05e3bcebc7",
+    "mtime": 1788473156.6101894,
+    "ast_hash": "a2656101cb17cb485a280f6e834d025c",
     "semantic_hash": ""
   },
   "packages/contracts/src/errors.ts": {
@@ -1265,8 +1265,8 @@
     "semantic_hash": "33583c3b8a894eeff30a962d8623f5e1"
   },
   "packages/core/src/enum-drift.ts": {
-    "mtime": 1786581679.9671319,
-    "ast_hash": "e046fd44d8b97d53e24b2ed07efd2bad",
+    "mtime": 1788473308.3609555,
+    "ast_hash": "3b73a203780fdb39de89df9b97dd4083",
     "semantic_hash": ""
   },
   "packages/core/src/index.ts": {
@@ -1330,8 +1330,8 @@
     "semantic_hash": ""
   },
   "packages/supabase/src/database.types.ts": {
-    "mtime": 1788452179.8648267,
-    "ast_hash": "9912f2117f14029afcfecd8ed0501a32",
+    "mtime": 1788473268.5738983,
+    "ast_hash": "6ea09ec040dfc9b5e8cbf2878a70e200",
     "semantic_hash": ""
   },
   "packages/supabase/src/index.ts": {
@@ -2860,8 +2860,8 @@
     "semantic_hash": ""
   },
   "apps/api/scripts/seed-e2e.ts": {
-    "mtime": 1788452179.256595,
-    "ast_hash": "328317a0bcd27d6a3e48d02692a88fe2",
+    "mtime": 1788473310.5284214,
+    "ast_hash": "87a535498959ea834cdf3c505c1b20d4",
     "semantic_hash": ""
   },
   "apps/customer/features/account/components/profile-edit-sheet.tsx": {
@@ -2945,8 +2945,8 @@
     "semantic_hash": ""
   },
   "apps/api/scripts/e2e-fixtures.ts": {
-    "mtime": 1787159090.8256955,
-    "ast_hash": "73abc37fa656f74ad1a0203e390301a3",
+    "mtime": 1788473285.1146808,
+    "ast_hash": "c84f85dac8ba22602bbefb33dcef7cf6",
     "semantic_hash": ""
   },
   "apps/api/scripts/seed-e2e-clean.ts": {
@@ -6052,6 +6052,41 @@
   "supabase/rollbacks/0207_the_driver_learns_how_good_the_point_is.rollback.sql": {
     "mtime": 1788452179.9877343,
     "ast_hash": "ab856512a873a3259d96683c6f620390",
+    "semantic_hash": ""
+  },
+  "apps/admin/app/mapa-referencias/page.tsx": {
+    "mtime": 1788473965.3723223,
+    "ast_hash": "c76d176400f3679b7a1ab1fd6247d47c",
+    "semantic_hash": ""
+  },
+  "apps/admin/components/drivers/driver-action-modals.tsx": {
+    "mtime": 1788474535.5790174,
+    "ast_hash": "5e384cb421148798f2201d008bf21116",
+    "semantic_hash": ""
+  },
+  "apps/admin/components/landmarks/landmarks-map-inner.tsx": {
+    "mtime": 1788473855.5138855,
+    "ast_hash": "3ea93e6a62a0fe2244d0c52be1a56188",
+    "semantic_hash": ""
+  },
+  "apps/admin/components/landmarks/landmarks-map.tsx": {
+    "mtime": 1788473796.3391423,
+    "ast_hash": "83a8fc9c4ab9fe7ff7bf4655c74cccfb",
+    "semantic_hash": ""
+  },
+  "apps/admin/lib/landmark-categories.ts": {
+    "mtime": 1788473961.409327,
+    "ast_hash": "af5fb9cdfd4430252d02dcd3bfbc2ddc",
+    "semantic_hash": ""
+  },
+  "apps/api/app/api/v1/admin/map-landmarks/route.ts": {
+    "mtime": 1788473444.2298062,
+    "ast_hash": "3c913e7e7cedf01757c967b96333fef7",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/0208_landmarks_are_dots_the_town_already_knows.sql": {
+    "mtime": 1788473142.1880825,
+    "ast_hash": "8a804f74a36727fd53b4243b3c1e0a7f",
     "semantic_hash": ""
   }
 }
