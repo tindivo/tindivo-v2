@@ -156,6 +156,12 @@ export function MapPicker({
 
   const [accuracyM, setAccuracyM] = useState<number | null>(initialAccuracyM)
   const [gps, setGps] = useState<GpsState>({ kind: 'idle' })
+  // El navegador no vuelve a mostrar su propio popup de permiso una vez que lo
+  // negaste: `getCurrentPosition` falla de una, sin UI. Si se le da a
+  // "Permitir GPS" y sigue denegado, la pantalla quedaba exactamente igual —
+  // como si el toque no hubiera hecho nada. Esto es lo único que distingue
+  // "no tocaste nada" de "tocaste y el navegador lo sigue bloqueando".
+  const [deniedRetried, setDeniedRetried] = useState(false)
   // Abre en calles: es lo que orienta primero. El satélite está a un toque para
   // quien necesite reconocer su techo, y la elección se conserva al volver.
   const [mode, setMode] = useState<MapMode>('street')
@@ -256,6 +262,8 @@ export function MapPicker({
 
   async function locate() {
     if (gps.kind === 'locating') return
+    const reintentoDesdeDenegado = gps.kind === 'denied'
+    setDeniedRetried(false)
     setGps({ kind: 'locating' })
     try {
       const fix = await getCurrentPositionHA()
@@ -268,6 +276,7 @@ export function MapPicker({
       setGps(
         code === 'denied' ? { kind: 'denied' } : { kind: 'failed', message: geoErrorMessage(code) },
       )
+      if (code === 'denied' && reintentoDesdeDenegado) setDeniedRetried(true)
     }
   }
 
@@ -457,6 +466,22 @@ export function MapPicker({
           </div>
         )}
       </div>
+
+      {/*
+        FUERA de la postal a propósito: la postal mide `heightPx` fijo con
+        `overflow-hidden` para que el mapa no salte de tamaño, así que
+        cualquier texto que crezca ahí dentro se corta en vez de envolver —
+        es la misma clase de corte que se ve en `address-sheet.tsx` con el
+        botón pegado abajo. El navegador tampoco reabre su propio popup de
+        permiso una vez denegado —es su regla, no un fallo nuestro—, así que
+        sin este aviso, tocar "Permitir GPS" y seguir bloqueado se veía
+        IDÉNTICO a no haber tocado nada.
+      */}
+      {estado === 'denied' && deniedRetried && (
+        <p className="mt-1.5 text-[11px] text-brand-dark leading-snug">
+          Tu navegador lo sigue bloqueando. Ábrelo desde el candado y vuelve a intentar.
+        </p>
+      )}
 
       <div className="mt-2 flex items-center justify-between gap-3">
         <div

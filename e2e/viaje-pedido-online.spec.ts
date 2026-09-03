@@ -266,7 +266,6 @@ test('un pedido online viaja de la app del cliente hasta entregado', async ({ br
     confirmaba, y no habia ningun sitio donde comprobar que se guardo.
   */
   const NOTA = 'Porton azul, toca el timbre dos veces'
-  await pCliente.getByRole('button', { name: /Agregar nota para el motorizado/ }).click()
   await pCliente.getByPlaceholder(/Toca el timbre dos veces/).fill(NOTA)
 
   const confirmar = pCliente.getByRole('button', { name: /Confirmar pedido/ })
