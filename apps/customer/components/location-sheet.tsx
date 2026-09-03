@@ -1,8 +1,8 @@
 'use client'
 
-import { Button, Icon, Segmented, Spinner } from '@tindivo/ui'
+import { Button, Icon, Segmented, Spinner, useDialogFocus } from '@tindivo/ui'
 import dynamic from 'next/dynamic'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { haversineKm, pointInPolygon } from '@/lib/coverage'
 import { bandForPoint, type DeliveryBands } from '@/lib/delivery-fee'
@@ -87,20 +87,23 @@ export function LocationSheet({
   /** La capa que enseña el gesto: solo mientras no haya un punto elegido. */
   const [coach, setCoach] = useState(!initialConfirmed)
 
+  const caja = useRef<HTMLDivElement>(null)
+
   useEffect(() => setMounted(true), [])
 
+  // Escape, la trampa de foco y la vuelta del foco al cerrar, en el mismo sitio
+  // que las hojas del DS. Antes esta pantalla escuchaba Escape por su cuenta
+  // pero no movía el foco: con teclado se abría el mapa y el foco se quedaba
+  // detrás, en la hoja que lo había abierto.
+  useDialogFocus(caja, { open: mounted, onClose: onCancel })
+
   useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onCancel()
-    }
-    document.addEventListener('keydown', onKey)
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => {
-      document.removeEventListener('keydown', onKey)
       document.body.style.overflow = prev
     }
-  }, [onCancel])
+  }, [])
 
   const inside = useMemo(() => {
     if (polygon) return pointInPolygon(coords, polygon)
@@ -155,10 +158,12 @@ export function LocationSheet({
     // el centro geométrico del lienzo (donde vive el pin) cae más abajo que el
     // centro de lo que la persona ve, y el punto que fija no es el que mira.
     <div
+      ref={caja}
+      tabIndex={-1}
       role="dialog"
       aria-modal="true"
       aria-label="Ajustar la ubicación en el mapa"
-      className="fixed inset-0 z-[95] flex flex-col bg-surface animate-[t-fade-in_180ms_ease]"
+      className="fixed inset-0 z-[95] flex flex-col bg-surface animate-[t-fade-in_180ms_ease] focus:outline-none"
     >
       <div className="relative min-h-0 flex-1">
         <MapCanvas
