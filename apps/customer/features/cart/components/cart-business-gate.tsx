@@ -3,6 +3,7 @@
 import { Icon } from '@tindivo/ui'
 import { useEffect, useState } from 'react'
 import type { CartLayout } from '@/features/cart/types'
+import { pickDefaultAddress } from '@/lib/address-record'
 import type { BusinessOrderingInfo } from '@/lib/business-ordering'
 import { useCart } from '@/lib/cart'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
@@ -50,20 +51,29 @@ export function CartBusinessGate({ info, layout }: CartBusinessGateProps) {
 
         const [{ data: userRow }, { data: addresses }] = await Promise.all([
           supabase.from('users').select('full_name').eq('id', user.id).maybeSingle(),
+          /*
+            SIN `.eq('is_default', true)`, QUE AQUÍ ERA UN CALLEJÓN.
+            Era el único lector de direcciones sin plan B —los otros cuatro caen
+            a la primera—, así que a los dos usuarios que quedaron sin
+            predeterminada (0203) este mensaje les salía SIN dirección: el
+            negocio recibía el pedido sin saber a dónde va. Se pide la lista y
+            decide `pickDefaultAddress`, que es la misma regla que usan el
+            perfil y el checkout.
+          */
           supabase
             .from('customer_addresses')
-            .select('line, reference')
+            .select('id, line, reference, is_default')
             .eq('user_id', user.id)
-            .eq('is_default', true)
-            .maybeSingle(),
+            .order('is_default', { ascending: false }),
         ])
 
         if (cancelled) return
 
         const name =
           userRow?.full_name || (user.user_metadata?.full_name as string | undefined) || null
-        const addressLine = addresses?.line ?? null
-        const addressReference = addresses?.reference ?? null
+        const address = pickDefaultAddress(addresses ?? [])
+        const addressLine = address?.line ?? null
+        const addressReference = address?.reference ?? null
 
         if (name || addressLine || addressReference) {
           setCustomer({ name, addressLine, addressReference })

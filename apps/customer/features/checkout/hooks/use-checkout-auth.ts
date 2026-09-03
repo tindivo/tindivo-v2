@@ -4,6 +4,7 @@ import { sessionVerdict, shouldClearStaleSession, signOutLocal } from '@tindivo/
 import { useEffect, useRef } from 'react'
 import type { CheckoutState } from '@/features/checkout/hooks/use-checkout-state'
 import type { CustomerProfile, PromoReason } from '@/features/checkout/types'
+import { pickDefaultAddress, SAVED_ADDRESS_COLUMNS } from '@/lib/address-record'
 import { useOnboarding } from '@/lib/onboarding-store'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
@@ -160,10 +161,10 @@ export function useCheckoutAuth(state: CheckoutState) {
       }
       const { data: addrs } = await supabase
         .from('customer_addresses')
-        .select('id,label,line,reference,is_default,coordinates_lat,coordinates_lng')
+        .select(SAVED_ADDRESS_COLUMNS)
         .order('is_default', { ascending: false })
       setAddresses((addrs ?? []) as CheckoutState['addresses'])
-      setAddressId((addrs ?? []).find((a) => a.is_default)?.id ?? addrs?.[0]?.id ?? null)
+      setAddressId(pickDefaultAddress(addrs ?? [])?.id ?? null)
       setAuthReady(true)
     })
   }, [cart, cartHydrated, confirmed, router, sheetOpen])

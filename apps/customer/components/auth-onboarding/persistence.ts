@@ -1,5 +1,6 @@
 'use client'
 
+import { saveAddressRow } from '@/lib/address-save'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
 export const TERMS_VERSION = '2026-05'
@@ -181,8 +182,18 @@ export async function saveGoogleName(input: { userId: string; fullName: string }
 }
 
 /**
- * Guarda la primera dirección como "Casa" predeterminada (+ coords default del perfil).
- * Limpia is_default previos por el índice único parcial customer_addresses_default_per_user_idx.
+ * Guarda una dirección como "Casa" (+ coords default del perfil).
+ *
+ * ERA EL CUARTO CAMINO QUE ESCRIBIA DIRECCIONES, y el único que quedaba fuera
+ * de las reglas comunes: ponía `is_default: true` a secas —limpiando antes las
+ * demás— y sellaba `location_confirmed_at` con `now()` aunque llegara sin
+ * coordenada. Lo primero importaba porque a esta función la llama también
+ * `placeOrder`, cuando el cliente pide con una dirección que no tenía guardada:
+ * ahí le robaba la predeterminada a la suya de siempre sin decir nada.
+ *
+ * Ahora el guardado entero lo hace `saveAddressRow`, igual que el perfil y el
+ * checkout. Lo único propio que queda aquí son las coordenadas por defecto del
+ * perfil, que es otra tabla.
  */
 export async function saveAddress(input: {
   userId: string
@@ -194,23 +205,21 @@ export async function saveAddress(input: {
   accuracyM?: number | null
 }) {
   const supabase = getSupabaseBrowser()
-  const { error: clearErr } = await supabase
-    .from('customer_addresses')
-    .update({ is_default: false })
-    .eq('user_id', input.userId)
-    .eq('is_default', true)
-  if (clearErr) throw new Error(clearErr.message)
-
-  const { error } = await supabase.from('customer_addresses').insert({
-    user_id: input.userId,
-    label: input.label?.trim() || 'Casa',
-    line: input.line?.trim() || null,
-    reference: input.reference.trim(),
-    coordinates_lat: input.lat,
-    coordinates_lng: input.lng,
-    is_default: true,
+  const res = await saveAddressRow({
+    userId: input.userId,
+    previous: null,
+    value: {
+      label: input.label?.trim() || 'Casa',
+      line: input.line?.trim() ?? '',
+      reference: input.reference.trim(),
+      coords: input.lat != null && input.lng != null ? { lat: input.lat, lng: input.lng } : null,
+      accuracyM: input.accuracyM ?? null,
+    },
+    makeDefault: 'auto',
   })
-  if (error) throw new Error(error.message)
+  // Aquí sí se lanza, al revés que en las hojas: esta función es un paso del
+  // onboarding y quien la llama ya tiene su propio manejo de errores.
+  if (!res.ok) throw new Error(res.error)
 
   if (input.lat != null && input.lng != null) {
     await supabase

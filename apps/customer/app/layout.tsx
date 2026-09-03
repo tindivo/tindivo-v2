@@ -110,7 +110,24 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="es" className={`${geist.variable} ${jetbrains.variable}`}>
+    // `suppressHydrationWarning` va AQUÍ por el script del muro del piloto que
+    // hay unas líneas más abajo: corre antes de hidratar y le pone
+    // `data-pilot-bypass="1"` a este mismo `<html>`, que el HTML del servidor no
+    // trae. React lo veía como un desajuste y lo gritaba en consola en CADA
+    // carga del dispositivo que tiene el bypass:
+    //
+    //   «A tree hydrated but some attributes of the server rendered HTML didn't
+    //    match the client properties. This won't be patched up.»
+    //
+    // Medido el 2026-09-01 con un control: sin bypass la consola sale limpia,
+    // con bypass aparece el error. No era un defecto —la mutación es
+    // deliberada, es el anti-flash— pero enterraba en ruido cualquier
+    // desajuste de verdad.
+    //
+    // El alcance del atributo es UN nivel: tapa los atributos de este `<html>`
+    // y nada de lo que hay dentro, así que un desajuste real en la app sigue
+    // saliendo.
+    <html lang="es" className={`${geist.variable} ${jetbrains.variable}`} suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

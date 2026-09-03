@@ -603,6 +603,8 @@ export type Database = {
           is_default: boolean
           label: string
           line: string | null
+          location_accuracy_m: number | null
+          location_confirmed_at: string | null
           reference: string
           updated_at: string
           user_id: string
@@ -615,6 +617,8 @@ export type Database = {
           is_default?: boolean
           label?: string
           line?: string | null
+          location_accuracy_m?: number | null
+          location_confirmed_at?: string | null
           reference: string
           updated_at?: string
           user_id: string
@@ -627,6 +631,8 @@ export type Database = {
           is_default?: boolean
           label?: string
           line?: string | null
+          location_accuracy_m?: number | null
+          location_confirmed_at?: string | null
           reference?: string
           updated_at?: string
           user_id?: string
@@ -1738,6 +1744,7 @@ export type Database = {
           customer_user_id: string | null
           delivered_at: string | null
           delivery_address: string | null
+          delivery_coordinates_accuracy_m: number | null
           delivery_coordinates_lat: number | null
           delivery_coordinates_lng: number | null
           delivery_distance_band:
@@ -1746,6 +1753,7 @@ export type Database = {
           delivery_fee: number
           delivery_fee_charged: number | null
           delivery_fee_source: string | null
+          delivery_location_confirmed_at: string | null
           delivery_maps_url: string | null
           delivery_method: Database["public"]["Enums"]["delivery_method"]
           delivery_reference: string | null
@@ -1836,6 +1844,7 @@ export type Database = {
           customer_user_id?: string | null
           delivered_at?: string | null
           delivery_address?: string | null
+          delivery_coordinates_accuracy_m?: number | null
           delivery_coordinates_lat?: number | null
           delivery_coordinates_lng?: number | null
           delivery_distance_band?:
@@ -1844,6 +1853,7 @@ export type Database = {
           delivery_fee: number
           delivery_fee_charged?: number | null
           delivery_fee_source?: string | null
+          delivery_location_confirmed_at?: string | null
           delivery_maps_url?: string | null
           delivery_method?: Database["public"]["Enums"]["delivery_method"]
           delivery_reference?: string | null
@@ -1934,6 +1944,7 @@ export type Database = {
           customer_user_id?: string | null
           delivered_at?: string | null
           delivery_address?: string | null
+          delivery_coordinates_accuracy_m?: number | null
           delivery_coordinates_lat?: number | null
           delivery_coordinates_lng?: number | null
           delivery_distance_band?:
@@ -1942,6 +1953,7 @@ export type Database = {
           delivery_fee?: number
           delivery_fee_charged?: number | null
           delivery_fee_source?: string | null
+          delivery_location_confirmed_at?: string | null
           delivery_maps_url?: string | null
           delivery_method?: Database["public"]["Enums"]["delivery_method"]
           delivery_reference?: string | null
@@ -2580,19 +2592,10 @@ export type Database = {
         Args: { p_business_user_id: string; p_settlement_id: string }
         Returns: Json
       }
-      create_appeal_report:
-        | {
-            Args: {
-              p_customer_user_id: string
-              p_description?: string
-              p_order_id: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: { p_description?: string; p_order_id: string }
-            Returns: Json
-          }
+      create_appeal_report: {
+        Args: { p_description?: string; p_order_id: string }
+        Returns: Json
+      }
       create_business_manual_order: {
         Args: {
           p_address_directory_id?: string
@@ -2653,9 +2656,12 @@ export type Database = {
           p_customer_gps_lng?: number
           p_customer_gps_method?: string
           p_customer_name: string
+          p_customer_notes?: string
           p_customer_phone: string
           p_customer_user_id: string
+          p_delivery_accuracy_m?: number
           p_delivery_address: string
+          p_delivery_confirmed_at?: string
           p_delivery_lat?: number
           p_delivery_lng?: number
           p_delivery_method: Database["public"]["Enums"]["delivery_method"]
@@ -2784,15 +2790,6 @@ export type Database = {
         Returns: Json
       }
       f_unaccent: { Args: { p_text: string }; Returns: string }
-      generate_settlements: {
-        Args: {
-          p_created_by?: string
-          p_due_date: string
-          p_period_end: string
-          p_period_start: string
-        }
-        Returns: Json
-      }
       generate_short_id: { Args: never; Returns: string }
       geo_distance_km: {
         Args: { p_lat1: number; p_lat2: number; p_lng1: number; p_lng2: number }
@@ -2902,6 +2899,7 @@ export type Database = {
           customer_user_id: string | null
           delivered_at: string | null
           delivery_address: string | null
+          delivery_coordinates_accuracy_m: number | null
           delivery_coordinates_lat: number | null
           delivery_coordinates_lng: number | null
           delivery_distance_band:
@@ -2910,6 +2908,7 @@ export type Database = {
           delivery_fee: number
           delivery_fee_charged: number | null
           delivery_fee_source: string | null
+          delivery_location_confirmed_at: string | null
           delivery_maps_url: string | null
           delivery_method: Database["public"]["Enums"]["delivery_method"]
           delivery_reference: string | null
@@ -3214,12 +3213,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3243,11 +3242,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3268,11 +3267,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3293,11 +3292,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3310,11 +3309,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

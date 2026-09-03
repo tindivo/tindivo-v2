@@ -28,6 +28,8 @@ export function ProductModal({ item, onClose, onAdd }: ProductModalProps) {
     buildLine,
   } = useProductOptions(item)
 
+  const hasPaidOptions = groups.some((g) => g.options.some((o) => Number(o.additional_price) > 0))
+
   function add() {
     onAdd(buildLine())
   }
@@ -74,8 +76,15 @@ export function ProductModal({ item, onClose, onAdd }: ProductModalProps) {
           {item.description && (
             <div className="mt-2 text-[14px] leading-[1.45] text-ink-muted">{item.description}</div>
           )}
+          {/*
+            «Desde» solo cuando alguna opción cuesta dinero — la misma condición
+            que ya usaba la tarjeta. El modal lo escribía siempre, así que un
+            «Agua mineral (sin gas)» de S/ 2.00, que no tiene ninguna opción,
+            aparecía como «Desde S/ 2.00». En un pueblo donde el precio es lo
+            primero que se mira, insinuar que puede subir es caro.
+          */}
           <div className="mt-3 font-extrabold text-[18px] text-brand">
-            Desde {soles(item.base_price)}
+            {hasPaidOptions ? `Desde ${soles(item.base_price)}` : soles(item.base_price)}
           </div>
         </div>
 

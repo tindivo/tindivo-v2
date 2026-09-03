@@ -3,11 +3,11 @@
 import { ScreenHeader } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { AddressSheet } from '@/components/address-sheet'
 import { PhoneGateModal } from '@/components/gates/phone-gate-modal'
 import { AccountMenu } from '@/features/account/components/account-menu'
 import { AccountSkeleton } from '@/features/account/components/account-skeleton'
 import { AccountToast } from '@/features/account/components/account-toast'
-import { AddressSheet } from '@/features/account/components/address-sheet'
 import { AddressesList } from '@/features/account/components/addresses-list'
 import { ProfileEditSheet } from '@/features/account/components/profile-edit-sheet'
 import { ProfileHero } from '@/features/account/components/profile-hero'
@@ -15,6 +15,7 @@ import { QuickActionsGrid } from '@/features/account/components/quick-actions-gr
 import { RecentOrdersPreview } from '@/features/account/components/recent-orders-preview'
 import { useAccountPage } from '@/features/account/hooks/use-account-page'
 import type { Address } from '@/features/account/types'
+import { frameFallback } from '@/lib/address-record'
 
 export default function CuentaPage() {
   const router = useRouter()
@@ -94,6 +95,7 @@ export default function CuentaPage() {
         <AddressSheet
           address={editing === 'new' ? null : editing}
           isFirst={addresses.length === 0}
+          frameAt={frameFallback(addresses)}
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null)

@@ -1,0 +1,17 @@
+-- ============================================================================
+-- ROLLBACK 0203 — Si solo tienes una dirección, esa es la predeterminada
+-- ============================================================================
+--
+-- NO HAY VUELTA ATRÁS AUTOMÁTICA, y es a propósito. Desmarcar esas filas
+-- exigiría saber cuáles marcó esta migración y cuáles ya estaban marcadas de
+-- antes, y esa distinción no se guarda en ningún sitio: la columna es un
+-- booleano sin historia.
+--
+-- Tampoco tendría sentido: el estado al que se volvería —un usuario con
+-- dirección y ninguna predeterminada— es exactamente el defecto, y deja al
+-- negocio recibiendo pedidos sin dirección.
+--
+-- Si de verdad hay que revertir una fila concreta, se hace a mano y con su id.
+-- ============================================================================
+
+-- Intencionadamente vacío.

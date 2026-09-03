@@ -11,6 +11,7 @@ import type {
   ProfileStep,
 } from '@/features/account/types'
 import { useActiveOrders } from '@/lib/active-orders'
+import { heirAfterRemoving, pickDefaultAddress, SAVED_ADDRESS_COLUMNS } from '@/lib/address-record'
 import { clearOnboardingResume } from '@/lib/onboarding-store'
 import { signOutDevice, signOutEverywhereDevice } from '@/lib/sign-out'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
@@ -127,7 +128,7 @@ export function useAccountPage() {
     const [{ data: addrs }, { data: ords }, { data: reportRows }] = await Promise.all([
       supabase
         .from('customer_addresses')
-        .select('id,label,line,reference,is_default,coordinates_lat,coordinates_lng')
+        .select(SAVED_ADDRESS_COLUMNS)
         .order('is_default', { ascending: false }),
       supabase
         .from('orders')
@@ -205,9 +206,8 @@ export function useAccountPage() {
   const progress = useMemo<ProfileProgress>(() => {
     const hasName = Boolean(profile.name.trim())
     const isPhoneVerified = Boolean(profile.phone.trim() && profile.phone_verified_at)
-    const defaultAddr =
-      addresses.find((a) => a.is_default) ?? (addresses.length > 0 ? addresses[0] : null)
-    const hasAddress = addresses.length > 0 && Boolean(defaultAddr)
+    const defaultAddr = pickDefaultAddress(addresses)
+    const hasAddress = defaultAddr != null
 
     const steps: ProfileStep[] = [
       {
@@ -270,8 +270,26 @@ export function useAccountPage() {
     await loadData()
   }
 
+  /**
+   * Borrar tiene que dejar la libreta con una predeterminada.
+   *
+   * Era un `delete` a secas, y el botón de borrar vive dentro de la hoja de
+   * edición de CUALQUIER dirección, la predeterminada incluida. Quien tuviera
+   * dos y borrase esa quedaba con direcciones y ninguna marcada: el mismo
+   * estado que la 0203 acababa de reparar a mano para dos usuarios, y que deja
+   * el mensaje de WhatsApp al negocio sin dirección.
+   *
+   * La promoción va DESPUÉS del borrado y solo si el borrado no dio error: el
+   * índice único parcial no admite dos predeterminadas a la vez, así que entre
+   * las dos escrituras el orden es el que hace que quepan.
+   */
   async function remove(id: string) {
-    await getSupabaseBrowser().from('customer_addresses').delete().eq('id', id)
+    const supabase = getSupabaseBrowser()
+    const heredera = heirAfterRemoving(addresses, id)
+    const { error } = await supabase.from('customer_addresses').delete().eq('id', id)
+    if (!error && heredera) {
+      await supabase.from('customer_addresses').update({ is_default: true }).eq('id', heredera.id)
+    }
     await loadData()
   }
 

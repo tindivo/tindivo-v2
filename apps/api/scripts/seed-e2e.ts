@@ -470,6 +470,23 @@ async function main(): Promise<void> {
       coordinates_lat: E2E.CUSTOMER_LAT,
       coordinates_lng: E2E.CUSTOMER_LNG,
       is_default: true,
+      /**
+       * UNA DIRECCIÓN NORMAL: confirmada por una persona y con la medida del
+       * sensor (migración 0202).
+       *
+       * Sin estas dos columnas el `insert` las dejaba en NULL, y NULL significa
+       * «este punto no lo eligió nadie»: el mundo e2e entero nacía con la
+       * insignia ámbar «Sin ubicación» y su aviso de «el motorizado puede
+       * perderse» en /cuenta y en el checkout. Hoy no se nota porque el backfill
+       * de la 0202 alcanzó a estas filas cuando ya existían, pero el primer
+       * `db reset` las recrearía desde cero y los snapshots visuales se caerían
+       * en bloque por un motivo que no está en el diff de nadie.
+       *
+       * 8 m es una lectura de GPS buena de verdad (el umbral de aviso son 30),
+       * así que el mundo por defecto es el caso sano.
+       */
+      location_confirmed_at: new Date().toISOString(),
+      location_accuracy_m: 8,
     })),
     'id',
   )

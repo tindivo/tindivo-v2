@@ -1,0 +1,38 @@
+-- ============================================================================
+-- 0206 — `is_compact` nunca quiso decir «compacto»
+-- ============================================================================
+--
+-- NO CAMBIA COMPORTAMIENTO. Es una columna que se lee mal y hace que cada
+-- auditoría la denuncie como defecto; esto la deja dicha.
+--
+-- LO QUE PARECÍA. Una revisión del app del cliente la marcó como desajuste:
+-- «el campo dice `is_compact` y la insignia dice Destacado». Suena a que la UI
+-- miente sobre el dato, y con `false` en los 72 platos de producción nadie
+-- tenía cómo desmentirlo mirando la pantalla.
+--
+-- LO QUE ES. Se comprobó en los tres lados y los tres dicen lo mismo:
+--
+--   · `apps/negocios` la rotula «Destacado · Se muestra primero y con badge»
+--     (features/menu/item-edit/components/editor-form.tsx).
+--   · La API ordena los destacados primero dentro de su sección
+--     (app/api/v1/public/businesses/[id]/route.ts), con `sort` estable para no
+--     tocar el `display_order` que el negocio eligió.
+--   · El app del cliente pinta la insignia «Destacado»
+--     (features/catalog/components/menu-item-card.tsx).
+--
+-- O sea: el comportamiento es coherente de punta a punta y lo único torcido es
+-- el NOMBRE, heredado del 0002. Renombrar la columna cruzaría cuatro apps, la
+-- API pública y `database.types.ts` por una mejora de lectura; el comentario
+-- cuesta cero y quita el falso positivo hoy.
+--
+-- OJO CON EL HOMÓNIMO. En `apps/customer/features/catalog/lib/menu-density.ts`
+-- vive `isCompactSection()`, que SÍ va de densidad —una sección sin fotos ni
+-- descripciones se pinta como lista— y no tiene NADA que ver con esta columna.
+-- Dos cosas llamadas «compact» en la misma feature: si algún día se renombra
+-- una, que sea esta.
+--
+-- ROLLBACK: supabase/rollbacks/0206_is_compact_never_meant_compact.rollback.sql
+-- ============================================================================
+
+COMMENT ON COLUMN public.menu_items.is_compact IS
+  'DESTACADO, no «compacto»: el nombre es histórico (0002). true = el plato se ordena primero dentro de su sección y lleva la insignia «Destacado» en el app del cliente. El panel de negocios lo rotula «Destacado». Sin relación con isCompactSection() del cliente, que es densidad de pintado.';

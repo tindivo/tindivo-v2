@@ -1,5 +1,20 @@
 # Auditoría: Módulo de deuda/liquidación restaurante ↔ Tindivo
 
+> ## ⚠️ RE-MEDIDO EL 2026-09-02 — la sección 2 estaba entera equivocada
+>
+> Este documento describe la ruta del dinero y se lee como autoridad, así que
+> vale la pena decir qué se comprobó y qué no. La sección **«2 · Cálculo de
+> comisiones y acumulación»** tenía sus TRES afirmaciones desactualizadas: los
+> importes de comisión, la función que acumula la deuda —que ya no existe— y el
+> proceso de liquidación —que ya no existe—. Están corregidas abajo, con el
+> texto viejo tachado para que se vea qué cambió y por qué.
+>
+> **El resto del documento NO se ha re-medido.** Si vas a decidir algo con él,
+> comprueba antes contra la base viva: `supabase migration list`,
+> `pg_get_functiondef` y `app_settings`. Un documento de dinero que no se
+> re-mide envejece hacia el lado peligroso — es lo mismo que le pasó a
+> `Docs/RIESGOS-LEDGER.md` y a `Docs/spec/PENDIENTES.md`.
+
 Este documento contiene un análisis exhaustivo y fundamentado sobre cómo opera el flujo financiero de deudas, comisiones, adelantos y liquidaciones entre los restaurantes asociados y la plataforma Tindivo 2.0.
 
 ---
@@ -108,13 +123,57 @@ El backend de Tindivo gestiona las finanzas mediante cuatro tablas principales y
 ## 3. Cálculo de comisiones y liquidación
 
 * **Momento de cálculo**:
-  La comisión de Tindivo se determina y se guarda como una captura estática en la columna `tindivo_commission` de la tabla `orders` cuando el motorizado **recoge el pedido** (evento `pickup` del RPC `advance_order`) [[0012_advance_order_rpc.sql:L95-L103](file:///d:/Tinkuy%20Creativo/Proyectos/Tindivo/Code/tindivo-v2/supabase/migrations/0012_advance_order_rpc.sql#L95-L103)].
-  * Si la orden es para recojo local (`pickup`), aplica la comisión base de recojos (por defecto **S/0.50**).
-  * Si es delivery, aplica la comisión de la banda correspondiente (Cerca: **S/3.00**; Lejos: **S/3.50**), a menos que el negocio posea configurados overrides personalizados en su registro.
+  La comisión de Tindivo se determina y se guarda como una captura estática en la columna `tindivo_commission` de la tabla `orders` cuando el motorizado **recoge el pedido** (evento `pickup` del RPC `advance_order`).
+
+  > ✅ **Corregido el 2026-09-02.** Aquí decía: *«recojo local S/0.50; delivery
+  > por banda — Cerca S/3.00, Lejos S/3.50»*. Las tres cifras y el criterio
+  > cambiaron. **La `0125` sacó la banda del cálculo de la comisión**: ya no hay
+  > `near`/`far`, solo `pickup`/`delivery`, y el envío se suma aparte en vez de
+  > restarse. Valor vivo medido en `app_settings.commissions`:
+  >
+  > ```json
+  > {"pickup": 1.00, "delivery": 1.50}
+  > ```
+  >
+  > Los `commission_override_pickup` / `commission_override_delivery` del
+  > negocio siguen mandando sobre estos, como antes.
+
 * **Acumulación de deuda**:
-  Cuando el pedido pasa al estado final `'delivered'`, el trigger de Postgres `trg_orders_balance_due` ejecuta `update_business_balance()` [[0003_functions_and_triggers.sql:L284-L297](file:///d:/Tinkuy%20Creativo/Proyectos/Tindivo/Code/tindivo-v2/supabase/migrations/0003_functions_and_triggers.sql#L284-L297)] incrementando de forma inmediata y automática el campo `businesses.balance_due` por pedido.
+  Cuando el pedido pasa a `'delivered'`, el trigger `trg_orders_balance_due` sobre `orders` ejecuta **`generate_delivery_charges()`**, que INSERTA las líneas correspondientes en el ledger `business_charges`. Ese insert dispara a su vez `trg_business_charges_recalc_balance`, que **recalcula** `businesses.balance_due` entero desde el ledger.
+
+  > ✅ **Corregido el 2026-09-02.** Aquí decía que el trigger ejecuta
+  > `update_business_balance()` «incrementando de forma inmediata el campo
+  > `businesses.balance_due` por pedido». Las dos mitades son falsas hoy:
+  >
+  > · **`update_business_balance()` NO EXISTE** — la borró la `0123` por
+  >   huérfana (era el menor M-1 de `RIESGOS-LEDGER.md`).
+  > · **`balance_due` ya no se incrementa a mano.** Desde la `0124` es un
+  >   **cache derivado**: `SUM(business_charges WHERE status = 'pending')`,
+  >   recalculado entero por su trigger. La fuente de verdad es el ledger, como
+  >   manda `AGENTS.md §2.2`; la columna es solo su reflejo.
+  >
+  > El nombre del trigger es historia y no describe lo que hace — lleva un
+  > `COMMENT` que lo avisa desde la `0205`.
+
 * **Proceso de liquidación periódica**:
-  No es automatizado por crons. Se ejecuta manualmente por la administración en la App Admin, invocando el RPC `generate_settlements` [[0017_settlement_rpcs.sql:L11-L47](file:///d:/Tinkuy%20Creativo/Proyectos/Tindivo/Code/tindivo-v2/supabase/migrations/0017_settlement_rpcs.sql#L11-L47)]. Este RPC agrupa todas las comisiones de los pedidos entregados dentro del período solicitado, calcula la sumatoria de las comisiones y crea las liquidaciones pendientes.
+  **No existe.** No hay pantalla, ni RPC, ni tabla.
+
+  > ✅ **Corregido el 2026-09-02.** Aquí decía que la administración invoca
+  > manualmente el RPC `generate_settlements` desde la App Admin. Nada de eso
+  > sigue en pie:
+  >
+  > · La **`0124`** borró `pay_settlement`, `generate_settlements` y la tabla
+  >   `settlements` entera, además de las columnas `settlement_id`. Se fueron
+  >   porque `generate_settlements` sumaba `orders.tindivo_commission` — una
+  >   TERCERA base de cálculo, distinta del ledger y de `balance_due`.
+  > · `generate_settlements` reapareció por accidente —la `0176` la recreó con
+  >   un `create or replace` en un barrido— y quedó **rota**, insertando en una
+  >   tabla inexistente. La **`0200`** la volvió a borrar.
+  > · Nunca hubo pantalla en `apps/admin` que la llamara.
+  >
+  > Lo que sí existe hoy para cobrar es `settle_business_charges`, que trabaja
+  > sobre el ledger. Si algún día hace falta facturar por período, se diseña de
+  > cero contra `business_charges`.
 
 ---
 

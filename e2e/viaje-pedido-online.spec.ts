@@ -212,6 +212,63 @@ test('un pedido online viaja de la app del cliente hasta entregado', async ({ br
   await expect(pCliente).toHaveURL(/\/checkout/)
   await foto(pCliente, 'cliente-checkout')
 
+  /*
+    LA DIRECCION SE ARREGLA DESDE AQUI, no desde Mi cuenta.
+
+    Este selector avisaba de que faltaba la calle y mandaba a otra pantalla a
+    arreglarlo: solo sabia ELEGIR o DAR DE ALTA. Ahora cada tarjeta abre el
+    mismo formulario, con el mismo guardado que el perfil y el onboarding, asi
+    que se comprueba que el formulario llega RELLENO — que es lo que prueba que
+    edita esta fila y no crea una nueva.
+  */
+  await pCliente.getByText('Jr. Los Pinos 123').first().click()
+  const hojaDir = pCliente.getByRole('dialog', { name: 'Entregar en' })
+  // Anclado al final y no exacto: el boton lleva un `Icon` dentro, y su
+  // `aria-label` entra en el nombre accesible («edit_location_alt Editar»).
+  await hojaDir
+    .getByRole('button', { name: /Editar$/ })
+    .first()
+    .click()
+  await expect(hojaDir.getByPlaceholder('Ej. Jr. Sucre 412')).toHaveValue('Jr. Los Pinos 123')
+  await hojaDir.getByRole('button', { name: 'Cancelar' }).click()
+  await hojaDir.getByRole('button', { name: /Volver/ }).click()
+  await expect(hojaDir).toBeHidden()
+
+  /*
+    EL PREPAGO SE ELIGE, NO SE HEREDA.
+
+    Este test solo podia pasar UNA VEZ, y el motivo estaba dentro de el: al
+    llegar hasta `delivered` convierte al cliente e2e en vecino conocido (0171),
+    asi que en la corrida siguiente el checkout ya no le exige prepago, el
+    pedido nace `pending_cash`, aceptarlo lo manda directo a `preparing` y la
+    cajera nunca dice «Esperando pago». El fixture no se limpia —`delivered` es
+    terminal y el spec perdona a proposito los prepagos, que no son efectivo por
+    rendir—, de modo que el rojo era permanente y parecia un fallo del producto.
+
+    LA ELECCION ES CONDICIONAL, y no por comodidad: con un cliente sin historial
+    el checkout IMPONE el prepago, deja esa opcion sola y marcada, y al quedar
+    marcada sustituye su descripcion por una promesa. O sea que el subtitulo por
+    el que se la localiza desaparece exactamente en el mundo en que ya estaba
+    elegida. `count()` responde al instante y no espera a nada, asi que ninguno
+    de los dos mundos paga un timeout.
+
+    Lo que se afirma en los dos es el RESULTADO, mas abajo: el pedido tiene que
+    nacer `prepaid`.
+  */
+  const opcionPrepago = pCliente.getByText('Pagas apenas el local confirme')
+  if (await opcionPrepago.count()) await opcionPrepago.click()
+
+  /*
+    LA NOTA AL MOTORIZADO, de punta a punta.
+    Se escribe aqui y se comprueba en los dos extremos: que llega entera a
+    `orders.customer_notes` —contrato Zod, API, RPC y saneo de la 0199— y que
+    vuelve a la pantalla del cliente, que es la mitad que faltaba: la escribia,
+    confirmaba, y no habia ningun sitio donde comprobar que se guardo.
+  */
+  const NOTA = 'Porton azul, toca el timbre dos veces'
+  await pCliente.getByRole('button', { name: /Agregar nota para el motorizado/ }).click()
+  await pCliente.getByPlaceholder(/Toca el timbre dos veces/).fill(NOTA)
+
   const confirmar = pCliente.getByRole('button', { name: /Confirmar pedido/ })
   await expect(confirmar).toBeEnabled()
   const [resp] = await Promise.all([
@@ -225,7 +282,9 @@ test('un pedido online viaja de la app del cliente hasta entregado', async ({ br
 
   const { data: pedido } = await db
     .from('orders')
-    .select('id, short_id, status, order_amount, delivery_fee, source, delivery_address')
+    .select(
+      'id, short_id, status, order_amount, delivery_fee, source, delivery_address, customer_notes, payment_intent, delivery_coordinates_accuracy_m, delivery_location_confirmed_at',
+    )
     .eq('customer_user_id', E2E.CUSTOMER_USER_ID)
     .order('created_at', { ascending: false })
     .limit(1)
@@ -237,7 +296,26 @@ test('un pedido online viaja de la app del cliente hasta entregado', async ({ br
     `  ✅ nace #${shortId} · ${pedido.source} · S/ ${pedido.order_amount} + ${pedido.delivery_fee} envío`,
   )
   console.log(`  → estado: ${await estado(shortId)}`)
+  expect(pedido.customer_notes, 'la nota al motorizado no llego a la columna').toBe(NOTA)
+  // El recorrido de abajo es el del prepago; si el pedido naciera en efectivo,
+  // la cajera nunca diria «Esperando pago» y el rojo apuntaria al sitio
+  // equivocado.
+  expect(pedido.payment_intent, 'el pedido tenia que nacer en prepago').toBe('prepaid')
+  /*
+    LA CALIDAD DEL PUNTO VIAJA CON EL PEDIDO (0207).
+    La direccion del mundo e2e esta confirmada y con 8 m de sensor, asi que el
+    pedido tiene que quedarse esa foto: contrato, API, los dos parametros nuevos
+    de `create_customer_order` y las dos columnas.
+  */
+  expect(pedido.delivery_coordinates_accuracy_m, 'la precision del punto no llego').toBe(8)
+  expect(pedido.delivery_location_confirmed_at, 'el sello del punto no llego').not.toBeNull()
+
   await pCliente.waitForTimeout(2500)
+  // Y el cliente la vuelve a ver en su seguimiento. Llega por la lectura con
+  // RLS de `useTracking`, no por `get_tracking` —ese endpoint es publico y el
+  // enlace se comparte por WhatsApp—, asi que esto prueba de paso que la
+  // policy deja leerla a su dueno.
+  await expect(pCliente.getByText(NOTA)).toBeVisible({ timeout: 15_000 })
   await foto(pCliente, 'cliente-pedido-creado')
 
   // ── PARADA 2 · Aterriza en el tablero de la cajera ──────────────────────────
@@ -319,6 +397,22 @@ test('un pedido online viaja de la app del cliente hasta entregado', async ({ br
   await pMoto.reload()
   await pMoto.waitForTimeout(2500)
   await foto(pMoto, 'moto-lo-tomo')
+
+  /*
+    LA MITAD QUE DA SENTIDO A LA 0207: el dato no sirve de nada en la columna si
+    quien conduce no lo ve al lado del boton que le lleva al pin.
+
+    Hay que ENTRAR al pedido: la tarjeta del destino vive en el detalle, no en
+    la bandeja. Se vuelve a la bandeja despues para no alterar el resto del
+    recorrido, que cuenta con encontrarse ahi.
+  */
+  await pMoto
+    .getByRole('button', { name: /Ver pedido de/ })
+    .first()
+    .click()
+  await expect(pMoto.getByText('GPS ±8 m')).toBeVisible({ timeout: 20_000 })
+  await foto(pMoto, 'moto-calidad-del-punto')
+  await pMoto.goto(MOTORIZADOS)
 
   // ── PARADA 5 · La comida está lista ─────────────────────────────────────────
   console.log('\n═══ 5 · COCINA LO DA POR LISTO ═══')

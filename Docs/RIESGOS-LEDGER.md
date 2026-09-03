@@ -9,12 +9,14 @@ Este documento registra cuatro riesgos estructurales y seis hallazgos menores
 para que la decisión sea explícita y con fecha, en vez de que alguien los
 redescubra dentro de seis meses leyendo un `UPDATE` suelto.
 
-> **📌 Siete de los diez ya están CERRADOS.** La migración `0123` se aplicó a
-> producción el **2026-08-05**. El estado real de cada uno está en la sección
-> [ESTADO REAL](#estado-real--0123-aplicada-en-prod-el-2026-08-05); las
-> secciones que siguen describen los riesgos **tal como se encontraron**, y se
-> conservan sin reescribir porque el diagnóstico original es lo que explica por
-> qué la corrección quedó como quedó.
+> **📌 Los diez están CERRADOS** — verificado contra la base viva el
+> **2026-09-01**. La migración `0123` cerró siete el 2026-08-05; los tres que
+> quedaban los cerraron la `0124`, la `0125` y la `0200` sin que este documento
+> se enterara. El estado real de cada uno, con la consulta que lo mide, está en
+> la sección [ESTADO REAL](#estado-real--0123-aplicada-en-prod-el-2026-08-05);
+> las secciones que siguen describen los riesgos **tal como se encontraron**, y
+> se conservan sin reescribir porque el diagnóstico original es lo que explica
+> por qué la corrección quedó como quedó.
 
 Rige `.agents/AGENTS.md §2.2`: *"Gate humano obligatorio: cualquier cambio que
 toque lógica de dinero (ledger, appeals, refunds, comisiones, fees) requiere
@@ -404,6 +406,13 @@ Desfasados desde `0110_far_costs_the_same_as_near.sql:47-49`, que dejó
 activarían si la clave desapareciera de `app_settings`, pero en ese escenario
 —el único en que importan— cobrarían de menos y en silencio.
 
+> ✅ **CERRADO por la `0125`.** Aquella quitó la banda del cálculo de la comisión
+> —ya no hay `near`/`far`, solo `pickup`/`delivery`— y de paso corrigió los
+> defaults, dejándolos en 1.00 / 1.50. Medido en la base viva el 2026-09-01:
+> el `COALESCE` de `advance_order` cae en `1.00` y `1.50`, y
+> `app_settings.commissions` vale `{"pickup": 1.00, "delivery": 1.50}`. Los dos
+> números coinciden, que es justo lo que este hallazgo pedía.
+
 ### M-4 · Comentario obsoleto en un test financiero
 
 `apps/api/lib/__tests__/resolve-fraud-claim.integration.test.ts:4-5`:
@@ -584,57 +593,83 @@ limpieza en 0, `db:types` regenerado (`f7f5497`) y las tres compuertas
 
 | riesgo | estado | cerrado por |
 | --- | --- | --- |
-| **R-L1** · `balance_due` deprecado | 🟡 **ABIERTO, pero HABILITADO** | — |
-| **R-L2** · `pay_settlement` | 🟡 **CERRADO A MEDIAS** | `0123` (2026-08-05) |
+| **R-L1** · `balance_due` deprecado | ✅ **CERRADO** | `0124` |
+| **R-L2** · `pay_settlement` | ✅ **CERRADO** | `0124` + `0200` |
 | **R-L3** · sobrecargas invertidas | ✅ **CERRADO** | `0123` (2026-08-05) |
 | **R-L4** · ledger paralelo | ✅ **CERRADO** | `0123` (2026-08-05) |
 | **M-1** · `update_business_balance` huérfana | ✅ **CERRADO** | `0123` (2026-08-05) |
 | **M-2** · funciones muertas | ✅ **CERRADO** | `0123` (2026-08-05) |
-| **M-3** · defaults desfasados en `advance_order` | 🔴 **ABIERTO** | — |
+| **M-3** · defaults desfasados en `advance_order` | ✅ **CERRADO** | `0125` |
 | **M-4** · comentario obsoleto en el test | ✅ **CERRADO** | `0123` (2026-08-05) |
 | **M-5** · ejecutable por `anon` | ✅ **CERRADO** | `0123` (2026-08-05) |
 | **M-6** · la de 4 nunca funcionó | ✅ **CERRADO** | `0123` (2026-08-05) |
 
-### R-L2 — qué se cerró y qué queda
+### R-L2 — CERRADO, y la mitad que quedaba se cerró sola
 
-**Cerrado:** el bloque de reposición del fondo de contingencia desapareció de
-`pay_settlement`. Con él se fue **el segundo decremento de `balance_due`**, que
-era el mismo defecto que `0076_fix_double_balance_decrement` corrigió en
-`settle_business_charges` y que aquí nunca se había revisado. Ya no baja el saldo
-dos veces en la misma llamada.
+**La primera mitad** la cerró la `0123`: el bloque de reposición del fondo de
+contingencia desapareció de `pay_settlement`, y con él **el segundo decremento
+de `balance_due`** —el mismo defecto que `0076_fix_double_balance_decrement`
+corrigió en `settle_business_charges` y que aquí nunca se había revisado.
 
-**Queda abierto:** `pay_settlement` **sigue sin marcar los cargos como
-`settled`**. No escribe `status`, ni `settled_at`, ni `settlement_id` — pese a
-que `business_charges.settlement_id` existe, tiene FK a `settlements` e índice
-parcial desde hace tiempo. Un pago por esa vía baja el saldo y deja el ledger
-intacto, así que los mismos cargos quedan cobrables otra vez por
-`settle_business_charges`.
+**La segunda mitad** era que `pay_settlement` no marcaba los cargos como
+`settled`. Ya no aplica: **la `0124` borró el flujo entero**. Se fueron la
+función, su hermana `generate_settlements`, la tabla `settlements` y las
+columnas `settlement_id` de `business_charges` y `restaurant_payments`. Es la
+respuesta al «levantamiento pendiente» que esta sección pedía: no se usaba, y el
+arreglo fue un borrado.
 
-**Antes de invertir en arreglarlo**, sigue pendiente el levantamiento sobre si el
-flujo de `settlements` se usa: no tiene pantalla en `apps/admin`, `pay_settlement`
-tenía cero ejecuciones históricas, y `generate_settlements` suma
-`orders.tindivo_commission` — una tercera base de cálculo distinta del ledger y
-de `balance_due`. Si resulta que no se usa, el arreglo es un borrado.
+Medido en la base viva el 2026-09-01:
 
-### R-L1 — sigue abierto, pero la puerta está abierta
+```sql
+select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+where n.nspname = 'public'
+  and p.proname in ('pay_settlement','generate_settlements','settle_business_charges');
+-- settle_business_charges        (las otras dos ya no existen)
 
-`balance_due` sigue deprecado por `AGENTS.md §2.2` y sigue escrito por las
-funciones vivas. Eso no cambió.
+select coalesce(to_regclass('public.settlements')::text, 'NO EXISTE');
+-- NO EXISTE
+```
 
-**Lo que sí cambió es que la opción "cache reconstruible" ya está disponible.**
-El nudo de este riesgo era esta frase: *"Hoy NO es reconstruible, porque
-contingencia mueve `balance_due` sin dejar rastro en el ledger"*. Contingencia ya
-no existe. **Ningún camino vivo mueve el saldo por fuera de `business_charges`**,
-así que `balance_due = SUM(business_charges WHERE status='pending')` pasa a ser
-una identidad que se puede imponer con un trigger de recálculo y verificar con
-una aserción.
+**Con una cola, encontrada al verificar esto.** `generate_settlements` seguía
+viva y ROTA: la `0176` la había vuelto a crear dos meses después del borrado, sin
+querer, porque `create or replace` sobre una función que no existe la CREA en
+vez de fallar. Llamarla daba `relation "public.settlements" does not exist`. La
+borra la **`0200`**, cuya cabecera cuenta el caso entero — la lección de fondo es
+que un barrido masivo tiene que sacar su lista de `pg_proc`, no del repo.
 
-Con eso, las tres lecturas de la decisión pendiente de Jesús —¿el ledger o el
-campo?— dejan de estar bloqueadas por un impedimento técnico y pasan a ser una
-elección de diseño. La recomendación sigue siendo la opción A del levantamiento:
-trigger de recálculo completo sobre `business_charges`, que deja las 19 lecturas
-de UI intactas y arregla de paso el desbloqueo por mora, que hoy decide con el
-campo deprecado.
+### R-L1 — CERRADO por la `0124`: `balance_due` ya es un cache derivado
+
+Este riesgo era que once funciones escribían `balance_due` mientras `AGENTS.md
+§2.2` lo declaraba deprecado, y que **no era reconstruible** porque contingencia
+lo movía sin dejar rastro en el ledger.
+
+Se aplicó la opción A que este documento recomendaba: **trigger de recálculo
+completo sobre `business_charges`**. Hoy `balance_due` es exactamente
+`SUM(business_charges WHERE status='pending')`, lo mantiene un único sitio, y las
+19 lecturas de UI siguieron intactas.
+
+Medido en la base viva el 2026-09-01:
+
+```sql
+select p.proname from pg_proc p
+join pg_namespace n on n.oid = p.pronamespace
+where n.nspname = 'public' and p.prokind = 'f'
+  and pg_get_functiondef(p.oid) ~* 'balance_due[[:space:]]*=';
+-- recalc_business_balance        (UNA, no once)
+
+select t.tgname || ' -> ' || p.proname from pg_trigger t
+join pg_proc p on p.oid = t.tgfoid
+where not t.tgisinternal and t.tgname ilike '%balance%';
+-- trg_business_charges_recalc_balance -> recalc_business_balance
+-- trg_orders_balance_due              -> generate_delivery_charges
+```
+
+El segundo trigger conserva un nombre que ya miente: `generate_delivery_charges`
+**no escribe la columna**. Solo la nombra en dos comentarios que explican
+precisamente eso —«`balance_due` lo mantiene ahora
+trg_business_charges_recalc_balance»—. Su trabajo es insertar y borrar cargos; el
+saldo lo recalcula el otro trigger como consecuencia. Renombrarlo es cosmético y
+no se ha hecho.
 
 > **Nota al pie — verificación pendiente en producción.** El PASO 6 del runbook
 > (prueba manual del flujo real: aprobar una devolución en `apps/admin` y ver el
@@ -682,6 +717,15 @@ reconstruible" no estaba disponible mientras contingencia existiera. Después de
 
 ## Cierre
 
-Ninguno se resuelve antes del launch. La cadena que sí cuadra y que este sprint
-modifica es **crear → pickup → delivered → `business_charges`**. El resto queda
-congelado y documentado.
+> **Este cierre quedó obsoleto y se conserva por lo que enseña.** Decía «ninguno
+> se resuelve antes del launch», y al revisar la base el 2026-09-01 los diez
+> estaban cerrados: la `0124`, la `0125` y la `0200` fueron cerrando riesgos sin
+> que nadie volviera a este fichero. Un documento de riesgos que no se vuelve a
+> medir envejece **hacia el lado peligroso**: apunta a fantasmas —tres, aquí— y
+> se pierde lo que sí quedó suelto, que fue la resurrección de
+> `generate_settlements` por la `0176`. La regla que sale de esto: cada vez que
+> se lea este fichero para decidir algo, se re-mide antes; las consultas están
+> escritas arriba, en cada sección.
+
+La cadena que cuadra es **crear → pickup → delivered → `business_charges`**, y
+`balance_due` es hoy un cache derivado de ella, mantenido por un solo trigger.

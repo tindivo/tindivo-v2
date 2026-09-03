@@ -134,30 +134,41 @@ export default defineConfig({
     },
   ],
 
+  /*
+    240 s y no 120, medido: arrancar en frío las CUATRO apps Next a la vez en
+    esta máquina pasa de los dos minutos, y Playwright aborta la suite entera
+    con «Timed out waiting 120000ms from config.webServer» antes de correr un
+    solo test. Da un rojo que no dice nada del código y que se va solo al
+    reintentar —el peor tipo—, porque la segunda corrida ya encuentra los
+    servidores levantados y los reutiliza.
+
+    No cuesta nada cuando ya están arriba: `reuseExistingServer` comprueba la
+    URL y sigue de largo. El tope solo se gasta en el arranque en frío.
+  */
   webServer: [
     {
       command: 'pnpm --filter @tindivo/api dev',
       url: 'http://localhost:3001/api/v1/health',
       reuseExistingServer: true,
-      timeout: 120_000,
+      timeout: 240_000,
     },
     {
       command: 'pnpm --filter @tindivo/customer dev',
       url: 'http://localhost:3000',
       reuseExistingServer: true,
-      timeout: 120_000,
+      timeout: 240_000,
     },
     {
       command: 'pnpm --filter @tindivo/negocios dev',
       url: 'http://localhost:3002',
       reuseExistingServer: true,
-      timeout: 120_000,
+      timeout: 240_000,
     },
     {
       command: 'pnpm --filter @tindivo/motorizados dev',
       url: 'http://localhost:3004',
       reuseExistingServer: true,
-      timeout: 120_000,
+      timeout: 240_000,
     },
   ],
 })

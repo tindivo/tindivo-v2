@@ -20,6 +20,7 @@ export { BottomSheet } from './primitives/sheet'
 export { Skeleton, SkeletonCard, SkeletonList, type SkeletonProps } from './primitives/skeleton'
 export { Spinner, type SpinnerProps } from './primitives/spinner'
 export { Toast, type ToastProps } from './primitives/toast'
+export { useDialogFocus } from './primitives/use-dialog-focus'
 export {
   dropLocalPushSubscription,
   getInstallId,

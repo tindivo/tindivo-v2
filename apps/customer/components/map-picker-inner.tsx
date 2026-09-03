@@ -249,6 +249,7 @@ export default function MapCanvas({
   onMovingChange,
   zoom = 17,
   minZoom = 14,
+  showPin = true,
 }: {
   center: LatLng
   interactive: boolean
@@ -262,6 +263,12 @@ export default function MapCanvas({
   onMovingChange?: (moving: boolean) => void
   zoom?: number
   minZoom?: number
+  /**
+   * Sin punto elegido NO se pinta el pin. Un pin naranja sobre el centro del
+   * pueblo se lee como «ya está», y ese malentendido es justo el que hacía que
+   * la gente guardara la plaza como su casa.
+   */
+  showPin?: boolean
 }) {
   const gestureRef = useRef(false)
   const [moving, setMoving] = useState(false)
@@ -341,7 +348,7 @@ export default function MapCanvas({
           <Follow center={center} />
         )}
       </MapContainer>
-      <CenterPin moving={moving} />
+      {showPin && <CenterPin moving={moving} />}
     </div>
   )
 }

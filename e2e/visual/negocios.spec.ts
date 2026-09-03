@@ -55,6 +55,19 @@ function volatile(page: Page): Locator[] {
      * fallar.
      */
     page.locator('img[src*="qrserver.com"], img[alt*="QR" i]'),
+    /**
+     * LAS FECHAS DEL FILTRO DEL HISTORIAL, que por defecto son HOY.
+     *
+     * `d7db24f` le dio al historial un rango de fechas, y con «Hoy» marcado los
+     * dos campos imprimen la fecha del día dentro de la captura. Una linea base
+     * grabada con eso dentro nace con caducidad: vale hasta medianoche y a la
+     * mañana siguiente da un rojo que no tiene nada que ver con el código.
+     *
+     * Enmascarados —no excluidos— por lo mismo que el QR: el hueco sigue
+     * ocupando su sitio, así que si el filtro desapareciera o cambiara de
+     * tamaño, la maquetación cambiaría y eso SÍ debe fallar.
+     */
+    page.locator('input[type="date"]'),
   ]
 }
 

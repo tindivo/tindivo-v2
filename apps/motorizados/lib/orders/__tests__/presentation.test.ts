@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { MOMENTS, momentOf, moneyLine, orderStateBadge } from '../presentation'
+import {
+  deliveryPointQuality,
+  MOMENTS,
+  momentOf,
+  moneyLine,
+  orderStateBadge,
+} from '../presentation'
 
 describe('el vocabulario es UNO SOLO para tarjeta y detalle', () => {
   // ESTE ES EL DEFECTO QUE MOTIVO EL MODULO.
@@ -193,5 +199,43 @@ describe('el paso del recorrido', () => {
       expect(i).not.toBeNull()
       expect(MOMENTS[i as number]).toBeTruthy()
     }
+  })
+})
+
+describe('deliveryPointQuality (0207)', () => {
+  it('un GPS bueno se anuncia con su medida y sin advertencia', () => {
+    expect(deliveryPointQuality('2026-09-03T10:00:00Z', 8)).toEqual({
+      tone: 'success',
+      label: 'GPS ±8 m',
+      hint: null,
+    })
+  })
+
+  it('un GPS flojo avisa de que puede estar a una cuadra', () => {
+    const q = deliveryPointQuality('2026-09-03T10:00:00Z', 60)
+    expect(q.tone).toBe('warning')
+    expect(q.label).toBe('GPS aproximado · ±60 m')
+    expect(q.hint).toMatch(/cuadra/)
+  })
+
+  it('a mano es un punto BUENO sin medida, no un punto dudoso', () => {
+    // La diferencia importa: lo eligió una persona mirando el mapa. No hay
+    // metros porque no hubo sensor, no porque el punto sea malo.
+    expect(deliveryPointQuality('2026-09-03T10:00:00Z', null)).toEqual({
+      tone: 'neutral',
+      label: 'Punto marcado a mano',
+      hint: null,
+    })
+  })
+
+  it('sin sello manda a la referencia: ese pin no lo eligió nadie', () => {
+    // Las cinco direcciones que apuntan al centro del pueblo.
+    const q = deliveryPointQuality(null, null)
+    expect(q.tone).toBe('warning')
+    expect(q.hint).toMatch(/referencia/)
+  })
+
+  it('sin sello no se cree una medida que venga suelta', () => {
+    expect(deliveryPointQuality(null, 8).label).toBe('Sin punto confirmado')
   })
 })

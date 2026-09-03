@@ -5,9 +5,9 @@ import { type FormEvent, useState } from 'react'
 import {
   AddressFields,
   type AddressValue,
+  canSaveAddress,
   EMPTY_ADDRESS,
-  isLineOk,
-  isReferenceOk,
+  getMissingLabel,
 } from '@/components/address-fields'
 import { saveAddress } from '../persistence'
 
@@ -30,7 +30,8 @@ export function AddressStep({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const valid = isReferenceOk(addr.reference) && isLineOk(addr.line) && insideZone
+  const valid = canSaveAddress(addr, insideZone)
+  const falta = getMissingLabel(addr, insideZone)
 
   function patch(p: Partial<AddressValue>) {
     setAddr((a) => ({ ...a, ...p }))
@@ -68,7 +69,8 @@ export function AddressStep({
           de entrega
         </h2>
         <p className="mt-1.5 text-[14px] text-ink-muted">
-          Buscamos tu ubicación con el GPS. Toca el mapa si necesitas afinar el punto.
+          Marca en el mapa dónde queda tu puerta. Probamos con el GPS primero; si no acierta, lo
+          mueves tú.
         </p>
 
         <div className="mt-4">
@@ -99,9 +101,7 @@ export function AddressStep({
         >
           {busy
             ? 'Guardando…'
-            : mode === 'gate'
-              ? 'Confirmar dirección'
-              : 'Guardar y empezar a pedir'}
+            : (falta ?? (mode === 'gate' ? 'Confirmar dirección' : 'Guardar y empezar a pedir'))}
         </Button>
       </div>
     </form>

@@ -17,18 +17,19 @@ export function CartButton({ tone = 'light', businessId }: CartButtonProps) {
     return s.lines.reduce((n, l) => n + l.quantity, 0)
   })
   const badge = hydrated ? count : 0
-  const isDark = tone === 'dark'
+  const fondo =
+    tone === 'dark'
+      ? 'border border-white/15 bg-black/45 text-white'
+      : tone === 'on_photo'
+        ? 'bg-card text-ink shadow-elev-2 active:scale-95'
+        : 'bg-ink/[0.06] text-ink hover:bg-ink/[0.10]'
 
   return (
     <>
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className={`relative flex h-[40px] w-[40px] items-center justify-center rounded-full transition-colors ${
-          isDark
-            ? 'border border-white/15 bg-black/45 text-white'
-            : 'bg-ink/[0.06] text-ink hover:bg-ink/[0.10]'
-        }`}
+        className={`relative flex h-[40px] w-[40px] items-center justify-center rounded-full transition-all ${fondo}`}
         aria-label={badge > 0 ? `Mi bolsa, ${badge} ítems` : 'Mi bolsa'}
       >
         <Icon name="shopping_bag" size={20} />

@@ -160,4 +160,28 @@ describe('shouldOfferSearch', () => {
     ]
     expect(shouldOfferSearch(larga)).toBe(true)
   })
+
+  /*
+   * Los dos de abajo clavan el corte exacto (12 platos / 4 categorías). Sin
+   * ellos, los tres de arriba pasan con casi cualquier umbral entre 7 y 20:
+   * un cambio de criterio se colaría sin que nada se pusiera rojo, y este
+   * número decide si medio piloto tiene buscador o no.
+   */
+  it('clava el corte por número de platos', () => {
+    const carta = (n: number) => [
+      category(
+        'todo',
+        Array.from({ length: n }, (_, i) => item(`x${i}`)),
+      ),
+    ]
+    expect(shouldOfferSearch(carta(11))).toBe(false)
+    expect(shouldOfferSearch(carta(12))).toBe(true)
+  })
+
+  it('clava el corte por número de categorías', () => {
+    const secciones = (n: number) =>
+      Array.from({ length: n }, (_, i) => category(`c${i}`, [item(`x${i}`)]))
+    expect(shouldOfferSearch(secciones(3))).toBe(false)
+    expect(shouldOfferSearch(secciones(4))).toBe(true)
+  })
 })

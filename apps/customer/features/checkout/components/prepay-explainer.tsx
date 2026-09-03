@@ -4,6 +4,13 @@ import type { PrepayTimers } from '@/features/checkout/types'
 
 interface PrepayExplainerProps {
   timers: PrepayTimers
+  /**
+   * El pedido NO puede pagarse al recibir: el prepago no lo eligió el cliente,
+   * se lo impusimos. Entonces el detalle arranca ABIERTO.
+   */
+  forzado: boolean
+  /** Nombre del negocio: es a él a quien se le transfiere, no a Tindivo. */
+  businessName: string
 }
 
 /**
@@ -15,16 +22,26 @@ interface PrepayExplainerProps {
  *   `unified-checkout`, y se ve sin tocar nada. Esto es el detrás: la secuencia
  *   completa, plegada.
  *
- * POR QUÉ PLEGADO
+ * POR QUÉ PLEGADO — Y CUÁNDO NO
  *   Porque en el checkout la mayoría no lee: marca y manda. Una tarjeta abierta
  *   con tres iconos, tres títulos, tres pies y un recuadro verde era, para ese
  *   cliente, un muro que saltar — y para el que sí quería entender, información
  *   que igual estaba disponible un toque más allá. Cerrado, la pantalla queda en
  *   una línea; abierto, contesta entero.
  *
- *   Y cerrado por defecto, no abierto-la-primera-vez: un bloque que aparece solo
- *   la primera vez es el que menos se entiende, porque llega justo cuando el
- *   cliente todavía no sabe que tiene una duda.
+ *   Sigue plegado para quien ELIGE prepagar: sabe lo que eligió.
+ *
+ *   Pero NO para quien no eligió. Con `forzado`, el prepago se lo impusimos
+ *   —primer pedido, umbral, o bloqueo— y ahí el razonamiento de arriba se da la
+ *   vuelta: el cliente al que hay que explicarle cómo funciona esto es
+ *   exactamente el que nunca lo ha hecho, y ese es, por definición, el del
+ *   primer pedido. Dejárselo plegado es esconder la explicación de la única
+ *   persona que la necesita.
+ *
+ *   Y sigue sin ser un abierto-la-primera-vez, que es otra cosa y peor: no
+ *   depende de cuántas veces haya estado aquí, sino de si hoy tiene elección.
+ *   Si la cierra, se queda cerrada — `tocado` distingue «nunca lo tocó» de
+ *   «decidió cerrarlo».
  *
  * LOS MINUTOS NO ESTÁN ESCRITOS AQUÍ
  *   Entran por `timers`, que sale de `app_settings.timers` (whitelisted para
@@ -33,8 +50,10 @@ interface PrepayExplainerProps {
  *   el umbral de prepago —ver `lib/prepay.ts`— y con `acceptanceMinutes` en la
  *   `0172`.
  */
-export function PrepayExplainer({ timers }: PrepayExplainerProps) {
-  const [abierto, setAbierto] = useState(false)
+export function PrepayExplainer({ timers, forzado, businessName }: PrepayExplainerProps) {
+  const [tocado, setTocado] = useState(false)
+  const [abiertoManual, setAbiertoManual] = useState(false)
+  const abierto = tocado ? abiertoManual : forzado
   const panelId = useId()
 
   const pasos = [
@@ -65,13 +84,18 @@ export function PrepayExplainer({ timers }: PrepayExplainerProps) {
     <div className="mt-2">
       <button
         type="button"
-        onClick={() => setAbierto((v) => !v)}
+        onClick={() => {
+          setTocado(true)
+          setAbiertoManual(!abierto)
+        }}
         aria-expanded={abierto}
         aria-controls={panelId}
         className="flex w-full items-center gap-2 rounded-[14px] px-3 py-2.5 text-left transition-colors hover:bg-surface-low"
       >
         <Icon name="help" size={16} className="shrink-0 text-ink-subtle" />
-        <span className="flex-1 text-[13px] font-semibold text-ink-muted">¿Cómo funciona?</span>
+        <span className="flex-1 font-semibold text-[13px] text-ink-muted">
+          ¿Cómo funciona el pago adelantado?
+        </span>
         <Icon
           name="expand_more"
           size={18}
@@ -80,27 +104,34 @@ export function PrepayExplainer({ timers }: PrepayExplainerProps) {
       </button>
 
       {abierto && (
-        <ol
-          id={panelId}
-          className="mt-1 grid grid-cols-3 gap-2 rounded-[16px] border border-ink/[0.04] bg-card px-3 py-4"
-        >
-          {pasos.map((p) => (
-            <li key={p.titulo} className="flex flex-col items-center gap-1.5 text-center">
-              <span
-                className={`flex h-11 w-11 items-center justify-center rounded-full ${p.fondo}`}
-                aria-hidden="true"
-              >
-                <Icon name={p.icono} size={21} />
-              </span>
-              <span className="text-[13px] font-bold leading-tight">{p.titulo}</span>
-              <span
-                className={`text-[11px] text-ink-subtle ${p.mono ? 'font-mono tabular-nums' : ''}`}
-              >
-                {p.pie}
-              </span>
-            </li>
-          ))}
-        </ol>
+        <div id={panelId}>
+          <ol className="mt-1 grid grid-cols-3 gap-2 rounded-[16px] border border-ink/[0.04] bg-card px-3 py-4">
+            {pasos.map((p) => (
+              <li key={p.titulo} className="flex flex-col items-center gap-1.5 text-center">
+                <span
+                  className={`flex h-11 w-11 items-center justify-center rounded-full ${p.fondo}`}
+                  aria-hidden="true"
+                >
+                  <Icon name={p.icono} size={21} />
+                </span>
+                <span className="text-[13px] font-bold leading-tight">{p.titulo}</span>
+                <span
+                  className={`text-[11px] text-ink-subtle ${p.mono ? 'font-mono tabular-nums' : ''}`}
+                >
+                  {p.pie}
+                </span>
+              </li>
+            ))}
+          </ol>
+          {/* A QUIÉN se le paga. Tindivo no retiene fondos —el dinero va
+              directo al negocio— y en un pueblo, con una marca nueva, esa es la
+              objeción de verdad. No es un sello aparte: es la última línea de
+              la explicación que el cliente ya estaba leyendo. */}
+          <p className="mt-2 px-1 text-[11.5px] text-ink-subtle leading-relaxed">
+            Le transfieres directo a {businessName || 'el restaurante'}. El número te llega en el
+            seguimiento del pedido, junto al contador.
+          </p>
+        </div>
       )}
     </div>
   )

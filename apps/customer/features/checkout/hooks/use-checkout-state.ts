@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { AddressValue } from '@/components/address-fields'
 import { EMPTY_ADDRESS } from '@/components/address-fields'
+import { maxDeclarable as maxDeclarableCash } from '@/features/checkout/lib/cash'
 import {
   type Address,
   type CashChoice,
@@ -18,6 +19,7 @@ import {
   type PrepayTimers,
   type PromoState,
 } from '@/features/checkout/types'
+import { pickDefaultAddress, SAVED_ADDRESS_COLUMNS } from '@/lib/address-record'
 import { useBusinessOrdering } from '@/lib/business-ordering'
 import { type CartState, useCart, useCartHydrated } from '@/lib/cart'
 import type { LatLng } from '@/lib/coverage'
@@ -65,6 +67,13 @@ export interface CheckoutState {
   setCashChoice: (v: CashChoice) => void
   cashCustom: string
   setCashCustom: (v: string) => void
+  /**
+   * Nota libre para el MOTORIZADO —«toca el timbre dos veces», «hay perro»—.
+   * Opcional: nunca bloquea el pedido. Viaja a `orders.customer_notes`, que la
+   * app de motorizados ya pinta desde antes; lo que faltaba era escribirla.
+   */
+  customerNote: string
+  setCustomerNote: (v: string) => void
 
   prepayThreshold: number
   setPrepayThreshold: (v: number) => void
@@ -127,6 +136,13 @@ export interface CheckoutState {
   mustPrepay: boolean
   prepayReason: string | null
 
+  /**
+   * Ventana de entrega que promete el negocio, en minutos, o `null` si no la
+   * tiene puesta. Sale de la MISMA respuesta que ya se pedía para saber si el
+   * negocio acepta pedidos web: cero peticiones nuevas.
+   */
+  eta: { min: number; max: number } | null
+
   selectedAddress: Address | undefined
   reference: string
   line: string
@@ -152,6 +168,7 @@ export function useCheckoutState(): CheckoutState {
   const [payment, setPayment] = useState<PaymentIntent>('pending_cash')
   const [cashChoice, setCashChoice] = useState<CashChoice>('exact')
   const [cashCustom, setCashCustom] = useState('')
+  const [customerNote, setCustomerNote] = useState('')
   const [geoBlock, setGeoBlock] = useState<GeoBlockKind | null>(null)
   const [prepayThreshold, setPrepayThreshold] = useState(DEFAULT_PREPAY_THRESHOLD)
   const [prepayTimers, setPrepayTimers] = useState<PrepayTimers>({ ...DEFAULT_PREPAY_TIMERS })
@@ -211,9 +228,10 @@ export function useCheckoutState(): CheckoutState {
 
   const mustPrepay = isNewUser || exceedsCashCap || isBlocked
 
-  // Máximo declarable = mín(billete máximo, total + vuelto máximo)
+  // Máximo declarable = mín(billete máximo, total + vuelto máximo). La fórmula
+  // vive en `lib/cash.ts` con el resto de la regla del vuelto.
   const maxDeclarable = useMemo(
-    () => Math.min(maxCashBill, total + maxChange),
+    () => maxDeclarableCash({ total, maxCashBill, maxChange }),
     [maxCashBill, maxChange, total],
   )
 
@@ -361,10 +379,10 @@ export function useCheckoutState(): CheckoutState {
   const reloadAddresses = useCallback(async () => {
     const { data: addrs } = await getSupabaseBrowser()
       .from('customer_addresses')
-      .select('id,label,line,reference,is_default,coordinates_lat,coordinates_lng')
+      .select(SAVED_ADDRESS_COLUMNS)
       .order('is_default', { ascending: false })
     setAddresses((addrs ?? []) as CheckoutState['addresses'])
-    setAddressId((prev) => prev ?? addrs?.find((a) => a.is_default)?.id ?? addrs?.[0]?.id ?? null)
+    setAddressId((prev) => prev ?? pickDefaultAddress(addrs ?? [])?.id ?? null)
   }, [])
 
   return {
@@ -399,6 +417,8 @@ export function useCheckoutState(): CheckoutState {
     setCashChoice,
     cashCustom,
     setCashCustom,
+    customerNote,
+    setCustomerNote,
     prepayThreshold,
     setPrepayThreshold,
     prepayTimers,
@@ -439,6 +459,10 @@ export function useCheckoutState(): CheckoutState {
     isBlocked,
     mustPrepay,
     prepayReason,
+    eta:
+      ordering.info?.etaMin != null && ordering.info?.etaMax != null
+        ? { min: ordering.info.etaMin, max: ordering.info.etaMax }
+        : null,
     selectedAddress,
     reference,
     line,

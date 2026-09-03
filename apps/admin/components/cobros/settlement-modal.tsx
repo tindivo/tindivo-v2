@@ -259,11 +259,12 @@ export function SettlementModal({
 
             {/* Input de monto libre y opciones de redondeo */}
             <div className="rounded-xl border border-ink/10 bg-white p-3.5 space-y-3">
-              <label className="block text-[12px] font-semibold text-ink">
+              <label htmlFor="monto-a-pagar" className="block text-[12px] font-semibold text-ink">
                 Monto que va a pagar el restaurante (S/):
               </label>
               <div className="flex items-center gap-2">
                 <input
+                  id="monto-a-pagar"
                   type="text"
                   inputMode="decimal"
                   placeholder={`Ej: ${totalPendingAmount}`}
@@ -322,10 +323,17 @@ export function SettlementModal({
             {/* Método de pago y Nota */}
             <div className="space-y-3">
               <div>
-                <label className="block mb-1.5 text-[12px] font-semibold text-ink">
+                <span
+                  id="metodo-de-pago-label"
+                  className="block mb-1.5 text-[12px] font-semibold text-ink"
+                >
                   Método de pago recibido:
-                </label>
-                <div className="grid grid-cols-4 gap-1.5">
+                </span>
+                <div
+                  role="group"
+                  aria-labelledby="metodo-de-pago-label"
+                  className="grid grid-cols-4 gap-1.5"
+                >
                   {(['yape', 'plin', 'efectivo', 'otro'] as const).map((m) => (
                     <button
                       key={m}
@@ -344,10 +352,14 @@ export function SettlementModal({
               </div>
 
               <div>
-                <label className="block mb-1 text-[12px] font-semibold text-ink">
+                <label
+                  htmlFor="nota-de-pago"
+                  className="block mb-1 text-[12px] font-semibold text-ink"
+                >
                   Nota / Referencia de pago (opcional):
                 </label>
                 <input
+                  id="nota-de-pago"
                   type="text"
                   placeholder="Ej: Depósito Yape #98765"
                   className="t-field text-[13px] w-full"

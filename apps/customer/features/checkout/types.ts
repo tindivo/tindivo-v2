@@ -1,4 +1,5 @@
 import type { PaymentIntent } from '@tindivo/contracts'
+import type { SavedAddress } from '@/lib/address-record'
 
 // Vive en `lib/` porque los términos y condiciones prometen este mismo número y
 // no pueden importar de una feature. Ver `lib/prepay.ts`.
@@ -30,6 +31,14 @@ export interface PrepayTimers {
 export const DEFAULT_MAX_CASH_BILL = 100
 export const DEFAULT_MAX_CHANGE = 50
 export const CASH_STEP = 0.5 // redondeo del input libre: múltiplos de S/0.50
+
+/**
+ * Tope de la nota al motorizado. Coincide a propósito con el `max(200)` del
+ * contrato Zod y con el `left(..., 200)` de `create_customer_order` (0199): son
+ * tres redes para el mismo número, y si discreparan el cliente escribiría algo
+ * que el servidor recorta sin avisar.
+ */
+export const CUSTOMER_NOTE_MAX = 200
 export const NEAR_DELIVERY_FEE = 2.0
 
 /**
@@ -97,15 +106,13 @@ export function promoAviso(reason: PromoReason): string | null {
   }
 }
 
-export interface Address {
-  id: string
-  label: string
-  line: string | null
-  reference: string
-  is_default: boolean
-  coordinates_lat: number | null
-  coordinates_lng: number | null
-}
+/**
+ * Una dirección guardada. Era una copia del tipo del perfil, y ya habían
+ * empezado a separarse: a esta le faltaba `location_accuracy_m`, de modo que
+ * el checkout no podía editar una dirección sin destruir la medida del sensor.
+ * Ver `SavedAddress`.
+ */
+export type Address = SavedAddress
 
 export interface OrderResult {
   id: string
@@ -226,3 +233,44 @@ export const PAYMENT_OPTIONS: PaymentOption[] = [
     momento: 'adelantado',
   },
 ]
+
+/**
+ * El icono de una dirección guardada, por su etiqueta.
+ *
+ * Sustituye a `labelEmoji` SOLO en el checkout. Aquel devuelve 🏠/💼/📍 y sigue
+ * vivo en el selector de etiqueta del formulario de dirección, donde el emoji
+ * va dentro de un chip de texto y se lee como parte de la palabra. Aquí el
+ * icono va solo, dentro de un cuadrado de color, haciendo de icono: un emoji
+ * ahí se ve de otro tamaño en cada teléfono, no toma el color de la marca, y
+ * choca con la regla del propio DS —Material Symbols para iconografía— que ya
+ * existe por el incidente del 2026-08-18.
+ */
+export function addressIcon(label: string): string {
+  return label === 'Casa' ? 'home' : label === 'Trabajo' ? 'work' : 'location_on'
+}
+
+/**
+ * QUÉ FALTA PARA PODER CONFIRMAR.
+ *
+ * Antes esto era un `string | null` suelto (`error`) que solo existía DESPUÉS
+ * de tocar el CTA, y se pintaba al final del scroll: si faltaba la referencia
+ * de la dirección, el aviso salía a ~600 px del campo que lo causaba, con la
+ * pantalla ya scrolleada al fondo por el propio acto de tocar el botón.
+ *
+ * Con el campo dentro del objeto, la misma falta puede hacer tres cosas a la
+ * vez sin repetir la regla: nombrar el CTA, marcar la fila y decidir a dónde
+ * llevar al cliente.
+ */
+export type CheckoutField = 'cart' | 'address' | 'name' | 'phone' | 'cash'
+
+export interface CheckoutIssue {
+  field: CheckoutField
+  /** Lo que se pinta junto al campo que falla. */
+  message: string
+  /**
+   * Lo que dice el CTA mientras esta sea la primera falta. Es una ORDEN, no un
+   * diagnóstico: «Agrega tu dirección», no «Falta la dirección». El botón sigue
+   * siendo un botón, así que tiene que decir qué pasa al tocarlo.
+   */
+  cta: string
+}

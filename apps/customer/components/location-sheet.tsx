@@ -1,8 +1,8 @@
 'use client'
 
-import { Button, Icon, Segmented, Spinner } from '@tindivo/ui'
+import { Button, Icon, Segmented, Spinner, useDialogFocus } from '@tindivo/ui'
 import dynamic from 'next/dynamic'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { haversineKm, pointInPolygon } from '@/lib/coverage'
 import { bandForPoint, type DeliveryBands } from '@/lib/delivery-fee'
@@ -41,6 +41,7 @@ export interface LocationResult {
 export function LocationSheet({
   initial,
   initialAccuracyM,
+  initialConfirmed,
   polygon,
   circle,
   bounds,
@@ -53,6 +54,13 @@ export function LocationSheet({
 }: {
   initial: LatLng
   initialAccuracyM: number | null
+  /**
+   * `false` cuando `initial` es solo el encuadre del pueblo y nadie ha elegido
+   * nada todavía. Manda sobre dos cosas: si sale la capa que enseña el gesto, y
+   * si Confirmar arranca habilitado. Sin esto, abrir la pantalla y darle al
+   * botón de una guardaba el centro de cobertura como si fuera una puerta.
+   */
+  initialConfirmed: boolean
   polygon: LatLng[] | null
   circle: { center: LatLng; radiusKm: number } | null
   bounds: MapBounds | null
@@ -71,21 +79,31 @@ export function LocationSheet({
   const [locating, setLocating] = useState(false)
   const [locateError, setLocateError] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
+  /**
+   * Hubo un gesto deliberado: el dedo movió el mapa o el GPS trajo una medida.
+   * Es lo único que habilita Confirmar. Abrir la pantalla y mirar no cuenta.
+   */
+  const [settled, setSettled] = useState(initialConfirmed)
+  /** La capa que enseña el gesto: solo mientras no haya un punto elegido. */
+  const [coach, setCoach] = useState(!initialConfirmed)
+
+  const caja = useRef<HTMLDivElement>(null)
 
   useEffect(() => setMounted(true), [])
 
+  // Escape, la trampa de foco y la vuelta del foco al cerrar, en el mismo sitio
+  // que las hojas del DS. Antes esta pantalla escuchaba Escape por su cuenta
+  // pero no movía el foco: con teclado se abría el mapa y el foco se quedaba
+  // detrás, en la hoja que lo había abierto.
+  useDialogFocus(caja, { open: mounted, onClose: onCancel })
+
   useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onCancel()
-    }
-    document.addEventListener('keydown', onKey)
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => {
-      document.removeEventListener('keydown', onKey)
       document.body.style.overflow = prev
     }
-  }, [onCancel])
+  }, [])
 
   const inside = useMemo(() => {
     if (polygon) return pointInPolygon(coords, polygon)
@@ -102,7 +120,14 @@ export function LocationSheet({
     if (byUser) {
       setAccuracyM(null)
       setLocateError(null)
+      setSettled(true)
     }
+  }
+
+  /** El primer arrastre ya enseñó lo que la capa quería enseñar. */
+  function handleMoving(m: boolean) {
+    setMoving(m)
+    if (m) setCoach(false)
   }
 
   async function useMyLocation() {
@@ -115,6 +140,8 @@ export function LocationSheet({
       setFlyToken((n) => n + 1)
       setCoords({ lat: fix.lat, lng: fix.lng })
       setAccuracyM(Math.round(fix.accuracyM))
+      setSettled(true)
+      setCoach(false)
     } catch (err) {
       const code = err instanceof GeolocationError ? err.code : 'position_unavailable'
       setLocateError(geoErrorMessage(code))
@@ -131,10 +158,12 @@ export function LocationSheet({
     // el centro geométrico del lienzo (donde vive el pin) cae más abajo que el
     // centro de lo que la persona ve, y el punto que fija no es el que mira.
     <div
+      ref={caja}
+      tabIndex={-1}
       role="dialog"
       aria-modal="true"
       aria-label="Ajustar la ubicación en el mapa"
-      className="fixed inset-0 z-[95] flex flex-col bg-surface animate-[t-fade-in_180ms_ease]"
+      className="fixed inset-0 z-[95] flex flex-col bg-surface animate-[t-fade-in_180ms_ease] focus:outline-none"
     >
       <div className="relative min-h-0 flex-1">
         <MapCanvas
@@ -147,11 +176,12 @@ export function LocationSheet({
           flyTarget={flyTarget}
           flyToken={flyToken}
           onSettle={handleSettle}
-          onMovingChange={setMoving}
+          onMovingChange={handleMoving}
+          showPin={!coach}
         />
 
         {/* Barra superior: volver + fondo del mapa. */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-[600] flex items-start gap-2 p-3 pt-[calc(0.75rem+env(safe-area-inset-top))]">
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-[730] flex items-start gap-2 p-3 pt-[calc(0.75rem+env(safe-area-inset-top))]">
           <button
             type="button"
             onClick={onCancel}
@@ -176,7 +206,7 @@ export function LocationSheet({
         {/* La instrucción se desvanece mientras el dedo está trabajando. */}
         <div
           className={`pointer-events-none absolute inset-x-0 top-[calc(4.75rem+env(safe-area-inset-top))] z-[600] flex justify-center px-4 transition-opacity duration-200 ${
-            moving ? 'opacity-0' : 'opacity-100'
+            moving || coach ? 'opacity-0' : 'opacity-100'
           }`}
         >
           <span className="rounded-full bg-ink/80 px-3.5 py-1.5 text-center font-medium text-[12px] text-white shadow-elev-3">
@@ -193,28 +223,111 @@ export function LocationSheet({
         >
           {locating ? <Spinner size="xs" variant="brand" /> : <Icon name="my_location" size={22} />}
         </button>
+        {/*
+          LA CAPA QUE ENSEÑA EL GESTO.
+          Sale solo cuando no hay punto elegido, y se va con el primer arrastre.
+          Aquí está el malentendido que costaba direcciones: la gente daba por
+          hecho que el mapa era una foto y se iba directo a los campos de texto.
+          Decirlo en una píldora de 12 px no alcanzaba; hay que enseñarlo.
+        */}
+        {coach && (
+          <div className="pointer-events-none absolute inset-0 z-[720] flex select-none flex-col items-center justify-center gap-3.5 bg-ink/[0.66] px-8 text-center">
+            <svg width="112" height="74" viewBox="0 0 112 74" fill="none" aria-hidden="true">
+              <title>El mapa se mueve, el pin se queda</title>
+              <g
+                stroke="rgba(255,255,255,.85)"
+                strokeWidth="2.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M14 37H2" />
+                <path d="M7 31l-5 6 5 6" />
+                <path d="M98 37h12" />
+                <path d="M105 31l5 6-5 6" />
+              </g>
+              <rect
+                x="26"
+                y="7"
+                width="60"
+                height="60"
+                rx="10"
+                fill="rgba(255,255,255,.14)"
+                stroke="rgba(255,255,255,.85)"
+                strokeWidth="2.4"
+              />
+              <g stroke="rgba(255,255,255,.42)" strokeWidth="2">
+                <path d="M26 27h60" />
+                <path d="M26 49h60" />
+                <path d="M46 7v60" />
+                <path d="M68 7v60" />
+              </g>
+              <g transform="translate(43 12) scale(0.76)">
+                <path
+                  d="M17 2C9.3 2 3 8.2 3 15.9 3 26 17 42 17 42s14-16.1 14-26.1C31 8.2 24.7 2 17 2z"
+                  fill="#f97316"
+                  stroke="#ffffff"
+                  strokeWidth="2.5"
+                />
+                <circle cx="17" cy="16" r="5" fill="#ffffff" />
+              </g>
+            </svg>
+
+            <h2 className="font-display font-extrabold text-[22px] text-white leading-[1.2] tracking-tight text-balance">
+              Arrastra el mapa hasta que el pin quede en tu puerta
+            </h2>
+            <p className="text-[14px] text-white/75 leading-snug text-pretty">
+              El pin no se mueve: se mueve el mapa por debajo. Pellizca para acercar.
+            </p>
+
+            <p className="flex items-start gap-2 rounded-[14px] bg-white/[0.13] px-3.5 py-2.5 text-left text-[12.5px] text-white/90 leading-snug">
+              <Icon name="satellite_alt" size={20} className="mt-px text-white/90" />
+              <span>
+                ¿No reconoces la calle? Toca <strong className="font-bold">Satélite</strong> y busca
+                el techo de tu casa.
+              </span>
+            </p>
+
+            <button
+              type="button"
+              onClick={() => setCoach(false)}
+              className="pointer-events-auto mt-1 inline-flex h-[46px] items-center justify-center rounded-full bg-white px-8 font-extrabold text-[15px] text-ink transition-transform active:scale-[0.97]"
+            >
+              Entendido
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="shrink-0 rounded-t-[24px] bg-card px-4 pt-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-[0_-16px_40px_-28px_rgba(0,0,0,0.4)]">
         <p className="font-display font-bold text-[17px] leading-tight text-ink">
-          {moving ? 'Ubicando…' : '¿El pin está en tu puerta?'}
+          {moving ? 'Ubicando…' : settled ? '¿El pin está en tu puerta?' : 'Arrastra el mapa'}
         </p>
 
         <div className="mt-1 flex min-h-[18px] items-center gap-1.5 font-mono text-[11px]">
           <span
             aria-hidden
             className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${
-              locateError || !inside ? 'bg-danger' : 'bg-brand'
+              locateError || !inside ? 'bg-danger' : settled ? 'bg-brand' : 'bg-brand-dark'
             }`}
           />
-          <span className={`truncate ${locateError || !inside ? 'text-danger' : 'text-ink/70'}`}>
+          <span
+            className={`truncate ${
+              locateError || !inside
+                ? 'text-danger'
+                : settled
+                  ? 'text-ink/70'
+                  : 'font-semibold text-brand-dark'
+            }`}
+          >
             {locateError
               ? locateError
               : !inside
                 ? 'Fuera de la zona de reparto de San Jacinto'
-                : `Envío S/ ${fee.toFixed(2)}${band === 'far' ? ' (zona lejana)' : ''}${
-                    accuracyM != null ? ` · GPS ±${accuracyM} m` : ''
-                  }`}
+                : !settled
+                  ? 'Aún no marcas tu puerta'
+                  : `Envío S/ ${fee.toFixed(2)}${band === 'far' ? ' (zona lejana)' : ''}${
+                      accuracyM != null ? ` · GPS ±${accuracyM} m` : ' · ajustada a mano'
+                    }`}
           </span>
         </div>
 
@@ -222,10 +335,14 @@ export function LocationSheet({
           type="button"
           variant="brand"
           className="mt-3 w-full"
-          disabled={!inside || moving}
+          disabled={!inside || moving || !settled}
           onClick={() => onConfirm({ coords, accuracyM })}
         >
-          {inside ? 'Confirmar ubicación' : 'Muévelo dentro de la zona'}
+          {!settled
+            ? 'Arrastra el mapa para marcar tu puerta'
+            : inside
+              ? 'Sí, aquí es mi puerta'
+              : 'Muévelo dentro de la zona'}
         </Button>
       </div>
     </div>

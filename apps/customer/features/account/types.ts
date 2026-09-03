@@ -1,14 +1,12 @@
 import type { AppealStatus, RefundStatus } from '@tindivo/contracts'
+import type { SavedAddress } from '@/lib/address-record'
 
-export interface Address {
-  id: string
-  label: string
-  line: string | null
-  reference: string
-  is_default: boolean
-  coordinates_lat: number | null
-  coordinates_lng: number | null
-}
+/**
+ * Una dirección guardada. El tipo vive en `lib/address-record.ts` porque lo
+ * leen cuatro pantallas de dos features distintas; aquí solo se le pone el
+ * nombre con el que esta feature lo llama.
+ */
+export type Address = SavedAddress
 
 export interface OrderRow {
   id: string

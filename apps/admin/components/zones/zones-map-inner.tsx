@@ -6,7 +6,7 @@ import { MapContainer, TileLayer, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import 'leaflet-draw'
 import 'leaflet-draw/dist/leaflet.draw.css'
-import { Button } from '@tindivo/ui'
+import { Button, IconButton, Segmented } from '@tindivo/ui'
 import { fieldSm, Ico } from '@/components/admin'
 import { MAP_TILES, type MapLayerMode, SATELLITE_LABELS_URL } from '@/lib/map-layers'
 
@@ -23,6 +23,22 @@ export interface ZoneShape {
 }
 
 /** La cobertura va de fondo, sin relleno y a rayas: es el marco perimetral general. */
+/**
+ * Las dos capas del mapa, en el formato que espera `Segmented`.
+ *
+ * Vive fuera del componente porque no depende de nada suyo y así no se recrea
+ * en cada render. Se declara una vez por fichero y no en un módulo común a
+ * propósito: son dos usos, y la regla de la casa es no extraer hasta el tercero.
+ */
+const CAPAS = [
+  { value: 'street' as const, label: 'Calles', icon: <Ico.map className="h-3.5 w-3.5" /> },
+  {
+    value: 'satellite' as const,
+    label: 'Satelital',
+    icon: <Ico.satellite className="h-3.5 w-3.5" />,
+  },
+]
+
 const COVERAGE_STYLE = {
   color: '#38bdf8',
   weight: 2.5,
@@ -301,32 +317,7 @@ export default function ZonesMapInner({
 
           <div className="flex items-center gap-2">
             {/* Toggle de capa */}
-            <div className="flex rounded-lg border border-ink/10 bg-ink/[0.04] p-0.5">
-              <button
-                type="button"
-                onClick={() => setMode('street')}
-                className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[12px] font-medium transition ${
-                  mode === 'street'
-                    ? 'bg-surface text-ink shadow-xs'
-                    : 'text-ink-muted hover:text-ink'
-                }`}
-              >
-                <Ico.map className="h-3.5 w-3.5" />
-                Calles
-              </button>
-              <button
-                type="button"
-                onClick={() => setMode('satellite')}
-                className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[12px] font-medium transition ${
-                  mode === 'satellite'
-                    ? 'bg-surface text-ink shadow-xs'
-                    : 'text-ink-muted hover:text-ink'
-                }`}
-              >
-                <Ico.satellite className="h-3.5 w-3.5" />
-                Satelital
-              </button>
-            </div>
+            <Segmented size="sm" value={mode} onChange={setMode} options={CAPAS} />
 
             <Button
               size="sm"
@@ -410,53 +401,41 @@ export default function ZonesMapInner({
             <div className="pointer-events-none absolute inset-0 z-[500] p-3">
               <div className="flex items-start justify-between">
                 {/* Toggle Calles / Satelital */}
-                <div className="pointer-events-auto flex rounded-xl border border-ink/15 bg-surface/90 p-1 shadow-md backdrop-blur-md">
-                  <button
-                    type="button"
-                    onClick={() => setMode('street')}
-                    className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[12px] font-medium transition ${
-                      mode === 'street'
-                        ? 'bg-ink text-surface shadow-xs'
-                        : 'text-ink-muted hover:text-ink'
-                    }`}
-                  >
-                    <Ico.map className="h-3.5 w-3.5" />
-                    Calles
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setMode('satellite')}
-                    className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[12px] font-medium transition ${
-                      mode === 'satellite'
-                        ? 'bg-ink text-surface shadow-xs'
-                        : 'text-ink-muted hover:text-ink'
-                    }`}
-                  >
-                    <Ico.satellite className="h-3.5 w-3.5" />
-                    Satelital
-                  </button>
+                {/* Mismo envoltorio de cristal que el mapa del cliente
+                    (`location-sheet.tsx`): el riel del `Segmented` va dentro, no
+                    en lugar de, la superficie translúcida que lo hace legible
+                    sobre la foto de satélite. */}
+                <div className="pointer-events-auto rounded-[15px] bg-surface/95 p-0.5 shadow-md backdrop-blur-md">
+                  <Segmented size="sm" value={mode} onChange={setMode} options={CAPAS} />
                 </div>
 
                 {/* Botones de Centrar y Pantalla Completa */}
                 <div className="pointer-events-auto flex items-center gap-1.5">
-                  <button
+                  {/* Cristal, no superficie sólida: estos dos flotan sobre la
+                      foto de satélite y un fondo opaco taparía justo el techo que
+                      se está mirando. Las clases sustituyen la piel del
+                      componente; lo que se conserva de él es lo que no se ve —
+                      anillo de foco, estado deshabilitado y respuesta al toque. */}
+                  <IconButton
                     type="button"
                     onClick={() => setTriggerFit((n) => n + 1)}
-                    className="flex h-8 w-8 items-center justify-center rounded-xl border border-ink/15 bg-surface/90 text-ink shadow-md backdrop-blur-md transition hover:bg-surface active:scale-95"
+                    className="h-8 w-8 rounded-xl border border-ink/15 bg-surface/90 text-ink shadow-md backdrop-blur-md hover:bg-surface"
                     title="Ajustar vista a la cobertura"
                     aria-label="Ajustar vista"
                   >
                     <Ico.focus className="h-4 w-4" />
-                  </button>
-                  <button
+                  </IconButton>
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="sm"
                     onClick={() => setIsFullscreen(true)}
-                    className="flex items-center gap-1.5 rounded-xl border border-ink/15 bg-surface/90 px-2.5 py-1.5 text-[12px] font-medium text-ink shadow-md backdrop-blur-md transition hover:bg-surface active:scale-95"
+                    className="h-8 gap-1.5 rounded-xl border-ink/15 bg-surface/90 px-2.5 font-medium text-[12px] text-ink shadow-md backdrop-blur-md hover:bg-surface"
                     title="Ampliar a pantalla completa para delimitar con precisión"
                   >
                     <Ico.maximize className="h-3.5 w-3.5" />
                     <span>Pantalla completa</span>
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>

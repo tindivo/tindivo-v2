@@ -11,6 +11,18 @@ export interface UseTrackingResult {
   data: Tracking | null
   error: string | null
   ownedId: string | null
+  /**
+   * La nota que el cliente le escribió al motorizado, si escribió alguna.
+   *
+   * NO VIENE DE `get_tracking`, y no es un descuido. Ese endpoint es público
+   * —`anon` puede llamarlo, porque el enlace de seguimiento se comparte por
+   * WhatsApp— y esta frase habla de la casa de alguien: «el portón azul»,
+   * «el perro ladra pero no muerde». Por eso viaja por el mismo sitio que ya
+   * decide si se puede cancelar: una lectura directa por PostgREST donde la RLS
+   * de `orders` responde la fila solo a su dueño. Sin viaje extra: la consulta
+   * de propiedad ya se hacía, solo pide una columna más.
+   */
+  ownNote: string | null
   load: () => Promise<void>
   cancel: CancelState
 }
@@ -20,6 +32,7 @@ export function useTracking(shortId: string): UseTrackingResult {
   const [error, setError] = useState<string | null>(null)
   // Propiedad: si hay sesión y el pedido es del usuario, RLS devuelve la fila (id) → habilita cancelar.
   const [ownedId, setOwnedId] = useState<string | null>(null)
+  const [ownNote, setOwnNote] = useState<string | null>(null)
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [cancelling, setCancelling] = useState(false)
 
@@ -41,11 +54,13 @@ export function useTracking(shortId: string): UseTrackingResult {
     // Comprobación de propiedad (una vez): solo el dueño autenticado ve "Cancelar".
     getSupabaseBrowser()
       .from('orders')
-      .select('id')
+      .select('id,customer_notes')
       .eq('short_id', shortId)
       .maybeSingle()
       .then(({ data: own }) => {
-        if (active && own) setOwnedId(own.id)
+        if (!active || !own) return
+        setOwnedId(own.id)
+        setOwnNote(own.customer_notes)
       })
     return () => {
       active = false
@@ -93,6 +108,7 @@ export function useTracking(shortId: string): UseTrackingResult {
     data,
     error,
     ownedId,
+    ownNote,
     load,
     cancel: {
       confirmCancel,

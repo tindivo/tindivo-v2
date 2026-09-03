@@ -4,7 +4,8 @@ import { BottomSheet, Icon, ScreenHeader } from '@tindivo/ui'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { labelEmoji } from '@/components/address-fields'
-import { AddressSheet } from '@/features/account/components/address-sheet'
+import { AddressSheet } from '@/components/address-sheet'
+import { pickDefaultAddress } from '@/lib/address-record'
 import { useOnboarding } from '@/lib/onboarding-store'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
@@ -70,7 +71,7 @@ export function AddressBar() {
     if (!onboardingOpen) setRefreshTick((t) => t + 1)
   }, [onboardingOpen])
 
-  const selected = addresses.find((a) => a.is_default) ?? addresses[0]
+  const selected = pickDefaultAddress(addresses)
 
   async function choose(id: string) {
     if (!userId) return

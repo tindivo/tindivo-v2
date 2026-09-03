@@ -1,6 +1,7 @@
 'use client'
 
-import { type ReactNode, useEffect } from 'react'
+import { type ReactNode, useEffect, useRef } from 'react'
+import { useDialogFocus } from './use-dialog-focus'
 
 /**
  * Bottom-sheet modal (slideUp). Cierra al click fuera o Escape.
@@ -33,6 +34,13 @@ export function BottomSheet({
   label: string
   children: ReactNode
 }) {
+  const caja = useRef<HTMLDivElement>(null)
+  // Mete el foco, escucha Escape en `document` y lo devuelve al cerrar. Lo de
+  // Escape no es un extra: el `onKeyDown` de abajo solo recibe la tecla si el
+  // foco YA está dentro, así que hasta ahora esta hoja prometía cerrarse con
+  // Escape y no lo hacía mientras nadie la tocara.
+  useDialogFocus(caja, { open, onClose })
+
   useEffect(() => {
     if (!open) return
     const prevOverflow = document.body.style.overflow
@@ -51,12 +59,14 @@ export function BottomSheet({
       onClick={(e) => {
         if (e.target === e.currentTarget && onClose) onClose()
       }}
-      onKeyDown={(e) => {
-        if (e.key === 'Escape' && onClose) onClose()
-      }}
     >
       <div
-        className="flex w-full max-w-[768px] max-h-[85dvh] min-h-0 flex-col overflow-hidden rounded-t-[28px] bg-surface text-ink shadow-[0_-20px_60px_-40px_rgba(0,0,0,0.35)] animate-[t-slide-up_280ms_cubic-bezier(0.22,1,0.36,1)] overscroll-contain"
+        ref={caja}
+        // `tabIndex={-1}` para poder enfocar la caja sin meterla en el orden de
+        // tabulación, y sin anillo: el foco está aquí para anunciar el diálogo,
+        // no para señalar un control.
+        tabIndex={-1}
+        className="flex w-full max-w-[768px] max-h-[85dvh] min-h-0 flex-col overflow-hidden rounded-t-[28px] bg-surface text-ink shadow-[0_-20px_60px_-40px_rgba(0,0,0,0.35)] animate-[t-slide-up_280ms_cubic-bezier(0.22,1,0.36,1)] overscroll-contain focus:outline-none"
         role="dialog"
         aria-modal="true"
         aria-label={label}

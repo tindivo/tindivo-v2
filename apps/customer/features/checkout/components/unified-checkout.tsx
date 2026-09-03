@@ -1,23 +1,19 @@
 'use client'
 
-import type { PaymentIntent } from '@tindivo/contracts'
 import { Button, cn, Icon } from '@tindivo/ui'
-import { useState } from 'react'
-import { isLineOk } from '@/components/address-fields'
+import { useEffect, useRef, useState } from 'react'
 import { OtpVerificationSheet } from '@/components/otp-verification-sheet'
 import { CartValidationBanner } from '@/features/cart/components/cart-validation-banner'
 import { CashSelector } from '@/features/checkout/components/cash-selector'
+import { DeliveryCard } from '@/features/checkout/components/delivery-card'
+import { GeoBlockSheet } from '@/features/checkout/components/geo-block-sheet'
 import { OrderDetail } from '@/features/checkout/components/order-detail'
+import { PaymentMethodList } from '@/features/checkout/components/payment-method-list'
 import { PrepayExplainer } from '@/features/checkout/components/prepay-explainer'
 import type { CheckoutViewModel } from '@/features/checkout/hooks/use-checkout'
 import type { UseCheckoutValidationReturn } from '@/features/checkout/hooks/use-checkout-validation'
 import { soles } from '@/features/checkout/lib/format'
-import {
-  PAYMENT_MOMENTS,
-  PAYMENT_OPTIONS,
-  PICKUP_ENABLED,
-  promoAviso,
-} from '@/features/checkout/types'
+import { type CheckoutField, PICKUP_ENABLED, promoAviso } from '@/features/checkout/types'
 import { AddressSelectorSheet } from './address-selector-sheet'
 import { NameEditSheet } from './name-edit-sheet'
 
@@ -68,53 +64,179 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
     maxCashBill,
     maxChange,
     maxDeclarable,
+    geoBlock,
+    setGeoBlock,
+    customerNote,
+    setCustomerNote,
+    eta,
   } = checkout
 
-  const { cashAmount, cashChange, validate } = validation
+  const { cashAmount, cashChange, issue, focus, attempted, validate } = validation
 
   const [showNameEdit, setShowNameEdit] = useState(false)
   const [showAddressSelector, setShowAddressSelector] = useState(false)
+  const [addressSheetStartsAdding, setAddressSheetStartsAdding] = useState(false)
   const [showOrderDetail, setShowOrderDetail] = useState(false)
 
-  const hasMissingLine = Boolean(selectedAddress && !isLineOk(selectedAddress.line))
+  const cartRef = useRef<HTMLDivElement>(null)
+  const deliveryRef = useRef<HTMLDivElement>(null)
+  const paymentRef = useRef<HTMLDivElement>(null)
+  const errorRef = useRef<HTMLParagraphElement>(null)
 
-  const ctaDisabled =
-    loading ||
-    locating ||
-    !cartHydrated ||
-    cart.count() === 0 ||
-    cart.hasInvalidLines() ||
-    validating
+  /**
+   * LLEVAR AL CLIENTE HASTA LO QUE FALTA.
+   *
+   * Sin esto, tocar el CTA pintaba un párrafo rojo al final de la página. Y el
+   * propio acto de llegar al CTA deja la pantalla scrolleada abajo del todo, así
+   * que el mensaje hablaba de un campo que en ese momento no se veía: para
+   * enterarse había que leer, deducir de qué sección hablaba y subir a buscarla.
+   *
+   * `block: 'center'` y no `'start'`: la barra del CTA es sticky y tapa la parte
+   * baja de la pantalla, así que un campo alineado arriba puede quedar medio
+   * escondido debajo de ella.
+   */
+  useEffect(() => {
+    if (!focus) return
+    const destino: Record<CheckoutField, HTMLElement | null> = {
+      cart: cartRef.current,
+      address: deliveryRef.current,
+      name: deliveryRef.current,
+      phone: deliveryRef.current,
+      cash: paymentRef.current,
+    }
+    destino[focus.field]?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [focus])
+
+  /** Un error del servidor llega sin campo al que ir: se lleva al aviso. */
+  useEffect(() => {
+    if (error) errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [error])
+
+  const busy = loading || locating || validating || !cartHydrated
+
   const ctaLabel = locating
-    ? 'Verificando ubicación…'
+    ? 'Verificando tu ubicación…'
     : validating
-      ? 'Verificando menú…'
+      ? 'Verificando el menú…'
       : loading
-        ? 'Enviando…'
-        : cart.hasInvalidLines()
-          ? 'Revisa tu bolsa'
+        ? 'Enviando tu pedido…'
+        : issue
+          ? issue.cta
           : `Confirmar pedido · ${soles(total)}`
 
-  function handlePaymentSelect(value: PaymentIntent) {
-    setPayment(value)
-    if (value !== 'pending_cash') {
-      setCashChoice('exact')
-      setCashCustom('')
+  /**
+   * El CTA NO se apaga cuando falta algo: cambia de trabajo.
+   *
+   * Un botón gris no dice qué falta ni deja hacer nada, y el aviso que sí lo
+   * decía estaba a media pantalla de distancia. Diciendo «Agrega tu dirección»
+   * y abriendo la hoja al tocarlo, el botón que antes solo confirmaba pasa a ser
+   * también el camino más corto a lo que falta. Se apaga solo mientras hay algo
+   * en curso —GPS, catálogo, envío—, que es cuando de verdad no se puede hacer
+   * nada.
+   */
+  function handleCta() {
+    if (!validate()) {
+      // `validate()` ya fijó el foco, que dispara el scroll de arriba. Para lo
+      // que se corrige en una hoja, además se abre: llevar al cliente hasta el
+      // campo y dejarlo mirándolo sería medio favor.
+      if (issue?.field === 'address') {
+        setAddressSheetStartsAdding(addresses.length === 0)
+        setShowAddressSelector(true)
+      }
+      if (issue?.field === 'name') setShowNameEdit(true)
+      if (issue?.field === 'cart') setShowOrderDetail(true)
+      return
     }
+    placeOrder({ paymentIntent: payment })
   }
 
+  const ctaPie = loading
+    ? 'No cierres esta pantalla.'
+    : payment === 'prepaid'
+      ? 'Todavía no pagas nada. Te avisamos cuando el local confirme.'
+      : 'Pagas al recibir, directo al motorizado.'
+
   return (
-    <main className="mx-auto min-h-dvh max-w-[768px] bg-surface pb-36 lg:max-w-6xl">
-      <div className="border-b border-border bg-surface px-4 pt-3.5 pb-3">
-        <div className="font-display text-[22px] font-bold tracking-tight">Confirmar pedido</div>
+    <main className="mx-auto flex min-h-dvh max-w-[768px] flex-col bg-surface lg:max-w-6xl">
+      <div className="border-ink/[0.04] border-b px-4 pt-3.5 pb-3">
+        <h1 className="font-display font-bold text-[22px] tracking-tight">Confirmar pedido</h1>
+        {/* El negocio y, si lo tiene puesto, su ventana de entrega. Es el MISMO
+            `estimated_eta_min/max` que el cliente ya vio en la card del catálogo
+            y en la portada del negocio: si aquí desapareciera, el checkout sería
+            la única pantalla del camino que deja de decir cuándo llega. Sin el
+            dato no se pinta nada — nunca un rango inventado. */}
+        {(cart.businessName || eta) && (
+          <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] text-ink-muted">
+            {cart.businessName && <span>{cart.businessName}</span>}
+            {cart.businessName && eta && (
+              <span aria-hidden className="h-[3px] w-[3px] rounded-full bg-ink-subtle" />
+            )}
+            {eta && (
+              <span className="inline-flex items-center gap-1 font-semibold text-ink">
+                <Icon name="schedule" size={13} aria-hidden />
+                Llega en {eta.min}–{eta.max} min
+              </span>
+            )}
+          </p>
+        )}
       </div>
 
-      <div className="px-4 pt-3">
+      <div className="flex flex-1 flex-col gap-5 px-4 pt-3.5 pb-4">
         <CartValidationBanner />
-        {/* Método de entrega */}
-        <Section title="Entrega">
+
+        {/* ── 1 · TU PEDIDO ──
+            Sube al primer lugar. Estaba al final, después de tres decisiones y
+            además plegado: para ver qué llevabas había que bajar hasta el fondo
+            y abrir un acordeón. Es el ancla de confianza de la pantalla, y en
+            cualquier app de delivery se ve antes de decidir nada. El desglose de
+            plata sí se queda abajo, pegado al CTA: contesta otra pregunta —qué
+            pago— y su sitio es junto al botón que lo confirma. */}
+        <section ref={cartRef}>
+          <SectionTitle>Tu pedido</SectionTitle>
+          <div className="overflow-hidden rounded-[18px] border border-ink/[0.04] bg-card shadow-elev-1">
+            <button
+              type="button"
+              onClick={() => setShowOrderDetail((s) => !s)}
+              aria-expanded={showOrderDetail}
+              className="flex w-full items-center gap-3 p-3.5 text-left transition-colors hover:bg-ink/[0.02]"
+            >
+              <span
+                aria-hidden
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-ink font-bold text-[14px] text-white tabular-nums"
+              >
+                {cart.count()}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-semibold text-[14px] text-ink">
+                  {cart.count()} {cart.count() === 1 ? 'producto' : 'productos'}
+                </span>
+                <span className="block text-[12px] text-ink-muted">
+                  {showOrderDetail ? 'Toca para cerrar el detalle' : 'Toca para ver el detalle'}
+                </span>
+              </span>
+              <span className="shrink-0 font-bold text-[15px] tabular-nums">{soles(subtotal)}</span>
+              <span
+                aria-hidden
+                className={cn(
+                  'flex shrink-0 text-ink-subtle transition-transform duration-200',
+                  showOrderDetail && 'rotate-180',
+                )}
+              >
+                <Icon name="expand_more" size={20} />
+              </span>
+            </button>
+            {showOrderDetail && <OrderDetail />}
+          </div>
+        </section>
+
+        {/* ── 2 · ENTREGA ──
+            Aquí vivían DOS secciones, «Entrega» y «Datos de contacto», con dos
+            títulos del mismo tamaño que «Método de pago». Ahora son un solo
+            objeto que dibuja la ruta. Ver `delivery-card.tsx`. */}
+        <section ref={deliveryRef}>
+          <SectionTitle>Entrega</SectionTitle>
           {PICKUP_ENABLED && (
-            <div className="flex gap-2">
+            <div className="mb-2.5 flex gap-2">
               <DeliveryMethodButton
                 active={deliveryMethod === 'delivery'}
                 onClick={() => setDeliveryMethod('delivery')}
@@ -129,297 +251,153 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
               />
             </div>
           )}
+          <DeliveryCard
+            businessName={cart.businessName ?? ''}
+            deliveryMethod={deliveryMethod}
+            address={selectedAddress}
+            invalid={attempted && (issue?.field === 'address' || issue?.field === 'name')}
+            invalidMessage={issue?.message ?? null}
+            name={name}
+            phone={phone}
+            onEditAddress={() => {
+              setAddressSheetStartsAdding(addresses.length === 0)
+              setShowAddressSelector(true)
+            }}
+            onEditName={() => setShowNameEdit(true)}
+            note={customerNote}
+            onNote={setCustomerNote}
+          />
+        </section>
 
-          {deliveryMethod === 'delivery' ? (
-            <button
-              type="button"
-              onClick={() => setShowAddressSelector(true)}
-              className={`mt-3 flex w-full items-start gap-3 rounded-[16px] border bg-card p-3.5 text-left transition-shadow hover:shadow-elev-1 ${
-                hasMissingLine ? 'border-danger/40 ring-1 ring-danger/20' : 'border-ink/[0.04]'
-              }`}
-            >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-[18px]">
-                {selectedAddress ? '🏠' : '📍'}
-              </div>
-              <div className="min-w-0 flex-1">
-                {selectedAddress ? (
-                  <>
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-semibold text-[14px] text-ink">
-                        {selectedAddress.label}
-                      </span>
-                      {hasMissingLine && (
-                        <span className="rounded-full bg-danger-soft px-1.5 py-0.5 text-[9px] font-bold uppercase text-danger">
-                          Falta calle
-                        </span>
-                      )}
-                    </div>
-                    {selectedAddress.line ? (
-                      <div className="text-[13px] font-medium text-ink">{selectedAddress.line}</div>
-                    ) : (
-                      <div className="mt-0.5 text-[12px] font-medium text-danger">
-                        ⚠️ Falta ingresar tu calle/número. Toca para completar.
-                      </div>
-                    )}
-                    <div className="mt-0.5 text-[12px] text-ink-muted">
-                      {selectedAddress.reference}
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="font-semibold text-[14px] text-ink">Agregar dirección</div>
-                    <div className="text-[12px] text-ink-muted">
-                      Necesitamos saber dónde entregar tu pedido.
-                    </div>
-                  </>
-                )}
-              </div>
-              <Icon name="chevron_right" size={20} className="mt-2 text-ink-subtle" />
-            </button>
-          ) : (
-            <div className="mt-3 flex items-start gap-3 rounded-[16px] border border-ink/[0.04] bg-card p-3.5">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-[18px]">
-                <Icon name="store" size={20} className="text-brand" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="font-semibold text-[14px] text-ink">
-                  {cart.businessName || 'Restaurante'}
-                </div>
-                <div className="text-[12px] text-ink-muted">Recoges tu pedido en el local.</div>
-              </div>
-            </div>
+        {/* ── 3 · PAGO ── */}
+        <section ref={paymentRef}>
+          <SectionTitle>¿Cómo pagas?</SectionTitle>
+          <PaymentMethodList
+            value={payment}
+            onChange={(v) => {
+              setPayment(v)
+              if (v !== 'pending_cash') {
+                setCashChoice('exact')
+                setCashCustom('')
+              }
+              setError(null)
+            }}
+            mustPrepay={mustPrepay}
+            prepayReason={prepayReason}
+          />
+
+          {payment === 'prepaid' && (
+            <PrepayExplainer
+              timers={prepayTimers}
+              forzado={mustPrepay}
+              businessName={cart.businessName ?? ''}
+            />
           )}
-        </Section>
-
-        {/* Contacto */}
-        <Section title="Datos de contacto">
-          <div className="flex items-center justify-between rounded-[16px] border border-ink/[0.04] bg-card p-3.5">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-[14px] text-ink">{name || 'Sin nombre'}</span>
-                <button
-                  type="button"
-                  onClick={() => setShowNameEdit(true)}
-                  className="inline-flex items-center text-ink-subtle hover:text-ink"
-                  aria-label="Editar nombre"
-                >
-                  <Icon name="edit" size={16} />
-                </button>
-              </div>
-              <div className="mt-0.5 text-[12px] text-ink-subtle">{phone || 'Sin teléfono'}</div>
-            </div>
-          </div>
-        </Section>
-
-        {/* Pago */}
-        <Section title="Método de pago">
-          {prepayReason && (
-            <div className="mb-3 rounded-xl bg-brand-soft px-3 py-2.5 text-[13px] text-brand-dark">
-              {prepayReason}
-            </div>
-          )}
-          {/* La lista se agrupa por CUÁNDO se paga, que es la única pregunta que
-              el cliente trae a esta pantalla. Con la lista plana, «Yape o Plin
-              al recibir» y «Yape o Plin por adelantado» iban pegadas y con el
-              mismo par de logos: dos filas que de un vistazo son la misma, y la
-              diferencia escondida al final de la línea. Con la cabecera delante,
-              el momento se lee antes que el método. */}
-          <div className="flex flex-col gap-4">
-            {PAYMENT_MOMENTS.map((grupo) => {
-              const opciones = PAYMENT_OPTIONS.filter(
-                (opt) => opt.momento === grupo.momento && (!mustPrepay || opt.value === 'prepaid'),
-              )
-              if (opciones.length === 0) return null
-
-              return (
-                <div key={grupo.momento}>
-                  <div className="mb-2 px-1 text-[11px] font-bold uppercase tracking-[0.14em] text-ink-subtle">
-                    {grupo.titulo}
-                  </div>
-                  <div className="flex flex-col gap-2.5">
-                    {opciones.map((opt) => {
-                      const sel = payment === opt.value
-                      return (
-                        <button
-                          key={opt.value}
-                          type="button"
-                          onClick={() => handlePaymentSelect(opt.value)}
-                          className={cn(
-                            'flex items-center gap-3 rounded-[18px] border bg-card p-4 text-left transition-shadow',
-                            sel ? 'border-brand ring-2 ring-brand/30' : 'border-ink/[0.04]',
-                          )}
-                        >
-                          <span
-                            className={cn(
-                              'flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-2',
-                              sel ? 'border-brand' : 'border-ink-subtle',
-                            )}
-                          >
-                            {sel && <span className="h-2.5 w-2.5 rounded-full bg-brand" />}
-                          </span>
-                          <span className="flex shrink-0 items-center gap-1">
-                            {opt.logos.map((logo) => (
-                              <img
-                                key={logo}
-                                src={`/pay/${logo}.svg`}
-                                alt={
-                                  logo === 'cash' ? 'Efectivo' : logo === 'yape' ? 'Yape' : 'Plin'
-                                }
-                                width={34}
-                                height={34}
-                                className="rounded-[9px]"
-                              />
-                            ))}
-                          </span>
-                          <span className="flex-1">
-                            <span className="block font-semibold text-[15px] text-ink">
-                              {opt.label}
-                            </span>
-                            {/* Al marcar prepago, el subtítulo ASCIENDE de
-                                descripción a promesa. No se añade una línea: se
-                                sustituye. Apilar «pagas apenas confirmen» y «no
-                                pagas nada ahora» era pedirle al cliente que
-                                leyera dos veces la misma idea. */}
-                            {sel && opt.value === 'prepaid' ? (
-                              <span className="mt-0.5 flex items-center gap-1 text-[12px] font-bold text-success">
-                                <Icon name="check" size={14} filled />
-                                No pagas nada ahora
-                              </span>
-                            ) : (
-                              <span className="block text-[12px] text-ink-muted">{opt.desc}</span>
-                            )}
-                          </span>
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-
-          {/* El detalle de la secuencia, PLEGADO. Va aquí, en paralelo al
-              `CashSelector` de abajo, porque las dos cosas son lo mismo: el
-              detalle que solo aplica a la opción marcada. */}
-          {payment === 'prepaid' && <PrepayExplainer timers={prepayTimers} />}
 
           {payment === 'pending_cash' && (
-            <div className="mt-3">
-              <CashSelector
-                total={total}
-                cashChoice={cashChoice}
-                setCashChoice={setCashChoice}
-                cashCustom={cashCustom}
-                setCashCustom={setCashCustom}
-                cashAmount={cashAmount}
-                cashChange={cashChange}
-                maxCashBill={maxCashBill}
-                maxChange={maxChange}
-                maxDeclarable={maxDeclarable}
-              />
-            </div>
+            <CashSelector
+              total={total}
+              cashChoice={cashChoice}
+              setCashChoice={setCashChoice}
+              cashCustom={cashCustom}
+              setCashCustom={setCashCustom}
+              cashAmount={cashAmount}
+              cashChange={cashChange}
+              maxCashBill={maxCashBill}
+              maxChange={maxChange}
+              maxDeclarable={maxDeclarable}
+            />
           )}
-        </Section>
+        </section>
 
-        {/* Resumen */}
-        <Section title="Tu pedido">
-          <button
-            type="button"
-            onClick={() => setShowOrderDetail((s) => !s)}
-            className="flex w-full items-center justify-between rounded-[16px] border border-ink/[0.04] bg-card p-3.5 text-left"
-          >
-            <div>
-              <div className="font-semibold text-[14px] text-ink">
-                {cart.count()} {cart.count() === 1 ? 'producto' : 'productos'}
-              </div>
-              <div className="text-[12px] text-ink-muted">{cart.businessName}</div>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-[16px] tabular-nums">{soles(subtotal)}</span>
-              <Icon
-                name="expand_more"
-                size={20}
-                className={cn(
-                  'text-ink-subtle transition-transform',
-                  showOrderDetail && 'rotate-180',
-                )}
-              />
-            </div>
-          </button>
-
-          {showOrderDetail && (
-            <div className="mt-2">
-              <OrderDetail />
-            </div>
-          )}
-
-          <div className="mt-4 space-y-2">
-            <div className="flex justify-between text-[14px] text-ink-muted">
-              <span>Subtotal</span>
-              <span className="tabular-nums">{soles(subtotal)}</span>
-            </div>
-            <div className="flex justify-between text-[14px] text-ink-muted">
-              <span>
-                Delivery
-                {distanceBand === 'far' && deliveryMethod !== 'pickup' && (
-                  <span className="ml-1.5 text-[11px] font-medium text-brand">(zona lejana)</span>
-                )}
-              </span>
-              <span className="tabular-nums">
-                {deliveryMethod === 'pickup' ? (
-                  'S/ 0.00'
-                ) : promoApplies ? (
-                  <>
-                    <span className="mr-1.5 text-ink-muted/60 line-through">
-                      {soles(nominalDeliveryFee)}
-                    </span>
-                    <span className="font-semibold text-brand">GRATIS</span>
-                  </>
-                ) : (
-                  soles(deliveryFee)
-                )}
-              </span>
-            </div>
-            {/* El aviso de la promo. `promoAviso` devuelve null cuando la promo
-                no está viva (fuera de ventana, o apagada): en ese caso el
-                checkout se ve exactamente como antes de que existiera. Un
-                "promoción agotada" en septiembre hablaría de algo que ya no
-                existe. Ver la nota en `types.ts`. */}
-            {deliveryMethod !== 'pickup' && promoAviso(promo.reason) && (
-              <p
-                className={
-                  promo.reason === 'active'
-                    ? 'text-[12px] text-brand'
-                    : 'text-[12px] text-ink-muted'
-                }
-              >
-                {promoAviso(promo.reason)}
-              </p>
-            )}
-            <div className="flex justify-between border-t border-ink/[0.08] pt-2 text-[17px] font-bold text-ink">
-              <span>Total</span>
-              <span className="tabular-nums">{soles(total)}</span>
-            </div>
+        {/* ── 4 · TOTALES ── */}
+        <section className="space-y-2 px-1">
+          <div className="flex justify-between text-[14px] text-ink-muted">
+            <span>Subtotal</span>
+            <span className="tabular-nums">{soles(subtotal)}</span>
           </div>
-        </Section>
-
-        {error && <p className="mt-3 text-sm text-danger">{error}</p>}
+          <div className="flex justify-between text-[14px] text-ink-muted">
+            <span>
+              Delivery
+              {distanceBand === 'far' && deliveryMethod !== 'pickup' && (
+                <span className="ml-1.5 font-medium text-[11px] text-brand">(zona lejana)</span>
+              )}
+            </span>
+            <span className="tabular-nums">
+              {deliveryMethod === 'pickup' ? (
+                'S/ 0.00'
+              ) : promoApplies ? (
+                <>
+                  <span className="mr-1.5 text-ink-muted/60 line-through">
+                    {soles(nominalDeliveryFee)}
+                  </span>
+                  <span className="font-bold text-brand-dark">GRATIS</span>
+                </>
+              ) : (
+                soles(deliveryFee)
+              )}
+            </span>
+          </div>
+          {/* `promoAviso` devuelve null cuando la promo no está viva: en ese caso
+              el checkout se ve exactamente como antes de que existiera. Ver la
+              nota en `types.ts`. */}
+          {deliveryMethod !== 'pickup' && promoAviso(promo.reason) && (
+            <p
+              className={cn(
+                'flex items-center gap-1.5 text-[12px]',
+                promo.reason === 'active' ? 'text-brand-dark' : 'text-ink-muted',
+              )}
+            >
+              {promo.reason === 'active' && (
+                <Icon name="local_activity" size={14} className="shrink-0" />
+              )}
+              {promoAviso(promo.reason)}
+            </p>
+          )}
+          <div className="flex justify-between border-ink/[0.09] border-t pt-2.5 font-extrabold text-[18px] text-ink tracking-tight">
+            <span>Total</span>
+            <span className="tabular-nums">{soles(total)}</span>
+          </div>
+        </section>
       </div>
 
-      {/* CTA sticky */}
-      <div className="sticky bottom-0 z-10 mx-auto max-w-[768px] bg-gradient-to-t from-surface via-surface/95 to-transparent px-4 pt-3 pb-5">
+      {/* ── CTA ──
+          `env(safe-area-inset-bottom)` en línea, como el `BottomActionBar` del
+          DS: en un iPhone con barra de gestos el botón quedaba pegado al borde
+          con un `pb-5` fijo. */}
+      <div
+        className="sticky bottom-0 z-10 border-ink/[0.05] border-t bg-surface/92 px-4 pt-3 backdrop-blur-md"
+        style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}
+      >
+        {error && (
+          <p
+            ref={errorRef}
+            role="alert"
+            className="mb-2.5 flex items-start gap-2 rounded-[14px] bg-danger-soft px-3 py-2.5 font-semibold text-[12.5px] text-danger leading-snug"
+          >
+            <span aria-hidden className="mt-px flex shrink-0">
+              <Icon name="error" size={15} />
+            </span>
+            {error}
+          </p>
+        )}
         <Button
           type="button"
-          variant="brand"
+          variant={issue && !busy ? 'secondary' : 'brand'}
+          size="lg"
           className="w-full"
-          disabled={ctaDisabled}
-          onClick={() => {
-            if (!validate()) return
-            placeOrder({ paymentIntent: payment })
-          }}
+          disabled={busy}
+          onClick={handleCta}
         >
+          {busy && (
+            <span
+              aria-hidden
+              className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"
+            />
+          )}
           {ctaLabel}
         </Button>
+        <p className="mt-2 text-center text-[11px] text-ink-subtle leading-snug">{ctaPie}</p>
       </div>
 
       <NameEditSheet
@@ -431,6 +409,7 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
 
       <AddressSelectorSheet
         open={showAddressSelector}
+        startAdding={addressSheetStartsAdding}
         onClose={() => setShowAddressSelector(false)}
         addresses={addresses}
         addressId={addressId}
@@ -439,6 +418,20 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
           setError(null)
         }}
         onSaved={reloadAddresses}
+      />
+
+      <GeoBlockSheet
+        kind={geoBlock}
+        onClose={() => setGeoBlock(null)}
+        onRetry={() => {
+          setGeoBlock(null)
+          void placeOrder()
+        }}
+        onPrepay={() => {
+          setGeoBlock(null)
+          setPayment('prepaid')
+          void placeOrder({ paymentIntent: 'prepaid', skipGps: true })
+        }}
       />
 
       <OtpVerificationSheet
@@ -457,12 +450,11 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
   )
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <section className="mb-5">
-      <h2 className="mb-2.5 font-display text-[17px] font-bold tracking-tight text-ink">{title}</h2>
+    <h2 className="mb-2.5 px-1 font-display font-bold text-[15px] text-ink tracking-tight">
       {children}
-    </section>
+    </h2>
   )
 }
 
@@ -481,8 +473,9 @@ function DeliveryMethodButton({
     <button
       type="button"
       onClick={onClick}
+      aria-pressed={active}
       className={cn(
-        'flex flex-1 items-center justify-center gap-2 rounded-[14px] border py-3 text-[14px] font-semibold transition-all',
+        'flex flex-1 items-center justify-center gap-2 rounded-[14px] border py-3 font-semibold text-[14px] transition-all',
         active
           ? 'border-brand bg-brand text-white shadow-glow-brand'
           : 'border-ink/[0.04] bg-card text-ink hover:bg-surface-low',
