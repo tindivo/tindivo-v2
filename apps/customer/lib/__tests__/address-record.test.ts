@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  deliveryPointQuality,
   frameFallback,
   heirAfterRemoving,
   pickDefaultAddress,
@@ -241,5 +242,58 @@ describe('toAddressValue', () => {
       coords: null,
       accuracyM: null,
     })
+  })
+})
+
+describe('deliveryPointQuality', () => {
+  const AHORA = '2026-09-03T12:00:00.000Z'
+  const AYER = '2026-09-02T10:00:00.000Z'
+  const sinPunto = { coords: null, accuracyM: null }
+
+  const guardada = {
+    id: 'a',
+    is_default: true,
+    label: 'Casa',
+    line: 'Jr. Sucre 412',
+    reference: 'Reja negra',
+    coordinates_lat: -9.1478,
+    coordinates_lng: -78.2762,
+    location_confirmed_at: AYER,
+    location_accuracy_m: 8,
+  }
+
+  it('copia la medida y el sello de la dirección elegida', () => {
+    expect(deliveryPointQuality(guardada, sinPunto, AHORA)).toEqual({
+      deliveryPointAccuracyM: 8,
+      deliveryPointConfirmedAt: AYER,
+    })
+  })
+
+  it('un pin puesto a mano va confirmado y SIN medida', () => {
+    // La ausencia de precisión no es «no se sabe»: es «esto fue una decisión,
+    // no una medición». El motorizado necesita esa diferencia.
+    const aMano = { ...guardada, location_accuracy_m: null }
+    expect(deliveryPointQuality(aMano, sinPunto, AHORA)).toEqual({
+      deliveryPointConfirmedAt: AYER,
+    })
+  })
+
+  it('una dirección sin confirmar no manda nada: el punto no lo eligió nadie', () => {
+    // Las cinco de la plaza. Sin sello, el app del motorizado dice que se guíe
+    // por la referencia en vez de fiarse del pin.
+    const plaza = { ...guardada, location_confirmed_at: null, location_accuracy_m: null }
+    expect(deliveryPointQuality(plaza, sinPunto, AHORA)).toEqual({})
+  })
+
+  it('sin dirección guardada, sella el punto que se acaba de marcar', () => {
+    const recien = { coords: { lat: -9.1471, lng: -78.2775 }, accuracyM: 12 }
+    expect(deliveryPointQuality(null, recien, AHORA)).toEqual({
+      deliveryPointAccuracyM: 12,
+      deliveryPointConfirmedAt: AHORA,
+    })
+  })
+
+  it('sin dirección y sin punto no hay nada que contar', () => {
+    expect(deliveryPointQuality(null, sinPunto, AHORA)).toEqual({})
   })
 })

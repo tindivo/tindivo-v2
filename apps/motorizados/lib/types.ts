@@ -193,6 +193,9 @@ export interface OrderDetailResponse {
     customerPhone: string | null
     deliveryAddress: string | null
     deliveryReference: string | null
+    /** Calidad del punto de entrega, fotografiada al pedir (0207). */
+    deliveryPointConfirmedAt: string | null
+    deliveryPointAccuracyM: number | null
     deliveryCoordinatesLat: number | null
     deliveryCoordinatesLng: number | null
     orderAmount: number

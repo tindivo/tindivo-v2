@@ -7,6 +7,7 @@ import { saveAddress } from '@/components/auth-onboarding/persistence'
 import type { CheckoutState } from '@/features/checkout/hooks/use-checkout-state'
 import { cashError } from '@/features/checkout/lib/cash'
 import type { GeoBlockKind, GpsValidationPayload, OrderResult } from '@/features/checkout/types'
+import { deliveryPointQuality } from '@/lib/address-record'
 import { api } from '@/lib/api'
 import { getLocationValidation, haversineKm } from '@/lib/coverage'
 import { getCurrentPositionHA } from '@/lib/geolocation'
@@ -212,6 +213,18 @@ export function useCheckoutActions(state: CheckoutState): CheckoutActions {
       // Solo tiene sentido con delivery: en un recojo no hay motorizado que la
       // lea. `undefined` y no `''` para que el contrato la trate como ausente.
       customerNotes: deliveryMethod === 'delivery' ? customerNote.trim() || undefined : undefined,
+      /*
+        LA CALIDAD DEL PUNTO, no la del GPS de quien pide (0207).
+
+        Sale de la dirección elegida —o de la que se acaba de escribir a mano—,
+        y el pedido se la queda como foto: si el cliente corrige su dirección
+        tres días después, el pedido de anteayer no cambia de historia.
+
+        En pickup no se manda: no hay punto de entrega ni motorizado que lo lea.
+      */
+      ...(deliveryMethod === 'delivery'
+        ? deliveryPointQuality(selectedAddress, manualAddr, new Date().toISOString())
+        : {}),
       coordinates:
         deliveryMethod !== 'delivery'
           ? undefined

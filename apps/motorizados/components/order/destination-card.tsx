@@ -3,7 +3,7 @@
 import { Button, Card, Icon } from '@tindivo/ui'
 import { useState } from 'react'
 import { mapsCenterSanJacinto } from '@/lib/deeplinks'
-import { BAND_LABEL } from '@/lib/orders/presentation'
+import { BAND_LABEL, deliveryPointQuality } from '@/lib/orders/presentation'
 import type { OrderDetailResponse } from '@/lib/types'
 import { MapSheet } from './map-sheet'
 
@@ -27,6 +27,14 @@ export function DestinationCard({ detail }: { detail: OrderDetailResponse }) {
   const reference = order.deliveryReference?.trim() || null
   const hasCoords = order.deliveryCoordinatesLat != null && order.deliveryCoordinatesLng != null
   const band = order.deliveryDistanceBand ? BAND_LABEL[order.deliveryDistanceBand] : null
+  /**
+   * De qué calidad es ese pin (0207). Solo se cuenta si hay pin: sin
+   * coordenadas no hay nada de lo que dudar, y la tarjeta ya manda a la
+   * referencia por su cuenta.
+   */
+  const punto = hasCoords
+    ? deliveryPointQuality(order.deliveryPointConfirmedAt, order.deliveryPointAccuracyM)
+    : null
 
   // Si no hay ni dirección ni referencia ni coordenadas, omitir.
   if (!cleanAddress && !reference && !hasCoords) return null
@@ -97,7 +105,33 @@ export function DestinationCard({ detail }: { detail: OrderDetailResponse }) {
           )}
         </div>
 
-        {/* 3. Botón de mapa: "Ir a la ubicación del cliente" si hay GPS, o "Ubicarse en Google Maps" si no hay */}
+        {/*
+          LA CALIDAD DEL PIN, pegada al botón que lleva a él.
+          Va aquí y no arriba con la banda a propósito: es lo último que se lee
+          antes de decidir si se sigue el mapa o la referencia, y esa decisión
+          se toma con el pulgar sobre este botón.
+        */}
+        {punto && (
+          <div
+            className={`mt-3.5 flex items-start gap-2 rounded-xl px-3 py-2 ${
+              punto.tone === 'warning'
+                ? 'bg-warning-soft text-[#78350f]'
+                : 'bg-ink/[0.04] text-ink-muted'
+            }`}
+          >
+            <Icon
+              name={punto.tone === 'warning' ? 'wrong_location' : 'my_location'}
+              size={15}
+              className="mt-px shrink-0"
+            />
+            <span className="min-w-0 flex-1 text-meta leading-snug">
+              <span className="font-semibold">{punto.label}</span>
+              {punto.hint && <span className="block">{punto.hint}</span>}
+            </span>
+          </div>
+        )}
+
+        {/* 4. Botón de mapa: "Ir a la ubicación del cliente" si hay GPS, o "Ubicarse en Google Maps" si no hay */}
         {hasCoords ? (
           <Button
             size="sm"

@@ -229,3 +229,58 @@ const MOMENT_BY_STATUS: Record<string, number> = {
 export function momentOf(status: string): number | null {
   return MOMENT_BY_STATUS[status] ?? null
 }
+
+/**
+ * Umbral por encima del cual la lectura ya no sirve para acertar una puerta.
+ *
+ * 30 m, el mismo que usa el app del cliente al pedirla. Se repite el número a
+ * propósito en vez de compartirlo: son dos apps que se despliegan por separado,
+ * y un import entre ellas acoplaría sus versiones para ahorrar una constante.
+ */
+const PRECISION_SUFICIENTE_M = 30
+
+export interface DeliveryPointQuality {
+  tone: Tone
+  /** Frase corta: de qué punto estamos hablando. */
+  label: string
+  /** Qué hacer con esa información. Vacío cuando no hay nada que advertir. */
+  hint: string | null
+}
+
+/**
+ * De qué calidad es el punto al que va el motorizado (migración 0207).
+ *
+ * POR QUÉ IMPORTA. Hasta ahora el pedido traía una coordenada y punto: un pin
+ * de ±8 m, uno puesto a dedo y uno que NADIE eligió —el centro del pueblo, que
+ * la app del cliente plantaba sola— se veían exactamente igual. Quien conduce
+ * decidía si fiarse sin ningún dato. En producción hay cinco direcciones
+ * apuntando a la plaza ahora mismo.
+ *
+ * Los dos significados de la ausencia son los de la 0202 y la 0147, y aquí se
+ * cuentan por separado porque llevan a acciones distintas: «puesto a mano» es
+ * un punto bueno sin medida, y «sin confirmar» es un punto en el que no hay que
+ * creer.
+ */
+export function deliveryPointQuality(
+  confirmedAt: string | null,
+  accuracyM: number | null,
+): DeliveryPointQuality {
+  if (!confirmedAt) {
+    return {
+      tone: 'warning',
+      label: 'Sin punto confirmado',
+      hint: 'Nadie marcó este pin. Guíate por la referencia.',
+    }
+  }
+  if (accuracyM == null) {
+    return { tone: 'neutral', label: 'Punto marcado a mano', hint: null }
+  }
+  if (accuracyM > PRECISION_SUFICIENTE_M) {
+    return {
+      tone: 'warning',
+      label: `GPS aproximado · ±${accuracyM} m`,
+      hint: 'Puede estar a una cuadra. Confirma con la referencia.',
+    }
+  }
+  return { tone: 'success', label: `GPS ±${accuracyM} m`, hint: null }
+}

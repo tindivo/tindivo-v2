@@ -65,6 +65,27 @@ export const CreateOrderRequestSchema = z
      * unbounded `text`.
      */
     customerNotes: z.string().trim().max(200).optional(),
+    /**
+     * How good the DELIVERY point is, snapshotted onto the order (0207).
+     *
+     * NOT the same as `gpsValidation`. That one is the anti-fraud reading of
+     * where the customer was STANDING when ordering; this describes the point
+     * the driver is being sent to. A customer can order from work with a
+     * perfect fix and send the order to a house whose pin was dropped by hand.
+     *
+     * Both meanings of absent are the ones from 0202, and the driver screen
+     * shows them apart:
+     *   · `confirmedAt` missing -> nobody ever chose that point; go by the
+     *     written reference.
+     *   · `confirmedAt` present, `accuracyM` missing -> a person placed it on
+     *     the map. There is no measurement because there was no sensor.
+     *
+     * A bogus accuracy never blocks an order: `create_customer_order` turns 0,
+     * negative or null into NULL before the column's CHECK can see it. Metadata
+     * must not stop a sale.
+     */
+    deliveryPointAccuracyM: z.number().int().positive().max(100_000).optional(),
+    deliveryPointConfirmedAt: z.string().datetime({ offset: true }).optional(),
     items: z.array(CreateOrderItemSchema).min(1).max(50),
   })
   .refine(

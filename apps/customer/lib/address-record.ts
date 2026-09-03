@@ -174,6 +174,46 @@ export function toAddressValue(a: SavedAddress | null): AddressValue {
   }
 }
 
+/**
+ * La calidad del punto de entrega que viaja CON el pedido (migración 0207).
+ *
+ * Las claves salen con el nombre del contrato a propósito: esto se enchufa tal
+ * cual en el cuerpo de `POST /customer/orders`, y verlas aquí con su nombre
+ * final evita el renombrado a mano que es donde se cuelan los pares cruzados.
+ *
+ * ES UNA FOTO, NO UN ENLACE. El pedido se queda con lo que la dirección sabía
+ * de sí misma en ese momento: si el cliente la corrige tres días después, el
+ * pedido de anteayer no cambia de historia.
+ *
+ * Y cuando la dirección se acaba de escribir a mano en el checkout —no había
+ * ninguna guardada—, el punto se está confirmando AHORA, así que se sella con
+ * `nowIso`, el mismo instante con el que `sealLocation` la va a guardar.
+ *
+ * Se omiten las claves en vez de mandarlas en `null`: el contrato las declara
+ * opcionales, y ausente es lo que ya significa «no se sabe».
+ */
+export function deliveryPointQuality(
+  saved: SavedAddress | null | undefined,
+  manual: Pick<AddressValue, 'coords' | 'accuracyM'>,
+  nowIso: string,
+): { deliveryPointAccuracyM?: number; deliveryPointConfirmedAt?: string } {
+  if (saved) {
+    return {
+      ...(saved.location_accuracy_m != null
+        ? { deliveryPointAccuracyM: saved.location_accuracy_m }
+        : {}),
+      ...(saved.location_confirmed_at != null
+        ? { deliveryPointConfirmedAt: saved.location_confirmed_at }
+        : {}),
+    }
+  }
+  if (manual.coords == null) return {}
+  return {
+    ...(manual.accuracyM != null ? { deliveryPointAccuracyM: manual.accuracyM } : {}),
+    deliveryPointConfirmedAt: nowIso,
+  }
+}
+
 /** Lo que la fila guarda del punto en el mapa (ver migración 0202). */
 export interface StoredLocation {
   coordinates_lat: number | null

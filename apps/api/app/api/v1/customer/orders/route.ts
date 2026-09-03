@@ -274,6 +274,12 @@ export async function POST(req: Request): Promise<Response> {
           // saltos de línea y tope de 200— lo hace la RPC (0199): aquí solo se
           // pasa lo que el contrato ya validó.
           p_customer_notes: body.customerNotes || undefined,
+          // La calidad del punto de ENTREGA, que el motorizado necesita para
+          // saber si fiarse del pin o leer la referencia (0207). No se recalcula
+          // aquí: es una foto de lo que la dirección del cliente sabía de sí
+          // misma en el momento de pedir.
+          p_delivery_accuracy_m: body.deliveryPointAccuracyM,
+          p_delivery_confirmed_at: body.deliveryPointConfirmedAt,
         })
         if (error) {
           // El guard de pedido activo no puede dejar su propio rastro: el RAISE

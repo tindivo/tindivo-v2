@@ -1744,6 +1744,7 @@ export type Database = {
           customer_user_id: string | null
           delivered_at: string | null
           delivery_address: string | null
+          delivery_coordinates_accuracy_m: number | null
           delivery_coordinates_lat: number | null
           delivery_coordinates_lng: number | null
           delivery_distance_band:
@@ -1752,6 +1753,7 @@ export type Database = {
           delivery_fee: number
           delivery_fee_charged: number | null
           delivery_fee_source: string | null
+          delivery_location_confirmed_at: string | null
           delivery_maps_url: string | null
           delivery_method: Database["public"]["Enums"]["delivery_method"]
           delivery_reference: string | null
@@ -1842,6 +1844,7 @@ export type Database = {
           customer_user_id?: string | null
           delivered_at?: string | null
           delivery_address?: string | null
+          delivery_coordinates_accuracy_m?: number | null
           delivery_coordinates_lat?: number | null
           delivery_coordinates_lng?: number | null
           delivery_distance_band?:
@@ -1850,6 +1853,7 @@ export type Database = {
           delivery_fee: number
           delivery_fee_charged?: number | null
           delivery_fee_source?: string | null
+          delivery_location_confirmed_at?: string | null
           delivery_maps_url?: string | null
           delivery_method?: Database["public"]["Enums"]["delivery_method"]
           delivery_reference?: string | null
@@ -1940,6 +1944,7 @@ export type Database = {
           customer_user_id?: string | null
           delivered_at?: string | null
           delivery_address?: string | null
+          delivery_coordinates_accuracy_m?: number | null
           delivery_coordinates_lat?: number | null
           delivery_coordinates_lng?: number | null
           delivery_distance_band?:
@@ -1948,6 +1953,7 @@ export type Database = {
           delivery_fee?: number
           delivery_fee_charged?: number | null
           delivery_fee_source?: string | null
+          delivery_location_confirmed_at?: string | null
           delivery_maps_url?: string | null
           delivery_method?: Database["public"]["Enums"]["delivery_method"]
           delivery_reference?: string | null
@@ -2653,7 +2659,9 @@ export type Database = {
           p_customer_notes?: string
           p_customer_phone: string
           p_customer_user_id: string
+          p_delivery_accuracy_m?: number
           p_delivery_address: string
+          p_delivery_confirmed_at?: string
           p_delivery_lat?: number
           p_delivery_lng?: number
           p_delivery_method: Database["public"]["Enums"]["delivery_method"]
@@ -2891,6 +2899,7 @@ export type Database = {
           customer_user_id: string | null
           delivered_at: string | null
           delivery_address: string | null
+          delivery_coordinates_accuracy_m: number | null
           delivery_coordinates_lat: number | null
           delivery_coordinates_lng: number | null
           delivery_distance_band:
@@ -2899,6 +2908,7 @@ export type Database = {
           delivery_fee: number
           delivery_fee_charged: number | null
           delivery_fee_source: string | null
+          delivery_location_confirmed_at: string | null
           delivery_maps_url: string | null
           delivery_method: Database["public"]["Enums"]["delivery_method"]
           delivery_reference: string | null

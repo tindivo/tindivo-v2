@@ -283,7 +283,7 @@ test('un pedido online viaja de la app del cliente hasta entregado', async ({ br
   const { data: pedido } = await db
     .from('orders')
     .select(
-      'id, short_id, status, order_amount, delivery_fee, source, delivery_address, customer_notes, payment_intent',
+      'id, short_id, status, order_amount, delivery_fee, source, delivery_address, customer_notes, payment_intent, delivery_coordinates_accuracy_m, delivery_location_confirmed_at',
     )
     .eq('customer_user_id', E2E.CUSTOMER_USER_ID)
     .order('created_at', { ascending: false })
@@ -301,6 +301,14 @@ test('un pedido online viaja de la app del cliente hasta entregado', async ({ br
   // la cajera nunca diria «Esperando pago» y el rojo apuntaria al sitio
   // equivocado.
   expect(pedido.payment_intent, 'el pedido tenia que nacer en prepago').toBe('prepaid')
+  /*
+    LA CALIDAD DEL PUNTO VIAJA CON EL PEDIDO (0207).
+    La direccion del mundo e2e esta confirmada y con 8 m de sensor, asi que el
+    pedido tiene que quedarse esa foto: contrato, API, los dos parametros nuevos
+    de `create_customer_order` y las dos columnas.
+  */
+  expect(pedido.delivery_coordinates_accuracy_m, 'la precision del punto no llego').toBe(8)
+  expect(pedido.delivery_location_confirmed_at, 'el sello del punto no llego').not.toBeNull()
 
   await pCliente.waitForTimeout(2500)
   // Y el cliente la vuelve a ver en su seguimiento. Llega por la lectura con
@@ -389,6 +397,22 @@ test('un pedido online viaja de la app del cliente hasta entregado', async ({ br
   await pMoto.reload()
   await pMoto.waitForTimeout(2500)
   await foto(pMoto, 'moto-lo-tomo')
+
+  /*
+    LA MITAD QUE DA SENTIDO A LA 0207: el dato no sirve de nada en la columna si
+    quien conduce no lo ve al lado del boton que le lleva al pin.
+
+    Hay que ENTRAR al pedido: la tarjeta del destino vive en el detalle, no en
+    la bandeja. Se vuelve a la bandeja despues para no alterar el resto del
+    recorrido, que cuenta con encontrarse ahi.
+  */
+  await pMoto
+    .getByRole('button', { name: /Ver pedido de/ })
+    .first()
+    .click()
+  await expect(pMoto.getByText('GPS ±8 m')).toBeVisible({ timeout: 20_000 })
+  await foto(pMoto, 'moto-calidad-del-punto')
+  await pMoto.goto(MOTORIZADOS)
 
   // ── PARADA 5 · La comida está lista ─────────────────────────────────────────
   console.log('\n═══ 5 · COCINA LO DA POR LISTO ═══')
