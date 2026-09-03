@@ -1,0 +1,107 @@
+-- ============================================================================
+-- 0209 — Treinta envíos más van por nuestra cuenta
+-- ============================================================================
+--
+-- Segunda edición de la promo de envío gratis de la 0187. No toca NADA del
+-- mecanismo: ni la tabla `promo_redemptions`, ni los índices, ni el trigger
+-- liquidador, ni `create_customer_order`, ni las dos RPC. La 0187 §A dejó dicho
+-- que la ventana, el interruptor y el tope son ajustables en caliente con un
+-- UPDATE; esto es exactamente ese UPDATE, escrito como migración para que quede
+-- en el historial en vez de en la memoria de alguien.
+--
+-- ─────────────────────────────────────────────────────────────────────────────
+-- ESTADO DEL QUE SE PARTE, MEDIDO EN PROD EL 2026-09-03
+--
+--   promo_free_delivery = {"code": "free-delivery-2026-08",
+--                          "from": "2026-08-25", "to": "2026-08-28",
+--                          "active": true, "max_redemptions": 100}
+--
+--   promo_redemptions: 7 filas, TODAS `redeemed`, 7 teléfonos distintos,
+--                      S/14.00 asumidos. Ni una `reserved` ni una `released`.
+--
+-- La promo lleva apagada de hecho desde el 29 de agosto: `active` sigue en true,
+-- pero la ventana ya pasó y `current_service_date()` cae fuera.
+--
+-- ─────────────────────────────────────────────────────────────────────────────
+-- POR QUÉ UN CÓDIGO NUEVO Y NO SUBIR EL TOPE DEL VIEJO
+--
+-- Los dos índices únicos de la 0187 son
+-- `(promo_code, customer_user_id)` y `(promo_code, verified_phone)`, parciales
+-- sobre `reserved`/`redeemed`. El código forma parte de la clave: con
+-- `free-delivery-2026-09` los 7 vecinos de agosto vuelven a ser elegibles, que
+-- es lo que quiere decir «las 30 primeras personas» de esta edición.
+--
+-- Reutilizar `free-delivery-2026-08` con tope 30 habría hecho otra cosa muy
+-- distinta y sin avisar: el contador de la sección D cuenta `reserved+redeemed`
+-- de ESE código, así que 7 de los 30 cupos ya estarían gastados —quedarían 23—
+-- y a esos 7 clientes el checkout les diría «Ya usaste tu envío gratis de
+-- lanzamiento». Se anunciarían 30 y se entregarían 23.
+--
+-- ─────────────────────────────────────────────────────────────────────────────
+-- POR QUÉ `to` = 2026-09-05 Y NO 2026-09-06
+--
+-- La ventana se evalúa con `public.current_service_date()` (0154), que es la
+-- JORNADA OPERATIVA con corte a las 05:00 de Lima, no la fecha natural. Con
+-- `to = '2026-09-05'` la promo muere el DOMINGO 6 a las 04:59:59, que es lo
+-- correcto para una operación de noche: el pedido del sábado a las 00:40
+-- pertenece a la cena del sábado y tiene que entrar. Poner el domingo 6 habría
+-- regalado una noche entera de más.
+--
+-- `from = '2026-09-03'` es la jornada de hoy, así que entra en vigor en cuanto
+-- se aplique esta migración.
+--
+-- ─────────────────────────────────────────────────────────────────────────────
+-- QUÉ SIGNIFICA EXACTAMENTE «30», Y QUÉ NO
+--
+-- El tope se compara contra `count(*) where status in ('reserved','redeemed')`.
+-- Cancelar un pedido pasa la fila a `released`, lo que DEVUELVE el cupo al tope
+-- global y además rehabilita a esa persona (los índices únicos también son
+-- parciales). O sea: 30 reservas vivas a la vez, no 30 regalos históricos. Es
+-- deliberado —quien canceló no consumió nada—, pero el número que se publicita
+-- y el que frena las redenciones son el mismo, y ese es el que manda.
+--
+-- COSTE MÁXIMO: 30 × S/2.00 (banda `near`) = S/60.00, o hasta S/75.00 si las 30
+-- cayeran en banda `far` (S/2.50). Lo asume Tindivo entero: con `delivery_fee`
+-- a 0, `generate_delivery_charges` no genera cargo `delivery_fee` al negocio
+-- (0124), y la comisión sigue saliendo igual. El negocio no paga esta promo ni
+-- se entera de ella en su ledger.
+--
+-- ─────────────────────────────────────────────────────────────────────────────
+-- DOS COSAS QUE ESTA MIGRACIÓN NO ARREGLA, DICHAS AQUÍ PARA QUE NO SORPRENDAN
+--
+--   · EL PEDIDO QUE TOMA LA CAJERA NO LLEVA PROMO. Verificado contra la
+--     definición viva: `create_business_manual_order` no menciona
+--     `promo_free_delivery` por ningún lado. Quien pida por WhatsApp paga su
+--     S/2. La promo solo existe dentro de la app del cliente.
+--
+--   · EL BANNER DEL HOME ES FIJO. `home-carousel.tsx` pinta «Envío gratis en tu
+--     primer pedido» siempre, con promo y sin ella —lleva mintiendo desde el 29
+--     de agosto—, y en esta edición tampoco es «primer pedido»: los de agosto
+--     repiten. Se deja como está: cambiarlo es UI y no entra en una migración.
+--
+-- FRENO RÁPIDO, sin migración y sin deploy:
+--   update public.app_settings
+--      set value = jsonb_set(value, '{active}', 'false'::jsonb)
+--    where key = 'promo_free_delivery';
+--
+-- ROLLBACK: supabase/rollbacks/0209_thirty_more_deliveries_go_on_our_account.rollback.sql
+-- ============================================================================
+
+-- MERGE (`||`) EN VEZ DE RECONSTRUIR EL OBJETO.
+-- Hoy las cinco claves son todas las que hay, así que un `jsonb_build_object`
+-- suelto daría el mismo resultado. Pero borraría en silencio cualquier clave
+-- que alguien añada a esta config entre hoy y el próximo `db reset`, y el
+-- estropicio se vería tarde y lejos. El merge solo pisa lo que nombra.
+--
+-- Idempotente por naturaleza (invariante 6): aplicarla dos veces deja el mismo
+-- valor. El `where key` no crea la fila si no existe — y no debe: la fila la
+-- pone la 0187, y si no está, esta migración no tiene nada que actualizar.
+update public.app_settings
+   set value = value || jsonb_build_object(
+         'code',            'free-delivery-2026-09',
+         'active',          true,
+         'from',            '2026-09-03',
+         'to',              '2026-09-05',
+         'max_redemptions', 30
+       )
+ where key = 'promo_free_delivery';
