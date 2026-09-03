@@ -1,6 +1,6 @@
 'use client'
 
-import { sealLocation, shouldBecomeDefault } from '@/lib/address-record'
+import { saveAddressRow } from '@/lib/address-save'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
 export const TERMS_VERSION = '2026-05'
@@ -184,19 +184,16 @@ export async function saveGoogleName(input: { userId: string; fullName: string }
 /**
  * Guarda una dirección como "Casa" (+ coords default del perfil).
  *
- * ES EL CUARTO CAMINO QUE ESCRIBE DIRECCIONES, y era el único que quedaba
- * fuera de las reglas comunes. Hacía dos cosas por su cuenta:
+ * ERA EL CUARTO CAMINO QUE ESCRIBIA DIRECCIONES, y el único que quedaba fuera
+ * de las reglas comunes: ponía `is_default: true` a secas —limpiando antes las
+ * demás— y sellaba `location_confirmed_at` con `now()` aunque llegara sin
+ * coordenada. Lo primero importaba porque a esta función la llama también
+ * `placeOrder`, cuando el cliente pide con una dirección que no tenía guardada:
+ * ahí le robaba la predeterminada a la suya de siempre sin decir nada.
  *
- *   1. `is_default: true` A SECAS, limpiando antes las demás. Se llama tanto
- *      desde el onboarding —donde suele ser la primera y el resultado era
- *      correcto por casualidad— como desde `placeOrder`, cuando el cliente pide
- *      con una dirección que no tenía guardada. Ahí le robaba la predeterminada
- *      a la suya de siempre sin decir nada. Ahora lo decide
- *      `shouldBecomeDefault` con lo que hay en la base, y solo marca cuando no
- *      hay nadie mandando: por eso ya no hace falta limpiar a nadie.
- *   2. Sellaba `location_confirmed_at` con `now()` aunque llegara sin
- *      coordenada. Ahora lo decide `sealLocation`, igual que el perfil y el
- *      checkout.
+ * Ahora el guardado entero lo hace `saveAddressRow`, igual que el perfil y el
+ * checkout. Lo único propio que queda aquí son las coordenadas por defecto del
+ * perfil, que es otra tabla.
  */
 export async function saveAddress(input: {
   userId: string
@@ -208,34 +205,21 @@ export async function saveAddress(input: {
   accuracyM?: number | null
 }) {
   const supabase = getSupabaseBrowser()
-  const { data: existentes, error: readErr } = await supabase
-    .from('customer_addresses')
-    .select('id,is_default')
-    .eq('user_id', input.userId)
-  if (readErr) throw new Error(readErr.message)
-
-  const { error } = await supabase.from('customer_addresses').insert({
-    user_id: input.userId,
-    label: input.label?.trim() || 'Casa',
-    line: input.line?.trim() || null,
-    reference: input.reference.trim(),
-    coordinates_lat: input.lat,
-    coordinates_lng: input.lng,
-    is_default: shouldBecomeDefault(existentes ?? []),
-    // El punto sale de un gesto o del sensor: el formulario no deja guardar de
-    // otra forma (`canSaveAddress`). La precisión viaja con él — NULL significa
-    // que el pin se puso a mano, mismo convenio que `capture_delivery_address`
-    // (0147).
-    ...sealLocation(
-      null,
-      {
-        coords: input.lat != null && input.lng != null ? { lat: input.lat, lng: input.lng } : null,
-        accuracyM: input.accuracyM ?? null,
-      },
-      new Date().toISOString(),
-    ),
+  const res = await saveAddressRow({
+    userId: input.userId,
+    previous: null,
+    value: {
+      label: input.label?.trim() || 'Casa',
+      line: input.line?.trim() ?? '',
+      reference: input.reference.trim(),
+      coords: input.lat != null && input.lng != null ? { lat: input.lat, lng: input.lng } : null,
+      accuracyM: input.accuracyM ?? null,
+    },
+    makeDefault: 'auto',
   })
-  if (error) throw new Error(error.message)
+  // Aquí sí se lanza, al revés que en las hojas: esta función es un paso del
+  // onboarding y quien la llama ya tiene su propio manejo de errores.
+  if (!res.ok) throw new Error(res.error)
 
   if (input.lat != null && input.lng != null) {
     await supabase

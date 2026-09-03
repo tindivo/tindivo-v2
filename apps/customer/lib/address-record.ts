@@ -122,6 +122,58 @@ export function frameFallback(
   return { lat: Number(elegida.coordinates_lat), lng: Number(elegida.coordinates_lng) }
 }
 
+/**
+ * UNA dirección guardada, como la leen todas las pantallas.
+ *
+ * Estaba escrita dos veces —`features/account/types.ts` y
+ * `features/checkout/types.ts`— y ya habían empezado a separarse: solo una de
+ * las dos tenía `location_accuracy_m`. Esa diferencia no era cosmética; el
+ * checkout no leía la precisión, así que en cuanto pudiera editar una dirección
+ * volvería a escribir NULL encima de la medida del sensor, que es justo el
+ * defecto que `sealLocation` vino a cerrar.
+ *
+ * Cumple `StoredLocation`, así que se le puede pasar entero a `sealLocation`.
+ */
+export interface SavedAddress extends FramableAddress {
+  label: string
+  line: string | null
+  reference: string
+  location_accuracy_m: number | null
+}
+
+/** Las columnas que hay que pedirle a PostgREST para llenar `SavedAddress`. */
+export const SAVED_ADDRESS_COLUMNS =
+  'id,label,line,reference,is_default,coordinates_lat,coordinates_lng,location_confirmed_at,location_accuracy_m' as const
+
+/**
+ * La fila guardada, tal como la tiene que ver el formulario.
+ *
+ * UNA DIRECCIÓN SIN CONFIRMAR ENTRA SIN PUNTO, aunque la fila traiga
+ * coordenadas. Son las cuatro que la 0202 marcó: la app las guardó sola en el
+ * centro del pueblo y no las eligió nadie. Rehidratarlas dejaría el mapa en
+ * verde —«ubicación confirmada»— sobre una plaza que no es la casa de nadie, y
+ * guardar volvería a sellarla como buena. Entrando en blanco, el formulario
+ * pide lo único que falta, que es un gesto.
+ *
+ * Y LA PRECISIÓN VIAJA CON EL PUNTO, nunca suelta: si no se rehidrata, el
+ * guardado siguiente escribe NULL encima de la medida del sensor. Eso ya pasó
+ * una vez en la hoja del perfil, y volvería a pasar en cuanto otra pantalla
+ * copiara este bloque a ojo. Por eso está aquí y no en cada hoja.
+ */
+export function toAddressValue(a: SavedAddress | null): AddressValue {
+  const punto =
+    a?.location_confirmed_at != null && a.coordinates_lat != null && a.coordinates_lng != null
+      ? { lat: Number(a.coordinates_lat), lng: Number(a.coordinates_lng) }
+      : null
+  return {
+    label: a?.label ?? 'Casa',
+    line: a?.line ?? '',
+    reference: a?.reference ?? '',
+    coords: punto,
+    accuracyM: punto ? (a?.location_accuracy_m ?? null) : null,
+  }
+}
+
 /** Lo que la fila guarda del punto en el mapa (ver migración 0202). */
 export interface StoredLocation {
   coordinates_lat: number | null

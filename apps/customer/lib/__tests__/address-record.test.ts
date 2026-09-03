@@ -6,6 +6,7 @@ import {
   type StoredLocation,
   sealLocation,
   shouldBecomeDefault,
+  toAddressValue,
 } from '@/lib/address-record'
 import type { AddressValue } from '@/lib/address-validation'
 
@@ -192,6 +193,53 @@ describe('sealLocation', () => {
     expect(sealLocation(sinPunto, enCero, AHORA)).toEqual({
       location_confirmed_at: AHORA,
       location_accuracy_m: 20,
+    })
+  })
+})
+
+describe('toAddressValue', () => {
+  const fila = {
+    id: 'a',
+    is_default: true,
+    label: 'Trabajo',
+    line: 'Av. Los Álamos 890',
+    reference: 'Portón azul',
+    coordinates_lat: -9.1478,
+    coordinates_lng: -78.2762,
+    location_confirmed_at: '2026-08-01T00:00:00.000Z',
+    location_accuracy_m: 8,
+  }
+
+  it('rehidrata el punto Y su precisión, que viajan juntos', () => {
+    // Sin la precisión, el guardado siguiente le escribe NULL encima: es el
+    // defecto que destruía la medida del sensor al cambiar una etiqueta.
+    expect(toAddressValue(fila)).toEqual({
+      label: 'Trabajo',
+      line: 'Av. Los Álamos 890',
+      reference: 'Portón azul',
+      coords: { lat: -9.1478, lng: -78.2762 },
+      accuracyM: 8,
+    })
+  })
+
+  it('una dirección sin confirmar entra SIN punto, aunque traiga coordenadas', () => {
+    // Las cuatro de la plaza. Rehidratarlas pondría el mapa en verde sobre un
+    // punto que no eligió nadie, y guardar volvería a sellarlo como bueno.
+    const plaza = { ...fila, location_confirmed_at: null, location_accuracy_m: null }
+    const v = toAddressValue(plaza)
+    expect(v.coords).toBeNull()
+    expect(v.accuracyM).toBeNull()
+    // El texto sí se conserva: la calle y la referencia estaban bien escritas.
+    expect(v.line).toBe('Av. Los Álamos 890')
+  })
+
+  it('sin fila devuelve el formulario en blanco, etiquetado como Casa', () => {
+    expect(toAddressValue(null)).toEqual({
+      label: 'Casa',
+      line: '',
+      reference: '',
+      coords: null,
+      accuracyM: null,
     })
   })
 })

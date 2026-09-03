@@ -11,7 +11,8 @@ import {
   isLineOk,
 } from '@/components/address-fields'
 import { type Address, addressIcon } from '@/features/checkout/types'
-import { frameFallback, sealLocation, shouldBecomeDefault } from '@/lib/address-record'
+import { frameFallback, toAddressValue } from '@/lib/address-record'
+import { saveAddressRow } from '@/lib/address-save'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
 interface AddressSelectorSheetProps {
@@ -41,6 +42,8 @@ export function AddressSelectorSheet({
   startAdding = false,
 }: AddressSelectorSheetProps) {
   const [adding, setAdding] = useState(startAdding)
+  /** La fila que se está arreglando. `null` mientras se da una de alta. */
+  const [editando, setEditando] = useState<Address | null>(null)
   const [manualAddr, setManualAddr] = useState<AddressValue>(EMPTY_ADDRESS)
   const [manualInside, setManualInside] = useState(true)
   const [busy, setBusy] = useState(false)
@@ -51,6 +54,8 @@ export function AddressSelectorSheet({
   useEffect(() => {
     if (open) {
       setAdding(startAdding)
+      setEditando(null)
+      setManualAddr(EMPTY_ADDRESS)
       setError(null)
     }
   }, [open, startAdding])
@@ -60,7 +65,28 @@ export function AddressSelectorSheet({
   const canSave = canSaveAddress(manualAddr, manualInside)
   const falta = getMissingLabel(manualAddr, manualInside)
 
-  async function saveNew() {
+  /** A esta le falta algo que el cliente puede arreglar aquí mismo. */
+  const arreglable = (a: Address) => !isLineOk(a.line) || a.location_confirmed_at == null
+
+  function abrirEdicion(a: Address) {
+    // `toAddressValue` es quien decide qué se rehidrata: una dirección sin
+    // confirmar entra SIN punto —para que no se vuelva a sellar la plaza como
+    // buena— y la precisión del sensor viaja con el punto, que es lo que evita
+    // escribirle NULL encima al guardar.
+    setManualAddr(toAddressValue(a))
+    setEditando(a)
+    setError(null)
+    setAdding(true)
+  }
+
+  function volverALista() {
+    setAdding(false)
+    setEditando(null)
+    setManualAddr(EMPTY_ADDRESS)
+    setError(null)
+  }
+
+  async function guardar() {
     if (!canSave) return
     setBusy(true)
     setError(null)
@@ -73,64 +99,22 @@ export function AddressSelectorSheet({
       return
     }
 
-    /**
-     * «¿MANDA ESTA?» SE LE PREGUNTA A LA BASE, NO A LAS PROPS.
-     *
-     * Esta rama se abre SOLA cuando el checkout cree que no hay ninguna
-     * dirección (`addresses.length === 0`), y antes el INSERT ni siquiera ponía
-     * `is_default`: caía al `false` de la columna y dejaba a dos usuarios de
-     * veintisiete con direcciones y ninguna predeterminada —los que la 0203
-     * tuvo que reparar a mano—.
-     *
-     * Decidirlo desde `addresses.length` arreglaba el caso bueno y abría uno
-     * malo: si la carga de direcciones falló, la lista llega vacía aunque el
-     * usuario tenga varias, y marcar esta como predeterminada choca contra el
-     * índice único parcial. Lo que hay en la base no puede mentir sobre eso, y
-     * cuesta un viaje en una acción que se hace una vez por dirección.
-     */
-    const { data: existentes, error: readError } = await supabase
-      .from('customer_addresses')
-      .select('id,is_default')
-      .eq('user_id', userId)
-    if (readError) {
-      setBusy(false)
-      setError(readError.message)
-      return
-    }
-
-    const { data, error: insertError } = await supabase
-      .from('customer_addresses')
-      .insert({
-        user_id: userId,
-        label: manualAddr.label,
-        line: manualAddr.line.trim(),
-        reference: manualAddr.reference.trim(),
-        coordinates_lat: manualAddr.coords?.lat ?? null,
-        coordinates_lng: manualAddr.coords?.lng ?? null,
-        // Un alta siempre sella ahora: no hay punto previo que conservar.
-        ...sealLocation(null, manualAddr, new Date().toISOString()),
-        // La misma regla que el alta del onboarding: manda solo si no hay
-        // nadie mandando. Nunca marca de mas, asi que no hay que limpiar a
-        // nadie despues ni se puede chocar con el indice unico parcial.
-        is_default: shouldBecomeDefault(existentes ?? []),
-      })
-      .select('id')
-      .single()
+    const res = await saveAddressRow({
+      userId,
+      previous: editando,
+      value: manualAddr,
+      // Un alta que no pregunta manda solo si no hay nadie mandando; una
+      // edición no dice nada sobre cuál es la predeterminada.
+      makeDefault: editando ? 'keep' : 'auto',
+    })
     setBusy(false)
-    /*
-      EL FALLO YA NO ES MUDO. Era `if (error || !data) return`: el botón dejaba
-      de girar, la hoja seguía abierta y no pasaba nada más. La hoja del perfil
-      sí pintaba `err.message` desde el primer día; esta no, y es la que se abre
-      cuando el cliente está a un toque de pedir.
-    */
-    if (insertError || !data) {
-      setError(insertError?.message ?? 'No pudimos guardar la dirección. Intenta de nuevo.')
+    if (!res.ok) {
+      setError(res.error)
       return
     }
     onSaved()
-    onSelect(data.id)
-    setAdding(false)
-    setManualAddr(EMPTY_ADDRESS)
+    onSelect(res.id)
+    volverALista()
     onClose()
   }
 
@@ -143,14 +127,16 @@ export function AddressSelectorSheet({
             {addresses.map((a) => {
               const sel = a.id === addressId
               return (
-                <button
+                /*
+                  DOS ACCIONES EN LA MISMA TARJETA, y por eso deja de ser un
+                  `<button>`: elegir esta dirección y arreglarla no son lo
+                  mismo, y un botón no puede contener otro. La fila de abajo
+                  cierra el callejón que este selector tenía — avisaba de que
+                  faltaba la calle y la única salida era Mi cuenta.
+                */
+                <div
                   key={a.id}
-                  type="button"
-                  onClick={() => {
-                    onSelect(a.id)
-                    onClose()
-                  }}
-                  className={`flex items-start gap-3 rounded-[18px] border bg-card p-3.5 text-left transition-all ${
+                  className={`overflow-hidden rounded-[18px] border bg-card transition-all ${
                     sel
                       ? 'border-brand ring-2 ring-brand/30'
                       : a.location_confirmed_at == null
@@ -158,59 +144,78 @@ export function AddressSelectorSheet({
                         : 'border-ink/[0.04] shadow-elev-1'
                   }`}
                 >
-                  <div
-                    aria-hidden
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-brand-dark"
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSelect(a.id)
+                      onClose()
+                    }}
+                    className="flex w-full items-start gap-3 p-3.5 text-left transition-colors hover:bg-ink/[0.02]"
                   >
-                    <Icon name={addressIcon(a.label)} size={20} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-semibold text-[14px] text-ink">{a.label}</span>
-                      {a.is_default && (
-                        <span className="rounded-[5px] bg-brand-soft px-1.5 py-0.5 text-[9px] font-bold uppercase text-brand">
-                          Por defecto
-                        </span>
-                      )}
-                      {!isLineOk(a.line) && (
-                        <span className="rounded-[5px] bg-danger-soft px-1.5 py-0.5 text-[9px] font-bold uppercase text-danger">
-                          Falta calle
-                        </span>
-                      )}
-                      {/* No bloquea el pedido: avisa. La cajera llama a todos
+                    <div
+                      aria-hidden
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-brand-dark"
+                    >
+                      <Icon name={addressIcon(a.label)} size={20} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-semibold text-[14px] text-ink">{a.label}</span>
+                        {a.is_default && (
+                          <span className="rounded-[5px] bg-brand-soft px-1.5 py-0.5 text-[9px] font-bold uppercase text-brand">
+                            Por defecto
+                          </span>
+                        )}
+                        {!isLineOk(a.line) && (
+                          <span className="rounded-[5px] bg-danger-soft px-1.5 py-0.5 text-[9px] font-bold uppercase text-danger">
+                            Falta calle
+                          </span>
+                        )}
+                        {/* No bloquea el pedido: avisa. La cajera llama a todos
                           igual, y quitarle el pedido a quien no entienda esta
                           pantalla cuesta más que un punto flojo. */}
+                        {a.location_confirmed_at == null && (
+                          <span className="rounded-[5px] bg-warning-soft px-1.5 py-0.5 text-[9px] font-bold text-amber-900 uppercase">
+                            Sin ubicación
+                          </span>
+                        )}
+                      </div>
+                      {a.line ? (
+                        <div className="text-[13px] font-medium text-ink">{a.line}</div>
+                      ) : (
+                        <div className="mt-0.5 flex items-center gap-1 font-medium text-[12px] text-danger">
+                          <Icon name="error" size={13} aria-hidden />
+                          Falta calle/número
+                        </div>
+                      )}
+                      <div className="mt-0.5 text-[12px] text-ink-muted">{a.reference}</div>
                       {a.location_confirmed_at == null && (
-                        <span className="rounded-[5px] bg-warning-soft px-1.5 py-0.5 text-[9px] font-bold text-amber-900 uppercase">
-                          Sin ubicación
-                        </span>
+                        <div className="mt-1.5 flex items-start gap-1.5 text-[11px] text-[#78350f] leading-snug">
+                          <Icon name="wrong_location" size={13} className="mt-px shrink-0" />
+                          {/* Ya no manda a Mi cuenta: el arreglo está aquí abajo. */}
+                          <span>
+                            Sin punto en el mapa. Márcalo para que el motorizado no se pierda.
+                          </span>
+                        </div>
                       )}
                     </div>
-                    {a.line ? (
-                      <div className="text-[13px] font-medium text-ink">{a.line}</div>
-                    ) : (
-                      <div className="mt-0.5 flex items-center gap-1 font-medium text-[12px] text-danger">
-                        <Icon name="error" size={13} aria-hidden />
-                        Falta calle/número
-                      </div>
+                    {sel && (
+                      <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full bg-brand text-white">
+                        <Icon name="check" size={16} filled />
+                      </span>
                     )}
-                    <div className="mt-0.5 text-[12px] text-ink-muted">{a.reference}</div>
-                    {a.location_confirmed_at == null && (
-                      <div className="mt-1.5 flex items-start gap-1.5 text-[11px] text-[#78350f] leading-snug">
-                        <Icon name="wrong_location" size={13} className="mt-px shrink-0" />
-                        <span>
-                          Sin punto en el mapa. Arréglala desde <strong>Mi cuenta</strong> para que
-                          el motorizado no se pierda.
-                        </span>
-                      </div>
-                    )}
+                  </button>
+                  <div className="border-ink/[0.05] border-t px-3.5 py-2">
+                    <button
+                      type="button"
+                      onClick={() => abrirEdicion(a)}
+                      className="inline-flex items-center gap-1 font-semibold text-[12.5px] text-brand-dark transition-colors hover:text-brand active:scale-95"
+                    >
+                      <Icon name="edit_location_alt" size={15} />
+                      {arreglable(a) ? 'Completar dirección' : 'Editar'}
+                    </button>
                   </div>
-                  {sel && (
-                    <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full bg-brand text-white">
-                      <Icon name="check" size={16} filled />
-                    </span>
-                  )}
-                </button>
+                </div>
               )
             })}
             <button
@@ -238,24 +243,19 @@ export function AddressSelectorSheet({
             {/* Anclado abajo por lo mismo que en el perfil: el botón tiene que
                 estar a la vista Y decir qué falta. */}
             <div className="-mx-4 -mb-6 sticky bottom-0 flex gap-2 border-ink/[0.06] border-t bg-surface px-4 pt-3 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => {
-                  setAdding(false)
-                  setError(null)
-                }}
-              >
+              <Button type="button" variant="ghost" onClick={volverALista}>
                 Cancelar
               </Button>
               <Button
                 type="button"
                 variant="brand"
-                onClick={saveNew}
+                onClick={guardar}
                 disabled={busy || !canSave}
                 className="flex-1"
               >
-                {busy ? 'Guardando…' : (falta ?? 'Guardar dirección')}
+                {busy
+                  ? 'Guardando…'
+                  : (falta ?? (editando ? 'Guardar cambios' : 'Guardar dirección'))}
               </Button>
             </div>
           </div>

@@ -213,21 +213,50 @@ test('un pedido online viaja de la app del cliente hasta entregado', async ({ br
   await foto(pCliente, 'cliente-checkout')
 
   /*
+    LA DIRECCION SE ARREGLA DESDE AQUI, no desde Mi cuenta.
+
+    Este selector avisaba de que faltaba la calle y mandaba a otra pantalla a
+    arreglarlo: solo sabia ELEGIR o DAR DE ALTA. Ahora cada tarjeta abre el
+    mismo formulario, con el mismo guardado que el perfil y el onboarding, asi
+    que se comprueba que el formulario llega RELLENO — que es lo que prueba que
+    edita esta fila y no crea una nueva.
+  */
+  await pCliente.getByText('Jr. Los Pinos 123').first().click()
+  const hojaDir = pCliente.getByRole('dialog', { name: 'Entregar en' })
+  // Anclado al final y no exacto: el boton lleva un `Icon` dentro, y su
+  // `aria-label` entra en el nombre accesible («edit_location_alt Editar»).
+  await hojaDir
+    .getByRole('button', { name: /Editar$/ })
+    .first()
+    .click()
+  await expect(hojaDir.getByPlaceholder('Ej. Jr. Sucre 412')).toHaveValue('Jr. Los Pinos 123')
+  await hojaDir.getByRole('button', { name: 'Cancelar' }).click()
+  await hojaDir.getByRole('button', { name: /Volver/ }).click()
+  await expect(hojaDir).toBeHidden()
+
+  /*
     EL PREPAGO SE ELIGE, NO SE HEREDA.
 
     Este test solo podia pasar UNA VEZ, y el motivo estaba dentro de el: al
     llegar hasta `delivered` convierte al cliente e2e en vecino conocido (0171),
     asi que en la corrida siguiente el checkout ya no le exige prepago, el
-    pedido nace `pending_cash`, aceptar lo manda directo a `preparing` y la
+    pedido nace `pending_cash`, aceptarlo lo manda directo a `preparing` y la
     cajera nunca dice «Esperando pago». El fixture no se limpia —`delivered` es
-    terminal—, de modo que el rojo era permanente y parecia un fallo del
-    producto.
+    terminal y el spec perdona a proposito los prepagos, que no son efectivo por
+    rendir—, de modo que el rojo era permanente y parecia un fallo del producto.
 
-    Eligiendo el metodo a mano el recorrido es el mismo con historial y sin el.
-    Se localiza por el SUBTITULO porque las dos opciones de billetera se llaman
-    igual, «Yape o Plin»: lo que las separa es cuando se paga.
+    LA ELECCION ES CONDICIONAL, y no por comodidad: con un cliente sin historial
+    el checkout IMPONE el prepago, deja esa opcion sola y marcada, y al quedar
+    marcada sustituye su descripcion por una promesa. O sea que el subtitulo por
+    el que se la localiza desaparece exactamente en el mundo en que ya estaba
+    elegida. `count()` responde al instante y no espera a nada, asi que ninguno
+    de los dos mundos paga un timeout.
+
+    Lo que se afirma en los dos es el RESULTADO, mas abajo: el pedido tiene que
+    nacer `prepaid`.
   */
-  await pCliente.getByText('Pagas apenas el local confirme').click()
+  const opcionPrepago = pCliente.getByText('Pagas apenas el local confirme')
+  if (await opcionPrepago.count()) await opcionPrepago.click()
 
   /*
     LA NOTA AL MOTORIZADO, de punta a punta.
@@ -254,7 +283,7 @@ test('un pedido online viaja de la app del cliente hasta entregado', async ({ br
   const { data: pedido } = await db
     .from('orders')
     .select(
-      'id, short_id, status, order_amount, delivery_fee, source, delivery_address, customer_notes',
+      'id, short_id, status, order_amount, delivery_fee, source, delivery_address, customer_notes, payment_intent',
     )
     .eq('customer_user_id', E2E.CUSTOMER_USER_ID)
     .order('created_at', { ascending: false })
@@ -268,6 +297,10 @@ test('un pedido online viaja de la app del cliente hasta entregado', async ({ br
   )
   console.log(`  → estado: ${await estado(shortId)}`)
   expect(pedido.customer_notes, 'la nota al motorizado no llego a la columna').toBe(NOTA)
+  // El recorrido de abajo es el del prepago; si el pedido naciera en efectivo,
+  // la cajera nunca diria «Esperando pago» y el rojo apuntaria al sitio
+  // equivocado.
+  expect(pedido.payment_intent, 'el pedido tenia que nacer en prepago').toBe('prepaid')
 
   await pCliente.waitForTimeout(2500)
   // Y el cliente la vuelve a ver en su seguimiento. Llega por la lectura con

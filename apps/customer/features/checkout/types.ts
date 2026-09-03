@@ -1,4 +1,5 @@
 import type { PaymentIntent } from '@tindivo/contracts'
+import type { SavedAddress } from '@/lib/address-record'
 
 // Vive en `lib/` porque los términos y condiciones prometen este mismo número y
 // no pueden importar de una feature. Ver `lib/prepay.ts`.
@@ -105,17 +106,13 @@ export function promoAviso(reason: PromoReason): string | null {
   }
 }
 
-export interface Address {
-  id: string
-  label: string
-  line: string | null
-  reference: string
-  is_default: boolean
-  coordinates_lat: number | null
-  coordinates_lng: number | null
-  /** NULL = ese punto no lo eligió nadie (ver migración 0202). */
-  location_confirmed_at: string | null
-}
+/**
+ * Una dirección guardada. Era una copia del tipo del perfil, y ya habían
+ * empezado a separarse: a esta le faltaba `location_accuracy_m`, de modo que
+ * el checkout no podía editar una dirección sin destruir la medida del sensor.
+ * Ver `SavedAddress`.
+ */
+export type Address = SavedAddress
 
 export interface OrderResult {
   id: string

@@ -19,7 +19,7 @@ import {
   type PrepayTimers,
   type PromoState,
 } from '@/features/checkout/types'
-import { pickDefaultAddress } from '@/lib/address-record'
+import { pickDefaultAddress, SAVED_ADDRESS_COLUMNS } from '@/lib/address-record'
 import { useBusinessOrdering } from '@/lib/business-ordering'
 import { type CartState, useCart, useCartHydrated } from '@/lib/cart'
 import type { LatLng } from '@/lib/coverage'
@@ -379,9 +379,7 @@ export function useCheckoutState(): CheckoutState {
   const reloadAddresses = useCallback(async () => {
     const { data: addrs } = await getSupabaseBrowser()
       .from('customer_addresses')
-      .select(
-        'id,label,line,reference,is_default,coordinates_lat,coordinates_lng,location_confirmed_at',
-      )
+      .select(SAVED_ADDRESS_COLUMNS)
       .order('is_default', { ascending: false })
     setAddresses((addrs ?? []) as CheckoutState['addresses'])
     setAddressId((prev) => prev ?? pickDefaultAddress(addrs ?? [])?.id ?? null)

@@ -11,7 +11,7 @@ import type {
   ProfileStep,
 } from '@/features/account/types'
 import { useActiveOrders } from '@/lib/active-orders'
-import { heirAfterRemoving, pickDefaultAddress } from '@/lib/address-record'
+import { heirAfterRemoving, pickDefaultAddress, SAVED_ADDRESS_COLUMNS } from '@/lib/address-record'
 import { clearOnboardingResume } from '@/lib/onboarding-store'
 import { signOutDevice, signOutEverywhereDevice } from '@/lib/sign-out'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
@@ -128,9 +128,7 @@ export function useAccountPage() {
     const [{ data: addrs }, { data: ords }, { data: reportRows }] = await Promise.all([
       supabase
         .from('customer_addresses')
-        .select(
-          'id,label,line,reference,is_default,coordinates_lat,coordinates_lng,location_confirmed_at,location_accuracy_m',
-        )
+        .select(SAVED_ADDRESS_COLUMNS)
         .order('is_default', { ascending: false }),
       supabase
         .from('orders')

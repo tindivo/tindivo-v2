@@ -1,24 +1,12 @@
 import type { AppealStatus, RefundStatus } from '@tindivo/contracts'
+import type { SavedAddress } from '@/lib/address-record'
 
-export interface Address {
-  id: string
-  label: string
-  line: string | null
-  reference: string
-  is_default: boolean
-  coordinates_lat: number | null
-  coordinates_lng: number | null
-  /** NULL = ese punto no lo eligió nadie (ver migración 0202). */
-  location_confirmed_at: string | null
-  /**
-   * Metros del sensor. NULL = el pin se puso a mano, así que no hay medida.
-   *
-   * Se lee aunque no se pinte en ninguna parte: es lo que la hoja de edición
-   * necesita para NO destruirlo al guardar un cambio de etiqueta. Ver
-   * `sealLocation` en `lib/address-record.ts`.
-   */
-  location_accuracy_m: number | null
-}
+/**
+ * Una dirección guardada. El tipo vive en `lib/address-record.ts` porque lo
+ * leen cuatro pantallas de dos features distintas; aquí solo se le pone el
+ * nombre con el que esta feature lo llama.
+ */
+export type Address = SavedAddress
 
 export interface OrderRow {
   id: string

@@ -11,7 +11,8 @@ import {
 } from '@/components/address-fields'
 import type { LatLng } from '@/components/map-picker'
 import type { Address } from '@/features/account/types'
-import { sealLocation } from '@/lib/address-record'
+import { toAddressValue } from '@/lib/address-record'
+import { saveAddressRow } from '@/lib/address-save'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
 interface AddressSheetProps {
@@ -35,31 +36,7 @@ export function AddressSheet({
   onSaved,
   onDelete,
 }: AddressSheetProps) {
-  /**
-   * UNA DIRECCIÓN SIN CONFIRMAR ENTRA SIN PUNTO, aunque la fila tenga
-   * coordenadas. Son las tres que la 0202 marcó: la app las guardó solas en el
-   * centro del pueblo y nadie las eligió. Rehidratarlas dejaría el mapa en
-   * verde («ubicación confirmada») sobre una plaza que no es la casa de nadie,
-   * y guardar volvería a sellarla como buena. Entrando en blanco, el formulario
-   * pide lo único que falta, que es un gesto.
-   */
-  const puntoConfirmado =
-    address?.location_confirmed_at != null &&
-    address.coordinates_lat != null &&
-    address.coordinates_lng != null
-      ? { lat: Number(address.coordinates_lat), lng: Number(address.coordinates_lng) }
-      : null
-
-  const [addr, setAddr] = useState<AddressValue>({
-    label: address?.label ?? 'Casa',
-    line: address?.line ?? '',
-    reference: address?.reference ?? '',
-    coords: puntoConfirmado,
-    // La precisión viaja CON el punto. Entraba siempre en `null`, así que el
-    // mapa anunciaba «ajustada a mano» sobre un GPS de ±8 m y, peor, guardar
-    // escribía ese null encima de la medida buena.
-    accuracyM: puntoConfirmado ? (address?.location_accuracy_m ?? null) : null,
-  })
+  const [addr, setAddr] = useState<AddressValue>(() => toAddressValue(address))
   /**
    * ANTES ESTO ERA `isFirst || true`, o sea `true` a secas: la prop `isFirst`
    * llegaba de dos sitios y no la miraba nadie. Consecuencia: TODA dirección
@@ -94,55 +71,25 @@ export function AddressSheet({
     const userId = session.session?.user.id
     if (!userId) {
       setBusy(false)
+      setError('Se cerró tu sesión. Vuelve a entrar para guardar la dirección.')
       return
     }
 
     // `esPrimera` gana sobre el interruptor: es la única dirección que hay, así
     // que dejarla sin marcar produciría un usuario con direcciones y ninguna
-    // predeterminada — el agujero que ya abrió el alta del checkout.
-    const seraPredeterminada = esPrimera || isDefault
-
-    if (seraPredeterminada) {
-      await supabase.from('customer_addresses').update({ is_default: false }).eq('user_id', userId)
+    // predeterminada.
+    const res = await saveAddressRow({
+      userId,
+      previous: address,
+      value: addr,
+      makeDefault: esPrimera || isDefault,
+    })
+    if (!res.ok) {
+      setError(res.error)
+      setBusy(false)
+      return
     }
-
-    const payload = {
-      label: addr.label,
-      line: addr.line.trim(),
-      reference: addr.reference.trim(),
-      is_default: seraPredeterminada,
-      coordinates_lat: addr.coords?.lat ?? null,
-      coordinates_lng: addr.coords?.lng ?? null,
-      // El sello lo mueve el PUNTO, no el formulario: si la coordenada no
-      // cambió, la confirmación y los metros del sensor que ya había siguen
-      // siendo los buenos. Ver `sealLocation`.
-      ...sealLocation(address, addr, new Date().toISOString()),
-    }
-
-    if (address) {
-      const { error: err } = await supabase
-        .from('customer_addresses')
-        .update(payload)
-        .eq('id', address.id)
-      if (err) {
-        setError(err.message)
-        setBusy(false)
-      } else {
-        onSaved(address.id)
-      }
-    } else {
-      const { data: created, error: err } = await supabase
-        .from('customer_addresses')
-        .insert({ ...payload, user_id: userId })
-        .select('id')
-        .single()
-      if (err) {
-        setError(err.message)
-        setBusy(false)
-      } else {
-        onSaved(created?.id)
-      }
-    }
+    onSaved(res.id)
   }
 
   // Un solo sitio para el título: lo pinta el header y nombra el diálogo. Si se
