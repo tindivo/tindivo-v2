@@ -7,9 +7,33 @@ Lo marcado **[tú]** requiere tus credenciales; el resto ya está preparado en e
 
 ## 0. Pre-requisitos
 
-- Proyecto Supabase **"Web v2"** (`psjigdoinfpgrnedxeyf`) — migraciones aplicadas hasta `0041`
-  (incluida `0041_tracking_item_modifiers.sql`, que expone los adicionales en el tracking).
+- Proyecto Supabase **`tindivo-prod`** (`zpnipajgwfthxhdtzhly`). **No es "Web v2"**: aquel
+  (`psjigdoinfpgrnedxeyf`) está ABANDONADO, y este documento lo nombraba como destino —aplicar
+  migraciones ahí no rompe nada visible, que es justo lo peligroso: se cree hecho y no lo está.
+  Ver `CLAUDE.md § Supabase`.
 - Cuenta Vercel, cuenta Inngest Cloud (keys ya en `apps/api/.env.local`), dominio `tindivo.com`.
+
+## 0.1 El orden: base de datos ANTES que apps
+
+```bash
+supabase db push      # aplica al remoto enlazado lo que falte
+pnpm db:types         # regenera los tipos DESPUÉS del push
+pnpm check:deploy     # tiene que salir en verde ANTES de desplegar las apps
+```
+
+**Este orden no es una preferencia, y equivocarlo no da un error visible.** El código de este
+repo se escribe contra el esquema que va a haber —`database.types.ts` se edita a mano al escribir
+la migración para que el árbol compile antes del push—, así que `pnpm type-check` compila igual
+contra un prod que todavía no tiene las columnas. Cuando las apps salen primero:
+
+- un `select` con una columna que no existe → PostgREST responde **400 por todo el select**, y el
+  app lo descarta: el cliente ve «Añade tu primera dirección» aunque tenga tres guardadas;
+- una RPC con un parámetro que no existe → **404**, y no se puede pedir.
+
+Ninguno de los dos pinta un error. Por eso hay una puerta: `pnpm check:deploy` compara las
+migraciones del repo con las aplicadas en el remoto, dice cuáles faltan y marca las que el código
+YA asume. Si no puede consultar el remoto, **falla** — un permiso de despliegue dado a ciegas es
+lo que viene a impedir.
 
 ## 1. Variables de entorno por app **[tú]**
 
