@@ -12,6 +12,7 @@ import { TrackingCancelRow } from '@/features/tracking/components/tracking-cance
 import { TrackingDriver } from '@/features/tracking/components/tracking-driver'
 import { TrackingHero } from '@/features/tracking/components/tracking-hero'
 import { TrackingItems } from '@/features/tracking/components/tracking-items'
+import { TrackingNote } from '@/features/tracking/components/tracking-note'
 import { TrackingPrepay } from '@/features/tracking/components/tracking-prepay'
 import { TrackingShell } from '@/features/tracking/components/tracking-shell'
 import { TrackingSoundToggle } from '@/features/tracking/components/tracking-sound-toggle'
@@ -39,7 +40,7 @@ import { prepayStage } from '@/features/tracking/lib/prepay-stage'
 export default function TrackingPage({ params }: { params: Promise<{ shortId: string }> }) {
   const { shortId } = use(params)
   const router = useRouter()
-  const { data, error, ownedId, load, cancel } = useTracking(shortId)
+  const { data, error, ownedId, ownNote, load, cancel } = useTracking(shortId)
   const countdown = useCountdown(data)
   const { alerta, descartar, sonidoActivo, alternarSonido } = useStatusAlerts(data)
 
@@ -151,6 +152,9 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
 
           <div className="lg:min-w-0">
             <TrackingDriver data={data} enRuta={enRuta} />
+            {/* Va con el motorizado y no con el detalle del pedido: habla de
+                como llegar a la puerta, no de lo que se pidio. */}
+            <TrackingNote note={ownNote} entregado={data.status === 'delivered'} />
             <TrackingItems data={data} />
             <TrackingActions data={data} current={current} cancellable={cancellable} />
           </div>

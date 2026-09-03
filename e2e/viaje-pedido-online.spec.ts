@@ -212,6 +212,34 @@ test('un pedido online viaja de la app del cliente hasta entregado', async ({ br
   await expect(pCliente).toHaveURL(/\/checkout/)
   await foto(pCliente, 'cliente-checkout')
 
+  /*
+    EL PREPAGO SE ELIGE, NO SE HEREDA.
+
+    Este test solo podia pasar UNA VEZ, y el motivo estaba dentro de el: al
+    llegar hasta `delivered` convierte al cliente e2e en vecino conocido (0171),
+    asi que en la corrida siguiente el checkout ya no le exige prepago, el
+    pedido nace `pending_cash`, aceptar lo manda directo a `preparing` y la
+    cajera nunca dice «Esperando pago». El fixture no se limpia —`delivered` es
+    terminal—, de modo que el rojo era permanente y parecia un fallo del
+    producto.
+
+    Eligiendo el metodo a mano el recorrido es el mismo con historial y sin el.
+    Se localiza por el SUBTITULO porque las dos opciones de billetera se llaman
+    igual, «Yape o Plin»: lo que las separa es cuando se paga.
+  */
+  await pCliente.getByText('Pagas apenas el local confirme').click()
+
+  /*
+    LA NOTA AL MOTORIZADO, de punta a punta.
+    Se escribe aqui y se comprueba en los dos extremos: que llega entera a
+    `orders.customer_notes` —contrato Zod, API, RPC y saneo de la 0199— y que
+    vuelve a la pantalla del cliente, que es la mitad que faltaba: la escribia,
+    confirmaba, y no habia ningun sitio donde comprobar que se guardo.
+  */
+  const NOTA = 'Porton azul, toca el timbre dos veces'
+  await pCliente.getByRole('button', { name: /Agregar nota para el motorizado/ }).click()
+  await pCliente.getByPlaceholder(/Toca el timbre dos veces/).fill(NOTA)
+
   const confirmar = pCliente.getByRole('button', { name: /Confirmar pedido/ })
   await expect(confirmar).toBeEnabled()
   const [resp] = await Promise.all([
@@ -225,7 +253,9 @@ test('un pedido online viaja de la app del cliente hasta entregado', async ({ br
 
   const { data: pedido } = await db
     .from('orders')
-    .select('id, short_id, status, order_amount, delivery_fee, source, delivery_address')
+    .select(
+      'id, short_id, status, order_amount, delivery_fee, source, delivery_address, customer_notes',
+    )
     .eq('customer_user_id', E2E.CUSTOMER_USER_ID)
     .order('created_at', { ascending: false })
     .limit(1)
@@ -237,7 +267,14 @@ test('un pedido online viaja de la app del cliente hasta entregado', async ({ br
     `  ✅ nace #${shortId} · ${pedido.source} · S/ ${pedido.order_amount} + ${pedido.delivery_fee} envío`,
   )
   console.log(`  → estado: ${await estado(shortId)}`)
+  expect(pedido.customer_notes, 'la nota al motorizado no llego a la columna').toBe(NOTA)
+
   await pCliente.waitForTimeout(2500)
+  // Y el cliente la vuelve a ver en su seguimiento. Llega por la lectura con
+  // RLS de `useTracking`, no por `get_tracking` —ese endpoint es publico y el
+  // enlace se comparte por WhatsApp—, asi que esto prueba de paso que la
+  // policy deja leerla a su dueno.
+  await expect(pCliente.getByText(NOTA)).toBeVisible({ timeout: 15_000 })
   await foto(pCliente, 'cliente-pedido-creado')
 
   // ── PARADA 2 · Aterriza en el tablero de la cajera ──────────────────────────
