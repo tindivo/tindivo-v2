@@ -130,7 +130,9 @@ export function DeliveryCard({
                     )}
                   </span>
                   {address.line ? (
-                    <span className="mt-0.5 block text-[12.5px] text-ink-muted leading-snug">
+                    // `capitalize` es solo de visualización: el dato se guarda
+                    // tal cual lo tecleó el cliente, esto no lo toca.
+                    <span className="mt-0.5 block text-[12.5px] text-ink-muted capitalize leading-snug">
                       {address.line}
                     </span>
                   ) : (
@@ -150,7 +152,7 @@ export function DeliveryCard({
                     </span>
                   )}
                   {address.reference && (
-                    <span className="mt-0.5 block text-[11.5px] text-ink-subtle leading-snug">
+                    <span className="mt-0.5 block text-[11.5px] text-ink-subtle capitalize leading-snug">
                       {address.reference}
                     </span>
                   )}

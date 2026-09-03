@@ -1,6 +1,7 @@
 'use client'
 
 import { Button, cn, Icon } from '@tindivo/ui'
+import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { OtpVerificationSheet } from '@/components/otp-verification-sheet'
 import { CartValidationBanner } from '@/features/cart/components/cart-validation-banner'
@@ -73,6 +74,7 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
 
   const { cashAmount, cashChange, issue, focus, attempted, validate } = validation
 
+  const router = useRouter()
   const [showNameEdit, setShowNameEdit] = useState(false)
   const [showAddressSelector, setShowAddressSelector] = useState(false)
   const [addressSheetStartsAdding, setAddressSheetStartsAdding] = useState(false)
@@ -159,26 +161,41 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
   return (
     <main className="mx-auto flex min-h-dvh max-w-[768px] flex-col bg-surface lg:max-w-6xl">
       <div className="border-ink/[0.04] border-b px-4 pt-3.5 pb-3">
-        <h1 className="font-display font-bold text-[22px] tracking-tight">Confirmar pedido</h1>
-        {/* El negocio y, si lo tiene puesto, su ventana de entrega. Es el MISMO
-            `estimated_eta_min/max` que el cliente ya vio en la card del catálogo
-            y en la portada del negocio: si aquí desapareciera, el checkout sería
-            la única pantalla del camino que deja de decir cuándo llega. Sin el
-            dato no se pinta nada — nunca un rango inventado. */}
-        {(cart.businessName || eta) && (
-          <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] text-ink-muted">
-            {cart.businessName && <span>{cart.businessName}</span>}
-            {cart.businessName && eta && (
-              <span aria-hidden className="h-[3px] w-[3px] rounded-full bg-ink-subtle" />
+        <div className="flex items-center gap-3">
+          {/* Destino fijo, no historial: el checkout puede abrirse por deep
+              link (retomar un pedido, un push) sin que haya un `back` de
+              verdad al que volver. Mismo patrón que `/cuenta`. */}
+          <button
+            type="button"
+            onClick={() => router.push(cart.businessId ? `/negocio/${cart.businessId}` : '/')}
+            aria-label="Volver"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-ink/[0.06] text-ink"
+          >
+            <Icon name="arrow_back" size={22} />
+          </button>
+          <div className="min-w-0 flex-1">
+            <h1 className="font-display font-bold text-[22px] tracking-tight">Confirmar pedido</h1>
+            {/* El negocio y, si lo tiene puesto, su ventana de entrega. Es el MISMO
+                `estimated_eta_min/max` que el cliente ya vio en la card del catálogo
+                y en la portada del negocio: si aquí desapareciera, el checkout sería
+                la única pantalla del camino que deja de decir cuándo llega. Sin el
+                dato no se pinta nada — nunca un rango inventado. */}
+            {(cart.businessName || eta) && (
+              <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] text-ink-muted">
+                {cart.businessName && <span>{cart.businessName}</span>}
+                {cart.businessName && eta && (
+                  <span aria-hidden className="h-[3px] w-[3px] rounded-full bg-ink-subtle" />
+                )}
+                {eta && (
+                  <span className="inline-flex items-center gap-1 font-semibold text-ink">
+                    <Icon name="schedule" size={13} aria-hidden />
+                    Llega en {eta.min}–{eta.max} min
+                  </span>
+                )}
+              </p>
             )}
-            {eta && (
-              <span className="inline-flex items-center gap-1 font-semibold text-ink">
-                <Icon name="schedule" size={13} aria-hidden />
-                Llega en {eta.min}–{eta.max} min
-              </span>
-            )}
-          </p>
-        )}
+          </div>
+        </div>
       </div>
 
       <div className="flex flex-1 flex-col gap-5 px-4 pt-3.5 pb-4">

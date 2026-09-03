@@ -56,27 +56,31 @@ export function PrepayExplainer({ timers, forzado, businessName }: PrepayExplain
   const abierto = tocado ? abiertoManual : forzado
   const panelId = useId()
 
+  /*
+    "8 min" a secas se lee como cuánto tarda, no como cuánto tiene el negocio
+    para responder — y con "Ahí pagas" al lado pasa lo mismo al revés: parece
+    un tiempo de espera, no la ventana que le queda al cliente para pagar. El
+    número seguía siendo el dato correcto; lo que faltaba era la palabra que
+    dice de quién es el plazo.
+  */
   const pasos = [
     {
       icono: 'schedule',
       titulo: 'Confirman',
-      pie: `${timers.acceptance} min`,
+      pie: `hasta ${timers.acceptance} min`,
       fondo: 'bg-surface-low text-ink-muted',
-      mono: true,
     },
     {
       icono: 'notifications_active',
       titulo: 'Te avisamos',
       pie: 'suena tu celu',
       fondo: 'bg-success-soft text-success',
-      mono: false,
     },
     {
       icono: 'account_balance_wallet',
       titulo: 'Ahí pagas',
-      pie: `${timers.payment} min`,
+      pie: `tienes ${timers.payment} min`,
       fondo: 'bg-brand-soft text-brand-dark',
-      mono: true,
     },
   ]
 
@@ -115,11 +119,7 @@ export function PrepayExplainer({ timers, forzado, businessName }: PrepayExplain
                   <Icon name={p.icono} size={21} />
                 </span>
                 <span className="text-[13px] font-bold leading-tight">{p.titulo}</span>
-                <span
-                  className={`text-[11px] text-ink-subtle ${p.mono ? 'font-mono tabular-nums' : ''}`}
-                >
-                  {p.pie}
-                </span>
+                <span className="text-[11px] text-ink-subtle">{p.pie}</span>
               </li>
             ))}
           </ol>
