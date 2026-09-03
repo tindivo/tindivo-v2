@@ -177,10 +177,18 @@ export interface PaymentOption {
   momento: PaymentMoment
 }
 
-/** Las cabeceras de la lista de pago, en el orden en que se pintan. */
+/**
+ * Las cabeceras de la lista de pago, en el orden en que se pintan.
+ *
+ * «Por adelantado» decía CUÁNDO se paga respecto al pedido, pero se lee como
+ * CUÁNDO respecto a AHORA — y ahora es justo lo que no es: el subtítulo de la
+ * fila («Pagas apenas el local confirme») existe para decir que no se paga en
+ * este instante. «Antes de recibir» es el espejo limpio de «Al recibir»: la
+ * misma pregunta, mismo eje, sin la lectura de «ya mismo».
+ */
 export const PAYMENT_MOMENTS: { momento: PaymentMoment; titulo: string }[] = [
   { momento: 'al_recibir', titulo: 'Al recibir' },
-  { momento: 'adelantado', titulo: 'Por adelantado' },
+  { momento: 'adelantado', titulo: 'Antes de recibir' },
 ]
 
 /**

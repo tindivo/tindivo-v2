@@ -98,68 +98,71 @@ export function AddressSheet({
   return (
     <BottomSheet open label={titulo} onClose={onClose}>
       <ScreenHeader title={titulo} onBack={onClose} as="h2" />
-      <form
-        onSubmit={save}
-        className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pt-2 pb-6"
-      >
-        <div className="mb-4">
-          <AddressFields
-            value={addr}
-            onChange={patch}
-            onValidityChange={setInsideZone}
-            frameAt={frameAt}
-          />
-        </div>
+      <form onSubmit={save} className="flex flex-1 min-h-0 flex-col">
+        {/*
+          EL BOTÓN NO VIVE EN LO QUE HACE SCROLL.
+          Iba `sticky bottom-0` dentro de este mismo scroll: "pegado" suena a
+          que nunca tapa nada, pero sticky solo se despega de su hueco natural
+          cuando ese hueco queda MÁS ABAJO que el fondo visible. Con contenido
+          más alto que la hoja, ese hueco está siempre más abajo — así que el
+          botón se queda enganchado al fondo TODO el tiempo, tapando lo que
+          esté ahí en ese momento: primero la referencia, luego —con la hoja
+          de GPS bloqueado, que es más alta— los botones del mapa. Sacándolo
+          del área que hace scroll y dejándolo como su propio bloque, el
+          scroll nunca tiene tanta altura como para poder cubrirlo.
+        */}
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pt-2 pb-4">
+          <div className="mb-4">
+            <AddressFields
+              value={addr}
+              onChange={patch}
+              onValidityChange={setInsideZone}
+              frameAt={frameAt}
+            />
+          </div>
 
-        {!esPrimera && (
-          <button
-            type="button"
-            onClick={() => setIsDefault((d) => !d)}
-            className="flex w-full items-center gap-3 rounded-[16px] border border-border bg-card p-3.5 text-left transition-colors hover:bg-surface-low/50"
-          >
-            <span
-              className={`relative h-[22px] w-[38px] shrink-0 rounded-full transition-colors ${
-                isDefault ? 'bg-brand' : 'bg-ink/[0.15]'
-              }`}
+          {!esPrimera && (
+            <button
+              type="button"
+              onClick={() => setIsDefault((d) => !d)}
+              className="flex w-full items-center gap-3 rounded-[16px] border border-border bg-card p-3.5 text-left transition-colors hover:bg-surface-low/50"
             >
               <span
-                className={`absolute top-0.5 h-[18px] w-[18px] rounded-full bg-white shadow transition-all ${
-                  isDefault ? 'left-[18px]' : 'left-0.5'
+                className={`relative h-[22px] w-[38px] shrink-0 rounded-full transition-colors ${
+                  isDefault ? 'bg-brand' : 'bg-ink/[0.15]'
                 }`}
-              />
-            </span>
-            <span className="flex-1 min-w-0">
-              <span className="block font-semibold text-[14px] text-ink">
-                Usar como predeterminada
+              >
+                <span
+                  className={`absolute top-0.5 h-[18px] w-[18px] rounded-full bg-white shadow transition-all ${
+                    isDefault ? 'left-[18px]' : 'left-0.5'
+                  }`}
+                />
               </span>
-              <span className="block text-[12px] text-ink-muted">
-                Se seleccionará automáticamente al hacer un pedido.
+              <span className="flex-1 min-w-0">
+                <span className="block font-semibold text-[14px] text-ink">
+                  Usar como predeterminada
+                </span>
+                <span className="block text-[12px] text-ink-muted">
+                  Se seleccionará automáticamente al hacer un pedido.
+                </span>
               </span>
-            </span>
-          </button>
-        )}
+            </button>
+          )}
 
-        {error && <p className="mt-3 text-danger text-sm">{error}</p>}
+          {error && <p className="mt-3 text-danger text-sm">{error}</p>}
 
-        {onDelete && (
-          <button
-            type="button"
-            onClick={onDelete}
-            className="mt-3.5 w-full rounded-[14px] bg-danger-soft px-4 py-3.5 font-semibold text-[14px] text-danger transition-colors hover:bg-danger/10 active:scale-[0.99]"
-          >
-            Eliminar dirección
-          </button>
-        )}
+          {onDelete && (
+            <button
+              type="button"
+              onClick={onDelete}
+              className="mt-3.5 w-full rounded-[14px] bg-danger-soft px-4 py-3.5 font-semibold text-[14px] text-danger transition-colors hover:bg-danger/10 active:scale-[0.99]"
+            >
+              Eliminar dirección
+            </button>
+          )}
+        </div>
 
-        {/*
-          ANCLADO ABAJO, NO AL FINAL DEL SCROLL.
-          Con el mapa arriba y el botón al final de la hoja, quien escribía la
-          referencia ya no veía el mapa y el botón ya estaba en naranja: nada lo
-          devolvía a marcar su ubicación. Pegado abajo el botón está siempre a
-          la vista y, cuando no se puede guardar, DICE qué falta en vez de
-          quedarse mudo y apagado.
-        */}
-        <div className="-mx-4 -mb-6 sticky bottom-0 mt-4 border-ink/[0.06] border-t bg-surface px-4 pt-3 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+        <div className="shrink-0 border-ink/[0.06] border-t bg-surface px-4 pt-3 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
           <Button type="submit" variant="brand" className="w-full" disabled={!canSave || busy}>
             {busy ? 'Guardando…' : (falta ?? (address ? 'Guardar cambios' : 'Guardar dirección'))}
           </Button>

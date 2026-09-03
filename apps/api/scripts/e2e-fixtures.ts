@@ -16,10 +16,12 @@ export const E2E = {
   DRIVER_USER_ID: 'e2e00000-0000-4000-8000-000000000002',
   /** MARCADOR de limpieza: todo pedido de prueba cuelga de este cliente. */
   CUSTOMER_USER_ID: 'e2e00000-0000-4000-8000-000000000003',
+  ADMIN_USER_ID: 'e2e00000-0000-4000-8000-000000000099',
 
   BUSINESS_EMAIL: 'negocio@e2e.local',
   DRIVER_EMAIL: 'motorizado@e2e.local',
   CUSTOMER_EMAIL: 'cliente@e2e.local',
+  ADMIN_EMAIL: 'admin@e2e.local',
 
   // ── Negocio ───────────────────────────────────────────────────────────────
   BUSINESS_ID: 'e2e00000-0000-4000-8000-000000000010',

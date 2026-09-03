@@ -67,6 +67,7 @@ async function main(): Promise<void> {
 
   // ── 2. Usuarios (auth primero: todo lo demás tiene FK a public.users) ───────
   console.log('\nusuarios')
+  await ensureAuthUser(E2E.ADMIN_USER_ID, E2E.ADMIN_EMAIL, 'Admin E2E')
   await ensureAuthUser(E2E.BUSINESS_USER_ID, E2E.BUSINESS_EMAIL, 'Dueño E2E')
   await ensureAuthUser(E2E.BUSINESS_2_USER_ID, E2E.BUSINESS_2_EMAIL, 'Dueño 2 E2E')
   await ensureAuthUser(E2E.DRIVER_USER_ID, E2E.DRIVER_EMAIL, 'Motorizado E2E')
@@ -80,6 +81,12 @@ async function main(): Promise<void> {
   await upsert(
     'users',
     [
+      {
+        id: E2E.ADMIN_USER_ID,
+        email: E2E.ADMIN_EMAIL,
+        full_name: 'Admin E2E',
+        primary_role: 'admin',
+      },
       {
         id: E2E.BUSINESS_USER_ID,
         email: E2E.BUSINESS_EMAIL,
@@ -117,6 +124,7 @@ async function main(): Promise<void> {
   await upsert(
     'user_roles',
     [
+      { user_id: E2E.ADMIN_USER_ID, role: 'admin' },
       { user_id: E2E.BUSINESS_USER_ID, role: 'business' },
       { user_id: E2E.BUSINESS_2_USER_ID, role: 'business' },
       { user_id: E2E.DRIVER_USER_ID, role: 'driver' },

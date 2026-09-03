@@ -38,3 +38,6 @@ type _vehicle_type = Assert<Equal<Dom['vehicle_type'][number], Enums<'vehicle_ty
 type _transfer_request_status = Assert<
   Equal<Dom['transfer_request_status'][number], Enums<'transfer_request_status'>>
 >
+type _map_landmark_category = Assert<
+  Equal<Dom['map_landmark_category'][number], Enums<'map_landmark_category'>>
+>

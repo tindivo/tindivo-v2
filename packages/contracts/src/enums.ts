@@ -204,6 +204,20 @@ export const VEHICLE_TYPES = ['moto', 'bici', 'pie', 'auto'] as const
 export const VehicleTypeSchema = z.enum(VEHICLE_TYPES)
 export type VehicleType = z.infer<typeof VehicleTypeSchema>
 
+// --- Categoría de landmark del mapa (0208) ---
+export const MAP_LANDMARK_CATEGORIES = [
+  'salud',
+  'mercado',
+  'educacion',
+  'religioso',
+  'deporte',
+  'recreacion',
+  'gobierno',
+  'otro',
+] as const
+export const MapLandmarkCategorySchema = z.enum(MAP_LANDMARK_CATEGORIES)
+export type MapLandmarkCategory = z.infer<typeof MapLandmarkCategorySchema>
+
 // Los enums del fondo de contingencia se eliminaron en la migración 0123 junto
 // con la tabla y sus tres RPC. Ver Docs/spec/spec-0123-eliminar-contingencia.md.
 
@@ -236,4 +250,5 @@ export const DOMAIN_ENUMS = {
   cancel_reason_detail: CANCEL_REASON_DETAILS,
   vehicle_type: VEHICLE_TYPES,
   transfer_request_status: TRANSFER_REQUEST_STATUSES,
+  map_landmark_category: MAP_LANDMARK_CATEGORIES,
 } as const

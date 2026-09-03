@@ -35,7 +35,9 @@ export async function GET(req: Request): Promise<Response> {
     const service = createServiceClient()
     const { data, error } = await service
       .from('businesses')
-      .select('id,name,primary_capability,is_active,is_blocked,balance_due,created_at,accent_color')
+      .select(
+        'id,name,slug,primary_capability,is_active,is_blocked,balance_due,created_at,accent_color,coordinates_lat,coordinates_lng,phone,address',
+      )
       .order('name')
     if (error) throw new Error(error.message)
     return ok(data ?? [], { headers: corsHeaders(req) })

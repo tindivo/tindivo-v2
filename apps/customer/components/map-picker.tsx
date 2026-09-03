@@ -11,6 +11,7 @@ import {
   getCurrentPositionHA,
   getGeolocationPermission,
 } from '@/lib/geolocation'
+import { getLandmarks, type Landmark } from '@/lib/landmarks'
 import { LocationSheet } from './location-sheet'
 import type { LatLng, MapBounds, MapMode } from './map-picker-inner'
 
@@ -153,9 +154,16 @@ export function MapPicker({
   const [loaded, setLoaded] = useState(false)
   const [bands, setBands] = useState<DeliveryBands>({ near: 2.0, far: 2.5 })
   const [farZones, setFarZones] = useState<LatLng[][]>([])
+  const [landmarks, setLandmarks] = useState<Landmark[]>([])
 
   const [accuracyM, setAccuracyM] = useState<number | null>(initialAccuracyM)
   const [gps, setGps] = useState<GpsState>({ kind: 'idle' })
+  // El navegador no vuelve a mostrar su propio popup de permiso una vez que lo
+  // negaste: `getCurrentPosition` falla de una, sin UI. Si se le da a
+  // "Permitir GPS" y sigue denegado, la pantalla quedaba exactamente igual —
+  // como si el toque no hubiera hecho nada. Esto es lo único que distingue
+  // "no tocaste nada" de "tocaste y el navegador lo sigue bloqueando".
+  const [deniedRetried, setDeniedRetried] = useState(false)
   // Abre en calles: es lo que orienta primero. El satélite está a un toque para
   // quien necesite reconocer su techo, y la elección se conserva al volver.
   const [mode, setMode] = useState<MapMode>('street')
@@ -168,17 +176,22 @@ export function MapPicker({
 
   useEffect(() => {
     let on = true
-    Promise.all([getCoverage(), getCoveragePolygon(), getDeliveryBands(), getFarZones()]).then(
-      ([cov, poly, b, fz]) => {
-        if (!on) return
-        setCenter({ lat: cov.centerLat, lng: cov.centerLng })
-        setRadiusKm(cov.radiusKm)
-        setPolygon(poly?.polygon ?? null)
-        setBands(b)
-        setFarZones(fz)
-        setLoaded(true)
-      },
-    )
+    Promise.all([
+      getCoverage(),
+      getCoveragePolygon(),
+      getDeliveryBands(),
+      getFarZones(),
+      getLandmarks(),
+    ]).then(([cov, poly, b, fz, lm]) => {
+      if (!on) return
+      setCenter({ lat: cov.centerLat, lng: cov.centerLng })
+      setRadiusKm(cov.radiusKm)
+      setPolygon(poly?.polygon ?? null)
+      setBands(b)
+      setFarZones(fz)
+      setLandmarks(lm)
+      setLoaded(true)
+    })
     return () => {
       on = false
     }
@@ -256,6 +269,8 @@ export function MapPicker({
 
   async function locate() {
     if (gps.kind === 'locating') return
+    const reintentoDesdeDenegado = gps.kind === 'denied'
+    setDeniedRetried(false)
     setGps({ kind: 'locating' })
     try {
       const fix = await getCurrentPositionHA()
@@ -268,6 +283,7 @@ export function MapPicker({
       setGps(
         code === 'denied' ? { kind: 'denied' } : { kind: 'failed', message: geoErrorMessage(code) },
       )
+      if (code === 'denied' && reintentoDesdeDenegado) setDeniedRetried(true)
     }
   }
 
@@ -317,6 +333,7 @@ export function MapPicker({
             bounds={bounds}
             zoom={17}
             showPin={hasPoint}
+            landmarks={landmarks}
           />
         ) : (
           <div className="h-full w-full animate-pulse bg-ink/[0.06]" />
@@ -458,6 +475,22 @@ export function MapPicker({
         )}
       </div>
 
+      {/*
+        FUERA de la postal a propósito: la postal mide `heightPx` fijo con
+        `overflow-hidden` para que el mapa no salte de tamaño, así que
+        cualquier texto que crezca ahí dentro se corta en vez de envolver —
+        es la misma clase de corte que se ve en `address-sheet.tsx` con el
+        botón pegado abajo. El navegador tampoco reabre su propio popup de
+        permiso una vez denegado —es su regla, no un fallo nuestro—, así que
+        sin este aviso, tocar "Permitir GPS" y seguir bloqueado se veía
+        IDÉNTICO a no haber tocado nada.
+      */}
+      {estado === 'denied' && deniedRetried && (
+        <p className="mt-1.5 text-[11px] text-brand-dark leading-snug">
+          Tu navegador lo sigue bloqueando. Ábrelo desde el candado y vuelve a intentar.
+        </p>
+      )}
+
       <div className="mt-2 flex items-center justify-between gap-3">
         <div
           className={`flex min-w-0 items-center gap-1.5 font-mono text-[11px] ${
@@ -488,8 +521,8 @@ export function MapPicker({
               : !hasPoint
                 ? 'Obligatorio · marca tu ubicación'
                 : !inside
-                  ? 'Fuera de la zona de reparto de San Jacinto'
-                  : `Envío S/ ${fee.toFixed(2)}${band === 'far' ? ' (zona lejana)' : ''} · ${
+                  ? 'Esta ubicación está fuera de la zona de reparto de San Jacinto'
+                  : `✓ Envío S/ ${fee.toFixed(2)}${band === 'far' ? ' (zona lejana)' : ''} · ${
                       accuracyM == null
                         ? 'ajustada a mano'
                         : flojo
@@ -520,6 +553,7 @@ export function MapPicker({
           bounds={bounds}
           farZones={farZones}
           bands={bands}
+          landmarks={landmarks}
           mode={mode}
           onModeChange={setMode}
           onCancel={() => setSheetOpen(false)}

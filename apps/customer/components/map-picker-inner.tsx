@@ -1,9 +1,18 @@
 'use client'
 
-import type { LatLngBoundsExpression } from 'leaflet'
-import { type RefObject, useEffect, useRef, useState } from 'react'
-import { Circle, MapContainer, Polygon, TileLayer, useMap, useMapEvents } from 'react-leaflet'
+import L, { type LatLngBoundsExpression } from 'leaflet'
+import { type RefObject, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  Circle,
+  MapContainer,
+  Marker,
+  Polygon,
+  TileLayer,
+  useMap,
+  useMapEvents,
+} from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
+import { LANDMARK_STYLE, type Landmark } from '@/lib/landmarks'
 
 export interface LatLng {
   lat: number
@@ -19,11 +28,21 @@ export interface MapBounds {
   east: number
 }
 
+/**
+ * SUTIL A PROPÓSITO. El pin y el botón "Sí, aquí es mi puerta" son lo que
+ * manda en esta pantalla; el polígono solo informa de fondo, en tercer nivel.
+ * Antes llevaba el trazo a opacidad plena (1.0) y el relleno al 10% — se leía
+ * como el elemento principal del mapa, compitiendo con el pin por la mirada.
+ * Los números (0.55 de trazo, 0.06 de relleno) sí importan y no se
+ * redondean por gusto: es la sensibilidad medida en la reseña que motivó este
+ * cambio, no una intuición nueva.
+ */
 const ZONE_STYLE = {
   color: 'var(--color-brand)',
   weight: 2,
+  opacity: 0.55,
   fillColor: 'var(--color-brand)',
-  fillOpacity: 0.1,
+  fillOpacity: 0.06,
 } as const
 
 /**
@@ -63,6 +82,108 @@ const TILES: Record<MapMode, { url: string; attribution: string; maxNativeZoom: 
 
 const SATELLITE_LABELS =
   'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'
+
+/**
+ * DESDE QUÉ ZOOM APARECEN LAS REFERENCIAS.
+ *
+ * Son dos umbrales y no uno porque el punto y su nombre estorban en momentos
+ * distintos. Con el pueblo entero en pantalla, veinte nombres encima de las
+ * calles tapan justo lo que se está mirando; el punto de color, en cambio, ya
+ * orienta ("hay una botica por ahí") sin escribir nada. El nombre entra
+ * cuando hay sitio para leerlo.
+ */
+const LANDMARK_MIN_ZOOM = 15
+const LANDMARK_LABEL_MIN_ZOOM = 16
+
+/** El nombre lo escribe una persona en el panel, así que no entra crudo al HTML. */
+const ESCAPES: Record<string, string> = {
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;',
+}
+function escaparHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (c) => ESCAPES[c] ?? c)
+}
+
+/**
+ * El marcador de una referencia: disco blanco con el glifo de su categoría y,
+ * si hay zoom para leerlo, el nombre al lado.
+ *
+ * NO ES UN PIN, Y ESA ES LA DECISIÓN ENTERA. La gota naranja del centro es la
+ * puerta del cliente —lo único que esta pantalla le pide— y cualquier otra
+ * gota en el mapa compite con ella. Un disco pequeño con un icono dentro se
+ * lee como "aquí hay un sitio", que es lo que son, y no se confunde ni de
+ * forma ni de tamaño ni de color con lo que hay que colocar. Es el mismo
+ * reparto que hace Google Maps entre sus POIs y el pin de destino.
+ *
+ * Va como `divIcon` y no como círculo de Leaflet porque el icono y el nombre
+ * tienen que viajar juntos como una sola pieza: pegados, alineados y con el
+ * mismo halo. Con un círculo + tooltip eran dos elementos que Leaflet coloca
+ * por su cuenta, y se despegaban al acercarse.
+ */
+function iconoDe(l: Landmark, conNombre: boolean): L.DivIcon {
+  const { color, icon } = LANDMARK_STYLE[l.category]
+  const nombre = conNombre ? `<span class="t-lm-name">${escaparHtml(l.name)}</span>` : ''
+  return L.divIcon({
+    className: 't-lm',
+    html:
+      `<span class="t-lm-dot">` +
+      `<span class="material-symbols-rounded t-lm-glyph" style="--icon-glyph:'${icon}';color:${color}"></span>` +
+      `</span>${nombre}`,
+    // El ancla es el punto exacto, y el tamaño lo pone el CSS: así el nombre
+    // puede sobresalir a la derecha sin que Leaflet lo recorte a una caja.
+    iconSize: [0, 0],
+    iconAnchor: [0, 0],
+  })
+}
+
+/**
+ * Las referencias del pueblo (`map_landmarks`), pintadas por debajo del pin.
+ *
+ * NUNCA SON TOCABLES (`interactive: false`). El gesto entero de esta pantalla
+ * es arrastrar el mapa, y un marcador que captura el puntero se come el
+ * arrastre que empieza encima de él — el mismo defecto que ya obligó a sacar
+ * el mapa del formulario y llevarlo a pantalla completa. Aquí son decorado
+ * que informa, no controles.
+ */
+function LandmarkLayer({
+  landmarks,
+  showLabels,
+}: {
+  landmarks: readonly Landmark[]
+  showLabels: boolean
+}) {
+  const map = useMap()
+  const [zoom, setZoom] = useState(() => map.getZoom())
+  useMapEvents({ zoomend: (e) => setZoom(e.target.getZoom()) })
+
+  const visibles = zoom >= LANDMARK_MIN_ZOOM
+  const conNombre = showLabels && zoom >= LANDMARK_LABEL_MIN_ZOOM
+  // Los iconos se rehacen solo cuando cambia lo que dibujan, no en cada
+  // `moveend` — y en esta pantalla hay uno por cada arrastre del dedo.
+  const iconos = useMemo(
+    () => (visibles ? landmarks.map((l) => [l, iconoDe(l, conNombre)] as const) : []),
+    [landmarks, conNombre, visibles],
+  )
+
+  if (!visibles) return null
+
+  return (
+    <>
+      {iconos.map(([l, icon]) => (
+        <Marker
+          key={l.id}
+          position={[l.lat, l.lng]}
+          icon={icon}
+          interactive={false}
+          keyboard={false}
+        />
+      ))}
+    </>
+  )
+}
 
 /**
  * Marca que el gesto lo hizo una persona.
@@ -250,6 +371,7 @@ export default function MapCanvas({
   zoom = 17,
   minZoom = 14,
   showPin = true,
+  landmarks = [],
 }: {
   center: LatLng
   interactive: boolean
@@ -269,6 +391,12 @@ export default function MapCanvas({
    * la gente guardara la plaza como su casa.
    */
   showPin?: boolean
+  /**
+   * Referencias del pueblo (`map_landmarks`). Ver `LandmarkLayer`: los
+   * nombres solo se escriben en el lienzo interactivo, porque en la postal de
+   * 180px no hay sitio para leerlos sin tapar el mapa entero.
+   */
+  landmarks?: readonly Landmark[]
 }) {
   const gestureRef = useRef(false)
   const [moving, setMoving] = useState(false)
@@ -333,6 +461,11 @@ export default function MapCanvas({
             pathOptions={ZONE_STYLE}
           />
         ) : null}
+        {/* Después de la zona y antes del pin: por orden de importancia y, de
+            paso, por orden de pintado — las referencias quedan encima de la
+            mancha de la zona y siempre por debajo del pin, que vive fuera de
+            Leaflet. */}
+        {landmarks.length > 0 && <LandmarkLayer landmarks={landmarks} showLabels={interactive} />}
         <InvalidateSize />
         {interactive ? (
           <>

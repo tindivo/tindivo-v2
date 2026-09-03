@@ -1281,6 +1281,50 @@ export type Database = {
         }
         Relationships: []
       }
+      map_landmarks: {
+        Row: {
+          active: boolean
+          category: Database["public"]["Enums"]["map_landmark_category"]
+          created_at: string
+          id: string
+          lat: number
+          lng: number
+          name: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          active?: boolean
+          category: Database["public"]["Enums"]["map_landmark_category"]
+          created_at?: string
+          id?: string
+          lat: number
+          lng: number
+          name: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          active?: boolean
+          category?: Database["public"]["Enums"]["map_landmark_category"]
+          created_at?: string
+          id?: string
+          lat?: number
+          lng?: number
+          name?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "map_landmarks_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       menu_categories: {
         Row: {
           blurb: string | null
@@ -3154,6 +3198,15 @@ export type Database = {
         | "rejected_proof"
         | "other"
         | "fraud_attempt"
+      map_landmark_category:
+        | "salud"
+        | "mercado"
+        | "educacion"
+        | "religioso"
+        | "deporte"
+        | "recreacion"
+        | "gobierno"
+        | "otro"
       order_source: "customer_pwa" | "business_manual"
       order_status:
         | "validando"
@@ -3368,6 +3421,16 @@ export const Constants = {
         "rejected_proof",
         "other",
         "fraud_attempt",
+      ],
+      map_landmark_category: [
+        "salud",
+        "mercado",
+        "educacion",
+        "religioso",
+        "deporte",
+        "recreacion",
+        "gobierno",
+        "otro",
       ],
       order_source: ["customer_pwa", "business_manual"],
       order_status: [

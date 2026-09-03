@@ -10,9 +10,22 @@ import { createServiceClient } from '@/lib/supabase/service'
 export const dynamic = 'force-dynamic'
 
 const money = z.number().nonnegative().max(1000)
-const Schema = z.object({
+export const BusinessUpdateSchema = z.object({
   name: z.string().trim().min(1).max(120).optional(),
+  slug: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .regex(/^[a-z0-9-]+$/, 'El slug solo puede contener letras minúsculas, números y guiones')
+    .min(2)
+    .max(100)
+    .optional(),
   tagline: z.string().max(120).nullable().optional(),
+  address: z.string().max(255).nullable().optional(),
+  coordinatesLat: z.number().min(-90).max(90).nullable().optional(),
+  coordinatesLng: z.number().min(-180).max(180).nullable().optional(),
+  estimatedEtaMin: z.number().int().nonnegative().max(300).optional(),
+  estimatedEtaMax: z.number().int().nonnegative().max(300).optional(),
   phone: z.string().max(30).nullable().optional(),
   yapeNumber: z.string().max(30).nullable().optional(),
   plinNumber: z.string().max(30).nullable().optional(),
@@ -31,6 +44,7 @@ const Schema = z.object({
   usesTindivoDrivers: z.boolean().optional(),
   // Contacto PÚBLICO para pedidos por WhatsApp (modo catálogo); null lo borra.
   whatsappNumber: PhonePeSchema.nullable().optional(),
+  categoria: z.array(z.string()).nullable().optional(),
 })
 
 export function OPTIONS(req: Request): Response {
@@ -50,7 +64,7 @@ export async function GET(
     const { data, error } = await service
       .from('businesses')
       .select(
-        'id,name,tagline,phone,whatsapp_number,yape_number,plin_number,accent_color,delivery_fee,commission_override_delivery,commission_override_pickup,is_active,is_blocked,blocked_for_debt,block_reason,balance_due,primary_capability,publishes_catalog,accepts_web_pickup,accepts_web_delivery,uses_tindivo_drivers',
+        'id,name,tagline,slug,address,coordinates_lat,coordinates_lng,estimated_eta_min,estimated_eta_max,phone,whatsapp_number,yape_number,plin_number,accent_color,delivery_fee,commission_override_delivery,commission_override_pickup,is_active,is_blocked,blocked_for_debt,block_reason,balance_due,primary_capability,publishes_catalog,accepts_web_pickup,accepts_web_delivery,uses_tindivo_drivers,categoria',
       )
       .eq('id', id)
       .maybeSingle()
@@ -71,10 +85,16 @@ export async function PATCH(
   try {
     await requireRole(req, 'admin')
     const { id } = await params
-    const body = Schema.parse(await req.json())
+    const body = BusinessUpdateSchema.parse(await req.json())
     const patch: {
       name?: string
+      slug?: string
       tagline?: string | null
+      address?: string | null
+      coordinates_lat?: number | null
+      coordinates_lng?: number | null
+      estimated_eta_min?: number
+      estimated_eta_max?: number
       phone?: string | null
       yape_number?: string | null
       plin_number?: string | null
@@ -88,9 +108,16 @@ export async function PATCH(
       accepts_web_delivery?: boolean
       uses_tindivo_drivers?: boolean
       whatsapp_number?: string | null
+      categoria?: string[] | null
     } = {}
     if (body.name !== undefined) patch.name = body.name
+    if (body.slug !== undefined) patch.slug = body.slug
     if (body.tagline !== undefined) patch.tagline = body.tagline
+    if (body.address !== undefined) patch.address = body.address
+    if (body.coordinatesLat !== undefined) patch.coordinates_lat = body.coordinatesLat
+    if (body.coordinatesLng !== undefined) patch.coordinates_lng = body.coordinatesLng
+    if (body.estimatedEtaMin !== undefined) patch.estimated_eta_min = body.estimatedEtaMin
+    if (body.estimatedEtaMax !== undefined) patch.estimated_eta_max = body.estimatedEtaMax
     if (body.phone !== undefined) patch.phone = body.phone
     if (body.yapeNumber !== undefined) patch.yape_number = body.yapeNumber
     if (body.plinNumber !== undefined) patch.plin_number = body.plinNumber
@@ -106,12 +133,15 @@ export async function PATCH(
     if (body.acceptsWebDelivery !== undefined) patch.accepts_web_delivery = body.acceptsWebDelivery
     if (body.usesTindivoDrivers !== undefined) patch.uses_tindivo_drivers = body.usesTindivoDrivers
     if (body.whatsappNumber !== undefined) patch.whatsapp_number = body.whatsappNumber
+    if (body.categoria !== undefined) patch.categoria = body.categoria
 
     const service = createServiceClient()
     if (Object.keys(patch).length === 0) {
       const { data } = await service
         .from('businesses')
-        .select('id,name,is_active')
+        .select(
+          'id,name,tagline,slug,address,coordinates_lat,coordinates_lng,estimated_eta_min,estimated_eta_max,phone,whatsapp_number,yape_number,plin_number,accent_color,delivery_fee,commission_override_delivery,commission_override_pickup,is_active,is_blocked,blocked_for_debt,block_reason,balance_due,primary_capability,publishes_catalog,accepts_web_pickup,accepts_web_delivery,uses_tindivo_drivers,categoria',
+        )
         .eq('id', id)
         .maybeSingle()
       if (!data) throw new DomainError('Negocio no encontrado', 'not_found')
@@ -121,12 +151,17 @@ export async function PATCH(
       .from('businesses')
       .update(patch)
       .eq('id', id)
-      .select('id,name,is_active,primary_capability,whatsapp_number')
+      .select(
+        'id,name,tagline,slug,address,coordinates_lat,coordinates_lng,estimated_eta_min,estimated_eta_max,phone,whatsapp_number,yape_number,plin_number,accent_color,delivery_fee,commission_override_delivery,commission_override_pickup,is_active,is_blocked,blocked_for_debt,block_reason,balance_due,primary_capability,publishes_catalog,accepts_web_pickup,accepts_web_delivery,uses_tindivo_drivers,categoria',
+      )
       .single()
     if (error) {
       // 23514 = violación de un CHECK (capacidades / formato de WhatsApp).
       if (error.code === '23514')
-        throw new DomainError('Combinación de capacidades inválida', 'validation_error')
+        throw new DomainError('Combinación de capacidades o formato inválido', 'validation_error')
+      // 23505 = violación de clave única (ej. slug duplicado).
+      if (error.code === '23505')
+        throw new DomainError('El slug elegido ya está en uso por otro negocio', 'conflict')
       throw new Error(error.message)
     }
     return ok(data, { headers: corsHeaders(req) })

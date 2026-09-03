@@ -101,8 +101,8 @@ const PAGO = {
 /**
  * Las tres frases con que la pantalla EXPLICA un prepago forzado (`prepayReason`
  * en `use-checkout-state.ts`): bloqueo antifraude, primer pedido y tope de
- * efectivo. Deliberadamente no casa con «Por adelantado», que es la cabecera del
- * grupo y se muestra a todo el mundo.
+ * efectivo. Deliberadamente no casa con «Antes de recibir», que es la cabecera
+ * del grupo y se muestra a todo el mundo.
  */
 const RE_MOTIVO_PREPAGO = /pago (va )?adelantado/
 
@@ -223,8 +223,8 @@ test.describe('0171 · al vecino conocido la pantalla le ofrece contraentrega', 
     // Al vecino conocido no se le explica ningún prepago: no hay motivo que dar.
     // El patrón cubre las TRES variantes de `prepayReason` (bloqueo, primer
     // pedido y tope de efectivo), que son las únicas frases que dicen «pago
-    // adelantado». No casa con «Por adelantado», que es la cabecera del grupo y
-    // al vecino sí se le muestra: su tercera opción vive ahí.
+    // adelantado». No casa con «Antes de recibir», que es la cabecera del grupo
+    // y al vecino sí se le muestra: su tercera opción vive ahí.
     await expect(page.getByText(RE_MOTIVO_PREPAGO)).toHaveCount(0)
 
     // Al vecino conocido la contraentrega le llega ACCIONABLE, que es más que
