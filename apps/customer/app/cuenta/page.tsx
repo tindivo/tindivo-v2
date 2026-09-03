@@ -15,6 +15,7 @@ import { QuickActionsGrid } from '@/features/account/components/quick-actions-gr
 import { RecentOrdersPreview } from '@/features/account/components/recent-orders-preview'
 import { useAccountPage } from '@/features/account/hooks/use-account-page'
 import type { Address } from '@/features/account/types'
+import { frameFallback } from '@/lib/address-record'
 
 export default function CuentaPage() {
   const router = useRouter()
@@ -94,6 +95,7 @@ export default function CuentaPage() {
         <AddressSheet
           address={editing === 'new' ? null : editing}
           isFirst={addresses.length === 0}
+          frameAt={frameFallback(addresses)}
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null)

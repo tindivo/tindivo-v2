@@ -11,7 +11,7 @@ import {
   isLineOk,
 } from '@/components/address-fields'
 import { type Address, addressIcon } from '@/features/checkout/types'
-import { sealLocation } from '@/lib/address-record'
+import { frameFallback, sealLocation, shouldBecomeDefault } from '@/lib/address-record'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
 interface AddressSelectorSheetProps {
@@ -74,7 +74,7 @@ export function AddressSelectorSheet({
     }
 
     /**
-     * «¿ES LA PRIMERA?» SE LE PREGUNTA A LA BASE, NO A LAS PROPS.
+     * «¿MANDA ESTA?» SE LE PREGUNTA A LA BASE, NO A LAS PROPS.
      *
      * Esta rama se abre SOLA cuando el checkout cree que no hay ninguna
      * dirección (`addresses.length === 0`), y antes el INSERT ni siquiera ponía
@@ -82,19 +82,19 @@ export function AddressSelectorSheet({
      * veintisiete con direcciones y ninguna predeterminada —los que la 0203
      * tuvo que reparar a mano—.
      *
-     * Ponerlo desde `addresses.length` arreglaba el caso bueno y abría uno
+     * Decidirlo desde `addresses.length` arreglaba el caso bueno y abría uno
      * malo: si la carga de direcciones falló, la lista llega vacía aunque el
      * usuario tenga varias, y marcar esta como predeterminada choca contra el
-     * índice único parcial. Un `count` recién leído no puede mentir sobre eso,
-     * y cuesta un viaje en una acción que se hace una vez por dirección.
+     * índice único parcial. Lo que hay en la base no puede mentir sobre eso, y
+     * cuesta un viaje en una acción que se hace una vez por dirección.
      */
-    const { count, error: countError } = await supabase
+    const { data: existentes, error: readError } = await supabase
       .from('customer_addresses')
-      .select('id', { count: 'exact', head: true })
+      .select('id,is_default')
       .eq('user_id', userId)
-    if (countError) {
+    if (readError) {
       setBusy(false)
-      setError(countError.message)
+      setError(readError.message)
       return
     }
 
@@ -109,17 +109,10 @@ export function AddressSelectorSheet({
         coordinates_lng: manualAddr.coords?.lng ?? null,
         // Un alta siempre sella ahora: no hay punto previo que conservar.
         ...sealLocation(null, manualAddr, new Date().toISOString()),
-        /*
-          `count === 0` y no `(count ?? 0) === 0`: si la cuenta viniera vacia,
-          la duda se resuelve hacia el lado que NO puede romper nada. Marcar de
-          mas choca contra el indice unico parcial; marcar de menos deja como
-          mucho una libreta sin predeterminada, que es el estado viejo y que la
-          pantalla de Mi cuenta ya cura al borrar o al editar.
-          Medido con un JWT real contra PostgREST: el HEAD con `count=exact`
-          responde 200 con `content-range: 0-0/1`, asi que el caso normal llega
-          con numero.
-        */
-        is_default: count === 0,
+        // La misma regla que el alta del onboarding: manda solo si no hay
+        // nadie mandando. Nunca marca de mas, asi que no hay que limpiar a
+        // nadie despues ni se puede chocar con el indice unico parcial.
+        is_default: shouldBecomeDefault(existentes ?? []),
       })
       .select('id')
       .single()
@@ -235,6 +228,7 @@ export function AddressSelectorSheet({
               value={manualAddr}
               onChange={(p) => setManualAddr((a) => ({ ...a, ...p }))}
               onValidityChange={setManualInside}
+              frameAt={frameFallback(addresses)}
             />
             {error && (
               <p role="alert" className="-mt-1 text-danger text-sm">

@@ -1,7 +1,7 @@
 'use client'
 
 import { ADDRESS_LINE_MIN, ADDRESS_REFERENCE_MAX, ADDRESS_REFERENCE_MIN } from '@tindivo/contracts'
-import { MapPicker } from '@/components/map-picker'
+import { type LatLng, MapPicker } from '@/components/map-picker'
 import {
   ADDRESS_LABELS,
   type AddressValue,
@@ -44,12 +44,15 @@ export function AddressFields({
   value,
   onChange,
   onValidityChange,
+  frameAt = null,
   showLabelPicker = true,
   mapHeightPx = 180,
 }: {
   value: AddressValue
   onChange: (patch: Partial<AddressValue>) => void
   onValidityChange?: (inside: boolean) => void
+  /** Encuadre de partida del mapa mientras no haya punto. Ver `MapPicker`. */
+  frameAt?: LatLng | null
   showLabelPicker?: boolean
   mapHeightPx?: number
 }) {
@@ -92,6 +95,7 @@ export function AddressFields({
         <MapPicker
           value={value.coords}
           initialAccuracyM={value.accuracyM}
+          frameAt={frameAt}
           onChange={(coords, accuracyM) => onChange({ coords, accuracyM })}
           onValidityChange={onValidityChange}
           heightPx={mapHeightPx}

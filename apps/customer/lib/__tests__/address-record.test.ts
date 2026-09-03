@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
+  frameFallback,
   heirAfterRemoving,
   pickDefaultAddress,
   type StoredLocation,
   sealLocation,
+  shouldBecomeDefault,
 } from '@/lib/address-record'
 import type { AddressValue } from '@/lib/address-validation'
 
@@ -45,6 +47,62 @@ describe('heirAfterRemoving', () => {
 
   it('ignora un id que no está en la lista', () => {
     expect(heirAfterRemoving([addr('a', true), addr('b')], 'zzz')).toBeNull()
+  })
+})
+
+describe('shouldBecomeDefault', () => {
+  it('la primera dirección de un usuario manda', () => {
+    expect(shouldBecomeDefault([])).toBe(true)
+  })
+
+  it('no le roba la predeterminada a la que ya manda', () => {
+    // El defecto del alta del onboarding: ponía `is_default: true` a secas y
+    // limpiaba las demás, así que pedir con una dirección nueva te cambiaba la
+    // de siempre sin avisar.
+    expect(shouldBecomeDefault([addr('a', true)])).toBe(false)
+    expect(shouldBecomeDefault([addr('a'), addr('b', true)])).toBe(false)
+  })
+
+  it('cura al usuario que se quedó sin ninguna marcada', () => {
+    expect(shouldBecomeDefault([addr('a'), addr('b')])).toBe(true)
+  })
+})
+
+describe('frameFallback', () => {
+  const casa = {
+    id: 'casa',
+    is_default: true,
+    coordinates_lat: -9.1478,
+    coordinates_lng: -78.2762,
+    location_confirmed_at: '2026-08-01T00:00:00.000Z',
+  }
+  const plaza = {
+    id: 'plaza',
+    is_default: false,
+    coordinates_lat: -9.1465,
+    coordinates_lng: -78.2779,
+    location_confirmed_at: null,
+  }
+
+  it('encuadra en la predeterminada confirmada', () => {
+    expect(frameFallback([plaza, casa])).toEqual({ lat: -9.1478, lng: -78.2762 })
+  })
+
+  it('ignora las direcciones sin confirmar, aunque sean la predeterminada', () => {
+    // Las cuatro de la plaza: encuadrar ahí sería volver al problema por la
+    // puerta de atrás.
+    expect(frameFallback([{ ...plaza, is_default: true }])).toBeNull()
+  })
+
+  it('sin direcciones no propone nada, y el mapa cae al centro del pueblo', () => {
+    expect(frameFallback([])).toBeNull()
+  })
+
+  it('si ninguna confirmada es la predeterminada, sirve la primera confirmada', () => {
+    expect(frameFallback([{ ...casa, is_default: false }])).toEqual({
+      lat: -9.1478,
+      lng: -78.2762,
+    })
   })
 })
 
@@ -113,6 +171,13 @@ describe('sealLocation', () => {
     expect(sealLocation(plaza, valor({ accuracyM: 9 }), AHORA)).toEqual({
       location_confirmed_at: AHORA,
       location_accuracy_m: 9,
+    })
+  })
+
+  it('sin punto no sella nada: no hay confirmación que inventar', () => {
+    expect(sealLocation(null, valor({ coords: null, accuracyM: 30 }), AHORA)).toEqual({
+      location_confirmed_at: null,
+      location_accuracy_m: null,
     })
   })
 

@@ -112,6 +112,7 @@ function boundsFor(polygon: LatLng[] | null, center: LatLng, radiusKm: number): 
 export function MapPicker({
   value,
   initialAccuracyM = null,
+  frameAt = null,
   onChange,
   onValidityChange,
   heightPx = 180,
@@ -126,6 +127,16 @@ export function MapPicker({
    * en ámbar— entraba disfrazada de buena.
    */
   initialAccuracyM?: number | null
+  /**
+   * Por dónde empezar a mirar cuando todavía no hay punto elegido.
+   *
+   * NO ES UNA RESPUESTA: no se guarda, no habilita Guardar y no cuenta como
+   * ubicación. Es lo mismo que ya hacía el centro del pueblo —encuadrar la
+   * postal— pero cerca de donde el cliente vive, si ya confirmó dónde vive.
+   * Ver `frameFallback` en `lib/address-record.ts`, que es quien lo elige y
+   * quien se encarga de no proponer una dirección sin confirmar.
+   */
+  frameAt?: LatLng | null
   /**
    * La coordenada Y su precisión viajan juntas: `null` significa que el punto
    * lo puso una persona moviendo el mapa, no el GPS. Separarlas en dos avisos
@@ -218,7 +229,10 @@ export function MapPicker({
     // corra una sola vez por montaje.
   }, [loaded])
 
-  const pos = value ?? center
+  // El orden es el de la certeza: lo que el cliente eligió, luego su barrio,
+  // luego el pueblo. Solo el primero es una respuesta; los otros dos son
+  // encuadre.
+  const pos = value ?? frameAt ?? center
 
   const inside = useMemo(() => {
     if (!loaded || !pos) return true

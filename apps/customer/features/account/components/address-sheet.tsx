@@ -9,6 +9,7 @@ import {
   canSaveAddress,
   getMissingLabel,
 } from '@/components/address-fields'
+import type { LatLng } from '@/components/map-picker'
 import type { Address } from '@/features/account/types'
 import { sealLocation } from '@/lib/address-record'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
@@ -16,6 +17,11 @@ import { getSupabaseBrowser } from '@/lib/supabase/client'
 interface AddressSheetProps {
   address: Address | null
   isFirst?: boolean
+  /**
+   * Por dónde encuadrar el mapa mientras no haya punto. Lo elige
+   * `frameFallback` con la libreta del cliente: su barrio en vez de la plaza.
+   */
+  frameAt?: LatLng | null
   onClose: () => void
   onSaved: (savedAddressId?: string) => void
   onDelete?: () => void
@@ -24,6 +30,7 @@ interface AddressSheetProps {
 export function AddressSheet({
   address,
   isFirst = false,
+  frameAt = null,
   onClose,
   onSaved,
   onDelete,
@@ -150,7 +157,12 @@ export function AddressSheet({
         className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pt-2 pb-6"
       >
         <div className="mb-4">
-          <AddressFields value={addr} onChange={patch} onValidityChange={setInsideZone} />
+          <AddressFields
+            value={addr}
+            onChange={patch}
+            onValidityChange={setInsideZone}
+            frameAt={frameAt}
+          />
         </div>
 
         {!esPrimera && (
