@@ -10,13 +10,12 @@ import {
   getMissingLabel,
 } from '@/components/address-fields'
 import type { LatLng } from '@/components/map-picker'
-import type { Address } from '@/features/account/types'
-import { toAddressValue } from '@/lib/address-record'
+import { type SavedAddress, toAddressValue } from '@/lib/address-record'
 import { saveAddressRow } from '@/lib/address-save'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
 interface AddressSheetProps {
-  address: Address | null
+  address: SavedAddress | null
   isFirst?: boolean
   /**
    * Por dónde encuadrar el mapa mientras no haya punto. Lo elige
