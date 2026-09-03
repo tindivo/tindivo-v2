@@ -12,6 +12,7 @@ import {
   geoErrorMessage,
   getCurrentPositionHA,
 } from '@/lib/geolocation'
+import type { Landmark } from '@/lib/landmarks'
 import type { LatLng, MapBounds, MapMode } from './map-picker-inner'
 
 const MapCanvas = dynamic(() => import('./map-picker-inner'), {
@@ -47,6 +48,7 @@ export function LocationSheet({
   bounds,
   farZones,
   bands,
+  landmarks,
   mode,
   onModeChange,
   onCancel,
@@ -66,6 +68,8 @@ export function LocationSheet({
   bounds: MapBounds | null
   farZones: LatLng[][]
   bands: DeliveryBands
+  /** Referencias del pueblo, para orientarse sin depender del nombre de la calle. */
+  landmarks: readonly Landmark[]
   mode: MapMode
   onModeChange: (m: MapMode) => void
   onCancel: () => void
@@ -178,7 +182,24 @@ export function LocationSheet({
           onSettle={handleSettle}
           onMovingChange={handleMoving}
           showPin={!coach}
+          landmarks={landmarks}
         />
+
+        {/* La etiqueta del polígono, no el polígono en sí, es lo que explica
+            la línea de fondo. Va abajo a la izquierda —lejos del pin, del
+            botón de GPS y de la instrucción— porque es el elemento de menor
+            jerarquía de la pantalla, no uno más compitiendo arriba. */}
+        {(polygon || circle) && (
+          <div className="pointer-events-none absolute bottom-3 left-3 z-[550]">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-card/90 px-2.5 py-1 font-semibold text-[11px] text-brand-dark shadow-elev-3 backdrop-blur-sm">
+              <span
+                aria-hidden
+                className="inline-block h-2 w-2 rounded-full border-[1.5px] border-brand bg-brand/[0.06]"
+              />
+              Zona de reparto
+            </span>
+          </div>
+        )}
 
         {/* Barra superior: volver + fondo del mapa. */}
         <div className="pointer-events-none absolute inset-x-0 top-0 z-[730] flex items-start gap-2 p-3 pt-[calc(0.75rem+env(safe-area-inset-top))]">
@@ -303,11 +324,19 @@ export function LocationSheet({
           {moving ? 'Ubicando…' : settled ? '¿El pin está en tu puerta?' : 'Arrastra el mapa'}
         </p>
 
+        {/*
+          VERDE PARA "DENTRO", NO NARANJA DE MARCA.
+          `map-picker.tsx` (la postal del formulario) ya distingue `bg-success`
+          de `bg-danger` para esto mismo; aquí el punto se quedaba en el
+          naranja de marca tanto si el pin estaba dentro como recién asentado,
+          y el "✓" que pide la reseña no tenía color que lo respalde. Ahora las
+          dos superficies dicen lo mismo con los mismos colores.
+        */}
         <div className="mt-1 flex min-h-[18px] items-center gap-1.5 font-mono text-[11px]">
           <span
             aria-hidden
             className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${
-              locateError || !inside ? 'bg-danger' : settled ? 'bg-brand' : 'bg-brand-dark'
+              locateError || !inside ? 'bg-danger' : settled ? 'bg-success' : 'bg-brand-dark'
             }`}
           />
           <span
@@ -315,17 +344,17 @@ export function LocationSheet({
               locateError || !inside
                 ? 'text-danger'
                 : settled
-                  ? 'text-ink/70'
+                  ? 'font-semibold text-success'
                   : 'font-semibold text-brand-dark'
             }`}
           >
             {locateError
               ? locateError
               : !inside
-                ? 'Fuera de la zona de reparto de San Jacinto'
+                ? 'Esta ubicación está fuera de la zona de reparto de San Jacinto'
                 : !settled
                   ? 'Aún no marcas tu puerta'
-                  : `Envío S/ ${fee.toFixed(2)}${band === 'far' ? ' (zona lejana)' : ''}${
+                  : `✓ Dentro de la zona · Envío S/ ${fee.toFixed(2)}${band === 'far' ? ' (zona lejana)' : ''}${
                       accuracyM != null ? ` · GPS ±${accuracyM} m` : ' · ajustada a mano'
                     }`}
           </span>

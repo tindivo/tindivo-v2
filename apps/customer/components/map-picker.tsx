@@ -11,6 +11,7 @@ import {
   getCurrentPositionHA,
   getGeolocationPermission,
 } from '@/lib/geolocation'
+import { getLandmarks, type Landmark } from '@/lib/landmarks'
 import { LocationSheet } from './location-sheet'
 import type { LatLng, MapBounds, MapMode } from './map-picker-inner'
 
@@ -153,6 +154,7 @@ export function MapPicker({
   const [loaded, setLoaded] = useState(false)
   const [bands, setBands] = useState<DeliveryBands>({ near: 2.0, far: 2.5 })
   const [farZones, setFarZones] = useState<LatLng[][]>([])
+  const [landmarks, setLandmarks] = useState<Landmark[]>([])
 
   const [accuracyM, setAccuracyM] = useState<number | null>(initialAccuracyM)
   const [gps, setGps] = useState<GpsState>({ kind: 'idle' })
@@ -174,17 +176,22 @@ export function MapPicker({
 
   useEffect(() => {
     let on = true
-    Promise.all([getCoverage(), getCoveragePolygon(), getDeliveryBands(), getFarZones()]).then(
-      ([cov, poly, b, fz]) => {
-        if (!on) return
-        setCenter({ lat: cov.centerLat, lng: cov.centerLng })
-        setRadiusKm(cov.radiusKm)
-        setPolygon(poly?.polygon ?? null)
-        setBands(b)
-        setFarZones(fz)
-        setLoaded(true)
-      },
-    )
+    Promise.all([
+      getCoverage(),
+      getCoveragePolygon(),
+      getDeliveryBands(),
+      getFarZones(),
+      getLandmarks(),
+    ]).then(([cov, poly, b, fz, lm]) => {
+      if (!on) return
+      setCenter({ lat: cov.centerLat, lng: cov.centerLng })
+      setRadiusKm(cov.radiusKm)
+      setPolygon(poly?.polygon ?? null)
+      setBands(b)
+      setFarZones(fz)
+      setLandmarks(lm)
+      setLoaded(true)
+    })
     return () => {
       on = false
     }
@@ -326,6 +333,7 @@ export function MapPicker({
             bounds={bounds}
             zoom={17}
             showPin={hasPoint}
+            landmarks={landmarks}
           />
         ) : (
           <div className="h-full w-full animate-pulse bg-ink/[0.06]" />
@@ -513,8 +521,8 @@ export function MapPicker({
               : !hasPoint
                 ? 'Obligatorio · marca tu ubicación'
                 : !inside
-                  ? 'Fuera de la zona de reparto de San Jacinto'
-                  : `Envío S/ ${fee.toFixed(2)}${band === 'far' ? ' (zona lejana)' : ''} · ${
+                  ? 'Esta ubicación está fuera de la zona de reparto de San Jacinto'
+                  : `✓ Envío S/ ${fee.toFixed(2)}${band === 'far' ? ' (zona lejana)' : ''} · ${
                       accuracyM == null
                         ? 'ajustada a mano'
                         : flojo
@@ -545,6 +553,7 @@ export function MapPicker({
           bounds={bounds}
           farZones={farZones}
           bands={bands}
+          landmarks={landmarks}
           mode={mode}
           onModeChange={setMode}
           onCancel={() => setSheetOpen(false)}

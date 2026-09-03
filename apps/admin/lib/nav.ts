@@ -49,6 +49,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: '/motorizados', label: 'Motorizados', icon: Ico.truck },
       { href: '/agenda', label: 'Agenda', icon: Ico.contacts },
       { href: '/zonas', label: 'Zonas de cobro', icon: Ico.store },
+      { href: '/mapa-referencias', label: 'Referencias del mapa', icon: Ico.mapPin },
     ],
   },
   {

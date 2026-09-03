@@ -21,6 +21,61 @@ html {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+/* Referencias del mapa (`map_landmarks`, ver `lib/landmarks.ts` y el
+   `divIcon` de `map-picker-inner.tsx`).
+
+   El marcador es un div de 0x0 clavado en la coordenada: todo lo que se ve
+   cuelga de ahí en `position: absolute`, para que el nombre pueda sobresalir
+   a la derecha sin que Leaflet lo recorte a una caja de tamaño fijo. */
+.t-lm {
+  /* El gesto de esta pantalla es arrastrar el mapa; nada de esto lo intercepta. */
+  pointer-events: none;
+}
+.t-lm-dot {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 9999px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
+}
+/* Dos clases a propósito: la hoja de Google Fonts fija `font-size: 24px` en
+   `.material-symbols-rounded`, y con una sola clase esto dependería de cuál de
+   las dos hojas cargue después — o sea, de la suerte. Con `.t-lm-dot` delante
+   gana siempre, sin recurrir a `!important`. */
+.t-lm-dot .t-lm-glyph {
+  font-size: 13px;
+  line-height: 1;
+  font-variation-settings:
+    'FILL' 1,
+    'wght' 500,
+    'GRAD' 0,
+    'opsz' 20;
+}
+/* El nombre no lleva caja: el halo blanco es lo que lo hace legible tanto
+   sobre el mapa de calles como sobre la foto de satélite, y sin sumar otro
+   rectángulo a una pantalla donde ya compiten el pin y el botón. */
+.t-lm-name {
+  position: absolute;
+  left: 13px;
+  top: 0;
+  transform: translateY(-50%);
+  white-space: nowrap;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #3c4043;
+  text-shadow:
+    0 0 3px #fff,
+    0 0 3px #fff,
+    0 0 2px #fff;
+}
+
 /* Muro del piloto: el atributo lo pone el script inline de `app/layout.tsx` antes
    del primer pintado, para que un dispositivo con bypass no vea el muro ni un
    instante. React lo desmonta después; esto solo cubre ese hueco. */
