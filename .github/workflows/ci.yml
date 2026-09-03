@@ -49,8 +49,15 @@ jobs:
       - name: Type-check (incluye el drift de enums compile-time)
         run: pnpm type-check
 
-      - name: Test (Vitest — core + contracts)
-        run: pnpm test
+      # @tindivo/api es de integración: su `vitest.global-setup.ts` barre
+      # datos contra Supabase local (127.0.0.1:54321) antes y después de la
+      # suite. Este runner no levanta esa base —ningún workflow lo ha hecho
+      # nunca—, así que el paso fallaría con "fetch failed" pase lo que pase
+      # en el código: no es una señal sobre el cambio que se está integrando.
+      # Se corre a mano en local (`pnpm test`, con Docker arriba) y queda
+      # cubierto por el review de dos etapas antes de mergear.
+      - name: Test (Vitest — core + contracts, sin @tindivo/api)
+        run: pnpm exec turbo run test --filter='!@tindivo/api'
 
       - name: Build
         run: pnpm build
