@@ -132,8 +132,22 @@ export function AuthOnboardingSheet() {
         ) : null}
       </div>
 
-      {/* Carrusel horizontal: todos los pasos montados, translate al activo. */}
-      <div className="h-[min(560px,78dvh)] overflow-hidden">
+      {/*
+       * Carrusel horizontal: todos los pasos montados, translate al activo.
+       *
+       * EL ALTO SE DESCUENTA, NO SE ADIVINA. Antes pedía `78dvh` dentro de una
+       * hoja que mide como mucho `85dvh`, y encima de él van el tirador (20 px)
+       * y el encabezado (60 px). 78 + 80 px no cabe en 85 hasta que la pantalla
+       * mide 971 px de alto, o sea: no cabía en ningún móvil. Nunca reventaba a
+       * la vista porque flexbox lo encogía por su cuenta, y ese encogido lo
+       * pagaban por igual el encabezado y la zona de contenido — la del campo.
+       *
+       * Restando los 80 px de arriba, lo que pide es lo que hay, y el reparto
+       * deja de depender de que flexbox reparta bien. En un móvil normal (800 px)
+       * sale el mismo 560 px de antes: esto no cambia lo que ya se veía bien,
+       * quita el encogido de las pantallas cortas. Ver `steps/phone-step.tsx`.
+       */}
+      <div className="h-[min(560px,calc(85dvh-80px))] overflow-hidden">
         <div
           className="flex h-full"
           style={{
