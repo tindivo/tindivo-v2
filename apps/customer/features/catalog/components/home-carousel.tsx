@@ -14,8 +14,8 @@ export interface HomeBanner {
 const DEFAULT_BANNERS: HomeBanner[] = [
   {
     id: 'envio-gratis',
-    title: 'Envío gratis en tu primer pedido',
-    imageUrl: '/banners/envio_gratis.png',
+    title: 'Envío gratis · Solo para las primeras 30 personas',
+    imageUrl: '/banners/envio_gratis copy.png',
     href: null,
   },
 ]
