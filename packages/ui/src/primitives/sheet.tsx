@@ -1,6 +1,7 @@
 'use client'
 
-import { type ReactNode, useEffect, useRef } from 'react'
+import { type ReactNode, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useDialogFocus } from './use-dialog-focus'
 
 /**
@@ -35,6 +36,32 @@ export function BottomSheet({
   children: ReactNode
 }) {
   const caja = useRef<HTMLDivElement>(null)
+  /**
+   * ESTA HOJA SE CUELGA DE `document.body`, Y NO ES UN CAPRICHO.
+   *
+   * `position: fixed` promete «respecto a la pantalla», pero deja de cumplirlo
+   * en cuanto un ANTEPASADO tiene `transform`, `filter`, `backdrop-filter`,
+   * `contain` o `will-change`: cualquiera de esos convierte al antepasado en el
+   * bloque contenedor, y la hoja pasa a colocarse dentro de ÉL.
+   *
+   * Visto el 2026-09-04. El pie de la bolsa lleva `backdrop-blur-3xl` y dentro
+   * van los botones que abren las hojas-puerta; la de la dirección se anclaba a
+   * ese pie en vez de a la pantalla, y el resultado era una pantalla mezclada:
+   * la cabecera «Mi bolsa» pintada ENCIMA del formulario de dirección, el
+   * rótulo «ETIQUETA» cortado por arriba y el vecino escribiendo su dirección
+   * bajo el título de otra pantalla. Reproducido a 640 px de alto.
+   *
+   * Al portalizar, el antepasado deja de existir para el posicionamiento y la
+   * promesa de `fixed` vuelve a ser cierta pase lo que pase por encima. Vale
+   * para las 32 hojas, no solo para la que se rompió: la siguiente que alguien
+   * abra desde dentro de un elemento con filtro ya nace bien.
+   *
+   * El `montado` es por el render del servidor, donde no hay `document`. No
+   * cuesta un parpadeo: `open` ya es false en el primer render de todas ellas
+   * —se abren al tocar algo—, así que nunca hay una hoja abierta que retrasar.
+   */
+  const [montado, setMontado] = useState(false)
+  useEffect(() => setMontado(true), [])
   // Mete el foco, escucha Escape en `document` y lo devuelve al cerrar. Lo de
   // Escape no es un extra: el `onKeyDown` de abajo solo recibe la tecla si el
   // foco YA está dentro, así que hasta ahora esta hoja prometía cerrarse con
@@ -50,8 +77,8 @@ export function BottomSheet({
     }
   }, [open])
 
-  if (!open) return null
-  return (
+  if (!open || !montado) return null
+  return createPortal(
     // biome-ignore lint/a11y/noStaticElementInteractions: backdrop de modal que cierra al click fuera
     <div
       className="fixed inset-0 z-80 flex items-end justify-center bg-ink/35 animate-[t-fade-in_200ms_ease] backdrop-blur-sm"
@@ -76,6 +103,7 @@ export function BottomSheet({
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
