@@ -147,7 +147,13 @@ export function AuthOnboardingSheet() {
        * sale el mismo 560 px de antes: esto no cambia lo que ya se veía bien,
        * quita el encogido de las pantallas cortas. Ver `steps/phone-step.tsx`.
        */}
-      <div className="h-[min(560px,calc(85dvh-80px))] overflow-hidden">
+      {/* `data-testid` porque el test que vigila el desplazamiento necesita un
+          asidero que no cambie: identificarlo por sus clases es justo lo que se
+          rompió al pasar de `overflow-hidden` a `overflow-clip-safe`. */}
+      <div
+        data-testid="onboarding-carrusel"
+        className="h-[min(560px,calc(85dvh-80px))] overflow-clip-safe"
+      >
         <div
           className="flex h-full"
           style={{

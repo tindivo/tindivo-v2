@@ -21,6 +21,27 @@ html {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+/* Recorta SIN ser contenedor de scroll.
+
+   `overflow: hidden` recorta, pero deja el elemento scrolleable por programa:
+   el navegador puede moverle el `scrollLeft` por su cuenta —al enfocar un campo
+   de dentro, por ejemplo— y como no hay barra ni gesto que valga, ahí se queda
+   para siempre. Es exactamente lo que le pasa al carrusel de pasos del
+   onboarding, que mide 6 paneles de ancho y se coloca con `translateX`: medido
+   el 2026-09-04, llegaba al paso del celular con 16 px de desplazamiento heredados
+   del formulario de registro anterior, y con ellos el panel activo se ve corrido
+   y asoma el de al lado. `overflow: clip` recorta igual pero NO crea contenedor
+   de scroll, así que ese desplazamiento no puede ni existir.
+
+   Las dos declaraciones son a propósito y en este orden: un navegador que no
+   conozca `clip` se queda con `hidden`, que es el comportamiento de hoy. Al
+   revés —o con `clip` a secas— un navegador viejo se quedaría sin recortar
+   nada y enseñaría los seis paneles en fila, que es mucho peor que 16 px. */
+.overflow-clip-safe {
+  overflow: hidden;
+  overflow: clip;
+}
+
 /* Referencias del mapa (`map_landmarks`, ver `lib/landmarks.ts` y el
    `divIcon` de `map-picker-inner.tsx`).
 
