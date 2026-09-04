@@ -15,7 +15,7 @@ const DEFAULT_BANNERS: HomeBanner[] = [
   {
     id: 'envio-gratis',
     title: 'Envío gratis · Solo para las primeras 30 personas',
-    imageUrl: '/banners/envio_gratis copy.png',
+    imageUrl: '/banners/envio_gratis.png',
     href: null,
   },
 ]
