@@ -417,11 +417,26 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
        * por `driver_availability.is_available`. El filtro sigue vigente donde
        * corresponde —quién puede TOMAR el pedido— pero no puede gobernar quién
        * se ENTERA de que existe.
+       *
+       * Filtrar aquí creaba un bloqueo circular, medido en producción: el cron
+       * `close-driver-shifts` apaga la disponibilidad de todos al cerrar el
+       * horario (23:00 Perú). Al día siguiente entra un pedido, `is_available`
+       * es false para todos, nadie recibe el aviso, y por tanto nadie se entera
+       * de que hay trabajo — así que nadie abre la app para volver a activarse.
+       * La única salida era que el motorizado entrase por azar.
+       *
+       * El v1 ya había llegado a esta conclusión y la dejó escrita en su propio
+       * `send-push` ("dejándolos en un limbo donde no podían volver a
+       * participar sin entrar primero a la PWA por azar"). v2 reintrodujo el
+       * filtro al reescribir la función.
        */
       const { data: drivers, error: driversErr } = await db
         .from('drivers')
         .select('user_id')
         .eq('is_active', true)
+      // Este error SÍ se mira: si la consulta falla, el resultado es
+      // indistinguible de "no hay motorizados" — un 200 con recipients 0 que
+      // parece normal. Es justo el silencio que costó tres días de diagnóstico.
       if (driversErr) throw new Error(`drivers query: ${driversErr.message}`)
       const oBrief = await orderBrief(aggregateId)
       const bName = oBrief?.bizName ?? bizName
@@ -434,6 +449,8 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
             `⚡ ${bName} · ¡Listo para llevar!`,
             `${dest}${pay}#${sid}`,
             {
+              // Deeplink al pedido, no a la raíz: tocar el aviso tiene que abrir
+              // LO que se está avisando.
               url: `/pedido/${aggregateId}`,
               req: true,
               renotify: true,
@@ -509,7 +526,14 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
   } else if (eventType === 'OrderQueued') {
     /**
      * El pedido entró a la bandeja por RELOJ, no porque nadie pulsara nada:
-     * `appears_in_queue_at` = `listo - queueLeadMinutes` (0117).
+     * `appears_in_queue_at` = `listo - queueLeadMinutes` (0117). Era el único
+     * camino de entrada a la bandeja que no avisaba, así que el pedido aparecía
+     * en silencio y solo lo veía quien tuviera la app abierta por azar.
+     *
+     * Es el aviso accionable —"ya puedes tomarlo"—, de ahí `requireInteraction`.
+     * El de `headsUpNotes` es el previo ("va a tardar, atento") y no compite:
+     * ese solo sale con `prep > 10`, que es exactamente cuando hay hueco entre
+     * los dos momentos.
      */
     const o = await orderBrief(aggregateId)
     if (o) {
@@ -571,6 +595,8 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
   } else if (eventType === 'TransferRequested') {
     // Al dueño actual (`fromDriverId`), no al solicitante: tiene una ventana de
     // segundos para responder y, desde la 0130, callarse le cede el pedido.
+    // Por eso `requireInteraction`: en Android con Doze, un aviso sin él se
+    // clasifica como baja prioridad y puede no llegar a verse.
     const o = await orderBrief(aggregateId)
     const owner = await driverUserId(payload?.fromDriverId)
     if (o && owner) {
@@ -595,6 +621,10 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
     const resolution = (payload?.resolution as string) ?? ''
     const transferred = payload?.transferred === true
     const reqId = payload?.requestId ?? aggregateId
+    // `fromDriverId`/`toDriverId` vienen del payload desde la 0134. Si falta
+    // (evento anterior a la migración, o Edge Function desplegada antes que
+    // ella), se recuperan de la solicitud: el acoplamiento código↔migración ya
+    // dejó producción sin pedidos una vez, y aquí sale gratis no repetirlo.
     let fromId = payload?.fromDriverId
     let toId = payload?.toDriverId
     if ((!fromId || !toId) && typeof reqId === 'string') {
@@ -633,6 +663,8 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
         vibrate: false,
       })
     } else if (o && resolution === 'expired' && transferred) {
+      // Doble aviso con TAGS DISTINTOS. Con el mismo tag, FCM/APNs colapsan los
+      // dos en uno y el que perdió el pedido vería el mensaje del que lo ganó.
       if (owner) {
         out.push({
           userId: owner,
@@ -658,6 +690,9 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
         })
       }
     } else if (o && resolution === 'expired' && !transferred && requester) {
+      // Venció y el pedido NO se movió. El único motivo que hoy produce la
+      // 0130 es la mochila llena; se nombra para que el solicitante entienda
+      // por qué no calificó en vez de creer que el sistema falló.
       const reason = (payload?.reason as string) ?? ''
       out.push({
         userId: requester,
@@ -697,6 +732,12 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
       const money = (n: unknown) => `S/ ${Number(n ?? 0).toFixed(2)}`
       const base = { userId: driverUser, url: '/efectivo', vibrate: false }
       if (eventType === 'CashConfirmed') {
+        // COLAPSADA POR (motorizado, negocio). Desde 0157 la cajera confirma
+        // cliente por cliente, así que cuatro confirmaciones seguidas son cuatro
+        // eventos. Con un tag por liquidación, el motorizado recibía cuatro
+        // notificaciones apiladas diciendo casi lo mismo; con este tag la
+        // notificación se REEMPLAZA y el cuerpo describe el estado actual —
+        // cuánto le queda abierto— en vez del último delta.
         const { data: biz } = await db
           .from('businesses')
           .select('name')
