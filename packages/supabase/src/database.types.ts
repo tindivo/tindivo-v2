@@ -2605,6 +2605,10 @@ export type Database = {
         }
         Returns: Json
       }
+      business_performance_metrics: {
+        Args: { p_business_id: string; p_end: string; p_start: string }
+        Returns: Json
+      }
       cancel_customer_order: {
         Args: { p_customer_user_id: string; p_order_id: string }
         Returns: Json
@@ -2751,6 +2755,14 @@ export type Database = {
         }
       }
       current_business_id: { Args: never; Returns: string }
+      current_customer_contraentrega_outcome: {
+        Args: {
+          p_customer_gps_lat?: number
+          p_customer_gps_lng?: number
+          p_customer_gps_method?: string
+        }
+        Returns: string
+      }
       current_customer_promo_free_delivery: { Args: never; Returns: Json }
       current_customer_trusted_for_contraentrega: {
         Args: never
@@ -2765,6 +2777,14 @@ export type Database = {
       current_user_role: { Args: never; Returns: string }
       customer_contraentrega_blocked: {
         Args: { p_phone: string; p_reference: string }
+        Returns: boolean
+      }
+      customer_contraentrega_decision: {
+        Args: { p_customer_user_id: string }
+        Returns: string
+      }
+      customer_gps_in_coverage: {
+        Args: { p_lat: number; p_lng: number; p_method: string }
         Returns: boolean
       }
       customer_is_blocked: {
