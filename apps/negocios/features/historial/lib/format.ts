@@ -1,5 +1,6 @@
+import type { HistRow } from '@/lib/order-history/types'
 import { mapPayment } from '@/lib/orders/view-model'
-import type { HistDisplay, HistRow } from '../types'
+import type { HistDisplay } from '../types'
 
 const limaTimeFmt = new Intl.DateTimeFormat('es-PE', {
   hour: '2-digit',

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useDashboard } from '@/components/dashboard/shell'
 import { ORDER_SELECT } from '@/lib/orders/view-model'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
-import type { HistRow } from '../types'
+import type { HistRow } from './types'
 
 export function useHistory(startDate: string, endDate: string) {
   const { bizId } = useDashboard()

@@ -24,7 +24,7 @@ const MapCanvas = dynamic(() => import('./map-picker-inner'), {
 })
 
 const ATTRIBUTION: Record<MapMode, string> = {
-  street: '© OpenStreetMap',
+  street: '© CARTO © OpenStreetMap',
   satellite: '© Esri',
 }
 

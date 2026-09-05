@@ -26,30 +26,118 @@ export interface Landmark {
 }
 
 /**
- * ICONO Y COLOR POR CATEGORÍA, COMO EN CUALQUIER MAPA QUE LA GENTE YA SABE LEER.
+ * EL GLIFO DE CADA CATEGORÍA, EN SVG Y NO EN FUENTE DE ICONOS.
  *
- * Un disco de color sin más no dice nada: hay que leer el nombre para saber
- * qué es, y entonces el color sobra. El glifo sí se lee de un vistazo —una
- * cruz es una botica en cualquier mapa del mundo— y es lo que hace que estas
- * referencias funcionen incluso antes de acercarse lo bastante para que
- * aparezcan los nombres.
+ * El resto de la app usa Material Symbols (`DECISIONS.md §1`) y aquí también se
+ * usaba, vía la ligadura de `--icon-glyph`. Se cambió por SVG en línea por tres
+ * motivos, y ninguno es estético:
  *
- * Los nombres son de Material Symbols Rounded, el único set del proyecto
- * (`DECISIONS.md §1`), y la fuente ya la carga `app/layout.tsx`.
+ * 1. LA FUENTE LLEGA TARDE. Estos marcadores se pintan en cuanto responde
+ *    `map_landmarks`, que es una consulta local y rápida; la hoja de Google
+ *    Fonts es una petición a otro dominio. Mientras no llega, la ligadura no
+ *    resuelve y el disco de color sale VACÍO. En San Jacinto, con la cobertura
+ *    que hay, ese hueco no dura un parpadeo.
+ * 2. A 10 px UNA FUENTE NO SE GOBIERNA. El glifo se centra según métricas
+ *    tipográficas (ascendente, `line-height`), no según su tinta, así que
+ *    queda descentrado dentro del círculo por una cantidad distinta en cada
+ *    icono. En SVG el glifo se escala y se centra contra el propio círculo.
+ * 3. SON DIBUJOS, NO TEXTO. Un glifo de fuente dentro de un `divIcon` es
+ *    contenido generado por CSS que un lector de pantalla puede intentar leer;
+ *    estas referencias ya van con `interactive: false` y `aria-hidden`.
+ *
+ * Los dibujos están authored en una rejilla de 24×24 y el renderer los escala
+ * y los centra (ver `iconoDe` en `map-picker-inner.tsx`), así que aquí solo
+ * importa que ocupen la rejilla entera y que se lean de un vistazo: el color
+ * NO desambigua nada por sí solo —hay que leer el nombre para saber qué es, y
+ * entonces el color sobra— pero una cruz es una botica en cualquier mapa del
+ * mundo, incluso antes de acercarse lo bastante para que aparezcan los nombres.
+ *
+ * El blanco lo pone el renderer en el `<g>` contenedor, y con él el color de
+ * la categoría como `currentColor`: un dibujo que necesite las dos tintas —el
+ * balón— las tiene sin recibir el color por parámetro.
  *
  * Los rótulos del panel ("Salud (botica, posta)") NO se reutilizan acá: allá
  * nombran una opción de un desplegable, y aquí el nombre propio del sitio ya
  * está escrito al lado del icono.
  */
-export const LANDMARK_STYLE: Record<MapLandmarkCategory, { color: string; icon: string }> = {
-  salud: { color: '#e11d48', icon: 'local_pharmacy' },
-  mercado: { color: '#d97706', icon: 'storefront' },
-  educacion: { color: '#2563eb', icon: 'school' },
-  religioso: { color: '#7c3aed', icon: 'church' },
-  deporte: { color: '#0891b2', icon: 'sports_soccer' },
-  recreacion: { color: '#16a34a', icon: 'park' },
-  gobierno: { color: '#475569', icon: 'account_balance' },
-  otro: { color: '#64748b', icon: 'place' },
+export const LANDMARK_STYLE: Record<MapLandmarkCategory, { color: string; glyph: string }> = {
+  // Cruz médica: el palo corto arriba y abajo la separa de la latina.
+  salud: {
+    color: '#e11d48',
+    glyph: '<path d="M10 4h4v6h6v4h-6v6h-4v-6H4v-4h6z"/>',
+  },
+  // Toldo + local con su puerta.
+  mercado: {
+    color: '#d97706',
+    glyph: '<path d="M3 4.5h18v3.6H3z"/><path d="M4.8 9.6h14.4V20h-4.6v-5.6H9.4V20H4.8z"/>',
+  },
+  // Birrete.
+  educacion: {
+    color: '#2563eb',
+    glyph:
+      '<path d="M12 3 1.2 8.4 12 13.8l10.8-5.4z"/>' +
+      '<path d="M5.9 11.9v3.7c0 1.5 2.7 2.7 6.1 2.7s6.1-1.2 6.1-2.7v-3.7L12 15z"/>',
+  },
+  /*
+   * Cruz latina, y el reparto de sus proporciones NO es gusto: es lo único que
+   * la separa de la de `salud`. Con los brazos a media altura y el trazo grueso
+   * —que es como se dibujó primero— las dos salían siendo el mismo signo `+` en
+   * dos colores, y a 10 px el color no desambigua: hay que leer el nombre, y si
+   * hay que leer el nombre el icono no sirvió de nada.
+   *
+   * Así que la médica es ANCHA Y CENTRADA (brazos de 4 de grueso, cruzando en
+   * el medio) y esta es ALTA Y FINA (brazos de 2.8, cruzando al 27% de la
+   * altura, con el palo bajando hasta abajo del todo). Lo que se distingue de
+   * un vistazo es la silueta, no el detalle.
+   */
+  religioso: {
+    color: '#7c3aed',
+    glyph: '<path d="M10.6 1.6h2.8v5.6h4.6V10h-4.6v12.4h-2.8V10H6V7.2h4.6z"/>',
+  },
+  /*
+   * Balón, y va EN NEGATIVO: disco blanco con los parches del color de la
+   * categoría, no un aro blanco con un pentágono dentro. Dibujado en positivo
+   * —que fue el primer intento— el aro fino y el pentágono diminuto se
+   * fusionaban a 10 px en un anillo con un punto en medio, o sea una diana,
+   * indistinguible del punto genérico de `otro`. En negativo el ojo ve primero
+   * un disco claro con manchas, que es exactamente lo que es un balón.
+   *
+   * Las costuras llegan al canto y son FINAS, y ese par de decisiones costó
+   * dos intentos fallidos: gruesas y hasta el borde el dibujo era una rueda
+   * de timón; finas pero cortas, una estrella de cinco puntas. Un balón se
+   * reconoce porque el parche central está CERRADO por costuras que llegan
+   * al borde — si mueren antes, lo que se ve es la estrella que forman.
+   *
+   * Los parches usan `currentColor` y no el color escrito a mano: el renderer
+   * lo pone en el `<g>` contenedor, así que este dibujo hereda el color de su
+   * categoría igual que el resto sin tener que interpolarlo aquí.
+   */
+  deporte: {
+    color: '#0891b2',
+    glyph:
+      '<circle cx="12" cy="12" r="11" fill="#fff"/>' +
+      '<path d="M12 7.6V1.6M16.18 10.64 22.46 8.6M14.59 15.56 18.47 20.9' +
+      'M9.41 15.56 5.53 20.9M7.82 10.64 1.54 8.6" ' +
+      'stroke="currentColor" stroke-width="1.5"/>' +
+      '<path d="M12 7.6 16.18 10.64 14.59 15.56H9.41L7.82 10.64z" fill="currentColor"/>',
+  },
+  // Árbol: dos copas y tronco.
+  recreacion: {
+    color: '#16a34a',
+    glyph: '<path d="M12 2.6 6.4 10.6h11.2zM12 7.2 4 18h16zM10.7 17h2.6V21h-2.6z"/>',
+  },
+  // Frontón, columnas y basamento.
+  gobierno: {
+    color: '#475569',
+    glyph:
+      '<path d="M12 2.6 2.4 8v2.2h19.2V8zM5 11.8h2.6v6.2H5zM10.7 11.8h2.6v6.2h-2.6z' +
+      'M16.4 11.8H19v6.2h-2.6zM2.8 19.2h18.4v2.2H2.8z"/>',
+  },
+  // Sin categoría: el punto genérico, igual que el POI sin icono de Google.
+  otro: {
+    color: '#64748b',
+    glyph: '<circle cx="12" cy="12" r="5.4"/>',
+  },
 }
 
 let cached: Promise<Landmark[]> | null = null

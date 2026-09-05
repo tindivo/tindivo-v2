@@ -201,17 +201,17 @@ export function LocationSheet({
           </div>
         )}
 
-        {/* Barra superior: volver + fondo del mapa. */}
+        {/* Barra superior: volver + fondo del mapa con acabado glassmorphism. */}
         <div className="pointer-events-none absolute inset-x-0 top-0 z-[730] flex items-start gap-2 p-3 pt-[calc(0.75rem+env(safe-area-inset-top))]">
           <button
             type="button"
             onClick={onCancel}
             aria-label="Volver sin cambiar la ubicación"
-            className="pointer-events-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-card text-ink shadow-elev-3 transition-transform active:scale-95"
+            className="pointer-events-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-card/90 text-ink shadow-elev-3 backdrop-blur-md border border-white/60 transition-transform active:scale-95"
           >
             <Icon name="arrow_back" size={22} />
           </button>
-          <div className="pointer-events-auto ml-auto rounded-[15px] bg-card/95 p-0.5 shadow-elev-3 backdrop-blur-sm">
+          <div className="pointer-events-auto ml-auto rounded-[18px] bg-card/90 p-1 shadow-elev-3 backdrop-blur-md border border-white/60">
             <Segmented
               size="sm"
               value={mode}
@@ -230,7 +230,7 @@ export function LocationSheet({
             moving || coach ? 'opacity-0' : 'opacity-100'
           }`}
         >
-          <span className="rounded-full bg-ink/80 px-3.5 py-1.5 text-center font-medium text-[12px] text-white shadow-elev-3">
+          <span className="rounded-full bg-slate-900/85 px-4 py-1.5 text-center font-medium text-[12px] text-white shadow-elev-3 backdrop-blur-md border border-white/10">
             Mueve el mapa hasta que el pin quede en tu puerta
           </span>
         </div>
@@ -240,7 +240,7 @@ export function LocationSheet({
           onClick={useMyLocation}
           disabled={locating}
           aria-label="Centrar en mi ubicación"
-          className="absolute right-4 bottom-4 z-[600] flex h-12 w-12 items-center justify-center rounded-full bg-card text-brand-dark shadow-elev-3 transition-transform active:scale-95 disabled:opacity-70"
+          className="absolute right-4 bottom-4 z-[600] flex h-12 w-12 items-center justify-center rounded-full bg-card/95 text-brand-dark shadow-elev-3 backdrop-blur-md border border-white/60 transition-transform active:scale-95 disabled:opacity-70"
         >
           {locating ? <Spinner size="xs" variant="brand" /> : <Icon name="my_location" size={22} />}
         </button>
