@@ -1,7 +1,7 @@
 // Tindivo service worker — push + notificationclick.
 // Sin offline-sync por decisión de producto.
 
-const DEFAULT_VIBRATE = [200, 100, 200]
+const DEFAULT_VIBRATE = [300, 100, 300, 100, 500]
 
 self.addEventListener('push', (event) => {
   event.waitUntil(
@@ -38,6 +38,7 @@ self.addEventListener('push', (event) => {
             tag,
             url = '/',
             requireInteraction = false,
+            renotify = false,
             silent,
             vibrate,
           } = data
@@ -50,6 +51,7 @@ self.addEventListener('push', (event) => {
             badge,
             tag,
             requireInteraction: Boolean(requireInteraction),
+            ...(tag && renotify ? { renotify: true } : {}),
             data: { url },
             vibrate: Array.isArray(vibrate) ? vibrate : vibrate ? DEFAULT_VIBRATE : undefined,
           }

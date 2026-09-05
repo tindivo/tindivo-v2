@@ -59,6 +59,7 @@ type Note = {
   url: string
   requireInteraction: boolean
   vibrate: boolean
+  renotify?: boolean
 }
 
 /**
@@ -133,11 +134,127 @@ async function allDriverUserIds(exceptDriverId?: unknown): Promise<string[]> {
     .map((d) => d.user_id as string)
 }
 
+/**
+ * Soles para leerse de un vistazo en una pantalla bloqueada.
+ *
+ * LOS CÉNTIMOS SOLO CUANDO LOS HAY. «S/ 3» y «S/ 2.50» se leen de un golpe;
+ * «S/ 3.00» obliga a procesar dos ceros que no dicen nada. Lo que NO se puede
+ * hacer es lo que había —redondear a entero con `toFixed(0)`—: un vuelto de
+ * S/ 2.50 anunciado como «S/ 3» manda al motorizado con medio sol de menos, y
+ * uno de S/ 0.40 anunciado como «S/ 0» lo manda creyendo que no hay vuelto.
+ * Es el mismo daño que arregló la migración 0131, rehecho en la capa de arriba.
+ *
+ * El redondeo a dos decimales es contra la coma flotante, no contra los datos:
+ * la columna es `numeric(10,2)` y llega limpia, pero cualquier resta hecha en
+ * JS puede devolver 2.4999999999999996 y `Number.isInteger` diría que no.
+ */
+function soles(n: unknown): string {
+  const v = Math.round(Number(n ?? 0) * 100) / 100
+  return `S/ ${Number.isInteger(v) ? v.toFixed(0) : v.toFixed(2)}`
+}
+
+/**
+ * Cómo cobra el motorizado, para el cuerpo del aviso.
+ *
+ * EL VUELTO SALE DE `change_to_give` Y NO SE RECALCULA AQUÍ. Antes se restaba
+ * `client_pays_with - (order_amount + delivery_fee)`, que da el número correcto
+ * en efectivo puro por casualidad —el pedido manual guarda `order_amount` ya
+ * descontada la tarifa, así que la suma cuadra— pero es la fórmula equivocada
+ * en cuanto el pago es mixto: ahí la base calcula `client_pays_with -
+ * cash_amount`, que es otra cosa. Restar por segunda vez lo que la base ya
+ * restó solo puede empatar o divergir, nunca acertar más; y la trampa estaba
+ * armada porque el cálculo vivía FUERA del `switch`, listo para que alguien
+ * lo enchufara a la rama mixta y se llevara el número malo sin enterarse.
+ *
+ * DEVUELVE CADENA VACÍA CUANDO EL PEDIDO NO DICE CÓMO SE PAGA. Antes caía en
+ * `return 'Efectivo'`, que no es un valor por defecto: es una suposición
+ * presentada como dato, en el campo por el que el motorizado decide si tiene
+ * que llevar sencillo. Quien recibe la cadena vacía ya sabe omitir el tramo.
+ */
+function formatPaymentBrief(o: {
+  payment_intent?: string | null
+  change_to_give?: number | null
+  cash_amount?: number | null
+}): string {
+  // `change_to_give` es NULL cuando no aplica ("no hay parte en efectivo") y
+  // solo trae número cuando hay vuelto que dar. Ver 0131, que fija esa
+  // semántica a propósito y explica por qué no es 0.
+  const vuelto = Number(o.change_to_give ?? 0)
+  const conVuelto = (texto: string) =>
+    vuelto > 0 ? `${texto} (vuelto ${soles(vuelto)})` : texto
+
+  switch (o.payment_intent) {
+    case 'prepaid':
+      return 'Prepagado'
+    case 'pending_yape':
+      return 'Yape/Plin'
+    case 'pending_cash':
+      return conVuelto('Efectivo')
+    case 'pending_mixed':
+      // El vuelto también aquí: la base lo guarda para el pago mixto igual que
+      // para el efectivo puro, y callarlo deja al motorizado sin sencillo por
+      // exactamente el mismo camino.
+      return conVuelto(o.cash_amount != null ? `Efectivo ${soles(o.cash_amount)} + Yape` : 'Mixto')
+    default:
+      return ''
+  }
+}
+
+/**
+ * Destino y cliente, cortos para una pantalla de teléfono.
+ *
+ * EL NOMBRE DEL CLIENTE YA NO VA DENTRO DEL DESTINO, y se devuelve aparte.
+ * `destText` viaja en los avisos que se mandan a TODOS los motorizados activos
+ * —pedido disponible, entró en cola, se liberó, lleva rato esperando— o sea a
+ * gente que en su mayoría no va a llevar ese pedido. Con el nombre dentro,
+ * cada uno de esos avisos publicaba «quién vive en tal referencia» en la
+ * pantalla bloqueada de todo el gremio, por un pedido que ninguno tomó. La
+ * referencia sola sí se queda: es la distancia, y es lo que el motorizado
+ * necesita para decidir si le sirve.
+ *
+ * `customerName` sigue disponible para los avisos de UN destinatario —el que
+ * ya tiene el pedido, o el que acaba de recibirlo en una transferencia—, que
+ * es quien tiene motivo para saberlo. Con un motorizado en el piloto esto no
+ * cambia nada; con tres, sí.
+ */
+function formatDestBrief(o: {
+  delivery_reference?: string | null
+  delivery_address?: string | null
+  customer_name?: string | null
+}): { destText: string; customerName: string } {
+  let ref = (o.delivery_reference ?? o.delivery_address ?? '').trim()
+  if (ref.length > 28) ref = `${ref.slice(0, 26)}…`
+
+  let cust = (o.customer_name ?? '').trim()
+  if (cust.length > 18) cust = `${cust.slice(0, 16)}…`
+
+  return { destText: ref ? `A: ${ref}` : '', customerName: cust }
+}
+
 /** Datos del pedido que aparecen en el cuerpo de cualquier aviso al motorizado. */
 async function orderBrief(orderId: string) {
   const { data: o } = await db
     .from('orders')
-    .select('short_id,business_id,driver_id,status,prep_time_minutes,order_amount')
+    /*
+     * SOLO LO QUE ALGUIEN LEE. Se cayeron cinco columnas que se pedían y no se
+     * usaban: `yape_amount` y `client_pays_with` nunca se leyeron, y
+     * `order_amount`/`delivery_fee` se quedaron sin lector cuando el vuelto
+     * pasó a salir de `change_to_give`. Una columna en el `select` es una
+     * promesa de que alguien la mira; las que no, envejecen mintiendo.
+     */
+    .select(`
+      short_id,
+      business_id,
+      driver_id,
+      status,
+      prep_time_minutes,
+      customer_name,
+      delivery_reference,
+      delivery_address,
+      payment_intent,
+      change_to_give,
+      cash_amount
+    `)
     .eq('id', orderId)
     .maybeSingle()
   if (!o) return null
@@ -146,13 +263,19 @@ async function orderBrief(orderId: string) {
     .select('name')
     .eq('id', o.business_id)
     .maybeSingle()
+
+  const { destText, customerName } = formatDestBrief(o)
+  const payText = formatPaymentBrief(o)
+
   return {
     sid: (o.short_id as string) ?? '',
     bizName: (biz?.name as string) ?? 'el restaurante',
     driverId: o.driver_id as string | null,
     status: o.status as string,
     prepMinutes: Number(o.prep_time_minutes ?? 0),
-    amount: `S/ ${Number(o.order_amount ?? 0).toFixed(2)}`,
+    destText,
+    customerName,
+    payText,
   }
 }
 
@@ -174,10 +297,11 @@ async function headsUpNotes(orderId: string, eventType: string): Promise<Note[]>
   if (o.status !== 'preparing') return []
   if (o.prepMinutes <= HEADS_UP_MIN_PREP_MINUTES) return []
   const userIds = await allDriverUserIds()
+  const dest = o.destText ? `${o.destText} · ` : ''
   return userIds.map((userId) => ({
     userId,
-    title: `Pedido en cocina — ${o.bizName}`,
-    body: `${o.amount} · estará listo en ${o.prepMinutes} min. Atento.`,
+    title: `🍳 ${o.bizName} · En cocina (${o.prepMinutes} min)`,
+    body: `${dest}Te avisaremos cuando esté por salir · #${o.sid}`,
     tag: `${eventType}-headsup-${o.sid}`,
     url: '/',
     requireInteraction: false,
@@ -259,7 +383,12 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
     const bizUser = biz?.user_id as string | null
     const cust = o.customer_user_id as string | null
     const custUrl = `/pedido/${sid}`
-    const push = (userId: string | null, title: string, body: string, o2?: { url?: string; req?: boolean }) => {
+    const push = (
+      userId: string | null,
+      title: string,
+      body: string,
+      o2?: { url?: string; req?: boolean; renotify?: boolean },
+    ) => {
       if (!userId) return
       out.push({
         userId,
@@ -269,6 +398,7 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
         url: o2?.url ?? custUrl,
         requireInteraction: Boolean(o2?.req),
         vibrate: Boolean(o2?.req),
+        renotify: Boolean(o2?.renotify ?? o2?.req),
       })
     }
 
@@ -287,35 +417,28 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
        * por `driver_availability.is_available`. El filtro sigue vigente donde
        * corresponde —quién puede TOMAR el pedido— pero no puede gobernar quién
        * se ENTERA de que existe.
-       *
-       * Filtrar aquí creaba un bloqueo circular, medido en producción: el cron
-       * `close-driver-shifts` apaga la disponibilidad de todos al cerrar el
-       * horario (23:00 Perú). Al día siguiente entra un pedido, `is_available`
-       * es false para todos, nadie recibe el aviso, y por tanto nadie se entera
-       * de que hay trabajo — así que nadie abre la app para volver a activarse.
-       * La única salida era que el motorizado entrase por azar.
-       *
-       * El v1 ya había llegado a esta conclusión y la dejó escrita en su propio
-       * `send-push` ("dejándolos en un limbo donde no podían volver a
-       * participar sin entrar primero a la PWA por azar"). v2 reintrodujo el
-       * filtro al reescribir la función.
        */
       const { data: drivers, error: driversErr } = await db
         .from('drivers')
         .select('user_id')
         .eq('is_active', true)
-      // Este error SÍ se mira: si la consulta falla, el resultado es
-      // indistinguible de "no hay motorizados" — un 200 con recipients 0 que
-      // parece normal. Es justo el silencio que costó tres días de diagnóstico.
       if (driversErr) throw new Error(`drivers query: ${driversErr.message}`)
+      const oBrief = await orderBrief(aggregateId)
+      const bName = oBrief?.bizName ?? bizName
+      const dest = oBrief?.destText ? `${oBrief.destText} · ` : ''
+      const pay = oBrief?.payText ? `${oBrief.payText} · ` : ''
       for (const d of drivers ?? []) {
         if (d.user_id) {
-          // Deeplink al pedido, no a la raíz: tocar el aviso tiene que abrir
-          // LO que se está avisando.
-          push(d.user_id as string, 'Nuevo pedido disponible', `${bizName} · #${sid}`, {
-            url: `/pedido/${aggregateId}`,
-            req: true,
-          })
+          push(
+            d.user_id as string,
+            `⚡ ${bName} · ¡Listo para llevar!`,
+            `${dest}${pay}#${sid}`,
+            {
+              url: `/pedido/${aggregateId}`,
+              req: true,
+              renotify: true,
+            },
+          )
         }
       }
     } else if (action === 'take') {
@@ -367,11 +490,13 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
       push(bizUser, 'Pedido cancelado', `#${sid} cancelado · ${reason}`, { url: '/' })
       // Si ya tenía motorizado, es quien más necesita saberlo: puede estar
       // yendo al local o esperando la comida en el mostrador.
+      const oBrief = await orderBrief(aggregateId)
+      const who = oBrief?.customerName ? ` de ${oBrief.customerName}` : ''
       push(
         await driverUserId(o.driver_id),
-        'Pedido cancelado',
-        `#${sid} se canceló · no lo recojas`,
-        { url: `/pedido/${aggregateId}`, req: true },
+        `❌ CANCELADO · ${bizName}`,
+        `Pedido${who} (#${sid}) se canceló · no vayas al local`,
+        { url: `/pedido/${aggregateId}`, req: true, renotify: true },
       )
     }
   } else if (eventType === 'OrderCreated') {
@@ -384,28 +509,24 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
   } else if (eventType === 'OrderQueued') {
     /**
      * El pedido entró a la bandeja por RELOJ, no porque nadie pulsara nada:
-     * `appears_in_queue_at` = `listo - queueLeadMinutes` (0117). Era el único
-     * camino de entrada a la bandeja que no avisaba, así que el pedido aparecía
-     * en silencio y solo lo veía quien tuviera la app abierta por azar.
-     *
-     * Es el aviso accionable —"ya puedes tomarlo"—, de ahí `requireInteraction`.
-     * El de `headsUpNotes` es el previo ("va a tardar, atento") y no compite:
-     * ese solo sale con `prep > 10`, que es exactamente cuando hay hueco entre
-     * los dos momentos.
+     * `appears_in_queue_at` = `listo - queueLeadMinutes` (0117).
      */
     const o = await orderBrief(aggregateId)
     if (o) {
       const mins = Number(payload?.minutesToReady ?? 0)
-      const when = mins > 1 ? `estará listo en ~${mins} min` : 'está por salir'
+      const when = mins > 1 ? `Listo en ~${mins} min` : 'Por salir'
+      const dest = o.destText ? `${o.destText} · ` : ''
+      const pay = o.payText ? `${o.payText} · ` : ''
       for (const userId of await allDriverUserIds()) {
         out.push({
           userId,
-          title: `Ya puedes tomarlo — ${o.bizName}`,
-          body: `#${o.sid} · ${o.amount} · ${when}`,
+          title: `🥡 ${o.bizName} · Por salir`,
+          body: `${dest}${when} · ${pay}#${o.sid}`,
           tag: `OrderQueued-${o.sid}`,
           url: `/pedido/${aggregateId}`,
           requireInteraction: true,
           vibrate: true,
+          renotify: true,
         })
       }
     }
@@ -414,15 +535,18 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
     // demás, no al que lo soltó.
     const o = await orderBrief(aggregateId)
     if (o) {
+      const dest = o.destText ? `${o.destText} · ` : ''
+      const pay = o.payText ? `${o.payText} · ` : ''
       for (const userId of await allDriverUserIds(payload?.driverId)) {
         out.push({
           userId,
-          title: `Pedido libre — ${o.bizName}`,
-          body: `#${o.sid} · ${o.amount} · se liberó, tómalo`,
+          title: `🔓 ${o.bizName} · Pedido libre`,
+          body: `${dest}Se liberó carrera · ${pay}#${o.sid}`,
           tag: `OrderReleased-${o.sid}`,
           url: `/pedido/${aggregateId}`,
           requireInteraction: true,
           vibrate: true,
+          renotify: true,
         })
       }
     }
@@ -430,23 +554,23 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
     const o = await orderBrief(aggregateId)
     if (o) {
       const mins = Number(payload?.minutesWaiting ?? 0)
+      const dest = o.destText ? `${o.destText} · ` : ''
       for (const userId of await allDriverUserIds()) {
         out.push({
           userId,
-          title: `Se está enfriando — ${o.bizName}`,
-          body: `#${o.sid} lleva ${mins} min sin motorizado · ${o.amount}`,
+          title: `⏰ ${o.bizName} · Espera motorizado`,
+          body: `Lleva ${mins} min esperando · ${dest}#${o.sid}`,
           tag: `OrderOverdue-${o.sid}`,
           url: `/pedido/${aggregateId}`,
           requireInteraction: true,
           vibrate: true,
+          renotify: true,
         })
       }
     }
   } else if (eventType === 'TransferRequested') {
     // Al dueño actual (`fromDriverId`), no al solicitante: tiene una ventana de
     // segundos para responder y, desde la 0130, callarse le cede el pedido.
-    // Por eso `requireInteraction`: en Android con Doze, un aviso sin él se
-    // clasifica como baja prioridad y puede no llegar a verse.
     const o = await orderBrief(aggregateId)
     const owner = await driverUserId(payload?.fromDriverId)
     if (o && owner) {
@@ -454,14 +578,16 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
         0,
         Math.round((new Date(String(payload?.expiresAt)).getTime() - Date.now()) / 1000),
       )
+      const who = o.customerName ? ` de ${o.customerName}` : ''
       out.push({
         userId: owner,
-        title: `Te piden tu pedido — #${o.sid}`,
-        body: `Un compañero quiere llevarlo. Responde en ${seconds || 30}s o se lo llevará.`,
+        title: `🔄 Te piden tu pedido · ${o.bizName}`,
+        body: `Un compañero pide el pedido${who} (#${o.sid}). Responde en ${seconds || 30}s.`,
         tag: `TransferRequested-${payload?.requestId ?? aggregateId}`,
         url: '/',
         requireInteraction: true,
         vibrate: true,
+        renotify: true,
       })
     }
   } else if (eventType === 'TransferResolved') {
@@ -469,10 +595,6 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
     const resolution = (payload?.resolution as string) ?? ''
     const transferred = payload?.transferred === true
     const reqId = payload?.requestId ?? aggregateId
-    // `fromDriverId`/`toDriverId` vienen del payload desde la 0134. Si falta
-    // (evento anterior a la migración, o Edge Function desplegada antes que
-    // ella), se recuperan de la solicitud: el acoplamiento código↔migración ya
-    // dejó producción sin pedidos una vez, y aquí sale gratis no repetirlo.
     let fromId = payload?.fromDriverId
     let toId = payload?.toDriverId
     if ((!fromId || !toId) && typeof reqId === 'string') {
@@ -486,64 +608,64 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
     }
     const owner = await driverUserId(fromId)
     const requester = await driverUserId(toId)
+    const dest = o?.destText ? `${o.destText} · ` : ''
+    const who = o?.customerName ? ` de ${o.customerName}` : ''
 
     if (o && resolution === 'accepted' && requester) {
       out.push({
         userId: requester,
-        title: `Aceptó — #${o.sid} es tuyo`,
-        body: `${o.bizName} · ${o.amount} · ya está en tu mochila`,
+        title: `✅ Pedido recibido · ${o.bizName}`,
+        body: `${dest}Ya está en tu mochila · #${o.sid}`,
         tag: `TransferResolved-accepted-${reqId}`,
         url: `/pedido/${aggregateId}`,
         requireInteraction: true,
         vibrate: true,
+        renotify: true,
       })
     } else if (o && resolution === 'rejected' && requester) {
       out.push({
         userId: requester,
-        title: `Rechazó — #${o.sid}`,
-        body: 'Tu compañero se queda con el pedido.',
+        title: `Rechazado · ${o.bizName}`,
+        body: `Tu compañero se queda con el pedido #${o.sid}.`,
         tag: `TransferResolved-rejected-${reqId}`,
         url: '/',
         requireInteraction: false,
         vibrate: false,
       })
     } else if (o && resolution === 'expired' && transferred) {
-      // Doble aviso con TAGS DISTINTOS. Con el mismo tag, FCM/APNs colapsan los
-      // dos en uno y el que perdió el pedido vería el mensaje del que lo ganó.
       if (owner) {
         out.push({
           userId: owner,
-          title: `Perdiste #${o.sid}`,
-          body: 'No respondiste a tiempo · el pedido pasó a tu compañero',
+          title: `🔄 Pedido transferido · ${o.bizName}`,
+          body: `El pedido${who} (#${o.sid}) pasó a tu compañero por tiempo agotado`,
           tag: `TransferResolved-expired-from-${reqId}`,
           url: '/',
           requireInteraction: true,
           vibrate: true,
+          renotify: true,
         })
       }
       if (requester) {
         out.push({
           userId: requester,
-          title: `#${o.sid} es tuyo`,
-          body: `${o.bizName} · ${o.amount} · nadie respondió, te lo quedas`,
+          title: `✅ Pedido recibido · ${o.bizName}`,
+          body: `${dest}Nadie respondió, te lo quedas · #${o.sid}`,
           tag: `TransferResolved-expired-to-${reqId}`,
           url: `/pedido/${aggregateId}`,
           requireInteraction: true,
           vibrate: true,
+          renotify: true,
         })
       }
     } else if (o && resolution === 'expired' && !transferred && requester) {
-      // Venció y el pedido NO se movió. El único motivo que hoy produce la
-      // 0130 es la mochila llena; se nombra para que el solicitante entienda
-      // por qué no calificó en vez de creer que el sistema falló.
       const reason = (payload?.reason as string) ?? ''
       out.push({
         userId: requester,
-        title: `Se venció — #${o.sid}`,
+        title: `Vencido · ${o.bizName}`,
         body:
           reason === 'requester_no_capacity'
-            ? 'Tu mochila está llena, el pedido se quedó con su dueño.'
-            : 'La solicitud venció y el pedido se quedó con su dueño.',
+            ? `Tu mochila está llena, el pedido #${o.sid} se quedó con su dueño.`
+            : `La solicitud venció y el pedido #${o.sid} se quedó con su dueño.`,
         tag: `TransferResolved-expired-none-${reqId}`,
         url: '/',
         requireInteraction: false,
@@ -564,25 +686,34 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
       .maybeSingle()
     const driverUser = await driverUserId(cs?.driver_id)
     if (driverUser) {
+      /*
+       * DOS DECIMALES SIEMPRE, y no el `soles()` de arriba a propósito. Aquel
+       * suelta los céntimos cuando son cero porque su trabajo es leerse de un
+       * vistazo en una notificación operativa; estos avisos son de CUADRE DE
+       * CAJA —lo que el negocio confirmó, lo que queda abierto— y ahí la
+       * columna de céntimos se lee contra un papel o contra otra pantalla.
+       * Alinear las dos cifras vale más que ahorrar dos ceros.
+       */
       const money = (n: unknown) => `S/ ${Number(n ?? 0).toFixed(2)}`
       const base = { userId: driverUser, url: '/efectivo', vibrate: false }
       if (eventType === 'CashConfirmed') {
-        // COLAPSADA POR (motorizado, negocio). Desde 0157 la cajera confirma
-        // cliente por cliente, así que cuatro confirmaciones seguidas son cuatro
-        // eventos. Con un tag por liquidación, el motorizado recibía cuatro
-        // notificaciones apiladas diciendo casi lo mismo; con este tag la
-        // notificación se REEMPLAZA y el cuerpo describe el estado actual —
-        // cuánto le queda abierto— en vez del último delta.
+        const { data: biz } = await db
+          .from('businesses')
+          .select('name')
+          .eq('id', cs?.business_id)
+          .maybeSingle()
+        const bName = (biz?.name as string) ?? 'El restaurante'
         const abierto = await openCashTotal(cs?.driver_id, cs?.business_id)
         out.push({
           ...base,
-          title: 'Efectivo confirmado',
+          title: `💵 Efectivo confirmado · ${bName}`,
           body:
             abierto.count === 0
-              ? `El negocio confirmó ${money(cs?.confirmed_amount)}. No queda nada por confirmar.`
-              : `El negocio confirmó ${money(cs?.confirmed_amount)}. Te quedan ${money(abierto.total)} por confirmar (${abierto.count}).`,
+              ? `${bName} confirmó ${money(cs?.confirmed_amount)}. No queda nada por confirmar.`
+              : `${bName} confirmó ${money(cs?.confirmed_amount)}. Te quedan ${money(abierto.total)} por confirmar (${abierto.count}).`,
           tag: `CashConfirmed-${cs?.driver_id}-${cs?.business_id}`,
           requireInteraction: false,
+          renotify: true,
         })
       } else if (eventType === 'CashDisputed') {
         out.push({
@@ -667,7 +798,8 @@ Deno.serve(async (req: Request) => {
           tag: note.tag,
           url: note.url,
           requireInteraction: note.requireInteraction,
-          ...(note.vibrate ? { vibrate: [120, 60, 120] } : {}),
+          ...(note.renotify ? { renotify: true } : {}),
+          ...(note.vibrate ? { vibrate: [300, 100, 300, 100, 500] } : {}),
         })
         try {
           await webpush.sendNotification(
