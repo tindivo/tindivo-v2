@@ -1,49 +1,39 @@
 'use client'
 
-import { subscribeToPush } from '@tindivo/ui'
-import { useEffect, useState } from 'react'
-import { api } from '@/lib/api'
-import { getSupabaseBrowser } from '@/lib/supabase/client'
-
-const VAPID = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? ''
+import { registerServiceWorker } from '@tindivo/ui'
+import { useEffect } from 'react'
+import { reengancharSiConcedido } from '@/lib/push'
 
 /**
- * Registra el service worker (instalabilidad) y gestiona la suscripción push.
- * Se auto-suscribe si el permiso ya está concedido; si está "default" y hay sesión,
- * muestra un botón flotante para activarlo (el prompt va dentro del gesto del usuario).
+ * Registra el service worker y reengancha la suscripción push. No pinta nada.
+ *
+ * AQUÍ YA NO SE PIDE EL PERMISO. Antes, este mismo componente pintaba un botón
+ * flotante «🔔 Activar avisos» abajo a la derecha —encima de la barra inferior—
+ * en cualquier página en la que hubiera sesión. Ese botón tenía tres problemas
+ * y el tercero es el caro:
+ *
+ *   · No decía para qué servía, así que se tocaba por curiosidad o no se tocaba.
+ *   · Se pisaba con la `BottomNav`.
+ *   · El permiso del navegador es un cartucho de un solo disparo (ver
+ *     `lib/push.ts`): un «Bloquear» ahí deja al cliente sin avisos para
+ *     siempre, sin forma de volver a preguntarle. Gastarlo en una esquina de
+ *     la portada es tirarlo.
+ *
+ * Ahora se ofrece donde la pregunta se contesta sola: en el seguimiento de un
+ * pedido vivo, con una hoja que explica los tres avisos que va a recibir
+ * (`PushPermissionSheet` + `usePushOffer`).
+ *
+ * Lo que sí sigue viviendo en el layout es esto: el registro del SW —que hace
+ * falta para el push y para que la app sea instalable, tenga o no permiso— y el
+ * reenganche de la suscripción cuando el permiso YA estaba dado, que es lo que
+ * evita que un cliente con avisos activados se quede mudo en silencio cuando su
+ * endpoint rota.
  */
 export function PushManager() {
-  const [show, setShow] = useState(false)
-
   useEffect(() => {
-    if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(() => {})
-    }
-    getSupabaseBrowser()
-      .auth.getSession()
-      .then(async ({ data }) => {
-        if (!data.session || !VAPID || typeof Notification === 'undefined') return
-        if (Notification.permission === 'granted') {
-          await subscribeToPush(VAPID, (s) => api.post('/push/subscriptions', s)).catch(() => {})
-        } else if (Notification.permission === 'default') {
-          setShow(true)
-        }
-      })
+    void registerServiceWorker()
+    void reengancharSiConcedido()
   }, [])
 
-  if (!show) return null
-  return (
-    <button
-      type="button"
-      onClick={async () => {
-        const r = await subscribeToPush(VAPID, (s) => api.post('/push/subscriptions', s)).catch(
-          () => 'denied' as const,
-        )
-        if (r !== 'unsupported') setShow(false)
-      }}
-      className="fixed right-3 bottom-3 z-50 rounded-full bg-ink px-4 py-2 font-semibold text-[13px] text-white shadow-lg"
-    >
-      🔔 Activar avisos
-    </button>
-  )
+  return null
 }

@@ -61,6 +61,11 @@ const USUARIOS_FIXTURE = [
   // fixture que más usuarios genera de toda la suite; sin barrerlo aquí, un
   // Ctrl-C en mitad de esa prueba deja decenas de cuentas por corrida.
   'Vecino Promo',
+  // otp-dev-simulation: un vecino por corrida, con teléfono propio (el índice
+  // único sobre el verificado impide reutilizar uno fijo). Su `customer_profiles`
+  // cae por cascada con el usuario; `customer_otp_attempts` no tiene FK, pero el
+  // simulacro no escribe ahí — solo lo haría un test que probara el tope real.
+  'Vecino OTP',
 ]
 
 /**

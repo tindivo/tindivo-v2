@@ -132,7 +132,7 @@ export function OtpVerificationSheet({ open, phone, onVerified, onClose }: Props
             )}
           </div>
         ) : (
-          <div className="flex-1 overflow-y-auto px-5 pt-4 pb-4 scrollbar-hide">
+          <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-4 pb-4">
             <h2 className="font-display text-[24px] font-bold leading-[1.15] tracking-tight">
               Verifica tu celular
             </h2>
@@ -140,16 +140,18 @@ export function OtpVerificationSheet({ open, phone, onVerified, onClose }: Props
               Enviamos un código de 6 dígitos por SMS a tu celular (+51 {maskedPhone})
             </p>
 
+            {/* Sin `autoFocus`: abre el teclado justo al pintar la pantalla y el
+             * campo se sale de la parte visible de la hoja. El porqué largo está
+             * en `auth-onboarding/steps/phone-step.tsx`, que tiene el mismo campo. */}
             <div className="mt-5 flex items-center gap-2.5 rounded-2xl border border-border bg-white px-3.5 py-1">
               <input
                 className="h-12 w-full bg-transparent font-mono text-[17px] text-center tracking-[0.25em] outline-none"
                 placeholder="— — — — — —"
                 inputMode="numeric"
+                autoComplete="one-time-code"
                 value={code}
                 maxLength={6}
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-                // biome-ignore lint/a11y/noAutofocus: OTP input inside active verification sheet
-                autoFocus
               />
             </div>
 

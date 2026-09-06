@@ -1,6 +1,7 @@
 'use client'
 
 import { Button, Icon } from '@tindivo/ui'
+import Link from 'next/link'
 import { useState } from 'react'
 import { soles } from '@/components/dashboard/primitives'
 import type { AccountSummaryData, PendingGroupItem } from '../types'
@@ -47,6 +48,36 @@ export function DeudaList({
 
       <DeudaHero balance={balance} isBlocked={data.isBlocked} threshold={data.debtBlockThreshold} />
       <DeudaSummary summary={data.summary} />
+
+      {/* Banner de acceso a Métricas y Rendimiento.
+          Enlaza a /rendimiento, no a /historial: el panel de métricas se mudó
+          ahí (9a2e5b6), con su propia entrada en el sidebar. El subtítulo
+          promete lo que la pantalla realmente muestra hoy — la factura del
+          periodo desglosada (comisión + envíos + devoluciones, ver
+          bill-card.tsx) — y no el "ROI Multiplicador" que salió de la
+          pantalla por ser el mismo ticket promedio bajo otro nombre. */}
+      <Link
+        href="/rendimiento"
+        className="flex items-center justify-between rounded-xl border border-brand/20 bg-brand/5 p-3 text-ink transition-all hover:bg-brand/10 shadow-elev-1"
+      >
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand/15 text-brand shrink-0">
+            <Icon name="rocket_launch" size={18} />
+          </span>
+          <div>
+            <span className="block text-xs font-bold text-ink">
+              Rendimiento y Retorno de tu Negocio
+            </span>
+            <span className="block text-[11px] text-ink-muted">
+              Consulta tu facturación, tu factura con Tindivo desglosada y tus clientes por periodo
+            </span>
+          </div>
+        </div>
+        <div className="flex items-center gap-0.5 text-xs font-bold text-brand shrink-0">
+          <span className="hidden sm:inline">Ver métricas</span>
+          <Icon name="chevron_right" size={18} />
+        </div>
+      </Link>
 
       {/* Botón WhatsApp contextual */}
       <div className="lg:hidden">

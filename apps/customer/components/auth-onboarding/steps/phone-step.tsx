@@ -128,8 +128,19 @@ export function PhoneStep({
   if (phase === 'input') {
     return (
       <form onSubmit={handleSendCode} className="flex h-full flex-col">
-        <div className="flex-1 overflow-y-auto px-5 pt-2 pb-4 scrollbar-hide">
-          {(mode === 'onboarding' || fullName || email) && (
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-2 pb-4">
+          {/*
+           * LA TARJETA DE SALUDO ES SOLO DEL ONBOARDING. Antes salía también en
+           * el gate —bastaba con tener nombre o correo—, y ahí sobra por dos
+           * motivos. Dice «CUENTA LISTA» a alguien que lleva semanas con cuenta,
+           * que no es una noticia sino ruido; y ocupa ~85 px en la pantalla con
+           * menos sitio de toda la app. Medido a 430 px de alto, esos 85 px eran
+           * justo los que empujaban el campo del teléfono fuera de la vista.
+           *
+           * En el onboarding sí gana su espacio: ahí el vecino acaba de crear la
+           * cuenta y la tarjeta es el acuse de recibo de que salió bien.
+           */}
+          {mode === 'onboarding' && (
             <Card className="flex items-center gap-3 p-3.5">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand font-bold text-[16px] text-white">
                 {firstName[0]?.toUpperCase() ?? 'T'}
@@ -210,7 +221,7 @@ export function PhoneStep({
   // Phase: verify
   return (
     <form onSubmit={handleVerifyCode} className="flex h-full flex-col">
-      <div className="flex-1 overflow-y-auto px-5 pt-2 pb-4 scrollbar-hide">
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-2 pb-4">
         <h2 className="font-display text-[24px] font-bold leading-[1.15] tracking-tight text-ink">
           Ingresa el código
         </h2>
@@ -218,17 +229,35 @@ export function PhoneStep({
           Enviamos un código de 6 dígitos por SMS a tu celular (+51 {maskedPhone})
         </p>
 
+        {/*
+         * SIN `autoFocus`, Y ESO NO ES UN OLVIDO.
+         *
+         * Enfocar solo abre el teclado del móvil en el mismo instante en que se
+         * pinta esta pantalla, y el teclado se come la mitad de la altura útil.
+         * La hoja tiene alto acotado (`max-h-[85dvh]`), así que lo que se
+         * encoge es la zona de contenido: medido el 2026-09-03 con la ventana a
+         * 282 px, quedaba en 77 px de los 192 px que ocupa este formulario y
+         * ESTE CAMPO caía fuera de la parte visible. El vecino veía el título,
+         * un botón apagado y un vacío — la hoja «en blanco».
+         *
+         * Sin enfoque automático la pantalla se pinta entera, el vecino ve el
+         * campo y lo toca él; a partir de ahí es el navegador quien mantiene a
+         * la vista lo que está enfocado, que es su trabajo y lo hace bien.
+         *
+         * `one-time-code` es lo que se gana a cambio: Android e iOS ofrecen el
+         * código del SMS encima del teclado, así que se rellena de un toque sin
+         * que nadie tenga que enfocar nada por él.
+         */}
         <div className="mt-5 flex items-center gap-2.5 rounded-2xl border border-ink/[0.08] bg-card px-3.5 py-1">
           <input
             className="h-12 w-full bg-transparent font-mono text-[17px] text-center tracking-[0.25em] text-ink outline-none placeholder:text-ink-subtle"
             placeholder="— — — — — —"
             inputMode="numeric"
+            autoComplete="one-time-code"
             value={code}
             maxLength={6}
             onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
             tabIndex={active ? 0 : -1}
-            // biome-ignore lint/a11y/noAutofocus: OTP input inside active onboarding panel
-            autoFocus
           />
         </div>
 

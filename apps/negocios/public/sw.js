@@ -10,8 +10,8 @@ self.addEventListener('push', (event) => {
   const options = {
     body: data.body || '',
     tag: data.tag || 'new-order',
-    icon: '/icon.svg',
-    badge: '/icon.svg',
+    icon: '/icon-192x192.png',
+    badge: '/icon-192x192.png',
     data: { url: data.url || '/' },
     requireInteraction: true,
     renotify: true,

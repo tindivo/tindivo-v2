@@ -45,7 +45,7 @@ export function LoginStep({
 
   return (
     <form onSubmit={onSubmit} className="flex h-full flex-col">
-      <div className="flex-1 overflow-y-auto px-5 pt-2 pb-4 scrollbar-hide">
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-2 pb-4">
         <h2 className="font-display text-[24px] font-bold leading-[1.1] tracking-tight text-ink">
           Hola de nuevo
         </h2>

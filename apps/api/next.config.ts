@@ -5,6 +5,11 @@ const config: NextConfig = {
   transpilePackages: ['@tindivo/contracts', '@tindivo/core', '@tindivo/supabase'],
   // API-only: sin optimización de imágenes ni assets de página.
   poweredByHeader: false,
+  // `puppeteer-core` y `@sparticuz/chromium` (reporte PDF de rendimiento) traen
+  // binarios nativos: si Next intenta empaquetarlos como cualquier import, el
+  // bundle de la función serverless revienta de tamaño. `serverExternalPackages`
+  // los deja como `require()` real, resueltos desde `node_modules` en runtime.
+  serverExternalPackages: ['puppeteer-core', '@sparticuz/chromium'],
   //
   // AQUÍ NO VA CORS. Vivía aquí un bloque `headers()` que ponía
   // `Access-Control-Allow-Origin: *` a todo `/api/:path*`, y tumbó el registro

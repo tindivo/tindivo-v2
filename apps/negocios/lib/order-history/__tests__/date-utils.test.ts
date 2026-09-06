@@ -33,12 +33,18 @@ describe('date-utils (Lima UTC-5)', () => {
     const thisWeek = getPresetRange('this_week')
     expect(thisWeek.end).toBe(todayStr)
     expect(thisWeek.start <= todayStr).toBe(true)
+
+    const lastMonth = getPresetRange('last_month')
+    expect(lastMonth.start.endsWith('-01')).toBe(true)
+    expect(lastMonth.end >= lastMonth.start).toBe(true)
+    expect(lastMonth.end < thisMonth.start).toBe(true)
   })
 
-  it('has readable labels for presets including 15 días', () => {
+  it('has readable labels for presets including 15 días and mes anterior', () => {
     expect(PRESET_LABELS.today).toBe('Hoy')
     expect(PRESET_LABELS.last_15_days).toBe('15 días')
     expect(PRESET_LABELS.last_7_days).toBe('7 días')
+    expect(PRESET_LABELS.last_month).toBe('Mes anterior')
   })
 
   it('formats range labels nicely', () => {

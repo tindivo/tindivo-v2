@@ -2573,6 +2573,14 @@ export type Database = {
     }
     Functions: {
       admin_conversion_opportunity_stats: { Args: never; Returns: Json }
+      admin_correct_delivery_band: {
+        Args: {
+          p_admin_user_id: string
+          p_new_band: Database["public"]["Enums"]["distance_band"]
+          p_order_id: string
+        }
+        Returns: Json
+      }
       admin_metrics: { Args: { p_from: string; p_to: string }; Returns: Json }
       admin_online_orders_stats: {
         Args: { p_from?: string; p_to?: string }
@@ -2603,6 +2611,10 @@ export type Database = {
           p_id: string
           p_reason: string
         }
+        Returns: Json
+      }
+      business_performance_metrics: {
+        Args: { p_business_id: string; p_end: string; p_start: string }
         Returns: Json
       }
       cancel_customer_order: {
@@ -2751,6 +2763,14 @@ export type Database = {
         }
       }
       current_business_id: { Args: never; Returns: string }
+      current_customer_contraentrega_outcome: {
+        Args: {
+          p_customer_gps_lat?: number
+          p_customer_gps_lng?: number
+          p_customer_gps_method?: string
+        }
+        Returns: string
+      }
       current_customer_promo_free_delivery: { Args: never; Returns: Json }
       current_customer_trusted_for_contraentrega: {
         Args: never
@@ -2765,6 +2785,14 @@ export type Database = {
       current_user_role: { Args: never; Returns: string }
       customer_contraentrega_blocked: {
         Args: { p_phone: string; p_reference: string }
+        Returns: boolean
+      }
+      customer_contraentrega_decision: {
+        Args: { p_customer_user_id: string }
+        Returns: string
+      }
+      customer_gps_in_coverage: {
+        Args: { p_lat: number; p_lng: number; p_method: string }
         Returns: boolean
       }
       customer_is_blocked: {

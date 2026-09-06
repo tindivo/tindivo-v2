@@ -5,6 +5,7 @@ const config: NextConfig = {
     '@tindivo/ui',
     '@tindivo/api-client',
     '@tindivo/contracts',
+    '@tindivo/core',
     '@tindivo/images',
     '@tindivo/supabase',
   ],

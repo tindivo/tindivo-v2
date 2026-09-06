@@ -10,6 +10,7 @@ export type DatePreset =
   | 'last_7_days'
   | 'last_15_days'
   | 'this_month'
+  | 'last_month'
   | 'custom'
 
 export const PRESET_LABELS: Record<DatePreset, string> = {
@@ -19,6 +20,7 @@ export const PRESET_LABELS: Record<DatePreset, string> = {
   last_7_days: '7 días',
   last_15_days: '15 días',
   this_month: 'Este mes',
+  last_month: 'Mes anterior',
   custom: 'Personalizado',
 }
 
@@ -77,6 +79,18 @@ export function getPresetRange(preset: Exclude<DatePreset, 'custom'>): {
     case 'this_month': {
       const startMonth = `${todayStr.slice(0, 7)}-01`
       return { start: startMonth, end: todayStr }
+    }
+
+    case 'last_month': {
+      const parts = todayStr.split('-')
+      const y = Number(parts[0]) || 2026
+      const m = Number(parts[1]) || 1
+      const prevYear = m === 1 ? y - 1 : y
+      const prevMonth = m === 1 ? 12 : m - 1
+      const start = `${prevYear}-${String(prevMonth).padStart(2, '0')}-01`
+      const lastDay = new Date(prevYear, prevMonth, 0).getDate()
+      const end = `${prevYear}-${String(prevMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
+      return { start, end }
     }
   }
 }

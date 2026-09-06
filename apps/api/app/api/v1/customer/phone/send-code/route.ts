@@ -5,7 +5,12 @@ import { corsHeaders, handleOptions } from '@/lib/http/cors'
 import { handleError, ok, problem } from '@/lib/http/problem'
 import { getRequestId } from '@/lib/http/request-id'
 import { createServiceClient } from '@/lib/supabase/service'
-import { twilioClient, VERIFY_SERVICE_SID } from '@/lib/twilio/client'
+import {
+  DEV_OTP_CODE,
+  OTP_DEV_SIMULATION,
+  twilioClient,
+  VERIFY_SERVICE_SID,
+} from '@/lib/twilio/client'
 
 export const dynamic = 'force-dynamic'
 
@@ -46,6 +51,26 @@ export async function POST(req: Request): Promise<Response> {
     const service = createServiceClient()
 
     if (!twilioClient) {
+      /*
+       * SIMULACRO LOCAL. Se da el envío por bueno sin mandar nada, y el código
+       * que valdrá después es `DEV_OTP_CODE`.
+       *
+       * SALE ANTES DEL RATE LIMIT A PROPÓSITO. El tope de 3 en 24 horas
+       * protege una factura que en local no existe, y aplicarlo aquí deja la
+       * pantalla intocable al cuarto intento con la única salida de borrar
+       * `customer_otp_attempts` a mano. Tampoco se apunta el intento: sin
+       * envío no hay nada que contar. Quien quiera probar el tope, que siembre
+       * las tres filas.
+       *
+       * `channel: 'dev'` y no `'sms'`: el front no lo mira, pero lo mira quien
+       * lea una respuesta y tenga que saber si aquí hubo un SMS de verdad.
+       */
+      if (OTP_DEV_SIMULATION) {
+        console.warn(
+          `[twilio] simulacro · ${fullPhone} no recibe nada; el código es ${DEV_OTP_CODE}`,
+        )
+        return ok({ sent: true, channel: 'dev' }, { status: 200, headers: corsHeaders(req) })
+      }
       return problem('internal_error', {
         detail: 'Verificación de teléfono no disponible temporalmente.',
         requestId,

@@ -2,6 +2,7 @@
 
 import type { ApiEnvelope } from '@tindivo/api-client'
 import { Button } from '@tindivo/ui'
+import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import { DataTable, EmptyState, SectionHeader } from '@/components/admin'
 import { SettlementModal } from '@/components/cobros/settlement-modal'
@@ -161,12 +162,21 @@ export default function CobrosPage() {
                 key: 'accion',
                 header: '',
                 align: 'right',
-                render: (r) =>
-                  r.balanceDue > 0 ? (
-                    <Button size="sm" onClick={() => setSelectedBusiness(r)}>
-                      + Liquidar
-                    </Button>
-                  ) : null,
+                render: (r) => (
+                  <div className="flex justify-end gap-2">
+                    <Link
+                      href={`/cobros/${r.id}`}
+                      className="t-btn t-btn-outline px-2.5 py-1 text-[12px]"
+                    >
+                      Ver carreras
+                    </Link>
+                    {r.balanceDue > 0 && (
+                      <Button size="sm" onClick={() => setSelectedBusiness(r)}>
+                        + Liquidar
+                      </Button>
+                    )}
+                  </div>
+                ),
               },
             ]}
           />

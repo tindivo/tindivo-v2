@@ -31,6 +31,7 @@ export const ORDER_SELECT =
   'yape_amount,cash_amount,requires_validation,validation_reason_code,risk_flags,' +
   'driver_id,created_at,pending_acceptance_at,awaiting_payment_at,validating_at,' +
   'waiting_driver_at,picked_up_at,delivered_at,cancelled_at,cancel_note,cancel_reason,updated_at,' +
+  'tindivo_commission,commission_amount,delivery_fee_charged,' +
   'driver:drivers(full_name)'
 
 /**
@@ -97,6 +98,9 @@ export interface OrderRow {
   cancel_note: string | null
   cancel_reason: string | null
   updated_at: string
+  tindivo_commission?: number | null
+  commission_amount?: number | null
+  delivery_fee_charged?: number | null
   driver?: { full_name: string | null } | null
 }
 

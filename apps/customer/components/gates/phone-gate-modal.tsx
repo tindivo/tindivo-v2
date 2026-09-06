@@ -41,11 +41,16 @@ export function PhoneGateModal({ onComplete, onClose }: Props) {
 
   return (
     <BottomSheet open label="Verifica tu celular" onClose={onClose}>
-      <div className="px-5 pt-4 pb-1">
-        <p className="text-[13px] text-ink/50">
-          Para hacer tu pedido, necesitamos verificar tu celular
-        </p>
-      </div>
+      {/*
+       * AQUÍ HABÍA UN RÓTULO —«Para hacer tu pedido, necesitamos verificar tu
+       * celular»— y se ha quitado porque costaba más de lo que decía.
+       *
+       * Repetía lo que `PhoneStep` ya pinta en su `<h2>` dos líneas más abajo,
+       * y a cambio se llevaba ~45 px de una hoja cuyo alto está tasado
+       * (`max-h-[85dvh]`). Con el teclado abierto esos 45 px salen del único
+       * sitio del que pueden salir: la zona de contenido, que es donde vive el
+       * campo. Ver la nota larga en `steps/phone-step.tsx`.
+       */}
       <div className="h-[min(500px,70dvh)]">
         <PhoneStep
           active

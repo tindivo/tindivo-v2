@@ -12,6 +12,7 @@
     "lint": "biome check ."
   },
   "dependencies": {
+    "@sparticuz/chromium": "^149.0.0",
     "@supabase/ssr": "catalog:",
     "@supabase/supabase-js": "catalog:",
     "@tindivo/contracts": "workspace:*",
@@ -21,6 +22,7 @@
     "@upstash/redis": "catalog:",
     "inngest": "catalog:",
     "next": "catalog:",
+    "puppeteer-core": "^25.10.0",
     "react": "catalog:",
     "react-dom": "catalog:",
     "twilio": "^6.0.2",

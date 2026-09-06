@@ -21,59 +21,133 @@ html {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-/* Referencias del mapa (`map_landmarks`, ver `lib/landmarks.ts` y el
+/* Recorta SIN ser contenedor de scroll.
+
+   `overflow: hidden` recorta, pero deja el elemento scrolleable por programa:
+   el navegador puede moverle el `scrollLeft` por su cuenta —al enfocar un campo
+   de dentro, por ejemplo— y como no hay barra ni gesto que valga, ahí se queda
+   para siempre. Es exactamente lo que le pasa al carrusel de pasos del
+   onboarding, que mide 6 paneles de ancho y se coloca con `translateX`: medido
+   el 2026-09-04, llegaba al paso del celular con 16 px de desplazamiento heredados
+   del formulario de registro anterior, y con ellos el panel activo se ve corrido
+   y asoma el de al lado. `overflow: clip` recorta igual pero NO crea contenedor
+   de scroll, así que ese desplazamiento no puede ni existir.
+
+   Las dos declaraciones son a propósito y en este orden: un navegador que no
+   conozca `clip` se queda con `hidden`, que es el comportamiento de hoy. Al
+   revés —o con `clip` a secas— un navegador viejo se quedaría sin recortar
+   nada y enseñaría los seis paneles en fila, que es mucho peor que 16 px. */
+.overflow-clip-safe {
+  overflow: hidden;
+  overflow: clip;
+}
+
+/* ── Mapa de elegir ubicación ─────────────────────────────────────────────── */
+
+/* Referencias del pueblo (`map_landmarks`; ver `lib/landmarks.ts` y el
    `divIcon` de `map-picker-inner.tsx`).
 
-   El marcador es un div de 0x0 clavado en la coordenada: todo lo que se ve
-   cuelga de ahí en `position: absolute`, para que el nombre pueda sobresalir
-   a la derecha sin que Leaflet lo recorte a una caja de tamaño fijo. */
+   El marcador es un div de 0×0 clavado en la coordenada: todo lo que se ve
+   cuelga de ahí en `position: absolute`, para que el nombre pueda sobresalir a
+   la derecha sin que Leaflet lo recorte a una caja de tamaño fijo. */
 .t-lm {
   /* El gesto de esta pantalla es arrastrar el mapa; nada de esto lo intercepta. */
   pointer-events: none;
 }
-.t-lm-dot {
+
+.t-lm-dot,
+.t-lm-badge {
   position: absolute;
   left: 0;
   top: 0;
+  display: block;
+  /* Sin esto el `<span>` reserva un renglón de texto bajo el SVG y el disco
+     queda un par de píxeles por encima de su propia coordenada. */
+  line-height: 0;
   transform: translate(-50%, -50%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 9999px;
-  background: #fff;
-  box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
+  /* `drop-shadow` y no `box-shadow`: la sombra tiene que seguir el contorno
+     del SVG (el aro), no la caja cuadrada que lo contiene. */
+  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.28));
 }
-/* Dos clases a propósito: la hoja de Google Fonts fija `font-size: 24px` en
-   `.material-symbols-rounded`, y con una sola clase esto dependería de cuál de
-   las dos hojas cargue después — o sea, de la suerte. Con `.t-lm-dot` delante
-   gana siempre, sin recurrir a `!important`. */
-.t-lm-dot .t-lm-glyph {
-  font-size: 13px;
-  line-height: 1;
-  font-variation-settings:
-    'FILL' 1,
-    'wght' 500,
-    'GRAD' 0,
-    'opsz' 20;
-}
-/* El nombre no lleva caja: el halo blanco es lo que lo hace legible tanto
+
+/* EL NOMBRE NO LLEVA CAJA. El halo blanco es lo que lo hace legible tanto
    sobre el mapa de calles como sobre la foto de satélite, y sin sumar otro
-   rectángulo a una pantalla donde ya compiten el pin y el botón. */
+   rectángulo a una pantalla donde ya compiten el pin, la chapa y el botón.
+
+   VA EN EL COLOR DE SU CATEGORÍA, no en gris. Es lo que ata el rótulo a su
+   chapa cuando hay tres juntos y el ojo tiene que emparejarlos, y es lo que
+   hace Google con los suyos (parques en verde, comercios en naranja).
+
+   DOS LÍNEAS Y PUNTOS SUSPENSIVOS. "Institución Educativa Nº 88024 San
+   Jacinto" en una sola línea son más de 200 px: en un teléfono de 390 px cruza
+   media pantalla y tapa las calles que la persona está intentando reconocer.
+   Google parte y recorta los suyos por lo mismo. El corte a dos líneas con
+   `-webkit-line-clamp` es el que entienden todos los motores de hoy; sin él el
+   rótulo simplemente crecería hacia abajo, que degrada pero no rompe. */
 .t-lm-name {
   position: absolute;
-  left: 13px;
+  /* Medio disco (11) + 3 de aire. */
+  left: 14px;
   top: 0;
   transform: translateY(-50%);
-  white-space: nowrap;
-  font-size: 10.5px;
-  font-weight: 600;
-  color: #3c4043;
+  /* `width: max-content` NO ES OPCIONAL, y el motivo no se ve mirando esta
+     regla. El marcador que contiene esto mide 0 px de ancho (`iconSize:
+     [0, 0]`, ver `iconoDe`), así que el ancho disponible para una caja
+     absoluta puesta a `left: 14px` sale NEGATIVO, y ante eso el navegador
+     encoge el bloque hasta min-content: cada palabra en su renglón. Con el
+     `nowrap` de antes daba igual porque el texto no podía partirse; en el
+     momento en que se le permite partir, «Botica La Merced» se maqueta en
+     38 px teniendo 116 disponibles y la segunda línea se recorta.
+     `max-content` pide el ancho natural del texto y `max-width` lo topa:
+     entre las dos sale el comportamiento que se quería —una línea si cabe,
+     dos si no— sin depender del tamaño del contenedor. */
+  width: max-content;
+  max-width: 116px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.005em;
+  /* NADA DE `text-wrap: balance` AQUÍ. Reparte el texto en líneas de largo
+     parejo, que para un titular es bonito y para esto es un defecto: encoge
+     la caja a lo que mida la línea equilibrada —medido, 44 px donde caben
+     108— y con ella la segunda línea se pasa del cupo y entra el recorte.
+     "Botica La Merced", que cabe entero en un renglón, salía «Botica La…».
+     Un rótulo de mapa llena la línea y parte donde toca; Google también. */
+  -webkit-font-smoothing: antialiased;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  /* Ocho direcciones para cerrar el contorno y dos difuminados para tapar las
+     diagonales que las ocho dejan abiertas. Es más barato de lo que parece: no
+     hay animación aquí, se pinta una vez y el panel de marcadores se compone
+     entero al arrastrar. */
   text-shadow:
-    0 0 3px #fff,
-    0 0 3px #fff,
-    0 0 2px #fff;
+    1.2px 0 0 #fff,
+    -1.2px 0 0 #fff,
+    0 1.2px 0 #fff,
+    0 -1.2px 0 #fff,
+    0.9px 0.9px 0 #fff,
+    -0.9px 0.9px 0 #fff,
+    0.9px -0.9px 0 #fff,
+    -0.9px -0.9px 0 #fff,
+    0 0 2px #fff,
+    0 0 3px #fff;
+}
+
+/* EL RÓTULO A LA IZQUIERDA. Lo decide `repartirRotulos` en
+   `map-picker-inner.tsx`, no el CSS: hay que saber dónde cae el punto dentro
+   del lienzo, y eso el CSS no lo sabe. Aquí solo está la otra mitad del par.
+
+   `right` en vez de `left`, con el contenedor de 0 px de ancho, deja el borde
+   derecho del rótulo a 14 px a la izquierda del punto — y como el ancho sigue
+   siendo `max-content`, la caja crece hacia la izquierda, que es lo que hace
+   falta. El `text-align` es para que la segunda línea de un nombre partido
+   quede alineada contra su chapa y no contra el vacío. */
+.t-lm-name.izq {
+  left: auto;
+  right: 14px;
+  text-align: right;
 }
 
 /* Muro del piloto: el atributo lo pone el script inline de `app/layout.tsx` antes

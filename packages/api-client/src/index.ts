@@ -36,14 +36,18 @@ export interface ApiEnvelope<T> {
 }
 
 export function createApiClient(opts: ApiClientOptions) {
-  async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  async function authHeaders(extra?: RequestOptions): Promise<Headers> {
     const headers = new Headers()
     headers.set('x-request-id', crypto.randomUUID())
-    if (options.body !== undefined) headers.set('content-type', 'application/json')
-    if (options.idempotencyKey) headers.set('idempotency-key', options.idempotencyKey)
+    if (extra?.body !== undefined) headers.set('content-type', 'application/json')
+    if (extra?.idempotencyKey) headers.set('idempotency-key', extra.idempotencyKey)
     const token = await opts.getAccessToken?.()
     if (token) headers.set('authorization', `Bearer ${token}`)
+    return headers
+  }
 
+  async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+    const headers = await authHeaders(options)
     const res = await fetch(`${opts.baseUrl}${path}`, {
       method: options.method ?? 'GET',
       headers,
@@ -61,6 +65,24 @@ export function createApiClient(opts: ApiClientOptions) {
     return json as T
   }
 
+  /** Descarga binaria (p.ej. un PDF): el éxito no es JSON, pero el error sigue siendo un Problem Details. */
+  async function getBlob(path: string, signal?: AbortSignal): Promise<Blob> {
+    const headers = await authHeaders()
+    const res = await fetch(`${opts.baseUrl}${path}`, {
+      method: 'GET',
+      headers,
+      credentials: 'include',
+      signal,
+    })
+
+    if (!res.ok) {
+      const text = await res.text()
+      const json: unknown = text ? JSON.parse(text) : null
+      throw new ApiError(json as ProblemDetails)
+    }
+    return res.blob()
+  }
+
   return {
     request,
     get: <T>(path: string, signal?: AbortSignal) => request<T>(path, { method: 'GET', signal }),
@@ -69,6 +91,7 @@ export function createApiClient(opts: ApiClientOptions) {
     put: <T>(path: string, body: unknown) => request<T>(path, { method: 'PUT', body }),
     patch: <T>(path: string, body: unknown) => request<T>(path, { method: 'PATCH', body }),
     delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
+    getBlob,
   }
 }
 

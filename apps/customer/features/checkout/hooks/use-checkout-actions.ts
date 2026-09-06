@@ -69,6 +69,7 @@ export function useCheckoutActions(state: CheckoutState): CheckoutActions {
     maxCashBill,
     refreshMaxChange,
     customerNote,
+    hasDeliveryHistory,
   } = state
 
   const idempotencyKeyRef = useRef<string>(crypto.randomUUID())
@@ -102,10 +103,18 @@ export function useCheckoutActions(state: CheckoutState): CheckoutActions {
       const accuracyM = fix.accuracyM
       const method = accuracyM > cfg.maxAccuracyM ? 'gps_low_accuracy' : 'gps_high_accuracy'
 
-      if (accuracyM > cfg.maxAccuracyM && selectedPayment !== 'prepaid') {
+      // 0211: estos dos cortes protegen una relación de confianza YA GANADA —
+      // una cuenta con `compra_previa` que de golpe reporta estar lejos, o con
+      // señal mala, es sospechosa y merece el sheet de reintentar/prepagar.
+      // Un cliente SIN historial no tiene esa confianza que proteger, y
+      // `customer_gps_in_coverage` (servidor) SÍ acepta `gps_low_accuracy` para
+      // su crédito de GPS (DECISIONS.md §8) — cortar aquí antes de mandarlo
+      // dejaba ese camino inalcanzable desde la app real, aunque el backend y
+      // los tests lo dieran por bueno. Para él, que decida el servidor.
+      if (accuracyM > cfg.maxAccuracyM && selectedPayment !== 'prepaid' && hasDeliveryHistory) {
         return { issue: 'low_accuracy' }
       }
-      if (distance > cfg.warningRadiusKm && selectedPayment !== 'prepaid') {
+      if (distance > cfg.warningRadiusKm && selectedPayment !== 'prepaid' && hasDeliveryHistory) {
         return { issue: 'far' }
       }
 

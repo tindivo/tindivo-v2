@@ -63,7 +63,15 @@ function useDebouncedCallback<Args extends unknown[]>(
 }
 
 // ── Navegación (fuente única; el activo se deriva de la ruta) ─────────────────
-export type NavId = 'pedidos' | 'menu' | 'add' | 'efectivo' | 'historial' | 'deuda' | 'config'
+export type NavId =
+  | 'pedidos'
+  | 'menu'
+  | 'add'
+  | 'efectivo'
+  | 'historial'
+  | 'rendimiento'
+  | 'deuda'
+  | 'config'
 
 const NAV_ITEMS: { id: NavId; label: string; icon: string; href: string }[] = [
   { id: 'pedidos', label: 'Pedidos', icon: 'receipt_long', href: '/' },
@@ -71,6 +79,7 @@ const NAV_ITEMS: { id: NavId; label: string; icon: string; href: string }[] = [
   { id: 'add', label: 'Pedir moto', icon: 'two_wheeler', href: '/nuevo' },
   { id: 'efectivo', label: 'Liquidaciones', icon: 'payments', href: '/efectivo' },
   { id: 'historial', label: 'Historial', icon: 'history', href: '/historial' },
+  { id: 'rendimiento', label: 'Rendimiento', icon: 'rocket_launch', href: '/rendimiento' },
   { id: 'deuda', label: 'Mi cuenta', icon: 'account_balance_wallet', href: '/deuda' },
   { id: 'config', label: 'Config', icon: 'settings', href: '/configuracion' },
 ]
@@ -83,6 +92,7 @@ function activeIdFor(pathname: string): NavId {
   if (pathname.startsWith('/nuevo')) return 'add'
   if (pathname.startsWith('/efectivo')) return 'efectivo'
   if (pathname.startsWith('/historial')) return 'historial'
+  if (pathname.startsWith('/rendimiento')) return 'rendimiento'
   if (pathname.startsWith('/deuda')) return 'deuda'
   if (pathname.startsWith('/configuracion')) return 'config'
   return 'pedidos'
@@ -396,7 +406,8 @@ function FabLink({ href, children }: { href: string; children: React.ReactNode }
 function BottomNav({ active }: { active: NavId }) {
   const { soundOn, toggleSound, signOut, bizName, pendingCashCount } = useDashboard()
   const [moreOpen, setMoreOpen] = useState(false)
-  const mas = active === 'historial' || active === 'deuda' || active === 'config'
+  const mas =
+    active === 'historial' || active === 'rendimiento' || active === 'deuda' || active === 'config'
 
   return (
     <>
@@ -488,6 +499,36 @@ function BottomNav({ active }: { active: NavId }) {
                     }`}
                   >
                     Pedidos pasados, entregas y reclamos
+                  </div>
+                </div>
+              </Link>
+
+              <Link
+                href="/rendimiento"
+                onClick={() => setMoreOpen(false)}
+                className={`flex items-center gap-3.5 rounded-2xl p-3 transition-colors ${
+                  active === 'rendimiento'
+                    ? 'bg-ink text-white'
+                    : 'bg-surface hover:bg-ink/[0.04] text-ink'
+                }`}
+              >
+                <span
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                    active === 'rendimiento' ? 'bg-white/15 text-white' : 'bg-ink/[0.06] text-ink'
+                  }`}
+                >
+                  <Icon name="rocket_launch" size={22} filled={active === 'rendimiento'} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[14px] font-semibold leading-tight">
+                    Rendimiento y Retorno
+                  </div>
+                  <div
+                    className={`mt-0.5 text-[12px] ${
+                      active === 'rendimiento' ? 'text-white/70' : 'text-ink-muted'
+                    }`}
+                  >
+                    Ventas, retorno Tindivo y clientes
                   </div>
                 </div>
               </Link>

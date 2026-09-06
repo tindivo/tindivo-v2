@@ -222,11 +222,20 @@ export function useCheckoutState(): CheckoutState {
     () => Math.round((subtotal + deliveryFee) * 100) / 100,
     [subtotal, deliveryFee],
   )
+  // 0211: un cliente sin historial YA NO se fuerza a prepago aquí. El GPS en
+  // vivo (que solo se captura al confirmar, en `use-checkout-actions.ts`) puede
+  // abrirle "al recibir" con una llamada de validación de respaldo — algo que
+  // el navegador no puede saber ANTES de que el cliente elija y confirme.
+  // `create_customer_order` es quien de verdad decide (DECISIONS.md §8): si el
+  // GPS no cae en San Jacinto, el servidor rechaza igual y el error ya sabe
+  // mostrarse (`use-checkout-actions.ts`, catch de `placeOrder`). Silencioso a
+  // propósito, como el resto de los gatillos de `validando` (ráfagas, picos):
+  // ninguno se anticipa en el checkout, todos se resuelven al confirmar.
   const isNewUser = !hasDeliveryHistory
   const exceedsCashCap = total > prepayThreshold
   const isBlocked = prepayOnlyByRisk
 
-  const mustPrepay = isNewUser || exceedsCashCap || isBlocked
+  const mustPrepay = exceedsCashCap || isBlocked
 
   // Máximo declarable = mín(billete máximo, total + vuelto máximo). La fórmula
   // vive en `lib/cash.ts` con el resto de la regla del vuelto.
@@ -252,14 +261,16 @@ export function useCheckoutState(): CheckoutState {
    * La del bloqueo no acusa ni explica el motivo —es antifraude— pero deja una
    * puerta: sin ella, «tu cuenta tiene restringido» es un callejón sin salida
    * escrito en pasiva.
+   *
+   * `isNewUser` YA NO aparece aquí (0211): un cliente nuevo puede intentar «al
+   * recibir» sin que el grupo se pinte bloqueado, así que no hay bandera de
+   * motivo que mostrar para ese caso — el servidor decide al confirmar.
    */
   const prepayReason = isBlocked
     ? 'Por ahora tus pedidos van con pago adelantado. Si crees que es un error, escríbenos.'
-    : isNewUser
-      ? 'Es tu primer pedido, así que va con pago adelantado. En el siguiente ya puedes pagar al recibir.'
-      : exceedsCashCap
-        ? `Tu total con envío pasa de S/${prepayThreshold}, así que el pago va adelantado.`
-        : null
+    : exceedsCashCap
+      ? `Tu total con envío pasa de S/${prepayThreshold}, así que el pago va adelantado.`
+      : null
 
   // Modo catálogo: el negocio no acepta pedidos web — el pedido va por WhatsApp
   // desde su página. Cubre deep-links a /checkout y carritos persistidos de un
@@ -352,21 +363,23 @@ export function useCheckoutState(): CheckoutState {
     }
   }, [cartHydrated, cart.businessId])
 
-  // NO forzar nada antes de saber quién es el cliente. `hasDeliveryHistory`
-  // arranca en `false` y lo resuelve un RPC, así que sin este guard la secuencia
-  // es: monta → `mustPrepay` true → fuerza `prepaid` → llega la respuesta →
-  // `mustPrepay` pasa a false → y el pago se queda en `prepaid`, porque este
-  // efecto solo empuja hacia el prepago, nunca de vuelta.
-  //
-  // Resultado: el vecino conocido llegaba a la pantalla de pago con "Pago
-  // adelantado" ya marcado y sin banner que lo explicara —las otras opciones
-  // habilitadas pero sin elegir—, que es justo lo que la 0171 viene a evitar.
+  // NO forzar nada antes de saber quién es el cliente. `isBlocked` (de
+  // `contraentrega_blocked`) arranca en `false` y lo resuelve un fetch, así que
+  // sin este guard la secuencia es: monta → `mustPrepay` false → llega la
+  // respuesta → `mustPrepay` pasa a true → pero si el cliente ya había elegido
+  // "al recibir" mientras tanto, este efecto lo empuja recién ENTONCES a
+  // `prepaid` — y si la respuesta hubiera llegado antes, ni se habría notado.
   // El efecto corre aunque la página muestre el esqueleto: `checkout/page.tsx`
   // no monta `UnifiedCheckout` hasta `authReady`, pero los hooks ya corrieron.
   //
-  // Todo camino que llega a la pantalla de pago resuelve el historial ANTES de
-  // `setAuthReady(true)`; el único que no lo hace es el del cliente bloqueado,
-  // que va a `BlockedView` y no tiene pantalla de pago.
+  // `isNewUser`/`hasDeliveryHistory` YA NO alimentan `mustPrepay` (0211): un
+  // cliente sin historial puede elegir "al recibir" sin que este efecto lo
+  // revierta; el servidor decide al confirmar, con el GPS que recién ahí se
+  // captura (`use-checkout-actions.ts`).
+  //
+  // Todo camino que llega a la pantalla de pago resuelve `isBlocked` ANTES de
+  // `setAuthReady(true)`; el único que no lo hace es el del cliente bloqueado
+  // por `blocked_until`, que va a `BlockedView` y no tiene pantalla de pago.
   useEffect(() => {
     if (!authReady) return
     if (mustPrepay && payment !== 'prepaid') setPayment('prepaid')

@@ -7,7 +7,7 @@ import {
   getLimaDate,
   getPresetRange,
   PRESET_LABELS,
-} from '../lib/date-utils'
+} from '@/lib/order-history/date-utils'
 
 interface DateRangePickerProps {
   startDate: string
@@ -24,6 +24,7 @@ const PRESET_OPTIONS: Exclude<DatePreset, 'custom'>[] = [
   'last_7_days',
   'last_15_days',
   'this_month',
+  'last_month',
 ]
 
 export function DateRangePicker({

@@ -10,6 +10,9 @@ const ServerEnvSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   UPSTASH_REDIS_REST_URL: z.url().optional(),
   UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
+  // Solo dev local: ruta al Chrome/Chromium instalado, para el reporte PDF de
+  // rendimiento. En producción se usa @sparticuz/chromium (ver lib/pdf/browser.ts).
+  PUPPETEER_EXECUTABLE_PATH: z.string().optional(),
 })
 
 export type ServerEnv = z.infer<typeof ServerEnvSchema>

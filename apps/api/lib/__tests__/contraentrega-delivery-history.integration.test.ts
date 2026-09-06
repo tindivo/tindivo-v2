@@ -104,7 +104,14 @@ async function crearCliente(): Promise<Cliente> {
   return cliente
 }
 
-async function pedirContraentrega(cliente: Cliente, telefonoEnviado?: string) {
+/** GPS EN VIVO del cliente al pedir (0044/0211) — no confundir con `p_delivery_lat/lng`, que es la dirección de entrega. */
+interface GpsEnVivo {
+  lat: number
+  lng: number
+  method: 'gps_high_accuracy' | 'gps_low_accuracy' | 'manual_skip_prepaid' | 'failed'
+}
+
+async function pedirContraentrega(cliente: Cliente, telefonoEnviado?: string, gps?: GpsEnVivo) {
   return db.rpc('create_customer_order', {
     p_customer_user_id: cliente.id,
     p_business_id: BUSINESS_ID,
@@ -119,6 +126,13 @@ async function pedirContraentrega(cliente: Cliente, telefonoEnviado?: string) {
     p_items: [{ menu_item_id: ITEM_POLLO_ID, quantity: 1, modifiers: [] }],
     p_source: 'customer_pwa',
     p_client_pays_with: 50,
+    ...(gps
+      ? {
+          p_customer_gps_lat: gps.lat,
+          p_customer_gps_lng: gps.lng,
+          p_customer_gps_method: gps.method,
+        }
+      : {}),
   })
 }
 
@@ -361,5 +375,193 @@ describe('0171/0182 · el historial del teléfono y el directorio abren la contr
     const { error } = await pedirContraentrega(cliente)
 
     expect(error?.message).toContain('Pago adelantado requerido')
+  })
+
+  /**
+   * 0211 · El primer pedido también puede ser del pueblo.
+   *
+   * Sin NINGUNA de las tres cláusulas de historial, un GPS en vivo (0044) que
+   * cae en San Jacinto YA NO exige prepago — pero tampoco da contraentrega
+   * libre: entra a `validando`, la misma llamada que ya paga cualquier cliente
+   * nuevo hoy. El GPS del navegador es falsificable sin root, así que NO es
+   * intercambiable con `compra_previa` (DECISIONS.md §8): compra_previa da
+   * contraentrega libre, GPS-sin-historial da contraentrega CON revisión.
+   *
+   * El riesgo (`risk_blocked`) sigue mandando primero: estos casos prueban que
+   * el crédito de GPS nunca se evalúa para un cliente con strikes, sin
+   * importar dónde diga estar parado.
+   */
+  describe('0211 · GPS en San Jacinto abre contraentrega CON validación, sin historial', () => {
+    it('sin historial y GPS real dentro de San Jacinto: entra, pero a `validando`', async () => {
+      const cliente = await crearCliente()
+
+      const { data, error } = await pedirContraentrega(cliente, undefined, {
+        lat: LAT,
+        lng: LNG,
+        method: 'gps_high_accuracy',
+      })
+
+      expect(error, `debería entrar: ${error?.message}`).toBeNull()
+      const creado = data as { id: string; status: string }
+      pedidosCreados.push(creado.id)
+      expect(creado.status).toBe('validando')
+
+      const { data: pedido } = await db
+        .from('orders')
+        .select('validation_reason_code, risk_flags, requires_validation')
+        .eq('id', creado.id)
+        .single()
+      expect(pedido?.validation_reason_code).toBe('new_customer_local_gps')
+      expect(pedido?.requires_validation).toBe(true)
+      expect((pedido?.risk_flags as Record<string, unknown> | null)?.newCustomerLocalGps).toBe(true)
+    })
+
+    it('gps_low_accuracy dentro de San Jacinto también cuenta (no exige alta precisión)', async () => {
+      const cliente = await crearCliente()
+
+      const { data, error } = await pedirContraentrega(cliente, undefined, {
+        lat: LAT,
+        lng: LNG,
+        method: 'gps_low_accuracy',
+      })
+
+      expect(error, `debería entrar: ${error?.message}`).toBeNull()
+      const creado = data as { id: string; status: string }
+      pedidosCreados.push(creado.id)
+      expect(creado.status).toBe('validando')
+    })
+
+    it('sin historial y GPS fuera de San Jacinto: sigue exigiendo prepago', async () => {
+      const cliente = await crearCliente()
+
+      // Lima Metropolitana: lejos de San Jacinto (Áncash) y del polígono de cobertura.
+      const { error } = await pedirContraentrega(cliente, undefined, {
+        lat: -12.046,
+        lng: -77.043,
+        method: 'gps_high_accuracy',
+      })
+
+      expect(error?.message).toContain('Pago adelantado requerido')
+    })
+
+    it.each([
+      'manual_skip_prepaid',
+      'failed',
+    ] as const)('un método "%s" no cuenta como GPS real aunque la coordenada caiga en San Jacinto', async (method) => {
+      const cliente = await crearCliente()
+
+      const { error } = await pedirContraentrega(cliente, undefined, { lat: LAT, lng: LNG, method })
+
+      expect(error?.message, 'sin sensor real no hay crédito de GPS').toContain(
+        'Pago adelantado requerido',
+      )
+    })
+
+    /**
+     * EL CASO QUE SOSTIENE LA ASIMETRÍA. Si esto se pone verde con el crédito
+     * de GPS aplicándose, un cliente con strikes recuperó contraentrega solo
+     * por decir (falsificablemente) que está en San Jacinto — exactamente el
+     * hueco que el riesgo existe para cerrar. No "arregles" esto ampliando el
+     * crédito de GPS al caso `risk_blocked`.
+     */
+    it('el riesgo gana al GPS: con 2 strikes y sin historial, el GPS en SJ no rescata', async () => {
+      const cliente = await crearCliente()
+      await sembrarStrikes(cliente.tel9, 2)
+
+      const { error } = await pedirContraentrega(cliente, undefined, {
+        lat: LAT,
+        lng: LNG,
+        method: 'gps_high_accuracy',
+      })
+
+      expect(error?.message, 'el GPS no debe rescatar a un cliente en risk_blocked').toContain(
+        'Pago adelantado requerido',
+      )
+    })
+
+    it('con historial (compra_previa), el GPS es irrelevante: contraentrega LIBRE, no `validando`', async () => {
+      const cliente = await crearCliente()
+      await sembrarEntregaManual(cliente.tel9)
+
+      // 'failed' salta el chequeo de distancia GPS-vs-dirección (0148): aísla
+      // que el trato libre no depende en nada del bloque nuevo de 0211.
+      const { data, error } = await pedirContraentrega(cliente, undefined, {
+        lat: -12.046,
+        lng: -77.043,
+        method: 'failed',
+      })
+
+      expect(error, `debería entrar: ${error?.message}`).toBeNull()
+      const creado = data as { id: string; status: string }
+      pedidosCreados.push(creado.id)
+      expect(creado.status).toBe('pending_acceptance')
+    })
+
+    it('customer_contraentrega_decision distingue risk_blocked de no_history y trusted', async () => {
+      const sinHistorial = await crearCliente()
+      const { data: decisionSinHistorial, error: e1 } = await db.rpc(
+        'customer_contraentrega_decision',
+        { p_customer_user_id: sinHistorial.id },
+      )
+      expect(e1).toBeNull()
+      expect(decisionSinHistorial).toBe('no_history')
+
+      const conRiesgo = await crearCliente()
+      await sembrarStrikes(conRiesgo.tel9, 2)
+      const { data: decisionRiesgo, error: e2 } = await db.rpc('customer_contraentrega_decision', {
+        p_customer_user_id: conRiesgo.id,
+      })
+      expect(e2).toBeNull()
+      expect(decisionRiesgo).toBe('risk_blocked')
+
+      const conHistorial = await crearCliente()
+      await sembrarEntregaManual(conHistorial.tel9)
+      const { data: decisionConfiado, error: e3 } = await db.rpc(
+        'customer_contraentrega_decision',
+        {
+          p_customer_user_id: conHistorial.id,
+        },
+      )
+      expect(e3).toBeNull()
+      expect(decisionConfiado).toBe('trusted')
+    })
+
+    it('el checkout resuelve `local_review` para un cliente nuevo con GPS en SJ, sin exponer el crudo', async () => {
+      const cliente = await crearCliente()
+
+      const navegador = createClient('http://127.0.0.1:54321', LOCAL_ANON_KEY, {
+        auth: { persistSession: false, autoRefreshToken: false },
+      })
+      const { error: loginError } = await navegador.auth.signInWithPassword({
+        email: `contraentrega-${cliente.tel9}@integration.local`,
+        password: CLAVE,
+      })
+      expect(loginError, `no se pudo iniciar sesión: ${loginError?.message}`).toBeNull()
+
+      const { data: sinGps, error: errSinGps } = await navegador.rpc(
+        'current_customer_contraentrega_outcome',
+      )
+      expect(errSinGps, `falta el grant a authenticated: ${errSinGps?.message}`).toBeNull()
+      expect(sinGps, 'sin GPS, sin historial: no_history').toBe('no_history')
+
+      const { data: conGps, error: errConGps } = await navegador.rpc(
+        'current_customer_contraentrega_outcome',
+        {
+          p_customer_gps_lat: LAT,
+          p_customer_gps_lng: LNG,
+          p_customer_gps_method: 'gps_high_accuracy',
+        },
+      )
+      expect(errConGps).toBeNull()
+      expect(conGps).toBe('local_review')
+
+      // El predicado crudo tampoco se expone aquí: preguntaría por cuentas ajenas.
+      const { error: prohibido } = await navegador.rpc('customer_contraentrega_decision', {
+        p_customer_user_id: cliente.id,
+      })
+      expect(prohibido?.message ?? '').toMatch(/permission denied|does not exist/i)
+
+      await signOutLocal(navegador)
+    })
   })
 })

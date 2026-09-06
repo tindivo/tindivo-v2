@@ -42,7 +42,7 @@ export function MethodStep({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex-1 overflow-y-auto px-5 pt-2 pb-4 scrollbar-hide">
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-2 pb-4">
         <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand font-display font-bold text-[24px] text-white shadow-glow-brand">
           T
         </div>

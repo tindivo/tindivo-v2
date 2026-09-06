@@ -49,7 +49,20 @@ export function useTracking(shortId: string): UseTrackingResult {
     let active = true
     load()
     const id = setInterval(() => {
-      if (active) load()
+      if (!active) return
+      /**
+       * CON LA PESTAÑA OCULTA NO SE SONDEA.
+       *
+       * No es solo ahorro —que también: son datos móviles y batería de alguien
+       * en San Jacinto, ocho segundos tras ocho segundos, por una respuesta que
+       * nadie está mirando—. Es que el navegador ya lo está estrangulando por su
+       * cuenta: en segundo plano los temporizadores se ralentizan y pueden
+       * pararse del todo, así que este intervalo no cumple lo que aparenta
+       * cumplir. Mejor no fingirlo y recargar de golpe al volver, que es lo que
+       * hace el efecto de abajo.
+       */
+      if (document.visibilityState !== 'visible') return
+      load()
     }, 8000)
     // Comprobación de propiedad (una vez): solo el dueño autenticado ve "Cancelar".
     getSupabaseBrowser()
@@ -67,6 +80,28 @@ export function useTracking(shortId: string): UseTrackingResult {
       clearInterval(id)
     }
   }, [shortId, load])
+
+  /**
+   * AL VOLVER A LA PESTAÑA, RECARGAR YA.
+   *
+   * Lo que el cliente tiene delante en ese instante puede ser de hace media
+   * hora: mientras la pestaña estaba oculta el sondeo no corrió (arriba) y el
+   * canal de Realtime pudo quedarse dormido con la conexión. El caso normal es
+   * exactamente este —el cliente se va a Yape o a WhatsApp y vuelve— y sin esto
+   * vuelve a una pantalla que dice «En cocina» con el motorizado en la puerta,
+   * hasta que pasen los ocho segundos.
+   *
+   * Va en su propio efecto y no dentro del de arriba para no reenganchar el
+   * `setInterval` ni rehacer la consulta de propiedad cada vez que alguien
+   * cambia de app.
+   */
+  useEffect(() => {
+    const alVolver = () => {
+      if (document.visibilityState === 'visible') void load()
+    }
+    document.addEventListener('visibilitychange', alVolver)
+    return () => document.removeEventListener('visibilitychange', alVolver)
+  }, [load])
 
   // Realtime: el dueño autenticado recibe los cambios al instante (el polling de 8s
   // queda como fallback para enlaces compartidos / pérdida de conexión).

@@ -84,12 +84,14 @@ export function PaymentMethodList({
               </span>
               <span aria-hidden className="h-px flex-1 bg-ink/[0.06]" />
               {/* «En este pedido», NO «hoy no».
-                  De los tres motivos por los que se bloquea el grupo, «hoy» es
-                  cierto en uno solo. Con `exceedsCashCap` es directamente
-                  contraproducente: al cliente le basta quitar un producto para
-                  desbloquearlo AHORA, y «hoy no» le dice que vuelva mañana. Con
-                  `isNewUser` tampoco —el siguiente pedido puede ser de hoy
-                  mismo, que es lo que promete el propio motivo de abajo. */}
+                  De los dos motivos por los que se bloquea el grupo (`isBlocked`,
+                  `exceedsCashCap`), «hoy» es cierto en uno solo. Con
+                  `exceedsCashCap` es directamente contraproducente: al cliente
+                  le basta quitar un producto para desbloquearlo AHORA, y «hoy
+                  no» le dice que vuelva mañana.
+                  `isNewUser` ya no bloquea este grupo (0211): un cliente sin
+                  historial puede elegir "al recibir" y el servidor decide al
+                  confirmar. */}
               {bloqueado && (
                 <span className="font-semibold text-[10px] text-ink-subtle uppercase tracking-[0.1em]">
                   En este pedido

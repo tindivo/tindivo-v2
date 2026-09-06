@@ -76,3 +76,34 @@ export const twilioClient: twilio.Twilio | null =
 
 /** Twilio Verify Service SID (VAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx). */
 export const VERIFY_SERVICE_SID = verifySid ?? ''
+
+/**
+ * Código maestro del simulacro local. Seis dígitos porque el contrato exige
+ * seis (`VerifySchema`), y todo ceros porque no debe parecerse nunca a uno real.
+ */
+export const DEV_OTP_CODE = '000000'
+
+/**
+ * ¿Se SIMULA el OTP en vez de mandarlo?
+ *
+ * En local no hay Twilio —`.env.local` no lleva las tres variables— y hasta
+ * ahora eso dejaba el paso del celular muerto: `send-code` devolvía el 500 de
+ * "no disponible temporalmente" y el vecino de mentira nunca llegaba a la
+ * pantalla del código. Con el simulacro se recorre la pantalla entera (envío →
+ * código → auto-submit a los seis dígitos → cooldown → sellado del perfil),
+ * que es lo único que se puede probar aquí: a Twilio no se le prueba en local.
+ *
+ * DOS CANDADOS, Y LOS DOS TIENEN QUE FALLAR PARA QUE ESTO SE ESCAPE A
+ * PRODUCCIÓN. En prod las tres variables están, así que `twilioClient` no es
+ * `null` y la rama es inalcanzable aunque `NODE_ENV` mintiera; y si algún día
+ * faltaran, `NODE_ENV === 'production'` la mantiene cerrada y el endpoint
+ * responde el error de siempre. Uno solo de los dos bastaría; están los dos
+ * porque lo que se salta es una verificación de identidad, y ahí el margen se
+ * paga barato.
+ */
+export const OTP_DEV_SIMULATION: boolean =
+  twilioClient === null && process.env.NODE_ENV !== 'production'
+
+if (OTP_DEV_SIMULATION) {
+  console.warn(`[twilio] SIMULACRO LOCAL de OTP activo — el código válido es ${DEV_OTP_CODE}`)
+}
