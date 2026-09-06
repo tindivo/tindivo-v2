@@ -1,6 +1,6 @@
 'use client'
 
-import { Icon } from '@tindivo/ui'
+import { Icon, ToggleSwitch } from '@tindivo/ui'
 import { useState } from 'react'
 import type { AlertChannel } from '@/features/tracking/hooks/use-alert-channel'
 import type { WakeLock } from '@/features/tracking/hooks/use-wake-lock'
@@ -119,28 +119,12 @@ export function TrackingAlertChannel({ canal, pantalla }: TrackingAlertChannelPr
 
       {pantalla.soportado && (
         <div className="flex flex-col gap-2.5 rounded-[18px] border border-border bg-card p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px] bg-surface-low">
-                <Icon name="light_mode" size={19} className="text-ink" />
-              </span>
-              <span className="text-body font-semibold leading-snug">
-                Mantener la pantalla encendida
-              </span>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={pantalla.activo}
-              aria-label="Mantener la pantalla encendida mientras esperas"
-              onClick={pantalla.alternar}
-              className={`flex h-8 w-13 shrink-0 items-center rounded-full p-[3px] transition-colors ${
-                pantalla.activo ? 'justify-end bg-brand' : 'justify-start bg-ink/[0.14]'
-              }`}
-            >
-              <span className="h-6.5 w-6.5 rounded-full bg-white shadow-sm" />
-            </button>
-          </div>
+          <ToggleSwitch
+            checked={pantalla.activo}
+            onChange={pantalla.alternar}
+            label="Mantener la pantalla encendida"
+            icon={<Icon name="light_mode" size={19} />}
+          />
           <p className="text-caption text-ink-muted leading-relaxed">
             Deja el celular a la vista: no se apagará hasta que llegue tu pedido. Gasta algo de
             batería.
