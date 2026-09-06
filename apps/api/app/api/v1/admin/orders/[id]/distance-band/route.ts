@@ -31,8 +31,7 @@ export async function PATCH(
     const { id } = await params
     const body = Schema.parse(await req.json())
     const service = createServiceClient()
-    // biome-ignore lint/suspicious/noExplicitAny: database.types.ts aún no trae admin_correct_delivery_band (0213, pendiente de push a remoto)
-    const { data, error } = await (service as any).rpc('admin_correct_delivery_band', {
+    const { data, error } = await service.rpc('admin_correct_delivery_band', {
       p_order_id: id,
       p_admin_user_id: user.id,
       p_new_band: body.band,

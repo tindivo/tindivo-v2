@@ -2573,6 +2573,14 @@ export type Database = {
     }
     Functions: {
       admin_conversion_opportunity_stats: { Args: never; Returns: Json }
+      admin_correct_delivery_band: {
+        Args: {
+          p_admin_user_id: string
+          p_new_band: Database["public"]["Enums"]["distance_band"]
+          p_order_id: string
+        }
+        Returns: Json
+      }
       admin_metrics: { Args: { p_from: string; p_to: string }; Returns: Json }
       admin_online_orders_stats: {
         Args: { p_from?: string; p_to?: string }
