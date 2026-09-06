@@ -7,6 +7,7 @@ import { PushPermissionSheet } from '@/components/push-permission-sheet'
 import { CancelledView } from '@/features/tracking/components/cancelled-view'
 import { PrepayRail } from '@/features/tracking/components/prepay-rail'
 import { TrackingActions } from '@/features/tracking/components/tracking-actions'
+import { TrackingAlertChannel } from '@/features/tracking/components/tracking-alert-channel'
 import { TrackingAlertToast } from '@/features/tracking/components/tracking-alert-toast'
 import { TrackingAppealView } from '@/features/tracking/components/tracking-appeal-view'
 import { TrackingCancelRow } from '@/features/tracking/components/tracking-cancel-row'
@@ -18,10 +19,12 @@ import { TrackingPrepay } from '@/features/tracking/components/tracking-prepay'
 import { TrackingShell } from '@/features/tracking/components/tracking-shell'
 import { TrackingSoundToggle } from '@/features/tracking/components/tracking-sound-toggle'
 import { TrackingSteps } from '@/features/tracking/components/tracking-steps'
+import { useAlertChannel } from '@/features/tracking/hooks/use-alert-channel'
 import { useCountdown } from '@/features/tracking/hooks/use-countdown'
 import { usePushOffer } from '@/features/tracking/hooks/use-push-offer'
 import { useStatusAlerts } from '@/features/tracking/hooks/use-status-alerts'
 import { useTracking } from '@/features/tracking/hooks/use-tracking'
+import { useWakeLock } from '@/features/tracking/hooks/use-wake-lock'
 import { isCancellable, STEPS } from '@/features/tracking/lib/format'
 import { prepayStage } from '@/features/tracking/lib/prepay-stage'
 
@@ -46,6 +49,17 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
   const countdown = useCountdown(data)
   const { alerta, descartar, sonidoActivo, alternarSonido } = useStatusAlerts(data)
   const ofertaPush = usePushOffer(data, ownedId)
+  /**
+   * El pedido sigue vivo: hay algo que avisar todavía.
+   *
+   * Gobierna las DOS piezas del modo espera. La fila de «cómo te avisamos» no
+   * tiene nada que prometer sobre un pedido terminado, y el bloqueo de pantalla
+   * tiene que soltarse solo al entregar — que es justo lo que la tarjeta le
+   * promete al cliente.
+   */
+  const enEspera = Boolean(data) && data?.status !== 'delivered' && data?.status !== 'cancelled'
+  const canalAviso = useAlertChannel()
+  const pantallaEncendida = useWakeLock(enEspera)
 
   const current = data ? toTrackingStep(data.status as OrderStatus) : null
   const foundIdx = current ? STEPS.findIndex((s) => s.key === current) : -1
@@ -129,6 +143,13 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
                     el hero no puede decir —«esto lo hace el negocio, no tú»— y
                     es justo lo que faltaba para que el prepago se entienda. */}
                 {etapaPrepago && <PrepayRail stage={etapaPrepago} />}
+
+                {/* Por dónde le va a llegar el aviso. Va pegado al estado y
+                    encima de las acciones porque responde a la pregunta que
+                    nace justo al leer «Preparando»: «¿y cómo me entero?». */}
+                {enEspera && (
+                  <TrackingAlertChannel canal={canalAviso} pantalla={pantallaEncendida} />
+                )}
 
                 {/* 2 · Ahora mismo */}
                 {cancellable && (
