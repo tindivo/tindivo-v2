@@ -49,9 +49,15 @@ export function DeudaList({
       <DeudaHero balance={balance} isBlocked={data.isBlocked} threshold={data.debtBlockThreshold} />
       <DeudaSummary summary={data.summary} />
 
-      {/* Banner de acceso a Métricas y Rendimiento */}
+      {/* Banner de acceso a Métricas y Rendimiento.
+          Enlaza a /rendimiento, no a /historial: el panel de métricas se mudó
+          ahí (9a2e5b6), con su propia entrada en el sidebar. El subtítulo
+          promete lo que la pantalla realmente muestra hoy — la factura del
+          periodo desglosada (comisión + envíos + devoluciones, ver
+          bill-card.tsx) — y no el "ROI Multiplicador" que salió de la
+          pantalla por ser el mismo ticket promedio bajo otro nombre. */}
       <Link
-        href="/historial"
+        href="/rendimiento"
         className="flex items-center justify-between rounded-xl border border-brand/20 bg-brand/5 p-3 text-ink transition-all hover:bg-brand/10 shadow-elev-1"
       >
         <div className="flex items-center gap-2.5">
@@ -63,7 +69,7 @@ export function DeudaList({
               Rendimiento y Retorno de tu Negocio
             </span>
             <span className="block text-[11px] text-ink-muted">
-              Consulta tu facturación, ROI Multiplicador y clientes por periodo
+              Consulta tu facturación, tu factura con Tindivo desglosada y tus clientes por periodo
             </span>
           </div>
         </div>
