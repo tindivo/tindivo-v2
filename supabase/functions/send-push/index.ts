@@ -77,6 +77,48 @@ async function timerMinutes(name: string, fallback: number): Promise<number> {
   return Number.isFinite(n) && n > 0 ? n : fallback
 }
 
+/**
+ * Nombre de pila del motorizado, para los avisos AL CLIENTE. Cadena vacía si no
+ * hay motorizado o no tiene nombre.
+ *
+ * Solo el nombre de pila: «Marco está en tu puerta» se lee de un golpe en la
+ * pantalla bloqueada y el apellido no añade nada que el cliente necesite para
+ * abrir la puerta. No es dato nuevo — el seguimiento ya le enseña `driverName`
+ * al cliente desde que el pedido tiene motorizado (`tracking/types.ts`), así
+ * que esto no publica nada que no estuviera ya en su pantalla.
+ */
+async function driverFirstName(driverId: unknown): Promise<string> {
+  if (typeof driverId !== 'string' || !driverId) return ''
+  const { data } = await db.from('drivers').select('full_name').eq('id', driverId).maybeSingle()
+  const full = ((data?.full_name as string | null) ?? '').trim()
+  return full ? full.split(/\s+/)[0] : ''
+}
+
+/**
+ * «listo en ~20 min», o cadena vacía cuando el pedido no dice cuánto tarda.
+ *
+ * VACÍA Y NO UN NÚMERO POR DEFECTO. Un «~20 min» inventado en un aviso que el
+ * cliente lee en la pantalla bloqueada es una promesa que nadie hizo; quien
+ * recibe la cadena vacía ya sabe omitir el tramo.
+ */
+function prepPhrase(prepMinutes: unknown): string {
+  const n = Number(prepMinutes ?? 0)
+  return Number.isFinite(n) && n > 0 ? `listo en ~${Math.round(n)} min` : ''
+}
+
+/**
+ * Lo que el cliente tiene que pagar, tal como lo ve en su pantalla.
+ *
+ * Es la MISMA suma que `get_tracking` devuelve como `total` (`order_amount +
+ * delivery_fee`, ver 0183). Que el aviso y la pantalla salgan de la misma
+ * fórmula no es estética: el cliente compara la cifra del push con la que
+ * tiene delante antes de yapear, y dos números distintos por un céntimo lo
+ * paran en seco.
+ */
+function orderTotal(o: { order_amount?: unknown; delivery_fee?: unknown }): string {
+  return soles(Number(o.order_amount ?? 0) + Number(o.delivery_fee ?? 0))
+}
+
 /** `user_id` del motorizado a partir de su `drivers.id`. Null si no existe. */
 async function driverUserId(driverId: unknown): Promise<string | null> {
   if (typeof driverId !== 'string' || !driverId) return null
@@ -369,7 +411,9 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
   if (eventType === 'OrderStatusChanged' || eventType === 'OrderExpired') {
     const { data: o } = await db
       .from('orders')
-      .select('short_id,business_id,customer_user_id,driver_id,cancel_reason')
+      .select(
+        'short_id,business_id,customer_user_id,driver_id,cancel_reason,payment_intent,order_amount,delivery_fee,prep_time_minutes',
+      )
       .eq('id', aggregateId)
       .maybeSingle()
     if (!o) return out
@@ -403,11 +447,42 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
     }
 
     if (eventType === 'OrderExpired') {
-      push(cust, 'Pedido cancelado', `#${sid} cancelado · se agotó el tiempo`)
+      push(cust, 'Tu pedido se canceló', 'No llegó el pago a tiempo · puedes volver a pedirlo')
     } else if (action === 'accept') {
-      push(cust, 'Tu pedido fue confirmado', `${bizName} confirmó #${sid} y empezó a prepararlo`)
+      /**
+       * ACEPTAR NO SIGNIFICA LO MISMO EN LOS DOS FLUJOS, y el aviso tampoco.
+       *
+       * `advance_order` ramifica por `payment_intent` (ver 0115): en
+       * contraentrega aceptar y empezar a cocinar son el mismo acto y el pedido
+       * va directo a `preparing`; en prepago se queda en `awaiting_payment`
+       * esperando que el cliente pague, con el cron de expiración corriendo.
+       *
+       * Aquí se mandaba el mismo aviso a los dos —«confirmó y empezó a
+       * prepararlo»— así que al prepago se le decía que su comida estaba en el
+       * fuego justo cuando lo único que faltaba era que pagase. Es el único
+       * aviso del flujo cuyo silencio cuesta el pedido: si no paga dentro de su
+       * ventana, se cancela solo.
+       */
+      if (o.payment_intent === 'prepaid') {
+        const minutos = await timerMinutes('paymentMinutes', 15)
+        push(
+          cust,
+          'Ya puedes pagar tu pedido',
+          `${orderTotal(o)} por Yape a ${bizName} · tienes ${minutos} min o se cancela solo`,
+          { req: true },
+        )
+      } else {
+        const prep = prepPhrase(o.prep_time_minutes)
+        push(
+          cust,
+          `${bizName} aceptó tu pedido`,
+          prep ? `Ya está en cocina · ${prep}` : 'Ya está en cocina',
+        )
+      }
       // El negocio acaba de meterlo en cocina: si va a tardar, los motorizados
       // lo saben desde ya en vez de enterarse cuando la comida ya está fría.
+      // (En prepago `headsUpNotes` no manda nada: mira que el estado sea
+      // `preparing`, y ahí todavía no lo es.)
       out.push(...(await headsUpNotes(aggregateId, eventType)))
     } else if (action === 'ready') {
       /**
@@ -463,7 +538,19 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
     } else if (action === 'arrived') {
       push(bizUser, 'Motorizado en tu local', `Está esperando #${sid}`, { url: '/', req: true })
     } else if (action === 'pickup') {
-      push(cust, 'Tu pedido salió', 'Va camino a la entrega')
+      /**
+       * SIN ETA, A PROPÓSITO, aunque el dato exista.
+       *
+       * El cliente sí ve un rango en pantalla: `etaView` lo calcula como
+       * `estimated_ready_at + travelMinutes{min,max}` (0117). Meterlo aquí
+       * obligaría a reescribir esa fórmula en Deno, y entonces la hora que
+       * promete el push y la que enseña la pantalla salen de dos
+       * implementaciones distintas que envejecen por separado — con el cliente
+       * comparándolas. El nombre del motorizado es lo que este aviso aporta;
+       * el reloj lo sigue llevando la pantalla, que es donde está entero.
+       */
+      const quien = await driverFirstName(o.driver_id)
+      push(cust, 'Tu pedido salió', quien ? `${quien} va en camino` : 'El motorizado va en camino')
       push(bizUser, 'Pedido recogido', `#${sid} salió a entrega`, { url: '/' })
     } else if (action === 'arrived_customer') {
       /**
@@ -478,32 +565,48 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
        * en su puerta.
        */
       const wait = await timerMinutes('noShowWaitMinutes', 5)
+      const quien = await driverFirstName(o.driver_id)
       push(
         cust,
-        'El motorizado está en tu puerta',
-        // "puede cancelarlo", no "se cancela": el no-show lo declara la persona
+        quien ? `${quien} está en tu puerta` : 'El motorizado está en tu puerta',
+        // "puede cancelar", no "se cancela": el no-show lo declara la persona
         // cuando vence la espera, no un cron.
-        `#${sid} · sal a recibirlo · pasados ${wait} min puede cancelarlo`,
+        `Sal a recibirlo · si no sales en ${wait} min puede cancelar el pedido`,
         { req: true },
       )
     } else if (action === 'no_show') {
-      push(cust, 'Pedido cancelado', `#${sid} · el motorizado esperó y nadie salió`, { req: true })
+      const wait = await timerMinutes('noShowWaitMinutes', 5)
+      const quien = await driverFirstName(o.driver_id)
+      push(
+        cust,
+        'Tu pedido se canceló',
+        `${quien || 'El motorizado'} esperó ${wait} min en tu puerta y nadie salió`,
+        { req: true },
+      )
       push(bizUser, 'Pedido cancelado', `#${sid} · el cliente no apareció`, { url: '/' })
     } else if (action === 'validate_fail_retry') {
       // La cajera rechazó el comprobante y el pedido volvió a `awaiting_payment`.
       // El cliente tiene que subir otro, con tope de dos intentos y el cron de
       // expiración de prepago corriendo: enterarse tarde le quema la ventana.
-      push(cust, 'Comprobante rechazado', `#${sid} · revisa el pago y sube otro comprobante`, {
+      // «1 intento» es exacto, no un redondeo amable: esta rama solo se dispara
+      // con `proof_attempt < 2` (ver 0189), o sea tras rechazar el primero de
+      // dos. Al segundo rechazo se cae por `validate_fail` y no hay tercero.
+      push(cust, 'Tu comprobante no se pudo verificar', 'Te queda 1 intento · sube otra captura', {
         req: true,
       })
     } else if (action === 'validate_fail') {
-      push(cust, 'Pedido cancelado', `#${sid} · no se pudo verificar el comprobante`, { req: true })
+      push(cust, 'Tu pedido se canceló', 'No se pudo verificar el comprobante de pago', {
+        req: true,
+      })
     } else if (action === 'deliver') {
-      push(cust, 'Pedido entregado', '¡Gracias por usar Tindivo!')
+      push(cust, 'Pedido entregado', `${orderTotal(o)} · gracias por pedir en Tindivo`)
       push(bizUser, 'Pedido entregado', `#${sid} fue entregado`, { url: '/' })
     } else if (action === 'cancel') {
       const reason = (o.cancel_reason as string) ?? ''
-      push(cust, 'Pedido cancelado', `#${sid} cancelado`)
+      // El motivo NO viaja al cliente: `cancel_reason` es un enum de la base
+      // (`business_rejected`, `out_of_stock`…) y enseñárselo crudo es peor que
+      // callarlo. Al negocio sí, que es quien lo escribió.
+      push(cust, 'Tu pedido se canceló', 'Puedes volver a pedirlo cuando quieras')
       push(bizUser, 'Pedido cancelado', `#${sid} cancelado · ${reason}`, { url: '/' })
       // Si ya tenía motorizado, es quien más necesita saberlo: puede estar
       // yendo al local o esperando la comida en el mostrador.
@@ -515,6 +618,63 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
         `Pedido${who} (#${sid}) se canceló · no vayas al local`,
         { url: `/pedido/${aggregateId}`, req: true, renotify: true },
       )
+    }
+  } else if (eventType === 'OrderProofVerified' || eventType === 'OrderValidated') {
+    /**
+     * LOS DOS AVISOS QUE NO EXISTÍAN, Y POR QUÉ HACÍAN FALTA.
+     *
+     * Los dos eventos estaban clasificados como auditoría en el despacho (0136)
+     * y se quedaban en el outbox sin viajar. Pero los dos cierran una espera del
+     * CLIENTE en la que no puede hacer absolutamente nada más que esperar:
+     *
+     *   · `OrderProofVerified` — pagó, subió la captura, y la cajera la aprobó.
+     *   · `OrderValidated`     — el pedido estaba retenido por antifraude y la
+     *                            cajera lo dio por bueno.
+     *
+     * Sin aviso, el cliente se queda mirando la pantalla sin saber si su plata
+     * llegó a alguna parte. La 0212 los mete en la lista blanca; esta rama es
+     * la que decide qué se les dice.
+     */
+    const { data: o } = await db
+      .from('orders')
+      .select('short_id,business_id,customer_user_id,prep_time_minutes')
+      .eq('id', aggregateId)
+      .maybeSingle()
+    const cust = (o?.customer_user_id as string | null) ?? null
+    if (o && cust) {
+      const sid = o.short_id as string
+      const { data: biz } = await db
+        .from('businesses')
+        .select('name')
+        .eq('id', o.business_id)
+        .maybeSingle()
+      const bizName = (biz?.name as string) ?? 'el restaurante'
+      const base = {
+        userId: cust,
+        // Invariante 5: la etiqueta lleva el tipo de evento, no solo el shortId.
+        tag: `${eventType}-${sid}`,
+        url: `/pedido/${sid}`,
+        requireInteraction: false,
+        vibrate: false,
+      }
+      if (eventType === 'OrderProofVerified') {
+        const prep = prepPhrase(o.prep_time_minutes)
+        out.push({
+          ...base,
+          title: 'Pago verificado',
+          body: prep ? `${bizName} ya está cocinando · ${prep}` : `${bizName} ya está cocinando`,
+        })
+      } else {
+        // `validate_order` manda el prepago de vuelta a `pending_acceptance` y
+        // la contraentrega directa a `preparing` (0189), así que el cuerpo NO
+        // puede prometer cocina: dice que el pedido sigue vivo, que es justo lo
+        // que el cliente estaba esperando saber.
+        out.push({
+          ...base,
+          title: 'Pedido verificado',
+          body: 'Todo en orden · tu pedido sigue su curso',
+        })
+      }
     }
   } else if (eventType === 'OrderCreated') {
     // El pedido manual nace en `preparing`, así que aquí ya está en cocina.
