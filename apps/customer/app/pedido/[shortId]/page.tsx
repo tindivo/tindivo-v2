@@ -3,6 +3,7 @@
 import { type OrderStatus, toTrackingStep } from '@tindivo/contracts'
 import { useRouter } from 'next/navigation'
 import { use } from 'react'
+import { PushPermissionSheet } from '@/components/push-permission-sheet'
 import { CancelledView } from '@/features/tracking/components/cancelled-view'
 import { PrepayRail } from '@/features/tracking/components/prepay-rail'
 import { TrackingActions } from '@/features/tracking/components/tracking-actions'
@@ -18,6 +19,7 @@ import { TrackingShell } from '@/features/tracking/components/tracking-shell'
 import { TrackingSoundToggle } from '@/features/tracking/components/tracking-sound-toggle'
 import { TrackingSteps } from '@/features/tracking/components/tracking-steps'
 import { useCountdown } from '@/features/tracking/hooks/use-countdown'
+import { usePushOffer } from '@/features/tracking/hooks/use-push-offer'
 import { useStatusAlerts } from '@/features/tracking/hooks/use-status-alerts'
 import { useTracking } from '@/features/tracking/hooks/use-tracking'
 import { isCancellable, STEPS } from '@/features/tracking/lib/format'
@@ -43,6 +45,7 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
   const { data, error, ownedId, ownNote, load, cancel } = useTracking(shortId)
   const countdown = useCountdown(data)
   const { alerta, descartar, sonidoActivo, alternarSonido } = useStatusAlerts(data)
+  const ofertaPush = usePushOffer(data, ownedId)
 
   const current = data ? toTrackingStep(data.status as OrderStatus) : null
   const foundIdx = current ? STEPS.findIndex((s) => s.key === current) : -1
@@ -97,6 +100,13 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
       pieFijo={data?.paymentIntent === 'prepaid' && data.status === 'awaiting_payment'}
     >
       <TrackingAlertToast alerta={alerta} onClose={descartar} />
+      {data && (
+        <PushPermissionSheet
+          open={ofertaPush.abierta}
+          shortId={data.shortId}
+          onClose={ofertaPush.cerrar}
+        />
+      )}
       {data && (
         <div className="px-4 pt-1.5 lg:grid lg:grid-cols-2 lg:items-start lg:gap-5">
           <div className="lg:min-w-0">

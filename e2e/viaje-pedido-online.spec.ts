@@ -140,9 +140,14 @@ test('un pedido online viaja de la app del cliente hasta entregado', async ({ br
   // GPS del cliente incompletas". El caso sin ubicación lo cubre ahora
   // `gps-fallback-prepaid.integration.test.ts`, que es su sitio — aquí sólo
   // duplicaría 200 líneas para cambiar una opción del contexto.
+  // `notifications` va aquí y no basta con el `use` global del config: eso
+  // configura el contexto de la fixture `page`, y este recorrido se fabrica los
+  // suyos a mano. Sin el permiso, la hoja de `PushPermissionSheet` se levanta a
+  // segundo y medio de llegar al seguimiento y su backdrop intercepta todo lo
+  // que el cliente intente pulsar de ahí en adelante.
   const cliente = await browser.newContext({
     viewport: { width: 430, height: 900 },
-    permissions: ['geolocation'],
+    permissions: ['geolocation', 'notifications'],
     geolocation: { latitude: -9.151, longitude: -78.28, accuracy: 20 },
   })
   const cajera = await browser.newContext({

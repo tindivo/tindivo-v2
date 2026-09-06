@@ -29,6 +29,24 @@ export default defineConfig({
     navigationTimeout: 30_000,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
+    /*
+      Los e2e corren como alguien que YA activó los avisos.
+
+      Las tres apps levantan una hoja modal cuando el permiso está sin
+      contestar: el panel de negocios su «Activa las notificaciones», y el
+      cliente la de `PushPermissionSheet`, que aparece a segundo y medio de
+      abrir el seguimiento de un pedido vivo. Con el permiso sin conceder, esa
+      hoja se pone encima de la pantalla con su backdrop y cualquier click
+      posterior queda interceptado: los specs que siguen un pedido fallan por
+      timeout de actionability, apuntando al botón que quisieran pulsar en vez
+      de al modal que lo tapa.
+
+      Concederlo aquí y no proyecto por proyecto para que el siguiente spec que
+      alguien escriba nazca ya inmune. Lo que se pierde es poder VER esas hojas
+      en e2e; un spec que quiera probarlas declara `test.use({ permissions: [] })`
+      y las recupera.
+    */
+    permissions: ['notifications'],
   },
 
   projects: [
