@@ -9,6 +9,7 @@ import {
   type PerformanceDailyPoint,
   projectSeries,
 } from '@tindivo/core'
+import { Button } from '@tindivo/ui'
 import { useId, useState } from 'react'
 import { CHART_ACCENT, CHART_GRID, CHART_SURFACE } from '../lib/chart-tokens'
 
@@ -69,13 +70,15 @@ export function TrendChart({ daily }: { daily: PerformanceDailyPoint[] }) {
           <h3 className="text-sm font-bold text-ink">Facturación por día</h3>
           <p className="text-xs text-ink-muted">Solo comida, sin el envío</p>
         </div>
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="sm"
           onClick={() => setShowTable((v) => !v)}
-          className="shrink-0 rounded-lg px-2 py-1 text-[11px] font-semibold text-ink-muted transition-colors hover:bg-surface hover:text-ink"
+          className="shrink-0 text-caption"
         >
           {showTable ? 'Ver gráfico' : 'Ver tabla'}
-        </button>
+        </Button>
       </div>
 
       {showTable ? (
