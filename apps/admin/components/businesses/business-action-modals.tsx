@@ -111,6 +111,8 @@ export function ModeModal({ business, onClose, onSuccess }: ModeModalProps) {
 
         <div className="space-y-3">
           <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+            {/* Excepción a check:ds — tarjetas-radio de preset, no botones.
+                Mismo caso que los presets de `/negocios/[id]`. */}
             {(Object.keys(MODE_PRESETS) as ModePresetKey[]).map((k) => {
               const preset = MODE_PRESETS[k]
               const on = modePreset === k

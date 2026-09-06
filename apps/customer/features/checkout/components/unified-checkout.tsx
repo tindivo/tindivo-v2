@@ -1,6 +1,6 @@
 'use client'
 
-import { Button, cn, Icon } from '@tindivo/ui'
+import { Button, cn, Icon, IconButton } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { OtpVerificationSheet } from '@/components/otp-verification-sheet'
@@ -165,14 +165,15 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
           {/* Destino fijo, no historial: el checkout puede abrirse por deep
               link (retomar un pedido, un push) sin que haya un `back` de
               verdad al que volver. Mismo patrón que `/cuenta`. */}
-          <button
+          <IconButton
             type="button"
+            variant="filled"
             onClick={() => router.push(cart.businessId ? `/negocio/${cart.businessId}` : '/')}
             aria-label="Volver"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-ink/[0.06] text-ink"
+            className="shrink-0"
           >
             <Icon name="arrow_back" size={22} />
-          </button>
+          </IconButton>
           <div className="min-w-0 flex-1">
             <h1 className="font-display font-bold text-[22px] tracking-tight">Confirmar pedido</h1>
             {/* El negocio y, si lo tiene puesto, su ventana de entrega. Es el MISMO

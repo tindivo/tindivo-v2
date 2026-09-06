@@ -1,7 +1,7 @@
 'use client'
 
 import { VEHICLE_TYPES, type VehicleType } from '@tindivo/contracts'
-import { Button } from '@tindivo/ui'
+import { Button, IconButton } from '@tindivo/ui'
 import { useEffect, useState } from 'react'
 import { Field, Ico } from '@/components/admin'
 import { api, errMsg } from '@/lib/api'
@@ -119,13 +119,14 @@ export function DriverLocalesModal({
               El motorizado solo verá pedidos de los locales que tenga autorizados.
             </p>
           </div>
-          <button
+          <IconButton
             type="button"
             onClick={onClose}
-            className="rounded-full p-1.5 text-ink-muted hover:bg-ink/5 hover:text-ink transition-colors"
+            aria-label="Cerrar"
+            className="text-ink-muted hover:text-ink"
           >
             <Ico.close className="h-5 w-5" />
-          </button>
+          </IconButton>
         </div>
 
         {error && (
@@ -320,13 +321,14 @@ export function DriverEditModal({
             </span>
             <h3 className="font-bold text-[18px] text-ink">{driver.full_name}</h3>
           </div>
-          <button
+          <IconButton
             type="button"
             onClick={onClose}
-            className="rounded-full p-1.5 text-ink-muted hover:bg-ink/5 hover:text-ink transition-colors"
+            aria-label="Cerrar"
+            className="text-ink-muted hover:text-ink"
           >
             <Ico.close className="h-5 w-5" />
-          </button>
+          </IconButton>
         </div>
 
         {error && (
@@ -359,6 +361,8 @@ export function DriverEditModal({
           <div>
             <span className="t-field-label block mb-1.5">Tipo de vehículo</span>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {/* Excepción a check:ds — rejilla de opción única (icono +
+                  etiqueta, anillo de marca al elegir), no botones de acción. */}
               {VEHICLE_TYPES.map((v) => {
                 const info = VEHICLE_LABELS[v] ?? { label: v, icon: '🛵' }
                 const isSelected = vehicleType === v

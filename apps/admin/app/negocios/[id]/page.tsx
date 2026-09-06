@@ -266,7 +266,6 @@ export default function AdminEditNegocioPage({ params }: { params: Promise<{ id:
           }
         />
       </div>
-
       {/* Alertas */}
       {error && (
         <div className="rounded-xl border border-danger/20 bg-danger/10 p-3 text-[14px] text-danger">
@@ -278,7 +277,6 @@ export default function AdminEditNegocioPage({ params }: { params: Promise<{ id:
           {successMsg}
         </div>
       )}
-
       {/* Estado del negocio */}
       {isBlocked && (
         <div className="rounded-2xl border border-danger/30 bg-danger/5 p-4">
@@ -295,7 +293,6 @@ export default function AdminEditNegocioPage({ params }: { params: Promise<{ id:
           </div>
         </div>
       )}
-
       {/* Tarjeta 1: Identidad del Negocio */}
       <div className="t-card space-y-4">
         <div className="border-b border-ink/10 pb-3">
@@ -352,7 +349,6 @@ export default function AdminEditNegocioPage({ params }: { params: Promise<{ id:
           </div>
         </div>
       </div>
-
       {/* Tarjeta 2: Ubicación y Coordenadas GPS (Mapa interactivo) */}
       <div className="t-card space-y-4">
         <div className="border-b border-ink/10 pb-3">
@@ -391,7 +387,6 @@ export default function AdminEditNegocioPage({ params }: { params: Promise<{ id:
           />
         </div>
       </div>
-
       {/* Tarjeta 3: Contacto y Cuentas de Cobro */}
       <div className="t-card space-y-4">
         <div className="border-b border-ink/10 pb-3">
@@ -443,7 +438,6 @@ export default function AdminEditNegocioPage({ params }: { params: Promise<{ id:
           </Field>
         </div>
       </div>
-
       {/* Tarjeta 4: Tiempos y Operaciones de Delivery */}
       <div className="t-card space-y-4">
         <div className="border-b border-ink/10 pb-3">
@@ -518,7 +512,6 @@ export default function AdminEditNegocioPage({ params }: { params: Promise<{ id:
           </Field>
         </div>
       </div>
-
       {/* Tarjeta 5: Modo de Operación y Estado */}
       <div className="t-card space-y-4">
         <div className="border-b border-ink/10 pb-3">
@@ -528,6 +521,11 @@ export default function AdminEditNegocioPage({ params }: { params: Promise<{ id:
           </p>
         </div>
 
+        {/* Excepción a check:ds — son TARJETAS SELECCIONABLES, no botones:
+            título, descripción y anillo de marca cuando están elegidas. Es la
+            forma de un radio, y `<Button>` no la tiene. Lo que de verdad les
+            falta es `role="radio"` + `aria-checked`, no una variante del design
+            system. */}
         {/* Presets de modo */}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <button
@@ -581,8 +579,7 @@ export default function AdminEditNegocioPage({ params }: { params: Promise<{ id:
           </label>
         </div>
       </div>
-
-      {/* Barra fija inferior de guardar cambios */}
+      {/* Barra fija inferior de guardar cambios */};
       <div className="sticky bottom-4 z-40 rounded-2xl border border-ink/10 bg-white/95 p-4 shadow-xl backdrop-blur-md flex items-center justify-between">
         <div className="text-[13px] text-ink-muted">
           Asegúrate de guardar los cambios antes de salir.

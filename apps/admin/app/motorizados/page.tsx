@@ -236,6 +236,14 @@ export default function MotorizadosPage() {
           )}
         </div>
 
+        {/* Excepción a check:ds — son PESTAÑAS de filtro, no botones.
+
+            `Segmented` de @tindivo/ui es el componente de esta forma y da la
+            semántica que a estos <button> les falta, pero pinta la activa
+            siempre igual. Aquí cada pestaña lleva su propio color —verde
+            «disponibles», rojo «sin locales»— y ese color es la señal que se lee
+            de un vistazo en una pantalla de operación. Colapsarlo a la pastilla
+            blanca del design system perdería información, no ruido. */}
         {/* Pestañas con scroll horizontal en mobile */}
         <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar text-[13px]">
           <button
