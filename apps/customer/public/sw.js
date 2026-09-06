@@ -35,5 +35,21 @@ self.addEventListener('notificationclick', (event) => {
   )
 })
 
+/**
+ * MANEJADOR `fetch` VACIO, Y VACIO A PROPOSITO.
+ *
+ * No intercepta nada: sin `respondWith`, el navegador hace la peticion como si
+ * este listener no existiera. Esta aqui por el otro efecto que tiene su mera
+ * presencia — Chrome ha venido exigiendo que el service worker TENGA un
+ * manejador de `fetch` para considerar la app instalable y disparar
+ * `beforeinstallprompt`, que es el evento del que cuelga la tarjeta de instalar.
+ *
+ * Sin un dispositivo real a mano no se puede confirmar que hoy siga siendo
+ * requisito, pero cuesta cero y no cambia ni una peticion. Lo que NO se hace es
+ * un passthrough (`respondWith(fetch(e.request))`): eso si mete al SW en medio
+ * de todo el trafico —rangos, streaming, subidas— a cambio de nada.
+ */
+self.addEventListener('fetch', () => {})
+
 self.addEventListener('install', () => self.skipWaiting())
 self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()))

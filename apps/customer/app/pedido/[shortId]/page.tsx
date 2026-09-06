@@ -13,6 +13,7 @@ import { TrackingAppealView } from '@/features/tracking/components/tracking-appe
 import { TrackingCancelRow } from '@/features/tracking/components/tracking-cancel-row'
 import { TrackingDriver } from '@/features/tracking/components/tracking-driver'
 import { TrackingHero } from '@/features/tracking/components/tracking-hero'
+import { TrackingInstall } from '@/features/tracking/components/tracking-install'
 import { TrackingItems } from '@/features/tracking/components/tracking-items'
 import { TrackingNote } from '@/features/tracking/components/tracking-note'
 import { TrackingPrepay } from '@/features/tracking/components/tracking-prepay'
@@ -150,6 +151,10 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
                 {enEspera && (
                   <TrackingAlertChannel canal={canalAviso} pantalla={pantallaEncendida} />
                 )}
+
+                {/* Y cuando ya comió, la instalación. El argumento solo existe
+                    aquí: acaba de recibir su pedido y sabe que esto le sirve. */}
+                {data.status === 'delivered' && <TrackingInstall shortId={data.shortId} />}
 
                 {/* 2 · Ahora mismo */}
                 {cancellable && (
