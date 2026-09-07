@@ -339,6 +339,21 @@ describe('get_pending_review — por cuál preguntar', () => {
     expect((data as { closesAt?: string })?.closesAt).toBeTruthy()
   })
 
+  it('trae el catalogo de etiquetas con el pendiente, no en una segunda ida', async () => {
+    // `app_settings` esta cerrada a RLS: el browser no puede leer el catalogo.
+    // Si no viajara aqui, las etiquetas acabarian escritas en el codigo del
+    // cliente y editarlas dejaria de ser posible sin desplegar. (0216)
+    const c = await crearCliente()
+    const suNavegador = await comoCliente(c)
+    await sembrarPedido(c.id, { diasAtras: 1 })
+
+    const { data } = await suNavegador.rpc('get_pending_review')
+    const tags = (data as { tags?: { id: string; label: string }[] })?.tags
+    expect(Array.isArray(tags)).toBe(true)
+    expect(tags?.length).toBeGreaterThan(0)
+    expect(tags?.every((t) => Boolean(t.id) && Boolean(t.label))).toBe(true)
+  })
+
   it('el ya calificado deja de aparecer', async () => {
     const c = await crearCliente()
     const suNavegador = await comoCliente(c)
