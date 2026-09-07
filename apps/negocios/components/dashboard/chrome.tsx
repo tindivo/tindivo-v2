@@ -70,6 +70,7 @@ export type NavId =
   | 'efectivo'
   | 'historial'
   | 'rendimiento'
+  | 'resenas'
   | 'deuda'
   | 'config'
 
@@ -80,6 +81,7 @@ const NAV_ITEMS: { id: NavId; label: string; icon: string; href: string }[] = [
   { id: 'efectivo', label: 'Liquidaciones', icon: 'payments', href: '/efectivo' },
   { id: 'historial', label: 'Historial', icon: 'history', href: '/historial' },
   { id: 'rendimiento', label: 'Rendimiento', icon: 'rocket_launch', href: '/rendimiento' },
+  { id: 'resenas', label: 'Reseñas', icon: 'star', href: '/resenas' },
   { id: 'deuda', label: 'Mi cuenta', icon: 'account_balance_wallet', href: '/deuda' },
   { id: 'config', label: 'Config', icon: 'settings', href: '/configuracion' },
 ]
@@ -93,6 +95,7 @@ function activeIdFor(pathname: string): NavId {
   if (pathname.startsWith('/efectivo')) return 'efectivo'
   if (pathname.startsWith('/historial')) return 'historial'
   if (pathname.startsWith('/rendimiento')) return 'rendimiento'
+  if (pathname.startsWith('/resenas')) return 'resenas'
   if (pathname.startsWith('/deuda')) return 'deuda'
   if (pathname.startsWith('/configuracion')) return 'config'
   return 'pedidos'
@@ -407,7 +410,11 @@ function BottomNav({ active }: { active: NavId }) {
   const { soundOn, toggleSound, signOut, bizName, pendingCashCount } = useDashboard()
   const [moreOpen, setMoreOpen] = useState(false)
   const mas =
-    active === 'historial' || active === 'rendimiento' || active === 'deuda' || active === 'config'
+    active === 'historial' ||
+    active === 'rendimiento' ||
+    active === 'resenas' ||
+    active === 'deuda' ||
+    active === 'config'
 
   return (
     <>
@@ -529,6 +536,34 @@ function BottomNav({ active }: { active: NavId }) {
                     }`}
                   >
                     Ventas, retorno Tindivo y clientes
+                  </div>
+                </div>
+              </Link>
+
+              <Link
+                href="/resenas"
+                onClick={() => setMoreOpen(false)}
+                className={`flex items-center gap-3.5 rounded-2xl p-3 transition-colors ${
+                  active === 'resenas'
+                    ? 'bg-ink text-white'
+                    : 'bg-surface hover:bg-ink/[0.04] text-ink'
+                }`}
+              >
+                <span
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                    active === 'resenas' ? 'bg-white/15 text-white' : 'bg-ink/[0.06] text-ink'
+                  }`}
+                >
+                  <Icon name="star" size={22} filled={active === 'resenas'} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[14px] font-semibold leading-tight">Reseñas</div>
+                  <div
+                    className={`mt-0.5 text-[12px] ${
+                      active === 'resenas' ? 'text-white/70' : 'text-ink-muted'
+                    }`}
+                  >
+                    Cómo calificaron tus pedidos
                   </div>
                 </div>
               </Link>

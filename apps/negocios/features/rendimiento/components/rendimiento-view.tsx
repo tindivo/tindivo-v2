@@ -8,11 +8,9 @@ import { DateRangePicker } from '@/components/dashboard/date-range-picker'
 import { api } from '@/lib/api'
 import { type DatePreset, formatRangeLabel, getPresetRange } from '@/lib/order-history/date-utils'
 import { usePerformance } from '../hooks/use-performance'
-import { useReviews } from '../hooks/use-reviews'
 import { BillCard } from './bill-card'
 import { CustomerSplit } from './customer-split'
 import { InsightsPanel } from './insights-panel'
-import { ReviewsCard } from './reviews-card'
 import { StatTile } from './stat-tile'
 import { TrendChart } from './trend-chart'
 import { WeekdayChart } from './weekday-chart'
@@ -39,8 +37,6 @@ export function RendimientoView() {
   const [exportError, setExportError] = useState<string | null>(null)
 
   const { data, loading, error } = usePerformance(start, end)
-  // Mismo rango que todo lo demás: el filtro de arriba manda también aquí.
-  const resenas = useReviews(start, end)
   const rangeLabel = formatRangeLabel(start, end)
 
   const insights = useMemo(() => (data ? buildInsights(data) : []), [data])
@@ -166,12 +162,8 @@ export function RendimientoView() {
               <BillCard bill={data.bill} />
             </div>
 
-            {/* 5. Clientes y volumen — y qué opinaron.
-                La reseña va con los clientes y no con las cifras de arriba a
-                propósito: no es una métrica de venta, es lo que dijo la gente
-                que ya te compró. */}
+            {/* 5. Clientes y volumen */}
             <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-2">
-              <ReviewsCard data={resenas.data} loading={resenas.loading} />
               <CustomerSplit customers={data.customers} />
               <Card className="flex flex-col p-4 sm:p-5">
                 <div className="flex items-center gap-2">

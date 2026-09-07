@@ -1,8 +1,7 @@
 'use client'
 
 import { Card, Icon } from '@tindivo/ui'
-import type { ReviewsSummary } from '../hooks/use-reviews'
-import { CHART_ACCENT } from '../lib/chart-tokens'
+import type { ReviewsSummary as Resumen } from '../hooks/use-reviews'
 
 /** Por debajo de esto el promedio es anécdota, y decirlo es parte del panel. */
 const MINIMO_PARA_LEER = 5
@@ -24,7 +23,7 @@ const MINIMO_PARA_LEER = 5
  * CON POCAS RESEÑAS SE DICE QUE SON POCAS. Un 3.0 de dos reseñas pintado igual
  * que un 3.0 de cuarenta invita a tomar decisiones sobre ruido.
  */
-export function ReviewsCard({ data, loading }: { data: ReviewsSummary | null; loading: boolean }) {
+export function ReviewsSummaryCard({ data, loading }: { data: Resumen | null; loading: boolean }) {
   if (loading && !data) {
     return <Card className="h-56 animate-pulse p-4 sm:p-5" />
   }
@@ -78,8 +77,8 @@ export function ReviewsCard({ data, loading }: { data: ReviewsSummary | null; lo
                   </span>
                   <span className="h-2.5 flex-1 overflow-hidden rounded-full bg-surface">
                     <span
-                      className="block h-full rounded-full"
-                      style={{ width: `${pct}%`, background: CHART_ACCENT }}
+                      className="block h-full rounded-full bg-brand-dark"
+                      style={{ width: `${pct}%` }}
                     />
                   </span>
                   <span className="w-6 shrink-0 text-right font-mono font-bold text-ink tabular-nums">
