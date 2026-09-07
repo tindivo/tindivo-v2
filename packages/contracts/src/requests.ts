@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { DeliveryMethodSchema, PaymentIntentSchema } from './enums'
+import { DeliveryMethodSchema, PaymentIntentSchema, PickupTimingSchema } from './enums'
 import {
   ADDRESS_LINE_MIN,
   ADDRESS_REFERENCE_MIN,
@@ -86,7 +86,40 @@ export const CreateOrderRequestSchema = z
      */
     deliveryPointAccuracyM: z.number().int().positive().max(100_000).optional(),
     deliveryPointConfirmedAt: z.string().datetime({ offset: true }).optional(),
+    /**
+     * CUÁNDO pasa el cliente por su recojo. Obligatorio en pickup (lo fuerza el
+     * `.refine` de abajo), prohibido en delivery.
+     *
+     * Es una PREGUNTA, no una inferencia. Da lo mismo si llegó por el QR del
+     * mostrador o buscando el restaurante en Google desde su casa: los dos
+     * casos son indistinguibles por origen, y un enlace se fotografía y se
+     * comparte. Solo la respuesta del cliente vale, y solo porque después la
+     * comprueba una persona.
+     *
+     * Lo que cambia detrás:
+     *   · 'now'   -> el cliente dice estar en el mostrador. La cajera lo
+     *               verifica MIRÁNDOLO antes de aceptar, así que el pedido no
+     *               pasa por `validando` (no se llama por teléfono a quien está
+     *               delante) y no se le exige GPS. Nadie cocina hasta ese sí.
+     *   · 'later' -> la comida se hace sin nadie delante. Mismo antifraude que
+     *               un delivery: GPS, `customer_contraentrega_decision` y, si
+     *               hace falta, `validando` con llamada.
+     */
+    pickupTiming: PickupTimingSchema.optional(),
     items: z.array(CreateOrderItemSchema).min(1).max(50),
+  })
+  .refine((d) => d.deliveryMethod === 'pickup' || d.pickupTiming === undefined, {
+    message: 'pickupTiming solo aplica a pedidos de recojo',
+    path: ['pickupTiming'],
+  })
+  .refine((d) => d.deliveryMethod !== 'pickup' || d.pickupTiming !== undefined, {
+    // El servidor tiene su propio default ('later', el lado caro), pero el
+    // canal del cliente NO se apoya en él: si el checkout deja de mandar la
+    // respuesta, eso es un bug del checkout y conviene que estalle aquí con un
+    // 422 legible, no que se convierta en silencio en el camino más estricto y
+    // el cliente vea una llamada que nadie le prometió.
+    message: 'Falta indicar cuándo recoges el pedido',
+    path: ['pickupTiming'],
   })
   .refine(
     (d) =>

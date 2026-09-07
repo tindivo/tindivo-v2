@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { buildNegociosCardVM } from '../card-view-model'
 import type { OrderRow } from '../view-model'
-import { formatReadyDelta, resolveMobileTab, toOrderVM } from '../view-model'
+import {
+  channelCounts,
+  formatReadyDelta,
+  getColumn,
+  matchesChannel,
+  resolveChannelFilter,
+  resolveMobileTab,
+  toOrderVM,
+} from '../view-model'
 
 function mockOrderRow(overrides: Partial<OrderRow> = {}): OrderRow {
   return {
@@ -22,6 +30,8 @@ function mockOrderRow(overrides: Partial<OrderRow> = {}): OrderRow {
     ready_early_used: false,
     waiting_driver_at: null,
     picked_up_at: null,
+    ready_for_pickup_at: null,
+    pickup_timing: null,
     driver_id: null,
     driver: null,
     created_at: '2026-08-05T15:00:00Z',
@@ -731,5 +741,78 @@ describe('resolveMobileTab', () => {
     expect(resolveMobileTab('cooking', 0)).toBe('cooking')
     expect(resolveMobileTab('route', 0)).toBe('route')
     expect(resolveMobileTab('today', 0)).toBe('today')
+  })
+})
+
+const NOW = Date.parse('2026-09-07T20:00:00Z')
+const vm = (o: Partial<OrderRow> = {}) => toOrderVM(mockOrderRow(o), NOW)
+
+describe('el recojo en el tablero (0219/0220)', () => {
+  /**
+   * «En cocina» no es la cocina literal: es TODO LO QUE SIGUE EN EL LOCAL, y ahí
+   * ya viven `waiting_driver` y el motorizado esperando en el mostrador. Una
+   * bolsa de recojo lista es exactamente eso, y además es la única columna donde
+   * la cajera todavía tiene algo que hacer con ella.
+   *
+   * «En reparto» sería lo contrario: la columna de lo que ya salió y ya no es
+   * cosa suya. Un recojo ahí es un pedido que reclama sus manos, escondido entre
+   * los que no las reclaman.
+   */
+  it('la bolsa lista se queda en «En cocina», no en «En reparto»', () => {
+    expect(getColumn('ready_for_pickup')).toBe('cocina')
+  })
+
+  it('cuenta hacia arriba desde que quedó lista, no hacia una fecha límite', () => {
+    const v = vm({
+      status: 'ready_for_pickup',
+      delivery_method: 'pickup',
+      pickup_timing: 'now',
+      ready_for_pickup_at: new Date(NOW - 7 * 60_000).toISOString(),
+    })
+
+    expect(v.state).toBe('awaiting_customer')
+    expect(v.waitingCustomerSec).toBe(420)
+    // El reloj de cocina se calla: ahí ya no hay nada que contar.
+    expect(v.readySec).toBeNull()
+    expect(v.canHandOver).toBe(true)
+  })
+
+  it('un recojo todavía en cocina no ofrece la entrega en mostrador', () => {
+    expect(vm({ status: 'preparing', delivery_method: 'pickup' }).canHandOver).toBe(false)
+  })
+
+  describe('filtro de canal', () => {
+    const entrega = vm({ id: 'a', delivery_method: 'delivery' })
+    const recojo = vm({ id: 'b', delivery_method: 'pickup', pickup_timing: 'now' })
+
+    /**
+     * Lo que dice el chip tiene que ser lo que se ve al pulsarlo. El descuadre
+     * de `JMAXL98Z` fue justo esto al revés: el chip contaba sobre el array
+     * completo y la lista pintaba un subconjunto ya filtrado.
+     */
+    it('los contadores cuadran con lo que cada chip enseñaría', () => {
+      const lista = [entrega, recojo, recojo]
+      const counts = channelCounts(lista)
+
+      expect(counts.all).toBe(lista.filter((o) => matchesChannel(o, 'all')).length)
+      expect(counts.delivery).toBe(lista.filter((o) => matchesChannel(o, 'delivery')).length)
+      expect(counts.pickup).toBe(lista.filter((o) => matchesChannel(o, 'pickup')).length)
+    })
+
+    /**
+     * Sin esto, la cajera filtra «Recojo», atiende el único que había, y se
+     * queda mirando un tablero vacío con los delivery detrás — y el chip para
+     * volver ya no se dibuja. Mismo problema y misma solución que
+     * `resolveMobileTab`: se deriva, no se navega.
+     */
+    it('un filtro que se queda sin nada vuelve solo a «Todos»', () => {
+      expect(resolveChannelFilter('pickup', { delivery: 3, pickup: 0 })).toBe('all')
+      expect(resolveChannelFilter('delivery', { delivery: 0, pickup: 2 })).toBe('all')
+    })
+
+    it('mientras haya algo de ese canal, el filtro elegido manda', () => {
+      expect(resolveChannelFilter('pickup', { delivery: 3, pickup: 1 })).toBe('pickup')
+      expect(resolveChannelFilter('all', { delivery: 0, pickup: 0 })).toBe('all')
+    })
   })
 })

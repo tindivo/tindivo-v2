@@ -23,6 +23,23 @@ export interface OrderActions {
   onConfirmDirectPayment: (prepTimeMinutes: number) => Promise<void>
   onExtend: () => Promise<void>
   onReady: () => Promise<void>
+  /**
+   * RECOJO · el cliente vino y se llevo su pedido.
+   *
+   * Es el `deliver` del mostrador. `paymentReal` viaja porque en un recojo el
+   * cobro lo hace la cajera EN ese momento y puede no coincidir con lo que el
+   * cliente eligio en la app; en prepago la RPC lo ignora y fuerza
+   * `paid_prepaid`, asi que aqui no hay que ramificar por metodo de pago.
+   */
+  onHandover: (paymentReal: 'paid_cash' | 'paid_yape') => Promise<void>
+  /**
+   * RECOJO · nadie vino por la comida.
+   *
+   * Cancela y escribe el strike. La espera minima la impone `advance_order`
+   * (`noShowWaitMinutes`) y su rechazo llega como texto: NO se replica aqui un
+   * contador que tendria que envejecer a la vez que el de la base.
+   */
+  onPickupNoShow: () => Promise<void>
   onCancel: (code: string, text: string) => Promise<void>
   onCallDriver?: (o: OrderVM) => void
   /** La cajera corrigio el pedido (0190). */
@@ -148,6 +165,27 @@ export function useOrderActions({
       await run(async () => {
         if (!selected) return
         await post(`/business/orders/${selected.rowId}/extend-prep`, {})
+        await refetchOrders()
+      })
+    },
+    onHandover: async (paymentReal) => {
+      await run(async () => {
+        if (!selected) return
+        await post(`/business/orders/${selected.rowId}/transition`, {
+          action: 'handover',
+          paymentReal,
+        })
+        onDone?.()
+        await refetchOrders()
+      })
+    },
+    onPickupNoShow: async () => {
+      await run(async () => {
+        if (!selected) return
+        await post(`/business/orders/${selected.rowId}/transition`, {
+          action: 'pickup_no_show',
+        })
+        onDone?.()
         await refetchOrders()
       })
     },

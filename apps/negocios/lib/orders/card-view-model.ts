@@ -140,8 +140,11 @@ export interface NegociosCardVM {
   shortId: string
   /** `null` cuando el origen es el normal del negocio. Ver `buildNegociosCardVM`. */
   sourceBadge: SourceBadge | null
-  /** `null` en delivery, que es el caso normal. */
-  methodBadge: { label: string; icon: string } | null
+  /**
+   * `null` en delivery, que es el caso normal. En recojo NUNCA es null, y
+   * distingue los dos: `className` solo viene en el que hay que mirar ya.
+   */
+  methodBadge: { label: string; icon: string; className?: string } | null
   stateBadge: StateBadge
   /** El nombre del cliente, o `#código` cuando no lo hay. Nunca "Cliente". */
   customerName: string
@@ -229,6 +232,24 @@ export const STATE_BADGE_MAP: Record<UiState, StateBadge> = {
   waiting: {
     label: 'Motorizado llegó',
     icon: 'local_shipping',
+    className: 'bg-emerald-100 text-emerald-900 font-bold',
+  },
+  /**
+   * COMPARTE EL VERDE DE `waiting`, Y ES A PROPÓSITO.
+   *
+   * Los dos dicen lo mismo desde el punto de vista de la cajera: la comida está
+   * hecha, está en el mostrador, y alguien tiene que venir a por ella. Que ese
+   * alguien sea el motorizado o el propio cliente cambia el texto y el botón,
+   * no la urgencia ni el color — y un color nuevo para el mismo grado de
+   * urgencia solo enseña a leer la paleta como decoración.
+   *
+   * La palabra es «cliente» y no «recojo»: el canal ya lo dice el chip de
+   * método de la tarjeta, y lo que la insignia tiene que responder aquí es a
+   * QUIÉN se espera.
+   */
+  awaiting_customer: {
+    label: 'Lista · esperando al cliente',
+    icon: 'shopping_bag',
     className: 'bg-emerald-100 text-emerald-900 font-bold',
   },
   picked_up: {
@@ -413,11 +434,14 @@ export function buildNegociosCardVM(
   options?: {
     queueLeadMin?: number
     deliveryLateMin?: number
+    /** 0220. A partir de aqui la espera del mostrador se pinta en ambar. */
+    noShowWaitMin?: number
     supportPhone?: string | null
   },
 ): NegociosCardVM {
   const queueLeadMin = options?.queueLeadMin ?? 5
   const deliveryLateMin = options?.deliveryLateMin ?? 20
+  const noShowWaitMin = options?.noShowWaitMin ?? 5
   const supportPhone = options?.supportPhone ?? null
 
   // 1. Origen — SOLO CUANDO ES LA EXCEPCIÓN.
@@ -435,8 +459,29 @@ export function buildNegociosCardVM(
   // 2. Método de entrega — SOLO CUANDO ES LA EXCEPCIÓN, por lo mismo.
   // Casi todo es delivery; el recojo en local es lo que cambia lo que la cajera
   // tiene que hacer (no llamar a nadie, avisar al cliente), y por eso avisa.
+  //
+  // Y LOS DOS RECOJOS NO SE PARECEN EN NADA PARA ELLA.
+  //
+  // «Cliente presente» es el ÚNICO aviso de la tarjeta que habla de alguien que
+  // está físicamente ahí, mirándola, ahora mismo. Ese pedido no pasó por
+  // `validando` precisamente porque ella iba a verificarlo con los ojos al
+  // aceptarlo: si la tarjeta no lo dice, la verificación no ocurre y el canal
+  // se queda sin su única garantía. Por eso lleva color sólido y no el gris de
+  // las demás insignias de cejilla — es la misma razón por la que «Online» pasó
+  // de pastel a sólido.
+  //
+  // Un recojo manual (`pickupTiming` null, nadie hizo la pregunta) cae en la
+  // rama neutra: no se le inventa una presencia que nadie comprobó.
   const methodBadge =
-    order.method === 'pickup' ? { label: 'Recojo en local', icon: 'storefront' } : null
+    order.method !== 'pickup'
+      ? null
+      : order.pickupTiming === 'now'
+        ? {
+            label: 'Recojo · cliente presente',
+            icon: 'person_pin_circle',
+            className: 'bg-emerald-600 text-white font-bold',
+          }
+        : { label: 'Recojo en local', icon: 'storefront' }
 
   // 3. Estado Badge
   const stateBadge = STATE_BADGE_MAP[order.state] ?? STATE_BADGE_MAP.cooking
@@ -512,6 +557,26 @@ export function buildNegociosCardVM(
       text: mmss(order.countdownSec),
       tone: isRed ? 'danger' : 'brand',
       label: 'Atender',
+    }
+  } else if (order.waitingCustomerSec != null) {
+    // EL RELOJ DEL MOSTRADOR CUENTA HACIA ARRIBA, Y NO ES UNA CUENTA ATRAS.
+    //
+    // No hay ningun cron que cancele un `ready_for_pickup`, a proposito: la
+    // comida ya esta hecha y hacerla desaparecer de la pantalla sin que nadie
+    // mire es perder el unico momento en que se puede decidir que pasa con ella.
+    // Asi que este numero no dice «te queda X»: dice cuanto lleva la bolsa ahi,
+    // que es lo unico que la cajera necesita para decidir si ya toca declarar
+    // el planton.
+    //
+    // El ambar entra en `noShowWaitMinutes`, que es EXACTAMENTE el minuto en
+    // que `advance_order` empieza a aceptar `pickup_no_show`. Avisar antes
+    // seria empujar a una accion que el servidor va a rechazar; avisar despues,
+    // esconder que ya se puede.
+    clock = {
+      text: formatReadyDelta(order.waitingCustomerSec),
+      tone: order.waitingCustomerSec > noShowWaitMin * 60 ? 'warning' : 'neutral',
+      readyBadge: true,
+      label: 'Esperando al cliente',
     }
   } else if (order.deliverySec != null) {
     // En reparto el reloj cuenta HACIA ARRIBA desde la recogida, y se pone rojo
@@ -597,7 +662,16 @@ export function buildNegociosCardVM(
   // 8. Acción 1-Tap
   let primaryAction: CardPrimaryAction | null = null
 
-  if (order.state === 'waiting') {
+  if (order.state === 'awaiting_customer') {
+    // Mismo tipo `deliver` que el aviso del motorizado en la puerta: los dos
+    // dicen «esto se cierra entregando», y la accion de verdad vive en el
+    // detalle. Lo que cambia es a quien se entrega.
+    primaryAction = {
+      type: 'deliver',
+      label: 'Entregar en el mostrador',
+      isUrgent: false,
+    }
+  } else if (order.state === 'waiting') {
     primaryAction = {
       type: 'deliver',
       label: `${order.driver?.name ?? 'Motorizado'} llegó · Entregar`,

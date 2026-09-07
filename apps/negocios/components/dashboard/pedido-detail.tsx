@@ -32,6 +32,10 @@ export interface DetailActions {
   onConfirmDirectPayment: (prepMinutes: number) => void | Promise<void>
   onExtend: () => void | Promise<void>
   onReady: () => void | Promise<void>
+  /** RECOJO · el cliente vino y se llevo su pedido. Ver `useOrderActions`. */
+  onHandover: (paymentReal: 'paid_cash' | 'paid_yape') => void | Promise<void>
+  /** RECOJO · nadie vino por la comida: cancela y deja el strike. */
+  onPickupNoShow: () => void | Promise<void>
   onCancel: (code: string, text: string) => void | Promise<void>
   /** Escala a Tindivo por WhatsApp. Recibe el pedido: también lo llama la
    *  tarjeta del tablero, donde no hay ningún detalle abierto. */
@@ -237,6 +241,8 @@ export function DetailScreen({
   // avisar al motorizado de que entre a recoger y que no esté lista se paga en
   // minutos de moto parada.
   const [confirmReady, setConfirmReady] = useState(false)
+  /** Dos pasos para el planton: cancela comida hecha Y penaliza al cliente. */
+  const [confirmNoShow, setConfirmNoShow] = useState(false)
 
   useEffect(() => {
     const origOverflow = document.body.style.overflow
@@ -882,16 +888,129 @@ export function DetailScreen({
                   className="inline-flex flex-[2] items-center justify-center gap-2 rounded-xl bg-brand px-5 py-3 text-[15px] font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-50"
                 >
                   <Icon weight={500} name="check" size={18} filled />
-                  {isPrepaid ? 'Aceptar disponibilidad' : 'Aceptar pedido'}
+                  {/* EL BOTON ES EL MISMO; LO QUE CAMBIA ES LO QUE SE CONFIRMA.
+                      En un recojo «ahora» este toque es ADEMAS la verificacion
+                      antifraude entera: ese pedido no paso por `validando`
+                      porque se dio por hecho que ella iba a mirar a quien lo
+                      hizo antes de mandarlo a cocina. Si el boton dijera solo
+                      «Aceptar pedido», la unica garantia del canal quedaria sin
+                      pedirse en ninguna parte. */}
+                  {isPrepaid
+                    ? 'Aceptar disponibilidad'
+                    : order.pickupTiming === 'now'
+                      ? 'Cliente presente · a cocina'
+                      : 'Aceptar pedido'}
                 </button>
               </div>
-              {isPrepaid && (
+              {isPrepaid ? (
                 <div className="text-center text-[11px] text-ink-muted">
                   Confirmas disponibilidad para preparar. El cliente procederá a realizar el pago
                   por Yape/Plin.
                 </div>
-              )}
+              ) : order.pickupTiming === 'now' ? (
+                <div className="text-center text-[11px] text-ink-muted">
+                  Dice estar en el local. Míralo antes de aceptar: si no está, rechaza y no se
+                  cocina nada.
+                </div>
+              ) : null}
             </>
+          )}
+        </div>
+      )}
+
+      {/* ── Footer del mostrador: las dos únicas salidas de un recojo ──
+          Un recojo no lo cierra nadie más. `deliver` y `no_show` los escribe el
+          motorizado y aquí no hay ninguno, así que sin estos dos botones la
+          bolsa se queda en `ready_for_pickup` para siempre — y con ella el
+          guard de pedido activo, que impediría a ese cliente volver a pedir en
+          este restaurante. Es el modo de fallo que `PICKUP_ENABLED` llevaba
+          documentado desde que se apagó la bandera.
+
+          «No vino» está a la misma altura que «Entregado» pero en gris y con
+          confirmación: cancela comida ya hecha Y le deja un strike al cliente
+          (dos strikes = prepago obligado, DECISIONS §8). No es una acción que
+          se pulse por descarte. */}
+      {order.canHandOver && (
+        <div className="shrink-0 border-t border-border bg-white px-3.5 pb-3.5 pt-3 shadow-elev-2">
+          {confirmNoShow ? (
+            <div className="space-y-2">
+              <p className="text-[13px] font-semibold text-ink">
+                ¿El cliente no vino por su pedido?
+              </p>
+              <p className="text-[12px] text-ink-muted">
+                Se cancela el pedido y queda una falta en su cuenta. A la segunda, ese cliente solo
+                podrá pedir con pago adelantado.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setConfirmNoShow(false)}
+                  disabled={busy}
+                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-ink/[0.06] px-5 py-3 text-[15px] font-semibold text-ink transition-transform active:scale-[0.98] disabled:opacity-50"
+                >
+                  Volver
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await actions.onPickupNoShow()
+                    setConfirmNoShow(false)
+                  }}
+                  disabled={busy}
+                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-danger px-5 py-3 text-[15px] font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-50"
+                >
+                  Sí, no vino
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {isPrepaid ? (
+                <button
+                  type="button"
+                  onClick={() => actions.onHandover('paid_cash')}
+                  disabled={busy}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-success px-5 py-3 text-[15px] font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-50"
+                >
+                  <Icon weight={500} name="shopping_bag" size={18} filled /> Se lo llevó
+                </button>
+              ) : (
+                <>
+                  {/* El cobro REAL, no el planeado: en el mostrador el cliente
+                      cambia de idea sobre la marcha y quien lo ve es ella. Es la
+                      misma pregunta que responde el motorizado al entregar. */}
+                  <p className="text-[12px] font-semibold text-ink-muted">
+                    Se lo llevó · ¿cómo pagó?
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => actions.onHandover('paid_cash')}
+                      disabled={busy}
+                      className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-success px-4 py-3 text-[15px] font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-50"
+                    >
+                      <Icon weight={500} name="payments" size={18} filled /> Efectivo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => actions.onHandover('paid_yape')}
+                      disabled={busy}
+                      className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-success px-4 py-3 text-[15px] font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-50"
+                    >
+                      <Icon weight={500} name="qr_code_2" size={18} filled /> Yape/Plin
+                    </button>
+                  </div>
+                </>
+              )}
+              <button
+                type="button"
+                onClick={() => setConfirmNoShow(true)}
+                disabled={busy}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-ink/[0.06] px-5 py-2.5 text-[13px] font-semibold text-ink-muted transition-transform active:scale-[0.98] disabled:opacity-50"
+              >
+                El cliente no vino
+              </button>
+            </div>
           )}
         </div>
       )}
@@ -907,7 +1026,9 @@ export function DetailScreen({
             <div className="flex items-center gap-2.5 rounded-[14px] border border-success bg-success-soft px-3.5 py-3">
               <Icon weight={500} name="check_circle" size={20} filled className="text-success" />
               <span className="text-[13px] font-semibold text-success">
-                Comida lista. El motorizado ya lo sabe.
+                {order.method === 'pickup'
+                  ? 'Comida lista en el mostrador. El cliente ya lo sabe.'
+                  : 'Comida lista. El motorizado ya lo sabe.'}
               </span>
             </div>
           ) : confirmReady ? (
@@ -939,7 +1060,8 @@ export function DetailScreen({
               disabled={busy}
               className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-success px-5 py-3 text-[15px] font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-50"
             >
-              <Icon weight={500} name="inventory_2" size={18} filled /> Listo — llamar moto
+              <Icon weight={500} name="inventory_2" size={18} filled />{' '}
+              {order.method === 'pickup' ? 'Listo — avisar al cliente' : 'Listo — llamar moto'}
             </button>
           )}
         </div>

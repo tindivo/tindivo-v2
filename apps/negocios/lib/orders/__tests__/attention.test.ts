@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   attentionKey,
   attentionState,
+  demandsCashier,
   LAST_CALL_SEC,
   newColumnSubtitle,
   nextBeepDelay,
@@ -49,6 +50,8 @@ function row(overrides: Partial<OrderRow> = {}): OrderRow {
     validating_at: null,
     waiting_driver_at: null,
     picked_up_at: null,
+    ready_for_pickup_at: null,
+    pickup_timing: null,
     delivered_at: null,
     cancelled_at: null,
     cancel_note: null,
@@ -436,5 +439,57 @@ describe('nextBeepDelay · el ritmo, que también sobraba', () => {
 
   it('en el último minuto vuelve al ritmo rápido, lleve el rato que lleve', () => {
     expect(nextBeepDelay({ elapsedMs: 4 * 60_000, urgent: true })).toBe(3_000)
+  })
+})
+
+/**
+ * EL FILTRO DE CANAL ES PURAMENTE VISUAL, Y ESTO ES LO QUE LO SOSTIENE.
+ *
+ * `attentionState` recibe la lista COMPLETA desde el shell; el filtro se aplica
+ * en la página, sobre las tres listas que se pintan. Nada en los tipos impide
+ * que alguien, al tocar el tablero, acabe pasando por aquí una lista ya
+ * filtrada — y ese día un recojo con su cliente de pie en el mostrador dejaría
+ * de sonar solo porque la cajera puso «Delivery» para concentrarse.
+ *
+ * Es la misma asimetría que perdió a `JMAXL98Z`, con otro disfraz: lo que
+ * suena y lo que se ve dejarían de salir de la misma llamada.
+ */
+describe('el canal no decide qué reclama a la cajera', () => {
+  it('un recojo y un delivery en el mismo estado pesan exactamente igual', () => {
+    const entrega = porAceptar(120, { id: 'a', short_id: 'DELIVER1' })
+    const recojo = porAceptar(120, {
+      id: 'b',
+      short_id: 'RECOJO01',
+      delivery_method: 'pickup',
+      pickup_timing: 'now',
+    })
+
+    const st = attentionState([entrega, recojo])
+
+    expect(st.alarm.count).toBe(2)
+    expect(st.orders.map((o) => o.id).sort()).toEqual(['DELIVER1', 'RECOJO01'])
+    expect(demandsCashier(recojo)).toBe(true)
+  })
+
+  /**
+   * La bolsa lista en el mostrador NO reclama, y es deliberado: no hay nada que
+   * hacer hasta que el cliente aparezca, y puede tardar veinte minutos. Es el
+   * mismo criterio por el que `awaiting_payment` tampoco despierta a nadie —
+   * alarma sin nada que hacer es la que se acaba apagando para siempre.
+   *
+   * Lo que sí lleva es reloj: `waitingCustomerSec` cuenta hacia arriba y a
+   * partir de `noShowWaitMinutes` la tarjeta lo dice en ámbar.
+   */
+  it('una bolsa esperando al cliente se ve, pero no suena', () => {
+    const enMostrador = vm({
+      status: 'ready_for_pickup',
+      delivery_method: 'pickup',
+      pickup_timing: 'now',
+      ready_for_pickup_at: '2026-08-21T19:30:00Z',
+    })
+
+    expect(demandsCashier(enMostrador)).toBe(false)
+    expect(attentionState([enMostrador]).alarm.hasPending).toBe(false)
+    expect(enMostrador.waitingCustomerSec).toBeGreaterThan(0)
   })
 })

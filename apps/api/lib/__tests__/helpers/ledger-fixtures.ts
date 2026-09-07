@@ -138,7 +138,14 @@ export interface OrderOptions {
   deliveryFee?: number
 }
 
-/** Pedido en `waiting_driver`, listo para que el motorizado lo tome. */
+/**
+ * Pedido listo para cerrarse, en el estado que le corresponde a su canal.
+ *
+ * El recojo NO puede nacer en `waiting_driver`: desde la 0220 ese estado es
+ * literalmente «esperando a un motorizado», la policy `ord_driver_read` ya no
+ * se lo ensena a ninguno y `advance_order('take')` lo rechaza en seco. Un
+ * recojo listo esta en `ready_for_pickup`, que es lo que el fixture siembra.
+ */
 export async function seedOrder(world: LedgerWorld, opts: OrderOptions = {}): Promise<string> {
   const { deliveryMethod = 'delivery', orderAmount = 40.0, deliveryFee = 2.0 } = opts
 
@@ -152,8 +159,10 @@ export async function seedOrder(world: LedgerWorld, opts: OrderOptions = {}): Pr
       order_amount: orderAmount,
       delivery_fee: deliveryMethod === 'pickup' ? 0 : deliveryFee,
       payment_intent: 'pending_cash',
-      status: 'waiting_driver',
-      appears_in_queue_at: new Date().toISOString(),
+      status: deliveryMethod === 'pickup' ? 'ready_for_pickup' : 'waiting_driver',
+      // NULL en recojo: `appears_in_queue_at` es el reloj que abre el pedido a
+      // la cola de motorizados, y un recojo no entra en ella.
+      appears_in_queue_at: deliveryMethod === 'pickup' ? null : new Date().toISOString(),
     })
     .select('id')
     .single()
@@ -164,30 +173,50 @@ export async function seedOrder(world: LedgerWorld, opts: OrderOptions = {}): Pr
 }
 
 /**
- * Recorre take → arrived → pickup → deliver.
- * `band` solo aplica a pedidos `delivery`; en `pickup` la banda no existe.
- * Al llegar a `delivered` dispara `generate_delivery_charges`.
+ * Lleva el pedido hasta `delivered` por el camino que le toca a su canal, que
+ * es lo que dispara `generate_delivery_charges`.
+ *
+ *   · delivery -> take → arrived → pickup → deliver, del MOTORIZADO.
+ *   · pickup   -> handover, del NEGOCIO. No hay equivalente de motorizado: en
+ *                 un recojo no hay nadie a quien darle la bolsa.
+ *
+ * `band` solo aplica al delivery; en recojo la banda no existe (`null`).
  */
 export async function deliverOrder(
   world: LedgerWorld,
   orderId: string,
   band: 'near' | 'far' | null = 'near',
 ): Promise<void> {
-  const call = async (action: string, params?: Record<string, unknown>) => {
+  const call = async (
+    action: string,
+    role: 'driver' | 'business',
+    params?: Record<string, unknown>,
+  ) => {
     const { error } = await localClient.rpc('advance_order', {
       p_order_id: orderId,
-      p_actor_user_id: world.driverUserId,
-      p_actor_role: 'driver',
+      p_actor_user_id: role === 'driver' ? world.driverUserId : world.businessUserId,
+      p_actor_role: role,
       p_action: action,
       ...(params ? { p_params: params } : {}),
     })
     if (error) throw new Error(`advance_order(${action}) failed: ${error.message}`)
   }
 
-  await call('take')
-  await call('arrived')
-  await call('pickup', band ? { band, slots: 1 } : { slots: 1 })
-  await call('deliver', { paymentReal: 'paid_cash' })
+  const { data: row } = await localClient
+    .from('orders')
+    .select('delivery_method')
+    .eq('id', orderId)
+    .single()
+
+  if (row?.delivery_method === 'pickup') {
+    await call('handover', 'business', { paymentReal: 'paid_cash' })
+    return
+  }
+
+  await call('take', 'driver')
+  await call('arrived', 'driver')
+  await call('pickup', 'driver', band ? { band, slots: 1 } : { slots: 1 })
+  await call('deliver', 'driver', { paymentReal: 'paid_cash' })
 }
 
 // ── Lecturas ──────────────────────────────────────────────────────────────────

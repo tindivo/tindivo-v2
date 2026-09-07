@@ -72,12 +72,39 @@ export async function POST(req: Request): Promise<Response> {
       // "Defensa en profundidad" no puede significar reimplementar la regla:
       // significa volver a preguntarla. Ahora las dos capas llaman al mismo
       // predicado, así que no pueden divergir otra vez.
-      const { data: confiable, error: confiableError } = await service.rpc(
-        'customer_trusted_for_contraentrega',
+      // Y SE PREGUNTA EL MISMO PREDICADO QUE APLICA LA RPC, NO UNO MÁS DURO.
+      //
+      // Aquí se llamaba a `customer_trusted_for_contraentrega`, que responde
+      // `decision = 'trusted'` a secas. La RPC, desde la 0211, acepta ADEMÁS al
+      // cliente sin historial cuyo GPS cae dentro de San Jacinto: lo deja pasar
+      // a `validando` con la llamada de la cajera. O sea que esta capa cortaba
+      // con 403 el único caso que la 0211 existe para abrir, y esa migración
+      // entera —con sus tests verdes contra la RPC— estaba muerta a través del
+      // HTTP. Es el MISMO fallo que ya se corrigió aquí una vez (la copia del
+      // historial a mano), reaparecido por elegir el predicado equivocado en
+      // vez de por reimplementarlo.
+      //
+      // `customer_contraentrega_decision` es la fuente única. Solo se rechaza
+      // lo que la RPC también rechazaría; en todo lo demás la última palabra la
+      // tiene ella, dentro de su propia transacción.
+      const { data: decision, error: decisionError } = await service.rpc(
+        'customer_contraentrega_decision',
         { p_customer_user_id: user.id },
       )
 
-      if (confiableError || confiable !== true) {
+      // Y SE CORTA SOLO LO QUE SE PUEDE DECIDIR AQUÍ SIN COPIAR NADA.
+      //
+      // `risk_blocked` es la única respuesta que no depende de más contexto: la
+      // cuenta tiene strikes o bloqueo manual, y eso no lo levanta ni el GPS ni
+      // el mostrador (DECISIONS §8 — la sanción es de la cuenta, no del canal).
+      //
+      // `no_history` SÍ depende de contexto que esta capa no tiene: del GPS en
+      // vivo para un delivery, y de la presencia física para un recojo «ahora».
+      // Resolverlo aquí obligaría a reescribir `customer_gps_in_coverage` y las
+      // reglas de recojo en TypeScript, que es exactamente la tercera copia que
+      // esta función ya pagó una vez. Lo decide la RPC, dentro de su propia
+      // transacción, y su `raise` viaja como 422 con el mismo texto de siempre.
+      if (decisionError !== null || decision === 'risk_blocked') {
         return problem('forbidden', {
           detail: 'Tu primer pedido debe ser con pago adelantado.',
           requestId,
@@ -280,6 +307,11 @@ export async function POST(req: Request): Promise<Response> {
           // misma en el momento de pedir.
           p_delivery_accuracy_m: body.deliveryPointAccuracyM,
           p_delivery_confirmed_at: body.deliveryPointConfirmedAt,
+          // CUÁNDO pasa por su recojo (0220). El contrato ya garantiza que
+          // viene en pickup y que no viene en delivery, así que aquí se pasa
+          // tal cual: la RPC lo vuelve a normalizar por su cuenta, y su default
+          // es el lado caro ('later'), no el permisivo.
+          p_pickup_timing: body.pickupTiming,
         })
         if (error) {
           // El guard de pedido activo no puede dejar su propio rastro: el RAISE

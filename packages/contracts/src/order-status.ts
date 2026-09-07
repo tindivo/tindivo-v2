@@ -10,19 +10,33 @@ import type { OrderStatus, TrackingStep } from './enums'
  *   (cualquier estado no terminal -> cancelled)
  *
  * El estado `validando` solo aparece en contraentrega de cliente nuevo / con
- * strike (validación humana por llamada). `pickup` (inactivo en el piloto)
- * define sus propias transiciones cuando se active (ver DECISIONS.md).
+ * strike (validación humana por llamada).
+ *
+ * El flujo de RECOJO (0219/0220) comparte todo el tramo de arriba y se separa
+ * al salir de cocina, donde no hay motorizado a quien esperar:
+ *
+ *   [validando] -> pending_acceptance -> preparing
+ *     -> ready_for_pickup -> delivered
+ *
+ * Un recojo «ahora» —el cliente está en el mostrador— no pasa por `validando`
+ * aunque sea su primer pedido: la verificación la hace la cajera mirándolo
+ * antes de aceptar, y hasta que acepta nadie ha cocinado nada.
  */
 export const ORDER_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
   validando: ['pending_acceptance', 'confirmed', 'awaiting_payment', 'cancelled'],
   pending_acceptance: ['confirmed', 'awaiting_payment', 'cancelled'],
   awaiting_payment: ['validando', 'cancelled'],
   confirmed: ['preparing', 'cancelled'],
-  preparing: ['waiting_driver', 'heading_to_restaurant', 'cancelled'],
+  preparing: ['waiting_driver', 'heading_to_restaurant', 'ready_for_pickup', 'cancelled'],
   waiting_driver: ['heading_to_restaurant', 'cancelled'],
   heading_to_restaurant: ['waiting_at_restaurant', 'cancelled'],
   waiting_at_restaurant: ['picked_up', 'cancelled'],
   picked_up: ['delivered', 'cancelled'],
+  // Solo dos salidas, y ninguna vuelve a cocina: la comida ya está hecha. O se
+  // la lleva el cliente (`delivered`, terminal compartido con delivery — de eso
+  // depende que un recojo habilite contraentrega después, ver DECISIONS §8), o
+  // no vino nadie y la cajera lo cierra con `pickup_no_show`, que cancela.
+  ready_for_pickup: ['delivered', 'cancelled'],
   delivered: [],
   cancelled: [],
 }
@@ -56,6 +70,12 @@ export const STATUS_TO_TRACKING: Record<OrderStatus, TrackingStep> = {
   heading_to_restaurant: 'preparing',
   waiting_at_restaurant: 'preparing',
   picked_up: 'ontheway',
+  // El tercer paso es POSICIONAL —«salió de cocina, todavía no está en manos
+  // del cliente»—, no «va en una moto». Un recojo listo en el mostrador ocupa
+  // ese sitio; lo que cambia es la palabra, y esa la elige `stepsFor()` en el
+  // cliente según el método. Meterlo en `preparing` habría dejado el stepper
+  // clavado en «Preparando» con la comida ya hecha esperando al cliente.
+  ready_for_pickup: 'ontheway',
   delivered: 'delivered',
   cancelled: 'cancelled',
 }

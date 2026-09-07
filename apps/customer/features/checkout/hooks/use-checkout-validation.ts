@@ -33,6 +33,7 @@ export function useCheckoutValidation(checkout: CheckoutViewModel): UseCheckoutV
     setError,
     name,
     deliveryMethod,
+    pickupTiming,
     line,
     reference,
     selectedAddress,
@@ -81,6 +82,19 @@ export function useCheckoutValidation(checkout: CheckoutViewModel): UseCheckoutV
     }
     if (name.trim().length === 0) {
       return { field: 'name', message: 'Ingresa tu nombre', cta: 'Agrega tu nombre' }
+    }
+    // NO SE ELIGE POR EL CLIENTE, NI SIQUIERA CON UN DEFAULT «RAZONABLE». La
+    // respuesta decide si el pedido se salta la llamada de la cajera, y eso
+    // solo puede darlo por bueno quien de verdad está en el mostrador. Va aquí
+    // —después del nombre, antes de la dirección— porque en la pantalla el
+    // selector de recojo está justo ahí, y el orden de las ramas es el orden en
+    // que se lleva al cliente por la página.
+    if (deliveryMethod === 'pickup' && pickupTiming === null) {
+      return {
+        field: 'pickup',
+        message: 'Dinos cuándo pasas por tu pedido',
+        cta: 'Elige cuándo lo recoges',
+      }
     }
     if (deliveryMethod === 'delivery') {
       if (!line || line.trim().length < ADDRESS_LINE_MIN) {
@@ -131,7 +145,11 @@ export function useCheckoutValidation(checkout: CheckoutViewModel): UseCheckoutV
     // El vuelto sale de `lib/cash`, la misma función que pinta el mensaje del
     // selector y que vuelve a correr en `placeOrder` con el techo fresco del
     // servidor. Aquí NO se vuelve a escribir la regla.
-    if (payment === 'pending_cash') {
+    // En recojo el selector de billete ni se pinta ni se manda —el vuelto lo da
+    // la caja, no el sencillo que la cajera le adelantó al motorizado—, así que
+    // validar aquí un `cashAmount` que nadie eligió solo puede dar falsos
+    // rechazos por un techo que en el mostrador no existe.
+    if (payment === 'pending_cash' && deliveryMethod !== 'pickup') {
       const mal = cashError(cashAmount, { total, maxCashBill, maxChange })
       if (mal) return { field: 'cash', message: mal, cta: 'Revisa con cuánto pagas' }
     }
@@ -140,6 +158,7 @@ export function useCheckoutValidation(checkout: CheckoutViewModel): UseCheckoutV
     cart,
     name,
     deliveryMethod,
+    pickupTiming,
     line,
     reference,
     selectedAddress,

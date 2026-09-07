@@ -21,6 +21,7 @@ export type TrackingSignal =
   | 'confirmed'
   | 'preparing'
   | 'ontheway'
+  | 'ready_for_pickup'
   | 'arrived'
   | 'delivered'
   | 'cancelled'
@@ -37,6 +38,13 @@ export function trackingSignal(data: Tracking): TrackingSignal {
   if (data.arrivedAtCustomerAt) return 'arrived'
   if (data.status === 'awaiting_payment') return 'awaiting_payment'
   if (data.status === 'confirmed') return 'confirmed'
+
+  // ANTES QUE LA PROYECCION A PASOS, y por eso no se deriva de ella:
+  // `ready_for_pickup` se proyecta a 'ontheway' (es el mismo sitio del camino),
+  // pero el aviso NO puede ser el mismo. «Tu pedido salio, el motorizado va en
+  // camino» sobre una bolsa que espera en el mostrador manda al cliente a
+  // asomarse a su puerta.
+  if (data.status === 'ready_for_pickup') return 'ready_for_pickup'
 
   const step = toTrackingStep(data.status as OrderStatus)
   if (step === 'ontheway') return 'ontheway'
@@ -72,6 +80,11 @@ export function alertFor(signal: TrackingSignal, prepaid: boolean): TrackingAler
       return { tone: 'good', message: 'Tu pedido ya está en cocina' }
     case 'ontheway':
       return { tone: 'good', message: 'Tu pedido salió. El motorizado va en camino' }
+    case 'ready_for_pickup':
+      // `action` y no `good`: aqui SI hay algo que hacer —ir al local— y la
+      // comida se enfria mientras tanto. Es el equivalente, para un recojo, del
+      // aviso de «el motorizado esta en tu puerta».
+      return { tone: 'action', message: 'Tu pedido está listo. Pásalo a recoger en el local' }
     case 'arrived':
       return { tone: 'action', message: '¡El motorizado llegó a tu domicilio!' }
     case 'delivered':

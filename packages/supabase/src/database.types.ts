@@ -1915,6 +1915,7 @@ export type Database = {
           payment_verified_by: string | null
           pending_acceptance_at: string | null
           picked_up_at: string | null
+          pickup_timing: string | null
           prep_extended_at: string | null
           prep_extension_count: number
           prep_time_minutes: number | null
@@ -1923,6 +1924,7 @@ export type Database = {
           queue_notified_at: string | null
           ready_early_at: string | null
           ready_early_used: boolean
+          ready_for_pickup_at: string | null
           rejected_at: string | null
           rejected_by: string | null
           rejection_reason_code: string | null
@@ -2015,6 +2017,7 @@ export type Database = {
           payment_verified_by?: string | null
           pending_acceptance_at?: string | null
           picked_up_at?: string | null
+          pickup_timing?: string | null
           prep_extended_at?: string | null
           prep_extension_count?: number
           prep_time_minutes?: number | null
@@ -2023,6 +2026,7 @@ export type Database = {
           queue_notified_at?: string | null
           ready_early_at?: string | null
           ready_early_used?: boolean
+          ready_for_pickup_at?: string | null
           rejected_at?: string | null
           rejected_by?: string | null
           rejection_reason_code?: string | null
@@ -2115,6 +2119,7 @@ export type Database = {
           payment_verified_by?: string | null
           pending_acceptance_at?: string | null
           picked_up_at?: string | null
+          pickup_timing?: string | null
           prep_extended_at?: string | null
           prep_extension_count?: number
           prep_time_minutes?: number | null
@@ -2123,6 +2128,7 @@ export type Database = {
           queue_notified_at?: string | null
           ready_early_at?: string | null
           ready_early_used?: boolean
+          ready_for_pickup_at?: string | null
           rejected_at?: string | null
           rejected_by?: string | null
           rejection_reason_code?: string | null
@@ -2822,6 +2828,7 @@ export type Database = {
           p_delivery_reference: string
           p_items: Json
           p_payment_intent: Database["public"]["Enums"]["payment_intent"]
+          p_pickup_timing?: string
           p_source?: Database["public"]["Enums"]["order_source"]
         }
         Returns: Json
@@ -3108,6 +3115,7 @@ export type Database = {
           payment_verified_by: string | null
           pending_acceptance_at: string | null
           picked_up_at: string | null
+          pickup_timing: string | null
           prep_extended_at: string | null
           prep_extension_count: number
           prep_time_minutes: number | null
@@ -3116,6 +3124,7 @@ export type Database = {
           queue_notified_at: string | null
           ready_early_at: string | null
           ready_early_used: boolean
+          ready_for_pickup_at: string | null
           rejected_at: string | null
           rejected_by: string | null
           rejection_reason_code: string | null
@@ -3355,6 +3364,7 @@ export type Database = {
         | "heading_to_restaurant"
         | "waiting_at_restaurant"
         | "picked_up"
+        | "ready_for_pickup"
         | "delivered"
         | "cancelled"
         | "awaiting_payment"

@@ -295,7 +295,8 @@ async function orderBrief(orderId: string) {
       delivery_address,
       payment_intent,
       change_to_give,
-      cash_amount
+      cash_amount,
+      delivery_method
     `)
     .eq('id', orderId)
     .maybeSingle()
@@ -315,6 +316,7 @@ async function orderBrief(orderId: string) {
     driverId: o.driver_id as string | null,
     status: o.status as string,
     prepMinutes: Number(o.prep_time_minutes ?? 0),
+    deliveryMethod: o.delivery_method as string,
     destText,
     customerName,
     payText,
@@ -336,6 +338,11 @@ const HEADS_UP_MIN_PREP_MINUTES = 10
 async function headsUpNotes(orderId: string, eventType: string): Promise<Note[]> {
   const o = await orderBrief(orderId)
   if (!o) return []
+  // UN RECOJO NUNCA ES TRABAJO DEL MOTORIZADO, NI SIQUIERA COMO AVISO PREVIO.
+  // Este empujon existe para que la moto sepa que hay algo cocinandose y no se
+  // vaya lejos; con una bolsa que se lleva el cliente, lo unico que hace es
+  // ensenar que los avisos de esta app no siempre son para uno.
+  if (o.deliveryMethod === 'pickup') return []
   if (o.status !== 'preparing') return []
   if (o.prepMinutes <= HEADS_UP_MIN_PREP_MINUTES) return []
   const userIds = await allDriverUserIds()
@@ -367,7 +374,7 @@ async function headsUpNotes(orderId: string, eventType: string): Promise<Note[]>
 async function newOrderBusinessNotes(orderId: string): Promise<Note[]> {
   const { data: o } = await db
     .from('orders')
-    .select('short_id,business_id,status,customer_name,order_amount')
+    .select('short_id,business_id,status,customer_name,order_amount,delivery_method,pickup_timing')
     .eq('id', orderId)
     .maybeSingle()
   if (!o) return []
@@ -388,10 +395,16 @@ async function newOrderBusinessNotes(orderId: string): Promise<Note[]> {
       title: `Nuevo pedido #${sid} · S/ ${Number(o.order_amount ?? 0).toFixed(2)}`,
       // Sin el número de minutos: el plazo vive en `app_settings.timers` y
       // escribirlo aquí lo dejaría mintiendo en cuanto alguien lo cambie.
+      // UN CLIENTE EN EL MOSTRADOR NO SE «ACEPTA», SE MIRA.
+      // Ese pedido se salto `validando` a cambio de que ella lo verifique con
+      // los ojos al aceptarlo; si el aviso que la despierta no lo dice, la
+      // verificacion no ocurre y el canal se queda sin su unica garantia.
       body:
         status === 'validando'
           ? `${who} · llámalo para validarlo antes de que se cancele`
-          : `${who} · acéptalo antes de que se cancele`,
+          : o.delivery_method === 'pickup' && o.pickup_timing === 'now'
+            ? `${who} dice estar en tu local · míralo y acéptalo`
+            : `${who} · acéptalo antes de que se cancele`,
       tag: `OrderCreated-${sid}`,
       url: '/',
       // La cajera puede tener el celular en el mostrador y de espaldas: sin
@@ -412,7 +425,7 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
     const { data: o } = await db
       .from('orders')
       .select(
-        'short_id,business_id,customer_user_id,driver_id,cancel_reason,payment_intent,order_amount,delivery_fee,prep_time_minutes',
+        'short_id,business_id,customer_user_id,driver_id,cancel_reason,payment_intent,order_amount,delivery_fee,prep_time_minutes,delivery_method,pickup_timing',
       )
       .eq('id', aggregateId)
       .maybeSingle()
@@ -484,6 +497,23 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
       // (En prepago `headsUpNotes` no manda nada: mira que el estado sea
       // `preparing`, y ahí todavía no lo es.)
       out.push(...(await headsUpNotes(aggregateId, eventType)))
+    } else if (action === 'ready' && o.delivery_method === 'pickup') {
+      /**
+       * UN RECOJO LISTO NO ES TRABAJO PARA NADIE EN MOTO.
+       *
+       * Sin esta rama, `ready` caia en la de abajo y mandaba «⚡ ¡Listo para
+       * llevar!» con `requireInteraction` a TODOS los motorizados activos, por
+       * una bolsa que nadie va a llevar a ninguna parte. Y el unico que si
+       * tenia que enterarse —el cliente, que esta esperando para pasar a
+       * recogerla— no recibia nada.
+       *
+       * `req: true` como el aviso del motorizado en la puerta, y por el mismo
+       * motivo: es el aviso cuyo silencio cuesta mas caro. La comida se enfria
+       * mientras tanto, y a partir de `noShowWaitMinutes` la cajera ya puede
+       * declarar el planton, que deja strike.
+       */
+      push(cust, 'Tu pedido está listo', `Pásalo a recoger en ${bizName}`, { req: true })
+      push(bizUser, 'Pedido listo en el mostrador', `#${sid} · esperando al cliente`, { url: '/' })
     } else if (action === 'ready') {
       /**
        * NOTIFICAR NO ES ASIGNAR.
@@ -598,6 +628,36 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
       push(cust, 'Tu pedido se canceló', 'No se pudo verificar el comprobante de pago', {
         req: true,
       })
+    } else if (action === 'handover') {
+      /**
+       * RECOJO COMPLETADO · Y LA PUERTA AL DELIVERY.
+       *
+       * Un recojo que llega a `delivered` cuenta como `compra_previa` para
+       * `customer_contraentrega_decision` (clausula 1: `status = 'delivered'`,
+       * sin mirar el metodo). O sea que esta persona YA puede pedir a domicilio
+       * pagando al recibir, sin prepago y sin llamada — y no tiene forma de
+       * saberlo. Este aviso es lo unico que convierte esa elegibilidad tecnica
+       * en un segundo pedido.
+       *
+       * Va sin `req`: es una invitacion, no una urgencia. El aviso que
+       * interrumpe se guarda para lo que cuesta dinero perderse.
+       */
+      push(
+        cust,
+        '¡Gracias por tu recojo!',
+        'La próxima te lo llevamos a casa · pagas al recibir',
+        { url: '/' },
+      )
+      push(bizUser, 'Recojo entregado', `#${sid} se lo llevó el cliente`, { url: '/' })
+    } else if (action === 'pickup_no_show') {
+      const espera = await timerMinutes('noShowWaitMinutes', 5)
+      push(
+        cust,
+        'Tu pedido se canceló',
+        `Tu pedido estuvo listo en el local más de ${espera} min y nadie pasó a recogerlo`,
+        { req: true },
+      )
+      push(bizUser, 'Pedido cancelado', `#${sid} · el cliente no vino a recoger`, { url: '/' })
     } else if (action === 'deliver') {
       push(cust, 'Pedido entregado', `${orderTotal(o)} · gracias por pedir en Tindivo`)
       push(bizUser, 'Pedido entregado', `#${sid} fue entregado`, { url: '/' })

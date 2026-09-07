@@ -60,10 +60,11 @@ function NegociosBaseCard({
   supportPhone,
   onCallDriver,
 }: CardProps) {
-  const { queueLeadMinutes, deliveryLateMinutes } = useBusinessTimers()
+  const { queueLeadMinutes, deliveryLateMinutes, noShowWaitMinutes } = useBusinessTimers()
   const vm = buildNegociosCardVM(order, {
     queueLeadMin: queueLeadMinutes,
     deliveryLateMin: deliveryLateMinutes,
+    noShowWaitMin: noShowWaitMinutes,
     supportPhone,
   })
 
@@ -135,7 +136,12 @@ function NegociosBaseCard({
         )}
 
         {vm.methodBadge && (
-          <span className="inline-flex items-center gap-[3px] rounded-full bg-ink/[0.04] px-1.5 py-0.5 text-[10px] font-semibold text-ink-muted">
+          <span
+            className={cn(
+              'inline-flex items-center gap-[3px] rounded-full px-1.5 py-0.5 text-[10px] font-semibold',
+              vm.methodBadge.className ?? 'bg-ink/[0.04] text-ink-muted',
+            )}
+          >
             <Icon name={vm.methodBadge.icon} size={10} weight={500} />
             {vm.methodBadge.label}
           </span>

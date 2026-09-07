@@ -34,6 +34,8 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
     setAddressId,
     deliveryMethod,
     setDeliveryMethod,
+    pickupTiming,
+    setPickupTiming,
     payment,
     setPayment,
     mustPrepay,
@@ -82,6 +84,7 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
 
   const cartRef = useRef<HTMLDivElement>(null)
   const deliveryRef = useRef<HTMLDivElement>(null)
+  const pickupRef = useRef<HTMLDivElement>(null)
   const paymentRef = useRef<HTMLDivElement>(null)
   const errorRef = useRef<HTMLParagraphElement>(null)
 
@@ -104,6 +107,10 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
       address: deliveryRef.current,
       name: deliveryRef.current,
       phone: deliveryRef.current,
+      // Apunta al bloque, no a la seccion: el selector de recojo es lo primero
+      // de "Entrega" y con `block: 'center'` la seccion entera deja la pregunta
+      // arriba del todo, fuera de la mirada.
+      pickup: pickupRef.current ?? deliveryRef.current,
       cash: paymentRef.current,
     }
     destino[focus.field]?.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -156,7 +163,9 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
     ? 'No cierres esta pantalla.'
     : payment === 'prepaid'
       ? 'Todavía no pagas nada. Te avisamos cuando el local confirme.'
-      : 'Pagas al recibir, directo al motorizado.'
+      : deliveryMethod === 'pickup'
+        ? 'Pagas en el local al recoger tu pedido.'
+        : 'Pagas al recibir, directo al motorizado.'
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-[768px] flex-col bg-surface lg:max-w-6xl">
@@ -269,6 +278,50 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
               />
             </div>
           )}
+          {/* ── LA PREGUNTA DEL RECOJO ──
+              Ninguna de las dos sale marcada, y no es un descuido de diseño: la
+              respuesta gobierna si el pedido se salta la validación telefónica
+              (ver `use-checkout-validation`), así que preseleccionar «ahora»
+              sería regalar esa exención a quien nunca contestó.
+
+              Las etiquetas dicen dónde está el cliente, no cuándo pasa por la
+              comida: «Ahora, estoy en el local» es comprobable —la cajera lo
+              mira— mientras que «en 10 minutos» no lo es por nadie. */}
+          {deliveryMethod === 'pickup' && (
+            <div
+              ref={pickupRef}
+              className={cn(
+                'mb-2.5 rounded-[14px] p-2.5',
+                attempted && issue?.field === 'pickup'
+                  ? 'bg-danger/[0.06] ring-1 ring-danger/40'
+                  : 'bg-surface-low',
+              )}
+            >
+              <p className="mb-2 font-semibold text-[13px] text-ink">¿Cuándo recoges tu pedido?</p>
+              <div className="flex gap-2">
+                <DeliveryMethodButton
+                  active={pickupTiming === 'now'}
+                  onClick={() => setPickupTiming('now')}
+                  icon="storefront"
+                  label="Ahora, estoy en el local"
+                />
+                <DeliveryMethodButton
+                  active={pickupTiming === 'later'}
+                  onClick={() => setPickupTiming('later')}
+                  icon="schedule"
+                  label="Más tarde"
+                />
+              </div>
+              {pickupTiming === 'now' && (
+                <p className="mt-2 text-[12px] text-ink-soft">
+                  Preparamos tu pedido cuando el local confirme que te tiene delante.
+                </p>
+              )}
+              {attempted && issue?.field === 'pickup' && (
+                <p className="mt-2 font-medium text-[12px] text-danger">{issue.message}</p>
+              )}
+            </div>
+          )}
           <DeliveryCard
             businessName={cart.businessName ?? ''}
             deliveryMethod={deliveryMethod}
@@ -312,7 +365,14 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
             />
           )}
 
-          {payment === 'pending_cash' && (
+          {/* EL BILLETE ES UNA PREGUNTA DEL DELIVERY, NO DEL PAGO EN EFECTIVO.
+              Existe porque el motorizado sale del local con un sencillo que le
+              adelanta la caja, y hay que saber cuanto llevarle (0146). En un
+              recojo el cliente paga EN la caja, que tiene su propio sencillo:
+              preguntarle con que billete viene es pedirle un dato que nadie va
+              a usar, y encima puede rechazarle el pedido por un techo de vuelto
+              que en el mostrador no aplica. */}
+          {payment === 'pending_cash' && deliveryMethod !== 'pickup' && (
             <CashSelector
               total={total}
               cashChoice={cashChoice}

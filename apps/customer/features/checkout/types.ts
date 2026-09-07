@@ -42,21 +42,28 @@ export const CUSTOMER_NOTE_MAX = 200
 export const NEAR_DELIVERY_FEE = 2.0
 
 /**
- * Recojo en tienda, desactivado para el piloto (DECISIONS.md: "pickup inactivo;
- * post-piloto"). Mientras esta bandera sea `false`, `unified-checkout` no
- * renderiza el selector y `deliveryMethod` se queda en 'delivery'.
+ * Recojo en tienda. Encendido por la 0219/0220, que cerraron el modo de fallo
+ * que mantenía esta bandera apagada.
  *
- * NO activarla sin recorrer el flujo entero primero. El backend lo soporta
- * (`delivery_fee = 0`, comisión de pickup configurada en 1.00) pero nunca se ha
- * ejercitado de punta a punta, y tiene un modo de fallo identificado:
+ * LO QUE DECÍA ESTA NOTA, Y CÓMO SE RESOLVIÓ. «Todas las transiciones
+ * intermedias las escribe el MOTORIZADO — take, arrived, pickup, deliver. En un
+ * recojo en tienda no hay motorizado, así que no está claro quién lleva el
+ * pedido a 'delivered'. Un pickup que se quede atascado además bloquea al
+ * cliente para volver a pedir de ese mismo restaurante.»
  *
- *   Todas las transiciones intermedias las escribe el MOTORIZADO — 'take',
- *   'arrived', 'pickup', 'deliver'. En un recojo en tienda no hay motorizado,
- *   así que no está claro quién lleva el pedido a 'delivered'. Un pickup que se
- *   quede atascado además bloquea al cliente para volver a pedir de ese mismo
- *   restaurante, por el guard de pedido activo de 0105.
+ * Era exacto. Ahora ese hueco lo cierran dos acciones del NEGOCIO en
+ * `advance_order` —`handover` (el cliente se lo llevó) y `pickup_no_show`
+ * (nadie vino)—, más el estado `ready_for_pickup` que las hace posibles, y las
+ * dos tienen botón en el detalle del tablero.
+ *
+ * LA BANDERA NO ES EL ÚNICO INTERRUPTOR, y a propósito. Esto solo decide si el
+ * checkout PINTA el selector; que un negocio concreto acepte recojos lo decide
+ * `businesses.accepts_web_pickup`, que la API comprueba por su cuenta. Un
+ * restaurante sin ese permiso sigue rechazando el recojo aunque la bandera esté
+ * encendida, así que el piloto se abre restaurante por restaurante y no de
+ * golpe.
  */
-export const PICKUP_ENABLED = false as boolean
+export const PICKUP_ENABLED = true as boolean
 
 /**
  * Por qué el cliente tiene (o no tiene) el envío gratis de la promo (0187).
@@ -269,7 +276,7 @@ export function addressIcon(label: string): string {
  * vez sin repetir la regla: nombrar el CTA, marcar la fila y decidir a dónde
  * llevar al cliente.
  */
-export type CheckoutField = 'cart' | 'address' | 'name' | 'phone' | 'cash'
+export type CheckoutField = 'cart' | 'address' | 'name' | 'phone' | 'cash' | 'pickup'
 
 export interface CheckoutIssue {
   field: CheckoutField

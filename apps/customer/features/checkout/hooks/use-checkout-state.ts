@@ -1,6 +1,6 @@
 'use client'
 
-import type { DeliveryMethod, PaymentIntent } from '@tindivo/contracts'
+import type { DeliveryMethod, PaymentIntent, PickupTiming } from '@tindivo/contracts'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { AddressValue } from '@/components/address-fields'
@@ -60,6 +60,20 @@ export interface CheckoutState {
   setStep: (v: 'delivery' | 'payment') => void
   deliveryMethod: DeliveryMethod
   setDeliveryMethod: (v: DeliveryMethod) => void
+  /**
+   * CUANDO pasa el cliente por su recojo. `null` es «todavia no lo ha dicho», y
+   * es el estado inicial A PROPOSITO: el checkout no puede elegir por el.
+   *
+   * De las dos respuestas, «ahora» es la que abre puertas —se salta el guard de
+   * contraentrega y la llamada de la cajera, porque la persona esta delante—,
+   * asi que arrancar preseleccionandola regalaria esa exencion a quien nunca
+   * contesto la pregunta. Y arrancar en «mas tarde» seria mentir al reves:
+   * empujaria al vecino que SI esta en el mostrador hacia el prepago.
+   *
+   * Se queda sin respuesta y el CTA la pide. Es un toque.
+   */
+  pickupTiming: PickupTiming | null
+  setPickupTiming: (v: PickupTiming | null) => void
 
   payment: PaymentIntent
   setPayment: (v: PaymentIntent) => void
@@ -165,6 +179,7 @@ export function useCheckoutState(): CheckoutState {
   const [verifiedPhone, setVerifiedPhone] = useState('')
   const [step, setStep] = useState<'delivery' | 'payment'>('delivery')
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('delivery')
+  const [pickupTiming, setPickupTiming] = useState<PickupTiming | null>(null)
   const [payment, setPayment] = useState<PaymentIntent>('pending_cash')
   const [cashChoice, setCashChoice] = useState<CashChoice>('exact')
   const [cashCustom, setCashCustom] = useState('')
@@ -190,6 +205,19 @@ export function useCheckoutState(): CheckoutState {
     getDeliveryBands().then(setBands)
     getFarZones().then(setFarZones)
   }, [])
+
+  /**
+   * Volver a delivery borra la respuesta del recojo.
+   *
+   * Vive aquí y no en el `onClick` del botón porque el contrato prohíbe mandar
+   * `pickupTiming` en un delivery (422), y un estado que sobreviva al cambio de
+   * método es exactamente cómo se cuela: el cliente prueba «Recojo · ahora»,
+   * vuelve a «Delivery», y el pedido sale con una respuesta que ya no significa
+   * nada. Derivarlo del método hace que el caso no pueda existir.
+   */
+  useEffect(() => {
+    if (deliveryMethod !== 'pickup') setPickupTiming(null)
+  }, [deliveryMethod])
 
   const selectedAddress = addresses.find((a) => a.id === addressId)
 
@@ -424,6 +452,8 @@ export function useCheckoutState(): CheckoutState {
     setStep,
     deliveryMethod,
     setDeliveryMethod,
+    pickupTiming,
+    setPickupTiming,
     payment,
     setPayment,
     cashChoice,

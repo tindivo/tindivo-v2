@@ -4,8 +4,9 @@ import type { PaymentQrView } from '@tindivo/contracts'
 import { Icon } from '@tindivo/ui'
 import Link from 'next/link'
 import { useState } from 'react'
+import { FilterChips } from '@/components/filter-chips'
 import { newColumnSubtitle } from '@/lib/orders/attention'
-import type { MobileTab, OrderVM } from '@/lib/orders/view-model'
+import type { ChannelFilter, MobileTab, OrderVM } from '@/lib/orders/view-model'
 import { resolveMobileTab, sortCooking } from '@/lib/orders/view-model'
 import { CocinaCard, NuevoCard, RepartoCard } from './cards'
 import { type DetailActions, type DetailItem, DetailScreen, PausarModal } from './pedido-detail'
@@ -21,6 +22,13 @@ export interface PedidosViewProps {
   onOpenPause: () => void
   onResume: () => void
   counts: { new: number; cooking: number; route: number; delivered: number; cancelled: number }
+  /** Filtro de canal YA RESUELTO (`resolveChannelFilter`), no el guardado. */
+  channel: ChannelFilter
+  onChannel: (f: ChannelFilter) => void
+  /** Cuántos activos hay de cada canal, para los contadores de los chips. */
+  channelCounts: Record<ChannelFilter, number>
+  /** `false` cuando el tablero tiene un solo canal: no hay nada que separar. */
+  showChannelChips: boolean
   newOrders: OrderVM[]
   cookingOrders: OrderVM[]
   routeOrders: OrderVM[]
@@ -294,6 +302,15 @@ export function PedidosMobile(p: PedidosViewProps) {
         )}
       </div>
 
+      {/* El filtro de canal, encima de la lista y NO dentro de ella: en movil la
+          lista scrollea, y un mando que se va hacia arriba con el scroll es un
+          mando que la cajera no encuentra cuando quiere deshacerlo. */}
+      {p.showChannelChips && (
+        <div className="px-3.5 pt-2.5">
+          <ChannelChips channel={p.channel} counts={p.channelCounts} onChange={p.onChannel} />
+        </div>
+      )}
+
       {/* List */}
       <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-3.5 py-3">
         {/* El mismo reparto que la cabecera de la columna en escritorio: cuántos
@@ -464,7 +481,20 @@ export function PedidosDesktop(p: PedidosViewProps) {
         </div>
       </header>
 
-      {/* Kanban 3 columnas */}
+      {/* `-mb-2` para que el mando se cuele en el hueco que ya tenía el tablero
+          en vez de empujarlo hacia abajo: cuando aparece, lo que se mueve es lo
+          menos posible. */}
+      {p.showChannelChips && (
+        <div className="-mb-2 px-5 pt-3">
+          <ChannelChips channel={p.channel} counts={p.channelCounts} onChange={p.onChannel} />
+        </div>
+      )}
+
+      {/* Kanban 3 columnas.
+          El padding NO se recorta cuando los chips están: subirlo a `pt-3` fijo
+          movía el tablero 8 px hacia arriba TAMBIÉN en la noche sin recojos,
+          que es la normal. Lo que cambia de sitio es el mando nuevo, no el
+          tablero de siempre. */}
       <div className="grid min-h-0 flex-1 grid-cols-[1fr_1.4fr_0.9fr] grid-rows-[1fr] gap-3 overflow-hidden p-5">
         <KanbanCol
           title="Nuevos"
@@ -485,7 +515,7 @@ export function PedidosDesktop(p: PedidosViewProps) {
           title="En cocina"
           count={p.counts.cooking}
           dotClass="bg-brand-dark"
-          subtitle="Cocinando + esperando moto"
+          subtitle="Cocinando · esperando moto o cliente"
         >
           {cooking.length > 0 ? (
             cooking.map((o) => (
@@ -536,5 +566,40 @@ export function PedidosDesktop(p: PedidosViewProps) {
         />
       )}
     </div>
+  )
+}
+
+/**
+ * LOS DOS CANALES, CON SU CUENTA. Ver `ChannelFilter` en `view-model`.
+ *
+ * ES PURAMENTE VISUAL. Lo que suena y lo que se ve resaltado sale de
+ * `attentionState`, que se calcula en el shell sobre la lista COMPLETA y no
+ * pasa por aquí. Un recojo con su cliente en el mostrador reclama a la cajera
+ * aunque tenga puesto «Delivery»: el riesgo de negocio no puede depender de qué
+ * chip esté pulsado.
+ *
+ * Los contadores llegan hechos desde la página (`channelCounts`), derivados del
+ * mismo array del que salen las listas. Ver la cabecera de `FilterChips`.
+ */
+function ChannelChips({
+  channel,
+  counts,
+  onChange,
+}: {
+  channel: ChannelFilter
+  counts: Record<ChannelFilter, number>
+  onChange: (f: ChannelFilter) => void
+}) {
+  return (
+    <FilterChips
+      options={[
+        { id: 'all', label: 'Todos' },
+        { id: 'delivery', label: '🚴 Delivery' },
+        { id: 'pickup', label: '🏠 Recojo' },
+      ]}
+      active={channel}
+      counts={counts}
+      onChange={onChange}
+    />
   )
 }

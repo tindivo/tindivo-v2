@@ -26,7 +26,12 @@ export const ORDER_STATUSES = [
   'heading_to_restaurant', // motorizado tomó el pedido, va al local
   'waiting_at_restaurant', // motorizado llegó al local ("He llegado")
   'picked_up', // motorizado recogió; declara banda (cerca/lejos)
-  'delivered', // entregado; snapshot de comisión + suma a balance_due
+  // La bolsa está hecha y esperando EN EL MOSTRADOR, sin motorizado de por
+  // medio (0219/0220). No es `waiting_driver` —ese estado es literalmente lo
+  // que pone el pedido en la cola de `apps/motorizados`— ni `picked_up`, que
+  // significa que la comida ya salió del local en una moto.
+  'ready_for_pickup',
+  'delivered', // entregado (o recogido en el mostrador); snapshot de comisión + suma a balance_due
   'cancelled', // terminal alternativo
 ] as const
 export const OrderStatusSchema = z.enum(ORDER_STATUSES)
@@ -55,6 +60,11 @@ export const ACTIVE_ORDER_STATUSES = [
   'heading_to_restaurant',
   'waiting_at_restaurant',
   'picked_up',
+  // Una bolsa esperando en el mostrador es un pedido ABIERTO: bloquea el
+  // catálogo, sale en "Mis pedidos" y cuenta para el guard de pedido activo. Si
+  // faltara aquí, quien no pasa a recoger podría seguir pidiendo al mismo
+  // restaurante y acumular comida hecha que nadie va a llevarse.
+  'ready_for_pickup',
 ] as const satisfies readonly OrderStatus[]
 export type ActiveOrderStatus = (typeof ACTIVE_ORDER_STATUSES)[number]
 
@@ -78,6 +88,21 @@ export type TrackingStep = z.infer<typeof TrackingStepSchema>
 export const DELIVERY_METHODS = ['delivery', 'pickup'] as const
 export const DeliveryMethodSchema = z.enum(DELIVERY_METHODS)
 export type DeliveryMethod = z.infer<typeof DeliveryMethodSchema>
+
+/**
+ * --- Recojo: cuándo pasa el cliente ---
+ *
+ * NO es un enum de Postgres y por eso no entra en `DOMAIN_ENUMS`: en la base es
+ * un `text` con CHECK (`orders_pickup_timing_chk`, 0220). Se dejó como texto a
+ * propósito — un enum de PG obliga a una migración aislada para añadirle un
+ * valor (ver 0219), y este vocabulario es de producto, no de dominio profundo.
+ *
+ * El vocabulario vive en tres sitios y los tres tienen que decir lo mismo: aquí,
+ * el CHECK de la columna, y el `case` de `create_customer_order`.
+ */
+export const PICKUP_TIMINGS = ['now', 'later'] as const
+export const PickupTimingSchema = z.enum(PICKUP_TIMINGS)
+export type PickupTiming = z.infer<typeof PickupTimingSchema>
 
 // --- Origen del pedido ---
 export const ORDER_SOURCES = ['customer_pwa', 'business_manual'] as const

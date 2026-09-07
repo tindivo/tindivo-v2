@@ -28,6 +28,34 @@ export const STEPS: { key: TrackingStep; label: string; short: string; sub: stri
 ]
 
 /**
+ * Los mismos cuatro pasos, con el tercero dicho para un recojo.
+ *
+ * El tercer paso es POSICIONAL —«salió de cocina, todavía no lo tiene el
+ * cliente»— y por eso `ready_for_pickup` se proyecta ahí (ver
+ * `STATUS_TO_TRACKING`). Lo que no se puede compartir son las PALABRAS: «En
+ * camino · El motorizado va en ruta» sobre una bolsa que espera en el mostrador
+ * manda al cliente a asomarse a su puerta mientras su comida se enfría a tres
+ * cuadras.
+ *
+ * Se rehace el array en vez de mutar `STEPS` porque `STEPS` es una constante
+ * compartida y exportada: una copia por render de una lista de cuatro objetos
+ * cuesta nada al lado de que dos pantallas se pisen la misma referencia.
+ */
+export function stepsFor(deliveryMethod: string): typeof STEPS {
+  if (deliveryMethod !== 'pickup') return STEPS
+  return STEPS.map((s) =>
+    s.key === 'ontheway'
+      ? {
+          ...s,
+          label: 'Listo para recoger',
+          short: 'Listo',
+          sub: 'Pásalo a recoger en el local',
+        }
+      : s,
+  )
+}
+
+/**
  * Copy de la pantalla de cancelado (DECISIONS §estados / prototipo).
  *
  * Ramifica por método de pago además de por motivo: para un prepago con
@@ -204,6 +232,14 @@ export function getStatusMessage(data: Tracking, current: TrackingStep | null): 
     return 'El motorizado ya llegó a tu domicilio y te está esperando.'
   }
   if (current === 'ontheway') {
+    // En un recojo el tercer paso no significa «salió»: significa que la bolsa
+    // está en el mostrador esperando. Decirle lo otro le haría esperar en su
+    // casa un motorizado que no existe.
+    if (data.deliveryMethod === 'pickup') {
+      return data.paymentIntent === 'prepaid'
+        ? 'Tu pedido ya está listo. Pásalo a recoger en el local.'
+        : 'Tu pedido ya está listo. Pásalo a recoger en el local y pagas ahí.'
+    }
     return data.paymentIntent === 'pending_cash'
       ? 'Tu pedido ya salió del restaurante. Ten listo tu pago.'
       : 'Tu pedido ya salió del restaurante y va en camino.'

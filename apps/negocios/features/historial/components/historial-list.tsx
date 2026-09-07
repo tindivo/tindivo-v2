@@ -108,6 +108,12 @@ export function HistorialList() {
             onRejectProof: () => {},
             onConfirmDirectPayment: () => {},
             onExtend: () => {},
+            // El historial solo enseña pedidos ya cerrados, así que ninguno
+            // llega con `canHandOver` y estos dos no se pintan nunca. Van vacíos
+            // por la misma razón que los de arriba: el detalle es un componente
+            // compartido y el contrato se cumple entero o no se cumple.
+            onHandover: () => {},
+            onPickupNoShow: () => {},
             onReady: () => {},
             onCancel: () => {},
           }}
