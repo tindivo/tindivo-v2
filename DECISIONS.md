@@ -5,7 +5,7 @@
 > este documento difieran, **gana este documento**. Se mantiene vivo: cada
 > decisión nueva o cambio se registra aquí, no en specs paralelos.
 >
-> Última actualización: 2026-08-07 (pedido manual: la cajera teclea el total con envío incluido y la comida se deduce en el RPC — §22).
+> Última actualización: 2026-09-07 (reseñas: se capturan desde el día 1 y no se publican hasta que los números lo permitan — §28).
 
 ---
 
@@ -800,3 +800,55 @@ Las nueve tallas de `theme.css` se declaran ahora como grupo `font-size` en
 **Al añadir una talla nueva a `@theme`, hay que añadirla también ahí.** Es el
 único acoplamiento que deja esta solución, y no avisa si se olvida.
 
+
+---
+
+## 28. Reseñas: se capturan desde el día 1, no se publican hasta que los números lo permitan (2026-09-07)
+
+**En producción (Fase A).** El cliente deja **una nota** de 1-5, etiquetas y un
+comentario opcional sobre un pedido `delivered`. Migraciones `0215`-`0218`.
+
+### Las cinco reglas que no se rompen
+
+1. **Nada es público.** No hay lectura anónima de `order_reviews` y el catálogo
+   no muestra ningún promedio. Abrirlo es una decisión con condiciones escritas
+   (ver abajo), no un `select` más.
+2. **El negocio ve la nota y las etiquetas; el TEXTO no le llega.** Lo hace
+   cumplir un `GRANT` por columna (`0217`), no la interfaz: `comment` está fuera
+   del rol `authenticated`. El admin lo lee por la API con service-role. Si
+   alguien "simplifica" la bandeja del admin leyendo por RLS, el texto
+   desaparece sin fallar ruidosamente.
+3. **No se promete anonimato.** El pedido lleva el teléfono y el negocio lo
+   tiene delante. Lo que se promete —y se cumple— es que no lee el párrafo.
+4. **La reseña no toca dinero ni asignación, nunca automáticamente.** Ni
+   comisión, ni prioridad de despacho, ni visibilidad. Es entrada para que un
+   humano decida, como el antifraude.
+5. **La nota del motorizado no se publica jamás.** Cuatro personas
+   identificables en un pueblo. Señal interna del admin y punto.
+
+### La pregunta se hace en el pedido SIGUIENTE, no al entregar
+
+Al entregar el cliente cierra la app y se va a comer. Funciona porque la brecha
+entre pedidos del mismo cliente es de **2 días en mediana** (p90 7.4, máx 14,
+medido en prod): de ahí los **21 días** de `app_settings.reviews.windowDays`.
+Con una brecha de semanas la decisión habría sido otra, porque calificar de
+memoria solo guarda los desastres.
+
+### Qué abre la Fase B (promedio público)
+
+Se cumplen **las cuatro** o no se abre:
+
+1. Tasa de respuesta **≥ 25 %**.
+2. **≥ 20 reseñas y ≥ 30 días** de historia en ese negocio. El que no llegue no
+   muestra **nada** — ni «Sin reseñas», que en una card lee como advertencia.
+3. **≥ 10 %** de las entregas de ese negocio representadas. Hoy solo el ~10 % de
+   los pedidos tiene cuenta, así que publicar antes sería publicar el juicio de
+   una minoría como si fuera el del pueblo.
+4. **Decisión explícita del usuario** a la vista de esos tres números. No es
+   automático: es la reputación de un vecino.
+
+**Fase C (comentarios públicos): solo con ≥ 8-10 negocios por pueblo**, y con
+moderación, derecho de réplica y política escrita antes del primer caso.
+
+> Las consultas SQL que miden las cuatro condiciones —verificadas contra prod—
+> y todo el detalle están en **`Docs/spec/spec_resenas.md`**.
