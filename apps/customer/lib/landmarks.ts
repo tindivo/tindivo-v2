@@ -133,6 +133,53 @@ export const LANDMARK_STYLE: Record<MapLandmarkCategory, { color: string; glyph:
       '<path d="M12 2.6 2.4 8v2.2h19.2V8zM5 11.8h2.6v6.2H5zM10.7 11.8h2.6v6.2h-2.6z' +
       'M16.4 11.8H19v6.2h-2.6zM2.8 19.2h18.4v2.2H2.8z"/>',
   },
+  /*
+   * Tenedor y cuchara (0214). Los dos juntos y no uno solo: un tenedor a 10 px
+   * es un peine, y un cubierto suelto no dice «comida». El par sí, y es el mismo
+   * signo que usa cualquier mapa del mundo.
+   *
+   * CUCHARA Y NO CUCHILLO, aunque el par clásico sea el otro: se dibujaron los
+   * dos y a tamaño de chapa el cuchillo pierde. Su hoja es una cuña estrecha que
+   * a 10 px queda casi tan recta como el mango del tenedor, y entonces las dos
+   * mitades se leen como dos barras — un icono de pausa. El cuenco de la cuchara
+   * es una mancha redonda contra el peine de las púas, y ese contraste es lo que
+   * sobrevive al tamaño. Es la misma lección que el balón de `deporte`: manda la
+   * silueta, no el detalle.
+   *
+   * Las púas llegan al borde de arriba y los mangos al de abajo: ocupar la
+   * rejilla entera es lo que evita que el renderer lo encoja a un manchón
+   * centrado.
+   *
+   * El naranja queda cerca del ámbar de `mercado`, y se deja: son las dos
+   * categorías de «sitio donde se compra algo», el color no desambigua nada por
+   * sí solo (ver la cabecera) y las siluetas —cubiertos contra toldo y local— no
+   * se parecen en nada.
+   */
+  restaurante: {
+    color: '#ea580c',
+    glyph:
+      '<path d="M4.4 2h1.5v6.4H4.4zM7.3 2h1.5v6.4H7.3zM10.2 2h1.5v6.4h-1.5z"/>' +
+      '<path d="M3.8 9.2h8.3v1c0 1.5-1 2.8-2.4 3.2V22H7.4v-8.6C6 13 5 11.7 5 10.2z"/>' +
+      '<path d="M15.1 2h1.2c2 1.9 3.1 4.6 3.1 7.4 0 2.1-1 3.6-2.5 4.1V22h-1.8z"/>',
+  },
+  /*
+   * Cama (0214). La silueta es lo contrario que todo lo demás de esta lista:
+   * ancha y baja, con un poste alto a la izquierda. No se parece a la caja del
+   * mercado —que es alta y con toldo— ni al frontón de gobierno, que es
+   * simétrico; y a 10 px «bulto tumbado con cabecero» se lee antes que
+   * cualquier letra H, que además chocaría con el nombre escrito al lado.
+   *
+   * La almohada es un bloque aparte y no un redondeo del colchón: es el único
+   * detalle que impide que esto se lea como un banco o un escalón.
+   */
+  hotel: {
+    color: '#4f46e5',
+    glyph:
+      '<path d="M2.2 5.2h2.3V21H2.2z"/>' +
+      '<path d="M5.9 9.6h4.8v3.4H5.9z"/>' +
+      '<path d="M4.5 13.8h17.3v4.4H4.5z"/>' +
+      '<path d="M19.5 18.9h2.3V21h-2.3z"/>',
+  },
   // Sin categoría: el punto genérico, igual que el POI sin icono de Google.
   otro: {
     color: '#64748b',

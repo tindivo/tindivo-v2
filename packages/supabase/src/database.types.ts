@@ -3234,6 +3234,8 @@ export type Database = {
         | "deporte"
         | "recreacion"
         | "gobierno"
+        | "restaurante"
+        | "hotel"
         | "otro"
       order_source: "customer_pwa" | "business_manual"
       order_status:

@@ -13,5 +13,7 @@ export const LANDMARK_CATEGORY_META: Record<MapLandmarkCategory, { label: string
     deporte: { label: 'Deporte (coliseo, losa)', color: '#06b6d4' },
     recreacion: { label: 'Recreación (parque, plaza)', color: '#22c55e' },
     gobierno: { label: 'Gobierno', color: '#64748b' },
+    restaurante: { label: 'Restaurante / menú', color: '#f97316' },
+    hotel: { label: 'Hotel / hospedaje', color: '#6366f1' },
     otro: { label: 'Otro', color: '#94a3b8' },
   }
