@@ -1,0 +1,33 @@
+-- =============================================================================
+-- 0214 · El mapa del pueblo aprende a comer y a dormir
+-- =============================================================================
+--
+-- Dos categorias nuevas de referencia: `restaurante` y `hotel`.
+--
+-- POR QUE ESTAS DOS. Las ocho de la 0208 cubren el equipamiento del pueblo
+-- (salud, mercado, educacion, religioso, deporte, recreacion, gobierno) y una
+-- bolsa. Un restaurante y un hostal son justo lo que un motorizado usa para
+-- orientarse de noche —estan abiertos y tienen luz cuando el colegio y la
+-- municipalidad son un porton cerrado— y hasta ahora los dos caian en `otro`,
+-- que se pinta con el punto generico y no dice nada.
+--
+-- VAN ANTES DE `otro`, Y NO AL FINAL. El orden del enum es el orden del
+-- desplegable del panel: `MAP_LANDMARK_CATEGORIES` se recorre tal cual en
+-- `landmarks-sheet.tsx` y en `/mapa-referencias`. Anadidas al final, «Otro»
+-- dejaria de ser la ultima opcion de la lista, que es donde tiene que estar la
+-- bolsa de descarte.
+--
+-- IDEMPOTENTE por `IF NOT EXISTS`. `ALTER TYPE ... ADD VALUE` si puede correr
+-- dentro de una transaccion en PG12+ mientras no se USE el valor nuevo en la
+-- misma transaccion, y aqui no se usa: solo se declara.
+--
+-- LO QUE ESTA MIGRACION NO TRAE, y hace falta para que sirva de algo:
+--   · el rotulo y el color del panel  -> apps/admin/lib/landmark-categories.ts
+--   · el dibujo del mapa del cliente  -> apps/customer/lib/landmarks.ts
+--   · el enum espejo de contratos     -> packages/contracts/src/enums.ts
+-- Sin el ultimo, `packages/core/src/enum-drift.ts` tumba el type-check, que es
+-- exactamente para lo que existe.
+-- =============================================================================
+
+ALTER TYPE public.map_landmark_category ADD VALUE IF NOT EXISTS 'restaurante' BEFORE 'otro';
+ALTER TYPE public.map_landmark_category ADD VALUE IF NOT EXISTS 'hotel' BEFORE 'otro';

@@ -288,28 +288,54 @@ test.describe('0171 · al vecino conocido la pantalla le ofrece contraentrega', 
     expect(pedido.validation_reason_code).toBe('standard_validation_rule')
   })
 
-  test('al cliente sin historial la pantalla solo le deja prepagar', async ({ page }) => {
+  /**
+   * 0211 · AL CLIENTE SIN HISTORIAL PERO DEL PUEBLO YA NO SE LE FUERZA EL PREPAGO.
+   *
+   * ESTE TEST AFIRMABA LO CONTRARIO, y la 0211 lo invirtió a propósito. Decía
+   * «la pantalla solo le deja prepagar» y comprobaba tres cosas que ya no
+   * existen: el aviso «tu primer pedido va con pago adelantado» y los dos radios
+   * de contraentrega deshabilitados.
+   *
+   * Lo que cambió. `create_customer_order` acepta ahora una señal más: el GPS EN
+   * VIVO del cliente al pedir. Sin historial pero con el GPS dentro del polígono
+   * de San Jacinto, la contraentrega se abre —entrando a `validando`, que es la
+   * llamada de la cajera— en vez de exigir prepago. Y como esa decisión depende
+   * de una coordenada que solo el servidor puede juzgar, `isNewUser` salió de
+   * `prepayReason` (ver `use-checkout-state.ts`): la pantalla ya no adivina, no
+   * pinta el bloque bloqueado, y el servidor decide al confirmar.
+   *
+   * POR QUÉ ESTE TEST CAE JUSTO AQUÍ. El `test.use` de este bloque le da a todo
+   * el describe geolocalización en las coordenadas del cliente sembrado, que
+   * están dentro de San Jacinto. O sea que el desconocido de este test es
+   * exactamente el caso que la 0211 vino a rescatar: cero historial, GPS del
+   * pueblo.
+   *
+   * Y QUÉ CUBRE, QUE NO ES LO MISMO QUE ANTES. Las siete reglas de servidor de
+   * la 0211 ya están cubiertas en
+   * `contraentrega-delivery-history.integration.test.ts` (GPS dentro, GPS fuera,
+   * baja precisión, strikes que ganan al GPS, historial que lo hace irrelevante).
+   * Lo que ningún test miraba es la otra mitad: que la PANTALLA dejó de bloquear.
+   * Eso es lo de aquí, y por eso no vuelve a confirmar el pedido — el estado
+   * resultante ya lo afirma el test de arriba para el vecino, y la integración
+   * para el desconocido.
+   */
+  test('al cliente sin historial pero con GPS del pueblo la pantalla ya no le fuerza el prepago', async ({
+    page,
+  }) => {
     await login(page, DESCONOCIDO.email)
     await llegarAlCheckout(page)
 
-    // El motivo se le dice, y es el del primer pedido.
-    await expect(page.getByText(/primer pedido.*adelantado/)).toBeVisible()
+    // Ningún motivo de prepago: ni el del primer pedido —que la 0211 quitó— ni
+    // los otros dos que sí siguen vivos (bloqueo por riesgo, tope de efectivo),
+    // que aquí no aplican.
+    await expect(page.getByText(RE_MOTIVO_PREPAGO)).toHaveCount(0)
 
-    // Y las opciones de contraentrega están APAGADAS, no ausentes.
-    //
-    // Antes se afirmaba `toHaveCount(0)` porque `unified-checkout` las filtraba,
-    // y en pantalla quedaba una sola fila con su radio ya marcado: una lista de
-    // un elemento no es una elección, y el cliente —que por definición es el de
-    // su primer pedido— no llegaba a saber que existen otras dos formas de pagar
-    // ni que las tendrá la próxima vez. Ahora se apagan y se explican, que es el
-    // mismo patrón de los chips de efectivo que no alcanzan el vuelto.
-    //
-    // El control negativo NO se debilita con el cambio: se refuerza. «No están»
-    // también daba verde si el bloque de pago entero dejaba de renderizarse;
-    // «están y no se pueden accionar» solo da verde si el guard de la 0171
-    // llegó de verdad a la pantalla.
-    await expect(page.getByRole('radio', { name: PAGO.prepago })).toBeChecked()
-    await expect(page.getByRole('radio', { name: PAGO.efectivo })).toBeDisabled()
-    await expect(page.getByRole('radio', { name: PAGO.yapeAlRecibir })).toBeDisabled()
+    // Y las tres formas de pagar se pueden accionar. Es el control que importa:
+    // «no está el aviso» también daría verde si el bloque de pago entero dejara
+    // de renderizarse; «los tres radios están y responden» solo da verde si la
+    // pantalla llegó de verdad a ofrecer la elección.
+    await expect(page.getByRole('radio', { name: PAGO.efectivo })).toBeEnabled()
+    await expect(page.getByRole('radio', { name: PAGO.yapeAlRecibir })).toBeEnabled()
+    await expect(page.getByRole('radio', { name: PAGO.prepago })).toBeEnabled()
   })
 })

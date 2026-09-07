@@ -213,6 +213,11 @@ export const MAP_LANDMARK_CATEGORIES = [
   'deporte',
   'recreacion',
   'gobierno',
+  // 0214. Van ANTES de `otro` porque este orden es el del desplegable del panel
+  // (`landmarks-sheet.tsx` recorre este array tal cual) y la bolsa de descarte
+  // tiene que quedarse la última.
+  'restaurante',
+  'hotel',
   'otro',
 ] as const
 export const MapLandmarkCategorySchema = z.enum(MAP_LANDMARK_CATEGORIES)

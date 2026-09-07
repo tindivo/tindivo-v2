@@ -203,6 +203,11 @@ export default function NegociosPage() {
             { key: 'blocked', label: 'Bloqueados', count: metrics.blocked },
             { key: 'with_gps', label: 'Con GPS', count: metrics.withGps },
             { key: 'no_gps', label: 'Sin GPS', count: metrics.noGps },
+            /* Excepción a check:ds — pestañas de filtro con censo, no botones.
+             Estas sí encajarían en `Segmented` (mismo `badge`, misma forma) y
+             conviene moverlas cuando alguien pueda mirar la pantalla: la app de
+             admin no tiene e2e ni sesión sembrada, así que el cambio no se puede
+             verificar desde aquí y no se hace a ciegas. */
           ].map((tab) => {
             const on = filterTab === tab.key
             return (
