@@ -32,7 +32,7 @@ export const ORDER_SELECT =
   'client_pays_with,change_to_give,' +
   'yape_amount,cash_amount,requires_validation,validation_reason_code,risk_flags,' +
   'driver_id,created_at,pending_acceptance_at,awaiting_payment_at,validating_at,' +
-  'waiting_driver_at,picked_up_at,ready_for_pickup_at,pickup_timing,' +
+  'waiting_driver_at,picked_up_at,ready_for_pickup_at,pickup_timing,tracking_link_sent_at,' +
   'delivered_at,cancelled_at,cancel_note,cancel_reason,updated_at,' +
   'tindivo_commission,commission_amount,delivery_fee_charged,' +
   'driver:drivers(full_name)'
@@ -98,6 +98,7 @@ export interface OrderRow {
   picked_up_at: string | null
   ready_for_pickup_at: string | null
   pickup_timing: string | null
+  tracking_link_sent_at: string | null
   delivered_at: string | null
   cancelled_at: string | null
   cancel_note: string | null
@@ -203,6 +204,14 @@ export interface OrderVM {
    * accion que el servidor va a rechazar.
    */
   canHandOver: boolean
+  /**
+   * Cuando la cajera ABRIO el aviso de WhatsApp del recojo (`hh:mm`), o `null`.
+   *
+   * No dice que el cliente lo recibiera: `wa.me` se abre fuera del panel y desde
+   * aqui no hay forma de saber si llego a pulsar enviar. La UI lo llama
+   * «Avisado» por eso, y no «Recibido». Ver 0221.
+   */
+  pickupNotifiedAt: string | null
   proofStatus: string | null
   proofUrl: string | null
   proofAttempt: number
@@ -671,6 +680,7 @@ export function toOrderVM(
         row.status,
       ),
     canHandOver: row.status === 'ready_for_pickup',
+    pickupNotifiedAt: fmtTime(row.tracking_link_sent_at),
     proofStatus: row.payment_proof_status,
     proofUrl: row.comprobante_prepago_url,
     proofAttempt: row.proof_attempt ?? 0,

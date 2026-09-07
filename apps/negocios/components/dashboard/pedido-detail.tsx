@@ -36,6 +36,8 @@ export interface DetailActions {
   onHandover: (paymentReal: 'paid_cash' | 'paid_yape') => void | Promise<void>
   /** RECOJO · nadie vino por la comida: cancela y deja el strike. */
   onPickupNoShow: () => void | Promise<void>
+  /** RECOJO · abre WhatsApp con el cliente. `null` si no hay número usable. */
+  onNotifyPickup: (() => void | Promise<void>) | null
   onCancel: (code: string, text: string) => void | Promise<void>
   /** Escala a Tindivo por WhatsApp. Recibe el pedido: también lo llama la
    *  tarjeta del tablero, donde no hay ningún detalle abierto. */
@@ -965,6 +967,34 @@ export function DetailScreen({
             </div>
           ) : (
             <div className="space-y-2">
+              {/* ── AVISAR AL CLIENTE, ANTES QUE LAS DOS SALIDAS ──
+                  El push del recojo listo (0220) solo alcanza a quien concedió
+                  el permiso de notificaciones y conserva una suscripción viva:
+                  en el piloto, una minoría. WhatsApp no depende de ningún
+                  permiso — el cliente ya verificó ese número por OTP para poder
+                  pedir.
+
+                  Va primero porque es lo que se hace ANTES: avisar, esperar, y
+                  solo después entregar o declarar el plantón. Y en gris, no en
+                  color: la acción que cierra el pedido sigue siendo la de
+                  abajo, y dos botones de color compiten por el mismo dedo.
+
+                  «Avisado» y no «Recibido»: `wa.me` se abre fuera del panel y
+                  desde aquí no se sabe si llegó a pulsar enviar. Se puede
+                  repetir las veces que haga falta — cada una pisa la marca. */}
+              {actions.onNotifyPickup && (
+                <button
+                  type="button"
+                  onClick={() => actions.onNotifyPickup?.()}
+                  disabled={busy}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-success/40 bg-success-soft px-5 py-2.5 text-[14px] font-semibold text-success transition-transform active:scale-[0.98] disabled:opacity-50"
+                >
+                  <Icon weight={500} name="chat" size={17} filled />
+                  {order.pickupNotifiedAt
+                    ? `Volver a avisar · avisado ${order.pickupNotifiedAt}`
+                    : 'Avisar por WhatsApp que está listo'}
+                </button>
+              )}
               {isPrepaid ? (
                 <button
                   type="button"

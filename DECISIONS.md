@@ -163,6 +163,33 @@ intermedias del delivery las escribe el motorizado, y en un recojo no hay:
 - `pickup_no_show` — nadie vino. Cancela con `cancel_reason = 'no_show'` y deja
   el strike (§8).
 
+**Cómo se entera el cliente, y por qué son DOS canales (`0221`).** Los dos
+momentos que deciden si el recojo funciona son «lo aceptaron» y «ya está listo».
+Los dos avisan por push (`send-push`, ramas `accept` y `ready`), y los dos tienen
+el mismo techo: el push solo llega a quien concedió el permiso de notificaciones
+y conserva una fila viva en `push_subscriptions` — en el piloto, una minoría.
+
+Por eso el segundo momento tiene además un botón **«Avisar por WhatsApp que está
+listo»** en el detalle del tablero: abre `wa.me` con el mensaje escrito y la
+cajera solo pulsa enviar. No depende de ningún permiso — el cliente ya verificó
+ese número por OTP para poder pedir.
+
+- El mensaje **se presenta** («soy La Florencia»): un número desconocido que te
+  manda a un sitio no se abre, se bloquea. Lleva el `short_id` para emparejar en
+  el mostrador, y el monto **solo si hay algo que cobrar** (en un prepago,
+  recordar la cifra invita a pagarla dos veces). **No promete plazos**: el
+  mostrador no autocancela nada y quien decide el plantón es ella.
+- Se sella en `tracking_link_sent_at`/`_by` — columnas que existían **sin
+  escritor desde la 0002**, diseñadas para exactamente esto. El botón dice
+  «avisado hh:mm» después, y **se puede repetir**: cada vez pisa la marca,
+  porque la pregunta es «¿cuándo fue la última vez?».
+- Dice **«Avisado» y no «Recibido»**: `wa.me` se abre fuera del panel y desde
+  ahí no se sabe si llegó a pulsar enviar, ni si el cliente lo leyó.
+
+En el primer momento (`accept`) el push de un recojo **no** dice «ya está en
+cocina» a secas: dice que se le avisará cuando pueda pasar. Sin eso, el cliente
+se planta en el mostrador veinte minutos antes de tiempo.
+
 **Una bolsa en el mostrador NO se autocancela.** Hay cuatro bloques de
 autocancelación en `cancel_expired_prepay_orders` y deliberadamente no hay un
 quinto: la comida ya está hecha, y borrarla de la pantalla sin que nadie mire es

@@ -52,6 +52,7 @@ function row(overrides: Partial<OrderRow> = {}): OrderRow {
     picked_up_at: null,
     ready_for_pickup_at: null,
     pickup_timing: null,
+    tracking_link_sent_at: null,
     delivered_at: null,
     cancelled_at: null,
     cancel_note: null,

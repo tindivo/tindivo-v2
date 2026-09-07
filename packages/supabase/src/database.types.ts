@@ -3008,6 +3008,10 @@ export type Database = {
         Returns: Json
       }
       mark_appeal_in_review: { Args: { p_report_id: string }; Returns: Json }
+      mark_pickup_notified: {
+        Args: { p_business_user_id: string; p_order_id: string }
+        Returns: Json
+      }
       order_cash_owed: {
         Args: { o: Database["public"]["Tables"]["orders"]["Row"] }
         Returns: number

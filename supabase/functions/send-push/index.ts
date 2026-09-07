@@ -486,11 +486,25 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
         )
       } else {
         const prep = prepPhrase(o.prep_time_minutes)
-        push(
-          cust,
-          `${bizName} aceptó tu pedido`,
-          prep ? `Ya está en cocina · ${prep}` : 'Ya está en cocina',
-        )
+        /*
+         * EN UN RECOJO, «ya está en cocina» deja sin decir lo único que el
+         * cliente necesita saber: si ya puede ir. Y la respuesta es NO —
+         * todavía no—, así que decírselo aquí es lo que evita que se plante en
+         * el mostrador veinte minutos antes de tiempo, ocupe el sitio y se le
+         * acabe la paciencia contra un reloj que ni siquiera había empezado.
+         *
+         * El aviso de «ahora sí» llega aparte, cuando la cajera marca la bolsa
+         * lista (rama `ready` de más abajo).
+         */
+        const enCocina =
+          o.delivery_method === 'pickup'
+            ? prep
+              ? `${prep} · te avisamos cuando puedas pasar a recogerlo`
+              : 'Te avisamos cuando puedas pasar a recogerlo'
+            : prep
+              ? `Ya está en cocina · ${prep}`
+              : 'Ya está en cocina'
+        push(cust, `${bizName} aceptó tu pedido`, enCocina)
       }
       // El negocio acaba de meterlo en cocina: si va a tardar, los motorizados
       // lo saben desde ya en vez de enterarse cuando la comida ya está fría.

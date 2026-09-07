@@ -600,6 +600,127 @@ describe('0219/0220 · el recojo en el local', () => {
     })
   })
 
+  // ── Avisar al cliente que ya puede venir (0221) ──────────────────────────
+
+  describe('el aviso de WhatsApp', () => {
+    async function recojoEnMostrador(): Promise<{ id: string; cliente: Cliente }> {
+      const cliente = await crearCliente()
+      const { data, error } = await pedirRecojo(cliente, 'now')
+      if (error) throw new Error(error.message)
+      const creado = registrar(data)
+      await avanzar(creado.id, bizUserId, 'business', 'accept', { prepTimeMinutes: 20 })
+      await avanzar(creado.id, bizUserId, 'business', 'ready')
+      return { id: creado.id, cliente }
+    }
+
+    async function avisar(orderId: string, actorUserId: string) {
+      return db.rpc('mark_pickup_notified', {
+        p_order_id: orderId,
+        p_business_user_id: actorUserId,
+      })
+    }
+
+    /**
+     * SELLA SOBRE COLUMNAS QUE YA EXISTÍAN SIN ESCRITOR desde la 0002
+     * (`tracking_link_sent_at`/`_by`, 0 de 4 filas con valor). No hubo columna
+     * nueva: se diseñaron para exactamente esto.
+     */
+    it('sella cuándo se abrió el aviso, y quién lo abrió', async () => {
+      const { id } = await recojoEnMostrador()
+
+      const { error } = await avisar(id, bizUserId)
+      expect(error, error?.message).toBeNull()
+
+      const { data: fila } = await db
+        .from('orders')
+        .select('tracking_link_sent_at, tracking_link_sent_by')
+        .eq('id', id)
+        .single()
+      expect(fila?.tracking_link_sent_at).not.toBeNull()
+      expect(fila?.tracking_link_sent_by).toBe(bizUserId)
+    })
+
+    /**
+     * REPETIBLE A PROPÓSITO, Y PISANDO LA MARCA. Si la cajera insiste veinte
+     * minutos después, lo que quiere ver en la tarjeta es ESA insistencia, no
+     * el primer intento: el sello responde «¿cuándo fue la última vez?».
+     */
+    it('volver a avisar mueve la marca hacia adelante', async () => {
+      const { id } = await recojoEnMostrador()
+      await avisar(id, bizUserId)
+      const { data: primera } = await db
+        .from('orders')
+        .select('tracking_link_sent_at')
+        .eq('id', id)
+        .single()
+
+      await new Promise((r) => setTimeout(r, 50))
+      const { error } = await avisar(id, bizUserId)
+      expect(error, 'insistir no puede estar prohibido').toBeNull()
+
+      const { data: segunda } = await db
+        .from('orders')
+        .select('tracking_link_sent_at')
+        .eq('id', id)
+        .single()
+      expect(Date.parse(segunda?.tracking_link_sent_at as string)).toBeGreaterThan(
+        Date.parse(primera?.tracking_link_sent_at as string),
+      )
+    })
+
+    /**
+     * AVISAR ANTES DE TIEMPO ES PEOR QUE NO AVISAR: manda al cliente a esperar
+     * de pie en el mostrador, ocupando el sitio, contra un reloj que todavía no
+     * había empezado.
+     */
+    it('no deja avisar de un pedido que sigue en cocina', async () => {
+      const cliente = await crearCliente()
+      const { data, error } = await pedirRecojo(cliente, 'now')
+      if (error) throw new Error(error.message)
+      const creado = registrar(data)
+      await avanzar(creado.id, bizUserId, 'business', 'accept', { prepTimeMinutes: 20 })
+
+      const res = await avisar(creado.id, bizUserId)
+
+      expect(res.error?.message).toContain('todavia no esta listo')
+    })
+
+    it('no deja avisar de un delivery: no hay mostrador al que venir', async () => {
+      const { data: pedido, error: insErr } = await db
+        .from('orders')
+        .insert({
+          business_id: BUSINESS_ID,
+          delivery_method: 'delivery',
+          payment_intent: 'pending_cash',
+          customer_phone: telefonoNuevo(),
+          order_amount: 20,
+          delivery_fee: 2,
+          status: 'waiting_driver',
+        })
+        .select('id')
+        .single()
+      if (insErr) throw new Error(insErr.message)
+      pedidosCreados.push(pedido.id)
+
+      const res = await avisar(pedido.id, bizUserId)
+
+      expect(res.error?.message).toContain('solo para pedidos de recojo')
+    })
+
+    /**
+     * `orders` solo tiene policy de escritura para admin, así que el sello pasa
+     * por esta función — y la función comprueba el dueño. Sin esta guarda, un
+     * negocio podría sellar el pedido de otro.
+     */
+    it('un negocio no puede sellar el pedido de otro', async () => {
+      const { id } = await recojoEnMostrador()
+
+      const res = await avisar(id, crypto.randomUUID())
+
+      expect(res.error?.message).toContain('No autorizado')
+    })
+  })
+
   // ── El esquema no deja mentir ────────────────────────────────────────────
 
   describe('el CHECK de `pickup_timing`', () => {

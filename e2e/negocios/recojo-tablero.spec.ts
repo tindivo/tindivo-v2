@@ -163,6 +163,67 @@ test.describe('0219/0220 · el recojo en el tablero de la cajera', () => {
   })
 
   /**
+   * EL AVISO QUE NO DEPENDE DE UN PERMISO. (0221)
+   *
+   * El push del recojo listo solo alcanza a quien concedió las notificaciones y
+   * conserva una suscripción viva: en el piloto, una minoría. WhatsApp no
+   * depende de nada de eso — el cliente ya verificó ese número por OTP para
+   * poder pedir.
+   *
+   * Se afirma sobre el `href`, que es el mensaje entero: si alguien lo cambia
+   * por descuido, el rojo dice exactamente qué le iba a llegar al cliente.
+   */
+  test('el aviso de WhatsApp lleva el chat del cliente y el mensaje escrito', async ({ page }) => {
+    const recojo = await sembrarRecojo('ready_for_pickup', 'now')
+    await abrirTablero(page, recojo.shortId)
+    await visible(page, `#${recojo.shortId}`).first().click()
+
+    const boton = page.getByRole('button', { name: /Avisar por WhatsApp/ })
+    await expect(boton).toBeVisible()
+
+    // `window.open` a `wa.me` abre una pestaña que no lleva a ninguna parte en
+    // e2e: se intercepta para leer la URL sin salir del navegador.
+    const url = await page.evaluate(() => {
+      let capturada = ''
+      // biome-ignore lint/suspicious/noExplicitAny: se pisa `open` a propósito
+      ;(window as any).open = (u: string) => {
+        capturada = u
+        return null
+      }
+      // biome-ignore lint/suspicious/noExplicitAny: puente para leerla después
+      ;(window as any).__waUrl = () => capturada
+      return ''
+    })
+    expect(url).toBe('')
+
+    await boton.click()
+    // biome-ignore lint/suspicious/noExplicitAny: el puente de arriba
+    const abierta = await page.evaluate(() => (window as any).__waUrl())
+
+    expect(abierta, 'tiene que abrir el chat del CLIENTE, no el de soporte').toContain('wa.me/51')
+    const texto = decodeURIComponent(new URL(abierta).searchParams.get('text') ?? '')
+    expect(texto, 'se presenta antes de pedir nada').toContain('soy La Florencia E2E')
+    expect(texto, 'lleva el código para emparejarlo en el mostrador').toContain(
+      `#${recojo.shortId}`,
+    )
+    expect(texto).toContain('ya está listo')
+    // Contraentrega: dice cuánto trae. (En prepago no lo diría — ver los tests
+    // de `pickupReadyMessage`.)
+    expect(texto).toContain('S/ 24.00')
+
+    // Y el panel se queda sabiendo que ya avisó, para no repetirlo a ciegas.
+    await expect(page.getByRole('button', { name: /avisado \d{2}:\d{2}/ })).toBeVisible({
+      timeout: 15_000,
+    })
+    const { data } = await db
+      .from('orders')
+      .select('tracking_link_sent_at')
+      .eq('id', recojo.id)
+      .single()
+    expect(data?.tracking_link_sent_at).not.toBeNull()
+  })
+
+  /**
    * ENTREGAR EN EL MOSTRADOR CIERRA EL PEDIDO Y LO COBRA. Es la aserción que
    * cuida el dinero: antes de la 0220 un recojo entregado pasaba por
    * `generate_delivery_charges` con `commission_amount` NULL y no generaba

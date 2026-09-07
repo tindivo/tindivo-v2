@@ -114,6 +114,7 @@ export function HistorialList() {
             // compartido y el contrato se cumple entero o no se cumple.
             onHandover: () => {},
             onPickupNoShow: () => {},
+            onNotifyPickup: null,
             onReady: () => {},
             onCancel: () => {},
           }}

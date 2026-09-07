@@ -4,7 +4,13 @@ import { ApiError } from '@tindivo/api-client'
 import { useCallback, useState } from 'react'
 import { api } from '@/lib/api'
 import type { OrderVM } from '@/lib/orders/view-model'
-import { normalizeSupportPhone, supportWhatsappUrl, urgentDriverMessage } from '@/lib/support'
+import {
+  customerWhatsappDigits,
+  normalizeSupportPhone,
+  pickupReadyMessage,
+  supportWhatsappUrl,
+  urgentDriverMessage,
+} from '@/lib/support'
 
 export interface OrderActionsDeps {
   selected: OrderVM | null
@@ -40,6 +46,14 @@ export interface OrderActions {
    * contador que tendria que envejecer a la vez que el de la base.
    */
   onPickupNoShow: () => Promise<void>
+  /**
+   * RECOJO · avisar al cliente por WhatsApp que su pedido ya esta listo (0221).
+   *
+   * `null` cuando el pedido no tiene un movil peruano al que escribir: la UI
+   * ensena el estado alternativo en vez de un boton que abre un chat con nadie.
+   * Mismo criterio que `onCallDriver` con el numero de soporte.
+   */
+  onNotifyPickup: (() => Promise<void>) | null
   onCancel: (code: string, text: string) => Promise<void>
   onCallDriver?: (o: OrderVM) => void
   /** La cajera corrigio el pedido (0190). */
@@ -189,6 +203,45 @@ export function useOrderActions({
         await refetchOrders()
       })
     },
+    /**
+     * EL CHAT SE ABRE PRIMERO, Y EL SELLO VA DESPUES.
+     *
+     * `window.open` tiene que salir del gesto del dedo o el navegador lo trata
+     * como popup y lo bloquea; un `await` por delante rompe esa cadena. Asi que
+     * primero se abre WhatsApp —que es lo que la cajera fue a hacer— y luego se
+     * sella, sin `run()`: si el sello falla, ella ya tiene el chat delante y un
+     * error rojo en la ficha solo la confundiria sobre algo que si funciono.
+     * Lo unico que se pierde es la marca «Avisado hh:mm».
+     */
+    onNotifyPickup: (() => {
+      if (!selected) return null
+      const digits = customerWhatsappDigits(selected.phone)
+      if (!digits) return null
+      const id = selected.rowId
+      return async () => {
+        window.open(
+          supportWhatsappUrl(
+            digits,
+            pickupReadyMessage({
+              bizName,
+              shortId: selected.id,
+              customerName: selected.customer,
+              // Un prepago ya esta pagado: recordarle el monto es invitarlo a
+              // pagarlo dos veces.
+              totalACobrar: selected.payment === 'prepaid' ? null : selected.total,
+            }),
+          ),
+          '_blank',
+          'noopener,noreferrer',
+        )
+        try {
+          await post(`/business/orders/${id}/notify-pickup`, {})
+          await refetchOrders()
+        } catch {
+          // El aviso ya salio. El sello es contabilidad, no el trabajo.
+        }
+      }
+    })(),
     onReady: async () => {
       await run(async () => {
         if (!selected) return

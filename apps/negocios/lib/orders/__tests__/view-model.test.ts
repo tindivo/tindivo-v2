@@ -32,6 +32,7 @@ function mockOrderRow(overrides: Partial<OrderRow> = {}): OrderRow {
     picked_up_at: null,
     ready_for_pickup_at: null,
     pickup_timing: null,
+    tracking_link_sent_at: null,
     driver_id: null,
     driver: null,
     created_at: '2026-08-05T15:00:00Z',
