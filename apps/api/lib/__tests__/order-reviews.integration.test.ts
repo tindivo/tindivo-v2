@@ -411,6 +411,100 @@ describe('get_pending_review — por cuál preguntar', () => {
 })
 
 describe('RLS — quién ve las reseñas', () => {
+  it('el negocio lee la nota y las etiquetas de las suyas', async () => {
+    const orderId = await sembrarPedido(cliente.id)
+    await navegador.rpc('create_order_review', {
+      p_order_id: orderId,
+      p_rating: 2,
+      p_tags: ['demoro'],
+      p_comment: 'esto no lo puede leer el negocio',
+    })
+
+    const duenoNavegador = createClient('http://127.0.0.1:54321', LOCAL_ANON_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    })
+    const { error: loginErr } = await duenoNavegador.auth.signInWithPassword({
+      email: 'negocio@e2e.local',
+      password: 'e2e-password-12345',
+    })
+    expect(loginErr).toBeNull()
+
+    const { data, error } = await duenoNavegador
+      .from('order_reviews')
+      .select('order_id, rating, tags')
+      .eq('order_id', orderId)
+      .single()
+
+    expect(error).toBeNull()
+    expect(data?.rating).toBe(2)
+    expect(data?.tags).toEqual(['demoro'])
+  })
+
+  it('el negocio NO puede pedir el comentario, y lo impide la base', async () => {
+    // La hoja le promete al cliente que lo que escriba lo lee solo el equipo de
+    // Tindivo. Si eso viviera en el `select` del panel, bastaría abrir la
+    // consola del navegador para romperlo — y en un pueblo, con el telefono del
+    // pedido delante, un parrafo duro acaba en una llamada al cliente.
+    // Lo hace cumplir el GRANT por columna de la 0217, no esta pantalla. (0217)
+    const orderId = await sembrarPedido(cliente.id)
+    await navegador.rpc('create_order_review', {
+      p_order_id: orderId,
+      p_rating: 1,
+      p_comment: 'secreto',
+    })
+
+    const duenoNavegador = createClient('http://127.0.0.1:54321', LOCAL_ANON_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    })
+    await duenoNavegador.auth.signInWithPassword({
+      email: 'negocio@e2e.local',
+      password: 'e2e-password-12345',
+    })
+
+    const explicito = await duenoNavegador
+      .from('order_reviews')
+      .select('comment')
+      .eq('order_id', orderId)
+    expect(explicito.error).not.toBeNull()
+
+    // Y tampoco por la puerta de atras: `select('*')` no puede colarlo.
+    const todo = await duenoNavegador.from('order_reviews').select('*').eq('order_id', orderId)
+    const filas = (todo.data ?? []) as Record<string, unknown>[]
+    expect(todo.error !== null || filas.every((f) => !('comment' in f))).toBe(true)
+  })
+
+  it('ni el propio cliente relee su comentario: el grant es del rol, no de la pantalla', async () => {
+    // Aceptado a proposito: en Fase A no hay pantalla donde releer la resena.
+    // El dia que la haya, se abre con una vista o una RPC que devuelva solo lo
+    // suyo — no ensanchando el grant de `authenticated`.
+    const orderId = await sembrarPedido(cliente.id)
+    await navegador.rpc('create_order_review', {
+      p_order_id: orderId,
+      p_rating: 5,
+      p_comment: 'mio',
+    })
+    const { error } = await navegador
+      .from('order_reviews')
+      .select('comment')
+      .eq('order_id', orderId)
+    expect(error).not.toBeNull()
+  })
+
+  it('el service-role sí lee el texto: es el camino del admin', async () => {
+    const orderId = await sembrarPedido(cliente.id)
+    await navegador.rpc('create_order_review', {
+      p_order_id: orderId,
+      p_rating: 3,
+      p_comment: 'esto lo lee un humano de Tindivo',
+    })
+    const { data } = await db
+      .from('order_reviews')
+      .select('comment')
+      .eq('order_id', orderId)
+      .single()
+    expect(data?.comment).toBe('esto lo lee un humano de Tindivo')
+  })
+
   it('el cliente lee la suya y no la de otro', async () => {
     const otro = await crearCliente()
     const suNavegador = await comoCliente(otro)

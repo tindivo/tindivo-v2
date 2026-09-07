@@ -74,9 +74,15 @@ export function ReviewSheet({
           <h2 className="font-display font-bold text-[22px] leading-tight tracking-tight">
             {titulo}
           </h2>
+          {/* Lo que frena a alguien de poner un 2 no es que el negocio vea su
+              nota: es que lea su párrafo. Y no lo lee — lo impide un GRANT por
+              columna, no este texto (0217). Decirlo así quita el frío donde
+              estaba sin prometer un anonimato que no se puede sostener: el
+              pedido lleva el teléfono del cliente y el negocio lo tiene
+              delante. */}
           <p className="text-body text-ink-muted leading-relaxed">
-            Solo lo ve {pendiente.businessName} y el equipo de Tindivo. Nos ayuda a saber qué
-            arreglar.
+            Tu nota la ve {pendiente.businessName}. Lo que escribas lo lee solo el equipo de
+            Tindivo.
           </p>
         </div>
 
