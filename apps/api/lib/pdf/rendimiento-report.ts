@@ -2,14 +2,20 @@ import {
   areaPath,
   bandBars,
   bestWeekdayByTicket,
+  buildGoal,
   buildInsights,
+  buildMood,
   type ChartBox,
   computeDelta,
+  computePerNightDelta,
   type Delta,
+  fmtOrders,
   fmtPct,
   linePath,
   niceMax,
   type PerformancePayload,
+  perNight,
+  plural,
   projectSeries,
   stackedPair,
   WEEKDAY_DISPLAY_ORDER,
@@ -44,7 +50,15 @@ function dayLabel(iso: string): string {
 }
 
 /** Insignia de variación. Sin periodo previo se dice, no se inventa un número. */
-function deltaChip(delta: Delta, upIsGood = true): string {
+/**
+ * `label` rotula QUÉ mide el porcentaje cuando no mide lo mismo que la cifra
+ * que tiene encima. Desde la 0222 es el caso normal: arriba va el total del
+ * periodo y la variación se calcula por noche trabajada. Sin el rótulo, un
+ * «▲ 11%» junto a un total se lee como que la facturación subió un 11%, y no
+ * es lo que se está diciendo.
+ */
+function deltaChip(delta: Delta, upIsGood = true, label?: string): string {
+  const suf = label ? ` ${esc(label)}` : ''
   if (!delta.comparable || delta.pct === null) {
     return `<span class="chip chip-flat">Sin periodo previo</span>`
   }
@@ -53,7 +67,7 @@ function deltaChip(delta: Delta, upIsGood = true): string {
   }
   const subio = delta.direction === 'up'
   const bueno = subio === upIsGood
-  return `<span class="chip ${bueno ? 'chip-good' : 'chip-bad'}">${subio ? '▲' : '▼'} ${fmtPct(delta.pct)}</span>`
+  return `<span class="chip ${bueno ? 'chip-good' : 'chip-bad'}">${subio ? '▲' : '▼'} ${fmtPct(delta.pct)}${suf}</span>`
 }
 
 // ── Gráficos (SVG estático, misma geometría que el panel) ────────────────────
@@ -176,10 +190,21 @@ function buildHtml({ businessName, rangeLabel, data }: ReportParams): string {
     timeZone: 'America/Lima',
   }).format(new Date())
 
-  const revDelta = computeDelta(data.current.revenue, data.previous.revenue)
+  // Por noche trabajada, igual que el panel: dos ventanas del mismo largo casi
+  // nunca han trabajado las mismas noches, y comparar sus totales puede
+  // invertir el signo de la realidad. El ticket ya es una media por pedido, así
+  // que ese se compara tal cual.
+  const revDelta = computePerNightDelta(
+    data.current.revenue,
+    data.current.nights,
+    data.previous.revenue,
+    data.previous.nights,
+  )
   const ticketDelta = computeDelta(data.current.ticket, data.previous.ticket)
   const netIncome = Math.max(0, data.current.revenue - data.bill.commission)
   const insights = buildInsights(data)
+  const mood = buildMood(data)
+  const goal = buildGoal(data)
   const cust = data.customers
   const tasaRetorno = cust.total > 0 ? (cust.returning / cust.total) * 100 : 0
 
@@ -228,6 +253,22 @@ function buildHtml({ businessName, rangeLabel, data }: ReportParams): string {
   .legend{display:flex;gap:14px;margin-top:8px;font-size:10.5px}
   .legend span.k{display:inline-block;width:9px;height:9px;border-radius:999px;margin-right:5px}
   .foot{margin-top:10px;padding-top:7px;border-top:1px solid #f1f1ef;font-size:8.5px;color:#a8a29e;display:flex;justify-content:space-between}
+  /* El ánimo y la meta. El PDF es lo que el negocio archiva y a veces enseña a
+     terceros, así que dice exactamente lo mismo que la pantalla: si el papel
+     felicitara donde el panel preocupa, la próxima vez no se creería ninguno. */
+  .mood{display:flex;gap:10px;align-items:flex-start;border:1px solid;border-radius:12px;padding:10px 13px;margin-bottom:10px}
+  .mood-emoji{font-size:26px;line-height:1}
+  .mood-t{font-size:13px;font-weight:800;margin:0;line-height:1.3}
+  .mood-b{font-size:10.5px;color:#57534e;line-height:1.45;margin:3px 0 0}
+  .mood-celebrating{background:#f0fdf4;border-color:#bbf7d0}
+  .mood-good{background:#f7fdf9;border-color:#d5f2e0}
+  .mood-steady{background:#faf6f1;border-color:#eeece9}
+  .mood-soft{background:#fffbeb;border-color:#fde68a}
+  .mood-worried{background:#fff7ed;border-color:#fed7aa}
+  .goal-head{display:flex;justify-content:space-between;align-items:baseline;margin-top:7px}
+  .goal-n{font-size:19px;font-weight:800;letter-spacing:-.02em}
+  .goal-track{height:8px;border-radius:999px;background:#f1f1ef;overflow:hidden;margin-top:6px}
+  .goal-fill{height:100%;border-radius:999px}
 </style></head><body>
 
 <div class="header">
@@ -242,11 +283,19 @@ function buildHtml({ businessName, rangeLabel, data }: ReportParams): string {
   </div>
 </div>
 
+<div class="mood mood-${mood.level}">
+  <span class="mood-emoji">${mood.emoji}</span>
+  <div>
+    <p class="mood-t">${esc(mood.headline)}</p>
+    <p class="mood-b">${esc(mood.body)}</p>
+  </div>
+</div>
+
 <div class="kpis">
   <div class="kpi">
     <div class="kpi-label">Facturación en comida</div>
     <div class="kpi-value">${soles(data.current.revenue)}</div>
-    <div class="kpi-foot">${deltaChip(revDelta)}<span class="small muted">${data.current.delivered} ${data.current.delivered === 1 ? 'pedido' : 'pedidos'}</span></div>
+    <div class="kpi-foot">${deltaChip(revDelta, true, 'por noche')}<span class="small muted">${data.current.delivered} ${plural(data.current.delivered, 'pedido', 'pedidos')} en ${data.current.nights} ${plural(data.current.nights, 'noche', 'noches')}</span></div>
   </div>
   <div class="kpi">
     <div class="kpi-label">Ticket promedio</div>
@@ -269,6 +318,32 @@ ${
         ${trendSvg(data.daily)}
       </div>`
     : ''
+}
+
+${
+  goal.state === 'noBaseline'
+    ? ''
+    : `<div class="card">
+  <h2>Tu meta de ${data.period.days} días</h2>
+  <p class="sub">Tu propio récord, no el de nadie más</p>
+  <div class="goal-head">
+    <span class="goal-n">${goal.orders} <span class="small muted" style="font-weight:400">de ${goal.target} ${plural(goal.target, 'pedido', 'pedidos')}</span></span>
+    <span class="small muted">${esc(
+      goal.missing > 0
+        ? `Te faltan ${goal.missing} ${plural(goal.missing, 'pedido', 'pedidos')}`
+        : goal.state === 'record'
+          ? 'Récord batido'
+          : 'Récord igualado',
+    )}</span>
+  </div>
+  <div class="goal-track"><div class="goal-fill" style="width:${Math.max(2, goal.progress * 100)}%;background:${goal.missing > 0 ? '#f97316' : '#16a34a'}"></div></div>
+  <p class="small muted" style="margin:6px 0 0">Tu mejor racha de ${data.period.days} días ${plural(goal.target, 'fue', 'fueron')} ${goal.target} ${plural(goal.target, 'pedido', 'pedidos')}, del ${esc(goal.window?.start ?? '')} al ${esc(goal.window?.end ?? '')}.</p>
+  ${
+    data.town.businesses >= 3 && data.town.ordersPerNight > 0 && data.current.nights > 0
+      ? `<p class="small muted" style="margin:4px 0 0">En San Jacinto el local típico hace ${fmtOrders(data.town.ordersPerNight)} pedidos por noche; tú vas en ${fmtOrders(perNight(data.current.delivered, data.current.nights))}.</p>`
+      : ''
+  }
+</div>`
 }
 
 <div class="card">

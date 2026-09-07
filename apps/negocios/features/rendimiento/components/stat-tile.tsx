@@ -15,6 +15,7 @@ export function StatTile({
   value,
   sub,
   delta,
+  deltaLabel,
   upIsGood = true,
   tone = 'neutral',
 }: {
@@ -22,6 +23,17 @@ export function StatTile({
   value: string
   sub?: string
   delta?: Delta
+  /**
+   * Qué mide el porcentaje, cuando NO mide lo mismo que la cifra grande.
+   *
+   * Es el caso normal desde la 0222: arriba va el total del periodo («cuánto
+   * facturé»), pero la variación se calcula POR NOCHE TRABAJADA, porque dos
+   * ventanas casi nunca han trabajado las mismas noches y comparar sus totales
+   * puede invertir el signo de la realidad. Sin este rótulo el badge diría
+   * «▲ 11%» al lado de un total y el dueño leería que su facturación subió un
+   * 11%, que no es lo que se le está diciendo.
+   */
+  deltaLabel?: string
   /** En la factura de Tindivo, subir NO es bueno. */
   upIsGood?: boolean
   tone?: 'neutral' | 'positive'
@@ -41,14 +53,22 @@ export function StatTile({
         {value}
       </span>
       <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
-        {delta && <DeltaBadge delta={delta} upIsGood={upIsGood} />}
+        {delta && <DeltaBadge delta={delta} upIsGood={upIsGood} label={deltaLabel} />}
         {sub && <span className="text-[11px] text-ink-muted">{sub}</span>}
       </div>
     </div>
   )
 }
 
-function DeltaBadge({ delta, upIsGood }: { delta: Delta; upIsGood: boolean }) {
+function DeltaBadge({
+  delta,
+  upIsGood,
+  label,
+}: {
+  delta: Delta
+  upIsGood: boolean
+  label?: string
+}) {
   if (!delta.comparable || delta.pct === null) {
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-0.5 text-[11px] font-semibold text-ink-muted">
@@ -73,6 +93,7 @@ function DeltaBadge({ delta, upIsGood }: { delta: Delta; upIsGood: boolean }) {
     >
       <Icon name={subio ? 'arrow_upward' : 'arrow_downward'} size={12} />
       {fmtPct(delta.pct)}
+      {label && <span className="font-semibold opacity-80">{label}</span>}
     </span>
   )
 }

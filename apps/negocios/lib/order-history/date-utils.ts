@@ -35,13 +35,50 @@ export function getLimaDate(d: Date = new Date()): string {
   return `${y}-${m}-${day}`
 }
 
+/**
+ * Rangos móviles que terminan AYER en vez de hoy.
+ *
+ * Lo pide «Rendimiento» y NO lo quieren ni Historial ni Reseñas, por eso es una
+ * opción y no el comportamiento por defecto: en una lista de pedidos o de
+ * reseñas, esconder las de hoy es una pérdida sin ninguna contrapartida.
+ *
+ * En Rendimiento sí la hay. Los locales de San Jacinto abren de noche, así que
+ * a media tarde la jornada en curso está vacía por definición: si «7 días»
+ * llega hasta hoy, el rango son seis noches vividas y una vacía, comparadas
+ * contra siete completas. Ese −1/7 no dice nada del negocio. En prod
+ * (2026-09-07) el local más grande había SUBIDO un 11% por noche y el panel le
+ * pintaba una flecha roja de −3.3% exactamente por esto.
+ *
+ * La jornada en curso no se pierde: viaja aparte (`tonight`) y el panel la
+ * enseña en su propia tarjeta, donde no contamina ninguna media.
+ *
+ * Solo afecta a los rangos MÓVILES. `today`, `this_week` y `this_month`
+ * significan literalmente «lo que va de», y recortarles el día en curso sería
+ * contradecir su nombre.
+ */
+export interface PresetRangeOptions {
+  excludeToday?: boolean
+}
+
 /** Devuelve el rango de fechas { start: 'YYYY-MM-DD', end: 'YYYY-MM-DD' } para un preset. */
-export function getPresetRange(preset: Exclude<DatePreset, 'custom'>): {
+export function getPresetRange(
+  preset: Exclude<DatePreset, 'custom'>,
+  options: PresetRangeOptions = {},
+): {
   start: string
   end: string
 } {
   const todayStr = getLimaDate()
   const todayDate = new Date(`${todayStr}T12:00:00-05:00`)
+  const shift = options.excludeToday ? 1 : 0
+
+  function rolling(days: number): { start: string; end: string } {
+    const end = new Date(todayDate)
+    end.setDate(end.getDate() - shift)
+    const start = new Date(end)
+    start.setDate(start.getDate() - (days - 1))
+    return { start: getLimaDate(start), end: getLimaDate(end) }
+  }
 
   switch (preset) {
     case 'today':
@@ -64,17 +101,11 @@ export function getPresetRange(preset: Exclude<DatePreset, 'custom'>): {
       return { start: getLimaDate(monday), end: todayStr }
     }
 
-    case 'last_7_days': {
-      const d = new Date(todayDate)
-      d.setDate(d.getDate() - 6)
-      return { start: getLimaDate(d), end: todayStr }
-    }
+    case 'last_7_days':
+      return rolling(7)
 
-    case 'last_15_days': {
-      const d = new Date(todayDate)
-      d.setDate(d.getDate() - 14)
-      return { start: getLimaDate(d), end: todayStr }
-    }
+    case 'last_15_days':
+      return rolling(15)
 
     case 'this_month': {
       const startMonth = `${todayStr.slice(0, 7)}-01`
