@@ -3460,6 +3460,8 @@ export const Constants = {
         "deporte",
         "recreacion",
         "gobierno",
+        "restaurante",
+        "hotel",
         "otro",
       ],
       order_source: ["customer_pwa", "business_manual"],
