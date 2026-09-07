@@ -1649,6 +1649,104 @@ export type Database = {
           },
         ]
       }
+      order_review_dismissals: {
+        Row: {
+          customer_user_id: string
+          dismissed_at: string
+          order_id: string
+        }
+        Insert: {
+          customer_user_id: string
+          dismissed_at?: string
+          order_id: string
+        }
+        Update: {
+          customer_user_id?: string
+          dismissed_at?: string
+          order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_review_dismissals_customer_user_id_fkey"
+            columns: ["customer_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_review_dismissals_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_reviews: {
+        Row: {
+          business_id: string
+          comment: string | null
+          created_at: string
+          customer_user_id: string | null
+          driver_id: string | null
+          id: string
+          order_id: string
+          rating: number
+          tags: string[]
+        }
+        Insert: {
+          business_id: string
+          comment?: string | null
+          created_at?: string
+          customer_user_id?: string | null
+          driver_id?: string | null
+          id?: string
+          order_id: string
+          rating: number
+          tags?: string[]
+        }
+        Update: {
+          business_id?: string
+          comment?: string | null
+          created_at?: string
+          customer_user_id?: string | null
+          driver_id?: string | null
+          id?: string
+          order_id?: string
+          rating?: number
+          tags?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_reviews_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_reviews_customer_user_id_fkey"
+            columns: ["customer_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_reviews_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_reviews_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_status_history: {
         Row: {
           changed_at: string
@@ -2762,6 +2860,15 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_order_review: {
+        Args: {
+          p_comment?: string
+          p_order_id: string
+          p_rating: number
+          p_tags?: string[]
+        }
+        Returns: Json
+      }
       current_business_id: { Args: never; Returns: string }
       current_customer_contraentrega_outcome: {
         Args: {
@@ -2871,6 +2978,7 @@ export type Database = {
         Args: { p_custom_time?: string }
         Returns: Json
       }
+      get_pending_review: { Args: never; Returns: Json }
       get_tracking: { Args: { p_short_id: string }; Returns: Json }
       is_published_business: {
         Args: { p_business_id: string }
