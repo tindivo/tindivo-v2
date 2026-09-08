@@ -1,6 +1,6 @@
 # 05 · API REST
 
-> Endpoints completos del API único `api.tindivo.com`. Convenciones, autenticación, idempotencia, CORS, errores. Agrupados por consumidor (público, customer, business, driver, admin, internal). Schemas referenciados desde `packages/contracts`.
+> Endpoints completos del API único `apiv2.tindivo.com`. Convenciones, autenticación, idempotencia, CORS, errores. Agrupados por consumidor (público, customer, business, driver, admin, internal). Schemas referenciados desde `packages/contracts`.
 
 ---
 
@@ -25,7 +25,20 @@
 
 ## 1. Convenciones generales
 
-- **Base URL**: `https://api.tindivo.com/api/v1/`
+- **Base URL**: `https://apiv2.tindivo.com/api/v1/`
+
+> **OJO CON EL DOMINIO.** La API de producción del v2 es **`apiv2.tindivo.com`**,
+> no `api.tindivo.com`. Esa segunda es la del **v1 legacy**, y sigue en pie: no
+> da error, contesta 200 en la raíz y devuelve un 404 de Next con aspecto normal
+> a cualquier ruta del v2. O sea que sondearla parece decir «esta ruta no está
+> desplegada» cuando lo que pasa es que estás llamando al backend equivocado.
+>
+> Para distinguirlas de un vistazo: `api.tindivo.com/` sirve una landing («Tindivo
+> API», el `app/page.tsx` del v1); `apiv2.tindivo.com/` devuelve 404 porque el
+> `apps/api` del v2 es API pura y no tiene página. Y la fuente de verdad no es
+> este documento: es la URL que llevan dentro los chunks de cualquier frontend
+> desplegado (`grep -oE 'https?://[^\"]+/api/v1'`).
+
 - **Content-Type**: `application/json` (excepto upload de archivos: `multipart/form-data`).
 - **Timestamps**: ISO 8601 UTC (e.g., `2026-05-23T18:30:00.000Z`). El cliente convierte a `America/Lima` al display.
 - **Money**: número decimal con 2 decimales (e.g., `25.50`). PEN implícito.

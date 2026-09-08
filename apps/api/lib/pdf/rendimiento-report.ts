@@ -220,7 +220,18 @@ const TREND_BOX: ChartBox = {
 function trendSvg(daily: PerformancePayload['daily']): string {
   if (daily.length < 3) return ''
   const values = daily.map((d) => d.revenue)
-  const max = niceMax(Math.max(...values))
+  const tope = Math.max(...values)
+  // Ni un sol facturado en todo el rango. Aquí no se puede dibujar una escala:
+  // `niceMax(0)` devuelve 1 —su tope de seguridad para no dividir entre cero—,
+  // así que el eje sale rotulado «0 / S/ 1 / S/ 1», con dos etiquetas idénticas
+  // porque las marcas son 0, 0.5 y 1 y las dos últimas redondean al mismo
+  // entero. Y debajo, una línea plana pegada al suelo.
+  //
+  // Eso no es un gráfico vacío: es un gráfico que MIENTE sobre su escala, y le
+  // toca justo a quien no vendió nada, que es la pantalla que más cuidado
+  // merece. Mismo criterio que con menos de tres jornadas: no se finge.
+  if (tope === 0) return '<p class="muted small">Ningún día con ventas en este rango.</p>'
+  const max = niceMax(tope)
   const pts = projectSeries(values, max, TREND_BOX)
   const plotH = TREND_BOX.height - TREND_BOX.padTop - TREND_BOX.padBottom
   const peak = values.indexOf(Math.max(...values))

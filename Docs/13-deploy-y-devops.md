@@ -50,11 +50,24 @@ Cada app en `apps/` se despliega como un proyecto Vercel independiente:
 
 | Proyecto Vercel | Repo path | Dominio producción | Dominio preview |
 |---|---|---|---|
-| `tindivo-api` | `apps/api` | `api.tindivo.com` | `api-tindivo-pr-N.vercel.app` |
+| `tindivo-api` | `apps/api` | `apiv2.tindivo.com` | `api-tindivo-pr-N.vercel.app` |
 | `tindivo-customer` | `apps/customer` | `tindivo.com` + `www.tindivo.com` | `customer-tindivo-pr-N.vercel.app` |
 | `tindivo-admin` | `apps/admin` | `admin.tindivo.com` | `admin-tindivo-pr-N.vercel.app` |
 | `tindivo-negocios` | `apps/negocios` | `negocios.tindivo.com` | `negocios-tindivo-pr-N.vercel.app` |
 | `tindivo-motorizados` | `apps/motorizados` | `motorizados.tindivo.com` | `motorizados-tindivo-pr-N.vercel.app` |
+
+> **OJO CON EL DOMINIO.** La API de producción del v2 es **`apiv2.tindivo.com`**,
+> no `api.tindivo.com`. Esa segunda es la del **v1 legacy**, y sigue en pie: no
+> da error, contesta 200 en la raíz y devuelve un 404 de Next con aspecto normal
+> a cualquier ruta del v2. O sea que sondearla parece decir «esta ruta no está
+> desplegada» cuando lo que pasa es que estás llamando al backend equivocado.
+>
+> Para distinguirlas de un vistazo: `api.tindivo.com/` sirve una landing («Tindivo
+> API», el `app/page.tsx` del v1); `apiv2.tindivo.com/` devuelve 404 porque el
+> `apps/api` del v2 es API pura y no tiene página. Y la fuente de verdad no es
+> este documento: es la URL que llevan dentro los chunks de cualquier frontend
+> desplegado (`grep -oE 'https?://[^\"]+/api/v1'`).
+
 
 ### Configuración por proyecto
 
@@ -78,11 +91,15 @@ DNS apuntando a Vercel:
 ```
 A     tindivo.com               76.76.21.21
 A     www.tindivo.com           76.76.21.21
-CNAME api.tindivo.com           cname.vercel-dns.com
+CNAME apiv2.tindivo.com         cname.vercel-dns.com
 CNAME admin.tindivo.com         cname.vercel-dns.com
 CNAME negocios.tindivo.com      cname.vercel-dns.com
 CNAME motorizados.tindivo.com   cname.vercel-dns.com
 ```
+
+`api.tindivo.com` NO está en esta lista y no es un olvido: ese CNAME existe y
+apunta al proyecto Vercel del **v1 legacy**, que sigue sirviendo. Ver el aviso
+de §2.
 
 Vercel emite certificados SSL automáticos (Let's Encrypt).
 
@@ -150,7 +167,7 @@ Inngest auto-discovers el endpoint al hacer deploy.
 
 En Inngest Dashboard:
 1. Crear app "tindivo-v2".
-2. Endpoint URL: `https://api.tindivo.com/api/inngest`.
+2. Endpoint URL: `https://apiv2.tindivo.com/api/inngest`.
 3. Verificar firma con `INNGEST_SIGNING_KEY`.
 
 ### Self-hosting (alternativa post-MVP)
@@ -180,7 +197,7 @@ NEXT_PUBLIC_CUSTOMER_URL="https://tindivo.com"
 NEXT_PUBLIC_ADMIN_URL="https://admin.tindivo.com"
 NEXT_PUBLIC_NEGOCIOS_URL="https://negocios.tindivo.com"
 NEXT_PUBLIC_MOTORIZADOS_URL="https://motorizados.tindivo.com"
-NEXT_PUBLIC_API_URL="https://api.tindivo.com"
+NEXT_PUBLIC_API_URL="https://apiv2.tindivo.com/api/v1"   # con el sufijo /api/v1
 NEXT_PUBLIC_SOPORTE_WHATSAPP="51987654321"
 ```
 
@@ -211,7 +228,7 @@ Secrets accesibles desde Edge Functions y triggers `pg_net`:
 ```sql
 INSERT INTO vault.secrets (name, secret) VALUES
   ('service_role_key', '<service_role>'),
-  ('app_internal_api_url', 'https://api.tindivo.com/api/v1/internal'),
+  ('app_internal_api_url', 'https://apiv2.tindivo.com/api/v1/internal'),
   ('send_push_url', 'https://<proj>.supabase.co/functions/v1/send-push'),
   ('inngest_webhook_url', 'https://inn.gs/e/<inngest_event_key>');
 ```
