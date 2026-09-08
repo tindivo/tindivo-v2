@@ -95,7 +95,14 @@ export function TrackingHero({
           <span className="shrink-0">{pasoVisible ? `Paso ${currentIdx + 1} de 4` : ''}</span>
           {!isDelivered && eta ? (
             <span className="tabular-nums">
-              {eta === 'Ya está listo' || eta === 'En cualquier momento' ? eta : `Llega en ${eta}`}
+              {/* «Llega» es un verbo de delivery: en un recojo no viaja el
+                  pedido, viaja el cliente. El resto del hero ya habla en
+                  recojo desde la 0220 (`stepsFor`), esta línea no. */}
+              {eta === 'Ya está listo' || eta === 'En cualquier momento'
+                ? eta
+                : data.deliveryMethod === 'pickup'
+                  ? `Listo en ${eta}`
+                  : `Llega en ${eta}`}
             </span>
           ) : (
             !isDelivered &&

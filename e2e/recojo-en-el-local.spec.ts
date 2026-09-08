@@ -337,6 +337,76 @@ test.describe('0219/0220 · el recojo en el local, desde la pantalla del cliente
    * vuelve a «Delivery», y el pedido sale con una respuesta que ya no significa
    * nada.
    */
+  /**
+   * EL SEGUIMIENTO DE UN RECOJO, DE COCINA A MOSTRADOR.
+   *
+   * Los tres textos que el cliente lee sobre su recojo salían del vocabulario
+   * del delivery, y el más caro era un número: `etaView` sumaba el trayecto de
+   * una moto que no existe, así que la pantalla prometía 25–30 min para comida
+   * que salía en 12, y al final llegaba a decir «Listo para recoger» y «Llega
+   * en 20–25 min» en la misma caja.
+   *
+   * Se conduce el pedido por SQL y no por el tablero A PROPÓSITO: lo que este
+   * caso prueba es la pantalla del CLIENTE, y meter por medio a la cajera
+   * convertiría cualquier fallo del panel en un rojo que apunta aquí.
+   */
+  test('el seguimiento de un recojo no promete el viaje de una moto', async ({ page }) => {
+    await login(page, CLIENTE.email)
+    await llegarAlCheckout(page)
+    await page.getByRole('button', { name: 'Recojo' }).click()
+    await page.getByRole('button', { name: /Ahora, estoy en el local/ }).click()
+    await page.getByRole('button', { name: /Confirmar pedido/ }).click()
+    await expect(page).toHaveURL(/\/pedido\//, { timeout: 20_000 })
+
+    const pedido = await ultimoPedido(CLIENTE.userId)
+    expect(pedido, 'el pedido tenía que nacer').not.toBeNull()
+
+    // ── EN COCINA, con doce minutos por delante ──
+    // El sello va en un UPDATE APARTE del cambio de estado: `orders_before_write`
+    // pisa los relojes con now() al mover el estado, así que ponerlos en la
+    // misma sentencia deja el ETA en cero y el caso probaría otra cosa.
+    await db
+      .from('orders')
+      .update({ status: 'preparing', prep_time_minutes: 12 })
+      .eq('id', pedido.id)
+    await db
+      .from('orders')
+      .update({ estimated_ready_at: new Date(Date.now() + 12 * 60_000).toISOString() })
+      .eq('id', pedido.id)
+    await page.reload()
+
+    // «Listo en», no «Llega en»: en un recojo no viaja el pedido, viaja él.
+    await expect(page.getByText(/Listo en \d+ min/)).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByText(/Llega en/)).toHaveCount(0)
+
+    // ── EN EL MOSTRADOR: un hecho, no una cuenta atrás ──
+    await db
+      .from('orders')
+      .update({ status: 'ready_for_pickup', ready_for_pickup_at: new Date().toISOString() })
+      .eq('id', pedido.id)
+    await page.reload()
+
+    await expect(page.getByText('Listo para recoger')).toBeVisible({ timeout: 20_000 })
+    // `.first()`: «Ya está listo» sale dos veces —el ETA del hero y el aviso de
+    // la pantalla— y las dos son correctas. Lo que se afirma es que ahí va un
+    // hecho y no un número, no cuántas veces se dice.
+    await expect(page.getByText('Ya está listo').first()).toBeVisible()
+    await expect(page.getByText(/Llega en/)).toHaveCount(0)
+
+    // ── Y SI NADIE VINO: el relato tiene que ser el que pasó ──
+    // `pickup_no_show` reusa `cancel_reason = 'no_show'` (mismo motivo de
+    // negocio, mismos strikes), así que sin ramificar por método el cliente leía
+    // que un motorizado fue a su casa a buscarlo.
+    await db
+      .from('orders')
+      .update({ status: 'cancelled', cancel_reason: 'no_show' })
+      .eq('id', pedido.id)
+    await page.reload()
+
+    await expect(page.getByText('Tu pedido se quedó sin recoger')).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByText(/El motorizado llegó a la dirección/)).toHaveCount(0)
+  })
+
   test('volver a delivery olvida la respuesta del recojo', async ({ page }) => {
     await login(page, CLIENTE.email)
     await llegarAlCheckout(page)

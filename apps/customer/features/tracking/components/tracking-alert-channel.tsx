@@ -126,7 +126,12 @@ export function TrackingAlertChannel({ canal, pantalla }: TrackingAlertChannelPr
             icon={<Icon name="light_mode" size={19} />}
           />
           <p className="text-caption text-ink-muted leading-relaxed">
-            Deja el celular a la vista: no se apagará hasta que llegue tu pedido. Gasta algo de
+            {/* «Hasta que llegue tu pedido» es de delivery: en un recojo no llega
+                nada, va el cliente. Se dice sin nombrar el desenlace en vez de
+                ramificar, porque este componente no recibe el pedido y pasarle
+                uno entero para elegir un verbo sería cablear una dependencia
+                por una palabra. */}
+            Deja el celular a la vista: no se apagará mientras sigues tu pedido. Gasta algo de
             batería.
           </p>
         </div>

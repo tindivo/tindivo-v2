@@ -33,7 +33,7 @@ export const ORDER_SELECT =
   'yape_amount,cash_amount,requires_validation,validation_reason_code,risk_flags,' +
   'driver_id,created_at,pending_acceptance_at,awaiting_payment_at,validating_at,' +
   'waiting_driver_at,picked_up_at,ready_for_pickup_at,pickup_timing,tracking_link_sent_at,' +
-  'payment_verified_at,' +
+  'payment_verified_at,payment_real,' +
   'delivered_at,cancelled_at,cancel_note,cancel_reason,updated_at,' +
   'tindivo_commission,commission_amount,delivery_fee_charged,' +
   'driver:drivers(full_name)'
@@ -101,6 +101,7 @@ export interface OrderRow {
   pickup_timing: string | null
   tracking_link_sent_at: string | null
   payment_verified_at: string | null
+  payment_real: string | null
   delivered_at: string | null
   cancelled_at: string | null
   cancel_note: string | null
@@ -366,6 +367,32 @@ export function mapPayment(intent: string): UiPayment {
   if (intent === 'pending_yape') return 'pending_wallet'
   if (intent === 'prepaid' || intent === 'pending_cash' || intent === 'pending_mixed') return intent
   return 'pending_cash'
+}
+
+/**
+ * LO QUE SE COBRÓ DE VERDAD, cuando ya se sabe. `null` mientras el pedido sigue
+ * abierto — ahí lo único que hay es la intención, y `mapPayment` es la buena.
+ *
+ * POR QUÉ HACE FALTA. `payment_intent` es lo que el CLIENTE eligió al pedir;
+ * `payment_real` es lo que ENTRÓ, y son distintos más a menudo de lo que
+ * parece: el motorizado pregunta al entregar y la cajera pregunta en el
+ * mostrador, precisamente porque en el último metro la gente cambia de idea.
+ *
+ * El historial pintaba la intención y lo llamaba «Pago». Con el recojo se
+ * volvió indefendible: desde la 0224 la cajera DECLARA el cobro al aceptar, y
+ * el historial le respondía «Efectivo» a cada recojo que ella hubiera cobrado
+ * por Yape — contradiciendo, en la misma pantalla, algo que acababa de escribir
+ * con el dedo.
+ */
+export function mapPaymentReal(real: string | null): UiPayment | null {
+  if (real === 'paid_yape') return 'pending_wallet'
+  if (real === 'paid_cash') return 'pending_cash'
+  if (real === 'paid_mixed') return 'pending_mixed'
+  if (real === 'paid_prepaid') return 'prepaid'
+  // 'unpaid' y 'refunded' no son formas de pago: no tienen fila en
+  // `PAYMENT_META` y decir cualquiera de las cuatro sería inventar. Que caiga
+  // en la intención, que es lo que había antes de esto.
+  return null
 }
 
 /**

@@ -13,6 +13,9 @@ export function CancelledView({ data }: CancelledViewProps) {
     paymentIntent: data.paymentIntent,
     proofUrl: data.proofUrl,
     paymentVerifiedAt: data.paymentVerifiedAt,
+    // `no_show` significa dos cosas distintas según el método, y sin esto un
+    // recojo que nadie recogió recibía la frase del motorizado en la puerta.
+    deliveryMethod: data.deliveryMethod,
   })
   // `schedule` se reserva para los vencimientos por tiempo. Todo lo demás —
   // cancelación de una de las partes, comprobante rechazado, no-show — es un
