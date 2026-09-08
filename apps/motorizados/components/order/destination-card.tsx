@@ -25,6 +25,7 @@ export function DestinationCard({ detail }: { detail: OrderDetailResponse }) {
       : null
 
   const reference = order.deliveryReference?.trim() || null
+  const customerNotes = order.customerNotes?.trim() || null
   const hasCoords = order.deliveryCoordinatesLat != null && order.deliveryCoordinatesLng != null
   const band = order.deliveryDistanceBand ? BAND_LABEL[order.deliveryDistanceBand] : null
   /**
@@ -36,8 +37,8 @@ export function DestinationCard({ detail }: { detail: OrderDetailResponse }) {
     ? deliveryPointQuality(order.deliveryPointConfirmedAt, order.deliveryPointAccuracyM)
     : null
 
-  // Si no hay ni dirección ni referencia ni coordenadas, omitir.
-  if (!cleanAddress && !reference && !hasCoords) return null
+  // Si no hay ni dirección ni referencia ni coordenadas ni nota, omitir.
+  if (!cleanAddress && !reference && !hasCoords && !customerNotes) return null
 
   return (
     <>
@@ -83,6 +84,23 @@ export function DestinationCard({ detail }: { detail: OrderDetailResponse }) {
                   Referencia
                 </span>
                 <p className="mt-0.5 text-body-lg font-bold leading-snug text-ink">{reference}</p>
+              </div>
+            </div>
+          )}
+
+          {/* 3. Nota para el motorizado (si existe) */}
+          {customerNotes && (
+            <div className="flex items-start gap-2.5 rounded-xl bg-ink/[0.04] p-2.5">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-ink-muted shadow-xs">
+                <Icon name="chat_bubble" size={17} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <span className="block font-mono text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
+                  Nota para el motorizado
+                </span>
+                <p className="mt-0.5 text-body font-medium leading-snug text-ink">
+                  {customerNotes}
+                </p>
               </div>
             </div>
           )}
