@@ -1,6 +1,28 @@
 # Spec: Habilitar pickup (recojo) en Tindivo — QR/póster en Priamo
 
-**Estado:** Listo para implementación. Decisiones cerradas con evidencia de código real (no supuestos). Sujeto a corrección tras feedback de campo, según lo acordado.
+**Estado:** IMPLEMENTADO (`0219`–`0223`), y **con una decisión revertida por feedback de campo** — exactamente el caso que este encabezado dejaba previsto. La fuente de verdad viva es `DECISIONS.md §8`; este documento se conserva como el razonamiento original.
+
+> **§2.2 YA NO DESCRIBE EL CÓDIGO (2026-09-08, `0223`).** Este spec decía que un
+> recojo «más tarde» reutiliza «el mismo mecanismo que delivery»: GPS dentro del
+> polígono, `current_customer_contraentrega_outcome()`, y `validando` con llamada
+> de la cajera. **Eso se implementó y luego se cerró.**
+>
+> El restaurante del piloto puso una regla que este spec no contemplaba: en el
+> mostrador **no se fía**. Un recojo llega a cocina pagado — o con la captura
+> subida, o cancelado en la caja ahí mismo. Consecuencias sobre lo escrito abajo:
+>
+> - **§2.2 queda sin efecto.** Un recojo «más tarde» va prepagado y punto: es el
+>   único camino donde se cocina sin nadie delante Y sin cobrador al final. Una
+>   llamada de validación confirma que el cliente existe, no que vaya a venir.
+> - **El GPS de un recojo ya no decide nada**; se captura solo como evidencia.
+> - **Aparece una regla que el spec no vio:** «Yape al recibir» (`pending_yape`)
+>   no existe en un mostrador — ese método es transferirle *al motorizado*, y no
+>   hay. Entraba por las cuatro capas sin que ninguna se quejara, y el sistema lo
+>   reinterpretaba en silencio como «cobrar en caja».
+> - **§3 y §7 quedan a medias.** El protocolo de no-show se construyó, pero
+>   pensado para un plantón que costaba comida. Con el dinero siempre dentro, un
+>   plantón deja al negocio con la comida *y* el dinero, y al cliente con un
+>   strike. Esa política está **pendiente de definir**.
 **Origen:** Discusión iterativa entre Abraham (founder), Claude, y una segunda revisión por otro agente. Todas las decisiones fueron contrastadas contra el código de producción (`tindivo-prod`) antes de cerrarse.
 **Objetivo de negocio:** habilitar autoservicio de pedidos de recojo en el local de Priamo (vía QR/póster), sin abrir una vía de fraude, y usando esos pedidos como puerta de entrada a clientes de delivery recurrentes.
 

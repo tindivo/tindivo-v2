@@ -14,7 +14,12 @@ import { PrepayExplainer } from '@/features/checkout/components/prepay-explainer
 import type { CheckoutViewModel } from '@/features/checkout/hooks/use-checkout'
 import type { UseCheckoutValidationReturn } from '@/features/checkout/hooks/use-checkout-validation'
 import { soles } from '@/features/checkout/lib/format'
-import { type CheckoutField, PICKUP_ENABLED, promoAviso } from '@/features/checkout/types'
+import {
+  type CheckoutField,
+  PICKUP_ENABLED,
+  paymentOptionsFor,
+  promoAviso,
+} from '@/features/checkout/types'
 import { AddressSelectorSheet } from './address-selector-sheet'
 import { NameEditSheet } from './name-edit-sheet'
 
@@ -344,6 +349,7 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
         <section ref={paymentRef}>
           <SectionTitle>¿Cómo pagas?</SectionTitle>
           <PaymentMethodList
+            options={paymentOptionsFor(deliveryMethod)}
             value={payment}
             onChange={(v) => {
               setPayment(v)

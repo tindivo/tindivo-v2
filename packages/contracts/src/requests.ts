@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { DeliveryMethodSchema, PaymentIntentSchema, PickupTimingSchema } from './enums'
+import { isCustomerPaymentAllowed } from './payment-rules'
 import {
   ADDRESS_LINE_MIN,
   ADDRESS_REFERENCE_MIN,
@@ -101,9 +102,12 @@ export const CreateOrderRequestSchema = z
      *               verifica MIRÁNDOLO antes de aceptar, así que el pedido no
      *               pasa por `validando` (no se llama por teléfono a quien está
      *               delante) y no se le exige GPS. Nadie cocina hasta ese sí.
-     *   · 'later' -> la comida se hace sin nadie delante. Mismo antifraude que
-     *               un delivery: GPS, `customer_contraentrega_decision` y, si
-     *               hace falta, `validando` con llamada.
+     *   · 'later' -> la comida se hace sin nadie delante Y sin caja a la que
+     *               cobrarle, así que va PREPAGADO y punto (ver
+     *               `customerPaymentIntents`). El antifraude de contraentrega
+     *               —GPS, `customer_contraentrega_decision`, `validando` con
+     *               llamada— no llega a aplicarse aquí: protege comida fiada, y
+     *               en este camino ya no se fía ninguna.
      */
     pickupTiming: PickupTimingSchema.optional(),
     items: z.array(CreateOrderItemSchema).min(1).max(50),
@@ -121,6 +125,23 @@ export const CreateOrderRequestSchema = z
     message: 'Falta indicar cuándo recoges el pedido',
     path: ['pickupTiming'],
   })
+  /*
+    EL PAGO TIENE QUE CUADRAR CON EL MÉTODO. La regla entera y sus porqués viven
+    en `customerPaymentIntents`; aquí solo se aplica.
+
+    Va DESPUÉS de los dos refines de `pickupTiming` a propósito: si falta la
+    respuesta del recojo, el mensaje útil es ese, no uno sobre el pago que
+    depende de ella. Zod corre los `.refine` en orden y acumula, así que un
+    recojo sin timing y con Yape saca las dos faltas; la primera es la que la
+    pantalla lleva al cliente.
+  */
+  .refine(
+    (d) => isCustomerPaymentAllowed(d.paymentIntent, d.deliveryMethod, d.pickupTiming ?? null),
+    {
+      message: 'Esa forma de pago no está disponible para este tipo de pedido',
+      path: ['paymentIntent'],
+    },
+  )
   .refine(
     (d) =>
       d.deliveryMethod === 'pickup' || (d.deliveryAddress?.trim().length ?? 0) >= ADDRESS_LINE_MIN,

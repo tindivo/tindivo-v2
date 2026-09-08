@@ -5,7 +5,7 @@
 > este documento difieran, **gana este documento**. Se mantiene vivo: cada
 > decisión nueva o cambio se registra aquí, no en specs paralelos.
 >
-> Última actualización: 2026-09-07 (recojo en el local: encendido, con su propio estado terminal-menos-uno y su propio escritor de strikes — §5 y §8).
+> Última actualización: 2026-09-08 (en el mostrador no se fía: un recojo llega a cocina pagado — §8, `0223`).
 
 ---
 
@@ -275,6 +275,51 @@ Codificado en `@tindivo/contracts` (`order-status.ts`: `ORDER_TRANSITIONS`, `STA
   El strike se ancla **solo por teléfono**: en un recojo no hay domicilio del cliente, así que `delivery_reference` y las coordenadas van NULL. `customer_contraentrega_blocked` cuenta por teléfono **O** por referencia, y con la referencia NULL esa mitad simplemente no suma. **Cero migración de esquema**: esas columnas ya eran nullable.
   Hasta `0220` el único escritor de `customer_strikes` era el `no_show` del motorizado, o sea que dejar comida hecha sin recoger no tenía ninguna consecuencia y el mismo cliente podía repetirlo cada noche.
 
+### En el mostrador no se fía: qué puede pagar un recojo (`0223`)
+
+Regla del restaurante del piloto, no una inferencia nuestra: **un recojo llega a
+cocina pagado**. O el cliente sube su captura, o cancela en la caja ahí mismo.
+
+|  | delivery | recojo «ahora» | recojo «más tarde» |
+|---|---|---|---|
+| Efectivo / caja (`pending_cash`) | ✅ | ✅ | ⛔ prepago |
+| Yape al recibir (`pending_yape`) | ✅ | **⛔ no existe** | **⛔ no existe** |
+| Prepago con captura (`prepaid`) | ✅ | ✅ | ✅ |
+
+**`pending_yape` no existe en un mostrador, y no es lo mismo que estar
+bloqueado.** Ese método significa una cosa física y concreta: el cliente le
+transfiere **al motorizado** cuando le entrega la bolsa. En un mostrador cobra la
+caja, y la caja ya declara al cerrar si entró efectivo o Yape (`payment_real`, la
+pregunta «¿cómo pagó?» del pie del mostrador). Por eso el checkout lo **esconde**
+en vez de apagarlo: una fila apagada lleva el rótulo «en este pedido», que
+promete que otro día sí — y no hay otro día.
+
+**Un recojo «más tarde» va prepagado porque es el único camino donde se cocina
+sin nadie delante Y sin cobrador al final.** En un delivery hay un motorizado en
+la puerta a quien pagarle; aquí no hay nadie. Si el cliente no viene, el plato se
+perdió y no hay a quién reclamarle. Ahí sí se **apaga** la caja con su motivo al
+lado: existe, y elegir «ahora» la devuelve.
+
+**Esto revierte, a propósito, media conclusión de `0220`.** Aquella decía que un
+recojo «más tarde» tenía «el mismo antifraude que un delivery» y que el crédito
+de GPS de `0211` le abría la contraentrega. Ya no: una llamada de validación
+confirma que el cliente existe, no que vaya a venir a por su comida. El
+antifraude de contraentrega protege comida fiada, y en esta rama ya no se fía
+ninguna.
+
+**Dónde vive la regla.** `customerPaymentIntents` (`@tindivo/contracts`) es la
+fuente; el `.refine` de `CreateOrderRequestSchema` da el 422 legible; el CHECK
+`orders_pickup_payment_chk` (`0223`) es el suelo por si alguien llega a la RPC
+sin pasar por el contrato. **Solo aplica a `source = 'customer_pwa'`**: un recojo
+manual de la cajera cobrado por Yape es legítimo — ella tuvo el dinero en la mano
+antes de crear la fila.
+
+**Lo que esta regla deja abierto y todavía no está decidido:** con el dinero
+siempre dentro, un `pickup_no_show` deja de ser «se perdió un plato» y pasa a ser
+«el negocio tiene la comida y el dinero, y el cliente un strike».
+`advance_order` no mira `payment_intent` en esa rama, y §14 solo contempla
+devolución en la cancelación temprana del cliente. **Pendiente de definir.**
+
 ### Recojo en el local: los dos perfiles, y por qué solo uno se salta el guard (`0220`)
 
 El checkout **pregunta** («¿Cuándo recoges tu pedido?» → *Ahora, estoy en el local* /
@@ -285,9 +330,10 @@ atribución de marketing y **nunca** como control de seguridad.
 
 | | `pickup_timing = 'later'` | `pickup_timing = 'now'` |
 |---|---|---|
-| Antifraude | **Idéntico a un delivery**: `customer_contraentrega_decision` + crédito de GPS + `validando` si toca | Se salta el guard de historial y `validando` |
-| GPS | Se captura y **decide** | Se captura como evidencia, **nunca bloquea** |
-| Qué lo garantiza | Lo mismo que un delivery | La cajera, mirando a quien pidió, antes de aceptar |
+| Cómo se paga (`0223`) | **Prepago y punto** | Caja del local (efectivo o Yape) o prepago |
+| Antifraude | No llega a aplicarse: no se fía nada | Se salta el guard de historial y `validando` |
+| GPS | Se captura como evidencia, **ya no decide** | Se captura como evidencia, **nunca bloquea** |
+| Qué lo garantiza | El dinero, cobrado antes de cocinar | La cajera, mirando a quien pidió, antes de aceptar |
 | Riesgo (`risk_blocked`) | Corta | **Corta igual** |
 
 **Por qué «ahora» puede saltarse el guard, y por qué eso no abre un hueco.** Es el

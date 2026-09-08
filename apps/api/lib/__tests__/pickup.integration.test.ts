@@ -103,12 +103,18 @@ async function pedirRecojo(
   cliente: Cliente,
   timing: 'now' | 'later',
   gps?: GpsEnVivo,
+  /**
+   * El default es la caja porque es el caso normal del mostrador. Los otros dos
+   * valores existen para los tests de la 0223: `prepaid` es el único camino de
+   * un «más tarde», y `pending_yape` el que ya no existe en ningún recojo.
+   */
+  intent: 'pending_cash' | 'pending_yape' | 'prepaid' = 'pending_cash',
 ): Promise<{ data: unknown; error: { message: string } | null }> {
   return db.rpc('create_customer_order', {
     p_customer_user_id: cliente.id,
     p_business_id: BUSINESS_ID,
     p_delivery_method: 'pickup',
-    p_payment_intent: 'pending_cash',
+    p_payment_intent: intent,
     p_customer_name: 'Vecino',
     p_customer_phone: cliente.tel9,
     p_delivery_address: '',
@@ -292,12 +298,22 @@ describe('0219/0220 · el recojo en el local', () => {
     })
   })
 
-  describe('el recojo «más tarde»: mismo antifraude que un delivery', () => {
-    /**
-     * La comida se hace sin nadie delante. Es exactamente el escenario del
-     * plantón que motivó todo esto, así que se le pide lo mismo que a un
-     * delivery: o historial, o un GPS que diga San Jacinto, o prepago.
-     */
+  /**
+   * EL RECOJO «MÁS TARDE» VA PREPAGADO Y PUNTO. (0223)
+   *
+   * Este bloque decía «mismo antifraude que un delivery» y probaba que el
+   * crédito de GPS de la 0211 le abría la contraentrega igual. La regla del
+   * restaurante lo cerró, y la razón es que un recojo «más tarde» NO es como un
+   * delivery: en un delivery hay un motorizado en la puerta a quien pagarle, y
+   * aquí no hay nadie. Es el único camino del sistema donde se cocina sin nadie
+   * delante Y sin cobrador al final — si el cliente no viene, el plato se
+   * perdió y no hay a quién reclamarle.
+   *
+   * Con el dinero dentro antes de encender la sartén, el plantón deja de costar
+   * comida. Por eso el antifraude de contraentrega ya no se aplica en esta rama:
+   * no es que se haya relajado, es que protege comida fiada y aquí no se fía.
+   */
+  describe('el recojo «más tarde»: va prepagado y punto', () => {
     it('sin historial y sin GPS exige prepago', async () => {
       const cliente = await crearCliente()
 
@@ -306,23 +322,132 @@ describe('0219/0220 · el recojo en el local', () => {
       expect(error?.message).toContain('Pago adelantado requerido')
     })
 
-    /** El crédito de GPS de la 0211, que vale igual para el recojo. */
-    it('sin historial pero con GPS en San Jacinto entra, y va a `validando`', async () => {
+    /**
+     * EL CASO QUE CAMBIÓ DE SIGNO, y por eso se afirma explícitamente.
+     *
+     * Este pedido ENTRABA hasta la 0223, a `validando`, por el crédito de GPS
+     * de la 0211: cliente sin historial pero geolocalizado en San Jacinto. La
+     * llamada de la cajera era la salvaguarda. Ya no basta — una llamada
+     * confirma que existes, no que vayas a venir a por tu comida.
+     */
+    it('el crédito de GPS ya no abre la contraentrega: sigue exigiendo prepago', async () => {
       const cliente = await crearCliente()
 
-      const { data, error } = await pedirRecojo(cliente, 'later', {
+      const { error } = await pedirRecojo(cliente, 'later', {
         lat: LAT,
         lng: LNG,
         method: 'gps_high_accuracy',
       })
 
+      expect(error).not.toBeNull()
+      expect(error?.message).toContain('orders_pickup_payment_chk')
+    })
+
+    it('prepagado sí entra, y es el único camino', async () => {
+      const cliente = await crearCliente()
+
+      const { data, error } = await pedirRecojo(cliente, 'later', undefined, 'prepaid')
+
       expect(error, `debería entrar: ${error?.message}`).toBeNull()
       const creado = registrar(data)
-      expect(creado.status).toBe('validando')
 
       const fila = await estado(creado.id)
       expect(fila.pickup_timing).toBe('later')
-      expect(fila.validation_reason_code).toBe('new_customer_local_gps')
+    })
+  })
+
+  /**
+   * EN EL MOSTRADOR NO SE FÍA. (0223)
+   *
+   * El espejo en SQL de `customerPaymentIntents`. Los tests del contrato cubren
+   * el mensaje legible; esto cubre el suelo, que es lo que queda si alguien
+   * llega a la RPC sin pasar por el contrato.
+   */
+  describe('el pago que un recojo puede traer', () => {
+    /**
+     * `pending_yape` significa que el cliente le transfiere AL MOTORIZADO al
+     * recibir la bolsa. En un mostrador no hay motorizado: cobra la caja, y la
+     * caja ya declara al cerrar si entró efectivo o Yape (`payment_real`).
+     * Antes esto entraba, y el sistema lo reinterpretaba en silencio como
+     * «cobrar en caja» — funcionaba de casualidad.
+     */
+    it('rechaza el Yape contraentrega aunque el cliente esté en el mostrador', async () => {
+      const cliente = await crearCliente()
+
+      const { error } = await pedirRecojo(cliente, 'now', undefined, 'pending_yape')
+
+      expect(error?.message).toContain('orders_pickup_payment_chk')
+    })
+
+    it('un recojo «ahora» sí puede pagar en caja: hay a quién cobrarle', async () => {
+      const cliente = await crearCliente()
+
+      const { data, error } = await pedirRecojo(cliente, 'now')
+
+      expect(error, `debería entrar: ${error?.message}`).toBeNull()
+      registrar(data)
+    })
+
+    /**
+     * EL DELIVERY NO SE TOCÓ. La regla es del mostrador, y ahí el motorizado
+     * existe. Sin esta aserción, un guard escrito de más se llevaría por
+     * delante el canal principal sin que ningún rojo lo dijera.
+     */
+    it('el delivery sigue aceptando Yape al recibir', async () => {
+      const cliente = await crearCliente()
+
+      const { data, error } = await db.rpc('create_customer_order', {
+        p_customer_user_id: cliente.id,
+        p_business_id: BUSINESS_ID,
+        p_delivery_method: 'delivery',
+        p_payment_intent: 'pending_yape',
+        p_customer_name: 'Vecino',
+        p_customer_phone: cliente.tel9,
+        p_delivery_address: 'Jr. Los Pinos 123',
+        p_delivery_reference: 'Portón azul',
+        p_delivery_lat: LAT,
+        p_delivery_lng: LNG,
+        p_items: [{ menu_item_id: ITEM_POLLO_ID, quantity: 1, modifiers: [] }],
+        p_source: 'customer_pwa',
+        p_customer_gps_lat: LAT,
+        p_customer_gps_lng: LNG,
+        p_customer_gps_method: 'gps_high_accuracy',
+      })
+
+      // Entra o lo corta el antifraude de contraentrega, pero NUNCA el CHECK
+      // del mostrador: eso significaría que la regla se derramó al delivery.
+      expect(error?.message ?? '').not.toContain('orders_pickup_payment_chk')
+      // Si entró hay que registrarlo o el barrido del globalSetup se estrella
+      // contra la FK a `users` al borrar el cliente de este test.
+      if (!error) registrar(data)
+    })
+
+    /**
+     * EL PEDIDO MANUAL DE LA CAJERA NO PASA POR ESTA REGLA, y no es un olvido:
+     * ella ya tuvo el dinero en la mano antes de crear la fila. Un CHECK sin
+     * condicionar por `source` le rompería el mostrador a la única persona que
+     * de verdad puede cobrar en él.
+     */
+    it('el recojo manual de la cajera puede ser para más tarde y en efectivo', async () => {
+      const { data, error } = await db
+        .from('orders')
+        .insert({
+          business_id: BUSINESS_ID,
+          source: 'business_manual',
+          delivery_method: 'pickup',
+          pickup_timing: 'later',
+          payment_intent: 'pending_cash',
+          customer_name: 'Vecino de la cajera',
+          customer_phone: '939000111',
+          order_amount: 20,
+          delivery_fee: 0,
+          status: 'pending_acceptance',
+        })
+        .select('id')
+        .single()
+
+      expect(error, `el manual no debería tropezar: ${error?.message}`).toBeNull()
+      if (data?.id) pedidosCreados.push(data.id)
     })
   })
 

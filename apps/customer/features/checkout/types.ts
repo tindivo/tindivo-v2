@@ -1,4 +1,4 @@
-import type { PaymentIntent } from '@tindivo/contracts'
+import { customerPaymentIntents, type DeliveryMethod, type PaymentIntent } from '@tindivo/contracts'
 import type { SavedAddress } from '@/lib/address-record'
 
 // Vive en `lib/` porque los términos y condiciones prometen este mismo número y
@@ -215,6 +215,9 @@ export const PAYMENT_OPTIONS: PaymentOption[] = [
     logos: ['cash'],
     momento: 'al_recibir',
   },
+  // Ojo al añadir aquí: `paymentOptionsFor` decide cuáles de estas EXISTEN en
+  // cada método. Una opción nueva aparece en recojo salvo que esa función diga
+  // lo contrario, y el recojo no tiene motorizado a quien pagarle.
   {
     value: 'pending_yape',
     // «Billetera digital» es palabra de banco, y con los dos logos al lado el
@@ -248,6 +251,38 @@ export const PAYMENT_OPTIONS: PaymentOption[] = [
     momento: 'adelantado',
   },
 ]
+
+/**
+ * Las opciones que EXISTEN para este método de entrega, ya con las palabras del
+ * método puestas.
+ *
+ * DOS COSAS DISTINTAS, Y LA PANTALLA LAS TRATA DISTINTO. Esta función solo
+ * ESCONDE lo que no existe; lo que existe pero hoy no aplica lo APAGA
+ * `mustPrepay`, con su motivo debajo del grupo. La diferencia no es cosmética:
+ * apagar «Yape al recibir» en un recojo lo dejaría bajo el rótulo «En este
+ * pedido», que promete que otro día sí — y no hay otro día, porque lo que falta
+ * es el motorizado a quien transferirle. La regla de fondo, en
+ * `customerPaymentIntents` (@tindivo/contracts).
+ *
+ * Se le pasa `null` como timing A PROPÓSITO: lo que se pinta no depende de si
+ * el cliente ya contestó cuándo recoge. Si contestó «más tarde», la fila de
+ * caja sigue ahí, apagada y explicada, en vez de desaparecer bajo su dedo justo
+ * después de tocar el botón de al lado.
+ *
+ * EL SUBTÍTULO DE CAJA NO NOMBRA UNA SOLA BILLETERA. En el mostrador el cliente
+ * paga con lo que trae —efectivo o Yape, contra el QR del local— y quien sabe
+ * cuál fue es la cajera, que ya lo declara al cerrar (`payment_real`). Prometer
+ * «efectivo» a secas mandaría a buscar un cajero a quien iba a yapear.
+ */
+export function paymentOptionsFor(deliveryMethod: DeliveryMethod): PaymentOption[] {
+  if (deliveryMethod !== 'pickup') return PAYMENT_OPTIONS
+  const permitidos = customerPaymentIntents('pickup', null)
+  return PAYMENT_OPTIONS.filter((o) => permitidos.includes(o.value)).map((o) =>
+    o.value === 'pending_cash'
+      ? { ...o, label: 'Pagas en el local', desc: 'En la caja, efectivo o Yape' }
+      : o,
+  )
+}
 
 /**
  * El icono de una dirección guardada, por su etiqueta.

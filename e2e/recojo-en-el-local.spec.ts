@@ -89,6 +89,22 @@ async function borrarPedidosDe(userId: string, phone: string): Promise<void> {
   await db.from('address_directory').delete().eq('phone', phone)
 }
 
+/**
+ * El `<input type="radio">` de una fila de pago, buscado por su texto.
+ *
+ * NO se usa `getByRole('radio', { name })`: los radios de `PaymentMethodList`
+ * son `sr-only` —un input real escondido dentro del `<label>`, para que la
+ * semántica y las flechas del teclado salgan gratis— y Playwright no los
+ * resuelve por nombre accesible. Lo que sí funciona es bajar desde el `<label>`,
+ * que es además cómo lo ve el cliente: él toca la fila, no el círculo.
+ *
+ * `toBeEnabled`/`toBeDisabled`/`toBeChecked` sí valen sobre un input escondido:
+ * miran el atributo, no la caja.
+ */
+function radioDe(page: Page, texto: string) {
+  return page.locator('label').filter({ hasText: texto }).locator('input[type="radio"]')
+}
+
 async function ultimoPedido(userId: string) {
   const { data } = await db
     .from('orders')
@@ -229,11 +245,23 @@ test.describe('0219/0220 · el recojo en el local, desde la pantalla del cliente
    * plantón que motivó todo esto, así que se le pide lo mismo que a un
    * delivery. Sin historial y sin GPS, eso es prepago.
    */
-  test('«más tarde» sin historial y sin GPS NO se salta nada', async ({ page }) => {
+  test('«más tarde» obliga a prepagar, y lo dice antes de que el cliente lo descubra', async ({
+    page,
+  }) => {
     await login(page, CLIENTE.email)
     await llegarAlCheckout(page)
 
     await page.getByRole('button', { name: 'Recojo' }).click()
+
+    /*
+     * ANTES DE CONTESTAR, LA CAJA ESTÁ Y SE PUEDE ELEGIR. Es la mitad que hace
+     * al test valer algo: si `paymentOptionsFor` devolviera solo el prepago
+     * para todo recojo, la segunda mitad pasaría igual y nadie se enteraría de
+     * que un recojo de mostrador perdió su forma natural de pagar.
+     */
+    const caja = radioDe(page, 'Pagas en el local')
+    await expect(caja).toBeEnabled()
+
     await page.getByRole('button', { name: 'Más tarde' }).click()
 
     // La promesa de «te lo preparamos cuando el local confirme que te tiene
@@ -241,25 +269,65 @@ test.describe('0219/0220 · el recojo en el local, desde la pantalla del cliente
     await expect(page.getByText(/Preparamos tu pedido cuando el local confirme/)).toHaveCount(0)
 
     /*
-     * SE COMPRUEBA CONTRA EL MURO DE GPS, QUE ES DONDE DE VERDAD SE DECIDE.
+     * LA REGLA DE LA 0223, VISTA DESDE LA PANTALLA.
      *
-     * La pantalla no avisa por adelantado —desde la 0211 un cliente sin
-     * historial puede intentar «al recibir», porque existe el crédito de GPS y
-     * el navegador no sabe antes de confirmar si su coordenada cae en San
-     * Jacinto—. Lo que sí hace es PEDIR la coordenada al confirmar, y sin ella
-     * levanta `GeoBlockSheet` con su salida: pagar por adelantado.
+     * Aquí antes se comprobaba el muro de GPS: un recojo «más tarde» sin
+     * historial y sin coordenada chocaba contra `GeoBlockSheet`. Ese muro ya no
+     * es el que decide — ahora el pago adelantado no depende de dónde esté el
+     * cliente sino de que NO VA A ESTAR: la comida se hace sin nadie delante y
+     * sin caja a la que cobrarle.
      *
-     * Ese muro es exactamente el que un recojo «ahora» NO encuentra (ver el
-     * caso anterior: mismo navegador, mismo cliente, sin GPS, y el pedido
-     * nace). La pareja de casos es la aserción entera — si alguien extiende la
-     * exención de presencia física a los dos perfiles, este test se pone rojo.
+     * La caja NO desaparece: se apaga con su motivo al lado. Que siga en
+     * pantalla es deliberado (ver `payment-method-list`): una fila que se
+     * evapora justo después de tocar el botón de al lado se lee como un fallo,
+     * y además el cliente perdería la información de que existe si elige
+     * «ahora».
      */
-    await page.getByRole('button', { name: /Confirmar pedido/ }).click()
-    await expect(
-      page.getByRole('dialog').filter({ hasText: 'No pudimos leer tu ubicación' }),
-    ).toBeVisible({ timeout: 20_000 })
+    await expect(caja).toBeDisabled()
+    await expect(page.getByText(/Como pasas más tarde, el pago va adelantado/)).toBeVisible()
 
-    expect(await ultimoPedido(CLIENTE.userId), 'no debería haber nacido ningún pedido').toBeNull()
+    /*
+     * Y la elección se mueve sola al único camino que queda, sin dejarla en una
+     * opción que el servidor iba a rechazar en el último toque.
+     *
+     * Se ancla en «No pagas nada ahora» y no en el subtítulo normal del
+     * prepago: al marcarlo, la fila SUSTITUYE su descripción por esa promesa
+     * (ver `payment-method-list`). O sea que el texto por el que uno buscaría
+     * la fila desaparece exactamente cuando queda seleccionada.
+     */
+    await expect(radioDe(page, 'No pagas nada ahora')).toBeChecked()
+
+    expect(await ultimoPedido(CLIENTE.userId), 'mirar la pantalla no crea pedidos').toBeNull()
+  })
+
+  /**
+   * LO QUE NO EXISTE NO SE ESCONDE APAGADO: NO SE PINTA. (0223)
+   *
+   * `pending_yape` significa que el cliente le transfiere AL MOTORIZADO al
+   * recibir la bolsa, y en un mostrador no hay motorizado. Apagarlo bajo el
+   * rótulo «En este pedido» —que es lo que hace el bloqueo— prometería que otro
+   * día sí, y no hay otro día. La distinción está escrita en
+   * `paymentOptionsFor` y esta es la aserción que la sostiene.
+   */
+  test('el recojo no ofrece «Yape al recibir», que es pagarle a un motorizado que no hay', async ({
+    page,
+  }) => {
+    await login(page, CLIENTE.email)
+    await llegarAlCheckout(page)
+
+    // En delivery sí está: es el canal donde el motorizado existe. Se busca por
+    // el SUBTÍTULO y no por el título porque «Yape o Plin» es literalmente el
+    // mismo texto en las dos filas —al recibir y por adelantado—; lo único que
+    // las distingue en pantalla es a quién le pagas.
+    const yapeAlMotorizado = page.getByText('Le transfieres al motorizado en tu puerta')
+    await expect(yapeAlMotorizado).toBeVisible()
+
+    await page.getByRole('button', { name: 'Recojo' }).click()
+
+    await expect(yapeAlMotorizado).toHaveCount(0)
+    // Y las dos que sí existen siguen ahí.
+    await expect(radioDe(page, 'Pagas en el local')).toHaveCount(1)
+    await expect(radioDe(page, 'Pagas apenas el local confirme')).toHaveCount(1)
   })
 
   /**

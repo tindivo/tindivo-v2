@@ -1,6 +1,12 @@
 'use client'
 
-import type { DeliveryMethod, PaymentIntent, PickupTiming } from '@tindivo/contracts'
+import {
+  type DeliveryMethod,
+  isCustomerPaymentAllowed,
+  type PaymentIntent,
+  type PickupTiming,
+  pickupForcesPrepay,
+} from '@tindivo/contracts'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { AddressValue } from '@/components/address-fields'
@@ -219,6 +225,30 @@ export function useCheckoutState(): CheckoutState {
     if (deliveryMethod !== 'pickup') setPickupTiming(null)
   }, [deliveryMethod])
 
+  /**
+   * EL PAGO ELEGIDO NO PUEDE SOBREVIVIR A UN CAMBIO QUE LO PROHÍBE.
+   *
+   * El cliente elige «Yape al recibir» pensando en un delivery, cambia a
+   * Recojo, y sin esto el pedido sale con un método que no existe en el
+   * mostrador — un 422 del contrato en el último toque, sobre algo que él ya
+   * había contestado bien. Igual al pasar a «más tarde» con la caja marcada.
+   *
+   * SIN `authReady`, a diferencia del efecto de `mustPrepay` de más abajo: ese
+   * espera porque `isBlocked` llega por red y arrancar en `false` lo haría
+   * saltar tarde. Esta regla es local y síncrona —sale del método y del timing,
+   * los dos en esta pantalla—, así que esperar solo dejaría una ventana en la
+   * que la elección inválida es visible y pulsable.
+   *
+   * El destino no es siempre el mismo: con «más tarde» solo queda el prepago;
+   * con «ahora» la caja sigue estando, y mandar a prepagar a quien tiene la
+   * caja delante sería empujarlo a yapear y subir una captura de pie en el
+   * mostrador.
+   */
+  useEffect(() => {
+    if (isCustomerPaymentAllowed(payment, deliveryMethod, pickupTiming)) return
+    setPayment(pickupForcesPrepay(deliveryMethod, pickupTiming) ? 'prepaid' : 'pending_cash')
+  }, [payment, deliveryMethod, pickupTiming])
+
   const selectedAddress = addresses.find((a) => a.id === addressId)
 
   const distanceBand = useMemo((): DistanceBand => {
@@ -262,8 +292,14 @@ export function useCheckoutState(): CheckoutState {
   const isNewUser = !hasDeliveryHistory
   const exceedsCashCap = total > prepayThreshold
   const isBlocked = prepayOnlyByRisk
+  /**
+   * El TERCER motivo para prepagar, y el único que no habla de la cuenta ni del
+   * monto sino del canal: un recojo para más tarde se cocina sin nadie delante
+   * y sin caja a la que cobrarle. Ver `pickupForcesPrepay`.
+   */
+  const forzadoPorRecojo = pickupForcesPrepay(deliveryMethod, pickupTiming)
 
-  const mustPrepay = exceedsCashCap || isBlocked
+  const mustPrepay = exceedsCashCap || isBlocked || forzadoPorRecojo
 
   // Máximo declarable = mín(billete máximo, total + vuelto máximo). La fórmula
   // vive en `lib/cash.ts` con el resto de la regla del vuelto.
@@ -296,9 +332,17 @@ export function useCheckoutState(): CheckoutState {
    */
   const prepayReason = isBlocked
     ? 'Por ahora tus pedidos van con pago adelantado. Si crees que es un error, escríbenos.'
-    : exceedsCashCap
-      ? `Tu total con envío pasa de S/${prepayThreshold}, así que el pago va adelantado.`
-      : null
+    : forzadoPorRecojo
+      ? // VA ANTES QUE LA DEL TOPE, y no por gravedad: por lo que el cliente
+        // puede hacer con ella. Si las dos aplican, ninguna se resuelve sola
+        // —quitar un producto no levanta la regla del recojo, ni al revés—,
+        // así que gana la que explica POR QUÉ el canal funciona así, que
+        // además es la que acaba de contestar de un toque.
+        // Dice qué gana él («te lo guardamos listo»), no solo qué se le exige.
+        'Como pasas más tarde, el pago va adelantado: preparamos tu pedido cuando confirmemos el pago y te lo guardamos listo.'
+      : exceedsCashCap
+        ? `Tu total con envío pasa de S/${prepayThreshold}, así que el pago va adelantado.`
+        : null
 
   // Modo catálogo: el negocio no acepta pedidos web — el pedido va por WhatsApp
   // desde su página. Cubre deep-links a /checkout y carritos persistidos de un
