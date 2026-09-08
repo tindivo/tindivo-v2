@@ -673,8 +673,18 @@ export function toOrderVM(
     state,
     customer: row.customer_name,
     phone: row.customer_phone,
-    addressRef: row.delivery_reference,
-    // Ver `address`: en manual la columna es el relleno 'Pedido manual'.
+    /*
+      `|| null` COMO SU VECINA DE ABAJO, y le faltaba.
+      La API manda `''` cuando el campo no aplica —en un recojo no hay
+      referencia— y una cadena vacía NO es lo mismo que ausente: pasa los
+      guards de verdad. La ficha del tablero preguntaba `addressRef ?? address`
+      y `??` da por buena la cadena vacía, así que pintaba un pin de dirección
+      con nada al lado en TODO recojo web. `address` ya se normalizaba aquí
+      justo por esto; que las dos lo hagan es lo que impide que la mitad de la
+      pantalla crea que hay dato y la otra mitad no.
+    */
+    addressRef: row.delivery_reference?.trim() || null,
+    // Ver arriba: en manual la columna es el relleno 'Pedido manual'.
     address: source === 'manual' ? null : row.delivery_address?.trim() || null,
     method: row.delivery_method === 'pickup' ? 'pickup' : 'delivery',
     total: amount + deliveryFee,

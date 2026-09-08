@@ -108,7 +108,9 @@ function radioDe(page: Page, texto: string) {
 async function ultimoPedido(userId: string) {
   const { data } = await db
     .from('orders')
-    .select('id, short_id, status, delivery_method, pickup_timing, delivery_fee, risk_flags')
+    .select(
+      'id, short_id, status, delivery_method, pickup_timing, delivery_fee, risk_flags, delivery_address',
+    )
     .eq('customer_user_id', userId)
     .order('created_at', { ascending: false })
     .limit(1)
@@ -231,6 +233,13 @@ test.describe('0219/0220 · el recojo en el local, desde la pantalla del cliente
     expect(pedido?.status).toBe('pending_acceptance')
     expect(Number(pedido?.delivery_fee)).toBe(0)
     expect(pedido?.risk_flags?.pickupNowPresence).toBe(true)
+    /*
+     * Y NO SE LLEVA LA DIRECCIÓN DE CASA. Era el único campo de logística del
+     * payload sin gatear por método: el pedido de mostrador se guardaba con el
+     * domicilio de quien lo hizo —un dato que nadie usa, que la ficha del
+     * tablero llegaba a pintar, y que no tiene por qué estar ahí.
+     */
+    expect(pedido?.delivery_address ?? '', 'un recojo no tiene domicilio').toBe('')
 
     // Y el cliente aterriza en su seguimiento, que es donde vive el botón de
     // cancelar mientras el local no acepte.

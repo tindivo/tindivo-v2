@@ -261,7 +261,19 @@ export function useCheckoutActions(state: CheckoutState): CheckoutActions {
         selectedPayment === 'pending_cash' && deliveryMethod !== 'pickup'
           ? Math.round(Math.round(payingWithCash() / 0.5) * 0.5 * 100) / 100
           : undefined,
-      deliveryAddress: selectedAddress?.line ?? (manualAddr.line.trim() || undefined),
+      /*
+        EL ÚNICO CAMPO DE LOGÍSTICA QUE SE ESCAPABA.
+        Sus cinco vecinos —`deliveryReference`, `customerNotes`,
+        `deliveryPointQuality`, `coordinates`— ya estaban gateados por método
+        desde la 0219; este no, y el spec lo pedía explícitamente (§2.2). El
+        resultado era que un pedido de mostrador se guardaba con la dirección de
+        casa de quien lo hizo: un dato que nadie va a usar, que la ficha del
+        tablero llegaba a pintar, y que no hay motivo para tener ahí.
+      */
+      deliveryAddress:
+        deliveryMethod === 'delivery'
+          ? (selectedAddress?.line ?? (manualAddr.line.trim() || undefined))
+          : undefined,
       deliveryReference: deliveryMethod === 'delivery' ? state.reference : undefined,
       // Solo tiene sentido con delivery: en un recojo no hay motorizado que la
       // lea. `undefined` y no `''` para que el contrato la trate como ausente.

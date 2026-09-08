@@ -596,8 +596,15 @@ export function DetailScreen({
                   className="mt-0.5 shrink-0 text-brand"
                 />
                 <div className="min-w-0">
+                  {/* `||` y NO `??`. `delivery_reference` llega como cadena
+                      vacía, no como NULL, así que `??` la daba por buena y
+                      pintaba un pin con nada al lado — mientras la guarda de
+                      arriba, que sí usa `||`, dejaba entrar el bloque. Se veía
+                      en TODO recojo web, que es donde la referencia no existe.
+                      Los dos operadores tienen que ser el mismo o la condición
+                      y el contenido hablan de cosas distintas. */}
                   <div className="text-[14px] leading-normal">
-                    {order.addressRef ?? order.address}
+                    {order.addressRef || order.address}
                   </div>
                   {order.addressRef && order.address && (
                     <div className="text-[12px] leading-normal text-ink-muted">{order.address}</div>
@@ -1082,8 +1089,17 @@ export function DetailScreen({
             <div className="flex items-center gap-2.5 rounded-[14px] border border-success bg-success-soft px-3.5 py-3">
               <Icon weight={500} name="check_circle" size={20} filled className="text-success" />
               <span className="text-[13px] font-semibold text-success">
+                {/* «YA LO SABE» NO SE PUEDE AFIRMAR DE UN CLIENTE.
+                    El push de «listo» solo alcanza a quien concedió el permiso
+                    de notificaciones y conserva una suscripción viva: en el
+                    piloto, una minoría. Decirle a la cajera que el cliente ya
+                    está enterado es justo lo que hace que no pulse el botón de
+                    WhatsApp que hay dos filas más abajo — el botón que existe
+                    porque el push NO basta (0221).
+                    Del motorizado sí se afirma: su app es una herramienta de
+                    trabajo y el permiso entra en su alta. */}
                 {order.method === 'pickup'
-                  ? 'Comida lista en el mostrador. El cliente ya lo sabe.'
+                  ? 'Comida lista en el mostrador. Le mandamos aviso a la app; si no aparece, escríbele por WhatsApp.'
                   : 'Comida lista. El motorizado ya lo sabe.'}
               </span>
             </div>

@@ -278,6 +278,16 @@ export async function POST(req: Request): Promise<Response> {
           p_payment_intent: body.paymentIntent,
           p_customer_name: body.customerName,
           p_customer_phone: body.customerPhone,
+          /*
+            EN UN RECOJO ESTOS DOS LLEGAN VACÍOS, y hay que saberlo aguas abajo.
+
+            Se queda el `?? ''` y NO se cambia a `null`: los tipos generados de
+            la RPC declaran los dos como `string` —la función los tiene sin
+            DEFAULT— así que mandar `null` obliga a un cast que el siguiente
+            `pnpm db:types` volvería a romper. La normalización vive en
+            `OrderVM` (`view-model.ts`), que es donde el panel ya la hacía para
+            la dirección y le faltaba para la referencia.
+          */
           p_delivery_address: body.deliveryAddress ?? '',
           p_delivery_reference: body.deliveryReference ?? '',
           p_delivery_lat: body.coordinates?.lat ?? undefined,
