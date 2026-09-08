@@ -32,7 +32,18 @@ real de su RLS **no** es reproducible desde sus migraciones.
 
 ## Convenciones
 
-- **Código, DB y commits en inglés**; contenido y UI en **español peruano**.
+- **Código y DB en inglés** (identificadores, tablas, columnas, ramas); contenido
+  y UI en **español peruano**.
+- **Los mensajes de commit van en español**, y el `type(scope)` en inglés. Aquí
+  decía "commits en inglés" y llevaba tiempo sin ser verdad: 91 de los últimos
+  100 están en español, y el estilo asentado es una frase que cuenta QUÉ cambia
+  para quien lo usa, no qué se tocó — `feat(recojo): en el mostrador no se fía`,
+  no `feat(pickup): add prepay validation`. Se corrige el doc y no la práctica
+  porque la práctica es deliberada: estos mensajes los lee la misma persona que
+  atiende el piloto.
+  **Con tilde.** Buena parte del historial las perdió, y no fue una decisión: en
+  Git Bash sobre Windows un heredoc corrompe los acentos en silencio. Escribe el
+  mensaje a un fichero UTF-8 y `git commit -F ese_fichero`.
 - TypeScript **strict** (TS 6). Zod **v4** (≠ v3). Next **16** + React **19** + Tailwind **v4**.
 - **Vertical slicing por feature**; una feature no importa de otra (lo común sube a `lib/`/`packages/`).
 - No DRY prematuro (extraer con 3+ usos). No abstracción sin 2+ implementaciones.
