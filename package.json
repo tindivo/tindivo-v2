@@ -28,6 +28,7 @@
     "db:seed:demo": "node apps/api/scripts/seed-demo-board.ts",
     "db:seed:demo:clean": "node apps/api/scripts/seed-demo-board.ts --clean",
     "db:seed:addresses": "node apps/api/scripts/seed-address-directory.ts",
+    "pdf:assets": "node apps/api/scripts/build-pdf-assets.ts",
     "test:e2e": "playwright test --ignore-snapshots",
     "test:e2e:visual": "playwright test --project=visual",
     "graphify:update": "graphify update .",
