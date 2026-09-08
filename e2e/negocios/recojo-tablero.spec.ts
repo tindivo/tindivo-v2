@@ -55,7 +55,11 @@ async function sembrarRecojo(
       // ella no toca el historial de ningún cliente del seed.
       delivery_method: 'pickup',
       pickup_timing: timing,
-      payment_intent: 'pending_cash',
+      // LA REGLA DE PAGO DE LA 0223, TAMBIÉN AL SEMBRAR. Un recojo «más tarde»
+      // del canal cliente solo existe prepagado —lo impone
+      // `orders_pickup_payment_chk`— así que sembrarlo en efectivo revienta el
+      // INSERT con un error de constraint que apunta al sitio equivocado.
+      payment_intent: timing === 'later' ? 'prepaid' : 'pending_cash',
       customer_name: timing === 'now' ? 'Vecino en el mostrador' : 'Vecino que pasa luego',
       customer_phone: telefonoNuevo(),
       order_amount: 24,
@@ -136,14 +140,57 @@ test.describe('0219/0220 · el recojo en el tablero de la cajera', () => {
    * EL BOTÓN PIDE LA VERIFICACIÓN, no solo la aceptación. «Aceptar pedido» a
    * secas dejaría la única garantía del canal sin pedirse en ninguna parte.
    */
-  test('aceptar un recojo «ahora» le pide mirar al cliente', async ({ page }) => {
+  test('aceptar un recojo «ahora» le pide mirar al cliente Y cobrarle', async ({ page }) => {
     const recojo = await sembrarRecojo('pending_acceptance', 'now')
     await abrirTablero(page, recojo.shortId)
 
     await visible(page, `#${recojo.shortId}`).first().click()
 
-    await expect(page.getByRole('button', { name: 'Cliente presente · a cocina' })).toBeVisible()
-    await expect(visible(page, /Míralo antes de aceptar/).first()).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Cliente presente · cobrar' })).toBeVisible()
+    await expect(visible(page, /Míralo y cóbrale antes de aceptar/).first()).toBeVisible()
+  })
+
+  /**
+   * NO SE MANDA A COCINA SIN DECLARAR EL COBRO. (0224)
+   *
+   * `advance_order` lo exige, pero un 422 al final del camino no sirve de nada
+   * si la pantalla deja pulsar: lo que esta aserción cuida es que el modal PIDA
+   * la respuesta antes, con el botón diciendo qué falta, igual que hace el CTA
+   * del checkout con la pregunta del recojo.
+   *
+   * Ninguna de las dos formas de cobro viene marcada, y es lo mismo que en el
+   * checkout: un `paid_cash` por defecto convertiría en efectivo cada Yape que
+   * pasara por la caja sin que nadie lo mirara.
+   */
+  test('el modal de aceptar pide el cobro antes de dejar mandar a cocina', async ({ page }) => {
+    const recojo = await sembrarRecojo('pending_acceptance', 'now')
+    await abrirTablero(page, recojo.shortId)
+    await visible(page, `#${recojo.shortId}`).first().click()
+
+    await page.getByRole('button', { name: 'Cliente presente · cobrar' }).click()
+
+    await expect(visible(page, '¿Con qué te pagó?').first()).toBeVisible()
+    const confirmar = page.getByRole('button', { name: 'Dinos con qué pagó' })
+    await expect(confirmar).toBeDisabled()
+
+    await page.getByRole('button', { name: 'Yape/Plin' }).click()
+    await page.getByRole('button', { name: 'Cobré · a cocina' }).click()
+
+    // La fila es la aserción: el dinero queda declarado y sellado con quién lo
+    // vio, en el mismo instante en que el pedido entra a cocina.
+    await expect
+      .poll(
+        async () => {
+          const { data } = await db
+            .from('orders')
+            .select('status, payment_real, payment_verified_at')
+            .eq('id', recojo.id)
+            .single()
+          return data
+        },
+        { timeout: 15_000 },
+      )
+      .toMatchObject({ status: 'preparing', payment_real: 'paid_yape' })
   })
 
   /**
@@ -265,6 +312,25 @@ test.describe('0219/0220 · el recojo en el tablero de la cajera', () => {
    * por vida (DECISIONS §8), así que no puede ser un botón que se pulse por
    * descarte.
    */
+  /**
+   * Y EL DE UN PEDIDO PAGADO NO AMENAZA CON NADA. (0224) `advance_order` ya no
+   * escribe el strike ahí, así que prometerlo en la pantalla haría dudar a la
+   * cajera del único botón que cierra el pedido — y le mentiría sobre lo que le
+   * pasa a un vecino que sí pagó.
+   */
+  test('el plantón de un recojo ya pagado no le deja falta a nadie', async ({ page }) => {
+    const recojo = await sembrarRecojo('ready_for_pickup', 'later') // prepago
+    await abrirTablero(page, recojo.shortId)
+    await visible(page, `#${recojo.shortId}`).first().click()
+
+    await page.getByRole('button', { name: 'El cliente no vino' }).click()
+
+    await expect(
+      visible(page, /ya está pagado, así que no le queda ninguna falta/).first(),
+    ).toBeVisible()
+    await expect(visible(page, /queda una falta en su cuenta/)).toHaveCount(0)
+  })
+
   test('declarar el plantón pide confirmar, y avisa de lo que cuesta', async ({ page }) => {
     const recojo = await sembrarRecojo('ready_for_pickup', 'now')
     await abrirTablero(page, recojo.shortId)

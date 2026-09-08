@@ -33,6 +33,7 @@ export const ORDER_SELECT =
   'yape_amount,cash_amount,requires_validation,validation_reason_code,risk_flags,' +
   'driver_id,created_at,pending_acceptance_at,awaiting_payment_at,validating_at,' +
   'waiting_driver_at,picked_up_at,ready_for_pickup_at,pickup_timing,tracking_link_sent_at,' +
+  'payment_verified_at,' +
   'delivered_at,cancelled_at,cancel_note,cancel_reason,updated_at,' +
   'tindivo_commission,commission_amount,delivery_fee_charged,' +
   'driver:drivers(full_name)'
@@ -99,6 +100,7 @@ export interface OrderRow {
   ready_for_pickup_at: string | null
   pickup_timing: string | null
   tracking_link_sent_at: string | null
+  payment_verified_at: string | null
   delivered_at: string | null
   cancelled_at: string | null
   cancel_note: string | null
@@ -151,6 +153,19 @@ export interface OrderVM {
   waitingCustomerSec: number | null
   /** Recojo: 'now' (cliente delante) o 'later'. `null` en delivery y en manual. */
   pickupTiming: string | null
+  /**
+   * `true` cuando alguien ya confirmó que el dinero de este pedido entró.
+   *
+   * Sale de `orders.payment_verified_at`, que tiene UN solo significado desde la
+   * 0181 —«una persona vio el dinero»— y ahora dos escritores: `validate_order`
+   * al aprobar una captura de Yape, y `advance_order` acción `accept` al cobrar
+   * un recojo «ahora» en la caja (0224).
+   *
+   * Gobierna dos cosas del mostrador: que el pie de entrega no vuelva a
+   * preguntar «¿cómo pagó?» por algo ya cobrado, y que declarar un plantón NO
+   * deje una falta en la cuenta de quien sí pagó.
+   */
+  yaCobrado: boolean
   /**
    * Segundos que el pedido lleva encima del motorizado, o `null` fuera de
    * reparto.
@@ -645,6 +660,7 @@ export function toOrderVM(
     readySec,
     waitingCustomerSec,
     pickupTiming: row.pickup_timing,
+    yaCobrado: row.payment_verified_at != null,
     deliverySec,
     bufferMinutes:
       state === 'buffer_p1' || state === 'buffer_p2' || state === 'buffer_p3'

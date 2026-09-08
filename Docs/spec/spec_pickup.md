@@ -19,10 +19,16 @@
 >   no existe en un mostrador — ese método es transferirle *al motorizado*, y no
 >   hay. Entraba por las cuatro capas sin que ninguna se quejara, y el sistema lo
 >   reinterpretaba en silencio como «cobrar en caja».
-> - **§3 y §7 quedan a medias.** El protocolo de no-show se construyó, pero
->   pensado para un plantón que costaba comida. Con el dinero siempre dentro, un
->   plantón deja al negocio con la comida *y* el dinero, y al cliente con un
->   strike. Esa política está **pendiente de definir**.
+> - **§3 se corrigió en la `0224`.** El protocolo de no-show se construyó
+>   pensado para un plantón que costaba comida. Con el dinero siempre dentro un
+>   plantón no cuesta ninguna, así que **ya no deja strike si el pedido estaba
+>   pagado**; el strike sobrevive solo para el recojo manual de la cajera, que es
+>   el único que puede llegar al mostrador sin cobrar. La política que se le
+>   promete al cliente —«te lo guardamos hasta que cierre el local; si no pasas,
+>   no se devuelve»— se le dice en el checkout ANTES de pagar.
+> - **El cobro se adelantó al `accept` (`0224`).** El spec no lo trataba: daba
+>   por hecho que un recojo «ahora» se cobraba al entregar. Entre aceptar y
+>   entregar hay una cocción entera.
 **Origen:** Discusión iterativa entre Abraham (founder), Claude, y una segunda revisión por otro agente. Todas las decisiones fueron contrastadas contra el código de producción (`tindivo-prod`) antes de cerrarse.
 **Objetivo de negocio:** habilitar autoservicio de pedidos de recojo en el local de Priamo (vía QR/póster), sin abrir una vía de fraude, y usando esos pedidos como puerta de entrada a clientes de delivery recurrentes.
 

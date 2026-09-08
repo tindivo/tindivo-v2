@@ -175,6 +175,60 @@ async function avanzar(
   })
 }
 
+/**
+ * Aceptar un recojo «ahora» ES COBRARLO (0224). `advance_order` exige
+ * `paymentReal` para mandarlo a cocina: el cliente está de pie en la caja y ese
+ * es el único instante en que se le puede cobrar. Sin el parámetro la RPC corta
+ * — que es justo lo que afirma el caso «no deja aceptarlo sin cobrarlo».
+ */
+async function aceptarCobrando(orderId: string, comoPago: 'paid_cash' | 'paid_yape' = 'paid_cash') {
+  const { error } = await avanzar(orderId, bizUserId, 'business', 'accept', {
+    prepTimeMinutes: 20,
+    paymentReal: comoPago,
+  })
+  if (error) throw new Error(`accept falló: ${error.message}`)
+}
+
+/**
+ * UN RECOJO QUE LLEGA AL MOSTRADOR SIN COBRAR, que desde la 0224 solo puede ser
+ * uno: el MANUAL de la cajera.
+ *
+ * Los del canal cliente ya no existen sin pagar — un «más tarde» es prepago por
+ * el CHECK de la 0223, y un «ahora» se cobra al aceptarlo. El que queda es el
+ * que ella toma por teléfono para más tarde y cobra al entregar. Ese sí es una
+ * pérdida si nadie viene (y por eso sigue dejando strike), y es el único sitio
+ * donde quedan vivas las guardas de `handover` que miran `paymentReal`.
+ *
+ * Se siembra por SQL y no por la RPC porque `create_customer_order` es el canal
+ * del cliente: un manual no pasa por ahí.
+ */
+async function recojoManualSinCobrar(minutos: number): Promise<{ id: string; tel9: string }> {
+  const tel9 = `9${Math.floor(Math.random() * 1e8)
+    .toString()
+    .padStart(8, '0')}`
+  const { data, error } = await db
+    .from('orders')
+    .insert({
+      business_id: BUSINESS_ID,
+      source: 'business_manual',
+      delivery_method: 'pickup',
+      pickup_timing: 'later',
+      payment_intent: 'pending_cash',
+      customer_name: 'Vecino de la cajera',
+      customer_phone: tel9,
+      order_amount: 24,
+      delivery_fee: 0,
+      status: 'ready_for_pickup',
+      prep_time_minutes: 20,
+      ready_for_pickup_at: new Date(Date.now() - minutos * 60_000).toISOString(),
+    })
+    .select('id')
+    .single()
+  if (error) throw new Error(error.message)
+  pedidosCreados.push(data.id)
+  return { id: data.id, tel9 }
+}
+
 async function borrarPedido(id: string) {
   await db.from('domain_events').delete().eq('aggregate_id', id)
   await db.from('order_event_log').delete().eq('order_id', id)
@@ -379,6 +433,53 @@ describe('0219/0220 · el recojo en el local', () => {
       expect(error?.message).toContain('orders_pickup_payment_chk')
     })
 
+    /**
+     * LA MITAD QUE FALTA DE LA REGLA (0224). La 0223 dice CON QUÉ se puede
+     * pagar; esto dice CUÁNDO. Sin el cobro declarado no se manda a cocina:
+     * entre aceptar y entregar hay una cocción entera, y quien se va en ese rato
+     * dejaría un plato hecho y sin pagar.
+     */
+    it('no deja mandar a cocina un recojo «ahora» sin cobrarlo', async () => {
+      const cliente = await crearCliente()
+      const { data, error } = await pedirRecojo(cliente, 'now')
+      expect(error).toBeNull()
+      const creado = registrar(data)
+
+      const { error: aceptErr } = await avanzar(creado.id, bizUserId, 'business', 'accept', {
+        prepTimeMinutes: 20,
+      })
+
+      expect(aceptErr?.message).toContain('Cobra el pedido antes de mandarlo a cocina')
+      expect((await estado(creado.id)).status, 'sigue sin cocinarse').toBe('pending_acceptance')
+    })
+
+    it('cobrar al aceptar sella quién vio el dinero, y el pie ya no lo pregunta', async () => {
+      const cliente = await crearCliente()
+      const { data, error } = await pedirRecojo(cliente, 'now')
+      expect(error).toBeNull()
+      const creado = registrar(data)
+
+      await aceptarCobrando(creado.id, 'paid_yape')
+
+      const { data: fila } = await db
+        .from('orders')
+        .select('status, payment_real, payment_verified_at, payment_verified_by')
+        .eq('id', creado.id)
+        .single()
+      expect(fila?.status).toBe('preparing')
+      expect(fila?.payment_real).toBe('paid_yape')
+      expect(fila?.payment_verified_at).not.toBeNull()
+      expect(fila?.payment_verified_by).toBe(bizUserId)
+
+      // Y al entregar NO se reescribe: el pie del mostrador ya no pregunta, así
+      // que no manda `paymentReal`. Sin el COALESCE nuevo, el default
+      // 'paid_cash' convertiría este Yape en efectivo y el corte de caja
+      // cuadraría contra un número que nadie declaró.
+      await avanzar(creado.id, bizUserId, 'business', 'ready')
+      await avanzar(creado.id, bizUserId, 'business', 'handover')
+      expect((await estado(creado.id)).payment_real).toBe('paid_yape')
+    })
+
     it('un recojo «ahora» sí puede pagar en caja: hay a quién cobrarle', async () => {
       const cliente = await crearCliente()
 
@@ -483,10 +584,7 @@ describe('0219/0220 · el recojo en el local', () => {
       const { data, error } = await pedirRecojo(cliente, 'now')
       if (error) throw new Error(error.message)
       const creado = registrar(data)
-      const { error: aceptErr } = await avanzar(creado.id, bizUserId, 'business', 'accept', {
-        prepTimeMinutes: 20,
-      })
-      if (aceptErr) throw new Error(`accept falló: ${aceptErr.message}`)
+      await aceptarCobrando(creado.id)
       return creado.id
     }
 
@@ -539,7 +637,7 @@ describe('0219/0220 · el recojo en el local', () => {
       const { data, error } = await pedirRecojo(cliente, 'now')
       if (error) throw new Error(error.message)
       const creado = registrar(data)
-      await avanzar(creado.id, bizUserId, 'business', 'accept', { prepTimeMinutes: 20 })
+      await aceptarCobrando(creado.id)
       await avanzar(creado.id, bizUserId, 'business', 'ready')
       return { id: creado.id, cliente }
     }
@@ -604,7 +702,11 @@ describe('0219/0220 · el recojo en el local', () => {
      * aceptarlo metería un desglose inventado en la liquidación.
      */
     it('no acepta un cobro mixto: en el mostrador no hay dos partes', async () => {
-      const { id } = await recojoEnMostrador()
+      // SOBRE UN PEDIDO SIN COBRAR, que desde la 0224 es donde esta guarda sigue
+      // viva: en uno ya cobrado el `paymentReal` que llegue aquí ni se mira
+      // —manda lo que la cajera declaró en la caja— así que un `paid_mixed` no
+      // llegaría a la validación, se ignoraría.
+      const { id } = await recojoManualSinCobrar(60)
 
       const { error } = await avanzar(id, bizUserId, 'business', 'handover', {
         paymentReal: 'paid_mixed',
@@ -646,7 +748,7 @@ describe('0219/0220 · el recojo en el local', () => {
       const { data, error } = await pedirRecojo(cliente, 'now')
       if (error) throw new Error(error.message)
       const creado = registrar(data)
-      await avanzar(creado.id, bizUserId, 'business', 'accept', { prepTimeMinutes: 20 })
+      await aceptarCobrando(creado.id)
       await avanzar(creado.id, bizUserId, 'business', 'ready')
       if (minutos > 0) {
         // El trigger `orders_before_write` pisa los sellos con now() en el
@@ -678,10 +780,11 @@ describe('0219/0220 · el recojo en el local', () => {
     /**
      * EL ESCRITOR QUE FALTABA. Hasta la 0220 solo el motorizado podía escribir
      * en `customer_strikes`, así que un plantón en el mostrador no dejaba
-     * rastro y el mismo cliente podía repetirlo cada noche.
+     * rastro y el mismo cliente podía repetirlo cada noche. Sigue vivo, pero
+     * solo para el pedido que de verdad costó comida: el que nadie pagó.
      */
-    it('pasada la espera, cancela y deja el strike anclado al teléfono', async () => {
-      const { id, tel9 } = await recojoEsperandoDesde(60)
+    it('un recojo sin cobrar deja el strike anclado al teléfono', async () => {
+      const { id, tel9 } = await recojoManualSinCobrar(60)
 
       const { error } = await avanzar(id, bizUserId, 'business', 'pickup_no_show')
       expect(error, error?.message).toBeNull()
@@ -704,9 +807,61 @@ describe('0219/0220 · el recojo en el local', () => {
       expect(strikes?.[0]?.delivery_coordinates_lat).toBeNull()
     })
 
+    /**
+     * EL PLANTÓN DE UN PEDIDO PAGADO NO ES UNA FALTA. (0224)
+     *
+     * Es la contrapartida directa de cobrar antes de cocinar: el strike existe
+     * para frenar a quien le genera PÉRDIDAS al negocio, y aquí no hay ninguna
+     * — el negocio se queda con el dinero y con el plato. Marcarlo igual
+     * empujaría a prepago obligado, y a los tres a un bloqueo de 30 días, a un
+     * vecino que pagó su pollo y tuvo una emergencia.
+     *
+     * El pedido SÍ se cancela: la bolsa deja de ocupar el mostrador.
+     */
+    it('un recojo ya cobrado se cancela SIN dejarle falta al cliente', async () => {
+      const { id, tel9 } = await recojoEsperandoDesde(60)
+
+      const { error } = await avanzar(id, bizUserId, 'business', 'pickup_no_show')
+      expect(error, error?.message).toBeNull()
+
+      const fila = await estado(id)
+      expect(fila.status).toBe('cancelled')
+      expect(fila.cancel_reason).toBe('no_show')
+
+      const { data: strikes } = await db.from('customer_strikes').select('id').eq('order_id', id)
+      expect(strikes, 'quien pagó no se lleva una falta').toHaveLength(0)
+
+      const { data: bloqueado } = await db.rpc('customer_contraentrega_blocked', {
+        p_phone: tel9,
+        p_reference: null,
+      })
+      expect(bloqueado).toBe(false)
+    })
+
+    /**
+     * Y EL EVENTO SALE IGUAL, pagado o no: hay que poder contar los plantones.
+     * `paid` es lo que distingue los dos casos para quien lea el outbox, que si
+     * no tendría que deducirlo de la AUSENCIA de una fila en `customer_strikes`.
+     */
+    it('el evento del plantón dice si el pedido estaba pagado', async () => {
+      const pagado = await recojoEsperandoDesde(60)
+      await avanzar(pagado.id, bizUserId, 'business', 'pickup_no_show')
+
+      const { data } = await db
+        .from('domain_events')
+        .select('payload')
+        .eq('aggregate_id', pagado.id)
+        .eq('event_type', 'CustomerNoShow')
+        .single()
+
+      expect(data?.payload?.paid).toBe(true)
+      expect(data?.payload?.strike).toBe(false)
+      expect(data?.payload?.channel).toBe('pickup')
+    })
+
     /** DECISIONS §8 vale igual venga el strike de la puerta o del mostrador. */
     it('el segundo plantón deja al cliente en prepago obligado', async () => {
-      const primero = await recojoEsperandoDesde(60)
+      const primero = await recojoManualSinCobrar(60)
       const { data: st, error: stErr } = await db
         .from('customer_strikes')
         .insert({ phone: primero.tel9, reason: 'no_show' })
@@ -733,7 +888,7 @@ describe('0219/0220 · el recojo en el local', () => {
       const { data, error } = await pedirRecojo(cliente, 'now')
       if (error) throw new Error(error.message)
       const creado = registrar(data)
-      await avanzar(creado.id, bizUserId, 'business', 'accept', { prepTimeMinutes: 20 })
+      await aceptarCobrando(creado.id)
       await avanzar(creado.id, bizUserId, 'business', 'ready')
       return { id: creado.id, cliente }
     }
@@ -803,7 +958,7 @@ describe('0219/0220 · el recojo en el local', () => {
       const { data, error } = await pedirRecojo(cliente, 'now')
       if (error) throw new Error(error.message)
       const creado = registrar(data)
-      await avanzar(creado.id, bizUserId, 'business', 'accept', { prepTimeMinutes: 20 })
+      await aceptarCobrando(creado.id)
 
       const res = await avisar(creado.id, bizUserId)
 
@@ -905,7 +1060,7 @@ describe('0219/0220 · el recojo en el local', () => {
     const { data, error } = await pedirRecojo(cliente, 'now')
     if (error) throw new Error(error.message)
     const creado = registrar(data)
-    await avanzar(creado.id, bizUserId, 'business', 'accept', { prepTimeMinutes: 20 })
+    await aceptarCobrando(creado.id)
     await avanzar(creado.id, bizUserId, 'business', 'ready')
     expect((await estado(creado.id)).status).toBe('ready_for_pickup')
 

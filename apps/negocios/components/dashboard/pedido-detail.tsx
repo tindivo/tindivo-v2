@@ -24,7 +24,12 @@ export type { DetailItem, RejectReason }
 
 export interface DetailActions {
   onClose: () => void
-  onAccept: (prepMinutes: number) => void | Promise<void>
+  /**
+   * `paymentReal` solo en un recojo «ahora» que no sea prepago: ahí el cobro
+   * ocurre AL ACEPTAR, con el cliente en la caja, y `advance_order` lo exige
+   * (0224). Lo pregunta `PrepTimeModal`; el resto de caminos no lo mandan.
+   */
+  onAccept: (prepMinutes: number, paymentReal?: 'paid_cash' | 'paid_yape') => void | Promise<void>
   onReject: (code: string, text: string) => void | Promise<void>
   onVerifyProof: () => void | Promise<void>
   onRejectProof: () => void | Promise<void>
@@ -32,8 +37,14 @@ export interface DetailActions {
   onConfirmDirectPayment: (prepMinutes: number) => void | Promise<void>
   onExtend: () => void | Promise<void>
   onReady: () => void | Promise<void>
-  /** RECOJO · el cliente vino y se llevo su pedido. Ver `useOrderActions`. */
-  onHandover: (paymentReal: 'paid_cash' | 'paid_yape') => void | Promise<void>
+  /**
+   * RECOJO · el cliente vino y se llevó su pedido. Ver `useOrderActions`.
+   *
+   * `undefined` cuando el pedido ya venía cobrado (prepago, o recojo «ahora»
+   * cobrado al aceptar): ahí no se declara nada nuevo y la RPC usa lo que ya
+   * hay en la fila.
+   */
+  onHandover: (paymentReal?: 'paid_cash' | 'paid_yape') => void | Promise<void>
   /** RECOJO · nadie vino por la comida: cancela y deja el strike. */
   onPickupNoShow: () => void | Promise<void>
   /** RECOJO · abre WhatsApp con el cliente. `null` si no hay número usable. */
@@ -336,9 +347,9 @@ export function DetailScreen({
         <PrepTimeModal
           order={order}
           onClose={() => setShowPrepModal(false)}
-          onConfirm={(prepTime) => {
+          onConfirm={(prepTime, paymentReal) => {
             setShowPrepModal(false)
-            actions.onAccept(prepTime)
+            actions.onAccept(prepTime, paymentReal)
           }}
         />
       )}
@@ -900,7 +911,9 @@ export function DetailScreen({
                   {isPrepaid
                     ? 'Aceptar disponibilidad'
                     : order.pickupTiming === 'now'
-                      ? 'Cliente presente · a cocina'
+                      ? // 0224: el toque ya no es solo «lo vi», es «lo vi y le
+                        // cobré». El modal pide las dos cosas.
+                        'Cliente presente · cobrar'
                       : 'Aceptar pedido'}
                 </button>
               </div>
@@ -911,8 +924,8 @@ export function DetailScreen({
                 </div>
               ) : order.pickupTiming === 'now' ? (
                 <div className="text-center text-[11px] text-ink-muted">
-                  Dice estar en el local. Míralo antes de aceptar: si no está, rechaza y no se
-                  cocina nada.
+                  Dice estar en el local. Míralo y cóbrale antes de aceptar: si no está, rechaza y
+                  no se cocina nada.
                 </div>
               ) : null}
             </>
@@ -939,9 +952,16 @@ export function DetailScreen({
               <p className="text-[13px] font-semibold text-ink">
                 ¿El cliente no vino por su pedido?
               </p>
+              {/* LO QUE DICE DEPENDE DE SI HAY DINERO DENTRO (0224).
+                  El strike existe para frenar a quien le genera pérdidas al
+                  negocio, y un recojo cobrado no genera ninguna: la comida está
+                  pagada. `advance_order` ya no lo escribe en ese caso, así que
+                  prometer aquí una falta que no va a ocurrir haría dudar a la
+                  cajera del único botón que cierra el pedido. */}
               <p className="text-[12px] text-ink-muted">
-                Se cancela el pedido y queda una falta en su cuenta. A la segunda, ese cliente solo
-                podrá pedir con pago adelantado.
+                {order.yaCobrado || isPrepaid
+                  ? 'Este pedido ya está pagado, así que no le queda ninguna falta al cliente. La comida es suya: guárdasela hasta que cierres.'
+                  : 'Se cancela el pedido y queda una falta en su cuenta. A la segunda, ese cliente solo podrá pedir con pago adelantado.'}
               </p>
               <div className="flex gap-2">
                 <button
@@ -995,10 +1015,16 @@ export function DetailScreen({
                     : 'Avisar por WhatsApp que está listo'}
                 </button>
               )}
-              {isPrepaid ? (
+              {/* YA COBRADO = NO SE VUELVE A PREGUNTAR (0224).
+                  Un recojo «ahora» se cobró al aceptarlo y un prepago llegó
+                  pagado: en los dos, la pregunta «¿cómo pagó?» pediría por
+                  segunda vez un dato que ya está en la fila, y una segunda
+                  respuesta distinta reescribiría la primera. Queda un solo
+                  botón, que es además lo único que falta por hacer. */}
+              {isPrepaid || order.yaCobrado ? (
                 <button
                   type="button"
-                  onClick={() => actions.onHandover('paid_cash')}
+                  onClick={() => actions.onHandover()}
                   disabled={busy}
                   className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-success px-5 py-3 text-[15px] font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-50"
                 >

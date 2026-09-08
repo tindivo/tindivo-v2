@@ -100,6 +100,24 @@ export function ReasonModal({
   )
 }
 
+/**
+ * ACEPTAR UN PEDIDO. Y, EN UN RECOJO «AHORA», COBRARLO. (0224)
+ *
+ * En un recojo de mostrador el cliente está de pie delante de la caja, y ese es
+ * el único instante en que se le puede cobrar: después de aquí hay una cocción
+ * entera, y quien se va en ese rato deja un plato hecho y sin pagar. Por eso
+ * `advance_order` EXIGE `paymentReal` para aceptar uno de estos, y por eso la
+ * pregunta vive en este modal y no en el pie de entrega.
+ *
+ * EL COBRO VA ARRIBA DEL TIEMPO, y no es orden alfabético: es el orden en que
+ * ella hace las cosas. Primero recibe el dinero, después estima la cocina.
+ *
+ * NINGUNA DE LAS DOS RESPUESTAS VIENE MARCADA, por lo mismo que la pregunta del
+ * recojo en el checkout: es la declaración de un hecho que solo ella puede
+ * comprobar. Un `paid_cash` por defecto convertiría en efectivo cada Yape que
+ * pasara por la caja sin que nadie lo mirara, y el corte de la noche cuadraría
+ * contra un número inventado.
+ */
 export function PrepTimeModal({
   order,
   onClose,
@@ -107,9 +125,14 @@ export function PrepTimeModal({
 }: {
   order: OrderVM
   onClose: () => void
-  onConfirm: (prep: number) => void
+  onConfirm: (prep: number, paymentReal?: 'paid_cash' | 'paid_yape') => void
 }) {
   const [sel, setSel] = useState(20)
+  const [cobro, setCobro] = useState<'paid_cash' | 'paid_yape' | null>(null)
+  // El prepago no entra: su dinero ya está dentro y lo selló `validate_order`.
+  const cobraEnMostrador =
+    order.method === 'pickup' && order.pickupTiming === 'now' && order.payment !== 'prepaid'
+  const falta = cobraEnMostrador && cobro === null
   return (
     <div className="absolute inset-0 z-[300] flex items-end justify-center bg-black/50">
       <div className="w-full max-w-[440px] rounded-t-[20px] bg-white p-5 pb-7 shadow-elev-3">
@@ -118,7 +141,9 @@ export function PrepTimeModal({
             <Icon weight={500} name="schedule" size={20} filled />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="text-base font-bold">Tiempo de preparación</div>
+            <div className="text-base font-bold">
+              {cobraEnMostrador ? 'Cobra y manda a cocina' : 'Tiempo de preparación'}
+            </div>
             <div className="mt-px text-xs text-ink-muted">
               #{order.id} · {order.customer ?? 'Cliente'}
             </div>
@@ -131,6 +156,40 @@ export function PrepTimeModal({
             <Icon weight={500} name="close" size={16} />
           </button>
         </div>
+
+        {cobraEnMostrador && (
+          <div className="mb-5">
+            <div className="mb-2.5 text-xs font-bold uppercase tracking-[0.06em] text-ink-muted">
+              ¿Con qué te pagó?
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {(
+                [
+                  { v: 'paid_cash', label: 'Efectivo', icon: 'payments' },
+                  { v: 'paid_yape', label: 'Yape/Plin', icon: 'qr_code_2' },
+                ] as const
+              ).map((o) => (
+                <button
+                  type="button"
+                  key={o.v}
+                  onClick={() => setCobro(o.v)}
+                  className={cn(
+                    'inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold transition-all',
+                    o.v === cobro
+                      ? 'border-transparent bg-success text-white'
+                      : 'border border-border bg-white text-ink',
+                  )}
+                >
+                  <Icon weight={500} name={o.icon} size={18} filled /> {o.label}
+                </button>
+              ))}
+            </div>
+            <div className="mt-2 text-[11px] text-ink-muted">
+              Cóbrale antes de mandarlo a cocina. Si no está o no paga, rechaza el pedido: no se
+              cocina nada.
+            </div>
+          </div>
+        )}
 
         <div className="mb-2.5 text-xs font-bold uppercase tracking-[0.06em] text-ink-muted">
           Selecciona el tiempo estimado para cocinar
@@ -164,10 +223,18 @@ export function PrepTimeModal({
           </button>
           <button
             type="button"
-            onClick={() => onConfirm(sel)}
+            onClick={() => onConfirm(sel, cobro ?? undefined)}
+            disabled={falta}
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-success px-5 py-3 text-[15px] font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-50"
           >
-            Confirmar y empezar
+            {/* El botón PIDE lo que falta en vez de quedarse gris y mudo: es el
+                mismo patrón del CTA del checkout, que dice «Elige cuándo lo
+                recoges» en lugar de deshabilitarse sin explicar. */}
+            {falta
+              ? 'Dinos con qué pagó'
+              : cobraEnMostrador
+                ? 'Cobré · a cocina'
+                : 'Confirmar y empezar'}
           </button>
         </div>
       </div>

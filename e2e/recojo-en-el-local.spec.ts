@@ -205,11 +205,11 @@ test.describe('0219/0220 · el recojo en el local, desde la pantalla del cliente
 
     await page.getByRole('button', { name: 'Recojo' }).click()
     await page.getByRole('button', { name: /Ahora, estoy en el local/ }).click()
-    await expect(page.getByText(/Preparamos tu pedido cuando el local confirme/)).toBeVisible()
+    await expect(page.getByText(/Pagas en la caja y preparan tu pedido/)).toBeVisible()
 
     // El envío desaparece de la cuenta: en un recojo no hay nada que cobrar por
     // llevarlo. Y el pie del CTA deja de hablar de motorizados.
-    await expect(page.getByText('Pagas en el local al recoger tu pedido.')).toBeVisible()
+    await expect(page.getByText('Pagas en la caja del local.')).toBeVisible()
 
     const confirmar = page.getByRole('button', { name: /Confirmar pedido/ })
     await expect(confirmar).toBeEnabled()
@@ -266,7 +266,7 @@ test.describe('0219/0220 · el recojo en el local, desde la pantalla del cliente
 
     // La promesa de «te lo preparamos cuando el local confirme que te tiene
     // delante» es exclusiva de «ahora»: aquí no hay nadie delante.
-    await expect(page.getByText(/Preparamos tu pedido cuando el local confirme/)).toHaveCount(0)
+    await expect(page.getByText(/Pagas en la caja y preparan tu pedido/)).toHaveCount(0)
 
     /*
      * LA REGLA DE LA 0223, VISTA DESDE LA PANTALLA.

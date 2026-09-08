@@ -5,7 +5,7 @@
 > este documento difieran, **gana este documento**. Se mantiene vivo: cada
 > decisión nueva o cambio se registra aquí, no en specs paralelos.
 >
-> Última actualización: 2026-09-08 (en el mostrador no se fía: un recojo llega a cocina pagado — §8, `0223`).
+> Última actualización: 2026-09-08 (en el mostrador no se fía: el recojo llega a cocina pagado y el plantón pagado no deja falta — §8, `0223`/`0224`).
 
 ---
 
@@ -314,11 +314,49 @@ sin pasar por el contrato. **Solo aplica a `source = 'customer_pwa'`**: un recoj
 manual de la cajera cobrado por Yape es legítimo — ella tuvo el dinero en la mano
 antes de crear la fila.
 
-**Lo que esta regla deja abierto y todavía no está decidido:** con el dinero
-siempre dentro, un `pickup_no_show` deja de ser «se perdió un plato» y pasa a ser
-«el negocio tiene la comida y el dinero, y el cliente un strike».
-`advance_order` no mira `payment_intent` en esa rama, y §14 solo contempla
-devolución en la cancelación temprana del cliente. **Pendiente de definir.**
+### El dinero entra antes de cocinar, y el plantón pagado no es una falta (`0224`)
+
+Segunda mitad de la regla. La `0223` cerró **qué** se puede elegir; esta mueve
+**cuándo** entra el dinero, y arregla lo que ese movimiento rompe al otro lado.
+
+**El cobro de un recojo «ahora» pasa al `accept`.** `advance_order` exige
+`paymentReal` (`paid_cash` | `paid_yape`) para mandarlo a cocina, y el tablero
+lo pregunta en el mismo modal del tiempo de preparación —el cobro arriba, que es
+el orden en que ella hace las cosas—. Antes el dinero entraba en `handover`, o
+sea **después** de la cocción: eso basta contra el pedido falso (quien no está,
+no se acepta) pero no contra el que se arrepiente, porque entre aceptar y
+entregar hay una cocción entera. Al entregar ya no se pregunta nada: un solo
+botón «Se lo llevó».
+
+**`payment_verified_at` es ahora el predicado único de «hay dinero dentro».** No
+es una columna reciclada a la fuerza: desde la `0181` significa «una persona
+confirmó que el dinero llegó» y la escribía `validate_order` al aprobar una
+captura. Ahora tiene un segundo escritor con el mismo sentido —la cajera
+cobrando en la caja— y eso permite responder con **una sola pregunta**, sin
+mirar `payment_intent`, si un pedido está pagado.
+
+**Un `pickup_no_show` de un pedido pagado ya no deja strike.** El strike existe
+(§8) para frenar a quien genera **pérdidas** al negocio; un recojo cobrado no
+genera ninguna: el negocio se queda con el dinero y con el plato. Marcarlo igual
+empujaría a prepago obligado, y a los tres a un bloqueo de 30 días, a un vecino
+que pagó y tuvo una emergencia — el mismo problema que el cobro por adelantado
+venía a evitar, reaparecido por el otro lado. El pedido **sí** se cancela (la
+bolsa deja de ocupar el mostrador) y el evento `CustomerNoShow` sale siempre,
+con `paid`/`strike` dentro para poder contarlos. El strike sigue vivo para el
+único recojo que puede llegar sin cobrar: **el manual de la cajera**.
+
+**La política que se le promete al cliente, y dónde se le dice.** «Te lo
+guardamos listo hasta que cierre el local. Si no pasas a recogerlo, no se
+devuelve» — en el checkout, bajo la respuesta «Más tarde», **antes** de pagar.
+Es la pieza antidisputa y por eso no vive en los términos: el cliente paga por
+adelantado y la comida se hace sin él delante, así que las dos mitades tienen
+que estar delante de sus ojos antes de que yapee.
+
+**Por qué no hay devolución automática, y no es tacañería:** Tindivo **no
+retiene fondos**. El Yape del prepago va directo al negocio, así que la
+plataforma no puede ejecutar un reembolso aunque quisiera — solo registrar lo
+que el negocio decida. Cualquier gesto de generosidad caso a caso es de La
+Florencia, y está bien que así sea.
 
 ### Recojo en el local: los dos perfiles, y por qué solo uno se salta el guard (`0220`)
 

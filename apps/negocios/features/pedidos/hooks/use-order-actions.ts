@@ -22,7 +22,14 @@ export interface OrderActionsDeps {
 
 export interface OrderActions {
   onClose: () => void
-  onAccept: (prepTimeMinutes: number) => Promise<void>
+  /**
+   * Aceptar el pedido y mandarlo a cocina.
+   *
+   * `paymentReal` SOLO viaja en un recojo «ahora» que no sea prepago: ahí el
+   * cliente está de pie en la caja y `advance_order` exige el cobro para
+   * aceptar (0224). En todo lo demás va `undefined` y la RPC ni lo mira.
+   */
+  onAccept: (prepTimeMinutes: number, paymentReal?: 'paid_cash' | 'paid_yape') => Promise<void>
   onReject: (code: string, text: string) => Promise<void>
   onVerifyProof: () => Promise<void>
   onRejectProof: () => Promise<void>
@@ -32,12 +39,20 @@ export interface OrderActions {
   /**
    * RECOJO · el cliente vino y se llevo su pedido.
    *
-   * Es el `deliver` del mostrador. `paymentReal` viaja porque en un recojo el
-   * cobro lo hace la cajera EN ese momento y puede no coincidir con lo que el
-   * cliente eligio en la app; en prepago la RPC lo ignora y fuerza
-   * `paid_prepaid`, asi que aqui no hay que ramificar por metodo de pago.
+   * Es el `deliver` del mostrador.
+   *
+   * `paymentReal` va SOLO cuando el cobro pasa aqui, o sea cuando nadie lo
+   * declaro antes: un recojo manual que la cajera toma por telefono y cobra al
+   * entregar. En un recojo «ahora» el dinero entro al aceptar (0224) y en un
+   * prepago llego antes, asi que se manda `undefined` y la RPC usa lo que ya
+   * hay en la fila.
+   *
+   * NO se manda un valor de relleno. Pasar 'paid_cash' por defecto acertaria
+   * solo porque el COALESCE de la RPC lo descarta — y el dia que ese orden
+   * cambie, un cobro por Yape quedaria registrado como efectivo sin que nadie
+   * lo note hasta cuadrar la caja.
    */
-  onHandover: (paymentReal: 'paid_cash' | 'paid_yape') => Promise<void>
+  onHandover: (paymentReal?: 'paid_cash' | 'paid_yape') => Promise<void>
   /**
    * RECOJO · nadie vino por la comida.
    *
@@ -88,7 +103,7 @@ export function useOrderActions({
 
   const actions: OrderActions = {
     onClose: () => onDone?.(),
-    onAccept: async (prep) => {
+    onAccept: async (prep, paymentReal) => {
       await run(async () => {
         if (!selected) return
         const id = selected.rowId
@@ -102,12 +117,14 @@ export function useOrderActions({
             await post(`/business/orders/${id}/transition`, {
               action: 'accept',
               prepTimeMinutes: prep,
+              paymentReal,
             })
           }
         } else {
           await post(`/business/orders/${id}/transition`, {
             action: 'accept',
             prepTimeMinutes: prep,
+            paymentReal,
           })
         }
         onDone?.()

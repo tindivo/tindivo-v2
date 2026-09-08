@@ -169,7 +169,10 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
     : payment === 'prepaid'
       ? 'Todavía no pagas nada. Te avisamos cuando el local confirme.'
       : deliveryMethod === 'pickup'
-        ? 'Pagas en el local al recoger tu pedido.'
+        ? // «En la caja» y no «al recoger»: desde la 0224 el cobro de un recojo
+          // «ahora» pasa cuando el local confirma que te tiene delante, no al
+          // entregarte la bolsa. El sitio es el mismo y el momento ya no.
+          'Pagas en la caja del local.'
         : 'Pagas al recibir, directo al motorizado.'
 
   return (
@@ -319,7 +322,26 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
               </div>
               {pickupTiming === 'now' && (
                 <p className="mt-2 text-[12px] text-ink-soft">
-                  Preparamos tu pedido cuando el local confirme que te tiene delante.
+                  Pagas en la caja y preparan tu pedido ahí mismo.
+                </p>
+              )}
+              {/* ── LO QUE PASA SI NO VIENES, DICHO ANTES DE PAGAR ──
+                  Es la pieza antidisputa, y por eso vive AQUÍ y no en los
+                  términos: el cliente de un «más tarde» paga por adelantado y
+                  la comida se hace sin él delante, así que las dos mitades
+                  —cuánto se le guarda y qué pasa si no pasa— tienen que estar
+                  delante de sus ojos ANTES de que yapee, no después.
+
+                  Va la promesa primero. «No se devuelve» a secas se lee como
+                  una amenaza en la pantalla donde se decide comprar; con lo que
+                  el negocio SÍ se compromete a hacer delante, es una condición
+                  y no un castigo. Y el plazo es «hasta que cierre el local»
+                  porque es lo que de verdad va a pasar: el mostrador no
+                  autocancela nada y la bolsa se queda ahí (0220). */}
+              {pickupTiming === 'later' && (
+                <p className="mt-2 text-[12px] text-ink-soft">
+                  Te lo guardamos listo hasta que cierre el local. Si no pasas a recogerlo, no se
+                  devuelve.
                 </p>
               )}
               {attempted && issue?.field === 'pickup' && (
