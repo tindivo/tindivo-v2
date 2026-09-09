@@ -2,7 +2,8 @@
 
 import { type ApiEnvelope, ApiError } from '@tindivo/api-client'
 import type { PerformancePayload } from '@tindivo/core'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { useLatestRequest } from '@/hooks/use-latest-request'
 import { api } from '@/lib/api'
 
 export type PerformanceData = PerformancePayload & { businessName: string }
@@ -30,8 +31,8 @@ export type PerformanceData = PerformancePayload & { businessName: string }
  * ventana. No hay nada en pantalla que delate el error, y esta es la pantalla
  * con la que el dueño decide.
  *
- * La guarda es un contador de peticiones: cada llamada se queda con su número y
- * solo escribe si sigue siendo la más nueva. `loading` va dentro de la misma
+ * La guarda es `useLatestRequest`: cada llamada se queda con su número y solo
+ * escribe si sigue siendo la más nueva. `loading` va dentro de la misma
  * condición a propósito — una respuesta vieja apagando el indicador dejaría la
  * pantalla diciendo «ya está» con la buena todavía en el aire.
  *
@@ -44,11 +45,10 @@ export function usePerformance(start: string, end: string) {
   const [data, setData] = useState<PerformanceData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const ultimaPeticion = useRef(0)
+  const abrirPeticion = useLatestRequest()
 
   const load = useCallback(async () => {
-    const mia = ++ultimaPeticion.current
-    const vigente = () => mia === ultimaPeticion.current
+    const vigente = abrirPeticion()
     setLoading(true)
     setError(null)
     try {
@@ -68,7 +68,7 @@ export function usePerformance(start: string, end: string) {
     } finally {
       if (vigente()) setLoading(false)
     }
-  }, [start, end])
+  }, [start, end, abrirPeticion])
 
   useEffect(() => {
     load()
