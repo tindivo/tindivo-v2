@@ -160,6 +160,26 @@ const ficherosApp = globSync('apps/**/*.{ts,tsx}', { cwd: RAIZ })
   .map((f) => readFileSync(join(RAIZ, f), 'utf8'))
   .join('\n')
 
+/**
+ * Las Edge Functions se miran APARTE porque se despliegan aparte.
+ *
+ * `supabase/functions` no viaja ni con `db push` ni con Vercel: sale con
+ * `supabase functions deploy`, un tercer despliegue que nadie recuerda y que
+ * este guardarraíl no miraba. Medido el 2026-09-09 contra `tindivo-prod`: la
+ * `send-push` desplegada (v12) pedía nueve columnas de `orders` y la del repo
+ * pide dos más (`delivery_method`, `pickup_timing`, de la 0220).
+ *
+ * Lo que lo hace peor que en las apps: ese `select` NO es del recojo. Está en
+ * la rama de `OrderStatusChanged`/`OrderExpired`, o sea en TODOS los pedidos, y
+ * el código de abajo hace `if (!o) return out`. Desplegar la función antes que
+ * la migración deja el piloto entero sin una sola notificación, con respuesta
+ * 200 y `recipients: 0` — que es exactamente como se ve una noche tranquila.
+ */
+const ficherosEdge = globSync('supabase/functions/**/*.ts', { cwd: RAIZ })
+  .filter((f) => !f.includes('node_modules'))
+  .map((f) => readFileSync(join(RAIZ, f), 'utf8'))
+  .join('\n')
+
 if (soloRemotas.length) {
   console.error(
     `\nAviso: ${soloRemotas.length} migración(es) están aplicadas en el remoto y NO en el repo:`,
@@ -171,24 +191,40 @@ if (soloRemotas.length) {
 if (pendientes.length) {
   console.error(`\nPRODUCCIÓN VA POR DETRÁS DEL REPO. Última aplicada: ${ultimaRemota}.\n`)
   console.error(`${pendientes.length} migración(es) sin aplicar:\n`)
+  let alguienUsaEdge = false
   for (const m of pendientes) {
     const r = rutaDe(m.local)
-    const estrenos = r
-      ? [...identificadoresDe(r.ruta)].filter((n) => !yaEnRemoto.has(n) && ficherosApp.includes(n))
-      : []
-    const nota = estrenos.length
-      ? `
-        ← EL CÓDIGO YA LA ASUME: ${estrenos.join(', ')}`
-      : ''
+    const nuevos = r ? [...identificadoresDe(r.ruta)].filter((n) => !yaEnRemoto.has(n)) : []
+    const estrenosApp = nuevos.filter((n) => ficherosApp.includes(n))
+    const estrenosEdge = nuevos.filter((n) => ficherosEdge.includes(n))
+    if (estrenosEdge.length) alguienUsaEdge = true
+    const nota =
+      (estrenosApp.length
+        ? `
+        ← EL CÓDIGO YA LA ASUME: ${estrenosApp.join(', ')}`
+        : '') +
+      (estrenosEdge.length
+        ? `
+        ← LA EDGE FUNCTION YA LA ASUME: ${estrenosEdge.join(', ')}`
+        : '')
     console.error(`  ${m.local}  ${r?.archivo ?? ''}${nota}`)
   }
   console.error(
-    '\nLas marcadas rompen producción si las apps se despliegan antes que la\n' +
-      'migración, y lo hacen EN SILENCIO: PostgREST devuelve 400 por un select\n' +
-      'con una columna que no existe, o 404 por una RPC con un parámetro que no\n' +
-      'existe, y el app los descarta sin pintar nada.\n' +
+    '\nLas marcadas rompen producción si se despliega antes que la migración, y\n' +
+      'lo hacen EN SILENCIO: PostgREST devuelve 400 por un select con una columna\n' +
+      'que no existe, o 404 por una RPC con un parámetro que no existe, y quien\n' +
+      'llama los descarta sin pintar nada.\n' +
       '\nEl orden es: `supabase db push` -> `pnpm db:types` -> desplegar las apps.\n',
   )
+  if (alguienUsaEdge) {
+    console.error(
+      'Y OJO CON LA EDGE FUNCTION, que es un despliegue aparte y no lo hace\n' +
+        'Vercel: `supabase functions deploy <slug>`. Va DESPUÉS de la migración,\n' +
+        'nunca antes. Su fallo es el más callado de todos: responde 200 con\n' +
+        '`recipients: 0` y nadie recibe nada — no solo lo que estrena la\n' +
+        'migración, sino TODOS los avisos que compartan ese select.\n',
+    )
+  }
   process.exit(1)
 }
 
