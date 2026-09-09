@@ -234,6 +234,21 @@ test.describe('0219/0220 · el recojo en el tablero de la cajera', () => {
     await expect(visible(page, 'Cobrado por Yape/Plin').first()).toBeVisible({ timeout: 15_000 })
     await expect(page.getByText('Cobrar en efectivo')).toHaveCount(0)
     await expect(page.getByText('Cobra en caja')).toHaveCount(0)
+
+    // Y EL COLOR DE LA PASTILLA TAMBIÉN, que es por donde se coló el fallo otra
+    // vez: `PAY_DISPLAY` se indexaba por la INTENCIÓN, así que este pedido
+    // pintaba la palabra «Billetera» dentro de la pastilla verde del efectivo.
+    // Se afirma sobre el color calculado y no sobre la clase de Tailwind: lo
+    // que estaba mal es lo que se ve, no cómo se escribe.
+    //
+    // Hay que volver a abrir el detalle: al mandar a cocina se cierra, y la
+    // pastilla vive en su cabecera. La tarjeta del tablero enseña el texto
+    // largo (`label`), no este.
+    await visible(page, `#${recojo.shortId}`).first().click()
+    const pastilla = visible(page, 'Billetera').first()
+    await expect(pastilla).toBeVisible()
+    const fondo = await pastilla.evaluate((el) => getComputedStyle(el).backgroundColor)
+    expect(fondo).toBe('rgb(237, 233, 254)') // violeta de billetera, no el #D1FAE5 del efectivo
   })
 
   /**

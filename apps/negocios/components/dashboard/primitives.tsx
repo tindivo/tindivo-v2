@@ -74,7 +74,19 @@ export function SourceBadgeMini({ source }: { source: UiSource }) {
  */
 export function PayBadgeMini({ order }: { order: OrderVM }) {
   const caja = cobroEnCaja(order)
-  const d = PAY_DISPLAY[order.payment] ?? PAY_DISPLAY.pending_cash
+  // EL COLOR TAMBIÉN TIENE QUE DECIR LA VERDAD, y decía la intención.
+  //
+  // `PAY_DISPLAY` se indexaba siempre por `order.payment`, o sea por lo que el
+  // cliente eligió al pedir. En un recojo cobrado por Yape eso pintaba la
+  // palabra «Billetera» DENTRO de la pastilla verde del efectivo: el texto
+  // decía una cosa y el color la contraria, sobre el mismo pedido. Es el mismo
+  // fallo que esta pastilla vino a arreglar, colado por el otro canal.
+  //
+  // Cobrado ya, manda lo que entró. Sin cobrar, la intención es lo único que
+  // hay — y en un recojo ni eso se afirma: va en gris, que es la ausencia de
+  // método, no un método más.
+  const clave = caja?.cobrado ? (order.paymentReal ?? order.payment) : order.payment
+  const d = PAY_DISPLAY[clave] ?? PAY_DISPLAY.pending_cash
   return (
     <span
       className={cn(

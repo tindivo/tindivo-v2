@@ -434,9 +434,17 @@ export function mapPaymentReal(real: string | null): UiPayment | null {
  * por su cuenta, y por eso podían decir cosas distintas del mismo pedido.
  */
 export interface CobroEnCaja {
-  /** Para la franja de la tarjeta, que tiene sitio. */
+  /** Para la franja de la tarjeta, que tiene sitio y contesta QUÉ HACER. */
   label: string
-  /** Para la pastilla de la cabecera del detalle, que no lo tiene. */
+  /**
+   * Para la pastilla de la cabecera del detalle, que no tiene sitio y contesta
+   * otra cosa: CON QUÉ, en una palabra.
+   *
+   * Se queda en el registro de sus vecinas —«Online», «Efectivo», «Billetera»,
+   * «Prepago»—: son pastillas de 10px en fila, y una que diga «Cobrado en
+   * efectivo» rompe la fila y encima repite lo que la franja ya dice mejor. Que
+   * el dinero ya entró se lee en la tarjeta y en el pie del detalle, no aquí.
+   */
   short: string
   icon: string
   /** El dinero YA entró: no es una orden, es un hecho. */
@@ -470,7 +478,14 @@ export function cobroEnCaja(order: {
         : ''
   return {
     label: `Cobrado${comoEntro}`,
-    short: order.paymentReal === 'pending_wallet' ? 'Cobrado · Yape' : `Cobrado${comoEntro}`,
+    // Sin método legible la pastilla dice «Cobrado» y no una forma de pago:
+    // es lo único que consta.
+    short:
+      order.paymentReal === 'pending_cash'
+        ? 'Efectivo'
+        : order.paymentReal === 'pending_wallet'
+          ? 'Billetera'
+          : 'Cobrado',
     icon: 'verified',
     cobrado: true,
   }

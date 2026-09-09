@@ -3,6 +3,7 @@ import { buildNegociosCardVM } from '../card-view-model'
 import type { OrderRow } from '../view-model'
 import {
   channelCounts,
+  cobroEnCaja,
   formatReadyDelta,
   getColumn,
   matchesChannel,
@@ -474,6 +475,66 @@ describe('la cejilla solo enseña lo que distingue', () => {
       toOrderVM(mockOrderRow({ customer_name: '   ', short_id: 'ABC12345' }), baseNow),
     )
     expect(vm.customerName).toBe('#ABC12345')
+  })
+})
+
+/**
+ * LA PASTILLA DE LA CABECERA Y LA FRANJA DE LA TARJETA DICEN COSAS DISTINTAS, y
+ * por eso `cobroEnCaja` devuelve dos textos. La franja contesta QUÉ HACER con
+ * la plata y tiene sitio; la pastilla contesta CON QUÉ, en una palabra, en fila
+ * con «Online» y las suyas.
+ *
+ * Se prueba aquí y no solo a través de la tarjeta porque la pastilla no pasa
+ * por `buildNegociosCardVM`: la consume `PayBadgeMini` directamente, y era
+ * justo el camino donde se coló la asimetría («Cobrado · Yape» contra «Cobrado
+ * en efectivo»).
+ */
+describe('cobroEnCaja', () => {
+  const recojo = (over: Partial<Parameters<typeof cobroEnCaja>[0]> = {}) =>
+    cobroEnCaja({
+      method: 'pickup',
+      payment: 'pending_cash',
+      yaCobrado: false,
+      paymentReal: null,
+      ...over,
+    })
+
+  it('no aplica al delivery: allí el método SÍ se pactó al pedir', () => {
+    expect(
+      cobroEnCaja({
+        ...{ method: 'delivery' as const },
+        payment: 'pending_cash',
+        yaCobrado: false,
+        paymentReal: null,
+      }),
+    ).toBeNull()
+  })
+
+  it('no aplica al prepago: su dinero entró por otra vía', () => {
+    expect(recojo({ payment: 'prepaid' })).toBeNull()
+  })
+
+  it('sin cobrar no nombra método, ni siquiera el que el cliente eligió', () => {
+    const caja = recojo()
+    expect(caja).toMatchObject({ label: 'Cobra en caja', short: 'En caja', cobrado: false })
+    expect(caja?.short).not.toMatch(/efectivo|yape|billetera/i)
+  })
+
+  it('cobrado, las dos formas se dicen igual de corto', () => {
+    const efectivo = recojo({ yaCobrado: true, paymentReal: 'pending_cash' })
+    const billetera = recojo({ yaCobrado: true, paymentReal: 'pending_wallet' })
+    // El fallo era este: «Cobrado · Yape» contra «Cobrado en efectivo», una
+    // pastilla de 10px con el doble de texto que su gemela.
+    expect(efectivo?.short).toBe('Efectivo')
+    expect(billetera?.short).toBe('Billetera')
+    // Y la franja, que sí tiene sitio, sigue diciendo el hecho entero.
+    expect(efectivo?.label).toBe('Cobrado en efectivo')
+    expect(billetera?.label).toBe('Cobrado por Yape/Plin')
+  })
+
+  it('cobrado sin método legible no inventa ninguno en ninguno de los dos textos', () => {
+    const caja = recojo({ yaCobrado: true, paymentReal: null })
+    expect(caja).toMatchObject({ label: 'Cobrado', short: 'Cobrado', cobrado: true })
   })
 })
 
