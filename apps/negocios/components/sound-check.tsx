@@ -36,8 +36,17 @@ import { playNewOrderTone, speak, unlockAudio } from '@/lib/use-audio-alert'
 
 export type ResultadoPrueba = 'oido' | 'sin-confirmar'
 
-/** Cuántos intentos antes de ofrecer seguir sin sonido. */
-const INTENTOS_ANTES_DE_RENDIRSE = 2
+/**
+ * CUÁNTAS VECES TIENE QUE DECIR «NO SE OYE» ANTES DE PODER SEGUIR.
+ *
+ * Se cuentan las RESPUESTAS, no las veces que ha sonado. Parece lo mismo y no
+ * lo es: contando reproducciones, el doble montaje de React en desarrollo ya
+ * daba la salida por buena en el primer intento, y en producción cualquier
+ * repetición automática la habría regalado igual. Lo que autoriza a seguir sin
+ * sonido es que una persona lo haya intentado dos veces, no que el navegador
+ * haya emitido dos bips.
+ */
+const FALLOS_ANTES_DE_RENDIRSE = 2
 
 const ULTIMA_FRASE_KEY = 'tindivo_ultima_frase_apertura'
 
@@ -54,7 +63,8 @@ export function SoundCheck({
   onDone: (resultado: ResultadoPrueba) => void
 }) {
   const [paso, setPaso] = useState<'sonando' | 'ayuda'>('sonando')
-  const [intentos, setIntentos] = useState(0)
+  /** Cuántas veces ha contestado que no oyó nada. Ver `FALLOS_ANTES_DE_RENDIRSE`. */
+  const [fallos, setFallos] = useState(0)
   const [saludo, setSaludo] = useState<SaludoApertura | null>(null)
   const temporizadores = useRef<ReturnType<typeof setTimeout>[]>([])
 
@@ -78,8 +88,6 @@ export function SoundCheck({
     // La voz se desfasa para no hablar encima del bip, igual que en las alertas
     // reales. Los dos tonos duran ~0.4 s.
     speak(nuevo.completo, 700)
-
-    setIntentos((n) => n + 1)
   }, [bizName])
 
   // Suena en cuanto aparece: la prueba no tiene un botón «empezar», porque un
@@ -95,7 +103,7 @@ export function SoundCheck({
     }
   }, [sonar])
 
-  const rendirse = intentos >= INTENTOS_ANTES_DE_RENDIRSE
+  const rendirse = fallos >= FALLOS_ANTES_DE_RENDIRSE
 
   return (
     <div
@@ -136,7 +144,10 @@ export function SoundCheck({
               </button>
               <button
                 type="button"
-                onClick={() => setPaso('ayuda')}
+                onClick={() => {
+                  setFallos((n) => n + 1)
+                  setPaso('ayuda')
+                }}
                 className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-ink/[0.06] px-4 text-[15px] font-bold text-ink transition-colors hover:bg-ink/[0.1]"
               >
                 No escuché nada

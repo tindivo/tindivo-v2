@@ -162,7 +162,7 @@ function OpeningAsk({
   onPostpone: () => void
 }) {
   const franja = shift ? `${shift.startLabel} a ${shift.endLabel}` : null
-  const titulo = forNewShift ? `Empieza tu turno de ${nombreDelTurno(shift)}` : '¿Abren hoy?'
+  const titulo = forNewShift ? `Empieza tu turno ${nombreDelTurno(shift)}` : '¿Abren hoy?'
   const detalle = forNewShift
     ? previousStatus === 'closed'
       ? 'Cerraste el turno anterior. Los clientes te ven cerrado hasta que confirmes este.'
@@ -219,13 +219,19 @@ function OpeningAsk({
   )
 }
 
-/** «la noche», «el mediodía»… sale de la hora de inicio del turno. */
+/**
+ * «de la noche», «del mediodía»… sale de la hora de inicio del turno.
+ *
+ * Devuelve la preposición incluida y no solo el nombre porque en español la
+ * contracción no es opcional: componer «de» + «el mediodía» da «de el mediodía»,
+ * que es justo lo que salía en pantalla la primera vez que se probó esto.
+ */
 function nombreDelTurno(shift: ShiftView | null): string {
   const hora = Number(shift?.startLabel.slice(0, 2) ?? Number.NaN)
-  if (!Number.isFinite(hora)) return 'trabajo'
-  if (hora < 12) return 'la mañana'
-  if (hora < 17) return 'el mediodía'
-  return 'la noche'
+  if (!Number.isFinite(hora)) return 'de trabajo'
+  if (hora < 12) return 'de la mañana'
+  if (hora < 17) return 'del mediodía'
+  return 'de la noche'
 }
 
 /**
