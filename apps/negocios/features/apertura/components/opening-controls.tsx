@@ -2,11 +2,10 @@
 
 import type { ShiftView } from '@tindivo/contracts'
 import { Icon } from '@tindivo/ui'
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useDashboard } from '@/components/dashboard/shell'
 import { useOpeningDay } from '../hooks/use-opening-day'
 import { ChangeSheet } from './change-sheet'
-import { type ResultadoPrueba, SoundCheck } from './sound-check'
 
 /**
  * Apertura de la jornada: la pregunta del principio y la franja para cambiar
@@ -35,39 +34,24 @@ import { type ResultadoPrueba, SoundCheck } from './sound-check'
  */
 const APLAZAMIENTO_MS = 5 * 60_000
 
-/**
- * DÓNDE SE ANOTA QUE EL SONIDO SE COMPROBÓ, Y POR QUÉ SE ANOTA EL TURNO.
- *
- * Una sola entrada con la clave del turno probado. Comprobar el sonido al abrir
- * el mediodía no dice nada del turno de la noche: entre medias la tablet se
- * silencia, se queda sin batería, se le desconecta el parlante o simplemente la
- * atiende otra persona. Guardar el turno en vez de un booleano hace que la
- * prueba caduque sola, sin código que la caduque.
- *
- * En `localStorage` y no en la base porque describe A ESTE APARATO —si abren el
- * panel en otro celular, ahí el sonido está sin comprobar, y eso es exactamente
- * lo que hay que decir—.
- */
-const PRUEBA_KEY = 'tindivo_sound_check_turno'
-
 export function OpeningControls() {
   const {
     status,
     changeAvailable,
     defaultChange,
     withinSchedule,
-    serviceDate,
     shift,
     moreShiftsToday,
     mustAsk,
     askingForNewShift,
+    madeInPreviousShift,
     loading,
     saving,
     error,
     declare,
     setChange,
   } = useOpeningDay()
-  const { bizName, enableSound } = useDashboard()
+  const { askSoundCheck, soundCheckAt } = useDashboard()
   /** Instante hasta el que la pregunta está aplazada. Ver `APLAZAMIENTO_MS`. */
   const [postponedUntil, setPostponedUntil] = useState(0)
   const [ahora, setAhora] = useState(() => Date.now())
@@ -84,46 +68,9 @@ export function OpeningControls() {
   // Un turno nuevo cancela el aplazamiento del anterior: lo que se aplazó al
   // mediodía no puede seguir callando la pregunta de la noche.
   const turno = shift ? `${shift.startLabel}-${shift.endLabel}` : ''
-  /** Identifica LA APERTURA CONCRETA: esta jornada y este turno. */
-  const claveTurno = `${serviceDate ?? '?'}|${turno}`
   useEffect(() => {
     setPostponedUntil(0)
   }, [turno])
-
-  // Qué turno tiene el sonido comprobado en ESTE aparato. Ver `PRUEBA_KEY`.
-  const [turnoProbado, setTurnoProbado] = useState<string | null>(() => {
-    if (typeof window === 'undefined') return null
-    try {
-      return window.localStorage.getItem(PRUEBA_KEY)
-    } catch {
-      return null
-    }
-  })
-  /** Prueba en curso. Se abre al declarar apertura y desde la franja de aviso. */
-  const [probando, setProbando] = useState(false)
-
-  const abrirPrueba = useCallback(() => {
-    // Encender las alertas es parte de la prueba: comprobar que suena con el
-    // interruptor apagado no comprueba nada, y el interruptor puede llevar
-    // apagado desde una noche en que alguien se hartó del ruido.
-    enableSound()
-    setProbando(true)
-  }, [enableSound])
-
-  const cerrarPrueba = useCallback(
-    (resultado: ResultadoPrueba) => {
-      setProbando(false)
-      if (resultado !== 'oido') return
-      setTurnoProbado(claveTurno)
-      try {
-        window.localStorage.setItem(PRUEBA_KEY, claveTurno)
-      } catch {
-        // Sin `localStorage` la prueba se repetirá en la próxima recarga. Es
-        // molesto y es preferible a darla por buena sin poder recordarlo.
-      }
-    },
-    [claveTurno],
-  )
 
   if (loading || !withinSchedule) return null
 
@@ -133,7 +80,10 @@ export function OpeningControls() {
    * El sonido está sin comprobar en este turno. Solo importa si el negocio dice
    * que atiende: a un local cerrado no le va a entrar ningún pedido que perder.
    */
-  const sonidoSinProbar = status === 'open' && !mustAsk && turnoProbado !== claveTurno
+  const sonidoSinProbar =
+    status === 'open' &&
+    !mustAsk &&
+    (soundCheckAt === null || madeInPreviousShift(new Date(soundCheckAt)))
 
   return (
     <>
@@ -150,7 +100,7 @@ export function OpeningControls() {
             // declarado abierto cuando esto se ejecuta: si el parlante
             // estuviera roto, dejar el local cerrado sería peor que el fallo
             // que se quiere evitar. Ver la cabecera de `SoundCheck`.
-            if (ok && next === 'open') abrirPrueba()
+            if (ok && next === 'open') askSoundCheck()
           }}
           onPostpone={() => {
             setAhora(Date.now())
@@ -159,9 +109,7 @@ export function OpeningControls() {
         />
       )}
 
-      {probando && <SoundCheck bizName={bizName} onDone={cerrarPrueba} />}
-
-      {sonidoSinProbar && <SoundUnverifiedBar onTest={abrirPrueba} />}
+      {sonidoSinProbar && <SoundUnverifiedBar onTest={askSoundCheck} />}
 
       <OpeningBar
         status={status}

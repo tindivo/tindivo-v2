@@ -23,7 +23,9 @@ import {
 } from 'react'
 import { OpeningControls } from '@/features/apertura/components/opening-controls'
 import { AttentionBanner } from '@/features/pedidos/components/attention-banner'
+import { LostSaleAlert } from '@/features/pedidos/components/lost-sale-alert'
 import { useAcknowledged } from '@/features/pedidos/hooks/use-acknowledged'
+import { useLostSales } from '@/features/pedidos/hooks/use-lost-sales'
 import { getBackoffDelayMs, useChannelHealth } from '@/hooks/use-channel-health'
 import { useIconFontReady } from '@/hooks/use-icon-font-ready'
 import { usePolledQuery } from '@/hooks/use-polled-query'
@@ -41,6 +43,7 @@ import {
 import { signOutDevice } from '@/lib/sign-out'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import { speak, unlockAudio, useDashboardSounds } from '@/lib/use-audio-alert'
+import { type ResultadoPrueba, SoundCheck } from '../sound-check'
 import { DashboardSkeleton } from './dashboard-skeleton'
 import { SuccessToastHost } from './toast'
 
@@ -138,6 +141,19 @@ export interface DashboardCtx {
    * bien puesto.
    */
   enableSound: () => void
+  /**
+   * Pide la prueba de sonido. Vive en el chrome y no en la apertura porque
+   * ahora la piden dos sitios muy distintos —la apertura del turno y el aviso
+   * de venta perdida— y el resultado es el mismo hecho: en este aparato, a esta
+   * hora, alguien confirmó que se oye.
+   */
+  askSoundCheck: () => void
+  /**
+   * Cuándo se comprobó el sonido por última vez EN ESTE APARATO, o `null` si
+   * nunca. Quien lo lee decide si sigue valiendo: la apertura, por ejemplo, lo
+   * caduca al empezar cada turno.
+   */
+  soundCheckAt: number | null
   /**
    * `force` salta el cooldown de deduplicación de `usePolledQuery`.
    *
@@ -1217,6 +1233,11 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
   const { acknowledged, acknowledge } = useAcknowledged(vms)
   const attention = useMemo(() => attentionState(vms, acknowledged), [vms, acknowledged])
 
+  // LO QUE SE ESCAPÓ. Vive en el chrome, como el sonido y el banner, porque un
+  // pedido se puede morir mientras la cajera teclea una comanda en `/nuevo` —de
+  // hecho es EL caso—, y ahí el tablero no está montado. Ver `lost-sales.ts`.
+  const { pending: ventasPerdidas, dismiss: cerrarVentasPerdidas } = useLostSales(vms)
+
   // Sonido persistente (corre en el chrome → suena en cualquier sección).
   // Le entra `alarm`, no `orders`: lo que suena es lo que se ve MENOS lo acusado.
   useDashboardSounds({
@@ -1294,6 +1315,47 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
     }
   }, [])
 
+  /**
+   * LA PRUEBA DE SONIDO, QUE AHORA LA PIDEN DOS SITIOS.
+   *
+   * Nació dentro de la apertura del turno y ahí se quedaba el resultado. Pero el
+   * aviso de venta perdida necesita ofrecer exactamente lo mismo —«¿seguro que
+   * esto suena?»— y su respuesta vale igual: es el mismo aparato y el mismo
+   * momento. Vive aquí para que haya UN solo hecho registrado, en vez de dos
+   * comprobaciones que no se enteran la una de la otra.
+   *
+   * Se guarda el INSTANTE y no un booleano. «Se comprobó» sin fecha no dice
+   * nada: lo que importa es si se comprobó en este turno, y esa pregunta la
+   * contesta quien lee, que es quien conoce el horario.
+   */
+  const [soundCheckAt, setSoundCheckAt] = useState<number | null>(() => {
+    if (typeof window === 'undefined') return null
+    const raw = Number(localStorage.getItem('tindivo_sound_check_at'))
+    return Number.isFinite(raw) && raw > 0 ? raw : null
+  })
+  const [soundCheckOpen, setSoundCheckOpen] = useState(false)
+
+  const askSoundCheck = useCallback(() => {
+    // Encender las alertas es parte de la prueba: comprobar que suena con el
+    // interruptor apagado no comprueba nada, y el interruptor puede llevar
+    // apagado desde una noche en que alguien se hartó del ruido.
+    enableSound()
+    setSoundCheckOpen(true)
+  }, [enableSound])
+
+  const onSoundCheckDone = useCallback((resultado: ResultadoPrueba) => {
+    setSoundCheckOpen(false)
+    if (resultado !== 'oido') return
+    const ahora = Date.now()
+    setSoundCheckAt(ahora)
+    try {
+      localStorage.setItem('tindivo_sound_check_at', String(ahora))
+    } catch {
+      // Sin `localStorage` la prueba se repetirá tras recargar. Molesto y
+      // preferible a darla por buena sin poder recordarlo.
+    }
+  }, [])
+
   const value = useMemo<DashboardCtx | null>(() => {
     if (!bizId) return null
     return {
@@ -1313,6 +1375,8 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
       soundOn,
       toggleSound,
       enableSound,
+      askSoundCheck,
+      soundCheckAt,
       refetchOrders,
       refetchBiz,
       signOut: onSignOut,
@@ -1336,6 +1400,8 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
     soundOn,
     toggleSound,
     enableSound,
+    askSoundCheck,
+    soundCheckAt,
     refetchOrders,
     refetchBiz,
     onSignOut,
@@ -1368,6 +1434,20 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
   return (
     <Ctx.Provider value={value}>
       {gateShown && <NotificationGate onActivate={handleActivateNotifications} />}
+      {soundCheckOpen && <SoundCheck bizName={value.bizName} onDone={onSoundCheckDone} />}
+      {/* Encima de todo salvo la prueba que él mismo ofrece: si un pedido se
+          murió sin que nadie lo tocara, no hay nada en pantalla más importante
+          que contarlo. */}
+      {ventasPerdidas.length > 0 && !gateShown && (
+        <LostSaleAlert
+          perdidas={ventasPerdidas}
+          onTestSound={() => {
+            cerrarVentasPerdidas()
+            askSoundCheck()
+          }}
+          onDismiss={cerrarVentasPerdidas}
+        />
+      )}
       <div className="flex flex-1 min-h-0 bg-surface">
         <div className="hidden shrink-0 lg:block h-full">
           <Sidebar active={active} onSignOut={onSignOut} />

@@ -57,6 +57,22 @@ export function playNewOrderTone(): void {
 }
 
 /**
+ * El tono de «se escapó un pedido»: tres notas DESCENDENTES y largas.
+ *
+ * Todo lo demás en este panel sube o repite —el pedido nuevo sube (880→1175),
+ * la llegada del motorizado va y vuelve—, así que bajar es lo único que no se
+ * confunde con nada. No hace falta saber solfeo para que una caída suene a mal
+ * asunto; es la misma razón por la que las alarmas de error bajan en todas
+ * partes.
+ *
+ * Suena más fuerte que ningún otro aviso (0.6) porque llega tarde por
+ * definición: si se ha llegado aquí es que los avisos discretos ya fallaron.
+ */
+export function playLostSaleTone(): void {
+  playToneSequence([660, 520, 390], 0.32, 0.6, false)
+}
+
+/**
  * Registra listeners globales para auto-desbloquear audio en PWA al primer gesto
  * y mantener activo el AudioContext cuando la PWA se minimiza/restaura.
  */

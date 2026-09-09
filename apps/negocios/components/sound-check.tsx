@@ -2,8 +2,8 @@
 
 import { Icon } from '@tindivo/ui'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { construirSaludo, type SaludoApertura } from '@/lib/saludo'
 import { playNewOrderTone, speak, unlockAudio } from '@/lib/use-audio-alert'
-import { construirSaludo, type SaludoApertura } from '../lib/saludo'
 
 /**
  * LA PRUEBA DE SONIDO DE LA APERTURA.

@@ -75,6 +75,15 @@ interface OpeningDay {
    * el texto: no es lo mismo «¿abren hoy?» que «empieza tu turno de la noche».
    */
   askingForNewShift: boolean
+  /**
+   * ¿Ese instante pasó en un turno ANTERIOR al de ahora?
+   *
+   * Lo usan dos cosas que caducan igual: la declaración de apertura y la prueba
+   * de sonido. Las dos describen «lo que se sabía en un turno», y las dos dejan
+   * de valer en el siguiente por la misma razón — entre uno y otro el local se
+   * cierra, cambia la persona del mostrador y la tablet se queda sola.
+   */
+  madeInPreviousShift: (at: Date) => boolean
   loading: boolean
   saving: boolean
   error: string | null
@@ -271,8 +280,9 @@ export function useOpeningDay(): OpeningDay {
    * preguntar: no hay instante contra el que medir, y una pregunta de más en
    * mitad del turno cuesta más que la que se ahorra.
    */
-  const declaracionDeOtroTurno =
-    schedule !== null && confirmedAt !== null && declarationIsStale(schedule, now, confirmedAt)
+  const madeInPreviousShift = (at: Date): boolean =>
+    schedule !== null && declarationIsStale(schedule, now, at)
+  const declaracionDeOtroTurno = confirmedAt !== null && madeInPreviousShift(confirmedAt)
   const askingForNewShift = status !== null && declaracionDeOtroTurno
   const mustAsk = withinSchedule && (status === null || declaracionDeOtroTurno)
 
@@ -286,6 +296,7 @@ export function useOpeningDay(): OpeningDay {
     moreShiftsToday,
     mustAsk,
     askingForNewShift,
+    madeInPreviousShift,
     loading,
     saving,
     error,
