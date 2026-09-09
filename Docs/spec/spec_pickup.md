@@ -46,7 +46,7 @@ Este spec resuelve eso reconectando pickup a la infraestructura antifraude ya ex
 
 El checkout de pickup debe preguntar explícitamente al cliente, sin inferir por el canal de entrada (QR vs. buscar en Google estando ahí mismo — ambos casos son indistinguibles por origen y deben tratarse igual):
 
-> **"¿Cuándo recoges tu pedido?"** → **Ahora, estoy cerca** / **Más tarde**
+> **"¿Cuándo recoges tu pedido?"** → **Ahora, espero en el local** / **Más tarde**
 
 Este es el campo nuevo `pickup_timing: 'now' | 'later'` en el payload de `create_customer_order`. No se infiere de `source=qr_priamo` — ese parámetro de URL queda solo como dato de atribución de marketing (para medir cuánta gente entra por el póster), nunca como control de seguridad, porque un link se puede fotografiar y compartir.
 

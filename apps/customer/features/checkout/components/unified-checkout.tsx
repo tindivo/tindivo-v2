@@ -300,8 +300,20 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
               sería regalar esa exención a quien nunca contestó.
 
               Las etiquetas dicen dónde está el cliente, no cuándo pasa por la
-              comida: «Ahora, estoy en el local» es comprobable —la cajera lo
-              mira— mientras que «en 10 minutos» no lo es por nadie. */}
+              comida: «Ahora, espero en el local» es comprobable —la cajera lo
+              mira— mientras que «en 10 minutos» no lo es por nadie.
+
+              Y el verbo es «espero», no «estoy». Con «estoy» la pregunta
+              —«¿CUÁNDO recoges tu pedido?»— y la respuesta —«ahora»— se leían
+              juntas como una promesa de comida inmediata, cuando lo que ocurre
+              es lo contrario: se cobra primero y se cocina después, con el
+              cliente ahí delante. La etiqueta que promete inmediatez y la caja
+              que tarda veinte minutos es una discusión en el mostrador.
+
+              No se pone un número de minutos porque aquí no se sabe: el tiempo
+              de preparación lo elige la cajera al aceptar, no el checkout.
+              Mismo criterio que `prepPhrase` en los avisos, que devuelve cadena
+              vacía antes que inventar un «~20 min» que nadie prometió. */}
           {deliveryMethod === 'pickup' && (
             <div
               ref={pickupRef}
@@ -318,7 +330,7 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
                   active={pickupTiming === 'now'}
                   onClick={() => setPickupTiming('now')}
                   icon="storefront"
-                  label="Ahora, estoy en el local"
+                  label="Ahora, espero en el local"
                 />
                 <DeliveryMethodButton
                   active={pickupTiming === 'later'}
@@ -329,7 +341,7 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
               </div>
               {pickupTiming === 'now' && (
                 <p className="mt-2 text-[12px] text-ink-soft">
-                  Pagas en la caja y preparan tu pedido ahí mismo.
+                  Pagas en la caja y lo preparan mientras esperas ahí.
                 </p>
               )}
               {/* ── LO QUE PASA SI NO VIENES, DICHO ANTES DE PAGAR ──

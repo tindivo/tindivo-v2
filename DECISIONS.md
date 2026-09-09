@@ -360,7 +360,7 @@ Florencia, y está bien que así sea.
 
 ### Recojo en el local: los dos perfiles, y por qué solo uno se salta el guard (`0220`)
 
-El checkout **pregunta** («¿Cuándo recoges tu pedido?» → *Ahora, estoy en el local* /
+El checkout **pregunta** («¿Cuándo recoges tu pedido?» → *Ahora, espero en el local* /
 *Más tarde*) y guarda la respuesta en `orders.pickup_timing`. **No se infiere del
 origen del enlace**: un QR pegado en el mostrador se fotografía y se comparte por
 WhatsApp en diez segundos, así que `source=qr_priamo` queda como dato de
