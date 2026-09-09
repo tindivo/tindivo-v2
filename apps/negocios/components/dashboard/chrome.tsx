@@ -132,6 +132,13 @@ export interface DashboardCtx {
   soundOn: boolean
   toggleSound: () => void
   /**
+   * Enciende las alertas, sin alternar. Lo llama la prueba de sonido de la
+   * apertura: ahí la intención es inequívoca —se está comprobando que suena—, y
+   * un `toggle` habría APAGADO el sonido justo en el turno de quien ya lo tenía
+   * bien puesto.
+   */
+  enableSound: () => void
+  /**
    * `force` salta el cooldown de deduplicación de `usePolledQuery`.
    *
    * Lo necesita quien acaba de ESCRIBIR y sabe que el servidor ya tiene el
@@ -1279,6 +1286,14 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
     })
   }, [])
 
+  const enableSound = useCallback(() => {
+    unlockAudio()
+    setSoundOn(true)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('tindivo_sound_on', 'true')
+    }
+  }, [])
+
   const value = useMemo<DashboardCtx | null>(() => {
     if (!bizId) return null
     return {
@@ -1297,6 +1312,7 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
       now,
       soundOn,
       toggleSound,
+      enableSound,
       refetchOrders,
       refetchBiz,
       signOut: onSignOut,
@@ -1319,6 +1335,7 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
     now,
     soundOn,
     toggleSound,
+    enableSound,
     refetchOrders,
     refetchBiz,
     onSignOut,

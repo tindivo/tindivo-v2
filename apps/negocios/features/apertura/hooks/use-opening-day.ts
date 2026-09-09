@@ -54,6 +54,8 @@ interface OpeningDay {
    * está cambiando precios, no abriendo.
    */
   withinSchedule: boolean
+  /** Jornada de servicio en curso (`current_service_date`), en `YYYY-MM-DD`. */
+  serviceDate: string | null
   /**
    * El turno que corre ahora mismo, para poder nombrarlo. `null` fuera de
    * horario o sin horario configurado.
@@ -279,6 +281,7 @@ export function useOpeningDay(): OpeningDay {
     changeAvailable,
     defaultChange,
     withinSchedule,
+    serviceDate,
     shift,
     moreShiftsToday,
     mustAsk,
