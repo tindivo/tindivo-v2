@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Tracking } from '../../types'
-import { cancelledCopy, etaLabel, etaView } from '../format'
+import { cancelledCopy, etaLabel, etaView, getStatusMessage } from '../format'
 
 /**
  * CUÁNTO FALTA, CUANDO NADIE VIAJA.
@@ -133,5 +133,60 @@ describe('0224 · qué lee el cliente cuando no pasó a recoger', () => {
    */
   it('sin método declarado, el texto es el del delivery', () => {
     expect(cancelledCopy('no_show').body).toContain('El motorizado llegó a la dirección')
+  })
+})
+
+/**
+ * NO SE LE PIDE DOS VECES UN DINERO QUE YA ENTRÓ.
+ *
+ * El pie del seguimiento preguntaba por `paymentIntent`, o sea por lo que el
+ * cliente PENSABA pagar cuando pidió, y desde la 0224 eso ya no responde si el
+ * dinero está dentro: un recojo «ahora» se cobra en la caja AL ACEPTAR, antes
+ * de que nadie toque una sartén. Así que a quien pagó su pollo y esperó la
+ * cocción entera, la pantalla le decía «pásalo a recoger Y PAGAS AHÍ» justo
+ * cuando iba camino del mostrador.
+ *
+ * Es el mismo defecto —y el mismo arreglo— que el aviso de WhatsApp que manda
+ * la cajera desde `negocios`: la pregunta buena es `paymentVerifiedAt`, que
+ * significa «alguien confirmó que el dinero llegó».
+ */
+describe('0224 · el pie del recojo listo y el dinero', () => {
+  const listo = (over: Partial<Tracking> = {}) =>
+    getStatusMessage({ ...BASE, status: 'ready_for_pickup', ...over } as Tracking, 'ontheway')
+
+  it('no manda a pagar a quien ya pagó en la caja', () => {
+    const cobrado = listo({ paymentVerifiedAt: '2026-09-08T19:40:00Z' })
+
+    expect(cobrado).not.toContain('pagas')
+    expect(cobrado).toContain('Pásalo a recoger')
+  })
+
+  /**
+   * La mitad que da sentido a la otra: el recojo MANUAL que la cajera fía a un
+   * cliente que conoce por teléfono sí tiene algo que cobrar en el mostrador
+   * —el CHECK de la 0223 solo ata al canal del cliente— y callarlo lo dejaría
+   * llegando sin plata.
+   */
+  it('sí lo dice cuando de verdad queda algo que cobrar', () => {
+    expect(listo({ paymentVerifiedAt: null })).toContain('pagas ahí')
+  })
+
+  /**
+   * El prepago sigue teniendo su rama, sumada y no sustituida: su
+   * `payment_verified_at` lo escribe `validate_order`, y un recojo manual
+   * creado ya prepagado no pasa por ahí.
+   */
+  it('un prepago no pide dinero ni sin el sello', () => {
+    expect(listo({ paymentIntent: 'prepaid', paymentVerifiedAt: null })).not.toContain('pagas')
+  })
+
+  /** El delivery no se toca: ahí el que cobra es el motorizado, en la puerta. */
+  it('el delivery conserva su aviso de tener el pago listo', () => {
+    const d = getStatusMessage(
+      { ...BASE, deliveryMethod: 'delivery', status: 'picked_up' } as Tracking,
+      'ontheway',
+    )
+
+    expect(d).toContain('Ten listo tu pago')
   })
 })

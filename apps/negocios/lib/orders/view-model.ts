@@ -492,6 +492,53 @@ export function cobroEnCaja(order: {
 }
 
 /**
+ * ¿ESTA TARJETA TIENE UN RELOJ QUE HAY QUE MOVER CADA SEGUNDO?
+ *
+ * El tablero no repinta a ciegas: un `setInterval` de 1 s solo empuja `now` si
+ * alguna tarjeta lo necesita, porque en un pueblo con diez pedidos por noche la
+ * pantalla se pasa la mayor parte del turno quieta y repintarla cada segundo
+ * para nada es batería del aparato de la caja.
+ *
+ * VIVE AQUÍ, Y NO EN `chrome.tsx`, porque ese es el fallo que arregló:
+ * `awaiting_customer` tenía reloj en la tarjeta y no estaba en la lista del
+ * tick, así que el contador del mostrador se quedaba clavado en el segundo del
+ * último repintado que provocara OTRO pedido — y si no quedaba ninguno vivo,
+ * clavado del todo (visto en 00:08). Con la condición al lado de quien decide
+ * el reloj, el test puede exigir que las dos digan lo mismo, que es lo que
+ * `chrome.tsx` no podía comprobar de sí mismo.
+ *
+ * Es más ancha que «tiene reloj» a propósito: `pending_acceptance`,
+ * `awaiting_payment` y `validando` entran por su cuenta atrás, que además
+ * dispara la autoexpiración al llegar a 0.
+ */
+export function needsClockTick(order: Pick<OrderVM, 'status' | 'state'>): boolean {
+  if (
+    order.status === 'pending_acceptance' ||
+    order.status === 'awaiting_payment' ||
+    order.status === 'validando'
+  ) {
+    return true
+  }
+  switch (order.state) {
+    case 'cooking':
+    case 'heading':
+    case 'waiting':
+    case 'buffer_p1':
+    case 'buffer_p2':
+    case 'buffer_p3':
+    case 'picked_up':
+    // La bolsa en el mostrador: cuenta hacia arriba y es el reloj que MÁS
+    // depende de ir corriendo. No mide lo que queda —un recojo no se
+    // autocancela— sino lo que la bolsa lleva ahí, que es con lo que la cajera
+    // decide si ya toca declarar el plantón. Congelado, dice que no toca.
+    case 'awaiting_customer':
+      return true
+    default:
+      return false
+  }
+}
+
+/**
  * Columna del kanban para un estado. EXHAUSTIVO A PROPÓSITO.
  *
  * Era una cadena de `if` que acababa en `return 'entregados'` como cajón de

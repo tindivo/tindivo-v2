@@ -45,6 +45,13 @@ function telefonoNuevo(): string {
 async function sembrarRecojo(
   status: 'pending_acceptance' | 'ready_for_pickup',
   timing: 'now' | 'later',
+  /**
+   * El dinero YA entró. Desde la 0224 no es un caso raro sino el normal de un
+   * recojo «ahora»: `accept` cobra en la caja antes de mandar nada a cocina, y
+   * sella `payment_verified_at` — la misma columna que escribe `validate_order`
+   * al aprobar la captura de un prepago.
+   */
+  opts: { cobrado?: boolean } = {},
 ): Promise<{ id: string; shortId: string }> {
   const { data, error } = await db
     .from('orders')
@@ -70,6 +77,8 @@ async function sembrarRecojo(
       // (`noShowWaitMinutes`) y sin esto el caso probaría el suelo, no el botón.
       ready_for_pickup_at:
         status === 'ready_for_pickup' ? new Date(Date.now() - 60 * 60_000).toISOString() : null,
+      payment_verified_at: opts.cobrado ? new Date(Date.now() - 90 * 60_000).toISOString() : null,
+      payment_real: opts.cobrado ? 'paid_cash' : null,
     })
     .select('id, short_id')
     .single()
@@ -326,6 +335,47 @@ test.describe('0219/0220 · el recojo en el tablero de la cajera', () => {
       .eq('id', recojo.id)
       .single()
     expect(data?.tracking_link_sent_at).not.toBeNull()
+  })
+
+  /**
+   * EL AVISO NO LE PIDE OTRA VEZ UN DINERO QUE YA ENTRÓ. (0224)
+   *
+   * La otra mitad del test de arriba, y el caso que en el piloto es el NORMAL:
+   * desde la 0224 un recojo «ahora» se cobra en la caja AL ACEPTAR, antes de
+   * que nadie toque una sartén. Así que cuando la comida sale del horno el
+   * dinero lleva dentro toda la cocción — y el mensaje seguía diciendo «son
+   * S/ 24.00, los pagas aquí al recogerlo», con el nombre del negocio detrás,
+   * a quien acababa de pagar en el mostrador.
+   *
+   * La pregunta buena la contesta `cobroEnCaja`, que es la fuente única de
+   * «¿queda algo que cobrar aquí?» — la misma con la que el pie de la ficha
+   * deja de preguntar «¿cómo pagó?» y con la que un plantón pagado no deja
+   * strike. Se afirma sobre el `href` porque es el mensaje entero.
+   */
+  test('el aviso NO menciona monto si el pedido ya se cobró en la caja', async ({ page }) => {
+    const recojo = await sembrarRecojo('ready_for_pickup', 'now', { cobrado: true })
+    await abrirTablero(page, recojo.shortId)
+    await visible(page, `#${recojo.shortId}`).first().click()
+
+    await page.evaluate(() => {
+      let capturada = ''
+      // biome-ignore lint/suspicious/noExplicitAny: se pisa `open` a propósito
+      ;(window as any).open = (u: string) => {
+        capturada = u
+        return null
+      }
+      // biome-ignore lint/suspicious/noExplicitAny: puente para leerla después
+      ;(window as any).__waUrl = () => capturada
+    })
+
+    await page.getByRole('button', { name: /Avisar por WhatsApp/ }).click()
+    // biome-ignore lint/suspicious/noExplicitAny: el puente de arriba
+    const abierta = await page.evaluate(() => (window as any).__waUrl())
+    const texto = decodeURIComponent(new URL(abierta).searchParams.get('text') ?? '')
+
+    expect(texto, 'sigue avisando de que puede pasar').toContain('ya está listo')
+    expect(texto, 'y no le vuelve a pedir la plata').not.toMatch(/S\//)
+    expect(texto).not.toMatch(/pagas/)
   })
 
   /**

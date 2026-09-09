@@ -288,7 +288,29 @@ export function getStatusMessage(data: Tracking, current: TrackingStep | null): 
     // está en el mostrador esperando. Decirle lo otro le haría esperar en su
     // casa un motorizado que no existe.
     if (data.deliveryMethod === 'pickup') {
-      return data.paymentIntent === 'prepaid'
+      /*
+       * «Y PAGAS AHÍ» SOLO SI QUEDA ALGO QUE PAGAR (0224).
+       *
+       * Esto preguntaba por `paymentIntent`, o sea por lo que el cliente
+       * PENSABA pagar al pedir, y desde la 0224 eso ya no dice si el dinero
+       * entró: un recojo «ahora» se cobra en la caja AL ACEPTAR, antes de que
+       * nadie toque una sartén. Cuando la comida sale del horno ese cliente
+       * lleva pagado toda la cocción, y la pantalla le seguía mandando a pagar
+       * por segunda vez justo cuando iba camino del mostrador.
+       *
+       * `paymentVerifiedAt` es la pregunta correcta y ya viajaba en el tracking
+       * (0183): significa «alguien confirmó que el dinero llegó», y lo escriben
+       * las dos vías —`validate_order` al aprobar la captura del prepago y
+       * `accept` al cobrar en el mostrador—.
+       *
+       * El prepago SIGUE con su rama, sumada y no sustituida: la escritura de
+       * `payment_verified_at` en un prepago la hace `validate_order`, y un
+       * recojo manual que la cajera cree ya prepagado no pasa por ahí. Sin
+       * `paymentIntent` en la condición, ese pedido volvería a pedir dinero.
+       * Lo que NO puede volver es lo contrario —dar por pagado lo que no lo
+       * está— y para eso basta con que ninguna de las dos ramas adivine.
+       */
+      return data.paymentVerifiedAt || data.paymentIntent === 'prepaid'
         ? 'Tu pedido ya está listo. Pásalo a recoger en el local.'
         : 'Tu pedido ya está listo. Pásalo a recoger en el local y pagas ahí.'
     }

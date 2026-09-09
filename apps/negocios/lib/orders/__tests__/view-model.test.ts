@@ -7,6 +7,7 @@ import {
   formatReadyDelta,
   getColumn,
   matchesChannel,
+  needsClockTick,
   resolveChannelFilter,
   resolveMobileTab,
   toOrderVM,
@@ -956,5 +957,76 @@ describe('el recojo en el tablero (0219/0220)', () => {
       expect(resolveChannelFilter('pickup', { delivery: 3, pickup: 1 })).toBe('pickup')
       expect(resolveChannelFilter('all', { delivery: 0, pickup: 0 })).toBe('all')
     })
+  })
+})
+
+/**
+ * EL RELOJ QUE SE PINTA Y EL RELOJ QUE SE MUEVE TIENEN QUE SER EL MISMO.
+ *
+ * El tablero solo repinta cada segundo si alguna tarjeta lo necesita —diez
+ * pedidos por noche no justifican tener la pantalla de la caja repintándose
+ * para nada— y esa condición se escribía a mano en `chrome.tsx`, lejos de
+ * `buildNegociosCardVM`, que es quien decide qué tarjeta lleva reloj.
+ *
+ * Se separaron: al mostrador (`awaiting_customer`) se le dio reloj y nadie lo
+ * añadió a la lista del tick, así que su contador avanzaba SOLO cuando otro
+ * pedido del tablero provocaba el repintado — y sin ningún otro vivo, se
+ * quedaba clavado (visto en 00:08 con la bolsa media hora en la repisa).
+ *
+ * Este test recorre los estados en vez de comprobar uno: lo que protege no es
+ * el recojo, es la relación. El siguiente estado con reloj tendrá que pasar por
+ * aquí.
+ */
+describe('el reloj de la tarjeta y el tick del tablero', () => {
+  const conReloj: { caso: string; row: Partial<OrderRow> }[] = [
+    {
+      caso: 'pendiente de aceptar (cuenta atrás)',
+      row: { status: 'pending_acceptance', pending_acceptance_at: new Date(NOW).toISOString() },
+    },
+    {
+      caso: 'en cocina',
+      row: { status: 'preparing', estimated_ready_at: new Date(NOW + 8 * 60_000).toISOString() },
+    },
+    {
+      caso: 'esperando motorizado con la comida aún en el horno',
+      row: {
+        status: 'waiting_driver',
+        waiting_driver_at: new Date(NOW - 60_000).toISOString(),
+        estimated_ready_at: new Date(NOW + 4 * 60_000).toISOString(),
+      },
+    },
+    {
+      caso: 'en reparto',
+      row: { status: 'picked_up', picked_up_at: new Date(NOW - 3 * 60_000).toISOString() },
+    },
+    {
+      caso: 'la bolsa esperando al cliente en el mostrador',
+      row: {
+        status: 'ready_for_pickup',
+        delivery_method: 'pickup',
+        pickup_timing: 'now',
+        ready_for_pickup_at: new Date(NOW - 8_000).toISOString(),
+      },
+    },
+  ]
+
+  for (const { caso, row } of conReloj) {
+    it(`${caso}: si la tarjeta pinta reloj, el tablero lo mueve`, () => {
+      const orderVm = vm(row)
+      const card = buildNegociosCardVM(orderVm)
+
+      expect(card.clock, 'este caso tiene que pintar reloj para probar algo').not.toBeNull()
+      expect(needsClockTick(orderVm)).toBe(true)
+    })
+  }
+
+  /**
+   * La otra mitad: un pedido cerrado no tiene nada que mover, y si entrara en
+   * la lista el tablero se repintaría cada segundo toda la noche por pedidos
+   * que ya no cambian.
+   */
+  it('un pedido cerrado no obliga a repintar', () => {
+    expect(needsClockTick(vm({ status: 'delivered' }))).toBe(false)
+    expect(needsClockTick(vm({ status: 'cancelled' }))).toBe(false)
   })
 })

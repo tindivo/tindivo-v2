@@ -3,7 +3,7 @@
 import { ApiError } from '@tindivo/api-client'
 import { useCallback, useState } from 'react'
 import { api } from '@/lib/api'
-import type { OrderVM } from '@/lib/orders/view-model'
+import { cobroEnCaja, type OrderVM } from '@/lib/orders/view-model'
 import {
   customerWhatsappDigits,
   normalizeSupportPhone,
@@ -243,9 +243,30 @@ export function useOrderActions({
               bizName,
               shortId: selected.id,
               customerName: selected.customer,
-              // Un prepago ya esta pagado: recordarle el monto es invitarlo a
-              // pagarlo dos veces.
-              totalACobrar: selected.payment === 'prepaid' ? null : selected.total,
+              // NO SE LE PIDE DOS VECES UN DINERO QUE YA ENTRO (0224).
+              //
+              // Esto preguntaba solo por el prepago, y desde la 0224 el prepago
+              // ya no es el unico recojo pagado: un recojo «ahora» se cobra AL
+              // ACEPTAR, antes de que nadie toque una sarten, asi que cuando la
+              // comida sale del horno el dinero lleva dentro toda la coccion.
+              // El aviso le decia igual «son S/ 24.00, los pagas aqui al
+              // recogerlo» a quien acababa de pagar en la caja: una invitacion
+              // a pagar dos veces, con el mensaje del negocio como prueba.
+              //
+              // La pregunta no se responde aqui a mano: `cobroEnCaja` es la
+              // fuente unica de «¿queda algo que cobrar en el mostrador?» y
+              // existe precisamente porque cada pantalla la calculaba por su
+              // cuenta y podian contradecirse sobre el mismo pedido. Devuelve
+              // `null` en un prepago y `cobrado: true` en cuanto hay
+              // `payment_verified_at` — la misma columna con la que el pie de
+              // la ficha deja de preguntar «¿como pago?» y con la que
+              // `advance_order` no pone strike a un planton pagado.
+              //
+              // Queda un solo caso con monto que anunciar, y es real: el recojo
+              // MANUAL para mas tarde que la cajera fia a un cliente que
+              // conoce por telefono. El CHECK de la 0223 solo ata al canal del
+              // cliente.
+              totalACobrar: cobroEnCaja(selected)?.cobrado === false ? selected.total : null,
             }),
           ),
           '_blank',

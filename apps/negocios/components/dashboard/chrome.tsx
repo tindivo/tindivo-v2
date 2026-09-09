@@ -34,6 +34,7 @@ import { attentionState } from '@/lib/orders/attention'
 import {
   getColumn,
   isBusinessPaused,
+  needsClockTick,
   ORDER_SELECT,
   type OrderRow,
   type OrderVM,
@@ -1251,25 +1252,17 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
     return n
   }, [vms])
 
-  // Tick inteligente: solo si hay countdowns o buffer activos.
+  // Tick inteligente: solo si alguna tarjeta tiene un reloj que mover.
+  //
+  // La condición vive en `needsClockTick`, al lado de quien decide qué tarjeta
+  // lleva reloj: estaba aquí escrita a mano y se le quedó fuera el mostrador
+  // (`awaiting_customer`), o sea que ese contador se congelaba en cuanto no
+  // quedaba ningún otro pedido vivo en el tablero.
   const needsTickRef = useRef(false)
   const lastExpireTriggerRef = useRef<number>(0)
 
   useEffect(() => {
-    const hasTicking = vms.some(
-      (v) =>
-        v.status === 'pending_acceptance' ||
-        v.status === 'awaiting_payment' ||
-        v.status === 'validando' ||
-        v.state === 'cooking' ||
-        v.state === 'heading' ||
-        v.state === 'waiting' ||
-        v.state === 'buffer_p1' ||
-        v.state === 'buffer_p2' ||
-        v.state === 'buffer_p3' ||
-        v.state === 'picked_up',
-    )
-    needsTickRef.current = hasTicking
+    needsTickRef.current = vms.some(needsClockTick)
   }, [vms])
 
   useEffect(() => {
