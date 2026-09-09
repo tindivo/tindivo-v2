@@ -6,6 +6,7 @@ import type { ConfigMessage } from '../hooks/use-business-config'
 import { CAP_ITEMS, capabilityLabel, isWaInvalid, SECTIONS, WA_ERROR } from '../lib/constants'
 import type { Form, SectionId } from '../types'
 import { AccentColorReadonly } from './accent-color-readonly'
+import { AvisosSection } from './avisos-section'
 import { CapToggle } from './cap-toggle'
 import { CapabilityNotes } from './capability-notes'
 import { Field } from './field'
@@ -442,6 +443,11 @@ export function ConfigView({
           <SectionCard title="Horario semanal" icon="calendar_month" id="horario">
             <ScheduleEditor />
           </SectionCard>
+
+          {/* Va fuera del formulario a propósito: no es un campo del negocio
+              que se guarde con «Guardar», es el estado de ESTE aparato y se
+              arregla en el momento. Ver `AvisosSection`. */}
+          <AvisosSection />
 
           <div className="flex justify-end">
             <SaveButton saving={saving} />

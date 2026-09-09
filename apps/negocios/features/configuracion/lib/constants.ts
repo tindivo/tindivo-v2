@@ -29,6 +29,7 @@ export const SECTIONS: {
   { id: 'tiempos', icon: 'schedule', label: 'Tiempos y precio' },
   { id: 'capacidades', icon: 'tune', label: 'Capacidades' },
   { id: 'horario', icon: 'calendar_month', label: 'Horario' },
+  { id: 'avisos', icon: 'notifications', label: 'Avisos' },
 ]
 
 export const CAP_ITEMS: {

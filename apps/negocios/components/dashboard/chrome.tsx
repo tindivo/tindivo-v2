@@ -28,6 +28,7 @@ import { useLostSales } from '@/features/pedidos/hooks/use-lost-sales'
 import { getBackoffDelayMs, useChannelHealth } from '@/hooks/use-channel-health'
 import { useIconFontReady } from '@/hooks/use-icon-font-ready'
 import { usePolledQuery } from '@/hooks/use-polled-query'
+import { usePushStatus } from '@/hooks/use-push-status'
 import { useBusinessTimers } from '@/hooks/use-queue-lead'
 import { attentionState } from '@/lib/orders/attention'
 import {
@@ -859,6 +860,9 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
    */
   const [audioBloqueado, setAudioBloqueado] = useState(false)
 
+  /** El registro del token de push. Ver `usePushStatus` y el gate de alertas. */
+  const { enable: enablePush } = usePushStatus()
+
   const enableSound = useCallback(() => {
     unlockAudio()
     setSoundOn(true)
@@ -909,11 +913,20 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
   }, [])
 
   const handleActivateNotifications = useCallback(async () => {
-    // 1. Permiso de push si no está concedido. Va DENTRO del gesto del usuario,
-    //    que es la única forma de que el navegador lo acepte.
-    if ('Notification' in window && Notification.permission === 'default') {
-      await Notification.requestPermission()
-    }
+    // 1. Permiso Y REGISTRO DEL TOKEN, que son dos cosas y aquí solo se hacía
+    //    la primera.
+    //
+    //    Este handler llamaba a `Notification.requestPermission()` y se
+    //    despedía. Quien mandaba el token al backend era `PushManager`, que
+    //    mira el permiso una sola vez al montar la página — o sea ANTES de que
+    //    este modal exista. Así que el camino normal (entrar, ver el gate,
+    //    aceptarlo) acababa con el permiso concedido y sin suscripción: el
+    //    navegador enseñaría los avisos que le mandaran, pero nadie tenía a
+    //    dónde mandárselos.
+    //
+    //    `enable()` hace las dos, y pide el permiso lo primero para no romper
+    //    el contexto del gesto en iOS. Ver `usePushStatus`.
+    await enablePush()
 
     // 2. Cerrar el modal y persistir el «ya lo vi».
     setGateShown(false)
@@ -930,7 +943,7 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
     //    y esa diferencia es la que se cobró tres pedidos el 8 de septiembre.
     //    `askSoundCheck` enciende el sonido, lo desbloquea y pregunta.
     askSoundCheck()
-  }, [askSoundCheck])
+  }, [askSoundCheck, enablePush])
 
   const refetchBiz = useCallback(async () => {
     const supabase = getSupabaseBrowser()
