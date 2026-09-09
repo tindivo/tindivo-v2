@@ -6,6 +6,7 @@ import { Button, cn, Icon } from '@tindivo/ui'
 import { useEffect, useState } from 'react'
 import { formatReadyDelta, type OrderVM } from '@/lib/orders/view-model'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
+import { printComanda } from './pedido-detail/comanda-ticket'
 import { CANCEL_REASONS, REJECT_REASONS_BASE, REJECT_REASONS_TAIL } from './pedido-detail/constants'
 import { DetailRow } from './pedido-detail/detail-row'
 import { EditarPedidoModal } from './pedido-detail/editar-modal'
@@ -233,6 +234,7 @@ export function DetailScreen({
   busy,
   isLoadingActions = false,
   mobile = false,
+  bizName,
   actions,
 }: {
   order: OrderVM
@@ -242,6 +244,7 @@ export function DetailScreen({
   busy: boolean
   isLoadingActions?: boolean
   mobile?: boolean
+  bizName?: string
   actions: DetailActions
 }) {
   const [modal, setModal] = useState<null | 'reject' | 'cancel'>(null)
@@ -364,7 +367,12 @@ export function DetailScreen({
         />
       )}
       {showComandaModal && items && (
-        <ComandaModal order={order} items={items} onClose={() => setShowComandaModal(false)} />
+        <ComandaModal
+          order={order}
+          items={items}
+          bizName={bizName}
+          onClose={() => setShowComandaModal(false)}
+        />
       )}
 
       {/* Header flotante/fijo */}
@@ -630,14 +638,24 @@ export function DetailScreen({
                   Comanda ({items.length} {items.length === 1 ? 'ítem' : 'ítems'})
                 </span>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowComandaModal(true)}
-                className="inline-flex items-center gap-1 rounded-lg bg-surface px-2.5 py-1 text-[11px] font-semibold text-ink-muted transition-colors hover:bg-surface-high hover:text-ink"
-              >
-                <Icon weight={500} name="fullscreen" size={14} />
-                <span>Ver en grande</span>
-              </button>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => printComanda({ order, items, bizName })}
+                  className="inline-flex items-center gap-1 rounded-lg border border-border/70 bg-white px-2.5 py-1 text-[11px] font-semibold text-ink shadow-xs transition-colors hover:bg-surface active:scale-95"
+                >
+                  <Icon weight={500} name="receipt_long" size={14} className="text-brand" />
+                  <span>Imprimir</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowComandaModal(true)}
+                  className="inline-flex items-center gap-1 rounded-lg bg-surface px-2.5 py-1 text-[11px] font-semibold text-ink-muted transition-colors hover:bg-surface-high hover:text-ink"
+                >
+                  <Icon weight={500} name="fullscreen" size={14} />
+                  <span>Ver en grande</span>
+                </button>
+              </div>
             </div>
             <div className="flex flex-col divide-y divide-border/60">
               {items.map((it, i) => (

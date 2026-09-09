@@ -187,6 +187,7 @@ export function PedidosMobile(p: PedidosViewProps) {
           busy={p.detailBusy}
           isLoadingActions={p.detailLoadingActions}
           mobile
+          bizName={p.bizName}
           actions={p.actions}
         />
       )}
@@ -562,6 +563,7 @@ export function PedidosDesktop(p: PedidosViewProps) {
           paymentQrs={p.paymentQrs}
           busy={p.detailBusy}
           isLoadingActions={p.detailLoadingActions}
+          bizName={p.bizName}
           actions={p.actions}
         />
       )}

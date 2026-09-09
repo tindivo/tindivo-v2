@@ -4,6 +4,7 @@ import { Button, cn, Icon } from '@tindivo/ui'
 import { useState } from 'react'
 import type { OrderVM } from '@/lib/orders/view-model'
 import { soles } from '../primitives'
+import { printComanda } from './comanda-ticket'
 import { PREP_PRESETS } from './constants'
 import type { DetailItem, RejectReason } from './types'
 
@@ -439,10 +440,12 @@ export function PausarModal({
 export function ComandaModal({
   order,
   items,
+  bizName,
   onClose,
 }: {
   order: OrderVM
   items: DetailItem[]
+  bizName?: string
   onClose: () => void
 }) {
   return (
@@ -467,13 +470,24 @@ export function ComandaModal({
               </div>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border-none bg-ink/[0.06] text-ink hover:bg-ink/[0.12]"
-          >
-            <Icon weight={500} name="close" size={18} />
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => printComanda({ order, items, bizName })}
+              title="Imprimir comanda"
+              className="flex h-8 items-center gap-1 cursor-pointer rounded-lg border border-border/80 bg-white px-2.5 text-xs font-semibold text-ink hover:bg-surface active:scale-95"
+            >
+              <Icon weight={500} name="receipt_long" size={16} className="text-brand" />
+              <span>Imprimir</span>
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border-none bg-ink/[0.06] text-ink hover:bg-ink/[0.12]"
+            >
+              <Icon weight={500} name="close" size={18} />
+            </button>
+          </div>
         </div>
 
         {/* Items scroll */}
@@ -522,13 +536,23 @@ export function ComandaModal({
             </span>
             <span className="font-mono text-[18px] font-bold text-ink">{soles(order.total)}</span>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-xl bg-ink px-5 py-2.5 text-[14px] font-semibold text-white transition-transform active:scale-[0.98]"
-          >
-            Cerrar comanda
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => printComanda({ order, items, bizName })}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-white px-4 py-2.5 text-[13px] font-bold text-ink shadow-xs transition-transform hover:bg-surface active:scale-[0.98]"
+            >
+              <Icon weight={500} name="receipt_long" size={17} className="text-brand" />
+              <span>Imprimir ticket</span>
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl bg-ink px-4 py-2.5 text-[13px] font-semibold text-white transition-transform active:scale-[0.98]"
+            >
+              Cerrar
+            </button>
+          </div>
         </div>
       </div>
     </div>
