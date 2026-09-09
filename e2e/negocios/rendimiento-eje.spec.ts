@@ -77,25 +77,44 @@ async function sembrarNocheVendida(monto: number): Promise<string> {
   return data.id
 }
 
-/** Abre /rendimiento y fija el rango a mano, que es la única vía: la pantalla
- *  no lee el rango de la URL, lo guarda en su propio estado. */
+/** `true` si esa URL es la petición de métricas de NUESTRO rango. */
+function esElRangoDelSpec(url: string): boolean {
+  return (
+    url.includes('/reports/rendimiento?') &&
+    url.includes(`start=${DESDE}`) &&
+    url.includes(`end=${HASTA}`)
+  )
+}
+
+/**
+ * Abre /rendimiento y fija el rango a mano, que es la única vía: la pantalla no
+ * lee el rango de la URL, lo guarda en su propio estado.
+ *
+ * SE ESPERA A LA RESPUESTA, NO A UN TÍTULO. Antes esperaba a que el <h3>
+ * «Facturación por día» fuera visible, con el comentario de que eso marcaba que
+ * el rango nuevo ya estaba pintado. No lo marcaba: ese título se pinta IGUAL en
+ * la rama de «ningún día con ventas» (`trend-chart.tsx`, tope cero) que en la
+ * del gráfico, y el rango por defecto de esta pantalla también sale vacío. O
+ * sea que la espera se cumplía con el DOM del rango viejo y no esperaba nada.
+ *
+ * Es lo que dejó pasar la carrera de `usePerformance` durante todo este tiempo,
+ * y de paso lo que hacía que el test de «sin una sola venta» pasara por la
+ * razón equivocada: habría pasado igual si el rango no se aplicara nunca.
+ *
+ * La promesa se arma ANTES de escribir las fechas: si se arma después, la
+ * respuesta puede haber llegado ya y se espera para siempre.
+ */
 async function abrirRendimiento(page: Page): Promise<void> {
   await page.goto('/rendimiento')
   await expect(page.getByRole('heading', { name: 'Rendimiento y Retorno' })).toBeVisible({
     timeout: 20_000,
   })
-  await page.locator('#history-start-date').fill(DESDE)
-  await page.locator('#history-end-date').fill(HASTA)
-  // El título del gráfico marca que la respuesta del rango nuevo ya está
-  // pintada; sin esperarlo se lee el DOM del rango por defecto.
-  //
-  // Por ROL y no por texto: cuando hay gráfico, «Facturación por día» está dos
-  // veces —el <h3> y el <title> del SVG, que es lo que leen los lectores de
-  // pantalla— y `getByText` casa con las dos. El rojo entonces es un «strict
-  // mode violation» que parece un fallo de la pantalla y no lo es.
-  await expect(page.getByRole('heading', { name: 'Facturación por día' })).toBeVisible({
+  const respuestaDelRango = page.waitForResponse((r) => esElRangoDelSpec(r.url()), {
     timeout: 20_000,
   })
+  await page.locator('#history-start-date').fill(DESDE)
+  await page.locator('#history-end-date').fill(HASTA)
+  await respuestaDelRango
 }
 
 /** Las etiquetas del eje Y, tal como salen en el SVG. */
@@ -122,6 +141,65 @@ test.describe('rendimiento · el eje no finge una escala que no existe', () => {
     await expect(page.getByText('S/ 1', { exact: true })).toHaveCount(0)
     // Y no queda un gráfico plano debajo del mensaje.
     await expect(page.locator('svg[role="img"][aria-label^="Facturación por día"]')).toHaveCount(0)
+  })
+
+  /**
+   * LA RESPUESTA VIEJA NO PISA A LA BUENA.
+   *
+   * Cambiar el rango dispara varias peticiones —el selector son dos inputs de
+   * fecha, así que escribir «del 3 al 9 de marzo» manda antes «del 3 de marzo
+   * al fin viejo»— y `usePerformance` escribía con la que llegara. Ganaba la
+   * última en RESPONDER, no la última en pedirse, y la intermedia suele ser más
+   * pesada que la buena, así que llegaba después.
+   *
+   * En pantalla eso no se ve como un error: la cabecera, la etiqueta del rango
+   * y los dos inputs dicen el rango pedido, y los números son de otra ventana.
+   *
+   * EL RETRASO ES DEL TEST, NO DEL AZAR. Reproducirlo esperando a que la
+   * carrera salga mal daría un test que pasa casi siempre y no protege nada, y
+   * peor: pasaría también con el fallo dentro. Aquí se retiene la respuesta de
+   * CUALQUIER rango que no sea el pedido hasta que la buena ya ha llegado, así
+   * que la vieja es SIEMPRE la última en entrar. Con la guarda se descarta; sin
+   * ella, pisa el gráfico y deja «Ningún día con ventas» sobre una noche de
+   * S/ 300 que sí está en la base.
+   */
+  test('una respuesta de otro rango que llega tarde no pisa a la del rango pedido', async ({
+    page,
+  }) => {
+    await sembrarNocheVendida(300)
+
+    await page.route(/\/reports\/rendimiento\?/, async (route) => {
+      const esElBueno = esElRangoDelSpec(route.request().url())
+      const respuesta = await route.fetch()
+      if (!esElBueno) await new Promise((listo) => setTimeout(listo, 3000))
+      await route.fulfill({ response: respuesta })
+    })
+
+    await abrirRendimiento(page)
+
+    // La buena ya entró. Se le da a la vieja tiempo de sobra para llegar y
+    // hacer daño: sin la guarda, aquí es cuando lo hace.
+    await page.waitForTimeout(4000)
+
+    // SE AFIRMA SOBRE EL RANGO DEL GRÁFICO, NO SOBRE QUE HAYA GRÁFICO.
+    //
+    // La primera versión de este test comprobaba solo que el <svg> estuviera, y
+    // pasaba con el fallo dentro: la petición intermedia va del 3 de marzo al
+    // fin viejo, o sea que CONTIENE la noche sembrada y también pinta un
+    // gráfico. Uno correcto para un rango que nadie pidió, que es exactamente
+    // la forma que tiene este fallo de no verse.
+    //
+    // El `aria-label` del SVG lleva el primer y el último día de la serie, así
+    // que distingue las tres respuestas en juego: la buena (03/03–09/03), la
+    // intermedia (03/03–08/09) y la de por defecto (vacía, sin SVG).
+    const primerDia = `${DESDE.slice(8, 10)}/${DESDE.slice(5, 7)}`
+    const ultimoDia = `${HASTA.slice(8, 10)}/${HASTA.slice(5, 7)}`
+    await expect(page.getByText('Ningún día con ventas en este rango.')).toHaveCount(0)
+    await expect(
+      page.getByRole('img', {
+        name: `Facturación por día entre el ${primerDia} y el ${ultimoDia}`,
+      }),
+    ).toBeVisible()
   })
 
   test('con una noche vendida vuelve el gráfico, y sin etiquetas repetidas', async ({ page }) => {
