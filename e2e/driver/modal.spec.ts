@@ -15,12 +15,44 @@ function shortId(): string {
   return s
 }
 
+/** Los pedidos que ha sembrado este spec. Solo se borra lo propio. */
+const sembrados: string[] = []
+
+/**
+ * Limpieza de lo que sembró ESTE spec, y solo eso.
+ *
+ * ANTES BORRABA TODOS LOS PEDIDOS DEL NEGOCIO Y NO BORRABA NINGUNO. PostgREST
+ * manda ese `delete` como UNA sentencia, así que basta con que una fila no se
+ * pueda borrar para que se caiga entera y no se borre nada:
+ *
+ *   ERROR: update or delete on table "orders" violates foreign key constraint
+ *          "business_charges_order_id_fkey" on table "business_charges"
+ *
+ * Y siempre hay alguna: `delivered` es terminal, los entregados del historial
+ * llevan su cargo colgando y nadie los limpia. Como el error no se miraba, la
+ * limpieza parecía correr.
+ *
+ * LO QUE COSTABA, que no se veía aquí sino dos ficheros más allá: los tres
+ * pedidos que este spec deja en `heading_to_restaurant` siguen asignados al
+ * motorizado E2E y le llenan la mochila (tope 3 de `assignment_rules`). El
+ * siguiente spec del proyecto por orden alfabético es `transfers`, y su caso
+ * del silencio pide capacidad al que recibe: sin ella la transferencia se
+ * niega —correctamente— y el rojo sale ahí, señalando a un código que no tiene
+ * nada que ver. Medido: «Mochila sobrecargada: 4/3» en la captura del fallo.
+ *
+ * `transfers.spec.ts` ya había aprendido esto y lo dejó escrito en su cabecera;
+ * aquí faltaba aplicarlo.
+ */
 async function wipe(): Promise<void> {
-  await db
-    .from('order_transfer_requests')
-    .delete()
-    .neq('id', '00000000-0000-0000-0000-000000000000')
-  await db.from('orders').delete().eq('business_id', E2E.BUSINESS_ID)
+  const ids = sembrados.splice(0)
+  if (!ids.length) return
+  await db.from('order_transfer_requests').delete().in('order_id', ids)
+  await db.from('domain_events').delete().in('aggregate_id', ids)
+  await db.from('order_event_log').delete().in('order_id', ids)
+  const { error } = await db.from('orders').delete().in('id', ids)
+  // Se mira, y revienta: una limpieza que falla en silencio no deja un test
+  // rojo, deja rojo al siguiente.
+  if (error) throw new Error(`FALLÓ la limpieza del spec: ${error.message}`)
 }
 
 async function seedMine(nombre: string, referencia: string): Promise<string> {
@@ -42,6 +74,7 @@ async function seedMine(nombre: string, referencia: string): Promise<string> {
     .select('id')
     .single()
   if (error) throw new Error(`FALLÓ seed: ${error.message}`)
+  sembrados.push(data.id)
   return data.id
 }
 
@@ -59,6 +92,14 @@ async function seedRequest(orderId: string, ttl = 60): Promise<void> {
 }
 
 test.describe.configure({ mode: 'serial' })
+
+/*
+ * En `afterEach` y no solo al final de cada test: el `await wipe()` de la última
+ * línea NO corre cuando el test falla, que es exactamente cuando queda basura.
+ * Así, un rojo aquí sigue siendo un rojo aquí y no se convierte en un rojo de
+ * `transfers` media hora después.
+ */
+test.afterEach(wipe)
 
 test('C1.1: modal a pantalla completa con countdown', async ({ page }) => {
   await wipe()
