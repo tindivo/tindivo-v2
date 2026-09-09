@@ -270,16 +270,24 @@ export const PAYMENT_OPTIONS: PaymentOption[] = [
  * después de tocar el botón de al lado.
  *
  * EL SUBTÍTULO DE CAJA NO NOMBRA UNA SOLA BILLETERA. En el mostrador el cliente
- * paga con lo que trae —efectivo o Yape, contra el QR del local— y quien sabe
- * cuál fue es la cajera, que ya lo declara al cerrar (`payment_real`). Prometer
- * «efectivo» a secas mandaría a buscar un cajero a quien iba a yapear.
+ * paga con lo que trae —efectivo o billetera, contra el QR del local— y quien
+ * sabe cuál fue es la cajera, que ya lo declara al aceptar (`payment_real`).
+ * Prometer «efectivo» a secas mandaría a buscar un cajero a quien iba a yapear.
+ *
+ * Y DICE «YAPE/PLIN», NO «YAPE». Decía «Yape» a secas, que es la misma falta de
+ * marca por la que el seguimiento dejó de decir «ten tu Yape a la mano» y por la
+ * que la fila de billetera se llama «Yape o Plin»: aquí además puede ser falso y
+ * no solo impreciso, porque el QR del mostrador sale de `business_payment_qrs`,
+ * donde un negocio puede tener configurado Plin y no Yape (`MAX_PAYMENT_QRS`,
+ * `walletLabel`). Nombrar la billetera concreta exigiría traer aquí la del
+ * negocio; mientras no se traiga, el par cubre las dos sin mentir en ninguna.
  */
 export function paymentOptionsFor(deliveryMethod: DeliveryMethod): PaymentOption[] {
   if (deliveryMethod !== 'pickup') return PAYMENT_OPTIONS
   const permitidos = customerPaymentIntents('pickup', null)
   return PAYMENT_OPTIONS.filter((o) => permitidos.includes(o.value)).map((o) =>
     o.value === 'pending_cash'
-      ? { ...o, label: 'Pagas en el local', desc: 'En la caja, efectivo o Yape' }
+      ? { ...o, label: 'Pagas en el local', desc: 'En la caja, efectivo o Yape/Plin' }
       : o,
   )
 }

@@ -460,7 +460,7 @@ export function DetailScreen({
               El de pago se queda: ese sí varía y cambia lo que hay que hacer. */}
           <div className="flex items-center gap-1.5">
             {order.source !== 'manual' && <SourceBadgeMini source={order.source} />}
-            <PayBadgeMini payment={order.payment} />
+            <PayBadgeMini order={order} />
           </div>
         </div>
         <div className="shrink-0 flex items-center">

@@ -159,6 +159,20 @@ export function PrepTimeModal({
 
         {cobraEnMostrador && (
           <div className="mb-5">
+            {/* CUÁNTO. La hoja se llama «Cobra y manda a cocina» y era la única
+                pantalla de cobro del panel que no decía el importe: el total
+                quedaba detrás de la hoja, tapado por ella, justo mientras el
+                cliente espera con la plata en la mano. Va antes que la
+                pregunta porque es antes en el tiempo — primero cobra el monto,
+                después declara con qué se lo pagaron. */}
+            <div className="mb-3.5 flex items-baseline justify-between gap-2 rounded-xl bg-ink/[0.04] px-3.5 py-2.5">
+              <span className="text-xs font-bold uppercase tracking-[0.06em] text-ink-muted">
+                Cóbrale
+              </span>
+              <span className="font-mono text-[22px] font-bold tabular-nums text-ink tracking-tight">
+                {soles(order.total)}
+              </span>
+            </div>
             <div className="mb-2.5 text-xs font-bold uppercase tracking-[0.06em] text-ink-muted">
               ¿Con qué te pagó?
             </div>

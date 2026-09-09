@@ -5,6 +5,7 @@
 
 import { demandsCashier } from './attention'
 import {
+  cobroEnCaja,
   formatReadyDelta,
   type OrderVM,
   type UiPayment,
@@ -393,6 +394,41 @@ function buildMoney(order: OrderVM): MoneyInfo {
       paysWithText: null,
       cashChangeText: null,
     }
+  }
+
+  // EL MOSTRADOR TIENE SU PROPIO VOCABULARIO, y son DOS estados donde los mapas
+  // de arriba solo saben ver uno. El porqué entero, en `cobroEnCaja`.
+  const caja = cobroEnCaja(order)
+  if (caja) {
+    return caja.cobrado
+      ? {
+          totalHeadline,
+          // La cifra se va por el mismo motivo que en el prepago: ya no hay
+          // nada que cobrar, y un importe junto a un pedido cobrado se lee como
+          // que falta. Sigue en el detalle, que es donde se consulta.
+          showTotal: false,
+          status: 'paid',
+          paymentLabel: caja.label,
+          paymentIcon: caja.icon,
+          paymentClassName: 'bg-emerald-50 text-emerald-900 border border-emerald-200 font-bold',
+          breakdown: null,
+          // Ninguno de los dos aplica en el mostrador: el checkout no pregunta
+          // con qué billete paga un recojo, así que `client_pays_with` es NULL
+          // y no hay vuelto que anunciar.
+          paysWithText: null,
+          cashChangeText: null,
+        }
+      : {
+          totalHeadline,
+          showTotal: true,
+          status: 'collect',
+          paymentLabel: caja.label,
+          paymentIcon: caja.icon,
+          paymentClassName: COLLECT_CLASS_MAP.pending_cash,
+          breakdown: null,
+          paysWithText: null,
+          cashChangeText: null,
+        }
   }
 
   return {

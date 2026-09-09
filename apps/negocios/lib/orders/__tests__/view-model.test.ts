@@ -520,6 +520,86 @@ describe('buildNegociosCardVM', () => {
     expect(money.cashChangeText).toBeNull()
   })
 
+  // ── EL MOSTRADOR ────────────────────────────────────────────────────────────
+  //
+  // La regla entera está en `cobroEnCaja`. Lo que se protege aquí es que la
+  // tarjeta no vuelva a AFIRMAR un método que nadie eligió, ni a ordenar cobrar
+  // algo que ya está cobrado.
+
+  const recojo = (over: Partial<OrderRow> = {}) =>
+    buildNegociosCardVM(
+      toOrderVM(
+        mockOrderRow({
+          delivery_method: 'pickup',
+          pickup_timing: 'now',
+          payment_intent: 'pending_cash',
+          ...over,
+        }),
+        baseNow,
+      ),
+    ).money
+
+  it('un recojo sin cobrar dice «cobra en caja», sin nombrar el método', () => {
+    const money = recojo()
+    expect(money.status).toBe('collect')
+    // NO «Cobrar en efectivo»: el cliente eligió «pagas en el local», que es
+    // efectivo O Yape, y quién de los dos no se sabe hasta que esté delante.
+    expect(money.paymentLabel).toBe('Cobra en caja')
+    expect(money.paymentLabel).not.toContain('efectivo')
+    // El importe se queda: todavía hay algo que cobrar.
+    expect(money.showTotal).toBe(true)
+  })
+
+  it('cobrado en el mostrador deja de ser una orden y pasa a ser un hecho', () => {
+    const money = recojo({
+      payment_verified_at: '2026-08-05T15:10:00Z',
+      payment_real: 'paid_cash',
+    })
+    // Lo que fallaba: seguía en `collect` con «Cobrar en efectivo» durante toda
+    // la cocción y en `ready_for_pickup` — o sea pidiéndole cobrar otra vez
+    // justo cuando el cliente vuelve al mostrador a recoger.
+    expect(money.status).toBe('paid')
+    expect(money.paymentLabel).toBe('Cobrado en efectivo')
+    expect(money.showTotal).toBe(false)
+  })
+
+  it('un recojo cobrado por Yape NO dice «efectivo»', () => {
+    // El tablero pintaba la intención del cliente de principio a fin, así que
+    // este pedido decía «Efectivo» toda la noche y solo cambiaba al caer en el
+    // historial, contradiciendo lo que la cajera acababa de declarar.
+    const money = recojo({
+      payment_verified_at: '2026-08-05T15:10:00Z',
+      payment_real: 'paid_yape',
+    })
+    expect(money.paymentLabel).toBe('Cobrado por Yape/Plin')
+    expect(money.paymentLabel).not.toContain('efectivo')
+  })
+
+  it('cobrado sin un método legible no inventa ninguno', () => {
+    // `unpaid` y `refunded` no son formas de pago. Caer en «efectivo» por
+    // defecto convertiría en billetes un Yape que nadie miró, y el corte de la
+    // noche cuadraría contra un número inventado.
+    const money = recojo({
+      payment_verified_at: '2026-08-05T15:10:00Z',
+      payment_real: 'refunded',
+    })
+    expect(money.paymentLabel).toBe('Cobrado')
+  })
+
+  it('un recojo prepagado sigue por la rama del prepago, no por la de la caja', () => {
+    const money = recojo({ payment_intent: 'prepaid', payment_proof_status: 'verified' })
+    expect(money.paymentLabel).toBe('Pagado · no cobrar')
+  })
+
+  it('el delivery no cambia: ahí el método SÍ se pactó al pedir', () => {
+    // En la puerta hay un motorizado que va a cobrar billetes y el cliente lo
+    // sabe desde el checkout. Esa afirmación sigue siendo verdad.
+    const money = buildNegociosCardVM(
+      toOrderVM(mockOrderRow({ payment_intent: 'pending_cash' }), baseNow),
+    ).money
+    expect(money.paymentLabel).toBe('Cobrar en efectivo')
+  })
+
   it('el cobro mixto enseña el desglose billetera + efectivo', () => {
     const row = mockOrderRow({
       payment_intent: 'pending_mixed',

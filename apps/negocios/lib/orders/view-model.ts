@@ -168,6 +168,20 @@ export interface OrderVM {
    */
   yaCobrado: boolean
   /**
+   * QUÉ ENTRÓ, cuando ya se sabe. `null` mientras nadie lo haya declarado.
+   *
+   * `yaCobrado` dice que el dinero está dentro; esto dice en qué forma. Son dos
+   * preguntas distintas y hacían falta las dos: la consulta ya traía
+   * `payment_real` (ver `ORDER_SELECT`) y `mapPaymentReal` existía justo al
+   * lado, pero solo las usaba el historial. El tablero pintaba la intención del
+   * cliente de principio a fin, así que un recojo cobrado por Yape decía
+   * «Efectivo» toda la noche y solo cambiaba al caer en el historial —
+   * contradiciendo, una pantalla después, lo que la cajera había declarado con
+   * el dedo. Es el mismo fallo que el comentario de `mapPaymentReal` dice haber
+   * arreglado: se arregló allí y no se propagó hasta aquí.
+   */
+  paymentReal: UiPayment | null
+  /**
    * Segundos que el pedido lleva encima del motorizado, o `null` fuera de
    * reparto.
    *
@@ -393,6 +407,73 @@ export function mapPaymentReal(real: string | null): UiPayment | null {
   // `PAYMENT_META` y decir cualquiera de las cuatro sería inventar. Que caiga
   // en la intención, que es lo que había antes de esto.
   return null
+}
+
+/**
+ * EL MOSTRADOR NO COBRA «EN EFECTIVO»: COBRA LA CAJA.
+ *
+ * `pending_cash` se llama así por el delivery, donde el método SÍ se pacta al
+ * pedir: el motorizado va a cobrar billetes y el cliente lo sabe. En un recojo
+ * ese nombre es mentira. El checkout ni siquiera le ofrece elegir —la fila dice
+ * «Pagas en el local · En la caja, efectivo o Yape/Plin», y por eso tampoco le
+ * pregunta con qué billete paga—, así que EL MÉTODO NO EXISTE hasta que el
+ * cliente está delante y decide. Quien lo sabe es la cajera, y lo declara al
+ * aceptar (`payment_real`, 0224).
+ *
+ * La tarjeta afirmaba «Efectivo» igual, y medio segundo después la hoja de
+ * cobro le preguntaba «¿con qué te pagó?»: la misma pantalla contradiciéndose.
+ *
+ * Y HAY UN SEGUNDO ESTADO, que es el que de verdad quema. Cobrado el pedido,
+ * `buildMoney` seguía devolviendo `collect` porque solo miraba el intent, así
+ * que la tarjeta ordenaba «Cobrar en efectivo» durante toda la cocción y en
+ * `ready_for_pickup` — o sea justo cuando el cliente vuelve al mostrador a
+ * recoger. Una orden de cobrar algo ya cobrado, en el peor momento posible.
+ *
+ * VIVE AQUÍ, Y NO EN CADA PANTALLA, porque ese es el fallo de fondo: la
+ * pastilla de la tarjeta y la de la cabecera del detalle calculaban lo mismo
+ * por su cuenta, y por eso podían decir cosas distintas del mismo pedido.
+ */
+export interface CobroEnCaja {
+  /** Para la franja de la tarjeta, que tiene sitio. */
+  label: string
+  /** Para la pastilla de la cabecera del detalle, que no lo tiene. */
+  short: string
+  icon: string
+  /** El dinero YA entró: no es una orden, es un hecho. */
+  cobrado: boolean
+}
+
+export function cobroEnCaja(order: {
+  method: 'delivery' | 'pickup'
+  payment: UiPayment
+  yaCobrado: boolean
+  paymentReal: UiPayment | null
+}): CobroEnCaja | null {
+  // El prepago no es cobro de mostrador: su dinero entró por otra vía y lo
+  // sella `validate_order`. Su vocabulario ya lo resuelve `buildMoney`.
+  if (order.method !== 'pickup' || order.payment === 'prepaid') return null
+
+  if (!order.yaCobrado) {
+    return { label: 'Cobra en caja', short: 'En caja', icon: 'point_of_sale', cobrado: false }
+  }
+
+  // Cobrado pero sin `payment_real` legible (`unpaid`, `refunded`): que diga lo
+  // único que consta. Elegir «efectivo» por defecto es justo lo que convertiría
+  // en billetes un Yape que nadie miró, y descuadraría el corte de la noche
+  // contra un número inventado — el mismo motivo por el que la hoja de cobro no
+  // trae ninguna de las dos respuestas premarcada.
+  const comoEntro =
+    order.paymentReal === 'pending_cash'
+      ? ' en efectivo'
+      : order.paymentReal === 'pending_wallet'
+        ? ' por Yape/Plin'
+        : ''
+  return {
+    label: `Cobrado${comoEntro}`,
+    short: order.paymentReal === 'pending_wallet' ? 'Cobrado · Yape' : `Cobrado${comoEntro}`,
+    icon: 'verified',
+    cobrado: true,
+  }
 }
 
 /**
@@ -698,6 +779,7 @@ export function toOrderVM(
     waitingCustomerSec,
     pickupTiming: row.pickup_timing,
     yaCobrado: row.payment_verified_at != null,
+    paymentReal: mapPaymentReal(row.payment_real),
     deliverySec,
     bufferMinutes:
       state === 'buffer_p1' || state === 'buffer_p2' || state === 'buffer_p3'

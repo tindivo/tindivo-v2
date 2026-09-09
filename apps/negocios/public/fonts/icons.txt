@@ -67,6 +67,7 @@ person_add
 person_pin_circle
 photo_camera
 play_circle
+point_of_sale
 priority_high
 qr_code_2
 receipt_long

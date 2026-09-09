@@ -1,7 +1,7 @@
 'use client'
 
 import { cn, Icon } from '@tindivo/ui'
-import type { UiPayment, UiSource } from '@/lib/orders/view-model'
+import { cobroEnCaja, type OrderVM, type UiPayment, type UiSource } from '@/lib/orders/view-model'
 
 // ── Money / time helpers ──────────────────────────────────────────────────────
 export const soles = (n: number) => `S/ ${Number(n).toFixed(2).replace(/\.00$/, '')}`
@@ -66,11 +66,23 @@ export function SourceBadgeMini({ source }: { source: UiSource }) {
   )
 }
 
-export function PayBadgeMini({ payment }: { payment: UiPayment }) {
-  const d = PAY_DISPLAY[payment] ?? PAY_DISPLAY.pending_cash
+/**
+ * En un recojo esta pastilla decía «Efectivo» sobre un pedido que el cliente
+ * puede pagar por Yape en la caja, y seguía diciéndolo después de que la cajera
+ * declarara lo contrario. La regla, y el porqué, en `cobroEnCaja`: aquí solo se
+ * consume, para que no vuelva a haber dos sitios calculando lo mismo.
+ */
+export function PayBadgeMini({ order }: { order: OrderVM }) {
+  const caja = cobroEnCaja(order)
+  const d = PAY_DISPLAY[order.payment] ?? PAY_DISPLAY.pending_cash
   return (
-    <span className={cn('rounded-full px-1.5 py-0.5 text-[10px] font-semibold', d.className)}>
-      {d.label}
+    <span
+      className={cn(
+        'rounded-full px-1.5 py-0.5 text-[10px] font-semibold',
+        caja && !caja.cobrado ? 'bg-[#E5E7EB] text-[#374151]' : d.className,
+      )}
+    >
+      {caja?.short ?? d.label}
     </span>
   )
 }

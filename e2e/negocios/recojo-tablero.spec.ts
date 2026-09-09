@@ -194,6 +194,49 @@ test.describe('0219/0220 · el recojo en el tablero de la cajera', () => {
   })
 
   /**
+   * LA TARJETA NO AFIRMA UN MÉTODO QUE NADIE ELIGIÓ, NI COBRA DOS VECES.
+   *
+   * En el checkout un recojo no elige método: la fila dice «Pagas en el local ·
+   * En la caja, efectivo o Yape/Plin», y con qué paga se decide delante de la
+   * caja. La tarjeta pintaba «Efectivo» igual —el intent se llama
+   * `pending_cash` por el delivery, donde el método SÍ se pacta al pedir— y
+   * medio segundo después la hoja preguntaba «¿con qué te pagó?»: la misma
+   * pantalla contradiciéndose.
+   *
+   * Y lo de después es peor: cobrado el pedido, la franja seguía ordenando
+   * «Cobrar en efectivo» toda la cocción y en `ready_for_pickup`, o sea cuando
+   * el cliente vuelve al mostrador a recoger — pidiendo cobrar otra vez algo ya
+   * cobrado, y en efectivo un pedido que se pagó por Yape.
+   *
+   * Se afirma de punta a punta y no en el view-model porque lo que falla es la
+   * costura: el dato (`payment_real`) llevaba tiempo en la consulta y en el
+   * historial, y era el tablero el que no lo leía.
+   */
+  test('la tarjeta no dice «efectivo» antes de saberlo ni «cobrar» después de cobrado', async ({
+    page,
+  }) => {
+    const recojo = await sembrarRecojo('pending_acceptance', 'now')
+    await abrirTablero(page, recojo.shortId)
+
+    // ANTES: hay algo que cobrar, pero nadie sabe todavía con qué.
+    await expect(visible(page, 'Cobra en caja').first()).toBeVisible()
+    await expect(page.getByText('Cobrar en efectivo')).toHaveCount(0)
+
+    await visible(page, `#${recojo.shortId}`).first().click()
+    await page.getByRole('button', { name: 'Cliente presente · cobrar' }).click()
+    // Y la hoja de cobro dice CUÁNTO: era la única pantalla de cobro del panel
+    // que no lo decía, con el total tapado justo detrás de ella.
+    await expect(visible(page, 'Cóbrale').first()).toBeVisible()
+    await page.getByRole('button', { name: 'Yape/Plin' }).click()
+    await page.getByRole('button', { name: 'Cobré · a cocina' }).click()
+
+    // DESPUÉS: un hecho, no una orden, y con el método que ella declaró.
+    await expect(visible(page, 'Cobrado por Yape/Plin').first()).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByText('Cobrar en efectivo')).toHaveCount(0)
+    await expect(page.getByText('Cobra en caja')).toHaveCount(0)
+  })
+
+  /**
    * LAS DOS ÚNICAS SALIDAS DE UN RECOJO. Sin ellas la bolsa se queda en
    * `ready_for_pickup` para siempre: `deliver` y `no_show` los escribe el
    * motorizado, y aquí no hay ninguno.
