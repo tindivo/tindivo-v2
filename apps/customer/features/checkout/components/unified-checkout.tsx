@@ -39,6 +39,7 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
     setAddressId,
     deliveryMethod,
     setDeliveryMethod,
+    acceptsPickup,
     pickupTiming,
     setPickupTiming,
     payment,
@@ -270,7 +271,13 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
             objeto que dibuja la ruta. Ver `delivery-card.tsx`. */}
         <section ref={deliveryRef}>
           <SectionTitle>Entrega</SectionTitle>
-          {PICKUP_ENABLED && (
+          {/* DOS INTERRUPTORES, Y HACEN FALTA LOS DOS. `PICKUP_ENABLED` dice si
+              el recojo existe en el producto; `acceptsPickup` dice si existe en
+              ESTE restaurante (`businesses.accepts_web_pickup`). Faltaba el
+              segundo: el selector se pintaba en todos, y el piloto abre el
+              recojo restaurante por restaurante — el que no lo tuviera
+              encendido dejaba elegir Recojo y devolvía 409 al confirmar. */}
+          {PICKUP_ENABLED && acceptsPickup && (
             <div className="mb-2.5 flex gap-2">
               <DeliveryMethodButton
                 active={deliveryMethod === 'delivery'}

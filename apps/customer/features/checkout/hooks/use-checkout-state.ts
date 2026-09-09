@@ -163,6 +163,20 @@ export interface CheckoutState {
    */
   eta: { min: number; max: number } | null
 
+  /**
+   * Si ESTE negocio acepta recojo. Sale de la misma respuesta que `eta`, o sea
+   * cero peticiones nuevas.
+   *
+   * Gobierna si el selector Delivery/Recojo se pinta. Antes ese selector colgaba
+   * solo de `PICKUP_ENABLED`, que es global: se enseñaba en todos los negocios,
+   * aceptaran recojo o no.
+   *
+   * `false` mientras la respuesta no llega, que es el lado seguro: esconder un
+   * canal que sí existe se arregla solo medio segundo después, mientras que
+   * enseñar uno que no existe termina en un 409 al confirmar.
+   */
+  acceptsPickup: boolean
+
   selectedAddress: Address | undefined
   reference: string
   line: string
@@ -184,7 +198,18 @@ export function useCheckoutState(): CheckoutState {
   const [name, setName] = useState('')
   const [verifiedPhone, setVerifiedPhone] = useState('')
   const [step, setStep] = useState<'delivery' | 'payment'>('delivery')
-  const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('delivery')
+  /**
+   * EL MÉTODO YA NO ES ESTADO DE ESTA PANTALLA: es de la bolsa.
+   *
+   * Tenía aquí su `useState`, y por eso la elección no existía hasta el último
+   * paso. El gate del carrito no podía consultarla —exigía domicilio siempre, a
+   * todo el mundo— y la cabecera del negocio no tenía nada que enseñar. Subirla
+   * al store no cambia esta pantalla (el selector sigue aquí y sigue mandando),
+   * pero deja que la conteste quien llega decidido y que la lean los pasos que
+   * ocurren antes.
+   */
+  const deliveryMethod = cart.deliveryMethod
+  const setDeliveryMethod = cart.setDeliveryMethod
   const [pickupTiming, setPickupTiming] = useState<PickupTiming | null>(null)
   const [payment, setPayment] = useState<PaymentIntent>('pending_cash')
   const [cashChoice, setCashChoice] = useState<CashChoice>('exact')
@@ -354,6 +379,25 @@ export function useCheckoutState(): CheckoutState {
       router.replace(`/negocio/${cart.businessId}`)
     }
   }, [cartHydrated, confirmed, ordering.info, cart.businessId, router])
+
+  /**
+   * UN RECOJO CONTRA UN NEGOCIO QUE NO ACEPTA RECOJOS SE DESHACE SOLO.
+   *
+   * El método se persiste con la bolsa, así que sobrevive a que el admin apague
+   * `accepts_web_pickup` entre dos sesiones —y `DECISIONS.md` dice que el piloto
+   * se abre y se cierra restaurante por restaurante, o sea que va a pasar—. Sin
+   * esto el cliente llega hasta el último toque y recibe un 409 del API sobre
+   * algo que él no eligió mal: lo eligió cuando sí valía.
+   *
+   * Se corrige aquí y no solo escondiendo el selector porque la bolsa ya venía
+   * con la respuesta puesta: no pintar el botón deja el estado malo intacto.
+   */
+  useEffect(() => {
+    if (!ordering.info || confirmed) return
+    if (deliveryMethod === 'pickup' && !ordering.info.acceptsPickup) {
+      setDeliveryMethod('delivery')
+    }
+  }, [ordering.info, deliveryMethod, setDeliveryMethod, confirmed])
 
   // Una sola query para las configuraciones globales que necesita esta pantalla
   // — no un round-trip por cada una. `max_change` ya no está aquí: lo pone la
@@ -550,6 +594,7 @@ export function useCheckoutState(): CheckoutState {
       ordering.info?.etaMin != null && ordering.info?.etaMax != null
         ? { min: ordering.info.etaMin, max: ordering.info.etaMax }
         : null,
+    acceptsPickup: ordering.info?.acceptsPickup === true,
     selectedAddress,
     reference,
     line,
