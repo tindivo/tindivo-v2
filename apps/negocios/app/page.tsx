@@ -31,7 +31,6 @@ export default function NegocioPedidosPage() {
     soundOn,
     toggleSound,
     refetchOrders,
-    acknowledge,
     openRequestId,
     clearOpenRequest,
   } = useDashboard()
@@ -160,11 +159,11 @@ export default function NegocioPedidosPage() {
     onChannel: setChannel,
     channelCounts: canalCounts,
     showChannelChips,
-    // ABRIR ES ACUSAR RECIBO. La alarma de ese pedido se calla —solo la de ese,
-    // y solo la alarma: el latido de la tarjeta y el banner siguen hasta que lo
-    // resuelva—. Ver `useAcknowledged` y la cabecera de `lib/orders/attention.ts`.
+    // ABRIR YA NO CALLA NADA. Lo fue —el acuse de recibo apagaba el sonido de
+    // ese pedido— y se quitó: abrir una tarjeta es MIRAR el pedido, no
+    // atenderlo, y en el hueco entre las dos cosas caben una llamada al cliente
+    // y una comanda a medio teclear. Ver la cabecera de `lib/orders/attention.ts`.
     onOpen: (o: Pick<OrderVM, 'rowId' | 'status'>) => {
-      acknowledge(o)
       reset()
       setSelectedId(o.rowId)
     },

@@ -24,7 +24,6 @@ import {
 import { OpeningControls } from '@/features/apertura/components/opening-controls'
 import { AttentionBanner } from '@/features/pedidos/components/attention-banner'
 import { LostSaleAlert } from '@/features/pedidos/components/lost-sale-alert'
-import { useAcknowledged } from '@/features/pedidos/hooks/use-acknowledged'
 import { useLostSales } from '@/features/pedidos/hooks/use-lost-sales'
 import { getBackoffDelayMs, useChannelHealth } from '@/hooks/use-channel-health'
 import { useIconFontReady } from '@/hooks/use-icon-font-ready'
@@ -42,7 +41,7 @@ import {
 } from '@/lib/orders/view-model'
 import { signOutDevice } from '@/lib/sign-out'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
-import { speak, unlockAudio, useDashboardSounds } from '@/lib/use-audio-alert'
+import { audioIsBlocked, unlockAudio, useDashboardSounds } from '@/lib/use-audio-alert'
 import { type ResultadoPrueba, SoundCheck } from '../sound-check'
 import { DashboardSkeleton } from './dashboard-skeleton'
 import { SuccessToastHost } from './toast'
@@ -176,13 +175,8 @@ export interface DashboardCtx {
   attentionCount: number
   /** Liquidaciones de efectivo pendientes de confirmación por la cajera. */
   pendingCashCount: number
-  /** ¿Está sonando la alarma AHORA? (hay algo sin acusar). */
+  /** ¿Está sonando la alarma AHORA? */
   alarmOn: boolean
-  /**
-   * «Ya lo vi»: calla la alarma de ESE pedido, y solo la alarma. Lo llama quien
-   * abre una tarjeta. Ver `useAcknowledged`.
-   */
-  acknowledge: (o: Pick<OrderVM, 'rowId' | 'status'>) => void
   /**
    * EL BANNER PIDE ABRIR UN PEDIDO QUE NO ES SUYO.
    *
@@ -684,25 +678,50 @@ function BottomNav({ active }: { active: NavId }) {
 }
 
 // ── Gate del modo catálogo ─────────────────────────────────────────────────────
-function NotificationGate({ onActivate }: { onActivate: () => void }) {
+/**
+ * El aviso de sonido apagado. Sale en dos momentos MUY distintos y el texto
+ * tiene que distinguirlos:
+ *
+ *   · al entrar, cuando las alertas nunca se activaron. Es informativo y se
+ *     puede leer con calma;
+ *   · CON UN PEDIDO ESPERANDO Y EL SONIDO MUDO. Aquí ya no se está previniendo
+ *     nada: se está perdiendo una venta mientras el modal está en pantalla, y
+ *     decirlo con las mismas palabras de bienvenida sería mentir por omisión.
+ */
+function NotificationGate({
+  onActivate,
+  urgente,
+}: {
+  onActivate: () => void
+  /** Hay algo esperando AHORA y no está sonando. */
+  urgente: boolean
+}) {
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/85 p-5">
       <div className="w-full max-w-[420px] rounded-3xl bg-white p-8 px-7 text-center">
-        {/* Icono grande de campana */}
-        <div className="mx-auto mb-4 flex h-[72px] w-[72px] items-center justify-center rounded-[20px] bg-brand-soft text-brand">
-          <Icon name="notifications_active" size={36} filled />
+        <div
+          className={`mx-auto mb-4 flex h-[72px] w-[72px] items-center justify-center rounded-[20px] ${
+            urgente ? 'bg-danger-soft text-danger' : 'bg-brand-soft text-brand'
+          }`}
+        >
+          <Icon name={urgente ? 'priority_high' : 'notifications_active'} size={36} filled />
         </div>
 
-        <h2 className="mb-2 text-[22px] font-bold text-ink">Activa las notificaciones</h2>
+        <h2 className="mb-2 text-[22px] font-bold text-ink">
+          {urgente ? 'Tienes un pedido y no está sonando' : 'Activa las notificaciones'}
+        </h2>
 
         <div className="mb-2 text-[15px] leading-relaxed text-ink-muted">
-          Para recibir pedidos necesitas activar las alertas de sonido y notificaciones del
-          navegador.
+          {urgente
+            ? 'Hay un pedido esperando respuesta y las alertas de este equipo están apagadas o bloqueadas.'
+            : 'Para recibir pedidos necesitas activar las alertas de sonido y notificaciones del navegador.'}
         </div>
 
         <div className="mb-6 flex items-center gap-2 rounded-xl bg-warning-soft px-4 py-3 text-[13px] text-amber-800">
           <Icon name="warning" size={16} filled />
-          Sin notificaciones activas, los pedidos pueden perderse y cancelarse automáticamente.
+          {urgente
+            ? 'Si no lo aceptas a tiempo, el pedido se cancela solo.'
+            : 'Sin notificaciones activas, los pedidos pueden perderse y cancelarse automáticamente.'}
         </div>
 
         <button
@@ -711,7 +730,7 @@ function NotificationGate({ onActivate }: { onActivate: () => void }) {
           className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand px-6 py-5 text-lg font-semibold text-white transition-transform active:scale-[0.98]"
         >
           <Icon name="notifications_active" size={22} filled />
-          Activar notificaciones
+          {urgente ? 'Activar el sonido ahora' : 'Activar notificaciones'}
         </button>
 
         <div className="mt-3 text-[11px] text-ink-muted">
@@ -819,29 +838,99 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
     }
   }, []) // Solo en el montaje
 
-  const handleActivateNotifications = useCallback(async () => {
-    // 1. Activar sonido + unlockAudio (gesto del usuario)
-    setSoundOn(true)
+  /**
+   * ¿POR QUÉ HAY UN PEDIDO ESPERANDO EN SILENCIO?
+   *
+   * Dos causas, y las dos son invisibles desde el mostrador:
+   *
+   *   · el interruptor de alertas está en OFF. Se guarda en `localStorage` y no
+   *     caduca: una noche que alguien se hartó del ruido apaga el sonido de
+   *     todas las noches siguientes;
+   *   · el `AudioContext` está en `suspended`. Pasa solo, sin error y sin aviso,
+   *     cuando la página se recarga y nadie la ha tocado todavía —un despliegue,
+   *     un tirón de red— y con él NO SUENA NADA aunque el interruptor esté en
+   *     ON y el parlante a tope. Es la explicación más probable de «tengo el
+   *     parlante prendido y no sonó».
+   *
+   * `gateDismissed` no cuenta aquí. Ese «no volver a mostrar» se dio para la
+   * pantalla de bienvenida, no para dar permiso a perder un pedido concreto que
+   * está esperando ahora mismo. La condición se comprueba solo cuando hay algo
+   * en juego, así que en una noche tranquila esto no interrumpe jamás.
+   */
+  const [audioBloqueado, setAudioBloqueado] = useState(false)
+
+  const enableSound = useCallback(() => {
     unlockAudio()
+    setSoundOn(true)
     if (typeof window !== 'undefined') {
       localStorage.setItem('tindivo_sound_on', 'true')
     }
+  }, [])
 
-    // 2. Habla de prueba para validar que la voz funciona
-    speak('Notificaciones activadas')
+  /**
+   * LA PRUEBA DE SONIDO, QUE AHORA LA PIDEN DOS SITIOS.
+   *
+   * Nació dentro de la apertura del turno y ahí se quedaba el resultado. Pero el
+   * aviso de venta perdida necesita ofrecer exactamente lo mismo —«¿seguro que
+   * esto suena?»— y su respuesta vale igual: es el mismo aparato y el mismo
+   * momento. Vive aquí para que haya UN solo hecho registrado, en vez de dos
+   * comprobaciones que no se enteran la una de la otra.
+   *
+   * Se guarda el INSTANTE y no un booleano. «Se comprobó» sin fecha no dice
+   * nada: lo que importa es si se comprobó en este turno, y esa pregunta la
+   * contesta quien lee, que es quien conoce el horario.
+   */
+  const [soundCheckAt, setSoundCheckAt] = useState<number | null>(() => {
+    if (typeof window === 'undefined') return null
+    const raw = Number(localStorage.getItem('tindivo_sound_check_at'))
+    return Number.isFinite(raw) && raw > 0 ? raw : null
+  })
+  const [soundCheckOpen, setSoundCheckOpen] = useState(false)
 
-    // 3. Pedir permiso de push/Notification si no está concedido
+  const askSoundCheck = useCallback(() => {
+    // Encender las alertas es parte de la prueba: comprobar que suena con el
+    // interruptor apagado no comprueba nada, y el interruptor puede llevar
+    // apagado desde una noche en que alguien se hartó del ruido.
+    enableSound()
+    setSoundCheckOpen(true)
+  }, [enableSound])
+
+  const onSoundCheckDone = useCallback((resultado: ResultadoPrueba) => {
+    setSoundCheckOpen(false)
+    if (resultado !== 'oido') return
+    const ahora = Date.now()
+    setSoundCheckAt(ahora)
+    try {
+      localStorage.setItem('tindivo_sound_check_at', String(ahora))
+    } catch {
+      // Sin `localStorage` la prueba se repetirá tras recargar. Molesto y
+      // preferible a darla por buena sin poder recordarlo.
+    }
+  }, [])
+
+  const handleActivateNotifications = useCallback(async () => {
+    // 1. Permiso de push si no está concedido. Va DENTRO del gesto del usuario,
+    //    que es la única forma de que el navegador lo acepte.
     if ('Notification' in window && Notification.permission === 'default') {
       await Notification.requestPermission()
     }
 
-    // 4. Cerrar el modal y persistir
+    // 2. Cerrar el modal y persistir el «ya lo vi».
     setGateShown(false)
     setGateDismissed(true)
     if (typeof window !== 'undefined') {
       localStorage.setItem('tindivo_notifications_gate_dismissed', 'true')
     }
-  }, [])
+
+    // 3. Y COMPROBAR QUE SUENA DE VERDAD, en vez de dar por hecho que sí.
+    //
+    //    Antes esto decía «Notificaciones activadas» con la voz y se despedía.
+    //    Decir que están activadas no es lo mismo que comprobar que se oyen —lo
+    //    primero lo sabe el código, lo segundo solo lo sabe quien está delante—
+    //    y esa diferencia es la que se cobró tres pedidos el 8 de septiembre.
+    //    `askSoundCheck` enciende el sonido, lo desbloquea y pregunta.
+    askSoundCheck()
+  }, [askSoundCheck])
 
   const refetchBiz = useCallback(async () => {
     const supabase = getSupabaseBrowser()
@@ -1228,10 +1317,7 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
   // Estaba aquí como filtro suelto, y el banner no existía: el sonido era global
   // y lo visible vivía solo en `app/page.tsx`. Eso costó `JMAXL98Z` en
   // producción. Ver `lib/orders/attention.ts`.
-  // El acuse de recibo: qué pedidos ha abierto ya. Calla el sonido de esos y
-  // NADA más — el banner y el latido de la tarjeta no lo miran siquiera.
-  const { acknowledged, acknowledge } = useAcknowledged(vms)
-  const attention = useMemo(() => attentionState(vms, acknowledged), [vms, acknowledged])
+  const attention = useMemo(() => attentionState(vms), [vms])
 
   // LO QUE SE ESCAPÓ. Vive en el chrome, como el sonido y el banner, porque un
   // pedido se puede morir mientras la cajera teclea una comanda en `/nuevo` —de
@@ -1239,7 +1325,7 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
   const { pending: ventasPerdidas, dismiss: cerrarVentasPerdidas } = useLostSales(vms)
 
   // Sonido persistente (corre en el chrome → suena en cualquier sección).
-  // Le entra `alarm`, no `orders`: lo que suena es lo que se ve MENOS lo acusado.
+  const alarmaPendiente = attention.alarm.hasPending
   useDashboardSounds({
     hasPending: attention.alarm.hasPending,
     pendingCount: attention.alarm.count,
@@ -1296,6 +1382,24 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
     }
   }, [bizId, reloadPendingCash])
 
+  // Se sondea solo mientras hay algo esperando: no hay evento de «el audio se
+  // suspendió», y preguntarlo cada dos segundos toda la noche sería sondear por
+  // sondear.
+  useEffect(() => {
+    if (!alarmaPendiente) {
+      setAudioBloqueado(false)
+      return
+    }
+    const mirar = () => setAudioBloqueado(audioIsBlocked())
+    mirar()
+    const t = setInterval(mirar, 2000)
+    return () => clearInterval(t)
+  }, [alarmaPendiente])
+
+  useEffect(() => {
+    if (alarmaPendiente && (!soundOn || audioBloqueado)) setGateShown(true)
+  }, [alarmaPendiente, soundOn, audioBloqueado])
+
   const toggleSound = useCallback(() => {
     setSoundOn((s) => {
       const next = !s
@@ -1305,55 +1409,6 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
       }
       return next
     })
-  }, [])
-
-  const enableSound = useCallback(() => {
-    unlockAudio()
-    setSoundOn(true)
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('tindivo_sound_on', 'true')
-    }
-  }, [])
-
-  /**
-   * LA PRUEBA DE SONIDO, QUE AHORA LA PIDEN DOS SITIOS.
-   *
-   * Nació dentro de la apertura del turno y ahí se quedaba el resultado. Pero el
-   * aviso de venta perdida necesita ofrecer exactamente lo mismo —«¿seguro que
-   * esto suena?»— y su respuesta vale igual: es el mismo aparato y el mismo
-   * momento. Vive aquí para que haya UN solo hecho registrado, en vez de dos
-   * comprobaciones que no se enteran la una de la otra.
-   *
-   * Se guarda el INSTANTE y no un booleano. «Se comprobó» sin fecha no dice
-   * nada: lo que importa es si se comprobó en este turno, y esa pregunta la
-   * contesta quien lee, que es quien conoce el horario.
-   */
-  const [soundCheckAt, setSoundCheckAt] = useState<number | null>(() => {
-    if (typeof window === 'undefined') return null
-    const raw = Number(localStorage.getItem('tindivo_sound_check_at'))
-    return Number.isFinite(raw) && raw > 0 ? raw : null
-  })
-  const [soundCheckOpen, setSoundCheckOpen] = useState(false)
-
-  const askSoundCheck = useCallback(() => {
-    // Encender las alertas es parte de la prueba: comprobar que suena con el
-    // interruptor apagado no comprueba nada, y el interruptor puede llevar
-    // apagado desde una noche en que alguien se hartó del ruido.
-    enableSound()
-    setSoundCheckOpen(true)
-  }, [enableSound])
-
-  const onSoundCheckDone = useCallback((resultado: ResultadoPrueba) => {
-    setSoundCheckOpen(false)
-    if (resultado !== 'oido') return
-    const ahora = Date.now()
-    setSoundCheckAt(ahora)
-    try {
-      localStorage.setItem('tindivo_sound_check_at', String(ahora))
-    } catch {
-      // Sin `localStorage` la prueba se repetirá tras recargar. Molesto y
-      // preferible a darla por buena sin poder recordarlo.
-    }
   }, [])
 
   const value = useMemo<DashboardCtx | null>(() => {
@@ -1383,7 +1438,6 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
       attentionCount: attention.orders.length,
       pendingCashCount,
       alarmOn: attention.alarm.hasPending && soundOn,
-      acknowledge,
       openRequestId,
       requestOpen,
       clearOpenRequest,
@@ -1407,7 +1461,6 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
     onSignOut,
     attention,
     pendingCashCount,
-    acknowledge,
     openRequestId,
     requestOpen,
     clearOpenRequest,
@@ -1433,7 +1486,12 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
 
   return (
     <Ctx.Provider value={value}>
-      {gateShown && <NotificationGate onActivate={handleActivateNotifications} />}
+      {gateShown && (
+        <NotificationGate
+          onActivate={handleActivateNotifications}
+          urgente={alarmaPendiente && (!soundOn || audioBloqueado)}
+        />
+      )}
       {soundCheckOpen && <SoundCheck bizName={value.bizName} onDone={onSoundCheckDone} />}
       {/* Encima de todo salvo la prueba que él mismo ofrece: si un pedido se
           murió sin que nadie lo tocara, no hay nada en pantalla más importante
@@ -1490,16 +1548,10 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
           </div>
         </div>
       </div>
-      {/* «Ver» ABRE el pedido, no lleva al tablero y se despide. Y abrirlo es el
-          acuse: la alarma de ese pedido se calla y el banner se queda, que es
-          justo el reparto que queremos —lo visible aguanta, el ruido no—. */}
-      <AttentionBanner
-        vm={attention.banner}
-        onOpen={(o) => {
-          acknowledge(o)
-          requestOpen(o.rowId)
-        }}
-      />
+      {/* «Ver» ABRE el pedido, no lleva al tablero y se despide. Abrirlo ya no
+          calla nada: mientras el pedido siga reclamando, sigue sonando. Ver la
+          cabecera de `lib/orders/attention.ts`. */}
+      <AttentionBanner vm={attention.banner} onOpen={(o) => requestOpen(o.rowId)} />
       <SuccessToastHost />
     </Ctx.Provider>
   )
