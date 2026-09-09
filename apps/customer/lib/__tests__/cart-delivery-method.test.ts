@@ -38,6 +38,20 @@ describe('deliveryMethod · valor inicial', () => {
 })
 
 describe('deliveryMethod · se conserva donde debe', () => {
+  it('sobrevive al PRIMER producto de una bolsa vacía', () => {
+    // El caso que estrena la cabecera: el cliente elige «Recojo» arriba, con la
+    // bolsa todavía vacía, y recién entonces añade su primer plato. Si el alta
+    // tratara «bolsa vacía» como «cambio de negocio», su elección se borraría
+    // en el mismo toque que la estrena, y sin decir nada.
+    //
+    // Una bolsa sin negocio no tiene capacidades con las que chocar, así que
+    // aquí no hay nada de lo que protegerse: lo que se reinicia es CAMBIAR de
+    // un negocio a otro, no estrenar.
+    useCart.getState().setDeliveryMethod('pickup')
+    bolsaCon('biz-1')
+    expect(useCart.getState().deliveryMethod).toBe('pickup')
+  })
+
   it('sobrevive a añadir otra línea DEL MISMO negocio', () => {
     bolsaCon('biz-1')
     useCart.getState().setDeliveryMethod('pickup')

@@ -157,8 +157,14 @@ export const useCart = create<CartState>()(
           const lines = sameBusiness ? [...state.lines] : []
           // Al cambiar de negocio se descarta la validación anterior.
           const validation = sameBusiness ? state.validation : null
-          // …y también el método: el negocio nuevo puede no aceptar recojo.
-          const deliveryMethod = sameBusiness ? state.deliveryMethod : DEFAULT_DELIVERY_METHOD
+          // …y también el método, PERO solo si se está cambiando de un negocio a
+          // OTRO. Estrenar una bolsa vacía no es cambiar de negocio: el cliente
+          // pudo elegir «Recojo» en la cabecera antes de añadir su primer plato,
+          // y tratar `businessId === null` como un cambio le borraría la
+          // elección en el mismo toque que la estrena. Una bolsa sin negocio no
+          // tiene capacidades con las que chocar.
+          const cambioDeNegocio = state.businessId !== null && state.businessId !== businessId
+          const deliveryMethod = cambioDeNegocio ? DEFAULT_DELIVERY_METHOD : state.deliveryMethod
           // Fusiona con una línea idéntica (mismo ítem + opciones + nota): suma cantidad.
           const sig = lineSignature(line)
           const idx = lines.findIndex((l) => lineSignature(l) === sig)
