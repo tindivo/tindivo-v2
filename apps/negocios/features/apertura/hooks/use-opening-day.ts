@@ -1,7 +1,14 @@
 'use client'
 
-import { getOpenStatus, type ScheduleDayRow } from '@tindivo/contracts'
-import { useCallback, useEffect, useState } from 'react'
+import {
+  currentShift,
+  declarationIsStale,
+  getOpenStatus,
+  hasLaterShiftToday,
+  type ScheduleDayRow,
+  type ShiftView,
+} from '@tindivo/contracts'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useDashboard } from '@/components/dashboard/shell'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
@@ -9,6 +16,23 @@ export type DayStatus = 'open' | 'closed'
 
 /** Fallback si `app_settings.max_change` no llega. Mismo valor que la 0143. */
 const DEFAULT_MAX_CHANGE = 50
+
+/**
+ * CADA CUÁNTO MIRA EL RELOJ, Y POR QUÉ NECESITA MIRARLO.
+ *
+ * Este hook decidía «¿estamos en horario?» en el render, con un `new Date()`
+ * suelto. Eso solo se recalcula cuando algo lo hace repintar, y el panel puede
+ * pasarse horas quieto: sin pedidos activos, `chrome.tsx` ni siquiera corre su
+ * tick de un segundo. O sea que un panel abierto desde el turno de mediodía NO
+ * SE ENTERABA de que daban las 18:00, y la pregunta de apertura del segundo
+ * turno no llegaba a plantearse aunque el resto del código quisiera.
+ *
+ * Veinte segundos sobran: la frontera de un turno es de minuto entero.
+ */
+const TICK_MS = 20_000
+
+/** Clave estable del turno, para detectar que cambió sin comparar objetos. */
+const shiftKey = (sh: ShiftView | null): string => (sh ? `${sh.startLabel}-${sh.endLabel}` : '')
 
 interface OpeningDay {
   /** null = el negocio todavía no ha declarado nada para esta jornada. */
@@ -30,6 +54,25 @@ interface OpeningDay {
    * está cambiando precios, no abriendo.
    */
   withinSchedule: boolean
+  /**
+   * El turno que corre ahora mismo, para poder nombrarlo. `null` fuera de
+   * horario o sin horario configurado.
+   */
+  shift: ShiftView | null
+  /** Hay otro turno más tarde HOY: lo que se cierre ahora no cierra el día. */
+  moreShiftsToday: boolean
+  /**
+   * HAY QUE VOLVER A PREGUNTAR. Es `true` cuando no hay declaración de esta
+   * jornada o cuando la que hay se hizo en OTRO turno. Ver `declarationIsStale`
+   * en `@tindivo/contracts`: el sábado a las 18:00, lo que se dijo a las 11:00
+   * ya no responde por la noche.
+   */
+  mustAsk: boolean
+  /**
+   * La pregunta viene de un turno nuevo y no de una jornada en blanco. Cambia
+   * el texto: no es lo mismo «¿abren hoy?» que «empieza tu turno de la noche».
+   */
+  askingForNewShift: boolean
   loading: boolean
   saving: boolean
   error: string | null
@@ -52,9 +95,22 @@ export function useOpeningDay(): OpeningDay {
   const [defaultChange, setDefaultChange] = useState(DEFAULT_MAX_CHANGE)
   const [serviceDate, setServiceDate] = useState<string | null>(null)
   const [schedule, setSchedule] = useState<ScheduleDayRow[] | null>(null)
+  /** Cuándo se hizo la declaración vigente. De aquí sale si habla de este turno. */
+  const [confirmedAt, setConfirmedAt] = useState<Date | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  /** Reloj propio: ver `TICK_MS`. */
+  const [now, setNow] = useState(() => new Date())
+  /** Sube al empezar un turno nuevo y obliga a releer la base. */
+  const [recargas, setRecargas] = useState(0)
+  /** Turno con el que se leyó la base la última vez, para recargar al cambiar. */
+  const cargadoParaTurno = useRef<string | null>(null)
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), TICK_MS)
+    return () => clearInterval(t)
+  }, [])
 
   useEffect(() => {
     if (!bizId) return
@@ -78,7 +134,11 @@ export function useOpeningDay(): OpeningDay {
         return
       }
       setServiceDate(today)
-      setSchedule((days ?? []) as ScheduleDayRow[])
+      const horario = (days ?? []) as ScheduleDayRow[]
+      setSchedule(horario)
+      // Se anota CON QUÉ TURNO se leyó, para que el efecto de más abajo sepa
+      // que estos datos ya son los de ahora y no dispare otra lectura.
+      cargadoParaTurno.current = shiftKey(currentShift(horario, new Date()))
 
       const rawDefault = setting?.value
       const parsedDefault =
@@ -91,7 +151,7 @@ export function useOpeningDay(): OpeningDay {
 
       const { data } = await supabase
         .from('business_service_days')
-        .select('status, change_available')
+        .select('status, change_available, confirmed_at')
         .eq('business_id', bizId as string)
         .eq('service_date', today)
         .maybeSingle()
@@ -99,6 +159,7 @@ export function useOpeningDay(): OpeningDay {
       if (cancelled) return
       setStatus((data?.status as DayStatus | undefined) ?? null)
       setChangeAvailable(data?.change_available ?? null)
+      setConfirmedAt(data?.confirmed_at ? new Date(data.confirmed_at as string) : null)
       setLoading(false)
     }
 
@@ -106,7 +167,30 @@ export function useOpeningDay(): OpeningDay {
     return () => {
       cancelled = true
     }
-  }, [bizId])
+    // `recargas` fuerza una lectura nueva al cambiar de turno: ver el efecto de
+    // abajo. Sin eso, un panel abierto desde el mediodía entra en el turno de la
+    // noche con los datos de la mañana y sin saber si alguien ya lo abrió desde
+    // otro dispositivo.
+  }, [bizId, recargas])
+
+  /**
+   * AL EMPEZAR UN TURNO NUEVO, SE VUELVE A LEER LA BASE.
+   *
+   * No es una optimización ni un refresco de cortesía. A las 18:00 hay que
+   * decidir si se planta la pregunta, y esa decisión no se puede tomar con los
+   * datos de las 11:00: entre medias han podido abrir desde el celular del
+   * dueño, o cambiar el horario, o —lo más probable— haber cruzado el corte de
+   * las 05:00 y estar mirando la jornada de ayer. Se relee entero, `service_date`
+   * incluida, que es justo lo que `load()` ya sabe hacer.
+   */
+  const shift = schedule === null ? null : currentShift(schedule, now)
+  const turnoAhora = shiftKey(shift)
+  useEffect(() => {
+    if (!bizId || cargadoParaTurno.current === null) return
+    if (cargadoParaTurno.current === turnoAhora) return
+    cargadoParaTurno.current = turnoAhora
+    setRecargas((n) => n + 1)
+  }, [bizId, turnoAhora])
 
   const declare = useCallback(
     async (next: DayStatus): Promise<boolean> => {
@@ -133,6 +217,9 @@ export function useOpeningDay(): OpeningDay {
         return false
       }
       setStatus(next)
+      // La declaración pasa a ser de ESTE instante, y con eso deja de ser de
+      // otro turno: es lo que hace desaparecer la pregunta al contestarla.
+      setConfirmedAt(new Date())
       setSaving(false)
       return true
     },
@@ -171,14 +258,31 @@ export function useOpeningDay(): OpeningDay {
   // Se pregunta por la declaración solo dentro del horario del negocio. Un
   // local sin horario configurado no tiene hora de apertura que esperar, así
   // que ahí siempre aplica.
-  const withinSchedule =
-    schedule === null ? false : getOpenStatus(schedule, new Date()).kind !== 'closed'
+  const withinSchedule = schedule === null ? false : getOpenStatus(schedule, now).kind !== 'closed'
+
+  const moreShiftsToday = schedule === null ? false : hasLaterShiftToday(schedule, now)
+
+  /**
+   * LA PREGUNTA QUE FALTABA. Ver `declarationIsStale` en `@tindivo/contracts`.
+   *
+   * Con `confirmed_at` a null —solo pasa en datos sembrados— no se vuelve a
+   * preguntar: no hay instante contra el que medir, y una pregunta de más en
+   * mitad del turno cuesta más que la que se ahorra.
+   */
+  const declaracionDeOtroTurno =
+    schedule !== null && confirmedAt !== null && declarationIsStale(schedule, now, confirmedAt)
+  const askingForNewShift = status !== null && declaracionDeOtroTurno
+  const mustAsk = withinSchedule && (status === null || declaracionDeOtroTurno)
 
   return {
     status,
     changeAvailable,
     defaultChange,
     withinSchedule,
+    shift,
+    moreShiftsToday,
+    mustAsk,
+    askingForNewShift,
     loading,
     saving,
     error,

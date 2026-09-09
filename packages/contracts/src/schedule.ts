@@ -172,3 +172,132 @@ function statusFromSchedule(days: ScheduleDayRow[], now: Date): OpenStatus {
   }
   return { kind: 'closed', opensAt: null, opensToday: false }
 }
+
+/**
+ * EL TURNO, QUE NO ES EL DÍA. Y LA JORNADA, QUE TAMPOCO.
+ *
+ * `getOpenStatus` contesta "¿está abierto AHORA?" y con eso basta para el
+ * cliente. Al panel del negocio le falta otra pregunta, y es la que costó dinero:
+ * "¿esto que declaró la cajera sigue valiendo?".
+ *
+ * La declaración de apertura (`business_service_days`) lleva UNA FILA POR
+ * `service_date`. La Florencia atiende los sábados en dos turnos —11:00 a 15:00
+ * y 18:00 a 23:00— y esa fila no sabe distinguirlos: si a las 15:00 la cajera
+ * pulsa «Cerrar por hoy», el sábado entero queda cerrado y el panel NO vuelve a
+ * preguntar nada, porque el modal solo aparece cuando `status` es `null`.
+ *
+ * Lo que pasó en producción está en la propia tabla. Los días de un solo turno
+ * el negocio confirma a las 18:13, 18:14, 18:21, 18:22, 18:25, 18:27 — o sea, en
+ * cuanto abre. Los sábados confirma a las 19:52, 20:17 y 21:30: entre dos y tres
+ * horas y media de local cerrado para el cliente porque nadie se percató. No es
+ * que la cajera no quisiera abrir; es que nadie se lo preguntó.
+ *
+ * Estas funciones dan el vocabulario que faltaba, y viven aquí y no en el panel
+ * porque son horario puro: mismo módulo, mismos turnos, mismos tests.
+ */
+
+/** Un turno tal como se guardó, con sus etiquetas `HH:MM`. */
+export interface ShiftView {
+  startLabel: string
+  endLabel: string
+}
+
+/** Turnos de la última semana, medidos en minutos hacia atrás desde `now`. */
+interface RelShift extends ShiftView {
+  /** Minutos desde que empezó. Negativo = todavía no empieza. */
+  startAgo: number
+  /** Minutos desde que terminó. Negativo = todavía no termina. */
+  endAgo: number
+}
+
+function shiftsBackFrom(days: ScheduleDayRow[], now: Date): RelShift[] {
+  const byDay = new Map(days.map((d) => [d.day_of_week, d]))
+  const { dayIdx, minutes } = limaParts(now)
+  const out: RelShift[] = []
+  // Ocho días hacia atrás: cubre la semana entera aunque solo haya un día
+  // configurado, y de paso el turno de ayer que cruza medianoche.
+  for (let back = 0; back <= 8; back++) {
+    for (const sh of shiftsOf(byDay.get((dayIdx - back + 14) % 7))) {
+      // Un turno que cruza medianoche termina al día siguiente: su fin se mide
+      // sumándole el día, no recortándolo.
+      const endMin = crossesMidnight(sh) ? sh.end + DAY_MIN : sh.end
+      out.push({
+        startAgo: minutes - sh.start + back * DAY_MIN,
+        endAgo: minutes - endMin + back * DAY_MIN,
+        startLabel: sh.startLabel,
+        endLabel: sh.endLabel,
+      })
+    }
+  }
+  return out
+}
+
+/**
+ * El turno que está corriendo AHORA, o `null` si el negocio está fuera de
+ * horario. Semántica `[start, end)`, la misma que `getOpenStatus`.
+ *
+ * Lo usa el panel para poder NOMBRAR el turno en la pregunta de apertura: «tu
+ * turno de la noche, 18:00 a 23:00» dice muchísimo más que «¿abren hoy?» a
+ * alguien que ya abrió esta mañana.
+ */
+export function currentShift(days: ScheduleDayRow[], now: Date): ShiftView | null {
+  const enCurso = shiftsBackFrom(days, now).find((sh) => sh.startAgo >= 0 && sh.endAgo < 0)
+  return enCurso ? { startLabel: enCurso.startLabel, endLabel: enCurso.endLabel } : null
+}
+
+/**
+ * Minutos desde que terminó el ÚLTIMO turno que ya acabó. `null` si no hay
+ * ninguno en la última semana (negocio sin horario, o recién configurado).
+ *
+ * Es la frontera de validez de una declaración: lo que la cajera dijo DESPUÉS de
+ * que acabara el turno anterior sigue hablando del turno de ahora. Lo que dijo
+ * antes hablaba de otro turno, y ya no vale.
+ */
+export function minutesSinceLastShiftEnd(days: ScheduleDayRow[], now: Date): number | null {
+  let masReciente: number | null = null
+  for (const sh of shiftsBackFrom(days, now)) {
+    if (sh.endAgo > 0 && (masReciente === null || sh.endAgo < masReciente)) {
+      masReciente = sh.endAgo
+    }
+  }
+  return masReciente
+}
+
+/**
+ * ¿LA DECLARACIÓN DE APERTURA HABLA DE OTRO TURNO?
+ *
+ * `true` = hay que volver a preguntar. Ocurre exactamente cuando la cajera
+ * declaró antes de que terminara el turno anterior al de ahora: el sábado a las
+ * 18:00, lo que dijo a las 11:00 (o el «cerrar» de las 15:00) ya no responde a
+ * la pregunta de si atienden esta noche.
+ *
+ * SE MIDE CONTRA EL FIN DEL TURNO ANTERIOR Y NO CONTRA EL INICIO DEL ACTUAL,
+ * para no castigar a quien se adelanta: confirmar a las 17:55 tiene que valer
+ * para el turno de las 18:00, no disparar la pregunta cinco minutos después.
+ *
+ * Sin horario configurado NUNCA es obsoleta: ese negocio no tiene turnos que
+ * distinguir, y preguntarle dos veces sería ruido sin información.
+ */
+export function declarationIsStale(days: ScheduleDayRow[], now: Date, confirmedAt: Date): boolean {
+  const desde = minutesSinceLastShiftEnd(days, now)
+  if (desde === null) return false
+  return (now.getTime() - confirmedAt.getTime()) / 60_000 > desde
+}
+
+/**
+ * ¿QUEDA OTRO TURNO MÁS TARDE HOY?
+ *
+ * Lo pregunta el botón de cerrar del panel, que decía «Cerrar por hoy» también
+ * el sábado a las 15:00 —con el turno de la noche entero por delante—. Cerrar un
+ * turno y cerrar el día son dos cosas distintas y el botón tiene que saber cuál
+ * está haciendo.
+ *
+ * «Hoy» es el día natural en Lima, no la jornada de servicio: lo que se está
+ * decidiendo es si el local vuelve a levantar la persiana esta misma tarde, y
+ * eso se lee en el reloj de la pared.
+ */
+export function hasLaterShiftToday(days: ScheduleDayRow[], now: Date): boolean {
+  const { minutes } = limaParts(now)
+  const quedaDeHoy = DAY_MIN - minutes
+  return shiftsBackFrom(days, now).some((sh) => sh.startAgo < 0 && -sh.startAgo < quedaDeHoy)
+}

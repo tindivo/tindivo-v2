@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { getOpenStatus, type ScheduleDayRow } from '../schedule'
+import {
+  currentShift,
+  declarationIsStale,
+  getOpenStatus,
+  hasLaterShiftToday,
+  minutesSinceLastShiftEnd,
+  type ScheduleDayRow,
+} from '../schedule'
 
 // Lima = UTC-5 fijo (sin DST): los instantes se escriben con offset explícito.
 // Semana de referencia: 2026-07-06 (lunes) .. 2026-07-12 (domingo).
@@ -240,5 +247,135 @@ describe('getOpenStatus · apertura declarada del día', () => {
 
   it('sin horario configurado la confirmación no aplica', () => {
     expect(getOpenStatus([], at(MON, '20:00'), false)).toEqual({ kind: 'no_schedule' })
+  })
+})
+
+/**
+ * EL SÁBADO DE LA FLORENCIA, que es el caso real y no un supuesto.
+ *
+ * Horario de producción: turno de mediodía 11:00–15:00 y turno de noche
+ * 18:00–23:00. Los sábados el negocio confirmaba su apertura a las 19:52, 20:17
+ * y 21:30 —contra las 18:13/18:14/18:22 de los días de un solo turno— porque
+ * nadie le preguntaba otra vez al empezar el segundo turno.
+ */
+const laFlorenciaSabado: ScheduleDayRow[] = [
+  day(4, { shift1_start: '18:00', shift1_end: '23:15' }),
+  day(5, {
+    shift1_start: '11:00',
+    shift1_end: '15:00',
+    shift2_start: '18:00',
+    shift2_end: '23:00',
+  }),
+  day(6, { shift1_start: '11:00', shift1_end: '15:00' }),
+]
+
+describe('currentShift · nombrar el turno que corre', () => {
+  it('distingue el de mediodía del de la noche el mismo sábado', () => {
+    expect(currentShift(laFlorenciaSabado, at(SAT, '12:00'))).toEqual({
+      startLabel: '11:00',
+      endLabel: '15:00',
+    })
+    expect(currentShift(laFlorenciaSabado, at(SAT, '19:00'))).toEqual({
+      startLabel: '18:00',
+      endLabel: '23:00',
+    })
+  })
+
+  it('en el hueco entre turnos no hay turno', () => {
+    expect(currentShift(laFlorenciaSabado, at(SAT, '16:30'))).toBeNull()
+  })
+
+  it('el turno que cruza medianoche sigue siendo el de anoche', () => {
+    const cruzando = [day(0, { shift1_start: '18:00', shift1_end: '01:00' })]
+    expect(currentShift(cruzando, at(TUE, '00:30'))).toEqual({
+      startLabel: '18:00',
+      endLabel: '01:00',
+    })
+  })
+
+  it('sin horario no hay turno que nombrar', () => {
+    expect(currentShift([], at(SAT, '19:00'))).toBeNull()
+  })
+})
+
+describe('declarationIsStale · volver a preguntar al empezar el segundo turno', () => {
+  const declaradaA = (fecha: string, hora: string) => at(fecha, hora)
+  /** Semana de un solo turno diario, 18:00-23:00: el resto de días del piloto. */
+  const unSoloTurno = [0, 1, 2, 3, 4, 5, 6].map((d) => day(d))
+
+  it('LO QUE SE DIJO AL MEDIODÍA NO RESPONDE POR LA NOCHE', () => {
+    // El caso que costó las noches de sábado: abrió a las 11:05 y cerró a las
+    // 14:55. A las 18:00 el panel tiene que volver a preguntar.
+    const alAbrirLaNoche = at(SAT, '18:00')
+    expect(declarationIsStale(laFlorenciaSabado, alAbrirLaNoche, declaradaA(SAT, '11:05'))).toBe(
+      true,
+    )
+    expect(declarationIsStale(laFlorenciaSabado, alAbrirLaNoche, declaradaA(SAT, '14:55'))).toBe(
+      true,
+    )
+  })
+
+  it('lo declarado ya dentro del turno de noche vale toda la noche', () => {
+    expect(declarationIsStale(laFlorenciaSabado, at(SAT, '22:30'), declaradaA(SAT, '18:04'))).toBe(
+      false,
+    )
+  })
+
+  it('adelantarse no se castiga: confirmar a las 17:55 vale para las 18:00', () => {
+    // Se mide contra el FIN del turno anterior (15:00), no contra el inicio del
+    // actual: si no, el que confirma cinco minutos antes recibe la pregunta otra
+    // vez cinco minutos después.
+    expect(declarationIsStale(laFlorenciaSabado, at(SAT, '18:05'), declaradaA(SAT, '17:55'))).toBe(
+      false,
+    )
+  })
+
+  it('un día de un solo turno se pregunta una vez y no vuelve a molestar', () => {
+    // Lunes 18:00–23:00: confirmó a las 18:13 y a las 22:00 sigue valiendo.
+    expect(declarationIsStale(unSoloTurno, at(MON, '22:00'), declaradaA(MON, '18:13'))).toBe(false)
+  })
+
+  it('lo de ayer no vale para hoy', () => {
+    expect(declarationIsStale(unSoloTurno, at(TUE, '19:00'), declaradaA(MON, '18:13'))).toBe(true)
+  })
+
+  it('sin horario configurado nunca se vuelve a preguntar', () => {
+    // Ese negocio no tiene turnos que distinguir; repetir la pregunta sería
+    // ruido sin información.
+    expect(declarationIsStale([], at(SAT, '19:00'), declaradaA(SAT, '11:00'))).toBe(false)
+  })
+})
+
+describe('minutesSinceLastShiftEnd · la frontera de validez', () => {
+  it('el sábado a las 18:30 el turno anterior acabó hace tres horas y media', () => {
+    expect(minutesSinceLastShiftEnd(laFlorenciaSabado, at(SAT, '18:30'))).toBe(210)
+  })
+
+  it('el sábado a mediodía la frontera es el turno del viernes', () => {
+    // Viernes (day_of_week 4) cierra a las 23:15; el sábado a las 12:00 son
+    // 12h45m = 765 minutos.
+    expect(minutesSinceLastShiftEnd(laFlorenciaSabado, at(SAT, '12:00'))).toBe(765)
+  })
+
+  it('sin horario no hay frontera', () => {
+    expect(minutesSinceLastShiftEnd([], at(SAT, '12:00'))).toBeNull()
+  })
+})
+
+describe('hasLaterShiftToday · cerrar un turno no es cerrar el día', () => {
+  it('el sábado a mediodía todavía queda la noche', () => {
+    expect(hasLaterShiftToday(laFlorenciaSabado, at(SAT, '12:00'))).toBe(true)
+  })
+
+  it('el sábado por la noche ya no queda nada: eso sí cierra el día', () => {
+    expect(hasLaterShiftToday(laFlorenciaSabado, at(SAT, '19:00'))).toBe(false)
+  })
+
+  it('el domingo, de un solo turno, cerrar es cerrar el día', () => {
+    expect(hasLaterShiftToday(laFlorenciaSabado, at(SUN, '12:00'))).toBe(false)
+  })
+
+  it('sin horario no hay turnos que queden', () => {
+    expect(hasLaterShiftToday([], at(SAT, '12:00'))).toBe(false)
   })
 })
