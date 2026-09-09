@@ -171,9 +171,18 @@ export interface CheckoutState {
    * solo de `PICKUP_ENABLED`, que es global: se enseñaba en todos los negocios,
    * aceptaran recojo o no.
    *
-   * `false` mientras la respuesta no llega, que es el lado seguro: esconder un
-   * canal que sí existe se arregla solo medio segundo después, mientras que
-   * enseñar uno que no existe termina en un 409 al confirmar.
+   * MIENTRAS LA RESPUESTA NO LLEGA SE CREE A LA BOLSA, y esto es una corrección
+   * de lo que decía antes esta nota. Decía que `false` era el lado seguro —
+   * esconder de más se arregla en medio segundo, enseñar de más acaba en 409—.
+   * Dejó de ser verdad en cuanto el método pasó a elegirse en la carta: si el
+   * cliente ya venía en recojo, esconder el selector durante el salto a la API
+   * (470–750 ms de piso) deja en pantalla «¿Cuándo recoges tu pedido?» SIN los
+   * dos botones encima, o sea una pregunta huérfana y ninguna forma de volver a
+   * delivery. Peor que el riesgo que evitaba.
+   *
+   * Y el riesgo no queda suelto: una bolsa solo puede venir en recojo si la
+   * ficha del negocio ofreció el canal, el efecto de más abajo la corrige en
+   * cuanto llega la respuesta, y el guard 409 del API sigue siendo el suelo.
    */
   acceptsPickup: boolean
 
@@ -594,7 +603,7 @@ export function useCheckoutState(): CheckoutState {
       ordering.info?.etaMin != null && ordering.info?.etaMax != null
         ? { min: ordering.info.etaMin, max: ordering.info.etaMax }
         : null,
-    acceptsPickup: ordering.info?.acceptsPickup === true,
+    acceptsPickup: ordering.info ? ordering.info.acceptsPickup : deliveryMethod === 'pickup',
     selectedAddress,
     reference,
     line,
