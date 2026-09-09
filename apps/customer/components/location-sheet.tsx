@@ -232,7 +232,16 @@ export function LocationSheet({
           }}
         />
 
-        {/* Barra superior: volver + selector de fondo. */}
+        {/* Barra superior: volver + selector de fondo.
+
+            EXCEPCIÓN A `check:ds` (vale también para el «centrar en mi
+            ubicación» de más abajo): son controles flotantes SOBRE el mapa, no
+            botones de una pantalla. Piden 44/48 px de diana con el pulgar,
+            fondo opaco `bg-card` para leerse encima del satélite y
+            `shadow-elev-3` para despegarse de él. `IconButton` solo llega a
+            40 px, no tiene elevación y su relleno es translúcido: encima de una
+            foto aérea desaparece. Ya estaban consentidos; aquí solo cambió el
+            estilo, no la decisión. */}
         <div className="pointer-events-none absolute inset-x-0 top-0 z-[730] flex items-start gap-2 p-3 pt-[calc(0.75rem+env(safe-area-inset-top))]">
           <button
             type="button"

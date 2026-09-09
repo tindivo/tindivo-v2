@@ -9,6 +9,13 @@
  * importar de otra (CLAUDE.md): lo común sube a `components/`. El vocabulario
  * se queda abajo — cada pantalla trae sus opciones y su tipo.
  *
+ * EXCEPCIÓN A `check:ds` — riel de chips, no botones sueltos. La superficie
+ * `bg-ink` marca CUÁL está activo dentro de una fila que scrollea; `<Button>`
+ * traería su alto fijo y su degradado de marca, y el riel dejaría de leerse
+ * como una sola cosa. Es el mismo caso ya documentado en `menu/page.tsx` para
+ * la barra de categorías, y la huella que este chip tenía registrada cuando
+ * vivía en `features/historial` viaja con él a esta ruta.
+ *
  * LA REGLA QUE NO SE PUEDE ROMPER AL USARLO: `counts[id]` tiene que ser
  * EXACTAMENTE cuántas tarjetas se verían al pulsar ese chip. Suena obvio y en
  * producción se rompió dos veces (el descuadre de `JMAXL98Z`: el chip contaba

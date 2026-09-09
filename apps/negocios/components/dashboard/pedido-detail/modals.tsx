@@ -1,6 +1,6 @@
 'use client'
 
-import { cn, Icon } from '@tindivo/ui'
+import { Button, cn, Icon } from '@tindivo/ui'
 import { useState } from 'react'
 import type { OrderVM } from '@/lib/orders/view-model'
 import { soles } from '../primitives'
@@ -169,19 +169,16 @@ export function PrepTimeModal({
                   { v: 'paid_yape', label: 'Yape/Plin', icon: 'qr_code_2' },
                 ] as const
               ).map((o) => (
-                <button
+                <Button
                   type="button"
                   key={o.v}
+                  variant={o.v === cobro ? 'success' : 'outline'}
+                  aria-pressed={o.v === cobro}
                   onClick={() => setCobro(o.v)}
-                  className={cn(
-                    'inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold transition-all',
-                    o.v === cobro
-                      ? 'border-transparent bg-success text-white'
-                      : 'border border-border bg-white text-ink',
-                  )}
+                  className="w-full"
                 >
                   <Icon weight={500} name={o.icon} size={18} filled /> {o.label}
-                </button>
+                </Button>
               ))}
             </div>
             <div className="mt-2 text-[11px] text-ink-muted">
@@ -221,11 +218,12 @@ export function PrepTimeModal({
           >
             Cancelar
           </button>
-          <button
+          <Button
             type="button"
+            variant="success"
+            className="w-full"
             onClick={() => onConfirm(sel, cobro ?? undefined)}
             disabled={falta}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-success px-5 py-3 text-[15px] font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-50"
           >
             {/* El botón PIDE lo que falta en vez de quedarse gris y mudo: es el
                 mismo patrón del CTA del checkout, que dice «Elige cuándo lo
@@ -235,7 +233,7 @@ export function PrepTimeModal({
               : cobraEnMostrador
                 ? 'Cobré · a cocina'
                 : 'Confirmar y empezar'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

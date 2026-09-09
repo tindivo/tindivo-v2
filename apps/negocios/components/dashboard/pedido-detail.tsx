@@ -1,7 +1,7 @@
 'use client'
 
 import type { PaymentQrView } from '@tindivo/contracts'
-import { cn, Icon } from '@tindivo/ui'
+import { Button, cn, Icon } from '@tindivo/ui'
 
 import { useEffect, useState } from 'react'
 import { formatReadyDelta, type OrderVM } from '@/lib/orders/view-model'
@@ -971,25 +971,27 @@ export function DetailScreen({
                   : 'Se cancela el pedido y queda una falta en su cuenta. A la segunda, ese cliente solo podrá pedir con pago adelantado.'}
               </p>
               <div className="flex gap-2">
-                <button
+                <Button
                   type="button"
+                  variant="soft"
+                  className="flex-1"
                   onClick={() => setConfirmNoShow(false)}
                   disabled={busy}
-                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-ink/[0.06] px-5 py-3 text-[15px] font-semibold text-ink transition-transform active:scale-[0.98] disabled:opacity-50"
                 >
                   Volver
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
+                  variant="danger"
+                  className="flex-1"
                   onClick={async () => {
                     await actions.onPickupNoShow()
                     setConfirmNoShow(false)
                   }}
                   disabled={busy}
-                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-danger px-5 py-3 text-[15px] font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-50"
                 >
                   Sí, no vino
-                </button>
+                </Button>
               </div>
             </div>
           ) : (
@@ -1010,17 +1012,18 @@ export function DetailScreen({
                   desde aquí no se sabe si llegó a pulsar enviar. Se puede
                   repetir las veces que haga falta — cada una pisa la marca. */}
               {actions.onNotifyPickup && (
-                <button
+                <Button
                   type="button"
+                  variant="outline"
+                  className="w-full"
                   onClick={() => actions.onNotifyPickup?.()}
                   disabled={busy}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-success/40 bg-success-soft px-5 py-2.5 text-[14px] font-semibold text-success transition-transform active:scale-[0.98] disabled:opacity-50"
                 >
                   <Icon weight={500} name="chat" size={17} filled />
                   {order.pickupNotifiedAt
                     ? `Volver a avisar · avisado ${order.pickupNotifiedAt}`
                     : 'Avisar por WhatsApp que está listo'}
-                </button>
+                </Button>
               )}
               {/* YA COBRADO = NO SE VUELVE A PREGUNTAR (0224).
                   Un recojo «ahora» se cobró al aceptarlo y un prepago llegó
@@ -1029,14 +1032,15 @@ export function DetailScreen({
                   respuesta distinta reescribiría la primera. Queda un solo
                   botón, que es además lo único que falta por hacer. */}
               {isPrepaid || order.yaCobrado ? (
-                <button
+                <Button
                   type="button"
+                  variant="success"
+                  className="w-full"
                   onClick={() => actions.onHandover()}
                   disabled={busy}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-success px-5 py-3 text-[15px] font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-50"
                 >
                   <Icon weight={500} name="shopping_bag" size={18} filled /> Se lo llevó
-                </button>
+                </Button>
               ) : (
                 <>
                   {/* El cobro REAL, no el planeado: en el mostrador el cliente
@@ -1046,33 +1050,37 @@ export function DetailScreen({
                     Se lo llevó · ¿cómo pagó?
                   </p>
                   <div className="flex gap-2">
-                    <button
+                    <Button
                       type="button"
+                      variant="success"
+                      className="flex-1 px-4"
                       onClick={() => actions.onHandover('paid_cash')}
                       disabled={busy}
-                      className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-success px-4 py-3 text-[15px] font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-50"
                     >
                       <Icon weight={500} name="payments" size={18} filled /> Efectivo
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
+                      variant="success"
+                      className="flex-1 px-4"
                       onClick={() => actions.onHandover('paid_yape')}
                       disabled={busy}
-                      className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-success px-4 py-3 text-[15px] font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-50"
                     >
                       <Icon weight={500} name="qr_code_2" size={18} filled /> Yape/Plin
-                    </button>
+                    </Button>
                   </div>
                 </>
               )}
-              <button
+              <Button
                 type="button"
+                variant="soft"
+                size="sm"
+                className="w-full"
                 onClick={() => setConfirmNoShow(true)}
                 disabled={busy}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-ink/[0.06] px-5 py-2.5 text-[13px] font-semibold text-ink-muted transition-transform active:scale-[0.98] disabled:opacity-50"
               >
                 El cliente no vino
-              </button>
+              </Button>
             </div>
           )}
         </div>
