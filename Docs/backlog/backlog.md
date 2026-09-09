@@ -353,7 +353,41 @@ Simplificar a que solo indique un monto entre valores fijos (S/2, S/2.50, S/3) e
 
 ### MOTO-06 · Auditar el cobro y permitir cambiarlo desde admin
 
-**🟠 P1**
+**🟡 P2 — medido el 2026-09-09, bajado de P1**
+
+Hoy `payment_real` se declara UNA vez y no hay dónde corregirlo. En un recojo
+lo declara la cajera al aceptar (la hoja «Cobra y manda a cocina» pregunta
+«¿con qué te pagó?» y `advance_order` lo exige); en un delivery, el motorizado
+al entregar. Si cualquiera de los dos se equivoca de botón, ese pedido queda
+mal rotulado para siempre.
+
+**Por qué baja a P2.** Se rastrearon todos los consumidores de la columna y, en
+un recojo, un valor equivocado NO mueve dinero de nadie:
+
+- `handover` escribe `cash_owed_at_delivery = 0` explícito, así que
+  `order_cash_owed()` da 0 y el pedido no entra en ninguna liquidación.
+- La liquidación además filtra por `driver_id`, y un recojo no tiene.
+- La comisión sale de `app_settings.commissions`, no del método de pago.
+- No existe ningún informe DEL NEGOCIO que separe efectivo de billetera
+  (`apps/api/lib/reports/` solo tiene `performance.ts`, que no lee la columna).
+  La pantalla «Efectivo» del panel es rendición de motorizados y lee
+  `cash_owed_at_delivery`, no el método.
+
+Lo que sí se ensucia: el KPI «Efectivo» del admin de Tindivo (`admin_metrics`,
+migración 0116) y el rótulo de ese pedido en el historial y en la tarjeta. Un
+pedido mal etiquetado y una métrica interna algo torcida.
+
+**El disparador para subirlo de nuevo:** el día que exista un «cuánto entró en
+efectivo esta noche» para el negocio. Ahí el dato mal puesto empieza a costar
+tiempo de contar billetes, y la corrección tiene que ir en ESE mismo cambio, no
+después.
+
+**Dónde va cuando toque:** en **admin**, no en el panel del negocio. El detalle
+de pedido de admin ya pinta «Pago real» (`apps/admin/app/orders/[id]/page.tsx`
++ `PAYMENT_REAL_LABEL`), así que es donde menos hay que construir — y deja el
+camino caliente de la cajera sin un botón de «corregir» que invite a tocarlo
+con el cliente delante. Necesitaría rastro de quién lo cambió: la columna ya
+tiene `payment_verified_by` y `payment_verified_at` al lado.
 
 ### MOTO-07 · Ubicación en tiempo real del motorizado
 
@@ -375,8 +409,21 @@ Debería mencionarse al inicio que el sistema usa GPS, y que el motorizado lo ve
 
 ### ADM-02 · `payment_real` no se ve en ninguna pantalla
 
-**🟠 P1 — hallazgo de auditoría previa**
-El dato ya se captura correctamente en el backend, pero solo es consultable por SQL directo. Se necesita para poder responder si la regla de prepago obligatorio está costando clientes. Va a métricas de admin.
+**✅ DONE — re-medido el 2026-09-09**
+
+Esta entrada decía que el dato «solo es consultable por SQL directo». Ya no era
+verdad, y era el tipo de afirmación que esconde lo que sí falta. Hoy se ve en
+cuatro sitios:
+
+- **Admin, por pedido:** fila «Pago real» en `apps/admin/app/orders/[id]`.
+- **Admin, agregado:** KPI «Efectivo» del dashboard, que sale de
+  `admin_metrics` (migración 0116) sumando `payment_real = 'paid_cash'`. Es lo
+  que esta entrada pedía para responder si el prepago obligatorio cuesta
+  clientes.
+- **Negocios, historial:** `mapPaymentReal(...) ?? mapPayment(intent)`.
+- **Negocios, tablero y detalle:** desde el cobro en caja del recojo.
+
+Lo que queda de aquí no es visibilidad sino corrección, y vive en **MOTO-06**.
 
 ### ADM-03 · Mostrar cantidad en la sección de apelaciones
 
