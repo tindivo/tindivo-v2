@@ -1,4 +1,5 @@
 import { Icon, IconButton } from '@tindivo/ui'
+import { itemWindowState } from '@/features/catalog/lib/availability'
 import { soles } from '@/features/catalog/lib/format'
 import { hasOptions } from '@/features/catalog/lib/menu-density'
 import type { MenuItem } from '@/features/catalog/types'
@@ -26,12 +27,26 @@ interface MenuCompactRowProps {
  */
 export function MenuCompactRow({ item, disabled, first, onOpen, onAdd }: MenuCompactRowProps) {
   const configurable = hasOptions(item)
-  const bloqueado = disabled || !item.is_available
+  // «No es su turno» (0226) bloquea igual que «se acabó». Ver `itemWindowState`.
+  const { outOfWindow, label: franja } = itemWindowState(item)
+  const bloqueado = disabled || !item.is_available || outOfWindow
 
   const contenido = (
     <>
-      <span className="min-w-0 flex-1 truncate font-semibold text-[14.5px] tracking-[-0.01em]">
-        {item.name}
+      {/* La fila crece a dos líneas SOLO si hay franja que explicar. Sin ella se
+          pinta exactamente igual que siempre, y los 50 px que hacen que Bebidas
+          quepa seis veces en pantalla siguen siendo 50. El motivo no puede ir en
+          un `title`: en el móvil, que es donde se pide, no hay hover. */}
+      <span className="min-w-0 flex-1">
+        <span className="block truncate font-semibold text-[14.5px] tracking-[-0.01em]">
+          {item.name}
+        </span>
+        {franja && (
+          <span className="mt-0.5 flex items-center gap-1 truncate text-[11px] text-ink-muted">
+            <Icon name="schedule" size={11} />
+            {franja}
+          </span>
+        )}
       </span>
       <span className="shrink-0 font-semibold text-[14px] tabular-nums">
         {soles(item.base_price)}

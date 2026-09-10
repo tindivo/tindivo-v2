@@ -1401,6 +1401,9 @@ export type Database = {
       }
       menu_items: {
         Row: {
+          available_days: number[] | null
+          available_from: string | null
+          available_to: string | null
           badges: string[]
           base_price: number
           business_id: string
@@ -1418,6 +1421,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          available_days?: number[] | null
+          available_from?: string | null
+          available_to?: string | null
           badges?: string[]
           base_price: number
           business_id: string
@@ -1435,6 +1441,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          available_days?: number[] | null
+          available_from?: string | null
+          available_to?: string | null
           badges?: string[]
           base_price?: number
           business_id?: string
@@ -3012,6 +3021,20 @@ export type Database = {
         Args: { p_business_user_id: string; p_order_id: string }
         Returns: Json
       }
+      menu_item_in_window: {
+        Args: {
+          p_at?: string
+          p_days: number[]
+          p_from: string
+          p_grace_min?: number
+          p_to: string
+        }
+        Returns: boolean
+      }
+      menu_item_orderable_now: {
+        Args: { p_days: number[]; p_from: string; p_to: string }
+        Returns: boolean
+      }
       order_cash_owed: {
         Args: { o: Database["public"]["Tables"]["orders"]["Row"] }
         Returns: number
@@ -3596,6 +3619,7 @@ export const Constants = {
         "heading_to_restaurant",
         "waiting_at_restaurant",
         "picked_up",
+        "ready_for_pickup",
         "delivered",
         "cancelled",
         "awaiting_payment",

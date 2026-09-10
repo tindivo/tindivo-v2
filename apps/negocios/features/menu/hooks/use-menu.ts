@@ -17,7 +17,7 @@ async function loadMenu(businessId: string): Promise<MenuCategory[]> {
       supabase
         .from('menu_items')
         .select(
-          'id,category_id,name,base_price,is_available,is_compact,badges,image_url,display_order',
+          'id,category_id,name,base_price,is_available,is_compact,badges,image_url,display_order,available_days,available_from,available_to',
         )
         .eq('business_id', businessId)
         .is('deleted_at', null)
@@ -83,6 +83,9 @@ async function loadMenu(businessId: string): Promise<MenuCategory[]> {
         base_price: Number(i.base_price),
         is_available: i.is_available,
         is_compact: i.is_compact,
+        available_days: i.available_days ?? [],
+        available_from: i.available_from ?? null,
+        available_to: i.available_to ?? null,
         badges: i.badges ?? [],
         imageUrl: i.image_url ?? null,
         modifierGroups: groupsByItem[i.id] ?? [],

@@ -94,7 +94,12 @@ export async function GET(
       supabase
         .from('menu_items')
         .select(
-          'id,category_id,name,description,base_price,image_url,image_hue,is_available,is_compact,badges,display_order',
+          // Las tres columnas de franja (0226) van CRUDAS, sin evaluar aquí. Es
+          // el mismo reparto que `schedule`: el servidor manda la REGLA y el
+          // cliente la resuelve contra su propio reloj. Si aquí se mandara ya
+          // calculado, esta página —que es ISR con `revalidate: 15`— ofrecería
+          // ceviche a las 15:30 a quien la abrió a las 14:55 y no ha recargado.
+          'id,category_id,name,description,base_price,image_url,image_hue,is_available,is_compact,badges,display_order,available_days,available_from,available_to',
         )
         .eq('business_id', businessId)
         .is('deleted_at', null)

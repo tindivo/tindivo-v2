@@ -1,6 +1,7 @@
 import { Icon } from '@tindivo/ui'
 import { ProductImage } from '@/components/product-image'
 import { HighlightedText } from '@/features/catalog/components/highlighted-text'
+import { itemWindowState } from '@/features/catalog/lib/availability'
 import { soles } from '@/features/catalog/lib/format'
 import { hasOptions as tieneOpciones } from '@/features/catalog/lib/menu-density'
 import type { MatchRange } from '@/features/catalog/lib/menu-search'
@@ -46,7 +47,10 @@ export function MenuItemCard({
   const groups = item.modifier_groups ?? []
   const configurable = tieneOpciones(item)
   const hasPaidOptions = groups.some((g) => g.options.some((o) => Number(o.additional_price) > 0))
-  const bloqueado = disabled || !item.is_available
+  // «No es su turno» (0226) bloquea igual que «se acabó», pero se cuenta
+  // distinto: solo el segundo deja al cliente sin saber cuándo volver.
+  const { outOfWindow, label: franja } = itemWindowState(item)
+  const bloqueado = disabled || !item.is_available || outOfWindow
 
   return (
     <div
@@ -62,8 +66,16 @@ export function MenuItemCard({
       >
         <div className="flex min-w-0 flex-1 flex-col justify-between">
           <div>
-            {(categoryLabel || item.is_compact || item.badges?.[0]) && (
+            {(categoryLabel || item.is_compact || item.badges?.[0] || franja) && (
               <span className="mb-1.5 flex flex-wrap gap-1.5">
+                {/* Primero la franja: es la única que explica por qué la
+                    tarjeta está apagada, y leerla después del nombre sería
+                    llegar tarde. */}
+                {franja && (
+                  <span className="inline-flex items-center gap-1 rounded-md bg-ink/[0.06] px-2 py-[3px] font-bold text-[10px] text-ink-muted">
+                    <Icon name="schedule" size={12} /> {franja}
+                  </span>
+                )}
                 {categoryLabel && (
                   <span className="inline-block rounded-md bg-ink/[0.05] px-2 py-[3px] font-bold text-[10px] text-ink-muted uppercase tracking-[0.08em]">
                     {categoryLabel}

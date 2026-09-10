@@ -67,6 +67,10 @@ export default function MenuItemEditorPage() {
         onDiscard={editor.handleDiscard}
         formData={editor.formData}
         cats={editor.cats}
+        schedule={editor.schedule}
+        categoryItemCount={editor.catItemCounts[editor.formData.category_id] ?? 0}
+        onApplyToCategory={editor.applyToCategory}
+        applyingToCategory={editor.applyingToCategory}
         groups={editor.groups}
         libraryGroups={editor.libraryGroups}
         imageSrc={imageSrc}
@@ -112,6 +116,10 @@ export default function MenuItemEditorPage() {
         onSignOut={editor.signOut}
         formData={editor.formData}
         cats={editor.cats}
+        schedule={editor.schedule}
+        categoryItemCount={editor.catItemCounts[editor.formData.category_id] ?? 0}
+        onApplyToCategory={editor.applyToCategory}
+        applyingToCategory={editor.applyingToCategory}
         groups={editor.groups}
         libraryGroups={editor.libraryGroups}
         imageSrc={imageSrc}

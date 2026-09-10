@@ -1,3 +1,4 @@
+import type { ScheduleDayRow } from '@tindivo/contracts'
 import { compressImage, UPLOAD_CACHE_CONTROL, validateImageInput } from '@tindivo/images'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
@@ -38,7 +39,23 @@ export function useItemEditor() {
     is_compact: false,
     image_url: null,
     badges: [],
+    available_days: [],
+    available_from: null,
+    available_to: null,
   })
+  /**
+   * Horario semanal del negocio. Lo necesita la sección de disponibilidad para
+   * dos cosas: proponer los atajos («solo al mediodía» sale de los turnos que el
+   * negocio ya tiene) y avisar si la franja cae en un día que no abre.
+   *
+   * Vacío mientras carga y también si el negocio no tiene horario: las dos
+   * situaciones se tratan igual —sin atajos y sin avisos— porque sin turnos no
+   * hay nada que proponer ni con qué comparar.
+   */
+  const [schedule, setSchedule] = useState<ScheduleDayRow[]>([])
+  /** Cuántos platos hay por categoría, para rotular el botón de aplicar en bloque. */
+  const [catItemCounts, setCatItemCounts] = useState<Record<string, number>>({})
+  const [applyingToCategory, setApplyingToCategory] = useState(false)
   const [pendingImageFile, setPendingImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [imageError, setImageError] = useState<string | null>(null)
@@ -91,7 +108,7 @@ export function useItemEditor() {
         .eq('status', 'pending_acceptance')
       setPendingOrders(count ?? 0)
 
-      const [catsRes, allGroupsRes] = await Promise.all([
+      const [catsRes, allGroupsRes, scheduleRes, siblingsRes] = await Promise.all([
         supabase
           .from('menu_categories')
           .select('id,name')
@@ -104,9 +121,28 @@ export function useItemEditor() {
           )
           .eq('business_id', biz.id)
           .order('display_order'),
+        supabase
+          .from('business_schedule')
+          .select('day_of_week,is_open,shift1_start,shift1_end,shift2_start,shift2_end')
+          .eq('business_id', biz.id)
+          .order('day_of_week'),
+        // Solo `category_id`: se usa para contar hermanos por categoría, no para
+        // pintar nada. Traer el resto de columnas sería descargar el menú entero.
+        supabase
+          .from('menu_items')
+          .select('category_id')
+          .eq('business_id', biz.id)
+          .is('deleted_at', null),
       ])
       const loadedCats = catsRes.data ?? []
       setCats(loadedCats)
+      setSchedule(scheduleRes.data ?? [])
+
+      const counts: Record<string, number> = {}
+      for (const row of siblingsRes.data ?? []) {
+        counts[row.category_id] = (counts[row.category_id] ?? 0) + 1
+      }
+      setCatItemCounts(counts)
 
       const allGroupsData = allGroupsRes.data ?? []
       const allGroupIds = allGroupsData.map((g) => g.id)
@@ -199,7 +235,7 @@ export function useItemEditor() {
         const { data: item } = await supabase
           .from('menu_items')
           .select(
-            'id,name,description,category_id,base_price,is_available,is_compact,image_url,badges',
+            'id,name,description,category_id,base_price,is_available,is_compact,image_url,badges,available_days,available_from,available_to',
           )
           .eq('id', itemId)
           .eq('business_id', biz.id)
@@ -220,6 +256,12 @@ export function useItemEditor() {
           is_compact: item.is_compact,
           image_url: item.image_url ?? null,
           badges: item.badges ?? [],
+          // `available_days` es `smallint[]`: null en la DB = sin restricción, y
+          // aquí se representa con el array vacío para que el formulario no
+          // tenga que distinguir dos formas del mismo «todos los días».
+          available_days: item.available_days ?? [],
+          available_from: item.available_from ?? null,
+          available_to: item.available_to ?? null,
         })
 
         const { data: junctions } = await supabase
@@ -618,6 +660,13 @@ export function useItemEditor() {
             is_compact: formData.is_compact,
             badges: formData.badges,
             display_order: 9999,
+            // Los tres a la vez: las tres columnas son UNA sola franja, y
+            // guardar media dejaria un estado que la regla trata como «sin
+            // hora» sin que nadie lo haya pedido. El array vacio se guarda
+            // como null, que es lo que la DB entiende por «todos los dias».
+            available_days: formData.available_days.length > 0 ? formData.available_days : null,
+            available_from: formData.available_from,
+            available_to: formData.available_to,
           })
           .select('id')
           .single()
@@ -639,6 +688,13 @@ export function useItemEditor() {
             is_compact: formData.is_compact,
             badges: formData.badges,
             image_url: formData.image_url,
+            // Los tres a la vez: las tres columnas son UNA sola franja, y
+            // guardar media dejaria un estado que la regla trata como «sin
+            // hora» sin que nadie lo haya pedido. El array vacio se guarda
+            // como null, que es lo que la DB entiende por «todos los dias».
+            available_days: formData.available_days.length > 0 ? formData.available_days : null,
+            available_from: formData.available_from,
+            available_to: formData.available_to,
           })
           .eq('id', itemId)
           .eq('business_id', bizId)
@@ -923,6 +979,50 @@ export function useItemEditor() {
     router.replace('/')
   }
 
+  /**
+   * APLICA LA FRANJA DEL PLATO ABIERTO A TODOS LOS DE SU CATEGORÍA.
+   *
+   * Es la diferencia entre configurar la carta de mediodía de La Florencia en
+   * dos gestos y en trece. Sus 13 platos de mediodía viven en dos categorías
+   * enteras (`PESCADOS Y MARISCOS` y `RECOMENDACIÓN DEL CHEF`), así que la
+   * categoría es la unidad natural del trabajo.
+   *
+   * Escribe SOLO las tres columnas de franja: ni precios, ni nombres, ni
+   * `is_available`. Un botón que tocara de más sería intocable.
+   *
+   * No incluye el plato abierto (lo guarda `handleSave` con el resto del
+   * formulario), y por eso no exige haber guardado antes: la franja se aplica
+   * tal como está en pantalla.
+   */
+  async function applyToCategory(): Promise<boolean> {
+    if (!bizId || !formData.category_id) return false
+    setApplyingToCategory(true)
+    const supabase = getSupabaseBrowser()
+    const { error, count } = await supabase
+      .from('menu_items')
+      .update(
+        {
+          available_days: formData.available_days.length > 0 ? formData.available_days : null,
+          available_from: formData.available_from,
+          available_to: formData.available_to,
+        },
+        { count: 'exact' },
+      )
+      .eq('business_id', bizId)
+      .eq('category_id', formData.category_id)
+      .is('deleted_at', null)
+    setApplyingToCategory(false)
+    if (error) {
+      setSaveError(`No se pudo aplicar la franja a la categoría: ${error.message}`)
+      return false
+    }
+    // `count` y no el número que rotulaba el botón: un UPDATE sin policy que
+    // case devuelve 204 con cero filas tocadas, y entonces el aviso de éxito
+    // mentiría. Lo que se anuncia es lo que la DB dice que cambió.
+    notifySuccess(`Franja aplicada a ${count ?? 0} plato${count === 1 ? '' : 's'}`)
+    return true
+  }
+
   return {
     ready,
     isNew,
@@ -933,6 +1033,10 @@ export function useItemEditor() {
     pendingOrders,
     cats,
     formData,
+    schedule,
+    catItemCounts,
+    applyingToCategory,
+    applyToCategory,
     groups,
     libraryGroups,
     hasUnsaved,

@@ -42,6 +42,26 @@ export interface MenuItem extends ProductItem {
   is_available: boolean
   is_compact: boolean
   badges: string[]
+  /**
+   * FRANJA EN QUE EL NEGOCIO SIRVE ESTE PLATO (migración 0226). Ausente o en
+   * `null` = siempre, que es el caso de la inmensa mayoría.
+   *
+   * Llega CRUDA y la evalúa el cliente con `isWithinWindow`, igual que
+   * `schedule` y `getOpenStatus`: así la card se apaga sola al cruzar la hora
+   * sin recargar la página, que es ISR de 15 segundos.
+   *
+   * NO es lo mismo que `is_available`. Esa dice «se acabó»; esto, «no es su
+   * turno», y al cliente hay que contarle cosas distintas: la segunda lleva
+   * dentro cuándo volver.
+   *
+   * **Opcionales a propósito**, como `slug` unos tipos más arriba: `apps/api` se
+   * despliega por separado y un `customer` nuevo contra una `api` vieja no los
+   * recibe. Declararlos obligatorios no los hace aparecer, solo esconde el
+   * hueco — y aquí el hueco significa «sin restricción», que es lo seguro.
+   */
+  available_days?: number[] | null
+  available_from?: string | null
+  available_to?: string | null
 }
 
 export interface Category {

@@ -37,10 +37,16 @@ export type OpenStatus =
       reason?: 'not_confirmed'
     }
 
-const HHMM_RE = /^(\d{2}):(\d{2})$/
+/**
+ * Los segundos son opcionales porque una columna `time` de Postgres llega por
+ * PostgREST como '11:00:00', no como '11:00'. `business_schedule` guarda texto
+ * 'HH:MM' y nunca los trae; `menu_items.available_from` sí. Se ignoran: ningún
+ * turno ni ninguna franja de carta se mide en segundos.
+ */
+const HHMM_RE = /^(\d{2}):(\d{2})(?::\d{2})?$/
 
-/** 'HH:MM' → minutos desde medianoche; null si es inválido o ausente. */
-function toMinutes(v: string | null): number | null {
+/** 'HH:MM' (o 'HH:MM:SS') → minutos desde medianoche; null si es inválido o ausente. */
+export function parseTimeToMinutes(v: string | null | undefined): number | null {
   if (!v) return null
   const m = HHMM_RE.exec(v)
   if (!m) return null
@@ -49,6 +55,8 @@ function toMinutes(v: string | null): number | null {
   if (h > 23 || min > 59) return null
   return h * 60 + min
 }
+
+const toMinutes = parseTimeToMinutes
 
 const WEEKDAY_TO_IDX: Record<string, number> = {
   Mon: 0,
@@ -69,7 +77,7 @@ const limaFmt = new Intl.DateTimeFormat('en-US', {
 })
 
 /** Día (0=Lunes) y minuto del instante en America/Lima — el server puede correr en otra TZ. */
-function limaParts(now: Date): { dayIdx: number; minutes: number } {
+export function limaParts(now: Date): { dayIdx: number; minutes: number } {
   let weekday = ''
   let hour = 0
   let minute = 0
@@ -107,7 +115,8 @@ function shiftsOf(row: ScheduleDayRow | undefined): Shift[] {
 
 const crossesMidnight = (sh: Shift): boolean => sh.end <= sh.start
 
-const DAY_MIN = 24 * 60
+/** Minutos de un día. Exportado porque la franja de un plato mide igual que un turno. */
+export const DAY_MIN = 24 * 60
 
 /**
  * Estado de atención del negocio en el instante `now` (America/Lima).
@@ -200,6 +209,20 @@ function statusFromSchedule(days: ScheduleDayRow[], now: Date): OpenStatus {
 export interface ShiftView {
   startLabel: string
   endLabel: string
+}
+
+/**
+ * Los turnos de UN día de la semana (0=Lunes..6=Domingo), en el orden en que se
+ * guardaron. Un día `is_open=false` no tiene ninguno.
+ *
+ * Es la puerta pública a `shiftsOf`, que es privada porque trabaja con la fila.
+ * La usa la franja de un plato para saber si cabe en el horario del negocio, y
+ * el editor del panel para proponer «solo al mediodía» sin que nadie teclee
+ * una hora que el local no abre.
+ */
+export function shiftsForDay(days: ScheduleDayRow[], dayOfWeek: number): ShiftView[] {
+  const row = days.find((d) => d.day_of_week === dayOfWeek)
+  return shiftsOf(row).map((sh) => ({ startLabel: sh.startLabel, endLabel: sh.endLabel }))
 }
 
 /** Turnos de la última semana, medidos en minutos hacia atrás desde `now`. */
