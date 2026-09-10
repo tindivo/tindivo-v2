@@ -1030,3 +1030,131 @@ describe('el reloj de la tarjeta y el tick del tablero', () => {
     expect(needsClockTick(vm({ status: 'cancelled' }))).toBe(false)
   })
 })
+
+/**
+ * EL CHIP DE VALIDAR ES UNA INSTRUCCIÓN, NO UNA ETIQUETA DEL PEDIDO.
+ *
+ * Encontrado mirando el tablero con un recojo real el 2026-09-10: el mismo
+ * pedido llevaba «Validar antes de cocinar» en las TRES columnas seguidas —por
+ * aceptar, en cocina y con la bolsa esperando en el mostrador— porque
+ * `riskLabel` salía de `requiresValidation` a secas, y esa columna no se apaga
+ * nunca: es un dato del nacimiento del pedido.
+ *
+ * En un recojo «ahora» además contradice al canal entero. Ese pedido se salta
+ * `validando` A PROPÓSITO (0220) porque su garantía es la cajera mirando a
+ * quien pidió; pedirle encima una validación le ofrece un trámite inexistente
+ * justo cuando tiene al cliente delante.
+ */
+describe('0220/0224 · cuándo la tarjeta pide validar', () => {
+  const baseNow = Date.parse('2026-08-05T15:15:00Z')
+
+  /** Un recojo «ahora», tal como lo escribe `create_customer_order`. */
+  const recojoAhora = (over: Partial<OrderRow> = {}) =>
+    buildNegociosCardVM(
+      toOrderVM(
+        mockOrderRow({
+          source: 'customer_pwa',
+          delivery_method: 'pickup',
+          pickup_timing: 'now',
+          status: 'pending_acceptance',
+          // La RPC deja dicho que la duda se resuelve en el mostrador. Es su
+          // afirmación, no una deducción nuestra desde `pickup_timing`.
+          requires_validation: true,
+          validation_reason_code: 'standard_validation_rule',
+          risk_flags: { pickupNowPresence: true, resolvedAtCounter: true },
+          ...over,
+        }),
+        baseNow,
+      ),
+    ).riskLabel
+
+  it('un recojo «ahora» no lo pide ni recién llegado: la cajera ya lo tiene delante', () => {
+    expect(recojoAhora()).toBeNull()
+  })
+
+  it('y sigue sin pedirlo en cocina y en el mostrador, que es donde más molestaba', () => {
+    expect(recojoAhora({ status: 'preparing' })).toBeNull()
+    expect(
+      recojoAhora({
+        status: 'ready_for_pickup',
+        ready_for_pickup_at: '2026-08-05T15:14:00Z',
+      }),
+    ).toBeNull()
+  })
+
+  /** La otra mitad: esto NO apaga el antifraude de verdad. */
+  it('un delivery que espera la llamada SÍ lo pide, y con su motivo', () => {
+    const card = buildNegociosCardVM(
+      toOrderVM(
+        mockOrderRow({
+          status: 'validando',
+          requires_validation: true,
+          validation_reason_code: 'gps_warning_zone',
+        }),
+        baseNow,
+      ),
+    )
+    expect(card.riskLabel).toBe('Validar · Zona ampliada')
+  })
+
+  it('pero deja de pedirlo en cuanto entra a cocina: a cocina se llega por una persona', () => {
+    const card = buildNegociosCardVM(
+      toOrderVM(
+        mockOrderRow({
+          status: 'preparing',
+          requires_validation: true,
+          validation_reason_code: 'gps_warning_zone',
+        }),
+        baseNow,
+      ),
+    )
+    expect(card.riskLabel).toBeNull()
+  })
+})
+
+/**
+ * EL DIBUJO DEL BOTÓN TIENE QUE DECIR LO MISMO QUE LA PALABRA.
+ *
+ * `deliver` cubre las dos entregas —la del motorizado en la puerta y la del
+ * mostrador— y el JSX las pintaba a las dos con `local_shipping`: un camión de
+ * reparto encima de «Entregar en el mostrador», donde no hay ninguno. Visto en
+ * el navegador el 2026-09-10.
+ *
+ * El icono viaja en la acción y no en el JSX para que el recolector de
+ * `icon-subset.test.ts` siga viéndolo (patrón `icon: '...'`): si alguien pone
+ * aquí una ligadura que no está en el `.woff2`, ese test lo caza antes de que
+ * salga como garabato en la pantalla de la caja.
+ */
+describe('0220 · el icono de la acción 1-tap', () => {
+  const baseNow = Date.parse('2026-08-05T15:15:00Z')
+
+  it('el mostrador no es una moto', () => {
+    const card = buildNegociosCardVM(
+      toOrderVM(
+        mockOrderRow({
+          delivery_method: 'pickup',
+          pickup_timing: 'now',
+          status: 'ready_for_pickup',
+          ready_for_pickup_at: '2026-08-05T15:14:00Z',
+        }),
+        baseNow,
+      ),
+    )
+    expect(card.primaryAction?.label).toBe('Entregar en el mostrador')
+    expect(card.primaryAction?.icon).toBe('storefront')
+  })
+
+  it('y la moto en la puerta sigue siendo una moto', () => {
+    const card = buildNegociosCardVM(
+      toOrderVM(
+        mockOrderRow({
+          status: 'waiting_at_restaurant',
+          driver_id: 'drv_1',
+          driver: { full_name: 'Carlos Chofer' },
+        }),
+        baseNow,
+      ),
+    )
+    expect(card.primaryAction?.icon).toBe('local_shipping')
+  })
+})

@@ -311,7 +311,7 @@ function NegociosBaseCard({
                   : 'bg-brand text-white',
               )}
             >
-              <Icon name="call" size={15} weight={500} filled />
+              <Icon name={vm.primaryAction.icon} size={15} weight={500} filled />
               {vm.primaryAction.label}
             </button>
           ) : (
@@ -321,7 +321,7 @@ function NegociosBaseCard({
                 vm.primaryAction.isUrgent ? 'bg-emerald-600' : 'bg-brand',
               )}
             >
-              <Icon name="local_shipping" size={15} filled />
+              <Icon name={vm.primaryAction.icon} size={15} filled />
               {vm.primaryAction.label}
             </div>
           )}

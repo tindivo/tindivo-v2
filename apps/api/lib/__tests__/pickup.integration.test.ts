@@ -740,6 +740,157 @@ describe('0219/0220 · el recojo en el local', () => {
     })
   })
 
+  /**
+   * EL RECOJO «MÁS TARDE», DE PUNTA A PUNTA.
+   *
+   * POR QUÉ HACÍA FALTA. Todo lo que este fichero prueba del ciclo de vida —
+   * `cerrar el recojo`, el plantón, el aviso de WhatsApp— se siembra con
+   * `'now'`, y los tres casos de «más tarde» que había se paraban en el
+   * NACIMIENTO: comprueban quién entra y quién no, nunca qué pasa después.
+   * Medido el 2026-09-10: ni un solo test recorría captura → validar → cocina →
+   * mostrador → entregado.
+   *
+   * Y es el camino que más lo necesita. Es el único del sistema donde se cocina
+   * SIN NADIE DELANTE y sin cobrador al final (DECISIONS §8): si algo se rompe
+   * aquí, se rompe con la comida ya hecha y el dinero ya cobrado.
+   *
+   * Además es el único recojo que llega a cocina por `validate_order` en vez de
+   * por `advance_order`, y esa diferencia no era cosmética: ahí estaba el
+   * defecto que arregla la 0225.
+   */
+  describe('el recojo «más tarde», de punta a punta', () => {
+    /**
+     * La captura del cliente, como la sube el API.
+     *
+     * Se escribe por SQL porque la ruta que lo hace en producción
+     * (`/customer/orders/[id]/prepay-proof`) sube el fichero a Storage antes de
+     * tocar la fila, y lo que este test prueba es lo que pasa DESPUÉS. Los tres
+     * campos son los que escribe esa ruta, `validation_context` incluido: sin
+     * él `validate_order` toma la rama de antifraude y devuelve el pedido a
+     * `pending_acceptance`, que es un camino distinto del que se quiere probar.
+     */
+    async function subirCaptura(orderId: string) {
+      const { error } = await db
+        .from('orders')
+        .update({
+          status: 'validando',
+          validation_context: 'proof',
+          comprobante_prepago_url: 'https://ejemplo.local/captura.jpg',
+          payment_proof_status: 'pending',
+        })
+        .eq('id', orderId)
+      if (error) throw new Error(`no se pudo subir la captura: ${error.message}`)
+    }
+
+    it('el camino entero: prepago, captura, cocina, mostrador y entregado', async () => {
+      const cliente = await crearCliente()
+      const { data, error } = await pedirRecojo(cliente, 'later', undefined, 'prepaid')
+      expect(error, `debería entrar: ${error?.message}`).toBeNull()
+      const creado = registrar(data)
+
+      // 1. Nace esperando respuesta del negocio, como cualquier prepago (0093).
+      expect((await estado(creado.id)).status).toBe('pending_acceptance')
+
+      // 2. Aceptarlo NO es cobrarlo: aquí el dinero no está en la caja, así que
+      //    `advance_order` no pide `paymentReal` y abre la ventana de pago.
+      //    Es la diferencia exacta con el «ahora», y por eso se afirma sin
+      //    pasar por `aceptarCobrando`.
+      const { error: errAccept } = await avanzar(creado.id, bizUserId, 'business', 'accept', {
+        prepTimeMinutes: 20,
+      })
+      expect(errAccept, errAccept?.message).toBeNull()
+      expect((await estado(creado.id)).status).toBe('awaiting_payment')
+
+      // 3. El cliente paga y sube su captura.
+      await subirCaptura(creado.id)
+      expect((await estado(creado.id)).status).toBe('validando')
+
+      // 4. La cajera la aprueba. ESTE es el único camino por el que un recojo
+      //    llega a cocina sin pasar por `advance_order`.
+      const { data: validado, error: errVal } = await db.rpc('validate_order', {
+        p_order_id: creado.id,
+        p_actor_user_id: bizUserId,
+        p_actor_role: 'business',
+        p_pass: true,
+        p_prep_time_minutes: 20,
+      })
+      expect(errVal, errVal?.message).toBeNull()
+      expect(validado).toMatchObject({ ok: true, status: 'preparing', context: 'proof' })
+
+      // El sello del dinero lo pone la aprobación de la captura, no la caja.
+      const { data: enCocina } = await db
+        .from('orders')
+        .select('status, payment_proof_status, payment_verified_at, payment_verified_by')
+        .eq('id', creado.id)
+        .single()
+      expect(enCocina?.status).toBe('preparing')
+      expect(enCocina?.payment_proof_status).toBe('verified')
+      expect(enCocina?.payment_verified_at).not.toBeNull()
+      expect(enCocina?.payment_verified_by).toBe(bizUserId)
+
+      // 5. Lista: se queda en el mostrador, no sale a la calle.
+      const { error: errReady } = await avanzar(creado.id, bizUserId, 'business', 'ready')
+      expect(errReady, errReady?.message).toBeNull()
+      const lista = await estado(creado.id)
+      expect(lista.status).toBe('ready_for_pickup')
+      expect(lista.ready_for_pickup_at).not.toBeNull()
+
+      // 6. Se lo llevó. SIN `paymentReal`: ya estaba pagado, y el pie del
+      //    mostrador no vuelve a preguntar (0224).
+      const { error: errHandover } = await avanzar(creado.id, bizUserId, 'business', 'handover')
+      expect(errHandover, errHandover?.message).toBeNull()
+      const cerrado = await estado(creado.id)
+      expect(cerrado.status).toBe('delivered')
+      expect(cerrado.payment_real).toBe('paid_prepaid')
+
+      // Y deja su comisión, sin cargo de envío: no hubo viaje que cobrar.
+      const { data: cargos } = await db
+        .from('business_charges')
+        .select('charge_type, amount')
+        .eq('order_id', creado.id)
+      expect(cargos).toHaveLength(1)
+      expect(cargos?.[0]).toMatchObject({ charge_type: 'commission' })
+    })
+
+    /**
+     * 0225 · LA VENTANA DE LA COLA NO SE ABRE PARA EL MOSTRADOR.
+     *
+     * `advance_order` ya lo cuidaba —hay un caso, «aceptar un recojo no abre la
+     * ventana de la cola», que lo afirma para el «ahora»— pero `validate_order`
+     * escribía `appears_in_queue_at` en sus tres rutas a `preparing` sin mirar
+     * el canal. Y el «más tarde» entra a cocina precisamente por ahí, así que
+     * era el ÚNICO recojo que salía de la validación con la ventana abierta.
+     *
+     * Que hoy ningún motorizado lo viera es mérito de la policy
+     * `ord_driver_read`, que exige `delivery_method = 'delivery'`. Esa policy es
+     * lo único que separaba un recojo prepagado de figurar como tomable, y no
+     * es un sitio donde apoyarse en silencio.
+     */
+    it('validar la captura no lo mete en la cola del motorizado', async () => {
+      const cliente = await crearCliente()
+      const { data, error } = await pedirRecojo(cliente, 'later', undefined, 'prepaid')
+      expect(error, error?.message).toBeNull()
+      const creado = registrar(data)
+
+      await avanzar(creado.id, bizUserId, 'business', 'accept', { prepTimeMinutes: 20 })
+      await subirCaptura(creado.id)
+      await db.rpc('validate_order', {
+        p_order_id: creado.id,
+        p_actor_user_id: bizUserId,
+        p_actor_role: 'business',
+        p_pass: true,
+        p_prep_time_minutes: 20,
+      })
+
+      const fila = await estado(creado.id)
+      expect(fila.status, 'la precondición del caso es que esté en cocina').toBe('preparing')
+      expect(
+        fila.appears_in_queue_at,
+        'NULL significa «la ventana nunca se abre»: en el mostrador no hay cola',
+      ).toBeNull()
+    })
+  })
+
   // ── Que el plantón cuente ────────────────────────────────────────────────
 
   describe('el cliente que no viene', () => {

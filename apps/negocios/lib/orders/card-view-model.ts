@@ -134,6 +134,18 @@ export interface CardPrimaryAction {
   label: string
   isUrgent: boolean
   phoneToCall?: string
+  /**
+   * La ligadura de Material Symbols del botón. Viaja CON la acción porque el
+   * tipo `deliver` cubre dos entregas distintas y el JSX lo pintaba con un
+   * `local_shipping` fijo: un camión de reparto encima de «Entregar en el
+   * mostrador», donde no hay ninguno. La palabra ya distinguía las dos; el
+   * dibujo decía lo contrario.
+   *
+   * Debe existir en `apps/negocios/public/fonts/icons.txt` — la fuente está
+   * auto-hospedada y recortada, y un nombre que no esté ahí no falla en
+   * TypeScript: sale como texto roto en la pantalla de la caja.
+   */
+  icon: string
 }
 
 export interface NegociosCardVM {
@@ -453,6 +465,53 @@ const RISK_REASON_LABEL: Record<string, string> = {
   standard_validation_rule: 'Validar antes de cocinar',
 }
 
+/**
+ * Los estados en los que la validación TODAVÍA ESTÁ POR HACER.
+ *
+ * Antes de estos no hay pedido, y después de ellos alguien ya actuó: a
+ * `cooking` solo se llega por el `accept` de la cajera o por `validate_order`,
+ * y las dos puertas son una persona decidiendo. Ver `quedaAlgoQueValidar`.
+ */
+const ESTADOS_SIN_VALIDAR: ReadonlySet<UiState> = new Set<UiState>([
+  'pending_acceptance',
+  'awaiting_payment',
+  'validando',
+])
+
+/**
+ * ¿QUEDA ALGO QUE VALIDAR, O EL CHIP ESTÁ CONTANDO EL PASADO?
+ *
+ * `requiresValidation` es un dato del NACIMIENTO del pedido —«este merece una
+ * llamada»— y nadie lo apaga después, porque la fila no necesita apagarlo: la
+ * prueba de que se validó es que el pedido avanzó. Pintar el chip a partir de
+ * esa columna a secas lo dejaba encendido para siempre. Visto en el navegador
+ * el 2026-09-10 en las TRES columnas del tablero a la vez: por aceptar, en
+ * cocina y con la bolsa ya en el mostrador.
+ *
+ * Dos cortes, y hacen falta los dos:
+ *
+ * 1. **El recojo «ahora» nace con la duda resuelta.** `create_customer_order`
+ *    le pone `resolvedAtCounter` en `risk_flags` porque su garantía es la
+ *    cajera mirando a quien pidió, no una llamada — es justo el pedido que se
+ *    salta `validando` a propósito (0220). Decirle «Validar antes de cocinar»
+ *    a quien tiene al cliente delante le pide un trámite que no existe, y peor:
+ *    hace dudar del único camino que ese pedido tiene.
+ *    Se lee `risk_flags` y no `pickupTiming` porque es la afirmación que hizo
+ *    la propia RPC al crear la fila, no una deducción nuestra sobre ella.
+ *
+ * 2. **Pasada la cocina ya no hay nada que hacer.** El chip es una instrucción
+ *    («valida ANTES de cocinar»), y en un pedido que ya se está cociendo la
+ *    instrucción llega tarde y contradice a la pantalla.
+ *
+ * No apaga ninguna señal de riesgo real: un delivery que de verdad espera
+ * llamada vive en `validando`, que sigue dentro de `ESTADOS_SIN_VALIDAR`.
+ */
+function quedaAlgoQueValidar(order: OrderVM): boolean {
+  if (!order.requiresValidation) return false
+  if (order.riskFlags?.resolvedAtCounter === true) return false
+  return ESTADOS_SIN_VALIDAR.has(order.state)
+}
+
 function soles(n: number): string {
   return `S/ ${Number(n).toFixed(2).replace(/\.00$/, '')}`
 }
@@ -690,8 +749,9 @@ export function buildNegociosCardVM(
           ? { primary: order.address, secondary: null }
           : null
 
-  // 7. Riesgo
-  const riskLabel = order.requiresValidation
+  // 7. Riesgo. Ver `quedaAlgoQueValidar`: el chip es una instrucción, no una
+  // etiqueta permanente del pedido.
+  const riskLabel = quedaAlgoQueValidar(order)
     ? (RISK_REASON_LABEL[order.validationReasonCode ?? ''] ?? 'Validar antes de cocinar')
     : null
 
@@ -701,17 +761,20 @@ export function buildNegociosCardVM(
   if (order.state === 'awaiting_customer') {
     // Mismo tipo `deliver` que el aviso del motorizado en la puerta: los dos
     // dicen «esto se cierra entregando», y la accion de verdad vive en el
-    // detalle. Lo que cambia es a quien se entrega.
+    // detalle. Lo que cambia es a quien se entrega — y por eso el icono viaja
+    // en la accion: aqui se entrega SOBRE EL MOSTRADOR, sin moto de por medio.
     primaryAction = {
       type: 'deliver',
       label: 'Entregar en el mostrador',
       isUrgent: false,
+      icon: 'storefront',
     }
   } else if (order.state === 'waiting') {
     primaryAction = {
       type: 'deliver',
       label: `${order.driver?.name ?? 'Motorizado'} llegó · Entregar`,
       isUrgent: true,
+      icon: 'local_shipping',
     }
   } else if (order.state === 'buffer_p2' || order.state === 'buffer_p3') {
     const isLateOrReady =
@@ -723,6 +786,7 @@ export function buildNegociosCardVM(
         label: alarma ? 'Pedir motorizado YA' : 'Pedir motorizado',
         isUrgent: alarma,
         phoneToCall: supportPhone ?? undefined,
+        icon: 'call',
       }
     }
   }

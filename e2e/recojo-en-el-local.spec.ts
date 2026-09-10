@@ -190,6 +190,40 @@ test.describe('0219/0220 · el recojo en el local, desde la pantalla del cliente
   })
 
   /**
+   * EL CHECKOUT NO PROMETE UNA ENTREGA QUE NO VA A OCURRIR.
+   *
+   * La cabecera pinta «Llega en 25–35 min» a partir del `estimated_eta_min/max`
+   * del negocio, que mide cuánto tarda un pedido en LLEGAR a casa del cliente.
+   * En un recojo no llega nada: va él.
+   *
+   * Lo que lo convertía en un fallo y no en un matiz es que la pantalla
+   * ANTERIOR ya lo tenía resuelto: `business-identity.tsx` sustituye esa misma
+   * frase por «Sin costo de envío» en cuanto el conmutador está en recojo. O
+   * sea que el cliente elegía recojo, veía desaparecer la promesa de entrega,
+   * tocaba «Ir a pagar» y la veía reaparecer — dos pantallas seguidas diciendo
+   * cosas distintas del mismo pedido.
+   *
+   * SE AFIRMAN LOS DOS SENTIDOS. La corrección es «no lo pintes en recojo», y
+   * se puede escribir de más —no pintarlo nunca— sin que nada se queje: el
+   * delivery se quedaría sin el único sitio del camino que le dice cuándo
+   * llega su comida.
+   */
+  test('la cabecera no dice «llega en» cuando el cliente va a recogerlo', async ({ page }) => {
+    await login(page, CLIENTE.email)
+    await llegarAlCheckout(page)
+
+    // Delivery: la promesa está, y es verdad.
+    await expect(page.getByText(/Llega en \d+/).first()).toBeVisible()
+
+    await page.getByRole('button', { name: 'Recojo' }).click()
+    await expect(page.getByText(/Llega en/)).toHaveCount(0)
+
+    // Y volviendo a delivery reaparece: no se perdió por el camino.
+    await page.getByRole('button', { name: 'Delivery' }).click()
+    await expect(page.getByText(/Llega en \d+/).first()).toBeVisible()
+  })
+
+  /**
    * EL CASO QUE ABRE EL CANAL, Y EL QUE ESTABA CERRADO.
    *
    * Sin historial, sin GPS (headless, sin permiso de geolocalización) y pagando

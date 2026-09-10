@@ -165,6 +165,26 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
     placeOrder({ paymentIntent: payment })
   }
 
+  /**
+   * EL ETA ES DE LA ENTREGA, Y EN UN RECOJO NO HAY ENTREGA.
+   *
+   * `estimated_eta_min/max` del negocio mide cuánto tarda en LLEGAR un pedido a
+   * casa del cliente. En un recojo nadie lleva nada: el cliente va al local, y
+   * cuánto espera ahí lo decide la cajera al aceptar, no esta pantalla.
+   *
+   * La pantalla ANTERIOR ya lo tenía resuelto —`business-identity.tsx` cambia
+   * ese mismo «Llega en 25–35 min» por «Sin costo de envío» en cuanto el
+   * conmutador está en recojo— y el checkout lo volvía a decir, así que el
+   * cliente elegía recojo, veía desaparecer la promesa de entrega, tocaba «Ir a
+   * pagar» y la veía reaparecer. Una pantalla contradiciendo a la de antes.
+   *
+   * No se sustituye por otra frase: «recoges en el local» ya lo dicen la bolsa y
+   * la tarjeta del negocio de más abajo, y el envío en cero está en el resumen.
+   * Aquí sobra, y la regla del bloque de abajo es justamente esa — sin dato no
+   * se pinta nada, nunca un rango inventado.
+   */
+  const arrivalEta = deliveryMethod === 'pickup' ? null : eta
+
   const ctaPie = loading
     ? 'No cierres esta pantalla.'
     : payment === 'prepaid'
@@ -199,16 +219,16 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
                 y en la portada del negocio: si aquí desapareciera, el checkout sería
                 la única pantalla del camino que deja de decir cuándo llega. Sin el
                 dato no se pinta nada — nunca un rango inventado. */}
-            {(cart.businessName || eta) && (
+            {(cart.businessName || arrivalEta) && (
               <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] text-ink-muted">
                 {cart.businessName && <span>{cart.businessName}</span>}
-                {cart.businessName && eta && (
+                {cart.businessName && arrivalEta && (
                   <span aria-hidden className="h-[3px] w-[3px] rounded-full bg-ink-subtle" />
                 )}
-                {eta && (
+                {arrivalEta && (
                   <span className="inline-flex items-center gap-1 font-semibold text-ink">
                     <Icon name="schedule" size={13} aria-hidden />
-                    Llega en {eta.min}–{eta.max} min
+                    Llega en {arrivalEta.min}–{arrivalEta.max} min
                   </span>
                 )}
               </p>

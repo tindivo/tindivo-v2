@@ -713,7 +713,22 @@ export function DetailScreen({
               <DetailRow label="Total del pedido" value={soles(order.amount)} mono />
               <DetailRow label="Delivery" value={soles(order.deliveryFee)} mono />
               <div className="mt-1 flex items-center justify-between border-t border-ink/10 pt-2 text-[15px]">
-                <span className="font-bold text-ink">Total a cobrar</span>
+                {/* «A COBRAR» ES UNA ORDEN, Y NO SE DA DOS VECES.
+                    Con el dinero ya dentro esta fila mandaba cobrar otra vez —
+                    el mismo fallo que `PaySectionCash` tenía justo debajo y que
+                    `0ef8e24` arregló en la tarjeta y en el pie. Aquí sobrevivió
+                    porque esta tarjeta compacta solo sale cuando el pedido NO
+                    trae ítems, que es el manual en el que la cajera teclea el
+                    total (0129): no aparece en el recorrido de un pedido del
+                    cliente, y por eso ningún ojo la pilló.
+
+                    Cobrado, se queda en «Total» — que es además lo que dice la
+                    rama de al lado, la de la comanda. La respuesta de si entró
+                    el dinero la da `cobroEnCaja` en la sección de pago; esta
+                    fila solo tiene que dejar de mandar. */}
+                <span className="font-bold text-ink">
+                  {order.yaCobrado ? 'Total' : 'Total a cobrar'}
+                </span>
                 <span className="font-mono text-[18px] font-extrabold text-ink">
                   {soles(order.total)}
                 </span>
@@ -791,8 +806,17 @@ export function DetailScreen({
             >
               <Icon weight={500} name="add" size={14} /> +10 min
             </button>
+            {/* EN UN RECOJO NO HAY MOTORIZADO AL QUE ADELANTARSE.
+                La condición que de verdad impone `extend_order_prep` es una
+                sola —que el pedido siga en `preparing`— y esta frase la traduce
+                al hecho que la cajera reconoce en cada canal: en delivery, la
+                moto que va a aparecer en la puerta; en el mostrador, el momento
+                en que ella misma pulsa «lista». Decirle lo del motorizado a un
+                recojo la deja esperando una señal que no va a llegar nunca. */}
             <div className="mt-1.5 text-[11px] text-ink-muted">
-              Solo disponible una vez y antes de que llegue el motorizado.
+              {order.method === 'pickup'
+                ? 'Solo disponible una vez y antes de marcar la comida lista.'
+                : 'Solo disponible una vez y antes de que llegue el motorizado.'}
             </div>
           </div>
         )}

@@ -43,7 +43,7 @@ function telefonoNuevo(): string {
  * cliente convertiría cualquier fallo de allí en un rojo que apunta aquí.
  */
 async function sembrarRecojo(
-  status: 'pending_acceptance' | 'ready_for_pickup',
+  status: 'pending_acceptance' | 'preparing' | 'ready_for_pickup',
   timing: 'now' | 'later',
   /**
    * El dinero YA entró. Desde la 0224 no es un caso raro sino el normal de un
@@ -72,7 +72,7 @@ async function sembrarRecojo(
       order_amount: 24,
       delivery_fee: 0,
       status,
-      prep_time_minutes: status === 'ready_for_pickup' ? 20 : null,
+      prep_time_minutes: status === 'pending_acceptance' ? null : 20,
       // La espera del mostrador ya vencida: el botón de plantón exige un suelo
       // (`noShowWaitMinutes`) y sin esto el caso probaría el suelo, no el botón.
       ready_for_pickup_at:
@@ -83,6 +83,39 @@ async function sembrarRecojo(
     .select('id, short_id')
     .single()
   if (error) throw new Error(`no se pudo sembrar el recojo: ${error.message}`)
+  pedidosSembrados.push(data.id)
+  return { id: data.id, shortId: data.short_id }
+}
+
+/**
+ * Un DELIVERY en cocina, para las mitades que protegen un arreglo del recojo.
+ *
+ * Existe por una razón concreta: varias correcciones de este canal se hacen
+ * cambiando una frase «si es recojo, di otra cosa», y ese cambio se puede
+ * escribir de más —quitando también la frase del delivery— sin que ningún rojo
+ * lo diga. Un caso que afirme lo que el delivery SIGUE diciendo es lo único que
+ * convierte eso en un fallo visible.
+ */
+async function sembrarDeliveryEnCocina(): Promise<{ id: string; shortId: string }> {
+  const { data, error } = await db
+    .from('orders')
+    .insert({
+      business_id: BIZ,
+      source: 'customer_pwa',
+      delivery_method: 'delivery',
+      payment_intent: 'pending_cash',
+      customer_name: 'Vecino con dirección',
+      customer_phone: telefonoNuevo(),
+      delivery_address: 'Jr. Los Pinos 123',
+      delivery_reference: 'Portón azul',
+      order_amount: 24,
+      delivery_fee: 2,
+      status: 'preparing',
+      prep_time_minutes: 20,
+    })
+    .select('id, short_id')
+    .single()
+  if (error) throw new Error(`no se pudo sembrar el delivery: ${error.message}`)
   pedidosSembrados.push(data.id)
   return { id: data.id, shortId: data.short_id }
 }
@@ -258,6 +291,89 @@ test.describe('0219/0220 · el recojo en el tablero de la cajera', () => {
     await expect(pastilla).toBeVisible()
     const fondo = await pastilla.evaluate((el) => getComputedStyle(el).backgroundColor)
     expect(fondo).toBe('rgb(237, 233, 254)') // violeta de billetera, no el #D1FAE5 del efectivo
+  })
+
+  /**
+   * LA FICHA TAMPOCO MANDA COBRAR LO YA COBRADO.
+   *
+   * La tarjeta lo arregló `0ef8e24` y el pie de entrega también; la sección de
+   * pago del detalle se quedó fuera y seguía pintando en verde «Pago en
+   * efectivo · Total a cobrar S/ 24» durante toda la cocción y con la bolsa ya
+   * en el mostrador. Visto en el navegador el 2026-09-10 con un recojo real:
+   * la pastilla de la cabecera decía «Efectivo», la tarjeta decía «Cobrado en
+   * efectivo», y dos dedos más abajo seguía la orden de cobrar.
+   *
+   * ES E2E Y NO UNITARIO A PROPÓSITO: la lógica («¿entró el dinero?») ya la
+   * prueba `cobroEnCaja` en `view-model.test.ts`, y lo que fallaba no era esa
+   * respuesta sino que esta sección no la consultaba. Eso solo se ve montando
+   * la ficha, y `negocios` no tiene testing-library.
+   */
+  test('la ficha de un recojo ya cobrado no vuelve a pedir el dinero', async ({ page }) => {
+    const recojo = await sembrarRecojo('ready_for_pickup', 'now', { cobrado: true })
+    await abrirTablero(page, recojo.shortId)
+
+    await visible(page, `#${recojo.shortId}`).first().click()
+
+    // El hecho, en la sección que antes daba la orden.
+    await expect(visible(page, 'Cobrado en efectivo').first()).toBeVisible()
+
+    // Y NI UNA SOLA ORDEN DE COBRAR EN TODA LA FICHA, que son DOS sitios
+    // distintos y hubo que arreglar los dos:
+    //
+    //   · «Pago en efectivo» lo pinta solo `PaySectionCash` en su rama de cobro
+    //     pendiente, así que su ausencia es esa corrección.
+    //   · «Total a cobrar» lo pinta además la tarjeta compacta de «Cobro»
+    //     (`pedido-detail.tsx`), la que sale cuando el pedido no trae ítems —el
+    //     caso de esta siembra, y el del manual en el que la cajera teclea el
+    //     total (0129)—. Esa fue la que sobrevivió al primer arreglo: la
+    //     aserción nació acotada a la primera y este caso la dejaba pasar.
+    //
+    // Se afirman las dos juntas a propósito. Lo que la cajera tiene delante es
+    // una ficha, no dos componentes, y basta con que UNO de los dos le mande
+    // cobrar para que vuelva a cobrar dos veces.
+    await expect(page.getByText('Pago en efectivo')).toHaveCount(0)
+    await expect(page.getByText('Total a cobrar')).toHaveCount(0)
+    await expect(page.getByText('Cobra en caja')).toHaveCount(0)
+  })
+
+  /**
+   * EL «+10 MIN» NO PUEDE ESPERAR A UNA MOTO QUE NO VIENE.
+   *
+   * La ficha decía «Solo disponible una vez y antes de que llegue el
+   * motorizado» en TODOS los pedidos, recojo incluido. Visto en el navegador el
+   * 2026-09-10 con un recojo en cocina.
+   *
+   * No es solo una palabra fuera de sitio: la frase le da a la cajera una
+   * señal por la que guiarse —«hasta que aparezca la moto»— y en el mostrador
+   * esa señal no llega nunca, así que no le dice cuándo se le acaba el margen.
+   * La condición real que impone `extend_order_prep` es una sola, que el pedido
+   * siga en `preparing`, y cada canal la reconoce por un hecho distinto.
+   */
+  test('en un recojo el «+10 min» no promete la llegada de un motorizado', async ({ page }) => {
+    const recojo = await sembrarRecojo('preparing', 'now', { cobrado: true })
+    await abrirTablero(page, recojo.shortId)
+
+    await visible(page, `#${recojo.shortId}`).first().click()
+
+    await expect(visible(page, '¿Necesitas más tiempo?').first()).toBeVisible()
+    await expect(visible(page, /antes de marcar la comida lista/).first()).toBeVisible()
+    await expect(page.getByText(/llegue el motorizado/)).toHaveCount(0)
+  })
+
+  /**
+   * LA OTRA MITAD. En delivery la moto sí aparece en la puerta, y esa frase es
+   * la que de verdad le dice a la cajera cuándo se le acabó el margen. Sin este
+   * caso, escribir el arreglo de más —quitar la mención en los dos canales— no
+   * daría ningún rojo.
+   */
+  test('y en un delivery la sigue prometiendo, que es donde es verdad', async ({ page }) => {
+    const pedido = await sembrarDeliveryEnCocina()
+    await abrirTablero(page, pedido.shortId)
+
+    await visible(page, `#${pedido.shortId}`).first().click()
+
+    await expect(visible(page, /antes de que llegue el motorizado/).first()).toBeVisible()
+    await expect(page.getByText(/marcar la comida lista/)).toHaveCount(0)
   })
 
   /**
