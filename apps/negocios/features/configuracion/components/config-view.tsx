@@ -233,6 +233,16 @@ export function ConfigView({
         <MobileSectionTitle>Horario semanal</MobileSectionTitle>
         <ScheduleEditor />
 
+        {/* Va fuera del formulario a propósito: no es un campo del negocio que
+            se guarde con «Guardar», es el estado de ESTE aparato. Ver
+            `AvisosSection` — trae su propio título de tarjeta, por eso no
+            lleva un `MobileSectionTitle` encima. Faltaba en esta vista: por
+            eso quien abría Configuración desde el celular o una tablet en
+            vertical no tenía forma de encender ni de revisar sus avisos. */}
+        <div className="mt-5">
+          <AvisosSection />
+        </div>
+
         {msg && (
           <p
             className={`mt-4 text-[13px] font-semibold ${msg.ok ? 'text-success' : 'text-danger'}`}

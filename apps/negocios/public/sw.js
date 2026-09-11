@@ -36,5 +36,20 @@ self.addEventListener('notificationclick', (event) => {
   )
 })
 
+// Avisa a las pestañas abiertas cuando el navegador rota o revoca la
+// suscripción por su cuenta. Chrome casi nunca dispara esto, pero cuando lo
+// hace es la única forma de enterarse sin esperar al siguiente poll — ver el
+// auto-heal de `usePushStatus`.
+self.addEventListener('pushsubscriptionchange', (event) => {
+  event.waitUntil(
+    (async () => {
+      const list = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+      for (const client of list) {
+        client.postMessage({ type: 'push-subscription-changed' })
+      }
+    })(),
+  )
+})
+
 self.addEventListener('install', () => self.skipWaiting())
 self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()))

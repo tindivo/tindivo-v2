@@ -4,6 +4,9 @@ import { registerServiceWorker } from '@tindivo/ui'
 import { useEffect } from 'react'
 import { reengancharSiConcedido } from '@/lib/push'
 
+/** Cada cuánto se revalida la suscripción sin que nadie cambie de pestaña. */
+const POLL_INTERVAL_MS = 60_000
+
 /**
  * Registra el service worker y reengancha la suscripción push. No pinta nada.
  *
@@ -28,11 +31,43 @@ import { reengancharSiConcedido } from '@/lib/push'
  * reenganche de la suscripción cuando el permiso YA estaba dado, que es lo que
  * evita que un cliente con avisos activados se quede mudo en silencio cuando su
  * endpoint rota.
+ *
+ * ANTES SOLO CORRÍA UNA VEZ, AL MONTAR. Un cliente que deja el seguimiento
+ * abierto mientras espera su pedido —el caso normal— podía tener un endpoint
+ * roto (o un POST que se perdió al activar) durante todo ese rato sin que
+ * nada lo revisara de nuevo. Ahora se repite al volver a la pestaña, al
+ * enterarse por el service worker de una rotación (`pushsubscriptionchange`
+ * en `public/sw.js`, que casi nunca dispara) y cada 60s por si ninguna de las
+ * dos anteriores pasa. Mismo patrón que `apps/negocios`.
  */
 export function PushManager() {
   useEffect(() => {
     void registerServiceWorker()
     void reengancharSiConcedido()
+
+    const alVolver = () => {
+      if (document.visibilityState === 'visible') void reengancharSiConcedido()
+    }
+    document.addEventListener('visibilitychange', alVolver)
+
+    const alMensajeDelSw = (ev: MessageEvent) => {
+      if ((ev.data as { type?: string } | null)?.type === 'push-subscription-changed') {
+        void reengancharSiConcedido()
+      }
+    }
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', alMensajeDelSw)
+    }
+
+    const interval = window.setInterval(() => void reengancharSiConcedido(), POLL_INTERVAL_MS)
+
+    return () => {
+      document.removeEventListener('visibilitychange', alVolver)
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.removeEventListener('message', alMensajeDelSw)
+      }
+      window.clearInterval(interval)
+    }
   }, [])
 
   return null

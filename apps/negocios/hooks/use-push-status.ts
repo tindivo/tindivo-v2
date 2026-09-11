@@ -1,6 +1,11 @@
 'use client'
 
-import { subscribeToPush, unsubscribeFromPush } from '@tindivo/ui'
+import {
+  getInstallId,
+  type PushSubscriptionPayload,
+  subscribeToPush,
+  unsubscribeFromPush,
+} from '@tindivo/ui'
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '@/lib/api'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
@@ -31,13 +36,32 @@ import { getSupabaseBrowser } from '@/lib/supabase/client'
  * olvidado en un cajón del local aparece igual de vivo que la tablet del
  * mostrador: los dos aceptan las entregas.
  *
- * SIGUE SIN SER EL HOOK DE MOTORIZADOS, y sigue sin compartirse. El de
- * `apps/motorizados/hooks/use-push-subscription.ts` lleva además validación de
- * propiedad del endpoint, auto-heal con debounce propio y reacción al login
- * —cosas de un aparato personal que cambia de dueño entre turnos—. Aquí el
- * auto-heal vive en `PushManager`, que es un sitio y no cinco. Cuando negocios
- * necesite lo de la propiedad del endpoint tocará subir el hook a `packages/`;
- * mientras tanto, adelantar esa mudanza sería mover 477 líneas para usar 60.
+ * DESDE EL 2026-09-11 TAMBIÉN VALIDA CONTRA EL BACKEND, calcado de
+ * `apps/motorizados/hooks/use-push-subscription.ts`. Hacía falta porque
+ * "activado" podía mentir: `pushManager.getSubscription()` solo dice lo que EL
+ * NAVEGADOR recuerda, no lo que el servidor tiene guardado. Caso real — Al
+ * Punto activó los avisos desde un iPhone, el interruptor quedó en ON, y nunca
+ * llegó nada porque esa fila jamás existió en `push_subscriptions`: el
+ * `pushManager.subscribe()` del navegador puede terminar bien y aun así perder
+ * el `POST /push/subscriptions` de después —una señal mala de noche en San
+ * Jacinto, una sesión que caduca a mitad del gesto— y sin esta verificación
+ * `refresh()` no tenía forma de distinguir esa suscripción fantasma de una
+ * sana. Dos averías, cubiertas igual que en motorizados:
+ *
+ *   · el endpoint local no es NUESTRO en el backend (`/push/subscriptions/me`
+ *     dice `owned: false`, que también es la respuesta cuando la fila
+ *     simplemente no existe) → se da de baja localmente y se deja el estado en
+ *     `granted`, que es el que `PushManager` ya sabe reparar solo;
+ *   · el endpoint SÍ es nuestro, pero no coincide con el último que
+ *     confirmamos enviado (`tindivo:push:last-sent-endpoint`) → se re-envía en
+ *     silencio, sin tocar el estado ni pedir permiso.
+ *
+ * Sigue sin compartirse con motorizados porque los dos hooks ya no cuentan lo
+ * mismo: éste tiene el estado `off` (apagado a mano, que NO se repara solo) y
+ * el auto-heal vive en un componente aparte (`PushManager`); el de
+ * motorizados reacciona al login porque ahí el aparato cambia de dueño entre
+ * turnos, algo que no pasa en el mostrador. Si hiciera falta un tercer sitio,
+ * ESE es el momento de subir esto a `packages/`.
  */
 
 export type PushStatus =
@@ -125,6 +149,72 @@ export function olvidarApagado(): void {
   }
 }
 
+/**
+ * Último endpoint que CONFIRMAMOS recibido por el backend — no el que el
+ * navegador dice tener. Copiado de `tindivo:push:last-sent-endpoint` en el
+ * hook de motorizados: mismo problema, misma solución. Comparar esto contra
+ * `sub.endpoint` en cada `refresh()` es lo que permite notar que el POST
+ * inicial se perdió, o que el navegador rotó el endpoint sin avisar (no
+ * dispara `pushsubscriptionchange` casi nunca), y reintentar en silencio en
+ * vez de quedarse en ON para siempre sin que llegue nada.
+ */
+const ULTIMO_ENDPOINT_ENVIADO_KEY = 'tindivo:push:last-sent-endpoint'
+
+function recordarEndpointEnviado(endpoint: string): void {
+  try {
+    window.localStorage.setItem(ULTIMO_ENDPOINT_ENVIADO_KEY, endpoint)
+  } catch {
+    // Modo privado o storage lleno — ignorar; se reintentará en el próximo tick.
+  }
+}
+
+function endpointYaEnviado(): string | null {
+  try {
+    return window.localStorage.getItem(ULTIMO_ENDPOINT_ENVIADO_KEY)
+  } catch {
+    return null
+  }
+}
+
+function olvidarEndpointEnviado(): void {
+  try {
+    window.localStorage.removeItem(ULTIMO_ENDPOINT_ENVIADO_KEY)
+  } catch {
+    // ignore
+  }
+}
+
+/** Cada cuánto `refresh()` se repite solo, sin que nadie cambie de pestaña. */
+const POLL_INTERVAL_MS = 60_000
+
+/** Registra el token y recuerda el endpoint para el chequeo de arriba. */
+async function postSubscription(sub: PushSubscriptionPayload): Promise<void> {
+  await api.post<void>('/push/subscriptions', sub)
+  recordarEndpointEnviado(sub.endpoint)
+}
+
+/**
+ * Reenvía al backend UNA suscripción que el navegador ya tiene, sin pasar por
+ * `Notification.requestPermission()` ni por `pushManager.subscribe()` — el
+ * caso que arregla es "el endpoint es correcto, solo falta que el servidor se
+ * entere", no "hace falta uno nuevo". Nunca lanza: es trabajo de fondo, no una
+ * acción que la cajera esté esperando.
+ */
+async function reconfirmarSuscripcion(sub: PushSubscription): Promise<void> {
+  const json = sub.toJSON() as { endpoint?: string; keys?: { p256dh?: string; auth?: string } }
+  if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) return
+  try {
+    await postSubscription({
+      endpoint: json.endpoint,
+      keys: { p256dh: json.keys.p256dh, auth: json.keys.auth },
+      userAgent: navigator.userAgent,
+      installId: getInstallId(),
+    })
+  } catch (err) {
+    console.warn('[push] no se pudo reconfirmar la suscripción con el backend', err)
+  }
+}
+
 function soportado(): boolean {
   return (
     typeof window !== 'undefined' &&
@@ -172,14 +262,48 @@ export function usePushStatus(): {
     }
     // Con el permiso concedido, la única prueba de que llegan avisos es que
     // haya una suscripción viva. Es la diferencia entre `granted` y
-    // `subscribed`, y es exactamente donde se colaba el fallo.
+    // `subscribed`, y es exactamente donde se colaba el fallo original.
     try {
       const reg = await navigator.serviceWorker.ready
-      if (await reg.pushManager.getSubscription()) {
+      const sub = await reg.pushManager.getSubscription()
+      if (sub) {
         // Una suscripción viva CONTRADICE la marca de apagado, así que la marca
         // se cae. Pasa cuando el `DELETE` de `disable()` funcionó pero el
         // `unsubscribe()` del navegador no: la verdad es que sigue suscrito.
         olvidarApagado()
+
+        if (await haySesion()) {
+          // ¿ESTO QUE EL NAVEGADOR DICE TENER EXISTE DE VERDAD EN EL BACKEND,
+          // Y ES NUESTRO? Sin esto, "hay un objeto en pushManager" se leía como
+          // "está sonando" — y las dos veces que no lo estaba (el POST inicial
+          // se perdió, o el navegador rotó el endpoint sin avisar) el navegador
+          // seguía devolviendo esta misma suscripción como si nada. Ver la nota
+          // grande de arriba y el caso de Al Punto.
+          const me = await api
+            .get<{ data: { owned: boolean; exists: boolean } }>(
+              `/push/subscriptions/me?endpoint=${encodeURIComponent(sub.endpoint)}`,
+            )
+            .catch(() => ({ data: { owned: true, exists: true } }))
+
+          if (!me.data.owned) {
+            // No es nuestro (o no existe): tirar la suscripción local y dejar
+            // el estado en `granted`, que es el que `PushManager` ya sabe
+            // reparar solo sin pedir permiso de nuevo.
+            await sub.unsubscribe().catch(() => null)
+            olvidarEndpointEnviado()
+            setStatus('granted')
+            return
+          }
+
+          // Es nuestro, pero no coincide con el último que confirmamos enviado:
+          // el navegador lo rotó en silencio, o el POST de aquel entonces se
+          // perdió después de que `pushManager.subscribe()` ya hubiera
+          // terminado. Se re-envía sin tocar el estado ni pedir nada.
+          if (endpointYaEnviado() !== sub.endpoint) {
+            void reconfirmarSuscripcion(sub)
+          }
+        }
+
         setStatus('subscribed')
         return
       }
@@ -234,7 +358,10 @@ export function usePushStatus(): {
 
     setBusy(true)
     try {
-      const r = await subscribeToPush(VAPID, (s) => api.post('/push/subscriptions', s))
+      // `postSubscription` recuerda el endpoint que SÍ llegó al backend — es lo
+      // que `refresh()` compara después para notar un POST que se pierde en
+      // silencio. Ver la nota grande de arriba.
+      const r = await subscribeToPush(VAPID, postSubscription)
       await refresh()
       if (r !== 'subscribed') {
         // El motivo crudo va siempre a consola: sin él, un fallo en la tablet
@@ -300,7 +427,32 @@ export function usePushStatus(): {
       if (document.visibilityState === 'visible') void refresh()
     }
     document.addEventListener('visibilitychange', alVolver)
-    return () => document.removeEventListener('visibilitychange', alVolver)
+
+    // El navegador casi nunca dispara esto, pero cuando lo hace es la única
+    // forma de enterarse de una rotación de endpoint sin esperar al poll de
+    // abajo. Lo reenvía `pushsubscriptionchange` en `public/sw.js`.
+    const alMensajeDelSw = (ev: MessageEvent) => {
+      if ((ev.data as { type?: string } | null)?.type === 'push-subscription-changed') {
+        void refresh()
+      }
+    }
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', alMensajeDelSw)
+    }
+
+    // SIN ESTO, un aparato que se queda quieto en la pantalla de pedidos —el
+    // caso normal del mostrador— solo se revisaba al cambiar de pestaña, algo
+    // que en una tablet fija no pasa nunca. Un POST perdido en silencio se
+    // quedaba así hasta la próxima recarga. Mismo intervalo que motorizados.
+    const interval = window.setInterval(() => void refresh(), POLL_INTERVAL_MS)
+
+    return () => {
+      document.removeEventListener('visibilitychange', alVolver)
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.removeEventListener('message', alMensajeDelSw)
+      }
+      window.clearInterval(interval)
+    }
   }, [refresh])
 
   // ── La lista de equipos ─────────────────────────────────────────────────────

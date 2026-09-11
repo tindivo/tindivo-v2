@@ -1,6 +1,11 @@
 'use client'
 
-import { pushSupported, subscribeToPush } from '@tindivo/ui'
+import {
+  getInstallId,
+  type PushSubscriptionPayload,
+  pushSupported,
+  subscribeToPush,
+} from '@tindivo/ui'
 import { api } from '@/lib/api'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
@@ -61,6 +66,46 @@ function leerDescartes(): Descartes {
   }
 }
 
+/**
+ * Último endpoint que CONFIRMAMOS recibido por el backend — no el que el
+ * navegador dice tener. Mismo problema, misma solución que en motorizados y
+ * negocios (`tindivo:push:last-sent-endpoint`): `pushManager.getSubscription()`
+ * puede terminar bien y aun así perder el `POST /push/subscriptions` de
+ * después —una señal mala, una sesión que caduca a mitad del gesto— y sin
+ * este rastro no había forma de notar esa suscripción fantasma.
+ */
+const ULTIMO_ENDPOINT_ENVIADO_KEY = 'tindivo:push:last-sent-endpoint'
+
+function recordarEndpointEnviado(endpoint: string): void {
+  try {
+    window.localStorage.setItem(ULTIMO_ENDPOINT_ENVIADO_KEY, endpoint)
+  } catch {
+    // Modo privado o storage lleno — ignorar; se reintentará en el próximo tick.
+  }
+}
+
+function endpointYaEnviado(): string | null {
+  try {
+    return window.localStorage.getItem(ULTIMO_ENDPOINT_ENVIADO_KEY)
+  } catch {
+    return null
+  }
+}
+
+function olvidarEndpointEnviado(): void {
+  try {
+    window.localStorage.removeItem(ULTIMO_ENDPOINT_ENVIADO_KEY)
+  } catch {
+    // ignore
+  }
+}
+
+/** Registra el token y recuerda el endpoint para `reengancharSiConcedido`. */
+async function postSubscription(sub: PushSubscriptionPayload): Promise<void> {
+  await api.post<void>('/push/subscriptions', sub)
+  recordarEndpointEnviado(sub.endpoint)
+}
+
 /** El estado del permiso en ESTE navegador. `'no-soportado'` en SSR. */
 export function estadoPush(): EstadoPush {
   if (!pushSupported() || !VAPID) return 'no-soportado'
@@ -107,30 +152,82 @@ export function descartar(shortId: string): void {
  */
 export async function pedirPermiso(): Promise<'subscribed' | 'denied' | 'unsupported'> {
   if (!VAPID) return 'unsupported'
-  return subscribeToPush(VAPID, (s) => api.post('/push/subscriptions', s)).catch(
-    () => 'denied' as const,
-  )
+  return subscribeToPush(VAPID, postSubscription).catch(() => 'denied' as const)
 }
 
 /**
- * Da de alta este navegador si el permiso YA estaba concedido.
+ * Da de alta este navegador si el permiso YA estaba concedido, Y CONFIRMA
+ * CONTRA EL BACKEND que lo que el navegador dice tener es real y es nuestro.
  *
- * No es redundante con `pedirPermiso`: el permiso vive en el navegador y la
+ * NO ES REDUNDANTE CON `pedirPermiso`: el permiso vive en el navegador y la
  * suscripción en nuestra tabla, y las dos se desincronizan solas —el endpoint
  * rota, el cliente entra desde otro dispositivo, alguien limpió la fila—. Sin
  * esto, un cliente con el permiso dado deja de recibir avisos en silencio y no
  * hay ninguna pantalla que se lo diga.
  *
- * EXIGE SESIÓN. `POST /push/subscriptions` va autenticado, así que sin sesión la
- * suscripción del navegador se crearía para no colgarse de nadie y el alta
- * moriría en un 401 que nadie mira. La comprobación va aquí y no en quien
- * llama: es una condición de esta operación, no del sitio donde se monte.
+ * Y NO BASTA CON MIRAR AL NAVEGADOR. `pushManager.getSubscription()` solo dice
+ * lo que EL NAVEGADOR recuerda, no lo que el servidor tiene guardado:
+ * `pushManager.subscribe()` puede terminar sin errores y aun así perder el
+ * `POST` de después. Caso real — un cliente activó los avisos, el navegador
+ * quedó "suscrito" y nunca llegó nada porque esa fila jamás existió en
+ * `push_subscriptions` (mismo defecto que tenía `apps/negocios`, arreglado el
+ * 2026-09-11). Por eso esto valida dos cosas, no una:
  *
- * `subscribeToPush` es idempotente y nunca lanza hacia fuera.
+ *   · el endpoint local es NUESTRO en el backend (`/push/subscriptions/me`
+ *     dice `owned: false` también cuando la fila simplemente no existe) → si
+ *     no, se da de baja localmente y se rehace entero;
+ *   · el endpoint SÍ es nuestro, pero no coincide con el último que
+ *     confirmamos enviado → se re-envía en silencio, sin gesto ni permiso.
+ *
+ * EXIGE SESIÓN. `POST /push/subscriptions` va autenticado, así que sin sesión
+ * la suscripción del navegador se crearía para no colgarse de nadie y el alta
+ * moriría en un 401 que nadie mira.
+ *
+ * Nunca lanza hacia fuera: es trabajo de fondo, no una acción que el cliente
+ * esté esperando. Se llama al montar, al volver a la pestaña y cada 60s — ver
+ * `PushManager`.
  */
 export async function reengancharSiConcedido(): Promise<void> {
   if (estadoPush() !== 'concedido') return
   const { data } = await getSupabaseBrowser().auth.getSession()
   if (!data.session) return
-  await subscribeToPush(VAPID, (s) => api.post('/push/subscriptions', s)).catch(() => {})
+
+  let sub: PushSubscription | null = null
+  try {
+    const reg = await navigator.serviceWorker.ready
+    sub = await reg.pushManager.getSubscription()
+  } catch {
+    return
+  }
+
+  if (!sub) {
+    // Permiso concedido pero nada suscrito en este navegador: rehacerlo entero.
+    await subscribeToPush(VAPID, postSubscription).catch(() => {})
+    return
+  }
+
+  const me = await api
+    .get<{ data: { owned: boolean; exists: boolean } }>(
+      `/push/subscriptions/me?endpoint=${encodeURIComponent(sub.endpoint)}`,
+    )
+    .catch(() => ({ data: { owned: true, exists: true } }))
+
+  if (!me.data.owned) {
+    await sub.unsubscribe().catch(() => null)
+    olvidarEndpointEnviado()
+    await subscribeToPush(VAPID, postSubscription).catch(() => {})
+    return
+  }
+
+  if (endpointYaEnviado() !== sub.endpoint) {
+    const json = sub.toJSON() as { endpoint?: string; keys?: { p256dh?: string; auth?: string } }
+    if (json.endpoint && json.keys?.p256dh && json.keys.auth) {
+      await postSubscription({
+        endpoint: json.endpoint,
+        keys: { p256dh: json.keys.p256dh, auth: json.keys.auth },
+        userAgent: navigator.userAgent,
+        installId: getInstallId(),
+      }).catch(() => {})
+    }
+  }
 }

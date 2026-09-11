@@ -8,6 +8,7 @@ import {
   getColumn,
   matchesChannel,
   needsClockTick,
+  paymentChangeAlert,
   resolveChannelFilter,
   resolveMobileTab,
   toOrderVM,
@@ -536,6 +537,51 @@ describe('cobroEnCaja', () => {
   it('cobrado sin método legible no inventa ninguno en ninguno de los dos textos', () => {
     const caja = recojo({ yaCobrado: true, paymentReal: null })
     expect(caja).toMatchObject({ label: 'Cobrado', short: 'Cobrado', cobrado: true })
+  })
+})
+
+/**
+ * EL MOTORIZADO COBRA EN LA PUERTA, SIN QUE NADIE EN EL MOSTRADOR LO VEA. A
+ * diferencia del recojo (`cobroEnCaja`, arriba), aquí nadie declaró nada
+ * delante de la cajera: el aviso existe para el incidente real que lo motivó
+ * — un pedido pactado en efectivo que el motorizado cobró por Yape, y el
+ * negocio no se enteró hasta el historial.
+ */
+describe('paymentChangeAlert', () => {
+  const pedido = (over: Partial<Parameters<typeof paymentChangeAlert>[0]> = {}) =>
+    paymentChangeAlert({
+      method: 'delivery',
+      payment: 'pending_cash',
+      paymentReal: null,
+      driver: { name: 'Juan' },
+      ...over,
+    })
+
+  it('nada que avisar mientras el motorizado no ha entregado', () => {
+    expect(pedido({ paymentReal: null })).toBeNull()
+  })
+
+  it('nada que avisar si cobró justo lo pactado', () => {
+    expect(pedido({ payment: 'pending_cash', paymentReal: 'pending_cash' })).toBeNull()
+  })
+
+  it('avisa cuando cobró distinto, con el nombre del motorizado y el método al que cambió', () => {
+    expect(pedido({ payment: 'pending_cash', paymentReal: 'pending_wallet' })).toEqual({
+      driverName: 'Juan',
+      toLabel: 'Billetera digital',
+    })
+  })
+
+  it('sin nombre de motorizado, no inventa uno', () => {
+    expect(pedido({ payment: 'pending_cash', paymentReal: 'pending_mixed', driver: null })).toEqual(
+      { driverName: 'El motorizado', toLabel: 'Pago mixto' },
+    )
+  })
+
+  it('no aplica al recojo: ese cobro lo declara la cajera, no el motorizado', () => {
+    expect(
+      pedido({ method: 'pickup', payment: 'pending_cash', paymentReal: 'pending_wallet' }),
+    ).toBeNull()
   })
 })
 

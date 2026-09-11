@@ -85,7 +85,15 @@ export function PayBadgeMini({ order }: { order: OrderVM }) {
   // Cobrado ya, manda lo que entró. Sin cobrar, la intención es lo único que
   // hay — y en un recojo ni eso se afirma: va en gris, que es la ausencia de
   // método, no un método más.
-  const clave = caja?.cobrado ? (order.paymentReal ?? order.payment) : order.payment
+  //
+  // `caja` es `null` en TODO delivery (`cobroEnCaja` solo mira el mostrador),
+  // así que el `?.` lo dejaba fuera del todo: un motorizado que cobrara Yape
+  // en la puerta de un pedido pactado en efectivo seguía viendo «Efectivo»
+  // aquí para siempre, la misma pastilla que ya se había arreglado para el
+  // recojo. `paymentReal` es `null` hasta que alguien lo declara —cajera o
+  // motorizado—, así que preferirlo siempre que exista no rompe el caso sin
+  // cobrar: ahí no hay nada que preferir y se cae en `order.payment` igual.
+  const clave = order.paymentReal ?? order.payment
   const d = PAY_DISPLAY[clave] ?? PAY_DISPLAY.pending_cash
   return (
     <span

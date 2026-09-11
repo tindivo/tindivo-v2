@@ -39,13 +39,20 @@ import {
   type OrderRow,
   type OrderVM,
   pauseMinutesLeft,
+  paymentChangeAlert,
   toOrderVM,
 } from '@/lib/orders/view-model'
 import { signOutDevice } from '@/lib/sign-out'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
-import { audioIsBlocked, unlockAudio, useDashboardSounds } from '@/lib/use-audio-alert'
+import {
+  audioIsBlocked,
+  unlockAudio,
+  useDashboardSounds,
+  usePaymentChangeAlerts,
+} from '@/lib/use-audio-alert'
 import { type ResultadoPrueba, SoundCheck } from '../sound-check'
 import { DashboardSkeleton } from './dashboard-skeleton'
+import { PaymentChangeAlertHost } from './payment-change-alert'
 import { SuccessToastHost } from './toast'
 
 // ── Debounce hook ─────────────────────────────────────────────────────────────
@@ -1354,6 +1361,26 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
     soundOn,
   })
 
+  // Pedidos de delivery donde el motorizado cobró distinto de lo pactado
+  // (ver `paymentChangeAlert`). Mismo motivo que `waitingIds` para ir por ids
+  // y no por un booleano: dos motorizados cambiando el cobro en la misma
+  // tanda de pedidos no pueden compartir un solo aviso.
+  const paymentChangedAlerts = useMemo(
+    () =>
+      vms.flatMap((o) => {
+        const alert = paymentChangeAlert(o)
+        if (!alert) return []
+        return [
+          {
+            id: o.rowId,
+            message: `#${o.id} — ${alert.driverName} ha cambiado de método de pago a ${alert.toLabel}`,
+          },
+        ]
+      }),
+    [vms],
+  )
+  usePaymentChangeAlerts(paymentChangedAlerts, soundOn)
+
   // Petición de apertura desde el banner. Ver `DashboardCtx.openRequestId`.
   const [openRequestId, setOpenRequestId] = useState<string | null>(null)
   const clearOpenRequest = useCallback(() => setOpenRequestId(null), [])
@@ -1572,6 +1599,7 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
           cabecera de `lib/orders/attention.ts`. */}
       <AttentionBanner vm={attention.banner} onOpen={(o) => requestOpen(o.rowId)} />
       <SuccessToastHost />
+      <PaymentChangeAlertHost />
     </Ctx.Provider>
   )
 }

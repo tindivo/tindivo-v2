@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import { nextBeepDelay, VOICE_EVERY_MS } from './orders/attention'
+import { notifyPaymentChanged } from './payment-change-bus'
 
 let sharedCtx: AudioContext | null = null
 let audioBusyUntil = 0
@@ -70,6 +71,18 @@ export function playNewOrderTone(): void {
  */
 export function playLostSaleTone(): void {
   playToneSequence([660, 520, 390], 0.32, 0.6, false)
+}
+
+/**
+ * El tono de «el motorizado cambió el método de pago»: dos notas cortas y
+ * limpias (C5→G5), sin parecido con ninguna de las otras tres — el pedido
+ * nuevo sube en semitono corto (880→1175), la llegada va y vuelve
+ * (660-880-660) y el escapado baja en tres (660-520-390). Esta sube en un
+ * salto más amplio y se para ahí: es un aviso de una sola vez, como la
+ * llegada, no una alarma que se repite.
+ */
+export function playPaymentChangedTone(): void {
+  playToneSequence([523, 784], 0.16, 0.4, false)
 }
 
 /**
@@ -354,4 +367,46 @@ export function useDashboardSounds({
     }
     prevWaitingIds.current = waitingIds
   }, [soundOn, waitingKey])
+}
+
+/**
+ * Tipo 4 — el motorizado cambió el método de pago pactado (ver
+ * `paymentChangeAlert` en `lib/orders/view-model.ts`, que decide CUÁNDO
+ * aplica). Un evento único por pedido, como la llegada: el mismo patrón
+ * `newArrivals` por ids.
+ *
+ * LA PRIMERA CARGA SOLO FIJA LA BASE, Y NO SUENA NADA. A diferencia de
+ * `waitingIds` —que es un estado transitorio, imposible de encontrar ya
+ * puesto salvo coincidencia exacta con el montaje—, "cambió el método" es
+ * permanente desde que `advance_order` lo escribe: un pedido entregado a las
+ * 8pm sigue "cambiado" a medianoche. Sin esta base iniciaría con el array de
+ * seguimiento vacío y trataría CADA pedido cambiado de la jornada como si
+ * acabara de pasar, disparando un pitido y un aviso por cada uno en cuanto la
+ * cajera abriera o recargara el panel.
+ *
+ * EL AVISO VISUAL NO DEPENDE DE `soundOn`; EL PITIDO SÍ. Es dinero que va a
+ * entrar distinto de lo pactado — apagar el sonido no es motivo para
+ * ocultarlo, solo para no pitar.
+ */
+export function usePaymentChangeAlerts(
+  alerts: readonly { id: string; message: string }[],
+  soundOn: boolean,
+): void {
+  const seenRef = useRef<Set<string> | null>(null)
+  const idsKey = alerts.map((a) => a.id).join('|')
+
+  useEffect(() => {
+    const seen = seenRef.current
+    if (seen === null) {
+      seenRef.current = new Set(alerts.map((a) => a.id))
+      return
+    }
+    for (const a of alerts) {
+      if (seen.has(a.id)) continue
+      seen.add(a.id)
+      notifyPaymentChanged(a.message)
+      if (soundOn) playPaymentChangedTone()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `alerts` se lee del cierre; `idsKey` ya representa su identidad relevante.
+  }, [idsKey, soundOn])
 }

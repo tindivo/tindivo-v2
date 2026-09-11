@@ -10,6 +10,9 @@ import { useHomeData } from '@/features/catalog/hooks/use-home-data'
 import { firstName } from '@/features/catalog/lib/format'
 import type { CatalogUser, PublicBusiness } from '@/features/catalog/types'
 import { PilotWall } from '@/features/pilot/components/pilot-wall'
+import { ReviewCard } from '@/features/reviews/components/review-card'
+import { usePendingReview } from '@/features/reviews/hooks/use-pending-review'
+import { useActiveOrdersStore } from '@/lib/active-orders'
 import { useCatalogSearch } from '@/lib/use-search'
 
 interface HomeShellProps {
@@ -26,6 +29,28 @@ export function HomeShell({ initialBusinesses, initialUser, initialQuery }: Home
   })
   const search = useCatalogSearch(initialQuery)
   const greetingName = firstName(user.name)
+  /**
+   * El recordatorio de calificar, para quien no lo hizo al salir del tracking
+   * (ver `PostDeliveryExitLink`) ni desde el historial.
+   *
+   * Se consulta cada vez que se abre el inicio con sesión — es la próxima
+   * vez que el cliente mira la app, sea al día siguiente o una semana después,
+   * dentro de la ventana de `get_pending_review`. Se apaga con sesión
+   * anónima: `usePendingReview` ya devuelve `null` para `anon`, pero sin este
+   * gate igual dispararía la consulta de sesión en cada visita del muro del
+   * piloto.
+   */
+  const resena = usePendingReview(user.signedIn)
+  /**
+   * `activeOrders` empieza en `[]` ANTES de la primera respuesta real —el
+   * store distingue "no tiene" de "aún no sé" con este flag, que
+   * `useActiveOrders()` no expone—. Sin esto, en una carga con un pedido
+   * activo de verdad, el recordatorio de reseña alcanzaría a pintarse un
+   * instante (la RPC de `get_pending_review` suele volver antes) y
+   * desaparecería en cuanto llegara el pedido activo: un destello que no dice
+   * nada bueno del producto.
+   */
+  const activeOrdersLoaded = useActiveOrdersStore((s) => s.loaded)
 
   return (
     <main className="mx-auto min-h-dvh max-w-[768px] bg-surface md:max-w-[880px] lg:max-w-6xl xl:max-w-7xl">
@@ -53,6 +78,14 @@ export function HomeShell({ initialBusinesses, initialUser, initialQuery }: Home
       </div>
 
       {user.signedIn && activeOrders.length > 0 && <ActiveOrderBanner orders={activeOrders} />}
+      {/* Y si no hay nada en curso, el recordatorio de calificar lo último que
+          llegó. Nunca junto al banner de arriba: un pedido en camino ya tiene
+          la atención del cliente, y esto es lo de ayer. */}
+      {user.signedIn && activeOrdersLoaded && activeOrders.length === 0 && resena.pendiente && (
+        <div className="px-4 pb-4">
+          <ReviewCard estado={resena} />
+        </div>
+      )}
 
       <SearchBar query={search.query} onChange={search.setQuery} />
       <SearchResults search={search} businesses={items} />
