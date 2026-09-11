@@ -54,17 +54,18 @@ describe('buildComandaHtml', () => {
     },
   ]
 
-  it('formatea comanda de DELIVERY con datos completos y efectivo', () => {
+  it('formatea comanda de MOTORIZADO con datos completos de despacho, precios y cobro', () => {
     const html = buildComandaHtml({
       order: baseOrder,
       items,
       bizName: 'Al Punto',
+      mode: 'motorizado',
     })
 
     expect(html).toContain('TINDIVO · SAN JACINTO')
     expect(html).toContain('AL PUNTO')
     expect(html).toContain('PEDIDO: #F4A2')
-    expect(html).toContain('>>> DELIVERY <<<')
+    expect(html).toContain('DELIVERY')
     expect(html).toContain('Carlos Ramírez')
     expect(html).toContain('987654321')
     expect(html).toContain('Jr. Comercio 123')
@@ -76,12 +77,57 @@ describe('buildComandaHtml', () => {
     expect(html).toContain('*** NOTA: Sin cebolla, bien cocido ***')
     expect(html).toContain('S/ 32.00')
     expect(html).toContain('S/ 3.50')
+    expect(html).toContain('TOTAL A COBRAR:')
     expect(html).toContain('S/ 35.50')
     expect(html).toContain('EFECTIVO')
     expect(html).toContain('Paga con:')
     expect(html).toContain('S/ 50.00')
     expect(html).toContain('Vuelto a dar:')
     expect(html).toContain('S/ 14.50')
+
+    // Pie de ticket sin Áncash
+    expect(html).toContain('¡Buen provecho! · Tindivo Delivery')
+    expect(html).toContain('tindivo.com · San Jacinto')
+    expect(html).not.toContain('Áncash')
+    expect(html).not.toContain('Ancash')
+  })
+
+  it('formatea comanda de COCINA enfocada en preparación (sin precios, sin totales, sin dirección)', () => {
+    const html = buildComandaHtml({
+      order: baseOrder,
+      items,
+      bizName: 'Al Punto',
+      mode: 'cocina',
+    })
+
+    // Datos que COCINA sí necesita
+    expect(html).toContain('*** COMANDA COCINA ***')
+    expect(html).toContain('#F4A2')
+    expect(html).toContain('AL PUNTO')
+    expect(html).toContain('DELIVERY')
+    expect(html).toContain('CLIENTE')
+    expect(html).toContain('Carlos Ramírez')
+    expect(html).toContain('[ 2x ]')
+    expect(html).toContain('LOMO SALTADO')
+    expect(html).toContain('PAPAS FRITAS EXTRA')
+    expect(html).toContain('*** NOTA: SIN CEBOLLA, BIEN COCIDO ***')
+
+    // Datos que COCINA NO debe ver (privacidad, espacio y foco operativo)
+    expect(html).not.toContain('S/ 32.00')
+    expect(html).not.toContain('S/ 3.50')
+    expect(html).not.toContain('S/ 35.50')
+    expect(html).not.toContain('TOTAL A COBRAR')
+    expect(html).not.toContain('Jr. Comercio 123')
+    expect(html).not.toContain('Frente al parque')
+    expect(html).not.toContain('Luis Moto')
+    expect(html).not.toContain('Paga con:')
+    expect(html).not.toContain('Vuelto a dar:')
+
+    // Pie de ticket sin Áncash
+    expect(html).toContain('¡Buen provecho! · Tindivo Delivery')
+    expect(html).toContain('tindivo.com · San Jacinto')
+    expect(html).not.toContain('Áncash')
+    expect(html).not.toContain('Ancash')
   })
 
   it('formatea comanda de RECOJO EN TIENDA prepago cuando cliente está en local', () => {
@@ -100,11 +146,12 @@ describe('buildComandaHtml', () => {
       order: pickupOrder,
       items,
       bizName: 'Al Punto',
+      mode: 'motorizado',
     })
 
     expect(html).toContain('TINDIVO · SAN JACINTO')
     expect(html).toContain('AL PUNTO')
-    expect(html).toContain('>>> RECOJO EN TIENDA <<<')
+    expect(html).toContain('RECOJO EN TIENDA')
     expect(html).toContain('(CLIENTE EN EL LOCAL)')
     expect(html).not.toContain('DIRECCIÓN:')
     expect(html).toContain('PREPAGO (ONLINE / YAPE)')
@@ -143,5 +190,16 @@ describe('buildComandaHtml', () => {
     expect(html).not.toContain('<script>')
     expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;')
     expect(html).toContain('&lt;b&gt;Hack&lt;/b&gt; &amp; &quot;More&quot;')
+  })
+
+  it('utiliza tipografía sans-serif de alto contraste para cabezales térmicos', () => {
+    const html = buildComandaHtml({
+      order: baseOrder,
+      items,
+    })
+
+    expect(html).toContain('font-family: Arial')
+    expect(html).not.toContain('JetBrains Mono')
+    expect(html).not.toContain('Courier New')
   })
 })

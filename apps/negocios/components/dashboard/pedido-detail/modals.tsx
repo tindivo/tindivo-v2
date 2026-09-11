@@ -448,38 +448,37 @@ export function ComandaModal({
   bizName?: string
   onClose: () => void
 }) {
+  const [activeTab, setActiveTab] = useState<'cocina' | 'motorizado'>('cocina')
+
   return (
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Comanda de cocina"
+      aria-label="Comanda de pedido"
       className="fixed inset-0 z-[400] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
     >
       <div className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-elev-4">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-border bg-surface px-5 py-4">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand/10 text-brand">
-              <Icon weight={500} name="restaurant_menu" size={20} />
-            </div>
-            <div>
-              <div className="text-[16px] font-bold text-ink">Comanda de cocina</div>
-              <div className="text-[12px] font-medium text-ink-muted">
-                #{order.id} · {order.customer ?? 'Cliente'} ({items.length}{' '}
-                {items.length === 1 ? 'ítem' : 'ítems'})
+        {/* Header con Pestañas Cocina / Motorizado */}
+        <div className="flex flex-col border-b border-border bg-surface px-5 pt-4 pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand/10 text-brand">
+                <Icon
+                  weight={500}
+                  name={activeTab === 'cocina' ? 'restaurant' : 'two_wheeler'}
+                  size={20}
+                />
+              </div>
+              <div>
+                <div className="text-[16px] font-bold text-ink">
+                  {activeTab === 'cocina' ? 'Comanda de Cocina' : 'Comanda de Motorizado'}
+                </div>
+                <div className="text-[12px] font-medium text-ink-muted">
+                  #{order.id} · {order.customer ?? 'Cliente'} ({items.length}{' '}
+                  {items.length === 1 ? 'ítem' : 'ítems'})
+                </div>
               </div>
             </div>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => printComanda({ order, items, bizName })}
-              title="Imprimir comanda"
-              className="flex h-8 items-center gap-1 cursor-pointer rounded-lg border border-border/80 bg-white px-2.5 text-xs font-semibold text-ink hover:bg-surface active:scale-95"
-            >
-              <Icon weight={500} name="receipt_long" size={16} className="text-brand" />
-              <span>Imprimir</span>
-            </button>
             <button
               type="button"
               onClick={onClose}
@@ -488,69 +487,204 @@ export function ComandaModal({
               <Icon weight={500} name="close" size={18} />
             </button>
           </div>
-        </div>
 
-        {/* Items scroll */}
-        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-5">
-          {items.map((it, idx) => (
-            <div
-              key={idx}
-              className="flex flex-col gap-1.5 rounded-xl border border-border/80 bg-surface/50 p-3.5"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-2.5">
-                  <span className="flex h-7 min-w-[28px] items-center justify-center rounded-lg bg-ink px-2 font-mono text-[14px] font-black text-white">
-                    {it.qty}×
-                  </span>
-                  <span className="text-[16px] font-bold text-ink">{it.name}</span>
-                </div>
-                <span className="font-mono text-[14px] font-semibold text-ink-muted">
-                  {soles(it.price)}
-                </span>
-              </div>
-              {it.mods && (
-                <div className="pl-9 text-[13px] text-ink-muted">
-                  <span className="font-semibold text-ink-subtle">Opciones:</span> {it.mods}
-                </div>
-              )}
-              {it.note && (
-                <div className="mt-1 flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-[13px] font-bold text-amber-950">
-                  <Icon
-                    weight={500}
-                    name="priority_high"
-                    size={16}
-                    className="mt-0.5 shrink-0 text-amber-800"
-                  />
-                  <span>NOTA: {it.note}</span>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-between border-t border-border bg-surface px-5 py-3.5">
-          <div className="flex items-baseline gap-2">
-            <span className="text-[12px] font-semibold uppercase text-ink-muted">
-              Total pedido:
-            </span>
-            <span className="font-mono text-[18px] font-bold text-ink">{soles(order.total)}</span>
-          </div>
-          <div className="flex items-center gap-2">
+          {/* Selector de modo */}
+          <div className="mt-3 flex rounded-xl border border-border/80 bg-white p-1 shadow-xs">
             <button
               type="button"
-              onClick={() => printComanda({ order, items, bizName })}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-white px-4 py-2.5 text-[13px] font-bold text-ink shadow-xs transition-transform hover:bg-surface active:scale-[0.98]"
+              onClick={() => setActiveTab('cocina')}
+              className={cn(
+                'flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-bold transition-colors',
+                activeTab === 'cocina'
+                  ? 'bg-ink text-white shadow-xs'
+                  : 'text-ink-muted hover:text-ink',
+              )}
             >
-              <Icon weight={500} name="receipt_long" size={17} className="text-brand" />
-              <span>Imprimir ticket</span>
+              <Icon weight={500} name="restaurant" size={15} />
+              <span>Vista Cocina</span>
             </button>
             <button
               type="button"
-              onClick={onClose}
-              className="rounded-xl bg-ink px-4 py-2.5 text-[13px] font-semibold text-white transition-transform active:scale-[0.98]"
+              onClick={() => setActiveTab('motorizado')}
+              className={cn(
+                'flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-bold transition-colors',
+                activeTab === 'motorizado'
+                  ? 'bg-ink text-white shadow-xs'
+                  : 'text-ink-muted hover:text-ink',
+              )}
             >
-              Cerrar
+              <Icon weight={500} name="two_wheeler" size={15} />
+              <span>Vista Motorizado</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Contenido según pestaña */}
+        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-5">
+          {activeTab === 'cocina' ? (
+            <>
+              {/* Banner de Cocina: Cliente destacado */}
+              <div className="rounded-xl border-2 border-dashed border-ink/40 bg-surface/80 p-3.5 text-center">
+                <div className="text-[11px] font-extrabold uppercase tracking-wider text-ink-muted">
+                  CLIENTE
+                </div>
+                <div className="text-[20px] font-black uppercase text-ink">
+                  {order.customer ?? 'Cliente'}
+                </div>
+                <div className="mt-1 inline-block rounded-full bg-ink px-2.5 py-0.5 text-[11px] font-bold text-white">
+                  {order.method === 'delivery' ? 'DELIVERY' : 'RECOJO EN LOCAL'}
+                </div>
+              </div>
+
+              {/* Items para Cocina (sin precios, notas destacadas) */}
+              <div className="flex flex-col gap-2.5">
+                {items.map((it, idx) => (
+                  <div
+                    key={idx}
+                    className="flex flex-col gap-1.5 rounded-xl border border-border/80 bg-surface/40 p-3.5"
+                  >
+                    <div className="flex items-start gap-2.5">
+                      <span className="flex h-7 min-w-[32px] items-center justify-center rounded-lg bg-ink px-2 text-[15px] font-black text-white">
+                        {it.qty}×
+                      </span>
+                      <span className="text-[16px] font-extrabold uppercase text-ink">
+                        {it.name}
+                      </span>
+                    </div>
+                    {it.mods && (
+                      <div className="pl-10 text-[13px] font-semibold text-ink-muted">
+                        • {it.mods}
+                      </div>
+                    )}
+                    {it.note && (
+                      <div className="mt-1 flex items-start gap-2 rounded-lg border-2 border-ink bg-amber-50 px-3 py-2 text-[13px] font-black text-ink">
+                        <Icon
+                          weight={500}
+                          name="priority_high"
+                          size={16}
+                          className="mt-0.5 shrink-0 text-ink"
+                        />
+                        <span>NOTA: {it.note.toUpperCase()}</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Datos de Entrega para Motorizado */}
+              <div className="flex flex-col gap-1.5 rounded-xl border border-border/80 bg-surface/60 p-3.5 text-[13px]">
+                <div className="flex justify-between">
+                  <span className="font-bold text-ink-muted">Cliente:</span>
+                  <span className="font-extrabold text-ink">{order.customer ?? 'Cliente'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-bold text-ink-muted">Teléfono:</span>
+                  <span className="font-semibold text-ink">{order.phone ?? 'No registrado'}</span>
+                </div>
+                {order.method === 'delivery' && (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="font-bold text-ink-muted">Dirección:</span>
+                      <span className="max-w-[70%] text-right font-extrabold text-ink">
+                        {order.address ?? order.addressRef ?? 'Sin dirección'}
+                      </span>
+                    </div>
+                    {order.addressRef && order.address !== order.addressRef && (
+                      <div className="flex justify-between">
+                        <span className="font-bold text-ink-muted">Referencia:</span>
+                        <span className="max-w-[70%] text-right font-semibold text-ink">
+                          {order.addressRef}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span className="font-bold text-ink-muted">Motorizado:</span>
+                      <span className="font-bold text-brand">
+                        {order.driver?.name ?? 'Por asignar'}
+                      </span>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Items con precios */}
+              <div className="flex flex-col gap-2">
+                {items.map((it, idx) => (
+                  <div
+                    key={idx}
+                    className="flex flex-col gap-1 rounded-xl border border-border/70 bg-surface/30 p-3"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="flex h-6 min-w-[26px] items-center justify-center rounded-md bg-ink px-1.5 text-[12px] font-bold text-white">
+                          {it.qty}×
+                        </span>
+                        <span className="text-[14px] font-bold text-ink">{it.name}</span>
+                      </div>
+                      <span className="font-mono text-[14px] font-bold text-ink">
+                        {soles(it.price * it.qty)}
+                      </span>
+                    </div>
+                    {it.mods && <div className="pl-8 text-[12px] text-ink-muted">• {it.mods}</div>}
+                    {it.note && (
+                      <div className="mt-1 pl-8 text-[12px] font-bold text-amber-900">
+                        Nota: {it.note}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Desglose de totales */}
+              <div className="flex flex-col gap-1 rounded-xl border border-border/80 bg-surface p-3 text-[13px]">
+                <div className="flex justify-between text-ink-muted">
+                  <span>Subtotal productos:</span>
+                  <span className="font-mono font-semibold">
+                    {soles(order.subtotal ?? order.total - (order.deliveryFee ?? 0))}
+                  </span>
+                </div>
+                {order.method === 'delivery' && (
+                  <div className="flex justify-between text-ink-muted">
+                    <span>Costo de envío:</span>
+                    <span className="font-mono font-semibold">{soles(order.deliveryFee ?? 0)}</span>
+                  </div>
+                )}
+                <div className="mt-1.5 flex justify-between border-t border-border pt-1.5 text-[15px] font-black text-ink">
+                  <span>TOTAL A COBRAR:</span>
+                  <span className="font-mono">{soles(order.total)}</span>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Footer con botones directos */}
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border bg-surface px-5 py-3.5">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl border border-border/80 bg-white px-3.5 py-2 text-[12px] font-bold text-ink hover:bg-surface active:scale-[0.98]"
+          >
+            Cerrar
+          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => printComanda({ order, items, bizName, mode: 'cocina' })}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-white px-3.5 py-2 text-[12px] font-bold text-ink shadow-xs transition-transform hover:bg-surface active:scale-[0.98]"
+            >
+              <Icon weight={500} name="restaurant" size={15} className="text-brand" />
+              <span>Imprimir Cocina</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => printComanda({ order, items, bizName, mode: 'motorizado' })}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-ink px-4 py-2 text-[12px] font-bold text-white shadow-xs transition-transform hover:bg-ink/90 active:scale-[0.98]"
+            >
+              <Icon weight={500} name="two_wheeler" size={15} className="text-white" />
+              <span>Imprimir Motorizado</span>
             </button>
           </div>
         </div>

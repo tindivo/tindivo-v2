@@ -648,19 +648,30 @@ export function DetailScreen({
               <div className="flex items-center gap-1.5">
                 <button
                   type="button"
-                  onClick={() => printComanda({ order, items, bizName })}
-                  className="inline-flex items-center gap-1 rounded-lg border border-border/70 bg-white px-2.5 py-1 text-[11px] font-semibold text-ink shadow-xs transition-colors hover:bg-surface active:scale-95"
+                  onClick={() => printComanda({ order, items, bizName, mode: 'cocina' })}
+                  title="Imprimir comanda para cocina (solo preparación y cliente)"
+                  className="inline-flex items-center gap-1 rounded-lg border border-border/70 bg-white px-2 py-1 text-[11px] font-bold text-ink shadow-xs transition-colors hover:bg-surface active:scale-95"
                 >
-                  <Icon weight={500} name="receipt_long" size={14} className="text-brand" />
-                  <span>Imprimir</span>
+                  <Icon weight={500} name="restaurant" size={13} className="text-brand" />
+                  <span>Cocina</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => printComanda({ order, items, bizName, mode: 'motorizado' })}
+                  title="Imprimir comanda para motorizado (despacho, dirección y cobro)"
+                  className="inline-flex items-center gap-1 rounded-lg border border-border/70 bg-white px-2 py-1 text-[11px] font-bold text-ink shadow-xs transition-colors hover:bg-surface active:scale-95"
+                >
+                  <Icon weight={500} name="two_wheeler" size={13} className="text-brand" />
+                  <span>Motorizado</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowComandaModal(true)}
-                  className="inline-flex items-center gap-1 rounded-lg bg-surface px-2.5 py-1 text-[11px] font-semibold text-ink-muted transition-colors hover:bg-surface-high hover:text-ink"
+                  title="Ver comanda en grande"
+                  className="inline-flex items-center gap-1 rounded-lg bg-surface px-2 py-1 text-[11px] font-semibold text-ink-muted transition-colors hover:bg-surface-high hover:text-ink"
                 >
-                  <Icon weight={500} name="fullscreen" size={14} />
-                  <span>Ver en grande</span>
+                  <Icon weight={500} name="fullscreen" size={13} />
+                  <span className="sr-only sm:not-sr-only">Ver</span>
                 </button>
               </div>
             </div>
