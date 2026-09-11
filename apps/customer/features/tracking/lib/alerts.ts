@@ -30,6 +30,8 @@ export interface TrackingAlert {
   tone: ChimeTone
   /** Lo que se dice en el toast y en el título de la pestaña. */
   message: string
+  /** Sonido dedicado de Customer (ej. campanilla de cocina al aceptar/cocinar). */
+  sound?: 'kitchenBell'
 }
 
 export function trackingSignal(data: Tracking): TrackingSignal {
@@ -70,14 +72,23 @@ export function alertFor(signal: TrackingSignal, prepaid: boolean): TrackingAler
     case 'awaiting_payment':
       // El único aviso que el cliente puede perder con consecuencias: si no
       // paga dentro de su ventana, el pedido se cancela solo.
-      return { tone: 'action', message: 'El restaurante confirmó. Ya puedes pagar tu pedido' }
+      return {
+        tone: 'action',
+        message: 'El restaurante confirmó. Ya puedes pagar tu pedido',
+        sound: 'kitchenBell',
+      }
     case 'confirmed':
       return {
         tone: 'good',
         message: prepaid ? 'Tu pago fue verificado' : 'El restaurante confirmó tu pedido',
+        sound: 'kitchenBell',
       }
     case 'preparing':
-      return { tone: 'good', message: 'Tu pedido ya está en cocina' }
+      return {
+        tone: 'good',
+        message: 'Tu pedido ya está en cocina',
+        sound: 'kitchenBell',
+      }
     case 'ontheway':
       return { tone: 'good', message: 'Tu pedido salió. El motorizado va en camino' }
     case 'ready_for_pickup':

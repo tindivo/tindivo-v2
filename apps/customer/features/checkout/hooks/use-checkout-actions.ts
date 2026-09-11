@@ -11,6 +11,7 @@ import { deliveryPointQuality } from '@/lib/address-record'
 import { api } from '@/lib/api'
 import { getLocationValidation, haversineKm } from '@/lib/coverage'
 import { getCurrentPositionHA } from '@/lib/geolocation'
+import { createAudioTrigger } from '@/lib/sound'
 
 export interface CheckoutActions {
   getIdempotencyKey: () => string
@@ -179,6 +180,7 @@ export function useCheckoutActions(state: CheckoutState): CheckoutActions {
   }
 
   async function placeOrder(options?: { paymentIntent?: PaymentIntent; skipGps?: boolean }) {
+    const triggerSubmittedSound = createAudioTrigger('orderSubmitted')
     const selectedPayment = options?.paymentIntent ?? payment
     setError(null)
 
@@ -322,6 +324,7 @@ export function useCheckoutActions(state: CheckoutState): CheckoutActions {
         orderPayload,
         currentKey,
       )
+      triggerSubmittedSound()
       setConfirmed(res.data)
       cart.clear()
       regenerateIdempotencyKey()
