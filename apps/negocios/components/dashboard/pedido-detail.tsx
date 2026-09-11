@@ -289,6 +289,13 @@ export function DetailScreen({
       order.status === 'awaiting_payment' ||
       order.status === 'validando')
   const isPrepaid = order.payment === 'prepaid'
+  // Ver el comentario junto a la "Sección de pago": en delivery lo real manda
+  // en cuanto se declara. En pickup no cambia nada — ahí sigue mandando
+  // `cobroEnCaja`, dentro de cada `PaySection*`.
+  const effectivePayment =
+    order.method === 'delivery' ? (order.paymentReal ?? order.payment) : order.payment
+  const paymentChanged =
+    order.method === 'delivery' && order.paymentReal != null && order.paymentReal !== order.payment
   const isOnline = order.source === 'web'
   const acceptDisabled = busy || isLoadingActions
   const isPrepaidAwaitingProof =
@@ -737,9 +744,17 @@ export function DetailScreen({
           </div>
         )}
 
-        {/* Sección de pago */}
-        {order.payment === 'pending_cash' && <PaySectionCash order={order} />}
-        {order.payment === 'pending_wallet' && <PaySectionWallet qrs={paymentQrs} />}
+        {/* Sección de pago.
+            EN DELIVERY, LO REAL MANDA cuando ya se sabe — igual que en el
+            historial (`toDisplay`) y en la pastilla de la cabecera
+            (`PayBadgeMini`). El motorizado declara el cobro en la puerta, sin
+            que nadie en el mostrador lo vea, y antes de esto esta sección
+            seguía la INTENCIÓN del cliente para siempre: un pedido pactado en
+            efectivo que el motorizado cobró por Yape mostraba «Pago en
+            efectivo» aquí incluso ya entregado, dentro del propio historial.
+            En pickup no cambia nada: ahí decide `cobroEnCaja`, más abajo. */}
+        {effectivePayment === 'pending_cash' && <PaySectionCash order={order} />}
+        {effectivePayment === 'pending_wallet' && <PaySectionWallet qrs={paymentQrs} />}
         {order.payment === 'prepaid' &&
           (isLoadingActions ? (
             <div className="h-16 animate-pulse rounded-md border border-ink/[0.08] bg-ink/[0.06] px-3.5 py-3" />
@@ -792,7 +807,13 @@ export function DetailScreen({
               {isValidandoPrepaid && <PaySectionPrepaid order={order} proofUrl={proofUrl} />}
             </>
           ))}
-        {order.payment === 'pending_mixed' && <PaySectionMixed order={order} qrs={paymentQrs} />}
+        {effectivePayment === 'pending_mixed' && <PaySectionMixed order={order} qrs={paymentQrs} />}
+        {paymentChanged && (
+          <div className="flex shrink-0 items-center gap-1.5 rounded-lg bg-warning-soft px-2.5 py-1.5 text-[11px] font-semibold text-amber-900">
+            <Icon name="priority_high" size={13} />
+            {order.driver?.name ?? 'El motorizado'} cambió el método de pago pactado
+          </div>
+        )}
 
         {/* Extensión de preparación */}
         {order.state === 'cooking' && !order.extensionUsed && (

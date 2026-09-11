@@ -491,6 +491,51 @@ export function cobroEnCaja(order: {
   }
 }
 
+/** Cómo se nombra, en una palabra con mayúscula, cada forma de pago real. */
+const PAYMENT_CHANGE_LABEL: Record<UiPayment, string> = {
+  pending_cash: 'Efectivo',
+  pending_wallet: 'Billetera digital',
+  pending_mixed: 'Pago mixto',
+  prepaid: 'Prepago',
+}
+
+export interface PaymentChangeAlert {
+  driverName: string
+  /** El método al que cambió, ya en palabras («Billetera digital», etc.). */
+  toLabel: string
+}
+
+/**
+ * EL MOTORIZADO CAMBIÓ EL COBRO EN LA PUERTA, Y EL NEGOCIO SE ENTERABA TARDE.
+ *
+ * `cobroEnCaja`, arriba, ya resolvió esto para el recojo: la cajera declara el
+ * cobro AL ACEPTAR, delante de la pantalla, así que no hace falta avisarle de
+ * nada que ella misma acaba de teclear. El delivery es distinto — el que
+ * declara el cobro es el motorizado, en la calle, sin que nadie en el
+ * mostrador lo vea pasar. El incidente real: un cliente pidió pagando
+ * efectivo, el motorizado cobró por Yape en la puerta, y el negocio no se
+ * enteró hasta mirar el historial — donde, aparte, seguía saliendo la
+ * intención original (ver el comentario de `mapPaymentReal`).
+ *
+ * SOLO DELIVERY, Y SOLO CUANDO DIFIERE. Un recojo pasa por `cobroEnCaja`, no
+ * por aquí. Y si el motorizado eligió "Cambió el método" pero terminó
+ * cobrando lo mismo que ya se había pactado, no hay nada que avisar: no
+ * cambió nada de verdad, solo confirmó lo esperado por otro camino.
+ */
+export function paymentChangeAlert(order: {
+  method: 'delivery' | 'pickup'
+  payment: UiPayment
+  paymentReal: UiPayment | null
+  driver: { name: string } | null
+}): PaymentChangeAlert | null {
+  if (order.method !== 'delivery') return null
+  if (order.paymentReal == null || order.paymentReal === order.payment) return null
+  return {
+    driverName: order.driver?.name ?? 'El motorizado',
+    toLabel: PAYMENT_CHANGE_LABEL[order.paymentReal],
+  }
+}
+
 /**
  * ¿ESTA TARJETA TIENE UN RELOJ QUE HAY QUE MOVER CADA SEGUNDO?
  *
