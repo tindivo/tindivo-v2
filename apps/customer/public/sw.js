@@ -51,5 +51,20 @@ self.addEventListener('notificationclick', (event) => {
  */
 self.addEventListener('fetch', () => {})
 
+// Avisa a las pestañas abiertas cuando el navegador rota o revoca la
+// suscripción por su cuenta. Casi nunca se dispara, pero cuando lo hace es la
+// única forma de enterarse sin esperar al siguiente chequeo periódico — ver
+// `reengancharSiConcedido` en `lib/push.ts`.
+self.addEventListener('pushsubscriptionchange', (event) => {
+  event.waitUntil(
+    (async () => {
+      const list = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+      for (const client of list) {
+        client.postMessage({ type: 'push-subscription-changed' })
+      }
+    })(),
+  )
+})
+
 self.addEventListener('install', () => self.skipWaiting())
 self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()))

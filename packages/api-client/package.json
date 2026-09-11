@@ -7,13 +7,15 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
     "@tindivo/contracts": "workspace:*"
   },
   "devDependencies": {
     "@tindivo/tsconfig": "workspace:*",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

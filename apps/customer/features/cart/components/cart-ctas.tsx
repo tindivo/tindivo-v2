@@ -72,6 +72,25 @@ export function CartCtas({ layout, onNavigate }: CartCtasProps) {
     await refetch()
   }
 
+  /**
+   * UN BOTÓN DESHABILITADO TIENE QUE PARECERLO. SIEMPRE.
+   *
+   * Aquí se deshabilitaba por `loading` —que son DOS esperas, la del negocio y
+   * la del perfil— pero el hilandero solo se pintaba por `readinessLoading`.
+   * Mientras la del negocio seguía en el aire, «Ir a pagar» se veía exactamente
+   * igual que uno vivo y no hacía absolutamente nada al tocarlo: ni navegar, ni
+   * abrir una hoja, ni decir por qué.
+   *
+   * Pasó en prod el 2026-09-09. Una clienta lo tocó, no ocurrió nada, y acabó
+   * pidiendo por teléfono. Antes de este arreglo la espera podía además ser
+   * ETERNA: `fetch` no traía plazo, así que una petición que salía y no volvía
+   * dejaba el botón muerto para el resto de la sesión. Eso se cierra en
+   * `packages/api-client`; esto cierra que la pantalla mienta.
+   *
+   * La invariante que queda, y que conviene no romper: todo estado
+   * deshabilitado de este botón se explica solo — o dice «Cargando…», o enseña
+   * el cartel de cerrado de más abajo.
+   */
   const loading = bizLoading || readinessLoading
   const block = layout === 'block'
 
@@ -85,7 +104,7 @@ export function CartCtas({ layout, onNavigate }: CartCtasProps) {
           disabled={loading || closed}
           onClick={handleCheckout}
         >
-          {readinessLoading ? (
+          {loading ? (
             <>
               <Spinner size="sm" variant="white" />
               <span>Cargando…</span>

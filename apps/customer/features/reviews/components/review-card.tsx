@@ -6,24 +6,53 @@ import { Stars } from '@/features/reviews/components/stars'
 import type { PendingReviewState } from '@/features/reviews/hooks/use-pending-review'
 
 /**
- * «¿Cómo estuvo tu pedido anterior?», mientras espera el de ahora.
+ * Mismos cortes que `relativeDate` en `/pedidos` y `elapsedLabel` en
+ * `ActiveOrderBanner`: no se comparte función porque cada una vive en un
+ * contexto que no conoce a las otras dos, pero el TEXTO sí tiene que
+ * coincidir en las tres.
  *
- * EL MOMENTO, que es la razón de que esto exista. Preguntar al entregar no
- * funciona: el cliente cierra la app y se va a comer. Se pregunta la siguiente
- * vez que pide, en la espera, que es el único rato en que mira la pantalla sin
- * tener nada que hacer. Y funciona porque su gente vuelve pronto: la brecha
- * entre pedidos del mismo cliente es de 2 días en mediana (medido en prod), así
- * que se acuerda perfectamente de cómo estuvo.
+ * Hace falta calcularlo de verdad —y no dejar fijo «hace poco»— porque esta
+ * tarjeta ya no vive solo en la espera de un pedido nuevo (brecha mediana de
+ * 2 días, donde «hace poco» pasaba sin que nadie lo notara): desde que
+ * también aparece en el inicio, el mismo pendiente puede seguir sin
+ * responder hasta los 21 días de `windowDays`, y «hace poco» sería falso.
+ */
+function relativo(iso: string): string {
+  const min = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
+  if (min < 1) return 'recién'
+  if (min < 60) return `hace ${min} min`
+  const h = Math.floor(min / 60)
+  if (h < 24) return `hace ${h} h`
+  const d = Math.floor(h / 24)
+  if (d === 1) return 'ayer'
+  return `hace ${d} días`
+}
+
+/**
+ * «¿Cómo estuvo tu pedido?», en las DOS redes que quedan tras la de salida
+ * (`PostDeliveryExitLink`, en el tracking del pedido recién entregado):
+ * mientras espera el siguiente pedido (`app/pedido/[shortId]/page.tsx`) y en
+ * el inicio (`HomeShell`), para quien no calificó ni descartó en ninguna de
+ * las dos anteriores. Mismo componente en las dos porque es el mismo
+ * pendiente y la misma pregunta — solo cambia cuándo lo ve.
  *
- * TARJETA EN LÍNEA, NO HOJA MODAL. Ese instante ya lo ocupa la hoja del permiso
- * de avisos, que se abre a los 1,5 s y es operativa —si no se pide ahora, ya no
- * sirve para este pedido—. Una segunda modal encima se descarta por reflejo y
- * se lleva por delante a las dos. La tarjeta no interrumpe, y en una espera de
- * treinta minutos eso le basta: sigue ahí cuando el cliente baja la vista.
+ * EL MOMENTO, que es la razón de que exista la primera red. Preguntar al
+ * entregar no funciona: el cliente cierra la app y se va a comer. La espera
+ * del pedido siguiente es el rato en que mira la pantalla sin nada que hacer,
+ * y funciona porque su gente vuelve pronto (brecha mediana de 2 días, medido
+ * en prod). El inicio es la red de después: cubre a quien no vuelve a pedir
+ * dentro de esa brecha, o cierra la app antes de que la tarjeta llegue a
+ * pintarse.
  *
- * NO SE PINTA MIENTRAS HAYA ALGO QUE HACER. Lo decide la página (ver
- * `app/pedido/[shortId]/page.tsx`): con el plazo de cancelar corriendo o un
- * prepago sin resolver, la atención tiene dueño.
+ * TARJETA EN LÍNEA, NO HOJA MODAL. En el tracking, ese instante ya lo ocupa la
+ * hoja del permiso de avisos, que se abre a los 1,5 s y es operativa —si no se
+ * pide ahora, ya no sirve para este pedido—. Una segunda modal encima se
+ * descarta por reflejo y se lleva por delante a las dos.
+ *
+ * NO SE PINTA MIENTRAS HAYA ALGO QUE HACER. En el tracking lo decide la
+ * página: con el plazo de cancelar corriendo o un prepago sin resolver, la
+ * atención tiene dueño. En el inicio, `HomeShell` aplica la misma regla contra
+ * un pedido activo.
  */
 export function ReviewCard({ estado }: { estado: PendingReviewState }) {
   const [nota, setNota] = useState(0)
@@ -60,7 +89,7 @@ export function ReviewCard({ estado }: { estado: PendingReviewState }) {
               ¿Cómo estuvo tu pedido?
             </p>
             <p className="truncate text-label text-ink-muted leading-relaxed">
-              {pendiente.businessName} · lo recibiste hace poco
+              {pendiente.businessName} · {relativo(pendiente.deliveredAt)}
             </p>
           </div>
         </div>
