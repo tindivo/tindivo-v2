@@ -34,6 +34,12 @@ export function PushManager() {
     // `granted` sin suscripción viva = el navegador la rotó o la revocó. Se
     // repara sin preguntar nada: el permiso ya está dado, así que no hace falta
     // gesto del usuario y no hay nada que consultarle.
+    //
+    // `off` ES EL MISMO CUADRO Y NO SE TOCA: permiso concedido, suscripción
+    // muerta. La diferencia es que ahí la mató una persona desde el interruptor
+    // de Configuración. Reparar eso sería volver a encender los avisos que
+    // acaban de apagarse, y encima al cambiar de pestaña — o sea en silencio y
+    // sin que nada lo explique. Ver `PushStatus` en `usePushStatus`.
     if (status !== 'granted') return
     let cancelado = false
     void (async () => {
