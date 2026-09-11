@@ -1412,6 +1412,7 @@ export type Database = {
           deleted_at: string | null
           description: string | null
           display_order: number
+          free_delivery_days: number[] | null
           id: string
           image_hue: number | null
           image_url: string | null
@@ -1432,6 +1433,7 @@ export type Database = {
           deleted_at?: string | null
           description?: string | null
           display_order?: number
+          free_delivery_days?: number[] | null
           id?: string
           image_hue?: number | null
           image_url?: string | null
@@ -1452,6 +1454,7 @@ export type Database = {
           deleted_at?: string | null
           description?: string | null
           display_order?: number
+          free_delivery_days?: number[] | null
           id?: string
           image_hue?: number | null
           image_url?: string | null
@@ -3020,6 +3023,10 @@ export type Database = {
       mark_pickup_notified: {
         Args: { p_business_user_id: string; p_order_id: string }
         Returns: Json
+      }
+      menu_item_free_delivery_day: {
+        Args: { p_at?: string; p_free_delivery_days: number[] }
+        Returns: boolean
       }
       menu_item_in_window: {
         Args: {
