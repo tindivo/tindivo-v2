@@ -936,15 +936,28 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
       localStorage.setItem('tindivo_notifications_gate_dismissed', 'true')
     }
 
-    // 3. Y COMPROBAR QUE SUENA DE VERDAD, en vez de dar por hecho que sí.
+    // 3. LA PRUEBA COMPLETA SOLO SI NUNCA SE CONFIRMÓ NADA, EN ESTE APARATO.
     //
     //    Antes esto decía «Notificaciones activadas» con la voz y se despedía.
     //    Decir que están activadas no es lo mismo que comprobar que se oyen —lo
     //    primero lo sabe el código, lo segundo solo lo sabe quien está delante—
     //    y esa diferencia es la que se cobró tres pedidos el 8 de septiembre.
-    //    `askSoundCheck` enciende el sonido, lo desbloquea y pregunta.
-    askSoundCheck()
-  }, [askSoundCheck, enablePush])
+    //
+    //    Pero este gate se reabre solo (ver el efecto de `alarmaPendiente` más
+    //    abajo) cada vez que hay un pedido esperando y el sonido está apagado o
+    //    el `AudioContext` suspendido — y eso pasa en CUALQUIER recarga de la
+    //    página, y en cuanto se apaga el interruptor con algo pendiente. Pedir
+    //    la prueba entera —bip, voz, «¿lo oíste?», troubleshooting— cada vez que
+    //    eso ocurre convierte el gate en un trámite largo justo cuando lo urgente
+    //    es volver a atender. Si ya se confirmó alguna vez en este aparato, aquí
+    //    basta con recuperar el sonido; la re-verificación de fondo (una vez por
+    //    turno, sin importar el gate) la sigue haciendo `OpeningControls`.
+    if (soundCheckAt === null) {
+      askSoundCheck()
+    } else {
+      enableSound()
+    }
+  }, [askSoundCheck, enablePush, enableSound, soundCheckAt])
 
   const refetchBiz = useCallback(async () => {
     const supabase = getSupabaseBrowser()
