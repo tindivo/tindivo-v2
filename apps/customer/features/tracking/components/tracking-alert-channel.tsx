@@ -117,7 +117,11 @@ export function TrackingAlertChannel({ canal, pantalla }: TrackingAlertChannelPr
         </div>
       )}
 
-      {pantalla.soportado && (
+      {/* Peldaño 2, y solo cuando el peldaño 1 no alcanza: si el push ya está
+          concedido, esta tarjeta repetiría —con más palabras— lo que la de
+          arriba ya prometió («aunque cierres la app»), y solo ocuparía
+          espacio. */}
+      {canal.estado !== 'concedido' && pantalla.soportado && (
         <div className="flex flex-col gap-2.5 rounded-[18px] border border-border bg-card p-4">
           <ToggleSwitch
             checked={pantalla.activo}
