@@ -57,6 +57,7 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
     nominalDeliveryFee,
     promoApplies,
     promo,
+    itemPromoApplies,
     distanceBand,
     cart,
     loading,
@@ -490,22 +491,32 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
               )}
             </span>
           </div>
-          {/* `promoAviso` devuelve null cuando la promo no está viva: en ese caso
-              el checkout se ve exactamente como antes de que existiera. Ver la
-              nota en `types.ts`. */}
-          {deliveryMethod !== 'pickup' && promoAviso(promo.reason) && (
-            <p
-              className={cn(
-                'flex items-center gap-1.5 text-[12px]',
-                promo.reason === 'active' ? 'text-brand-dark' : 'text-ink-muted',
-              )}
-            >
-              {promo.reason === 'active' && (
+          {/* `promoAviso` devuelve null cuando la promo de lanzamiento no está
+              viva: en ese caso el checkout se ve exactamente como antes de que
+              existiera. Ver la nota en `types.ts`. La promo por plato
+              (0227/0228) tiene prioridad de aviso porque, a diferencia de la de
+              lanzamiento, no depende de la cuenta y no tiene "agotada". */}
+          {deliveryMethod !== 'pickup' &&
+            (itemPromoApplies ? (
+              <p className="flex items-center gap-1.5 text-[12px] text-brand-dark">
                 <Icon name="local_activity" size={14} className="shrink-0" />
-              )}
-              {promoAviso(promo.reason)}
-            </p>
-          )}
+                Promo: el envío de este pedido va por nuestra cuenta.
+              </p>
+            ) : (
+              promoAviso(promo.reason) && (
+                <p
+                  className={cn(
+                    'flex items-center gap-1.5 text-[12px]',
+                    promo.reason === 'active' ? 'text-brand-dark' : 'text-ink-muted',
+                  )}
+                >
+                  {promo.reason === 'active' && (
+                    <Icon name="local_activity" size={14} className="shrink-0" />
+                  )}
+                  {promoAviso(promo.reason)}
+                </p>
+              )
+            ))}
           <div className="flex justify-between border-ink/[0.09] border-t pt-2.5 font-extrabold text-[18px] text-ink tracking-tight">
             <span>Total</span>
             <span className="tabular-nums">{soles(total)}</span>
