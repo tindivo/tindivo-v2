@@ -79,6 +79,12 @@ real de su RLS **no** es reproducible desde sus migraciones.
    sacar un pedido de `delivered`, esa rama pasa a ejecutarse de verdad —
    **repásala entera antes de abrir el camino**, empezando por qué pasa con los
    cargos que ya no están en `pending` y que el `DELETE` no toca.
+9. **Iconos en `apps/negocios` (y `motorizados`): SUBSET CERRADO de Material Symbols.**
+   - `negocios` NO usa el CDN de Google Fonts: auto-hospeda `material-symbols-rounded.woff2` (~92 KB) por conectividad del piloto.
+   - Solo funcionan las ligaduras listadas en `apps/negocios/public/fonts/icons.txt`.
+   - Si introduces un `<Icon name="..." />` que no está en la fuente, **no falla TypeScript ni el linter**: el navegador muestra el nombre como texto cortado a un garabato roto (`st`, etc.).
+   - **Regla obligatoria:** Antes de usar cualquier icono en `negocios` o `packages/ui`, **verifica que exista en `apps/negocios/public/fonts/icons.txt`**. Si no está, usa un icono existente equivalente o regenera el `.woff2` siguiendo `apps/negocios/public/fonts/README.md`.
+   - Corre siempre `pnpm --filter @tindivo/negocios test` (corre `icon-subset.test.ts`) para certificar que ningún icono quedó fuera.
 
 ## Comandos
 

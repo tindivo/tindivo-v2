@@ -159,6 +159,13 @@ comportamiento, no al aplicar la migración.
 - Todo cambio semántico o funcional debe reportarse y documentarse **por separado** de las correcciones cosméticas de tipos o imports, sin importar el alcance principal de la sesión.
 - **Precedente:** En la 0119, el cambio de semántica del PATCH en `settings/route.ts` (introducción de `MERGED_KEYS` para fusionar y preservar claves no editadas por el panel en la BD) quedó erróneamente agrupado junto a doce cambios de tipos e imports.
 
+### 2.11 Iconos en Negocios y Motorizados: subset cerrado de fuentes
+
+- `negocios` (y `motorizados`) NO cargan el CDN de Google Fonts: auto-hospedan `public/fonts/material-symbols-rounded.woff2` (~92 KB) por la mala conectividad del piloto en San Jacinto.
+- Esa fuente solo contiene las ligaduras de los iconos listados en `apps/negocios/public/fonts/icons.txt`.
+- Usar un nombre de icono que no esté en la fuente no produce error de compilación ni de linter: el navegador renderiza el nombre literal como texto dentro de la caja de 18-24px y se ve como un garabato roto (`st`, etc.).
+- **Regla obligatoria:** Antes de escribir `<Icon name="..." />`, comprueba que el nombre esté en `icons.txt`. Si no está, usa un icono del inventario existente o regenera el binario `.woff2` siguiendo `apps/negocios/public/fonts/README.md`. Corre siempre `pnpm --filter @tindivo/negocios test` para validar `icon-subset.test.ts`.
+
 ---
 
 ## 3. Flujo de trabajo obligatorio
