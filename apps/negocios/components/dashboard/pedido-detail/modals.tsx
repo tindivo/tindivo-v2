@@ -241,8 +241,8 @@ export function PrepTimeModal({
             disabled={falta}
           >
             {/* El botón PIDE lo que falta en vez de quedarse gris y mudo: es el
-                mismo patrón del CTA del checkout, que dice «Elige cuándo lo
-                recoges» en lugar de deshabilitarse sin explicar. */}
+                mismo patrón del CTA del checkout, que dice «Responde si vas
+                ahora» en lugar de deshabilitarse sin explicar. */}
             {falta
               ? 'Dinos con qué pagó'
               : cobraEnMostrador

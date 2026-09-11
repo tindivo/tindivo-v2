@@ -360,11 +360,17 @@ Florencia, y está bien que así sea.
 
 ### Recojo en el local: los dos perfiles, y por qué solo uno se salta el guard (`0220`)
 
-El checkout **pregunta** («¿Cuándo recoges tu pedido?» → *Ahora, espero en el local* /
-*Más tarde*) y guarda la respuesta en `orders.pickup_timing`. **No se infiere del
-origen del enlace**: un QR pegado en el mostrador se fotografía y se comparte por
-WhatsApp en diez segundos, así que `source=qr_priamo` queda como dato de
-atribución de marketing y **nunca** como control de seguridad.
+El checkout **pregunta** («¿Vas al local ahora?» → *Sí, voy y espero ahí* /
+*No, paso más tarde*) y guarda la respuesta en `orders.pickup_timing`. **No se
+infiere del origen del enlace**: un QR pegado en el mostrador se fotografía y se
+comparte por WhatsApp en diez segundos, así que `source=qr_priamo` queda como
+dato de atribución de marketing y **nunca** como control de seguridad.
+
+**La pregunta es por dónde va a estar el cliente, no por la hora.** Antes decía
+«¿cuándo recoges tu pedido?» y pedía un horario que las dos opciones no dan; con
+ese eje, «más tarde» se leía como «a qué hora paso» en lugar de lo que de verdad
+significa —«no voy a estar delante»—, que es justo lo que decide todo lo demás:
+el pago en caja deja de existir y vuelve la validación telefónica.
 
 | | `pickup_timing = 'later'` | `pickup_timing = 'now'` |
 |---|---|---|

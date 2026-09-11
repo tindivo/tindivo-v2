@@ -178,15 +178,15 @@ test.describe('0219/0220 · el recojo en el local, desde la pantalla del cliente
     await llegarAlCheckout(page)
 
     await page.getByRole('button', { name: 'Recojo' }).click()
-    await expect(page.getByText('¿Cuándo recoges tu pedido?')).toBeVisible()
+    await expect(page.getByText('¿Vas al local ahora?')).toBeVisible()
 
-    const ahora = page.getByRole('button', { name: /Ahora, espero en el local/ })
-    const masTarde = page.getByRole('button', { name: 'Más tarde' })
+    const ahora = page.getByRole('button', { name: /Sí, voy y espero ahí/ })
+    const masTarde = page.getByRole('button', { name: 'No, paso más tarde' })
     await expect(ahora).toHaveAttribute('aria-pressed', 'false')
     await expect(masTarde).toHaveAttribute('aria-pressed', 'false')
 
     // El CTA no se apaga: cambia de trabajo y dice qué falta.
-    await expect(page.getByRole('button', { name: /Elige cuándo lo recoges/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: /Responde si vas ahora/ })).toBeVisible()
   })
 
   /**
@@ -240,7 +240,7 @@ test.describe('0219/0220 · el recojo en el local, desde la pantalla del cliente
     await llegarAlCheckout(page)
 
     await page.getByRole('button', { name: 'Recojo' }).click()
-    await page.getByRole('button', { name: /Ahora, espero en el local/ }).click()
+    await page.getByRole('button', { name: /Sí, voy y espero ahí/ }).click()
     await expect(page.getByText(/Pagas en la caja y lo preparan mientras esperas/)).toBeVisible()
 
     // El envío desaparece de la cuenta: en un recojo no hay nada que cobrar por
@@ -305,7 +305,7 @@ test.describe('0219/0220 · el recojo en el local, desde la pantalla del cliente
     const caja = radioDe(page, 'Pagas en el local')
     await expect(caja).toBeEnabled()
 
-    await page.getByRole('button', { name: 'Más tarde' }).click()
+    await page.getByRole('button', { name: 'No, paso más tarde' }).click()
 
     // La promesa de «te lo preparamos cuando el local confirme que te tiene
     // delante» es exclusiva de «ahora»: aquí no hay nadie delante.
@@ -397,7 +397,7 @@ test.describe('0219/0220 · el recojo en el local, desde la pantalla del cliente
     await login(page, CLIENTE.email)
     await llegarAlCheckout(page)
     await page.getByRole('button', { name: 'Recojo' }).click()
-    await page.getByRole('button', { name: /Ahora, espero en el local/ }).click()
+    await page.getByRole('button', { name: /Sí, voy y espero ahí/ }).click()
     await page.getByRole('button', { name: /Confirmar pedido/ }).click()
     await expect(page).toHaveURL(/\/pedido\//, { timeout: 20_000 })
 
@@ -455,17 +455,17 @@ test.describe('0219/0220 · el recojo en el local, desde la pantalla del cliente
     await llegarAlCheckout(page)
 
     await page.getByRole('button', { name: 'Recojo' }).click()
-    await page.getByRole('button', { name: /Ahora, espero en el local/ }).click()
-    await expect(page.getByRole('button', { name: /Ahora, espero en el local/ })).toHaveAttribute(
+    await page.getByRole('button', { name: /Sí, voy y espero ahí/ }).click()
+    await expect(page.getByRole('button', { name: /Sí, voy y espero ahí/ })).toHaveAttribute(
       'aria-pressed',
       'true',
     )
 
     await page.getByRole('button', { name: 'Delivery' }).click()
-    await expect(page.getByText('¿Cuándo recoges tu pedido?')).toHaveCount(0)
+    await expect(page.getByText('¿Vas al local ahora?')).toHaveCount(0)
 
     await page.getByRole('button', { name: 'Recojo' }).click()
-    await expect(page.getByRole('button', { name: /Ahora, espero en el local/ })).toHaveAttribute(
+    await expect(page.getByRole('button', { name: /Sí, voy y espero ahí/ })).toHaveAttribute(
       'aria-pressed',
       'false',
     )

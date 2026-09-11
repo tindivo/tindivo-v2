@@ -176,7 +176,7 @@ export interface CheckoutState {
    * esconder de más se arregla en medio segundo, enseñar de más acaba en 409—.
    * Dejó de ser verdad en cuanto el método pasó a elegirse en la carta: si el
    * cliente ya venía en recojo, esconder el selector durante el salto a la API
-   * (470–750 ms de piso) deja en pantalla «¿Cuándo recoges tu pedido?» SIN los
+   * (470–750 ms de piso) deja en pantalla «¿Vas al local ahora?» SIN los
    * dos botones encima, o sea una pregunta huérfana y ninguna forma de volver a
    * delivery. Peor que el riesgo que evitaba.
    *

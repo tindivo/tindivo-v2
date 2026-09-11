@@ -319,16 +319,23 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
               (ver `use-checkout-validation`), así que preseleccionar «ahora»
               sería regalar esa exención a quien nunca contestó.
 
-              Las etiquetas dicen dónde está el cliente, no cuándo pasa por la
-              comida: «Ahora, espero en el local» es comprobable —la cajera lo
-              mira— mientras que «en 10 minutos» no lo es por nadie.
+              La pregunta es por DÓNDE VA A ESTAR el cliente, no por la hora, y
+              antes preguntaba «¿cuándo recoges tu pedido?» — que pedía un
+              horario que estas dos opciones no dan. Peor: dejaba «más tarde»
+              leyéndose como «a qué hora paso», cuando lo que de verdad
+              significa es «no voy a estar delante», que es la respuesta que
+              gobierna todo lo demás (el pago en caja deja de existir, la
+              validación telefónica vuelve). Preguntar el eje correcto es lo que
+              hace que las dos etiquetas se entiendan sin leer la letra chica.
 
-              Y el verbo es «espero», no «estoy». Con «estoy» la pregunta
-              —«¿CUÁNDO recoges tu pedido?»— y la respuesta —«ahora»— se leían
-              juntas como una promesa de comida inmediata, cuando lo que ocurre
-              es lo contrario: se cobra primero y se cocina después, con el
-              cliente ahí delante. La etiqueta que promete inmediatez y la caja
-              que tarda veinte minutos es una discusión en el mostrador.
+              «Voy y espero ahí» es comprobable —la cajera lo mira— mientras que
+              «en 10 minutos» no lo es por nadie.
+
+              Y el verbo es «espero», no «estoy». Con «estoy» la respuesta se
+              leía como una promesa de comida inmediata, cuando lo que ocurre es
+              lo contrario: se cobra primero y se cocina después, con el cliente
+              ahí delante. La etiqueta que promete inmediatez y la caja que
+              tarda veinte minutos es una discusión en el mostrador.
 
               No se pone un número de minutos porque aquí no se sabe: el tiempo
               de preparación lo elige la cajera al aceptar, no el checkout.
@@ -344,24 +351,24 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
                   : 'bg-surface-low',
               )}
             >
-              <p className="mb-2 font-semibold text-[13px] text-ink">¿Cuándo recoges tu pedido?</p>
+              <p className="mb-2 font-semibold text-[13px] text-ink">¿Vas al local ahora?</p>
               <div className="flex gap-2">
                 <DeliveryMethodButton
                   active={pickupTiming === 'now'}
                   onClick={() => setPickupTiming('now')}
                   icon="storefront"
-                  label="Ahora, espero en el local"
+                  label="Sí, voy y espero ahí"
                 />
                 <DeliveryMethodButton
                   active={pickupTiming === 'later'}
                   onClick={() => setPickupTiming('later')}
                   icon="schedule"
-                  label="Más tarde"
+                  label="No, paso más tarde"
                 />
               </div>
               {pickupTiming === 'now' && (
                 <p className="mt-2 text-[12px] text-ink-soft">
-                  Pagas en la caja y lo preparan mientras esperas ahí.
+                  Pagas en la caja y lo preparan mientras esperas.
                 </p>
               )}
               {/* ── LO QUE PASA SI NO VIENES, DICHO ANTES DE PAGAR ──

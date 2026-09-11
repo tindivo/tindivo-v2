@@ -92,8 +92,8 @@ export function useCheckoutValidation(checkout: CheckoutViewModel): UseCheckoutV
     if (deliveryMethod === 'pickup' && pickupTiming === null) {
       return {
         field: 'pickup',
-        message: 'Dinos cuándo pasas por tu pedido',
-        cta: 'Elige cuándo lo recoges',
+        message: 'Dinos si vas al local ahora',
+        cta: 'Responde si vas ahora',
       }
     }
     if (deliveryMethod === 'delivery') {
