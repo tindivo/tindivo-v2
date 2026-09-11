@@ -2,6 +2,7 @@ import type { TrackingStep } from '@tindivo/contracts'
 import { Icon } from '@tindivo/ui'
 import Link from 'next/link'
 import { SupportLink } from '@/components/support-link'
+import { PostDeliveryExitLink } from '@/features/reviews/components/post-delivery-exit-link'
 import { getStatusMessage } from '@/features/tracking/lib/format'
 import type { Tracking } from '@/features/tracking/types'
 
@@ -47,9 +48,13 @@ export function TrackingActions({ data, current, cancellable }: TrackingActionsP
         )}
       </div>
 
-      <Link href="/" className="mt-6 inline-block text-[14px] text-brand">
-        ← Volver al inicio
-      </Link>
+      {data.status === 'delivered' ? (
+        <PostDeliveryExitLink shortId={data.shortId} />
+      ) : (
+        <Link href="/" className="mt-6 inline-block text-[14px] text-brand">
+          ← Volver al inicio
+        </Link>
+      )}
     </>
   )
 }
