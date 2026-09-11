@@ -2695,8 +2695,8 @@
     "semantic_hash": ""
   },
   "apps/customer/features/checkout/hooks/use-checkout-actions.ts": {
-    "mtime": 1788865281.446468,
-    "ast_hash": "20f6a447a00c2947a6e39c4536ea7a3e",
+    "mtime": 1789086280.1092787,
+    "ast_hash": "a2a49697ba7fcd4fbc984b77961d4731",
     "semantic_hash": ""
   },
   "apps/customer/features/checkout/hooks/use-checkout-auth.ts": {
@@ -5235,8 +5235,8 @@
     "semantic_hash": ""
   },
   "apps/customer/features/tracking/hooks/use-status-alerts.ts": {
-    "mtime": 1787364817.9905202,
-    "ast_hash": "66dd99083547d6df0e9a29c7945a9a9a",
+    "mtime": 1789086322.8504705,
+    "ast_hash": "7fdd2a6e7bdcc38fdc425e480830d126",
     "semantic_hash": ""
   },
   "apps/customer/features/tracking/lib/__tests__/cancelled-copy.test.ts": {
@@ -5250,8 +5250,8 @@
     "semantic_hash": ""
   },
   "apps/customer/features/tracking/lib/alerts.ts": {
-    "mtime": 1788812669.4402952,
-    "ast_hash": "fdbe0f1ae7f64805d96a5969873933e8",
+    "mtime": 1789086311.4321024,
+    "ast_hash": "6ea9aeafbfbbf826a0ba843435de8a07",
     "semantic_hash": ""
   },
   "apps/customer/features/tracking/lib/chime.ts": {
@@ -6772,6 +6772,31 @@
   "supabase/rollbacks/0226_some_dishes_only_go_at_midday.rollback.sql": {
     "mtime": 1789076740.9564078,
     "ast_hash": "c1e4915e574e3707007ad585daaab7f7",
+    "semantic_hash": ""
+  },
+  "apps/customer/lib/__tests__/sound.test.ts": {
+    "mtime": 1789086365.5349956,
+    "ast_hash": "15b81d39c35ee6ef6ebe97bf78124ef8",
+    "semantic_hash": ""
+  },
+  "apps/customer/lib/sound.ts": {
+    "mtime": 1789086251.1720974,
+    "ast_hash": "26f83dec075c645d93dd4834f39d6387",
+    "semantic_hash": ""
+  },
+  "apps/api/lib/__tests__/promo-item-free-delivery.integration.test.ts": {
+    "mtime": 1789087276.5927463,
+    "ast_hash": "ea1b964443f2597ccc6aa8d4a7cadb2d",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/0227_one_dish_can_carry_its_own_free_delivery.sql": {
+    "mtime": 1789086670.3077984,
+    "ast_hash": "16442fc088d6ebc0eadcc851a06fa3c0",
+    "semantic_hash": ""
+  },
+  "supabase/rollbacks/0227_one_dish_can_carry_its_own_free_delivery.rollback.sql": {
+    "mtime": 1789086553.0023005,
+    "ast_hash": "0199f2d12a691bb341c3b1e181cea6ee",
     "semantic_hash": ""
   }
 }
