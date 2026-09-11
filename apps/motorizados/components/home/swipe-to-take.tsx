@@ -3,6 +3,7 @@
 import { ApiError } from '@tindivo/api-client'
 import { cn, Icon } from '@tindivo/ui'
 import { type ReactNode, useEffect, useRef, useState } from 'react'
+import { createDriverAudioTrigger } from '@/lib/sound'
 import { postTransition } from '@/lib/transitions'
 
 /**
@@ -99,11 +100,13 @@ export function SwipeToTake({
     later(() => setX(0), 1020)
   }, [hint])
 
-  async function take() {
+  async function take(triggerSound?: () => void) {
+    const trigger = triggerSound ?? createDriverAudioTrigger('orderTaken')
     setPhase('busy')
     setX(COMMIT_X)
     try {
       await postTransition(orderId, 'take')
+      trigger()
       setPhase('done')
       setX(width.current)
       // La fila colapsa primero y el board se entera después: si se refresca
@@ -173,8 +176,12 @@ export function SwipeToTake({
   function onPointerUp() {
     if (!dragging) return
     setDragging(false)
-    if (axis.current === 'x' && x >= width.current * THRESHOLD) void take()
-    else setX(0)
+    if (axis.current === 'x' && x >= width.current * THRESHOLD) {
+      const trigger = createDriverAudioTrigger('orderTaken')
+      void take(trigger)
+    } else {
+      setX(0)
+    }
   }
 
   const armedNow = phase === 'busy' || phase === 'done' || x >= width.current * THRESHOLD

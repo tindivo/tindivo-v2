@@ -4,6 +4,7 @@ import { ApiError } from '@tindivo/api-client'
 import { useCallback, useState } from 'react'
 import { api } from '@/lib/api'
 import { cobroEnCaja, type OrderVM } from '@/lib/orders/view-model'
+import { createKitchenSoundTrigger } from '@/lib/sound'
 import {
   customerWhatsappDigits,
   normalizeSupportPhone,
@@ -75,6 +76,17 @@ export interface OrderActions {
   onEdited?: () => void
 }
 
+function getStatus(res: unknown): string | undefined {
+  if (!res || typeof res !== 'object') return undefined
+  if ('data' in res && res.data && typeof res.data === 'object' && 'status' in res.data) {
+    return (res.data as { status?: string }).status
+  }
+  if ('status' in res) {
+    return (res as { status?: string }).status
+  }
+  return undefined
+}
+
 export function useOrderActions({
   selected,
   supportWhatsapp,
@@ -104,28 +116,38 @@ export function useOrderActions({
   const actions: OrderActions = {
     onClose: () => onDone?.(),
     onAccept: async (prep, paymentReal) => {
+      const triggerKitchenSound = createKitchenSoundTrigger()
       await run(async () => {
         if (!selected) return
         const id = selected.rowId
 
         if (selected.status === 'validando') {
-          const res = (await post(`/business/orders/${id}/validate`, {
+          const res = await post(`/business/orders/${id}/validate`, {
             pass: true,
             prepTimeMinutes: prep,
-          })) as { status?: string }
-          if (res?.status === 'pending_acceptance') {
-            await post(`/business/orders/${id}/transition`, {
+          })
+          const status = getStatus(res)
+          if (status === 'pending_acceptance') {
+            const transRes = await post(`/business/orders/${id}/transition`, {
               action: 'accept',
               prepTimeMinutes: prep,
               paymentReal,
             })
+            if (getStatus(transRes) === 'preparing') {
+              triggerKitchenSound()
+            }
+          } else if (status === 'preparing') {
+            triggerKitchenSound()
           }
         } else {
-          await post(`/business/orders/${id}/transition`, {
+          const res = await post(`/business/orders/${id}/transition`, {
             action: 'accept',
             prepTimeMinutes: prep,
             paymentReal,
           })
+          if (getStatus(res) === 'preparing') {
+            triggerKitchenSound()
+          }
         }
         onDone?.()
         await refetchOrders()
@@ -155,9 +177,13 @@ export function useOrderActions({
       })
     },
     onVerifyProof: async () => {
+      const triggerKitchenSound = createKitchenSoundTrigger()
       await run(async () => {
         if (!selected) return
-        await post(`/business/orders/${selected.rowId}/validate`, { pass: true })
+        const res = await post(`/business/orders/${selected.rowId}/validate`, { pass: true })
+        if (getStatus(res) === 'preparing') {
+          triggerKitchenSound()
+        }
         await refetchOrders()
       })
     },
@@ -170,12 +196,16 @@ export function useOrderActions({
      * mirando la ficha vieja es la vía rápida a pulsar dos veces.
      */
     onConfirmDirectPayment: async (prep) => {
+      const triggerKitchenSound = createKitchenSoundTrigger()
       await run(async () => {
         if (!selected) return
-        await post(`/business/orders/${selected.rowId}/validate`, {
+        const res = await post(`/business/orders/${selected.rowId}/validate`, {
           pass: true,
           prepTimeMinutes: prep,
         })
+        if (getStatus(res) === 'preparing') {
+          triggerKitchenSound()
+        }
         onDone?.()
         await refetchOrders()
       })
