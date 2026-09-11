@@ -3,11 +3,19 @@
 import type { PaymentQrView } from '@tindivo/contracts'
 import { Icon } from '@tindivo/ui'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import { FilterChips } from '@/components/filter-chips'
 import { newColumnSubtitle } from '@/lib/orders/attention'
-import type { MobileTab, OrderVM } from '@/lib/orders/view-model'
+import type { ChannelFilter, MobileTab, OrderVM } from '@/lib/orders/view-model'
 import { resolveMobileTab, sortCooking } from '@/lib/orders/view-model'
 import { CocinaCard, NuevoCard, RepartoCard } from './cards'
+import {
+  COLUMN_FILTER_OPTIONS,
+  type ColumnFilter,
+  ColumnFilterDropdown,
+  calculateColumnFilterCounts,
+  matchesColumnFilter,
+} from './column-filter-dropdown'
 import { type DetailActions, type DetailItem, DetailScreen, PausarModal } from './pedido-detail'
 import { SourceBadgeMini, soles } from './primitives'
 
@@ -21,6 +29,13 @@ export interface PedidosViewProps {
   onOpenPause: () => void
   onResume: () => void
   counts: { new: number; cooking: number; route: number; delivered: number; cancelled: number }
+  /** Filtro de canal YA RESUELTO (`resolveChannelFilter`), no el guardado. */
+  channel: ChannelFilter
+  onChannel: (f: ChannelFilter) => void
+  /** Cuántos activos hay de cada canal, para los contadores de los chips. */
+  channelCounts: Record<ChannelFilter, number>
+  /** `false` cuando el tablero tiene un solo canal: no hay nada que separar. */
+  showChannelChips: boolean
   newOrders: OrderVM[]
   cookingOrders: OrderVM[]
   routeOrders: OrderVM[]
@@ -179,6 +194,7 @@ export function PedidosMobile(p: PedidosViewProps) {
           busy={p.detailBusy}
           isLoadingActions={p.detailLoadingActions}
           mobile
+          bizName={p.bizName}
           actions={p.actions}
         />
       )}
@@ -294,6 +310,15 @@ export function PedidosMobile(p: PedidosViewProps) {
         )}
       </div>
 
+      {/* El filtro de canal, encima de la lista y NO dentro de ella: en movil la
+          lista scrollea, y un mando que se va hacia arriba con el scroll es un
+          mando que la cajera no encuentra cuando quiere deshacerlo. */}
+      {p.showChannelChips && (
+        <div className="px-3.5 pt-2.5">
+          <ChannelChips channel={p.channel} counts={p.channelCounts} onChange={p.onChannel} />
+        </div>
+      )}
+
       {/* List */}
       <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-3.5 py-3">
         {/* El mismo reparto que la cabecera de la columna en escritorio: cuántos
@@ -340,12 +365,14 @@ function KanbanCol({
   count,
   dotClass,
   subtitle,
+  filterNode,
   children,
 }: {
   title: string
   count: number
   dotClass: string
   subtitle: string
+  filterNode?: React.ReactNode
   children: React.ReactNode
 }) {
   return (
@@ -356,13 +383,16 @@ function KanbanCol({
           <div className="text-[13px] font-bold">{title}</div>
           <div className="mt-px text-[10px] text-ink-muted">{subtitle}</div>
         </div>
-        <span
-          className={`inline-flex min-h-[22px] items-center justify-center rounded-full px-1.5 text-[11px] font-bold ${
-            count > 0 ? 'bg-danger text-white' : 'bg-ink/[0.08] text-ink'
-          }`}
-        >
-          {count}
-        </span>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {filterNode}
+          <span
+            className={`inline-flex min-h-[22px] items-center justify-center rounded-full px-1.5 text-[11px] font-bold ${
+              count > 0 ? 'bg-danger text-white' : 'bg-ink/[0.08] text-ink'
+            }`}
+          >
+            {count}
+          </span>
+        </div>
       </div>
       <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-2.5 pb-4">
         {children}
@@ -372,8 +402,26 @@ function KanbanCol({
 }
 
 export function PedidosDesktop(p: PedidosViewProps) {
-  const cooking = [...p.cookingOrders].sort(sortCooking)
+  const [nuevosFilter, setNuevosFilter] = useState<ColumnFilter>('all')
+  const [cocinaFilter, setCocinaFilter] = useState<ColumnFilter>('all')
+
+  const cooking = useMemo(() => [...p.cookingOrders].sort(sortCooking), [p.cookingOrders])
   const hasWaiting = p.cookingOrders.some((o) => o.state === 'waiting')
+
+  const nuevosCounts = useMemo(() => calculateColumnFilterCounts(p.newOrders), [p.newOrders])
+  const filteredNewOrders = useMemo(
+    () => p.newOrders.filter((o) => matchesColumnFilter(o, nuevosFilter)),
+    [p.newOrders, nuevosFilter],
+  )
+
+  const cocinaCounts = useMemo(
+    () => calculateColumnFilterCounts(p.cookingOrders),
+    [p.cookingOrders],
+  )
+  const filteredCooking = useMemo(
+    () => cooking.filter((o) => matchesColumnFilter(o, cocinaFilter)),
+    [cooking, cocinaFilter],
+  )
 
   return (
     <div className="relative flex min-w-0 min-h-0 flex-1 flex-col overflow-hidden bg-surface h-full">
@@ -464,16 +512,64 @@ export function PedidosDesktop(p: PedidosViewProps) {
         </div>
       </header>
 
-      {/* Kanban 3 columnas */}
+      {/* `-mb-2` para que el mando se cuele en el hueco que ya tenía el tablero
+          en vez de empujarlo hacia abajo: cuando aparece, lo que se mueve es lo
+          menos posible. */}
+      {p.showChannelChips && (
+        <div className="-mb-2 px-5 pt-3">
+          <ChannelChips channel={p.channel} counts={p.channelCounts} onChange={p.onChannel} />
+        </div>
+      )}
+
+      {/* Kanban 3 columnas.
+          El padding NO se recorta cuando los chips están: subirlo a `pt-3` fijo
+          movía el tablero 8 px hacia arriba TAMBIÉN en la noche sin recojos,
+          que es la normal. Lo que cambia de sitio es el mando nuevo, no el
+          tablero de siempre. */}
       <div className="grid min-h-0 flex-1 grid-cols-[1fr_1.4fr_0.9fr] grid-rows-[1fr] gap-3 overflow-hidden p-5">
         <KanbanCol
           title="Nuevos"
-          count={p.counts.new}
+          count={nuevosFilter !== 'all' ? filteredNewOrders.length : p.counts.new}
           dotClass="bg-danger"
-          subtitle={newColumnSubtitle(p.newOrders)}
+          subtitle={
+            nuevosFilter !== 'all'
+              ? `Mostrando ${filteredNewOrders.length} de ${p.counts.new}`
+              : newColumnSubtitle(p.newOrders)
+          }
+          filterNode={
+            p.newOrders.length > 0 ? (
+              <ColumnFilterDropdown
+                filter={nuevosFilter}
+                counts={nuevosCounts}
+                onChange={setNuevosFilter}
+                columnTitle="Nuevos"
+              />
+            ) : null
+          }
         >
           {p.newOrders.length > 0 ? (
-            p.newOrders.map((o) => <NuevoCard key={o.rowId} order={o} compact onOpen={p.onOpen} />)
+            filteredNewOrders.length > 0 ? (
+              filteredNewOrders.map((o) => (
+                <NuevoCard key={o.rowId} order={o} compact onOpen={p.onOpen} />
+              ))
+            ) : (
+              <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-white/60 p-4 text-center">
+                <p className="text-[12px] font-medium text-ink-muted">
+                  No hay pedidos de{' '}
+                  <span className="font-bold text-ink">
+                    {COLUMN_FILTER_OPTIONS.find((opt) => opt.id === nuevosFilter)?.label}
+                  </span>{' '}
+                  en Nuevos
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setNuevosFilter('all')}
+                  className="mt-2 cursor-pointer rounded-lg bg-surface px-2.5 py-1 text-[11px] font-bold text-ink transition-colors hover:bg-surface-high"
+                >
+                  Ver todos ({p.newOrders.length})
+                </button>
+              </div>
+            )
           ) : (
             <div className="px-2 py-5 text-center text-[12px] text-ink-subtle">
               Sin pedidos nuevos · te avisaremos cuando lleguen
@@ -483,21 +579,54 @@ export function PedidosDesktop(p: PedidosViewProps) {
 
         <KanbanCol
           title="En cocina"
-          count={p.counts.cooking}
+          count={cocinaFilter !== 'all' ? filteredCooking.length : p.counts.cooking}
           dotClass="bg-brand-dark"
-          subtitle="Cocinando + esperando moto"
+          subtitle={
+            cocinaFilter !== 'all'
+              ? `Mostrando ${filteredCooking.length} de ${p.counts.cooking}`
+              : 'Cocinando · esperando moto o cliente'
+          }
+          filterNode={
+            p.cookingOrders.length > 0 ? (
+              <ColumnFilterDropdown
+                filter={cocinaFilter}
+                counts={cocinaCounts}
+                onChange={setCocinaFilter}
+                columnTitle="Cocina"
+              />
+            ) : null
+          }
         >
           {cooking.length > 0 ? (
-            cooking.map((o) => (
-              <CocinaCard
-                key={o.rowId}
-                order={o}
-                compact
-                onOpen={p.onOpen}
-                supportPhone={p.supportPhone}
-                onCallDriver={p.onCallDriver}
-              />
-            ))
+            filteredCooking.length > 0 ? (
+              filteredCooking.map((o) => (
+                <CocinaCard
+                  key={o.rowId}
+                  order={o}
+                  compact
+                  onOpen={p.onOpen}
+                  supportPhone={p.supportPhone}
+                  onCallDriver={p.onCallDriver}
+                />
+              ))
+            ) : (
+              <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-white/60 p-4 text-center">
+                <p className="text-[12px] font-medium text-ink-muted">
+                  No hay pedidos de{' '}
+                  <span className="font-bold text-ink">
+                    {COLUMN_FILTER_OPTIONS.find((opt) => opt.id === cocinaFilter)?.label}
+                  </span>{' '}
+                  en cocina
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setCocinaFilter('all')}
+                  className="mt-2 cursor-pointer rounded-lg bg-surface px-2.5 py-1 text-[11px] font-bold text-ink transition-colors hover:bg-surface-high"
+                >
+                  Ver todos ({cooking.length})
+                </button>
+              </div>
+            )
           ) : (
             <div className="px-2 py-5 text-center text-[12px] text-ink-subtle">
               Nada en preparación
@@ -532,9 +661,45 @@ export function PedidosDesktop(p: PedidosViewProps) {
           paymentQrs={p.paymentQrs}
           busy={p.detailBusy}
           isLoadingActions={p.detailLoadingActions}
+          bizName={p.bizName}
           actions={p.actions}
         />
       )}
     </div>
+  )
+}
+
+/**
+ * LOS DOS CANALES, CON SU CUENTA. Ver `ChannelFilter` en `view-model`.
+ *
+ * ES PURAMENTE VISUAL. Lo que suena y lo que se ve resaltado sale de
+ * `attentionState`, que se calcula en el shell sobre la lista COMPLETA y no
+ * pasa por aquí. Un recojo con su cliente en el mostrador reclama a la cajera
+ * aunque tenga puesto «Delivery»: el riesgo de negocio no puede depender de qué
+ * chip esté pulsado.
+ *
+ * Los contadores llegan hechos desde la página (`channelCounts`), derivados del
+ * mismo array del que salen las listas. Ver la cabecera de `FilterChips`.
+ */
+function ChannelChips({
+  channel,
+  counts,
+  onChange,
+}: {
+  channel: ChannelFilter
+  counts: Record<ChannelFilter, number>
+  onChange: (f: ChannelFilter) => void
+}) {
+  return (
+    <FilterChips
+      options={[
+        { id: 'all', label: 'Todos' },
+        { id: 'delivery', label: '🚴 Delivery' },
+        { id: 'pickup', label: '🏠 Recojo' },
+      ]}
+      active={channel}
+      counts={counts}
+      onChange={onChange}
+    />
   )
 }

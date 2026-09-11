@@ -4,6 +4,8 @@ import { type OrderStatus, toTrackingStep } from '@tindivo/contracts'
 import { useRouter } from 'next/navigation'
 import { use } from 'react'
 import { PushPermissionSheet } from '@/components/push-permission-sheet'
+import { ReviewCard } from '@/features/reviews/components/review-card'
+import { usePendingReview } from '@/features/reviews/hooks/use-pending-review'
 import { CancelledView } from '@/features/tracking/components/cancelled-view'
 import { PrepayRail } from '@/features/tracking/components/prepay-rail'
 import { TrackingActions } from '@/features/tracking/components/tracking-actions'
@@ -26,7 +28,7 @@ import { usePushOffer } from '@/features/tracking/hooks/use-push-offer'
 import { useStatusAlerts } from '@/features/tracking/hooks/use-status-alerts'
 import { useTracking } from '@/features/tracking/hooks/use-tracking'
 import { useWakeLock } from '@/features/tracking/hooks/use-wake-lock'
-import { isCancellable, STEPS } from '@/features/tracking/lib/format'
+import { isCancellable, stepsFor } from '@/features/tracking/lib/format'
 import { prepayStage } from '@/features/tracking/lib/prepay-stage'
 
 /**
@@ -61,12 +63,24 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
   const enEspera = Boolean(data) && data?.status !== 'delivered' && data?.status !== 'cancelled'
   const canalAviso = useAlertChannel()
   const pantallaEncendida = useWakeLock(enEspera)
+  /**
+   * La pregunta por el pedido ANTERIOR, que solo cabe aquí.
+   *
+   * Se consulta con el pedido vivo porque la espera es el único rato en que el
+   * cliente mira la pantalla sin tener nada que hacer. En `delivered` no: ahí
+   * cierra la app y se va a comer, que es justo el motivo de que preguntar al
+   * entregar no funcione.
+   */
+  const resena = usePendingReview(enEspera)
 
   const current = data ? toTrackingStep(data.status as OrderStatus) : null
-  const foundIdx = current ? STEPS.findIndex((s) => s.key === current) : -1
+  // Un solo sitio elige las palabras de los cuatro pasos, y de ahi salen tanto
+  // el hero como el stepper. En recojo el tercero deja de hablar de motorizados.
+  const steps = stepsFor(data?.deliveryMethod ?? 'delivery')
+  const foundIdx = current ? steps.findIndex((s) => s.key === current) : -1
   const currentIdx = foundIdx < 0 ? 0 : foundIdx
   const step =
-    STEPS[currentIdx] ??
+    steps[currentIdx] ??
     ({
       key: 'received' as const,
       label: 'Pedido recibido',
@@ -76,7 +90,7 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
       label: string
       sub: string
     })
-  const progress = ((currentIdx + 1) / STEPS.length) * 100
+  const progress = ((currentIdx + 1) / steps.length) * 100
   const cancellable = data ? isCancellable(data, ownedId) : false
   const enRuta = current === 'ontheway' || current === 'delivered'
   const etapaPrepago = data ? prepayStage(data) : null
@@ -167,6 +181,16 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
                   onProofUploaded={load}
                 />
 
+                {/* Y solo cuando NO hay nada que hacer, la pregunta por el
+                    pedido anterior. Va después de la zona de acción y no antes
+                    porque compite con ella: con el plazo de cancelar corriendo
+                    o un prepago sin resolver, la atención ya tiene dueño. Y
+                    espera a que se cierre la hoja del permiso de avisos —dos
+                    peticiones seguidas se descartan las dos—. */}
+                {enEspera && !cancellable && !etapaPrepago && !ofertaPush.abierta && (
+                  <ReviewCard estado={resena} />
+                )}
+
                 {/* 3 · Referencia
                     Los dos rieles NUNCA coinciden en pantalla, y no es por
                     estética: mientras el prepago está sin resolver, este de
@@ -181,7 +205,7 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
                     Se reparten el turno solos: `prepayStage` devuelve `null` de
                     `preparing` en adelante, que es exactamente cuando este
                     empieza a moverse y el otro deja de tener sujeto. */}
-                {!etapaPrepago && <TrackingSteps currentIdx={currentIdx} />}
+                {!etapaPrepago && <TrackingSteps currentIdx={currentIdx} steps={steps} />}
               </>
             )}
           </div>

@@ -1,11 +1,12 @@
 'use client'
 
 import type { PaymentQrView } from '@tindivo/contracts'
-import { cn, Icon } from '@tindivo/ui'
+import { Button, cn, Icon } from '@tindivo/ui'
 
 import { useEffect, useState } from 'react'
 import { formatReadyDelta, type OrderVM } from '@/lib/orders/view-model'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
+import { printComanda } from './pedido-detail/comanda-ticket'
 import { CANCEL_REASONS, REJECT_REASONS_BASE, REJECT_REASONS_TAIL } from './pedido-detail/constants'
 import { DetailRow } from './pedido-detail/detail-row'
 import { EditarPedidoModal } from './pedido-detail/editar-modal'
@@ -24,7 +25,12 @@ export type { DetailItem, RejectReason }
 
 export interface DetailActions {
   onClose: () => void
-  onAccept: (prepMinutes: number) => void | Promise<void>
+  /**
+   * `paymentReal` solo en un recojo «ahora» que no sea prepago: ahí el cobro
+   * ocurre AL ACEPTAR, con el cliente en la caja, y `advance_order` lo exige
+   * (0224). Lo pregunta `PrepTimeModal`; el resto de caminos no lo mandan.
+   */
+  onAccept: (prepMinutes: number, paymentReal?: 'paid_cash' | 'paid_yape') => void | Promise<void>
   onReject: (code: string, text: string) => void | Promise<void>
   onVerifyProof: () => void | Promise<void>
   onRejectProof: () => void | Promise<void>
@@ -32,6 +38,18 @@ export interface DetailActions {
   onConfirmDirectPayment: (prepMinutes: number) => void | Promise<void>
   onExtend: () => void | Promise<void>
   onReady: () => void | Promise<void>
+  /**
+   * RECOJO · el cliente vino y se llevó su pedido. Ver `useOrderActions`.
+   *
+   * `undefined` cuando el pedido ya venía cobrado (prepago, o recojo «ahora»
+   * cobrado al aceptar): ahí no se declara nada nuevo y la RPC usa lo que ya
+   * hay en la fila.
+   */
+  onHandover: (paymentReal?: 'paid_cash' | 'paid_yape') => void | Promise<void>
+  /** RECOJO · nadie vino por la comida: cancela y deja el strike. */
+  onPickupNoShow: () => void | Promise<void>
+  /** RECOJO · abre WhatsApp con el cliente. `null` si no hay número usable. */
+  onNotifyPickup: (() => void | Promise<void>) | null
   onCancel: (code: string, text: string) => void | Promise<void>
   /** Escala a Tindivo por WhatsApp. Recibe el pedido: también lo llama la
    *  tarjeta del tablero, donde no hay ningún detalle abierto. */
@@ -216,6 +234,7 @@ export function DetailScreen({
   busy,
   isLoadingActions = false,
   mobile = false,
+  bizName,
   actions,
 }: {
   order: OrderVM
@@ -225,6 +244,7 @@ export function DetailScreen({
   busy: boolean
   isLoadingActions?: boolean
   mobile?: boolean
+  bizName?: string
   actions: DetailActions
 }) {
   const [modal, setModal] = useState<null | 'reject' | 'cancel'>(null)
@@ -237,6 +257,8 @@ export function DetailScreen({
   // avisar al motorizado de que entre a recoger y que no esté lista se paga en
   // minutos de moto parada.
   const [confirmReady, setConfirmReady] = useState(false)
+  /** Dos pasos para el planton: cancela comida hecha Y penaliza al cliente. */
+  const [confirmNoShow, setConfirmNoShow] = useState(false)
 
   useEffect(() => {
     const origOverflow = document.body.style.overflow
@@ -328,9 +350,9 @@ export function DetailScreen({
         <PrepTimeModal
           order={order}
           onClose={() => setShowPrepModal(false)}
-          onConfirm={(prepTime) => {
+          onConfirm={(prepTime, paymentReal) => {
             setShowPrepModal(false)
-            actions.onAccept(prepTime)
+            actions.onAccept(prepTime, paymentReal)
           }}
         />
       )}
@@ -345,7 +367,12 @@ export function DetailScreen({
         />
       )}
       {showComandaModal && items && (
-        <ComandaModal order={order} items={items} onClose={() => setShowComandaModal(false)} />
+        <ComandaModal
+          order={order}
+          items={items}
+          bizName={bizName}
+          onClose={() => setShowComandaModal(false)}
+        />
       )}
 
       {/* Header flotante/fijo */}
@@ -441,7 +468,7 @@ export function DetailScreen({
               El de pago se queda: ese sí varía y cambia lo que hay que hacer. */}
           <div className="flex items-center gap-1.5">
             {order.source !== 'manual' && <SourceBadgeMini source={order.source} />}
-            <PayBadgeMini payment={order.payment} />
+            <PayBadgeMini order={order} />
           </div>
         </div>
         <div className="shrink-0 flex items-center">
@@ -577,8 +604,15 @@ export function DetailScreen({
                   className="mt-0.5 shrink-0 text-brand"
                 />
                 <div className="min-w-0">
+                  {/* `||` y NO `??`. `delivery_reference` llega como cadena
+                      vacía, no como NULL, así que `??` la daba por buena y
+                      pintaba un pin con nada al lado — mientras la guarda de
+                      arriba, que sí usa `||`, dejaba entrar el bloque. Se veía
+                      en TODO recojo web, que es donde la referencia no existe.
+                      Los dos operadores tienen que ser el mismo o la condición
+                      y el contenido hablan de cosas distintas. */}
                   <div className="text-[14px] leading-normal">
-                    {order.addressRef ?? order.address}
+                    {order.addressRef || order.address}
                   </div>
                   {order.addressRef && order.address && (
                     <div className="text-[12px] leading-normal text-ink-muted">{order.address}</div>
@@ -604,14 +638,24 @@ export function DetailScreen({
                   Comanda ({items.length} {items.length === 1 ? 'ítem' : 'ítems'})
                 </span>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowComandaModal(true)}
-                className="inline-flex items-center gap-1 rounded-lg bg-surface px-2.5 py-1 text-[11px] font-semibold text-ink-muted transition-colors hover:bg-surface-high hover:text-ink"
-              >
-                <Icon weight={500} name="fullscreen" size={14} />
-                <span>Ver en grande</span>
-              </button>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => printComanda({ order, items, bizName })}
+                  className="inline-flex items-center gap-1 rounded-lg border border-border/70 bg-white px-2.5 py-1 text-[11px] font-semibold text-ink shadow-xs transition-colors hover:bg-surface active:scale-95"
+                >
+                  <Icon weight={500} name="receipt_long" size={14} className="text-brand" />
+                  <span>Imprimir</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowComandaModal(true)}
+                  className="inline-flex items-center gap-1 rounded-lg bg-surface px-2.5 py-1 text-[11px] font-semibold text-ink-muted transition-colors hover:bg-surface-high hover:text-ink"
+                >
+                  <Icon weight={500} name="fullscreen" size={14} />
+                  <span>Ver en grande</span>
+                </button>
+              </div>
             </div>
             <div className="flex flex-col divide-y divide-border/60">
               {items.map((it, i) => (
@@ -669,7 +713,22 @@ export function DetailScreen({
               <DetailRow label="Total del pedido" value={soles(order.amount)} mono />
               <DetailRow label="Delivery" value={soles(order.deliveryFee)} mono />
               <div className="mt-1 flex items-center justify-between border-t border-ink/10 pt-2 text-[15px]">
-                <span className="font-bold text-ink">Total a cobrar</span>
+                {/* «A COBRAR» ES UNA ORDEN, Y NO SE DA DOS VECES.
+                    Con el dinero ya dentro esta fila mandaba cobrar otra vez —
+                    el mismo fallo que `PaySectionCash` tenía justo debajo y que
+                    `0ef8e24` arregló en la tarjeta y en el pie. Aquí sobrevivió
+                    porque esta tarjeta compacta solo sale cuando el pedido NO
+                    trae ítems, que es el manual en el que la cajera teclea el
+                    total (0129): no aparece en el recorrido de un pedido del
+                    cliente, y por eso ningún ojo la pilló.
+
+                    Cobrado, se queda en «Total» — que es además lo que dice la
+                    rama de al lado, la de la comanda. La respuesta de si entró
+                    el dinero la da `cobroEnCaja` en la sección de pago; esta
+                    fila solo tiene que dejar de mandar. */}
+                <span className="font-bold text-ink">
+                  {order.yaCobrado ? 'Total' : 'Total a cobrar'}
+                </span>
                 <span className="font-mono text-[18px] font-extrabold text-ink">
                   {soles(order.total)}
                 </span>
@@ -747,8 +806,17 @@ export function DetailScreen({
             >
               <Icon weight={500} name="add" size={14} /> +10 min
             </button>
+            {/* EN UN RECOJO NO HAY MOTORIZADO AL QUE ADELANTARSE.
+                La condición que de verdad impone `extend_order_prep` es una
+                sola —que el pedido siga en `preparing`— y esta frase la traduce
+                al hecho que la cajera reconoce en cada canal: en delivery, la
+                moto que va a aparecer en la puerta; en el mostrador, el momento
+                en que ella misma pulsa «lista». Decirle lo del motorizado a un
+                recojo la deja esperando una señal que no va a llegar nunca. */}
             <div className="mt-1.5 text-[11px] text-ink-muted">
-              Solo disponible una vez y antes de que llegue el motorizado.
+              {order.method === 'pickup'
+                ? 'Solo disponible una vez y antes de marcar la comida lista.'
+                : 'Solo disponible una vez y antes de que llegue el motorizado.'}
             </div>
           </div>
         )}
@@ -882,16 +950,180 @@ export function DetailScreen({
                   className="inline-flex flex-[2] items-center justify-center gap-2 rounded-xl bg-brand px-5 py-3 text-[15px] font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-50"
                 >
                   <Icon weight={500} name="check" size={18} filled />
-                  {isPrepaid ? 'Aceptar disponibilidad' : 'Aceptar pedido'}
+                  {/* EL BOTON ES EL MISMO; LO QUE CAMBIA ES LO QUE SE CONFIRMA.
+                      En un recojo «ahora» este toque es ADEMAS la verificacion
+                      antifraude entera: ese pedido no paso por `validando`
+                      porque se dio por hecho que ella iba a mirar a quien lo
+                      hizo antes de mandarlo a cocina. Si el boton dijera solo
+                      «Aceptar pedido», la unica garantia del canal quedaria sin
+                      pedirse en ninguna parte. */}
+                  {isPrepaid
+                    ? 'Aceptar disponibilidad'
+                    : order.pickupTiming === 'now'
+                      ? // 0224: el toque ya no es solo «lo vi», es «lo vi y le
+                        // cobré». El modal pide las dos cosas.
+                        'Cliente presente · cobrar'
+                      : 'Aceptar pedido'}
                 </button>
               </div>
-              {isPrepaid && (
+              {isPrepaid ? (
                 <div className="text-center text-[11px] text-ink-muted">
                   Confirmas disponibilidad para preparar. El cliente procederá a realizar el pago
                   por Yape/Plin.
                 </div>
-              )}
+              ) : order.pickupTiming === 'now' ? (
+                <div className="text-center text-[11px] text-ink-muted">
+                  Dice estar en el local. Míralo y cóbrale antes de aceptar: si no está, rechaza y
+                  no se cocina nada.
+                </div>
+              ) : null}
             </>
+          )}
+        </div>
+      )}
+
+      {/* ── Footer del mostrador: las dos únicas salidas de un recojo ──
+          Un recojo no lo cierra nadie más. `deliver` y `no_show` los escribe el
+          motorizado y aquí no hay ninguno, así que sin estos dos botones la
+          bolsa se queda en `ready_for_pickup` para siempre — y con ella el
+          guard de pedido activo, que impediría a ese cliente volver a pedir en
+          este restaurante. Es el modo de fallo que `PICKUP_ENABLED` llevaba
+          documentado desde que se apagó la bandera.
+
+          «No vino» está a la misma altura que «Entregado» pero en gris y con
+          confirmación: cancela comida ya hecha Y le deja un strike al cliente
+          (dos strikes = prepago obligado, DECISIONS §8). No es una acción que
+          se pulse por descarte. */}
+      {order.canHandOver && (
+        <div className="shrink-0 border-t border-border bg-white px-3.5 pb-3.5 pt-3 shadow-elev-2">
+          {confirmNoShow ? (
+            <div className="space-y-2">
+              <p className="text-[13px] font-semibold text-ink">
+                ¿El cliente no vino por su pedido?
+              </p>
+              {/* LO QUE DICE DEPENDE DE SI HAY DINERO DENTRO (0224).
+                  El strike existe para frenar a quien le genera pérdidas al
+                  negocio, y un recojo cobrado no genera ninguna: la comida está
+                  pagada. `advance_order` ya no lo escribe en ese caso, así que
+                  prometer aquí una falta que no va a ocurrir haría dudar a la
+                  cajera del único botón que cierra el pedido. */}
+              <p className="text-[12px] text-ink-muted">
+                {order.yaCobrado || isPrepaid
+                  ? 'Este pedido ya está pagado, así que no le queda ninguna falta al cliente. La comida es suya: guárdasela hasta que cierres.'
+                  : 'Se cancela el pedido y queda una falta en su cuenta. A la segunda, ese cliente solo podrá pedir con pago adelantado.'}
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="soft"
+                  className="flex-1"
+                  onClick={() => setConfirmNoShow(false)}
+                  disabled={busy}
+                >
+                  Volver
+                </Button>
+                <Button
+                  type="button"
+                  variant="danger"
+                  className="flex-1"
+                  onClick={async () => {
+                    await actions.onPickupNoShow()
+                    setConfirmNoShow(false)
+                  }}
+                  disabled={busy}
+                >
+                  Sí, no vino
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {/* ── AVISAR AL CLIENTE, ANTES QUE LAS DOS SALIDAS ──
+                  El push del recojo listo (0220) solo alcanza a quien concedió
+                  el permiso de notificaciones y conserva una suscripción viva:
+                  en el piloto, una minoría. WhatsApp no depende de ningún
+                  permiso — el cliente ya verificó ese número por OTP para poder
+                  pedir.
+
+                  Va primero porque es lo que se hace ANTES: avisar, esperar, y
+                  solo después entregar o declarar el plantón. Y en gris, no en
+                  color: la acción que cierra el pedido sigue siendo la de
+                  abajo, y dos botones de color compiten por el mismo dedo.
+
+                  «Avisado» y no «Recibido»: `wa.me` se abre fuera del panel y
+                  desde aquí no se sabe si llegó a pulsar enviar. Se puede
+                  repetir las veces que haga falta — cada una pisa la marca. */}
+              {actions.onNotifyPickup && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => actions.onNotifyPickup?.()}
+                  disabled={busy}
+                >
+                  <Icon weight={500} name="chat" size={17} filled />
+                  {order.pickupNotifiedAt
+                    ? `Volver a avisar · avisado ${order.pickupNotifiedAt}`
+                    : 'Avisar por WhatsApp que está listo'}
+                </Button>
+              )}
+              {/* YA COBRADO = NO SE VUELVE A PREGUNTAR (0224).
+                  Un recojo «ahora» se cobró al aceptarlo y un prepago llegó
+                  pagado: en los dos, la pregunta «¿cómo pagó?» pediría por
+                  segunda vez un dato que ya está en la fila, y una segunda
+                  respuesta distinta reescribiría la primera. Queda un solo
+                  botón, que es además lo único que falta por hacer. */}
+              {isPrepaid || order.yaCobrado ? (
+                <Button
+                  type="button"
+                  variant="success"
+                  className="w-full"
+                  onClick={() => actions.onHandover()}
+                  disabled={busy}
+                >
+                  <Icon weight={500} name="shopping_bag" size={18} filled /> Se lo llevó
+                </Button>
+              ) : (
+                <>
+                  {/* El cobro REAL, no el planeado: en el mostrador el cliente
+                      cambia de idea sobre la marcha y quien lo ve es ella. Es la
+                      misma pregunta que responde el motorizado al entregar. */}
+                  <p className="text-[12px] font-semibold text-ink-muted">
+                    Se lo llevó · ¿cómo pagó?
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="success"
+                      className="flex-1 px-4"
+                      onClick={() => actions.onHandover('paid_cash')}
+                      disabled={busy}
+                    >
+                      <Icon weight={500} name="payments" size={18} filled /> Efectivo
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="success"
+                      className="flex-1 px-4"
+                      onClick={() => actions.onHandover('paid_yape')}
+                      disabled={busy}
+                    >
+                      <Icon weight={500} name="qr_code_2" size={18} filled /> Yape/Plin
+                    </Button>
+                  </div>
+                </>
+              )}
+              <Button
+                type="button"
+                variant="soft"
+                size="sm"
+                className="w-full"
+                onClick={() => setConfirmNoShow(true)}
+                disabled={busy}
+              >
+                El cliente no vino
+              </Button>
+            </div>
           )}
         </div>
       )}
@@ -907,7 +1139,18 @@ export function DetailScreen({
             <div className="flex items-center gap-2.5 rounded-[14px] border border-success bg-success-soft px-3.5 py-3">
               <Icon weight={500} name="check_circle" size={20} filled className="text-success" />
               <span className="text-[13px] font-semibold text-success">
-                Comida lista. El motorizado ya lo sabe.
+                {/* «YA LO SABE» NO SE PUEDE AFIRMAR DE UN CLIENTE.
+                    El push de «listo» solo alcanza a quien concedió el permiso
+                    de notificaciones y conserva una suscripción viva: en el
+                    piloto, una minoría. Decirle a la cajera que el cliente ya
+                    está enterado es justo lo que hace que no pulse el botón de
+                    WhatsApp que hay dos filas más abajo — el botón que existe
+                    porque el push NO basta (0221).
+                    Del motorizado sí se afirma: su app es una herramienta de
+                    trabajo y el permiso entra en su alta. */}
+                {order.method === 'pickup'
+                  ? 'Comida lista en el mostrador. Le mandamos aviso a la app; si no aparece, escríbele por WhatsApp.'
+                  : 'Comida lista. El motorizado ya lo sabe.'}
               </span>
             </div>
           ) : confirmReady ? (
@@ -939,7 +1182,8 @@ export function DetailScreen({
               disabled={busy}
               className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-success px-5 py-3 text-[15px] font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-50"
             >
-              <Icon weight={500} name="inventory_2" size={18} filled /> Listo — llamar moto
+              <Icon weight={500} name="inventory_2" size={18} filled />{' '}
+              {order.method === 'pickup' ? 'Listo — avisar al cliente' : 'Listo — llamar moto'}
             </button>
           )}
         </div>

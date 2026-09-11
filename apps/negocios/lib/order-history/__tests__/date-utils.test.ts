@@ -54,3 +54,44 @@ describe('date-utils (Lima UTC-5)', () => {
     expect(formatRangeLabel('2026-07-25', '2026-08-05')).toBe('25/07 al 05/08/2026')
   })
 })
+
+/**
+ * `excludeToday` lo pide solo «Rendimiento», donde promediar una noche que aún
+ * no ha pasado metía un sesgo a la baja en todas las comparaciones. Historial y
+ * Reseñas siguen incluyendo hoy, y estos tests son los que avisan si alguien
+ * convierte la opción en el comportamiento por defecto y les esconde el día en
+ * curso a esas dos listas.
+ */
+describe('getPresetRange con excludeToday', () => {
+  it('deja los rangos móviles terminando ayer, sin acortarlos', () => {
+    const todayStr = getLimaDate()
+
+    const siete = getPresetRange('last_7_days', { excludeToday: true })
+    expect(siete.end < todayStr).toBe(true)
+    expect(dias(siete.start, siete.end)).toBe(7)
+
+    const quince = getPresetRange('last_15_days', { excludeToday: true })
+    expect(quince.end).toBe(siete.end)
+    expect(dias(quince.start, quince.end)).toBe(15)
+  })
+
+  it('no cambia nada cuando no se pide', () => {
+    const todayStr = getLimaDate()
+    expect(getPresetRange('last_7_days').end).toBe(todayStr)
+    expect(getPresetRange('last_7_days', {})).toEqual(getPresetRange('last_7_days'))
+    expect(dias(getPresetRange('last_7_days').start, todayStr)).toBe(7)
+  })
+
+  it('no toca los rangos que significan «lo que va de»', () => {
+    const todayStr = getLimaDate()
+    for (const preset of ['today', 'this_week', 'this_month'] as const) {
+      expect(getPresetRange(preset, { excludeToday: true }).end).toBe(todayStr)
+    }
+  })
+})
+
+/** Días inclusivos entre dos fechas `YYYY-MM-DD`. */
+function dias(start: string, end: string): number {
+  const ms = Date.parse(`${end}T12:00:00Z`) - Date.parse(`${start}T12:00:00Z`)
+  return Math.round(ms / 86_400_000) + 1
+}

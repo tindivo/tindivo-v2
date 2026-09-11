@@ -31,6 +31,22 @@ setup('sesión de negocios', async ({ page }) => {
   await page.evaluate(() => {
     localStorage.setItem('tindivo_sound_on', 'true')
     localStorage.setItem('tindivo_notifications_gate_dismissed', 'true')
+    /**
+     * Y DA POR HECHA LA PRUEBA DE SONIDO DE ESTE TURNO.
+     *
+     * `7bed05c` puso una barra roja fija —«Sonido sin comprobar. Podrías no
+     * enterarte de un pedido.»— encima de TODAS las rutas del panel mientras el
+     * negocio esté abierto y nadie haya confirmado que oye la alarma. En un
+     * navegador de verdad la confirma una persona; aquí no hay nadie que
+     * escuche, así que sin esto la barra sale siempre, empuja 44 px la página
+     * entera y las seis capturas fallan con el 20-30% de los píxeles por algo
+     * que no es la pantalla que se está mirando.
+     *
+     * Va aquí y no enmascarado porque no es un elemento volátil: es un estado
+     * del aparato, y el aparato de las capturas es este. Vecino de
+     * `tindivo_sound_on`, por la misma razón.
+     */
+    localStorage.setItem('tindivo_sound_check_at', String(Date.now()))
   })
 
   await page.context().storageState({ path: SESSION })

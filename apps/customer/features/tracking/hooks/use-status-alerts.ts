@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { alertFor, type TrackingAlert, trackingSignal } from '@/features/tracking/lib/alerts'
 import { playChime, unlockChimes, VIBRACION } from '@/features/tracking/lib/chime'
 import type { Tracking } from '@/features/tracking/types'
+import { playCustomerSound } from '@/lib/sound'
 
 const CLAVE = 'tindivo:tracking-alerts'
 
@@ -90,7 +91,13 @@ export function useStatusAlerts(data: Tracking | null): StatusAlerts {
     setAlerta(aviso)
 
     const visible = document.visibilityState === 'visible'
-    if (visible && sonidoRef.current) playChime(aviso.tone)
+    if (visible && sonidoRef.current) {
+      if (aviso.sound) {
+        playCustomerSound(aviso.sound)
+      } else {
+        playChime(aviso.tone)
+      }
+    }
     if (typeof navigator.vibrate === 'function') {
       try {
         navigator.vibrate(VIBRACION[aviso.tone])

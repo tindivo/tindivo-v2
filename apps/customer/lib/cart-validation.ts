@@ -1,6 +1,7 @@
+import { itemWindowState } from '@/features/catalog/lib/availability'
 import type { BusinessDetail, MenuItem, ModOption } from '@/features/catalog/types'
 
-export type CartIssueKind = 'removed' | 'unavailable' | 'price_changed'
+export type CartIssueKind = 'removed' | 'unavailable' | 'out_of_window' | 'price_changed'
 
 export interface CartLineIssue {
   kind: CartIssueKind
@@ -91,6 +92,15 @@ export function validateCartAgainstCatalog(
     } else {
       if (!catalogItem.is_available) {
         issues.push({ kind: 'unavailable', message: 'Producto agotado por ahora' })
+      }
+      // FUERA DE SU FRANJA (0226). Es el caso del cliente que dejo el ceviche en
+      // la bolsa el domingo a mediodia y vuelve el martes de noche: el plato
+      // existe, no se ha agotado y el precio no ha cambiado, pero esa noche no
+      // se cocina. Sin esto el checkout llega hasta la RPC y vuelve con un error
+      // generico; con esto se lo dice la bolsa, y con la franja dentro.
+      const franja = itemWindowState(catalogItem)
+      if (franja.outOfWindow) {
+        issues.push({ kind: 'out_of_window', message: franja.label ?? 'Fuera de su horario' })
       }
       if (catalogItem.base_price !== line.unitPrice && line.modifiers.length === 0) {
         // Precio base cambió y la línea no lleva modificadores.

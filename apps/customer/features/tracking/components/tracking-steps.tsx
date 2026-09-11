@@ -1,8 +1,18 @@
 import { Icon } from '@tindivo/ui'
-import { STEPS } from '@/features/tracking/lib/format'
+import type { STEPS } from '@/features/tracking/lib/format'
 
 interface TrackingStepsProps {
   currentIdx: number
+  /**
+   * Los pasos YA elegidos por metodo (`stepsFor`), no la constante.
+   *
+   * El stepper importaba `STEPS` directamente, asi que era imposible que
+   * dijera «Listo para recoger» sin duplicar aqui la decision de que texto
+   * toca. Recibiendolos, el nombre del tercer paso se decide UNA vez, en la
+   * pagina, y el hero y el stepper no pueden acabar diciendo cosas distintas
+   * del mismo pedido.
+   */
+  steps: typeof STEPS
 }
 
 /**
@@ -18,14 +28,14 @@ interface TrackingStepsProps {
  * puede hacer: enseñar el camino entero de un vistazo. El detalle del paso en
  * curso se queda donde ya estaba, arriba.
  */
-export function TrackingSteps({ currentIdx }: TrackingStepsProps) {
+export function TrackingSteps({ currentIdx, steps }: TrackingStepsProps) {
   return (
     <ol className="mt-3.5 flex rounded-[22px] border border-ink/[0.04] bg-card px-3 py-4 shadow-elev-1">
-      {STEPS.map((s, i) => {
+      {steps.map((s, i) => {
         const done = i < currentIdx
         const active = i === currentIdx
         const first = i === 0
-        const last = i === STEPS.length - 1
+        const last = i === steps.length - 1
 
         return (
           <li key={s.key} className="relative flex flex-1 flex-col items-center">

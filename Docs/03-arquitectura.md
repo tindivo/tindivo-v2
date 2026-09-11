@@ -87,7 +87,7 @@
 ```
 tindivo-v2/
 ├── apps/
-│   ├── api/                     # api.tindivo.com — REST único (Next.js)
+│   ├── api/                     # apiv2.tindivo.com — REST único (Next.js)
 │   ├── customer/                # tindivo.com — PWA cliente (Next.js)
 │   ├── admin/                   # admin.tindivo.com — Panel control (Next.js)
 │   ├── negocios/                # negocios.tindivo.com — PWA negocio (Next.js)
@@ -132,7 +132,7 @@ tindivo-v2/
 
 Cada app es un proyecto Next.js independiente con su propio `package.json`, `next.config.ts`, `tailwind.config.ts`. Pueden tener dependencias distintas (e.g., `apps/customer` no necesita `leaflet`).
 
-### 4.1 `apps/api` (api.tindivo.com)
+### 4.1 `apps/api` (apiv2.tindivo.com)
 
 - REST único.
 - Estructura: `app/api/v1/<path>/route.ts` (App Router).
@@ -429,7 +429,7 @@ apps/negocios/src/
 
 ## 8. Comunicación entre apps · REST único
 
-Todas las apps frontend (`customer`, `admin`, `negocios`, `motorizados`) consumen el mismo `api.tindivo.com`. NO hay Server Actions (por compatibilidad con Capacitor futuro y por separación cliente/servidor explícita).
+Todas las apps frontend (`customer`, `admin`, `negocios`, `motorizados`) consumen el mismo `apiv2.tindivo.com`. NO hay Server Actions (por compatibilidad con Capacitor futuro y por separación cliente/servidor explícita).
 
 ### Convenciones
 
@@ -824,7 +824,7 @@ notificaciones con datos del cliente en la vista previa.
            └───────────────────┼───────────────────┼───────────────────┘
                                ▼
                     ┌──────────────────────┐
-                    │  api.tindivo.com     │
+                    │  apiv2.tindivo.com   │
                     │  Next.js REST + Inngest serve │
                     └──────┬────────┬──────┘
                            │        │

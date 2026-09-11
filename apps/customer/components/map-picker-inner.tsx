@@ -1,7 +1,7 @@
 'use client'
 
 import L, { type LatLngBoundsExpression } from 'leaflet'
-import { type RefObject, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, type RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Circle,
   MapContainer,
@@ -412,6 +412,38 @@ function repartirRotulos(
 }
 
 /**
+ * Cuánta holgura se pinta MÁS ALLÁ del borde del lienzo antes de dejar de
+ * montar marcadores.
+ *
+ * Existe porque un marcador que no se ve igual cuesta: su `<div>`, su SVG y su
+ * halo de diez sombras están en el DOM y se recomponen con el panel cada vez
+ * que el mapa se mueve. Con el pueblo entero cargado —hoy 60 referencias— la
+ * postal de 180 px del formulario montaba las 60 para enseñar cuatro.
+ *
+ * SON DOS HOLGURAS, Y LA DIFERENCIA ES SI EL DEDO PUEDE ARRASTRAR.
+ *
+ *   - INTERACTIVO: media pantalla, con un piso de 200 px. El reparto solo se
+ *     rehace al posarse el mapa (`moveend`), así que lo que no esté montado al
+ *     empezar el gesto no aparece hasta soltar. Con media pantalla de colchón
+ *     un arrastre normal nunca llega al borde de lo montado, y el que sí llega
+ *     —un manotazo largo— rellena al posarse, que es cuando Leaflet trae los
+ *     tiles de todas formas.
+ *   - POSTAL: 60 px y basta. Ese lienzo va con `interactive: false` y
+ *     `pointer-events: none`: no hay gesto que pueda destapar un hueco, así que
+ *     la holgura solo cubre el `flyTo` del botón de GPS.
+ *
+ * Es MÁS ANCHA que el `MARGEN` de `repartirRotulos` a propósito: allá el margen
+ * decide quién entra en la pelea por un rótulo, y quien queda fuera conserva su
+ * nombre sin comprobar choques. Si el recorte fuera más estrecho que aquel
+ * margen, esa holgura sin verificar se vería; siendo más ancho, todo lo que se
+ * ve pasó por el reparto igual que antes.
+ */
+function margenCulling(lienzo: L.Point, interactivo: boolean): number {
+  if (!interactivo) return 60
+  return Math.max(Math.max(lienzo.x, lienzo.y) / 2, 200)
+}
+
+/**
  * Las referencias del pueblo (`map_landmarks`), pintadas por debajo del pin.
  *
  * NUNCA SON TOCABLES (`interactive: false`). El gesto entero de esta pantalla
@@ -419,13 +451,38 @@ function repartirRotulos(
  * arrastre que empieza encima de él — el mismo defecto que ya obligó a sacar
  * el mapa del formulario y llevarlo a pantalla completa. Aquí son decorado
  * que informa, no controles.
+ *
+ * LO QUE ESTA CAPA NO PUEDE PERMITIRSE.
+ *
+ * react-leaflet compara TODAS las props por identidad y traduce cada cambio en
+ * una llamada imperativa sobre el marcador vivo (ver `updateMarker` en
+ * `react-leaflet/lib/Marker.js`). Eso convierte dos descuidos de JavaScript en
+ * trabajo de verdad, multiplicado por el número de referencias:
+ *
+ *   - `position={[l.lat, l.lng]}` escrito en el JSX es un array NUEVO en cada
+ *     render, así que `props.position !== prevProps.position` siempre y salían
+ *     60 `setLatLng()` por render — incluido cada tecleo en el formulario, que
+ *     re-renderiza este árbol entero sin haber tocado el mapa. Por eso las
+ *     posiciones viven en un `Map` memoizado: las referencias no se mueven
+ *     nunca, así que su array tampoco tiene por qué cambiar.
+ *
+ *   - un `L.divIcon` nuevo dispara `setIcon()`, y eso NO es barato: Leaflet
+ *     rehace el icono con `div.innerHTML = html`, o sea que reparsea el SVG y
+ *     vuelve a rasterizar el halo de diez sombras del rótulo. Antes se creaban
+ *     los 60 iconos en cada `moveend` aunque el reparto hubiera movido dos, y
+ *     el tirón caía justo al soltar el dedo. De ahí la caché: la clave es lo
+ *     ÚNICO que cambia el HTML del marcador —chapa, nombre y lado—, así que un
+ *     punto colocado igual que en la pasada anterior recibe el MISMO objeto y
+ *     react-leaflet no lo toca.
  */
 function LandmarkLayer({
   landmarks,
   showLabels,
+  interactivo,
 }: {
   landmarks: readonly Landmark[]
   showLabels: boolean
+  interactivo: boolean
 }) {
   const map = useMap()
   const [zoom, setZoom] = useState(() => map.getZoom())
@@ -436,13 +493,43 @@ function LandmarkLayer({
    * para recalcular, y guardar el centro obligaría a compararlo con épsilones.
    *
    * VA EN `moveend`, NO EN `move`. Es la diferencia entre recalcular una vez al
-   * soltar el dedo y hacerlo sesenta veces por segundo mientras se arrastra —y
-   * cada recálculo rehace el DOM de todos los marcadores.
+   * soltar el dedo y hacerlo sesenta veces por segundo mientras se arrastra.
    */
   const [pasada, setPasada] = useState(0)
+
+  /*
+   * UN RECÁLCULO POR FOTOGRAMA, NO UNO POR EVENTO.
+   *
+   * `invalidateSize()` no dispara un evento: dispara DOS. Cuando el tamaño
+   * cambió de verdad, Leaflet emite `moveend` y acto seguido `resize` (está a
+   * la vista en `invalidateSize`, en leaflet-src). Y como `InvalidateSize`
+   * vuelve a medir a los 0, 150 y 450 ms para sobrevivir a la animación del
+   * sheet, abrir la pantalla completa costaba hasta SEIS repartos seguidos —
+   * todos durante la animación, que es el peor momento para robar hilo
+   * principal: es justo lo que hacía que abrir el mapa se sintiera pesado.
+   *
+   * El `requestAnimationFrame` colapsa cada ráfaga en una sola pasada. No es un
+   * debounce con reloj: no añade retraso perceptible, solo se niega a hacer dos
+   * veces el mismo trabajo dentro del mismo fotograma.
+   */
+  const pendiente = useRef<number | null>(null)
+  const repintar = useCallback(() => {
+    if (pendiente.current != null) return
+    pendiente.current = requestAnimationFrame(() => {
+      pendiente.current = null
+      setPasada((n) => n + 1)
+    })
+  }, [])
+  useEffect(
+    () => () => {
+      if (pendiente.current != null) cancelAnimationFrame(pendiente.current)
+    },
+    [],
+  )
+
   useMapEvents({
     zoomend: (e) => setZoom(e.target.getZoom()),
-    moveend: () => setPasada((n) => n + 1),
+    moveend: repintar,
     /*
      * `resize` NO ES DECORATIVO AQUÍ, es lo que hace que el primer reparto
      * valga. Este lienzo nace dentro de un bottom-sheet que todavía está
@@ -455,7 +542,7 @@ function LandmarkLayer({
      * colocándose bien al primer toque, que es el peor síntoma posible: el
      * defecto desaparece justo cuando vas a mirarlo.
      */
-    resize: () => setPasada((n) => n + 1),
+    resize: repintar,
   })
 
   const visibles = zoom >= LANDMARK_MIN_ZOOM
@@ -469,41 +556,70 @@ function LandmarkLayer({
    */
   const detallado = showLabels && zoom >= LANDMARK_LABEL_MIN_ZOOM
 
-  const iconos = useMemo(
-    () =>
-      visibles
-        ? repartirRotulos(map, landmarks, detallado).map(
-            (c) =>
-              /*
-               * LA CHAPA VA CON EL ZOOM, EL NOMBRE CON EL REPARTO. Antes las dos
-               * salían de la misma condición y el efecto era el contrario del que
-               * se quería: la referencia que perdía el rótulo por un choque perdía
-               * TAMBIÉN su icono y caía al punto genérico, o sea que dejaba de
-               * decir siquiera de qué categoría era. Perder el nombre cuesta el
-               * nombre; no tiene por qué costar «aquí hay una botica».
-               */
-              [c.landmark, iconoDe(c.landmark, detallado, c.conNombre, c.aLaIzquierda)] as const,
-          )
-        : [],
+  /** El array de cada punto, creado UNA vez. Ver la cabecera del componente. */
+  const posiciones = useMemo(() => {
+    const m = new Map<string, [number, number]>()
+    for (const l of landmarks) m.set(l.id, [l.lat, l.lng])
+    return m
+  }, [landmarks])
+
+  /*
+   * Iconos por clave `id|chapa|nombre|lado`. Sobrevive ENTRE pasadas a
+   * propósito: la gracia es justamente que un punto que no cambió de colocación
+   * reciba el objeto de la pasada anterior. Se vacía solo si cambia la lista,
+   * que es lo único que puede dejar dentro el HTML de un nombre ya editado.
+   */
+  const cacheIconos = useRef(new Map<string, L.DivIcon>())
+  useEffect(() => {
+    cacheIconos.current.clear()
+  }, [landmarks])
+
+  const marcadores = useMemo(() => {
+    if (!visibles) return []
+    const lienzo = map.getSize()
+    const holgura = margenCulling(lienzo, interactivo)
+    const salida: { id: string; pos: [number, number]; icon: L.DivIcon }[] = []
+
+    for (const c of repartirRotulos(map, landmarks, detallado)) {
+      const p = map.latLngToContainerPoint([c.landmark.lat, c.landmark.lng])
+      if (p.x < -holgura || p.x > lienzo.x + holgura) continue
+      if (p.y < -holgura || p.y > lienzo.y + holgura) continue
+
+      const pos = posiciones.get(c.landmark.id)
+      if (!pos) continue
+
+      /*
+       * LA CHAPA VA CON EL ZOOM, EL NOMBRE CON EL REPARTO. Antes las dos
+       * salían de la misma condición y el efecto era el contrario del que se
+       * quería: la referencia que perdía el rótulo por un choque perdía TAMBIÉN
+       * su icono y caía al punto genérico, o sea que dejaba de decir siquiera
+       * de qué categoría era. Perder el nombre cuesta el nombre; no tiene por
+       * qué costar «aquí hay una botica».
+       */
+      const clave = `${c.landmark.id}|${detallado ? 1 : 0}${c.conNombre ? 1 : 0}${
+        c.aLaIzquierda ? 1 : 0
+      }`
+      let icon = cacheIconos.current.get(clave)
+      if (!icon) {
+        icon = iconoDe(c.landmark, detallado, c.conNombre, c.aLaIzquierda)
+        cacheIconos.current.set(clave, icon)
+      }
+
+      salida.push({ id: c.landmark.id, pos, icon })
+    }
+    return salida
     // `pasada` no se lee dentro: está para que el reparto se rehaga cuando el
     // mapa se posa. Sin ella el memo se quedaría con las posiciones del primer
     // encuadre y los rótulos se solaparían en cuanto alguien arrastrara.
     // (Biome no lo marca: no hace falta suprimir nada, solo explicarlo.)
-    [map, landmarks, detallado, visibles, pasada],
-  )
+  }, [map, landmarks, detallado, visibles, interactivo, posiciones, pasada])
 
   if (!visibles) return null
 
   return (
     <>
-      {iconos.map(([l, icon]) => (
-        <Marker
-          key={l.id}
-          position={[l.lat, l.lng]}
-          icon={icon}
-          interactive={false}
-          keyboard={false}
-        />
+      {marcadores.map((m) => (
+        <Marker key={m.id} position={m.pos} icon={m.icon} interactive={false} keyboard={false} />
       ))}
     </>
   )
@@ -719,7 +835,7 @@ function CenterPin({ moving }: { moving: boolean }) {
  * vista previa dentro de un formulario con scroll sin que el mapa se coma el
  * gesto del dedo.
  */
-export default function MapCanvas({
+function MapCanvas({
   center,
   interactive,
   mode,
@@ -764,17 +880,46 @@ export default function MapCanvas({
   const [moving, setMoving] = useState(false)
   const tiles = TILES[mode]
 
-  const maxBounds: LatLngBoundsExpression | undefined = bounds
-    ? [
-        [bounds.south, bounds.west],
-        [bounds.north, bounds.east],
-      ]
-    : undefined
+  const maxBounds: LatLngBoundsExpression | undefined = useMemo(
+    () =>
+      bounds
+        ? [
+            [bounds.south, bounds.west],
+            [bounds.north, bounds.east],
+          ]
+        : undefined,
+    [bounds],
+  )
 
-  function handleMoving(m: boolean) {
-    setMoving(m)
-    onMovingChange?.(m)
-  }
+  /*
+   * EL ANILLO DE LA ZONA, MEMOIZADO, y no es cosmética.
+   *
+   * `positions` la compara react-leaflet por identidad igual que la `position`
+   * de un marcador (ver `updatePolygon`), así que un `.map()` escrito dentro
+   * del JSX significaba `setLatLngs()` en CADA render: Leaflet vuelve a
+   * proyectar los vértices —hoy son 51— y reescribe el atributo `d` del path
+   * SVG entero. Se pagaba al arrastrar, al abrir el sheet y en cada tecla que
+   * alguien escribía en el formulario de dirección, sin que la zona de reparto
+   * hubiera cambiado nunca. El polígono llega memoizado desde `MapPicker`, así
+   * que esto se calcula una vez por sesión.
+   */
+  const anillo = useMemo(
+    () => polygon?.map((p) => [p.lat, p.lng] as [number, number]) ?? null,
+    [polygon],
+  )
+
+  const handleMoving = useCallback(
+    (m: boolean) => {
+      setMoving(m)
+      onMovingChange?.(m)
+    },
+    [onMovingChange],
+  )
+
+  const handleSettle = useCallback(
+    (c: LatLng, byUser: boolean) => onSettle?.(c, byUser),
+    [onSettle],
+  )
 
   return (
     <div className="relative h-full w-full">
@@ -812,11 +957,8 @@ export default function MapCanvas({
           // el tope de la imagen.
           <TileLayer key="sat-labels" url={SATELLITE_LABELS} maxNativeZoom={19} maxZoom={19} />
         )}
-        {polygon ? (
-          <Polygon
-            positions={polygon.map((p) => [p.lat, p.lng] as [number, number])}
-            pathOptions={ZONE_STYLE}
-          />
+        {anillo ? (
+          <Polygon positions={anillo} pathOptions={ZONE_STYLE} />
         ) : circle ? (
           <Circle
             center={[circle.center.lat, circle.center.lng]}
@@ -828,14 +970,16 @@ export default function MapCanvas({
             paso, por orden de pintado — las referencias quedan encima de la
             mancha de la zona y siempre por debajo del pin, que vive fuera de
             Leaflet. */}
-        {landmarks.length > 0 && <LandmarkLayer landmarks={landmarks} showLabels={interactive} />}
+        {landmarks.length > 0 && (
+          <LandmarkLayer landmarks={landmarks} showLabels={interactive} interactivo={interactive} />
+        )}
         <InvalidateSize />
         {interactive ? (
           <>
             <GestureWatch gestureRef={gestureRef} />
             <CenterTracker
               gestureRef={gestureRef}
-              onSettle={(c, byUser) => onSettle?.(c, byUser)}
+              onSettle={handleSettle}
               onMovingChange={handleMoving}
             />
             {flyTarget && <FlyTo target={flyTarget} token={flyToken} gestureRef={gestureRef} />}
@@ -848,3 +992,23 @@ export default function MapCanvas({
     </div>
   )
 }
+
+/**
+ * MEMOIZADO, y el motivo está fuera de este archivo.
+ *
+ * `MapPicker` vive dentro del formulario de dirección, y `address-sheet.tsx`
+ * guarda ese formulario en un solo objeto que reemplaza entero en cada cambio
+ * (`patch()` hace `{ ...a, ...p }`). Así que escribir una letra en "Dirección"
+ * o en "Referencia" re-renderizaba este árbol completo — Leaflet incluido—
+ * aunque `coords` no se hubiera tocado. Cada tecla costaba los `setLatLng()` de
+ * todas las referencias y el re-trazado del anillo de la zona.
+ *
+ * Con las props ya estables aguas arriba (`bounds`, `circle` y `landmarks`
+ * memoizados en `MapPicker`; `onSettle` y `onMovingChange` con `useCallback` en
+ * `LocationSheet`), la comparación superficial de `memo` corta ese render en
+ * seco: el mapa solo se vuelve a pintar cuando algo del mapa cambió.
+ *
+ * `next/dynamic` toma el `.default` de este módulo, y un componente memoizado
+ * funciona igual ahí.
+ */
+export default memo(MapCanvas)

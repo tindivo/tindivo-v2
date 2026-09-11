@@ -1,4 +1,4 @@
-import type { PaymentIntent } from '@tindivo/contracts'
+import { customerPaymentIntents, type DeliveryMethod, type PaymentIntent } from '@tindivo/contracts'
 import type { SavedAddress } from '@/lib/address-record'
 
 // Vive en `lib/` porque los términos y condiciones prometen este mismo número y
@@ -42,21 +42,28 @@ export const CUSTOMER_NOTE_MAX = 200
 export const NEAR_DELIVERY_FEE = 2.0
 
 /**
- * Recojo en tienda, desactivado para el piloto (DECISIONS.md: "pickup inactivo;
- * post-piloto"). Mientras esta bandera sea `false`, `unified-checkout` no
- * renderiza el selector y `deliveryMethod` se queda en 'delivery'.
+ * Recojo en tienda. Encendido por la 0219/0220, que cerraron el modo de fallo
+ * que mantenía esta bandera apagada.
  *
- * NO activarla sin recorrer el flujo entero primero. El backend lo soporta
- * (`delivery_fee = 0`, comisión de pickup configurada en 1.00) pero nunca se ha
- * ejercitado de punta a punta, y tiene un modo de fallo identificado:
+ * LO QUE DECÍA ESTA NOTA, Y CÓMO SE RESOLVIÓ. «Todas las transiciones
+ * intermedias las escribe el MOTORIZADO — take, arrived, pickup, deliver. En un
+ * recojo en tienda no hay motorizado, así que no está claro quién lleva el
+ * pedido a 'delivered'. Un pickup que se quede atascado además bloquea al
+ * cliente para volver a pedir de ese mismo restaurante.»
  *
- *   Todas las transiciones intermedias las escribe el MOTORIZADO — 'take',
- *   'arrived', 'pickup', 'deliver'. En un recojo en tienda no hay motorizado,
- *   así que no está claro quién lleva el pedido a 'delivered'. Un pickup que se
- *   quede atascado además bloquea al cliente para volver a pedir de ese mismo
- *   restaurante, por el guard de pedido activo de 0105.
+ * Era exacto. Ahora ese hueco lo cierran dos acciones del NEGOCIO en
+ * `advance_order` —`handover` (el cliente se lo llevó) y `pickup_no_show`
+ * (nadie vino)—, más el estado `ready_for_pickup` que las hace posibles, y las
+ * dos tienen botón en el detalle del tablero.
+ *
+ * LA BANDERA NO ES EL ÚNICO INTERRUPTOR, y a propósito. Esto solo decide si el
+ * checkout PINTA el selector; que un negocio concreto acepte recojos lo decide
+ * `businesses.accepts_web_pickup`, que la API comprueba por su cuenta. Un
+ * restaurante sin ese permiso sigue rechazando el recojo aunque la bandera esté
+ * encendida, así que el piloto se abre restaurante por restaurante y no de
+ * golpe.
  */
-export const PICKUP_ENABLED = false as boolean
+export const PICKUP_ENABLED = true as boolean
 
 /**
  * Por qué el cliente tiene (o no tiene) el envío gratis de la promo (0187).
@@ -208,6 +215,9 @@ export const PAYMENT_OPTIONS: PaymentOption[] = [
     logos: ['cash'],
     momento: 'al_recibir',
   },
+  // Ojo al añadir aquí: `paymentOptionsFor` decide cuáles de estas EXISTEN en
+  // cada método. Una opción nueva aparece en recojo salvo que esa función diga
+  // lo contrario, y el recojo no tiene motorizado a quien pagarle.
   {
     value: 'pending_yape',
     // «Billetera digital» es palabra de banco, y con los dos logos al lado el
@@ -243,6 +253,46 @@ export const PAYMENT_OPTIONS: PaymentOption[] = [
 ]
 
 /**
+ * Las opciones que EXISTEN para este método de entrega, ya con las palabras del
+ * método puestas.
+ *
+ * DOS COSAS DISTINTAS, Y LA PANTALLA LAS TRATA DISTINTO. Esta función solo
+ * ESCONDE lo que no existe; lo que existe pero hoy no aplica lo APAGA
+ * `mustPrepay`, con su motivo debajo del grupo. La diferencia no es cosmética:
+ * apagar «Yape al recibir» en un recojo lo dejaría bajo el rótulo «En este
+ * pedido», que promete que otro día sí — y no hay otro día, porque lo que falta
+ * es el motorizado a quien transferirle. La regla de fondo, en
+ * `customerPaymentIntents` (@tindivo/contracts).
+ *
+ * Se le pasa `null` como timing A PROPÓSITO: lo que se pinta no depende de si
+ * el cliente ya contestó cuándo recoge. Si contestó «más tarde», la fila de
+ * caja sigue ahí, apagada y explicada, en vez de desaparecer bajo su dedo justo
+ * después de tocar el botón de al lado.
+ *
+ * EL SUBTÍTULO DE CAJA NO NOMBRA UNA SOLA BILLETERA. En el mostrador el cliente
+ * paga con lo que trae —efectivo o billetera, contra el QR del local— y quien
+ * sabe cuál fue es la cajera, que ya lo declara al aceptar (`payment_real`).
+ * Prometer «efectivo» a secas mandaría a buscar un cajero a quien iba a yapear.
+ *
+ * Y DICE «YAPE/PLIN», NO «YAPE». Decía «Yape» a secas, que es la misma falta de
+ * marca por la que el seguimiento dejó de decir «ten tu Yape a la mano» y por la
+ * que la fila de billetera se llama «Yape o Plin»: aquí además puede ser falso y
+ * no solo impreciso, porque el QR del mostrador sale de `business_payment_qrs`,
+ * donde un negocio puede tener configurado Plin y no Yape (`MAX_PAYMENT_QRS`,
+ * `walletLabel`). Nombrar la billetera concreta exigiría traer aquí la del
+ * negocio; mientras no se traiga, el par cubre las dos sin mentir en ninguna.
+ */
+export function paymentOptionsFor(deliveryMethod: DeliveryMethod): PaymentOption[] {
+  if (deliveryMethod !== 'pickup') return PAYMENT_OPTIONS
+  const permitidos = customerPaymentIntents('pickup', null)
+  return PAYMENT_OPTIONS.filter((o) => permitidos.includes(o.value)).map((o) =>
+    o.value === 'pending_cash'
+      ? { ...o, label: 'Pagas en el local', desc: 'En la caja, efectivo o Yape/Plin' }
+      : o,
+  )
+}
+
+/**
  * El icono de una dirección guardada, por su etiqueta.
  *
  * Sustituye a `labelEmoji` SOLO en el checkout. Aquel devuelve 🏠/💼/📍 y sigue
@@ -269,7 +319,7 @@ export function addressIcon(label: string): string {
  * vez sin repetir la regla: nombrar el CTA, marcar la fila y decidir a dónde
  * llevar al cliente.
  */
-export type CheckoutField = 'cart' | 'address' | 'name' | 'phone' | 'cash'
+export type CheckoutField = 'cart' | 'address' | 'name' | 'phone' | 'cash' | 'pickup'
 
 export interface CheckoutIssue {
   field: CheckoutField

@@ -4,6 +4,7 @@ import { Icon } from '@tindivo/ui'
 import { CartCtas } from '@/features/cart/components/cart-ctas'
 import { CartEmpty } from '@/features/cart/components/cart-empty'
 import { CartLineList } from '@/features/cart/components/cart-line-item'
+import { CartPickupNotice } from '@/features/cart/components/cart-pickup-notice'
 import { soles } from '@/features/cart/lib/format'
 import { useCart, useCartHydrated } from '@/lib/cart'
 
@@ -50,9 +51,14 @@ export function CartSidebar({ businessId, businessName }: CartSidebarProps) {
           <div className="mt-3">
             <CartLineList lines={ownLines} />
           </div>
-          <div className="mt-4 flex items-center justify-between border-t border-border pt-4">
-            <span className="text-[13px] text-ink/55">Subtotal</span>
-            <span className="font-bold text-[18px] tabular-nums">{soles(subtotal)}</span>
+          <div className="mt-4 border-t border-border pt-4">
+            <div className="flex items-center justify-between">
+              <span className="text-[13px] text-ink/55">Subtotal</span>
+              <span className="font-bold text-[18px] tabular-nums">{soles(subtotal)}</span>
+            </div>
+            <div className="mt-2.5 empty:hidden">
+              <CartPickupNotice />
+            </div>
           </div>
           <CartCtas layout="block" />
         </>

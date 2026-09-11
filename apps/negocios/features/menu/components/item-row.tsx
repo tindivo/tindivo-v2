@@ -1,3 +1,4 @@
+import { describeWindow, isWithinWindow } from '@tindivo/contracts'
 import { Icon } from '@tindivo/ui'
 import Link from 'next/link'
 import { countAgotadoOptions, formatItemPrice } from '../lib/utils'
@@ -11,6 +12,21 @@ interface ItemRowProps {
 export function ItemRow({ item, onToggleAvailability }: ItemRowProps) {
   const hasGroups = item.modifierGroups.length > 0
   const agotadoCount = countAgotadoOptions(item)
+
+  /**
+   * LA FRANJA, Y SI AHORA MISMO TOCA (0226).
+   *
+   * El switch de al lado dice «se acabó» y nada más. Pero un plato de carta de
+   * mediodía que el cliente no ve un martes tiene el switch en verde, y sin este
+   * chip la pregunta «¿por qué no lo ve?» no tiene respuesta en pantalla.
+   *
+   * Se calcula al renderizar y no se refresca solo: el panel se recarga cada vez
+   * que la cajera entra, y un chip que se queda cinco minutos desfasado no
+   * decide nada — la verdad la calculan el catálogo del cliente y la RPC.
+   */
+  const franja = { days: item.available_days, from: item.available_from, to: item.available_to }
+  const textoFranja = describeWindow(franja)
+  const fueraDeTurno = textoFranja !== null && !isWithinWindow(franja, new Date())
 
   return (
     <div
@@ -67,6 +83,22 @@ export function ItemRow({ item, onToggleAvailability }: ItemRowProps) {
           {!item.is_available && (
             <span className="rounded-full bg-danger/10 px-2 py-0.5 text-[10px] font-bold text-danger">
               Agotado
+            </span>
+          )}
+          {textoFranja && (
+            <span
+              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                fueraDeTurno ? 'bg-ink/[0.08] text-ink-muted' : 'bg-info/10 text-info'
+              }`}
+              title={
+                fueraDeTurno
+                  ? `Ahora mismo no es su turno, así que el cliente no puede pedirlo. ${textoFranja}.`
+                  : `${textoFranja}. Ahora mismo sí se puede pedir.`
+              }
+            >
+              <Icon name="schedule" size={10} />
+              {textoFranja.replace(/^Solo /, '')}
+              {fueraDeTurno && ' · fuera de turno'}
             </span>
           )}
         </div>

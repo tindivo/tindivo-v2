@@ -11,6 +11,7 @@ import { deliveryPointQuality } from '@/lib/address-record'
 import { api } from '@/lib/api'
 import { getLocationValidation, haversineKm } from '@/lib/coverage'
 import { getCurrentPositionHA } from '@/lib/geolocation'
+import { createAudioTrigger } from '@/lib/sound'
 
 export interface CheckoutActions {
   getIdempotencyKey: () => string
@@ -48,6 +49,7 @@ export function useCheckoutActions(state: CheckoutState): CheckoutActions {
   const {
     cart,
     deliveryMethod,
+    pickupTiming,
     payment,
     cashChoice,
     cashCustom,
@@ -90,7 +92,28 @@ export function useCheckoutActions(state: CheckoutState): CheckoutActions {
     selectedPayment: PaymentIntent,
     skipGps: boolean,
   ): Promise<{ payload?: GpsValidationPayload; issue?: GeoBlockKind }> {
-    if (deliveryMethod !== 'delivery') return {}
+    // EL RECOJO YA NO SE SALTA ESTO, Y LOS DOS TIPOS DE RECOJO NO SON IGUALES.
+    //
+    // Antes había un `deliveryMethod !== 'delivery'` aquí que devolvía `{}` sin
+    // pedir nada. El efecto no era «pickup sin antifraude»: era el contrario.
+    // `create_customer_order` evalúa `customer_contraentrega_decision` ANTES de
+    // ramificar por método, así que un recojo en efectivo llegaba sin
+    // coordenadas, `customer_gps_in_coverage` daba false, y el vecino sin
+    // historial que quería recoger su comida se estrellaba contra «Pago
+    // adelantado requerido». El canal estaba cerrado, no abierto.
+    //
+    //   · 'later' -> se comporta EXACTAMENTE como un delivery. La comida se
+    //     hace sin nadie delante, y el GPS es lo único que distingue al vecino
+    //     de alguien que encargó un plantón desde otra provincia.
+    //
+    //   · 'now'   -> se captura, pero NUNCA bloquea. La garantía de ese pedido
+    //     es la cajera mirando al cliente, no la coordenada; y el mostrador es
+    //     bajo techo, que es justo donde el GPS falla. Un `issue` aquí abriría
+    //     `GeoBlockSheet` («paga por adelantado») a alguien que está de pie
+    //     delante de la caja con el billete en la mano. La lectura se manda
+    //     igual porque como EVIDENCIA vale —queda en el pedido—; lo que no hace
+    //     es decidir.
+    const recojoPresencial = deliveryMethod === 'pickup' && pickupTiming === 'now'
     if (skipGps) return { payload: { method: 'manual_skip_prepaid' } }
 
     try {
@@ -111,10 +134,20 @@ export function useCheckoutActions(state: CheckoutState): CheckoutActions {
       // su crédito de GPS (DECISIONS.md §8) — cortar aquí antes de mandarlo
       // dejaba ese camino inalcanzable desde la app real, aunque el backend y
       // los tests lo dieran por bueno. Para él, que decida el servidor.
-      if (accuracyM > cfg.maxAccuracyM && selectedPayment !== 'prepaid' && hasDeliveryHistory) {
+      if (
+        accuracyM > cfg.maxAccuracyM &&
+        selectedPayment !== 'prepaid' &&
+        hasDeliveryHistory &&
+        !recojoPresencial
+      ) {
         return { issue: 'low_accuracy' }
       }
-      if (distance > cfg.warningRadiusKm && selectedPayment !== 'prepaid' && hasDeliveryHistory) {
+      if (
+        distance > cfg.warningRadiusKm &&
+        selectedPayment !== 'prepaid' &&
+        hasDeliveryHistory &&
+        !recojoPresencial
+      ) {
         return { issue: 'far' }
       }
 
@@ -129,6 +162,11 @@ export function useCheckoutActions(state: CheckoutState): CheckoutActions {
       }
     } catch {
       if (selectedPayment === 'prepaid') return { payload: { method: 'manual_skip_prepaid' } }
+      // Un recojo presencial NO se cae por un GPS que no fija. Se registra el
+      // intento fallido —`failed` es un hecho que vale guardar— y sigue: quien
+      // decide es la cajera, y a ella no le hace falta una coordenada para ver
+      // que tiene a alguien delante.
+      if (recojoPresencial) return { payload: { method: 'failed' } }
       return { issue: 'unavailable' }
     }
   }
@@ -142,6 +180,7 @@ export function useCheckoutActions(state: CheckoutState): CheckoutActions {
   }
 
   async function placeOrder(options?: { paymentIntent?: PaymentIntent; skipGps?: boolean }) {
+    const triggerSubmittedSound = createAudioTrigger('orderSubmitted')
     const selectedPayment = options?.paymentIntent ?? payment
     setError(null)
 
@@ -153,7 +192,10 @@ export function useCheckoutActions(state: CheckoutState): CheckoutActions {
       return
     }
 
-    if (selectedPayment === 'pending_cash') {
+    // `deliveryMethod !== 'pickup'`: en recojo no se pregunta el billete ni se
+    // manda, así que este techo —que es el del sencillo del motorizado— no
+    // tiene nada contra qué comparar. Ver el `cashPayingWith` de más abajo.
+    if (selectedPayment === 'pending_cash' && deliveryMethod !== 'pickup') {
       // El techo se vuelve a PREGUNTAR aquí, no se reutiliza el que trajo la
       // pantalla al montar: entre que el cliente eligió su billete y tocó
       // confirmar, la cajera pudo declarar otro sencillo. Y la regla es la
@@ -213,11 +255,27 @@ export function useCheckoutActions(state: CheckoutState): CheckoutActions {
       paymentIntent: selectedPayment,
       customerName: name.trim() || 'Cliente',
       customerPhone: phone,
+      // En recojo NO se manda: el billete es un dato del sencillo que la caja
+      // le adelanta al motorizado (0146), y en el mostrador no hay tal adelanto.
+      // Mandarlo dispararia los topes R2/R3 de `create_customer_order` contra un
+      // vuelto que la propia caja tiene.
       cashPayingWith:
-        selectedPayment === 'pending_cash'
+        selectedPayment === 'pending_cash' && deliveryMethod !== 'pickup'
           ? Math.round(Math.round(payingWithCash() / 0.5) * 0.5 * 100) / 100
           : undefined,
-      deliveryAddress: selectedAddress?.line ?? (manualAddr.line.trim() || undefined),
+      /*
+        EL ÚNICO CAMPO DE LOGÍSTICA QUE SE ESCAPABA.
+        Sus cinco vecinos —`deliveryReference`, `customerNotes`,
+        `deliveryPointQuality`, `coordinates`— ya estaban gateados por método
+        desde la 0219; este no, y el spec lo pedía explícitamente (§2.2). El
+        resultado era que un pedido de mostrador se guardaba con la dirección de
+        casa de quien lo hizo: un dato que nadie va a usar, que la ficha del
+        tablero llegaba a pintar, y que no hay motivo para tener ahí.
+      */
+      deliveryAddress:
+        deliveryMethod === 'delivery'
+          ? (selectedAddress?.line ?? (manualAddr.line.trim() || undefined))
+          : undefined,
       deliveryReference: deliveryMethod === 'delivery' ? state.reference : undefined,
       // Solo tiene sentido con delivery: en un recojo no hay motorizado que la
       // lea. `undefined` y no `''` para que el contrato la trate como ausente.
@@ -246,6 +304,10 @@ export function useCheckoutActions(state: CheckoutState): CheckoutActions {
               ? { lat: manualAddr.coords.lat, lng: manualAddr.coords.lng }
               : undefined,
       gpsValidation: gpsPayload,
+      // Obligatorio en recojo por contrato, prohibido en delivery. `null` (la
+      // pregunta sin contestar) no llega aqui: `useCheckoutValidation` corta
+      // antes con su propia falta.
+      pickupTiming: deliveryMethod === 'pickup' ? (pickupTiming ?? undefined) : undefined,
       items: cart.lines.map((l) => ({
         menuItemId: l.itemId,
         quantity: l.quantity,
@@ -262,6 +324,7 @@ export function useCheckoutActions(state: CheckoutState): CheckoutActions {
         orderPayload,
         currentKey,
       )
+      triggerSubmittedSound()
       setConfirmed(res.data)
       cart.clear()
       regenerateIdempotencyKey()

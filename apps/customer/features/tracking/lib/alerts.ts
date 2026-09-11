@@ -21,6 +21,7 @@ export type TrackingSignal =
   | 'confirmed'
   | 'preparing'
   | 'ontheway'
+  | 'ready_for_pickup'
   | 'arrived'
   | 'delivered'
   | 'cancelled'
@@ -29,6 +30,8 @@ export interface TrackingAlert {
   tone: ChimeTone
   /** Lo que se dice en el toast y en el título de la pestaña. */
   message: string
+  /** Sonido dedicado de Customer (ej. campanilla de cocina al aceptar/cocinar). */
+  sound?: 'kitchenBell'
 }
 
 export function trackingSignal(data: Tracking): TrackingSignal {
@@ -37,6 +40,13 @@ export function trackingSignal(data: Tracking): TrackingSignal {
   if (data.arrivedAtCustomerAt) return 'arrived'
   if (data.status === 'awaiting_payment') return 'awaiting_payment'
   if (data.status === 'confirmed') return 'confirmed'
+
+  // ANTES QUE LA PROYECCION A PASOS, y por eso no se deriva de ella:
+  // `ready_for_pickup` se proyecta a 'ontheway' (es el mismo sitio del camino),
+  // pero el aviso NO puede ser el mismo. «Tu pedido salio, el motorizado va en
+  // camino» sobre una bolsa que espera en el mostrador manda al cliente a
+  // asomarse a su puerta.
+  if (data.status === 'ready_for_pickup') return 'ready_for_pickup'
 
   const step = toTrackingStep(data.status as OrderStatus)
   if (step === 'ontheway') return 'ontheway'
@@ -62,16 +72,30 @@ export function alertFor(signal: TrackingSignal, prepaid: boolean): TrackingAler
     case 'awaiting_payment':
       // El único aviso que el cliente puede perder con consecuencias: si no
       // paga dentro de su ventana, el pedido se cancela solo.
-      return { tone: 'action', message: 'El restaurante confirmó. Ya puedes pagar tu pedido' }
+      return {
+        tone: 'action',
+        message: 'El restaurante confirmó. Ya puedes pagar tu pedido',
+        sound: 'kitchenBell',
+      }
     case 'confirmed':
       return {
         tone: 'good',
         message: prepaid ? 'Tu pago fue verificado' : 'El restaurante confirmó tu pedido',
+        sound: 'kitchenBell',
       }
     case 'preparing':
-      return { tone: 'good', message: 'Tu pedido ya está en cocina' }
+      return {
+        tone: 'good',
+        message: 'Tu pedido ya está en cocina',
+        sound: 'kitchenBell',
+      }
     case 'ontheway':
       return { tone: 'good', message: 'Tu pedido salió. El motorizado va en camino' }
+    case 'ready_for_pickup':
+      // `action` y no `good`: aqui SI hay algo que hacer —ir al local— y la
+      // comida se enfria mientras tanto. Es el equivalente, para un recojo, del
+      // aviso de «el motorizado esta en tu puerta».
+      return { tone: 'action', message: 'Tu pedido está listo. Pásalo a recoger en el local' }
     case 'arrived':
       return { tone: 'action', message: '¡El motorizado llegó a tu domicilio!' }
     case 'delivered':

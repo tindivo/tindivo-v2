@@ -2,7 +2,7 @@
 
 import { Button, Icon, Segmented, Spinner, useDialogFocus } from '@tindivo/ui'
 import dynamic from 'next/dynamic'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { haversineKm, pointInPolygon } from '@/lib/coverage'
 import { bandForPoint, type DeliveryBands } from '@/lib/delivery-fee'
@@ -118,21 +118,29 @@ export function LocationSheet({
   const band = useMemo(() => bandForPoint(coords, farZones), [coords, farZones])
   const fee = band === 'far' ? bands.far : bands.near
 
+  /*
+   * LOS DOS VAN CON `useCallback`, y no es ritual: `MapCanvas` está memoizado
+   * (ver el pie de `map-picker-inner.tsx`) y una lambda nueva por render basta
+   * para tumbar esa comparación y volver a renderizar Leaflet entero. Las dos
+   * usan solo actualizadores de estado, así que no tienen dependencias y su
+   * identidad dura lo que dure la pantalla.
+   */
+
   /** Un `moveend` del dedo invalida la precisión: el punto ya no lo puso el GPS. */
-  function handleSettle(c: LatLng, byUser: boolean) {
+  const handleSettle = useCallback((c: LatLng, byUser: boolean) => {
     setCoords(c)
     if (byUser) {
       setAccuracyM(null)
       setLocateError(null)
       setSettled(true)
     }
-  }
+  }, [])
 
   /** El primer arrastre ya enseñó lo que la capa quería enseñar. */
-  function handleMoving(m: boolean) {
+  const handleMoving = useCallback((m: boolean) => {
     setMoving(m)
     if (m) setCoach(false)
-  }
+  }, [])
 
   async function useMyLocation() {
     if (locating) return
@@ -191,7 +199,7 @@ export function LocationSheet({
             jerarquía de la pantalla, no uno más compitiendo arriba. */}
         {(polygon || circle) && (
           <div className="pointer-events-none absolute bottom-3 left-3 z-[550]">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-card/90 px-2.5 py-1 font-semibold text-[11px] text-brand-dark shadow-elev-3 backdrop-blur-sm">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-card px-2.5 py-1 font-semibold text-[11px] text-brand-dark shadow-elev-3">
               <span
                 aria-hidden
                 className="inline-block h-2 w-2 rounded-full border-[1.5px] border-brand bg-brand/[0.06]"
@@ -201,17 +209,49 @@ export function LocationSheet({
           </div>
         )}
 
-        {/* Barra superior: volver + fondo del mapa con acabado glassmorphism. */}
+        {/*
+          EL SCRIM QUE SEPARA LOS CONTROLES DEL MAPA, Y POR QUÉ NO ES UN BLUR.
+          
+          Aquí había `backdrop-blur` en cinco sitios, y `backdrop-filter` no se
+          pinta una vez: MUESTREA el fondo, así que mientras el mapa corre por
+          debajo el compositor tiene que rehacer el desenfoque de cada una de
+          esas regiones EN CADA FOTOGRAMA. Era el costo por frame del arrastre,
+          el único que no baja aunque se recorten los marcadores.
+          
+          Un degradado sólido hace el mismo trabajo por nada: se pinta una vez,
+          no se mueve nunca y no depende de lo que tenga debajo. Es lo que hacen
+          Google Maps y Apple Maps con sus barras, y sobre el satélite además se
+          lee MEJOR — el blur deja un puré de color detrás de texto de 12 px,
+          donde un fondo opaco da contraste de verdad.
+        */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 z-[725] h-32"
+          style={{
+            background: 'linear-gradient(to bottom, rgb(15 23 42 / 0.22), rgb(15 23 42 / 0))',
+          }}
+        />
+
+        {/* Barra superior: volver + selector de fondo.
+
+            EXCEPCIÓN A `check:ds` (vale también para el «centrar en mi
+            ubicación» de más abajo): son controles flotantes SOBRE el mapa, no
+            botones de una pantalla. Piden 44/48 px de diana con el pulgar,
+            fondo opaco `bg-card` para leerse encima del satélite y
+            `shadow-elev-3` para despegarse de él. `IconButton` solo llega a
+            40 px, no tiene elevación y su relleno es translúcido: encima de una
+            foto aérea desaparece. Ya estaban consentidos; aquí solo cambió el
+            estilo, no la decisión. */}
         <div className="pointer-events-none absolute inset-x-0 top-0 z-[730] flex items-start gap-2 p-3 pt-[calc(0.75rem+env(safe-area-inset-top))]">
           <button
             type="button"
             onClick={onCancel}
             aria-label="Volver sin cambiar la ubicación"
-            className="pointer-events-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-card/90 text-ink shadow-elev-3 backdrop-blur-md border border-white/60 transition-transform active:scale-95"
+            className="pointer-events-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-card text-ink shadow-elev-3 border border-ink/[0.06] transition-transform active:scale-95"
           >
             <Icon name="arrow_back" size={22} />
           </button>
-          <div className="pointer-events-auto ml-auto rounded-[18px] bg-card/90 p-1 shadow-elev-3 backdrop-blur-md border border-white/60">
+          <div className="pointer-events-auto ml-auto rounded-[18px] bg-card p-1 shadow-elev-3 border border-ink/[0.06]">
             <Segmented
               size="sm"
               value={mode}
@@ -230,7 +270,7 @@ export function LocationSheet({
             moving || coach ? 'opacity-0' : 'opacity-100'
           }`}
         >
-          <span className="rounded-full bg-slate-900/85 px-4 py-1.5 text-center font-medium text-[12px] text-white shadow-elev-3 backdrop-blur-md border border-white/10">
+          <span className="rounded-full bg-slate-900/[0.92] px-4 py-1.5 text-center font-medium text-[12px] text-white shadow-elev-3 border border-white/10">
             Mueve el mapa hasta que el pin quede en tu puerta
           </span>
         </div>
@@ -240,7 +280,7 @@ export function LocationSheet({
           onClick={useMyLocation}
           disabled={locating}
           aria-label="Centrar en mi ubicación"
-          className="absolute right-4 bottom-4 z-[600] flex h-12 w-12 items-center justify-center rounded-full bg-card/95 text-brand-dark shadow-elev-3 backdrop-blur-md border border-white/60 transition-transform active:scale-95 disabled:opacity-70"
+          className="absolute right-4 bottom-4 z-[600] flex h-12 w-12 items-center justify-center rounded-full bg-card text-brand-dark shadow-elev-3 border border-ink/[0.06] transition-transform active:scale-95 disabled:opacity-70"
         >
           {locating ? <Spinner size="xs" variant="brand" /> : <Icon name="my_location" size={22} />}
         </button>

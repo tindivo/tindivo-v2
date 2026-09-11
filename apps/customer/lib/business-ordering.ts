@@ -7,10 +7,29 @@ import { api } from '@/lib/api'
 /**
  * Modo de pedido del negocio, derivado de sus capacidades:
  * - 'whatsapp': solo catálogo (sin pedidos web) → CTAs de WhatsApp/llamada.
- * - 'delivery': acepta pedidos web → checkout normal.
+ * - 'ordering': acepta pedidos web → checkout normal.
+ *
+ * SE LLAMABA `'delivery'`, y el nombre pasó a mentir el día que el recojo dejó
+ * de ser hipotético: un negocio que solo acepta recojo caía igualmente en
+ * `mode: 'delivery'`, porque lo único que esta bandera dice es «se puede pedir
+ * por la web». Cuál de los dos canales admite lo dicen `acceptsDelivery` y
+ * `acceptsPickup`, que antes ni salían de aquí.
  */
 export interface BusinessOrderingInfo {
-  mode: 'delivery' | 'whatsapp'
+  mode: 'ordering' | 'whatsapp'
+  /**
+   * Las dos capacidades, POR SEPARADO.
+   *
+   * Antes se fusionaban en `mode` con un OR y se tiraban, así que la app del
+   * cliente no tenía forma de saber si este negocio acepta recojo. El toggle
+   * Delivery/Recojo del checkout se pintaba siempre, y el día que el piloto
+   * apague el recojo en un restaurante —`DECISIONS.md` dice explícitamente que
+   * se abre «restaurante por restaurante, no de golpe»— el cliente elegiría
+   * Recojo, llenaría todo y comería un 409 en el último toque, sin ninguna
+   * pista previa de que ese canal no existía para él.
+   */
+  acceptsDelivery: boolean
+  acceptsPickup: boolean
   whatsappNumber: string | null
   /** Horario semanal; vacío = sin horario configurado (siempre abierto). */
   schedule: ScheduleDayRow[]
@@ -51,8 +70,12 @@ async function fetchInfo(businessId: string): Promise<BusinessOrderingInfo | nul
   try {
     const res = await api.get<DetailEnvelope>(`/public/businesses/${businessId}`)
     const b = res.data.business
+    const acceptsDelivery = b.accepts_web_delivery === true
+    const acceptsPickup = b.accepts_web_pickup === true
     const info: BusinessOrderingInfo = {
-      mode: !b.accepts_web_delivery && !b.accepts_web_pickup ? 'whatsapp' : 'delivery',
+      mode: !acceptsDelivery && !acceptsPickup ? 'whatsapp' : 'ordering',
+      acceptsDelivery,
+      acceptsPickup,
       whatsappNumber: b.whatsapp_number ?? null,
       schedule: res.data.schedule ?? [],
       etaMin: b.estimated_eta_min ?? null,

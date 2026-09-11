@@ -3,8 +3,14 @@
 import { ApiError } from '@tindivo/api-client'
 import { useCallback, useState } from 'react'
 import { api } from '@/lib/api'
-import type { OrderVM } from '@/lib/orders/view-model'
-import { normalizeSupportPhone, supportWhatsappUrl, urgentDriverMessage } from '@/lib/support'
+import { cobroEnCaja, type OrderVM } from '@/lib/orders/view-model'
+import {
+  customerWhatsappDigits,
+  normalizeSupportPhone,
+  pickupReadyMessage,
+  supportWhatsappUrl,
+  urgentDriverMessage,
+} from '@/lib/support'
 
 export interface OrderActionsDeps {
   selected: OrderVM | null
@@ -16,13 +22,53 @@ export interface OrderActionsDeps {
 
 export interface OrderActions {
   onClose: () => void
-  onAccept: (prepTimeMinutes: number) => Promise<void>
+  /**
+   * Aceptar el pedido y mandarlo a cocina.
+   *
+   * `paymentReal` SOLO viaja en un recojo «ahora» que no sea prepago: ahí el
+   * cliente está de pie en la caja y `advance_order` exige el cobro para
+   * aceptar (0224). En todo lo demás va `undefined` y la RPC ni lo mira.
+   */
+  onAccept: (prepTimeMinutes: number, paymentReal?: 'paid_cash' | 'paid_yape') => Promise<void>
   onReject: (code: string, text: string) => Promise<void>
   onVerifyProof: () => Promise<void>
   onRejectProof: () => Promise<void>
   onConfirmDirectPayment: (prepTimeMinutes: number) => Promise<void>
   onExtend: () => Promise<void>
   onReady: () => Promise<void>
+  /**
+   * RECOJO · el cliente vino y se llevo su pedido.
+   *
+   * Es el `deliver` del mostrador.
+   *
+   * `paymentReal` va SOLO cuando el cobro pasa aqui, o sea cuando nadie lo
+   * declaro antes: un recojo manual que la cajera toma por telefono y cobra al
+   * entregar. En un recojo «ahora» el dinero entro al aceptar (0224) y en un
+   * prepago llego antes, asi que se manda `undefined` y la RPC usa lo que ya
+   * hay en la fila.
+   *
+   * NO se manda un valor de relleno. Pasar 'paid_cash' por defecto acertaria
+   * solo porque el COALESCE de la RPC lo descarta — y el dia que ese orden
+   * cambie, un cobro por Yape quedaria registrado como efectivo sin que nadie
+   * lo note hasta cuadrar la caja.
+   */
+  onHandover: (paymentReal?: 'paid_cash' | 'paid_yape') => Promise<void>
+  /**
+   * RECOJO · nadie vino por la comida.
+   *
+   * Cancela y escribe el strike. La espera minima la impone `advance_order`
+   * (`noShowWaitMinutes`) y su rechazo llega como texto: NO se replica aqui un
+   * contador que tendria que envejecer a la vez que el de la base.
+   */
+  onPickupNoShow: () => Promise<void>
+  /**
+   * RECOJO · avisar al cliente por WhatsApp que su pedido ya esta listo (0221).
+   *
+   * `null` cuando el pedido no tiene un movil peruano al que escribir: la UI
+   * ensena el estado alternativo en vez de un boton que abre un chat con nadie.
+   * Mismo criterio que `onCallDriver` con el numero de soporte.
+   */
+  onNotifyPickup: (() => Promise<void>) | null
   onCancel: (code: string, text: string) => Promise<void>
   onCallDriver?: (o: OrderVM) => void
   /** La cajera corrigio el pedido (0190). */
@@ -57,7 +103,7 @@ export function useOrderActions({
 
   const actions: OrderActions = {
     onClose: () => onDone?.(),
-    onAccept: async (prep) => {
+    onAccept: async (prep, paymentReal) => {
       await run(async () => {
         if (!selected) return
         const id = selected.rowId
@@ -71,12 +117,14 @@ export function useOrderActions({
             await post(`/business/orders/${id}/transition`, {
               action: 'accept',
               prepTimeMinutes: prep,
+              paymentReal,
             })
           }
         } else {
           await post(`/business/orders/${id}/transition`, {
             action: 'accept',
             prepTimeMinutes: prep,
+            paymentReal,
           })
         }
         onDone?.()
@@ -151,6 +199,87 @@ export function useOrderActions({
         await refetchOrders()
       })
     },
+    onHandover: async (paymentReal) => {
+      await run(async () => {
+        if (!selected) return
+        await post(`/business/orders/${selected.rowId}/transition`, {
+          action: 'handover',
+          paymentReal,
+        })
+        onDone?.()
+        await refetchOrders()
+      })
+    },
+    onPickupNoShow: async () => {
+      await run(async () => {
+        if (!selected) return
+        await post(`/business/orders/${selected.rowId}/transition`, {
+          action: 'pickup_no_show',
+        })
+        onDone?.()
+        await refetchOrders()
+      })
+    },
+    /**
+     * EL CHAT SE ABRE PRIMERO, Y EL SELLO VA DESPUES.
+     *
+     * `window.open` tiene que salir del gesto del dedo o el navegador lo trata
+     * como popup y lo bloquea; un `await` por delante rompe esa cadena. Asi que
+     * primero se abre WhatsApp —que es lo que la cajera fue a hacer— y luego se
+     * sella, sin `run()`: si el sello falla, ella ya tiene el chat delante y un
+     * error rojo en la ficha solo la confundiria sobre algo que si funciono.
+     * Lo unico que se pierde es la marca «Avisado hh:mm».
+     */
+    onNotifyPickup: (() => {
+      if (!selected) return null
+      const digits = customerWhatsappDigits(selected.phone)
+      if (!digits) return null
+      const id = selected.rowId
+      return async () => {
+        window.open(
+          supportWhatsappUrl(
+            digits,
+            pickupReadyMessage({
+              bizName,
+              shortId: selected.id,
+              customerName: selected.customer,
+              // NO SE LE PIDE DOS VECES UN DINERO QUE YA ENTRO (0224).
+              //
+              // Esto preguntaba solo por el prepago, y desde la 0224 el prepago
+              // ya no es el unico recojo pagado: un recojo «ahora» se cobra AL
+              // ACEPTAR, antes de que nadie toque una sarten, asi que cuando la
+              // comida sale del horno el dinero lleva dentro toda la coccion.
+              // El aviso le decia igual «son S/ 24.00, los pagas aqui al
+              // recogerlo» a quien acababa de pagar en la caja: una invitacion
+              // a pagar dos veces, con el mensaje del negocio como prueba.
+              //
+              // La pregunta no se responde aqui a mano: `cobroEnCaja` es la
+              // fuente unica de «¿queda algo que cobrar en el mostrador?» y
+              // existe precisamente porque cada pantalla la calculaba por su
+              // cuenta y podian contradecirse sobre el mismo pedido. Devuelve
+              // `null` en un prepago y `cobrado: true` en cuanto hay
+              // `payment_verified_at` — la misma columna con la que el pie de
+              // la ficha deja de preguntar «¿como pago?» y con la que
+              // `advance_order` no pone strike a un planton pagado.
+              //
+              // Queda un solo caso con monto que anunciar, y es real: el recojo
+              // MANUAL para mas tarde que la cajera fia a un cliente que
+              // conoce por telefono. El CHECK de la 0223 solo ata al canal del
+              // cliente.
+              totalACobrar: cobroEnCaja(selected)?.cobrado === false ? selected.total : null,
+            }),
+          ),
+          '_blank',
+          'noopener,noreferrer',
+        )
+        try {
+          await post(`/business/orders/${id}/notify-pickup`, {})
+          await refetchOrders()
+        } catch {
+          // El aviso ya salio. El sello es contabilidad, no el trabajo.
+        }
+      }
+    })(),
     onReady: async () => {
       await run(async () => {
         if (!selected) return

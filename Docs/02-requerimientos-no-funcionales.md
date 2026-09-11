@@ -281,7 +281,7 @@ Dashboard básico en Supabase + Vercel Analytics. Post-MVP considerar Grafana Cl
 
 - Pingdom o UptimeRobot free tier — chequeo cada 5 min de:
   - `tindivo.com` → 200 OK
-  - `api.tindivo.com/health` → `{status: 'ok'}`
+  - `apiv2.tindivo.com/api/v1/health` → `{status: 'ok'}`
 - Alerta al admin (WhatsApp/email) si 3 pings consecutivos fallan.
 
 ### RNF-OBS-06 · Error tracking

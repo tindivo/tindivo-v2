@@ -66,6 +66,15 @@ const USUARIOS_FIXTURE = [
   // cae por cascada con el usuario; `customer_otp_attempts` no tiene FK, pero el
   // simulacro no escribe ahí — solo lo haría un test que probara el tope real.
   'Vecino OTP',
+  // order-reviews: un cliente por caso, porque `get_pending_review` mira el
+  // historial de entregas del cliente y los del seed acumulan `delivered` para
+  // siempre — con ellos, el pendiente de otra suite se colaría en estos casos.
+  'Vecino Reseñas',
+  // pickup: un cliente por caso, por lo mismo. Y además estos SÍ acaban con un
+  // `delivered` a propósito —el caso que prueba que un recojo abre la
+  // contraentrega—, así que reutilizar uno haría verde el caso siguiente por el
+  // motivo equivocado.
+  'Vecino Recojo',
 ]
 
 /**

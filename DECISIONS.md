@@ -5,7 +5,7 @@
 > este documento difieran, **gana este documento**. Se mantiene vivo: cada
 > decisión nueva o cambio se registra aquí, no en specs paralelos.
 >
-> Última actualización: 2026-08-07 (pedido manual: la cajera teclea el total con envío incluido y la comida se deduce en el RPC — §22).
+> Última actualización: 2026-09-08 (en el mostrador no se fía: el recojo llega a cocina pagado y el plantón pagado no deja falta — §8, `0223`/`0224`).
 
 ---
 
@@ -102,7 +102,15 @@ tindivo-v2/
 |---|---|---|---|---|
 | **Cerca** (`near`) | S/2.00 | S/1.00 | **S/3.00** | S/1.00 |
 | **Lejos** (`far`) | S/2.50 | S/1.00 | **S/3.50** | S/1.00 |
-| **Pickup** (inactivo) | S/0 | — | **S/0.50** | S/0.50 |
+| **Recojo** (`pickup`) | S/0 | S/1.00 | **S/1.00** | S/1.00 |
+
+> **El recojo cobra S/1.00, no S/0.50 (corregido 2026-09-07).** Esta tabla decía
+> S/0.50 desde el principio y el número vivo es 1.00 —
+> `app_settings.commissions.pickup`, con `businesses.commission_override_pickup`
+> por si un negocio negocia otro. Los 0.50/3.00/3.50 originales quedaron
+> desfasados en la `0110` y `advance_order` ya usaba 1.00 desde entonces; lo que
+> faltaba era que alguien lo escribiera aquí. **El número manda desde
+> `app_settings`, no desde esta tabla.**
 
 - **Narrativa al dueño**: "S/1 de comisión; el delivery lo paga el cliente". La UI de deuda muestra el desglose (delivery del cliente vs. comisión Tindivo) sin mentir.
 - El **cliente paga al restaurante** (comida + delivery). El restaurante transfiere a Tindivo el monto conjunto.
@@ -125,12 +133,82 @@ tindivo-v2/
 ```
 `*validando` solo para contraentrega de **cliente nuevo / con strike** (validación humana por llamada, 5 min).
 
+### Recojo en el local — la rama que se separa al salir de cocina (`0219`/`0220`)
+
+```
+[validando]* -> pending_acceptance -> preparing -> ready_for_pickup -> delivered
+```
+
+**`ready_for_pickup` es un estado nuevo, y no se reutilizó ninguno.** `waiting_driver`
+no significa «lista»: es literalmente lo que mete el pedido en la cola de
+`apps/motorizados` (policy `ord_driver_read`). `picked_up` significa «la comida
+salió del local en una moto» y arranca el reloj de reparto, la ventana de
+`no_show` del motorizado y el congelado de comisión. Meter el recojo en
+cualquiera de los dos habría metido un dato falso en cada reporte futuro.
+
+**`delivered` sigue siendo el único terminal, compartido con delivery.** De eso
+depende la pieza de crecimiento entera: la cláusula (1) de `compra_previa`
+(§8) pregunta por `status = 'delivered'` sin mirar `delivery_method`, así que
+quien recoge una vez puede pedir a domicilio pagando al recibir. Verificado
+contra la definición viva, no supuesto.
+
+**Quién lo cierra.** Dos acciones del NEGOCIO en `advance_order`, que son las que
+faltaban para que un recojo pudiera terminar — todas las transiciones
+intermedias del delivery las escribe el motorizado, y en un recojo no hay:
+- `handover` — el cliente se lo llevó. Cierra en `delivered`, fija el cobro real
+  y genera la comisión de recojo (`app_settings.commissions.pickup`, con
+  `businesses.commission_override_pickup`). Sin ella el recojo salía gratis: el
+  trigger `generate_delivery_charges` deriva el cargo de `commission_amount`, que
+  solo escribía la acción `pickup` del motorizado.
+- `pickup_no_show` — nadie vino. Cancela con `cancel_reason = 'no_show'` y deja
+  el strike (§8).
+
+**Cómo se entera el cliente, y por qué son DOS canales (`0221`).** Los dos
+momentos que deciden si el recojo funciona son «lo aceptaron» y «ya está listo».
+Los dos avisan por push (`send-push`, ramas `accept` y `ready`), y los dos tienen
+el mismo techo: el push solo llega a quien concedió el permiso de notificaciones
+y conserva una fila viva en `push_subscriptions` — en el piloto, una minoría.
+
+Por eso el segundo momento tiene además un botón **«Avisar por WhatsApp que está
+listo»** en el detalle del tablero: abre `wa.me` con el mensaje escrito y la
+cajera solo pulsa enviar. No depende de ningún permiso — el cliente ya verificó
+ese número por OTP para poder pedir.
+
+- El mensaje **se presenta** («soy La Florencia»): un número desconocido que te
+  manda a un sitio no se abre, se bloquea. Lleva el `short_id` para emparejar en
+  el mostrador, y el monto **solo si hay algo que cobrar** (en un prepago,
+  recordar la cifra invita a pagarla dos veces). **No promete plazos**: el
+  mostrador no autocancela nada y quien decide el plantón es ella.
+- Se sella en `tracking_link_sent_at`/`_by` — columnas que existían **sin
+  escritor desde la 0002**, diseñadas para exactamente esto. El botón dice
+  «avisado hh:mm» después, y **se puede repetir**: cada vez pisa la marca,
+  porque la pregunta es «¿cuándo fue la última vez?».
+- Dice **«Avisado» y no «Recibido»**: `wa.me` se abre fuera del panel y desde
+  ahí no se sabe si llegó a pulsar enviar, ni si el cliente lo leyó.
+
+En el primer momento (`accept`) el push de un recojo **no** dice «ya está en
+cocina» a secas: dice que se le avisará cuando pueda pasar. Sin eso, el cliente
+se planta en el mostrador veinte minutos antes de tiempo.
+
+**Una bolsa en el mostrador NO se autocancela.** Hay cuatro bloques de
+autocancelación en `cancel_expired_prepay_orders` y deliberadamente no hay un
+quinto: la comida ya está hecha, y borrarla de la pantalla sin que nadie mire es
+perder el único momento en que se puede decidir qué pasa con ella. Sí cuenta como
+pedido ACTIVO (guard de pedido activo y `ACTIVE_ORDER_STATUSES`), o sea que
+bloquea un pedido nuevo del mismo cliente en ese restaurante.
+
+**Ningún recojo entra en el flujo de reparto**, y se cierra en tres sitios porque
+uno solo no basta: la policy `ord_driver_read` (RLS), la guarda de
+`advance_order('take')` (la RPC la llama el service client, que no pasa por RLS)
+y `appears_in_queue_at`, que se queda NULL — ese reloj es lo que ABRE el pedido a
+la cola, y NULL ahí significa «la ventana no se abre nunca».
+
 ### Proyección al tracking del cliente (4 pasos)
 | Estado backend | Paso cliente |
 |---|---|
 | `validando`, `pending_acceptance`, `confirmed` | **received** (Pedido recibido) |
 | `preparing`, `waiting_driver`, `heading_to_restaurant`, `waiting_at_restaurant` | **preparing** (Preparando) |
-| `picked_up` | **ontheway** (En camino) |
+| `picked_up`, `ready_for_pickup` | **ontheway** (tercer paso) |
 | `delivered` | **delivered** (Entregado) |
 | `cancelled` | **cancelled** (mostrado aparte) |
 
@@ -139,6 +217,13 @@ tindivo-v2/
 > ventana de cancelación del cliente sigue gatillada por el estado **crudo**
 > (`validando`/`pending_acceptance`), no por el bucket "recibido" (evita ofrecer cancelar un
 > pedido ya `confirmed`). El home muestra un badge "Pedido en curso" con este mismo label.
+
+> **El tercer paso es posicional, no «va en una moto» (2026-09-07).** `ready_for_pickup`
+> se proyecta ahí igual que `picked_up`: los dos significan «salió de cocina, todavía no lo
+> tiene el cliente». Lo que cambia son las PALABRAS, y las elige `stepsFor(deliveryMethod)`
+> en la app del cliente — en recojo el paso dice «Listo para recoger · Pásalo a recoger en el
+> local». Proyectarlo a `preparing` habría dejado el stepper clavado en «Preparando» con la
+> comida ya hecha esperando en el mostrador.
 
 Codificado en `@tindivo/contracts` (`order-status.ts`: `ORDER_TRANSITIONS`, `STATUS_TO_TRACKING`). Los guards de transición finos viven en `packages/core` (Fase 1C).
 
@@ -186,6 +271,154 @@ Codificado en `@tindivo/contracts` (`order-status.ts`: `ORDER_TRANSITIONS`, `STA
 - **Señal de geolocalización (GPS en San Jacinto) — NO es equivalente a `compra_previa`.** Un cliente sin ningún historial (ninguna de las tres cláusulas de arriba) pero cuyo GPS **en vivo, al momento de pedir** (`customer_gps_lat/lng`, método `gps_high_accuracy` o `gps_low_accuracy` — nunca `manual_skip_prepaid`/`failed`, que no traen coordenada real) cae dentro del polígono de cobertura de San Jacinto, puede elegir contraentrega, pero el pedido entra a `validando` (la cajera llama) en vez de contraentrega libre.
   **Por qué la asimetría, y por qué es una decisión nueva y no un OR simétrico**: el GPS del navegador es trivialmente falsificable (apps de mock-location sin root). Tratar "GPS en SJ" igual que "compra previa" en un cliente de cero historial habría regalado contraentrega libre en un primer pedido spoofeado — justo el hueco que el guard de "cliente nuevo siempre prepago o llamada" (`0057`/`0171`) existe para cerrar. La llamada de la cajera es el mismo costo de fricción que ya paga hoy cualquier cliente nuevo sin GPS; no es una fricción nueva, solo evita que se salte del todo.
 - **Protocolo no-show**: motorizado espera 5 min en la puerta → reporta con 1 tap → strike + entra a la bandeja del admin (reporte tipo `no_show`) → cliente recibe notificación inmediata.
+- **Protocolo no-show DEL MOSTRADOR** (`0220`): mismo motivo, mismo umbral, misma consecuencia. La cajera declara `pickup_no_show` sobre un pedido en `ready_for_pickup`; el suelo es el mismo `noShowWaitMinutes` desde `ready_for_pickup_at` (un suelo contra el toque accidental justo tras marcar «lista», no la espera de verdad — esa la decide ella mirando la repisa).
+  El strike se ancla **solo por teléfono**: en un recojo no hay domicilio del cliente, así que `delivery_reference` y las coordenadas van NULL. `customer_contraentrega_blocked` cuenta por teléfono **O** por referencia, y con la referencia NULL esa mitad simplemente no suma. **Cero migración de esquema**: esas columnas ya eran nullable.
+  Hasta `0220` el único escritor de `customer_strikes` era el `no_show` del motorizado, o sea que dejar comida hecha sin recoger no tenía ninguna consecuencia y el mismo cliente podía repetirlo cada noche.
+
+### En el mostrador no se fía: qué puede pagar un recojo (`0223`)
+
+Regla del restaurante del piloto, no una inferencia nuestra: **un recojo llega a
+cocina pagado**. O el cliente sube su captura, o cancela en la caja ahí mismo.
+
+|  | delivery | recojo «ahora» | recojo «más tarde» |
+|---|---|---|---|
+| Efectivo / caja (`pending_cash`) | ✅ | ✅ | ⛔ prepago |
+| Yape al recibir (`pending_yape`) | ✅ | **⛔ no existe** | **⛔ no existe** |
+| Prepago con captura (`prepaid`) | ✅ | ✅ | ✅ |
+
+**`pending_yape` no existe en un mostrador, y no es lo mismo que estar
+bloqueado.** Ese método significa una cosa física y concreta: el cliente le
+transfiere **al motorizado** cuando le entrega la bolsa. En un mostrador cobra la
+caja, y la caja ya declara al cerrar si entró efectivo o Yape (`payment_real`, la
+pregunta «¿cómo pagó?» del pie del mostrador). Por eso el checkout lo **esconde**
+en vez de apagarlo: una fila apagada lleva el rótulo «en este pedido», que
+promete que otro día sí — y no hay otro día.
+
+**Un recojo «más tarde» va prepagado porque es el único camino donde se cocina
+sin nadie delante Y sin cobrador al final.** En un delivery hay un motorizado en
+la puerta a quien pagarle; aquí no hay nadie. Si el cliente no viene, el plato se
+perdió y no hay a quién reclamarle. Ahí sí se **apaga** la caja con su motivo al
+lado: existe, y elegir «ahora» la devuelve.
+
+**Esto revierte, a propósito, media conclusión de `0220`.** Aquella decía que un
+recojo «más tarde» tenía «el mismo antifraude que un delivery» y que el crédito
+de GPS de `0211` le abría la contraentrega. Ya no: una llamada de validación
+confirma que el cliente existe, no que vaya a venir a por su comida. El
+antifraude de contraentrega protege comida fiada, y en esta rama ya no se fía
+ninguna.
+
+**Dónde vive la regla.** `customerPaymentIntents` (`@tindivo/contracts`) es la
+fuente; el `.refine` de `CreateOrderRequestSchema` da el 422 legible; el CHECK
+`orders_pickup_payment_chk` (`0223`) es el suelo por si alguien llega a la RPC
+sin pasar por el contrato. **Solo aplica a `source = 'customer_pwa'`**: un recojo
+manual de la cajera cobrado por Yape es legítimo — ella tuvo el dinero en la mano
+antes de crear la fila.
+
+### El dinero entra antes de cocinar, y el plantón pagado no es una falta (`0224`)
+
+Segunda mitad de la regla. La `0223` cerró **qué** se puede elegir; esta mueve
+**cuándo** entra el dinero, y arregla lo que ese movimiento rompe al otro lado.
+
+**El cobro de un recojo «ahora» pasa al `accept`.** `advance_order` exige
+`paymentReal` (`paid_cash` | `paid_yape`) para mandarlo a cocina, y el tablero
+lo pregunta en el mismo modal del tiempo de preparación —el cobro arriba, que es
+el orden en que ella hace las cosas—. Antes el dinero entraba en `handover`, o
+sea **después** de la cocción: eso basta contra el pedido falso (quien no está,
+no se acepta) pero no contra el que se arrepiente, porque entre aceptar y
+entregar hay una cocción entera. Al entregar ya no se pregunta nada: un solo
+botón «Se lo llevó».
+
+**`payment_verified_at` es ahora el predicado único de «hay dinero dentro».** No
+es una columna reciclada a la fuerza: desde la `0181` significa «una persona
+confirmó que el dinero llegó» y la escribía `validate_order` al aprobar una
+captura. Ahora tiene un segundo escritor con el mismo sentido —la cajera
+cobrando en la caja— y eso permite responder con **una sola pregunta**, sin
+mirar `payment_intent`, si un pedido está pagado.
+
+**Un `pickup_no_show` de un pedido pagado ya no deja strike.** El strike existe
+(§8) para frenar a quien genera **pérdidas** al negocio; un recojo cobrado no
+genera ninguna: el negocio se queda con el dinero y con el plato. Marcarlo igual
+empujaría a prepago obligado, y a los tres a un bloqueo de 30 días, a un vecino
+que pagó y tuvo una emergencia — el mismo problema que el cobro por adelantado
+venía a evitar, reaparecido por el otro lado. El pedido **sí** se cancela (la
+bolsa deja de ocupar el mostrador) y el evento `CustomerNoShow` sale siempre,
+con `paid`/`strike` dentro para poder contarlos. El strike sigue vivo para el
+único recojo que puede llegar sin cobrar: **el manual de la cajera**.
+
+**La política que se le promete al cliente, y dónde se le dice.** «Te lo
+guardamos listo hasta que cierre el local. Si no pasas a recogerlo, no se
+devuelve» — en el checkout, bajo la respuesta «Más tarde», **antes** de pagar.
+Es la pieza antidisputa y por eso no vive en los términos: el cliente paga por
+adelantado y la comida se hace sin él delante, así que las dos mitades tienen
+que estar delante de sus ojos antes de que yapee.
+
+**Por qué no hay devolución automática, y no es tacañería:** Tindivo **no
+retiene fondos**. El Yape del prepago va directo al negocio, así que la
+plataforma no puede ejecutar un reembolso aunque quisiera — solo registrar lo
+que el negocio decida. Cualquier gesto de generosidad caso a caso es de La
+Florencia, y está bien que así sea.
+
+### Recojo en el local: los dos perfiles, y por qué solo uno se salta el guard (`0220`)
+
+El checkout **pregunta** («¿Vas al local ahora?» → *Sí, voy y espero ahí* /
+*No, paso más tarde*) y guarda la respuesta en `orders.pickup_timing`. **No se
+infiere del origen del enlace**: un QR pegado en el mostrador se fotografía y se
+comparte por WhatsApp en diez segundos, así que `source=qr_priamo` queda como
+dato de atribución de marketing y **nunca** como control de seguridad.
+
+**La pregunta es por dónde va a estar el cliente, no por la hora.** Antes decía
+«¿cuándo recoges tu pedido?» y pedía un horario que las dos opciones no dan; con
+ese eje, «más tarde» se leía como «a qué hora paso» en lugar de lo que de verdad
+significa —«no voy a estar delante»—, que es justo lo que decide todo lo demás:
+el pago en caja deja de existir y vuelve la validación telefónica.
+
+| | `pickup_timing = 'later'` | `pickup_timing = 'now'` |
+|---|---|---|
+| Cómo se paga (`0223`) | **Prepago y punto** | Caja del local (efectivo o Yape) o prepago |
+| Antifraude | No llega a aplicarse: no se fía nada | Se salta el guard de historial y `validando` |
+| GPS | Se captura como evidencia, **ya no decide** | Se captura como evidencia, **nunca bloquea** |
+| Qué lo garantiza | El dinero, cobrado antes de cocinar | La cajera, mirando a quien pidió, antes de aceptar |
+| Riesgo (`risk_blocked`) | Corta | **Corta igual** |
+
+**Por qué «ahora» puede saltarse el guard, y por qué eso no abre un hueco.** Es el
+único camino del sistema donde un cliente sin ninguna historia paga contraentrega
+sin GPS y sin llamada, y se sostiene sobre un solo hecho: **nadie cocina hasta que
+la cajera acepta**, y para aceptar tiene delante a quien pidió. La verificación es
+un humano mirando a otro humano — más fuerte que una coordenada, porque el GPS de
+un navegador se falsifica sin root y estar de pie en el mostrador no. Y mentir no
+le cuesta nada al negocio: quien dice «ahora» y no aparece deja un pedido que
+nadie tocó, y que muere solo por la ventana de aceptación (`acceptanceMinutes`)
+que ya corre para todos. Sin comida hecha, no hay pérdida que cobrar.
+
+**`validando` significa «la cajera llama por teléfono»**, y no se llama a quien
+está al otro lado del mostrador; por eso un recojo «ahora» nunca entra ahí. Lo que
+**no** se pierde son las señales: `requires_validation`, `validation_reason_code` y
+`risk_flags` se guardan igual y la tarjeta las enseña. Lo que cambia es quién
+resuelve la duda.
+
+**Lo que sí se descubrió al abrirlo, y era lo contrario de lo que se suponía.** El
+recojo **ya pasaba** por el antifraude: el guard de contraentrega de
+`create_customer_order` corre ANTES de ramificar por método. Lo que hacía el
+cliente era no capturar GPS para pickup (`collectGpsValidation` retornaba `{}`), así
+que el pedido llegaba sin coordenadas y el vecino sin historial que quería recoger
+su comida se estrellaba contra «Pago adelantado requerido». El canal estaba
+CERRADO, no abierto.
+
+**Un bug colateral, corregido de paso.** `apps/api/.../customer/orders/route.ts`
+preguntaba `customer_trusted_for_contraentrega` (que exige `decision = 'trusted'`)
+y devolvía 403 a todo lo demás — o sea que cortaba el caso `local_review` que
+`0211` existe para abrir, y esa migración entera estaba muerta **a través del
+HTTP** aunque sus tests contra la RPC estuvieran verdes. Ahora esa capa solo
+rechaza `risk_blocked`, que es lo único que puede decidir sin copiar reglas; el
+resto lo decide la RPC dentro de su transacción.
+
+**Fuera de alcance, evaluado y descartado:** OTP obligatorio antes de cocina
+(redundante con GPS + `validando`, con costo de Twilio); contador de inasistencias
+paralelo al de strikes (lo que faltaba era el escritor, no un sistema aparte);
+rate limiting por IP (el canal ya exige sesión autenticada con teléfono
+verificado); cuarta columna en el kanban (aprieta el escritorio a 1280 px y no
+existe en tablet, que cae a la vista móvil); tablero separado por canal (fragmenta
+la atención de la cajera).
 - **Salir de un strike**: no hay botón "paga y vuelve". Excepción: el cliente deja un reporte (`strike_reactivation`) y el admin lo revisa caso a caso. El bloqueo total de 3 strikes sí expira solo a los 30 días (`blocked_until`); el escalón de 2 (prepago forzado) **no** expira ni decae con compras exitosas — el contador es acumulado de por vida.
 - **Fake de restaurante**: Tindivo no absorbe nada automático; toda compensación pasa por revisión del admin; tope ~S/30–40.
 - **Pedidos manuales**: capturar número+dirección estructurados; el bloqueo por strikes **también** aplica al canal manual.
@@ -368,7 +601,7 @@ Si algún día se automatiza: el umbral ya está en `app_settings`, pero mete
 - **OTP del cliente**: proveedor de SMS/WhatsApp para validar el celular (tiene costo y cuenta). — *Fase 6.*
 - **Credenciales**: Vercel (team/proyectos), Inngest (signing key o self-host), VAPID (generar par), DNS de `tindivo.com`. — *Fase 2/7.*
 - **Backups y PII**: destino de backups (el v1 mencionaba Google Drive personal = riesgo de cumplimiento). — *Fase 7.*
-- **Pickup**: confirmado soportado por el modelo pero inactivo; el cierre de `delivered` en pickup (sin motorizado) se define si se activa. — *post-piloto.*
+- ~~**Pickup**: confirmado soportado por el modelo pero inactivo; el cierre de `delivered` en pickup (sin motorizado) se define si se activa.~~ **RESUELTO (2026-09-07, `0219`/`0220`)**: lo cierra el negocio con `handover`, sobre el estado nuevo `ready_for_pickup`. Ver §5 y §8. Encendido restaurante por restaurante con `businesses.accepts_web_pickup`, no de golpe.
 
 ---
 
@@ -800,3 +1033,55 @@ Las nueve tallas de `theme.css` se declaran ahora como grupo `font-size` en
 **Al añadir una talla nueva a `@theme`, hay que añadirla también ahí.** Es el
 único acoplamiento que deja esta solución, y no avisa si se olvida.
 
+
+---
+
+## 28. Reseñas: se capturan desde el día 1, no se publican hasta que los números lo permitan (2026-09-07)
+
+**En producción (Fase A).** El cliente deja **una nota** de 1-5, etiquetas y un
+comentario opcional sobre un pedido `delivered`. Migraciones `0215`-`0218`.
+
+### Las cinco reglas que no se rompen
+
+1. **Nada es público.** No hay lectura anónima de `order_reviews` y el catálogo
+   no muestra ningún promedio. Abrirlo es una decisión con condiciones escritas
+   (ver abajo), no un `select` más.
+2. **El negocio ve la nota y las etiquetas; el TEXTO no le llega.** Lo hace
+   cumplir un `GRANT` por columna (`0217`), no la interfaz: `comment` está fuera
+   del rol `authenticated`. El admin lo lee por la API con service-role. Si
+   alguien "simplifica" la bandeja del admin leyendo por RLS, el texto
+   desaparece sin fallar ruidosamente.
+3. **No se promete anonimato.** El pedido lleva el teléfono y el negocio lo
+   tiene delante. Lo que se promete —y se cumple— es que no lee el párrafo.
+4. **La reseña no toca dinero ni asignación, nunca automáticamente.** Ni
+   comisión, ni prioridad de despacho, ni visibilidad. Es entrada para que un
+   humano decida, como el antifraude.
+5. **La nota del motorizado no se publica jamás.** Cuatro personas
+   identificables en un pueblo. Señal interna del admin y punto.
+
+### La pregunta se hace en el pedido SIGUIENTE, no al entregar
+
+Al entregar el cliente cierra la app y se va a comer. Funciona porque la brecha
+entre pedidos del mismo cliente es de **2 días en mediana** (p90 7.4, máx 14,
+medido en prod): de ahí los **21 días** de `app_settings.reviews.windowDays`.
+Con una brecha de semanas la decisión habría sido otra, porque calificar de
+memoria solo guarda los desastres.
+
+### Qué abre la Fase B (promedio público)
+
+Se cumplen **las cuatro** o no se abre:
+
+1. Tasa de respuesta **≥ 25 %**.
+2. **≥ 20 reseñas y ≥ 30 días** de historia en ese negocio. El que no llegue no
+   muestra **nada** — ni «Sin reseñas», que en una card lee como advertencia.
+3. **≥ 10 %** de las entregas de ese negocio representadas. Hoy solo el ~10 % de
+   los pedidos tiene cuenta, así que publicar antes sería publicar el juicio de
+   una minoría como si fuera el del pueblo.
+4. **Decisión explícita del usuario** a la vista de esos tres números. No es
+   automático: es la reputación de un vecino.
+
+**Fase C (comentarios públicos): solo con ≥ 8-10 negocios por pueblo**, y con
+moderación, derecho de réplica y política escrita antes del primer caso.
+
+> Las consultas SQL que miden las cuatro condiciones —verificadas contra prod—
+> y todo el detalle están en **`Docs/spec/spec_resenas.md`**.

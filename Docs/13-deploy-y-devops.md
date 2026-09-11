@@ -50,11 +50,24 @@ Cada app en `apps/` se despliega como un proyecto Vercel independiente:
 
 | Proyecto Vercel | Repo path | Dominio producción | Dominio preview |
 |---|---|---|---|
-| `tindivo-api` | `apps/api` | `api.tindivo.com` | `api-tindivo-pr-N.vercel.app` |
+| `tindivo-api` | `apps/api` | `apiv2.tindivo.com` | `api-tindivo-pr-N.vercel.app` |
 | `tindivo-customer` | `apps/customer` | `tindivo.com` + `www.tindivo.com` | `customer-tindivo-pr-N.vercel.app` |
 | `tindivo-admin` | `apps/admin` | `admin.tindivo.com` | `admin-tindivo-pr-N.vercel.app` |
 | `tindivo-negocios` | `apps/negocios` | `negocios.tindivo.com` | `negocios-tindivo-pr-N.vercel.app` |
 | `tindivo-motorizados` | `apps/motorizados` | `motorizados.tindivo.com` | `motorizados-tindivo-pr-N.vercel.app` |
+
+> **OJO CON EL DOMINIO.** La API de producción del v2 es **`apiv2.tindivo.com`**,
+> no `api.tindivo.com`. Esa segunda es la del **v1 legacy**, y sigue en pie: no
+> da error, contesta 200 en la raíz y devuelve un 404 de Next con aspecto normal
+> a cualquier ruta del v2. O sea que sondearla parece decir «esta ruta no está
+> desplegada» cuando lo que pasa es que estás llamando al backend equivocado.
+>
+> Para distinguirlas de un vistazo: `api.tindivo.com/` sirve una landing («Tindivo
+> API», el `app/page.tsx` del v1); `apiv2.tindivo.com/` devuelve 404 porque el
+> `apps/api` del v2 es API pura y no tiene página. Y la fuente de verdad no es
+> este documento: es la URL que llevan dentro los chunks de cualquier frontend
+> desplegado (`grep -oE 'https?://[^\"]+/api/v1'`).
+
 
 ### Configuración por proyecto
 
@@ -78,11 +91,15 @@ DNS apuntando a Vercel:
 ```
 A     tindivo.com               76.76.21.21
 A     www.tindivo.com           76.76.21.21
-CNAME api.tindivo.com           cname.vercel-dns.com
+CNAME apiv2.tindivo.com         cname.vercel-dns.com
 CNAME admin.tindivo.com         cname.vercel-dns.com
 CNAME negocios.tindivo.com      cname.vercel-dns.com
 CNAME motorizados.tindivo.com   cname.vercel-dns.com
 ```
+
+`api.tindivo.com` NO está en esta lista y no es un olvido: ese CNAME existe y
+apunta al proyecto Vercel del **v1 legacy**, que sigue sirviendo. Ver el aviso
+de §2.
 
 Vercel emite certificados SSL automáticos (Let's Encrypt).
 
@@ -150,7 +167,7 @@ Inngest auto-discovers el endpoint al hacer deploy.
 
 En Inngest Dashboard:
 1. Crear app "tindivo-v2".
-2. Endpoint URL: `https://api.tindivo.com/api/inngest`.
+2. Endpoint URL: `https://apiv2.tindivo.com/api/inngest`.
 3. Verificar firma con `INNGEST_SIGNING_KEY`.
 
 ### Self-hosting (alternativa post-MVP)
@@ -180,7 +197,7 @@ NEXT_PUBLIC_CUSTOMER_URL="https://tindivo.com"
 NEXT_PUBLIC_ADMIN_URL="https://admin.tindivo.com"
 NEXT_PUBLIC_NEGOCIOS_URL="https://negocios.tindivo.com"
 NEXT_PUBLIC_MOTORIZADOS_URL="https://motorizados.tindivo.com"
-NEXT_PUBLIC_API_URL="https://api.tindivo.com"
+NEXT_PUBLIC_API_URL="https://apiv2.tindivo.com/api/v1"   # con el sufijo /api/v1
 NEXT_PUBLIC_SOPORTE_WHATSAPP="51987654321"
 ```
 
@@ -211,7 +228,7 @@ Secrets accesibles desde Edge Functions y triggers `pg_net`:
 ```sql
 INSERT INTO vault.secrets (name, secret) VALUES
   ('service_role_key', '<service_role>'),
-  ('app_internal_api_url', 'https://api.tindivo.com/api/v1/internal'),
+  ('app_internal_api_url', 'https://apiv2.tindivo.com/api/v1/internal'),
   ('send_push_url', 'https://<proj>.supabase.co/functions/v1/send-push'),
   ('inngest_webhook_url', 'https://inn.gs/e/<inngest_event_key>');
 ```
@@ -277,6 +294,32 @@ jobs:
 
 Vercel detecta push a `main` y despliega cada app automáticamente. No necesitamos workflow propio para deploys.
 
+> **LO QUE SIGUE ES UNA PROPUESTA, NO LO QUE HAY (verificado el 2026-09-09).**
+> `.github/workflows/` contiene **un solo fichero, `ci.yml`**. Ni `migrate.yml`
+> ni `deploy-functions.yml` existen. Nada aplica migraciones ni despliega Edge
+> Functions al mergear a `main`: **las dos cosas son manuales**, y creer lo
+> contrario es cómo producción se queda seis migraciones por detrás sin que
+> nadie lo note.
+>
+> **El orden real, y no se puede alterar:**
+>
+> 1. `supabase db push` — la migración primero, siempre.
+> 2. `pnpm db:types` — regenera contra el remoto, así que va DESPUÉS del push.
+> 3. Desplegar las apps (Vercel).
+> 4. `supabase functions deploy <slug>` — **tercer despliegue, aparte**. Vercel
+>    no lo hace.
+>
+> El paso 4 es el que más se olvida y el que peor falla. La `send-push`
+> desplegada el 2026-09-06 (v12) pedía nueve columnas de `orders`; la del repo
+> pide `delivery_method` y `pickup_timing` (0220). Ese `select` no es del
+> recojo: está en la rama de `OrderStatusChanged`/`OrderExpired`, o sea en todos
+> los pedidos, y abajo hay un `if (!o) return out`. Desplegarla antes que la
+> migración deja el piloto **sin una sola notificación**, respondiendo 200 con
+> `recipients: 0` — indistinguible de una noche tranquila.
+>
+> `pnpm check:deploy` comprueba los cuatro pasos y ya mira también
+> `supabase/functions/`. Correrlo antes de desplegar y después del push.
+
 Para Supabase migrations:
 
 ```yaml
@@ -323,16 +366,32 @@ jobs:
 
 ### Convención
 
-Archivos en `supabase/migrations/<timestamp>_<name>.sql`. Timestamp en formato `YYYYMMDDHHMMSS`.
+Archivos en `supabase/migrations/NNNN_<nombre>.sql`, con contador de cuatro
+dígitos. Ejemplo: `0219_the_counter_is_not_a_motorcycle.sql`.
 
-Ejemplo: `20260101120000_init.sql`, `20260102100000_add_business_capabilities.sql`.
+**No es el `YYYYMMDDHHMMSS` que decía aquí**: ese es el esquema del v1
+(`../tindivo-delivery`) y escribir uno así en este repo lo ordena mal frente a
+los 223 que ya existen. Antes de crear una, `supabase migration list` para ver
+el primer número libre — dos agentes trabajando a la vez cogen el mismo si no
+se mira.
 
 ### Workflow
 
-1. **Local**: editar SQL en `supabase/migrations/*.sql`. Aplicar a local Supabase con `supabase db reset`.
-2. **PR**: incluir migration en el PR. CI valida (corre `db reset` + `db push` contra preview Supabase).
-3. **Merge a main**: workflow `migrate.yml` aplica con `supabase db push` contra producción.
-4. **Tipos**: tras cada migration, regenerar tipos con `pnpm db:types` y commitear `packages/supabase/src/types.gen.ts`.
+1. **Local**: editar SQL en `supabase/migrations/*.sql`. Aplicar a local con
+   `supabase db reset` y **reponer el mundo e2e con `pnpm db:seed:e2e`**, que
+   el reset se lleva por delante y no hay `seed.sql`.
+2. **PR**: incluir la migración en el PR. Ojo: el CI **no** valida migraciones
+   contra ninguna preview — `ci.yml` corre lint, check:ds, check:auth,
+   type-check, test y build, y nada más.
+3. **Aplicar a producción**: a mano, con `supabase db push`. **No hay workflow
+   que lo haga al mergear.**
+4. **Tipos**: tras el push, `pnpm db:types` y commitear
+   `packages/supabase/src/database.types.ts` (ese es el fichero; `types.gen.ts`
+   no existe). Apunta al remoto, así que antes del push regenera el esquema
+   viejo.
+5. **Advisors**: `get_advisors` por MCP tras aplicar, que es donde salen las
+   tablas con RLS sin policy y las funciones SECURITY DEFINER que quedaron
+   abiertas a `anon`.
 
 ### Expand-contract
 

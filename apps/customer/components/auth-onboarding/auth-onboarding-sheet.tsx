@@ -3,6 +3,7 @@
 import { BottomSheet, Icon } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { useCart } from '@/lib/cart'
 import {
   clearOnboardingResume,
   type OnboardingStep,
@@ -40,6 +41,23 @@ export function AuthOnboardingSheet() {
   const router = useRouter()
   const ob = useOnboarding()
   const [userId, setUserId] = useState<string | null>(null)
+  /**
+   * A QUIEN VA A RECOGER NO SE LE ENSEÑA EL MAPA.
+   *
+   * Un pedido de mostrador no tiene domicilio (`delivery_reference` y las
+   * coordenadas van NULL), así que la pantalla de la dirección no le pide un
+   * dato que su pedido vaya a usar: le pide uno que quizá use algún día. Y no es
+   * una pantalla barata — monta Leaflet y sale a por el GPS— justo en el
+   * escenario donde el cliente está de pie en el local con cola detrás.
+   *
+   * La salida ya existía (la X del encabezado, con su «Puedes completar esto
+   * después»), pero seguía siendo una pantalla que hay que descartar a mano. Con
+   * la bolsa en recojo el registro termina en el celular.
+   *
+   * NO SE PIERDE LA DIRECCIÓN: quien luego quiera delivery la pone en el
+   * checkout, que ya sabe pedirla (`AddressSelectorSheet`), o en su perfil.
+   */
+  const recoge = useCart((s) => s.deliveryMethod) === 'pickup'
 
   // Mantener el userId al día mientras el sheet está abierto (signup/login lo crean).
   useEffect(() => {
@@ -55,7 +73,10 @@ export function AuthOnboardingSheet() {
   if (!ob.open) return null
 
   const idx = Math.max(0, PANEL_ORDER.indexOf(ob.step))
-  const totalSteps = ob.path === 'google' ? 3 : 2
+  // El total cuenta los pasos que ESTE cliente va a ver: sin la dirección, el
+  // camino de correo se queda en uno y el de Google en dos. Un «Paso 1 de 2» que
+  // termina en el 1 es la clase de detalle que hace dudar de si algo falló.
+  const totalSteps = (ob.path === 'google' ? 3 : 2) - (recoge ? 1 : 0)
   const stepNumber: Partial<Record<OnboardingStep, number>> = {
     'google-name': 1,
     phone: ob.path === 'google' ? 2 : 1,
@@ -221,7 +242,10 @@ export function AuthOnboardingSheet() {
                     fullName={ob.fullName}
                     email={ob.email}
                     userId={userId}
-                    onDone={() => ob.goTo('address')}
+                    onDone={() => {
+                      if (recoge) finish()
+                      else ob.goTo('address')
+                    }}
                   />
                 )}
                 {panel === 'address' && (

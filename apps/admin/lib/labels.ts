@@ -150,4 +150,9 @@ export const ACTIVE_STATUSES = new Set([
   'heading_to_restaurant',
   'waiting_at_restaurant',
   'picked_up',
+  // Una bolsa esperando en el mostrador sigue viva: el admin la tiene que ver
+  // entre los activos, no darla por cerrada. Espeja `ACTIVE_ORDER_STATUSES` de
+  // `@tindivo/contracts` — aquí falta además `awaiting_payment`, que es un
+  // hueco anterior y de otra rama, no de esta.
+  'ready_for_pickup',
 ])

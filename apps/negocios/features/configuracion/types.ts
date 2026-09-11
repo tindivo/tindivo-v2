@@ -14,4 +14,4 @@ export interface Form {
   usesTindivoDrivers: boolean
 }
 
-export type SectionId = 'datos' | 'yape' | 'tiempos' | 'capacidades' | 'horario'
+export type SectionId = 'datos' | 'yape' | 'tiempos' | 'capacidades' | 'horario' | 'avisos'

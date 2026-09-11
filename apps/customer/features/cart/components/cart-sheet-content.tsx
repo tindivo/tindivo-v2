@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { CartCtas } from '@/features/cart/components/cart-ctas'
 import { CartEmpty } from '@/features/cart/components/cart-empty'
 import { CartLineList } from '@/features/cart/components/cart-line-item'
+import { CartPickupNotice } from '@/features/cart/components/cart-pickup-notice'
 import { CartValidationBanner } from '@/features/cart/components/cart-validation-banner'
 import { soles } from '@/features/cart/lib/format'
 import { useCart } from '@/lib/cart'
@@ -75,14 +76,23 @@ export function CartSheetContent({ onClose }: CartSheetContentProps) {
       </div>
 
       {count > 0 && (
-        <div className="flex items-center gap-3 border-t border-white/[0.08] bg-white/[0.90] px-4 pt-3.5 pb-6 shadow-elev-3 backdrop-blur-3xl">
-          <div className="shrink-0">
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">
-              Subtotal
-            </div>
-            <div className="font-extrabold text-[18px] tabular-nums">{soles(subtotal)}</div>
+        <div className="border-t border-white/[0.08] bg-white/[0.90] px-4 pt-3.5 pb-6 shadow-elev-3 backdrop-blur-3xl">
+          {/* Franja propia y ENCIMA del pie: la fila de abajo ya reparte su
+              ancho entre el subtotal y el boton, y meter aqui un rotulo mas
+              empuja al CTA. Solo aparece en recojo, asi que el delivery ve
+              exactamente el mismo pie de siempre. */}
+          <div className="mb-2.5 empty:hidden">
+            <CartPickupNotice />
           </div>
-          <CartCtas layout="row" onNavigate={onClose} />
+          <div className="flex items-center gap-3">
+            <div className="shrink-0">
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">
+                Subtotal
+              </div>
+              <div className="font-extrabold text-[18px] tabular-nums">{soles(subtotal)}</div>
+            </div>
+            <CartCtas layout="row" onNavigate={onClose} />
+          </div>
         </div>
       )}
     </BottomSheet>

@@ -27,12 +27,12 @@ drag_indicator
 edit
 edit_location_alt
 edit_note
-emoji_events
 error
 expand_less
 expand_more
 fact_check
 fastfood
+format_list_bulleted
 fullscreen
 gavel
 gps_fixed
@@ -64,8 +64,10 @@ pause_circle
 payments
 person
 person_add
+person_pin_circle
 photo_camera
 play_circle
+point_of_sale
 priority_high
 qr_code_2
 receipt_long

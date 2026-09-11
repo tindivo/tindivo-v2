@@ -7,6 +7,8 @@ import { Button, Card, CardBody, EmptyState, ScreenHeader, StatusPill } from '@t
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { ReviewPromptButton } from '@/features/reviews/components/review-prompt-button'
+import { usePendingReview } from '@/features/reviews/hooks/use-pending-review'
 import { api } from '@/lib/api'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import { getSupportWhatsapp } from '@/lib/support'
@@ -77,6 +79,13 @@ export default function PedidosPage() {
   const [orders, setOrders] = useState<OrderRow[]>([])
   const [bizNames, setBizNames] = useState<Record<string, string>>({})
   const [wa, setWa] = useState(TINDIVO_SUPPORT_WHATSAPP)
+  /**
+   * La segunda puerta a la reseña, para quien no pasó por la espera.
+   *
+   * Se consulta siempre que se abra el historial: aquí el cliente ya vino a
+   * mirar sus pedidos, así que la pregunta no le quita la atención de nada.
+   */
+  const resena = usePendingReview(true)
 
   useEffect(() => {
     getSupportWhatsapp().then(setWa)
@@ -189,6 +198,7 @@ export default function PedidosPage() {
                           </Button>
                         </Link>
                       )}
+                      <ReviewPromptButton estado={resena} orderId={o.id} />
                       {(!isCancelled || o.cancel_reason !== 'proof_rejected_final') && (
                         <Link href={`/negocio/${o.business_id}`} className="flex-1">
                           <Button variant="outline" size="sm" className="w-full">

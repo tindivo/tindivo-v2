@@ -1,0 +1,592 @@
+import { expect, type Page, test } from '@playwright/test'
+import { localClient } from '../../apps/api/lib/__tests__/helpers/local-db.ts'
+import { E2E } from '../../apps/api/scripts/e2e-fixtures.ts'
+
+// biome-ignore lint/suspicious/noExplicitAny: database.types.ts se genera contra el remoto
+const db = localClient as any
+
+/**
+ * El recojo visto desde el mostrador. (Migraciones 0219 y 0220)
+ *
+ * POR QUÉ ESTE SPEC EXISTE, teniendo ya `pickup.integration.test.ts` (las
+ * reglas) y `recojo-en-el-local.spec.ts` (la pantalla del cliente).
+ *
+ * Falta el lado de la cajera, y ahí es donde el canal se sostiene o se cae. Un
+ * recojo «ahora» se salta el guard de contraentrega y la llamada de validación
+ * a cambio de UNA cosa: que ella verifique con los ojos que tiene delante a
+ * quien pidió, antes de aceptar. Esa contrapartida no vive en ninguna función:
+ * vive en lo que la tarjeta dice y en lo que el botón le pide. Si la tarjeta se
+ * ve igual que un delivery, la verificación no ocurre en ninguna parte y lo que
+ * queda es un canal sin freno.
+ *
+ * Y el otro extremo: un recojo que llega a `ready_for_pickup` no lo cierra
+ * nadie más que ella. Sin los dos botones del mostrador, la bolsa se queda en
+ * ese estado para siempre — y con ella el guard de pedido activo, que impide a
+ * ese cliente volver a pedir en este restaurante.
+ */
+
+const BIZ = E2E.BUSINESS_ID
+const pedidosSembrados: string[] = []
+
+/** Un teléfono de 9 dígitos que no choca con los del seed. */
+function telefonoNuevo(): string {
+  let t = '9'
+  for (let i = 0; i < 8; i++) t += Math.floor(Math.random() * 10)
+  return t
+}
+
+/**
+ * Un recojo web ya en el estado que interesa.
+ *
+ * Se siembra por SQL y no por la app del cliente a propósito: lo que este spec
+ * prueba es la pantalla de la cajera, y hacerla depender del checkout del
+ * cliente convertiría cualquier fallo de allí en un rojo que apunta aquí.
+ */
+async function sembrarRecojo(
+  status: 'pending_acceptance' | 'preparing' | 'ready_for_pickup',
+  timing: 'now' | 'later',
+  /**
+   * El dinero YA entró. Desde la 0224 no es un caso raro sino el normal de un
+   * recojo «ahora»: `accept` cobra en la caja antes de mandar nada a cocina, y
+   * sella `payment_verified_at` — la misma columna que escribe `validate_order`
+   * al aprobar la captura de un prepago.
+   */
+  opts: { cobrado?: boolean } = {},
+): Promise<{ id: string; shortId: string }> {
+  const { data, error } = await db
+    .from('orders')
+    .insert({
+      business_id: BIZ,
+      source: 'customer_pwa',
+      // `customer_user_id` NULL: la fila no necesita cuenta para pintarse, y sin
+      // ella no toca el historial de ningún cliente del seed.
+      delivery_method: 'pickup',
+      pickup_timing: timing,
+      // LA REGLA DE PAGO DE LA 0223, TAMBIÉN AL SEMBRAR. Un recojo «más tarde»
+      // del canal cliente solo existe prepagado —lo impone
+      // `orders_pickup_payment_chk`— así que sembrarlo en efectivo revienta el
+      // INSERT con un error de constraint que apunta al sitio equivocado.
+      payment_intent: timing === 'later' ? 'prepaid' : 'pending_cash',
+      customer_name: timing === 'now' ? 'Vecino en el mostrador' : 'Vecino que pasa luego',
+      customer_phone: telefonoNuevo(),
+      order_amount: 24,
+      delivery_fee: 0,
+      status,
+      prep_time_minutes: status === 'pending_acceptance' ? null : 20,
+      // La espera del mostrador ya vencida: el botón de plantón exige un suelo
+      // (`noShowWaitMinutes`) y sin esto el caso probaría el suelo, no el botón.
+      ready_for_pickup_at:
+        status === 'ready_for_pickup' ? new Date(Date.now() - 60 * 60_000).toISOString() : null,
+      payment_verified_at: opts.cobrado ? new Date(Date.now() - 90 * 60_000).toISOString() : null,
+      payment_real: opts.cobrado ? 'paid_cash' : null,
+    })
+    .select('id, short_id')
+    .single()
+  if (error) throw new Error(`no se pudo sembrar el recojo: ${error.message}`)
+  pedidosSembrados.push(data.id)
+  return { id: data.id, shortId: data.short_id }
+}
+
+/**
+ * Un DELIVERY en cocina, para las mitades que protegen un arreglo del recojo.
+ *
+ * Existe por una razón concreta: varias correcciones de este canal se hacen
+ * cambiando una frase «si es recojo, di otra cosa», y ese cambio se puede
+ * escribir de más —quitando también la frase del delivery— sin que ningún rojo
+ * lo diga. Un caso que afirme lo que el delivery SIGUE diciendo es lo único que
+ * convierte eso en un fallo visible.
+ */
+async function sembrarDeliveryEnCocina(): Promise<{ id: string; shortId: string }> {
+  const { data, error } = await db
+    .from('orders')
+    .insert({
+      business_id: BIZ,
+      source: 'customer_pwa',
+      delivery_method: 'delivery',
+      payment_intent: 'pending_cash',
+      customer_name: 'Vecino con dirección',
+      customer_phone: telefonoNuevo(),
+      delivery_address: 'Jr. Los Pinos 123',
+      delivery_reference: 'Portón azul',
+      order_amount: 24,
+      delivery_fee: 2,
+      status: 'preparing',
+      prep_time_minutes: 20,
+    })
+    .select('id, short_id')
+    .single()
+  if (error) throw new Error(`no se pudo sembrar el delivery: ${error.message}`)
+  pedidosSembrados.push(data.id)
+  return { id: data.id, shortId: data.short_id }
+}
+
+/**
+ * El texto tal como lo VE la cajera.
+ *
+ * `.filter({ visible: true })` no es cosmético: el tablero monta las DOS vistas
+ * —`PedidosMobile` y `PedidosDesktop`— y esconde una por CSS, así que cada
+ * pedido aparece dos veces en el DOM y `.first()` cae en la copia oculta. El
+ * síntoma es un `toBeVisible` que falla enseñando el elemento que buscaba.
+ */
+function visible(page: Page, texto: string | RegExp) {
+  return page.getByText(texto).filter({ visible: true })
+}
+
+/** Abre el tablero y espera a que la tarjeta del pedido esté pintada. */
+async function abrirTablero(page: Page, shortId: string): Promise<void> {
+  await page.goto('/')
+  await expect(visible(page, `#${shortId}`).first()).toBeVisible({ timeout: 20_000 })
+}
+
+test.describe('0219/0220 · el recojo en el tablero de la cajera', () => {
+  test.afterEach(async () => {
+    for (const id of pedidosSembrados.splice(0)) {
+      await db.from('domain_events').delete().eq('aggregate_id', id)
+      await db.from('order_event_log').delete().eq('order_id', id)
+      await db.from('customer_order_items').delete().eq('order_id', id)
+      await db.from('business_charges').delete().eq('order_id', id)
+      await db.from('customer_strikes').delete().eq('order_id', id)
+      await db.from('orders').delete().eq('id', id)
+    }
+  })
+
+  /**
+   * LA CONTRAPARTIDA DEL CANAL, DICHA EN LA TARJETA.
+   *
+   * «Recojo · cliente presente» es el único aviso del tablero que habla de
+   * alguien que está físicamente ahí. Va en sólido y no en el gris de las demás
+   * insignias de cejilla por la misma razón por la que «Online» dejó de ser
+   * pastel: si el único marcador de algo que cambia lo que hay que hacer se
+   * lee como decoración, no se lee.
+   */
+  test('un recojo «ahora» se distingue de un delivery en la propia tarjeta', async ({ page }) => {
+    const recojo = await sembrarRecojo('pending_acceptance', 'now')
+
+    await abrirTablero(page, recojo.shortId)
+
+    await expect(visible(page, 'Recojo · cliente presente').first()).toBeVisible()
+    // Y el estado del mostrador, que es lo que le dice a quién se espera.
+    await expect(visible(page, 'Recojo en local').first()).toBeVisible()
+  })
+
+  test('un recojo «más tarde» NO dice que haya nadie delante', async ({ page }) => {
+    const recojo = await sembrarRecojo('pending_acceptance', 'later')
+
+    await abrirTablero(page, recojo.shortId)
+
+    await expect(visible(page, 'Recojo en local').first()).toBeVisible()
+    await expect(page.getByText('Recojo · cliente presente')).toHaveCount(0)
+  })
+
+  /**
+   * EL BOTÓN PIDE LA VERIFICACIÓN, no solo la aceptación. «Aceptar pedido» a
+   * secas dejaría la única garantía del canal sin pedirse en ninguna parte.
+   */
+  test('aceptar un recojo «ahora» le pide mirar al cliente Y cobrarle', async ({ page }) => {
+    const recojo = await sembrarRecojo('pending_acceptance', 'now')
+    await abrirTablero(page, recojo.shortId)
+
+    await visible(page, `#${recojo.shortId}`).first().click()
+
+    await expect(page.getByRole('button', { name: 'Cliente presente · cobrar' })).toBeVisible()
+    await expect(visible(page, /Míralo y cóbrale antes de aceptar/).first()).toBeVisible()
+  })
+
+  /**
+   * NO SE MANDA A COCINA SIN DECLARAR EL COBRO. (0224)
+   *
+   * `advance_order` lo exige, pero un 422 al final del camino no sirve de nada
+   * si la pantalla deja pulsar: lo que esta aserción cuida es que el modal PIDA
+   * la respuesta antes, con el botón diciendo qué falta, igual que hace el CTA
+   * del checkout con la pregunta del recojo.
+   *
+   * Ninguna de las dos formas de cobro viene marcada, y es lo mismo que en el
+   * checkout: un `paid_cash` por defecto convertiría en efectivo cada Yape que
+   * pasara por la caja sin que nadie lo mirara.
+   */
+  test('el modal de aceptar pide el cobro antes de dejar mandar a cocina', async ({ page }) => {
+    const recojo = await sembrarRecojo('pending_acceptance', 'now')
+    await abrirTablero(page, recojo.shortId)
+    await visible(page, `#${recojo.shortId}`).first().click()
+
+    await page.getByRole('button', { name: 'Cliente presente · cobrar' }).click()
+
+    await expect(visible(page, '¿Con qué te pagó?').first()).toBeVisible()
+    const confirmar = page.getByRole('button', { name: 'Dinos con qué pagó' })
+    await expect(confirmar).toBeDisabled()
+
+    await page.getByRole('button', { name: 'Yape/Plin' }).click()
+    await page.getByRole('button', { name: 'Cobré · a cocina' }).click()
+
+    // La fila es la aserción: el dinero queda declarado y sellado con quién lo
+    // vio, en el mismo instante en que el pedido entra a cocina.
+    await expect
+      .poll(
+        async () => {
+          const { data } = await db
+            .from('orders')
+            .select('status, payment_real, payment_verified_at')
+            .eq('id', recojo.id)
+            .single()
+          return data
+        },
+        { timeout: 15_000 },
+      )
+      .toMatchObject({ status: 'preparing', payment_real: 'paid_yape' })
+  })
+
+  /**
+   * LA TARJETA NO AFIRMA UN MÉTODO QUE NADIE ELIGIÓ, NI COBRA DOS VECES.
+   *
+   * En el checkout un recojo no elige método: la fila dice «Pagas en el local ·
+   * En la caja, efectivo o Yape/Plin», y con qué paga se decide delante de la
+   * caja. La tarjeta pintaba «Efectivo» igual —el intent se llama
+   * `pending_cash` por el delivery, donde el método SÍ se pacta al pedir— y
+   * medio segundo después la hoja preguntaba «¿con qué te pagó?»: la misma
+   * pantalla contradiciéndose.
+   *
+   * Y lo de después es peor: cobrado el pedido, la franja seguía ordenando
+   * «Cobrar en efectivo» toda la cocción y en `ready_for_pickup`, o sea cuando
+   * el cliente vuelve al mostrador a recoger — pidiendo cobrar otra vez algo ya
+   * cobrado, y en efectivo un pedido que se pagó por Yape.
+   *
+   * Se afirma de punta a punta y no en el view-model porque lo que falla es la
+   * costura: el dato (`payment_real`) llevaba tiempo en la consulta y en el
+   * historial, y era el tablero el que no lo leía.
+   */
+  test('la tarjeta no dice «efectivo» antes de saberlo ni «cobrar» después de cobrado', async ({
+    page,
+  }) => {
+    const recojo = await sembrarRecojo('pending_acceptance', 'now')
+    await abrirTablero(page, recojo.shortId)
+
+    // ANTES: hay algo que cobrar, pero nadie sabe todavía con qué.
+    await expect(visible(page, 'Cobra en caja').first()).toBeVisible()
+    await expect(page.getByText('Cobrar en efectivo')).toHaveCount(0)
+
+    await visible(page, `#${recojo.shortId}`).first().click()
+    await page.getByRole('button', { name: 'Cliente presente · cobrar' }).click()
+    // Y la hoja de cobro dice CUÁNTO: era la única pantalla de cobro del panel
+    // que no lo decía, con el total tapado justo detrás de ella.
+    await expect(visible(page, 'Cóbrale').first()).toBeVisible()
+    await page.getByRole('button', { name: 'Yape/Plin' }).click()
+    await page.getByRole('button', { name: 'Cobré · a cocina' }).click()
+
+    // DESPUÉS: un hecho, no una orden, y con el método que ella declaró.
+    await expect(visible(page, 'Cobrado por Yape/Plin').first()).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByText('Cobrar en efectivo')).toHaveCount(0)
+    await expect(page.getByText('Cobra en caja')).toHaveCount(0)
+
+    // Y EL COLOR DE LA PASTILLA TAMBIÉN, que es por donde se coló el fallo otra
+    // vez: `PAY_DISPLAY` se indexaba por la INTENCIÓN, así que este pedido
+    // pintaba la palabra «Billetera» dentro de la pastilla verde del efectivo.
+    // Se afirma sobre el color calculado y no sobre la clase de Tailwind: lo
+    // que estaba mal es lo que se ve, no cómo se escribe.
+    //
+    // Hay que volver a abrir el detalle: al mandar a cocina se cierra, y la
+    // pastilla vive en su cabecera. La tarjeta del tablero enseña el texto
+    // largo (`label`), no este.
+    await visible(page, `#${recojo.shortId}`).first().click()
+    const pastilla = visible(page, 'Billetera').first()
+    await expect(pastilla).toBeVisible()
+    const fondo = await pastilla.evaluate((el) => getComputedStyle(el).backgroundColor)
+    expect(fondo).toBe('rgb(237, 233, 254)') // violeta de billetera, no el #D1FAE5 del efectivo
+  })
+
+  /**
+   * LA FICHA TAMPOCO MANDA COBRAR LO YA COBRADO.
+   *
+   * La tarjeta lo arregló `0ef8e24` y el pie de entrega también; la sección de
+   * pago del detalle se quedó fuera y seguía pintando en verde «Pago en
+   * efectivo · Total a cobrar S/ 24» durante toda la cocción y con la bolsa ya
+   * en el mostrador. Visto en el navegador el 2026-09-10 con un recojo real:
+   * la pastilla de la cabecera decía «Efectivo», la tarjeta decía «Cobrado en
+   * efectivo», y dos dedos más abajo seguía la orden de cobrar.
+   *
+   * ES E2E Y NO UNITARIO A PROPÓSITO: la lógica («¿entró el dinero?») ya la
+   * prueba `cobroEnCaja` en `view-model.test.ts`, y lo que fallaba no era esa
+   * respuesta sino que esta sección no la consultaba. Eso solo se ve montando
+   * la ficha, y `negocios` no tiene testing-library.
+   */
+  test('la ficha de un recojo ya cobrado no vuelve a pedir el dinero', async ({ page }) => {
+    const recojo = await sembrarRecojo('ready_for_pickup', 'now', { cobrado: true })
+    await abrirTablero(page, recojo.shortId)
+
+    await visible(page, `#${recojo.shortId}`).first().click()
+
+    // El hecho, en la sección que antes daba la orden.
+    await expect(visible(page, 'Cobrado en efectivo').first()).toBeVisible()
+
+    // Y NI UNA SOLA ORDEN DE COBRAR EN TODA LA FICHA, que son DOS sitios
+    // distintos y hubo que arreglar los dos:
+    //
+    //   · «Pago en efectivo» lo pinta solo `PaySectionCash` en su rama de cobro
+    //     pendiente, así que su ausencia es esa corrección.
+    //   · «Total a cobrar» lo pinta además la tarjeta compacta de «Cobro»
+    //     (`pedido-detail.tsx`), la que sale cuando el pedido no trae ítems —el
+    //     caso de esta siembra, y el del manual en el que la cajera teclea el
+    //     total (0129)—. Esa fue la que sobrevivió al primer arreglo: la
+    //     aserción nació acotada a la primera y este caso la dejaba pasar.
+    //
+    // Se afirman las dos juntas a propósito. Lo que la cajera tiene delante es
+    // una ficha, no dos componentes, y basta con que UNO de los dos le mande
+    // cobrar para que vuelva a cobrar dos veces.
+    await expect(page.getByText('Pago en efectivo')).toHaveCount(0)
+    await expect(page.getByText('Total a cobrar')).toHaveCount(0)
+    await expect(page.getByText('Cobra en caja')).toHaveCount(0)
+  })
+
+  /**
+   * EL «+10 MIN» NO PUEDE ESPERAR A UNA MOTO QUE NO VIENE.
+   *
+   * La ficha decía «Solo disponible una vez y antes de que llegue el
+   * motorizado» en TODOS los pedidos, recojo incluido. Visto en el navegador el
+   * 2026-09-10 con un recojo en cocina.
+   *
+   * No es solo una palabra fuera de sitio: la frase le da a la cajera una
+   * señal por la que guiarse —«hasta que aparezca la moto»— y en el mostrador
+   * esa señal no llega nunca, así que no le dice cuándo se le acaba el margen.
+   * La condición real que impone `extend_order_prep` es una sola, que el pedido
+   * siga en `preparing`, y cada canal la reconoce por un hecho distinto.
+   */
+  test('en un recojo el «+10 min» no promete la llegada de un motorizado', async ({ page }) => {
+    const recojo = await sembrarRecojo('preparing', 'now', { cobrado: true })
+    await abrirTablero(page, recojo.shortId)
+
+    await visible(page, `#${recojo.shortId}`).first().click()
+
+    await expect(visible(page, '¿Necesitas más tiempo?').first()).toBeVisible()
+    await expect(visible(page, /antes de marcar la comida lista/).first()).toBeVisible()
+    await expect(page.getByText(/llegue el motorizado/)).toHaveCount(0)
+  })
+
+  /**
+   * LA OTRA MITAD. En delivery la moto sí aparece en la puerta, y esa frase es
+   * la que de verdad le dice a la cajera cuándo se le acabó el margen. Sin este
+   * caso, escribir el arreglo de más —quitar la mención en los dos canales— no
+   * daría ningún rojo.
+   */
+  test('y en un delivery la sigue prometiendo, que es donde es verdad', async ({ page }) => {
+    const pedido = await sembrarDeliveryEnCocina()
+    await abrirTablero(page, pedido.shortId)
+
+    await visible(page, `#${pedido.shortId}`).first().click()
+
+    await expect(visible(page, /antes de que llegue el motorizado/).first()).toBeVisible()
+    await expect(page.getByText(/marcar la comida lista/)).toHaveCount(0)
+  })
+
+  /**
+   * LAS DOS ÚNICAS SALIDAS DE UN RECOJO. Sin ellas la bolsa se queda en
+   * `ready_for_pickup` para siempre: `deliver` y `no_show` los escribe el
+   * motorizado, y aquí no hay ninguno.
+   */
+  test('la bolsa en el mostrador ofrece entregarla o declarar el plantón', async ({ page }) => {
+    const recojo = await sembrarRecojo('ready_for_pickup', 'now')
+    await abrirTablero(page, recojo.shortId)
+
+    await visible(page, `#${recojo.shortId}`).first().click()
+
+    await expect(visible(page, 'Se lo llevó · ¿cómo pagó?').first()).toBeVisible()
+    await expect(page.getByRole('button', { name: /Efectivo/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'El cliente no vino' })).toBeVisible()
+  })
+
+  /**
+   * EL AVISO QUE NO DEPENDE DE UN PERMISO. (0221)
+   *
+   * El push del recojo listo solo alcanza a quien concedió las notificaciones y
+   * conserva una suscripción viva: en el piloto, una minoría. WhatsApp no
+   * depende de nada de eso — el cliente ya verificó ese número por OTP para
+   * poder pedir.
+   *
+   * Se afirma sobre el `href`, que es el mensaje entero: si alguien lo cambia
+   * por descuido, el rojo dice exactamente qué le iba a llegar al cliente.
+   */
+  test('el aviso de WhatsApp lleva el chat del cliente y el mensaje escrito', async ({ page }) => {
+    const recojo = await sembrarRecojo('ready_for_pickup', 'now')
+    await abrirTablero(page, recojo.shortId)
+    await visible(page, `#${recojo.shortId}`).first().click()
+
+    const boton = page.getByRole('button', { name: /Avisar por WhatsApp/ })
+    await expect(boton).toBeVisible()
+
+    // `window.open` a `wa.me` abre una pestaña que no lleva a ninguna parte en
+    // e2e: se intercepta para leer la URL sin salir del navegador.
+    const url = await page.evaluate(() => {
+      let capturada = ''
+      // biome-ignore lint/suspicious/noExplicitAny: se pisa `open` a propósito
+      ;(window as any).open = (u: string) => {
+        capturada = u
+        return null
+      }
+      // biome-ignore lint/suspicious/noExplicitAny: puente para leerla después
+      ;(window as any).__waUrl = () => capturada
+      return ''
+    })
+    expect(url).toBe('')
+
+    await boton.click()
+    // biome-ignore lint/suspicious/noExplicitAny: el puente de arriba
+    const abierta = await page.evaluate(() => (window as any).__waUrl())
+
+    expect(abierta, 'tiene que abrir el chat del CLIENTE, no el de soporte').toContain('wa.me/51')
+    const texto = decodeURIComponent(new URL(abierta).searchParams.get('text') ?? '')
+    expect(texto, 'se presenta antes de pedir nada').toContain('soy La Florencia E2E')
+    expect(texto, 'lleva el código para emparejarlo en el mostrador').toContain(
+      `#${recojo.shortId}`,
+    )
+    expect(texto).toContain('ya está listo')
+    // Contraentrega: dice cuánto trae. (En prepago no lo diría — ver los tests
+    // de `pickupReadyMessage`.)
+    expect(texto).toContain('S/ 24.00')
+
+    // Y el panel se queda sabiendo que ya avisó, para no repetirlo a ciegas.
+    await expect(page.getByRole('button', { name: /avisado \d{2}:\d{2}/ })).toBeVisible({
+      timeout: 15_000,
+    })
+    const { data } = await db
+      .from('orders')
+      .select('tracking_link_sent_at')
+      .eq('id', recojo.id)
+      .single()
+    expect(data?.tracking_link_sent_at).not.toBeNull()
+  })
+
+  /**
+   * EL AVISO NO LE PIDE OTRA VEZ UN DINERO QUE YA ENTRÓ. (0224)
+   *
+   * La otra mitad del test de arriba, y el caso que en el piloto es el NORMAL:
+   * desde la 0224 un recojo «ahora» se cobra en la caja AL ACEPTAR, antes de
+   * que nadie toque una sartén. Así que cuando la comida sale del horno el
+   * dinero lleva dentro toda la cocción — y el mensaje seguía diciendo «son
+   * S/ 24.00, los pagas aquí al recogerlo», con el nombre del negocio detrás,
+   * a quien acababa de pagar en el mostrador.
+   *
+   * La pregunta buena la contesta `cobroEnCaja`, que es la fuente única de
+   * «¿queda algo que cobrar aquí?» — la misma con la que el pie de la ficha
+   * deja de preguntar «¿cómo pagó?» y con la que un plantón pagado no deja
+   * strike. Se afirma sobre el `href` porque es el mensaje entero.
+   */
+  test('el aviso NO menciona monto si el pedido ya se cobró en la caja', async ({ page }) => {
+    const recojo = await sembrarRecojo('ready_for_pickup', 'now', { cobrado: true })
+    await abrirTablero(page, recojo.shortId)
+    await visible(page, `#${recojo.shortId}`).first().click()
+
+    await page.evaluate(() => {
+      let capturada = ''
+      // biome-ignore lint/suspicious/noExplicitAny: se pisa `open` a propósito
+      ;(window as any).open = (u: string) => {
+        capturada = u
+        return null
+      }
+      // biome-ignore lint/suspicious/noExplicitAny: puente para leerla después
+      ;(window as any).__waUrl = () => capturada
+    })
+
+    await page.getByRole('button', { name: /Avisar por WhatsApp/ }).click()
+    // biome-ignore lint/suspicious/noExplicitAny: el puente de arriba
+    const abierta = await page.evaluate(() => (window as any).__waUrl())
+    const texto = decodeURIComponent(new URL(abierta).searchParams.get('text') ?? '')
+
+    expect(texto, 'sigue avisando de que puede pasar').toContain('ya está listo')
+    expect(texto, 'y no le vuelve a pedir la plata').not.toMatch(/S\//)
+    expect(texto).not.toMatch(/pagas/)
+  })
+
+  /**
+   * ENTREGAR EN EL MOSTRADOR CIERRA EL PEDIDO Y LO COBRA. Es la aserción que
+   * cuida el dinero: antes de la 0220 un recojo entregado pasaba por
+   * `generate_delivery_charges` con `commission_amount` NULL y no generaba
+   * ningún cargo — el canal salía gratis para el negocio.
+   */
+  test('«se lo llevó» deja el pedido entregado y con su comisión', async ({ page }) => {
+    const recojo = await sembrarRecojo('ready_for_pickup', 'now')
+    await abrirTablero(page, recojo.shortId)
+
+    await visible(page, `#${recojo.shortId}`).first().click()
+    await page.getByRole('button', { name: /Efectivo/ }).click()
+
+    await expect
+      .poll(
+        async () => {
+          const { data } = await db
+            .from('orders')
+            .select('status, commission_amount, payment_real')
+            .eq('id', recojo.id)
+            .single()
+          return data
+        },
+        { timeout: 20_000, message: 'el pedido no llegó a `delivered`' },
+      )
+      .toMatchObject({ status: 'delivered', payment_real: 'paid_cash' })
+
+    const { data: cargos } = await db
+      .from('business_charges')
+      .select('charge_type, amount')
+      .eq('order_id', recojo.id)
+    expect(cargos, 'un recojo entregado tiene que generar su comisión').toHaveLength(1)
+    expect(cargos?.[0]?.charge_type).toBe('commission')
+    expect(Number(cargos?.[0]?.amount)).toBeGreaterThan(0)
+  })
+
+  /**
+   * EL PLANTÓN PIDE CONFIRMACIÓN, y no es fricción de adorno: cancela comida ya
+   * hecha Y le deja un strike al cliente. Dos strikes son prepago obligado de
+   * por vida (DECISIONS §8), así que no puede ser un botón que se pulse por
+   * descarte.
+   */
+  /**
+   * Y EL DE UN PEDIDO PAGADO NO AMENAZA CON NADA. (0224) `advance_order` ya no
+   * escribe el strike ahí, así que prometerlo en la pantalla haría dudar a la
+   * cajera del único botón que cierra el pedido — y le mentiría sobre lo que le
+   * pasa a un vecino que sí pagó.
+   */
+  test('el plantón de un recojo ya pagado no le deja falta a nadie', async ({ page }) => {
+    const recojo = await sembrarRecojo('ready_for_pickup', 'later') // prepago
+    await abrirTablero(page, recojo.shortId)
+    await visible(page, `#${recojo.shortId}`).first().click()
+
+    await page.getByRole('button', { name: 'El cliente no vino' }).click()
+
+    await expect(
+      visible(page, /ya está pagado, así que no le queda ninguna falta/).first(),
+    ).toBeVisible()
+    await expect(visible(page, /queda una falta en su cuenta/)).toHaveCount(0)
+  })
+
+  test('declarar el plantón pide confirmar, y avisa de lo que cuesta', async ({ page }) => {
+    const recojo = await sembrarRecojo('ready_for_pickup', 'now')
+    await abrirTablero(page, recojo.shortId)
+
+    await visible(page, `#${recojo.shortId}`).first().click()
+    await page.getByRole('button', { name: 'El cliente no vino' }).click()
+
+    await expect(visible(page, /queda una falta en su cuenta/).first()).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Sí, no vino' })).toBeVisible()
+
+    await page.getByRole('button', { name: 'Sí, no vino' }).click()
+
+    await expect
+      .poll(
+        async () => {
+          const { data } = await db
+            .from('orders')
+            .select('status, cancel_reason')
+            .eq('id', recojo.id)
+            .single()
+          return data
+        },
+        { timeout: 20_000, message: 'el pedido no llegó a `cancelled`' },
+      )
+      .toMatchObject({ status: 'cancelled', cancel_reason: 'no_show' })
+
+    const { data: strikes } = await db
+      .from('customer_strikes')
+      .select('phone, delivery_reference')
+      .eq('order_id', recojo.id)
+    expect(strikes, 'el plantón del mostrador tiene que dejar strike').toHaveLength(1)
+    // En un recojo no hay domicilio del cliente que anclar. Ver 0220.
+    expect(strikes?.[0]?.delivery_reference).toBeNull()
+  })
+})

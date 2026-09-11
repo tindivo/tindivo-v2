@@ -19,7 +19,7 @@
 - [11. Rol de soporte](#11-rol-de-soporte)
 - [12. Verificación de teléfono por SMS](#12-verificación-de-teléfono-por-sms)
 - [13. Internacionalización (i18n)](#13-internacionalización-i18n)
-- [14. Calificaciones y reviews](#14-calificaciones-y-reviews)
+- [14. Calificaciones y reviews — CONSTRUIDO (Fase A)](#14-calificaciones-y-reviews--fuera-de-mvp-construido-fase-a-2026-09-07)
 - [15. Programa de fidelización del cliente](#15-programa-de-fidelización-del-cliente)
 - [16. Roadmap propuesto en fases](#16-roadmap-propuesto-en-fases)
 
@@ -248,18 +248,33 @@ Antes de listar features pendientes, dejamos por escrito los principios que orde
 
 ---
 
-## 14. Calificaciones y reviews
+## 14. Calificaciones y reviews — ~~fuera de MVP~~ **CONSTRUIDO (Fase A, 2026-09-07)**
 
-**Qué es**: tras la entrega, el cliente puede calificar al negocio (1-5 estrellas) y al motorizado, dejar comentario.
+> ⚠️ **Esta sección describía una tabla que nunca existió.** Decía «Tabla
+> `reviews` con `order_id`, `business_rating`, `driver_rating`, `comment`.
+> Placeholder, sin endpoints en MVP», y era falso en cada detalle: no había
+> placeholder, la tabla se llama `order_reviews`, y la nota es **una sola**, no
+> dos. Se corrige aquí para que nadie planifique sobre un fantasma.
 
-**Por qué se posterga**:
-- En pueblos pequeños, todos se conocen — un review negativo daña relaciones reales.
-- Tindivo no busca ser "el TripAdvisor de pueblos chicos".
+**Qué se construyó**: tras la entrega, el cliente califica con **una nota de
+1-5**, etiquetas y un comentario opcional. Se le pregunta **la siguiente vez que
+pide**, no al entregar. **Nada es público.**
 
-**Espacio que dejamos**:
-- Tabla `reviews` con `order_id`, `business_rating`, `driver_rating`, `comment`. Placeholder, sin endpoints en MVP.
+**Por qué se separó en fases**: las dos razones originales seguían siendo
+ciertas —en un pueblo todos se conocen, y Tindivo no busca ser el TripAdvisor de
+pueblos chicos—, pero son un argumento contra *publicarlas*, no contra
+*recogerlas*. Recogerlas da la señal operativa (qué noche se cayó, si fue la
+cocina o la moto) sin costarle la reputación a nadie.
 
-**Cuándo construirlo**: cuando lleguen ≥ 10 pueblos con N negocios donde el cliente no conoce personalmente al dueño y necesite señales de calidad.
+**Estado real**:
+- Fase A **en producción**: migraciones `0215`-`0218`; captura en el cliente,
+  panel del negocio (nota y etiquetas, nunca el texto) y bandeja del admin.
+- Fase B (promedio público con umbral) y Fase C (comentarios públicos): **no
+  construidas**, con las condiciones y las consultas de decisión escritas.
+
+📄 **Todo el detalle, los números medidos y las puertas de cada fase están en
+[`Docs/spec/spec_resenas.md`](spec/spec_resenas.md).** Este documento no repite
+nada de eso: cuando difieran, gana el spec.
 
 ---
 
@@ -286,7 +301,7 @@ Antes de listar features pendientes, dejamos por escrito los principios que orde
 | **MVP v2** | 0-3 | Operar en San Jacinto | Las 5 apps + fix bug push + capacidades de negocio |
 | **Fase 2** | 4-6 | Madurez del piloto | Encomiendas, cupones (si hay demanda), heatmap, rol soporte |
 | **Fase 3** | 7-12 | Expansión geográfica | Multi-tenant a 2-3 pueblos, real-time GPS, apps nativas Capacitor |
-| **Fase 4** | 13-18 | Productización | `tienda.tindivo.com`, pasarela pago, calificaciones, fidelización |
+| **Fase 4** | 13-18 | Productización | `tienda.tindivo.com`, pasarela pago, ~~calificaciones~~ (Fase A ya en prod; B/C según `spec_resenas.md`), fidelización |
 | **Fase 5+** | 18+ | Escalamiento | i18n, multi-tenant a 10+ pueblos, BFF por canal, infra dedicada |
 
 **Reglas para promover una feature de "fuera de MVP" a una fase activa**:

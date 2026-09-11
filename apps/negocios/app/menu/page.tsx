@@ -103,9 +103,23 @@ export default function MenuPage() {
     }
   }, [ready, filteredCats])
 
+  // Platos con franja horaria (0226). Se cuenta aparte de los agotados porque es
+  // otra cosa: «no es su turno» no es «se acabó», y el subtítulo es el único
+  // sitio donde la cajera ve de un vistazo cuántos tiene configurados.
+  const porTurnoTotal = cats
+    .flatMap((c) => c.items)
+    .filter(
+      (i) => i.available_days.length > 0 || i.available_from !== null || i.available_to !== null,
+    ).length
+
   const subtitle =
     ready && cats.length > 0
-      ? `${totalItems} plato${totalItems !== 1 ? 's' : ''} · ${unavailableTotal} agotado${unavailableTotal !== 1 ? 's' : ''} · ${withGroupsTotal} con grupos`
+      ? [
+          `${totalItems} plato${totalItems !== 1 ? 's' : ''}`,
+          `${unavailableTotal} agotado${unavailableTotal !== 1 ? 's' : ''}`,
+          ...(porTurnoTotal > 0 ? [`${porTurnoTotal} por turno`] : []),
+          `${withGroupsTotal} con grupos`,
+        ].join(' · ')
       : undefined
 
   const headerRight = (

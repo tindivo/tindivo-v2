@@ -7,6 +7,7 @@ import {
   getLimaDate,
   getPresetRange,
   PRESET_LABELS,
+  type PresetRangeOptions,
 } from '@/lib/order-history/date-utils'
 
 interface DateRangePickerProps {
@@ -15,6 +16,15 @@ interface DateRangePickerProps {
   onRangeChange: (start: string, end: string) => void
   activePreset: DatePreset
   onPresetChange: (preset: DatePreset) => void
+  /**
+   * Cómo se resuelven los presets en esta pantalla.
+   *
+   * Lo usa «Rendimiento» para pedir `excludeToday`: allí los rangos móviles
+   * tienen que terminar ayer, porque promediar una noche que aún no ha pasado
+   * mete un sesgo a la baja en todas las comparaciones. Historial y Reseñas lo
+   * omiten y siguen incluyendo hoy, que es lo que quieren sus listas.
+   */
+  rangeOptions?: PresetRangeOptions
 }
 
 const PRESET_OPTIONS: Exclude<DatePreset, 'custom'>[] = [
@@ -33,11 +43,12 @@ export function DateRangePicker({
   onRangeChange,
   activePreset,
   onPresetChange,
+  rangeOptions,
 }: DateRangePickerProps) {
   const todayStr = getLimaDate()
 
   function handleSelectPreset(preset: Exclude<DatePreset, 'custom'>) {
-    const range = getPresetRange(preset)
+    const range = getPresetRange(preset, rangeOptions)
     onPresetChange(preset)
     onRangeChange(range.start, range.end)
   }

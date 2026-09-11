@@ -10,7 +10,8 @@
     "./enums": "./src/enums.ts",
     "./errors": "./src/errors.ts",
     "./order-status": "./src/order-status.ts",
-    "./schedule": "./src/schedule.ts"
+    "./schedule": "./src/schedule.ts",
+    "./menu-availability": "./src/menu-availability.ts"
   },
   "scripts": {
     "type-check": "tsc --noEmit",

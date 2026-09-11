@@ -3,11 +3,18 @@
 import type { PaymentIntent } from '@tindivo/contracts'
 import { cn, Icon } from '@tindivo/ui'
 import { useId } from 'react'
-import { PAYMENT_MOMENTS, PAYMENT_OPTIONS } from '@/features/checkout/types'
+import { PAYMENT_MOMENTS, type PaymentOption } from '@/features/checkout/types'
 
 interface PaymentMethodListProps {
   value: PaymentIntent
   onChange: (v: PaymentIntent) => void
+  /**
+   * Las opciones que EXISTEN para este pedido, ya filtradas por método
+   * (`paymentOptionsFor`). Entra por prop y no se importa aquí porque el
+   * vocabulario del recojo —«Pagas en el local»— es del método, no del
+   * componente: este solo sabe dibujar una lista agrupada por momento.
+   */
+  options: PaymentOption[]
   /** El pedido obliga a pagar por adelantado. */
   mustPrepay: boolean
   /** Por qué obliga. Se pinta bajo el grupo que queda apagado. */
@@ -61,6 +68,7 @@ interface PaymentMethodListProps {
 export function PaymentMethodList({
   value,
   onChange,
+  options,
   mustPrepay,
   prepayReason,
 }: PaymentMethodListProps) {
@@ -72,7 +80,7 @@ export function PaymentMethodList({
       <legend className="sr-only">Método de pago</legend>
 
       {PAYMENT_MOMENTS.map((grupo) => {
-        const opciones = PAYMENT_OPTIONS.filter((o) => o.momento === grupo.momento)
+        const opciones = options.filter((o) => o.momento === grupo.momento)
         if (opciones.length === 0) return null
         const bloqueado = mustPrepay && grupo.momento === 'al_recibir'
 

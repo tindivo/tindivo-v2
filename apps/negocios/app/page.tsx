@@ -7,7 +7,14 @@ import { useOrderActions } from '@/features/pedidos/hooks/use-order-actions'
 import { useOrderDetail } from '@/features/pedidos/hooks/use-order-detail'
 import { useSupportPhone } from '@/features/pedidos/hooks/use-support-phone'
 import { sortNew } from '@/lib/orders/attention'
-import { getColumn, type OrderVM } from '@/lib/orders/view-model'
+import {
+  type ChannelFilter,
+  channelCounts,
+  getColumn,
+  matchesChannel,
+  type OrderVM,
+  resolveChannelFilter,
+} from '@/lib/orders/view-model'
 
 export default function NegocioPedidosPage() {
   const {
@@ -24,24 +31,49 @@ export default function NegocioPedidosPage() {
     soundOn,
     toggleSound,
     refetchOrders,
-    acknowledge,
     openRequestId,
     clearOpenRequest,
   } = useDashboard()
 
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [showPause, setShowPause] = useState(false)
+  const [channel, setChannel] = useState<ChannelFilter>('all')
   const supportWhatsapp = useSupportPhone()
+
+  /**
+   * EL FILTRO DE CANAL SE APLICA AQUI, Y AQUI ES DONDE IMPORTA QUE SEA.
+   *
+   * `vms` es la lista completa y sigue viajando entera al shell, que es quien
+   * llama a `attentionState`. O sea que lo que suena, lo que late y lo que dice
+   * el banner NO pasa por este filtro: si la cajera esconde el delivery para
+   * concentrarse, un recojo con su reloj corriendo la sigue reclamando igual.
+   * Filtrar mas arriba —o pasarle a `attentionState` una de estas listas—
+   * romperia eso en silencio.
+   */
+  const activos = useMemo(() => vms.filter((v) => getColumn(v.status) !== 'entregados'), [vms])
+  const canalCounts = useMemo(() => channelCounts(activos), [activos])
+  // Los dos chips solo tienen sentido cuando hay algo que separar. Con un solo
+  // canal en el tablero, un filtro es un mando que no puede hacer nada util y
+  // si puede dejar la pantalla vacia sin que se vea por que.
+  const showChannelChips = canalCounts.pickup > 0 && canalCounts.delivery > 0
+  const canal = resolveChannelFilter(channel, canalCounts)
 
   // Ordenada aquí, y no en la vista: la columna se pinta DOS veces —escritorio y
   // móvil— y son dos listas que tienen que decir lo mismo. Ver `sortNew` para
   // por qué el orden de llegada no servía.
   const newOrders = useMemo(
-    () => vms.filter((v) => getColumn(v.status) === 'nuevos').sort(sortNew),
-    [vms],
+    () =>
+      vms.filter((v) => getColumn(v.status) === 'nuevos' && matchesChannel(v, canal)).sort(sortNew),
+    [vms, canal],
   )
-  const cookingOrders = useMemo(() => vms.filter((v) => getColumn(v.status) === 'cocina'), [vms])
-  const routeOrders = useMemo(() => vms.filter((v) => getColumn(v.status) === 'reparto'), [vms])
+  const cookingOrders = useMemo(
+    () => vms.filter((v) => getColumn(v.status) === 'cocina' && matchesChannel(v, canal)),
+    [vms, canal],
+  )
+  const routeOrders = useMemo(
+    () => vms.filter((v) => getColumn(v.status) === 'reparto' && matchesChannel(v, canal)),
+    [vms, canal],
+  )
   const history = useMemo(
     // SIN RECORTE. El `.slice(0, 40)` que había aquí hacía de tapadera de una
     // consulta sin ventana: traía cerrados de días y luego escondía todos menos
@@ -110,16 +142,28 @@ export default function NegocioPedidosPage() {
     onToggleSound: toggleSound,
     onOpenPause: () => setShowPause(true),
     onResume,
-    counts,
+    // LOS CONTADORES DE LAS COLUMNAS SALEN DE LO QUE SE PINTA, no de `counts`
+    // del shell: con un filtro activo, el numero de la cabecera y el de
+    // tarjetas debajo tienen que ser el mismo. Es el descuadre de `JMAXL98Z`.
+    counts: {
+      ...counts,
+      new: newOrders.length,
+      cooking: cookingOrders.length,
+      route: routeOrders.length,
+    },
     newOrders,
     cookingOrders,
     routeOrders,
     history,
-    // ABRIR ES ACUSAR RECIBO. La alarma de ese pedido se calla —solo la de ese,
-    // y solo la alarma: el latido de la tarjeta y el banner siguen hasta que lo
-    // resuelva—. Ver `useAcknowledged` y la cabecera de `lib/orders/attention.ts`.
+    channel: canal,
+    onChannel: setChannel,
+    channelCounts: canalCounts,
+    showChannelChips,
+    // ABRIR YA NO CALLA NADA. Lo fue —el acuse de recibo apagaba el sonido de
+    // ese pedido— y se quitó: abrir una tarjeta es MIRAR el pedido, no
+    // atenderlo, y en el hueco entre las dos cosas caben una llamada al cliente
+    // y una comanda a medio teclear. Ver la cabecera de `lib/orders/attention.ts`.
     onOpen: (o: Pick<OrderVM, 'rowId' | 'status'>) => {
-      acknowledge(o)
       reset()
       setSelectedId(o.rowId)
     },

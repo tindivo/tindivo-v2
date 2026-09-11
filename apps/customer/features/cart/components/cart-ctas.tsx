@@ -29,7 +29,7 @@ export function CartCtas({ layout, onNavigate }: CartCtasProps) {
     currentGate,
     blockedOrderShortId,
     refetch,
-  } = useOrderReadiness()
+  } = useOrderReadiness(cart.deliveryMethod)
   const [showGate, setShowGate] = useState(false)
   const [now, setNow] = useState(() => new Date())
 
@@ -47,7 +47,7 @@ export function CartCtas({ layout, onNavigate }: CartCtasProps) {
   }, [showGate, ready, onNavigate, router])
 
   const closed =
-    info?.mode === 'delivery' &&
+    info?.mode === 'ordering' &&
     info.schedule.length > 0 &&
     getOpenStatus(info.schedule, now).kind === 'closed'
 
