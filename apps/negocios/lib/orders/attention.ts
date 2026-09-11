@@ -211,12 +211,22 @@ export const INSIST_MS = 30_000
 export function nextBeepDelay({
   elapsedMs,
   urgent,
+  reading = false,
 }: {
   /** Desde que esta tanda empezó a sonar. */
   elapsedMs: number
   urgent: boolean
+  /**
+   * Hay una ficha de pedido abierta en pantalla. Fuerza el ritmo espaciado
+   * aunque todavía esté en la tanda de enganche —está leyendo, no hace falta
+   * insistir— pero NO gana a `urgent`: el último minuto no se deja amortiguar
+   * por estar mirando otra cosa.
+   */
+  reading?: boolean
 }): number {
-  return urgent || elapsedMs < INSIST_MS ? BEEP_FAST_MS : BEEP_SLOW_MS
+  if (urgent) return BEEP_FAST_MS
+  if (reading) return BEEP_SLOW_MS
+  return elapsedMs < INSIST_MS ? BEEP_FAST_MS : BEEP_SLOW_MS
 }
 
 /**
