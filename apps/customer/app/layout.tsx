@@ -100,12 +100,24 @@ export const metadata: Metadata = {
     apple: '/apple-touch-icon.png',
   },
   manifest: '/manifest.webmanifest',
+  // SIN ESTO, WEB PUSH NO FUNCIONA EN iOS, aunque `TrackingInstall` guíe al
+  // cliente paso a paso por "Compartir → Añadir a pantalla de inicio". Desde
+  // iOS 16.4, Safari solo entrega Web Push a una PWA corriendo en modo
+  // standalone; sin `appleWebApp.capable` el ícono agregado abre una pestaña
+  // normal de Safari —nunca standalone— y toda esa hoja de instrucciones
+  // termina en nada. Mismo defecto que tenía `apps/negocios` (fix 2026-09-11).
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Tindivo',
+  },
 }
 
 export const viewport: Viewport = {
   themeColor: '#f97316',
   width: 'device-width',
   initialScale: 1,
+  viewportFit: 'cover',
 }
 
 export default function RootLayout({ children }: { children: ReactNode }) {
@@ -129,6 +141,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     // saliendo.
     <html lang="es" className={`${geist.variable} ${jetbrains.variable}`} suppressHydrationWarning>
       <head>
+        {/* `metadata.appleWebApp` (arriba) NO genera esta etiqueta — genera
+            `mobile-web-app-capable` pero no la con prefijo `apple-`, que es la
+            que Safari mira de verdad para tratar el ícono agregado como app
+            standalone y no como una pestaña más. Verificado sirviendo la
+            página: sin esta línea a mano, la etiqueta simplemente no sale. */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
