@@ -13,10 +13,10 @@ export interface HomeBanner {
 
 const DEFAULT_BANNERS: HomeBanner[] = [
   {
-    id: 'envio-gratis',
-    title: 'Envío gratis · Solo para las primeras 30 personas',
-    imageUrl: '/banners/envio_gratis.png',
-    href: null,
+    id: 'alitas-crispy-al-punto',
+    title: '4 Alitas Crispy de Al Punto · envío gratis martes y jueves',
+    imageUrl: '/banners/alitas_crispy_al_punto.png',
+    href: '/negocio/al-punto',
   },
 ]
 
