@@ -1,5 +1,5 @@
 import type { HistRow } from '@/lib/order-history/types'
-import { mapPayment } from '@/lib/orders/view-model'
+import { mapPayment, mapPaymentReal } from '@/lib/orders/view-model'
 import type { HistDisplay } from '../types'
 
 const limaTimeFmt = new Intl.DateTimeFormat('es-PE', {
@@ -34,7 +34,10 @@ export function toDisplay(r: HistRow, isSingleDayToday = true): HistDisplay {
     source: src,
     customer: r.customer_name ?? 'Cliente',
     total: Number(r.order_amount ?? 0) + Number(r.delivery_fee ?? 0),
-    payment: mapPayment(r.payment_intent),
+    // LO REAL MANDA, y la intención es el respaldo. En un pedido todavía
+    // abierto `payment_real` es NULL y no hay nada que preferir; en uno cerrado
+    // es el único dato que corresponde a dinero que existió.
+    payment: mapPaymentReal(r.payment_real) ?? mapPayment(r.payment_intent),
     closedAt: fmtTime(r.delivered_at ?? r.cancelled_at ?? r.created_at, isSingleDayToday),
     cancelReason: r.status === 'cancelled' ? (r.cancel_note ?? null) : null,
     isCancel: r.status === 'cancelled',

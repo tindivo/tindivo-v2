@@ -2,7 +2,7 @@
 
 import { type PaymentQrView, walletLabel } from '@tindivo/contracts'
 import { Icon } from '@tindivo/ui'
-import type { OrderVM } from '@/lib/orders/view-model'
+import { cobroEnCaja, type OrderVM } from '@/lib/orders/view-model'
 import { soles } from '../primitives'
 import { DetailRow } from './detail-row'
 
@@ -24,6 +24,37 @@ import { DetailRow } from './detail-row'
  * caso —y solo en ese— vuelve el total.
  */
 export function PaySectionCash({ order }: { order: OrderVM }) {
+  /**
+   * LO YA COBRADO NO SE MANDA A COBRAR (0224).
+   *
+   * Desde que el recojo «ahora» se cobra al aceptarlo, esta sección se pasaba
+   * la cocción entera y el rato de mostrador diciendo «Total a cobrar S/ 25»
+   * de un pedido cuyo dinero estaba en la caja desde antes de encender el
+   * horno. Visto en el navegador el 2026-09-10: la pastilla de la cabecera
+   * decía «Efectivo», la tarjeta decía «Cobrado en efectivo», y aquí seguía la
+   * orden de cobrar. Es el hermano del fallo que arregló `0ef8e24` en el pie.
+   *
+   * La respuesta sale de `cobroEnCaja` Y NO DE UN `if` propio, que es
+   * justamente lo que esa función existe para impedir: la pastilla, la franja
+   * de la tarjeta y esta sección calculaban lo mismo por separado y por eso
+   * podían contradecirse. Aquí solo se elige el tamaño de la frase.
+   *
+   * No toca el delivery aunque comparta componente: `payment_verified_at` solo
+   * lo escriben `validate_order` (prepago) y el `accept` del mostrador, así
+   * que un efectivo cobrado en la puerta nunca llega con `yaCobrado` en true.
+   */
+  const caja = cobroEnCaja(order)
+  if (caja?.cobrado) {
+    return (
+      <div className="shrink-0 rounded-xl border border-success/30 bg-success/10 p-3">
+        <div className="flex items-center gap-1.5">
+          <Icon weight={500} name={caja.icon} size={18} filled className="text-success" />
+          <div className="text-[13px] font-bold text-success">{caja.label}</div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="shrink-0 rounded-xl border border-success/30 bg-success/10 p-3">
       <div className="mb-2.5 flex items-center gap-1.5">

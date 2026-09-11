@@ -23,23 +23,27 @@
 // devuelve los dos hechos juntos en un objeto: no hay forma de encender la
 // alarma sin traerse el banner en la misma expresión.
 //
-// LA OTRA MITAD, QUE LLEGÓ DESPUÉS: LO QUE SUENA ES UN SUBCONJUNTO DE LO QUE SE
-// VE, NO LO MISMO.
+// LA OTRA MITAD, QUE FUE Y VOLVIÓ: ¿SE PUEDE CALLAR LA ALARMA DE ALGO QUE SIGUE
+// SIN ATENDERSE?
 //
-// El invariante de arriba impide que suene algo invisible. No dice nada del
-// camino contrario, y ahí estaba el otro problema: el sonido no sabía cuándo
-// parar. Su única entrada era "¿hay pendientes?", así que un pedido pitaba cada
-// tres segundos durante sus cinco minutos —unos cien bips dobles y veinte
-// frases habladas— y seguía pitando MIENTRAS la cajera lo tenía abierto
-// delante. Del piloto volvió una sola queja sobre esto, y es la peor que puede
-// volver: que suena demasiado. Porque la respuesta natural a una alarma
-// insoportable es apagarla, y el interruptor que existe se guarda para siempre.
+// Se probó que sí. Abrir la tarjeta era un acuse de recibo (`acknowledged`) que
+// apagaba el sonido de ESE pedido y dejaba lo visible intacto. La idea era
+// buena y la queja que la motivó era real —del piloto volvió «suena
+// demasiado», y la respuesta natural a una alarma insoportable es apagarla del
+// todo—. Pero medía mal el riesgo. Abrir una tarjeta no es atender el pedido:
+// es mirarlo. Y entre mirarlo y aceptarlo caben una llamada al cliente, una
+// comanda a medio teclear y un motorizado en la puerta. En ese hueco la alarma
+// estaba callada y el reloj seguía corriendo.
 //
-// El trabajo de la alarma es IR A BUSCARLA. Cuando la ha traído, se calla.
-// Abrir el pedido es el acuse de recibo (`acknowledged`): apaga el sonido de
-// ESE pedido y no toca nada de lo visible —el banner y el latido siguen—.
-// Por eso `AttentionState` tiene dos campos y no uno: `orders`/`banner` es lo
-// que se ve, y `alarm` es lo que suena, que sale de filtrar el primero.
+// Lo que se hace ahora es lo contrario: MIENTRAS ALGO RECLAME A LA CAJERA,
+// SUENA. Sin acuses y sin excepciones. Lo que amortigua el ruido es el RITMO
+// —tanda rápida para engancharla, luego espaciado; ver `nextBeepDelay`— y no el
+// silencio, porque el silencio es indistinguible de que no haya nada.
+//
+// Sigue habiendo dos campos, `banner` y `alarm`, y ahora dicen exactamente lo
+// mismo. Se conservan separados porque la pregunta «¿lo que suena es lo que se
+// ve?» tiene que poder hacerse: el día que alguien quiera volver a filtrar el
+// sonido, el sitio donde hacerlo está señalado y el test que lo vigila también.
 //
 // NO ES LO MISMO QUE LA COLUMNA "NUEVOS". `getColumn` mete también
 // `awaiting_payment` en `nuevos`, y ahí está bien: el pedido es nuevo y merece
@@ -49,9 +53,6 @@
 // conviene que sigan siendo dos funciones distintas.
 
 import type { OrderVM } from './view-model'
-
-/** Sin acuses: el caso de quien llama a `attentionState` sin pasar nada. */
-const SIN_ACUSES: ReadonlySet<string> = new Set()
 
 /** Lo que el banner necesita pintar, ya decidido. Ver `attentionState`. */
 export interface AttentionBannerVM {
@@ -67,14 +68,11 @@ export interface AttentionBannerVM {
 
 /** Lo que suena. Es siempre un subconjunto de lo que se ve. */
 export interface AlarmState {
-  /** Los que reclaman a la cajera y todavía no ha acusado. */
+  /** Los que reclaman a la cajera. Hoy, todos los que se ven. */
   orders: OrderVM[]
   hasPending: boolean
   count: number
-  /**
-   * Alguno está en su último minuto. Ese ya no admite acuse y además aprieta la
-   * cadencia del bip: ver `nextBeepDelay`.
-   */
+  /** Alguno está en su último minuto: aprieta la cadencia. Ver `nextBeepDelay`. */
   urgent: boolean
 }
 
@@ -91,7 +89,7 @@ export interface AttentionState {
   orders: OrderVM[]
   /** `null` exactamente cuando `orders` está vacío. Eso es el invariante. */
   banner: AttentionBannerVM | null
-  /** Lo que suena: `orders` menos lo acusado. Nunca más que `orders`. */
+  /** Lo que suena. Nunca más que `orders` — ver la cabecera del módulo. */
   alarm: AlarmState
 }
 
@@ -104,19 +102,6 @@ export interface AttentionState {
  * distintos, que es como empiezan a separarse.
  */
 export const LAST_CALL_SEC = 60
-
-/**
- * LA CLAVE DEL ACUSE DE RECIBO: EL PEDIDO **Y** SU SITUACIÓN.
- *
- * Que lleve el estado dentro no es un detalle de implementación, es la regla:
- * el acuse vale para lo que la cajera vio, no para el pedido de por vida. Un
- * prepago que aceptó (y con eso calló) vuelve a sonar solo cuando el cliente
- * sube el comprobante y pasa a `validando` — porque es OTRA clave, y de esa no
- * hay acuse. El ida y vuelta sale del modelo, sin lógica que lo vigile.
- */
-export function attentionKey(o: Pick<OrderVM, 'rowId' | 'status'>): string {
-  return `${o.rowId}:${o.status}`
-}
 
 /**
  * ¿LE TOCA A LA CAJERA, AHORA MISMO?
@@ -260,27 +245,17 @@ export const VOICE_EVERY_MS = 60_000
  * llamables desde un test. Un invariante que cuesta comprobar es un invariante
  * que se deja de comprobar.
  */
-export function attentionState(
-  vms: readonly OrderVM[],
-  /**
-   * Claves de `attentionKey` que la cajera ya acusó abriendo el pedido. Solo
-   * callan el sonido; lo visible no se toca.
-   */
-  acknowledged: ReadonlySet<string> = SIN_ACUSES,
-): AttentionState {
+export function attentionState(vms: readonly OrderVM[]): AttentionState {
   const orders = vms.filter(demandsCashier)
 
-  // El acuse no sirve en el último minuto: a esas alturas el pedido está a
-  // punto de autocancelarse solo, y «ya lo vi» hace tres minutos no es una
-  // razón para dejarlo morir callado. Así se perdió `JMAXL98Z`.
-  const sonando = orders.filter(
-    (o) => o.countdownSec < LAST_CALL_SEC || !acknowledged.has(attentionKey(o)),
-  )
+  // SUENA TODO LO QUE RECLAMA. Aquí es donde vivía el filtro de los acuses, y
+  // aquí es donde volvería a vivir si alguna vez se decide que algo puede
+  // reclamar en silencio. Ver la cabecera del módulo.
   const alarm: AlarmState = {
-    orders: sonando,
-    hasPending: sonando.length > 0,
-    count: sonando.length,
-    urgent: sonando.some((o) => o.countdownSec < LAST_CALL_SEC),
+    orders,
+    hasPending: orders.length > 0,
+    count: orders.length,
+    urgent: orders.some((o) => o.countdownSec < LAST_CALL_SEC),
   }
 
   if (orders.length === 0) {

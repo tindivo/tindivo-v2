@@ -27,11 +27,23 @@ export interface BusinessTimers extends OrderTimers {
   queueLeadMinutes: number
   /** 0139. A partir de aquí, el reloj de reparto se pone rojo. */
   deliveryLateMinutes: number
+  /**
+   * 0220. Cuánto lleva una bolsa de recojo esperando en el mostrador antes de
+   * que el reloj de la tarjeta lo diga en ámbar.
+   *
+   * Es la MISMA clave que `advance_order` exige antes de aceptar un
+   * `pickup_no_show`, y por eso comparte número: el momento en que la tarjeta
+   * empieza a avisar es exactamente el momento en que la cajera ya puede
+   * declarar que el cliente no vino. Con dos números distintos, el aviso
+   * llegaría antes que la acción o al revés.
+   */
+  noShowWaitMinutes: number
 }
 
 const DEFAULTS: BusinessTimers = {
   queueLeadMinutes: 10,
   deliveryLateMinutes: 20,
+  noShowWaitMinutes: 5,
   ...DEFAULT_ORDER_TIMERS,
 }
 
@@ -53,6 +65,7 @@ export function useBusinessTimers(): BusinessTimers {
         setTimers({
           queueLeadMinutes: leer('queueLeadMinutes'),
           deliveryLateMinutes: leer('deliveryLateMinutes'),
+          noShowWaitMinutes: leer('noShowWaitMinutes'),
           // Los cuatro plazos de cancelación, que hasta la 0174 estaban clavados
           // en `view-model.ts`. Se leen aquí porque salen de la MISMA fila que
           // los dos umbrales de arriba: un hook aparte habría repetido la

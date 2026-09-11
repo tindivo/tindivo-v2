@@ -68,6 +68,23 @@ export interface FormData {
   is_compact: boolean
   image_url: string | null
   badges: string[]
+  /**
+   * FRANJA EN QUE SE SIRVE EL PLATO (migración 0226). Los tres en `null`/vacío
+   * significan «siempre que el local esté abierto», que es lo que tienen todos
+   * los platos que nadie ha tocado.
+   *
+   * NO es lo mismo que `is_available`. Ese dice «se acabó» y lo pone la cajera a
+   * mano; esto dice «no es su turno» y es una regla. El cliente ve el plato
+   * disponible solo si las dos cosas dan verde, y nada de esto reescribe la
+   * otra: el «se acabó el ceviche» de las 12:30 sobrevive al cambio de turno.
+   *
+   * `days`: 0=Lunes..6=Domingo, la convención de `business_schedule`. Las horas
+   * son `HH:MM` en el formulario; la columna es `time` y PostgREST las devuelve
+   * como `HH:MM:SS`, que `parseTimeToMinutes` ya acepta.
+   */
+  available_days: number[]
+  available_from: string | null
+  available_to: string | null
 }
 
 export interface Category {

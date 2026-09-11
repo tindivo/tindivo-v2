@@ -1,6 +1,12 @@
 'use client'
 
-import type { DeliveryMethod, PaymentIntent } from '@tindivo/contracts'
+import {
+  type DeliveryMethod,
+  isCustomerPaymentAllowed,
+  type PaymentIntent,
+  type PickupTiming,
+  pickupForcesPrepay,
+} from '@tindivo/contracts'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { AddressValue } from '@/components/address-fields'
@@ -60,6 +66,20 @@ export interface CheckoutState {
   setStep: (v: 'delivery' | 'payment') => void
   deliveryMethod: DeliveryMethod
   setDeliveryMethod: (v: DeliveryMethod) => void
+  /**
+   * CUANDO pasa el cliente por su recojo. `null` es «todavia no lo ha dicho», y
+   * es el estado inicial A PROPOSITO: el checkout no puede elegir por el.
+   *
+   * De las dos respuestas, «ahora» es la que abre puertas —se salta el guard de
+   * contraentrega y la llamada de la cajera, porque la persona esta delante—,
+   * asi que arrancar preseleccionandola regalaria esa exencion a quien nunca
+   * contesto la pregunta. Y arrancar en «mas tarde» seria mentir al reves:
+   * empujaria al vecino que SI esta en el mostrador hacia el prepago.
+   *
+   * Se queda sin respuesta y el CTA la pide. Es un toque.
+   */
+  pickupTiming: PickupTiming | null
+  setPickupTiming: (v: PickupTiming | null) => void
 
   payment: PaymentIntent
   setPayment: (v: PaymentIntent) => void
@@ -143,6 +163,29 @@ export interface CheckoutState {
    */
   eta: { min: number; max: number } | null
 
+  /**
+   * Si ESTE negocio acepta recojo. Sale de la misma respuesta que `eta`, o sea
+   * cero peticiones nuevas.
+   *
+   * Gobierna si el selector Delivery/Recojo se pinta. Antes ese selector colgaba
+   * solo de `PICKUP_ENABLED`, que es global: se enseñaba en todos los negocios,
+   * aceptaran recojo o no.
+   *
+   * MIENTRAS LA RESPUESTA NO LLEGA SE CREE A LA BOLSA, y esto es una corrección
+   * de lo que decía antes esta nota. Decía que `false` era el lado seguro —
+   * esconder de más se arregla en medio segundo, enseñar de más acaba en 409—.
+   * Dejó de ser verdad en cuanto el método pasó a elegirse en la carta: si el
+   * cliente ya venía en recojo, esconder el selector durante el salto a la API
+   * (470–750 ms de piso) deja en pantalla «¿Vas al local ahora?» SIN los
+   * dos botones encima, o sea una pregunta huérfana y ninguna forma de volver a
+   * delivery. Peor que el riesgo que evitaba.
+   *
+   * Y el riesgo no queda suelto: una bolsa solo puede venir en recojo si la
+   * ficha del negocio ofreció el canal, el efecto de más abajo la corrige en
+   * cuanto llega la respuesta, y el guard 409 del API sigue siendo el suelo.
+   */
+  acceptsPickup: boolean
+
   selectedAddress: Address | undefined
   reference: string
   line: string
@@ -164,7 +207,19 @@ export function useCheckoutState(): CheckoutState {
   const [name, setName] = useState('')
   const [verifiedPhone, setVerifiedPhone] = useState('')
   const [step, setStep] = useState<'delivery' | 'payment'>('delivery')
-  const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('delivery')
+  /**
+   * EL MÉTODO YA NO ES ESTADO DE ESTA PANTALLA: es de la bolsa.
+   *
+   * Tenía aquí su `useState`, y por eso la elección no existía hasta el último
+   * paso. El gate del carrito no podía consultarla —exigía domicilio siempre, a
+   * todo el mundo— y la cabecera del negocio no tenía nada que enseñar. Subirla
+   * al store no cambia esta pantalla (el selector sigue aquí y sigue mandando),
+   * pero deja que la conteste quien llega decidido y que la lean los pasos que
+   * ocurren antes.
+   */
+  const deliveryMethod = cart.deliveryMethod
+  const setDeliveryMethod = cart.setDeliveryMethod
+  const [pickupTiming, setPickupTiming] = useState<PickupTiming | null>(null)
   const [payment, setPayment] = useState<PaymentIntent>('pending_cash')
   const [cashChoice, setCashChoice] = useState<CashChoice>('exact')
   const [cashCustom, setCashCustom] = useState('')
@@ -190,6 +245,43 @@ export function useCheckoutState(): CheckoutState {
     getDeliveryBands().then(setBands)
     getFarZones().then(setFarZones)
   }, [])
+
+  /**
+   * Volver a delivery borra la respuesta del recojo.
+   *
+   * Vive aquí y no en el `onClick` del botón porque el contrato prohíbe mandar
+   * `pickupTiming` en un delivery (422), y un estado que sobreviva al cambio de
+   * método es exactamente cómo se cuela: el cliente prueba «Recojo · ahora»,
+   * vuelve a «Delivery», y el pedido sale con una respuesta que ya no significa
+   * nada. Derivarlo del método hace que el caso no pueda existir.
+   */
+  useEffect(() => {
+    if (deliveryMethod !== 'pickup') setPickupTiming(null)
+  }, [deliveryMethod])
+
+  /**
+   * EL PAGO ELEGIDO NO PUEDE SOBREVIVIR A UN CAMBIO QUE LO PROHÍBE.
+   *
+   * El cliente elige «Yape al recibir» pensando en un delivery, cambia a
+   * Recojo, y sin esto el pedido sale con un método que no existe en el
+   * mostrador — un 422 del contrato en el último toque, sobre algo que él ya
+   * había contestado bien. Igual al pasar a «más tarde» con la caja marcada.
+   *
+   * SIN `authReady`, a diferencia del efecto de `mustPrepay` de más abajo: ese
+   * espera porque `isBlocked` llega por red y arrancar en `false` lo haría
+   * saltar tarde. Esta regla es local y síncrona —sale del método y del timing,
+   * los dos en esta pantalla—, así que esperar solo dejaría una ventana en la
+   * que la elección inválida es visible y pulsable.
+   *
+   * El destino no es siempre el mismo: con «más tarde» solo queda el prepago;
+   * con «ahora» la caja sigue estando, y mandar a prepagar a quien tiene la
+   * caja delante sería empujarlo a yapear y subir una captura de pie en el
+   * mostrador.
+   */
+  useEffect(() => {
+    if (isCustomerPaymentAllowed(payment, deliveryMethod, pickupTiming)) return
+    setPayment(pickupForcesPrepay(deliveryMethod, pickupTiming) ? 'prepaid' : 'pending_cash')
+  }, [payment, deliveryMethod, pickupTiming])
 
   const selectedAddress = addresses.find((a) => a.id === addressId)
 
@@ -234,8 +326,14 @@ export function useCheckoutState(): CheckoutState {
   const isNewUser = !hasDeliveryHistory
   const exceedsCashCap = total > prepayThreshold
   const isBlocked = prepayOnlyByRisk
+  /**
+   * El TERCER motivo para prepagar, y el único que no habla de la cuenta ni del
+   * monto sino del canal: un recojo para más tarde se cocina sin nadie delante
+   * y sin caja a la que cobrarle. Ver `pickupForcesPrepay`.
+   */
+  const forzadoPorRecojo = pickupForcesPrepay(deliveryMethod, pickupTiming)
 
-  const mustPrepay = exceedsCashCap || isBlocked
+  const mustPrepay = exceedsCashCap || isBlocked || forzadoPorRecojo
 
   // Máximo declarable = mín(billete máximo, total + vuelto máximo). La fórmula
   // vive en `lib/cash.ts` con el resto de la regla del vuelto.
@@ -268,9 +366,17 @@ export function useCheckoutState(): CheckoutState {
    */
   const prepayReason = isBlocked
     ? 'Por ahora tus pedidos van con pago adelantado. Si crees que es un error, escríbenos.'
-    : exceedsCashCap
-      ? `Tu total con envío pasa de S/${prepayThreshold}, así que el pago va adelantado.`
-      : null
+    : forzadoPorRecojo
+      ? // VA ANTES QUE LA DEL TOPE, y no por gravedad: por lo que el cliente
+        // puede hacer con ella. Si las dos aplican, ninguna se resuelve sola
+        // —quitar un producto no levanta la regla del recojo, ni al revés—,
+        // así que gana la que explica POR QUÉ el canal funciona así, que
+        // además es la que acaba de contestar de un toque.
+        // Dice qué gana él («te lo guardamos listo»), no solo qué se le exige.
+        'Como pasas más tarde, el pago va adelantado: preparamos tu pedido cuando confirmemos el pago y te lo guardamos listo.'
+      : exceedsCashCap
+        ? `Tu total con envío pasa de S/${prepayThreshold}, así que el pago va adelantado.`
+        : null
 
   // Modo catálogo: el negocio no acepta pedidos web — el pedido va por WhatsApp
   // desde su página. Cubre deep-links a /checkout y carritos persistidos de un
@@ -282,6 +388,25 @@ export function useCheckoutState(): CheckoutState {
       router.replace(`/negocio/${cart.businessId}`)
     }
   }, [cartHydrated, confirmed, ordering.info, cart.businessId, router])
+
+  /**
+   * UN RECOJO CONTRA UN NEGOCIO QUE NO ACEPTA RECOJOS SE DESHACE SOLO.
+   *
+   * El método se persiste con la bolsa, así que sobrevive a que el admin apague
+   * `accepts_web_pickup` entre dos sesiones —y `DECISIONS.md` dice que el piloto
+   * se abre y se cierra restaurante por restaurante, o sea que va a pasar—. Sin
+   * esto el cliente llega hasta el último toque y recibe un 409 del API sobre
+   * algo que él no eligió mal: lo eligió cuando sí valía.
+   *
+   * Se corrige aquí y no solo escondiendo el selector porque la bolsa ya venía
+   * con la respuesta puesta: no pintar el botón deja el estado malo intacto.
+   */
+  useEffect(() => {
+    if (!ordering.info || confirmed) return
+    if (deliveryMethod === 'pickup' && !ordering.info.acceptsPickup) {
+      setDeliveryMethod('delivery')
+    }
+  }, [ordering.info, deliveryMethod, setDeliveryMethod, confirmed])
 
   // Una sola query para las configuraciones globales que necesita esta pantalla
   // — no un round-trip por cada una. `max_change` ya no está aquí: lo pone la
@@ -424,6 +549,8 @@ export function useCheckoutState(): CheckoutState {
     setStep,
     deliveryMethod,
     setDeliveryMethod,
+    pickupTiming,
+    setPickupTiming,
     payment,
     setPayment,
     cashChoice,
@@ -476,6 +603,7 @@ export function useCheckoutState(): CheckoutState {
       ordering.info?.etaMin != null && ordering.info?.etaMax != null
         ? { min: ordering.info.etaMin, max: ordering.info.etaMax }
         : null,
+    acceptsPickup: ordering.info ? ordering.info.acceptsPickup : deliveryMethod === 'pickup',
     selectedAddress,
     reference,
     line,

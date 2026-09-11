@@ -28,6 +28,51 @@ export function unlockAudio(): void {
 }
 
 /**
+ * EL AUDIO ESTÁ BLOQUEADO Y NADIE LO SABE.
+ *
+ * Un `AudioContext` en `suspended` no falla, no avisa y no suena: el navegador
+ * se limita a no reproducir nada hasta que haya un gesto del usuario. En una
+ * tablet que se queda encendida toda la noche eso significa que las alertas
+ * pueden estar muertas mientras el panel se ve perfectamente normal — y la
+ * cajera contesta, con toda la razón, que tiene el parlante prendido.
+ *
+ * `true` = ahora mismo no sonaría nada aunque hubiera un pedido. Es lo único
+ * que el panel puede saber del audio sin hacer ruido para comprobarlo.
+ */
+export function audioIsBlocked(): boolean {
+  const ctx = getCtx()
+  return ctx !== null && ctx.state !== 'running'
+}
+
+/**
+ * Toca EL MISMO tono que anuncia un pedido nuevo (tipo 1), para la prueba de
+ * sonido de la apertura.
+ *
+ * Que sea el mismo y no uno de demostración no es un detalle: lo que se está
+ * comprobando es que ESE sonido, a ESE volumen, se oye desde la cocina. Un bip
+ * de prueba más suave o más agudo prueba otra cosa.
+ */
+export function playNewOrderTone(): void {
+  playToneSequence([880, 1175], 0.18, 0.55, false)
+}
+
+/**
+ * El tono de «se escapó un pedido»: tres notas DESCENDENTES y largas.
+ *
+ * Todo lo demás en este panel sube o repite —el pedido nuevo sube (880→1175),
+ * la llegada del motorizado va y vuelve—, así que bajar es lo único que no se
+ * confunde con nada. No hace falta saber solfeo para que una caída suene a mal
+ * asunto; es la misma razón por la que las alarmas de error bajan en todas
+ * partes.
+ *
+ * Suena más fuerte que ningún otro aviso (0.6) porque llega tarde por
+ * definición: si se ha llegado aquí es que los avisos discretos ya fallaron.
+ */
+export function playLostSaleTone(): void {
+  playToneSequence([660, 520, 390], 0.32, 0.6, false)
+}
+
+/**
  * Registra listeners globales para auto-desbloquear audio en PWA al primer gesto
  * y mantener activo el AudioContext cuando la PWA se minimiza/restaura.
  */

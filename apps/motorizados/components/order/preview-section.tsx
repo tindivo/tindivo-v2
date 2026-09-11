@@ -187,6 +187,19 @@ export function PreviewSection({ detail, now }: { detail: OrderDetailResponse; n
             <p className="mt-2 text-caption italic text-ink-muted">Sin referencia de entrega</p>
           )}
 
+          {order.customerNotes && (
+            <InfoRow icon="chat_bubble" tone="muted">
+              <div>
+                <span className="block font-mono text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
+                  Nota para el motorizado
+                </span>
+                <p className="mt-0.5 text-body font-medium leading-snug text-ink">
+                  {order.customerNotes}
+                </p>
+              </div>
+            </InfoRow>
+          )}
+
           {/* El teléfono va en gris y sin peso: acá todavía se está DECIDIENDO.
               Llamar es un `tel:` por si la referencia no se entiende, pero no
               compite con la dirección. El WhatsApp de "voy en camino" vive en

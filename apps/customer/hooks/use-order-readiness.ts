@@ -1,12 +1,14 @@
 'use client'
 
+import type { DeliveryMethod } from '@tindivo/contracts'
 import { useEffect, useState } from 'react'
 import { isLineOk, isReferenceOk } from '@/components/address-fields'
 import { pointInPolygon } from '@/lib/coverage'
+import { type GateType, missingGates } from '@/lib/order-gates'
 import { type AppealData, type CancelledOrder, checkPaymentBlock } from '@/lib/payment-block'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
-type GateType = 'auth' | 'phone' | 'address' | 'pending_payment_resolution'
+export type { GateType }
 
 type OrderReadiness = {
   ready: boolean
@@ -17,7 +19,16 @@ type OrderReadiness = {
   blockedOrderShortId: string | null
 }
 
-export function useOrderReadiness(): OrderReadiness {
+/**
+ * Qué le falta al cliente para poder pasar al checkout, y con qué método.
+ *
+ * `deliveryMethod` NO tiene valor por defecto a propósito: quien llame tiene que
+ * decir para qué pedido pregunta. Un default silencioso a `'delivery'` habría
+ * dejado pasar sin ruido cualquier sitio que se olvidara de pasarlo, y ese sitio
+ * volvería a exigirle el mapa a quien va a recoger — que es justo el fallo que
+ * este cambio viene a cerrar.
+ */
+export function useOrderReadiness(deliveryMethod: DeliveryMethod): OrderReadiness {
   const [profile, setProfile] = useState<{
     phone: string | null
     phone_verified_at: string | null
@@ -132,25 +143,17 @@ export function useOrderReadiness(): OrderReadiness {
     fetchReadiness()
   }, [])
 
-  const missingSteps: GateType[] = []
-
-  if (!loading) {
-    if (!isAuthenticated) {
-      missingSteps.push('auth')
-    } else {
-      if (!profile?.phone_verified_at) {
-        missingSteps.push('phone')
-      }
-
-      if (!hasValidAddress) {
-        missingSteps.push('address')
-      }
-
-      if (isPaymentBlocked) {
-        missingSteps.push('pending_payment_resolution')
-      }
-    }
-  }
+  // La REGLA vive en `lib/order-gates.ts` y se prueba sola; aquí solo se le
+  // pasan los cuatro hechos que este hook fue a buscar a la red.
+  const missingSteps: GateType[] = loading
+    ? []
+    : missingGates({
+        isAuthenticated,
+        phoneVerified: profile?.phone_verified_at != null,
+        hasValidAddress,
+        isPaymentBlocked,
+        deliveryMethod,
+      })
 
   return {
     ready: !loading && missingSteps.length === 0,

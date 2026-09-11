@@ -134,7 +134,7 @@ El ecosistema se reparte en cinco apps autónomas, cada una en su propio subdomi
 | `negocios.tindivo.com` | Dueño de negocio / cajero | PWA con UI condicional | Recibir pedidos, gestionar menú, pedir motorizado, ver efectivo y deuda |
 | `motorizados.tindivo.com` | Motorizado | PWA mobile-first | Recibir asignaciones, marcar estados, gestionar equipo, entregar efectivo |
 | `admin.tindivo.com` | Admin Tindivo | Panel de control responsive | Vigilancia operativa, resolución de emergencias, facturación |
-| `api.tindivo.com` | Las cuatro apps anteriores | REST único | Lógica de negocio, autenticación, persistencia |
+| `apiv2.tindivo.com` | Las cuatro apps anteriores | REST único | Lógica de negocio, autenticación, persistencia |
 
 **Por qué subdominios y no route groups en una sola app**:
 

@@ -36,15 +36,15 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <head>
         {/* Material Symbols Rounded — subset variable auto-hospedado (92 KB).
             Un solo archivo con los cuatro ejes, así que basta un preload. */}
-        <link rel="preload" as="style" href="/fonts/material-symbols.css" />
+        <link rel="preload" as="style" href="/fonts/material-symbols.css?v=2" />
         <link
           rel="preload"
           as="font"
           type="font/woff2"
           crossOrigin="anonymous"
-          href="/fonts/material-symbols-rounded.woff2"
+          href="/fonts/material-symbols-rounded.woff2?v=2"
         />
-        <link rel="stylesheet" href="/fonts/material-symbols.css" />
+        <link rel="stylesheet" href="/fonts/material-symbols.css?v=2" />
       </head>
       <body className="flex h-dvh flex-col overflow-hidden bg-surface font-sans text-ink antialiased">
         <EnvBanner />

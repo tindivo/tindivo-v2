@@ -49,6 +49,7 @@ export function DeliveredScreen({
       : null
 
   const reference = order.deliveryReference?.trim() || null
+  const customerNotes = order.customerNotes?.trim() || null
   const hasCoords = order.deliveryCoordinatesLat != null && order.deliveryCoordinatesLng != null
   const band = order.deliveryDistanceBand ? BAND_LABEL[order.deliveryDistanceBand] : null
 
@@ -100,47 +101,34 @@ export function DeliveredScreen({
                 <Icon name="check_circle" size={12} filled />
                 Entregado
               </span>
-              {order.isManual && (
-                <span className="rounded-full bg-ink/[0.06] px-2 py-0.5 text-meta font-semibold text-ink-muted">
-                  Manual
-                </span>
+              {order.deliveredAt && (
+                <span className="text-caption text-ink-muted">{hourOf(order.deliveredAt)}</span>
               )}
             </div>
-            <p className="mt-1 font-display text-title font-bold tracking-tight text-ink">
-              Pedido #{order.shortId}
+            <p className="mt-1 font-display text-lead font-bold text-ink">
+              {formatDeliveryDate(order.deliveredAt || order.createdAt)}
             </p>
-            <p className="mt-0.5 text-caption font-medium text-ink-muted">
-              {order.deliveredAt ? formatDeliveryDate(order.deliveredAt) : 'Completado'}
-            </p>
+            {routeDurationMin != null && (
+              <p className="mt-0.5 flex items-center gap-1 text-caption text-ink-muted">
+                <Icon name="schedule" size={14} />
+                Completado en {routeDurationMin} min de reparto
+              </p>
+            )}
           </div>
         </div>
-
-        {/* Métrica de ruta si existe */}
-        {routeDurationMin != null && (
-          <div className="mt-3.5 flex items-center gap-2 rounded-xl bg-ink/[0.04] px-3 py-2 text-caption font-medium text-ink">
-            <Icon name="timer" size={16} className="text-brand shrink-0" />
-            <span>
-              Tiempo en ruta: <strong>{routeDurationMin} min</strong> (desde recogida hasta entrega)
-            </span>
-          </div>
-        )}
       </Card>
 
-      {/* ── 2. Cliente y Canales de Contacto ── */}
+      {/* ── 2. Cliente y Contacto ── */}
       <Card className="p-[18px]">
-        <div className="flex items-center justify-between">
-          <Eyebrow>Cliente</Eyebrow>
-          <span className="text-micro font-medium text-ink-muted">Destinatario</span>
-        </div>
-
+        <Eyebrow>Cliente</Eyebrow>
         <div className="mt-2 flex items-start gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-ink/[0.06] text-ink">
             <Icon name="person" size={20} />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-body-lg font-bold text-ink">{order.customerName ?? 'Cliente'}</p>
+            <p className="font-semibold text-body-lg">{order.customerName ?? 'Cliente'}</p>
             {order.customerPhone ? (
-              <p className="mt-0.5 font-mono text-body font-semibold tracking-tight text-ink">
+              <p className="mt-0.5 font-mono text-caption text-ink-muted">
                 {prettyPhone(order.customerPhone)}
               </p>
             ) : (
@@ -149,24 +137,26 @@ export function DeliveredScreen({
           </div>
         </div>
 
-        {order.customerPhone && (
-          <div className="mt-3.5 grid grid-cols-2 gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full"
-              as="a"
-              href={telLink(order.customerPhone)}
-            >
-              <Icon name="phone" size={18} />
-              Llamar
-            </Button>
+        {(order.customerPhone || canWhatsApp) && (
+          <div className="mt-3.5 grid grid-cols-2 gap-2 border-t border-ink/[0.06] pt-3.5">
+            {order.customerPhone && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                as="a"
+                href={telLink(order.customerPhone)}
+              >
+                <Icon name="phone" size={18} />
+                Llamar
+              </Button>
+            )}
             {canWhatsApp && (
               <Button
                 type="button"
                 size="sm"
                 onClick={() => setWhatsappOpen(true)}
-                className="w-full bg-none bg-[#25D366] text-white shadow-none hover:bg-[#1ebd5a]"
+                className="w-full bg-[#25D366] text-white shadow-none hover:bg-[#1ebd5a]"
               >
                 <svg
                   aria-hidden="true"
@@ -184,7 +174,7 @@ export function DeliveredScreen({
       </Card>
 
       {/* ── 3. Ubicación y Destino de Entrega ── */}
-      {(cleanAddress || reference || hasCoords) && (
+      {(cleanAddress || reference || hasCoords || customerNotes) && (
         <Card className="p-[18px]">
           <div className="mb-3 flex items-center justify-between gap-2">
             <Eyebrow>Entregado en</Eyebrow>
@@ -222,6 +212,22 @@ export function DeliveredScreen({
                     Referencia
                   </span>
                   <p className="mt-0.5 text-body-lg font-bold leading-snug text-ink">{reference}</p>
+                </div>
+              </div>
+            )}
+
+            {customerNotes && (
+              <div className="flex items-start gap-2.5 rounded-xl bg-ink/[0.04] p-2.5">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-ink-muted shadow-xs">
+                  <Icon name="chat_bubble" size={17} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <span className="block font-mono text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
+                    Nota para el motorizado
+                  </span>
+                  <p className="mt-0.5 text-body font-medium leading-snug text-ink">
+                    {customerNotes}
+                  </p>
                 </div>
               </div>
             )}

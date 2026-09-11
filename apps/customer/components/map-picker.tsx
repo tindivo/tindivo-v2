@@ -258,7 +258,17 @@ export function MapPicker({
     if (loaded && pos) onValidityChange?.(inside)
   }, [inside, loaded, pos, onValidityChange])
 
-  const circle = polygon ? null : center ? { center, radiusKm } : null
+  /*
+   * Memoizado porque `MapCanvas` está memoizado: un objeto literal nuevo por
+   * render tumba la comparación superficial y devuelve el problema que el memo
+   * viene a resolver. Hoy en producción hay polígono, así que esto vale `null`
+   * y ya era estable por accidente — pero el día que un pueblo se configure con
+   * radio en vez de polígono, el accidente se acaba.
+   */
+  const circle = useMemo(
+    () => (polygon ? null : center ? { center, radiusKm } : null),
+    [polygon, center, radiusKm],
+  )
   const bounds = useMemo(
     () => (center ? boundsFor(polygon, center, radiusKm) : null),
     [polygon, center, radiusKm],

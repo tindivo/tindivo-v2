@@ -28,17 +28,63 @@ export const STEPS: { key: TrackingStep; label: string; short: string; sub: stri
 ]
 
 /**
+ * Los mismos cuatro pasos, con el tercero dicho para un recojo.
+ *
+ * El tercer paso es POSICIONAL —«salió de cocina, todavía no lo tiene el
+ * cliente»— y por eso `ready_for_pickup` se proyecta ahí (ver
+ * `STATUS_TO_TRACKING`). Lo que no se puede compartir son las PALABRAS: «En
+ * camino · El motorizado va en ruta» sobre una bolsa que espera en el mostrador
+ * manda al cliente a asomarse a su puerta mientras su comida se enfría a tres
+ * cuadras.
+ *
+ * Se rehace el array en vez de mutar `STEPS` porque `STEPS` es una constante
+ * compartida y exportada: una copia por render de una lista de cuatro objetos
+ * cuesta nada al lado de que dos pantallas se pisen la misma referencia.
+ */
+export function stepsFor(deliveryMethod: string): typeof STEPS {
+  if (deliveryMethod !== 'pickup') return STEPS
+  return STEPS.map((s) =>
+    s.key === 'ontheway'
+      ? {
+          ...s,
+          label: 'Listo para recoger',
+          short: 'Listo',
+          sub: 'Pásalo a recoger en el local',
+        }
+      : s,
+  )
+}
+
+/**
  * Copy de la pantalla de cancelado (DECISIONS §estados / prototipo).
  *
  * Ramifica por método de pago además de por motivo: para un prepago con
  * comprobante subido, "no se te cobró nada" es falso — el dinero ya salió a la
- * cuenta del restaurante. Ninguno de estos textos promete ni niega una
- * devolución: la política está sin decidir, y prometer de más es peor que no
- * decir nada.
+ * cuenta del restaurante.
+ *
+ * Y desde la 0224 ramifica también por MÉTODO DE ENTREGA, por un motivo más
+ * duro que el matiz: `pickup_no_show` y el no-show del motorizado comparten
+ * `cancel_reason = 'no_show'`, así que un recojo que nadie recogió recibía la
+ * frase del delivery — «el motorizado llegó a la dirección y no logró
+ * encontrarte»— sobre algo que no ocurrió. Nadie fue a ninguna dirección: la
+ * bolsa se quedó en el mostrador.
+ *
+ * SOBRE LA DEVOLUCIÓN. Aquí decía que la política estaba sin decidir. Ya lo
+ * está para el recojo (DECISIONS §8): se le guarda hasta el cierre y no se
+ * devuelve, y eso se le dice en el CHECKOUT, antes de pagar, que es donde
+ * evita la discusión. Esta pantalla no lo repite a propósito — quien la está
+ * leyendo ya perdió su comida, y restregarle la condición no impide nada que
+ * el aviso previo no impidiera ya. Lo que sí hace es dejar la puerta abierta a
+ * WhatsApp, que es donde el negocio puede ser generoso caso a caso.
  */
 export function cancelledCopy(
   reason: string | null,
-  opts?: { paymentIntent?: string; proofUrl?: string | null; paymentVerifiedAt?: string | null },
+  opts?: {
+    paymentIntent?: string
+    proofUrl?: string | null
+    paymentVerifiedAt?: string | null
+    deliveryMethod?: string
+  },
 ): {
   eyebrow: string
   title: string
@@ -103,9 +149,19 @@ export function cancelledCopy(
         body: 'El restaurante no pudo confirmar el comprobante que enviaste. Si crees que hubo un error, escríbenos por WhatsApp.',
       }
     case 'no_show':
+      // EL MISMO `cancel_reason` PARA DOS HECHOS DISTINTOS, y por eso se
+      // ramifica aquí y no en la base: `pickup_no_show` reusa 'no_show' a
+      // propósito —es el mismo motivo de negocio y cuenta para los mismos
+      // strikes— pero lo que hay que contarle al cliente no se parece en nada.
+      if (opts?.deliveryMethod === 'pickup') {
+        return {
+          eyebrow: 'Pedido cancelado',
+          title: 'Tu pedido se quedó sin recoger',
+          body: 'Lo tuvimos listo en el mostrador hasta la hora de cierre. Escríbenos por WhatsApp y lo vemos contigo.',
+        }
+      }
       // Sin acusar: el motorizado pudo no dar con la puerta, y el cliente pudo
-      // no oír la llamada. Tampoco se menciona el dinero — la política está en
-      // backlog y prometer una devolución que no está decidida sería peor.
+      // no oír la llamada.
       return {
         eyebrow: 'Pedido cancelado',
         title: 'No pudimos entregarte el pedido',
@@ -142,6 +198,11 @@ export function etaView(data: Tracking, now: number = Date.now()): EtaView {
   if (data.arrivedAtCustomerAt) return { kind: 'none' }
   if (data.status === 'delivered' || data.status === 'cancelled') return { kind: 'none' }
 
+  // 1-bis. LA BOLSA YA ESTÁ EN EL MOSTRADOR. No hay nada que estimar y el
+  //        titular ya lo dice; un número al lado solo puede contradecirlo.
+  //        Es el equivalente exacto, para un recojo, de la regla de arriba.
+  if (data.status === 'ready_for_pickup') return { kind: 'ready' }
+
   // 2. La cajera marcó listo antes de tiempo. Desde la 0120 eso RECORTA
   //    `estimated_ready_at` al lead de cola (10 min) en vez de dejarlo con la
   //    hora vieja, así que el reloj ya no anuncia cocción que no existe y el
@@ -157,7 +218,23 @@ export function etaView(data: Tracking, now: number = Date.now()): EtaView {
   const ready = Date.parse(data.estimatedReadyAt)
   if (!Number.isFinite(ready)) return { kind: 'none' }
 
-  const travel = data.travelMinutes ?? { min: 20, max: 25 }
+  /*
+   * EN UN RECOJO NO SE SUMA TRAYECTO, porque el que se mueve es el cliente.
+   *
+   * Esto estaba mal durante TODO el ciclo del recojo, no solo al final: con la
+   * comida a cinco minutos de estar lista, la pantalla prometía 25–30 porque le
+   * añadía el viaje de una moto que no existe. Y al final del camino el error
+   * se volvía visible —«Listo para recoger» junto a «Llega en 20–25 min», en la
+   * misma caja— que es como se encontró.
+   *
+   * `stepsFor`, `getStatusMessage` y `alertFor` sí se adaptaron al recojo en la
+   * 0220; esta función se quedó fuera porque no habla de estados sino de
+   * minutos, y nadie fue a buscarla ahí.
+   */
+  const travel =
+    data.deliveryMethod === 'pickup'
+      ? { min: 0, max: 0 }
+      : (data.travelMinutes ?? { min: 20, max: 25 })
   const min = Math.ceil((ready + travel.min * 60_000 - now) / 60_000)
   const max = Math.ceil((ready + travel.max * 60_000 - now) / 60_000)
 
@@ -172,7 +249,10 @@ export function etaLabel(data: Tracking, now: number = Date.now()): string | nul
   if (v.kind === 'none') return null
   if (v.kind === 'ready') return 'Ya está listo'
   if (v.kind === 'imminent') return 'En cualquier momento'
-  return `${v.min}–${v.max} min`
+  // Un rango de un solo número se dice como un número. Pasa en recojo, donde no
+  // hay trayecto que sumar y los dos extremos salen iguales: «12–12 min» se lee
+  // como un error de la pantalla, no como una estimación.
+  return v.min === v.max ? `${v.min} min` : `${v.min}–${v.max} min`
 }
 
 /**
@@ -204,6 +284,36 @@ export function getStatusMessage(data: Tracking, current: TrackingStep | null): 
     return 'El motorizado ya llegó a tu domicilio y te está esperando.'
   }
   if (current === 'ontheway') {
+    // En un recojo el tercer paso no significa «salió»: significa que la bolsa
+    // está en el mostrador esperando. Decirle lo otro le haría esperar en su
+    // casa un motorizado que no existe.
+    if (data.deliveryMethod === 'pickup') {
+      /*
+       * «Y PAGAS AHÍ» SOLO SI QUEDA ALGO QUE PAGAR (0224).
+       *
+       * Esto preguntaba por `paymentIntent`, o sea por lo que el cliente
+       * PENSABA pagar al pedir, y desde la 0224 eso ya no dice si el dinero
+       * entró: un recojo «ahora» se cobra en la caja AL ACEPTAR, antes de que
+       * nadie toque una sartén. Cuando la comida sale del horno ese cliente
+       * lleva pagado toda la cocción, y la pantalla le seguía mandando a pagar
+       * por segunda vez justo cuando iba camino del mostrador.
+       *
+       * `paymentVerifiedAt` es la pregunta correcta y ya viajaba en el tracking
+       * (0183): significa «alguien confirmó que el dinero llegó», y lo escriben
+       * las dos vías —`validate_order` al aprobar la captura del prepago y
+       * `accept` al cobrar en el mostrador—.
+       *
+       * El prepago SIGUE con su rama, sumada y no sustituida: la escritura de
+       * `payment_verified_at` en un prepago la hace `validate_order`, y un
+       * recojo manual que la cajera cree ya prepagado no pasa por ahí. Sin
+       * `paymentIntent` en la condición, ese pedido volvería a pedir dinero.
+       * Lo que NO puede volver es lo contrario —dar por pagado lo que no lo
+       * está— y para eso basta con que ninguna de las dos ramas adivine.
+       */
+      return data.paymentVerifiedAt || data.paymentIntent === 'prepaid'
+        ? 'Tu pedido ya está listo. Pásalo a recoger en el local.'
+        : 'Tu pedido ya está listo. Pásalo a recoger en el local y pagas ahí.'
+    }
     return data.paymentIntent === 'pending_cash'
       ? 'Tu pedido ya salió del restaurante. Ten listo tu pago.'
       : 'Tu pedido ya salió del restaurante y va en camino.'

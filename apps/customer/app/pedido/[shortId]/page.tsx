@@ -28,7 +28,7 @@ import { usePushOffer } from '@/features/tracking/hooks/use-push-offer'
 import { useStatusAlerts } from '@/features/tracking/hooks/use-status-alerts'
 import { useTracking } from '@/features/tracking/hooks/use-tracking'
 import { useWakeLock } from '@/features/tracking/hooks/use-wake-lock'
-import { isCancellable, STEPS } from '@/features/tracking/lib/format'
+import { isCancellable, stepsFor } from '@/features/tracking/lib/format'
 import { prepayStage } from '@/features/tracking/lib/prepay-stage'
 
 /**
@@ -74,10 +74,13 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
   const resena = usePendingReview(enEspera)
 
   const current = data ? toTrackingStep(data.status as OrderStatus) : null
-  const foundIdx = current ? STEPS.findIndex((s) => s.key === current) : -1
+  // Un solo sitio elige las palabras de los cuatro pasos, y de ahi salen tanto
+  // el hero como el stepper. En recojo el tercero deja de hablar de motorizados.
+  const steps = stepsFor(data?.deliveryMethod ?? 'delivery')
+  const foundIdx = current ? steps.findIndex((s) => s.key === current) : -1
   const currentIdx = foundIdx < 0 ? 0 : foundIdx
   const step =
-    STEPS[currentIdx] ??
+    steps[currentIdx] ??
     ({
       key: 'received' as const,
       label: 'Pedido recibido',
@@ -87,7 +90,7 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
       label: string
       sub: string
     })
-  const progress = ((currentIdx + 1) / STEPS.length) * 100
+  const progress = ((currentIdx + 1) / steps.length) * 100
   const cancellable = data ? isCancellable(data, ownedId) : false
   const enRuta = current === 'ontheway' || current === 'delivered'
   const etapaPrepago = data ? prepayStage(data) : null
@@ -202,7 +205,7 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
                     Se reparten el turno solos: `prepayStage` devuelve `null` de
                     `preparing` en adelante, que es exactamente cuando este
                     empieza a moverse y el otro deja de tener sujeto. */}
-                {!etapaPrepago && <TrackingSteps currentIdx={currentIdx} />}
+                {!etapaPrepago && <TrackingSteps currentIdx={currentIdx} steps={steps} />}
               </>
             )}
           </div>

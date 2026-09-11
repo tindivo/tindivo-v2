@@ -1,5 +1,6 @@
 import { signOutLocal } from '@tindivo/supabase'
 import { unsubscribeFromPush } from '@tindivo/ui'
+import { olvidarApagado } from '@/hooks/use-push-status'
 import { api } from './api'
 import { getSupabaseBrowser } from './supabase/client'
 
@@ -25,5 +26,10 @@ export async function signOutDevice(): Promise<void> {
   if (baja === 'failed') {
     console.error('[auth] no se pudo dar de baja el push al cerrar sesión')
   }
+  // El «apagué los avisos en esta tablet» es de quien lo decidió, no del
+  // navegador. Si sobreviviera al cierre de sesión, el siguiente turno
+  // arrancaría mudo sin que nadie pueda saber por qué: el estado se vería
+  // exactamente igual que un equipo recién estrenado. Ver `APAGADO_KEY`.
+  olvidarApagado()
   await signOutLocal(getSupabaseBrowser())
 }

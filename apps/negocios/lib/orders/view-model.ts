@@ -16,6 +16,8 @@ export type UiState =
   | 'buffer_p3'
   | 'heading'
   | 'waiting'
+  /** Recojo: la bolsa esta en el mostrador y falta que venga el cliente. */
+  | 'awaiting_customer'
   | 'picked_up'
   | 'delivered'
   | 'cancelled'
@@ -30,7 +32,9 @@ export const ORDER_SELECT =
   'client_pays_with,change_to_give,' +
   'yape_amount,cash_amount,requires_validation,validation_reason_code,risk_flags,' +
   'driver_id,created_at,pending_acceptance_at,awaiting_payment_at,validating_at,' +
-  'waiting_driver_at,picked_up_at,delivered_at,cancelled_at,cancel_note,cancel_reason,updated_at,' +
+  'waiting_driver_at,picked_up_at,ready_for_pickup_at,pickup_timing,tracking_link_sent_at,' +
+  'payment_verified_at,payment_real,' +
+  'delivered_at,cancelled_at,cancel_note,cancel_reason,updated_at,' +
   'tindivo_commission,commission_amount,delivery_fee_charged,' +
   'driver:drivers(full_name)'
 
@@ -93,6 +97,11 @@ export interface OrderRow {
   validating_at: string | null
   waiting_driver_at: string | null
   picked_up_at: string | null
+  ready_for_pickup_at: string | null
+  pickup_timing: string | null
+  tracking_link_sent_at: string | null
+  payment_verified_at: string | null
+  payment_real: string | null
   delivered_at: string | null
   cancelled_at: string | null
   cancel_note: string | null
@@ -141,6 +150,37 @@ export interface OrderVM {
   minutesLeft: number | null
   /** Segundos con signo entre `now` y `estimated_ready_at`. Positivo = tiempo restante, negativo = retraso. */
   readySec: number | null
+  /** Recojo: segundos que la bolsa lleva esperando en el mostrador. */
+  waitingCustomerSec: number | null
+  /** Recojo: 'now' (cliente delante) o 'later'. `null` en delivery y en manual. */
+  pickupTiming: string | null
+  /**
+   * `true` cuando alguien ya confirmó que el dinero de este pedido entró.
+   *
+   * Sale de `orders.payment_verified_at`, que tiene UN solo significado desde la
+   * 0181 —«una persona vio el dinero»— y ahora dos escritores: `validate_order`
+   * al aprobar una captura de Yape, y `advance_order` acción `accept` al cobrar
+   * un recojo «ahora» en la caja (0224).
+   *
+   * Gobierna dos cosas del mostrador: que el pie de entrega no vuelva a
+   * preguntar «¿cómo pagó?» por algo ya cobrado, y que declarar un plantón NO
+   * deje una falta en la cuenta de quien sí pagó.
+   */
+  yaCobrado: boolean
+  /**
+   * QUÉ ENTRÓ, cuando ya se sabe. `null` mientras nadie lo haya declarado.
+   *
+   * `yaCobrado` dice que el dinero está dentro; esto dice en qué forma. Son dos
+   * preguntas distintas y hacían falta las dos: la consulta ya traía
+   * `payment_real` (ver `ORDER_SELECT`) y `mapPaymentReal` existía justo al
+   * lado, pero solo las usaba el historial. El tablero pintaba la intención del
+   * cliente de principio a fin, así que un recojo cobrado por Yape decía
+   * «Efectivo» toda la noche y solo cambiaba al caer en el historial —
+   * contradiciendo, una pantalla después, lo que la cajera había declarado con
+   * el dedo. Es el mismo fallo que el comentario de `mapPaymentReal` dice haber
+   * arreglado: se arregló allí y no se propagó hasta aquí.
+   */
+  paymentReal: UiPayment | null
   /**
    * Segundos que el pedido lleva encima del motorizado, o `null` fuera de
    * reparto.
@@ -184,6 +224,24 @@ export interface OrderVM {
   comidaLista: boolean
   /** `true` si "Marcar listo" tiene sentido: la comida puede seguir en cocina. */
   canMarkReady: boolean
+  /**
+   * `true` cuando la bolsa esta en el mostrador esperando al cliente, o sea
+   * cuando tienen sentido las dos unicas acciones que cierran un recojo:
+   * entregarlo (`handover`) o declarar que no vino (`pickup_no_show`).
+   *
+   * Se deriva del ESTADO y no de `method === 'pickup'`: un recojo en cocina
+   * todavia no se puede entregar, y ensenar el boton ahi seria ofrecer una
+   * accion que el servidor va a rechazar.
+   */
+  canHandOver: boolean
+  /**
+   * Cuando la cajera ABRIO el aviso de WhatsApp del recojo (`hh:mm`), o `null`.
+   *
+   * No dice que el cliente lo recibiera: `wa.me` se abre fuera del panel y desde
+   * aqui no hay forma de saber si llego a pulsar enviar. La UI lo llama
+   * «Avisado» por eso, y no «Recibido». Ver 0221.
+   */
+  pickupNotifiedAt: string | null
   proofStatus: string | null
   proofUrl: string | null
   proofAttempt: number
@@ -326,6 +384,161 @@ export function mapPayment(intent: string): UiPayment {
 }
 
 /**
+ * LO QUE SE COBRÓ DE VERDAD, cuando ya se sabe. `null` mientras el pedido sigue
+ * abierto — ahí lo único que hay es la intención, y `mapPayment` es la buena.
+ *
+ * POR QUÉ HACE FALTA. `payment_intent` es lo que el CLIENTE eligió al pedir;
+ * `payment_real` es lo que ENTRÓ, y son distintos más a menudo de lo que
+ * parece: el motorizado pregunta al entregar y la cajera pregunta en el
+ * mostrador, precisamente porque en el último metro la gente cambia de idea.
+ *
+ * El historial pintaba la intención y lo llamaba «Pago». Con el recojo se
+ * volvió indefendible: desde la 0224 la cajera DECLARA el cobro al aceptar, y
+ * el historial le respondía «Efectivo» a cada recojo que ella hubiera cobrado
+ * por Yape — contradiciendo, en la misma pantalla, algo que acababa de escribir
+ * con el dedo.
+ */
+export function mapPaymentReal(real: string | null): UiPayment | null {
+  if (real === 'paid_yape') return 'pending_wallet'
+  if (real === 'paid_cash') return 'pending_cash'
+  if (real === 'paid_mixed') return 'pending_mixed'
+  if (real === 'paid_prepaid') return 'prepaid'
+  // 'unpaid' y 'refunded' no son formas de pago: no tienen fila en
+  // `PAYMENT_META` y decir cualquiera de las cuatro sería inventar. Que caiga
+  // en la intención, que es lo que había antes de esto.
+  return null
+}
+
+/**
+ * EL MOSTRADOR NO COBRA «EN EFECTIVO»: COBRA LA CAJA.
+ *
+ * `pending_cash` se llama así por el delivery, donde el método SÍ se pacta al
+ * pedir: el motorizado va a cobrar billetes y el cliente lo sabe. En un recojo
+ * ese nombre es mentira. El checkout ni siquiera le ofrece elegir —la fila dice
+ * «Pagas en el local · En la caja, efectivo o Yape/Plin», y por eso tampoco le
+ * pregunta con qué billete paga—, así que EL MÉTODO NO EXISTE hasta que el
+ * cliente está delante y decide. Quien lo sabe es la cajera, y lo declara al
+ * aceptar (`payment_real`, 0224).
+ *
+ * La tarjeta afirmaba «Efectivo» igual, y medio segundo después la hoja de
+ * cobro le preguntaba «¿con qué te pagó?»: la misma pantalla contradiciéndose.
+ *
+ * Y HAY UN SEGUNDO ESTADO, que es el que de verdad quema. Cobrado el pedido,
+ * `buildMoney` seguía devolviendo `collect` porque solo miraba el intent, así
+ * que la tarjeta ordenaba «Cobrar en efectivo» durante toda la cocción y en
+ * `ready_for_pickup` — o sea justo cuando el cliente vuelve al mostrador a
+ * recoger. Una orden de cobrar algo ya cobrado, en el peor momento posible.
+ *
+ * VIVE AQUÍ, Y NO EN CADA PANTALLA, porque ese es el fallo de fondo: la
+ * pastilla de la tarjeta y la de la cabecera del detalle calculaban lo mismo
+ * por su cuenta, y por eso podían decir cosas distintas del mismo pedido.
+ */
+export interface CobroEnCaja {
+  /** Para la franja de la tarjeta, que tiene sitio y contesta QUÉ HACER. */
+  label: string
+  /**
+   * Para la pastilla de la cabecera del detalle, que no tiene sitio y contesta
+   * otra cosa: CON QUÉ, en una palabra.
+   *
+   * Se queda en el registro de sus vecinas —«Online», «Efectivo», «Billetera»,
+   * «Prepago»—: son pastillas de 10px en fila, y una que diga «Cobrado en
+   * efectivo» rompe la fila y encima repite lo que la franja ya dice mejor. Que
+   * el dinero ya entró se lee en la tarjeta y en el pie del detalle, no aquí.
+   */
+  short: string
+  icon: string
+  /** El dinero YA entró: no es una orden, es un hecho. */
+  cobrado: boolean
+}
+
+export function cobroEnCaja(order: {
+  method: 'delivery' | 'pickup'
+  payment: UiPayment
+  yaCobrado: boolean
+  paymentReal: UiPayment | null
+}): CobroEnCaja | null {
+  // El prepago no es cobro de mostrador: su dinero entró por otra vía y lo
+  // sella `validate_order`. Su vocabulario ya lo resuelve `buildMoney`.
+  if (order.method !== 'pickup' || order.payment === 'prepaid') return null
+
+  if (!order.yaCobrado) {
+    return { label: 'Cobra en caja', short: 'En caja', icon: 'point_of_sale', cobrado: false }
+  }
+
+  // Cobrado pero sin `payment_real` legible (`unpaid`, `refunded`): que diga lo
+  // único que consta. Elegir «efectivo» por defecto es justo lo que convertiría
+  // en billetes un Yape que nadie miró, y descuadraría el corte de la noche
+  // contra un número inventado — el mismo motivo por el que la hoja de cobro no
+  // trae ninguna de las dos respuestas premarcada.
+  const comoEntro =
+    order.paymentReal === 'pending_cash'
+      ? ' en efectivo'
+      : order.paymentReal === 'pending_wallet'
+        ? ' por Yape/Plin'
+        : ''
+  return {
+    label: `Cobrado${comoEntro}`,
+    // Sin método legible la pastilla dice «Cobrado» y no una forma de pago:
+    // es lo único que consta.
+    short:
+      order.paymentReal === 'pending_cash'
+        ? 'Efectivo'
+        : order.paymentReal === 'pending_wallet'
+          ? 'Billetera'
+          : 'Cobrado',
+    icon: 'verified',
+    cobrado: true,
+  }
+}
+
+/**
+ * ¿ESTA TARJETA TIENE UN RELOJ QUE HAY QUE MOVER CADA SEGUNDO?
+ *
+ * El tablero no repinta a ciegas: un `setInterval` de 1 s solo empuja `now` si
+ * alguna tarjeta lo necesita, porque en un pueblo con diez pedidos por noche la
+ * pantalla se pasa la mayor parte del turno quieta y repintarla cada segundo
+ * para nada es batería del aparato de la caja.
+ *
+ * VIVE AQUÍ, Y NO EN `chrome.tsx`, porque ese es el fallo que arregló:
+ * `awaiting_customer` tenía reloj en la tarjeta y no estaba en la lista del
+ * tick, así que el contador del mostrador se quedaba clavado en el segundo del
+ * último repintado que provocara OTRO pedido — y si no quedaba ninguno vivo,
+ * clavado del todo (visto en 00:08). Con la condición al lado de quien decide
+ * el reloj, el test puede exigir que las dos digan lo mismo, que es lo que
+ * `chrome.tsx` no podía comprobar de sí mismo.
+ *
+ * Es más ancha que «tiene reloj» a propósito: `pending_acceptance`,
+ * `awaiting_payment` y `validando` entran por su cuenta atrás, que además
+ * dispara la autoexpiración al llegar a 0.
+ */
+export function needsClockTick(order: Pick<OrderVM, 'status' | 'state'>): boolean {
+  if (
+    order.status === 'pending_acceptance' ||
+    order.status === 'awaiting_payment' ||
+    order.status === 'validando'
+  ) {
+    return true
+  }
+  switch (order.state) {
+    case 'cooking':
+    case 'heading':
+    case 'waiting':
+    case 'buffer_p1':
+    case 'buffer_p2':
+    case 'buffer_p3':
+    case 'picked_up':
+    // La bolsa en el mostrador: cuenta hacia arriba y es el reloj que MÁS
+    // depende de ir corriendo. No mide lo que queda —un recojo no se
+    // autocancela— sino lo que la bolsa lleva ahí, que es con lo que la cajera
+    // decide si ya toca declarar el plantón. Congelado, dice que no toca.
+    case 'awaiting_customer':
+      return true
+    default:
+      return false
+  }
+}
+
+/**
  * Columna del kanban para un estado. EXHAUSTIVO A PROPÓSITO.
  *
  * Era una cadena de `if` que acababa en `return 'entregados'` como cajón de
@@ -348,6 +561,17 @@ export function getColumn(status: OrderStatus): OrderColumn {
     case 'waiting_driver':
     case 'heading_to_restaurant':
     case 'waiting_at_restaurant':
+      return 'cocina'
+    // «En cocina» NO es la cocina literal: es TODO LO QUE SIGUE EN EL LOCAL.
+    // Ahi viven ya `waiting_driver` («lista, esperando moto») y el motorizado
+    // esperando en el mostrador. Una bolsa de recojo lista es exactamente eso —
+    // hecha, dentro del local, esperando a quien se la lleve— y ademas es la
+    // unica columna donde la cajera todavia tiene algo que hacer con ella.
+    //
+    // «En reparto» es lo contrario: lo que ya salio y ya no es cosa suya. Un
+    // recojo ahi seria un pedido que reclama sus manos escondido en la columna
+    // de lo que no las reclama.
+    case 'ready_for_pickup':
       return 'cocina'
     case 'picked_up':
       return 'reparto'
@@ -396,6 +620,60 @@ export function resolveMobileTab(selected: MobileTab, newCount: number): MobileT
   return selected === 'new' && newCount === 0 ? 'cooking' : selected
 }
 
+/**
+ * EL FILTRO DE CANAL DEL TABLERO ACTIVO.
+ *
+ * Es PURAMENTE VISUAL, y esa frase es la regla entera. La alarma, el banner y
+ * el latido salen de `attentionState`, que se calcula en el shell sobre la
+ * lista COMPLETA y no pasa por aquí. Si la cajera filtra «solo delivery» para
+ * concentrarse, un recojo con su cliente de pie en el mostrador y su reloj de
+ * autocancelación corriendo tiene que seguir sonando igual: el riesgo de
+ * negocio no puede depender de qué pestaña esté abierta.
+ *
+ * Si alguien alguna vez pasa una lista ya filtrada a `attentionState`, esa
+ * frase deja de ser cierta en silencio. No hay forma de que el tipo lo impida;
+ * lo cubre `attention.test.ts`.
+ */
+export type ChannelFilter = 'all' | 'delivery' | 'pickup'
+
+/**
+ * El filtro que se APLICA, que no siempre es el guardado. Mismo problema y
+ * misma forma que `resolveMobileTab`.
+ *
+ * Sin esto, la cajera filtra «Recojo», atiende el único que había, y se queda
+ * mirando un tablero vacío con seis pedidos de delivery detrás — y el chip que
+ * usaría para volver ya no se dibuja, porque los chips solo aparecen cuando hay
+ * los dos canales. Se resuelve derivando y no navegando: en cuanto el canal
+ * elegido se queda sin nada, el tablero vuelve a enseñarlo todo.
+ */
+export function resolveChannelFilter(
+  selected: ChannelFilter,
+  counts: { delivery: number; pickup: number },
+): ChannelFilter {
+  if (selected === 'pickup' && counts.pickup === 0) return 'all'
+  if (selected === 'delivery' && counts.delivery === 0) return 'all'
+  return selected
+}
+
+/** `true` si el pedido pasa el filtro de canal. */
+export function matchesChannel(o: Pick<OrderVM, 'method'>, filter: ChannelFilter): boolean {
+  return filter === 'all' || o.method === filter
+}
+
+/**
+ * Los contadores de los chips, DERIVADOS DEL MISMO ARRAY QUE PINTA LA LISTA.
+ *
+ * `JMAXL98Z` fue exactamente este descuadre: el chip contaba sobre el array
+ * completo mientras la lista pintaba un subconjunto ya filtrado, así que decían
+ * cosas distintas de lo mismo. Corregido dos veces para Web/Manual; que esto
+ * sea una función y no tres `filter().length` sueltos en el JSX es lo que
+ * impide que vuelva a separarse.
+ */
+export function channelCounts(vms: readonly OrderVM[]): Record<ChannelFilter, number> {
+  const pickup = vms.filter((v) => v.method === 'pickup').length
+  return { all: vms.length, delivery: vms.length - pickup, pickup }
+}
+
 function getUiState(row: OrderRow, now: number): UiState {
   switch (row.status) {
     case 'pending_acceptance':
@@ -422,6 +700,8 @@ function getUiState(row: OrderRow, now: number): UiState {
       return 'heading'
     case 'waiting_at_restaurant':
       return 'waiting'
+    case 'ready_for_pickup':
+      return 'awaiting_customer'
     case 'picked_up':
       return 'picked_up'
     case 'delivered':
@@ -511,6 +791,20 @@ export function toOrderVM(
       ? Math.round((now - Date.parse(row.picked_up_at)) / 1000)
       : null
 
+  /**
+   * Segundos que la bolsa lleva en el mostrador esperando al cliente.
+   *
+   * Cuenta HACIA ARRIBA y no hacia una fecha limite: no hay ninguna. Un recojo
+   * NO se autocancela —la comida ya esta hecha y borrarla de la pantalla sin
+   * que nadie mire seria perder el momento de decidir que hacer con ella—, asi
+   * que el numero no es una cuenta atras sino la unica pista que tiene la
+   * cajera para decidir cuando declarar el planton.
+   */
+  const waitingCustomerSec =
+    state === 'awaiting_customer' && row.ready_for_pickup_at != null
+      ? Math.round((now - Date.parse(row.ready_for_pickup_at)) / 1000)
+      : null
+
   const extCount = row.prep_extension_count ?? 0
 
   return {
@@ -522,8 +816,18 @@ export function toOrderVM(
     state,
     customer: row.customer_name,
     phone: row.customer_phone,
-    addressRef: row.delivery_reference,
-    // Ver `address`: en manual la columna es el relleno 'Pedido manual'.
+    /*
+      `|| null` COMO SU VECINA DE ABAJO, y le faltaba.
+      La API manda `''` cuando el campo no aplica —en un recojo no hay
+      referencia— y una cadena vacía NO es lo mismo que ausente: pasa los
+      guards de verdad. La ficha del tablero preguntaba `addressRef ?? address`
+      y `??` da por buena la cadena vacía, así que pintaba un pin de dirección
+      con nada al lado en TODO recojo web. `address` ya se normalizaba aquí
+      justo por esto; que las dos lo hagan es lo que impide que la mitad de la
+      pantalla crea que hay dato y la otra mitad no.
+    */
+    addressRef: row.delivery_reference?.trim() || null,
+    // Ver arriba: en manual la columna es el relleno 'Pedido manual'.
     address: source === 'manual' ? null : row.delivery_address?.trim() || null,
     method: row.delivery_method === 'pickup' ? 'pickup' : 'delivery',
     total: amount + deliveryFee,
@@ -534,6 +838,10 @@ export function toOrderVM(
     prepMinutes: row.prep_time_minutes ?? null,
     minutesLeft,
     readySec,
+    waitingCustomerSec,
+    pickupTiming: row.pickup_timing,
+    yaCobrado: row.payment_verified_at != null,
+    paymentReal: mapPaymentReal(row.payment_real),
     deliverySec,
     bufferMinutes:
       state === 'buffer_p1' || state === 'buffer_p2' || state === 'buffer_p3'
@@ -560,12 +868,16 @@ export function toOrderVM(
       state === 'buffer_p1' ||
       state === 'buffer_p2' ||
       state === 'buffer_p3',
-    // Los mismos cuatro estados que acepta advance_order('ready').
+    // Los mismos cuatro estados que acepta advance_order('ready'). En recojo
+    // solo se llega desde `preparing`, pero la lista no hace falta acotarla: los
+    // otros tres son estados de motorizado en los que un recojo no entra nunca.
     canMarkReady:
       !row.ready_early_used &&
       ['preparing', 'waiting_driver', 'heading_to_restaurant', 'waiting_at_restaurant'].includes(
         row.status,
       ),
+    canHandOver: row.status === 'ready_for_pickup',
+    pickupNotifiedAt: fmtTime(row.tracking_link_sent_at),
     proofStatus: row.payment_proof_status,
     proofUrl: row.comprobante_prepago_url,
     proofAttempt: row.proof_attempt ?? 0,

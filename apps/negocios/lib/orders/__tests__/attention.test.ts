@@ -1,8 +1,8 @@
 import { ORDER_STATUSES, type OrderStatus } from '@tindivo/contracts'
 import { describe, expect, it } from 'vitest'
 import {
-  attentionKey,
   attentionState,
+  demandsCashier,
   LAST_CALL_SEC,
   newColumnSubtitle,
   nextBeepDelay,
@@ -49,6 +49,9 @@ function row(overrides: Partial<OrderRow> = {}): OrderRow {
     validating_at: null,
     waiting_driver_at: null,
     picked_up_at: null,
+    ready_for_pickup_at: null,
+    pickup_timing: null,
+    tracking_link_sent_at: null,
     delivered_at: null,
     cancelled_at: null,
     cancel_note: null,
@@ -220,18 +223,17 @@ describe('el latido de la tarjeta · «oye, atiende a esto»', () => {
       expect(buildNegociosCardVM(order).pulse !== 'none', `estado ${status}`).toBe(
         st.orders.length > 0,
       )
-      // Y mientras no haya acuses de por medio, lo que se ve es exactamente lo
-      // que suena. El acuse solo puede quitar de un lado: ver más abajo.
+      // Y lo que se ve es exactamente lo que suena.
       expect(st.alarm.hasPending, `estado ${status}`).toBe(st.orders.length > 0)
     }
   })
 
-  it('acusado el pedido, la tarjeta SIGUE latiendo aunque ya no suene', () => {
-    // El acuse dice «ya lo vi», no «ya lo resolví». Apagar el latido aquí sería
-    // dejar el pedido sin ninguna señal, que es el fallo que costó JMAXL98Z.
+  it('abrir el pedido no apaga ni el latido ni el sonido', () => {
+    // Abrirlo dice «ya lo vi», no «ya lo resolví». Ninguna de las dos señales
+    // se apaga hasta que el pedido deje de reclamar de verdad.
     const pedido = porAceptar(240)
-    const st = attentionState([pedido], new Set([attentionKey(pedido)]))
-    expect(st.alarm.hasPending).toBe(false)
+    const st = attentionState([pedido])
+    expect(st.alarm.hasPending).toBe(true)
     expect(buildNegociosCardVM(pedido).pulse).toBe('attention')
   })
 
@@ -344,82 +346,52 @@ describe('newColumnSubtitle · el chip cuenta la columna, el subtitulo la repart
 })
 
 /**
- * EL ACUSE DE RECIBO: ABRIR EL PEDIDO CALLA SU ALARMA, Y SOLO SU ALARMA.
+ * MIENTRAS RECLAME, SUENA. El acuse de recibo se quitó — ver la cabecera de
+ * `attention.ts`—, y estos tests fijan lo que queda en su lugar: que no hay
+ * ningún camino por el que un pedido que sigue esperando se quede en silencio.
  *
- * Del piloto volvió una queja sobre el aviso, y es la peor que puede volver:
- * que suena demasiado. Sonaba cada tres segundos durante los cinco minutos del
- * pedido, incluso mientras la cajera lo tenía abierto delante. La respuesta
- * natural a eso es apagar las alertas, y ahí se pierde el siguiente pedido.
- *
- * Lo que estos tests fijan es el reparto: el acuse toca `alarm` y NUNCA
- * `orders` ni `banner`. Si algún día alguien lo hace apagar lo visible, este
- * fichero se pone rojo — que es justo el error que costó `JMAXL98Z`.
+ * Abrir la tarjeta era el acuse. Callaba la alarma de ese pedido hasta su
+ * último minuto, y en ese hueco cabía todo: la llamada al cliente, la comanda a
+ * medio teclear, el motorizado en la puerta. Mirar un pedido no es atenderlo.
  */
-describe('attentionState · el acuse de recibo', () => {
-  it('acusar calla el sonido y deja el banner y el latido intactos', () => {
+describe('attentionState · lo que reclama, suena', () => {
+  it('un pedido abierto y sin aceptar SIGUE sonando', () => {
+    // Es el cambio: antes esto era `false` en cuanto la cajera lo abría.
     const pedido = porAceptar(240)
-    const acusado = new Set([attentionKey(pedido)])
-
-    const antes = attentionState([pedido])
-    expect(antes.alarm.hasPending).toBe(true)
-
-    const despues = attentionState([pedido], acusado)
-    expect(despues.alarm.hasPending).toBe(false)
-    expect(despues.alarm.count).toBe(0)
-    // Lo visible no se entera de que existe el acuse.
-    expect(despues.orders).toHaveLength(1)
-    expect(despues.banner).not.toBeNull()
-    expect(despues.banner?.label).toBe(antes.banner?.label)
+    expect(attentionState([pedido]).alarm.hasPending).toBe(true)
+    expect(buildNegociosCardVM(pedido).pulse).toBe('attention')
   })
 
-  it('lo que suena nunca es más que lo que se ve', () => {
+  it('lo que suena es EXACTAMENTE lo que se ve', () => {
     const lista = [porAceptar(240), revisandoPago(300), esperandoAlCliente(120)]
-    for (const acusados of [
-      new Set<string>(),
-      new Set([attentionKey(lista[0] as OrderVM)]),
-      new Set(lista.map(attentionKey)),
-    ]) {
-      const st = attentionState(lista, acusados)
-      expect(st.alarm.orders.length).toBeLessThanOrEqual(st.orders.length)
-      for (const o of st.alarm.orders) expect(st.orders).toContain(o)
-      if (st.alarm.hasPending) expect(st.banner).not.toBeNull()
-    }
+    const st = attentionState(lista)
+    expect(st.alarm.orders).toEqual(st.orders)
+    expect(st.alarm.count).toBe(st.orders.length)
+    if (st.alarm.hasPending) expect(st.banner).not.toBeNull()
   })
 
-  it('acusar uno no calla al que entra después', () => {
-    const visto = porAceptar(240, { id: 'a', short_id: 'VISTAAAA' })
-    const nuevo = porAceptar(400, { id: 'b', short_id: 'NUEVBBBB' })
-    const st = attentionState([visto, nuevo], new Set([attentionKey(visto)]))
-    expect(st.alarm.count).toBe(1)
-    expect(st.alarm.orders[0]?.id).toBe('NUEVBBBB')
+  it('varios a la vez se cuentan todos', () => {
+    const uno = porAceptar(240, { id: 'a', short_id: 'AAAAAAAA' })
+    const otro = porAceptar(400, { id: 'b', short_id: 'BBBBBBBB' })
+    expect(attentionState([uno, otro]).alarm.count).toBe(2)
   })
 
-  it('EN EL ÚLTIMO MINUTO el acuse ya no vale: vuelve a sonar', () => {
-    // Y esto es lo que impide que un «ya lo vi» de hace tres minutos deje morir
-    // el pedido en silencio, que es exactamente cómo se perdió JMAXL98Z.
-    const alFilo = porAceptar(LAST_CALL_SEC - 15)
-    const st = attentionState([alFilo], new Set([attentionKey(alFilo)]))
+  it('el que espera al cliente no suena, aunque esté en la columna de nuevos', () => {
+    // El único silencio que queda, y es por quién tiene la pelota, no por acuse.
+    expect(attentionState([esperandoAlCliente(600)]).alarm.hasPending).toBe(false)
+  })
+
+  it('en el último minuto sube a urgente sin dejar de sonar', () => {
+    const st = attentionState([porAceptar(LAST_CALL_SEC - 15)])
     expect(st.alarm.hasPending).toBe(true)
     expect(st.alarm.urgent).toBe(true)
   })
 
-  it('el acuse muere con la situación, no con el pedido: el prepago vuelve a sonar', () => {
-    // Misma fila, dos momentos. Acusa el `pending_acceptance` (lo aceptó y con
-    // eso lo calló); cuando el cliente sube el comprobante, el pedido pasa a
-    // `validando` y esa situación no tiene acuse.
+  it('el prepago que vuelve con el comprobante reclama otra vez', () => {
     const aceptando = porAceptar(240, { id: 'ord_x', short_id: 'PREPXXXX' })
-    const acusado = new Set([attentionKey(aceptando)])
-    expect(attentionState([aceptando], acusado).alarm.hasPending).toBe(false)
-
     const conComprobante = revisandoPago(500, { id: 'ord_x', short_id: 'PREPXXXX' })
     expect(conComprobante.rowId).toBe(aceptando.rowId)
-    expect(attentionState([conComprobante], acusado).alarm.hasPending).toBe(true)
-  })
-
-  it('`urgent` mira solo lo que suena, no lo acusado que aún no está al filo', () => {
-    const tranquilo = porAceptar(300, { id: 'a', short_id: 'CALMAAAA' })
-    const st = attentionState([tranquilo], new Set([attentionKey(tranquilo)]))
-    expect(st.alarm.urgent).toBe(false)
+    expect(attentionState([conComprobante]).alarm.hasPending).toBe(true)
   })
 })
 
@@ -436,5 +408,57 @@ describe('nextBeepDelay · el ritmo, que también sobraba', () => {
 
   it('en el último minuto vuelve al ritmo rápido, lleve el rato que lleve', () => {
     expect(nextBeepDelay({ elapsedMs: 4 * 60_000, urgent: true })).toBe(3_000)
+  })
+})
+
+/**
+ * EL FILTRO DE CANAL ES PURAMENTE VISUAL, Y ESTO ES LO QUE LO SOSTIENE.
+ *
+ * `attentionState` recibe la lista COMPLETA desde el shell; el filtro se aplica
+ * en la página, sobre las tres listas que se pintan. Nada en los tipos impide
+ * que alguien, al tocar el tablero, acabe pasando por aquí una lista ya
+ * filtrada — y ese día un recojo con su cliente de pie en el mostrador dejaría
+ * de sonar solo porque la cajera puso «Delivery» para concentrarse.
+ *
+ * Es la misma asimetría que perdió a `JMAXL98Z`, con otro disfraz: lo que
+ * suena y lo que se ve dejarían de salir de la misma llamada.
+ */
+describe('el canal no decide qué reclama a la cajera', () => {
+  it('un recojo y un delivery en el mismo estado pesan exactamente igual', () => {
+    const entrega = porAceptar(120, { id: 'a', short_id: 'DELIVER1' })
+    const recojo = porAceptar(120, {
+      id: 'b',
+      short_id: 'RECOJO01',
+      delivery_method: 'pickup',
+      pickup_timing: 'now',
+    })
+
+    const st = attentionState([entrega, recojo])
+
+    expect(st.alarm.count).toBe(2)
+    expect(st.orders.map((o) => o.id).sort()).toEqual(['DELIVER1', 'RECOJO01'])
+    expect(demandsCashier(recojo)).toBe(true)
+  })
+
+  /**
+   * La bolsa lista en el mostrador NO reclama, y es deliberado: no hay nada que
+   * hacer hasta que el cliente aparezca, y puede tardar veinte minutos. Es el
+   * mismo criterio por el que `awaiting_payment` tampoco despierta a nadie —
+   * alarma sin nada que hacer es la que se acaba apagando para siempre.
+   *
+   * Lo que sí lleva es reloj: `waitingCustomerSec` cuenta hacia arriba y a
+   * partir de `noShowWaitMinutes` la tarjeta lo dice en ámbar.
+   */
+  it('una bolsa esperando al cliente se ve, pero no suena', () => {
+    const enMostrador = vm({
+      status: 'ready_for_pickup',
+      delivery_method: 'pickup',
+      pickup_timing: 'now',
+      ready_for_pickup_at: '2026-08-21T19:30:00Z',
+    })
+
+    expect(demandsCashier(enMostrador)).toBe(false)
+    expect(attentionState([enMostrador]).alarm.hasPending).toBe(false)
+    expect(enMostrador.waitingCustomerSec).toBeGreaterThan(0)
   })
 })

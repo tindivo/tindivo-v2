@@ -1,9 +1,10 @@
 'use client'
 
-import { cn, Icon } from '@tindivo/ui'
+import { Button, cn, Icon } from '@tindivo/ui'
 import { useState } from 'react'
 import type { OrderVM } from '@/lib/orders/view-model'
 import { soles } from '../primitives'
+import { printComanda } from './comanda-ticket'
 import { PREP_PRESETS } from './constants'
 import type { DetailItem, RejectReason } from './types'
 
@@ -100,6 +101,24 @@ export function ReasonModal({
   )
 }
 
+/**
+ * ACEPTAR UN PEDIDO. Y, EN UN RECOJO «AHORA», COBRARLO. (0224)
+ *
+ * En un recojo de mostrador el cliente está de pie delante de la caja, y ese es
+ * el único instante en que se le puede cobrar: después de aquí hay una cocción
+ * entera, y quien se va en ese rato deja un plato hecho y sin pagar. Por eso
+ * `advance_order` EXIGE `paymentReal` para aceptar uno de estos, y por eso la
+ * pregunta vive en este modal y no en el pie de entrega.
+ *
+ * EL COBRO VA ARRIBA DEL TIEMPO, y no es orden alfabético: es el orden en que
+ * ella hace las cosas. Primero recibe el dinero, después estima la cocina.
+ *
+ * NINGUNA DE LAS DOS RESPUESTAS VIENE MARCADA, por lo mismo que la pregunta del
+ * recojo en el checkout: es la declaración de un hecho que solo ella puede
+ * comprobar. Un `paid_cash` por defecto convertiría en efectivo cada Yape que
+ * pasara por la caja sin que nadie lo mirara, y el corte de la noche cuadraría
+ * contra un número inventado.
+ */
 export function PrepTimeModal({
   order,
   onClose,
@@ -107,9 +126,14 @@ export function PrepTimeModal({
 }: {
   order: OrderVM
   onClose: () => void
-  onConfirm: (prep: number) => void
+  onConfirm: (prep: number, paymentReal?: 'paid_cash' | 'paid_yape') => void
 }) {
   const [sel, setSel] = useState(20)
+  const [cobro, setCobro] = useState<'paid_cash' | 'paid_yape' | null>(null)
+  // El prepago no entra: su dinero ya está dentro y lo selló `validate_order`.
+  const cobraEnMostrador =
+    order.method === 'pickup' && order.pickupTiming === 'now' && order.payment !== 'prepaid'
+  const falta = cobraEnMostrador && cobro === null
   return (
     <div className="absolute inset-0 z-[300] flex items-end justify-center bg-black/50">
       <div className="w-full max-w-[440px] rounded-t-[20px] bg-white p-5 pb-7 shadow-elev-3">
@@ -118,7 +142,9 @@ export function PrepTimeModal({
             <Icon weight={500} name="schedule" size={20} filled />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="text-base font-bold">Tiempo de preparación</div>
+            <div className="text-base font-bold">
+              {cobraEnMostrador ? 'Cobra y manda a cocina' : 'Tiempo de preparación'}
+            </div>
             <div className="mt-px text-xs text-ink-muted">
               #{order.id} · {order.customer ?? 'Cliente'}
             </div>
@@ -131,6 +157,51 @@ export function PrepTimeModal({
             <Icon weight={500} name="close" size={16} />
           </button>
         </div>
+
+        {cobraEnMostrador && (
+          <div className="mb-5">
+            {/* CUÁNTO. La hoja se llama «Cobra y manda a cocina» y era la única
+                pantalla de cobro del panel que no decía el importe: el total
+                quedaba detrás de la hoja, tapado por ella, justo mientras el
+                cliente espera con la plata en la mano. Va antes que la
+                pregunta porque es antes en el tiempo — primero cobra el monto,
+                después declara con qué se lo pagaron. */}
+            <div className="mb-3.5 flex items-baseline justify-between gap-2 rounded-xl bg-ink/[0.04] px-3.5 py-2.5">
+              <span className="text-xs font-bold uppercase tracking-[0.06em] text-ink-muted">
+                Cóbrale
+              </span>
+              <span className="font-mono text-[22px] font-bold tabular-nums text-ink tracking-tight">
+                {soles(order.total)}
+              </span>
+            </div>
+            <div className="mb-2.5 text-xs font-bold uppercase tracking-[0.06em] text-ink-muted">
+              ¿Con qué te pagó?
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {(
+                [
+                  { v: 'paid_cash', label: 'Efectivo', icon: 'payments' },
+                  { v: 'paid_yape', label: 'Yape/Plin', icon: 'qr_code_2' },
+                ] as const
+              ).map((o) => (
+                <Button
+                  type="button"
+                  key={o.v}
+                  variant={o.v === cobro ? 'success' : 'outline'}
+                  aria-pressed={o.v === cobro}
+                  onClick={() => setCobro(o.v)}
+                  className="w-full"
+                >
+                  <Icon weight={500} name={o.icon} size={18} filled /> {o.label}
+                </Button>
+              ))}
+            </div>
+            <div className="mt-2 text-[11px] text-ink-muted">
+              Cóbrale antes de mandarlo a cocina. Si no está o no paga, rechaza el pedido: no se
+              cocina nada.
+            </div>
+          </div>
+        )}
 
         <div className="mb-2.5 text-xs font-bold uppercase tracking-[0.06em] text-ink-muted">
           Selecciona el tiempo estimado para cocinar
@@ -162,13 +233,22 @@ export function PrepTimeModal({
           >
             Cancelar
           </button>
-          <button
+          <Button
             type="button"
-            onClick={() => onConfirm(sel)}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-success px-5 py-3 text-[15px] font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-50"
+            variant="success"
+            className="w-full"
+            onClick={() => onConfirm(sel, cobro ?? undefined)}
+            disabled={falta}
           >
-            Confirmar y empezar
-          </button>
+            {/* El botón PIDE lo que falta en vez de quedarse gris y mudo: es el
+                mismo patrón del CTA del checkout, que dice «Responde si vas
+                ahora» en lugar de deshabilitarse sin explicar. */}
+            {falta
+              ? 'Dinos con qué pagó'
+              : cobraEnMostrador
+                ? 'Cobré · a cocina'
+                : 'Confirmar y empezar'}
+          </Button>
         </div>
       </div>
     </div>
@@ -360,10 +440,12 @@ export function PausarModal({
 export function ComandaModal({
   order,
   items,
+  bizName,
   onClose,
 }: {
   order: OrderVM
   items: DetailItem[]
+  bizName?: string
   onClose: () => void
 }) {
   return (
@@ -388,13 +470,24 @@ export function ComandaModal({
               </div>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border-none bg-ink/[0.06] text-ink hover:bg-ink/[0.12]"
-          >
-            <Icon weight={500} name="close" size={18} />
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => printComanda({ order, items, bizName })}
+              title="Imprimir comanda"
+              className="flex h-8 items-center gap-1 cursor-pointer rounded-lg border border-border/80 bg-white px-2.5 text-xs font-semibold text-ink hover:bg-surface active:scale-95"
+            >
+              <Icon weight={500} name="receipt_long" size={16} className="text-brand" />
+              <span>Imprimir</span>
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border-none bg-ink/[0.06] text-ink hover:bg-ink/[0.12]"
+            >
+              <Icon weight={500} name="close" size={18} />
+            </button>
+          </div>
         </div>
 
         {/* Items scroll */}
@@ -443,13 +536,23 @@ export function ComandaModal({
             </span>
             <span className="font-mono text-[18px] font-bold text-ink">{soles(order.total)}</span>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-xl bg-ink px-5 py-2.5 text-[14px] font-semibold text-white transition-transform active:scale-[0.98]"
-          >
-            Cerrar comanda
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => printComanda({ order, items, bizName })}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-white px-4 py-2.5 text-[13px] font-bold text-ink shadow-xs transition-transform hover:bg-surface active:scale-[0.98]"
+            >
+              <Icon weight={500} name="receipt_long" size={17} className="text-brand" />
+              <span>Imprimir ticket</span>
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl bg-ink px-4 py-2.5 text-[13px] font-semibold text-white transition-transform active:scale-[0.98]"
+            >
+              Cerrar
+            </button>
+          </div>
         </div>
       </div>
     </div>

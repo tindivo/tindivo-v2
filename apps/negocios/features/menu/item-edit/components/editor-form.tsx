@@ -1,9 +1,11 @@
+import type { ScheduleDayRow } from '@tindivo/contracts'
 import { Button, Icon } from '@tindivo/ui'
 import { useState } from 'react'
 import { BADGE_PRESETS } from '../lib/constants'
 import { findTotalPricingGroup } from '../lib/utils'
 import type { Category, FormData, ModifierGroup, PriceDisplay } from '../types'
 import { AttachLibraryGroupModal } from './attach-library-group-modal'
+import { AvailabilitySection } from './availability-section'
 import { DangerZone } from './danger-zone'
 import { ModifierGroupCard } from './modifier-group-card'
 import { PriceLiveSummary } from './price-live-summary'
@@ -12,6 +14,12 @@ import { PriceWarningCard } from './price-warning-card'
 export interface EditorFormProps {
   formData: FormData
   cats: Category[]
+  /** Horario semanal del negocio, para los atajos de disponibilidad. */
+  schedule: ScheduleDayRow[]
+  /** Platos de la categoría del plato abierto, para rotular el botón de aplicar en bloque. */
+  categoryItemCount: number
+  onApplyToCategory?: () => void
+  applyingToCategory?: boolean
   groups: ModifierGroup[]
   libraryGroups?: ModifierGroup[]
   isNew: boolean
@@ -50,6 +58,10 @@ const labelCls =
 export function EditorForm({
   formData,
   cats,
+  schedule,
+  categoryItemCount,
+  onApplyToCategory,
+  applyingToCategory,
   groups,
   libraryGroups = [],
   isNew,
@@ -327,11 +339,21 @@ export function EditorForm({
         </div>
       </div>
 
-      {/* B: Modifier groups */}
+      <AvailabilitySection
+        formData={formData}
+        schedule={schedule}
+        onFormChange={onFormChange}
+        categoryName={cats.find((c) => c.id === formData.category_id)?.name ?? 'esta categoría'}
+        categoryItemCount={categoryItemCount}
+        onApplyToCategory={onApplyToCategory}
+        applyingToCategory={applyingToCategory}
+      />
+
+      {/* C: Modifier groups */}
       <div className="rounded-2xl border border-ink/[0.06] bg-card p-4">
         <div className="mb-3.5 flex items-center gap-2.5">
           <div className="flex-1 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/55">
-            B · Grupos de opciones
+            C · Grupos de opciones
           </div>
           <span className="rounded-full bg-ink/[0.06] px-2.5 py-1 text-[11px] font-bold text-ink">
             {visibleGroups.length} grupo{visibleGroups.length !== 1 ? 's' : ''}

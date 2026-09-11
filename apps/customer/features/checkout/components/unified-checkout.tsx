@@ -14,7 +14,12 @@ import { PrepayExplainer } from '@/features/checkout/components/prepay-explainer
 import type { CheckoutViewModel } from '@/features/checkout/hooks/use-checkout'
 import type { UseCheckoutValidationReturn } from '@/features/checkout/hooks/use-checkout-validation'
 import { soles } from '@/features/checkout/lib/format'
-import { type CheckoutField, PICKUP_ENABLED, promoAviso } from '@/features/checkout/types'
+import {
+  type CheckoutField,
+  PICKUP_ENABLED,
+  paymentOptionsFor,
+  promoAviso,
+} from '@/features/checkout/types'
 import { AddressSelectorSheet } from './address-selector-sheet'
 import { NameEditSheet } from './name-edit-sheet'
 
@@ -34,6 +39,9 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
     setAddressId,
     deliveryMethod,
     setDeliveryMethod,
+    acceptsPickup,
+    pickupTiming,
+    setPickupTiming,
     payment,
     setPayment,
     mustPrepay,
@@ -82,6 +90,7 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
 
   const cartRef = useRef<HTMLDivElement>(null)
   const deliveryRef = useRef<HTMLDivElement>(null)
+  const pickupRef = useRef<HTMLDivElement>(null)
   const paymentRef = useRef<HTMLDivElement>(null)
   const errorRef = useRef<HTMLParagraphElement>(null)
 
@@ -104,6 +113,10 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
       address: deliveryRef.current,
       name: deliveryRef.current,
       phone: deliveryRef.current,
+      // Apunta al bloque, no a la seccion: el selector de recojo es lo primero
+      // de "Entrega" y con `block: 'center'` la seccion entera deja la pregunta
+      // arriba del todo, fuera de la mirada.
+      pickup: pickupRef.current ?? deliveryRef.current,
       cash: paymentRef.current,
     }
     destino[focus.field]?.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -152,11 +165,36 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
     placeOrder({ paymentIntent: payment })
   }
 
+  /**
+   * EL ETA ES DE LA ENTREGA, Y EN UN RECOJO NO HAY ENTREGA.
+   *
+   * `estimated_eta_min/max` del negocio mide cuánto tarda en LLEGAR un pedido a
+   * casa del cliente. En un recojo nadie lleva nada: el cliente va al local, y
+   * cuánto espera ahí lo decide la cajera al aceptar, no esta pantalla.
+   *
+   * La pantalla ANTERIOR ya lo tenía resuelto —`business-identity.tsx` cambia
+   * ese mismo «Llega en 25–35 min» por «Sin costo de envío» en cuanto el
+   * conmutador está en recojo— y el checkout lo volvía a decir, así que el
+   * cliente elegía recojo, veía desaparecer la promesa de entrega, tocaba «Ir a
+   * pagar» y la veía reaparecer. Una pantalla contradiciendo a la de antes.
+   *
+   * No se sustituye por otra frase: «recoges en el local» ya lo dicen la bolsa y
+   * la tarjeta del negocio de más abajo, y el envío en cero está en el resumen.
+   * Aquí sobra, y la regla del bloque de abajo es justamente esa — sin dato no
+   * se pinta nada, nunca un rango inventado.
+   */
+  const arrivalEta = deliveryMethod === 'pickup' ? null : eta
+
   const ctaPie = loading
     ? 'No cierres esta pantalla.'
     : payment === 'prepaid'
       ? 'Todavía no pagas nada. Te avisamos cuando el local confirme.'
-      : 'Pagas al recibir, directo al motorizado.'
+      : deliveryMethod === 'pickup'
+        ? // «En la caja» y no «al recoger»: desde la 0224 el cobro de un recojo
+          // «ahora» pasa cuando el local confirma que te tiene delante, no al
+          // entregarte la bolsa. El sitio es el mismo y el momento ya no.
+          'Pagas en la caja del local.'
+        : 'Pagas al recibir, directo al motorizado.'
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-[768px] flex-col bg-surface lg:max-w-6xl">
@@ -181,16 +219,16 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
                 y en la portada del negocio: si aquí desapareciera, el checkout sería
                 la única pantalla del camino que deja de decir cuándo llega. Sin el
                 dato no se pinta nada — nunca un rango inventado. */}
-            {(cart.businessName || eta) && (
+            {(cart.businessName || arrivalEta) && (
               <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] text-ink-muted">
                 {cart.businessName && <span>{cart.businessName}</span>}
-                {cart.businessName && eta && (
+                {cart.businessName && arrivalEta && (
                   <span aria-hidden className="h-[3px] w-[3px] rounded-full bg-ink-subtle" />
                 )}
-                {eta && (
+                {arrivalEta && (
                   <span className="inline-flex items-center gap-1 font-semibold text-ink">
                     <Icon name="schedule" size={13} aria-hidden />
-                    Llega en {eta.min}–{eta.max} min
+                    Llega en {arrivalEta.min}–{arrivalEta.max} min
                   </span>
                 )}
               </p>
@@ -253,7 +291,13 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
             objeto que dibuja la ruta. Ver `delivery-card.tsx`. */}
         <section ref={deliveryRef}>
           <SectionTitle>Entrega</SectionTitle>
-          {PICKUP_ENABLED && (
+          {/* DOS INTERRUPTORES, Y HACEN FALTA LOS DOS. `PICKUP_ENABLED` dice si
+              el recojo existe en el producto; `acceptsPickup` dice si existe en
+              ESTE restaurante (`businesses.accepts_web_pickup`). Faltaba el
+              segundo: el selector se pintaba en todos, y el piloto abre el
+              recojo restaurante por restaurante — el que no lo tuviera
+              encendido dejaba elegir Recojo y devolvía 409 al confirmar. */}
+          {PICKUP_ENABLED && acceptsPickup && (
             <div className="mb-2.5 flex gap-2">
               <DeliveryMethodButton
                 active={deliveryMethod === 'delivery'}
@@ -267,6 +311,88 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
                 icon="store"
                 label="Recojo"
               />
+            </div>
+          )}
+          {/* ── LA PREGUNTA DEL RECOJO ──
+              Ninguna de las dos sale marcada, y no es un descuido de diseño: la
+              respuesta gobierna si el pedido se salta la validación telefónica
+              (ver `use-checkout-validation`), así que preseleccionar «ahora»
+              sería regalar esa exención a quien nunca contestó.
+
+              La pregunta es por DÓNDE VA A ESTAR el cliente, no por la hora, y
+              antes preguntaba «¿cuándo recoges tu pedido?» — que pedía un
+              horario que estas dos opciones no dan. Peor: dejaba «más tarde»
+              leyéndose como «a qué hora paso», cuando lo que de verdad
+              significa es «no voy a estar delante», que es la respuesta que
+              gobierna todo lo demás (el pago en caja deja de existir, la
+              validación telefónica vuelve). Preguntar el eje correcto es lo que
+              hace que las dos etiquetas se entiendan sin leer la letra chica.
+
+              «Voy y espero ahí» es comprobable —la cajera lo mira— mientras que
+              «en 10 minutos» no lo es por nadie.
+
+              Y el verbo es «espero», no «estoy». Con «estoy» la respuesta se
+              leía como una promesa de comida inmediata, cuando lo que ocurre es
+              lo contrario: se cobra primero y se cocina después, con el cliente
+              ahí delante. La etiqueta que promete inmediatez y la caja que
+              tarda veinte minutos es una discusión en el mostrador.
+
+              No se pone un número de minutos porque aquí no se sabe: el tiempo
+              de preparación lo elige la cajera al aceptar, no el checkout.
+              Mismo criterio que `prepPhrase` en los avisos, que devuelve cadena
+              vacía antes que inventar un «~20 min» que nadie prometió. */}
+          {deliveryMethod === 'pickup' && (
+            <div
+              ref={pickupRef}
+              className={cn(
+                'mb-2.5 rounded-[14px] p-2.5',
+                attempted && issue?.field === 'pickup'
+                  ? 'bg-danger/[0.06] ring-1 ring-danger/40'
+                  : 'bg-surface-low',
+              )}
+            >
+              <p className="mb-2 font-semibold text-[13px] text-ink">¿Vas al local ahora?</p>
+              <div className="flex gap-2">
+                <DeliveryMethodButton
+                  active={pickupTiming === 'now'}
+                  onClick={() => setPickupTiming('now')}
+                  icon="storefront"
+                  label="Sí, voy y espero ahí"
+                />
+                <DeliveryMethodButton
+                  active={pickupTiming === 'later'}
+                  onClick={() => setPickupTiming('later')}
+                  icon="schedule"
+                  label="No, paso más tarde"
+                />
+              </div>
+              {pickupTiming === 'now' && (
+                <p className="mt-2 text-[12px] text-ink-soft">
+                  Pagas en la caja y lo preparan mientras esperas.
+                </p>
+              )}
+              {/* ── LO QUE PASA SI NO VIENES, DICHO ANTES DE PAGAR ──
+                  Es la pieza antidisputa, y por eso vive AQUÍ y no en los
+                  términos: el cliente de un «más tarde» paga por adelantado y
+                  la comida se hace sin él delante, así que las dos mitades
+                  —cuánto se le guarda y qué pasa si no pasa— tienen que estar
+                  delante de sus ojos ANTES de que yapee, no después.
+
+                  Va la promesa primero. «No se devuelve» a secas se lee como
+                  una amenaza en la pantalla donde se decide comprar; con lo que
+                  el negocio SÍ se compromete a hacer delante, es una condición
+                  y no un castigo. Y el plazo es «hasta que cierre el local»
+                  porque es lo que de verdad va a pasar: el mostrador no
+                  autocancela nada y la bolsa se queda ahí (0220). */}
+              {pickupTiming === 'later' && (
+                <p className="mt-2 text-[12px] text-ink-soft">
+                  Te lo guardamos listo hasta que cierre el local. Si no pasas a recogerlo, no se
+                  devuelve.
+                </p>
+              )}
+              {attempted && issue?.field === 'pickup' && (
+                <p className="mt-2 font-medium text-[12px] text-danger">{issue.message}</p>
+              )}
             </div>
           )}
           <DeliveryCard
@@ -291,6 +417,7 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
         <section ref={paymentRef}>
           <SectionTitle>¿Cómo pagas?</SectionTitle>
           <PaymentMethodList
+            options={paymentOptionsFor(deliveryMethod)}
             value={payment}
             onChange={(v) => {
               setPayment(v)
@@ -312,7 +439,14 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
             />
           )}
 
-          {payment === 'pending_cash' && (
+          {/* EL BILLETE ES UNA PREGUNTA DEL DELIVERY, NO DEL PAGO EN EFECTIVO.
+              Existe porque el motorizado sale del local con un sencillo que le
+              adelanta la caja, y hay que saber cuanto llevarle (0146). En un
+              recojo el cliente paga EN la caja, que tiene su propio sencillo:
+              preguntarle con que billete viene es pedirle un dato que nadie va
+              a usar, y encima puede rechazarle el pedido por un techo de vuelto
+              que en el mostrador no aplica. */}
+          {payment === 'pending_cash' && deliveryMethod !== 'pickup' && (
             <CashSelector
               total={total}
               cashChoice={cashChoice}

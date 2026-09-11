@@ -1,3 +1,4 @@
+import { describeWindow } from '@tindivo/contracts'
 import { Icon } from '@tindivo/ui'
 import { soles } from '@/components/dashboard/primitives'
 import { itemMinPrice, optionDisplayPrice } from '../lib/utils'
@@ -115,6 +116,14 @@ export function CustomerPreviewPanel({
     (g) => !g.isDeleted && g.options.filter((o) => !o.isDeleted).length > 0,
   )
   const minP = itemMinPrice(basePrice, groups)
+  // La misma función que compone la frase en la card del cliente: si aquí se
+  // escribiera el texto a mano, las dos pantallas podrían acabar diciendo cosas
+  // distintas de la misma franja.
+  const franja = describeWindow({
+    days: formData.available_days,
+    from: formData.available_from,
+    to: formData.available_to,
+  })
 
   return (
     <div
@@ -143,6 +152,19 @@ export function CustomerPreviewPanel({
         <div className="p-4">
           <div className="mb-3 flex items-start gap-2.5">
             <div className="flex-1">
+              {/* LA FRANJA, DONDE EL CLIENTE LA VA A LEER (0226).
+                  Este panel existe para que la cajera vea lo que verá el
+                  cliente; si se saltara la franja, prometería una card limpia y
+                  el cliente se encontraría el plato en gris. Se enseña siempre
+                  que esté configurada —y no solo cuando toca fuera de turno—
+                  porque aquí la pregunta es «cómo se va a ver», no «se puede
+                  pedir ahora». */}
+              {franja && (
+                <div className="mb-1.5 inline-flex items-center gap-1 rounded-md bg-ink/[0.06] px-2 py-0.5 text-[11px] font-bold text-ink-muted">
+                  <Icon name="schedule" size={12} />
+                  {franja}
+                </div>
+              )}
               {formData.badges.length > 0 && (
                 <div className="mb-1.5 flex flex-wrap gap-1">
                   {formData.badges.map((b) => (

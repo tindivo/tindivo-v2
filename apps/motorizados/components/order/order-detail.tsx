@@ -79,8 +79,12 @@ export function OrderDetail({
           ))}
 
           {order.customerNotes && (
-            <div className="mt-2 rounded-[14px] bg-ink/[0.04] px-3 py-2 text-caption">
-              Nota del cliente: {order.customerNotes}
+            <div className="mt-2 flex items-start gap-2 rounded-[14px] bg-ink/[0.04] px-3 py-2 text-caption text-ink">
+              <Icon name="chat_bubble" size={15} className="mt-0.5 shrink-0 text-ink-muted" />
+              <span>
+                <strong className="font-semibold text-ink">Nota para el motorizado:</strong>{' '}
+                {order.customerNotes}
+              </span>
             </div>
           )}
           {order.isManual && order.businessNotes && (

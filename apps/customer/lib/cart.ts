@@ -1,11 +1,22 @@
 'use client'
 
+import { DELIVERY_METHODS, type DeliveryMethod } from '@tindivo/contracts'
 import { useEffect, useState } from 'react'
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import type { BusinessDetail } from '@/features/catalog/types'
 import type { CartValidationResult } from '@/lib/cart-validation'
 import { validateCartAgainstCatalog } from '@/lib/cart-validation'
+
+/**
+ * Cómo se recibe un pedido nuevo mientras nadie diga lo contrario.
+ *
+ * `delivery` es el lado conservador y no el más común: es el que PIDE MÁS
+ * —domicilio, referencia, pin en zona— así que equivocarse hacia aquí le cuesta
+ * al cliente un formulario de más, mientras que equivocarse hacia `pickup` le
+ * cuesta un 409 en el último toque contra un negocio que no acepta recojo.
+ */
+const DEFAULT_DELIVERY_METHOD: DeliveryMethod = 'delivery'
 
 export interface CartModifier {
   groupName: string
@@ -35,6 +46,24 @@ export interface CartState {
   lines: CartLine[]
   /** Resultado de la última validación contra el catálogo del backend. */
   validation: CartValidationResult | null
+  /**
+   * Cómo quiere recibir ESTE pedido: a domicilio o recogiéndolo en el local.
+   *
+   * VIVE EN LA BOLSA Y NO EN EL PERFIL porque no es una preferencia de la
+   * persona sino una decisión de este pedido concreto: el mismo vecino pide a
+   * casa el martes y pasa por el local el viernes camino del trabajo.
+   *
+   * Y VIVE AQUÍ Y NO EN EL CHECKOUT —que es donde estaba— porque la decisión
+   * gobierna cosas que ocurren mucho antes de esa pantalla: si el gate del
+   * carrito exige domicilio (`lib/order-gates.ts`), qué dice la cabecera del
+   * negocio y si el envío suma al total. Un estado que nace en el último paso
+   * no puede gobernar los primeros.
+   *
+   * Se persiste con el resto de la bolsa: quien elige recojo, cierra la app y
+   * vuelve, no tiene por qué volver a decirlo.
+   */
+  deliveryMethod: DeliveryMethod
+  setDeliveryMethod: (method: DeliveryMethod) => void
   /** Agrega una línea configurada; si es de otro negocio, reinicia el carrito. */
   addLine: (
     businessId: string,
@@ -93,13 +122,34 @@ const memoryStorage = {
   removeItem: () => {},
 }
 
+/**
+ * Todo lo que deja de ser verdad cuando la bolsa se queda sin negocio.
+ *
+ * ESTABA ESCRITO CINCO VECES —vaciar por cantidad, vaciar por quitar, `clear`,
+ * limpiar líneas inválidas y el cambio de negocio de `addLine`— y las cinco
+ * repetían el mismo literal. Añadir `deliveryMethod` a mano en cada una era
+ * pedir que se olvidara justo en la quinta, y la que se olvide deja una bolsa
+ * de un negocio nuevo con el «recojo» del anterior puesto.
+ *
+ * El método vuelve al valor por defecto y NO se conserva a propósito: aceptar
+ * recojo es de cada negocio (`accepts_web_pickup`), así que arrastrarlo al
+ * siguiente es exactamente cómo se llega al 409 que este trabajo viene a cerrar.
+ */
+const EMPTY_CART: Pick<CartState, 'businessId' | 'businessName' | 'validation' | 'deliveryMethod'> =
+  {
+    businessId: null,
+    businessName: null,
+    validation: null,
+    deliveryMethod: DEFAULT_DELIVERY_METHOD,
+  }
+
 export const useCart = create<CartState>()(
   persist(
     (set, get) => ({
-      businessId: null,
-      businessName: null,
+      ...EMPTY_CART,
       lines: [],
-      validation: null,
+
+      setDeliveryMethod: (method) => set({ deliveryMethod: method }),
 
       addLine: (businessId, businessName, line) =>
         set((state) => {
@@ -107,6 +157,14 @@ export const useCart = create<CartState>()(
           const lines = sameBusiness ? [...state.lines] : []
           // Al cambiar de negocio se descarta la validación anterior.
           const validation = sameBusiness ? state.validation : null
+          // …y también el método, PERO solo si se está cambiando de un negocio a
+          // OTRO. Estrenar una bolsa vacía no es cambiar de negocio: el cliente
+          // pudo elegir «Recojo» en la cabecera antes de añadir su primer plato,
+          // y tratar `businessId === null` como un cambio le borraría la
+          // elección en el mismo toque que la estrena. Una bolsa sin negocio no
+          // tiene capacidades con las que chocar.
+          const cambioDeNegocio = state.businessId !== null && state.businessId !== businessId
+          const deliveryMethod = cambioDeNegocio ? DEFAULT_DELIVERY_METHOD : state.deliveryMethod
           // Fusiona con una línea idéntica (mismo ítem + opciones + nota): suma cantidad.
           const sig = lineSignature(line)
           const idx = lines.findIndex((l) => lineSignature(l) === sig)
@@ -114,11 +172,11 @@ export const useCart = create<CartState>()(
             const existing = lines[idx]
             if (existing) {
               lines[idx] = { ...existing, quantity: existing.quantity + line.quantity }
-              return { businessId, businessName, lines, validation }
+              return { businessId, businessName, lines, validation, deliveryMethod }
             }
           }
           lines.push({ ...line, key: line.key ?? nextKey(line.itemId) })
-          return { businessId, businessName, lines, validation }
+          return { businessId, businessName, lines, validation, deliveryMethod }
         }),
 
       replace: (businessId, businessName, lines) =>
@@ -127,6 +185,9 @@ export const useCart = create<CartState>()(
           businessName,
           lines: lines.map((l) => ({ ...l, key: nextKey(l.itemId) })),
           validation: null,
+          // Puede venir de otro negocio, y el pedido repetido no arrastra el
+          // metodo del anterior: se vuelve a elegir.
+          deliveryMethod: DEFAULT_DELIVERY_METHOD,
         })),
 
       setQty: (key, qty) =>
@@ -134,20 +195,16 @@ export const useCart = create<CartState>()(
           const lines = state.lines
             .map((l) => (l.key === key ? { ...l, quantity: Math.max(1, qty) } : l))
             .filter((l) => l.quantity > 0)
-          return lines.length > 0
-            ? { lines }
-            : { lines, businessId: null, businessName: null, validation: null }
+          return lines.length > 0 ? { lines } : { lines, ...EMPTY_CART }
         }),
 
       remove: (key) =>
         set((state) => {
           const lines = state.lines.filter((l) => l.key !== key)
-          return lines.length > 0
-            ? { lines }
-            : { lines, businessId: null, businessName: null, validation: null }
+          return lines.length > 0 ? { lines } : { lines, ...EMPTY_CART }
         }),
 
-      clear: () => set({ businessId: null, businessName: null, lines: [], validation: null }),
+      clear: () => set({ ...EMPTY_CART, lines: [] }),
 
       count: () => get().lines.reduce((n, l) => n + l.quantity, 0),
       subtotal: () =>
@@ -168,7 +225,7 @@ export const useCart = create<CartState>()(
           const lines = state.lines.filter((l) => !invalidKeys.has(l.key))
           return lines.length > 0
             ? { lines, validation: { ...state.validation, invalidLines: [] } }
-            : { lines, businessId: null, businessName: null, validation: null }
+            : { lines, ...EMPTY_CART }
         }),
 
       hasInvalidLines: () => {
@@ -186,13 +243,14 @@ export const useCart = create<CartState>()(
         businessId: s.businessId,
         businessName: s.businessName,
         lines: s.lines,
+        deliveryMethod: s.deliveryMethod,
       }),
       // Al rehidratar, re-asigna claves únicas: sana carritos previos que pudieran tener
       // claves duplicadas y garantiza unicidad para React (keys estables por sesión).
       // La validación nunca se persiste: se recalcula al cargar el catálogo.
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<
-          Pick<CartState, 'businessId' | 'businessName' | 'lines'>
+          Pick<CartState, 'businessId' | 'businessName' | 'lines' | 'deliveryMethod'>
         >
         return {
           ...(current as CartState),
@@ -200,6 +258,14 @@ export const useCart = create<CartState>()(
           businessName: p.businessName ?? null,
           lines: (p.lines ?? []).map((l) => ({ ...l, key: nextKey(l.itemId) })),
           validation: null,
+          // SE COMPRUEBA CONTRA EL ENUM, no se acepta lo que venga. Esto sale de
+          // `localStorage`, que sobrevive a los despliegues: una bolsa guardada
+          // por una versión anterior no trae la clave (y `undefined` colaría como
+          // método), y nada impide que alguien la edite a mano. Un valor que no
+          // existe se propagaría hasta el 422 del contrato al confirmar.
+          deliveryMethod: DELIVERY_METHODS.includes(p.deliveryMethod as DeliveryMethod)
+            ? (p.deliveryMethod as DeliveryMethod)
+            : DEFAULT_DELIVERY_METHOD,
         }
       },
       // Hidratamos manualmente tras montar (CartHydrator) para evitar mismatch SSR.

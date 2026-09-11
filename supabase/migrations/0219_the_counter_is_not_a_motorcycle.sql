@@ -1,0 +1,30 @@
+-- =============================================================================
+-- 0219 · El mostrador no es una moto
+-- =============================================================================
+--
+-- AISLADA A PROPÓSITO, Y SOLO CON `ADD VALUE`. Postgres deja añadir un valor a
+-- un enum dentro de una transacción, pero NO deja USARLO en esa misma
+-- transacción, y el CLI envuelve cada archivo de migración en una. Por eso este
+-- archivo no hace nada más: todo lo que escribe o compara `ready_for_pickup`
+-- vive en la 0220. Mismo motivo y misma forma que la 0058.
+--
+-- POR QUÉ UN ESTADO NUEVO, Y NO `waiting_driver` NI `picked_up`.
+--
+--   `picked_up` significa «la comida salió del local en una moto» y es lo que
+--   arranca el reloj de reparto (`deliverySec`), la ventana de `no_show` del
+--   motorizado y el congelado de comisión y envío. `waiting_driver` significa
+--   «la comida está lista y espera a un motorizado», y es literalmente lo que
+--   pone el pedido en la cola de `apps/motorizados` (ver la policy
+--   `ord_driver_read`).
+--
+--   En un recojo no hay moto. Meter el recojo en cualquiera de los dos no es un
+--   atajo: es un dato falso que después hay que desmentir en cada reporte y en
+--   cada consulta que asuma que esos estados implican motorizado asignado.
+--
+-- `delivered` SIGUE SIENDO EL ÚNICO TERMINAL, compartido con delivery. Eso no
+-- es un detalle estético: la cláusula (1) de `customer_contraentrega_decision`
+-- pregunta por `o.status = 'delivered'` sin mirar `delivery_method`, así que un
+-- recojo completado habilita contraentrega igual que una entrega. Verificado
+-- contra la definición viva, no supuesto (ver la cabecera de la 0220).
+
+ALTER TYPE public.order_status ADD VALUE IF NOT EXISTS 'ready_for_pickup' AFTER 'picked_up';

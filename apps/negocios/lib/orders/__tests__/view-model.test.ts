@@ -1,7 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import { buildNegociosCardVM } from '../card-view-model'
 import type { OrderRow } from '../view-model'
-import { formatReadyDelta, resolveMobileTab, toOrderVM } from '../view-model'
+import {
+  channelCounts,
+  cobroEnCaja,
+  formatReadyDelta,
+  getColumn,
+  matchesChannel,
+  needsClockTick,
+  resolveChannelFilter,
+  resolveMobileTab,
+  toOrderVM,
+} from '../view-model'
 
 function mockOrderRow(overrides: Partial<OrderRow> = {}): OrderRow {
   return {
@@ -22,6 +32,9 @@ function mockOrderRow(overrides: Partial<OrderRow> = {}): OrderRow {
     ready_early_used: false,
     waiting_driver_at: null,
     picked_up_at: null,
+    ready_for_pickup_at: null,
+    pickup_timing: null,
+    tracking_link_sent_at: null,
     driver_id: null,
     driver: null,
     created_at: '2026-08-05T15:00:00Z',
@@ -466,6 +479,66 @@ describe('la cejilla solo enseña lo que distingue', () => {
   })
 })
 
+/**
+ * LA PASTILLA DE LA CABECERA Y LA FRANJA DE LA TARJETA DICEN COSAS DISTINTAS, y
+ * por eso `cobroEnCaja` devuelve dos textos. La franja contesta QUÉ HACER con
+ * la plata y tiene sitio; la pastilla contesta CON QUÉ, en una palabra, en fila
+ * con «Online» y las suyas.
+ *
+ * Se prueba aquí y no solo a través de la tarjeta porque la pastilla no pasa
+ * por `buildNegociosCardVM`: la consume `PayBadgeMini` directamente, y era
+ * justo el camino donde se coló la asimetría («Cobrado · Yape» contra «Cobrado
+ * en efectivo»).
+ */
+describe('cobroEnCaja', () => {
+  const recojo = (over: Partial<Parameters<typeof cobroEnCaja>[0]> = {}) =>
+    cobroEnCaja({
+      method: 'pickup',
+      payment: 'pending_cash',
+      yaCobrado: false,
+      paymentReal: null,
+      ...over,
+    })
+
+  it('no aplica al delivery: allí el método SÍ se pactó al pedir', () => {
+    expect(
+      cobroEnCaja({
+        ...{ method: 'delivery' as const },
+        payment: 'pending_cash',
+        yaCobrado: false,
+        paymentReal: null,
+      }),
+    ).toBeNull()
+  })
+
+  it('no aplica al prepago: su dinero entró por otra vía', () => {
+    expect(recojo({ payment: 'prepaid' })).toBeNull()
+  })
+
+  it('sin cobrar no nombra método, ni siquiera el que el cliente eligió', () => {
+    const caja = recojo()
+    expect(caja).toMatchObject({ label: 'Cobra en caja', short: 'En caja', cobrado: false })
+    expect(caja?.short).not.toMatch(/efectivo|yape|billetera/i)
+  })
+
+  it('cobrado, las dos formas se dicen igual de corto', () => {
+    const efectivo = recojo({ yaCobrado: true, paymentReal: 'pending_cash' })
+    const billetera = recojo({ yaCobrado: true, paymentReal: 'pending_wallet' })
+    // El fallo era este: «Cobrado · Yape» contra «Cobrado en efectivo», una
+    // pastilla de 10px con el doble de texto que su gemela.
+    expect(efectivo?.short).toBe('Efectivo')
+    expect(billetera?.short).toBe('Billetera')
+    // Y la franja, que sí tiene sitio, sigue diciendo el hecho entero.
+    expect(efectivo?.label).toBe('Cobrado en efectivo')
+    expect(billetera?.label).toBe('Cobrado por Yape/Plin')
+  })
+
+  it('cobrado sin método legible no inventa ninguno en ninguno de los dos textos', () => {
+    const caja = recojo({ yaCobrado: true, paymentReal: null })
+    expect(caja).toMatchObject({ label: 'Cobrado', short: 'Cobrado', cobrado: true })
+  })
+})
+
 describe('buildNegociosCardVM', () => {
   const baseNow = Date.parse('2026-08-05T15:15:00Z')
 
@@ -507,6 +580,86 @@ describe('buildNegociosCardVM', () => {
     ).money
     expect(money.paysWithText).toBeNull()
     expect(money.cashChangeText).toBeNull()
+  })
+
+  // ── EL MOSTRADOR ────────────────────────────────────────────────────────────
+  //
+  // La regla entera está en `cobroEnCaja`. Lo que se protege aquí es que la
+  // tarjeta no vuelva a AFIRMAR un método que nadie eligió, ni a ordenar cobrar
+  // algo que ya está cobrado.
+
+  const recojo = (over: Partial<OrderRow> = {}) =>
+    buildNegociosCardVM(
+      toOrderVM(
+        mockOrderRow({
+          delivery_method: 'pickup',
+          pickup_timing: 'now',
+          payment_intent: 'pending_cash',
+          ...over,
+        }),
+        baseNow,
+      ),
+    ).money
+
+  it('un recojo sin cobrar dice «cobra en caja», sin nombrar el método', () => {
+    const money = recojo()
+    expect(money.status).toBe('collect')
+    // NO «Cobrar en efectivo»: el cliente eligió «pagas en el local», que es
+    // efectivo O Yape, y quién de los dos no se sabe hasta que esté delante.
+    expect(money.paymentLabel).toBe('Cobra en caja')
+    expect(money.paymentLabel).not.toContain('efectivo')
+    // El importe se queda: todavía hay algo que cobrar.
+    expect(money.showTotal).toBe(true)
+  })
+
+  it('cobrado en el mostrador deja de ser una orden y pasa a ser un hecho', () => {
+    const money = recojo({
+      payment_verified_at: '2026-08-05T15:10:00Z',
+      payment_real: 'paid_cash',
+    })
+    // Lo que fallaba: seguía en `collect` con «Cobrar en efectivo» durante toda
+    // la cocción y en `ready_for_pickup` — o sea pidiéndole cobrar otra vez
+    // justo cuando el cliente vuelve al mostrador a recoger.
+    expect(money.status).toBe('paid')
+    expect(money.paymentLabel).toBe('Cobrado en efectivo')
+    expect(money.showTotal).toBe(false)
+  })
+
+  it('un recojo cobrado por Yape NO dice «efectivo»', () => {
+    // El tablero pintaba la intención del cliente de principio a fin, así que
+    // este pedido decía «Efectivo» toda la noche y solo cambiaba al caer en el
+    // historial, contradiciendo lo que la cajera acababa de declarar.
+    const money = recojo({
+      payment_verified_at: '2026-08-05T15:10:00Z',
+      payment_real: 'paid_yape',
+    })
+    expect(money.paymentLabel).toBe('Cobrado por Yape/Plin')
+    expect(money.paymentLabel).not.toContain('efectivo')
+  })
+
+  it('cobrado sin un método legible no inventa ninguno', () => {
+    // `unpaid` y `refunded` no son formas de pago. Caer en «efectivo» por
+    // defecto convertiría en billetes un Yape que nadie miró, y el corte de la
+    // noche cuadraría contra un número inventado.
+    const money = recojo({
+      payment_verified_at: '2026-08-05T15:10:00Z',
+      payment_real: 'refunded',
+    })
+    expect(money.paymentLabel).toBe('Cobrado')
+  })
+
+  it('un recojo prepagado sigue por la rama del prepago, no por la de la caja', () => {
+    const money = recojo({ payment_intent: 'prepaid', payment_proof_status: 'verified' })
+    expect(money.paymentLabel).toBe('Pagado · no cobrar')
+  })
+
+  it('el delivery no cambia: ahí el método SÍ se pactó al pedir', () => {
+    // En la puerta hay un motorizado que va a cobrar billetes y el cliente lo
+    // sabe desde el checkout. Esa afirmación sigue siendo verdad.
+    const money = buildNegociosCardVM(
+      toOrderVM(mockOrderRow({ payment_intent: 'pending_cash' }), baseNow),
+    ).money
+    expect(money.paymentLabel).toBe('Cobrar en efectivo')
   })
 
   it('el cobro mixto enseña el desglose billetera + efectivo', () => {
@@ -731,5 +884,277 @@ describe('resolveMobileTab', () => {
     expect(resolveMobileTab('cooking', 0)).toBe('cooking')
     expect(resolveMobileTab('route', 0)).toBe('route')
     expect(resolveMobileTab('today', 0)).toBe('today')
+  })
+})
+
+const NOW = Date.parse('2026-09-07T20:00:00Z')
+const vm = (o: Partial<OrderRow> = {}) => toOrderVM(mockOrderRow(o), NOW)
+
+describe('el recojo en el tablero (0219/0220)', () => {
+  /**
+   * «En cocina» no es la cocina literal: es TODO LO QUE SIGUE EN EL LOCAL, y ahí
+   * ya viven `waiting_driver` y el motorizado esperando en el mostrador. Una
+   * bolsa de recojo lista es exactamente eso, y además es la única columna donde
+   * la cajera todavía tiene algo que hacer con ella.
+   *
+   * «En reparto» sería lo contrario: la columna de lo que ya salió y ya no es
+   * cosa suya. Un recojo ahí es un pedido que reclama sus manos, escondido entre
+   * los que no las reclaman.
+   */
+  it('la bolsa lista se queda en «En cocina», no en «En reparto»', () => {
+    expect(getColumn('ready_for_pickup')).toBe('cocina')
+  })
+
+  it('cuenta hacia arriba desde que quedó lista, no hacia una fecha límite', () => {
+    const v = vm({
+      status: 'ready_for_pickup',
+      delivery_method: 'pickup',
+      pickup_timing: 'now',
+      ready_for_pickup_at: new Date(NOW - 7 * 60_000).toISOString(),
+    })
+
+    expect(v.state).toBe('awaiting_customer')
+    expect(v.waitingCustomerSec).toBe(420)
+    // El reloj de cocina se calla: ahí ya no hay nada que contar.
+    expect(v.readySec).toBeNull()
+    expect(v.canHandOver).toBe(true)
+  })
+
+  it('un recojo todavía en cocina no ofrece la entrega en mostrador', () => {
+    expect(vm({ status: 'preparing', delivery_method: 'pickup' }).canHandOver).toBe(false)
+  })
+
+  describe('filtro de canal', () => {
+    const entrega = vm({ id: 'a', delivery_method: 'delivery' })
+    const recojo = vm({ id: 'b', delivery_method: 'pickup', pickup_timing: 'now' })
+
+    /**
+     * Lo que dice el chip tiene que ser lo que se ve al pulsarlo. El descuadre
+     * de `JMAXL98Z` fue justo esto al revés: el chip contaba sobre el array
+     * completo y la lista pintaba un subconjunto ya filtrado.
+     */
+    it('los contadores cuadran con lo que cada chip enseñaría', () => {
+      const lista = [entrega, recojo, recojo]
+      const counts = channelCounts(lista)
+
+      expect(counts.all).toBe(lista.filter((o) => matchesChannel(o, 'all')).length)
+      expect(counts.delivery).toBe(lista.filter((o) => matchesChannel(o, 'delivery')).length)
+      expect(counts.pickup).toBe(lista.filter((o) => matchesChannel(o, 'pickup')).length)
+    })
+
+    /**
+     * Sin esto, la cajera filtra «Recojo», atiende el único que había, y se
+     * queda mirando un tablero vacío con los delivery detrás — y el chip para
+     * volver ya no se dibuja. Mismo problema y misma solución que
+     * `resolveMobileTab`: se deriva, no se navega.
+     */
+    it('un filtro que se queda sin nada vuelve solo a «Todos»', () => {
+      expect(resolveChannelFilter('pickup', { delivery: 3, pickup: 0 })).toBe('all')
+      expect(resolveChannelFilter('delivery', { delivery: 0, pickup: 2 })).toBe('all')
+    })
+
+    it('mientras haya algo de ese canal, el filtro elegido manda', () => {
+      expect(resolveChannelFilter('pickup', { delivery: 3, pickup: 1 })).toBe('pickup')
+      expect(resolveChannelFilter('all', { delivery: 0, pickup: 0 })).toBe('all')
+    })
+  })
+})
+
+/**
+ * EL RELOJ QUE SE PINTA Y EL RELOJ QUE SE MUEVE TIENEN QUE SER EL MISMO.
+ *
+ * El tablero solo repinta cada segundo si alguna tarjeta lo necesita —diez
+ * pedidos por noche no justifican tener la pantalla de la caja repintándose
+ * para nada— y esa condición se escribía a mano en `chrome.tsx`, lejos de
+ * `buildNegociosCardVM`, que es quien decide qué tarjeta lleva reloj.
+ *
+ * Se separaron: al mostrador (`awaiting_customer`) se le dio reloj y nadie lo
+ * añadió a la lista del tick, así que su contador avanzaba SOLO cuando otro
+ * pedido del tablero provocaba el repintado — y sin ningún otro vivo, se
+ * quedaba clavado (visto en 00:08 con la bolsa media hora en la repisa).
+ *
+ * Este test recorre los estados en vez de comprobar uno: lo que protege no es
+ * el recojo, es la relación. El siguiente estado con reloj tendrá que pasar por
+ * aquí.
+ */
+describe('el reloj de la tarjeta y el tick del tablero', () => {
+  const conReloj: { caso: string; row: Partial<OrderRow> }[] = [
+    {
+      caso: 'pendiente de aceptar (cuenta atrás)',
+      row: { status: 'pending_acceptance', pending_acceptance_at: new Date(NOW).toISOString() },
+    },
+    {
+      caso: 'en cocina',
+      row: { status: 'preparing', estimated_ready_at: new Date(NOW + 8 * 60_000).toISOString() },
+    },
+    {
+      caso: 'esperando motorizado con la comida aún en el horno',
+      row: {
+        status: 'waiting_driver',
+        waiting_driver_at: new Date(NOW - 60_000).toISOString(),
+        estimated_ready_at: new Date(NOW + 4 * 60_000).toISOString(),
+      },
+    },
+    {
+      caso: 'en reparto',
+      row: { status: 'picked_up', picked_up_at: new Date(NOW - 3 * 60_000).toISOString() },
+    },
+    {
+      caso: 'la bolsa esperando al cliente en el mostrador',
+      row: {
+        status: 'ready_for_pickup',
+        delivery_method: 'pickup',
+        pickup_timing: 'now',
+        ready_for_pickup_at: new Date(NOW - 8_000).toISOString(),
+      },
+    },
+  ]
+
+  for (const { caso, row } of conReloj) {
+    it(`${caso}: si la tarjeta pinta reloj, el tablero lo mueve`, () => {
+      const orderVm = vm(row)
+      const card = buildNegociosCardVM(orderVm)
+
+      expect(card.clock, 'este caso tiene que pintar reloj para probar algo').not.toBeNull()
+      expect(needsClockTick(orderVm)).toBe(true)
+    })
+  }
+
+  /**
+   * La otra mitad: un pedido cerrado no tiene nada que mover, y si entrara en
+   * la lista el tablero se repintaría cada segundo toda la noche por pedidos
+   * que ya no cambian.
+   */
+  it('un pedido cerrado no obliga a repintar', () => {
+    expect(needsClockTick(vm({ status: 'delivered' }))).toBe(false)
+    expect(needsClockTick(vm({ status: 'cancelled' }))).toBe(false)
+  })
+})
+
+/**
+ * EL CHIP DE VALIDAR ES UNA INSTRUCCIÓN, NO UNA ETIQUETA DEL PEDIDO.
+ *
+ * Encontrado mirando el tablero con un recojo real el 2026-09-10: el mismo
+ * pedido llevaba «Validar antes de cocinar» en las TRES columnas seguidas —por
+ * aceptar, en cocina y con la bolsa esperando en el mostrador— porque
+ * `riskLabel` salía de `requiresValidation` a secas, y esa columna no se apaga
+ * nunca: es un dato del nacimiento del pedido.
+ *
+ * En un recojo «ahora» además contradice al canal entero. Ese pedido se salta
+ * `validando` A PROPÓSITO (0220) porque su garantía es la cajera mirando a
+ * quien pidió; pedirle encima una validación le ofrece un trámite inexistente
+ * justo cuando tiene al cliente delante.
+ */
+describe('0220/0224 · cuándo la tarjeta pide validar', () => {
+  const baseNow = Date.parse('2026-08-05T15:15:00Z')
+
+  /** Un recojo «ahora», tal como lo escribe `create_customer_order`. */
+  const recojoAhora = (over: Partial<OrderRow> = {}) =>
+    buildNegociosCardVM(
+      toOrderVM(
+        mockOrderRow({
+          source: 'customer_pwa',
+          delivery_method: 'pickup',
+          pickup_timing: 'now',
+          status: 'pending_acceptance',
+          // La RPC deja dicho que la duda se resuelve en el mostrador. Es su
+          // afirmación, no una deducción nuestra desde `pickup_timing`.
+          requires_validation: true,
+          validation_reason_code: 'standard_validation_rule',
+          risk_flags: { pickupNowPresence: true, resolvedAtCounter: true },
+          ...over,
+        }),
+        baseNow,
+      ),
+    ).riskLabel
+
+  it('un recojo «ahora» no lo pide ni recién llegado: la cajera ya lo tiene delante', () => {
+    expect(recojoAhora()).toBeNull()
+  })
+
+  it('y sigue sin pedirlo en cocina y en el mostrador, que es donde más molestaba', () => {
+    expect(recojoAhora({ status: 'preparing' })).toBeNull()
+    expect(
+      recojoAhora({
+        status: 'ready_for_pickup',
+        ready_for_pickup_at: '2026-08-05T15:14:00Z',
+      }),
+    ).toBeNull()
+  })
+
+  /** La otra mitad: esto NO apaga el antifraude de verdad. */
+  it('un delivery que espera la llamada SÍ lo pide, y con su motivo', () => {
+    const card = buildNegociosCardVM(
+      toOrderVM(
+        mockOrderRow({
+          status: 'validando',
+          requires_validation: true,
+          validation_reason_code: 'gps_warning_zone',
+        }),
+        baseNow,
+      ),
+    )
+    expect(card.riskLabel).toBe('Validar · Zona ampliada')
+  })
+
+  it('pero deja de pedirlo en cuanto entra a cocina: a cocina se llega por una persona', () => {
+    const card = buildNegociosCardVM(
+      toOrderVM(
+        mockOrderRow({
+          status: 'preparing',
+          requires_validation: true,
+          validation_reason_code: 'gps_warning_zone',
+        }),
+        baseNow,
+      ),
+    )
+    expect(card.riskLabel).toBeNull()
+  })
+})
+
+/**
+ * EL DIBUJO DEL BOTÓN TIENE QUE DECIR LO MISMO QUE LA PALABRA.
+ *
+ * `deliver` cubre las dos entregas —la del motorizado en la puerta y la del
+ * mostrador— y el JSX las pintaba a las dos con `local_shipping`: un camión de
+ * reparto encima de «Entregar en el mostrador», donde no hay ninguno. Visto en
+ * el navegador el 2026-09-10.
+ *
+ * El icono viaja en la acción y no en el JSX para que el recolector de
+ * `icon-subset.test.ts` siga viéndolo (patrón `icon: '...'`): si alguien pone
+ * aquí una ligadura que no está en el `.woff2`, ese test lo caza antes de que
+ * salga como garabato en la pantalla de la caja.
+ */
+describe('0220 · el icono de la acción 1-tap', () => {
+  const baseNow = Date.parse('2026-08-05T15:15:00Z')
+
+  it('el mostrador no es una moto', () => {
+    const card = buildNegociosCardVM(
+      toOrderVM(
+        mockOrderRow({
+          delivery_method: 'pickup',
+          pickup_timing: 'now',
+          status: 'ready_for_pickup',
+          ready_for_pickup_at: '2026-08-05T15:14:00Z',
+        }),
+        baseNow,
+      ),
+    )
+    expect(card.primaryAction?.label).toBe('Entregar en el mostrador')
+    expect(card.primaryAction?.icon).toBe('storefront')
+  })
+
+  it('y la moto en la puerta sigue siendo una moto', () => {
+    const card = buildNegociosCardVM(
+      toOrderVM(
+        mockOrderRow({
+          status: 'waiting_at_restaurant',
+          driver_id: 'drv_1',
+          driver: { full_name: 'Carlos Chofer' },
+        }),
+        baseNow,
+      ),
+    )
+    expect(card.primaryAction?.icon).toBe('local_shipping')
   })
 })

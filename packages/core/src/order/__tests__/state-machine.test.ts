@@ -40,6 +40,59 @@ describe('máquina de estados del pedido', () => {
   })
 })
 
+describe('recojo en el local (0219/0220)', () => {
+  it('sale de cocina al mostrador y de ahí a entregado', () => {
+    expect(() => assertTransition('preparing', 'ready_for_pickup')).not.toThrow()
+    expect(() => assertTransition('ready_for_pickup', 'delivered')).not.toThrow()
+  })
+
+  it('una bolsa en el mostrador se puede cancelar: es el plantón', () => {
+    expect(() => assertTransition('ready_for_pickup', 'cancelled')).not.toThrow()
+  })
+
+  /**
+   * El estado nuevo NO abre ningún camino de vuelta hacia el flujo de reparto.
+   * Si lo abriera, un recojo podría acabar en la cola de `apps/motorizados` por
+   * la puerta de atrás — que es justo lo que la policy `ord_driver_read` y la
+   * guarda de `take` cierran por delante.
+   */
+  it('no vuelve a cocina ni entra en el flujo de motorizado', () => {
+    for (const destino of [
+      'preparing',
+      'waiting_driver',
+      'heading_to_restaurant',
+      'waiting_at_restaurant',
+      'picked_up',
+    ] as const) {
+      expect(() => assertTransition('ready_for_pickup', destino)).toThrow(
+        InvalidStateTransitionError,
+      )
+    }
+  })
+
+  /**
+   * `delivered` SIGUE SIENDO EL ÚNICO TERMINAL, compartido con delivery, y de
+   * eso depende la pieza de crecimiento entera: la cláusula (1) de
+   * `customer_contraentrega_decision` pregunta por `status = 'delivered'` sin
+   * mirar el método, así que un recojo completado habilita contraentrega para
+   * el siguiente pedido a domicilio. Un terminal propio para el recojo habría
+   * roto eso en silencio.
+   */
+  it('el mostrador no estrena terminal propio', () => {
+    expect(isTerminal('ready_for_pickup')).toBe(false)
+    expect(isTerminal('delivered')).toBe(true)
+  })
+
+  /**
+   * El tercer paso del cliente es POSICIONAL —«salió de cocina, aún no lo
+   * tiene»—, no «va en una moto». Las palabras las elige `stepsFor()` en la app
+   * del cliente; aquí solo se fija el sitio.
+   */
+  it('el cliente lo ve en el tercer paso, no atascado en «preparando»', () => {
+    expect(toTrackingStep('ready_for_pickup')).toBe('ontheway')
+  })
+})
+
 describe('ventana de cancelación del cliente', () => {
   const created = new Date('2026-05-29T20:00:00Z')
 
