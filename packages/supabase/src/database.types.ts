@@ -2749,6 +2749,10 @@ export type Database = {
         }
         Returns: Json
       }
+      cart_item_free_delivery: {
+        Args: { p_business_id: string; p_item_ids: string[] }
+        Returns: boolean
+      }
       claim_outbox_events: {
         Args: { p_limit?: number }
         Returns: {

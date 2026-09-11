@@ -148,6 +148,13 @@ export interface CheckoutState {
   /** Lo que costaría el envío sin la promo. Para el tachado. */
   nominalDeliveryFee: number
   promoApplies: boolean
+  /**
+   * ¿Esta bolsa concreta se lleva el envío gratis de un plato (0227/0228)? A
+   * diferencia de `promo` (lanzamiento, por cuenta), esta depende de qué hay en
+   * la bolsa y de qué día es hoy, no de la cuenta. Se pinta aparte porque el
+   * aviso que le corresponde es distinto: no hay "reason" con cupos ni ventana.
+   */
+  itemPromoApplies: boolean
   distanceBand: DistanceBand
   total: number
   isNewUser: boolean
@@ -232,6 +239,7 @@ export function useCheckoutState(): CheckoutState {
   const [prepayOnlyByRisk, setPrepayOnlyByRisk] = useState(false)
   const [hasDeliveryHistory, setHasDeliveryHistory] = useState(false)
   const [promo, setPromo] = useState<PromoState>(PROMO_DESCONOCIDA)
+  const [itemPromoApplies, setItemPromoApplies] = useState(false)
   const [locating, setLocating] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -245,6 +253,51 @@ export function useCheckoutState(): CheckoutState {
     getDeliveryBands().then(setBands)
     getFarZones().then(setFarZones)
   }, [])
+
+  // Clave estable de qué hay en la bolsa: `cart.lines` es un array nuevo en
+  // cada render, así que depender de él directo dispararía la RPC de abajo sin
+  // que la bolsa haya cambiado de verdad.
+  const cartItemIdsKey = cart.lines.map((l) => l.itemId).join(',')
+
+  /**
+   * ¿Esta bolsa se lleva el envío gratis de un plato? (0227/0228)
+   *
+   * SOLO PARA PINTAR, igual que `promo` unas líneas más abajo: quien decide el
+   * precio de verdad es `create_customer_order`, y esta RPC —`cart_item_free_delivery`—
+   * es un espejo exacto de ese guard, no una segunda fuente de verdad. Un
+   * `true` obsoleto aquí no regala nada; el servidor vuelve a evaluar la bolsa
+   * en la creación.
+   *
+   * Fuera de `delivery`, o sin bolsa, ni se llama: ahí el envío ya es S/0 o no
+   * hay nada que cobrar, y llamar igual sería una vuelta a la red que no cambia
+   * la pantalla. Ante fallo de red queda en `false`, el lado seguro — mismo
+   * criterio que `promo`.
+   */
+  useEffect(() => {
+    const itemIds = cartItemIdsKey ? cartItemIdsKey.split(',') : []
+    if (deliveryMethod !== 'delivery' || !cart.businessId || itemIds.length === 0) {
+      setItemPromoApplies(false)
+      return
+    }
+    let on = true
+    getSupabaseBrowser()
+      .rpc('cart_item_free_delivery', {
+        p_business_id: cart.businessId,
+        p_item_ids: itemIds,
+      })
+      .then(({ data, error }) => {
+        if (!on) return
+        if (error) {
+          console.error('[checkout] envío gratis por plato:', error.message)
+          setItemPromoApplies(false)
+          return
+        }
+        setItemPromoApplies(data === true)
+      })
+    return () => {
+      on = false
+    }
+  }, [deliveryMethod, cart.businessId, cartItemIdsKey])
 
   /**
    * Volver a delivery borra la respuesta del recojo.
@@ -308,7 +361,8 @@ export function useCheckoutState(): CheckoutState {
    * gratis quemaría el cupo del cliente — el servidor lo excluye igual, esto es
    * para que la pantalla no diga "GRATIS por la promo" cuando no lo es.
    */
-  const promoApplies = promo.eligible && deliveryMethod === 'delivery' && nominalDeliveryFee > 0
+  const promoApplies =
+    (promo.eligible || itemPromoApplies) && deliveryMethod === 'delivery' && nominalDeliveryFee > 0
   const deliveryFee = promoApplies ? 0 : nominalDeliveryFee
   const total = useMemo(
     () => Math.round((subtotal + deliveryFee) * 100) / 100,
@@ -574,6 +628,7 @@ export function useCheckoutState(): CheckoutState {
     setHasDeliveryHistory,
     promo,
     setPromo,
+    itemPromoApplies,
     locating,
     setLocating,
     loading,
