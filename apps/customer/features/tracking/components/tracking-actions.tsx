@@ -10,6 +10,8 @@ interface TrackingActionsProps {
   data: Tracking
   current: TrackingStep | null
   cancellable: boolean
+  /** Ver `PostDeliveryExitLink`: hay otra hoja modal disputando la pantalla. */
+  holdReviewPopup?: boolean
 }
 
 /**
@@ -23,7 +25,12 @@ interface TrackingActionsProps {
  * Cuando el pedido SÍ se puede cancelar, el mensaje de estado no se pinta: la
  * fila de arriba ya dice lo mismo y con un contador al lado.
  */
-export function TrackingActions({ data, current, cancellable }: TrackingActionsProps) {
+export function TrackingActions({
+  data,
+  current,
+  cancellable,
+  holdReviewPopup = false,
+}: TrackingActionsProps) {
   return (
     <>
       <div className="mt-5 border-t border-ink/[0.06] pt-4">
@@ -49,7 +56,7 @@ export function TrackingActions({ data, current, cancellable }: TrackingActionsP
       </div>
 
       {data.status === 'delivered' ? (
-        <PostDeliveryExitLink shortId={data.shortId} />
+        <PostDeliveryExitLink shortId={data.shortId} holdOpen={holdReviewPopup} />
       ) : (
         <Link href="/" className="mt-6 inline-block text-[14px] text-brand">
           ← Volver al inicio
