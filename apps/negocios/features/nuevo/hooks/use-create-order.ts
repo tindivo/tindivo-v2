@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useRef, useState } from 'react'
 import { useDashboard } from '@/components/dashboard/chrome'
 import { api } from '@/lib/api'
+import { createKitchenSoundTrigger } from '@/lib/sound'
 import {
   clearIdempotencyKey,
   getOrCreateIdempotencyKey,
@@ -84,6 +85,7 @@ export function useCreateOrder() {
 
   const submit = async (payload: CreateOrderPayload, canSubmit: boolean) => {
     if (submittingRef.current || !canSubmit) return
+    const triggerKitchenSound = createKitchenSoundTrigger()
     submittingRef.current = true
     setBusy(true)
     setError(null)
@@ -114,6 +116,7 @@ export function useCreateOrder() {
 
     try {
       await api.post('/business/orders', orderPayload, idempotencyKey)
+      triggerKitchenSound()
       clearIdempotencyKey()
       // `force` porque el cooldown de 1s no aplica aquí: acabamos de escribir y
       // sabemos que el servidor ya lo tiene. `refetchOrders` no rechaza nunca
@@ -130,6 +133,7 @@ export function useCreateOrder() {
           const freshKey = regenerateIdempotencyKey()
           try {
             await api.post('/business/orders', orderPayload, freshKey)
+            triggerKitchenSound()
             clearIdempotencyKey()
             await refetchOrders({ force: true })
             router.replace('/')

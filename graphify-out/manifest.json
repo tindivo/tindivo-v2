@@ -615,7 +615,7 @@
     "semantic_hash": ""
   },
   "apps/customer/app/layout.tsx": {
-    "mtime": 1789103385.6423893,
+    "mtime": 1789165208.6560154,
     "ast_hash": "347e44888838a7332b01bb73c927d9ae",
     "semantic_hash": ""
   },
@@ -725,7 +725,7 @@
     "semantic_hash": ""
   },
   "apps/customer/components/push-manager.tsx": {
-    "mtime": 1789103486.398384,
+    "mtime": 1789165208.6565516,
     "ast_hash": "a7b01a328e03eab4e821353562ef9c56",
     "semantic_hash": ""
   },
@@ -795,7 +795,7 @@
     "semantic_hash": "b94982db987a06959d1836a6d7f9735a"
   },
   "apps/customer/public/sw.js": {
-    "mtime": 1789103397.8651357,
+    "mtime": 1789165208.661641,
     "ast_hash": "61ad62540c92e1e009e3f322c9688bb2",
     "semantic_hash": ""
   },
@@ -815,8 +815,8 @@
     "semantic_hash": ""
   },
   "apps/motorizados/app/pedido/[id]/page.tsx": {
-    "mtime": 1788221586.353703,
-    "ast_hash": "dca383fd26a714445d5e35a0a652a011",
+    "mtime": 1789167999.9449916,
+    "ast_hash": "f90d33632cd1636e3fa27dcc30fc7afe",
     "semantic_hash": ""
   },
   "apps/motorizados/components/home/available-tab.tsx": {
@@ -1050,7 +1050,7 @@
     "semantic_hash": ""
   },
   "apps/negocios/app/layout.tsx": {
-    "mtime": 1789093739.7910323,
+    "mtime": 1789165208.6626163,
     "ast_hash": "8eb3e5f84652b400a21ec5d4e29db355",
     "semantic_hash": ""
   },
@@ -1075,8 +1075,8 @@
     "semantic_hash": ""
   },
   "apps/negocios/app/page.tsx": {
-    "mtime": 1789087737.4392054,
-    "ast_hash": "04c7e1db872f3d0050878a6f89063f34",
+    "mtime": 1789167519.2923174,
+    "ast_hash": "072182f38460ea43a375b9fc64261ada",
     "semantic_hash": ""
   },
   "apps/negocios/components/dashboard/cards.tsx": {
@@ -1085,12 +1085,12 @@
     "semantic_hash": ""
   },
   "apps/negocios/components/dashboard/chrome.tsx": {
-    "mtime": 1789103114.637644,
-    "ast_hash": "17b6902ec49ea518252e3cf517bb64a0",
+    "mtime": 1789167510.7460039,
+    "ast_hash": "1db2fff734118849b862224c27be1562",
     "semantic_hash": ""
   },
   "apps/negocios/components/dashboard/pedido-detail.tsx": {
-    "mtime": 1789105457.14534,
+    "mtime": 1789165208.667621,
     "ast_hash": "96859cee4561fc737f3693106adf738f",
     "semantic_hash": ""
   },
@@ -1100,7 +1100,7 @@
     "semantic_hash": ""
   },
   "apps/negocios/components/dashboard/primitives.tsx": {
-    "mtime": 1789102504.1613238,
+    "mtime": 1789165208.6711657,
     "ast_hash": "a76e6663738f63496f77191e22dd9694",
     "semantic_hash": ""
   },
@@ -1130,7 +1130,7 @@
     "semantic_hash": "800d674c36e6e1a1bf57bfe0c8f74811"
   },
   "apps/negocios/lib/orders/view-model.ts": {
-    "mtime": 1789102496.171674,
+    "mtime": 1789165208.6761587,
     "ast_hash": "38f6347dc47024d147e27167af0d23a5",
     "semantic_hash": ""
   },
@@ -1140,8 +1140,8 @@
     "semantic_hash": ""
   },
   "apps/negocios/lib/use-audio-alert.ts": {
-    "mtime": 1789103114.6034756,
-    "ast_hash": "e91e26b83164c505e551dda23303d705",
+    "mtime": 1789168050.7444217,
+    "ast_hash": "676cf1d3c38380ed4a164fa8a279ca96",
     "semantic_hash": ""
   },
   "apps/negocios/next-env.d.ts": {
@@ -1165,7 +1165,7 @@
     "semantic_hash": "b94982db987a06959d1836a6d7f9735a"
   },
   "apps/negocios/public/sw.js": {
-    "mtime": 1789101702.5021634,
+    "mtime": 1789165208.6781633,
     "ast_hash": "dbbbc908a6569e9de8f1925a43d8553a",
     "semantic_hash": ""
   },
@@ -1185,13 +1185,13 @@
     "semantic_hash": ""
   },
   "packages/api-client/package.json": {
-    "mtime": 1783714444.4428189,
-    "ast_hash": "a78ab8f3506270e7986b383acc0c3b37",
-    "semantic_hash": "a78ab8f3506270e7986b383acc0c3b37"
+    "mtime": 1789165208.7065654,
+    "ast_hash": "b8de568f72de2f3999b9cfab32a23fbb",
+    "semantic_hash": ""
   },
   "packages/api-client/src/index.ts": {
-    "mtime": 1788736053.2414684,
-    "ast_hash": "d5e29466cdc215737324441171f5e036",
+    "mtime": 1789165208.7075732,
+    "ast_hash": "9ddb5edd71beb29e290fdfadf1d1206d",
     "semantic_hash": ""
   },
   "packages/api-client/tsconfig.json": {
@@ -2520,8 +2520,8 @@
     "semantic_hash": ""
   },
   "apps/customer/features/cart/components/cart-ctas.tsx": {
-    "mtime": 1789087737.283831,
-    "ast_hash": "4986459a1b841dc0ed2e1ef4e133f6be",
+    "mtime": 1789165208.6570864,
+    "ast_hash": "c92fa4c482e626b247d20ac6a0f3bbc6",
     "semantic_hash": ""
   },
   "apps/customer/features/cart/components/cart-empty.tsx": {
@@ -2770,7 +2770,7 @@
     "semantic_hash": ""
   },
   "apps/customer/features/tracking/components/tracking-actions.tsx": {
-    "mtime": 1789104675.0412009,
+    "mtime": 1789165208.6591864,
     "ast_hash": "5682340ad00f29771b48c9a057b2dcbd",
     "semantic_hash": ""
   },
@@ -3480,7 +3480,7 @@
     "semantic_hash": ""
   },
   "apps/negocios/features/configuracion/components/config-view.tsx": {
-    "mtime": 1789093276.8032434,
+    "mtime": 1789165208.6721628,
     "ast_hash": "1c67a16d589cbbca736a6c73d6d7576f",
     "semantic_hash": ""
   },
@@ -3800,8 +3800,8 @@
     "semantic_hash": ""
   },
   "apps/negocios/features/nuevo/hooks/use-create-order.ts": {
-    "mtime": 1787364818.0100937,
-    "ast_hash": "154095ee62354d68df4a23d22fb4b824",
+    "mtime": 1789167027.9501424,
+    "ast_hash": "9d4ab9205b41492f12496cacb3c01130",
     "semantic_hash": ""
   },
   "apps/negocios/features/nuevo/hooks/use-intake-status.ts": {
@@ -3825,8 +3825,8 @@
     "semantic_hash": ""
   },
   "apps/negocios/features/pedidos/hooks/use-order-actions.ts": {
-    "mtime": 1789087737.5216954,
-    "ast_hash": "1bbaa30e778e405bcb6bd8f5881ead68",
+    "mtime": 1789167064.431576,
+    "ast_hash": "db3c901da02d97d9a27b317360ee88a3",
     "semantic_hash": ""
   },
   "apps/negocios/features/pedidos/hooks/use-order-detail.ts": {
@@ -3880,7 +3880,7 @@
     "semantic_hash": ""
   },
   "apps/negocios/components/dashboard/pedido-detail/modals.tsx": {
-    "mtime": 1789105673.2104516,
+    "mtime": 1789165208.6701674,
     "ast_hash": "01ea4ff80b6e035ead90ba3e12a5e0b1",
     "semantic_hash": ""
   },
@@ -3905,7 +3905,7 @@
     "semantic_hash": ""
   },
   "apps/negocios/lib/orders/__tests__/view-model.test.ts": {
-    "mtime": 1789103114.621977,
+    "mtime": 1789165208.675163,
     "ast_hash": "6700d9bfaecb0979d5fb56f3e5d04680",
     "semantic_hash": ""
   },
@@ -4800,7 +4800,7 @@
     "semantic_hash": ""
   },
   "apps/customer/features/catalog/components/home-shell.tsx": {
-    "mtime": 1789107031.2396073,
+    "mtime": 1789165208.657615,
     "ast_hash": "50e3f4d9b30cb4d38fc894dbe1c0d601",
     "semantic_hash": ""
   },
@@ -5285,13 +5285,13 @@
     "semantic_hash": ""
   },
   "apps/negocios/lib/orders/__tests__/attention.test.ts": {
-    "mtime": 1789087737.5634835,
-    "ast_hash": "8b1ef2b3420fffe20eff366ee61fcde1",
+    "mtime": 1789167545.8092237,
+    "ast_hash": "d87c8d2c86f09265278c098e9c078a50",
     "semantic_hash": ""
   },
   "apps/negocios/lib/orders/attention.ts": {
-    "mtime": 1789087737.5692942,
-    "ast_hash": "9f36f953842fd561dd5961c157d736f4",
+    "mtime": 1789167394.730234,
+    "ast_hash": "8e58a38d6e4ead42c7d73f7621e43634",
     "semantic_hash": ""
   },
   "e2e/driver/payment-qrs.spec.ts": {
@@ -5605,8 +5605,8 @@
     "semantic_hash": ""
   },
   "apps/motorizados/components/home/swipe-to-take.tsx": {
-    "mtime": 1787723101.6888256,
-    "ast_hash": "17e061266111d2266bf0042aba230059",
+    "mtime": 1789167857.6743171,
+    "ast_hash": "c4b1fc0b02fd5bd53eaff841dc6d9b92",
     "semantic_hash": ""
   },
   "apps/motorizados/components/restaurants/restaurant-detail-sheet.tsx": {
@@ -6310,8 +6310,8 @@
     "semantic_hash": ""
   },
   "apps/customer/features/reviews/components/review-card.tsx": {
-    "mtime": 1789087737.3167915,
-    "ast_hash": "74808f25a7e640221c9a0d6b213966ec",
+    "mtime": 1789165208.6591864,
+    "ast_hash": "6ee0a1db89d23c3151eb219e21b58b0e",
     "semantic_hash": ""
   },
   "apps/customer/features/reviews/components/review-prompt-button.tsx": {
@@ -6340,8 +6340,8 @@
     "semantic_hash": ""
   },
   "apps/customer/features/tracking/components/tracking-alert-channel.tsx": {
-    "mtime": 1789087737.3379488,
-    "ast_hash": "06ce9d55c244d1d89f91379ac5b3d341",
+    "mtime": 1789165208.6591864,
+    "ast_hash": "d65dce8253ec43dfb62ac9fcdbf35f6f",
     "semantic_hash": ""
   },
   "apps/customer/features/tracking/components/tracking-install.tsx": {
@@ -6390,7 +6390,7 @@
     "semantic_hash": ""
   },
   "apps/customer/lib/push.ts": {
-    "mtime": 1789103467.1431584,
+    "mtime": 1789165208.6605172,
     "ast_hash": "ab7d92dacf24e12033f574f501fb5df1",
     "semantic_hash": ""
   },
@@ -6405,7 +6405,7 @@
     "semantic_hash": ""
   },
   "apps/negocios/components/dashboard/pedido-detail/comanda-ticket.ts": {
-    "mtime": 1789105673.194282,
+    "mtime": 1789165208.6691294,
     "ast_hash": "4d88961f1392b41af064eae508b9e492",
     "semantic_hash": ""
   },
@@ -6415,8 +6415,8 @@
     "semantic_hash": ""
   },
   "apps/negocios/components/sound-check.tsx": {
-    "mtime": 1789087737.466488,
-    "ast_hash": "d83738d36ea6a9a1a0ac2527b32694bb",
+    "mtime": 1789167533.724324,
+    "ast_hash": "d7a12449d368a7ebb3f0301f2b93456e",
     "semantic_hash": ""
   },
   "apps/negocios/features/configuracion/components/avisos-section.tsx": {
@@ -6505,7 +6505,7 @@
     "semantic_hash": ""
   },
   "apps/negocios/hooks/use-push-status.ts": {
-    "mtime": 1789102088.4682598,
+    "mtime": 1789165208.67316,
     "ast_hash": "1ed95abc8d1311837e5da2f10a5c4eb2",
     "semantic_hash": ""
   },
@@ -6720,7 +6720,7 @@
     "semantic_hash": ""
   },
   "apps/negocios/components/dashboard/pedido-detail/__tests__/comanda-ticket.test.ts": {
-    "mtime": 1789105539.6518617,
+    "mtime": 1789165208.6691294,
     "ast_hash": "710352cef9b6c485c6abe9dea5c52b73",
     "semantic_hash": ""
   },
@@ -6800,27 +6800,27 @@
     "semantic_hash": ""
   },
   "apps/customer/features/reviews/components/post-delivery-exit-link.tsx": {
-    "mtime": 1789105853.8965461,
+    "mtime": 1789165208.658129,
     "ast_hash": "75a26b212198d6426d2b5217f64700ec",
     "semantic_hash": ""
   },
   "apps/negocios/components/dashboard/payment-change-alert.tsx": {
-    "mtime": 1789103042.0615191,
+    "mtime": 1789165208.6651123,
     "ast_hash": "53a3de303a565ca806bb0384d07b112c",
     "semantic_hash": ""
   },
   "apps/negocios/components/pwa/install-banner.tsx": {
-    "mtime": 1789093678.6391551,
+    "mtime": 1789165208.6721628,
     "ast_hash": "54c99737ed920702580dee74cb098434",
     "semantic_hash": ""
   },
   "apps/negocios/hooks/use-pwa-install.ts": {
-    "mtime": 1789093652.5907478,
+    "mtime": 1789165208.67416,
     "ast_hash": "9da3fc0cc987cc933ca0f68f765c1ef3",
     "semantic_hash": ""
   },
   "apps/negocios/lib/payment-change-bus.ts": {
-    "mtime": 1789102950.4942665,
+    "mtime": 1789165208.6761587,
     "ast_hash": "5e87381aa7c4f9c0729b75f59c5657ee",
     "semantic_hash": ""
   },
@@ -6837,6 +6837,71 @@
   "apps/customer/public/banners/alitas_crispy_al_punto.png": {
     "mtime": 1789089392.8212,
     "ast_hash": "aea2ebb01829403a8e5fbca7d0b50232",
+    "semantic_hash": ""
+  },
+  "apps/negocios/lib/__tests__/sound.test.ts": {
+    "mtime": 1789167941.1725156,
+    "ast_hash": "ee4223ceeaa95a278e2b2de03020d573",
+    "semantic_hash": ""
+  },
+  "apps/negocios/lib/sound.ts": {
+    "mtime": 1789166997.9268105,
+    "ast_hash": "3c14b9c08525dcbc58c60971835f8dd4",
+    "semantic_hash": ""
+  },
+  "packages/api-client/src/__tests__/timeout.test.ts": {
+    "mtime": 1789165208.7065654,
+    "ast_hash": "dce668558cb90037bec7348580a2ca0d",
+    "semantic_hash": ""
+  },
+  "apps/motorizados/public/sounds/notication-tindivo-1.mp3": {
+    "mtime": 1788981677.2104802,
+    "ast_hash": "7c21a559e1ba1f5f69ec5c5b5b6e7d42",
+    "semantic_hash": ""
+  },
+  "apps/motorizados/public/sounds/notication-tindivo-4.mp3": {
+    "mtime": 1788982116.761235,
+    "ast_hash": "1d34d3fe346f8b5fe00fe1961408b950",
+    "semantic_hash": ""
+  },
+  "apps/negocios/public/sound/notication-tindivo-2.mp3": {
+    "mtime": 1788981699.9194422,
+    "ast_hash": "fa81158f918629f36ca70c203171329e",
+    "semantic_hash": ""
+  },
+  "apps/negocios/public/sound/notication-tindivo-levelup.mp3": {
+    "mtime": 1788982578.5313475,
+    "ast_hash": "7a3389aa036b9739d6a74dcba348c76e",
+    "semantic_hash": ""
+  },
+  "apps/negocios/public/sounds/notication-tindivo-levelup.mp3": {
+    "mtime": 1788982578.5313475,
+    "ast_hash": "7a3389aa036b9739d6a74dcba348c76e",
+    "semantic_hash": ""
+  },
+  "apps/motorizados/lib/__tests__/sound.test.ts": {
+    "mtime": 1789167987.0384645,
+    "ast_hash": "0fef5cf954d4531e7136d679fd67302e",
+    "semantic_hash": ""
+  },
+  "apps/motorizados/lib/sound.ts": {
+    "mtime": 1789167987.0374637,
+    "ast_hash": "7e76ad415befd28b6aee19c3481d0d66",
+    "semantic_hash": ""
+  },
+  "apps/motorizados/public/sound/notication-tindivo-1.mp3": {
+    "mtime": 1788981677.2104802,
+    "ast_hash": "7c21a559e1ba1f5f69ec5c5b5b6e7d42",
+    "semantic_hash": ""
+  },
+  "apps/motorizados/public/sound/notication-tindivo-4.mp3": {
+    "mtime": 1788982116.761235,
+    "ast_hash": "1d34d3fe346f8b5fe00fe1961408b950",
+    "semantic_hash": ""
+  },
+  "apps/negocios/public/sounds/notication-tindivo-5.mp3": {
+    "mtime": 1788982343.457068,
+    "ast_hash": "46aad78e4fe0f9b76776b0e966afe360",
     "semantic_hash": ""
   }
 }

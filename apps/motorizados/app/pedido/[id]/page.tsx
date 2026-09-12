@@ -27,6 +27,7 @@ import { api } from '@/lib/api'
 import { isValidPePhone, waLink } from '@/lib/deeplinks'
 import { soles } from '@/lib/format'
 import { getOptimistic } from '@/lib/offline-queue'
+import { createDriverAudioTrigger } from '@/lib/sound'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import { postTransition } from '@/lib/transitions'
 import type { OrderDetailResponse } from '@/lib/types'
@@ -156,11 +157,18 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
   }, [mode, id])
 
   async function run(action: string, params: Record<string, unknown> = {}) {
+    const triggerTakenSound = action === 'take' ? createDriverAudioTrigger('orderTaken') : null
+    const triggerDeliveredSound =
+      action === 'deliver' ? createDriverAudioTrigger('orderDelivered') : null
     setActionError(null)
     setBusy(true)
     try {
       const result = await postTransition(id, action, params)
+      if (action === 'take') {
+        triggerTakenSound?.()
+      }
       if (action === 'deliver') {
+        triggerDeliveredSound?.()
         const shortId = detail?.order.shortId ?? ''
         const paymentReal = (params.paymentReal as string) ?? detail?.order.paymentIntent
         let cashOwed = 0

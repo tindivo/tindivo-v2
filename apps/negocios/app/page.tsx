@@ -33,9 +33,18 @@ export default function NegocioPedidosPage() {
     refetchOrders,
     openRequestId,
     clearOpenRequest,
+    setReadingDetail,
   } = useDashboard()
 
   const [selectedId, setSelectedId] = useState<string | null>(null)
+
+  // Avisa al chrome que hay una ficha abierta para que el sonido espacie el
+  // bip y calle la voz mientras se lee — nunca para apagar nada. Ver la
+  // cabecera de `useDashboardSounds`.
+  useEffect(() => {
+    setReadingDetail(selectedId !== null)
+    return () => setReadingDetail(false)
+  }, [selectedId, setReadingDetail])
   const [showPause, setShowPause] = useState(false)
   const [channel, setChannel] = useState<ChannelFilter>('all')
   const supportWhatsapp = useSupportPhone()

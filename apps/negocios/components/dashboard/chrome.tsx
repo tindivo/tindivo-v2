@@ -48,6 +48,7 @@ import {
   audioIsBlocked,
   unlockAudio,
   useDashboardSounds,
+  useOrderDeliveredAlerts,
   usePaymentChangeAlerts,
 } from '@/lib/use-audio-alert'
 import { type ResultadoPrueba, SoundCheck } from '../sound-check'
@@ -197,6 +198,13 @@ export interface DashboardCtx {
   openRequestId: string | null
   requestOpen: (rowId: string) => void
   clearOpenRequest: () => void
+  /**
+   * Hay una ficha de pedido abierta en pantalla. Lo fija `app/page.tsx`, que es
+   * quien la monta; el chrome solo lo retransmite a `useDashboardSounds` para
+   * espaciar el bip y callar la voz MIENTRAS SE LEE — nunca para apagar nada.
+   * Ver `lib/use-audio-alert.ts`.
+   */
+  setReadingDetail: (reading: boolean) => void
 }
 
 const Ctx = createContext<DashboardCtx | null>(null)
@@ -839,6 +847,7 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
     return false
   })
   const [gateShown, setGateShown] = useState(false)
+  const [readingDetail, setReadingDetail] = useState(false)
 
   // Mostrar gate en la carga inicial si sonido está desactivado y no ha sido descartado antes.
   useEffect(() => {
@@ -1359,6 +1368,7 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
     waitingIds,
     hasBufferP3,
     soundOn,
+    readingDetail,
   })
 
   // Pedidos de delivery donde el motorizado cobró distinto de lo pactado
@@ -1380,6 +1390,18 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
     [vms],
   )
   usePaymentChangeAlerts(paymentChangedAlerts, soundOn)
+
+  // Tipo 5 — se entregó. Igual que `waitingIds`: los ids y no un contador,
+  // para que dos entregas seguidas no compartan un solo aviso.
+  const deliveredIds = useMemo(
+    () =>
+      vms
+        .filter((o) => o.status === 'delivered')
+        .map((o) => o.rowId)
+        .sort(),
+    [vms],
+  )
+  useOrderDeliveredAlerts(deliveredIds, soundOn)
 
   // Petición de apertura desde el banner. Ver `DashboardCtx.openRequestId`.
   const [openRequestId, setOpenRequestId] = useState<string | null>(null)
@@ -1487,6 +1509,7 @@ function AuthedChrome({ children, onSignOut }: { children: ReactNode; onSignOut:
       openRequestId,
       requestOpen,
       clearOpenRequest,
+      setReadingDetail,
     }
   }, [
     bizId,

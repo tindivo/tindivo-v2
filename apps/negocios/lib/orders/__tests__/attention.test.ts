@@ -409,6 +409,14 @@ describe('nextBeepDelay · el ritmo, que también sobraba', () => {
   it('en el último minuto vuelve al ritmo rápido, lleve el rato que lleve', () => {
     expect(nextBeepDelay({ elapsedMs: 4 * 60_000, urgent: true })).toBe(3_000)
   })
+
+  it('leyendo una ficha se espacia aunque esté en la tanda de enganche', () => {
+    expect(nextBeepDelay({ elapsedMs: 0, urgent: false, reading: true })).toBe(12_000)
+  })
+
+  it('leyendo NO amortigua el último minuto: eso no se deja callar', () => {
+    expect(nextBeepDelay({ elapsedMs: 0, urgent: true, reading: true })).toBe(3_000)
+  })
 })
 
 /**

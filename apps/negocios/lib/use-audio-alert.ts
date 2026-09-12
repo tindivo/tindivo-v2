@@ -7,6 +7,7 @@ import { notifyPaymentChanged } from './payment-change-bus'
 let sharedCtx: AudioContext | null = null
 let audioBusyUntil = 0
 let autoUnlocked = false
+const chimeBuffers = new Map<string, Promise<AudioBuffer | null>>()
 
 function getCtx(): AudioContext | null {
   if (typeof window === 'undefined') return null
@@ -20,10 +21,34 @@ function getCtx(): AudioContext | null {
   return sharedCtx
 }
 
-/** Desbloquea el audio dentro de un gesto del usuario (toggle o primer toque PWA). */
+/**
+ * Los timbres reales (tipo 1 y tipo 5) que `preloadChimes` calienta aquí. Vive
+ * junto a `unlockAudio` y no junto a cada `play*Chime` porque el problema que
+ * resuelve es de MOMENTO, no de cuál archivo es: sin esto, el primer pedido de
+ * la noche paga descarga + decodificación (red variable, a veces cientos de
+ * ms) antes de que suene el timbre — justo el pedido donde más importa que
+ * timbre y bip caigan juntos, no uno detrás del otro.
+ */
+const CHIME_URLS = ['/sound/notication-tindivo-2.mp3', '/sounds/notication-tindivo-5.mp3'] as const
+
+function preloadChimes(ctx: AudioContext): void {
+  for (const url of CHIME_URLS) {
+    void loadChimeBuffer(ctx, url)
+  }
+}
+
+/**
+ * Desbloquea el audio dentro de un gesto del usuario (toggle o primer toque
+ * PWA) Y precalienta los timbres reales — ver `preloadChimes`. Se llama en
+ * cada uno de los momentos en que este panel ya se ocupa de que el sonido
+ * esté listo (primer gesto, `enableSound`, volver de segundo plano), así que
+ * no hace falta un sitio nuevo para esto.
+ */
 export function unlockAudio(): void {
   const ctx = getCtx()
-  if (ctx && ctx.state === 'suspended') {
+  if (!ctx) return
+  preloadChimes(ctx)
+  if (ctx.state === 'suspended') {
     void ctx.resume()
   }
 }
@@ -55,6 +80,71 @@ export function audioIsBlocked(): boolean {
  */
 export function playNewOrderTone(): void {
   playToneSequence([880, 1175], 0.18, 0.55, false)
+}
+
+/**
+ * Descarga y decodifica un timbre UNA sola vez por sesión (cacheado por URL), y
+ * comparte la promesa: si el mismo evento se repite, no vuelve a pedir el
+ * archivo por red.
+ */
+function loadChimeBuffer(ctx: AudioContext, url: string): Promise<AudioBuffer | null> {
+  let promise = chimeBuffers.get(url)
+  if (!promise) {
+    promise = fetch(url)
+      .then((res) => res.arrayBuffer())
+      .then((data) => ctx.decodeAudioData(data))
+      .catch(() => null)
+    chimeBuffers.set(url, promise)
+  }
+  return promise
+}
+
+/**
+ * REPRODUCE UN ARCHIVO DE AUDIO REAL, NO UN BIP SINTÉTICO.
+ *
+ * Va por el mismo `AudioContext` compartido — y no por un `<audio>` aparte —
+ * para heredar gratis todo lo que ya se resolvió ahí: el desbloqueo en el
+ * primer gesto, la reanudación al volver de segundo plano y la detección de
+ * `suspended` (`audioIsBlocked`). Un `<audio>` propio abriría una segunda
+ * superficie de autoplay sin ninguna de esas garantías.
+ *
+ * Si el archivo no carga —red caída, formato no soportado— esto no hace nada:
+ * quien lo llama para un evento que además tiene bip sintético (el pedido
+ * nuevo) no se queda en silencio total por esto.
+ */
+function playChime(url: string, gainValue = 0.85): void {
+  const ctx = getCtx()
+  if (!ctx) return
+  if (ctx.state === 'suspended') void ctx.resume()
+  void loadChimeBuffer(ctx, url).then((buffer) => {
+    if (!buffer) return
+    const source = ctx.createBufferSource()
+    const gain = ctx.createGain()
+    source.buffer = buffer
+    gain.gain.value = gainValue
+    source.connect(gain)
+    gain.connect(ctx.destination)
+    source.start()
+  })
+}
+
+/**
+ * EL TIMBRE DE «ENTRÓ UN PEDIDO».
+ *
+ * Suena UNA vez por pedido que entra (el flanco de `pendingCount`), antes del
+ * anuncio de voz.
+ */
+export function playNewOrderChime(): void {
+  playChime('/sound/notication-tindivo-2.mp3')
+}
+
+/**
+ * EL TIMBRE DE «SE ENTREGÓ», tipo 5. Suena UNA vez por pedido que pasa a
+ * `delivered`, seguido de la voz «Pedido entregado» — ver
+ * `useOrderDeliveredAlerts`.
+ */
+export function playOrderDeliveredChime(): void {
+  playChime('/sounds/notication-tindivo-5.mp3')
 }
 
 /**
@@ -109,6 +199,61 @@ if (typeof window !== 'undefined' && !autoUnlocked) {
 }
 
 /**
+ * UN AVISO SE COMÍA AL OTRO A MEDIA FRASE.
+ *
+ * `speak()` hacía `speechSynthesis.cancel()` antes de cada frase, así que si
+ * "llegó el motorizado" caía mientras sonaba "tienes 2 pedidos en espera", la
+ * primera moría a medias y la cajera se quedaba sin enterarse de ninguna de
+ * las dos completas. Con cuatro tipos de aviso hablando cada uno por su
+ * cuenta, esto no era un caso raro: bastaba con que dos cayeran cerca.
+ *
+ * Ahora las frases se ENCOLAN y se hablan una detrás de otra, nunca una
+ * encima de otra. El límite (`MAX_QUEUE`) evita que una noche ruidosa deje a
+ * la cajera escuchando, con dos minutos de atraso, avisos que ya no describen
+ * lo que está pasando: si se acumulan más de las que caben, se descartan las
+ * más viejas y se conserva la más reciente.
+ */
+const MAX_QUEUE = 3
+let speechQueue: string[] = []
+let speaking = false
+
+function speakNext(): void {
+  const text = speechQueue.shift()
+  if (text === undefined) {
+    speaking = false
+    return
+  }
+  speaking = true
+
+  // `advanced` evita avanzar dos veces: `onend` y el colchón de abajo pueden
+  // llegar los dos si el navegador dispara `onend` tarde.
+  let advanced = false
+  const advance = () => {
+    if (advanced) return
+    advanced = true
+    speakNext()
+  }
+
+  try {
+    const utterance = new SpeechSynthesisUtterance(text)
+    utterance.lang = 'es-PE'
+    utterance.rate = 1.1
+    utterance.pitch = 1.0
+    utterance.volume = 1.0
+    utterance.onend = advance
+    utterance.onerror = advance
+    window.speechSynthesis.speak(utterance)
+    // COLCHÓN DE SEGURIDAD: algunos Android nunca disparan `onend` si la PWA
+    // pierde el foco a media frase. Sin esto, la cola se queda atascada con
+    // `speaking = true` para siempre y ningún aviso vuelve a hablar.
+    setTimeout(advance, 8_000)
+  } catch {
+    // Ignorar fallos de speech en entornos donde la voz no está disponible
+    advance()
+  }
+}
+
+/**
  * Anuncia verbalmente el estado de pedidos pendientes u otros avisos.
  * Usa la API de Web Speech (SpeechSynthesis). Se desfasa suavemente tras el bip
  * para evitar que la voz hable sobre los tonos de audio.
@@ -118,17 +263,25 @@ export function speak(text: string, delayMs = 350): void {
 
   setTimeout(() => {
     try {
-      window.speechSynthesis.cancel()
-      const utterance = new SpeechSynthesisUtterance(text)
-      utterance.lang = 'es-PE'
-      utterance.rate = 1.1
-      utterance.pitch = 1.0
-      utterance.volume = 1.0
-      window.speechSynthesis.speak(utterance)
+      speechQueue.push(text)
+      if (speechQueue.length > MAX_QUEUE) speechQueue = speechQueue.slice(-MAX_QUEUE)
+      if (!speaking) speakNext()
     } catch {
       // Ignorar fallos de speech en entornos donde la voz no está disponible
     }
   }, delayMs)
+}
+
+/**
+ * Corta la voz DE VERDAD y vacía la cola. Es distinto de dejar que `speak`
+ * siga su curso: lo usa quien cierra un diálogo (la prueba de sonido) y no
+ * quiere que una frase vieja aparezca después, fuera de contexto.
+ */
+export function cancelSpeech(): void {
+  speechQueue = []
+  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    window.speechSynthesis.cancel()
+  }
 }
 
 /** Genera el texto de anuncio según la cantidad de pedidos pendientes. */
@@ -138,9 +291,16 @@ function pendingAnnouncement(count: number): string {
 }
 
 /**
- * Reproduce una secuencia de tonos senoidales con prevención de solapamiento.
- * Si `isInterval` es verdadero y el canal está ocupado, el tick del intervalo se salta
- * para evitar acumulación de sonidos cuando la PWA está minimizada.
+ * Reproduce una secuencia de tonos con prevención de solapamiento. Si
+ * `isInterval` es verdadero y el canal está ocupado, el tick del intervalo se
+ * salta para evitar acumulación de sonidos cuando la PWA está minimizada.
+ *
+ * CADA NOTA LLEVA DOS OSCILADORES, NO UNO. Una senoidal pura es la onda con
+ * menos armónicos que existe, y por eso es la que peor se abre paso en un
+ * parlante pequeño con ruido de local alrededor: sonaba "hay un bip" y a veces
+ * ni eso. La segunda capa —una onda triangular una octava arriba, más floja—
+ * le mete brillo sin cambiar la nota que se oye ni la melodía de cada tipo de
+ * aviso (el semitono que sube, el que baja, el que va y vuelve).
  */
 function playToneSequence(
   freqs: number[],
@@ -164,21 +324,26 @@ function playToneSequence(
   const startAt = Math.max(now, audioBusyUntil)
   let at = startAt
 
-  for (const f of freqs) {
+  const capa = (freq: number, type: OscillatorType, gainPeak: number) => {
     const osc = ctx.createOscillator()
     const gain = ctx.createGain()
     osc.connect(gain)
     gain.connect(ctx.destination)
-    osc.type = 'sine'
-    osc.frequency.value = f
+    osc.type = type
+    osc.frequency.value = freq
 
     // Envolvente de ganancia suave para evitar clics eléctricos
     gain.gain.setValueAtTime(0.0001, at)
-    gain.gain.exponentialRampToValueAtTime(Math.max(peak, 0.001), at + 0.015)
+    gain.gain.exponentialRampToValueAtTime(Math.max(gainPeak, 0.0001), at + 0.015)
     gain.gain.exponentialRampToValueAtTime(0.0001, at + durEach - 0.015)
 
     osc.start(at)
     osc.stop(at + durEach)
+  }
+
+  for (const f of freqs) {
+    capa(f, 'sine', peak)
+    capa(f * 2, 'triangle', peak * 0.35)
     at += durEach + 0.04
   }
 
@@ -212,7 +377,8 @@ export function newArrivals(prev: readonly string[], curr: readonly string[]): s
 
 /**
  * Alertas de audio del dashboard de negocios (PROPUESTAS_UX_PEDIDOS §7):
- *  · Tipo 1 — pedido nuevo: 880Hz + 1175Hz, doble bip, con cadencia escalonada
+ *  · Tipo 1 — pedido nuevo: el timbre `playNewOrderChime` (una vez, al entrar)
+ *    seguido de la voz, y luego el bip 880Hz + 1175Hz con cadencia escalonada
  *    (ver `nextBeepDelay`) mientras queden pedidos SIN ACUSAR.
  *  · Tipo 2 — motorizado llegó: 660-880-660Hz, triple bip suave, una vez POR
  *    PEDIDO que entra en `waiting` (ver `newArrivals`).
@@ -221,7 +387,8 @@ export function newArrivals(prev: readonly string[], curr: readonly string[]): s
  * QUÉ SUENA Y QUÉ NO LO DECIDE `attentionState`, no este hook. Aquí solo entra
  * el recuento de lo que sigue reclamando a la cajera sin que ella lo haya
  * abierto: el acuse de recibo se resuelve antes, y por eso este fichero no sabe
- * nada de acuses. Lo único que decide aquí es el RITMO.
+ * nada de acuses. Lo único que decide aquí es el RITMO — y, con `readingDetail`,
+ * si la voz habla o se calla. El bip nunca se apaga por leer.
  */
 export function useDashboardSounds({
   hasPending,
@@ -230,6 +397,7 @@ export function useDashboardSounds({
   waitingIds,
   hasBufferP3,
   soundOn,
+  readingDetail = false,
 }: {
   /** Hay algo sin acusar. Es `attentionState(...).alarm.hasPending`. */
   hasPending: boolean
@@ -244,6 +412,14 @@ export function useDashboardSounds({
   waitingIds: readonly string[]
   hasBufferP3: boolean
   soundOn: boolean
+  /**
+   * Hay una ficha de pedido abierta en pantalla, sea cual sea. NO apaga nada
+   * —eso es justo lo que se quitó tras `JMAXL98Z`, ver `attention.ts`—: solo
+   * fuerza el ritmo espaciado (`reading` en `nextBeepDelay`) y calla la VOZ,
+   * que es la que de verdad estorba leyendo. El bip sigue, más espaciado, y el
+   * último minuto lo salta lo mismo que siempre.
+   */
+  readingDetail?: boolean
 }) {
   const t1 = useRef<ReturnType<typeof setTimeout> | null>(null)
   const t3 = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -256,9 +432,11 @@ export function useDashboardSounds({
   /** Leídos por el bucle, que vive fuera del render y no puede depender de props. */
   const countRef = useRef(pendingCount)
   const urgentRef = useRef(urgent)
+  const readingRef = useRef(readingDetail)
   useEffect(() => {
     countRef.current = pendingCount
     urgentRef.current = urgent
+    readingRef.current = readingDetail
   })
 
   // Tipo 1 — pedido nuevo. Un bucle que se reprograma solo, en vez de un
@@ -285,13 +463,19 @@ export function useDashboardSounds({
     const tick = () => {
       playToneSequence([880, 1175], 0.18, 0.55, true)
       const ahora = Date.now()
-      if (ahora - lastVoiceAt.current >= VOICE_EVERY_MS) {
+      // La voz de recordatorio ("sigues teniendo N") es la que más estorba
+      // leyendo, y no lleva noticia nueva: el bip de abajo ya sigue sonando.
+      if (!readingRef.current && ahora - lastVoiceAt.current >= VOICE_EVERY_MS) {
         lastVoiceAt.current = ahora
         speak(pendingAnnouncement(countRef.current), 450)
       }
       t1.current = setTimeout(
         tick,
-        nextBeepDelay({ elapsedMs: ahora - startedAt.current, urgent: urgentRef.current }),
+        nextBeepDelay({
+          elapsedMs: ahora - startedAt.current,
+          urgent: urgentRef.current,
+          reading: readingRef.current,
+        }),
       )
     }
     tick()
@@ -302,16 +486,22 @@ export function useDashboardSounds({
     // queremos premiar.
   }, [soundOn, hasPending])
 
-  // La voz sí va en el flanco: cuando la cuenta SUBE hay noticia, y esa no
-  // espera al siguiente bip. Además reinicia la tanda de enganche, porque un
-  // pedido nuevo merece el ritmo rápido aunque el anterior ya estuviera en el
-  // lento.
+  // EL FLANCO: cuando la cuenta SUBE hay noticia, y esa no espera al siguiente
+  // bip del bucle (que puede estar a hasta 12s). Además reinicia la tanda de
+  // enganche, porque un pedido nuevo merece el ritmo rápido aunque el anterior
+  // ya estuviera en el lento.
+  //
+  // EL TIMBRE SUENA SIEMPRE, LEYENDO O NO — es el "entró un pedido", no el
+  // recordatorio, y es corto y de un timbre distinto al bip: no compite con la
+  // lectura como sí lo hace una frase hablada. Lo único que calla leyendo es
+  // la VOZ.
   useEffect(() => {
     if (!soundOn || !hasPending) return
     if (pendingCount > prevPendingCount.current) {
       startedAt.current = Date.now()
       lastVoiceAt.current = Date.now()
-      speak(pendingAnnouncement(pendingCount), 450)
+      playNewOrderChime()
+      if (!readingRef.current) speak(pendingAnnouncement(pendingCount), 700)
     }
     prevPendingCount.current = pendingCount
   }, [soundOn, hasPending, pendingCount])
@@ -408,5 +598,41 @@ export function usePaymentChangeAlerts(
       if (soundOn) playPaymentChangedTone()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `alerts` se lee del cierre; `idsKey` ya representa su identidad relevante.
+  }, [idsKey, soundOn])
+}
+
+/**
+ * Tipo 5 — el pedido se entregó: timbre (`notication-tindivo-5`) + voz «Pedido
+ * entregado», una vez por pedido que pasa a `delivered`. Mismo patrón por ids
+ * que la llegada y el cambio de pago (`newArrivals` / diff contra lo visto).
+ *
+ * LA PRIMERA CARGA SOLO FIJA LA BASE, mismo motivo que `usePaymentChangeAlerts`
+ * y no el de `waitingIds`: `delivered` es TERMINAL (invariante 8 de
+ * `CLAUDE.md`), así que un pedido entregado a las 8pm lo sigue estando a
+ * medianoche. Sin esta base, reabrir el panel a mitad de turno narraría de
+ * nuevo cada entrega de la noche.
+ *
+ * ES SOLO SONIDO, sin banner: no reclama nada de la cajera —lo contrario de
+ * `attentionState`—, así que respeta `soundOn` entero (timbre y voz), sin la
+ * excepción visual que sí tiene el cambio de pago.
+ */
+export function useOrderDeliveredAlerts(deliveredIds: readonly string[], soundOn: boolean): void {
+  const seenRef = useRef<Set<string> | null>(null)
+  const idsKey = deliveredIds.join('|')
+
+  useEffect(() => {
+    const seen = seenRef.current
+    if (seen === null) {
+      seenRef.current = new Set(deliveredIds)
+      return
+    }
+    for (const id of deliveredIds) {
+      if (seen.has(id)) continue
+      seen.add(id)
+      if (!soundOn) continue
+      playOrderDeliveredChime()
+      speak('Pedido entregado', 500)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `deliveredIds` se lee del cierre; `idsKey` ya representa su identidad relevante.
   }, [idsKey, soundOn])
 }

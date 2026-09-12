@@ -3,7 +3,13 @@
 import { Icon } from '@tindivo/ui'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { construirSaludo, type SaludoApertura } from '@/lib/saludo'
-import { playNewOrderTone, speak, unlockAudio } from '@/lib/use-audio-alert'
+import {
+  cancelSpeech,
+  playNewOrderChime,
+  playNewOrderTone,
+  speak,
+  unlockAudio,
+} from '@/lib/use-audio-alert'
 
 /**
  * LA PRUEBA DE SONIDO DE LA APERTURA.
@@ -84,9 +90,12 @@ export function SoundCheck({
       // Sin `localStorage` la frase puede repetirse. No es motivo para no sonar.
     }
 
+    // Timbre + bip, igual que un pedido real: ver la cabecera de
+    // `playNewOrderChime` en `use-audio-alert.ts`.
+    playNewOrderChime()
     playNewOrderTone()
-    // La voz se desfasa para no hablar encima del bip, igual que en las alertas
-    // reales. Los dos tonos duran ~0.4 s.
+    // La voz se desfasa para no hablar encima del timbre, igual que en las
+    // alertas reales.
     speak(nuevo.completo, 700)
   }, [bizName])
 
@@ -97,9 +106,7 @@ export function SoundCheck({
     const timers = temporizadores.current
     return () => {
       for (const t of timers) clearTimeout(t)
-      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-        window.speechSynthesis.cancel()
-      }
+      cancelSpeech()
     }
   }, [sonar])
 
