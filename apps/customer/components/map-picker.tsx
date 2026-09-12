@@ -175,6 +175,17 @@ export function MapPicker({
   const autoLocateTried = useRef(false)
 
   useEffect(() => {
+    // Adelanta la descarga del chunk de Leaflet (react-leaflet + su CSS) en
+    // paralelo con los datos, en vez de esperar a que `MapCanvas` se monte.
+    // Sin esto, el `import()` de `next/dynamic` no arrancaba hasta que las
+    // cinco consultas de arriba resolvían: dos viajes en fila (datos, luego
+    // JS) donde podían ser uno solo en paralelo. Es fire-and-forget: solo
+    // calienta la caché de chunks de webpack para cuando `MapCanvas` se pida
+    // de verdad.
+    import('./map-picker-inner')
+  }, [])
+
+  useEffect(() => {
     let on = true
     Promise.all([
       getCoverage(),

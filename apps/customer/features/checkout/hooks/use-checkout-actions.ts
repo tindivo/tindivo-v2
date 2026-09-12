@@ -10,7 +10,6 @@ import type { GeoBlockKind, GpsValidationPayload, OrderResult } from '@/features
 import { deliveryPointQuality } from '@/lib/address-record'
 import { api } from '@/lib/api'
 import { getLocationValidation, haversineKm } from '@/lib/coverage'
-import { getCurrentPositionHA } from '@/lib/geolocation'
 import { createAudioTrigger } from '@/lib/sound'
 
 export interface CheckoutActions {
@@ -72,6 +71,7 @@ export function useCheckoutActions(state: CheckoutState): CheckoutActions {
     refreshMaxChange,
     customerNote,
     hasDeliveryHistory,
+    takePrefetchedGpsFix,
   } = state
 
   const idempotencyKeyRef = useRef<string>(crypto.randomUUID())
@@ -118,7 +118,10 @@ export function useCheckoutActions(state: CheckoutState): CheckoutActions {
 
     try {
       const cfg = await getLocationValidation()
-      const fix = await getCurrentPositionHA(cfg.timeoutMs)
+      // La lectura ya está en curso desde que se montó el checkout
+      // (`use-checkout-state.ts`), así que lo normal es que esto resuelva de
+      // una: sigue siendo GPS en vivo de esta sesión, solo que pedido antes.
+      const fix = await takePrefetchedGpsFix(cfg.timeoutMs)
       const distance = haversineKm(
         { lat: fix.lat, lng: fix.lng },
         { lat: cfg.centerLat, lng: cfg.centerLng },

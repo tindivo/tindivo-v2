@@ -1,5 +1,6 @@
 'use client'
 
+import { getAppSettingsBatch } from '@/lib/app-settings'
 import { type LatLng, pointInPolygon } from '@/lib/coverage'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
@@ -22,12 +23,8 @@ let cachedZones: Promise<LatLng[][]> | null = null
 
 async function fetchBands(): Promise<DeliveryBands> {
   try {
-    const { data } = await getSupabaseBrowser()
-      .from('app_settings')
-      .select('value')
-      .eq('key', 'delivery_bands')
-      .maybeSingle()
-    const v = data?.value as Partial<DeliveryBands> | null
+    const batch = await getAppSettingsBatch()
+    const v = batch.delivery_bands as Partial<DeliveryBands> | undefined
     if (v && typeof v.near === 'number' && typeof v.far === 'number') {
       return { near: v.near, far: v.far }
     }

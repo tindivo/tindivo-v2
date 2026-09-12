@@ -8,7 +8,7 @@ import {
   pickupForcesPrepay,
 } from '@tindivo/contracts'
 import { useRouter } from 'next/navigation'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { AddressValue } from '@/components/address-fields'
 import { EMPTY_ADDRESS } from '@/components/address-fields'
 import { maxDeclarable as maxDeclarableCash } from '@/features/checkout/lib/cash'
@@ -28,7 +28,7 @@ import {
 import { pickDefaultAddress, SAVED_ADDRESS_COLUMNS } from '@/lib/address-record'
 import { useBusinessOrdering } from '@/lib/business-ordering'
 import { type CartState, useCart, useCartHydrated } from '@/lib/cart'
-import type { LatLng } from '@/lib/coverage'
+import { getLocationValidation, type LatLng } from '@/lib/coverage'
 import {
   bandForPoint,
   type DeliveryBands,
@@ -36,6 +36,7 @@ import {
   getDeliveryBands,
   getFarZones,
 } from '@/lib/delivery-fee'
+import { type GeoFix, getCurrentPositionHA } from '@/lib/geolocation'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
 export interface CheckoutState {
@@ -197,6 +198,15 @@ export interface CheckoutState {
   reference: string
   line: string
   reloadAddresses: () => Promise<void>
+
+  /**
+   * Se lleva la lectura de GPS que ya está en curso desde que se montó el
+   * checkout, si la hay, y libera el hueco para que la siguiente vez arranque
+   * una nueva. Sigue siendo una lectura EN VIVO de esta sesión de checkout
+   * (DECISIONS.md §8) — lo único que cambia es cuándo se pidió, no qué se
+   * captura ni qué decide el servidor. Ver el efecto que la arma más abajo.
+   */
+  takePrefetchedGpsFix: (timeoutMs: number) => Promise<GeoFix>
 }
 
 export function useCheckoutState(): CheckoutState {
@@ -252,6 +262,52 @@ export function useCheckoutState(): CheckoutState {
   useEffect(() => {
     getDeliveryBands().then(setBands)
     getFarZones().then(setFarZones)
+  }, [])
+
+  /**
+   * ADELANTA EL GPS ANTIFRAUDE AL MONTAR EL CHECKOUT, NO AL TOCAR CONFIRMAR.
+   *
+   * Antes `collectGpsValidation` (`use-checkout-actions.ts`) pedía la posición
+   * recién al enviar el pedido: hasta `location_validation.timeoutMs` (15 s en
+   * prod, `0086`/`0087`) de "Verificando tu ubicación…" en el peor momento
+   * posible, justo cuando el cliente ya revisó todo y quiere que se vaya.
+   *
+   * Lo que se guarda y se valida NO cambia: sigue siendo una lectura de GPS en
+   * vivo de ESTA sesión de checkout (DECISIONS.md §8, "GPS en vivo al momento
+   * de pedir") — nunca la dirección guardada ni una posición vieja de otra
+   * pantalla. Lo único que se mueve es CUÁNDO arranca `getCurrentPosition`: en
+   * cuanto se abre el checkout, mientras el cliente todavía elige método de
+   * pago, así que casi siempre ya resolvió para cuando toca Confirmar.
+   *
+   * `.catch(() => {})` es un observador aparte, no un reemplazo: la promesa
+   * real que guarda el ref sigue rechazando para quien la espere de verdad
+   * (`takePrefetchedGpsFix`). Sin este observador, un cliente que abandona el
+   * checkout sin pagar y cuyo GPS falla dejaría un rechazo sin capturar en la
+   * consola — ruido, no un bug funcional.
+   */
+  const gpsPrefetchRef = useRef<Promise<GeoFix> | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    getLocationValidation().then((cfg) => {
+      if (cancelled) return
+      const fix = getCurrentPositionHA(cfg.timeoutMs)
+      fix.catch(() => {})
+      gpsPrefetchRef.current = fix
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  /**
+   * Se lleva lo que haya en curso y vacía el hueco: un segundo intento de pago
+   * (tras un error de otro tipo) pide una lectura nueva, igual que hacía
+   * `getCurrentPositionHA` llamado directo antes de este cambio.
+   */
+  const takePrefetchedGpsFix = useCallback((timeoutMs: number): Promise<GeoFix> => {
+    const fix = gpsPrefetchRef.current
+    gpsPrefetchRef.current = null
+    return fix ?? getCurrentPositionHA(timeoutMs)
   }, [])
 
   // Clave estable de qué hay en la bolsa: `cart.lines` es un array nuevo en
@@ -663,5 +719,6 @@ export function useCheckoutState(): CheckoutState {
     reference,
     line,
     reloadAddresses,
+    takePrefetchedGpsFix,
   }
 }
