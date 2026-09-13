@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { OrderVM } from '@/lib/orders/view-model'
-import { buildComandaHtml } from '../comanda-ticket'
+import { buildComandaHtml, getAvailablePrintModes } from '../comanda-ticket'
 import type { DetailItem } from '../types'
 
 describe('buildComandaHtml', () => {
@@ -201,5 +201,20 @@ describe('buildComandaHtml', () => {
     expect(html).toContain('font-family: Arial')
     expect(html).not.toContain('JetBrains Mono')
     expect(html).not.toContain('Courier New')
+  })
+})
+
+describe('getAvailablePrintModes', () => {
+  it('excluye estrictamente «motorizado» para pedidos para llevar (pickup)', () => {
+    const modes = getAvailablePrintModes('pickup')
+    expect(modes).toEqual(['cocina'])
+    expect(modes).not.toContain('motorizado')
+  })
+
+  it('incluye «cocina» y «motorizado» para pedidos de entrega (delivery)', () => {
+    const modes = getAvailablePrintModes('delivery')
+    expect(modes).toEqual(['cocina', 'motorizado'])
+    expect(modes).toContain('cocina')
+    expect(modes).toContain('motorizado')
   })
 })

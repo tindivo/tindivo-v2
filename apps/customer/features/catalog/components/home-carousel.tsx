@@ -15,8 +15,20 @@ const DEFAULT_BANNERS: HomeBanner[] = [
   {
     id: 'alitas-crispy-al-punto',
     title: '4 Alitas Crispy de Al Punto · envío gratis martes y jueves',
-    imageUrl: '/banners/alitas_crispy_al_punto.png',
+    imageUrl: '/banners/alitas_crispy_al_punto.webp',
     href: '/negocio/al-punto',
+  },
+  {
+    id: 'recojo-feature',
+    title: 'Recojo en tienda · Pide, paga y recoge',
+    imageUrl: '/banners/recojo_feature.webp',
+    href: null,
+  },
+  {
+    id: 'rating-feature',
+    title: 'Tu opinión cuenta · Ahora puedes calificar a los restaurantes',
+    imageUrl: '/banners/rating_feature.webp',
+    href: null,
   },
 ]
 

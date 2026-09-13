@@ -635,8 +635,8 @@
     "semantic_hash": ""
   },
   "apps/customer/app/pedido/[shortId]/page.tsx": {
-    "mtime": 1789087737.2729545,
-    "ast_hash": "4448690129d17df156e8fc6854046a05",
+    "mtime": 1789254681.221898,
+    "ast_hash": "00fc2b9cae885087f4a341637569e1f5",
     "semantic_hash": ""
   },
   "apps/customer/app/pedidos/page.tsx": {
@@ -720,8 +720,8 @@
     "semantic_hash": ""
   },
   "apps/customer/components/map-picker.tsx": {
-    "mtime": 1789087737.2823262,
-    "ast_hash": "ebe10d64eeef74a930e155437e907f29",
+    "mtime": 1789253173.689012,
+    "ast_hash": "bebbbcca6583dadbbe552b9e1e96dfc7",
     "semantic_hash": ""
   },
   "apps/customer/components/push-manager.tsx": {
@@ -745,9 +745,9 @@
     "semantic_hash": ""
   },
   "apps/customer/lib/coverage.ts": {
-    "mtime": 1783714444.7219312,
-    "ast_hash": "b17fb85534497be920d7b318cb888048",
-    "semantic_hash": "b17fb85534497be920d7b318cb888048"
+    "mtime": 1789253145.2269413,
+    "ast_hash": "ab8a747f824f7c1d28e7d2925e31d359",
+    "semantic_hash": ""
   },
   "apps/customer/lib/geolocation.ts": {
     "mtime": 1788452179.6921375,
@@ -815,7 +815,7 @@
     "semantic_hash": ""
   },
   "apps/motorizados/app/pedido/[id]/page.tsx": {
-    "mtime": 1789167999.9449916,
+    "mtime": 1789189272.2075534,
     "ast_hash": "f90d33632cd1636e3fa27dcc30fc7afe",
     "semantic_hash": ""
   },
@@ -1075,7 +1075,7 @@
     "semantic_hash": ""
   },
   "apps/negocios/app/page.tsx": {
-    "mtime": 1789167519.2923174,
+    "mtime": 1789189272.2243783,
     "ast_hash": "072182f38460ea43a375b9fc64261ada",
     "semantic_hash": ""
   },
@@ -1085,13 +1085,13 @@
     "semantic_hash": ""
   },
   "apps/negocios/components/dashboard/chrome.tsx": {
-    "mtime": 1789167510.7460039,
-    "ast_hash": "1db2fff734118849b862224c27be1562",
+    "mtime": 1789189272.2258852,
+    "ast_hash": "ddff046aae56180afbef30c637be12b8",
     "semantic_hash": ""
   },
   "apps/negocios/components/dashboard/pedido-detail.tsx": {
-    "mtime": 1789165208.667621,
-    "ast_hash": "96859cee4561fc737f3693106adf738f",
+    "mtime": 1789255145.948512,
+    "ast_hash": "3ca4f5b2d80e7cc0ab63f5bf5d718d1a",
     "semantic_hash": ""
   },
   "apps/negocios/components/dashboard/pedidos-view.tsx": {
@@ -1140,8 +1140,8 @@
     "semantic_hash": ""
   },
   "apps/negocios/lib/use-audio-alert.ts": {
-    "mtime": 1789168050.7444217,
-    "ast_hash": "676cf1d3c38380ed4a164fa8a279ca96",
+    "mtime": 1789254539.7172472,
+    "ast_hash": "52a8db23e9764746448ad4b19db002c0",
     "semantic_hash": ""
   },
   "apps/negocios/next-env.d.ts": {
@@ -2695,8 +2695,8 @@
     "semantic_hash": ""
   },
   "apps/customer/features/checkout/hooks/use-checkout-actions.ts": {
-    "mtime": 1789087737.3074973,
-    "ast_hash": "a2a49697ba7fcd4fbc984b77961d4731",
+    "mtime": 1789253529.4650664,
+    "ast_hash": "b8eecffbf8fd059f0b41d4d6b21e9143",
     "semantic_hash": ""
   },
   "apps/customer/features/checkout/hooks/use-checkout-auth.ts": {
@@ -2705,8 +2705,8 @@
     "semantic_hash": ""
   },
   "apps/customer/features/checkout/hooks/use-checkout-state.ts": {
-    "mtime": 1789089392.77567,
-    "ast_hash": "be6e31b9876851a685bee55d4d55a408",
+    "mtime": 1789253511.776361,
+    "ast_hash": "664229e945cbff46b26038da7f205e4b",
     "semantic_hash": ""
   },
   "apps/customer/features/checkout/hooks/use-checkout-validation.ts": {
@@ -2770,8 +2770,8 @@
     "semantic_hash": ""
   },
   "apps/customer/features/tracking/components/tracking-actions.tsx": {
-    "mtime": 1789165208.6591864,
-    "ast_hash": "5682340ad00f29771b48c9a057b2dcbd",
+    "mtime": 1789254677.0068483,
+    "ast_hash": "862b31f92375d94b9ef6a0ccb831dd2b",
     "semantic_hash": ""
   },
   "apps/customer/features/tracking/components/tracking-appeal-view.tsx": {
@@ -3800,7 +3800,7 @@
     "semantic_hash": ""
   },
   "apps/negocios/features/nuevo/hooks/use-create-order.ts": {
-    "mtime": 1789167027.9501424,
+    "mtime": 1789189272.2302437,
     "ast_hash": "9d4ab9205b41492f12496cacb3c01130",
     "semantic_hash": ""
   },
@@ -3825,7 +3825,7 @@
     "semantic_hash": ""
   },
   "apps/negocios/features/pedidos/hooks/use-order-actions.ts": {
-    "mtime": 1789167064.431576,
+    "mtime": 1789189272.232644,
     "ast_hash": "db3c901da02d97d9a27b317360ee88a3",
     "semantic_hash": ""
   },
@@ -3880,8 +3880,8 @@
     "semantic_hash": ""
   },
   "apps/negocios/components/dashboard/pedido-detail/modals.tsx": {
-    "mtime": 1789165208.6701674,
-    "ast_hash": "01ea4ff80b6e035ead90ba3e12a5e0b1",
+    "mtime": 1789254974.7837622,
+    "ast_hash": "f6161fd4f400f369c68cb9fdb9894ec1",
     "semantic_hash": ""
   },
   "apps/negocios/components/dashboard/pedido-detail/pay-sections.tsx": {
@@ -4705,8 +4705,8 @@
     "semantic_hash": ""
   },
   "apps/customer/lib/delivery-fee.ts": {
-    "mtime": 1786748731.6616533,
-    "ast_hash": "17aebb70e7bad65ab019a8e66af2ec08",
+    "mtime": 1789253153.7794402,
+    "ast_hash": "a7c41497a0f9e0769893239a2e0cc0f7",
     "semantic_hash": ""
   },
   "supabase/migrations/0161_the_town_has_a_far_side_and_someone_has_to_draw_it.sql": {
@@ -4730,8 +4730,8 @@
     "semantic_hash": ""
   },
   "apps/customer/features/catalog/components/home-carousel.tsx": {
-    "mtime": 1789089392.7700691,
-    "ast_hash": "c6f1598d60027d9d5135e878475c951d",
+    "mtime": 1789257052.8252091,
+    "ast_hash": "eac499f7bddd645ae6edc195d04b6d17",
     "semantic_hash": ""
   },
   "supabase/migrations/0163_manual_orders_allowed_when_inactive.sql": {
@@ -4800,8 +4800,8 @@
     "semantic_hash": ""
   },
   "apps/customer/features/catalog/components/home-shell.tsx": {
-    "mtime": 1789165208.657615,
-    "ast_hash": "50e3f4d9b30cb4d38fc894dbe1c0d601",
+    "mtime": 1789254145.4193575,
+    "ast_hash": "2b240e6c7d3b3f72e15e1f3e21053abc",
     "semantic_hash": ""
   },
   "supabase/migrations/0164_drop_pilot_whitelist.sql": {
@@ -5285,12 +5285,12 @@
     "semantic_hash": ""
   },
   "apps/negocios/lib/orders/__tests__/attention.test.ts": {
-    "mtime": 1789167545.8092237,
+    "mtime": 1789189272.24044,
     "ast_hash": "d87c8d2c86f09265278c098e9c078a50",
     "semantic_hash": ""
   },
   "apps/negocios/lib/orders/attention.ts": {
-    "mtime": 1789167394.730234,
+    "mtime": 1789189272.2431004,
     "ast_hash": "8e58a38d6e4ead42c7d73f7621e43634",
     "semantic_hash": ""
   },
@@ -5605,7 +5605,7 @@
     "semantic_hash": ""
   },
   "apps/motorizados/components/home/swipe-to-take.tsx": {
-    "mtime": 1789167857.6743171,
+    "mtime": 1789189272.210385,
     "ast_hash": "c4b1fc0b02fd5bd53eaff841dc6d9b92",
     "semantic_hash": ""
   },
@@ -5815,8 +5815,8 @@
     "semantic_hash": ""
   },
   "apps/customer/public/banners/envio_gratis.png": {
-    "mtime": 1788480731.5007052,
-    "ast_hash": "e73b89b66c4c55d7c2cc64c11be83d03",
+    "mtime": 1789256964.085,
+    "ast_hash": "3904cd5b22029ac4a6150393ad6badcb",
     "semantic_hash": ""
   },
   "apps/admin/app/negocios/[id]/page.tsx": {
@@ -6310,8 +6310,8 @@
     "semantic_hash": ""
   },
   "apps/customer/features/reviews/components/review-card.tsx": {
-    "mtime": 1789165208.6591864,
-    "ast_hash": "6ee0a1db89d23c3151eb219e21b58b0e",
+    "mtime": 1789254118.8020236,
+    "ast_hash": "9d104608f2c9f7bfc8e4978e777b2823",
     "semantic_hash": ""
   },
   "apps/customer/features/reviews/components/review-prompt-button.tsx": {
@@ -6355,8 +6355,8 @@
     "semantic_hash": ""
   },
   "apps/customer/features/tracking/hooks/use-push-offer.ts": {
-    "mtime": 1788736052.943205,
-    "ast_hash": "f2bf507718edbcec48c339863329f4b2",
+    "mtime": 1789254648.5111852,
+    "ast_hash": "8f68620f6ce4b94680a49297383ccbce",
     "semantic_hash": ""
   },
   "apps/customer/features/tracking/hooks/use-wake-lock.ts": {
@@ -6405,8 +6405,8 @@
     "semantic_hash": ""
   },
   "apps/negocios/components/dashboard/pedido-detail/comanda-ticket.ts": {
-    "mtime": 1789165208.6691294,
-    "ast_hash": "4d88961f1392b41af064eae508b9e492",
+    "mtime": 1789255043.52331,
+    "ast_hash": "9cf66c85e2fc08ca71c7209681bb5e86",
     "semantic_hash": ""
   },
   "apps/negocios/components/filter-chips.tsx": {
@@ -6415,8 +6415,8 @@
     "semantic_hash": ""
   },
   "apps/negocios/components/sound-check.tsx": {
-    "mtime": 1789167533.724324,
-    "ast_hash": "d7a12449d368a7ebb3f0301f2b93456e",
+    "mtime": 1789189272.2288022,
+    "ast_hash": "d9a517e9a85282700827dbd05ea7351e",
     "semantic_hash": ""
   },
   "apps/negocios/features/configuracion/components/avisos-section.tsx": {
@@ -6720,8 +6720,8 @@
     "semantic_hash": ""
   },
   "apps/negocios/components/dashboard/pedido-detail/__tests__/comanda-ticket.test.ts": {
-    "mtime": 1789165208.6691294,
-    "ast_hash": "710352cef9b6c485c6abe9dea5c52b73",
+    "mtime": 1789255069.95137,
+    "ast_hash": "f477b4b87445570256d29d7f428a3b99",
     "semantic_hash": ""
   },
   "apps/negocios/features/configuracion/lib/__tests__/avisos-equipos.test.ts": {
@@ -6800,8 +6800,8 @@
     "semantic_hash": ""
   },
   "apps/customer/features/reviews/components/post-delivery-exit-link.tsx": {
-    "mtime": 1789165208.658129,
-    "ast_hash": "75a26b212198d6426d2b5217f64700ec",
+    "mtime": 1789256224.5876403,
+    "ast_hash": "c9b15e7c0e68e72ff5bc2a4b5a22f94e",
     "semantic_hash": ""
   },
   "apps/negocios/components/dashboard/payment-change-alert.tsx": {
@@ -6835,17 +6835,17 @@
     "semantic_hash": ""
   },
   "apps/customer/public/banners/alitas_crispy_al_punto.png": {
-    "mtime": 1789089392.8212,
-    "ast_hash": "aea2ebb01829403a8e5fbca7d0b50232",
+    "mtime": 1789256952.508,
+    "ast_hash": "ecd07b173bead521c5feca61f6e79caf",
     "semantic_hash": ""
   },
   "apps/negocios/lib/__tests__/sound.test.ts": {
-    "mtime": 1789167941.1725156,
+    "mtime": 1789189272.234166,
     "ast_hash": "ee4223ceeaa95a278e2b2de03020d573",
     "semantic_hash": ""
   },
   "apps/negocios/lib/sound.ts": {
-    "mtime": 1789166997.9268105,
+    "mtime": 1789189272.2468746,
     "ast_hash": "3c14b9c08525dcbc58c60971835f8dd4",
     "semantic_hash": ""
   },
@@ -6855,53 +6855,98 @@
     "semantic_hash": ""
   },
   "apps/motorizados/public/sounds/notication-tindivo-1.mp3": {
-    "mtime": 1788981677.2104802,
+    "mtime": 1789189272.2200382,
     "ast_hash": "7c21a559e1ba1f5f69ec5c5b5b6e7d42",
     "semantic_hash": ""
   },
   "apps/motorizados/public/sounds/notication-tindivo-4.mp3": {
-    "mtime": 1788982116.761235,
+    "mtime": 1789189272.2212958,
     "ast_hash": "1d34d3fe346f8b5fe00fe1961408b950",
     "semantic_hash": ""
   },
   "apps/negocios/public/sound/notication-tindivo-2.mp3": {
-    "mtime": 1788981699.9194422,
+    "mtime": 1789189272.2656221,
     "ast_hash": "fa81158f918629f36ca70c203171329e",
     "semantic_hash": ""
   },
   "apps/negocios/public/sound/notication-tindivo-levelup.mp3": {
-    "mtime": 1788982578.5313475,
+    "mtime": 1789189272.2796855,
     "ast_hash": "7a3389aa036b9739d6a74dcba348c76e",
     "semantic_hash": ""
   },
   "apps/negocios/public/sounds/notication-tindivo-levelup.mp3": {
-    "mtime": 1788982578.5313475,
+    "mtime": 1789189272.2902706,
     "ast_hash": "7a3389aa036b9739d6a74dcba348c76e",
     "semantic_hash": ""
   },
   "apps/motorizados/lib/__tests__/sound.test.ts": {
-    "mtime": 1789167987.0384645,
+    "mtime": 1789189272.2126915,
     "ast_hash": "0fef5cf954d4531e7136d679fd67302e",
     "semantic_hash": ""
   },
   "apps/motorizados/lib/sound.ts": {
-    "mtime": 1789167987.0374637,
+    "mtime": 1789189272.2148206,
     "ast_hash": "7e76ad415befd28b6aee19c3481d0d66",
     "semantic_hash": ""
   },
   "apps/motorizados/public/sound/notication-tindivo-1.mp3": {
-    "mtime": 1788981677.2104802,
+    "mtime": 1789189272.216917,
     "ast_hash": "7c21a559e1ba1f5f69ec5c5b5b6e7d42",
     "semantic_hash": ""
   },
   "apps/motorizados/public/sound/notication-tindivo-4.mp3": {
-    "mtime": 1788982116.761235,
+    "mtime": 1789189272.218484,
     "ast_hash": "1d34d3fe346f8b5fe00fe1961408b950",
     "semantic_hash": ""
   },
   "apps/negocios/public/sounds/notication-tindivo-5.mp3": {
-    "mtime": 1788982343.457068,
+    "mtime": 1789189272.2877145,
     "ast_hash": "46aad78e4fe0f9b76776b0e966afe360",
+    "semantic_hash": ""
+  },
+  "apps/customer/lib/app-settings.ts": {
+    "mtime": 1789253122.2228632,
+    "ast_hash": "e6c68ed434d967b8635f2a6866611863",
+    "semantic_hash": ""
+  },
+  "apps/negocios/components/dashboard/pedido-detail/print-dropdown.tsx": {
+    "mtime": 1789255052.5904248,
+    "ast_hash": "e4c4f2183ae7666cc54e7719300361e4",
+    "semantic_hash": ""
+  },
+  "scripts/compress-banners.mjs": {
+    "mtime": 1789256914.4984505,
+    "ast_hash": "5b6817063f9329984083c1ca52123906",
+    "semantic_hash": ""
+  },
+  "apps/customer/public/banners/alitas_crispy_al_punto.webp": {
+    "mtime": 1789256947.261,
+    "ast_hash": "4101c2726dd64c877765241ae0f6206a",
+    "semantic_hash": ""
+  },
+  "apps/customer/public/banners/envio_gratis.webp": {
+    "mtime": 1789256959.509,
+    "ast_hash": "273df0130852e13afba32db9ff0d7456",
+    "semantic_hash": ""
+  },
+  "apps/customer/public/banners/rating_feature.png": {
+    "mtime": 1789256970.994,
+    "ast_hash": "95911d819e40f220082bd83ee2d2ae73",
+    "semantic_hash": ""
+  },
+  "apps/customer/public/banners/rating_feature.webp": {
+    "mtime": 1789256967.333,
+    "ast_hash": "817121fa8491ad763269620e9aee9bf0",
+    "semantic_hash": ""
+  },
+  "apps/customer/public/banners/recojo_feature.png": {
+    "mtime": 1789256979.214,
+    "ast_hash": "e0b9be0b18c2686cb7313cbcc63a92ec",
+    "semantic_hash": ""
+  },
+  "apps/customer/public/banners/recojo_feature.webp": {
+    "mtime": 1789256974.264,
+    "ast_hash": "1647e8f47de57ae2bcf78815b3e0afbb",
     "semantic_hash": ""
   }
 }

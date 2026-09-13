@@ -140,8 +140,7 @@ export function playNewOrderChime(): void {
 
 /**
  * EL TIMBRE DE «SE ENTREGÓ», tipo 5. Suena UNA vez por pedido que pasa a
- * `delivered`, seguido de la voz «Pedido entregado» — ver
- * `useOrderDeliveredAlerts`.
+ * `delivered` — ver `useOrderDeliveredAlerts`.
  */
 export function playOrderDeliveredChime(): void {
   playChime('/sounds/notication-tindivo-5.mp3')
@@ -602,9 +601,9 @@ export function usePaymentChangeAlerts(
 }
 
 /**
- * Tipo 5 — el pedido se entregó: timbre (`notication-tindivo-5`) + voz «Pedido
- * entregado», una vez por pedido que pasa a `delivered`. Mismo patrón por ids
- * que la llegada y el cambio de pago (`newArrivals` / diff contra lo visto).
+ * Tipo 5 — el pedido se entregó: timbre (`notication-tindivo-5`) sin voz,
+ * una vez por pedido que pasa a `delivered`. Mismo patrón por ids que la
+ * llegada y el cambio de pago (`newArrivals` / diff contra lo visto).
  *
  * LA PRIMERA CARGA SOLO FIJA LA BASE, mismo motivo que `usePaymentChangeAlerts`
  * y no el de `waitingIds`: `delivered` es TERMINAL (invariante 8 de
@@ -613,7 +612,7 @@ export function usePaymentChangeAlerts(
  * nuevo cada entrega de la noche.
  *
  * ES SOLO SONIDO, sin banner: no reclama nada de la cajera —lo contrario de
- * `attentionState`—, así que respeta `soundOn` entero (timbre y voz), sin la
+ * `attentionState`—, así que respeta `soundOn` (timbre), sin la
  * excepción visual que sí tiene el cambio de pago.
  */
 export function useOrderDeliveredAlerts(deliveredIds: readonly string[], soundOn: boolean): void {
@@ -631,7 +630,6 @@ export function useOrderDeliveredAlerts(deliveredIds: readonly string[], soundOn
       seen.add(id)
       if (!soundOn) continue
       playOrderDeliveredChime()
-      speak('Pedido entregado', 500)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `deliveredIds` se lee del cierre; `idsKey` ya representa su identidad relevante.
   }, [idsKey, soundOn])
