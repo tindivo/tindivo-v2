@@ -3,6 +3,17 @@ import type { DetailItem } from './types'
 
 export type ComandaMode = 'cocina' | 'motorizado'
 
+/**
+ * Determina los modos de impresión de comanda disponibles según el método del pedido.
+ * Si es para llevar (`method === 'pickup'`), 'motorizado' queda estrictamente excluido.
+ */
+export function getAvailablePrintModes(method: 'delivery' | 'pickup'): ComandaMode[] {
+  if (method === 'pickup') {
+    return ['cocina']
+  }
+  return ['cocina', 'motorizado']
+}
+
 function fmtMoney(amount: number): string {
   return `S/ ${amount.toFixed(2)}`
 }

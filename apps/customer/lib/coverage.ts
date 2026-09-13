@@ -1,6 +1,6 @@
 'use client'
 
-import { getSupabaseBrowser } from '@/lib/supabase/client'
+import { getAppSettingsBatch } from '@/lib/app-settings'
 
 export interface Coverage {
   centerLat: number
@@ -34,12 +34,8 @@ let cachedLocation: Promise<LocationValidation> | null = null
 
 async function fetchCoverage(): Promise<Coverage> {
   try {
-    const { data } = await getSupabaseBrowser()
-      .from('app_settings')
-      .select('value')
-      .eq('key', 'coverage')
-      .maybeSingle()
-    const v = data?.value as Partial<Coverage> | null
+    const batch = await getAppSettingsBatch()
+    const v = batch.coverage as Partial<Coverage> | undefined
     if (
       v &&
       typeof v.centerLat === 'number' &&
@@ -62,12 +58,8 @@ export function getCoverage(): Promise<Coverage> {
 
 async function fetchLocationValidation(): Promise<LocationValidation> {
   try {
-    const { data } = await getSupabaseBrowser()
-      .from('app_settings')
-      .select('value')
-      .eq('key', 'location_validation')
-      .maybeSingle()
-    const v = data?.value as Partial<LocationValidation> | null
+    const batch = await getAppSettingsBatch()
+    const v = batch.location_validation as Partial<LocationValidation> | undefined
     if (
       v &&
       typeof v.centerLat === 'number' &&
@@ -131,12 +123,8 @@ function isLatLng(p: unknown): p is LatLng {
 
 async function fetchCoveragePolygon(): Promise<CoveragePolygon | null> {
   try {
-    const { data } = await getSupabaseBrowser()
-      .from('app_settings')
-      .select('value')
-      .eq('key', 'coverage_polygon')
-      .maybeSingle()
-    const raw = (data?.value as { polygon?: unknown } | null)?.polygon
+    const batch = await getAppSettingsBatch()
+    const raw = (batch.coverage_polygon as { polygon?: unknown } | undefined)?.polygon
     if (!Array.isArray(raw)) return null
     const ring = raw.filter(isLatLng).map((p) => ({ lat: p.lat, lng: p.lng }))
     // Un polígono válido necesita al menos 3 vértices.

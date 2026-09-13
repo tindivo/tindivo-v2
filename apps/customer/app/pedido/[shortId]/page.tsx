@@ -4,8 +4,6 @@ import { type OrderStatus, toTrackingStep } from '@tindivo/contracts'
 import { useRouter } from 'next/navigation'
 import { use } from 'react'
 import { PushPermissionSheet } from '@/components/push-permission-sheet'
-import { ReviewCard } from '@/features/reviews/components/review-card'
-import { usePendingReview } from '@/features/reviews/hooks/use-pending-review'
 import { CancelledView } from '@/features/tracking/components/cancelled-view'
 import { PrepayRail } from '@/features/tracking/components/prepay-rail'
 import { TrackingActions } from '@/features/tracking/components/tracking-actions'
@@ -63,15 +61,6 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
   const enEspera = Boolean(data) && data?.status !== 'delivered' && data?.status !== 'cancelled'
   const canalAviso = useAlertChannel()
   const pantallaEncendida = useWakeLock(enEspera)
-  /**
-   * La pregunta por el pedido ANTERIOR, que solo cabe aquí.
-   *
-   * Se consulta con el pedido vivo porque la espera es el único rato en que el
-   * cliente mira la pantalla sin tener nada que hacer. En `delivered` no: ahí
-   * cierra la app y se va a comer, que es justo el motivo de que preguntar al
-   * entregar no funcione.
-   */
-  const resena = usePendingReview(enEspera)
 
   const current = data ? toTrackingStep(data.status as OrderStatus) : null
   // Un solo sitio elige las palabras de los cuatro pasos, y de ahi salen tanto
@@ -181,16 +170,6 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
                   onProofUploaded={load}
                 />
 
-                {/* Y solo cuando NO hay nada que hacer, la pregunta por el
-                    pedido anterior. Va después de la zona de acción y no antes
-                    porque compite con ella: con el plazo de cancelar corriendo
-                    o un prepago sin resolver, la atención ya tiene dueño. Y
-                    espera a que se cierre la hoja del permiso de avisos —dos
-                    peticiones seguidas se descartan las dos—. */}
-                {enEspera && !cancellable && !etapaPrepago && !ofertaPush.abierta && (
-                  <ReviewCard estado={resena} />
-                )}
-
                 {/* 3 · Referencia
                     Los dos rieles NUNCA coinciden en pantalla, y no es por
                     estética: mientras el prepago está sin resolver, este de
@@ -216,7 +195,12 @@ export default function TrackingPage({ params }: { params: Promise<{ shortId: st
                 como llegar a la puerta, no de lo que se pidio. */}
             <TrackingNote note={ownNote} entregado={data.status === 'delivered'} />
             <TrackingItems data={data} />
-            <TrackingActions data={data} current={current} cancellable={cancellable} />
+            <TrackingActions
+              data={data}
+              current={current}
+              cancellable={cancellable}
+              holdReviewPopup={ofertaPush.abierta}
+            />
           </div>
         </div>
       )}

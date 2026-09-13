@@ -61,5 +61,20 @@ export function usePushOffer(data: Tracking | null, ownedId: string | null): Pus
     // permiso del navegador), así que no puede reabrirse sola.
   }, [ownedId, shortId, vivo])
 
+  /**
+   * SE CIERRA SOLA SI EL PEDIDO DEJA DE ESTAR VIVO MIENTRAS ESPERA RESPUESTA.
+   *
+   * El efecto de arriba no vuelve a programar el `setTimeout` cuando `vivo`
+   * pasa a `false` — pero si la hoja YA estaba abierta y sin contestar en ese
+   * instante (el motorizado marca entrega mientras el cliente la mira sin
+   * tocar nada), nada la cerraba: se quedaba prometiendo avisos de un pedido
+   * que ya terminó. Sin esto, una entrega mientras la hoja está abierta la
+   * dejaba encima del popup de reseña que ahora se abre solo al entregar
+   * (`PostDeliveryExitLink`) — dos hojas modales a la vez.
+   */
+  useEffect(() => {
+    if (!vivo) setAbierta(false)
+  }, [vivo])
+
   return { abierta, cerrar: useCallback(() => setAbierta(false), []) }
 }

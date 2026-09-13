@@ -6,7 +6,6 @@ import { Button, cn, Icon } from '@tindivo/ui'
 import { useEffect, useState } from 'react'
 import { formatReadyDelta, type OrderVM } from '@/lib/orders/view-model'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
-import { printComanda } from './pedido-detail/comanda-ticket'
 import { CANCEL_REASONS, REJECT_REASONS_BASE, REJECT_REASONS_TAIL } from './pedido-detail/constants'
 import { DetailRow } from './pedido-detail/detail-row'
 import { EditarPedidoModal } from './pedido-detail/editar-modal'
@@ -17,6 +16,7 @@ import {
   ReasonModal,
 } from './pedido-detail/modals'
 import { PaySectionCash, PaySectionMixed, PaySectionWallet } from './pedido-detail/pay-sections'
+import { PrintComandaDropdown } from './pedido-detail/print-dropdown'
 import type { DetailItem, RejectReason } from './pedido-detail/types'
 import { mmss, PayBadgeMini, SourceBadgeMini, soles } from './primitives'
 
@@ -646,24 +646,7 @@ export function DetailScreen({
                 </span>
               </div>
               <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => printComanda({ order, items, bizName, mode: 'cocina' })}
-                  title="Imprimir comanda para cocina (solo preparación y cliente)"
-                  className="inline-flex items-center gap-1 rounded-lg border border-border/70 bg-white px-2 py-1 text-[11px] font-bold text-ink shadow-xs transition-colors hover:bg-surface active:scale-95"
-                >
-                  <Icon weight={500} name="restaurant" size={13} className="text-brand" />
-                  <span>Cocina</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => printComanda({ order, items, bizName, mode: 'motorizado' })}
-                  title="Imprimir comanda para motorizado (despacho, dirección y cobro)"
-                  className="inline-flex items-center gap-1 rounded-lg border border-border/70 bg-white px-2 py-1 text-[11px] font-bold text-ink shadow-xs transition-colors hover:bg-surface active:scale-95"
-                >
-                  <Icon weight={500} name="two_wheeler" size={13} className="text-brand" />
-                  <span>Motorizado</span>
-                </button>
+                <PrintComandaDropdown order={order} items={items} bizName={bizName} />
                 <button
                   type="button"
                   onClick={() => setShowComandaModal(true)}

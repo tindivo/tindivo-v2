@@ -78,13 +78,12 @@ export function HomeShell({ initialBusinesses, initialUser, initialQuery }: Home
       </div>
 
       {user.signedIn && activeOrders.length > 0 && <ActiveOrderBanner orders={activeOrders} />}
-      {/* Y si no hay nada en curso, el recordatorio de calificar lo último que
-          llegó. Nunca junto al banner de arriba: un pedido en camino ya tiene
-          la atención del cliente, y esto es lo de ayer. */}
+      {/* Y si no hay nada en curso, el popup de calificar lo último que llegó
+          (para quien no contestó al entregar). Nunca junto al banner de
+          arriba: un pedido en camino ya tiene la atención del cliente, y esto
+          es lo de ayer. */}
       {user.signedIn && activeOrdersLoaded && activeOrders.length === 0 && resena.pendiente && (
-        <div className="px-4 pb-4">
-          <ReviewCard estado={resena} />
-        </div>
+        <ReviewCard estado={resena} />
       )}
 
       <SearchBar query={search.query} onChange={search.setQuery} />

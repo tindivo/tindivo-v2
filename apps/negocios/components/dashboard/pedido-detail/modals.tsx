@@ -678,14 +678,16 @@ export function ComandaModal({
               <Icon weight={500} name="restaurant" size={15} className="text-brand" />
               <span>Imprimir Cocina</span>
             </button>
-            <button
-              type="button"
-              onClick={() => printComanda({ order, items, bizName, mode: 'motorizado' })}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-ink px-4 py-2 text-[12px] font-bold text-white shadow-xs transition-transform hover:bg-ink/90 active:scale-[0.98]"
-            >
-              <Icon weight={500} name="two_wheeler" size={15} className="text-white" />
-              <span>Imprimir Motorizado</span>
-            </button>
+            {order.method !== 'pickup' && (
+              <button
+                type="button"
+                onClick={() => printComanda({ order, items, bizName, mode: 'motorizado' })}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-ink px-4 py-2 text-[12px] font-bold text-white shadow-xs transition-transform hover:bg-ink/90 active:scale-[0.98]"
+              >
+                <Icon weight={500} name="two_wheeler" size={15} className="text-white" />
+                <span>Imprimir Motorizado</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
