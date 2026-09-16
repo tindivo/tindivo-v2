@@ -13,9 +13,15 @@ export interface HomeBanner {
 
 const DEFAULT_BANNERS: HomeBanner[] = [
   {
-    id: 'alitas-crispy-al-punto',
-    title: '4 Alitas Crispy de Al Punto · envío gratis martes y jueves',
-    imageUrl: '/banners/alitas_crispy_al_punto.webp',
+    id: 'promo-6-alitas-al-punto',
+    title: '6 Alitas Crispy · Al Punto',
+    imageUrl: '/banners/6_alitas_promo.webp',
+    href: '/negocio/al-punto',
+  },
+  {
+    id: 'promo-combo-familiar-al-punto',
+    title: 'Combo Familiar · Al Punto',
+    imageUrl: '/banners/familiar_promo.webp',
     href: '/negocio/al-punto',
   },
   {

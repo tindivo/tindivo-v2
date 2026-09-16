@@ -1413,6 +1413,7 @@ export type Database = {
           description: string | null
           display_order: number
           free_delivery_days: number[] | null
+          free_delivery_until: string | null
           id: string
           image_hue: number | null
           image_url: string | null
@@ -1434,6 +1435,7 @@ export type Database = {
           description?: string | null
           display_order?: number
           free_delivery_days?: number[] | null
+          free_delivery_until?: string | null
           id?: string
           image_hue?: number | null
           image_url?: string | null
@@ -1455,6 +1457,7 @@ export type Database = {
           description?: string | null
           display_order?: number
           free_delivery_days?: number[] | null
+          free_delivery_until?: string | null
           id?: string
           image_hue?: number | null
           image_url?: string | null
@@ -3030,6 +3033,10 @@ export type Database = {
       }
       menu_item_free_delivery_day: {
         Args: { p_at?: string; p_free_delivery_days: number[] }
+        Returns: boolean
+      }
+      menu_item_free_delivery_until: {
+        Args: { p_at?: string; p_free_delivery_until: string }
         Returns: boolean
       }
       menu_item_in_window: {
