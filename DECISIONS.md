@@ -1085,3 +1085,60 @@ moderación, derecho de réplica y política escrita antes del primer caso.
 
 > Las consultas SQL que miden las cuatro condiciones —verificadas contra prod—
 > y todo el detalle están en **`Docs/spec/spec_resenas.md`**.
+
+
+## 29. El motorizado avanza el pedido arrastrando, y la cola se entera al instante (2026-09-19)
+
+**Contexto**: de noche, con casco y una mano, cada toque de más en los cuatro
+pasos del viaje es fricción, y cada «ok» costaba dos esperas encadenadas (el POST
+y luego un GET) en la señal del pueblo. Además, un pedido tomado por otro
+motorizado seguía visible en Disponibles hasta 15 s.
+
+### Decisiones
+
+- **El gesto de arrastrar es el atajo de todos los pasos**, no solo de «Tomar»
+  (`SwipeCard`). A la derecha avanza: «Llegué al local» → «Ya recogí» → «Llegué a
+  la puerta» → «Cobrar». A la izquierda **suelta** (solo antes de recoger: con la
+  comida recogida `advance_order` lo rechaza). La ficha y su barra de abajo siguen
+  siendo el camino accesible; un arrastre nunca es el único camino.
+- **Lo irreversible no se cierra de un roce.** «Cobrar» y «Soltar» abren la hoja
+  correspondiente (`delivered` es terminal, invariante 8; soltar exige motivo). No
+  cierran por sí mismos.
+- **Se pinta antes de preguntar** para lo que solo puede hacer el dueño del pedido
+  (`arrived`, `pickup`, `arrived_customer`): parche local + POST detrás, y si el
+  servidor rechaza, se deshace. **`take` compite y sigue confirmando primero;
+  `deliver` es dinero y tampoco es optimista.**
+- **Se quitó «¿El pedido ya está listo?»** y la hoja «Confirmar recogida» ya no se
+  abre en cada recogida. `advance_order` no condiciona `pickup` a que esté listo:
+  era una pregunta de cortesía. Solo se para cuando la recogida es **prematura**
+  (la hora estimada no llegó **y** la cocina no marcó listo): es el único caso en
+  que uno puede llevarse un pedido ajeno. `ready_early_used` gana sobre la hora,
+  porque «listo» recorta `estimated_ready_at` a unos minutos por delante, no a cero.
+- **El GPS de «llegué a la puerta» no bloquea:** acepta un fix de hasta 30 s y se
+  rinde a los 2 s (antes esperaba hasta 5 s con `maximumAge: 0`). Sin fix, la
+  llegada se registra igual con coordenadas nulas.
+- **Gesto entre pestañas** (En espera · Míos · Equipo) arrastrando **fuera de las
+  tarjetas**: las tarjetas ya usan el arrastre para actuar sobre el pedido, y si
+  además cambiaran de pestaña, rozar una te sacaría de la bandeja. No arranca en
+  el borde izquierdo (24 px), que en iOS es el «atrás» del sistema.
+
+### La 0231: Broadcast, porque `postgres_changes` no avisa de lo que dejas de ver
+
+`ord_driver_read` solo deja ver los pedidos sin dueño, así que cuando otro se
+lleva uno la fila **deja de ser visible** para el resto y Realtime no manda nada
+(no puede evaluar la policy contra el registro nuevo). Un trigger anuncia el
+flanco «salió de la cola» por Broadcast en el tema privado `drivers:board`
+(`realtime.send`), con solo el id del pedido y el del motorizado que se lo llevó.
+La policy de `realtime.messages` limita el tema a usuarios con rol `driver`.
+`realtime.send` va envuelto: **un fallo del aviso nunca rompe la transición.**
+Medido en la app real: la tarjeta desaparece a los **0,24 s**, contra **17,7 s**
+con el trigger apagado. Si el canal no engancha, el poll de 15 s sigue cubriendo.
+
+### Deuda que queda
+
+- Las hojas de cobro y de soltar se abren **en la ficha** (`/pedido/[id]?a=…`),
+  no dentro de «Míos»: reutilizan la lógica de captura de dirección y de cobro sin
+  duplicarla. Llevarlas a «Míos» exige un detalle del pedido a demanda.
+- Desde el gesto **no salen** los avisos de WhatsApp («¿avisar que vas en
+  camino?»), que siguen solo en la ficha.
+- `Docs/10-flujo-motorizados.md` aún dibuja «Confirmar recogida» en cada recogida.
