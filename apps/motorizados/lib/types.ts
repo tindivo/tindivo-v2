@@ -153,6 +153,8 @@ export interface CardOrder {
   picked_up_at: string | null
   /** Llegada a la puerta del cliente. Solo lo necesita el gesto de «Míos». */
   arrived_at_customer_at?: string | null
+  /** Solo para el chip de WhatsApp de «Míos». De un pedido ajeno no viaja. */
+  customer_phone?: string | null
   delivered_at: string | null
   /**
    * Cómo se cobró DE VERDAD (`orders.payment_real`), una vez entregado.

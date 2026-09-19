@@ -12,6 +12,8 @@ import {
   type StateTone,
   type Tone,
 } from '@/lib/orders/card-view-model'
+import { minePhase } from '@/lib/orders/phase'
+import { whatsappChip } from '@/lib/orders/whatsapp-chip'
 import type { CardOrder, TeamResponse } from '@/lib/types'
 
 type IncomingRequest = TeamResponse['receivedRequests'][number]
@@ -155,6 +157,18 @@ export function OrderCard({
     blockedReason,
   })
   const accent = `#${order.business?.accent_color ?? 'f97316'}`
+  // El aviso al cliente, a un toque y sin ventana: ver `whatsappChip`.
+  const chip =
+    variant === 'mine'
+      ? whatsappChip(
+          {
+            customer_phone: order.customer_phone,
+            customer_name: order.customer_name,
+            business: order.business,
+          },
+          minePhase(order),
+        )
+      : null
 
   return (
     <Card
@@ -342,14 +356,30 @@ export function OrderCard({
                 ocupan más de lo que dice su talla, así que a 22px el importe
                 pesa como el nombre a 17px sin llegar a destronarlo — y el nombre
                 sigue siendo la identidad de la tarjeta. */}
-            <p
-              className={cn(
-                'font-mono text-title font-bold leading-none tracking-tight tabular-nums',
-                vm.money.tone === 'success' ? 'text-success' : 'text-ink',
+            <div className="flex items-center justify-between gap-2">
+              <p
+                className={cn(
+                  'font-mono text-title font-bold leading-none tracking-tight tabular-nums',
+                  vm.money.tone === 'success' ? 'text-success' : 'text-ink',
+                )}
+              >
+                {vm.money.headline}
+              </p>
+              {/* EL AVISO AL CLIENTE, sin ventana. `z-20` porque el botón que
+                  cubre la tarjeta (`z-10`) se comería el toque; es un enlace y
+                  no un botón para que abra WhatsApp sin pasar por la ficha. */}
+              {chip && (
+                <a
+                  href={chip.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="relative z-20 flex shrink-0 items-center gap-1.5 rounded-full bg-[#25D366] px-3 py-1.5 text-meta font-bold text-white shadow-sm active:scale-95"
+                >
+                  <Icon name="chat" size={15} filled />
+                  {chip.label}
+                </a>
               )}
-            >
-              {vm.money.headline}
-            </p>
+            </div>
             {/* `ink-muted` y NO `ink-subtle`: aquí vive el vuelto, y
                 `--color-ink-subtle` da 2,5:1 sobre blanco — por debajo del
                 mínimo legible, en la calle y con casco. */}
