@@ -1,6 +1,7 @@
 'use client'
 
 import { holdOrderPatch, releaseOrderPatch } from '@/hooks/use-driver-orders'
+import { invalidateOrderDetail } from '@/lib/orders/detail-cache'
 import { postTransition } from '@/lib/transitions'
 import type { BoardOrder } from '@/lib/types'
 
@@ -30,6 +31,7 @@ export async function advanceOrder(
   try {
     const resolved = typeof params === 'function' ? await params() : params
     const result = await postTransition(orderId, action, resolved)
+    invalidateOrderDetail(orderId)
     await releaseOrderPatch(orderId, result === 'ok')
   } catch (err) {
     await releaseOrderPatch(orderId, false)

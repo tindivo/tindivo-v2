@@ -1,13 +1,14 @@
 'use client'
 
 import { EmptyState, SkeletonList } from '@tindivo/ui'
-import { useRouter } from 'next/navigation'
-import { useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useTeam } from '@/hooks/use-team'
 import { quickPosition } from '@/lib/geo'
 import { advanceOrder } from '@/lib/orders/advance'
+import { fetchOrderDetail } from '@/lib/orders/detail-cache'
 import { minePhase, prematureMinutes } from '@/lib/orders/phase'
 import type { BoardOrder } from '@/lib/types'
+import { type MineSheetIntent, MineSheets, type MineSheetTarget } from './mine-sheets'
 import { OrderCard } from './order-card'
 import { type LeftAction, type RightAction, SwipeCard } from './swipe-card'
 
@@ -26,21 +27,23 @@ const STATUS_RANK: Record<string, number> = {
   picked_up: 2,
 }
 
-/** Con qué se abre la ficha para dejar la hoja correspondiente ya abierta. */
-type SheetIntent = 'recoger' | 'cobrar' | 'soltar'
-
 /** Mis pedidos activos (HU-D-037). */
 export function MineTab({
   mine,
   loading,
   now,
+  onChanged,
 }: {
   mine: BoardOrder[]
   /** Primera carga sin resolver: no se sabe si está vacío. */
   loading: boolean
   now: number
+  /** Refresca el board tras una transición hecha desde una hoja. */
+  onChanged: () => Promise<void>
 }) {
-  const router = useRouter()
+  /** La hoja abierta sobre la bandeja (cobro, soltar, recogida adelantada). */
+  const [sheetTarget, setSheetTarget] = useState<MineSheetTarget | null>(null)
+  const closeSheet = useCallback(() => setSheetTarget(null), [])
   // Del store compartido de T1: no cuesta una petición extra.
   const { receivedRequests } = useTeam()
 
@@ -70,9 +73,9 @@ export function MineTab({
     })
   }, [mine, requestByOrder])
 
-  /** Abre la ficha con la hoja ya puesta: el cobro, el motivo de soltar… */
-  function openSheet(orderId: string, intent: SheetIntent) {
-    router.push(`/pedido/${orderId}?a=${intent}`)
+  /** Abre la hoja sobre la bandeja: el cobro, el motivo de soltar… */
+  function openSheet(orderId: string, intent: MineSheetIntent) {
+    setSheetTarget({ orderId, intent })
   }
 
   /**
@@ -200,11 +203,15 @@ export function MineTab({
           )
           const { right, left } = actionsFor(o)
           if (!right && !left) return <div key={o.id}>{card}</div>
+          // Los gestos que abren una hoja necesitan el detalle del pedido: se pide
+          // en cuanto el dedo toca la tarjeta, no al soltar.
+          const warm = right?.mode === 'open' || left !== undefined
           return (
             <SwipeCard
               key={o.id}
               right={right}
               left={left}
+              onTouch={warm ? () => void fetchOrderDetail(o.id).catch(() => {}) : undefined}
               hint={i === 0}
               hintKey="tindivo.drv.swipehint.mine.v1"
             >
@@ -213,6 +220,8 @@ export function MineTab({
           )
         })}
       </div>
+
+      <MineSheets target={sheetTarget} now={now} onClose={closeSheet} onChanged={onChanged} />
 
       {mine.length === 0 && (
         <EmptyState

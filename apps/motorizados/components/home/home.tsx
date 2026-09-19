@@ -179,7 +179,9 @@ export function Home() {
             onTaken={board.refetch}
           />
         )}
-        {tab === 'mine' && <MineTab mine={board.mine} loading={board.loading} now={now} />}
+        {tab === 'mine' && (
+          <MineTab mine={board.mine} loading={board.loading} now={now} onChanged={board.refetch} />
+        )}
         {tab === 'team' && <TeamTab mySlots={board.mySlots} />}
       </div>
     </main>

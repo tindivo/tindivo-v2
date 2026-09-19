@@ -143,12 +143,19 @@ export function SwipeCard({
   left,
   hint = false,
   hintKey = DEFAULT_HINT_KEY,
+  onTouch,
   children,
 }: {
   right?: RightAction
   left?: LeftAction
   hint?: boolean
   hintKey?: string
+  /**
+   * Se llama en cuanto el dedo toca la tarjeta, antes de saber si será un
+   * gesto. Sirve para ir pidiendo lo que la hoja va a necesitar: el arrastre
+   * dura lo que tarda la respuesta, y así ya está cuando se suelta.
+   */
+  onTouch?: () => void
   children: ReactNode
 }) {
   const [x, setX] = useState(0)
@@ -263,6 +270,7 @@ export function SwipeCard({
     armed.current = false
     width.current = e.currentTarget.getBoundingClientRect().width || 1
     setDragging(true)
+    onTouch?.()
   }
 
   function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {

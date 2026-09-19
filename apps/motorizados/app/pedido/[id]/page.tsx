@@ -4,29 +4,26 @@ import { ApiError } from '@tindivo/api-client'
 import { canalUnico } from '@tindivo/supabase'
 import { BottomActionBar, Button, Icon, ScreenHeader } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
-import { use, useCallback, useEffect, useRef, useState } from 'react'
+import { use, useCallback, useEffect, useState } from 'react'
 import { notifyDriverSuccess } from '@/components/driver-toast'
-import { AddressCaptureSheet } from '@/components/order/address-capture-sheet'
 import { BusinessCard } from '@/components/order/business-card'
 import { ChangeHeadsUp } from '@/components/order/change-heads-up'
-import { DeliverSheet } from '@/components/order/deliver-sheet'
 import { DeliveredScreen } from '@/components/order/delivered-screen'
 import { DestinationCard } from '@/components/order/destination-card'
 import { IncidentSheet } from '@/components/order/incident-sheet'
 import { MomentPickedUp } from '@/components/order/moment-picked-up'
 import { OrderDetail } from '@/components/order/order-detail'
-import { PickupSheet } from '@/components/order/pickup-sheet'
+import { type OrderSheet, OrderSheets } from '@/components/order/order-sheets'
 import { PreviewSection } from '@/components/order/preview-section'
-import { ReleaseSheet } from '@/components/order/release-sheet'
 import { StatusHero } from '@/components/order/status-hero'
 import { WaitTimer } from '@/components/order/wait-timer'
 import { useDriverOrders } from '@/hooks/use-driver-orders'
 import { useNow } from '@/hooks/use-now'
 import { api } from '@/lib/api'
 import { isValidPePhone, waLink } from '@/lib/deeplinks'
-import { soles } from '@/lib/format'
 import { quickPosition } from '@/lib/geo'
 import { getOptimistic } from '@/lib/offline-queue'
+import { deliveredMessage } from '@/lib/orders/delivered-message'
 import { prematureMinutes } from '@/lib/orders/phase'
 import { createDriverAudioTrigger } from '@/lib/sound'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
@@ -57,14 +54,9 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
   const [actionError, setActionError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
-  const [pickupOpen, setPickupOpen] = useState(false)
-  const [deliverOpen, setDeliverOpen] = useState(false)
+  /** La hoja abierta (recogida adelantada, cobro, soltar, dirección). Ver `OrderSheets`. */
+  const [sheet, setSheet] = useState<OrderSheet | null>(null)
   const [incidentOpen, setIncidentOpen] = useState(false)
-  const [releaseOpen, setReleaseOpen] = useState(false)
-  const [captureOpen, setCaptureOpen] = useState(false)
-  const [captureBusy, setCaptureBusy] = useState(false)
-  /** Desde dónde se abrió la captura. Decide si al cerrar se encadena el cobro. */
-  const [captureIntent, setCaptureIntent] = useState<'before_deliver' | 'adjust'>('before_deliver')
 
   /** Toast no bloqueante de sugerencia de WhatsApp post-recogida o al llegar. */
   const [waToast, setWaToast] = useState<{
@@ -147,48 +139,8 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
                   ? 'picked_up'
                   : 'lost'
 
-  // LA HOJA QUE PIDIÓ EL GESTO DE «MÍOS». Cobrar, soltar y una recogida
-  // adelantada abren la ficha con `?a=`, y aquí se deja la hoja ya abierta: el
-  // gesto no duplica los formularios, solo lleva hasta ellos.
-  //
-  // SE LEE UNA VEZ Y SE BORRA de la URL, para que recargar o volver atrás no
-  // vuelva a abrir una hoja que ya se cerró. Y solo se abre si el pedido sigue
-  // en el paso que la pide: si entretanto cambió, se ignora.
-  const sheetIntent = useRef<string | null>(null)
-  useEffect(() => {
-    const a = new URLSearchParams(window.location.search).get('a')
-    if (!a) return
-    sheetIntent.current = a
-    window.history.replaceState(null, '', window.location.pathname)
-  }, [])
-
-  useEffect(() => {
-    const intent = sheetIntent.current
-    if (!intent || !detail) return
-    if (intent === 'recoger' && mode === 'waiting') {
-      sheetIntent.current = null
-      setPickupOpen(true)
-    } else if (intent === 'soltar' && (mode === 'heading' || mode === 'waiting')) {
-      sheetIntent.current = null
-      setReleaseOpen(true)
-    } else if (intent === 'cobrar' && mode === 'picked_up' && detail.order.arrivedAtCustomerAt) {
-      sheetIntent.current = null
-      const needsCapture =
-        detail.order.isManual &&
-        (detail.order.deliveryCoordinatesLat == null || detail.order.deliveryCoordinatesLng == null)
-      if (needsCapture) {
-        setCaptureIntent('before_deliver')
-        setCaptureOpen(true)
-      } else {
-        setDeliverOpen(true)
-      }
-    } else if (mode !== 'loading') {
-      // El pedido ya no está en ese paso: no se abre nada.
-      sheetIntent.current = null
-    }
-  }, [detail, mode])
-
-  async function run(action: string, params: Record<string, unknown> = {}) {
+  /** `true` si salió bien: las hojas se cierran solo entonces. */
+  async function run(action: string, params: Record<string, unknown> = {}): Promise<boolean> {
     const triggerTakenSound = action === 'take' ? createDriverAudioTrigger('orderTaken') : null
     const triggerDeliveredSound =
       action === 'deliver' ? createDriverAudioTrigger('orderDelivered') : null
@@ -201,23 +153,11 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
       }
       if (action === 'deliver') {
         triggerDeliveredSound?.()
-        const shortId = detail?.order.shortId ?? ''
-        const paymentReal = (params.paymentReal as string) ?? detail?.order.paymentIntent
-        let cashOwed = 0
-        if (paymentReal === 'paid_cash') {
-          cashOwed = (detail?.order.orderAmount ?? 0) + (detail?.order.deliveryFee ?? 0)
-        } else if (paymentReal === 'paid_mixed') {
-          cashOwed = Number(params.cashAmount ?? detail?.order.cashAmount ?? 0)
-        }
-
-        const msg =
-          cashOwed > 0
-            ? `Pedido #${shortId} entregado · Cobraste ${soles(cashOwed)} en efectivo`
-            : `Pedido #${shortId} entregado con éxito`
+        const msg = detail ? deliveredMessage(detail.order, params) : 'Pedido entregado con éxito'
 
         notifyDriverSuccess(msg)
         router.replace('/')
-        return
+        return true
       }
 
       // Sugerencia no bloqueante de WhatsApp post-recogida (A.5) o al llegar (A.6)
@@ -271,56 +211,14 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
         // Encolado offline: reflejar el avance optimista sin red.
         setDetail((d) => (d ? { ...d, order: { ...d.order, status: d.order.status } } : d))
       }
-      setPickupOpen(false)
-      setDeliverOpen(false)
+      return true
     } catch (err) {
       setActionError(
         err instanceof ApiError ? (err.problem.detail ?? err.message) : 'No se pudo completar',
       )
+      return false
     } finally {
       setBusy(false)
-    }
-  }
-
-  /**
-   * Guarda la ubicación en el directorio (0147).
-   *
-   * NO BLOQUEA LA ENTREGA, y es la regla que gobierna toda esta pieza: si algo
-   * falla —red, permiso, coordenada rechazada— se avisa y se sigue igual al
-   * cobro. El pedido es lo urgente; la dirección es la mejora de mañana.
-   */
-  async function saveAddress(captured: {
-    lat: number
-    lng: number
-    accuracyM: number | null
-    reference?: string
-  }) {
-    setCaptureBusy(true)
-    setActionError(null)
-    try {
-      await api.post(`/driver/orders/${id}/address`, {
-        lat: captured.lat,
-        lng: captured.lng,
-        accuracyM: captured.accuracyM,
-        reference: captured.reference,
-      })
-      await load()
-    } catch (err) {
-      setActionError(
-        err instanceof ApiError
-          ? `No se guardó la ubicación: ${err.problem.detail ?? err.message}`
-          : 'No se guardó la ubicación. El pedido se puede entregar igual.',
-      )
-    } finally {
-      setCaptureBusy(false)
-      setCaptureOpen(false)
-      // Solo se encadena al cobro cuando la captura fue el PASO PREVIO a
-      // entregar. Un ajuste voluntario termina donde empezó: el motorizado
-      // corrigió el pin y sigue con lo suyo.
-      //
-      // Y cuando sí encadena, lo hace PASE LO QUE PASE: que la dirección no se
-      // guardara no puede dejarlo sin poder cerrar la entrega.
-      if (captureIntent === 'before_deliver') setDeliverOpen(true)
     }
   }
 
@@ -501,7 +399,7 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
             <button
               type="button"
               disabled={busy}
-              onClick={() => setReleaseOpen(true)}
+              onClick={() => setSheet('release')}
               className="mx-auto py-1 text-xs font-semibold text-danger/80 hover:text-danger hover:underline active:opacity-70 transition-colors"
             >
               Soltar pedido
@@ -527,7 +425,7 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
                   },
                   now,
                 )
-                if (early > 0) setPickupOpen(true)
+                if (early > 0) setSheet('pickup')
                 else void run('pickup', { slots: 1 })
               }}
             >
@@ -536,7 +434,7 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
             <button
               type="button"
               disabled={busy}
-              onClick={() => setReleaseOpen(true)}
+              onClick={() => setSheet('release')}
               className="mx-auto py-1 text-xs font-semibold text-danger/80 hover:text-danger hover:underline active:opacity-70 transition-colors"
             >
               Soltar pedido
@@ -575,12 +473,7 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
                     //
                     // Es un paso ANTES de cobrar, no dentro: si se salta o
                     // falla, la entrega sigue su curso igual.
-                    if (needsAddressCapture) {
-                      setCaptureIntent('before_deliver')
-                      setCaptureOpen(true)
-                    } else {
-                      setDeliverOpen(true)
-                    }
+                    setSheet(needsAddressCapture ? 'capture:before_deliver' : 'deliver')
                   }}
                 >
                   Pedido entregado
@@ -594,10 +487,7 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
                   <button
                     type="button"
                     disabled={busy}
-                    onClick={() => {
-                      setCaptureIntent('adjust')
-                      setCaptureOpen(true)
-                    }}
+                    onClick={() => setSheet('capture:adjust')}
                     className="flex h-10 w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-border bg-card text-[13px] font-semibold text-ink-muted transition-transform active:scale-[0.98]"
                   >
                     <Icon name="edit_location_alt" size={16} />
@@ -652,57 +542,19 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
         </div>
       )}
 
-      {pickupOpen && (
-        <PickupSheet
-          detail={detail}
-          now={now}
-          busy={busy}
-          onConfirm={({ slots }) => run('pickup', { slots })}
-          onClose={() => setPickupOpen(false)}
-        />
-      )}
-
-      {captureOpen && (
-        <AddressCaptureSheet
-          initialLat={detail.order.deliveryCoordinatesLat}
-          initialLng={detail.order.deliveryCoordinatesLng}
-          initialReference={detail.order.deliveryReference}
-          hasDirectoryRow={detail.order.addressDirectoryId != null}
-          busy={captureBusy}
-          onConfirm={saveAddress}
-          onSkip={() => {
-            setCaptureOpen(false)
-            // Omitir la ubicación NO cancela la entrega. Era el paso previo al
-            // cobro, así que el cobro sigue.
-            if (captureIntent === 'before_deliver') setDeliverOpen(true)
-          }}
-        />
-      )}
-
-      {deliverOpen && (
-        <DeliverSheet
-          detail={detail}
-          busy={busy}
-          // El cobro real viaja entero, no solo el método: los importes son lo
-          // que decide el corte de caja (0140/0141).
-          onConfirm={(payment) => run('deliver', { ...payment })}
-          onNoShow={() => run('no_show')}
-          onClose={() => setDeliverOpen(false)}
-        />
-      )}
+      <OrderSheets
+        orderId={id}
+        detail={detail}
+        sheet={sheet}
+        onSheet={setSheet}
+        now={now}
+        busy={busy}
+        onAct={run}
+        onReload={load}
+        onError={setActionError}
+      />
 
       {incidentOpen && <IncidentSheet orderId={id} onClose={() => setIncidentOpen(false)} />}
-
-      {releaseOpen && (
-        <ReleaseSheet
-          busy={busy}
-          onConfirm={async (reason, note) => {
-            await run('release', { reason, note })
-            setReleaseOpen(false)
-          }}
-          onClose={() => setReleaseOpen(false)}
-        />
-      )}
     </main>
   )
 }
