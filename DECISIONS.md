@@ -1134,11 +1134,19 @@ La policy de `realtime.messages` limita el tema a usuarios con rol `driver`.
 Medido en la app real: la tarjeta desaparece a los **0,24 s**, contra **17,7 s**
 con el trigger apagado. Si el canal no engancha, el poll de 15 s sigue cubriendo.
 
+### Las hojas viven en «Míos», y el aviso al cliente es un chip
+
+- **Cobrar, Soltar y la recogida prematura abren su hoja sobre la bandeja**, no
+  en la ficha. Las hojas (recogida, cobro, soltar, captura de dirección) salieron
+  de `pedido/[id]/page.tsx` a `OrderSheets`, que usan la ficha y «Míos»: hay
+  UNA versión del formulario que toca dinero, no dos. El detalle del pedido se
+  pide en cuanto el dedo toca la tarjeta (`fetchOrderDetail`), así que la hoja
+  sale a los ~0,35 s y no tras cargar una pantalla.
+- **El aviso de WhatsApp desde el gesto es un chip** en la tarjeta («Avisar: voy
+  en camino» con la comida encima, «Avisar: ya llegué» en la puerta), sin
+  ventana emergente y solo con un teléfono válido. La ficha conserva el suyo.
+
 ### Deuda que queda
 
-- Las hojas de cobro y de soltar se abren **en la ficha** (`/pedido/[id]?a=…`),
-  no dentro de «Míos»: reutilizan la lógica de captura de dirección y de cobro sin
-  duplicarla. Llevarlas a «Míos» exige un detalle del pedido a demanda.
-- Desde el gesto **no salen** los avisos de WhatsApp («¿avisar que vas en
-  camino?»), que siguen solo en la ficha.
-- `Docs/10-flujo-motorizados.md` aún dibuja «Confirmar recogida» en cada recogida.
+- El chip y el aviso de la ficha coexisten: si el aviso de WhatsApp deja de
+  interesar, se quitan los dos a la vez.

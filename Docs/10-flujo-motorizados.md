@@ -216,6 +216,25 @@ Pedidos activos de compañeros (drivers autorizados para los mismos negocios). �
 
 ## 7. Flujo de un pedido end-to-end
 
+> **Cómo se avanza hoy (2026-09-19, `DECISIONS.md §29`).** Los wireframes de
+> esta sección son el diseño original y ya no describen la interacción:
+>
+> - **Se avanza arrastrando la tarjeta** en «Míos», a la derecha: «Llegué al
+>   local» → «Ya recogí» → «Llegué a la puerta» → «Cobrar». A la izquierda,
+>   «Soltar pedido» (solo antes de recoger). La ficha y su barra de abajo
+>   siguen siendo el camino accesible.
+> - **No hay «¿ya está listo?»** ni «Confirmar recogida» en cada recogida. Solo
+>   se pregunta si la recogida es **prematura** (falta tiempo y la cocina no
+>   marcó listo). La mochila ya no se declara: cada pedido ocupa 1 hueco, y la
+>   banda la fija la ubicación o la cajera, no el motorizado.
+> - **Cobrar y Soltar abren su hoja sobre la bandeja** (`OrderSheets`, la
+>   misma que usa la ficha): `delivered` es terminal y soltar exige motivo, así
+>   que el gesto nunca los cierra por sí solo.
+> - **El aviso al cliente** («voy en camino» / «ya llegué») es un chip de
+>   WhatsApp en la tarjeta, no una ventana. La ficha conserva su aviso.
+> - **La cola se entera al instante** de que otro se llevó un pedido (0231,
+>   Broadcast en `drivers:board`), en vez de esperar al poll de 15 s.
+
 ### Estado: `waiting_driver` → `heading_to_restaurant`
 
 Driver acepta (manual o auto-asignación). Recibe push: *"Te asignaron un pedido"*.
