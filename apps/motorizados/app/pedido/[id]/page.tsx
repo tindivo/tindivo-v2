@@ -4,7 +4,7 @@ import { ApiError } from '@tindivo/api-client'
 import { canalUnico } from '@tindivo/supabase'
 import { BottomActionBar, Button, Icon, ScreenHeader } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
-import { use, useCallback, useEffect, useState } from 'react'
+import { use, useCallback, useEffect, useRef, useState } from 'react'
 import { notifyDriverSuccess } from '@/components/driver-toast'
 import { AddressCaptureSheet } from '@/components/order/address-capture-sheet'
 import { BusinessCard } from '@/components/order/business-card'
@@ -17,7 +17,6 @@ import { MomentPickedUp } from '@/components/order/moment-picked-up'
 import { OrderDetail } from '@/components/order/order-detail'
 import { PickupSheet } from '@/components/order/pickup-sheet'
 import { PreviewSection } from '@/components/order/preview-section'
-import { ReadyPromptSheet } from '@/components/order/ready-prompt-sheet'
 import { ReleaseSheet } from '@/components/order/release-sheet'
 import { StatusHero } from '@/components/order/status-hero'
 import { WaitTimer } from '@/components/order/wait-timer'
@@ -26,7 +25,9 @@ import { useNow } from '@/hooks/use-now'
 import { api } from '@/lib/api'
 import { isValidPePhone, waLink } from '@/lib/deeplinks'
 import { soles } from '@/lib/format'
+import { quickPosition } from '@/lib/geo'
 import { getOptimistic } from '@/lib/offline-queue'
+import { prematureMinutes } from '@/lib/orders/phase'
 import { createDriverAudioTrigger } from '@/lib/sound'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import { postTransition } from '@/lib/transitions'
@@ -56,7 +57,6 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
   const [actionError, setActionError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
-  const [readyPromptOpen, setReadyPromptOpen] = useState(false)
   const [pickupOpen, setPickupOpen] = useState(false)
   const [deliverOpen, setDeliverOpen] = useState(false)
   const [incidentOpen, setIncidentOpen] = useState(false)
@@ -147,14 +147,46 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
                   ? 'picked_up'
                   : 'lost'
 
-  // Pregunta "¿está listo?" una sola vez por pedido al entrar al local.
+  // LA HOJA QUE PIDIÓ EL GESTO DE «MÍOS». Cobrar, soltar y una recogida
+  // adelantada abren la ficha con `?a=`, y aquí se deja la hoja ya abierta: el
+  // gesto no duplica los formularios, solo lleva hasta ellos.
+  //
+  // SE LEE UNA VEZ Y SE BORRA de la URL, para que recargar o volver atrás no
+  // vuelva a abrir una hoja que ya se cerró. Y solo se abre si el pedido sigue
+  // en el paso que la pide: si entretanto cambió, se ignora.
+  const sheetIntent = useRef<string | null>(null)
   useEffect(() => {
-    if (mode !== 'waiting') return
-    const key = `tindivo.readyprompt.${id}`
-    if (sessionStorage.getItem(key)) return
-    sessionStorage.setItem(key, '1')
-    setReadyPromptOpen(true)
-  }, [mode, id])
+    const a = new URLSearchParams(window.location.search).get('a')
+    if (!a) return
+    sheetIntent.current = a
+    window.history.replaceState(null, '', window.location.pathname)
+  }, [])
+
+  useEffect(() => {
+    const intent = sheetIntent.current
+    if (!intent || !detail) return
+    if (intent === 'recoger' && mode === 'waiting') {
+      sheetIntent.current = null
+      setPickupOpen(true)
+    } else if (intent === 'soltar' && (mode === 'heading' || mode === 'waiting')) {
+      sheetIntent.current = null
+      setReleaseOpen(true)
+    } else if (intent === 'cobrar' && mode === 'picked_up' && detail.order.arrivedAtCustomerAt) {
+      sheetIntent.current = null
+      const needsCapture =
+        detail.order.isManual &&
+        (detail.order.deliveryCoordinatesLat == null || detail.order.deliveryCoordinatesLng == null)
+      if (needsCapture) {
+        setCaptureIntent('before_deliver')
+        setCaptureOpen(true)
+      } else {
+        setDeliverOpen(true)
+      }
+    } else if (mode !== 'loading') {
+      // El pedido ya no está en ese paso: no se abre nada.
+      sheetIntent.current = null
+    }
+  }, [detail, mode])
 
   async function run(action: string, params: Record<string, unknown> = {}) {
     const triggerTakenSound = action === 'take' ? createDriverAudioTrigger('orderTaken') : null
@@ -204,8 +236,38 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
         }
       }
 
-      if (result === 'ok') await load()
-      else {
+      if (result === 'ok') {
+        // NO SE ESPERA AL GET. Antes cada «ok» eran dos viajes seguidos —el POST
+        // y luego `load()`— antes de que la pantalla cambiara: 1-1,5 s en la
+        // señal del pueblo. El POST ya dijo que salió bien, así que el paso
+        // nuevo se pinta ahora y `load()` solo reconcilia por detrás.
+        //
+        // `take` queda fuera: el detalle de una vista previa no trae todo lo que
+        // la ficha completa necesita (teléfono, dirección), así que ahí sí se
+        // espera a lo que devuelve el servidor.
+        const at = new Date().toISOString()
+        if (action === 'take') {
+          await load()
+        } else {
+          setDetail((d) => {
+            if (!d) return d
+            if (action === 'arrived') {
+              return {
+                ...d,
+                order: { ...d.order, status: 'waiting_at_restaurant', waitingAtRestaurantAt: at },
+              }
+            }
+            if (action === 'pickup') {
+              return { ...d, order: { ...d.order, status: 'picked_up', pickedUpAt: at } }
+            }
+            if (action === 'arrived_customer') {
+              return { ...d, order: { ...d.order, arrivedAtCustomerAt: at } }
+            }
+            return d
+          })
+          void load()
+        }
+      } else {
         // Encolado offline: reflejar el avance optimista sin red.
         setDetail((d) => (d ? { ...d, order: { ...d.order, status: d.order.status } } : d))
       }
@@ -449,8 +511,27 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
 
         {mode === 'waiting' && (
           <div className="flex w-full flex-col items-center gap-1.5">
-            <Button className="w-full" disabled={busy} onClick={() => setPickupOpen(true)}>
-              Ya recogí el pedido
+            {/* SIN HOJA POR DEFECTO. Antes eran dos preguntas seguidas («¿ya está
+                listo?» y «Confirmar recogida») antes de un paso que el servidor
+                no condiciona a nada. Solo se para si la recogida es PREMATURA:
+                la hora no llegó y la cocina no marcó listo, que es cuando uno
+                puede llevarse un pedido que no es el suyo. */}
+            <Button
+              className="w-full"
+              disabled={busy}
+              onClick={() => {
+                const early = prematureMinutes(
+                  {
+                    estimated_ready_at: detail.order.estimatedReadyAt,
+                    ready_early_used: detail.order.readyEarlyUsed,
+                  },
+                  now,
+                )
+                if (early > 0) setPickupOpen(true)
+                else void run('pickup', { slots: 1 })
+              }}
+            >
+              {busy ? 'Un momento…' : 'Ya recogí el pedido'}
             </Button>
             <button
               type="button"
@@ -472,39 +553,9 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
                 onClick={async () => {
                   setBusy(true)
                   setActionError(null)
-                  let coords: {
-                    lat: number | null
-                    lng: number | null
-                    accuracy_m: number | null
-                  } = {
-                    lat: null,
-                    lng: null,
-                    accuracy_m: null,
-                  }
-                  if (typeof window !== 'undefined' && 'geolocation' in navigator) {
-                    try {
-                      const posPromise = new Promise<GeolocationPosition>((resolve, reject) => {
-                        navigator.geolocation.getCurrentPosition(resolve, reject, {
-                          enableHighAccuracy: true,
-                          timeout: 5000,
-                          maximumAge: 0,
-                        })
-                      })
-                      const timeoutPromise = new Promise<null>((resolve) =>
-                        setTimeout(() => resolve(null), 5000),
-                      )
-                      const res = await Promise.race([posPromise, timeoutPromise])
-                      if (res && 'coords' in res) {
-                        coords = {
-                          lat: res.coords.latitude,
-                          lng: res.coords.longitude,
-                          accuracy_m: res.coords.accuracy,
-                        }
-                      }
-                    } catch {
-                      // Ignorar silenciosamente errores de GPS (G1)
-                    }
-                  }
+                  // Hasta 2 s de GPS, no 5: ver `quickPosition`. Sin fix la
+                  // llegada se registra igual, con coordenadas nulas.
+                  const coords = await quickPosition()
                   await run('arrived_customer', coords)
                 }}
               >
@@ -599,16 +650,6 @@ export default function PedidoPage({ params }: { params: Promise<{ id: string }>
             </button>
           </div>
         </div>
-      )}
-
-      {readyPromptOpen && mode === 'waiting' && (
-        <ReadyPromptSheet
-          onReady={() => {
-            setReadyPromptOpen(false)
-            setPickupOpen(true)
-          }}
-          onWaiting={() => setReadyPromptOpen(false)}
-        />
       )}
 
       {pickupOpen && (

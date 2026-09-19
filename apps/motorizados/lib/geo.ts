@@ -63,3 +63,42 @@ export function distanceMeters(
     Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2
   return Math.round(2 * R * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h)))
 }
+
+/** Posición al llegar a la puerta. Todo `null` cuando no hay fix a tiempo. */
+export type ArrivalFix = {
+  lat: number | null
+  lng: number | null
+  accuracy_m: number | null
+}
+
+const NO_FIX: ArrivalFix = { lat: null, lng: null, accuracy_m: null }
+
+/**
+ * El fix de «llegué a la puerta», sin hacer esperar a nadie.
+ *
+ * ANTES ESPERABA HASTA 5 s CON `maximumAge: 0` y solo entonces mandaba la
+ * llegada: cinco segundos de botón muerto justo en la puerta del cliente. Ahora
+ * acepta una posición de hasta 30 s —quien lleva minutos conduciendo ya tiene
+ * una fresca— y se rinde a los 2 s. Sin fix el servidor acepta la llegada igual
+ * (`lat`/`lng` nulos): que no haya coordenada es un dato, no un motivo para no
+ * registrar que ya llegaste.
+ */
+export function quickPosition(): Promise<ArrivalFix> {
+  if (typeof navigator === 'undefined' || !('geolocation' in navigator)) {
+    return Promise.resolve(NO_FIX)
+  }
+  return new Promise((resolve) => {
+    const giveUp = window.setTimeout(() => resolve(NO_FIX), 2200)
+    navigator.geolocation.getCurrentPosition(
+      (p) => {
+        window.clearTimeout(giveUp)
+        resolve({ lat: p.coords.latitude, lng: p.coords.longitude, accuracy_m: p.coords.accuracy })
+      },
+      () => {
+        window.clearTimeout(giveUp)
+        resolve(NO_FIX)
+      },
+      { enableHighAccuracy: true, timeout: 2000, maximumAge: 30_000 },
+    )
+  })
+}

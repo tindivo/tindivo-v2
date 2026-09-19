@@ -10,7 +10,7 @@ import type { BoardOrder, DriverBusiness } from '@/lib/types'
 import { orderUrgency } from '@/lib/urgency'
 
 const BOARD_COLUMNS =
-  'id,short_id,status,source,customer_name,customer_phone,delivery_address,delivery_reference,order_amount,delivery_fee,payment_intent,driver_id,created_at,estimated_ready_at,ready_early_used,ready_early_at,urgent_since,appears_in_queue_at,occupancy_slots,waiting_at_restaurant_at,picked_up_at,delivered_at,payment_real,cash_owed_at_delivery,client_pays_with,change_to_give,cash_amount,yape_amount,business_id,delivery_method,delivery_distance_band,delivery_coordinates_lat,delivery_coordinates_lng'
+  'id,short_id,status,source,customer_name,customer_phone,delivery_address,delivery_reference,order_amount,delivery_fee,payment_intent,driver_id,created_at,estimated_ready_at,ready_early_used,ready_early_at,urgent_since,appears_in_queue_at,occupancy_slots,waiting_at_restaurant_at,picked_up_at,arrived_at_customer_at,delivered_at,payment_real,cash_owed_at_delivery,client_pays_with,change_to_give,cash_amount,yape_amount,business_id,delivery_method,delivery_distance_band,delivery_coordinates_lat,delivery_coordinates_lng'
 
 export interface DriverBoard {
   orders: BoardOrder[]
@@ -91,6 +91,12 @@ let businesses: Record<string, DriverBusiness> = {}
 let pollTimer: ReturnType<typeof setInterval> | null = null
 let pollStart: ReturnType<typeof setTimeout> | null = null
 let channel: ReturnType<ReturnType<typeof getSupabaseBrowser>['channel']> | null = null
+
+/**
+ * Aviso de «este pedido salió de la cola» (0231). Ver `listenQueueBroadcast`.
+ * Vive aparte de `channel` porque NO se recrea en cada `start()`.
+ */
+let queueChannel: ReturnType<ReturnType<typeof getSupabaseBrowser>['channel']> | null = null
 let visibilityBound = false
 
 /**
@@ -146,8 +152,46 @@ function recombine(): BoardOrder[] {
   return rawOrders.map((o) => {
     const next = optimistic[o.id]
     const business = businesses[o.business_id] ?? null
-    return next ? { ...o, business, status: next } : { ...o, business }
+    const held = patches.get(o.id)
+    const base = next ? { ...o, business, status: next } : { ...o, business }
+    return held ? { ...base, ...held } : base
   })
+}
+
+/**
+ * PARCHES LOCALES: el gesto pinta el paso nuevo AL SOLTAR, no cuando contesta el
+ * servidor.
+ *
+ * Cada «ok» costaba dos esperas encadenadas (el POST y luego el refetch), unos
+ * 1,2 s en la señal del pueblo, y con la comida en la mano eso es una eternidad.
+ * El parche cambia la tarjeta ya; el POST corre detrás.
+ *
+ * VIVE EN UN MAPA APARTE y `recombine()` lo aplica en cada emisión, porque un
+ * refetch que llegue entre el gesto y la respuesta —el realtime y el poll no
+ * saben nada del gesto— traería el estado VIEJO y la tarjeta volvería atrás un
+ * instante. Mientras el parche esté puesto, gana él.
+ *
+ * SE SUELTA en cuanto hay verdad: tras el POST bueno y un refetch (que ya trae
+ * el estado nuevo), o al fallar. Ver `holdOrderPatch`/`releaseOrderPatch`.
+ */
+const patches = new Map<string, Partial<BoardOrder>>()
+
+/** Pinta `patch` sobre el pedido hasta que se suelte. */
+export function holdOrderPatch(orderId: string, patch: Partial<BoardOrder>): void {
+  patches.set(orderId, patch)
+  emit({ ...snapshot, orders: recombine() })
+}
+
+/**
+ * Quita el parche. Con `reload`, primero se pide la verdad al servidor para que
+ * la tarjeta no parpadee entre el parche y el dato real; sin él (un fallo) se
+ * vuelve al último dato bueno y se pide la verdad después.
+ */
+export async function releaseOrderPatch(orderId: string, reload = true): Promise<void> {
+  if (reload) await refetch()
+  patches.delete(orderId)
+  emit({ ...snapshot, orders: recombine() })
+  if (!reload) void refetch()
 }
 
 async function refetch(): Promise<void> {
@@ -178,6 +222,63 @@ function onVisible(): void {
   if (document.visibilityState === 'visible') void refetch()
 }
 
+/**
+ * OTRO SE LLEVÓ EL PEDIDO: fuera de mi lista AHORA, no en el próximo poll.
+ *
+ * `postgres_changes` no avisa cuando una fila DEJA de ser visible para ti (la
+ * RLS de `ord_driver_read` solo enseña los pedidos sin dueño), así que quien no
+ * lo tomó seguía viéndolo hasta 15 s. La 0231 lo anuncia por Broadcast, que no
+ * depende de la visibilidad de la fila.
+ *
+ * Solo se retira la fila si sigue SIN DUEÑO en mi copia: un pedido que ya es
+ * mío no lo toca un aviso ajeno. Y si el que lo tomó soy yo, no se hace nada:
+ * mi propio gesto ya lo trata, y quitarlo aquí lo haría parpadear.
+ *
+ * El refetch posterior reconcilia lo que el aviso no dice (una cancelación, un
+ * pedido que volvió a la cola). Si el canal no engancha, el poll de 15 s sigue
+ * cubriendo: esto es una mejora de latencia, no un requisito.
+ */
+function onQueueLeft(payload: { orderId?: string; driverId?: string | null } | undefined): void {
+  const id = payload?.orderId
+  if (!id) return
+  if (payload?.driverId && payload.driverId === snapshot.myDriverId) return
+  const before = rawOrders.length
+  rawOrders = rawOrders.filter((o) => !(o.id === id && o.driver_id == null))
+  if (rawOrders.length !== before) emit({ ...snapshot, orders: recombine() })
+  void refetch()
+}
+
+/**
+ * UN CANAL PARA TODA LA VIDA DEL STORE, no uno por `start()`.
+ *
+ * El tema tiene que ser EXACTAMENTE `drivers:board`: es el que emite el trigger
+ * y el que autoriza la policy de `realtime.messages`, así que no admite el
+ * sufijo de `canalUnico`. Sin sufijo, pedir el mismo nombre dentro de la
+ * ventana de baja de `removeChannel` devuelve el canal viejo (ver
+ * `realtime-channel-name.ts`). Por eso se crea una sola vez y `stop()` no lo
+ * cierra: escuchar sin nadie suscrito no cuesta nada y no hay ventana que ganar.
+ *
+ * Si falla —sesión aún sin token, tema rechazado— se ignora: el poll cubre.
+ */
+function listenQueueBroadcast(): void {
+  if (queueChannel !== null) return
+  try {
+    queueChannel = getSupabaseBrowser()
+      .channel('drivers:board', { config: { private: true } })
+      .on('broadcast', { event: 'order_left_queue' }, (msg) => onQueueLeft(msg.payload))
+      .subscribe()
+  } catch {
+    queueChannel = null
+  }
+}
+
+/** Cierra el aviso al cambiar de sesión: el canal lleva el token del anterior. */
+function dropQueueBroadcast(): void {
+  if (queueChannel === null) return
+  void getSupabaseBrowser().removeChannel(queueChannel)
+  queueChannel = null
+}
+
 function start(): void {
   const gen = ++generation
   const supabase = getSupabaseBrowser()
@@ -199,8 +300,12 @@ function start(): void {
       loadedForUserId = uid
       rawOrders = []
       businesses = {}
+      patches.clear()
+      dropQueueBroadcast()
       emit(EMPTY)
     }
+
+    listenQueueBroadcast()
 
     // UNA SOLA CONSULTA A `drivers`, y antes eran tres para leer la misma fila:
     // dos pedían `id` (una por instancia del hook) y una tercera pedía

@@ -46,6 +46,8 @@ export interface BoardOrder {
   waiting_at_restaurant_at: string | null
   /** Cuándo recogiste. Es el origen del reloj de reparto. Ver `CardOrder`. */
   picked_up_at: string | null
+  /** Cuándo llegaste a la puerta. Separa «en reparto» de «en la puerta». */
+  arrived_at_customer_at: string | null
   delivered_at: string | null
   /** Cómo se cobró de verdad, y cuánto efectivo quedó a deber. Ver `CardOrder`. */
   payment_real: string | null
@@ -149,6 +151,8 @@ export interface CardOrder {
    * No viaja en los pedidos de equipo, como el resto de los tiempos.
    */
   picked_up_at: string | null
+  /** Llegada a la puerta del cliente. Solo lo necesita el gesto de «Míos». */
+  arrived_at_customer_at?: string | null
   delivered_at: string | null
   /**
    * Cómo se cobró DE VERDAD (`orders.payment_real`), una vez entregado.

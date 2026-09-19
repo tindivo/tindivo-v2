@@ -2,13 +2,18 @@
 
 import { BottomSheet, Button, Icon } from '@tindivo/ui'
 import { soles } from '@/lib/format'
+import { prematureMinutes } from '@/lib/orders/phase'
 import type { OrderDetailResponse } from '@/lib/types'
 
 /** Una sola fuente para el título: lo pinta la pantalla y nombra el diálogo. */
 const TITULO = 'Confirmar recogida'
 
 /**
- * Confirmación de recogida.
+ * Confirmación de recogida ADELANTADA.
+ *
+ * YA NO SE ABRE EN CADA RECOGIDA: solo cuando la hora estimada no ha llegado y
+ * la cocina no marcó el pedido como listo (`prematureMinutes`). Es el único caso
+ * en que hay algo que decidir; en los demás «Ya recogí» avanza directo.
  *
  * YA NO SE PREGUNTA POR LA MOCHILA. Era la última pregunta antes de salir del
  * local, con la comida en la mano y el reloj corriendo, y la respuesta era
@@ -38,10 +43,11 @@ export function PickupSheet({
   onClose: () => void
 }) {
   const { order, business } = detail
-  const premature = order.estimatedReadyAt != null && Date.parse(order.estimatedReadyAt) > now
-  const minutesEarly = premature
-    ? Math.max(1, Math.round((Date.parse(order.estimatedReadyAt as string) - now) / 60_000))
-    : 0
+  const minutesEarly = prematureMinutes(
+    { estimated_ready_at: order.estimatedReadyAt, ready_early_used: order.readyEarlyUsed },
+    now,
+  )
+  const premature = minutesEarly > 0
   const total = order.orderAmount + order.deliveryFee
   const cobra = order.paymentIntent !== 'prepaid'
 
