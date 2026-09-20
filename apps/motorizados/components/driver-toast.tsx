@@ -9,6 +9,11 @@ let listener: ((text: string) => void) | null = null
 
 /** Dispara un toast de éxito en la app del motorizado (persistente a través de redirecciones). */
 export function notifyDriverSuccess(text: string): void {
+  // Con el host montado se muestra directo: guardarlo además lo haría reaparecer al remontar el shell.
+  if (listener) {
+    listener(text)
+    return
+  }
   if (typeof window !== 'undefined') {
     try {
       sessionStorage.setItem(STORAGE_KEY, text)
@@ -16,7 +21,6 @@ export function notifyDriverSuccess(text: string): void {
       /* fail-open */
     }
   }
-  listener?.(text)
 }
 
 /**

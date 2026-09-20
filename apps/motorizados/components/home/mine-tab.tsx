@@ -1,10 +1,16 @@
 'use client'
 
 import { EmptyState, SkeletonList } from '@tindivo/ui'
-import { useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useTeam } from '@/hooks/use-team'
+import { quickPosition } from '@/lib/geo'
+import { advanceOrder } from '@/lib/orders/advance'
+import { fetchOrderDetail } from '@/lib/orders/detail-cache'
+import { minePhase, prematureMinutes } from '@/lib/orders/phase'
 import type { BoardOrder } from '@/lib/types'
+import { type MineSheetIntent, MineSheets, type MineSheetTarget } from './mine-sheets'
 import { OrderCard } from './order-card'
+import { type LeftAction, type RightAction, SwipeCard } from './swipe-card'
 
 /**
  * Orden por estado: arriba donde PUEDES actuar.
@@ -26,12 +32,18 @@ export function MineTab({
   mine,
   loading,
   now,
+  onChanged,
 }: {
   mine: BoardOrder[]
   /** Primera carga sin resolver: no se sabe si está vacío. */
   loading: boolean
   now: number
+  /** Refresca el board tras una transición hecha desde una hoja. */
+  onChanged: () => Promise<void>
 }) {
+  /** La hoja abierta sobre la bandeja (cobro, soltar, recogida adelantada). */
+  const [sheetTarget, setSheetTarget] = useState<MineSheetTarget | null>(null)
+  const closeSheet = useCallback(() => setSheetTarget(null), [])
   // Del store compartido de T1: no cuesta una petición extra.
   const { receivedRequests } = useTeam()
 
@@ -61,6 +73,118 @@ export function MineTab({
     })
   }, [mine, requestByOrder])
 
+  /** Abre la hoja sobre la bandeja: el cobro, el motivo de soltar… */
+  function openSheet(orderId: string, intent: MineSheetIntent) {
+    setSheetTarget({ orderId, intent })
+  }
+
+  /**
+   * QUÉ HACE EL GESTO EN CADA PASO. Los cuatro pasos, en el orden del viaje:
+   *
+   *   Voy al local  → «Llegué al local»     (`arrived`)
+   *   En el local   → «Ya recogí»           (`pickup`)
+   *   En reparto    → «Llegué a la puerta»  (`arrived_customer`)
+   *   En la puerta  → «Cobrar»              (abre el cobro: `delivered` es
+   *                                          terminal, no se cierra de un roce)
+   *
+   * Y a la izquierda, «Soltar», solo hasta recoger.
+   */
+  function actionsFor(o: BoardOrder): { right?: RightAction; left?: LeftAction } {
+    const phase = minePhase(o)
+    if (phase === null) return {}
+    const stamp = () => new Date().toISOString()
+
+    const left: LeftAction | undefined =
+      phase === 'heading' || phase === 'waiting'
+        ? {
+            verb: 'Soltar pedido',
+            icon: 'block',
+            tone: 'danger',
+            onCommit: () => openSheet(o.id, 'soltar'),
+          }
+        : undefined
+
+    if (phase === 'heading') {
+      return {
+        left,
+        right: {
+          mode: 'optimistic',
+          verb: 'Llegué al local',
+          icon: 'store',
+          tone: 'sky',
+          commit: () =>
+            advanceOrder(o.id, 'arrived', {
+              status: 'waiting_at_restaurant',
+              waiting_at_restaurant_at: stamp(),
+            }),
+        },
+      }
+    }
+
+    if (phase === 'waiting') {
+      // Recoger ANTES de tiempo y sin que la cocina lo haya marcado listo es el
+      // único caso en que se pregunta: es cuando uno se lleva un pedido ajeno.
+      if (prematureMinutes(o, now) > 0) {
+        return {
+          left,
+          right: {
+            mode: 'open',
+            verb: 'Ya recogí',
+            icon: 'shopping_bag',
+            tone: 'orange',
+            commit: () => openSheet(o.id, 'recoger'),
+          },
+        }
+      }
+      return {
+        left,
+        right: {
+          mode: 'optimistic',
+          verb: 'Ya recogí',
+          icon: 'shopping_bag',
+          tone: 'orange',
+          commit: () =>
+            advanceOrder(
+              o.id,
+              'pickup',
+              { status: 'picked_up', picked_up_at: stamp() },
+              { slots: 1 },
+            ),
+        },
+      }
+    }
+
+    if (phase === 'carrying') {
+      return {
+        right: {
+          mode: 'optimistic',
+          verb: 'Llegué a la puerta',
+          icon: 'location_on',
+          tone: 'violet',
+          // El fix se pide DESPUÉS de pintar el paso: la espera del GPS ya no
+          // queda delante del dedo.
+          commit: () =>
+            advanceOrder(
+              o.id,
+              'arrived_customer',
+              { arrived_at_customer_at: stamp() },
+              quickPosition,
+            ),
+        },
+      }
+    }
+
+    return {
+      right: {
+        mode: 'open',
+        verb: 'Cobrar',
+        icon: 'payments',
+        tone: 'amber',
+        commit: () => openSheet(o.id, 'cobrar'),
+      },
+    }
+  }
+
   // Mismo criterio que en "En espera": "No tienes pedidos activos" es una
   // afirmación, y no se hace hasta saberla cierta.
   if (loading) return <SkeletonList count={2} />
@@ -68,16 +192,36 @@ export function MineTab({
   return (
     <div>
       <div className="flex flex-col gap-3">
-        {sorted.map((o) => (
-          <OrderCard
-            key={o.id}
-            order={o}
-            now={now}
-            variant="mine"
-            incomingRequest={requestByOrder.get(o.id) ?? null}
-          />
-        ))}
+        {sorted.map((o, i) => {
+          const card = (
+            <OrderCard
+              order={o}
+              now={now}
+              variant="mine"
+              incomingRequest={requestByOrder.get(o.id) ?? null}
+            />
+          )
+          const { right, left } = actionsFor(o)
+          if (!right && !left) return <div key={o.id}>{card}</div>
+          // Los gestos que abren una hoja necesitan el detalle del pedido: se pide
+          // en cuanto el dedo toca la tarjeta, no al soltar.
+          const warm = right?.mode === 'open' || left !== undefined
+          return (
+            <SwipeCard
+              key={o.id}
+              right={right}
+              left={left}
+              onTouch={warm ? () => void fetchOrderDetail(o.id).catch(() => {}) : undefined}
+              hint={i === 0}
+              hintKey="tindivo.drv.swipehint.mine.v1"
+            >
+              {card}
+            </SwipeCard>
+          )
+        })}
       </div>
+
+      <MineSheets target={sheetTarget} now={now} onClose={closeSheet} onChanged={onChanged} />
 
       {mine.length === 0 && (
         <EmptyState

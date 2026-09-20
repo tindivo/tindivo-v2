@@ -1,7 +1,7 @@
 'use client'
 
 import { Segmented } from '@tindivo/ui'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useDriverOrders } from '@/hooks/use-driver-orders'
 import { useNow } from '@/hooks/use-now'
 import { useTeam } from '@/hooks/use-team'
@@ -10,6 +10,19 @@ import { MineTab } from './mine-tab'
 import { TeamTab } from './team-tab'
 
 type Tab = 'available' | 'mine' | 'team'
+
+const TABS: Tab[] = ['available', 'mine', 'team']
+
+/** Lo que hay que arrastrar en horizontal, y cuánto más que en vertical. */
+const TAB_SWIPE_MIN_PX = 64
+const TAB_SWIPE_DOMINANCE = 1.6
+const TAB_SWIPE_MAX_MS = 700
+
+/**
+ * El iPhone reserva el borde izquierdo para «atrás»: un arrastre que empieza
+ * ahí es del sistema, no nuestro. Con margen de sobra sobre sus ~20 px.
+ */
+const SYSTEM_EDGE_PX = 24
 
 /** Board principal del motorizado: estado + tabs + bandejas. */
 export function Home() {
@@ -20,6 +33,65 @@ export function Home() {
   // llevarte a Equipo exigía que ya estuvieras en Equipo.
   const team = useTeam()
   const [tab, setTab] = useState<Tab>('available')
+
+  // ── GESTO ENTRE PESTAÑAS.
+  //
+  // Arrastrar en horizontal por FUERA de las tarjetas cambia de pestaña: hacia
+  // la izquierda avanza (En espera → Míos → Equipo), hacia la derecha retrocede.
+  //
+  // LAS TARJETAS QUEDAN FUERA A PROPÓSITO. Las de Disponibles y Míos ya usan el
+  // arrastre para avanzar o soltar el pedido (`data-swipe-card`); si además
+  // cambiaran de pestaña, rozar una tarjeta te sacaría de la bandeja. El gesto
+  // vive en la franja de pestañas, los avisos, los huecos entre tarjetas y el
+  // espacio bajo la lista. Las pestañas siguen siendo tocables, como siempre.
+  const contentRef = useRef<HTMLDivElement>(null)
+  const swipeStart = useRef<{ x: number; y: number; t: number } | null>(null)
+  const prevTab = useRef<Tab>(tab)
+
+  function go(delta: 1 | -1) {
+    const next = TABS[TABS.indexOf(tab) + delta]
+    if (!next) return
+    if (typeof navigator.vibrate === 'function') navigator.vibrate(8)
+    setTab(next)
+  }
+
+  function onPointerDown(e: React.PointerEvent<HTMLElement>) {
+    swipeStart.current = null
+    if (e.pointerType === 'mouse') return
+    if (e.clientX < SYSTEM_EDGE_PX) return
+    if ((e.target as Element).closest('[data-swipe-card],input,textarea,select,[aria-modal]')) {
+      return
+    }
+    swipeStart.current = { x: e.clientX, y: e.clientY, t: Date.now() }
+  }
+
+  function onPointerUp(e: React.PointerEvent<HTMLElement>) {
+    const s = swipeStart.current
+    swipeStart.current = null
+    if (!s) return
+    const dx = e.clientX - s.x
+    const dy = e.clientY - s.y
+    if (Date.now() - s.t > TAB_SWIPE_MAX_MS) return
+    if (Math.abs(dx) < TAB_SWIPE_MIN_PX) return
+    if (Math.abs(dx) < Math.abs(dy) * TAB_SWIPE_DOMINANCE) return
+    go(dx < 0 ? 1 : -1)
+  }
+
+  // El contenido entra desde el lado hacia el que se fue: la pestaña nueva está
+  // «al lado», no aparece de golpe. Vale igual para el toque en la franja.
+  useEffect(() => {
+    if (prevTab.current === tab) return
+    const dir = TABS.indexOf(tab) > TABS.indexOf(prevTab.current) ? 1 : -1
+    prevTab.current = tab
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    contentRef.current?.animate(
+      [
+        { opacity: 0, transform: `translateX(${dir * 28}px)` },
+        { opacity: 1, transform: 'translateX(0)' },
+      ],
+      { duration: 200, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
+    )
+  }, [tab])
 
   // ── Pestaña de aterrizaje: donde hay trabajo, no siempre la primera.
   //
@@ -57,7 +129,14 @@ export function Home() {
     // pantalla completa y ya no mide nada. Las dos lecturas caían siempre al
     // fallback `0px`, así que los `max()` daban el valor fijo de siempre —
     // dos cálculos muertos y un comentario que mentía sobre el contrato.
-    <main className="mx-auto max-w-[480px] px-4 pt-20 pb-10">
+    <main
+      className="mx-auto min-h-dvh max-w-[480px] touch-pan-y px-4 pt-20 pb-10"
+      onPointerDown={onPointerDown}
+      onPointerUp={onPointerUp}
+      onPointerCancel={() => {
+        swipeStart.current = null
+      }}
+    >
       {/* El saludo y la fila de estado («Disponible», «Avisos activos») vivían
           aquí y se han ido a la barra superior: se perdían al bajar por la
           bandeja y no existían en Efectivo ni en Historial. Ver `ShiftStatus`. */}
@@ -87,20 +166,24 @@ export function Home() {
         />
       </div>
 
-      {tab === 'available' && (
-        <AvailableTab
-          available={board.available}
-          upcoming={board.upcoming}
-          mySlots={board.mySlots}
-          hasOverdueAvailable={board.hasOverdueAvailable}
-          lastSyncOk={board.lastSyncOk}
-          loading={board.loading}
-          now={now}
-          onTaken={board.refetch}
-        />
-      )}
-      {tab === 'mine' && <MineTab mine={board.mine} loading={board.loading} now={now} />}
-      {tab === 'team' && <TeamTab mySlots={board.mySlots} />}
+      <div ref={contentRef}>
+        {tab === 'available' && (
+          <AvailableTab
+            available={board.available}
+            upcoming={board.upcoming}
+            mySlots={board.mySlots}
+            hasOverdueAvailable={board.hasOverdueAvailable}
+            lastSyncOk={board.lastSyncOk}
+            loading={board.loading}
+            now={now}
+            onTaken={board.refetch}
+          />
+        )}
+        {tab === 'mine' && (
+          <MineTab mine={board.mine} loading={board.loading} now={now} onChanged={board.refetch} />
+        )}
+        {tab === 'team' && <TeamTab mySlots={board.mySlots} />}
+      </div>
     </main>
   )
 }
