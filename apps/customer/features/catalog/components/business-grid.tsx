@@ -8,8 +8,24 @@ interface BusinessGridProps {
   error: string | null
 }
 
+/**
+ * Abiertos antes que cerrados, sin tocar el resto del orden. `sort` de JS es
+ * estable (spec desde ES2019): dentro de cada grupo sobrevive el orden que
+ * trajo la API (`order('name')`), así que esto no reordena nada más.
+ *
+ * `is_open_now == null` (sin horario configurado) cuenta como abierto: es el
+ * mismo criterio que ya usa `BusinessCard` para no pintarle el chip «Cerrado».
+ */
+function abiertosPrimero(businesses: PublicBusiness[]): PublicBusiness[] {
+  return [...businesses].sort(
+    (a, b) => Number(a.is_open_now === false) - Number(b.is_open_now === false),
+  )
+}
+
 export function BusinessGrid({ businesses, error }: BusinessGridProps) {
-  const platformBusinesses = businesses?.filter((b) => b.primary_capability !== 'catalog_only')
+  const platformBusinesses = businesses
+    ? abiertosPrimero(businesses.filter((b) => b.primary_capability !== 'catalog_only'))
+    : undefined
   const whatsappBusinesses = businesses?.filter((b) => b.primary_capability === 'catalog_only')
 
   return (

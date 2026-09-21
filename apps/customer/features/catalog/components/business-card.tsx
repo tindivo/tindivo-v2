@@ -21,12 +21,42 @@ function accentCss(hex: string | null | undefined): string {
   return clean ? `#${clean}` : 'var(--color-brand)'
 }
 
+/** Pill flotante sobre la foto: fondo blanco translúcido, legible sobre cualquier plato. */
+function PhotoBadge({
+  tone,
+  children,
+}: {
+  tone: 'closed' | 'brand' | 'neutral'
+  children: React.ReactNode
+}) {
+  const toneClass =
+    tone === 'closed'
+      ? 'bg-warning-soft/95 text-amber-900'
+      : tone === 'brand'
+        ? 'bg-brand-soft/95 text-brand-dark'
+        : 'bg-card/90 text-ink'
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-semibold text-meta shadow-elev-1 backdrop-blur-sm',
+        toneClass,
+      )}
+    >
+      {children}
+    </span>
+  )
+}
+
 export function BusinessCard({ business }: BusinessCardProps) {
   const b = business
   const isClosed = b.is_open_now === false
   const isWhatsapp = b.primary_capability === 'catalog_only'
-  // El logo apagado es la señal grande de «hoy no»; el chip la confirma.
-  const logoTone = isClosed ? 'opacity-45 grayscale' : ''
+  // El logo y la foto apagados son la señal grande de «hoy no»; el badge la confirma.
+  const dimmedTone = isClosed ? 'opacity-45 grayscale' : ''
+  // Máximo 2 (`categoria` nunca trae más, `0002`), unidas con el tagline en
+  // una sola línea: es el mismo dato que muestra Rappi bajo el nombre
+  // («Pollería · Pollos a la brasa»), sin sumar una línea nueva a la card.
+  const subtitulo = [...(b.categoria ?? []), b.tagline].filter(Boolean).join(' · ')
 
   return (
     <Card
@@ -35,68 +65,99 @@ export function BusinessCard({ business }: BusinessCardProps) {
       // `transition-[transform,box-shadow]` pisa el `transition-shadow` de
       // `Card` en tailwind-merge, y `duration-150` su `duration-300`: el
       // `active:scale` del dedo tiene que responder al toque, no a la sombra.
-      className="flex items-center gap-3 p-3 transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.985]"
+      className="overflow-hidden transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.985]"
     >
-      {b.logo_url ? (
-        <Image
-          src={b.logo_url}
-          // Decorativo a propósito: el nombre está a 12 px a la derecha, así que
-          // un `alt` con el nombre lo hace sonar dos veces seguidas.
-          alt=""
-          width={72}
-          height={72}
-          sizes="72px"
-          loading="lazy"
-          decoding="async"
-          className={cn('h-[72px] w-[72px] shrink-0 rounded-2xl object-cover', logoTone)}
-        />
-      ) : (
-        <div
-          className={cn(
-            'flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-2xl font-display font-bold text-[26px] text-white shadow-sm',
-            logoTone,
-          )}
-          style={{ backgroundColor: accentCss(b.accent_color) }}
-        >
-          {b.name ? b.name.trim()[0]?.toUpperCase() : 'T'}
-        </div>
-      )}
       {/*
-        `min-h-[72px]` y no `h-[72px]`: la altura la manda el logo, así que la
-        card mide 96 px siempre. Antes la mandaba el tagline — el de Pizza
-        Priamo tiene 108 caracteres y estiraba su card a 132 px, y con ella la
-        fila entera de la grilla en md/lg.
+        La misma portada que abre la carta (`BusinessHero`), traída al home: es
+        lo que un restaurante sin foto de comida pierde frente a uno que sí la
+        tiene. `aspect-[3/2]` es el punto medio entre la 2:1 del carrusel de
+        promos (demasiado baja para una foto de plato) y un cuadrado (demasiado
+        alta para la grilla de 3 columnas en desktop).
       */}
-      <div className="flex min-h-[72px] min-w-0 flex-1 flex-col justify-center">
-        <div className="truncate font-display font-bold text-lead leading-tight tracking-tight">
-          {b.name}
-        </div>
-        {b.tagline && <div className="mt-0.5 truncate text-ink-muted text-label">{b.tagline}</div>}
-        <div className="mt-1.5 flex flex-wrap items-center gap-2 text-caption text-ink-muted">
-          {isClosed && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-warning-soft px-2.5 py-0.5 font-semibold text-amber-900 text-meta">
-              <Icon name="schedule" size={14} /> Cerrado ahora
-            </span>
-          )}
-          {isWhatsapp ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-brand-soft px-2.5 py-0.5 font-semibold text-brand-dark text-meta">
-              <Icon name="chat" size={14} /> Pedidos por WhatsApp
-            </span>
-          ) : (
-            /*
-              El tiempo estimado solo cuando se puede cumplir. Un negocio cerrado
-              enseñaba el chip «Cerrado» y, a su lado, «20–40 min»: la card
-              decía que no atiende y acto seguido cuánto tarda en llegar.
+      <div className="relative aspect-[3/2] w-full overflow-hidden bg-surface-low">
+        {b.banner_url ? (
+          <Image
+            src={b.banner_url}
+            alt=""
+            fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            loading="lazy"
+            decoding="async"
+            className={cn('object-cover', dimmedTone)}
+          />
+        ) : (
+          <div
+            className={cn('absolute inset-0', dimmedTone)}
+            style={{
+              background: `linear-gradient(135deg, ${accentCss(b.accent_color)} 0%, #1a1614 130%)`,
+            }}
+          />
+        )}
 
-              «Delivery» se cayó de la fila: lo hacían todos los negocios con
-              ETA, así que no separaba a ninguno, y la única excepción ya se
-              marca sola con el chip de WhatsApp.
-            */
-            !isClosed && (
-              <span className="inline-flex items-center gap-1">
-                <Icon name="schedule" size={16} /> {b.estimated_eta_min}–{b.estimated_eta_max} min
-              </span>
-            )
+        {/*
+          Un solo badge por card, no dos apilados: «Cerrado» pesa más que
+          «WhatsApp», que pesa más que el ETA. Antes (fila horizontal) cabían
+          los tres a la vez; flotando sobre la foto, uno solo se lee de un
+          vistazo — que es el punto de sacarlo de la fila de texto.
+        */}
+        <div className="absolute top-2 right-2">
+          {isClosed ? (
+            <PhotoBadge tone="closed">
+              <Icon name="schedule" size={14} /> Cerrado ahora
+            </PhotoBadge>
+          ) : isWhatsapp ? (
+            <PhotoBadge tone="brand">
+              <Icon name="chat" size={14} /> WhatsApp
+            </PhotoBadge>
+          ) : (
+            <PhotoBadge tone="neutral">
+              <Icon name="schedule" size={14} /> {b.estimated_eta_min}–{b.estimated_eta_max} min
+            </PhotoBadge>
+          )}
+        </div>
+      </div>
+
+      {/*
+        El logo se monta sobre la costura foto/cuerpo, como Rappi y PedidosYa:
+        `-mt-6` (24 px) lo sube la mitad de sus 48 px hacia la foto, e
+        `items-end` alinea su base con la del bloque de texto. El anillo
+        `ring-card` es lo que lo despega de cualquier foto, clara u oscura.
+      */}
+      <div className="flex items-end gap-3 px-3 pb-3">
+        {b.logo_url ? (
+          <Image
+            src={b.logo_url}
+            // Decorativo a propósito: el nombre está a 12 px a la derecha, así que
+            // un `alt` con el nombre lo hace sonar dos veces seguidas.
+            alt=""
+            width={48}
+            height={48}
+            sizes="48px"
+            loading="lazy"
+            decoding="async"
+            className={cn(
+              '-mt-6 h-12 w-12 shrink-0 rounded-2xl object-cover shadow-elev-2 ring-4 ring-card',
+              dimmedTone,
+            )}
+          />
+        ) : (
+          <div
+            className={cn(
+              '-mt-6 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl font-display font-bold text-[18px] text-white shadow-elev-2 ring-4 ring-card',
+              dimmedTone,
+            )}
+            style={{ backgroundColor: accentCss(b.accent_color) }}
+          >
+            {b.name ? b.name.trim()[0]?.toUpperCase() : 'T'}
+          </div>
+        )}
+
+        <div className="min-w-0 flex-1 pb-0.5">
+          <div className="truncate font-display font-bold text-lead leading-tight tracking-tight">
+            {b.name}
+          </div>
+          {subtitulo && (
+            <div className="mt-0.5 truncate text-ink-muted text-label">{subtitulo}</div>
           )}
         </div>
       </div>

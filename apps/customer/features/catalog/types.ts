@@ -129,6 +129,20 @@ export interface PublicBusiness {
   tagline: string | null
   accent_color: string
   logo_url: string | null
+  /**
+   * La misma foto de portada que usa `BusinessHero` en el detalle. Ya viaja en
+   * `PUBLIC_COLUMNS` del endpoint (`apps/api/.../public/businesses/route.ts`);
+   * este tipo simplemente no la declaraba. Opcional a propósito, como
+   * `logo_url`: un negocio sin banner cae al degradé de `accent_color`.
+   */
+  banner_url?: string | null
+  /**
+   * `text[]` en la DB (hasta 2, `0002`), NO un string. Igual que `banner_url`,
+   * ya viaja en `PUBLIC_COLUMNS` y este tipo no la declaraba. Suele llegar
+   * como `[]`, nunca `null` (default de columna), pero se deja opcional por
+   * el mismo motivo que `slug`: una API vieja no la manda.
+   */
+  categoria?: string[] | null
   primary_capability: string
   estimated_eta_min: number
   estimated_eta_max: number
