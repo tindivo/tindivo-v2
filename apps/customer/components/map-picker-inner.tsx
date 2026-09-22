@@ -929,6 +929,18 @@ function MapCanvas({
         minZoom={minZoom}
         maxZoom={19}
         zoomControl={false}
+        // MEDIDO, NO INTUIDO. Un trace de rendering (Tracing.start de CDP,
+        // categorías `devtools.timeline`/`cc`, no el profiler de JS) durante
+        // un zoom con rueda mostró 884 tareas de rasterizado en ~12 pasos:
+        // cada paso de zoom animado crea/reemplaza nodos DOM reales (niveles
+        // de tiles vía `_updateLevels`, iconos vía `createIcon`), y cada
+        // mutación de esas invalida pintura y fuerza rasterizar de nuevo esa
+        // zona — no es una transformación barata de algo ya dibujado. Eso
+        // explica los tirones puntuales (peor frame: 286ms) más que una
+        // lentitud pareja. Apagar la animación cambia el gesto de "acercarse
+        // suave" a un salto instantáneo, pero elimina las ráfagas de repintado
+        // intermedias — el zoom pasa de N repintados animados a 1 solo.
+        zoomAnimation={false}
         attributionControl={interactive}
         // `maxBounds` + viscosidad 1 hace de pared dura: el mapa no deja salir
         // del pueblo. Antes se podía arrastrar el pin hasta Lima y lo único que
