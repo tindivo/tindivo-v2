@@ -1,5 +1,6 @@
 import { signOutEverywhere, signOutLocal } from '@tindivo/supabase'
 import { dropLocalPushSubscription, unsubscribeFromPush } from '@tindivo/ui'
+import { useActiveCourierOrdersStore } from './active-courier-orders'
 import { useActiveOrdersStore } from './active-orders'
 import { api } from './api'
 import { getSupabaseBrowser } from './supabase/client'
@@ -31,6 +32,7 @@ export async function signOutDevice(): Promise<void> {
   // del árbol de React): sin esto el badge de la BottomNav seguiría mostrando
   // los pedidos del que salió a quien entre después en el mismo navegador.
   useActiveOrdersStore.getState().reset()
+  useActiveCourierOrdersStore.getState().reset()
 }
 
 /**
@@ -52,4 +54,5 @@ export async function signOutEverywhereDevice(): Promise<void> {
   await dropLocalPushSubscription()
   await signOutEverywhere(getSupabaseBrowser())
   useActiveOrdersStore.getState().reset()
+  useActiveCourierOrdersStore.getState().reset()
 }

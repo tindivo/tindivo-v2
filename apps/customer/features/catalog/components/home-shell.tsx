@@ -9,6 +9,7 @@ import { SearchResults } from '@/features/catalog/components/search-results'
 import { useHomeData } from '@/features/catalog/hooks/use-home-data'
 import { firstName } from '@/features/catalog/lib/format'
 import type { CatalogUser, PublicBusiness } from '@/features/catalog/types'
+import { CourierEntryBanner } from '@/features/courier/components/courier-entry-banner'
 import { PilotWall } from '@/features/pilot/components/pilot-wall'
 import { ReviewCard } from '@/features/reviews/components/review-card'
 import { usePendingReview } from '@/features/reviews/hooks/use-pending-review'
@@ -75,6 +76,10 @@ export function HomeShell({ initialBusinesses, initialUser, initialQuery }: Home
             </>
           )}
         </h1>
+      </div>
+
+      <div className="px-4 pb-4">
+        <CourierEntryBanner />
       </div>
 
       {user.signedIn && activeOrders.length > 0 && <ActiveOrderBanner orders={activeOrders} />}

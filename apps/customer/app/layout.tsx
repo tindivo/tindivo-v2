@@ -5,6 +5,8 @@ import type { ReactNode } from 'react'
 import { AuthOnboardingHost } from '@/components/auth-onboarding/host'
 import { BottomNav } from '@/components/bottom-nav'
 import { PushManager } from '@/components/push-manager'
+import { CourierHost } from '@/features/courier/components/courier-host'
+import { CourierMapHost } from '@/features/courier/components/map/courier-map-host'
 import {
   PILOT_BYPASS_KEY,
   PILOT_BYPASS_TOKEN,
@@ -174,6 +176,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <CartHydrator />
         <PushManager />
         <AuthOnboardingHost />
+        <CourierMapHost />
+        <CourierHost />
         <BottomNav />
         <Analytics />
       </body>

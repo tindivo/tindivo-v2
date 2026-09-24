@@ -150,6 +150,67 @@ html {
   text-align: right;
 }
 
+/* Pines de ruta (origen/destino/motorizado) de Tindivo Entregas — ver
+   `RoutePinLayer` en `map-picker-inner.tsx`. Mismo "div de 0×0 clavado en la
+   coordenada" que `.t-lm`, pero la gota ancla por su PUNTA (abajo), no por el
+   centro: es la que toca la puerta, no el círculo del pin. */
+.t-route-pin {
+  pointer-events: none;
+}
+
+.t-route-pin-drop {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+  line-height: 0;
+  transform: translate(-50%, -100%);
+  filter: drop-shadow(0 2px 4px rgb(0 0 0 / 0.3));
+}
+
+/* El globo de nombre ("Elmer", "Tu casa"), siempre encima de la gota. La
+   altura de la gota (38px) más 6px de aire es lo que fija el `-44px`: si el
+   tamaño del SVG de `routePinIcono` cambia, este número tiene que seguirlo. */
+.t-route-pin-label {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -44px) translateY(-100%);
+  display: block;
+  white-space: nowrap;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.2);
+}
+
+/* La píldora del motorizado ("Va a recoger"): centrada en su coordenada, no
+   apoyada por una punta — no es un lugar, es dónde está alguien ahora mismo. */
+.t-route-driver {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #0f172a;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.3);
+}
+
+.t-route-driver-label {
+  line-height: 1;
+}
+
 /* Muro del piloto: el atributo lo pone el script inline de `app/layout.tsx` antes
    del primer pintado, para que un dispositivo con bypass no vea el muro ni un
    instante. React lo desmonta después; esto solo cubre ese hueco. */

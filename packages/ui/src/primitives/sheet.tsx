@@ -28,12 +28,29 @@ export function BottomSheet({
   onClose,
   label,
   children,
+  scrim = true,
 }: {
   open: boolean
   onClose?: () => void
   /** Cómo se llama esta hoja para quien no la ve. Obligatoria a propósito. */
   label: string
   children: ReactNode
+  /**
+   * `false` quita el fondo oscuro (`bg-ink/35 backdrop-blur-sm`) Y el cierre
+   * al clic fuera: sigue siendo portal, sigue atrapando el foco, sigue
+   * cerrando con Escape. Es para hojas que flotan sobre un mapa persistente
+   * (Tindivo Entregas) en vez de sobre lo que hubiera detrás — el mapa tiene
+   * que quedar visible y TOCABLE, no tapado por un scrim pensado para un
+   * fondo cualquiera.
+   *
+   * El backdrop pasa a `pointer-events-none` en vez de solo perder el color:
+   * antes seguía siendo el elemento de pantalla completa más alto (z-80) y
+   * capturaba cualquier gesto sobre el mapa, así que arrastrar el mapa detrás
+   * de la hoja no solo no lo movía — CERRABA la hoja entera, porque el mismo
+   * div escuchaba el clic para eso. `pointer-events-auto` en la caja de abajo
+   * la deja interactiva igual, aunque su padre ya no lo sea.
+   */
+  scrim?: boolean
 }) {
   const caja = useRef<HTMLDivElement>(null)
   /**
@@ -79,12 +96,14 @@ export function BottomSheet({
 
   if (!open || !montado) return null
   return createPortal(
-    // biome-ignore lint/a11y/noStaticElementInteractions: backdrop de modal que cierra al click fuera
+    // biome-ignore lint/a11y/noStaticElementInteractions: backdrop de modal que cierra al click fuera (solo con scrim)
     <div
-      className="fixed inset-0 z-80 flex items-end justify-center bg-ink/35 animate-[t-fade-in_200ms_ease] backdrop-blur-sm"
+      className={`fixed inset-0 z-80 flex items-end justify-center animate-[t-fade-in_200ms_ease] ${
+        scrim ? 'bg-ink/35 backdrop-blur-sm' : 'pointer-events-none'
+      }`}
       role="presentation"
       onClick={(e) => {
-        if (e.target === e.currentTarget && onClose) onClose()
+        if (scrim && e.target === e.currentTarget && onClose) onClose()
       }}
     >
       <div
@@ -93,7 +112,7 @@ export function BottomSheet({
         // tabulación, y sin anillo: el foco está aquí para anunciar el diálogo,
         // no para señalar un control.
         tabIndex={-1}
-        className="flex w-full max-w-[768px] max-h-[85dvh] min-h-0 flex-col overflow-hidden rounded-t-[28px] bg-surface text-ink shadow-[0_-20px_60px_-40px_rgba(0,0,0,0.35)] animate-[t-slide-up_280ms_cubic-bezier(0.22,1,0.36,1)] overscroll-contain focus:outline-none"
+        className="pointer-events-auto flex w-full max-w-[768px] max-h-[85dvh] min-h-0 flex-col overflow-hidden rounded-t-[28px] bg-surface text-ink shadow-[0_-20px_60px_-40px_rgba(0,0,0,0.35)] animate-[t-slide-up_280ms_cubic-bezier(0.22,1,0.36,1)] overscroll-contain focus:outline-none"
         role="dialog"
         aria-modal="true"
         aria-label={label}

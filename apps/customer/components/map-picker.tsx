@@ -57,7 +57,7 @@ type GpsState =
  * que el formulario avise). Es el límite de hasta dónde puede viajar el mapa,
  * para que perderse deje de ser posible.
  */
-function boundsFor(polygon: LatLng[] | null, center: LatLng, radiusKm: number): MapBounds {
+export function boundsFor(polygon: LatLng[] | null, center: LatLng, radiusKm: number): MapBounds {
   if (polygon && polygon.length >= 3) {
     const lats = polygon.map((p) => p.lat)
     const lngs = polygon.map((p) => p.lng)
@@ -117,6 +117,7 @@ export function MapPicker({
   onChange,
   onValidityChange,
   heightPx = 180,
+  showDeliveryFee = true,
 }: {
   value: LatLng | null
   /**
@@ -147,6 +148,13 @@ export function MapPicker({
   onChange: (c: LatLng, accuracyM: number | null) => void
   onValidityChange?: (inside: boolean) => void
   heightPx?: number
+  /**
+   * `false` oculta el texto de envío por banda ("Envío S/ X · zona lejana"):
+   * es la tarifa de DELIVERY a un restaurante, que no significa nada para
+   * quien está fijando un punto A/B de Tindivo Entregas (tarifa plana S/ 3,
+   * calculada aparte). El mapa y el GPS se comportan exactamente igual.
+   */
+  showDeliveryFee?: boolean
 }) {
   const [center, setCenter] = useState<LatLng | null>(null)
   const [polygon, setPolygon] = useState<LatLng[] | null>(null)
@@ -543,13 +551,21 @@ export function MapPicker({
                 ? 'Obligatorio · marca tu ubicación'
                 : !inside
                   ? 'Esta ubicación está fuera de la zona de reparto de San Jacinto'
-                  : `✓ Envío S/ ${fee.toFixed(2)}${band === 'far' ? ' (zona lejana)' : ''} · ${
-                      accuracyM == null
-                        ? 'ajustada a mano'
-                        : flojo
-                          ? `GPS flojo ±${accuracyM} m`
-                          : `GPS ±${accuracyM} m`
-                    }`}
+                  : showDeliveryFee
+                    ? `✓ Envío S/ ${fee.toFixed(2)}${band === 'far' ? ' (zona lejana)' : ''} · ${
+                        accuracyM == null
+                          ? 'ajustada a mano'
+                          : flojo
+                            ? `GPS flojo ±${accuracyM} m`
+                            : `GPS ±${accuracyM} m`
+                      }`
+                    : `✓ Ubicación confirmada · ${
+                        accuracyM == null
+                          ? 'ajustada a mano'
+                          : flojo
+                            ? `GPS flojo ±${accuracyM} m`
+                            : `GPS ±${accuracyM} m`
+                      }`}
           </span>
         </div>
 
