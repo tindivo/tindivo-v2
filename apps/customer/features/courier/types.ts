@@ -3,27 +3,21 @@ import type { CourierPayer } from '@tindivo/contracts'
 /**
  * Pantallas de la hoja de Tindivo Entregas.
  *
- * El camino por defecto (sin negocio, rediseño "Tu ruta" inspirado en
- * inDrive) es `trip → pin-drop → trip → pin-drop → trip-details →
- * trip-payer → trip-items → tracking`: `trip` arma los puntos A/B uno a la
- * vez (fila activa + "Listo" habilita el siguiente), `trip-details` es la
- * pantalla de confirmación con las dos tarjetas de ubicación/contacto,
- * `trip-payer` es el paso corto de "¿Quién paga?", `trip-items` es "¿Qué
- * llevamos?" con el checkbox final que dispara el pedido.
+ * El camino por defecto (sin negocio) es MAPA PRIMERO, inspirado en inDrive:
+ * `pin-drop (A) → pin-drop (B) → trip-details → trip-payer → trip-items →
+ * tracking`. `pin-drop` es el mapa a pantalla completa con el pin fijo al
+ * centro ("arrastra el mapa, no el pin") y, debajo, la referencia del punto
+ * en la misma pantalla; `trip-details` es la confirmación con las dos
+ * tarjetas de ubicación/contacto, `trip-payer` el paso corto de "¿Quién
+ * paga?" y `trip-items` "¿Qué llevamos?" con el checkbox que dispara el pedido.
  *
  * `route`/`confirm` son el camino de negocio (directorio) — se OCULTAN (ya no
  * son el default de `openSheet`) pero se mantienen funcionales para
- * retomarlos después.
- *
- * `pin-drop` es el mapa a pantalla completa con el pin fijo al centro
- * ("arrastra el mapa, no el pin"). Desde `trip` no hay paso `pin-note`
- * aparte: la referencia se escribe inline en la fila del punto activo.
- * `pin-note` sigue existiendo solo para el camino de negocio oculto
- * (`confirm` vía `PointField`).
+ * retomarlos después. `pin-note` existe solo para ese camino, donde la
+ * referencia se escribe en un paso aparte.
  */
 export type CourierFlowStep =
-  | 'trip' // Tu ruta: fila A/B, una a la vez
-  | 'pin-drop' // fijar el punto en el mapa (A o B)
+  | 'pin-drop' // fijar el punto en el mapa (A o B) + su referencia
   | 'pin-note' // escribir cómo llegar — solo camino de negocio oculto
   | 'trip-details' // Dónde recogemos / Dónde entregamos (imagen 6)
   | 'trip-payer' // ¿Quién paga?

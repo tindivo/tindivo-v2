@@ -58,79 +58,93 @@ describe('useCourierStore · pin-drop', () => {
 })
 
 /**
- * El camino por defecto (sin negocio): `trip` arma los puntos A/B uno a la
- * vez. `confirmPinDrop` con `returnStep: 'trip'` NO pasa por `pin-note` (la
- * referencia se escribe inline en la fila), y `advanceTripPoint` es lo que
- * decide si falta el otro punto o si ya se puede pasar a `trip-details`.
+ * El camino por defecto (sin negocio) es mapa primero: `openSheet` abre directo
+ * el pin del punto A, y `confirmPinDrop` con la referencia decide solo si falta
+ * el otro punto (→ pin de B) o si ya se puede pasar a `trip-details`.
  */
-describe('useCourierStore · trip (sin negocio)', () => {
+describe('useCourierStore · mapa primero (sin negocio)', () => {
+  const A = { lat: -9.15, lng: -78.5 }
+  const B = { lat: -9.14, lng: -78.49 }
+
   beforeEach(() => {
     useCourierStore.setState(useCourierStore.getInitialState())
   })
 
-  it('openSheet arranca en trip con el punto A activo', () => {
+  it('openSheet arranca directo en el pin del punto A', () => {
     useCourierStore.getState().openSheet()
     const s = useCourierStore.getState()
-    expect(s.step).toBe('trip')
-    expect(s.activeTripPoint).toBe('origin')
+    expect(s.open).toBe(true)
+    expect(s.step).toBe('pin-drop')
+    expect(s.editingPoint).toBe('origin')
+    expect(s.returnStep).toBe('trip-details')
   })
 
-  it('confirmPinDrop desde trip vuelve directo a trip, sin pasar por pin-note', () => {
+  it('confirmar A con su referencia pasa al pin de B, sin salir de pin-drop', () => {
     useCourierStore.getState().openSheet()
-    useCourierStore.getState().beginEditPoint('origin')
-    useCourierStore.getState().confirmPinDrop({ lat: -9.15, lng: -78.5 }, 12)
+    useCourierStore.getState().confirmPinDrop(A, 12, 'Frente al mercado')
     const s = useCourierStore.getState()
-    expect(s.step).toBe('trip')
+    expect(s.step).toBe('pin-drop')
+    expect(s.editingPoint).toBe('destination')
+    expect(s.draft.origin.coordinates).toEqual(A)
+    expect(s.draft.origin.referenceText).toBe('Frente al mercado')
+  })
+
+  it('confirmar B con su referencia pasa a trip-details', () => {
+    useCourierStore.getState().openSheet()
+    useCourierStore.getState().confirmPinDrop(A, 12, 'Frente al mercado')
+    useCourierStore.getState().confirmPinDrop(B, null, 'Casa celeste, segundo piso')
+    const s = useCourierStore.getState()
+    expect(s.step).toBe('trip-details')
     expect(s.editingPoint).toBeNull()
-    expect(s.draft.origin.coordinates).toEqual({ lat: -9.15, lng: -78.5 })
+    expect(s.returnStep).toBeNull()
+    expect(s.draft.destination.referenceText).toBe('Casa celeste, segundo piso')
   })
 
-  it('advanceTripPoint pasa de origen a destino cuando falta el punto B', () => {
+  it('atrás desde B vuelve al pin de A sin perder lo ya escrito', () => {
     useCourierStore.getState().openSheet()
-    useCourierStore.getState().updatePoint('origin', {
-      coordinates: { lat: -9.15, lng: -78.5 },
-      referenceText: 'Frente al mercado',
-    })
-    useCourierStore.getState().advanceTripPoint()
+    useCourierStore.getState().confirmPinDrop(A, 12, 'Frente al mercado')
+    useCourierStore.getState().cancelEditPoint()
     const s = useCourierStore.getState()
-    expect(s.step).toBe('trip')
-    expect(s.activeTripPoint).toBe('destination')
+    expect(s.step).toBe('pin-drop')
+    expect(s.editingPoint).toBe('origin')
+    expect(s.draft.origin.coordinates).toEqual(A)
   })
 
-  it('advanceTripPoint pasa a trip-details cuando A y B ya están completos', () => {
+  it('atrás desde A, todavía sin nada, cierra el flujo', () => {
     useCourierStore.getState().openSheet()
-    useCourierStore.getState().updatePoint('origin', {
-      coordinates: { lat: -9.15, lng: -78.5 },
-      referenceText: 'Frente al mercado',
-    })
-    useCourierStore.getState().updatePoint('destination', {
-      coordinates: { lat: -9.14, lng: -78.49 },
-      referenceText: 'Casa celeste, segundo piso',
-    })
-    useCourierStore.getState().advanceTripPoint()
-    useCourierStore.getState().advanceTripPoint()
-    expect(useCourierStore.getState().step).toBe('trip-details')
-  })
-
-  it('beginChangePoint limpia el punto y vuelve a trip sin tocar el otro punto', () => {
-    useCourierStore.getState().openSheet()
-    useCourierStore.getState().updatePoint('origin', {
-      coordinates: { lat: -9.15, lng: -78.5 },
-      referenceText: 'Frente al mercado',
-    })
-    useCourierStore.getState().updatePoint('destination', {
-      coordinates: { lat: -9.14, lng: -78.49 },
-      referenceText: 'Casa celeste, segundo piso',
-    })
-    useCourierStore.setState({ step: 'trip-details' })
-
-    useCourierStore.getState().beginChangePoint('origin')
+    useCourierStore.getState().cancelEditPoint()
     const s = useCourierStore.getState()
-    expect(s.step).toBe('trip')
-    expect(s.activeTripPoint).toBe('origin')
-    expect(s.draft.origin.coordinates).toBeNull()
-    expect(s.draft.origin.referenceText).toBe('')
-    // El punto B, que ya estaba listo, no se toca.
-    expect(s.draft.destination.coordinates).toEqual({ lat: -9.14, lng: -78.49 })
+    expect(s.open).toBe(false)
+    expect(s.editingPoint).toBeNull()
+  })
+
+  it('corregir un punto desde trip-details vuelve ahí, con el otro punto intacto', () => {
+    useCourierStore.getState().openSheet()
+    useCourierStore.getState().confirmPinDrop(A, 12, 'Frente al mercado')
+    useCourierStore.getState().confirmPinDrop(B, null, 'Casa celeste, segundo piso')
+
+    useCourierStore.getState().beginEditPoint('origin')
+    let s = useCourierStore.getState()
+    expect(s.step).toBe('pin-drop')
+    expect(s.returnStep).toBe('trip-details')
+
+    const A2 = { lat: -9.151, lng: -78.501 }
+    useCourierStore.getState().confirmPinDrop(A2, null, 'Puerta azul, frente al mercado')
+    s = useCourierStore.getState()
+    expect(s.step).toBe('trip-details')
+    expect(s.draft.origin.coordinates).toEqual(A2)
+    expect(s.draft.origin.referenceText).toBe('Puerta azul, frente al mercado')
+    expect(s.draft.destination.coordinates).toEqual(B)
+  })
+
+  it('cancelar la corrección desde trip-details no toca nada', () => {
+    useCourierStore.getState().openSheet()
+    useCourierStore.getState().confirmPinDrop(A, 12, 'Frente al mercado')
+    useCourierStore.getState().confirmPinDrop(B, null, 'Casa celeste, segundo piso')
+    useCourierStore.getState().beginEditPoint('destination')
+    useCourierStore.getState().cancelEditPoint()
+    const s = useCourierStore.getState()
+    expect(s.step).toBe('trip-details')
+    expect(s.draft.destination.coordinates).toEqual(B)
   })
 })

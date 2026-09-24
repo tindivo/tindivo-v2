@@ -1,20 +1,62 @@
 'use client'
 
+import { ADDRESS_REFERENCE_MAX, AddressReferenceSchema } from '@tindivo/contracts'
 import { Button, Icon, Segmented, Spinner, useDialogFocus } from '@tindivo/ui'
-import { useRef } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import type { MapMode } from '@/components/map-picker-inner'
+import type { CourierEditingPoint } from '../../types'
+
+const COPY: Record<
+  CourierEditingPoint,
+  {
+    title: string
+    confirm: string
+    placeholder: string
+    hint: string
+    pill: string
+    icon: string
+    dot: string
+  }
+> = {
+  origin: {
+    title: '¿Dónde recogemos?',
+    confirm: 'Confirmar recojo',
+    placeholder: 'Ej: puerta azul, frente al mercado',
+    hint: 'Ayuda al motorizado: color de la puerta o algo cercano.',
+    pill: 'Mueve el mapa hasta la puerta de recojo',
+    icon: 'trip_origin',
+    dot: 'bg-brand',
+  },
+  destination: {
+    title: '¿Dónde entregamos?',
+    confirm: 'Confirmar entrega',
+    placeholder: 'Ej: casa celeste, segundo piso',
+    hint: 'Ayuda al motorizado: color de la puerta o algo cercano.',
+    pill: 'Mueve el mapa hasta la puerta de entrega',
+    icon: 'location_on',
+    dot: 'bg-[#2E3236]',
+  },
+}
 
 /**
- * Pedir-2 · Fijar en el mapa: los controles sobre el `MapCanvas` que ya vive
- * en `CourierMapHost`. NO monta su propio mapa — es la parte "chrome" de lo
- * que en `location-sheet.tsx` (checkout) es una pantalla autocontenida, aquí
- * separada porque el mapa de Entregas no puede remontarse entre pasos.
+ * Fijar un punto en el mapa: los controles sobre el `MapCanvas` que ya vive en
+ * `CourierMapHost`. NO monta su propio mapa — es la parte "chrome" de lo que en
+ * `location-sheet.tsx` (checkout) es una pantalla autocontenida, aquí separada
+ * porque el mapa de Entregas no puede remontarse entre pasos.
+ *
+ * Con `guided` (camino por defecto) la referencia del punto se escribe en el
+ * panel de abajo, en la misma pantalla que el pin: es un solo paso por punto.
+ * Sin `guided` (camino de negocio) el panel es solo el pin y la referencia va
+ * en un paso aparte.
  */
 export function PinDropOverlay({
   mode,
   onModeChange,
-  coach,
-  onDismissCoach,
+  point,
+  guided,
+  stepIndex,
+  reference,
+  onReferenceChange,
   moving,
   settled,
   inside,
@@ -23,22 +65,76 @@ export function PinDropOverlay({
   onUseMyLocation,
   onConfirm,
   onCancel,
+  onPanelHeight,
 }: {
   mode: MapMode
   onModeChange: (m: MapMode) => void
-  coach: boolean
-  onDismissCoach: () => void
+  point: CourierEditingPoint
+  guided: boolean
+  /** 1 o 2 mientras se arma la ruta por primera vez; `null` al corregir un punto. */
+  stepIndex: 1 | 2 | null
+  reference: string
+  onReferenceChange: (v: string) => void
   moving: boolean
   settled: boolean
   inside: boolean
   locating: boolean
   locateError: string | null
   onUseMyLocation: () => void
-  onConfirm: () => void
+  onConfirm: (reference: string | undefined) => void
   onCancel: () => void
+  onPanelHeight: (px: number) => void
 }) {
   const caja = useRef<HTMLDivElement>(null)
+  const panel = useRef<HTMLDivElement>(null)
+  const input = useRef<HTMLInputElement>(null)
+  const [refError, setRefError] = useState<string | null>(null)
   useDialogFocus(caja, { open: true, onClose: onCancel })
+
+  // El mapa termina donde empieza este panel: así el pin queda en el centro de
+  // lo que se ve y no debajo de la tarjeta. `CourierMapHost` recorta el mapa a
+  // esta altura.
+  useLayoutEffect(() => {
+    const el = panel.current
+    if (!el) return
+    const report = () => onPanelHeight(Math.round(el.getBoundingClientRect().height))
+    report()
+    const ro = new ResizeObserver(report)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [onPanelHeight])
+
+  const copy = COPY[point]
+  const canConfirm = settled && inside && !moving
+
+  function tryConfirm() {
+    if (!canConfirm) return
+    if (!guided) {
+      onConfirm(undefined)
+      return
+    }
+    const parsed = AddressReferenceSchema.safeParse(reference)
+    if (!parsed.success) {
+      setRefError(parsed.error.issues[0]?.message ?? 'Escribe una referencia')
+      input.current?.focus()
+      return
+    }
+    // Sin esto el teclado se queda abierto para el punto siguiente y tapa el mapa.
+    input.current?.blur()
+    onConfirm(parsed.data)
+  }
+
+  const status = locateError
+    ? { tone: 'danger', text: locateError }
+    : !inside
+      ? { tone: 'danger', text: 'Esta ubicación está fuera de la zona de reparto de San Jacinto' }
+      : locating
+        ? { tone: 'brand', text: 'Buscando tu ubicación…' }
+        : moving
+          ? { tone: 'brand', text: 'Ubicando…' }
+          : settled
+            ? { tone: 'success', text: '✓ Dentro de la zona de reparto' }
+            : { tone: 'brand', text: 'Mueve el mapa hasta la puerta' }
 
   return (
     <div
@@ -50,13 +146,11 @@ export function PinDropOverlay({
       /*
        * `pointer-events-none` EN EL CONTENEDOR ENTERO. A diferencia de
        * `location-sheet.tsx`, el mapa NO vive dentro de este div — vive en
-       * `CourierMapHost`, un HERMANO por debajo (z-0). Sin esto, este `div`
-       * transparente de pantalla completa (z-70) es el elemento más alto en
-       * CADA punto de la pantalla y se queda con el `mousedown`/`touchstart`
-       * que el arrastre necesita que llegue al Leaflet de abajo — verificado
-       * con `document.elementFromPoint`. Cada control real (botones,
-       * segmented, la tarjeta inferior) reactiva `pointer-events-auto` por su
-       * cuenta.
+       * `CourierMapHost`, un HERMANO por debajo. Sin esto, este `div`
+       * transparente de pantalla completa es el elemento más alto en CADA punto
+       * de la pantalla y se queda con el `mousedown`/`touchstart` que el
+       * arrastre necesita que llegue al Leaflet de abajo. Cada control real
+       * (botones, segmented, el panel inferior) reactiva `pointer-events-auto`.
        */
       className="pointer-events-none fixed inset-0 z-70 flex flex-col focus:outline-none"
     >
@@ -93,11 +187,11 @@ export function PinDropOverlay({
 
         <div
           className={`pointer-events-none absolute inset-x-0 top-[calc(4.75rem+env(safe-area-inset-top))] z-[600] flex justify-center px-4 transition-opacity duration-200 ${
-            moving || coach ? 'opacity-0' : 'opacity-100'
+            moving || settled || locating ? 'opacity-0' : 'opacity-100'
           }`}
         >
           <span className="rounded-full bg-slate-900/[0.92] px-4 py-1.5 text-center font-medium text-[12px] text-white shadow-elev-3 border border-white/10">
-            Mueve el mapa hasta que el pin quede en tu puerta
+            {guided ? copy.pill : 'Mueve el mapa hasta que el pin quede en tu puerta'}
           </span>
         </div>
 
@@ -110,110 +204,110 @@ export function PinDropOverlay({
         >
           {locating ? <Spinner size="xs" variant="brand" /> : <Icon name="my_location" size={22} />}
         </button>
-
-        {coach && (
-          <div className="pointer-events-none absolute inset-0 z-[720] flex select-none flex-col items-center justify-center gap-3.5 bg-ink/[0.66] px-8 text-center">
-            <svg width="112" height="74" viewBox="0 0 112 74" fill="none" aria-hidden="true">
-              <title>El mapa se mueve, el pin se queda</title>
-              <g
-                stroke="rgba(255,255,255,.85)"
-                strokeWidth="2.4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M14 37H2" />
-                <path d="M7 31l-5 6 5 6" />
-                <path d="M98 37h12" />
-                <path d="M105 31l5 6-5 6" />
-              </g>
-              <rect
-                x="26"
-                y="7"
-                width="60"
-                height="60"
-                rx="10"
-                fill="rgba(255,255,255,.14)"
-                stroke="rgba(255,255,255,.85)"
-                strokeWidth="2.4"
-              />
-              <g stroke="rgba(255,255,255,.42)" strokeWidth="2">
-                <path d="M26 27h60" />
-                <path d="M26 49h60" />
-                <path d="M46 7v60" />
-                <path d="M68 7v60" />
-              </g>
-              <g transform="translate(43 12) scale(0.76)">
-                <path
-                  d="M17 2C9.3 2 3 8.2 3 15.9 3 26 17 42 17 42s14-16.1 14-26.1C31 8.2 24.7 2 17 2z"
-                  fill="#f97316"
-                  stroke="#ffffff"
-                  strokeWidth="2.5"
-                />
-                <circle cx="17" cy="16" r="5" fill="#ffffff" />
-              </g>
-            </svg>
-
-            <h2 className="font-display font-extrabold text-[22px] text-white leading-[1.2] tracking-tight text-balance">
-              Arrastra el mapa hasta que el pin quede en tu puerta
-            </h2>
-            <p className="text-[14px] text-white/75 leading-snug text-pretty">
-              El pin no se mueve: se mueve el mapa por debajo. Pellizca para acercar.
-            </p>
-
-            <button
-              type="button"
-              onClick={onDismissCoach}
-              className="pointer-events-auto mt-1 inline-flex h-[46px] items-center justify-center rounded-full bg-white px-8 font-extrabold text-[15px] text-ink transition-transform active:scale-[0.97]"
-            >
-              Entendido
-            </button>
-          </div>
-        )}
       </div>
 
-      <div className="pointer-events-auto shrink-0 rounded-t-[24px] bg-card px-4 pt-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-[0_-16px_40px_-28px_rgba(0,0,0,0.4)]">
-        <p className="font-display font-bold text-[17px] leading-tight text-ink">
-          {moving ? 'Ubicando…' : settled ? '¿El pin está en tu puerta?' : 'Arrastra el mapa'}
+      <div
+        ref={panel}
+        className="pointer-events-auto shrink-0 rounded-t-[24px] bg-card px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-[0_-16px_40px_-28px_rgba(0,0,0,0.4)]"
+      >
+        {guided && stepIndex && (
+          <p className="mb-0.5 flex items-center gap-1.5 font-mono text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
+            <span aria-hidden className={`h-2 w-2 rounded-full ${copy.dot}`} />
+            Paso {stepIndex} de 2
+          </p>
+        )}
+        <p className="font-display font-extrabold text-[20px] leading-tight tracking-tight text-ink">
+          {guided
+            ? copy.title
+            : moving
+              ? 'Ubicando…'
+              : settled
+                ? '¿El pin está en tu puerta?'
+                : 'Arrastra el mapa'}
         </p>
 
         <div className="mt-1 flex min-h-[18px] items-center gap-1.5 font-mono text-[11px]">
           <span
             aria-hidden
             className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${
-              locateError || !inside ? 'bg-danger' : settled ? 'bg-success' : 'bg-brand-dark'
+              status.tone === 'danger'
+                ? 'bg-danger'
+                : status.tone === 'success'
+                  ? 'bg-success'
+                  : 'bg-brand-dark'
             }`}
           />
           <span
-            className={`truncate ${
-              locateError || !inside
+            aria-live="polite"
+            className={`truncate font-semibold ${
+              status.tone === 'danger'
                 ? 'text-danger'
-                : settled
-                  ? 'font-semibold text-success'
-                  : 'font-semibold text-brand-dark'
+                : status.tone === 'success'
+                  ? 'text-success'
+                  : 'text-brand-dark'
             }`}
           >
-            {locateError
-              ? locateError
-              : !inside
-                ? 'Esta ubicación está fuera de la zona de reparto de San Jacinto'
-                : !settled
-                  ? 'Aún no marcas el punto'
-                  : '✓ Dentro de la zona de reparto'}
+            {status.text}
           </span>
         </div>
+
+        {guided && (
+          <div className="mt-3">
+            <label
+              className={`flex h-12 items-center gap-2.5 rounded-2xl border-2 bg-white px-3.5 transition-colors ${
+                refError ? 'border-danger' : 'border-ink/10 focus-within:border-ink/40'
+              }`}
+            >
+              <Icon name={copy.icon} size={20} className="shrink-0 text-ink-muted" />
+              <input
+                ref={input}
+                type="text"
+                value={reference}
+                maxLength={ADDRESS_REFERENCE_MAX}
+                enterKeyHint="done"
+                autoComplete="off"
+                aria-label="Dirección y referencia"
+                aria-invalid={refError ? true : undefined}
+                placeholder={copy.placeholder}
+                onChange={(e) => {
+                  onReferenceChange(e.target.value)
+                  if (refError) setRefError(null)
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    tryConfirm()
+                  }
+                }}
+                className="min-w-0 flex-1 border-0 bg-transparent text-[15px] font-semibold text-ink outline-none placeholder:font-medium placeholder:text-ink-muted/70"
+              />
+            </label>
+            {/* Alto fijo: el aviso reemplaza a la pista sin mover el mapa de arriba. */}
+            <p
+              role={refError ? 'alert' : undefined}
+              className={`mt-1.5 min-h-[16px] px-1 text-[12px] leading-[16px] ${
+                refError ? 'font-bold text-danger' : 'font-medium text-ink-muted'
+              }`}
+            >
+              {refError ?? copy.hint}
+            </p>
+          </div>
+        )}
 
         <Button
           type="button"
           variant="brand"
           className="mt-3 w-full"
-          disabled={!inside || moving || !settled}
-          onClick={onConfirm}
+          disabled={!canConfirm}
+          onClick={tryConfirm}
         >
           {!settled
-            ? 'Arrastra el mapa para marcar el punto'
-            : inside
-              ? 'Confirmar ubicación'
-              : 'Muévelo dentro de la zona'}
+            ? 'Mueve el mapa para marcar el punto'
+            : !inside
+              ? 'Muévelo dentro de la zona'
+              : guided
+                ? copy.confirm
+                : 'Confirmar ubicación'}
         </Button>
       </div>
     </div>

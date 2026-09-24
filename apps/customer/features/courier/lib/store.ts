@@ -20,10 +20,12 @@ interface CourierState {
   trackingShortId: string | null
   /** Qué punto se está fijando en `pin-drop`/`pin-note`. `null` fuera de ese subflujo. */
   editingPoint: CourierEditingPoint | null
-  /** A qué paso volver al terminar (o cancelar) el pin-drop. */
+  /**
+   * A qué paso volver al terminar (o cancelar) el pin-drop. `'trip-details'`
+   * marca el camino por defecto: A → B → `trip-details`, y también la
+   * corrección de un punto desde `trip-details`.
+   */
   returnStep: CourierFlowStep | null
-  /** Qué fila de "Tu ruta" (`trip`) está activa/editable ahora mismo. */
-  activeTripPoint: CourierEditingPoint
 
   openSheet: (opts?: { step?: CourierFlowStep }) => void
   openForBusiness: (business: {
@@ -44,30 +46,19 @@ interface CourierState {
   beginEditPoint: (which: CourierEditingPoint) => void
   /** Vuelve al paso anterior sin guardar nada del punto que se estaba fijando. */
   cancelEditPoint: () => void
-  /** Pedir-2 → Pedir-2b: guarda la coordenada, pasa a escribir la referencia. */
-  confirmPinDrop: (coordinates: { lat: number; lng: number }, accuracyM: number | null) => void
+  /**
+   * Confirma el pin. Con `referenceText` (camino por defecto, la referencia se
+   * escribe en la misma pantalla del mapa) guarda coordenada y texto juntos y
+   * avanza: A → B → `trip-details`, o de vuelta a `trip-details` si se estaba
+   * corrigiendo un punto. Sin él (camino de negocio) pasa a `pin-note`.
+   */
+  confirmPinDrop: (
+    coordinates: { lat: number; lng: number },
+    accuracyM: number | null,
+    referenceText?: string,
+  ) => void
   /** Pedir-2b → paso de origen: guarda el texto y vuelve. */
   confirmPinNote: (referenceText: string) => void
-  /**
-   * `trip` → "Listo" en la fila activa: si el punto activo ya tiene
-   * coordenadas y texto, avanza. Si con esto quedan AMBOS puntos completos,
-   * pasa a `trip-details`; si no, activa la fila que todavía falte (así
-   * volver a fijar un punto ya hecho, desde `trip-details`, no reinicia el
-   * otro punto que ya estaba listo).
-   */
-  advanceTripPoint: () => void
-  /**
-   * `trip` → tocar una fila ya completa (p.ej. volver a A después de haber
-   * llegado a B): activa esa fila para ajustarla SIN limpiarla — a
-   * diferencia de `beginChangePoint`, que es para cuando ya se confirmó el
-   * popup de "¿Estás seguro?" en `trip-details` y sí hay que empezar de cero.
-   */
-  focusTripPoint: (which: CourierEditingPoint) => void
-  /**
-   * `trip-details` → "Cambiar" en Ubicación (tras confirmar el popup): limpia
-   * coordenadas y referencia de `which` y vuelve a `trip` con esa fila activa.
-   */
-  beginChangePoint: (which: CourierEditingPoint) => void
 }
 
 function isPointComplete(point: CourierDraft['origin']): boolean {
@@ -76,24 +67,24 @@ function isPointComplete(point: CourierDraft['origin']): boolean {
 
 export const useCourierStore = create<CourierState>((set, get) => ({
   open: false,
-  step: 'trip',
+  step: 'pin-drop',
   draft: emptyCourierDraft(),
   fromBusiness: false,
   tracking: null,
   trackingShortId: null,
   editingPoint: null,
   returnStep: null,
-  activeTripPoint: 'origin',
 
+  // Sin `step` es el camino por defecto, mapa primero: se abre directo el
+  // pin del punto A y, al confirmarlo, el del B (ver `confirmPinDrop`).
   openSheet: (opts) =>
     set({
       open: true,
-      step: opts?.step ?? 'trip',
       draft: emptyCourierDraft(),
       fromBusiness: false,
-      editingPoint: null,
-      returnStep: null,
-      activeTripPoint: 'origin',
+      ...(opts?.step
+        ? { step: opts.step, editingPoint: null, returnStep: null }
+        : { step: 'pin-drop', editingPoint: 'origin', returnStep: 'trip-details' }),
     }),
 
   openForBusiness: (business) =>
@@ -142,21 +133,41 @@ export const useCourierStore = create<CourierState>((set, get) => ({
     set((s) => ({ editingPoint: which, returnStep: s.step, step: 'pin-drop' })),
 
   cancelEditPoint: () =>
-    set((s) => ({ step: s.returnStep ?? 'route', editingPoint: null, returnStep: null })),
+    set((s) => {
+      if (s.returnStep === 'trip-details') {
+        // Corrigiendo un punto desde `trip-details`: se vuelve ahí sin tocar nada.
+        if (isPointComplete(s.draft.origin) && isPointComplete(s.draft.destination)) {
+          return { step: 'trip-details', editingPoint: null, returnStep: null }
+        }
+        // Armando la ruta por primera vez: atrás desde B es volver a A, y atrás
+        // desde A es salir del flujo (todavía no hay nada que perder).
+        if (s.editingPoint === 'destination') return { editingPoint: 'origin' }
+        return { open: false, editingPoint: null, returnStep: null }
+      }
+      return { step: s.returnStep ?? 'route', editingPoint: null, returnStep: null }
+    }),
 
-  confirmPinDrop: (coordinates, accuracyM) =>
+  confirmPinDrop: (coordinates, accuracyM, referenceText) =>
     set((s) => {
       if (!s.editingPoint) return {}
       const draft = {
         ...s.draft,
-        [s.editingPoint]: { ...s.draft[s.editingPoint], coordinates, accuracyM },
+        [s.editingPoint]: {
+          ...s.draft[s.editingPoint],
+          coordinates,
+          accuracyM,
+          ...(referenceText === undefined ? {} : { referenceText }),
+        },
       }
-      // Desde `trip` la referencia se escribe inline en la fila del punto: no
-      // hay paso `pin-note` aparte, se vuelve directo. El camino de negocio
-      // oculto (`confirm` vía `PointField`) sigue pasando por `pin-note`.
-      if (s.returnStep === 'trip') {
-        return { draft, step: 'trip', editingPoint: null, returnStep: null }
+      if (s.returnStep === 'trip-details' && referenceText !== undefined) {
+        const other: CourierEditingPoint = s.editingPoint === 'origin' ? 'destination' : 'origin'
+        if (isPointComplete(draft[other])) {
+          return { draft, step: 'trip-details', editingPoint: null, returnStep: null }
+        }
+        return { draft, editingPoint: other }
       }
+      // Camino de negocio (`confirm` vía `PointField`): la referencia se
+      // escribe en un paso aparte.
       return { draft, step: 'pin-note' }
     }),
 
@@ -173,23 +184,4 @@ export const useCourierStore = create<CourierState>((set, get) => ({
         returnStep: null,
       }
     }),
-
-  advanceTripPoint: () =>
-    set((s) => {
-      const bothComplete = isPointComplete(s.draft.origin) && isPointComplete(s.draft.destination)
-      if (bothComplete) return { step: 'trip-details' }
-      return { activeTripPoint: isPointComplete(s.draft.origin) ? 'destination' : 'origin' }
-    }),
-
-  focusTripPoint: (which) => set({ activeTripPoint: which }),
-
-  beginChangePoint: (which) =>
-    set((s) => ({
-      draft: {
-        ...s.draft,
-        [which]: { ...s.draft[which], coordinates: null, accuracyM: null, referenceText: '' },
-      },
-      step: 'trip',
-      activeTripPoint: which,
-    })),
 }))

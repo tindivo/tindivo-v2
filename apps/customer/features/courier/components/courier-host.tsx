@@ -7,7 +7,6 @@ import { TrackingSheet } from './tracking-sheet'
 import { TripDetailsSheet } from './trip-details-sheet'
 import { TripItemsSheet } from './trip-items-sheet'
 import { TripPayerSheet } from './trip-payer-sheet'
-import { TripSheet } from './trip-sheet'
 
 /**
  * Isla montada en `app/layout.tsx`, junto a `AuthOnboardingHost`/`BottomNav`
@@ -18,7 +17,6 @@ import { TripSheet } from './trip-sheet'
 export function CourierHost() {
   return (
     <>
-      <TripSheet />
       <TripDetailsSheet />
       <TripPayerSheet />
       <TripItemsSheet />

@@ -9,7 +9,7 @@ import { useCourierStore } from '../lib/store'
 export function RouteSheet() {
   const open = useCourierStore((s) => s.open && s.step === 'route')
   const closeSheet = useCourierStore((s) => s.closeSheet)
-  const goTo = useCourierStore((s) => s.goTo)
+  const openSheet = useCourierStore((s) => s.openSheet)
   const openForBusiness = useCourierStore((s) => s.openForBusiness)
 
   const [query, setQuery] = useState('')
@@ -106,7 +106,7 @@ export function RouteSheet() {
 
         <button
           type="button"
-          onClick={() => goTo('trip')}
+          onClick={() => openSheet()}
           className="mt-3 flex w-full items-center gap-3 rounded-2xl bg-[#FFF7ED] px-2 py-2"
         >
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white">

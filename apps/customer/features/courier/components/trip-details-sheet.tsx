@@ -1,7 +1,6 @@
 'use client'
 
-import { BottomSheet, Icon, useDialogFocus } from '@tindivo/ui'
-import { useRef, useState } from 'react'
+import { BottomSheet, Icon } from '@tindivo/ui'
 import { useCourierRequest } from '../hooks/use-courier-request'
 import { isValidPePhone, missingPhoneDigits, stripPeCountryCode } from '../lib/phone'
 import { useCourierStore } from '../lib/store'
@@ -9,18 +8,16 @@ import type { CourierEditingPoint, CourierPoint } from '../types'
 
 /**
  * Dónde recogemos / Dónde entregamos (imagen 6): resumen de los dos puntos ya
- * fijados en `trip`, más el contacto de cada uno. Cambiar la UBICACIÓN pasa
- * por un popup de confirmación (invalida la referencia escrita); cambiar solo
- * el TEXTO o el contacto no, porque no invalida nada.
+ * fijados en el mapa, más el contacto de cada uno. "Cambiar" reabre el mapa
+ * sobre ese punto con su referencia ya escrita (se corrige ahí mismo, sin
+ * volver a empezar); el texto y el contacto se editan aquí sin pasar por el mapa.
  */
 export function TripDetailsSheet() {
   const open = useCourierStore((s) => s.open && s.step === 'trip-details')
   const closeSheet = useCourierStore((s) => s.closeSheet)
   const goTo = useCourierStore((s) => s.goTo)
-  const beginChangePoint = useCourierStore((s) => s.beginChangePoint)
+  const beginEditPoint = useCourierStore((s) => s.beginEditPoint)
   const { draft, updatePoint, identity } = useCourierRequest()
-
-  const [confirmChange, setConfirmChange] = useState<CourierEditingPoint | null>(null)
 
   const originReady =
     draft.origin.contactName.trim().length > 0 && isValidPePhone(draft.origin.contactPhone)
@@ -51,7 +48,7 @@ export function TripDetailsSheet() {
           title="Dónde recogemos"
           point={draft.origin}
           contactLabel="Quien entrega"
-          onChangeLocation={() => setConfirmChange('origin')}
+          onChangeLocation={() => beginEditPoint('origin')}
           onChangeContact={(patch) => updatePoint('origin', patch)}
           myPhoneChip={
             identity?.phone
@@ -70,7 +67,7 @@ export function TripDetailsSheet() {
             title="Dónde entregamos"
             point={draft.destination}
             contactLabel="Recibe"
-            onChangeLocation={() => setConfirmChange('destination')}
+            onChangeLocation={() => beginEditPoint('destination')}
             onChangeContact={(patch) => updatePoint('destination', patch)}
             onUseMyIdentity={
               identity?.userId
@@ -97,16 +94,6 @@ export function TripDetailsSheet() {
           Continuar
         </button>
       </div>
-
-      {confirmChange && (
-        <ChangeLocationConfirm
-          onCancel={() => setConfirmChange(null)}
-          onConfirm={() => {
-            beginChangePoint(confirmChange)
-            setConfirmChange(null)
-          }}
-        />
-      )}
     </BottomSheet>
   )
 }
@@ -238,53 +225,6 @@ function PointCard({
             Faltan {missing} dígito{missing === 1 ? '' : 's'}
           </p>
         )}
-      </div>
-    </div>
-  )
-}
-
-function ChangeLocationConfirm({
-  onCancel,
-  onConfirm,
-}: {
-  onCancel: () => void
-  onConfirm: () => void
-}) {
-  const caja = useRef<HTMLDivElement>(null)
-  useDialogFocus(caja, { open: true, onClose: onCancel })
-
-  return (
-    <div
-      ref={caja}
-      tabIndex={-1}
-      role="alertdialog"
-      aria-modal="true"
-      aria-label="¿Cambiar la ubicación?"
-      className="fixed inset-0 z-[90] flex items-end justify-center bg-ink/40 backdrop-blur-sm focus:outline-none sm:items-center"
-    >
-      <div className="w-full max-w-sm rounded-t-[28px] bg-white p-5 pb-[calc(1.5rem+env(safe-area-inset-bottom))] shadow-elev-3 sm:rounded-[28px]">
-        <div className="text-[19px] font-extrabold tracking-[-0.02em] text-[#2E3236]">
-          ¿Estás seguro?
-        </div>
-        <p className="mt-1.5 text-[14px] leading-snug text-[#5C6368]">
-          Tendrás que volver a escribir la referencia o dirección.
-        </p>
-        <div className="mt-4 flex gap-2.5">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="h-13 flex-1 rounded-full bg-[#F4F4F2] text-[15px] font-extrabold text-[#2E3236]"
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            className="h-13 flex-1 rounded-full bg-[linear-gradient(135deg,#F97316,#FB923C)] text-[15px] font-extrabold text-white"
-          >
-            Sí, cambiar
-          </button>
-        </div>
       </div>
     </div>
   )

@@ -351,7 +351,15 @@ function RouteLineLayer({ from, to }: { from: LatLng; to: LatLng }) {
  * dispara el encuadre (mismo patrón que `FlyTo`): sin él, cada cambio de
  * identidad del array de coordenadas volvería a encuadrar en cada render.
  */
-function FitBounds({ coordinates, token }: { coordinates: readonly LatLng[]; token: number }) {
+function FitBounds({
+  coordinates,
+  token,
+  bottomInsetRatio = 0,
+}: {
+  coordinates: readonly LatLng[]
+  token: number
+  bottomInsetRatio?: number
+}) {
   const map = useMap()
   /*
    * `-1`, NO `token`. Este componente solo existe mientras `fitToPins` esté
@@ -371,21 +379,18 @@ function FitBounds({ coordinates, token }: { coordinates: readonly LatLng[]; tok
   useEffect(() => {
     if (token === last.current || coordinates.length === 0) return
     last.current = token
-    const [only, ...rest] = coordinates
-    if (only && rest.length === 0) {
-      map.flyTo([only.lat, only.lng], Math.max(map.getZoom(), 17), {
-        animate: true,
-        duration: 0.9,
-      })
-      return
-    }
+    // Una hoja tapa la parte de abajo del lienzo: el margen inferior extra
+    // deja los pines en la franja que sí se ve (un solo pin también se centra
+    // ahí, y `maxZoom` lo deja a la altura de un pin suelto).
+    const bottom = Math.round(map.getSize().y * bottomInsetRatio)
     map.flyToBounds(coordinates.map((c) => [c.lat, c.lng]) as LatLngBoundsExpression, {
-      padding: [56, 56],
+      paddingTopLeft: [56, 56],
+      paddingBottomRight: [56, 56 + bottom],
       maxZoom: 17,
       animate: true,
       duration: 0.9,
     })
-  }, [token, coordinates, map])
+  }, [token, coordinates, bottomInsetRatio, map])
   return null
 }
 
@@ -881,17 +886,24 @@ function Follow({ center }: { center: LatLng }) {
  * Leaflet mide el contenedor al montar. Dentro de un bottom-sheet que todavía
  * está animando, esa medida sale mal y los tiles quedan a medio pintar.
  */
-function InvalidateSize() {
+function InvalidateSize({ observe = false }: { observe?: boolean }) {
   const map = useMap()
   useEffect(() => {
     map.invalidateSize()
     const t1 = setTimeout(() => map.invalidateSize(), 150)
     const t2 = setTimeout(() => map.invalidateSize(), 450)
+    // Opt-in: un lienzo cuyo alto lo manda otro componente (Tindivo Entregas
+    // recorta el mapa al panel de abajo) tiene que re-medirse solo. Leaflet
+    // conserva el centro geográfico al re-medir, así que el pin no se mueve.
+    const el = map.getContainer()
+    const ro = observe ? new ResizeObserver(() => map.invalidateSize()) : null
+    ro?.observe(el)
     return () => {
       clearTimeout(t1)
       clearTimeout(t2)
+      ro?.disconnect()
     }
-  }, [map])
+  }, [map, observe])
   return null
 }
 
@@ -917,7 +929,14 @@ const REBOTE = 'cubic-bezier(0.34, 1.56, 0.64, 1)'
  * quieto es el pin. La sombra se queda clavada en el punto exacto mientras la
  * gota despega: eso es lo que comunica que el mapa se mueve por debajo.
  */
-function CenterPin({ moving }: { moving: boolean }) {
+function CenterPin({
+  moving,
+  variant = 'origin',
+}: {
+  moving: boolean
+  variant?: 'origin' | 'destination'
+}) {
+  const dark = variant === 'destination'
   return (
     <div
       className="pointer-events-none absolute top-1/2 left-1/2 z-[700]"
@@ -974,8 +993,8 @@ function CenterPin({ moving }: { moving: boolean }) {
           <title>Punto de entrega</title>
           <defs>
             <linearGradient id="tindivoPinGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="#fb923c" />
-              <stop offset="100%" stopColor="#ea580c" />
+              <stop offset="0%" stopColor={dark ? '#3f4751' : '#fb923c'} />
+              <stop offset="100%" stopColor={dark ? '#0f172a' : '#ea580c'} />
             </linearGradient>
           </defs>
           <path
@@ -1017,6 +1036,8 @@ function MapCanvas({
   routePins = [],
   routeLine,
   fitToPins,
+  observeResize = false,
+  pinVariant = 'origin',
 }: {
   center: LatLng
   interactive: boolean
@@ -1047,7 +1068,11 @@ function MapCanvas({
   /** Línea recta origen→destino cuando ambos puntos ya están fijados. Ver `RouteLineLayer`. */
   routeLine?: { from: LatLng; to: LatLng } | null
   /** Encuadra el mapa para que quepan estas coordenadas. Ver `FitBounds`. */
-  fitToPins?: { coordinates: readonly LatLng[]; token: number }
+  fitToPins?: { coordinates: readonly LatLng[]; token: number; bottomInsetRatio?: number }
+  /** Re-mide el lienzo cuando su contenedor cambia de tamaño (no solo al montar). */
+  observeResize?: boolean
+  /** Color del pin central: naranja = recojo (por defecto), oscuro = entrega. */
+  pinVariant?: 'origin' | 'destination'
 }) {
   const gestureRef = useRef(false)
   const [moving, setMoving] = useState(false)
@@ -1158,10 +1183,16 @@ function MapCanvas({
         {landmarks.length > 0 && (
           <LandmarkLayer landmarks={landmarks} showLabels={interactive} interactivo={interactive} />
         )}
-        {fitToPins && <FitBounds coordinates={fitToPins.coordinates} token={fitToPins.token} />}
+        {fitToPins && (
+          <FitBounds
+            coordinates={fitToPins.coordinates}
+            token={fitToPins.token}
+            bottomInsetRatio={fitToPins.bottomInsetRatio}
+          />
+        )}
         {routeLine && <RouteLineLayer from={routeLine.from} to={routeLine.to} />}
         {routePins.length > 0 && <RoutePinLayer pins={routePins} />}
-        <InvalidateSize />
+        <InvalidateSize observe={observeResize} />
         {interactive ? (
           <>
             <GestureWatch gestureRef={gestureRef} />
@@ -1176,7 +1207,7 @@ function MapCanvas({
           <Follow center={center} />
         )}
       </MapContainer>
-      {showPin && <CenterPin moving={moving} />}
+      {showPin && <CenterPin moving={moving} variant={pinVariant} />}
     </div>
   )
 }
