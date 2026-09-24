@@ -1,10 +1,11 @@
 /**
- * Tindivo Entregas — flujo "Tu ruta" (sin negocio) de punta a punta.
+ * Tindivo Entregas — flujo mapa primero (sin negocio) de punta a punta.
  *
  * El buscador de negocio (`RouteSheet`/`ConfirmSheet`) se ocultó del flujo por
- * defecto (rediseño "Tu ruta" inspirado en inDrive, ver
- * `apps/customer/features/courier/components/trip-sheet.tsx`): el botón
- * "Tindivo Entregas" del home ya no abre un buscador, abre directo el punto A.
+ * defecto (inspirado en inDrive): el botón "Tindivo Entregas" del home ya no
+ * abre un buscador ni una hoja de formulario, abre directo el mapa para fijar
+ * el punto A (recojo), con su referencia en el mismo panel; al confirmarlo
+ * sigue el punto B (entrega) y luego "Confirma tu pedido".
  * El primer test de este archivo, que ejercitaba justo ese buscador, queda
  * `test.skip` — el camino sigue existiendo en el código pero no hay ya ningún
  * botón de la UI que lleve ahí.
@@ -85,23 +86,14 @@ async function loginAsCustomer(page: Page) {
 }
 
 /**
- * Fija UN punto desde la fila activa de "Tu ruta": escribe la dirección y
- * referencia en el textbox de la fila, abre el mapa, arrastra, confirma, y
- * vuelve — sin pasar por un paso de referencia aparte (a diferencia del
- * camino de negocio, aquí `confirmPinDrop` vuelve directo a `trip`).
+ * Fija UN punto en la pantalla del mapa: espera el diálogo, arrastra el mapa
+ * (habilita "Confirmar"), escribe la referencia en el panel de abajo y confirma.
+ * `confirmar` es el rótulo del botón de ese paso ("Confirmar recojo" o
+ * "Confirmar entrega"); vale la misma pantalla para A y para B.
  */
-async function fijarPuntoDesdeTrip(page: Page, referencia: string) {
-  await page.getByPlaceholder('Escriba dirección y referencia aquí…').fill(referencia)
-  // Insensible a mayúsculas: el botón dice "Escoge en el mapa" (sin pin) o
-  // "Ajustar en el mapa" (con pin) — y el ícono de la fila también aporta su
-  // propio `aria-label` (`role="img"`, ver `packages/ui/src/primitives/icon.tsx`)
-  // al nombre accesible del botón.
-  await page.getByRole('button', { name: /mapa/i }).click()
-
+async function fijarPunto(page: Page, referencia: string, confirmar: RegExp) {
   const pinDrop = page.getByRole('dialog', { name: 'Fijar el punto en el mapa' })
   await expect(pinDrop).toBeVisible({ timeout: 10_000 })
-  const entendido = page.getByRole('button', { name: 'Entendido' })
-  if (await entendido.isVisible().catch(() => false)) await entendido.click()
 
   const caja = await page.locator('.leaflet-container').boundingBox()
   expect(caja, 'el mapa tiene que tener caja para poder arrastrarlo').not.toBeNull()
@@ -114,15 +106,10 @@ async function fijarPuntoDesdeTrip(page: Page, referencia: string) {
     await page.mouse.up()
   }
 
-  const confirmarPin = page.getByRole('button', { name: /Confirmar ubicación/ })
-  await expect(confirmarPin).toBeEnabled({ timeout: 10_000 })
-  await confirmarPin.click()
-
-  // Vuelve a "Tu ruta" con el pin puesto: el texto ya escrito sigue ahí y
-  // ahora aparece "Listo" — tocarlo avanza al siguiente punto (o a "Confirma
-  // tu pedido" si este era el segundo).
-  await expect(page.getByText('Tu ruta')).toBeVisible()
-  await page.getByRole('button', { name: 'Listo' }).click()
+  await pinDrop.getByRole('textbox', { name: 'Dirección y referencia' }).fill(referencia)
+  const boton = pinDrop.getByRole('button', { name: confirmar })
+  await expect(boton).toBeEnabled({ timeout: 10_000 })
+  await boton.click()
 }
 
 test.skip('el buscador de negocio queda oculto: sin botón en la UI que lleve a route/confirm', async () => {
@@ -139,19 +126,19 @@ test('pedir entrega fijando A y B en el mapa llega a "Buscando motorizado"', asy
   await loginAsCustomer(page)
   await page.goto('/')
 
-  // ── Banner → abre directo "Tu ruta" con el punto A activo ────────────────
+  // ── Banner → abre directo el mapa del punto A (sin hoja ni instrucciones) ─
   const banner = page.getByRole('button', { name: /Tindivo Entregas/ })
   await expect(banner).toBeVisible({ timeout: 15_000 })
   await banner.click()
-  await expect(page.getByText('Tu ruta')).toBeVisible()
-  await expect(page.getByText('Completa el punto A primero')).toBeVisible()
+  await expect(page.getByText('¿Dónde recogemos?')).toBeVisible({ timeout: 10_000 })
+  await expect(page.getByRole('button', { name: 'Entendido' })).toHaveCount(0)
 
   // ── Punto A: recogemos en ─────────────────────────────────────────────────
-  await fijarPuntoDesdeTrip(page, 'Frente al mercado, puerta azul')
+  await fijarPunto(page, 'Frente al mercado, puerta azul', /Confirmar recojo/)
 
-  // ── Punto B: llevamos a (ya habilitado) ───────────────────────────────────
-  await expect(page.getByText('Completa el punto A primero')).toHaveCount(0)
-  await fijarPuntoDesdeTrip(page, 'Casa celeste, segundo piso')
+  // ── Punto B: entregamos en (mismo mapa, siguiente paso) ───────────────────
+  await expect(page.getByText('¿Dónde entregamos?')).toBeVisible({ timeout: 10_000 })
+  await fijarPunto(page, 'Casa celeste, segundo piso', /Confirmar entrega/)
 
   // ── Confirma tu pedido (imagen 6): contacto de cada punto ────────────────
   await expect(page.getByText('Confirma tu pedido')).toBeVisible({ timeout: 10_000 })
@@ -191,7 +178,39 @@ test('pedir entrega fijando A y B en el mapa llega a "Buscando motorizado"', asy
   expect(errores, 'la pantalla no debe lanzar errores de JS').toEqual([])
 })
 
-test('cambiar la ubicación desde "Confirma tu pedido" pide confirmación y limpia la referencia', async ({
+test('sin referencia el punto no avanza y dice por qué', async ({ page }) => {
+  const errores: string[] = []
+  page.on('pageerror', (e) => errores.push(e.message))
+
+  await loginAsCustomer(page)
+  await page.goto('/')
+  const banner = page.getByRole('button', { name: /Tindivo Entregas/ })
+  await expect(banner).toBeVisible({ timeout: 15_000 })
+  await banner.click()
+
+  const pinDrop = page.getByRole('dialog', { name: 'Fijar el punto en el mapa' })
+  await expect(pinDrop).toBeVisible({ timeout: 10_000 })
+  const caja = await page.locator('.leaflet-container').boundingBox()
+  if (caja) {
+    const cx = caja.x + caja.width / 2
+    const cy = caja.y + caja.height / 2
+    await page.mouse.move(cx, cy)
+    await page.mouse.down()
+    await page.mouse.move(cx + 25, cy + 15, { steps: 10 })
+    await page.mouse.up()
+  }
+
+  const boton = pinDrop.getByRole('button', { name: /Confirmar recojo/ })
+  await expect(boton).toBeEnabled({ timeout: 10_000 })
+  await boton.click()
+
+  await expect(pinDrop.getByRole('alert')).toContainText('al menos')
+  await expect(page.getByText('¿Dónde recogemos?')).toBeVisible()
+
+  expect(errores, 'la pantalla no debe lanzar errores de JS').toEqual([])
+})
+
+test('cambiar la ubicación desde "Confirma tu pedido" reabre el mapa con su referencia', async ({
   page,
 }) => {
   const errores: string[] = []
@@ -203,25 +222,37 @@ test('cambiar la ubicación desde "Confirma tu pedido" pide confirmación y limp
   const banner = page.getByRole('button', { name: /Tindivo Entregas/ })
   await expect(banner).toBeVisible({ timeout: 15_000 })
   await banner.click()
-  await expect(page.getByText('Tu ruta')).toBeVisible()
 
-  await fijarPuntoDesdeTrip(page, 'Frente al mercado, puerta azul')
-  await fijarPuntoDesdeTrip(page, 'Casa celeste, segundo piso')
+  await fijarPunto(page, 'Frente al mercado, puerta azul', /Confirmar recojo/)
+  await fijarPunto(page, 'Casa celeste, segundo piso', /Confirmar entrega/)
   const tripDetails = page.getByRole('dialog', { name: 'Confirma tu pedido' })
   await expect(tripDetails).toBeVisible({ timeout: 10_000 })
 
-  // "Cambiar" de la primera tarjeta (Dónde recogemos) → popup de confirmación.
-  // Acotado al diálogo: el home tiene su propia barra de dirección con un
-  // botón "Cambiar dirección de entrega" que, sin acotar, gana por orden en
-  // el DOM y queda tapado por el backdrop de esta hoja.
+  // "Cambiar" de la primera tarjeta (Dónde recogemos). Acotado al diálogo: el
+  // home tiene su propia barra de dirección con un botón "Cambiar dirección de
+  // entrega" que, sin acotar, gana por orden en el DOM.
   await tripDetails.getByRole('button', { name: 'Cambiar' }).first().click()
-  await expect(page.getByText('¿Estás seguro?')).toBeVisible()
-  await page.getByRole('button', { name: 'Sí, cambiar' }).click()
 
-  // Vuelve a "Tu ruta" con el punto A limpio y B intacto.
-  await expect(page.getByText('Tu ruta')).toBeVisible()
-  await expect(page.getByPlaceholder('Escriba dirección y referencia aquí…')).toHaveValue('')
-  await expect(page.getByText('Casa celeste, segundo piso')).toBeVisible()
+  // Reabre el mapa sobre ese punto, con la referencia ya escrita y sin popup de
+  // "¿Estás seguro?": corregirla es escribir encima, no empezar de cero.
+  const pinDrop = page.getByRole('dialog', { name: 'Fijar el punto en el mapa' })
+  await expect(pinDrop).toBeVisible({ timeout: 10_000 })
+  await expect(pinDrop.getByRole('textbox', { name: 'Dirección y referencia' })).toHaveValue(
+    'Frente al mercado, puerta azul',
+  )
+  await expect(page.getByText('¿Estás seguro?')).toHaveCount(0)
+
+  // El punto ya estaba fijado: se puede confirmar sin volver a arrastrar.
+  const confirmar = pinDrop.getByRole('button', { name: /Confirmar/ })
+  await expect(confirmar).toBeEnabled({ timeout: 10_000 })
+  await confirmar.click()
+
+  await expect(tripDetails).toBeVisible({ timeout: 10_000 })
+  // Las referencias viven en inputs: el 1.º y el 3.º de texto (le siguen los
+  // nombres de contacto).
+  const textos = tripDetails.locator('input[type="text"]')
+  await expect(textos.nth(0)).toHaveValue('Frente al mercado, puerta azul')
+  await expect(textos.nth(2)).toHaveValue('Casa celeste, segundo piso')
 
   expect(errores, 'la pantalla no debe lanzar errores de JS').toEqual([])
 })
