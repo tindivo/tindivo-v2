@@ -5,7 +5,7 @@
 > este documento difieran, **gana este documento**. Se mantiene vivo: cada
 > decisión nueva o cambio se registra aquí, no en specs paralelos.
 >
-> Última actualización: 2026-09-08 (en el mostrador no se fía: el recojo llega a cocina pagado y el plantón pagado no deja falta — §8, `0223`/`0224`).
+> Última actualización: 2026-09-22 (Tindivo Entregas: backend + lado cliente construidos, nombres `courier_orders`/`directory_businesses` — §31).
 
 ---
 
@@ -1150,3 +1150,63 @@ con el trigger apagado. Si el canal no engancha, el poll de 15 s sigue cubriendo
 
 - El chip y el aviso de la ficha coexisten: si el aviso de WhatsApp deja de
   interesar, se quitan los dos a la vez.
+
+---
+
+## 30. Motor de mapa compartido: qué se reusa del selector de ubicación para el Catálogo de negocios (2026-09-22)
+
+**Contexto**: el selector de ubicación del cliente (`apps/customer/components/map-picker-inner.tsx`) recibió hoy dos optimizaciones medidas — cache de tiles en el service worker (`759e0c1`) y `zoomAnimation={false}` (`0a75dd2`), este último verificado con un trace de rendering de Chrome DevTools Protocol, no con el profiler de JS (que no ve el costo de repintado/rasterizado que causaba el tirón). En paralelo surge `Docs/Encargos/Tindivo — Catálogo de negocios y Encargos (spec v1).md` (sin construir aún al momento de esta entrada), que necesita su propio mapa: potencialmente **gran parte de San Jacinto** en pines, con `directory_businesses` como fuente. Antes de que ese feature arranque su propio mapa desde cero — o, peor, importe el del cliente cruzado —, queda dicho qué se reusa y qué no.
+
+### Decisiones
+
+- **Se reusa el MOTOR, no la pantalla.** Del `map-picker-inner.tsx` actual, esto aplica tal cual a cualquier mapa de Tindivo en San Jacinto: la configuración de las dos capas de tiles (CARTO Positron / Esri World Imagery, con sus `maxNativeZoom` medidos), `zoomAnimation={false}`, la pared de `maxBounds` con viscosidad 1, el filtrado por viewport (`margenCulling`) y el cache de tiles del service worker. Son decisiones ya medidas contra la conectividad real del piloto; repetir la medición para el catálogo sería redescubrir lo mismo.
+- **El reparto de rótulos anti-colisión (`repartirRotulos`) también se reusa como algoritmo**, porque el problema es el mismo — muchos puntos con nombre, sin que se pisen ni se salgan del lienzo — y ya está resuelto y cubierto por `e2e/mapa-reparto-de-rotulos.spec.ts`. **Con un aviso de escala**: está medido y ajustado para el volumen de hoy (~60-70 referencias visibles a la vez). Si el catálogo llega a mostrar cientos de negocios en pantalla al mismo tiempo (no solo cientos en la tabla — lo que importa es cuántos caen en el viewport a la vez), hay que volver a medir antes de darlo por bueno; el algoritmo es O(n²) en el peor caso dentro de la comprobación de colisiones.
+- **NO se reusa el paradigma de interacción.** El selector de ubicación fija el pin al centro y arrastra el mapa por debajo (`LocationSheet`); sus marcadores son `interactive: false` a propósito porque el gesto de la pantalla entera es mover el mapa, no tocar un pin (ver el comentario de cabecera de `LandmarkLayer`). Un catálogo es explorar-y-tocar: los marcadores tienen que ser tocables, abrir una ficha, y no hay pin central que arrastrar. Es un componente nuevo, no un flag sobre el actual.
+- **NO se reusa el estilo del pin.** Las referencias de hoy van por categoría (glifo SVG + color, 10 tipos, `LANDMARK_STYLE` en `lib/landmarks.ts`). El catálogo, según el spec §3.1, va por **estado del negocio** — aliado (naranja sólido), recojo habilitado (carbón), solo visible (gris) — más foto de portada en vez de glifo. Es un sistema visual distinto, con sus propias reglas de negocio (qué estado gana sobre cuál), no una lista de categorías más larga.
+- **NO se reusa la fuente de datos.** `lib/landmarks.ts` lee `map_landmarks` (curada a mano por el admin, ver migración 0208). El catálogo lee `directory_businesses` (spec §10). El PATRÓN de fetch sí se reusa — lectura directa del navegador a Supabase, memoizada por sesión de página, sin pasar por `/api/v1` — pero es un módulo nuevo, tabla nueva.
+- **Dónde vive el código**: las piezas reusables (tiles, reparto de rótulos, cache de iconos, culling) NO se importan cruzadas desde `apps/customer` — rompería la regla de vertical-slicing (`CLAUDE.md`: "una feature no importa de otra"). Antes de que el catálogo arranque su mapa, esas piezas suben a `packages/ui` como el motor de mapa compartido; cada feature (selector de ubicación del cliente, catálogo de negocios, y cualquier mapa futuro en `apps/admin`/`apps/motorizados`) monta su propia capa de interacción y estilo de pin encima.
+
+### Deuda que queda
+
+- La extracción a `packages/ui` no está hecha: esta entrada documenta la decisión de CÓMO reusar, no la ejecuta. Se hace en la misma sesión donde arranque el mapa del catálogo, no antes (evita mover código sin un segundo consumidor real que confirme la forma de la API compartida).
+- La medición de `repartirRotulos` a escala de "gran parte de San Jacinto" queda pendiente hasta que el catálogo tenga datos reales o un seed representativo.
+
+---
+
+## 31. Tindivo Entregas — lado cliente: nombres, tablas y alcance de la primera noche de build (2026-09-22)
+
+**Contexto**: `Docs/Encargos/` traía dos documentos con nombres técnicos distintos para el mismo servicio — recoger algo ya pagado en un punto A y llevarlo a un punto B por S/ 3. `03-plan-tecnico.md` (19-sep) proponía `courier_requests`/`catalog_places`; el spec más reciente, `Docs/Encargos/Tindivo — Catálogo de negocios y Encargos (spec v1).md` (21/22-sep), resuelve en su §10 `courier_orders`/`directory_businesses` con razonamiento explícito. Jesús confirmó en esta sesión que el segundo manda: **"la verdad que se confundió el agente creo... deberia de ser el más reciente"**. Esta entrada formaliza lo construido, con Jesús dormido y autorización para decidir en su nombre lo que hiciera falta ("trata de ahora tomar decisiones por tu cuenta en pro del proyecto").
+
+### Nombres (fuente única: `packages/contracts/src/enums.ts`, `courier.ts`, `courier-status.ts`)
+
+Gana el spec v1. Tablas `courier_orders` y `directory_businesses` (no `courier_requests`/`catalog_places` de `03-plan-tecnico.md`, que queda superado en este punto — el resto de ese documento, fases y riesgos, sigue siendo referencia válida). Enums `courier_status`, `courier_payer` (`origin`|`destination`), `courier_cancel_reason`, `directory_business_category`. Migración `0232` (+ `0233`, corrección de seguridad — ver abajo).
+
+### Qué se construyó esta noche (backend completo + cliente, spec v1 §10)
+
+- **Backend**: migración con las dos tablas, RLS explícita, RPC `create_courier_order` / `advance_courier_order` / `expire_courier_orders`, funciones de solo lectura (`courier_service_status`, `is_within_courier_schedule`, `get_courier_tracking`), cron failsafe (`pg_cron`, guardado tras `pg_extension` como en `0174`) + timer preciso por Inngest (`courierAcceptanceTimeout`, mismo patrón que `orderAcceptanceTimeout`). `packages/contracts` (enums, schemas Zod, máquina de transiciones) y `packages/core` (funciones puras, TDD) con el mismo patrón que `order/state-machine.ts`. `haversineMeters` sale a `packages/contracts/src/geo.ts`: tercer uso de la fórmula en el repo (`apps/customer/lib/coverage.ts`, `apps/motorizados/lib/geo.ts`), regla del repo cumplida.
+- **Rutas** (`apps/api`): `POST customer/courier-orders`, `POST customer/courier-orders/:id/cancel`, `GET public/courier/status`, `GET public/courier/[shortId]`. **No hay `GET` de listado/detalle de `courier_orders`**: el patrón de `orders` en este repo es leer esas dos cosas DIRECTO desde el navegador vía RLS (`co_customer_select`), no por API — se sigue ese mismo patrón, y también para `directory_businesses` (`db_public_read`, mismo trato que `map_landmarks`).
+- **Cliente** (`apps/customer/features/courier/`): store Zustand + `CourierHost` montado en `app/layout.tsx` (patrón `auth-onboarding/host.tsx`), flujo de pedir (`route` → `confirm` si el origen es un negocio del directorio, o `person-details` si es "otro lugar o persona") y seguimiento (`tracking`, polling 8s + Realtime, patrón `use-tracking.ts`). Directorio en `/entregas` (lista con filtros y las 3 tarjetas del spec §3.1: aliado / recojo habilitado / solo visible, badge "Con carta" independiente). Entrada desde el home: `CourierEntryBanner`, inserción puntual en `home-shell.tsx` sin tocar el resto — **el home NO se rediseñó** (eso es tarea aparte, bloqueada por la referencia de Rappi que traerá Jesús).
+- **`MapPicker` gana un prop aditivo** (`showDeliveryFee`, default `true`): Encargos lo reusa DOS VECES (punto A y B) en vez de construir un selector de mapa propio, y con `showDeliveryFee={false}` no muestra la tarifa de banda de delivery a restaurante, que no aplica aquí. Cero cambios de comportamiento para `checkout`, que no pasa el prop.
+- **Seed de directorio** (`pnpm db:seed:courier-directory`, solo local): 8 negocios con los mismos nombres del diseño aprobado (Elmer, Botica Santa Rosa, Bodega Doña Ana, La Florencia como aliado enlazado al negocio real del seed e2e).
+
+### Corrección de seguridad encontrada por `get_advisors` (migración `0233`)
+
+`create_courier_order` y `advance_courier_order` quedaron ejecutables por `anon`/`authenticated` tras la `0232`: ninguna de las dos valida que `p_customer_user_id`/`p_actor_user_id` coincida con `auth.uid()`, porque confían en que la API ya lo garantizó (`requireRole` + `service_role`). Sin el `REVOKE`, cualquier cuenta autenticada podía llamar la RPC directo y crear una solicitud a nombre de otro cliente, o avanzar una entrega a nombre de otro motorizado. Se corrigió con el mismo patrón de `create_customer_order` (`0008`/`0009`/`0105`): `REVOKE EXECUTE ... FROM public, anon, authenticated` + `GRANT ... TO service_role`. **Lección para la próxima RPC de este tipo: el `REVOKE` va en la MISMA migración que crea la función, no después** — `CREATE OR REPLACE FUNCTION` no toca grants existentes, así que sin él el hueco queda abierto hasta que alguien corra `get_advisors`.
+
+### Qué NO se construyó (fuera de alcance, confirmado)
+
+- Nada de `apps/motorizados` (aceptar/cobrar de verdad) ni `apps/admin` (encender el servicio, alta del directorio, rendiciones). `advance_courier_order` ya modela las transiciones del motorizado — accept/release/depart/arrive/collect_transport/pick_up/depart_dropoff/deliver/cancel, con las guardas de cobro por `payer` — y está cubierto por 22 tests de integración, pero ninguna app lo expone todavía. Es la fase siguiente, con su propio diseño.
+- `driver_payment_qrs` / `courier_remittances` (deuda y rendición del motorizado): la columna `payment_method` de `courier_orders` existe pero no se ejercita desde ninguna UI.
+- `funnel_events` / medición del embudo (spec v1 §9): `utm_source` se guarda en cada `courier_order` (columna + parámetro de la RPC), pero no hay tabla ni ruta de medición agregada.
+
+### Actualización de la misma madrugada: lo que faltaba del plan de cliente, ya construido
+
+Tras el primer resumen de esta entrada quedaban tres huecos del propio scope de cliente que se prometió — se completaron en la misma sesión:
+
+- **`Directorio-mapa`, con pines tocables de verdad.** No se hizo la extracción a `packages/ui` (sigue pendiente, §30) — se construyó un componente nuevo y autocontenido (`features/courier/components/directory-map*.tsx`) que COPIA las piezas del motor ya medidas (teselas CARTO Positron, `zoomAnimation:false`, `maxBoundsViscosity:1`) sin reusar el paradigma de interacción del selector de ubicación (aquí el pin no va fijo al centro: los negocios son marcadores de Leaflet tocables de verdad, sin reparto anti-colisión de rótulos — con los ~8 negocios del piloto el riesgo de que se pisen es bajo; si el directorio crece a la densidad real del pueblo, medir antes de confiar en que sigue sin hacer falta, mismo aviso que el §30 dejó para `repartirRotulos`). La tarjeta de negocio se extrajo a `DirectoryBusinessCard` (la usan la lista Y la hoja que abre un pin — dos consumidores reales).
+- **Badge de "Pedidos" sumando entregas activas**, y el banner del home cambiando de "promo" a "Entrega en curso" con el estado real (nombre del motorizado, en qué paso va) cuando hay una. Nuevo store hermano `lib/active-courier-orders.ts` (deliberadamente más simple que `active-orders.ts`: con `maxActivePerPhone=1` el caso normal es 0 o 1 fila, así que no hace falta la coreografía de tokens de request-en-vuelo del original), enganchado también a `lib/sign-out.ts` para que no sobreviva a un cambio de cuenta en el mismo navegador.
+- **Cuatro bugs más** encontrados en la revisión manual de este segundo tramo (el sub-agente de code-review automático había chocado con el límite de sesión de la cuenta y no llegó a correr): estado muerto en el store (`payerInfoOpen`, nunca leído por nadie), un comentario que afirmaba —sin ser cierto— que una función de contracts la llamaba la RPC del lado servidor, y dos ajustes menores de tipos.
+
+### Cómo se probó
+
+Migración aplicada y probada en local (`supabase db reset`), y empujada a `tindivo-prod` (aditiva — tablas/enums nuevos, nada existente cambia — de madrugada, fuera del horario de pedidos; `pnpm db:types` + `get_advisors` limpios salvo lo ya corregido). 22 tests de integración de RPC contra la base local (`apps/api/lib/__tests__/courier-orders.integration.test.ts`) cubren las guardas de creación, la carrera de `accept`, las dos guardas de cobro por `payer`, `release`, cancelación y `expire_courier_orders`. Tests unitarios en `packages/core`/`packages/contracts` (máquina de estados, `haversineMeters`) y `apps/customer/features/courier/lib` (formato, prioridad de estado de tarjeta). Tres e2e de Playwright en Chromium: el flujo completo (home → banner → buscar "Elmer" → confirmar, destino precargado de `customer_addresses` → enviar → "Buscando motorizado"), el mapa del directorio (pines visibles, tocar uno abre su ficha) y el badge/banner de una entrega en curso (sembrada directo en la base, viewport móvil porque la `BottomNav` es `lg:hidden`) — los tres sin errores de JS y sin dejar residuos en la base. `pnpm lint`/`type-check` limpios en todos los paquetes tocados; suites completas de `apps/api` (366/366) y `apps/customer` (224/224) verdes.
