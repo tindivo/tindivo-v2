@@ -19,6 +19,13 @@ móvil (iframe de 390 px en Chrome de escritorio + Playwright); lo marcado
   persona ya movió el mapa, un GPS tardío no se lo quita.
 - «Cambiar» en «Confirma tu pedido» reabre el mapa con la referencia escrita, sin popup.
 
+## Iteración 1b (2026-09-24) — hecha
+
+- Del paso 2 se vuelve al 1 sin salir del mapa: una píldora «← Recojo: casa verde…»
+  en el panel (y la flecha de atrás hacen lo mismo). Lo escrito en B, y su pin si ya
+  estaba asentado dentro de la zona, se guarda; al confirmar A se vuelve a B donde
+  se dejó. Si B ya estaba completo, confirmar A pasa directo a «Confirma tu pedido».
+
 ## Para la iteración 2
 
 Ordenado por impacto.
@@ -45,13 +52,22 @@ Ordenado por impacto.
    «Buscando tu ubicación…» mucho rato. Bajar el tiempo o ofrecer «Usar mi ubicación».
 8. **Instrucción repetida.** La píldora de arriba y la línea de estado dicen lo mismo;
    dejar una.
-9. **En B no se ve qué se puso en A.** Una fila compacta «Recojo: casa verde…» arriba del
-   panel, tocable para volver.
-10. **Atribución de Leaflet** ocupa una franja sobre el panel; compactarla.
-11. **Tarjetas de «Confirma tu pedido»** dicen «Punto en el mapa»; un mapa mínimo o la
+9. **Atribución de Leaflet** ocupa una franja sobre el panel; compactarla.
+10. **Tarjetas de «Confirma tu pedido»** dicen «Punto en el mapa»; un mapa mínimo o la
     referencia daría contexto.
-12. **`/entregas`** (fuera de alcance por ahora): en móvil el botón de volver pisa el
+11. **`/entregas`** (fuera de alcance por ahora): en móvil el botón de volver pisa el
     título «Negocios».
-13. **Deuda técnica.** `MapCanvas` conserva el último `flyTarget` al desmontarse y
+12. **Deuda técnica.** `MapCanvas` conserva el último `flyTarget` al desmontarse y
     remontarse: hoy cada siembra lo sobrescribe, pero un remonte sin siembra volaría a un
     punto viejo.
+
+## Para la iteración 3 (vistos al hacer la 1b)
+
+- **Objetivos táctiles chicos.** La píldora del recojo mide ~32 px de alto; el mínimo
+  cómodo es 44 px. Revisar todos los controles del panel a esa medida.
+- **La flecha de atrás y la píldora hacen lo mismo en el paso 2.** Decidir si la flecha
+  debería salir del flujo (cerrar) y dejar la píldora como único camino a A.
+- **El pin de A no es tocable.** Tocar su pin en el mapa también podría llevar al paso 1.
+- **El punto B guardado al saltar a A** no se ve en el mapa mientras se corrige A (solo
+  se ve el pin central); pintarlo como pin fijo daría contexto.
+- **Etiqueta «Recojo» genérica** sobre el pin de A: mostrar la referencia escrita.
