@@ -147,4 +147,32 @@ describe('useCourierStore · mapa primero (sin negocio)', () => {
     expect(s.step).toBe('trip-details')
     expect(s.draft.destination.coordinates).toEqual(B)
   })
+
+  it('de B se puede volver a A sin perder lo que ya se había escrito en B', () => {
+    useCourierStore.getState().openSheet()
+    useCourierStore.getState().confirmPinDrop(A, 12, 'Frente al mercado')
+    useCourierStore.getState().switchEditingPoint('origin', { referenceText: 'Casa celeste' })
+    let s = useCourierStore.getState()
+    expect(s.step).toBe('pin-drop')
+    expect(s.editingPoint).toBe('origin')
+    expect(s.draft.destination.referenceText).toBe('Casa celeste')
+    expect(s.draft.destination.coordinates).toBeNull()
+
+    // Corregir A y confirmar lleva otra vez a B (que sigue incompleto).
+    useCourierStore.getState().confirmPinDrop(A, null, 'Puerta azul, frente al mercado')
+    s = useCourierStore.getState()
+    expect(s.editingPoint).toBe('destination')
+    expect(s.draft.origin.referenceText).toBe('Puerta azul, frente al mercado')
+  })
+
+  it('si B ya estaba completo al saltar a A, confirmar A pasa directo a trip-details', () => {
+    useCourierStore.getState().openSheet()
+    useCourierStore.getState().confirmPinDrop(A, 12, 'Frente al mercado')
+    useCourierStore.getState().switchEditingPoint('origin', {
+      coordinates: B,
+      referenceText: 'Casa celeste, segundo piso',
+    })
+    useCourierStore.getState().confirmPinDrop(A, null, 'Frente al mercado')
+    expect(useCourierStore.getState().step).toBe('trip-details')
+  })
 })

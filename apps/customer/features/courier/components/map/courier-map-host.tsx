@@ -60,6 +60,7 @@ export function CourierMapHost() {
   const returnStep = useCourierStore((s) => s.returnStep)
   const confirmPinDrop = useCourierStore((s) => s.confirmPinDrop)
   const cancelEditPoint = useCourierStore((s) => s.cancelEditPoint)
+  const switchEditingPoint = useCourierStore((s) => s.switchEditingPoint)
   const trackingShortId = useCourierStore((s) => s.trackingShortId)
 
   const isTracking = step === 'tracking'
@@ -390,6 +391,19 @@ export function CourierMapHost() {
         : 2
       : null
 
+  // Del paso 2 al 1 sin salir del mapa. Lo ya avanzado en B (referencia y, si el
+  // pin estaba asentado dentro de la zona, su coordenada) se guarda para que al
+  // volver a B siga donde estaba.
+  const goToOrigin = () => {
+    const keepPin = pinSettled && pinInside && pinCoords != null
+    switchEditingPoint('origin', {
+      referenceText: reference,
+      ...(keepPin ? { coordinates: pinCoords, accuracyM: pinAccuracyM } : {}),
+    })
+  }
+  const originSummary =
+    stepIndex === 2 && isPointComplete(draft.origin) ? draft.origin.referenceText.trim() : null
+
   return (
     <>
       <div
@@ -439,6 +453,8 @@ export function CourierMapHost() {
           point={editingPoint}
           guided={guided}
           stepIndex={stepIndex}
+          originSummary={originSummary}
+          onGoToOrigin={goToOrigin}
           reference={reference}
           onReferenceChange={setReference}
           moving={pinMoving}
@@ -448,7 +464,7 @@ export function CourierMapHost() {
           locateError={locateError}
           onUseMyLocation={useMyLocation}
           onConfirm={(ref) => pinCoords && confirmPinDrop(pinCoords, pinAccuracyM, ref)}
-          onCancel={cancelEditPoint}
+          onCancel={originSummary ? goToOrigin : cancelEditPoint}
           onPanelHeight={setPanelH}
         />
       )}

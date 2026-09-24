@@ -59,6 +59,13 @@ interface CourierState {
   ) => void
   /** Pedir-2b → paso de origen: guarda el texto y vuelve. */
   confirmPinNote: (referenceText: string) => void
+  /**
+   * Pasa de fijar un punto a fijar el otro SIN salir del mapa (p. ej. de B
+   * volver a A). Lo que ya había avanzado en el punto que se deja (`patch`:
+   * referencia escrita, y coordenada si el pin ya estaba asentado) se guarda en
+   * el borrador, para que al volver a él no haya que empezar de cero.
+   */
+  switchEditingPoint: (which: CourierEditingPoint, patch: Partial<CourierDraft['origin']>) => void
 }
 
 function isPointComplete(point: CourierDraft['origin']): boolean {
@@ -182,6 +189,15 @@ export const useCourierStore = create<CourierState>((set, get) => ({
         step: s.returnStep ?? 'route',
         editingPoint: null,
         returnStep: null,
+      }
+    }),
+
+  switchEditingPoint: (which, patch) =>
+    set((s) => {
+      if (s.step !== 'pin-drop' || !s.editingPoint) return {}
+      return {
+        draft: { ...s.draft, [s.editingPoint]: { ...s.draft[s.editingPoint], ...patch } },
+        editingPoint: which,
       }
     }),
 }))

@@ -256,3 +256,34 @@ test('cambiar la ubicación desde "Confirma tu pedido" reabre el mapa con su ref
 
   expect(errores, 'la pantalla no debe lanzar errores de JS').toEqual([])
 })
+
+test('desde el paso 2 se puede volver al recojo sin perder lo escrito', async ({ page }) => {
+  const errores: string[] = []
+  page.on('pageerror', (e) => errores.push(e.message))
+
+  await loginAsCustomer(page)
+  await page.goto('/')
+  const banner = page.getByRole('button', { name: /Tindivo Entregas/ })
+  await expect(banner).toBeVisible({ timeout: 15_000 })
+  await banner.click()
+
+  await fijarPunto(page, 'Frente al mercado, puerta azul', /Confirmar recojo/)
+  await expect(page.getByText('¿Dónde entregamos?')).toBeVisible({ timeout: 10_000 })
+
+  const pinDrop = page.getByRole('dialog', { name: 'Fijar el punto en el mapa' })
+  const referencia = pinDrop.getByRole('textbox', { name: 'Dirección y referencia' })
+  await referencia.fill('Casa celeste')
+
+  // El atajo muestra lo escrito para el recojo y vuelve al paso 1.
+  await pinDrop.getByRole('button', { name: /Cambiar el recojo/ }).click()
+  await expect(page.getByText('¿Dónde recogemos?')).toBeVisible({ timeout: 10_000 })
+  await expect(referencia).toHaveValue('Frente al mercado, puerta azul')
+
+  // El punto A ya estaba fijado: confirma sin arrastrar y vuelve a B, donde lo
+  // que se había empezado a escribir sigue ahí.
+  await pinDrop.getByRole('button', { name: /Confirmar/ }).click()
+  await expect(page.getByText('¿Dónde entregamos?')).toBeVisible({ timeout: 10_000 })
+  await expect(referencia).toHaveValue('Casa celeste')
+
+  expect(errores, 'la pantalla no debe lanzar errores de JS').toEqual([])
+})

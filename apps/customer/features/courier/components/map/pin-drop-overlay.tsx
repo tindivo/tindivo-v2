@@ -55,6 +55,8 @@ export function PinDropOverlay({
   point,
   guided,
   stepIndex,
+  originSummary,
+  onGoToOrigin,
   reference,
   onReferenceChange,
   moving,
@@ -73,6 +75,9 @@ export function PinDropOverlay({
   guided: boolean
   /** 1 o 2 mientras se arma la ruta por primera vez; `null` al corregir un punto. */
   stepIndex: 1 | 2 | null
+  /** En el paso 2, lo escrito para el recojo: sirve de atajo para volver al paso 1. */
+  originSummary: string | null
+  onGoToOrigin: () => void
   reference: string
   onReferenceChange: (v: string) => void
   moving: boolean
@@ -211,10 +216,23 @@ export function PinDropOverlay({
         className="pointer-events-auto shrink-0 rounded-t-[24px] bg-card px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-[0_-16px_40px_-28px_rgba(0,0,0,0.4)]"
       >
         {guided && stepIndex && (
-          <p className="mb-0.5 flex items-center gap-1.5 font-mono text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
-            <span aria-hidden className={`h-2 w-2 rounded-full ${copy.dot}`} />
-            Paso {stepIndex} de 2
-          </p>
+          <div className="mb-0.5 flex items-center justify-between gap-3">
+            <p className="flex shrink-0 items-center gap-1.5 font-mono text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
+              <span aria-hidden className={`h-2 w-2 rounded-full ${copy.dot}`} />
+              Paso {stepIndex} de 2
+            </p>
+            {originSummary && (
+              <button
+                type="button"
+                onClick={onGoToOrigin}
+                aria-label={`Cambiar el recojo: ${originSummary}`}
+                className="flex min-w-0 items-center gap-1 rounded-full bg-brand-soft py-2 pr-3 pl-2 text-[12px] font-bold text-brand-dark transition-transform active:scale-95"
+              >
+                <Icon name="arrow_back" size={14} className="shrink-0" />
+                <span className="truncate">Recojo: {originSummary}</span>
+              </button>
+            )}
+          </div>
         )}
         <p className="font-display font-extrabold text-[20px] leading-tight tracking-tight text-ink">
           {guided
