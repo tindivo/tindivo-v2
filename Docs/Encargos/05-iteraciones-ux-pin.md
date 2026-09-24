@@ -21,10 +21,20 @@ móvil (iframe de 390 px en Chrome de escritorio + Playwright); lo marcado
 
 ## Iteración 1b (2026-09-24) — hecha
 
-- Del paso 2 se vuelve al 1 sin salir del mapa: una píldora «← Recojo: casa verde…»
-  en el panel (y la flecha de atrás hacen lo mismo). Lo escrito en B, y su pin si ya
-  estaba asentado dentro de la zona, se guarda; al confirmar A se vuelve a B donde
-  se dejó. Si B ya estaba completo, confirmar A pasa directo a «Confirma tu pedido».
+- Del paso 2 se vuelve al 1 sin salir del mapa con la flecha de atrás (la píldora
+  «Recojo: …» se quitó: era redundante). Lo escrito en B, y su pin si ya estaba
+  asentado dentro de la zona, se guarda; al confirmar A se vuelve a B donde se dejó.
+  Si B ya estaba completo, confirmar A pasa directo a «Confirma tu pedido».
+
+## Iteración 1c (2026-09-24) — hecha
+
+- Pasar de A a B (o reabrir un punto) ya no anima el mapa: salta directo. Solo el GPS
+  vuela.
+- En B el botón sigue bloqueado hasta mover el mapa (B nace sobre A) y el pin de B es
+  oscuro, distinto al de A.
+- El globo del pin de A muestra la referencia escrita (no «Recojo»), y tocarlo en el
+  paso 2 vuelve al paso 1. El globo se recorta con «…» si es largo.
+- B guardado al saltar a A se ve en el mapa como pin fijo mientras se corrige A.
 
 ## Para la iteración 2
 
@@ -61,13 +71,11 @@ Ordenado por impacto.
     remontarse: hoy cada siembra lo sobrescribe, pero un remonte sin siembra volaría a un
     punto viejo.
 
-## Para la iteración 3 (vistos al hacer la 1b)
+## Para la iteración 3
 
-- **Objetivos táctiles chicos.** La píldora del recojo mide ~32 px de alto; el mínimo
-  cómodo es 44 px. Revisar todos los controles del panel a esa medida.
-- **La flecha de atrás y la píldora hacen lo mismo en el paso 2.** Decidir si la flecha
-  debería salir del flujo (cerrar) y dejar la píldora como único camino a A.
-- **El pin de A no es tocable.** Tocar su pin en el mapa también podría llevar al paso 1.
-- **El punto B guardado al saltar a A** no se ve en el mapa mientras se corrige A (solo
-  se ve el pin central); pintarlo como pin fijo daría contexto.
-- **Etiqueta «Recojo» genérica** sobre el pin de A: mostrar la referencia escrita.
+- **Objetivos táctiles.** Botones e input del panel ya miden ≥ 44 px; falta revisar el
+  globo tocable del pin (unos 22 px) en teléfono real, quizá con un área de toque mayor.
+- **La flecha de atrás del paso 1** cierra el flujo entero sin avisar: decidir si con
+  algo escrito debería pedir confirmación.
+- **B nace sobre A** y el globo de A queda justo encima del pin oscuro: probar a sembrar
+  B un poco desplazado o con un zoom más abierto (ver punto 3 de la iteración 2).
