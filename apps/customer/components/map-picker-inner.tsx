@@ -42,6 +42,8 @@ export interface RoutePin {
   /** El nombre en el globo sobre el pin ("Elmer", "Tu casa"). */
   label?: string
   variant: RoutePinVariant
+  /** Si existe, el globo con el nombre se puede tocar (el pin en sí no). */
+  onTap?: () => void
 }
 
 /**
@@ -277,7 +279,7 @@ function routePinIcono(pin: RoutePin): L.DivIcon {
 
   const color = ROUTE_PIN_COLOR[pin.variant]
   return L.divIcon({
-    className: 't-route-pin',
+    className: pin.onTap ? 't-route-pin t-route-pin-tap' : 't-route-pin',
     html:
       (pin.label
         ? `<span class="t-route-pin-label" style="color:${color}">${escaparHtml(pin.label)}</span>`
@@ -299,7 +301,7 @@ function RoutePinLayer({ pins }: { pins: readonly RoutePin[] }) {
   return (
     <>
       {pins.map((pin) => {
-        const clave = `${pin.id}|${pin.variant}|${pin.label ?? ''}`
+        const clave = `${pin.id}|${pin.variant}|${pin.label ?? ''}|${pin.onTap ? 1 : 0}`
         let icon = cache.current.get(clave)
         if (!icon) {
           icon = routePinIcono(pin)
@@ -310,8 +312,9 @@ function RoutePinLayer({ pins }: { pins: readonly RoutePin[] }) {
             key={pin.id}
             position={[pin.coordinates.lat, pin.coordinates.lng]}
             icon={icon}
-            interactive={false}
+            interactive={!!pin.onTap}
             keyboard={false}
+            eventHandlers={pin.onTap ? { click: pin.onTap } : undefined}
           />
         )
       })}
@@ -849,10 +852,12 @@ function FlyTo({
   target,
   token,
   gestureRef,
+  instant = false,
 }: {
   target: LatLng
   token: number
   gestureRef: RefObject<boolean>
+  instant?: boolean
 }) {
   const map = useMap()
   // `-1`: mismo motivo que en `FitBounds` — `FlyTo` solo monta cuando
@@ -865,11 +870,13 @@ function FlyTo({
     if (token === last.current) return
     last.current = token
     gestureRef.current = false
-    map.flyTo([target.lat, target.lng], Math.max(map.getZoom(), 17), {
-      animate: true,
-      duration: 0.9,
-    })
-  }, [token, target, map, gestureRef])
+    const zoom = Math.max(map.getZoom(), 17)
+    if (instant) {
+      map.setView([target.lat, target.lng], zoom, { animate: false })
+      return
+    }
+    map.flyTo([target.lat, target.lng], zoom, { animate: true, duration: 0.9 })
+  }, [token, target, map, gestureRef, instant])
   return null
 }
 
@@ -1027,6 +1034,7 @@ function MapCanvas({
   bounds,
   flyTarget,
   flyToken = 0,
+  flyInstant = false,
   onSettle,
   onMovingChange,
   zoom = 17,
@@ -1047,6 +1055,8 @@ function MapCanvas({
   bounds: MapBounds | null
   flyTarget?: LatLng
   flyToken?: number
+  /** El vuelo de `flyTarget` es un salto sin animación (cambio de pantalla, no viaje). */
+  flyInstant?: boolean
   onSettle?: (c: LatLng, byUser: boolean) => void
   onMovingChange?: (moving: boolean) => void
   zoom?: number
@@ -1201,7 +1211,14 @@ function MapCanvas({
               onSettle={handleSettle}
               onMovingChange={handleMoving}
             />
-            {flyTarget && <FlyTo target={flyTarget} token={flyToken} gestureRef={gestureRef} />}
+            {flyTarget && (
+              <FlyTo
+                target={flyTarget}
+                token={flyToken}
+                gestureRef={gestureRef}
+                instant={flyInstant}
+              />
+            )}
           </>
         ) : (
           <Follow center={center} />

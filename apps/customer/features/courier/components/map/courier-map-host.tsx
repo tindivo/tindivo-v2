@@ -133,7 +133,11 @@ export function CourierMapHost() {
   isInsideRef.current = isInside
   const pinInside = useMemo(() => (pinCoords ? isInside(pinCoords) : true), [pinCoords, isInside])
 
-  const flyTo = useCallback((c: LatLng) => {
+  const [pinFlyInstant, setPinFlyInstant] = useState(false)
+  // `instant`: pasar de A a B (o reabrir un punto) es cambiar de pantalla, no
+  // viajar: sin animación el mapa ya está donde toca. Solo el GPS anima.
+  const flyTo = useCallback((c: LatLng, instant = false) => {
+    setPinFlyInstant(instant)
     setPinFlyTarget(c)
     setPinFlyToken((n) => n + 1)
   }, [])
@@ -176,7 +180,7 @@ export function CourierMapHost() {
       setPinCoords(point.coordinates)
       setPinSettled(true)
       setLocating(false)
-      flyTo(point.coordinates)
+      flyTo(point.coordinates, true)
       return
     }
 
@@ -186,7 +190,7 @@ export function CourierMapHost() {
     if (anchor) {
       setPinCoords(anchor)
       setLocating(false)
-      flyTo(anchor)
+      flyTo(anchor, true)
       return
     }
 
@@ -258,6 +262,9 @@ export function CourierMapHost() {
 
   const isPinDrop = step === 'pin-drop'
   const isPinNote = step === 'pin-note'
+  // Ref: `routePins` es un memo y no debe rehacerse por una función nueva en
+  // cada render; el globo del recojo llama a lo que haya en ese momento.
+  const goToOriginRef = useRef<() => void>(() => {})
 
   const routePins = useMemo<RoutePin[]>(() => {
     if (!STEPS_WITH_ROUTE_PINS.has(step)) return []
@@ -282,8 +289,17 @@ export function CourierMapHost() {
         id: 'origin',
         coordinates: originCoords,
         label:
-          draft.origin.label || draft.origin.contactName || fromTracking?.originName || 'Recojo',
+          draft.origin.label ||
+          draft.origin.referenceText.trim() ||
+          draft.origin.contactName ||
+          fromTracking?.originName ||
+          'Recojo',
         variant: 'origin',
+        // En el paso 2, tocar el globo del recojo vuelve al paso 1.
+        onTap:
+          hideDestination && returnStep === 'trip-details'
+            ? () => goToOriginRef.current()
+            : undefined,
       })
     }
     if (destinationCoords) {
@@ -292,6 +308,7 @@ export function CourierMapHost() {
         coordinates: destinationCoords,
         label:
           draft.destination.label ||
+          draft.destination.referenceText.trim() ||
           draft.destination.contactName ||
           fromTracking?.destinationName ||
           'Entrega',
@@ -319,7 +336,16 @@ export function CourierMapHost() {
       })
     }
     return pins
-  }, [step, isTracking, isPinDrop, editingPoint, draft.origin, draft.destination, tracking])
+  }, [
+    step,
+    isTracking,
+    isPinDrop,
+    editingPoint,
+    returnStep,
+    draft.origin,
+    draft.destination,
+    tracking,
+  ])
 
   // `fitToPins` necesita un token que cambie SOLO cuando el conjunto de pines
   // cambia de verdad — no en cada render de `CourierMapHost` — o el mapa
@@ -401,8 +427,7 @@ export function CourierMapHost() {
       ...(keepPin ? { coordinates: pinCoords, accuracyM: pinAccuracyM } : {}),
     })
   }
-  const originSummary =
-    stepIndex === 2 && isPointComplete(draft.origin) ? draft.origin.referenceText.trim() : null
+  goToOriginRef.current = goToOrigin
 
   return (
     <>
@@ -436,6 +461,7 @@ export function CourierMapHost() {
           showPin={isPinDrop}
           flyTarget={isPinDrop ? pinFlyTarget : undefined}
           flyToken={pinFlyToken}
+          flyInstant={pinFlyInstant}
           onSettle={isPinDrop ? handleSettle : undefined}
           onMovingChange={isPinDrop ? handleMoving : undefined}
           routePins={routePins}
@@ -453,8 +479,6 @@ export function CourierMapHost() {
           point={editingPoint}
           guided={guided}
           stepIndex={stepIndex}
-          originSummary={originSummary}
-          onGoToOrigin={goToOrigin}
           reference={reference}
           onReferenceChange={setReference}
           moving={pinMoving}
@@ -464,7 +488,7 @@ export function CourierMapHost() {
           locateError={locateError}
           onUseMyLocation={useMyLocation}
           onConfirm={(ref) => pinCoords && confirmPinDrop(pinCoords, pinAccuracyM, ref)}
-          onCancel={originSummary ? goToOrigin : cancelEditPoint}
+          onCancel={stepIndex === 2 ? goToOrigin : cancelEditPoint}
           onPanelHeight={setPanelH}
         />
       )}

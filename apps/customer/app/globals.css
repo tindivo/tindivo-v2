@@ -158,6 +158,11 @@ html {
   pointer-events: none;
 }
 
+.t-route-pin-tap .t-route-pin-label {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
 .t-route-pin-drop {
   position: absolute;
   left: 0;
@@ -178,6 +183,9 @@ html {
   transform: translate(-50%, -44px) translateY(-100%);
   display: block;
   white-space: nowrap;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   padding: 3px 8px;
   border-radius: 999px;
   background: #fff;

@@ -274,8 +274,8 @@ test('desde el paso 2 se puede volver al recojo sin perder lo escrito', async ({
   const referencia = pinDrop.getByRole('textbox', { name: 'Dirección y referencia' })
   await referencia.fill('Casa celeste')
 
-  // El atajo muestra lo escrito para el recojo y vuelve al paso 1.
-  await pinDrop.getByRole('button', { name: /Cambiar el recojo/ }).click()
+  // La flecha de atrás vuelve al paso 1 (no cierra el flujo).
+  await pinDrop.getByRole('button', { name: 'Volver al recojo' }).click()
   await expect(page.getByText('¿Dónde recogemos?')).toBeVisible({ timeout: 10_000 })
   await expect(referencia).toHaveValue('Frente al mercado, puerta azul')
 
@@ -286,4 +286,21 @@ test('desde el paso 2 se puede volver al recojo sin perder lo escrito', async ({
   await expect(referencia).toHaveValue('Casa celeste')
 
   expect(errores, 'la pantalla no debe lanzar errores de JS').toEqual([])
+})
+
+test('en el paso 2 el globo del recojo lleva de vuelta al paso 1', async ({ page }) => {
+  await loginAsCustomer(page)
+  await page.goto('/')
+  const banner = page.getByRole('button', { name: /Tindivo Entregas/ })
+  await expect(banner).toBeVisible({ timeout: 15_000 })
+  await banner.click()
+
+  await fijarPunto(page, 'Frente al mercado, puerta azul', /Confirmar recojo/)
+  await expect(page.getByText('¿Dónde entregamos?')).toBeVisible({ timeout: 10_000 })
+
+  // El globo muestra la referencia escrita, no un «Recojo» genérico.
+  const globo = page.locator('.t-route-pin-tap .t-route-pin-label')
+  await expect(globo).toHaveText('Frente al mercado, puerta azul')
+  await globo.click()
+  await expect(page.getByText('¿Dónde recogemos?')).toBeVisible({ timeout: 10_000 })
 })
