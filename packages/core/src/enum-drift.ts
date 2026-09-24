@@ -41,3 +41,11 @@ type _transfer_request_status = Assert<
 type _map_landmark_category = Assert<
   Equal<Dom['map_landmark_category'][number], Enums<'map_landmark_category'>>
 >
+type _courier_status = Assert<Equal<Dom['courier_status'][number], Enums<'courier_status'>>>
+type _courier_payer = Assert<Equal<Dom['courier_payer'][number], Enums<'courier_payer'>>>
+type _courier_cancel_reason = Assert<
+  Equal<Dom['courier_cancel_reason'][number], Enums<'courier_cancel_reason'>>
+>
+type _directory_business_category = Assert<
+  Equal<Dom['directory_business_category'][number], Enums<'directory_business_category'>>
+>

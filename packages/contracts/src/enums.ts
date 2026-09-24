@@ -251,6 +251,59 @@ export type MapLandmarkCategory = z.infer<typeof MapLandmarkCategorySchema>
 // Los enums del fondo de contingencia se eliminaron en la migración 0123 junto
 // con la tabla y sus tres RPC. Ver Docs/spec/spec-0123-eliminar-contingencia.md.
 
+// --- Tindivo Entregas (`courier`): estado de la solicitud de recojo ---
+// Tabla propia `courier_orders`, no `orders` — la máquina de estados es
+// deliberadamente distinta (Docs/Encargos/03-plan-tecnico.md §1.2).
+export const COURIER_STATUSES = [
+  'requested', // el cliente pidió; nadie lo tomó todavía
+  'accepted', // un motorizado lo aceptó
+  'heading_to_pickup', // el motorizado va camino al punto A
+  'at_pickup', // el motorizado llegó al punto A
+  'picked_up', // recogió el artículo (cobró el transporte si `payer` = 'origin')
+  'heading_to_dropoff', // va camino al punto B
+  'delivered', // entregado (cobró el transporte si `payer` = 'destination'); terminal
+  'cancelled', // terminal alternativo
+] as const
+export const CourierStatusSchema = z.enum(COURIER_STATUSES)
+export type CourierStatus = z.infer<typeof CourierStatusSchema>
+
+// --- Tindivo Entregas: quién paga el transporte ---
+// 'origin' = quien entrega, al recoger · 'destination' = quien recibe, al
+// entregar (preseleccionado — spec v1 §8.1, 2026-09-22).
+export const COURIER_PAYERS = ['origin', 'destination'] as const
+export const CourierPayerSchema = z.enum(COURIER_PAYERS)
+export type CourierPayer = z.infer<typeof CourierPayerSchema>
+
+// --- Tindivo Entregas: razón de cancelación ---
+export const COURIER_CANCEL_REASONS = [
+  'no_driver', // nadie aceptó dentro de `timers.courierAcceptMinutes`
+  'driver_rejected',
+  'not_ready', // el motorizado esperó `timers.courierWaitMinutes` y no estaba listo
+  'transport_unpaid',
+  'customer_cancelled',
+  'unreachable',
+  'other',
+] as const
+export const CourierCancelReasonSchema = z.enum(COURIER_CANCEL_REASONS)
+export type CourierCancelReason = z.infer<typeof CourierCancelReasonSchema>
+
+// --- Directorio de negocios (catálogo de Tindivo Entregas): categoría ---
+// Lista fija a propósito (spec v1 §4): una categoría libre se vuelve
+// inconsistente con el tiempo, y esto lo carga una sola persona a mano.
+export const DIRECTORY_BUSINESS_CATEGORIES = [
+  'chicken_grill', // pollo / parrilla
+  'chifa',
+  'pizza_burgers', // pizza y hamburguesas
+  'snacks', // snacks y comida rápida
+  'desserts', // postres y helados
+  'drinks_liquor', // bebidas y licores
+  'pharmacy',
+  'bodega', // minimarket / bodega
+  'other',
+] as const
+export const DirectoryBusinessCategorySchema = z.enum(DIRECTORY_BUSINESS_CATEGORIES)
+export type DirectoryBusinessCategory = z.infer<typeof DirectoryBusinessCategorySchema>
+
 // --- Transferencia entre motorizados (modelado; UI fuera de Fase 1) ---
 export const TRANSFER_REQUEST_STATUSES = [
   'pending',
@@ -281,4 +334,8 @@ export const DOMAIN_ENUMS = {
   vehicle_type: VEHICLE_TYPES,
   transfer_request_status: TRANSFER_REQUEST_STATUSES,
   map_landmark_category: MAP_LANDMARK_CATEGORIES,
+  courier_status: COURIER_STATUSES,
+  courier_payer: COURIER_PAYERS,
+  courier_cancel_reason: COURIER_CANCEL_REASONS,
+  directory_business_category: DIRECTORY_BUSINESS_CATEGORIES,
 } as const

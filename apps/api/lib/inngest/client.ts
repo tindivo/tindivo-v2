@@ -10,6 +10,7 @@ export const EVENT_ORDER_PREPAY_PROOF_UPLOADED = 'order/prepay.proof_uploaded' a
 
 export const EVENT_ORDER_PROOF_REJECTED_FINAL = 'order/proof-rejected-final' as const
 export const EVENT_ORDER_APPEAL_CREATED = 'order/appeal.created' as const
+export const EVENT_COURIER_ORDER_CREATED = 'courier/order.created' as const
 
 export const OrderProofRejectedFinalSchema = z.object({
   orderId: z.string().uuid(),
@@ -111,4 +112,21 @@ export function sendOrderAppealCreated(data: OrderAppealCreatedData) {
     data,
     id: `appeal-created-${data.reportId}`,
   })
+}
+
+/** Datos del evento que agenda el timeout de aceptación de una entrega (Tindivo Entregas). */
+export type CourierOrderCreatedData = {
+  courierOrderId: string
+  /** Override del deadline en ms — SOLO para tests locales. */
+  sleepMs?: number
+}
+
+/**
+ * Envío tipado del evento `courier/order.created`. Timer preciso por
+ * solicitud (`timers.courierAcceptMinutes`); `expire_courier_orders()` es el
+ * failsafe idempotente por si este aviso se pierde (mismo patrón que
+ * `sendOrderCreated`/`cancel_expired_prepay_orders`, DECISIONS §11).
+ */
+export function sendCourierOrderCreated(data: CourierOrderCreatedData) {
+  return inngest.send({ name: EVENT_COURIER_ORDER_CREATED, data })
 }
