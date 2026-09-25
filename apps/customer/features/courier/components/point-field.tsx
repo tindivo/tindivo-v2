@@ -1,6 +1,7 @@
 'use client'
 
 import { Icon } from '@tindivo/ui'
+import { normalizePePhoneInput } from '../lib/phone'
 import { useCourierStore } from '../lib/store'
 import type { CourierEditingPoint, CourierPoint } from '../types'
 
@@ -71,7 +72,7 @@ export function PointField({
             type="tel"
             inputMode="tel"
             value={point.contactPhone}
-            onChange={(e) => onChange({ contactPhone: e.target.value })}
+            onChange={(e) => onChange({ contactPhone: normalizePePhoneInput(e.target.value) })}
             placeholder="Celular"
             className="w-[130px] rounded-xl border border-transparent bg-white px-3 py-2 font-sans text-[14px] text-[#2E3236] outline-none focus:border-brand/40"
           />
