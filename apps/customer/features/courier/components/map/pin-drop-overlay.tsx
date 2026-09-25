@@ -2,7 +2,7 @@
 
 import { ADDRESS_REFERENCE_MAX, AddressReferenceSchema } from '@tindivo/contracts'
 import { Button, Icon, Segmented, Spinner, useDialogFocus } from '@tindivo/ui'
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import type { MapMode } from '@/components/map-picker-inner'
 import type { CourierEditingPoint } from '../../types'
 
@@ -89,7 +89,18 @@ export function PinDropOverlay({
   const panel = useRef<HTMLDivElement>(null)
   const input = useRef<HTMLInputElement>(null)
   const [refError, setRefError] = useState<string | null>(null)
-  useDialogFocus(caja, { open: true, onClose: onCancel })
+  const [confirmLeave, setConfirmLeave] = useState(false)
+
+  // Salir del paso 1 con algo ya escrito pide confirmación; volver del paso 2 al
+  // 1 no (no se pierde nada). La identidad tiene que ser fija: `useDialogFocus`
+  // re-enfoca el diálogo cada vez que cambia `onClose`.
+  const leaveRef = useRef<() => void>(() => {})
+  leaveRef.current = () => {
+    if (guided && stepIndex === 1 && reference.trim().length > 0) setConfirmLeave(true)
+    else onCancel()
+  }
+  const requestLeave = useCallback(() => leaveRef.current(), [])
+  useDialogFocus(caja, { open: true, onClose: requestLeave })
 
   // El mapa termina donde empieza este panel: así el pin queda en el centro de
   // lo que se ve y no debajo de la tarjeta. `CourierMapHost` recorta el mapa a
@@ -166,8 +177,8 @@ export function PinDropOverlay({
         <div className="pointer-events-none absolute inset-x-0 top-0 z-[730] flex items-start gap-2 p-3 pt-[calc(0.75rem+env(safe-area-inset-top))]">
           <button
             type="button"
-            onClick={onCancel}
-            aria-label={stepIndex === 2 ? 'Volver al recojo' : 'Volver sin fijar el punto'}
+            onClick={requestLeave}
+            aria-label={stepIndex === 2 ? 'Volver al paso 1' : 'Volver sin fijar el punto'}
             className="pointer-events-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-card text-ink shadow-elev-3 border border-ink/[0.06] transition-transform active:scale-95"
           >
             <Icon name="arrow_back" size={22} />
@@ -211,10 +222,24 @@ export function PinDropOverlay({
         className="pointer-events-auto shrink-0 rounded-t-[24px] bg-card px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-[0_-16px_40px_-28px_rgba(0,0,0,0.4)]"
       >
         {guided && stepIndex && (
-          <p className="mb-0.5 flex items-center gap-1.5 font-mono text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
-            <span aria-hidden className={`h-2 w-2 rounded-full ${copy.dot}`} />
-            Paso {stepIndex} de 2
-          </p>
+          // Alto fijo en los dos pasos: la flecha solo existe en el 2, y si la
+          // fila cambiara de alto el mapa se re-mediría al pasar de A a B.
+          <div className="-mt-1 mb-0.5 flex h-9 items-center gap-1">
+            {stepIndex === 2 && (
+              <button
+                type="button"
+                onClick={onCancel}
+                aria-label="Volver al recojo"
+                className="-ml-2 flex h-9 w-9 items-center justify-center rounded-full text-ink transition-colors active:bg-ink/[0.06]"
+              >
+                <Icon name="arrow_back" size={20} />
+              </button>
+            )}
+            <p className="flex items-center gap-1.5 font-mono text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
+              <span aria-hidden className={`h-2 w-2 rounded-full ${copy.dot}`} />
+              Paso {stepIndex} de 2
+            </p>
+          </div>
         )}
         <p className="font-display font-extrabold text-[20px] leading-tight tracking-tight text-ink">
           {guided
@@ -309,6 +334,52 @@ export function PinDropOverlay({
                 ? copy.confirm
                 : 'Confirmar ubicación'}
         </Button>
+      </div>
+
+      {confirmLeave && (
+        <LeaveConfirm
+          onStay={() => setConfirmLeave(false)}
+          onLeave={() => {
+            setConfirmLeave(false)
+            onCancel()
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+function LeaveConfirm({ onStay, onLeave }: { onStay: () => void; onLeave: () => void }) {
+  return (
+    <div
+      role="alertdialog"
+      aria-modal="true"
+      aria-label="¿Salir sin pedir?"
+      className="pointer-events-auto fixed inset-0 z-[90] flex items-end justify-center bg-ink/40 backdrop-blur-sm"
+    >
+      <div className="w-full max-w-sm rounded-t-[28px] bg-white p-5 pb-[calc(1.5rem+env(safe-area-inset-bottom))] shadow-elev-3">
+        <div className="text-[19px] font-extrabold tracking-[-0.02em] text-[#2E3236]">
+          ¿Salir sin pedir?
+        </div>
+        <p className="mt-1.5 text-[14px] leading-snug text-[#5C6368]">
+          Perderás lo que ya escribiste.
+        </p>
+        <div className="mt-4 flex gap-2.5">
+          <button
+            type="button"
+            onClick={onStay}
+            className="h-13 flex-1 rounded-full bg-[#F4F4F2] text-[15px] font-extrabold text-[#2E3236]"
+          >
+            Seguir aquí
+          </button>
+          <button
+            type="button"
+            onClick={onLeave}
+            className="h-13 flex-1 rounded-full bg-[linear-gradient(135deg,#F97316,#FB923C)] text-[15px] font-extrabold text-white"
+          >
+            Salir
+          </button>
+        </div>
       </div>
     </div>
   )

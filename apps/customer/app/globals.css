@@ -161,6 +161,8 @@ html {
 .t-route-pin-tap .t-route-pin-label {
   pointer-events: auto;
   cursor: pointer;
+  /* Un globo tocable con el dedo: más alto y ancho que el de solo lectura. */
+  padding: 9px 14px;
 }
 
 .t-route-pin-drop {

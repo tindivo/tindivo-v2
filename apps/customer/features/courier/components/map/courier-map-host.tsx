@@ -186,8 +186,13 @@ export function CourierMapHost() {
 
     setPinAccuracyM(null)
     setPinSettled(false)
-    const anchor = key === 'destination' ? d.origin.coordinates : null
-    if (anchor) {
+    const origin = key === 'destination' ? d.origin.coordinates : null
+    if (origin) {
+      // B nace a unos 30 m de A (hacia abajo, para no tapar el globo de A que
+      // va arriba), no encima: así los dos pines se distinguen
+      // desde el primer instante. Si ese desvío cayera fuera de la zona, sobre A.
+      const shifted = { lat: origin.lat - 0.00025, lng: origin.lng + 0.0002 }
+      const anchor = isInsideRef.current(shifted) ? shifted : origin
       setPinCoords(anchor)
       setLocating(false)
       flyTo(anchor, true)
@@ -265,6 +270,12 @@ export function CourierMapHost() {
   // Ref: `routePins` es un memo y no debe rehacerse por una función nueva en
   // cada render; el globo del recojo llama a lo que haya en ese momento.
   const goToOriginRef = useRef<() => void>(() => {})
+  // `PinDropOverlay` se lo pasa a `useDialogFocus`, que vuelve a enfocar el
+  // diálogo cada vez que cambia su `onClose`: con una función nueva por render
+  // el input perdía el foco al escribir una letra. Por eso la identidad es fija
+  // y lo que hace se lee de un ref.
+  const backRef = useRef<() => void>(() => {})
+  const handleBack = useCallback(() => backRef.current(), [])
 
   const routePins = useMemo<RoutePin[]>(() => {
     if (!STEPS_WITH_ROUTE_PINS.has(step)) return []
@@ -428,6 +439,7 @@ export function CourierMapHost() {
     })
   }
   goToOriginRef.current = goToOrigin
+  backRef.current = stepIndex === 2 ? goToOrigin : cancelEditPoint
 
   return (
     <>
@@ -488,7 +500,7 @@ export function CourierMapHost() {
           locateError={locateError}
           onUseMyLocation={useMyLocation}
           onConfirm={(ref) => pinCoords && confirmPinDrop(pinCoords, pinAccuracyM, ref)}
-          onCancel={stepIndex === 2 ? goToOrigin : cancelEditPoint}
+          onCancel={handleBack}
           onPanelHeight={setPanelH}
         />
       )}
