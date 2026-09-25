@@ -26,3 +26,15 @@ export function isValidPePhone(phone: string): boolean {
 export function stripPeCountryCode(phone: string): string {
   return phone.replace(/[^\d]/g, '').replace(/^51(?=\d{9}$)/, '')
 }
+
+/**
+ * Lo que queda en el campo «Celular» tras cada tecla: solo dígitos y nunca más
+ * de 9. Si pegan un número con el prefijo (`+51 987 654 321`) se le quita; sin
+ * este tope se podían seguir escribiendo dígitos y el aviso «Faltan N» nunca
+ * decía que sobraban.
+ */
+export function normalizePePhoneInput(value: string): string {
+  const digits = value.replace(/[^\d]/g, '')
+  const local = digits.length > 9 && digits.startsWith('51') ? digits.slice(2) : digits
+  return local.slice(0, 9)
+}

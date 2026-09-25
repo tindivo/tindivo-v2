@@ -165,7 +165,10 @@ test('pedir entrega fijando A y B en el mapa llega a "Buscando motorizado"', asy
   await soyYoRecibe.click()
 
   await page.getByPlaceholder('Quien entrega').fill('Doña Rosa')
-  await page.getByPlaceholder('987 654 321').first().fill('987654321')
+  const celular = page.getByPlaceholder('987 654 321').first()
+  await celular.pressSequentially('98765432199', { delay: 20 })
+  // No admite más de 9 dígitos: los sobrantes se descartan al teclear.
+  await expect(celular).toHaveValue('987654321')
 
   const continuar = page.getByRole('button', { name: 'Continuar' })
   await expect(continuar).not.toHaveAttribute('aria-disabled', 'true', { timeout: 10_000 })

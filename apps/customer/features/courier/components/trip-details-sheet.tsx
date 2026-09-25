@@ -4,7 +4,12 @@ import { BottomSheet, Icon } from '@tindivo/ui'
 import { useRef } from 'react'
 import { useCourierRequest } from '../hooks/use-courier-request'
 import { type CourierContact, suggestContacts } from '../lib/contacts'
-import { isValidPePhone, missingPhoneDigits, stripPeCountryCode } from '../lib/phone'
+import {
+  isValidPePhone,
+  missingPhoneDigits,
+  normalizePePhoneInput,
+  stripPeCountryCode,
+} from '../lib/phone'
 import { useCourierStore } from '../lib/store'
 import type { CourierEditingPoint, CourierPoint } from '../types'
 
@@ -245,7 +250,7 @@ function PointCard({
                 autoComplete="tel-national"
                 value={point.contactPhone}
                 onChange={(e) =>
-                  onChangeContact({ contactPhone: stripPeCountryCode(e.target.value) })
+                  onChangeContact({ contactPhone: normalizePePhoneInput(e.target.value) })
                 }
                 placeholder="987 654 321"
                 data-contact={`${which}-phone`}
