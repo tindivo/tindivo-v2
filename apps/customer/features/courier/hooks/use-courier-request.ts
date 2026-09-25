@@ -4,7 +4,7 @@ import { ApiError } from '@tindivo/api-client'
 import { useEffect, useState } from 'react'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import { createCourierOrder, type Requester } from '../lib/api'
-import { stripPeCountryCode } from '../lib/phone'
+import { type CourierContact, recentContacts } from '../lib/contacts'
 import { useCourierStore } from '../lib/store'
 import type { CourierOrderResult } from '../types'
 
@@ -39,6 +39,17 @@ async function loadIdentity(): Promise<CustomerIdentity> {
   }
 }
 
+async function loadRecentContacts(userId: string, myPhone: string): Promise<CourierContact[]> {
+  const supabase = getSupabaseBrowser()
+  const { data } = await supabase
+    .from('courier_orders')
+    .select('origin_name, origin_phone, destination_name, destination_phone')
+    .eq('customer_user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(20)
+  return recentContacts(data ?? [], myPhone)
+}
+
 async function loadDefaultAddress() {
   const supabase = getSupabaseBrowser()
   const {
@@ -64,7 +75,6 @@ async function loadDefaultAddress() {
  * `submit()` para el paso final (`confirm`/`person-details`).
  */
 export function useCourierRequest() {
-  const step = useCourierStore((s) => s.step)
   const draft = useCourierStore((s) => s.draft)
   const updateDraft = useCourierStore((s) => s.updateDraft)
   const updatePoint = useCourierStore((s) => s.updatePoint)
@@ -72,13 +82,20 @@ export function useCourierRequest() {
   const submitted = useCourierStore((s) => s.submitted)
 
   const [identity, setIdentity] = useState<CustomerIdentity | null>(null)
+  const [recents, setRecents] = useState<CourierContact[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     let on = true
     loadIdentity().then((id) => {
-      if (on) setIdentity(id)
+      if (!on) return
+      setIdentity(id)
+      if (id.userId) {
+        loadRecentContacts(id.userId, id.phone).then((list) => {
+          if (on) setRecents(list)
+        })
+      }
     })
     return () => {
       on = false
@@ -94,7 +111,7 @@ export function useCourierRequest() {
     loadDefaultAddress().then((addr) => {
       if (!on || !addr) return
       updatePoint('destination', {
-        contactName: identity?.name || 'Yo',
+        contactName: identity?.name ?? '',
         contactPhone: identity?.phone ?? '',
         coordinates: addr.coordinates,
         referenceText: addr.referenceText,
@@ -105,24 +122,6 @@ export function useCourierRequest() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fromBusiness, identity])
-
-  // `trip-details` (imagen 6): el celular de quien entrega parte precargado
-  // con el del cliente que está pidiendo — "ya lo editará si no lo es". El
-  // destino parte en "Yo" por el mismo motivo (antes requería tocar un botón
-  // aparte, `useMyIdentity`, que se mantiene abajo para volver a aplicarlo).
-  useEffect(() => {
-    if (step !== 'trip-details' || !identity) return
-    if (!draft.origin.contactPhone) {
-      updatePoint('origin', { contactPhone: stripPeCountryCode(identity.phone) })
-    }
-    if (!draft.destination.contactName && !draft.destination.contactPhone) {
-      updatePoint('destination', {
-        contactName: identity.name || 'Yo',
-        contactPhone: stripPeCountryCode(identity.phone),
-      })
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, identity])
 
   async function submit(utmSource?: string | null): Promise<CourierOrderResult | null> {
     if (!identity?.userId) {
@@ -148,5 +147,5 @@ export function useCourierRequest() {
     }
   }
 
-  return { draft, updateDraft, updatePoint, identity, submitting, error, submit }
+  return { draft, updateDraft, updatePoint, identity, recents, submitting, error, submit }
 }

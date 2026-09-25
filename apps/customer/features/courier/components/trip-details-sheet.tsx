@@ -2,6 +2,7 @@
 
 import { BottomSheet, Icon } from '@tindivo/ui'
 import { useCourierRequest } from '../hooks/use-courier-request'
+import { type CourierContact, suggestContacts } from '../lib/contacts'
 import { isValidPePhone, missingPhoneDigits, stripPeCountryCode } from '../lib/phone'
 import { useCourierStore } from '../lib/store'
 import type { CourierEditingPoint, CourierPoint } from '../types'
@@ -17,7 +18,11 @@ export function TripDetailsSheet() {
   const closeSheet = useCourierStore((s) => s.closeSheet)
   const goTo = useCourierStore((s) => s.goTo)
   const beginEditPoint = useCourierStore((s) => s.beginEditPoint)
-  const { draft, updatePoint, identity } = useCourierRequest()
+  const { draft, updatePoint, identity, recents } = useCourierRequest()
+  const me: CourierContact | null =
+    identity?.userId && (identity.name || identity.phone)
+      ? { name: identity.name, phone: stripPeCountryCode(identity.phone) }
+      : null
 
   const originReady =
     draft.origin.contactName.trim().length > 0 && isValidPePhone(draft.origin.contactPhone)
@@ -50,15 +55,8 @@ export function TripDetailsSheet() {
           contactLabel="Quien entrega"
           onChangeLocation={() => beginEditPoint('origin')}
           onChangeContact={(patch) => updatePoint('origin', patch)}
-          myPhoneChip={
-            identity?.phone
-              ? {
-                  active: draft.origin.contactPhone === stripPeCountryCode(identity.phone),
-                  onClick: () =>
-                    updatePoint('origin', { contactPhone: stripPeCountryCode(identity.phone) }),
-                }
-              : undefined
-          }
+          me={me}
+          recents={recents}
         />
 
         <div className="mt-3">
@@ -69,15 +67,8 @@ export function TripDetailsSheet() {
             contactLabel="Recibe"
             onChangeLocation={() => beginEditPoint('destination')}
             onChangeContact={(patch) => updatePoint('destination', patch)}
-            onUseMyIdentity={
-              identity?.userId
-                ? () =>
-                    updatePoint('destination', {
-                      contactName: identity.name || 'Yo',
-                      contactPhone: stripPeCountryCode(identity.phone),
-                    })
-                : undefined
-            }
+            me={me}
+            recents={recents}
           />
         </div>
 
@@ -105,8 +96,8 @@ function PointCard({
   contactLabel,
   onChangeLocation,
   onChangeContact,
-  onUseMyIdentity,
-  myPhoneChip,
+  me,
+  recents,
 }: {
   which: CourierEditingPoint
   title: string
@@ -114,8 +105,10 @@ function PointCard({
   contactLabel: string
   onChangeLocation: () => void
   onChangeContact: (patch: Partial<CourierPoint>) => void
-  onUseMyIdentity?: () => void
-  myPhoneChip?: { active: boolean; onClick: () => void }
+  /** La persona que está pidiendo: su atajo «Soy yo». `null` si no hay sesión. */
+  me: CourierContact | null
+  /** Contactos de entregas anteriores, para autocompletar nombre y celular. */
+  recents: readonly CourierContact[]
 }) {
   const missing = missingPhoneDigits(point.contactPhone)
   const dotColor = which === 'origin' ? 'bg-brand' : 'bg-[#2E3236]'
@@ -129,18 +122,6 @@ function PointCard({
             {title}
           </span>
         </div>
-        {myPhoneChip && (
-          <button
-            type="button"
-            onClick={myPhoneChip.onClick}
-            className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-bold ${
-              myPhoneChip.active ? 'bg-white text-brand-dark' : 'bg-white/60 text-[#5C6368]'
-            }`}
-          >
-            <Icon name="person" size={14} filled={myPhoneChip.active} />
-            Es mío
-          </button>
-        )}
       </div>
 
       <div className="flex items-center gap-3 rounded-2xl bg-white px-3 py-2.5">
@@ -183,22 +164,21 @@ function PointCard({
             value={point.contactName}
             onChange={(e) => onChangeContact({ contactName: e.target.value })}
             placeholder={contactLabel}
+            autoComplete="off"
             className="w-full border-0 bg-transparent text-[14px] font-semibold text-[#2E3236] outline-none"
           />
         </div>
         {point.contactName.trim().length > 0 && (
           <Icon name="check_circle" size={18} filled className="text-success" />
         )}
-        {onUseMyIdentity && (
-          <button
-            type="button"
-            onClick={onUseMyIdentity}
-            className="shrink-0 text-[13px] font-bold text-brand-dark"
-          >
-            Yo
-          </button>
-        )}
       </div>
+
+      <ContactChips
+        me={me}
+        recents={recents}
+        current={point}
+        onPick={(c) => onChangeContact({ contactName: c.name, contactPhone: c.phone })}
+      />
 
       <div className="flex flex-col gap-1 rounded-2xl bg-white px-3 py-2.5">
         <div className="flex items-center gap-3">
@@ -210,6 +190,7 @@ function PointCard({
               <input
                 type="tel"
                 inputMode="tel"
+                autoComplete="tel-national"
                 value={point.contactPhone}
                 onChange={(e) =>
                   onChangeContact({ contactPhone: stripPeCountryCode(e.target.value) })
@@ -226,6 +207,60 @@ function PointCard({
           </p>
         )}
       </div>
+    </div>
+  )
+}
+
+/**
+ * Autocompletar quien entrega / quien recibe: «Soy yo» y los contactos de
+ * entregas anteriores, tocables. No se rellena nada por su cuenta: en un
+ * pedido tú puedes ser quien entrega, quien recibe o ninguno de los dos, y
+ * suponerlo mandaría al motorizado a llamar a la persona equivocada.
+ * Lo que se escribe en «nombre» filtra los recientes (el celular se completa
+ * al tocar el que corresponde).
+ */
+function ContactChips({
+  me,
+  recents,
+  current,
+  onPick,
+}: {
+  me: CourierContact | null
+  recents: readonly CourierContact[]
+  current: CourierPoint
+  onPick: (c: CourierContact) => void
+}) {
+  const shown = suggestContacts(recents, current.contactName)
+  if (!me && shown.length === 0) return null
+
+  const isMe =
+    me != null && current.contactPhone === me.phone && current.contactName.trim() === me.name.trim()
+
+  return (
+    <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-0.5">
+      {me && (
+        <button
+          type="button"
+          onClick={() => onPick(me)}
+          aria-pressed={isMe}
+          className={`flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-[13px] font-bold transition-colors ${
+            isMe ? 'bg-brand text-white' : 'bg-white text-brand-dark'
+          }`}
+        >
+          <Icon name="person" size={16} filled={isMe} />
+          Soy yo
+        </button>
+      )}
+      {shown.map((c) => (
+        <button
+          key={`${c.phone}|${c.name}`}
+          type="button"
+          onClick={() => onPick(c)}
+          className="flex h-9 max-w-[200px] shrink-0 items-center rounded-full bg-white px-3 text-[13px] font-bold text-[#2E3236]"
+        >
+          <span className="truncate">{c.name}</span>
+        </button>
+      ))}
     </div>
   )
 }
