@@ -36,6 +36,21 @@ móvil (iframe de 390 px en Chrome de escritorio + Playwright); lo marcado
   paso 2 vuelve al paso 1. El globo se recorta con «…» si es largo.
 - B guardado al saltar a A se ve en el mapa como pin fijo mientras se corrige A.
 
+## Iteración 1d (2026-09-24) — hecha
+
+- **Bug: el input del paso 2 perdía el foco al escribir una letra.** `useDialogFocus`
+  re-enfoca el diálogo cuando cambia `onClose`, y en el paso 2 llegaba una función
+  nueva en cada render. Ahora la identidad es fija y hay un e2e que escribe letra a letra.
+- Flecha de atrás dentro del panel del paso 2 (además de la de arriba del mapa).
+- Salir del paso 1 con algo escrito pide confirmación; volver al paso 1 desde el 2 no.
+- B nace a ~30 m de A (hacia abajo, para no tapar el globo de A), no encima.
+- El globo tocable del pin de A es más grande (≈ 34 px de alto).
+- **«Confirma tu pedido» ya no rellena nada por su cuenta** (antes ponía «Yo» y tu
+  celular en quien recibe). En cada tarjeta hay un chip «Soy yo» que completa nombre y
+  celular, y chips con los contactos de tus entregas anteriores; lo que escribes en el
+  nombre filtra esos chips. Los inputs llevan `autocomplete` para el autocompletado del
+  navegador.
+
 ## Para la iteración 2
 
 Ordenado por impacto.
@@ -73,9 +88,12 @@ Ordenado por impacto.
 
 ## Para la iteración 3
 
-- **Objetivos táctiles.** Botones e input del panel ya miden ≥ 44 px; falta revisar el
-  globo tocable del pin (unos 22 px) en teléfono real, quizá con un área de toque mayor.
-- **La flecha de atrás del paso 1** cierra el flujo entero sin avisar: decidir si con
-  algo escrito debería pedir confirmación.
-- **B nace sobre A** y el globo de A queda justo encima del pin oscuro: probar a sembrar
-  B un poco desplazado o con un zoom más abierto (ver punto 3 de la iteración 2).
+- **Inferir quién es «yo».** Si el punto A se fijó con el GPS de la persona, casi seguro
+  quien entrega es ella; sugerir «Soy yo» ya marcado en esa tarjeta (sin rellenar solo).
+- **Contactos recientes de más fuentes.** Hoy salen de `courier_orders`; sumar los de
+  pedidos a restaurantes (`orders`) y los guardados en la cuenta.
+- **Contactos: guardar un nombre para la próxima vez** («Guardar a Doña Rosa»).
+- **El chip «Soy yo» no cabe visualmente bajo el nombre** en pantallas muy angostas
+  (scroll horizontal); revisar en 320 px.
+- **La flecha de atrás del paso 1** ya confirma; falta decidir si «Cerrar» debería
+  ofrecer guardar un borrador.

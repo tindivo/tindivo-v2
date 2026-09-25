@@ -142,9 +142,14 @@ test('pedir entrega fijando A y B en el mapa llega a "Buscando motorizado"', asy
 
   // ── Confirma tu pedido (imagen 6): contacto de cada punto ────────────────
   await expect(page.getByText('Confirma tu pedido')).toBeVisible({ timeout: 10_000 })
+  // Nada viene relleno por su cuenta: en un pedido puedes ser quien entrega,
+  // quien recibe o ninguno. «Soy yo» completa nombre y celular de un toque.
+  const detalles = page.getByRole('dialog', { name: 'Confirma tu pedido' })
+  await expect(detalles.getByPlaceholder('Recibe')).toHaveValue('')
+  await detalles.getByRole('button', { name: 'Soy yo' }).nth(1).click()
+  await expect(detalles.getByPlaceholder('Recibe')).not.toHaveValue('')
   await page.getByPlaceholder('Quien entrega').fill('Doña Rosa')
   await page.getByPlaceholder('987 654 321').first().fill('987654321')
-  await page.getByPlaceholder('987 654 321').last().fill('912345678')
 
   const continuar = page.getByRole('button', { name: 'Continuar' })
   await expect(continuar).toBeEnabled({ timeout: 10_000 })
@@ -303,4 +308,27 @@ test('en el paso 2 el globo del recojo lleva de vuelta al paso 1', async ({ page
   await expect(globo).toHaveText('Frente al mercado, puerta azul')
   await globo.click()
   await expect(page.getByText('¿Dónde recogemos?')).toBeVisible({ timeout: 10_000 })
+})
+
+test('en el paso 2 se puede escribir la referencia letra a letra sin perder el foco', async ({
+  page,
+}) => {
+  await loginAsCustomer(page)
+  await page.goto('/')
+  const banner = page.getByRole('button', { name: /Tindivo Entregas/ })
+  await expect(banner).toBeVisible({ timeout: 15_000 })
+  await banner.click()
+
+  await fijarPunto(page, 'Frente al mercado, puerta azul', /Confirmar recojo/)
+  await expect(page.getByText('¿Dónde entregamos?')).toBeVisible({ timeout: 10_000 })
+
+  const referencia = page
+    .getByRole('dialog', { name: 'Fijar el punto en el mapa' })
+    .getByRole('textbox', { name: 'Dirección y referencia' })
+  await referencia.click()
+  await referencia.pressSequentially('Casa celeste', { delay: 60 })
+  // Antes, en el paso 2 escribir una letra devolvía el foco al diálogo y el resto
+  // de las teclas se perdía.
+  await expect(referencia).toHaveValue('Casa celeste')
+  await expect(referencia).toBeFocused()
 })
