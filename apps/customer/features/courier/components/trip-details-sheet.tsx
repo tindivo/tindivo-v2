@@ -1,6 +1,7 @@
 'use client'
 
 import { BottomSheet, Icon } from '@tindivo/ui'
+import { useRef } from 'react'
 import { useCourierRequest } from '../hooks/use-courier-request'
 import { type CourierContact, suggestContacts } from '../lib/contacts'
 import { isValidPePhone, missingPhoneDigits, stripPeCountryCode } from '../lib/phone'
@@ -30,11 +31,38 @@ export function TripDetailsSheet() {
     draft.destination.contactName.trim().length > 0 &&
     isValidPePhone(draft.destination.contactPhone)
   const ready = originReady && destinationReady
+  const scroller = useRef<HTMLDivElement>(null)
+
+  // Una sola línea, siempre: si el aviso creciera, el pie se movería.
+  const missingText = ready
+    ? null
+    : !originReady && !destinationReady
+      ? 'Falta el contacto de quien entrega y de quien recibe'
+      : originReady
+        ? `Falta ${missingOf(draft.destination)} de quien recibe`
+        : `Falta ${missingOf(draft.origin)} de quien entrega`
+
+  // Con datos incompletos «Continuar» no se apaga en silencio: lleva al primer
+  // campo que falta (y el aviso de abajo dice cuál es).
+  function goToFirstMissing() {
+    const order: [boolean, string][] = [
+      [draft.origin.contactName.trim().length === 0, 'origin-name'],
+      [!isValidPePhone(draft.origin.contactPhone), 'origin-phone'],
+      [draft.destination.contactName.trim().length === 0, 'destination-name'],
+      [!isValidPePhone(draft.destination.contactPhone), 'destination-phone'],
+    ]
+    const target = order.find(([missing]) => missing)?.[1]
+    const el = target
+      ? scroller.current?.querySelector<HTMLInputElement>(`[data-contact="${target}"]`)
+      : null
+    el?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    el?.focus({ preventScroll: true })
+  }
 
   return (
     <BottomSheet open={open} onClose={closeSheet} label="Confirma tu pedido" scrim={false}>
-      <div className="flex max-h-[85dvh] flex-col overflow-y-auto px-4 pb-6">
-        <div className="mb-3 flex items-center justify-between">
+      <div className="flex max-h-[85dvh] min-h-0 flex-col">
+        <div className="flex shrink-0 items-center justify-between px-4 pb-3">
           <div className="text-[24px] font-extrabold tracking-[-0.03em] text-[#2E3236]">
             Confirma tu pedido
           </div>
@@ -48,45 +76,67 @@ export function TripDetailsSheet() {
           </button>
         </div>
 
-        <PointCard
-          which="origin"
-          title="Dónde recogemos"
-          point={draft.origin}
-          contactLabel="Quien entrega"
-          onChangeLocation={() => beginEditPoint('origin')}
-          onChangeContact={(patch) => updatePoint('origin', patch)}
-          me={me}
-          recents={recents}
-        />
-
-        <div className="mt-3">
+        <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
           <PointCard
-            which="destination"
-            title="Dónde entregamos"
-            point={draft.destination}
-            contactLabel="Recibe"
-            onChangeLocation={() => beginEditPoint('destination')}
-            onChangeContact={(patch) => updatePoint('destination', patch)}
+            which="origin"
+            title="Dónde recogemos"
+            point={draft.origin}
+            contactLabel="Quien entrega"
+            onChangeLocation={() => beginEditPoint('origin')}
+            onChangeContact={(patch) => updatePoint('origin', patch)}
             me={me}
             recents={recents}
           />
+
+          <div className="mt-3">
+            <PointCard
+              which="destination"
+              title="Dónde entregamos"
+              point={draft.destination}
+              contactLabel="Recibe"
+              onChangeLocation={() => beginEditPoint('destination')}
+              onChangeContact={(patch) => updatePoint('destination', patch)}
+              me={me}
+              recents={recents}
+            />
+          </div>
         </div>
 
-        <button
-          type="button"
-          disabled={!ready}
-          onClick={() => goTo('trip-payer')}
-          className={`mt-4 flex h-14 w-full items-center justify-center rounded-full font-extrabold text-[16px] ${
-            ready
-              ? 'bg-[linear-gradient(135deg,#F97316,#FB923C)] text-white shadow-[0_10px_24px_-10px_rgba(234,88,12,.55)]'
-              : 'bg-[#E8E9EB] text-[#5C6368]'
-          }`}
-        >
-          Continuar
-        </button>
+        {/* Fijo abajo: el botón no se pierde al final de una lista larga. */}
+        <div className="shrink-0 border-t border-ink/[0.06] bg-surface px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+          <p
+            aria-live="polite"
+            className={`mb-2 min-h-[16px] px-1 text-[12px] font-semibold leading-[16px] ${
+              missingText ? 'text-[#B45309]' : 'text-transparent'
+            }`}
+          >
+            {missingText ?? 'Todo listo'}
+          </p>
+          <button
+            type="button"
+            aria-disabled={!ready}
+            onClick={() => (ready ? goTo('trip-payer') : goToFirstMissing())}
+            className={`flex h-14 w-full items-center justify-center gap-2 rounded-full font-extrabold text-[16px] transition-[transform,box-shadow] active:scale-[0.98] ${
+              ready
+                ? 'bg-[linear-gradient(135deg,#F97316,#FB923C)] text-white shadow-[0_10px_24px_-10px_rgba(234,88,12,.55)]'
+                : 'bg-[#E8E9EB] text-[#5C6368]'
+            }`}
+          >
+            Continuar
+            <Icon name="arrow_forward" size={20} />
+          </button>
+        </div>
       </div>
     </BottomSheet>
   )
+}
+
+/** Qué le falta a un contacto, para el aviso de «Continuar». */
+function missingOf(point: CourierPoint): string {
+  const noName = point.contactName.trim().length === 0
+  const noPhone = !isValidPePhone(point.contactPhone)
+  if (noName && noPhone) return 'el nombre y el celular'
+  return noName ? 'el nombre' : 'el celular'
 }
 
 function PointCard({
@@ -155,6 +205,14 @@ function PointCard({
         )}
       </div>
 
+      <ContactChips
+        me={me}
+        recents={recents}
+        current={point}
+        onPick={(c) => onChangeContact({ contactName: c.name, contactPhone: c.phone })}
+        onClear={() => onChangeContact({ contactName: '', contactPhone: '' })}
+      />
+
       <div className="flex items-center gap-3 rounded-2xl bg-white px-3 py-2.5">
         <Icon name="badge" size={18} className="text-[#6B7075]" />
         <div className="min-w-0 flex-1">
@@ -164,6 +222,7 @@ function PointCard({
             value={point.contactName}
             onChange={(e) => onChangeContact({ contactName: e.target.value })}
             placeholder={contactLabel}
+            data-contact={`${which}-name`}
             autoComplete="off"
             className="w-full border-0 bg-transparent text-[14px] font-semibold text-[#2E3236] outline-none"
           />
@@ -172,13 +231,6 @@ function PointCard({
           <Icon name="check_circle" size={18} filled className="text-success" />
         )}
       </div>
-
-      <ContactChips
-        me={me}
-        recents={recents}
-        current={point}
-        onPick={(c) => onChangeContact({ contactName: c.name, contactPhone: c.phone })}
-      />
 
       <div className="flex flex-col gap-1 rounded-2xl bg-white px-3 py-2.5">
         <div className="flex items-center gap-3">
@@ -196,6 +248,7 @@ function PointCard({
                   onChangeContact({ contactPhone: stripPeCountryCode(e.target.value) })
                 }
                 placeholder="987 654 321"
+                data-contact={`${which}-phone`}
                 className="w-full border-0 bg-transparent text-[14px] font-semibold text-[#2E3236] outline-none"
               />
             </div>
@@ -213,54 +266,64 @@ function PointCard({
 
 /**
  * Autocompletar quien entrega / quien recibe: «Soy yo» y los contactos de
- * entregas anteriores, tocables. No se rellena nada por su cuenta: en un
- * pedido tú puedes ser quien entrega, quien recibe o ninguno de los dos, y
- * suponerlo mandaría al motorizado a llamar a la persona equivocada.
- * Lo que se escribe en «nombre» filtra los recientes (el celular se completa
- * al tocar el que corresponde).
+ * entregas anteriores, como fichas que se activan y se desactivan. No se rellena
+ * nada por su cuenta: en un pedido puedes ser quien entrega, quien recibe o
+ * ninguno de los dos, y suponerlo mandaría al motorizado a llamar a la persona
+ * equivocada. Tocar una ficha activa completa nombre y celular; volver a tocarla
+ * la apaga y deja los dos campos vacíos. Lo que se escribe en «nombre» filtra los
+ * recientes.
  */
 function ContactChips({
   me,
   recents,
   current,
   onPick,
+  onClear,
 }: {
   me: CourierContact | null
   recents: readonly CourierContact[]
   current: CourierPoint
   onPick: (c: CourierContact) => void
+  onClear: () => void
 }) {
-  const shown = suggestContacts(recents, current.contactName)
-  if (!me && shown.length === 0) return null
-
-  const isMe =
-    me != null && current.contactPhone === me.phone && current.contactName.trim() === me.name.trim()
+  const same = (c: CourierContact) =>
+    current.contactPhone === c.phone && current.contactName.trim() === c.name.trim()
+  const chips = [
+    ...(me ? [{ key: 'me', label: 'Soy yo', icon: 'person', contact: me }] : []),
+    ...suggestContacts(recents, current.contactName).map((c) => ({
+      key: `${c.phone}|${c.name}`,
+      label: c.name,
+      icon: null,
+      contact: c,
+    })),
+  ]
+  if (chips.length === 0) return null
 
   return (
-    <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-0.5">
-      {me && (
-        <button
-          type="button"
-          onClick={() => onPick(me)}
-          aria-pressed={isMe}
-          className={`flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-[13px] font-bold transition-colors ${
-            isMe ? 'bg-brand text-white' : 'bg-white text-brand-dark'
-          }`}
-        >
-          <Icon name="person" size={16} filled={isMe} />
-          Soy yo
-        </button>
-      )}
-      {shown.map((c) => (
-        <button
-          key={`${c.phone}|${c.name}`}
-          type="button"
-          onClick={() => onPick(c)}
-          className="flex h-9 max-w-[200px] shrink-0 items-center rounded-full bg-white px-3 text-[13px] font-bold text-[#2E3236]"
-        >
-          <span className="truncate">{c.name}</span>
-        </button>
-      ))}
+    <div className="-mx-1 flex gap-2 overflow-x-auto px-1 py-0.5">
+      {chips.map((chip) => {
+        const active = same(chip.contact)
+        return (
+          <button
+            key={chip.key}
+            type="button"
+            aria-pressed={active}
+            onClick={() => (active ? onClear() : onPick(chip.contact))}
+            className={`flex h-10 max-w-[220px] shrink-0 items-center gap-1.5 rounded-full border-2 px-3.5 text-[14px] font-bold transition-colors ${
+              active
+                ? 'border-brand bg-brand text-white'
+                : 'border-transparent bg-white text-[#2E3236]'
+            }`}
+          >
+            {active ? (
+              <Icon name="check" size={16} />
+            ) : (
+              chip.icon && <Icon name={chip.icon} size={16} className="text-brand-dark" />
+            )}
+            <span className="truncate">{chip.label}</span>
+          </button>
+        )
+      })}
     </div>
   )
 }
