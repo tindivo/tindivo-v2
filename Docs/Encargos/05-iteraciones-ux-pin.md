@@ -51,6 +51,16 @@ móvil (iframe de 390 px en Chrome de escritorio + Playwright); lo marcado
   nombre filtra esos chips. Los inputs llevan `autocomplete` para el autocompletado del
   navegador.
 
+## Iteración 1e (2026-09-24) — hecha
+
+- «Soy yo» y los contactos recientes son fichas que se **activan y se desactivan**: tocar
+  una completa nombre y celular, volver a tocarla la apaga y vacía los dos campos. La
+  activa se ve rellena, con un ✓. Van justo encima del nombre de cada tarjeta.
+- **«Continuar» fijo abajo**, con flecha, en un pie que no se pierde al final de la lista.
+  Con datos incompletos no se apaga en silencio: una línea dice qué falta («Falta el
+  nombre y el celular de quien recibe») y tocarlo lleva al primer campo vacío.
+- Descartado a propósito: guardar contactos con nombre («overengineering»).
+
 ## Para la iteración 2
 
 Ordenado por impacto.
@@ -92,7 +102,6 @@ Ordenado por impacto.
   quien entrega es ella; sugerir «Soy yo» ya marcado en esa tarjeta (sin rellenar solo).
 - **Contactos recientes de más fuentes.** Hoy salen de `courier_orders`; sumar los de
   pedidos a restaurantes (`orders`) y los guardados en la cuenta.
-- **Contactos: guardar un nombre para la próxima vez** («Guardar a Doña Rosa»).
 - **El chip «Soy yo» no cabe visualmente bajo el nombre** en pantallas muy angostas
   (scroll horizontal); revisar en 320 px.
 - **La flecha de atrás del paso 1** ya confirma; falta decidir si «Cerrar» debería

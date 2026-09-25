@@ -143,16 +143,32 @@ test('pedir entrega fijando A y B en el mapa llega a "Buscando motorizado"', asy
   // ── Confirma tu pedido (imagen 6): contacto de cada punto ────────────────
   await expect(page.getByText('Confirma tu pedido')).toBeVisible({ timeout: 10_000 })
   // Nada viene relleno por su cuenta: en un pedido puedes ser quien entrega,
-  // quien recibe o ninguno. «Soy yo» completa nombre y celular de un toque.
+  // quien recibe o ninguno. «Continuar» incompleto no se apaga en silencio: dice
+  // qué falta y lleva al primer campo vacío.
   const detalles = page.getByRole('dialog', { name: 'Confirma tu pedido' })
   await expect(detalles.getByPlaceholder('Recibe')).toHaveValue('')
-  await detalles.getByRole('button', { name: 'Soy yo' }).nth(1).click()
+  // `dispatchEvent`: Playwright no hace clic en aria-disabled, y aquí justo se prueba ese clic.
+  await detalles.getByRole('button', { name: /Continuar/ }).dispatchEvent('click')
+  await expect(
+    detalles.getByText(/Falta el contacto de quien entrega y de quien recibe/),
+  ).toBeVisible()
+  await expect(detalles.getByPlaceholder('Quien entrega')).toBeFocused()
+
+  // «Soy yo» completa nombre y celular; volver a tocarlo lo apaga.
+  const soyYoRecibe = detalles.getByRole('button', { name: 'Soy yo' }).nth(1)
+  await soyYoRecibe.click()
+  await expect(soyYoRecibe).toHaveAttribute('aria-pressed', 'true')
   await expect(detalles.getByPlaceholder('Recibe')).not.toHaveValue('')
+  await soyYoRecibe.click()
+  await expect(soyYoRecibe).toHaveAttribute('aria-pressed', 'false')
+  await expect(detalles.getByPlaceholder('Recibe')).toHaveValue('')
+  await soyYoRecibe.click()
+
   await page.getByPlaceholder('Quien entrega').fill('Doña Rosa')
   await page.getByPlaceholder('987 654 321').first().fill('987654321')
 
   const continuar = page.getByRole('button', { name: 'Continuar' })
-  await expect(continuar).toBeEnabled({ timeout: 10_000 })
+  await expect(continuar).not.toHaveAttribute('aria-disabled', 'true', { timeout: 10_000 })
   await continuar.click()
 
   // ── ¿Quién paga? ───────────────────────────────────────────────────────────
