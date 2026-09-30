@@ -2,6 +2,7 @@
 
 import { ApiError } from '@tindivo/api-client'
 import { useEffect, useState } from 'react'
+import { useOnboarding } from '@/lib/onboarding-store'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import { createCourierOrder, type Requester } from '../lib/api'
 import { type CourierContact, recentContacts } from '../lib/contacts'
@@ -86,7 +87,11 @@ export function useCourierRequest() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Se recarga cada vez que se abre Entregas: quien inició sesión con la app
+  // ya cargada (login al entrar, `open-flow.ts`) tiene que ver su «Soy yo».
+  const sheetOpen = useCourierStore((s) => s.open)
   useEffect(() => {
+    if (!sheetOpen) return
     let on = true
     loadIdentity().then((id) => {
       if (!on) return
@@ -100,7 +105,7 @@ export function useCourierRequest() {
     return () => {
       on = false
     }
-  }, [])
+  }, [sheetOpen])
 
   // Precarga el destino con la dirección por defecto del cliente SOLO cuando
   // el flujo entró desde un negocio (Main.dc.html: "Llevamos a" ya viene
@@ -124,11 +129,18 @@ export function useCourierRequest() {
   }, [fromBusiness, identity])
 
   async function submit(utmSource?: string | null): Promise<CourierOrderResult | null> {
-    if (!identity?.userId) {
-      setError('Ingresa con tu celular para continuar.')
+    // La sesión pudo iniciarse después de cargar la identidad: se pregunta de
+    // nuevo antes de rendirse. Si de verdad no hay, se ABRE el login (antes
+    // solo se decía con un texto, al final del pedido).
+    const who = identity?.userId ? identity : await loadIdentity()
+    if (!who.userId) {
+      setIdentity(who)
+      setError('Inicia sesión y vuelve a tocar «Pedir entrega».')
+      useOnboarding.getState().openSheet({ next: null, inPlace: true })
       return null
     }
-    const requester: Requester = { name: identity.name || 'Cliente', phone: identity.phone }
+    if (who !== identity) setIdentity(who)
+    const requester: Requester = { name: who.name || 'Cliente', phone: who.phone }
     setSubmitting(true)
     setError(null)
     try {

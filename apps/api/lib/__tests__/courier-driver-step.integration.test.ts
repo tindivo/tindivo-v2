@@ -319,3 +319,42 @@ describe('0235 · correcciones de la auditoría', () => {
     expect((await leer(id)).status).toBe('requested')
   })
 })
+
+describe('0235 · nota para el motorizado', () => {
+  let customer: CourierCustomer
+  let driver: CourierDriver
+
+  beforeEach(async () => {
+    customer = await seedCourierCustomer()
+    driver = await seedCourierDriver({ available: true })
+    await setCourierEnabled(true)
+    await patchCourierSettings({ maxActivePerPhone: 10 })
+  })
+
+  afterEach(async () => {
+    await cleanupCourier({ customerUserIds: [customer.userId], driverUserIds: [driver.userId] })
+  })
+
+  async function nota(driverNote?: string): Promise<string | null> {
+    const { data, error } = await callCreateCourierOrder({
+      customerUserId: customer.userId,
+      requesterPhone: customer.phone,
+      driverNote,
+    })
+    if (error) throw new Error(error.message)
+    const { data: fila } = await localClient
+      .from('courier_orders')
+      .select('driver_note')
+      .eq('id', (data as { id: string }).id)
+      .single()
+    return (fila as { driver_note: string | null }).driver_note
+  }
+
+  it('guarda la nota, y una vacía o ausente queda en null', async () => {
+    expect(await nota('Está a nombre de María. Cuidado, es frágil.')).toBe(
+      'Está a nombre de María. Cuidado, es frágil.',
+    )
+    expect(await nota('   ')).toBeNull()
+    expect(await nota()).toBeNull()
+  })
+})

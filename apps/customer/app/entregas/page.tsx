@@ -13,7 +13,7 @@ import {
   getDirectory,
 } from '@/features/courier/lib/directory'
 import { formatCourierPrice } from '@/features/courier/lib/format'
-import { useCourierStore } from '@/features/courier/lib/store'
+import { openCourierFlow } from '@/features/courier/lib/open-flow'
 
 const CATEGORIES: (DirectoryBusinessCategory | 'all')[] = [
   'all',
@@ -34,7 +34,6 @@ export default function EntregasDirectorioPage() {
   const [category, setCategory] = useState<DirectoryBusinessCategory | 'all'>('all')
   const [query, setQuery] = useState('')
   const { status } = useCourierStatus()
-  const openSheet = useCourierStore((s) => s.openSheet)
 
   useEffect(() => {
     getDirectory().then(setRows)
@@ -178,7 +177,7 @@ export default function EntregasDirectorioPage() {
             </div>
             <button
               type="button"
-              onClick={() => openSheet()}
+              onClick={() => void openCourierFlow()}
               className="flex h-16 w-full flex-col items-center justify-center rounded-full bg-[linear-gradient(135deg,#F97316,#FB923C)] text-white shadow-[0_10px_24px_-10px_rgba(234,88,12,.55)]"
             >
               <span className="flex items-center gap-2 text-[18px] font-extrabold">

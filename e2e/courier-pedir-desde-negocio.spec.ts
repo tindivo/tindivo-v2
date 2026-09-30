@@ -5,15 +5,15 @@
  * defecto (inspirado en inDrive): el botón "Tindivo Entregas" del home ya no
  * abre un buscador ni una hoja de formulario, abre directo el mapa para fijar
  * el punto A (recojo), con su referencia en el mismo panel; al confirmarlo
- * sigue el punto B (entrega) y luego "Confirma tu pedido".
+ * sigue el punto B (entrega) y luego "Detalles de la entrega".
  * El primer test de este archivo, que ejercitaba justo ese buscador, queda
  * `test.skip` — el camino sigue existiendo en el código pero no hay ya ningún
  * botón de la UI que lleve ahí.
  *
  * Entra como el cliente sembrado de e2e (`cliente@e2e.local`), abre "Pedir
  * entrega" desde el banner del home, fija el punto A (recojo) y el punto B
- * (entrega) uno a la vez en el mapa, completa el contacto de cada uno,
- * "¿Quién paga?" y "¿Qué llevamos?", y comprueba que la solicitud llega a
+ * (entrega) uno a la vez en el mapa, llena la única pantalla de detalles (qué
+ * llevamos, contactos, quién paga, indicaciones), y comprueba que la solicitud llega a
  * "Buscando motorizado". Requiere `app_settings.courier.enabled = true`,
  * horario que cubra la hora de la corrida y al menos un motorizado
  * `is_available` — lo deja así el propio test en `beforeAll`, y lo devuelve a
@@ -140,48 +140,45 @@ test('pedir entrega fijando A y B en el mapa llega a "Buscando motorizado"', asy
   await expect(page.getByText('¿Dónde entregamos?')).toBeVisible({ timeout: 10_000 })
   await fijarPunto(page, 'Casa celeste, segundo piso', /Confirmar entrega/)
 
-  // ── Confirma tu pedido (imagen 6): contacto de cada punto ────────────────
-  await expect(page.getByText('Confirma tu pedido')).toBeVisible({ timeout: 10_000 })
-  // Nada viene relleno por su cuenta: en un pedido puedes ser quien entrega,
-  // quien recibe o ninguno. «Continuar» incompleto no se apaga en silencio: dice
-  // qué falta y lleva al primer campo vacío.
-  const detalles = page.getByRole('dialog', { name: 'Confirma tu pedido' })
-  await expect(detalles.getByPlaceholder('Recibe')).toHaveValue('')
+  // ── Detalles de la entrega: la ÚNICA pantalla después de los mapas ─────────
+  // Qué llevamos, de quién a quién, quién paga y «Pedir». Nada viene relleno por
+  // su cuenta: en un pedido puedes ser quien entrega, quien recibe o ninguno.
+  // «Pedir» incompleto no se apaga en silencio: dice qué falta y lleva ahí.
+  const detalles = page.getByRole('dialog', { name: 'Detalles de la entrega' })
+  await expect(detalles).toBeVisible({ timeout: 10_000 })
+  const recibeNombre = detalles.getByPlaceholder('Nombre de quien recibe (opcional)')
+  await expect(recibeNombre).toHaveValue('')
   // `dispatchEvent`: Playwright no hace clic en aria-disabled, y aquí justo se prueba ese clic.
-  await detalles.getByRole('button', { name: /Continuar/ }).dispatchEvent('click')
-  await expect(
-    detalles.getByText(/Falta el contacto de quien entrega y de quien recibe/),
-  ).toBeVisible()
-  await expect(detalles.getByPlaceholder('Quien entrega')).toBeFocused()
+  await detalles.getByRole('button', { name: /Pedir entrega/ }).dispatchEvent('click')
+  await expect(detalles.getByText('Falta decir qué llevamos')).toBeVisible()
+  await expect(detalles.getByRole('textbox', { name: 'Qué llevamos' })).toBeFocused()
+
+  // Un chip rellena la descripción; se puede reescribir encima.
+  await detalles.getByRole('button', { name: 'Documentos' }).click()
+  await expect(detalles.getByRole('textbox', { name: 'Qué llevamos' })).toHaveValue('Documentos')
+  await detalles.getByRole('textbox', { name: 'Qué llevamos' }).fill(descripcion)
 
   // «Soy yo» completa nombre y celular; volver a tocarlo lo apaga.
   const soyYoRecibe = detalles.getByRole('button', { name: 'Soy yo' }).nth(1)
   await soyYoRecibe.click()
   await expect(soyYoRecibe).toHaveAttribute('aria-pressed', 'true')
-  await expect(detalles.getByPlaceholder('Recibe')).not.toHaveValue('')
+  await expect(recibeNombre).not.toHaveValue('')
   await soyYoRecibe.click()
   await expect(soyYoRecibe).toHaveAttribute('aria-pressed', 'false')
-  await expect(detalles.getByPlaceholder('Recibe')).toHaveValue('')
+  await expect(recibeNombre).toHaveValue('')
   await soyYoRecibe.click()
 
-  await page.getByPlaceholder('Quien entrega').fill('Doña Rosa')
-  const celular = page.getByPlaceholder('987 654 321').first()
+  // El nombre de quien entrega es opcional: basta el celular.
+  const celular = detalles.getByRole('textbox', { name: 'Celular de quien entrega' })
   await celular.pressSequentially('98765432199', { delay: 20 })
   // No admite más de 9 dígitos: los sobrantes se descartan al teclear.
   await expect(celular).toHaveValue('987654321')
 
-  const continuar = page.getByRole('button', { name: 'Continuar' })
-  await expect(continuar).not.toHaveAttribute('aria-disabled', 'true', { timeout: 10_000 })
-  await continuar.click()
+  // Indicaciones: plegadas hasta que se piden.
+  await detalles.getByRole('button', { name: /Agregar indicaciones/ }).click()
+  await detalles.getByPlaceholder(/Está a nombre de María/).fill('Está a nombre de Rosa')
 
-  // ── ¿Quién paga? ───────────────────────────────────────────────────────────
-  await expect(page.getByText('¿Quién paga?').first()).toBeVisible()
-  await page.getByRole('button', { name: 'Continuar' }).click()
-
-  // ── Qué llevamos ───────────────────────────────────────────────────────────
-  await expect(page.getByText('¿Qué llevamos?')).toBeVisible()
-  await page.getByPlaceholder(/Un sobre con papeles/).fill(descripcion)
-  await page.getByRole('checkbox', { name: /Ya está listo y pagado/ }).check()
+  await detalles.getByRole('checkbox', { name: /Ya está listo y pagado/ }).check()
 
   const submit = page.getByRole('button', { name: /Pedir entrega/ })
   await expect(submit).toBeEnabled({ timeout: 10_000 })
@@ -192,12 +189,13 @@ test('pedir entrega fijando A y B en el mapa llega a "Buscando motorizado"', asy
 
   const { data: rows } = await db
     .from('courier_orders')
-    .select('id')
+    .select('id, driver_note')
     .eq('item_description', descripcion)
     .order('created_at', { ascending: false })
     .limit(1)
   createdOrderIds = (rows ?? []).map((r) => r.id)
   expect(createdOrderIds.length, 'la solicitud tiene que haber quedado en la base').toBe(1)
+  expect(rows?.[0]?.driver_note).toBe('Está a nombre de Rosa')
 
   expect(errores, 'la pantalla no debe lanzar errores de JS').toEqual([])
 })
@@ -234,7 +232,7 @@ test('sin referencia el punto no avanza y dice por qué', async ({ page }) => {
   expect(errores, 'la pantalla no debe lanzar errores de JS').toEqual([])
 })
 
-test('cambiar la ubicación desde "Confirma tu pedido" reabre el mapa con su referencia', async ({
+test('cambiar la ubicación desde "Detalles de la entrega" reabre el mapa con su referencia', async ({
   page,
 }) => {
   const errores: string[] = []
@@ -249,7 +247,7 @@ test('cambiar la ubicación desde "Confirma tu pedido" reabre el mapa con su ref
 
   await fijarPunto(page, 'Frente al mercado, puerta azul', /Confirmar recojo/)
   await fijarPunto(page, 'Casa celeste, segundo piso', /Confirmar entrega/)
-  const tripDetails = page.getByRole('dialog', { name: 'Confirma tu pedido' })
+  const tripDetails = page.getByRole('dialog', { name: 'Detalles de la entrega' })
   await expect(tripDetails).toBeVisible({ timeout: 10_000 })
 
   // "Cambiar" de la primera tarjeta (Dónde recogemos). Acotado al diálogo: el
@@ -272,11 +270,12 @@ test('cambiar la ubicación desde "Confirma tu pedido" reabre el mapa con su ref
   await confirmar.click()
 
   await expect(tripDetails).toBeVisible({ timeout: 10_000 })
-  // Las referencias viven en inputs: el 1.º y el 3.º de texto (le siguen los
-  // nombres de contacto).
-  const textos = tripDetails.locator('input[type="text"]')
-  await expect(textos.nth(0)).toHaveValue('Frente al mercado, puerta azul')
-  await expect(textos.nth(2)).toHaveValue('Casa celeste, segundo piso')
+  await expect(
+    tripDetails.getByRole('textbox', { name: 'Referencia de recogemos de' }),
+  ).toHaveValue('Frente al mercado, puerta azul')
+  await expect(
+    tripDetails.getByRole('textbox', { name: 'Referencia de entregamos a' }),
+  ).toHaveValue('Casa celeste, segundo piso')
 
   expect(errores, 'la pantalla no debe lanzar errores de JS').toEqual([])
 })
@@ -350,4 +349,32 @@ test('en el paso 2 se puede escribir la referencia letra a letra sin perder el f
   // de las teclas se perdía.
   await expect(referencia).toHaveValue('Casa celeste')
   await expect(referencia).toBeFocused()
+})
+
+test('sin sesión, Entregas pide la cuenta al entrar y después abre el mapa solo', async ({
+  page,
+}) => {
+  const errores: string[] = []
+  page.on('pageerror', (e) => errores.push(e.message))
+
+  // Antes: se llenaba todo y recién al final salía «Ingresa con tu celular».
+  await page.goto('/')
+  const banner = page.getByRole('button', { name: /Tindivo Entregas/ })
+  await expect(banner).toBeVisible({ timeout: 15_000 })
+  await banner.click()
+
+  // Primero la cuenta, no el mapa.
+  await expect(page.getByRole('dialog', { name: 'Fijar el punto en el mapa' })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Iniciar sesión' }).click()
+  const formLogin = page.locator('form').filter({ hasText: 'Hola de nuevo' })
+  await formLogin.getByPlaceholder('tu@correo.com').fill(E2E.CUSTOMER_EMAIL)
+  await formLogin.getByPlaceholder('Tu contraseña').fill(E2E.PASSWORD)
+  await formLogin.locator('button[type="submit"]').click()
+
+  // Al terminar el login, el mapa se abre sin volver a tocar el banner.
+  await expect(page.getByRole('dialog', { name: 'Fijar el punto en el mapa' })).toBeVisible({
+    timeout: 20_000,
+  })
+
+  expect(errores, 'la pantalla no debe lanzar errores de JS').toEqual([])
 })

@@ -89,6 +89,7 @@ export async function POST(req: Request): Promise<Response> {
           p_weight_confirmed: body.weightConfirmed,
           p_prepaid_confirmed: body.prepaidConfirmed,
           p_utm_source: body.utmSource,
+          p_driver_note: body.driverNote,
         })
         if (error) {
           if (error.code === 'P0001') {

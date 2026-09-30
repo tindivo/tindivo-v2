@@ -89,10 +89,13 @@ function CardShell({
           {payerLabel(order)}
         </span>
       </header>
-      <p className="mb-3 flex items-center gap-2 text-body text-ink">
-        <Icon name="person" size={16} className="text-blue-600" filled />
+      {/* «Pidió», no «a nombre de»: en los pedidos de WhatsApp quien pide es la
+          cuenta de Jesús. A nombre de quién está la bolsa lo dice el cliente
+          en sus indicaciones (abajo), y si no, se llama. */}
+      <p className="mb-3 flex items-center gap-2 text-caption text-ink-muted">
+        <Icon name="person" size={14} className="text-blue-600" filled />
         <span>
-          Pedido a nombre de <strong>{order.requesterName}</strong>
+          Pidió <strong className="text-ink">{order.requesterName}</strong>
         </span>
       </p>
       <div className="flex flex-col gap-3">
@@ -104,6 +107,12 @@ function CardShell({
         {order.itemDescription}
         {order.isFragile && <span className="font-bold text-danger">· Frágil</span>}
       </p>
+      {order.driverNote && (
+        <p className="mt-2 flex items-start gap-2 rounded-2xl bg-warning-soft px-3 py-2 text-body font-semibold text-ink">
+          <Icon name="info" size={16} className="mt-0.5 shrink-0 text-warning" filled />
+          {order.driverNote}
+        </p>
+      )}
       {children}
     </article>
   )

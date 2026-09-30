@@ -1,9 +1,12 @@
 'use client'
 
+import { COURIER_DRIVER_HINT_MAX, COURIER_ITEM_DESCRIPTION_MAX } from '@tindivo/contracts'
 import { BottomSheet, Icon } from '@tindivo/ui'
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { useCourierRequest } from '../hooks/use-courier-request'
+import { useCourierStatus } from '../hooks/use-courier-status'
 import { type CourierContact, suggestContacts } from '../lib/contacts'
+import { formatCourierPrice, getUtmSource } from '../lib/format'
 import {
   isValidPePhone,
   missingPhoneDigits,
@@ -12,64 +15,86 @@ import {
 } from '../lib/phone'
 import { useCourierStore } from '../lib/store'
 import type { CourierEditingPoint, CourierPoint } from '../types'
+import { PayerField } from './payer-field'
 
 /**
- * Dónde recogemos / Dónde entregamos (imagen 6): resumen de los dos puntos ya
- * fijados en el mapa, más el contacto de cada uno. "Cambiar" reabre el mapa
- * sobre ese punto con su referencia ya escrita (se corrige ahí mismo, sin
- * volver a empezar); el texto y el contacto se editan aquí sin pasar por el mapa.
+ * Categorías: solo UI, rellenan `itemDescription` (el contrato no tiene campo
+ * de categoría). Sin «Comida»: la comida preparada no va por Entregas (va por
+ * los restaurantes aliados), y se dice en una línea para que nadie la pida como
+ * «Otro». Si la persona ya escribió algo, elegir una categoría no lo pisa.
+ */
+const CATEGORIES = [
+  { id: 'documentos', label: 'Documentos', icon: 'description', preset: 'Documentos' },
+  { id: 'paquete', label: 'Paquete', icon: 'package_2', preset: 'Un paquete' },
+  { id: 'medicinas', label: 'Medicinas', icon: 'medication', preset: 'Medicinas' },
+  { id: 'ropa', label: 'Ropa', icon: 'apparel', preset: 'Ropa' },
+  { id: 'otro', label: 'Otro', icon: 'more_horiz', preset: '' },
+] as const
+
+type CategoryId = (typeof CATEGORIES)[number]['id']
+
+/**
+ * La única pantalla después de los dos mapas (A → B → aquí → seguimiento).
+ * Antes eran tres —contactos, «¿Quién paga?» y «¿Qué llevamos?»— y el pedido
+ * se sentía largo. Agrupada por tarea: qué llevamos, de quién a quién, quién
+ * paga, y las indicaciones plegadas. Solo el botón queda fijo abajo: una
+ * casilla fija también taparía campos con el teclado abierto.
+ *
+ * El nombre de cada contacto es OPCIONAL: lo que el motorizado usa es el
+ * celular (llama antes de salir). Si queda vacío se envía «Quien entrega» /
+ * «Quien recibe».
  */
 export function TripDetailsSheet() {
   const open = useCourierStore((s) => s.open && s.step === 'trip-details')
   const closeSheet = useCourierStore((s) => s.closeSheet)
-  const goTo = useCourierStore((s) => s.goTo)
   const beginEditPoint = useCourierStore((s) => s.beginEditPoint)
-  const { draft, updatePoint, identity, recents } = useCourierRequest()
+  const { draft, updateDraft, updatePoint, identity, recents, submitting, error, submit } =
+    useCourierRequest()
+  const { status } = useCourierStatus()
   const me: CourierContact | null =
     identity?.userId && (identity.name || identity.phone)
       ? { name: identity.name, phone: stripPeCountryCode(identity.phone) }
       : null
 
-  const originReady =
-    draft.origin.contactName.trim().length > 0 && isValidPePhone(draft.origin.contactPhone)
-  const destinationReady =
-    draft.destination.contactName.trim().length > 0 &&
-    isValidPePhone(draft.destination.contactPhone)
-  const ready = originReady && destinationReady
+  const [category, setCategory] = useState<CategoryId | null>(null)
+  const [noteOpen, setNoteOpen] = useState(false)
+  const [infoOpen, setInfoOpen] = useState(false)
   const scroller = useRef<HTMLDivElement>(null)
 
-  // Una sola línea, siempre: si el aviso creciera, el pie se movería.
-  const missingText = ready
-    ? null
-    : !originReady && !destinationReady
-      ? 'Falta el contacto de quien entrega y de quien recibe'
-      : originReady
-        ? `Falta ${missingOf(draft.destination)} de quien recibe`
-        : `Falta ${missingOf(draft.origin)} de quien entrega`
+  const itemReady = draft.itemDescription.trim().length > 0
+  const originReady = isValidPePhone(draft.origin.contactPhone)
+  const destinationReady = isValidPePhone(draft.destination.contactPhone)
+  const ready = itemReady && originReady && destinationReady && draft.weightConfirmed
 
-  // Con datos incompletos «Continuar» no se apaga en silencio: lleva al primer
-  // campo que falta (y el aviso de abajo dice cuál es).
-  function goToFirstMissing() {
-    const order: [boolean, string][] = [
-      [draft.origin.contactName.trim().length === 0, 'origin-name'],
-      [!isValidPePhone(draft.origin.contactPhone), 'origin-phone'],
-      [draft.destination.contactName.trim().length === 0, 'destination-name'],
-      [!isValidPePhone(draft.destination.contactPhone), 'destination-phone'],
-    ]
-    const target = order.find(([missing]) => missing)?.[1]
-    const el = target
-      ? scroller.current?.querySelector<HTMLInputElement>(`[data-contact="${target}"]`)
-      : null
+  // Una sola línea, siempre: si el aviso creciera, el pie se movería.
+  const missing: { text: string; target: string } | null = !itemReady
+    ? { text: 'Falta decir qué llevamos', target: 'item' }
+    : !originReady
+      ? { text: 'Falta el celular de quien entrega', target: 'origin-phone' }
+      : !destinationReady
+        ? { text: 'Falta el celular de quien recibe', target: 'destination-phone' }
+        : !draft.weightConfirmed
+          ? { text: 'Marca que está listo y pagado', target: 'ready' }
+          : null
+
+  function pickCategory(c: (typeof CATEGORIES)[number]) {
+    setCategory(c.id)
+    if (!draft.itemDescription.trim() && c.preset) updateDraft({ itemDescription: c.preset })
+    if (c.id === 'otro') focusField('item')
+  }
+
+  function focusField(target: string) {
+    const el = scroller.current?.querySelector<HTMLElement>(`[data-field="${target}"]`)
     el?.scrollIntoView({ block: 'center', behavior: 'smooth' })
     el?.focus({ preventScroll: true })
   }
 
   return (
-    <BottomSheet open={open} onClose={closeSheet} label="Confirma tu pedido" scrim={false}>
+    <BottomSheet open={open} onClose={closeSheet} label="Detalles de la entrega" scrim={false}>
       <div className="flex max-h-[85dvh] min-h-0 flex-col">
         <div className="flex shrink-0 items-center justify-between px-4 pb-3">
           <div className="text-[24px] font-extrabold tracking-[-0.03em] text-[#2E3236]">
-            Confirma tu pedido
+            Detalles de la entrega
           </div>
           <button
             type="button"
@@ -81,85 +106,207 @@ export function TripDetailsSheet() {
           </button>
         </div>
 
-        <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
+        <div
+          ref={scroller}
+          className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 pb-4"
+        >
+          {/* ── ¿Qué llevamos? ─────────────────────────────────────────── */}
+          <section className="flex flex-col gap-2.5">
+            <h3 className="text-[18px] font-extrabold tracking-[-0.02em] text-[#2E3236]">
+              ¿Qué llevamos?
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {CATEGORIES.map((c) => {
+                const active = category === c.id
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => pickCategory(c)}
+                    className={`flex h-10 items-center gap-1.5 rounded-full px-3.5 text-[14px] font-bold ${
+                      active
+                        ? 'bg-[#FFEDD5] text-brand-dark shadow-[inset_0_0_0_2px_#F97316]'
+                        : 'bg-[#F4F4F2] text-[#2E3236]'
+                    }`}
+                  >
+                    <Icon name={active ? 'check' : c.icon} size={16} filled={active} />
+                    {c.label}
+                  </button>
+                )
+              })}
+            </div>
+            <input
+              type="text"
+              value={draft.itemDescription}
+              maxLength={COURIER_ITEM_DESCRIPTION_MAX}
+              onChange={(e) => updateDraft({ itemDescription: e.target.value })}
+              placeholder="Ej.: Un sobre con documentos"
+              aria-label="Qué llevamos"
+              data-field="item"
+              className="h-12 w-full rounded-2xl bg-[#F4F4F2] px-3.5 text-[16px] font-semibold text-[#2E3236] outline-none placeholder:text-[#9AA0A6]"
+            />
+            <p className="px-1 text-[12px] font-medium text-[#5C6368]">
+              La comida preparada se pide en Restaurantes.
+            </p>
+          </section>
+
+          {/* ── De quién a quién ───────────────────────────────────────── */}
           <PointCard
             which="origin"
-            title="Dónde recogemos"
+            title="Recogemos de"
             point={draft.origin}
-            contactLabel="Quien entrega"
+            namePlaceholder="Nombre de quien entrega (opcional)"
             onChangeLocation={() => beginEditPoint('origin')}
-            onChangeContact={(patch) => updatePoint('origin', patch)}
+            onChange={(patch) => updatePoint('origin', patch)}
+            me={me}
+            recents={recents}
+          />
+          <PointCard
+            which="destination"
+            title="Entregamos a"
+            point={draft.destination}
+            namePlaceholder="Nombre de quien recibe (opcional)"
+            onChangeLocation={() => beginEditPoint('destination')}
+            onChange={(patch) => updatePoint('destination', patch)}
             me={me}
             recents={recents}
           />
 
-          <div className="mt-3">
-            <PointCard
-              which="destination"
-              title="Dónde entregamos"
-              point={draft.destination}
-              contactLabel="Recibe"
-              onChangeLocation={() => beginEditPoint('destination')}
-              onChangeContact={(patch) => updatePoint('destination', patch)}
-              me={me}
-              recents={recents}
+          {/* ── ¿Quién paga? ───────────────────────────────────────────── */}
+          <PayerField
+            payer={draft.payer}
+            onChange={(payer) => updateDraft({ payer })}
+            price={status.price}
+          />
+
+          {/* ── Indicaciones (plegadas) ────────────────────────────────── */}
+          {noteOpen || draft.driverNote ? (
+            <div className="flex flex-col gap-1 rounded-2xl bg-[#F4F4F2] p-3.5">
+              <span className="text-[12px] font-semibold text-[#5C6368]">
+                Indicaciones para el motorizado
+              </span>
+              <textarea
+                value={draft.driverNote}
+                maxLength={COURIER_DRIVER_HINT_MAX}
+                onChange={(e) => updateDraft({ driverNote: e.target.value })}
+                placeholder="Ej.: Está a nombre de María. Cuidado, es frágil."
+                rows={2}
+                // biome-ignore lint/a11y/noAutofocus: se abre por un toque explícito en «Agregar indicaciones»
+                autoFocus={noteOpen && !draft.driverNote}
+                className="w-full resize-none border-0 bg-transparent text-[15px] font-semibold text-[#2E3236] outline-none placeholder:text-[#9AA0A6]"
+              />
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setNoteOpen(true)}
+              className="flex h-12 items-center gap-2 self-start rounded-full px-1 text-[15px] font-bold text-brand-dark"
+            >
+              <Icon name="add" size={20} />
+              Agregar indicaciones (opcional)
+            </button>
+          )}
+
+          {/* ── Listo y pagado ─────────────────────────────────────────── */}
+          <label className="flex items-start gap-3 rounded-[18px] border-[1.5px] border-[#E8E9EB] bg-white p-3.5">
+            <input
+              type="checkbox"
+              checked={draft.weightConfirmed}
+              data-field="ready"
+              onChange={(e) =>
+                updateDraft({
+                  weightConfirmed: e.target.checked,
+                  prepaidConfirmed: e.target.checked,
+                })
+              }
+              className="mt-0.5 h-5 w-5 shrink-0 accent-brand"
             />
-          </div>
+            <span className="text-[14px] font-semibold leading-snug text-[#2E3236]">
+              Ya está listo y pagado. Tindivo no compra ni adelanta dinero. Máx. 5 kg.{' '}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault()
+                  setInfoOpen(true)
+                }}
+                className="font-bold text-brand-dark underline underline-offset-2"
+              >
+                Ver qué se puede llevar
+              </button>
+            </span>
+          </label>
         </div>
 
-        {/* Fijo abajo: el botón no se pierde al final de una lista larga. */}
+        {/* Fijo abajo: solo el aviso y el botón. */}
         <div className="shrink-0 border-t border-ink/[0.06] bg-surface px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))]">
           <p
             aria-live="polite"
             className={`mb-2 min-h-[16px] px-1 text-[12px] font-semibold leading-[16px] ${
-              missingText ? 'text-[#B45309]' : 'text-transparent'
+              error ? 'text-[#DC2626]' : missing ? 'text-[#B45309]' : 'text-transparent'
             }`}
           >
-            {missingText ?? 'Todo listo'}
+            {error ?? missing?.text ?? 'Todo listo'}
           </p>
           <button
             type="button"
-            aria-disabled={!ready}
-            onClick={() => (ready ? goTo('trip-payer') : goToFirstMissing())}
-            className={`flex h-14 w-full items-center justify-center gap-2 rounded-full font-extrabold text-[16px] transition-[transform,box-shadow] active:scale-[0.98] ${
-              ready
+            aria-disabled={!ready || submitting}
+            onClick={() => {
+              if (submitting) return
+              if (missing) focusField(missing.target)
+              else void submit(getUtmSource())
+            }}
+            className={`flex h-14 w-full items-center justify-center gap-2 rounded-full font-extrabold text-[17px] transition-[transform,box-shadow] active:scale-[0.98] ${
+              ready && !submitting
                 ? 'bg-[linear-gradient(135deg,#F97316,#FB923C)] text-white shadow-[0_10px_24px_-10px_rgba(234,88,12,.55)]'
                 : 'bg-[#E8E9EB] text-[#5C6368]'
             }`}
           >
-            Continuar
-            <Icon name="arrow_forward" size={20} />
+            <Icon name="two_wheeler" size={22} filled={ready} />
+            {submitting ? 'Enviando…' : `Pedir entrega · ${formatCourierPrice(status.price)}`}
           </button>
         </div>
       </div>
+
+      <BottomSheet open={infoOpen} onClose={() => setInfoOpen(false)} label="Qué se puede llevar">
+        <div className="flex flex-col gap-3 px-4 pb-6">
+          <div className="text-[20px] font-extrabold tracking-[-0.02em] text-[#2E3236]">
+            Qué se puede llevar
+          </div>
+          <p className="text-[15px] leading-relaxed text-[#5C6368]">
+            Hasta 5 kg, sin foto. Sin comida preparada, sin alcohol, sin nada que necesite receta
+            especial ni refrigeración. El motorizado puede rechazar la entrega si al recoger no
+            cumple esto.
+          </p>
+          <button
+            type="button"
+            onClick={() => setInfoOpen(false)}
+            className="mt-2 h-14 w-full rounded-full bg-[linear-gradient(135deg,#F97316,#FB923C)] text-[18px] font-extrabold text-white"
+          >
+            Entendido
+          </button>
+        </div>
+      </BottomSheet>
     </BottomSheet>
   )
-}
-
-/** Qué le falta a un contacto, para el aviso de «Continuar». */
-function missingOf(point: CourierPoint): string {
-  const noName = point.contactName.trim().length === 0
-  const noPhone = !isValidPePhone(point.contactPhone)
-  if (noName && noPhone) return 'el nombre y el celular'
-  return noName ? 'el nombre' : 'el celular'
 }
 
 function PointCard({
   which,
   title,
   point,
-  contactLabel,
+  namePlaceholder,
   onChangeLocation,
-  onChangeContact,
+  onChange,
   me,
   recents,
 }: {
   which: CourierEditingPoint
   title: string
   point: CourierPoint
-  contactLabel: string
+  namePlaceholder: string
   onChangeLocation: () => void
-  onChangeContact: (patch: Partial<CourierPoint>) => void
+  onChange: (patch: Partial<CourierPoint>) => void
   /** La persona que está pidiendo: su atajo «Soy yo». `null` si no hay sesión. */
   me: CourierContact | null
   /** Contactos de entregas anteriores, para autocompletar nombre y celular. */
@@ -169,103 +316,79 @@ function PointCard({
   const dotColor = which === 'origin' ? 'bg-brand' : 'bg-[#2E3236]'
 
   return (
-    <div className="flex flex-col gap-2.5 rounded-[22px] bg-[#F4F4F2] p-3.5">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${dotColor}`} />
-          <span className="text-[17px] font-extrabold tracking-[-0.01em] text-[#2E3236]">
-            {title}
-          </span>
-        </div>
+    <section className="flex flex-col gap-2.5 rounded-[22px] bg-[#F4F4F2] p-3.5">
+      <div className="flex items-center gap-2">
+        <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${dotColor}`} />
+        <h3 className="text-[17px] font-extrabold tracking-[-0.01em] text-[#2E3236]">{title}</h3>
       </div>
 
+      {/* Lugar: la referencia escrita en el mapa, editable aquí; «Cambiar» reabre el mapa. */}
       <div className="flex items-center gap-3 rounded-2xl bg-white px-3 py-2.5">
-        <Icon name="location_on" size={18} filled className="text-[#6B7075]" />
-        <div className="min-w-0 flex-1">
-          <div className="text-[12px] font-semibold text-[#5C6368]">Ubicación</div>
-          <div className="text-[15px] font-bold text-[#2E3236]">Punto en el mapa</div>
-        </div>
+        <Icon name="location_on" size={18} filled className="shrink-0 text-[#6B7075]" />
+        <input
+          type="text"
+          value={point.referenceText}
+          onChange={(e) => onChange({ referenceText: e.target.value })}
+          aria-label={`Referencia de ${title.toLowerCase()}`}
+          className="min-w-0 flex-1 border-0 bg-transparent text-[15px] font-semibold text-[#2E3236] outline-none"
+        />
         <button
           type="button"
           onClick={onChangeLocation}
-          className="text-[13px] font-bold text-brand-dark"
+          className="shrink-0 text-[13px] font-bold text-brand-dark"
         >
           Cambiar
         </button>
-      </div>
-
-      <div className="flex items-start gap-3 rounded-2xl bg-white px-3 py-2.5">
-        <Icon name="edit_location_alt" size={18} className="mt-0.5 text-[#6B7075]" />
-        <div className="min-w-0 flex-1">
-          <div className="text-[12px] font-semibold text-[#5C6368]">Dirección y referencia</div>
-          <input
-            type="text"
-            value={point.referenceText}
-            onChange={(e) => onChangeContact({ referenceText: e.target.value })}
-            className="w-full border-0 bg-transparent text-[14px] font-semibold text-[#2E3236] outline-none"
-          />
-        </div>
-        {point.referenceText.trim().length > 0 && (
-          <Icon name="check_circle" size={18} filled className="mt-0.5 text-success" />
-        )}
       </div>
 
       <ContactChips
         me={me}
         recents={recents}
         current={point}
-        onPick={(c) => onChangeContact({ contactName: c.name, contactPhone: c.phone })}
-        onClear={() => onChangeContact({ contactName: '', contactPhone: '' })}
+        onPick={(c) => onChange({ contactName: c.name, contactPhone: c.phone })}
+        onClear={() => onChange({ contactName: '', contactPhone: '' })}
       />
 
-      <div className="flex items-center gap-3 rounded-2xl bg-white px-3 py-2.5">
-        <Icon name="badge" size={18} className="text-[#6B7075]" />
-        <div className="min-w-0 flex-1">
-          <div className="text-[12px] font-semibold text-[#5C6368]">{contactLabel}</div>
+      {/* Contacto: celular (obligatorio) y nombre (opcional) en una sola tarjeta. */}
+      <div className="flex flex-col rounded-2xl bg-white">
+        <div className="flex items-center gap-3 px-3 py-2.5">
+          <Icon name="call" size={18} className="shrink-0 text-[#6B7075]" />
+          <span className="text-[15px] font-semibold text-[#9AA0A6]">+51</span>
           <input
-            type="text"
-            value={point.contactName}
-            onChange={(e) => onChangeContact({ contactName: e.target.value })}
-            placeholder={contactLabel}
-            data-contact={`${which}-name`}
-            autoComplete="off"
-            className="w-full border-0 bg-transparent text-[14px] font-semibold text-[#2E3236] outline-none"
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel-national"
+            value={point.contactPhone}
+            onChange={(e) => onChange({ contactPhone: normalizePePhoneInput(e.target.value) })}
+            placeholder="987 654 321"
+            aria-label={`Celular de ${which === 'origin' ? 'quien entrega' : 'quien recibe'}`}
+            data-field={`${which}-phone`}
+            className="min-w-0 flex-1 border-0 bg-transparent text-[15px] font-semibold text-[#2E3236] outline-none"
           />
-        </div>
-        {point.contactName.trim().length > 0 && (
-          <Icon name="check_circle" size={18} filled className="text-success" />
-        )}
-      </div>
-
-      <div className="flex flex-col gap-1 rounded-2xl bg-white px-3 py-2.5">
-        <div className="flex items-center gap-3">
-          <Icon name="call" size={18} className="text-[#6B7075]" />
-          <div className="min-w-0 flex-1">
-            <div className="text-[12px] font-semibold text-[#5C6368]">Celular</div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-[14px] font-semibold text-[#9AA0A6]">+51</span>
-              <input
-                type="tel"
-                inputMode="tel"
-                autoComplete="tel-national"
-                value={point.contactPhone}
-                onChange={(e) =>
-                  onChangeContact({ contactPhone: normalizePePhoneInput(e.target.value) })
-                }
-                placeholder="987 654 321"
-                data-contact={`${which}-phone`}
-                className="w-full border-0 bg-transparent text-[14px] font-semibold text-[#2E3236] outline-none"
-              />
-            </div>
-          </div>
+          {isValidPePhone(point.contactPhone) && (
+            <Icon name="check_circle" size={18} filled className="shrink-0 text-success" />
+          )}
         </div>
         {point.contactPhone.trim().length > 0 && missing > 0 && (
-          <p className="pl-8 text-[12px] font-bold text-[#DC2626]">
+          <p className="px-3 pb-2 pl-[44px] text-[12px] font-bold text-[#DC2626]">
             Faltan {missing} dígito{missing === 1 ? '' : 's'}
           </p>
         )}
+        <div className="mx-3 border-t border-ink/[0.06]" />
+        <div className="flex items-center gap-3 px-3 py-2.5">
+          <Icon name="person" size={18} className="shrink-0 text-[#6B7075]" />
+          <input
+            type="text"
+            value={point.contactName}
+            onChange={(e) => onChange({ contactName: e.target.value })}
+            placeholder={namePlaceholder}
+            aria-label={namePlaceholder}
+            autoComplete="off"
+            className="min-w-0 flex-1 border-0 bg-transparent text-[15px] font-semibold text-[#2E3236] outline-none placeholder:text-[#9AA0A6]"
+          />
+        </div>
       </div>
-    </div>
+    </section>
   )
 }
 

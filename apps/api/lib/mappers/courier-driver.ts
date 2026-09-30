@@ -6,7 +6,7 @@ import type {
 
 /** Columnas de `courier_orders` que necesita la tarjeta del motorizado. */
 export const DRIVER_COURIER_COLUMNS =
-  'id,short_id,status,driver_id,requester_name,origin_name,origin_phone,origin_lat,origin_lng,origin_reference_text,destination_name,destination_phone,destination_lat,destination_lng,destination_reference_text,item_description,is_fragile,payer,fee_amount,transport_collected_at,payment_method,created_at,accepted_at' as const
+  'id,short_id,status,driver_id,requester_name,origin_name,origin_phone,origin_lat,origin_lng,origin_reference_text,destination_name,destination_phone,destination_lat,destination_lng,destination_reference_text,item_description,is_fragile,driver_note,payer,fee_amount,transport_collected_at,payment_method,created_at,accepted_at' as const
 
 export interface DriverCourierRow {
   id: string
@@ -26,6 +26,7 @@ export interface DriverCourierRow {
   destination_reference_text: string
   item_description: string
   is_fragile: boolean
+  driver_note: string | null
   payer: 'origin' | 'destination'
   fee_amount: number | string
   transport_collected_at: string | null
@@ -61,6 +62,7 @@ export function toDriverCourierView(
     },
     itemDescription: row.item_description,
     isFragile: row.is_fragile,
+    driverNote: row.driver_note,
     payer: row.payer,
     feeAmount: Number(row.fee_amount),
     transportCollected: row.transport_collected_at !== null,

@@ -33,8 +33,6 @@ const OUTSIDE_MESSAGE = 'Estás fuera de San Jacinto. Mueve el mapa hasta el pun
 const STEPS_WITH_ROUTE_PINS = new Set<CourierFlowStep>([
   'pin-drop',
   'trip-details',
-  'trip-payer',
-  'trip-items',
   'route',
   'pin-note',
   'confirm',

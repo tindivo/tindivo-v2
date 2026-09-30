@@ -5,6 +5,7 @@ import { Icon } from '@tindivo/ui'
 import { useActiveCourierOrders } from '@/lib/active-courier-orders'
 import { useCourierStatus } from '../hooks/use-courier-status'
 import { formatCourierPrice } from '../lib/format'
+import { openCourierFlow } from '../lib/open-flow'
 import { useCourierStore } from '../lib/store'
 
 function statusLine(status: CourierStatus, originName: string, driverName: string | null): string {
@@ -33,7 +34,6 @@ function statusLine(status: CourierStatus, originName: string, driverName: strin
  */
 export function CourierEntryBanner() {
   const { status, loading } = useCourierStatus()
-  const openSheet = useCourierStore((s) => s.openSheet)
   const openTracking = useCourierStore((s) => s.openTracking)
   const activeCourierOrders = useActiveCourierOrders()
   const active = activeCourierOrders[0]
@@ -93,7 +93,7 @@ export function CourierEntryBanner() {
   return (
     <button
       type="button"
-      onClick={() => openSheet()}
+      onClick={() => void openCourierFlow()}
       className="relative flex h-[124px] w-full flex-col justify-between overflow-hidden rounded-[24px] bg-[#FFF7ED] p-4 text-left shadow-[inset_0_0_0_1.5px_#FED7AA]"
     >
       <div className="pointer-events-none absolute -right-6 -bottom-6 h-28 w-28 rounded-full bg-[#FFEDD5]" />

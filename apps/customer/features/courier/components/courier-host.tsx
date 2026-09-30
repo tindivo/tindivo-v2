@@ -1,12 +1,13 @@
 'use client'
 
+import { useEffect } from 'react'
+import { useOnboarding } from '@/lib/onboarding-store'
+import { resumeCourierAfterLogin } from '../lib/open-flow'
 import { ConfirmSheet } from './confirm-sheet'
 import { PinNoteSheet } from './map/pin-note-sheet'
 import { RouteSheet } from './route-sheet'
 import { TrackingSheet } from './tracking-sheet'
 import { TripDetailsSheet } from './trip-details-sheet'
-import { TripItemsSheet } from './trip-items-sheet'
-import { TripPayerSheet } from './trip-payer-sheet'
 
 /**
  * Isla montada en `app/layout.tsx`, junto a `AuthOnboardingHost`/`BottomNav`
@@ -15,11 +16,24 @@ import { TripPayerSheet } from './trip-payer-sheet'
  * negocio, directorio, home— pueda abrirla sin que una feature importe otra.
  */
 export function CourierHost() {
+  // Vuelta del login pedido al entrar a Entregas (ver `open-flow.ts`): al montar
+  // —regreso de Google, que recarga— y cada vez que se cierra la hoja de login
+  // —correo, sin recarga—. El retraso deja que el onboarding de Google reabra
+  // antes sus pasos pendientes (nombre, celular), para no abrir encima.
+  useEffect(() => {
+    const t = setTimeout(() => void resumeCourierAfterLogin(), 800)
+    const unsub = useOnboarding.subscribe((s, prev) => {
+      if (prev.open && !s.open) void resumeCourierAfterLogin()
+    })
+    return () => {
+      clearTimeout(t)
+      unsub()
+    }
+  }, [])
+
   return (
     <>
       <TripDetailsSheet />
-      <TripPayerSheet />
-      <TripItemsSheet />
       <RouteSheet />
       <PinNoteSheet />
       <ConfirmSheet />

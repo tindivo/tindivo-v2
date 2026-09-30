@@ -16,7 +16,9 @@
 --      «Aceptar» simultáneos no pueden pasar el tope.
 --   3. Cobro con método obligatorio (`cash`|`yape`) y prohibido soltar una
 --      entrega ya cobrada (el dinero no puede quedarse sin motorizado).
---   4. `create_courier_order`: «listo ahora» forzado en el servidor
+--   4. `courier_orders.driver_note`: la nota opcional del cliente para el
+--      motorizado («Está a nombre de María. Cuidado, es frágil.»).
+--   5. `create_courier_order`: «listo ahora» forzado en el servidor
 --      (`ready_in_min = 0`), y la cuenta de Jesús que crea los pedidos de
 --      WhatsApp (`courier.unlimitedRequesterUserIds`) queda fuera del límite
 --      de 1 activo por teléfono.
@@ -35,9 +37,25 @@ update public.app_settings
   set value = value || '{"unlimitedRequesterUserIds": []}'::jsonb
   where key = 'courier' and not (value ? 'unlimitedRequesterUserIds');
 
--- ── 2 · create_courier_order: listo ahora + cuenta de WhatsApp sin límite ──
--- Misma firma que la 0232 (se conservan los grants de la 0233). Solo cambian
--- dos cosas, marcadas con «0235».
+-- ── 2 · Nota para el motorizado ─────────────────────────────────────────────
+-- Opcional. Resuelve el «¿a nombre de quién está?» en el mostrador sin un
+-- campo más, y reemplaza el interruptor «Es frágil».
+
+alter table public.courier_orders add column if not exists driver_note text;
+alter table public.courier_orders drop constraint if exists co_driver_note_len;
+alter table public.courier_orders add constraint co_driver_note_len
+  check (driver_note is null or length(driver_note) <= 140);
+
+-- ── 3 · create_courier_order: nota + listo ahora + cuenta de WhatsApp ──────
+-- La firma gana `p_driver_note` AL FINAL y con default, así que las llamadas
+-- con la firma de la 0232 siguen resolviendo. La vieja se borra para no dejar
+-- dos versiones (un overload volvería ambigua la llamada por nombre), y por
+-- eso se vuelven a aplicar abajo los permisos de la 0233.
+
+drop function if exists public.create_courier_order(
+  uuid, text, text, uuid, text, text, numeric, numeric, text, text, text, numeric, numeric, text,
+  text, boolean, int, public.courier_payer, boolean, boolean, text
+);
 
 create or replace function public.create_courier_order(
   p_customer_user_id uuid,
@@ -60,7 +78,8 @@ create or replace function public.create_courier_order(
   p_payer public.courier_payer,
   p_weight_confirmed boolean,
   p_prepaid_confirmed boolean,
-  p_utm_source text default null
+  p_utm_source text default null,
+  p_driver_note text default null
 ) returns jsonb
   language plpgsql security definer set search_path = ''
 as $$
@@ -140,7 +159,7 @@ begin
     destination_name, destination_phone, destination_lat, destination_lng, destination_reference_text,
     item_description, is_fragile, ready_in_min, ready_at,
     payer, fee_amount, distance_m, weight_confirmed, prepaid_confirmed,
-    utm_source
+    utm_source, driver_note
   ) values (
     v_short_id, p_customer_user_id, p_requester_name, p_requester_phone,
     p_directory_business_id,
@@ -148,7 +167,7 @@ begin
     p_destination_name, p_destination_phone, p_destination_lat, p_destination_lng, p_destination_reference_text,
     p_item_description, p_is_fragile, 0, now(),
     p_payer, v_fee, v_distance_m, p_weight_confirmed, p_prepaid_confirmed,
-    p_utm_source
+    p_utm_source, nullif(btrim(p_driver_note), '')
   )
   returning id, order_number into v_id, v_order_number;
 
@@ -167,7 +186,17 @@ begin
 end;
 $$;
 
--- ── 3 · driver_courier_step ─────────────────────────────────────────────────
+-- Permisos de la 0233, otra vez: el `drop` de arriba se los llevó.
+revoke execute on function public.create_courier_order(
+  uuid, text, text, uuid, text, text, numeric, numeric, text, text, text, numeric, numeric, text,
+  text, boolean, int, public.courier_payer, boolean, boolean, text, text
+) from public, anon, authenticated;
+grant execute on function public.create_courier_order(
+  uuid, text, text, uuid, text, text, numeric, numeric, text, text, text, numeric, numeric, text,
+  text, boolean, int, public.courier_payer, boolean, boolean, text, text
+) to service_role;
+
+-- ── 4 · driver_courier_step ─────────────────────────────────────────────────
 -- Pasos: accept · pick_up · deliver · fail · release.
 -- Cada rama llama a `advance_courier_order` (la única que escribe el estado)
 -- dentro de ESTA transacción: o avanza todo, o nada.

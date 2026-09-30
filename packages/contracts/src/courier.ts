@@ -55,6 +55,8 @@ export const CreateCourierOrderRequestSchema = z.object({
   prepaidConfirmed: z.literal(true),
   /** De `?src=` en la URL de entrada (spec v1 §9: medir el embudo). */
   utmSource: z.string().trim().max(60).optional(),
+  /** Nota opcional para el motorizado: «Está a nombre de María. Cuidado, es frágil.» (0235). */
+  driverNote: z.string().trim().max(COURIER_DRIVER_HINT_MAX).optional(),
 })
 export type CreateCourierOrderRequest = z.infer<typeof CreateCourierOrderRequestSchema>
 
@@ -144,6 +146,8 @@ export interface DriverCourierOrderView {
   destination: DriverCourierEndpointView
   itemDescription: string
   isFragile: boolean
+  /** Nota del cliente para el motorizado; `null` si no dejó ninguna. */
+  driverNote: string | null
   payer: z.infer<typeof CourierPayerSchema>
   feeAmount: number
   transportCollected: boolean

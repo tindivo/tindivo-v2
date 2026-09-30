@@ -18,14 +18,16 @@ function buildRequestBody(
   }
   return {
     directoryBusinessId: draft.origin.directoryBusinessId,
+    // El nombre es opcional en la UI (lo que el motorizado usa es el
+    // celular); el contrato y la tabla lo exigen, así que va un rótulo.
     origin: {
-      contactName: draft.origin.contactName,
+      contactName: draft.origin.contactName.trim() || 'Quien entrega',
       contactPhone: draft.origin.contactPhone || undefined,
       coordinates: draft.origin.coordinates,
       referenceText: draft.origin.referenceText,
     },
     destination: {
-      contactName: draft.destination.contactName,
+      contactName: draft.destination.contactName.trim() || 'Quien recibe',
       contactPhone: draft.destination.contactPhone || undefined,
       coordinates: draft.destination.coordinates,
       referenceText: draft.destination.referenceText,
@@ -33,12 +35,14 @@ function buildRequestBody(
     requesterName: requester.name,
     requesterPhone: requester.phone,
     itemDescription: draft.itemDescription,
-    isFragile: draft.isFragile,
-    readyInMin: draft.readyInMin,
+    // «Es frágil» se dice en las indicaciones; «listo ahora» lo fuerza el servidor (0235).
+    isFragile: false,
+    readyInMin: 0,
     payer: draft.payer,
     weightConfirmed: draft.weightConfirmed as true,
     prepaidConfirmed: draft.prepaidConfirmed as true,
     utmSource: utmSource ?? undefined,
+    driverNote: draft.driverNote.trim() || undefined,
   }
 }
 

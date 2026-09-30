@@ -213,7 +213,11 @@ export function PinDropOverlay({
           aria-label="Centrar en mi ubicación"
           className="absolute right-4 bottom-4 z-[600] flex h-12 w-12 items-center justify-center rounded-full bg-card text-brand-dark shadow-elev-3 border border-ink/[0.06] transition-transform active:scale-95 disabled:opacity-70"
         >
-          {locating ? <Spinner size="xs" variant="brand" /> : <Icon name="my_location" size={22} />}
+          {locating ? (
+            <Spinner size="xs" variant="brand" />
+          ) : (
+            <Icon name="near_me" size={22} filled />
+          )}
         </button>
       </div>
 

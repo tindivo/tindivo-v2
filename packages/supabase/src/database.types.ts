@@ -660,6 +660,7 @@ export type Database = {
           directory_business_id: string | null
           distance_m: number | null
           driver_id: string | null
+          driver_note: string | null
           fee_amount: number
           id: string
           is_fragile: boolean
@@ -705,6 +706,7 @@ export type Database = {
           directory_business_id?: string | null
           distance_m?: number | null
           driver_id?: string | null
+          driver_note?: string | null
           fee_amount: number
           id?: string
           is_fragile?: boolean
@@ -750,6 +752,7 @@ export type Database = {
           directory_business_id?: string | null
           distance_m?: number | null
           driver_id?: string | null
+          driver_note?: string | null
           fee_amount?: number
           id?: string
           is_fragile?: boolean
@@ -3106,6 +3109,7 @@ export type Database = {
           p_destination_phone: string
           p_destination_reference_text: string
           p_directory_business_id: string
+          p_driver_note?: string
           p_is_fragile: boolean
           p_item_description: string
           p_origin_lat: number
@@ -4083,3 +4087,4 @@ export const Constants = {
     },
   },
 } as const
+

@@ -39,7 +39,11 @@ test.beforeAll(async () => {
     })
     .eq('key', 'courier')
 
-  const { data: d } = await db.from('drivers').select('id').eq('user_id', E2E.DRIVER_USER_ID).single()
+  const { data: d } = await db
+    .from('drivers')
+    .select('id')
+    .eq('user_id', E2E.DRIVER_USER_ID)
+    .single()
   driverId = d.id
   const { data: av } = await db
     .from('driver_availability')
@@ -70,6 +74,7 @@ test.beforeAll(async () => {
     p_payer: 'destination',
     p_weight_confirmed: true,
     p_prepaid_confirmed: true,
+    p_driver_note: 'Está a nombre de María. Cuidado, es frágil.',
   })
   if (error) throw new Error(`no se pudo sembrar la entrega: ${error.message}`)
   courierOrderId = data.id
@@ -94,7 +99,7 @@ test('el motorizado acepta, recoge y entrega una entrega cobrando por Yape', asy
 
   const disponible = page.locator('article').filter({ hasText: descripcion })
   await expect(disponible).toBeVisible({ timeout: 30_000 })
-  await expect(disponible.getByText('Pedido a nombre de')).toBeVisible()
+  await expect(disponible.getByText('Está a nombre de María')).toBeVisible()
   await expect(disponible.getByText('Cobrar S/ 3.00 al entregar')).toBeVisible()
   // Una disponible no enseña a quién llamar: eso es solo para la suya.
   await expect(disponible.getByRole('link', { name: /Llamar/ })).toHaveCount(0)

@@ -140,6 +140,7 @@ export interface CreateCourierOrderArgs {
   prepaidConfirmed?: boolean
   directoryBusinessId?: string
   readyInMin?: number
+  driverNote?: string
 }
 
 /** Llama `create_courier_order` con valores por defecto razonables (punto A/B dentro de la zona). */
@@ -173,6 +174,7 @@ export async function callCreateCourierOrder(args: CreateCourierOrderArgs) {
     p_weight_confirmed: args.weightConfirmed ?? true,
     p_prepaid_confirmed: args.prepaidConfirmed ?? true,
     p_utm_source: undefined,
+    p_driver_note: args.driverNote,
   })
 }
 
