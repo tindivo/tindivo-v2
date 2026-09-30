@@ -118,6 +118,18 @@ export async function setCourierMaxActivePerPhone(max: number): Promise<void> {
   if (error) throw new Error(`setCourierMaxActivePerPhone falló: ${error.message}`)
 }
 
+/** Fusiona claves sueltas en `app_settings.courier` (tope por motorizado, cuentas sin límite…). */
+export async function patchCourierSettings(patch: Record<string, unknown>): Promise<void> {
+  const { data } = await localClient
+    .from('app_settings')
+    .select('value')
+    .eq('key', 'courier')
+    .single()
+  const value = { ...(data?.value as Record<string, unknown>), ...patch }
+  const { error } = await localClient.from('app_settings').update({ value }).eq('key', 'courier')
+  if (error) throw new Error(`patchCourierSettings falló: ${error.message}`)
+}
+
 export interface CreateCourierOrderArgs {
   customerUserId: string
   requesterPhone: string
@@ -127,6 +139,7 @@ export interface CreateCourierOrderArgs {
   weightConfirmed?: boolean
   prepaidConfirmed?: boolean
   directoryBusinessId?: string
+  readyInMin?: number
 }
 
 /** Llama `create_courier_order` con valores por defecto razonables (punto A/B dentro de la zona). */
@@ -155,7 +168,7 @@ export async function callCreateCourierOrder(args: CreateCourierOrderArgs) {
     p_destination_reference_text: 'Casa de dos pisos, prueba de integración',
     p_item_description: 'Un paquete de prueba',
     p_is_fragile: false,
-    p_ready_in_min: 0,
+    p_ready_in_min: args.readyInMin ?? 0,
     p_payer: args.payer ?? 'destination',
     p_weight_confirmed: args.weightConfirmed ?? true,
     p_prepaid_confirmed: args.prepaidConfirmed ?? true,

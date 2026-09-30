@@ -3309,6 +3309,16 @@ export type Database = {
           phone: string
         }[]
       }
+      driver_courier_step: {
+        Args: {
+          p_actor_user_id: string
+          p_cancel_reason?: Database["public"]["Enums"]["courier_cancel_reason"]
+          p_courier_order_id: string
+          p_payment_method?: string
+          p_step: string
+        }
+        Returns: Json
+      }
       effective_max_change: { Args: { p_business_id: string }; Returns: number }
       enqueue_overdue_orders: { Args: never; Returns: number }
       enqueue_queued_orders: { Args: never; Returns: number }

@@ -181,7 +181,7 @@ test('pedir entrega fijando A y B en el mapa llega a "Buscando motorizado"', asy
   // ── Qué llevamos ───────────────────────────────────────────────────────────
   await expect(page.getByText('¿Qué llevamos?')).toBeVisible()
   await page.getByPlaceholder(/Un sobre con papeles/).fill(descripcion)
-  await page.getByRole('checkbox', { name: /Lo que envío está permitido/ }).check()
+  await page.getByRole('checkbox', { name: /Ya está listo y pagado/ }).check()
 
   const submit = page.getByRole('button', { name: /Pedir entrega/ })
   await expect(submit).toBeEnabled({ timeout: 10_000 })

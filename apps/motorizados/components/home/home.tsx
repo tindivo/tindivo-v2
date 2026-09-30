@@ -2,10 +2,12 @@
 
 import { Segmented } from '@tindivo/ui'
 import { useEffect, useRef, useState } from 'react'
+import { useCourierBoard } from '@/hooks/use-courier-board'
 import { useDriverOrders } from '@/hooks/use-driver-orders'
 import { useNow } from '@/hooks/use-now'
 import { useTeam } from '@/hooks/use-team'
 import { AvailableTab } from './available-tab'
+import { CourierAvailableList, CourierMineList } from './courier-section'
 import { MineTab } from './mine-tab'
 import { TeamTab } from './team-tab'
 
@@ -32,6 +34,9 @@ export function Home() {
   // un `onCount` que solo disparaba con la pestaña montada: el badge que debía
   // llevarte a Equipo exigía que ya estuvieras en Equipo.
   const team = useTeam()
+  // Tindivo Entregas: su propio tablero (otra tabla, otra API), pintado encima
+  // de la comida en «En espera» y en «Míos».
+  const courier = useCourierBoard()
   const [tab, setTab] = useState<Tab>('available')
 
   // ── GESTO ENTRE PESTAÑAS.
@@ -110,12 +115,12 @@ export function Home() {
   // porque no haya pedidos, sino porque no hay con qué comparar `driver_id`— y
   // la regla se congelaba en 'available' con trabajo activo en pantalla.
   const [initialized, setInitialized] = useState(false)
-  const resolved = !board.loading && !team.loading && board.myDriverId !== null
+  const resolved = !board.loading && !team.loading && !courier.loading && board.myDriverId !== null
   useEffect(() => {
     if (initialized || !resolved) return
-    if (board.mine.length > 0) setTab('mine')
+    if (board.mine.length > 0 || courier.mine.length > 0) setTab('mine')
     setInitialized(true)
-  }, [initialized, resolved, board.mine.length])
+  }, [initialized, resolved, board.mine.length, courier.mine.length])
 
   // El badge de Equipo cuenta lo que la pestaña MUESTRA: pedidos de compañeros
   // que se pueden pedir. Las solicitudes entrantes viven en el banner y no se
@@ -158,15 +163,28 @@ export function Home() {
             {
               value: 'available',
               label: 'En espera',
-              badge: board.available.length || undefined,
+              badge: board.available.length + courier.available.length || undefined,
             },
-            { value: 'mine', label: 'Míos', badge: board.mine.length || undefined },
+            {
+              value: 'mine',
+              label: 'Míos',
+              badge: board.mine.length + courier.mine.length || undefined,
+            },
             { value: 'team', label: 'Equipo', badge: transferableCount || undefined },
           ]}
         />
       </div>
 
       <div ref={contentRef}>
+        {tab === 'available' && (
+          <CourierAvailableList
+            orders={courier.available}
+            mineCount={courier.mine.length}
+            maxActive={courier.maxActivePerDriver}
+            onChanged={courier.refetch}
+          />
+        )}
+        {tab === 'mine' && <CourierMineList orders={courier.mine} onChanged={courier.refetch} />}
         {tab === 'available' && (
           <AvailableTab
             available={board.available}

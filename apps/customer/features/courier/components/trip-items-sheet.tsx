@@ -5,10 +5,8 @@ import { BottomSheet, Icon } from '@tindivo/ui'
 import { useState } from 'react'
 import { useCourierRequest } from '../hooks/use-courier-request'
 import { useCourierStatus } from '../hooks/use-courier-status'
-import { formatCourierPrice, formatReadyIn, getUtmSource } from '../lib/format'
+import { formatCourierPrice, getUtmSource } from '../lib/format'
 import { useCourierStore } from '../lib/store'
-
-const READY_OPTIONS = [0, 10, 20, 30]
 
 /**
  * Categorías: solo UI, rellenan `itemDescription` (no hay campo de categoría
@@ -18,7 +16,9 @@ const READY_OPTIONS = [0, 10, 20, 30]
  */
 const CATEGORIES = [
   { id: 'papeles', label: 'Papeles', icon: 'description', preset: 'Papeles' },
-  { id: 'comida', label: 'Comida', icon: 'restaurant', preset: 'Comida' },
+  // Sin «Comida»: la comida preparada no va por Entregas (va por los
+  // restaurantes aliados). Docs/Entregas/mvp-entregas-v1.md.
+  { id: 'paquete', label: 'Paquete', icon: 'package_2', preset: 'Un paquete' },
   { id: 'medicinas', label: 'Medicinas', icon: 'medication', preset: 'Medicinas' },
 ] as const
 
@@ -123,26 +123,8 @@ export function TripItemsSheet() {
           />
         </label>
 
-        <div className="mb-1 text-[18px] font-extrabold tracking-[-0.02em] text-[#2E3236]">
-          ¿Cuándo estará listo?
-        </div>
-        <div className="mb-3 flex gap-2 overflow-x-auto">
-          {READY_OPTIONS.map((min) => (
-            <button
-              key={min}
-              type="button"
-              onClick={() => updateDraft({ readyInMin: min })}
-              className={`h-11 shrink-0 rounded-full px-4 text-[14px] font-bold ${
-                draft.readyInMin === min
-                  ? 'bg-[#FFEDD5] text-brand-dark shadow-[inset_0_0_0_2px_#F97316]'
-                  : 'bg-[#F4F4F2] text-[#2E3236]'
-              }`}
-            >
-              {formatReadyIn(min)}
-            </button>
-          ))}
-        </div>
-
+        {/* Sin «¿Cuándo estará listo?»: en el MVP todo está listo YA (y el
+            servidor fuerza `ready_in_min = 0`, 0235). */}
         <label className="mb-1 flex items-start gap-3 rounded-[18px] border-[1.5px] border-[#E8E9EB] bg-white p-3.5">
           <input
             type="checkbox"
@@ -153,7 +135,7 @@ export function TripItemsSheet() {
             className="mt-0.5 h-5 w-5 shrink-0 accent-brand"
           />
           <span className="text-[14px] font-semibold leading-snug text-[#2E3236]">
-            Lo que envío está permitido. Máx. 5 kg.{' '}
+            Ya está listo y pagado. Tindivo no compra ni adelanta dinero. Máx. 5 kg.{' '}
             <button
               type="button"
               onClick={(e) => {
@@ -183,7 +165,7 @@ export function TripItemsSheet() {
             <Icon name="two_wheeler" size={22} filled={ready} />
             {submitting ? 'Enviando…' : `Pedir entrega · ${formatCourierPrice(status.price)}`}
           </span>
-          {!ready && <span className="text-[13px] font-bold">Marca que es permitido</span>}
+          {!ready && <span className="text-[13px] font-bold">Marca que está listo y pagado</span>}
         </button>
       </div>
 

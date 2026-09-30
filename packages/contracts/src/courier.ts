@@ -1,5 +1,9 @@
 import { z } from 'zod'
-import { CourierPayerSchema, type DirectoryBusinessCategorySchema } from './enums'
+import {
+  CourierPayerSchema,
+  type CourierStatus,
+  type DirectoryBusinessCategorySchema,
+} from './enums'
 import { AddressReferenceSchema, CoordinatesSchema, PhonePeSchema, UuidSchema } from './primitives'
 
 /**
@@ -98,4 +102,58 @@ export interface DirectoryBusinessView {
   partnerBusinessId: string | null
   courierEnabled: boolean
   hasMenuInTindivo: boolean
+}
+
+// --- Motorizado: los tres botones (0235, `driver_courier_step`) ---
+
+/** Pasos que el motorizado da desde su app; cada uno es UNA transacción. */
+export const DRIVER_COURIER_STEPS = ['accept', 'pick_up', 'deliver', 'fail', 'release'] as const
+export type DriverCourierStep = (typeof DRIVER_COURIER_STEPS)[number]
+
+/** Motivos de «No se pudo» que ofrece el motorizado (subconjunto de `courier_cancel_reason`). */
+export const DRIVER_COURIER_FAIL_REASONS = ['not_ready', 'unreachable', 'other'] as const
+export type DriverCourierFailReason = (typeof DRIVER_COURIER_FAIL_REASONS)[number]
+
+export const CourierPaymentMethodSchema = z.enum(['cash', 'yape'])
+export type CourierPaymentMethod = z.infer<typeof CourierPaymentMethodSchema>
+
+/** Cuerpo de POST /api/v1/driver/courier-orders/:id/step. */
+export const DriverCourierStepRequestSchema = z.object({
+  step: z.enum(DRIVER_COURIER_STEPS),
+  paymentMethod: CourierPaymentMethodSchema.optional(),
+  failReason: z.enum(DRIVER_COURIER_FAIL_REASONS).optional(),
+})
+export type DriverCourierStepRequest = z.infer<typeof DriverCourierStepRequestSchema>
+
+/** Un extremo tal como lo ve el motorizado. El teléfono solo viaja si la entrega es suya. */
+export interface DriverCourierEndpointView {
+  name: string
+  phone: string | null
+  referenceText: string
+  coordinates: { lat: number; lng: number }
+}
+
+/** Tarjeta de entrega en la app del motorizado (GET /api/v1/driver/courier-orders). */
+export interface DriverCourierOrderView {
+  id: string
+  shortId: string
+  status: CourierStatus
+  /** «Pedido a nombre de…»: quien lo pidió, para decirlo en el mostrador. */
+  requesterName: string
+  origin: DriverCourierEndpointView
+  destination: DriverCourierEndpointView
+  itemDescription: string
+  isFragile: boolean
+  payer: z.infer<typeof CourierPayerSchema>
+  feeAmount: number
+  transportCollected: boolean
+  paymentMethod: CourierPaymentMethod | null
+  createdAt: string
+  acceptedAt: string | null
+}
+
+export interface DriverCourierBoard {
+  available: DriverCourierOrderView[]
+  mine: DriverCourierOrderView[]
+  maxActivePerDriver: number
 }
