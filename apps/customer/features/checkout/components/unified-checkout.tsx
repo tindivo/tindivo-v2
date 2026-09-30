@@ -604,7 +604,7 @@ export function UnifiedCheckout({ checkout, validation }: UnifiedCheckoutProps) 
           setVerifiedPhone(phone)
           setShowOtpSheet(false)
           setTimeout(() => {
-            placeOrder({ paymentIntent: payment })
+            placeOrder({ paymentIntent: payment, verifiedPhone: phone })
           }, 300)
         }}
         onClose={() => setShowOtpSheet(false)}

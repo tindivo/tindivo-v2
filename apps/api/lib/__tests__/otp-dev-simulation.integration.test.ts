@@ -128,7 +128,7 @@ describe('simulacro local de OTP', () => {
     expect(OTP_DEV_SIMULATION).toBe(true)
   })
 
-  it('da el envío por bueno sin mandar nada, y sin gastar el tope de 3 en 24h', async () => {
+  it('da el envío por bueno, auto-valida en dev sellando el perfil y sin gastar el tope de 3 en 24h', async () => {
     // Cuatro envíos: uno más que `MAX_ATTEMPTS_PER_24H`. El tope protege una
     // factura de Twilio que aquí no existe, y aplicarlo dejaría la pantalla
     // intocable al cuarto intento con la única salida de vaciar la tabla a
@@ -137,9 +137,8 @@ describe('simulacro local de OTP', () => {
       const res = await pedir(sendCode, '/customer/phone/send-code', { phone: TELEFONO })
       expect(res.status, `el envío ${i + 1} debería pasar`).toBe(200)
       const { data } = await res.json()
-      // 'dev' y no 'sms': el front no lo mira, pero quien lea una respuesta
-      // tiene que poder saber si aquí hubo un SMS de verdad.
-      expect(data).toEqual({ sent: true, channel: 'dev' })
+      // 'dev' y 'verified: true': auto-validado de una vez para que el usuario no toque la BD
+      expect(data).toEqual({ sent: true, verified: true, channel: 'dev' })
     }
 
     const { count } = await localClient
@@ -147,9 +146,19 @@ describe('simulacro local de OTP', () => {
       .select('id', { count: 'exact', head: true })
       .eq('user_id', userId)
     expect(count ?? 0).toBe(0)
+
+    const p = await perfil()
+    expect(p.phone).toBe(`+51${TELEFONO}`)
+    expect(p.phone_verified_at).not.toBeNull()
   })
 
-  it('rechaza un código que no es el maestro, y NO sella el perfil', async () => {
+  it('rechaza un código que no es el maestro en verify, y NO sella el perfil', async () => {
+    // Limpiamos el perfil para verificar que un código incorrecto no sella nada
+    await localClient
+      .from('customer_profiles')
+      .update({ phone: null, phone_verified_at: null })
+      .eq('user_id', userId)
+
     const res = await pedir(verifyCode, '/customer/phone/verify', {
       phone: TELEFONO,
       code: '123456',
@@ -187,6 +196,28 @@ describe('simulacro local de OTP', () => {
       const enProduccion = await import('../twilio/client')
       expect(enProduccion.twilioClient).toBeNull()
       expect(enProduccion.OTP_DEV_SIMULATION).toBe(false)
+    } finally {
+      vi.unstubAllEnvs()
+      vi.resetModules()
+    }
+  })
+
+  it('EN PRODUCCIÓN send-code NO SELLA EL PERFIL, aunque falten las variables', async () => {
+    // Desde que `send-code` verifica por sí solo en el simulacro, el candado
+    // del flag ya no basta con mirarlo: hay que ver que la ruta, cargada en
+    // producción, falla y deja el perfil como estaba.
+    await localClient
+      .from('customer_profiles')
+      .update({ phone: null, phone_verified_at: null })
+      .eq('user_id', userId)
+
+    vi.stubEnv('NODE_ENV', 'production')
+    vi.resetModules()
+    try {
+      const { POST: sendCodeProd } = await import('../../app/api/v1/customer/phone/send-code/route')
+      const res = await pedir(sendCodeProd, '/customer/phone/send-code', { phone: TELEFONO })
+      expect(res.status).toBe(500)
+      expect(await perfil()).toEqual({ phone: null, phone_verified_at: null })
     } finally {
       vi.unstubAllEnvs()
       vi.resetModules()

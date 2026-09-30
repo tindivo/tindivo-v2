@@ -52,8 +52,15 @@ export async function POST(req: Request): Promise<Response> {
 
     if (!twilioClient) {
       /*
-       * SIMULACRO LOCAL. Se da el envío por bueno sin mandar nada, y el código
-       * que valdrá después es `DEV_OTP_CODE`.
+       * SIMULACRO LOCAL. No se manda nada y el teléfono queda verificado AQUÍ
+       * MISMO: la respuesta lleva `verified: true` y el front salta la
+       * pantalla del código. Antes había que teclear `DEV_OTP_CODE` en una
+       * pantalla que no decía cuál era, y registrar un vecino de prueba
+       * acababa editando `customer_profiles` a mano. `verify` sigue aceptando
+       * el código maestro para quien quiera recorrer esa pantalla a propósito.
+       *
+       * El sellado repite el de `verify` (mismo E.164, mismo 409 por el índice
+       * único): si aquel cambia, este tiene que cambiar con él.
        *
        * SALE ANTES DEL RATE LIMIT A PROPÓSITO. El tope de 3 en 24 horas
        * protege una factura que en local no existe, y aplicarlo aquí deja la
@@ -67,9 +74,32 @@ export async function POST(req: Request): Promise<Response> {
        */
       if (OTP_DEV_SIMULATION) {
         console.warn(
-          `[twilio] simulacro · ${fullPhone} no recibe nada; el código es ${DEV_OTP_CODE}`,
+          `[twilio] simulacro · ${fullPhone} verificado sin código (el maestro sigue siendo ${DEV_OTP_CODE})`,
         )
-        return ok({ sent: true, channel: 'dev' }, { status: 200, headers: corsHeaders(req) })
+
+        const { error: updateErr } = await service
+          .from('customer_profiles')
+          .update({
+            phone: fullPhone,
+            phone_verified_at: new Date().toISOString(),
+          })
+          .eq('user_id', user.id)
+
+        if (updateErr) {
+          if (updateErr.code === '23505') {
+            return problem('conflict', {
+              detail: 'Este número ya está asociado a otra cuenta.',
+              requestId,
+              headers: corsHeaders(req),
+            })
+          }
+          throw new Error(updateErr.message)
+        }
+
+        return ok(
+          { sent: true, verified: true, channel: 'dev' },
+          { status: 200, headers: corsHeaders(req) },
+        )
       }
       return problem('internal_error', {
         detail: 'Verificación de teléfono no disponible temporalmente.',
