@@ -58,3 +58,50 @@ export function createDriverAudioTrigger(key: DriverSoundKey, volume = 0.8): () 
     return () => {}
   }
 }
+
+/**
+ * Aviso de «entrega nueva» (Tindivo Entregas). Dos notas generadas con Web
+ * Audio en vez de un .mp3: así no se confunde con los sonidos de comida
+ * (tomar / entregar) y no pesa ningún archivo. Vibra además, para el
+ * motorizado que lleva el celular en el soporte con el volumen bajo.
+ *
+ * Solo suena con la app ABIERTA: con el celular bloqueado no hay aviso (el
+ * push de Entregas está en el backlog). Si el navegador aún no tuvo un toque
+ * del usuario, el AudioContext nace suspendido y el tono no suena; la
+ * vibración sí.
+ */
+let chimeCtx: AudioContext | null = null
+
+export function playCourierChime(): void {
+  if (typeof window === 'undefined') return
+  try {
+    navigator.vibrate?.([120, 80, 120])
+  } catch {
+    // Sin vibración
+  }
+  try {
+    const Ctx =
+      window.AudioContext ??
+      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+    if (!Ctx) return
+    chimeCtx ??= new Ctx()
+    const ctx = chimeCtx
+    if (ctx.state === 'suspended') void ctx.resume().catch(() => {})
+    const notes = [880, 1318.5]
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      const start = ctx.currentTime + i * 0.18
+      osc.type = 'sine'
+      osc.frequency.value = freq
+      gain.gain.setValueAtTime(0.0001, start)
+      gain.gain.exponentialRampToValueAtTime(0.35, start + 0.02)
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.16)
+      osc.connect(gain).connect(ctx.destination)
+      osc.start(start)
+      osc.stop(start + 0.18)
+    })
+  } catch {
+    // Entornos sin Web Audio
+  }
+}

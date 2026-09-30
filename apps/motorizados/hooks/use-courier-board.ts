@@ -3,6 +3,7 @@
 import type { DriverCourierBoard } from '@tindivo/contracts'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '@/lib/api'
+import { playCourierChime } from '@/lib/sound'
 
 /**
  * Tablero de Tindivo Entregas: disponibles + mías, cada 15 s con la pestaña
@@ -26,11 +27,18 @@ export function useCourierBoard() {
   const [board, setBoard] = useState<DriverCourierBoard>(EMPTY)
   const [loading, setLoading] = useState(true)
   const alive = useRef(true)
+  // Ids ya vistos en «disponibles». `null` hasta la primera carga: lo que ya
+  // estaba al abrir la app no suena, solo lo que llega después.
+  const seen = useRef<Set<string> | null>(null)
 
   const refetch = useCallback(async () => {
     try {
       const { data } = await api.get<{ data: DriverCourierBoard }>('/driver/courier-orders')
-      if (alive.current) setBoard(data)
+      if (!alive.current) return
+      const ids = data.available.map((o) => o.id)
+      if (seen.current && ids.some((id) => !seen.current?.has(id))) playCourierChime()
+      seen.current = new Set(ids)
+      setBoard(data)
     } catch {
       // Un fallo pasajero deja el último tablero bueno en pantalla; el
       // siguiente poll lo corrige.

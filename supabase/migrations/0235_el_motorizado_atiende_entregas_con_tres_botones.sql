@@ -75,10 +75,12 @@ declare
   v_active_count int;
   v_unlimited boolean;
 begin
-  if not p_weight_confirmed then
+  -- 0235: `is not true` y no `not`: con NULL, `if not null` no entra y la
+  -- confirmación se saltaría (auditoría de Codex).
+  if p_weight_confirmed is not true then
     raise exception 'Falta confirmar que lo que envías está permitido' using errcode = 'P0001';
   end if;
-  if not p_prepaid_confirmed then
+  if p_prepaid_confirmed is not true then
     raise exception 'Falta confirmar que ya pagaste tu pedido' using errcode = 'P0001';
   end if;
 
@@ -109,6 +111,9 @@ begin
     ? p_customer_user_id::text;
 
   if not v_unlimited then
+    -- 0235: serializa por celular ANTES de contar. Sin esto, dos solicitudes
+    -- simultáneas del mismo celular cuentan 0 cada una y entran las dos.
+    perform pg_advisory_xact_lock(hashtext('courier_phone:' || p_requester_phone));
     v_max_active := coalesce((v_courier ->> 'maxActivePerPhone')::int, 1);
     select count(*) into v_active_count
       from public.courier_orders
@@ -215,6 +220,13 @@ begin
   elsif p_step in ('pick_up', 'deliver', 'fail', 'release') then
     select * into v_row from public.courier_orders
       where id = p_courier_order_id for update;
+    -- «Soltar» repetido tras perder la respuesta: la entrega ya volvió a la
+    -- cola y ya no es de nadie. Se devuelve su estado en vez de un error, igual
+    -- que los demás pasos repetidos (auditoría de Codex).
+    if p_step = 'release' and v_row.id is not null
+       and v_row.status = 'requested' and v_row.driver_id is null then
+      return jsonb_build_object('id', v_row.id, 'status', v_row.status);
+    end if;
     if v_row.id is null or v_row.driver_id is distinct from v_driver_id then
       -- Una entrega ajena o inexistente se ve igual: no se filtra cuál es cuál.
       raise exception 'courier_not_found' using errcode = 'P0001';

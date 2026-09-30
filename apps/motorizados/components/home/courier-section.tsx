@@ -141,7 +141,7 @@ export function CourierAvailableList({
   }
 
   return (
-    <section className="mb-5 flex flex-col gap-3" aria-label="Entregas disponibles">
+    <section className="mt-5 mb-5 flex flex-col gap-3" aria-label="Entregas disponibles">
       <h2 className="px-1 font-display text-body font-bold text-blue-800">
         Entregas por aceptar · {orders.length}
       </h2>
@@ -216,7 +216,7 @@ export function CourierMineList({
   }
 
   return (
-    <section className="mb-5 flex flex-col gap-3" aria-label="Mis entregas">
+    <section className="mt-5 mb-5 flex flex-col gap-3" aria-label="Mis entregas">
       <h2 className="px-1 font-display text-body font-bold text-blue-800">
         Mis entregas · {orders.length}
       </h2>

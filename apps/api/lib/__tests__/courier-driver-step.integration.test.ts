@@ -275,3 +275,47 @@ describe('create_courier_order (0235)', () => {
     expect(tercero.error).toBeNull()
   })
 })
+
+describe('0235 · correcciones de la auditoría', () => {
+  let customer: CourierCustomer
+  let driver: CourierDriver
+
+  beforeEach(async () => {
+    customer = await seedCourierCustomer()
+    driver = await seedCourierDriver({ available: true })
+    await setCourierEnabled(true)
+    await patchCourierSettings({
+      maxActivePerPhone: 1,
+      maxActivePerDriver: 2,
+      unlimitedRequesterUserIds: [],
+    })
+  })
+
+  afterEach(async () => {
+    await cleanupCourier({ customerUserIds: [customer.userId], driverUserIds: [driver.userId] })
+  })
+
+  it('dos solicitudes simultáneas del mismo celular: entra una sola', async () => {
+    const [a, b] = await Promise.all([
+      callCreateCourierOrder({ customerUserId: customer.userId, requesterPhone: customer.phone }),
+      callCreateCourierOrder({ customerUserId: customer.userId, requesterPhone: customer.phone }),
+    ])
+    const ok = [a, b].filter((r) => r.error === null)
+    const limit = [a, b].filter((r) => r.error?.message.includes('courier_active_limit'))
+    expect(ok).toHaveLength(1)
+    expect(limit).toHaveLength(1)
+  })
+
+  it('«Soltar» repetido tras perder la respuesta no da error', async () => {
+    const { data } = await callCreateCourierOrder({
+      customerUserId: customer.userId,
+      requesterPhone: customer.phone,
+    })
+    const id = (data as { id: string }).id
+    await paso(id, driver, 'accept')
+    expect((await paso(id, driver, 'release')).error).toBeNull()
+    const repetido = await paso(id, driver, 'release')
+    expect(repetido.error).toBeNull()
+    expect((await leer(id)).status).toBe('requested')
+  })
+})

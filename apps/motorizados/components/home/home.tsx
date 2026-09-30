@@ -177,15 +177,6 @@ export function Home() {
 
       <div ref={contentRef}>
         {tab === 'available' && (
-          <CourierAvailableList
-            orders={courier.available}
-            mineCount={courier.mine.length}
-            maxActive={courier.maxActivePerDriver}
-            onChanged={courier.refetch}
-          />
-        )}
-        {tab === 'mine' && <CourierMineList orders={courier.mine} onChanged={courier.refetch} />}
-        {tab === 'available' && (
           <AvailableTab
             available={board.available}
             upcoming={board.upcoming}
@@ -200,6 +191,17 @@ export function Home() {
         {tab === 'mine' && (
           <MineTab mine={board.mine} loading={board.loading} now={now} onChanged={board.refetch} />
         )}
+        {/* Entregas DEBAJO de la comida: la comida de los partners va
+            primero (regla del piloto; auditoría de Codex). */}
+        {tab === 'available' && (
+          <CourierAvailableList
+            orders={courier.available}
+            mineCount={courier.mine.length}
+            maxActive={courier.maxActivePerDriver}
+            onChanged={courier.refetch}
+          />
+        )}
+        {tab === 'mine' && <CourierMineList orders={courier.mine} onChanged={courier.refetch} />}
         {tab === 'team' && <TeamTab mySlots={board.mySlots} />}
       </div>
     </main>
