@@ -136,10 +136,10 @@ describe('create_courier_order', () => {
     expect(error?.message).toContain('courier_closed')
   })
 
-  it('rechaza si no hay ningún motorizado disponible', async () => {
-    // `courier_has_available_driver()` mira TODOS los motorizados, no solo el
-    // de este test — la base local trae motorizados del seed e2e ya
-    // disponibles. Se apagan todos, se prueba, y se restauran exactamente como
+  it('en horario se crea aunque ningún motorizado esté «Disponible» (0240)', async () => {
+    // El aviso llega a todos los activos igual; si nadie la toma, vence sola.
+    // Se apagan TODOS (la base local trae motorizados del seed e2e ya
+    // disponibles), se prueba, y se restauran exactamente como
     // estaban (fileParallelism:false hace esto seguro: un solo archivo de
     // integración corre a la vez).
     const { data: antes, error: leerErr } = await localClient
@@ -153,11 +153,14 @@ describe('create_courier_order', () => {
       .neq('driver_id', '00000000-0000-0000-0000-000000000000')
 
     try {
-      const { error } = await callCreateCourierOrder({
+      const { data, error } = await callCreateCourierOrder({
         customerUserId: customer.userId,
         requesterPhone: customer.phone,
       })
-      expect(error?.message).toContain('courier_no_driver')
+      expect(error).toBeNull()
+      expect((data as { status: string }).status).toBe('requested')
+      const { data: estado } = await localClient.rpc('courier_service_status')
+      expect((estado as { openNow: boolean }).openNow).toBe(true)
     } finally {
       for (const row of antes ?? []) {
         await localClient

@@ -26,9 +26,6 @@ function courierErrorDetail(message: string): {
   if (message.startsWith('courier_closed')) {
     return { code: 'conflict', detail: 'Atendemos de 6 a 11 pm, todos los días.' }
   }
-  if (message.startsWith('courier_no_driver')) {
-    return { code: 'conflict', detail: 'No hay motorizado disponible ahora mismo.' }
-  }
   if (message.startsWith('courier_out_of_zone')) {
     return { code: 'conflict', detail: 'Solo llegamos dentro de San Jacinto.' }
   }
