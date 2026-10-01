@@ -1,363 +1,226 @@
 'use client'
 
 import { ApiError } from '@tindivo/api-client'
-import type {
-  CourierPaymentMethod,
-  DriverCourierFailReason,
-  DriverCourierOrderView,
-  DriverCourierStepRequest,
-} from '@tindivo/contracts'
-import { BottomSheet, Button, cn, Icon } from '@tindivo/ui'
+import type { CourierStatus, DriverCourierOrderView } from '@tindivo/contracts'
+import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { api } from '@/lib/api'
+import { createDriverAudioTrigger } from '@/lib/sound'
+import { CourierCard, isPicked } from './courier-card'
+import { errorText, needsPayment, PaymentSheet, ProblemSheet, sendStep } from './courier-steps'
+import { type LeftAction, type RightAction, SwipeCard } from './swipe-card'
 
 /**
  * Tindivo Entregas en el tablero del motorizado (MVP, Docs/Entregas/mvp-entregas-v1.md §4).
  *
- * Tarjetas AZULES para que no se confundan con la comida. Tres botones de
- * avance —Aceptar, Recogido, Entregado— más «No se pudo» y «Soltar». Cada
- * botón es UNA transacción en la base (`driver_courier_step`, 0235), y es
- * idempotente: si la conexión se corta, volver a tocar es seguro.
+ * MISMA MANO QUE LA COMIDA: la tarjeta se arrastra a la derecha para avanzar
+ * (Aceptar → Ya recogí → Entregado) y a la izquierda para «No se pudo», y
+ * tocándola se abre su ficha, `/entrega/[id]`, con los mismos pasos en
+ * botones. Cada paso es UNA transacción en la base (`driver_courier_step`,
+ * 0235) e idempotente: si la conexión se corta, volver a intentarlo es seguro.
  *
  * La comida manda por REGLA DE OPERACIÓN, no por software: si hay comida
  * lista para recoger, va primero; una entrega ya recogida se termina antes.
  */
 
-const FAIL_REASONS: { value: DriverCourierFailReason; label: string }[] = [
-  { value: 'not_ready', label: 'No estaba listo' },
-  { value: 'unreachable', label: 'No contestan / no está' },
-  { value: 'other', label: 'Otro motivo' },
-]
+// ── En espera ───────────────────────────────────────────────────────────────
 
-async function sendStep(id: string, body: DriverCourierStepRequest): Promise<void> {
-  await api.post(`/driver/courier-orders/${id}/step`, body)
-}
-
-function errorText(err: unknown, fallback: string): string {
-  return err instanceof ApiError ? (err.problem.detail ?? err.message) : fallback
-}
-
-function payerLabel(o: DriverCourierOrderView): string {
-  const fee = `S/ ${o.feeAmount.toFixed(2)}`
-  if (o.transportCollected) return `Cobrado ${fee}`
-  return o.payer === 'origin' ? `Cobrar ${fee} al recoger` : `Cobrar ${fee} al entregar`
-}
-
-function Point({ label, point }: { label: string; point: DriverCourierOrderView['origin'] }) {
-  return (
-    <div className="flex items-start gap-2.5">
-      <Icon name="location_on" size={18} className="mt-0.5 shrink-0 text-blue-600" filled />
-      <div className="min-w-0 flex-1">
-        <p className="text-caption font-semibold uppercase tracking-wide text-blue-700">{label}</p>
-        <p className="text-body font-semibold text-ink">{point.referenceText}</p>
-        <p className="text-caption text-ink-muted">{point.name}</p>
-      </div>
-      {point.phone && (
-        <a
-          href={`tel:${point.phone}`}
-          aria-label={`Llamar a ${point.name}`}
-          className="flex h-11 shrink-0 items-center gap-1.5 rounded-full bg-blue-600 px-4 text-caption font-bold text-white"
-        >
-          <Icon name="call" size={16} filled />
-          Llamar
-        </a>
-      )}
-    </div>
-  )
-}
-
-function CardShell({
+/**
+ * Una entrega por aceptar. Va SUELTA, no en una lista propia: la bandeja la
+ * intercala con la comida por su reloj (`interleaveByTime`).
+ */
+export function CourierAvailableItem({
   order,
-  children,
+  blockedReason,
+  hint = false,
+  onChanged,
 }: {
   order: DriverCourierOrderView
-  children: React.ReactNode
+  /** Ya tiene el máximo de entregas: la tarjeta no cede y dice por qué. */
+  blockedReason?: string
+  hint?: boolean
+  onChanged: () => void
 }) {
+  const router = useRouter()
+  const card = (
+    <CourierCard
+      order={order}
+      variant="available"
+      blockedReason={blockedReason}
+      onOpen={() => router.push(`/entrega/${order.id}`)}
+    />
+  )
+
+  // Bloqueada no cede ni un píxel: ya dice por qué con el candado.
+  if (blockedReason) return <div>{card}</div>
+
   return (
-    <article className="rounded-3xl border-2 border-blue-200 bg-blue-50 p-4">
-      <header className="mb-3 flex items-center justify-between gap-2">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-600 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-white">
-          <Icon name="local_shipping" size={14} filled />
-          Entrega
-        </span>
-        <span
-          className={cn(
-            'rounded-full px-2.5 py-1 text-caption font-bold',
-            order.transportCollected ? 'bg-success-soft text-success' : 'bg-white text-blue-800',
-          )}
-        >
-          {payerLabel(order)}
-        </span>
-      </header>
-      {/* «Pidió», no «a nombre de»: en los pedidos de WhatsApp quien pide es la
-          cuenta de Jesús. A nombre de quién está la bolsa lo dice el cliente
-          en sus indicaciones (abajo), y si no, se llama. */}
-      <p className="mb-3 flex items-center gap-2 text-caption text-ink-muted">
-        <Icon name="person" size={14} className="text-blue-600" filled />
-        <span>
-          Pidió <strong className="text-ink">{order.requesterName}</strong>
-        </span>
-      </p>
-      <div className="flex flex-col gap-3">
-        <Point label="Recoger" point={order.origin} />
-        <Point label="Llevar" point={order.destination} />
-      </div>
-      <p className="mt-3 flex items-center gap-2 rounded-2xl bg-white px-3 py-2 text-body text-ink">
-        <Icon name="inventory_2" size={16} className="text-blue-600" filled />
-        {order.itemDescription}
-        {order.isFragile && <span className="font-bold text-danger">· Frágil</span>}
-      </p>
-      {order.driverNote && (
-        <p className="mt-2 flex items-start gap-2 rounded-2xl bg-warning-soft px-3 py-2 text-body font-semibold text-ink">
-          <Icon name="info" size={16} className="mt-0.5 shrink-0 text-warning" filled />
-          {order.driverNote}
-        </p>
-      )}
-      {children}
-    </article>
+    <SwipeCard
+      hint={hint}
+      right={{
+        mode: 'confirm',
+        verb: 'Aceptar',
+        doing: 'Aceptando…',
+        done: 'Es tuya',
+        icon: 'check_circle',
+        tone: 'green',
+        armSound: () => createDriverAudioTrigger('orderTaken'),
+        commit: () => sendStep(order.id, { step: 'accept' }),
+        onDone: onChanged,
+        failure: (err) => {
+          if (!(err instanceof ApiError)) return null
+          // Si se la llevó otro, la tarjeta sobra en esta bandeja.
+          const after = err.status === 409 ? onChanged : undefined
+          return { text: errorText(err, 'No se pudo aceptar'), tone: 'danger', after }
+        },
+      }}
+    >
+      {card}
+    </SwipeCard>
   )
 }
 
-// ── Disponibles ─────────────────────────────────────────────────────────────
+/** El motivo del candado, o nada si aún cabe otra entrega. */
+export function courierBlockedReason(mineCount: number, maxActive: number): string | undefined {
+  return mineCount >= maxActive ? `Ya tienes ${mineCount} entregas · termina una` : undefined
+}
 
-export function CourierAvailableList({
-  orders,
-  mineCount,
-  maxActive,
+// ── Míos ────────────────────────────────────────────────────────────────────
+
+type Sheet = 'problem' | { payment: 'pick_up' | 'deliver' } | null
+
+/** Una entrega mía, intercalada con la comida en «Míos». */
+export function CourierMineItem({
+  order: fromBoard,
+  hint = false,
   onChanged,
 }: {
-  orders: DriverCourierOrderView[]
-  mineCount: number
-  maxActive: number
-  onChanged: () => void
+  order: DriverCourierOrderView
+  hint?: boolean
+  onChanged: () => Promise<void> | void
 }) {
-  const [busyId, setBusyId] = useState<string | null>(null)
-  const [error, setError] = useState<{ id: string; text: string } | null>(null)
-  if (orders.length === 0) return null
-  const full = mineCount >= maxActive
+  const router = useRouter()
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [sheet, setSheet] = useState<Sheet>(null)
+  /**
+   * El paso ya dado, pintado ANTES de que el servidor conteste: «Ya recogí»
+   * cambia la tarjeta al soltar, como en la comida. Se borra cuando el
+   * tablero recargado ya lo trae, o se deshace si el servidor lo rechaza.
+   */
+  const [patched, setPatched] = useState<CourierStatus | null>(null)
+  const order = patched ? { ...fromBoard, status: patched } : fromBoard
+  const picked = isPicked(order)
 
-  async function accept(id: string) {
-    setBusyId(id)
-    setError(null)
+  /** Recogido sin cobro: se pinta ya y el POST corre detrás. Lanza si falla. */
+  async function pickUpNow() {
+    setPatched('picked_up')
     try {
-      await sendStep(id, { step: 'accept' })
-    } catch (err) {
-      setError({ id, text: errorText(err, 'No se pudo aceptar. Intenta de nuevo.') })
+      await sendStep(order.id, { step: 'pick_up' })
+      await onChanged()
     } finally {
-      setBusyId(null)
-      onChanged()
+      setPatched(null)
     }
   }
 
-  return (
-    <section className="mt-5 mb-5 flex flex-col gap-3" aria-label="Entregas disponibles">
-      <h2 className="px-1 font-display text-body font-bold text-blue-800">
-        Entregas por aceptar · {orders.length}
-      </h2>
-      {full && (
-        <p className="rounded-2xl bg-blue-100 px-3 py-2 text-caption font-semibold text-blue-900">
-          Ya tienes {mineCount} entregas. Termina una para aceptar otra.
-        </p>
-      )}
-      {orders.map((o) => (
-        <CardShell key={o.id} order={o}>
-          <p className="mt-3 text-caption text-ink-muted">
-            Antes de salir, llama a quien entrega para confirmar que está listo.
-          </p>
-          {error?.id === o.id && <p className="mt-2 text-caption text-danger">{error.text}</p>}
-          <Button
-            className="mt-3 w-full"
-            disabled={full || busyId !== null}
-            onClick={() => accept(o.id)}
-          >
-            {busyId === o.id ? 'Aceptando…' : 'Aceptar entrega'}
-          </Button>
-        </CardShell>
-      ))}
-    </section>
-  )
-}
-
-// ── Mías ────────────────────────────────────────────────────────────────────
-
-type Sheet =
-  | { kind: 'payment'; order: DriverCourierOrderView; step: 'pick_up' | 'deliver' }
-  | { kind: 'fail'; order: DriverCourierOrderView }
-  | null
-
-const PICKED = new Set(['picked_up', 'heading_to_dropoff'])
-
-function needsPayment(o: DriverCourierOrderView, step: 'pick_up' | 'deliver'): boolean {
-  if (o.transportCollected) return false
-  return step === 'pick_up' ? o.payer === 'origin' : o.payer === 'destination'
-}
-
-export function CourierMineList({
-  orders,
-  onChanged,
-}: {
-  orders: DriverCourierOrderView[]
-  onChanged: () => void
-}) {
-  const [busyId, setBusyId] = useState<string | null>(null)
-  const [error, setError] = useState<{ id: string; text: string } | null>(null)
-  const [sheet, setSheet] = useState<Sheet>(null)
-  if (orders.length === 0) return null
-
-  async function run(id: string, body: DriverCourierStepRequest): Promise<boolean> {
-    setBusyId(id)
+  /** Un paso desde una hoja: el error se queda en la hoja. */
+  async function run(body: Parameters<typeof sendStep>[1]): Promise<boolean> {
+    setBusy(true)
     setError(null)
     try {
-      await sendStep(id, body)
+      await sendStep(order.id, body)
       return true
     } catch (err) {
-      setError({ id, text: errorText(err, 'No se pudo guardar. Intenta de nuevo.') })
+      setError(errorText(err, 'No se pudo guardar. Intenta de nuevo.'))
       return false
     } finally {
-      setBusyId(null)
-      onChanged()
+      setBusy(false)
+      await onChanged()
     }
   }
 
-  function advance(o: DriverCourierOrderView, step: 'pick_up' | 'deliver') {
-    if (needsPayment(o, step)) setSheet({ kind: 'payment', order: o, step })
-    else void run(o.id, { step })
+  function open(next: Sheet) {
+    setError(null)
+    setSheet(next)
   }
 
-  return (
-    <section className="mt-5 mb-5 flex flex-col gap-3" aria-label="Mis entregas">
-      <h2 className="px-1 font-display text-body font-bold text-blue-800">
-        Mis entregas · {orders.length}
-      </h2>
-      {orders.map((o) => {
-        const picked = PICKED.has(o.status)
-        const busy = busyId === o.id
-        return (
-          <CardShell key={o.id} order={o}>
-            {error?.id === o.id && <p className="mt-2 text-caption text-danger">{error.text}</p>}
-            <Button
-              className="mt-3 w-full"
-              disabled={busyId !== null}
-              onClick={() => advance(o, picked ? 'deliver' : 'pick_up')}
-            >
-              {busy ? 'Guardando…' : picked ? 'Entregado' : 'Recogido'}
-            </Button>
-            <div className="mt-2 flex gap-2">
-              <Button
-                variant="secondary"
-                className="flex-1"
-                disabled={busyId !== null}
-                onClick={() => setSheet({ kind: 'fail', order: o })}
-              >
-                No se pudo
-              </Button>
-              {!picked && !o.transportCollected && (
-                <Button
-                  variant="secondary"
-                  className="flex-1"
-                  disabled={busyId !== null}
-                  onClick={() => void run(o.id, { step: 'release' })}
-                >
-                  Soltar
-                </Button>
-              )}
-            </div>
-          </CardShell>
-        )
-      })}
+  const left: LeftAction = {
+    verb: 'No se pudo',
+    icon: 'block',
+    tone: 'danger',
+    onCommit: () => open('problem'),
+  }
 
-      {sheet?.kind === 'payment' && (
+  const right: RightAction = !picked
+    ? needsPayment(order, 'pick_up')
+      ? {
+          mode: 'open',
+          verb: 'Ya recogí',
+          icon: 'shopping_bag',
+          tone: 'orange',
+          commit: () => open({ payment: 'pick_up' }),
+        }
+      : {
+          mode: 'optimistic',
+          verb: 'Ya recogí',
+          icon: 'shopping_bag',
+          tone: 'orange',
+          commit: pickUpNow,
+        }
+    : needsPayment(order, 'deliver')
+      ? {
+          mode: 'open',
+          verb: 'Entregado',
+          icon: 'check_circle',
+          tone: 'green',
+          commit: () => open({ payment: 'deliver' }),
+        }
+      : {
+          // Entregada sale de «Míos»: la tarjeta se va, como al tomar.
+          mode: 'confirm',
+          verb: 'Entregado',
+          doing: 'Guardando…',
+          done: 'Entregada',
+          icon: 'check_circle',
+          tone: 'green',
+          commit: () => sendStep(order.id, { step: 'deliver' }),
+          onDone: () => void onChanged(),
+        }
+
+  return (
+    <>
+      <SwipeCard right={right} left={left} hint={hint} hintKey="tindivo.drv.swipehint.mine.v1">
+        <CourierCard
+          order={order}
+          variant="mine"
+          onOpen={() => router.push(`/entrega/${order.id}`)}
+        />
+      </SwipeCard>
+
+      {sheet !== null && typeof sheet === 'object' && (
         <PaymentSheet
-          fee={sheet.order.feeAmount}
+          fee={order.feeAmount}
+          error={error}
+          busy={busy}
           onClose={() => setSheet(null)}
           onPick={async (method) => {
-            const ok = await run(sheet.order.id, { step: sheet.step, paymentMethod: method })
-            if (ok) setSheet(null)
+            if (await run({ step: sheet.payment, paymentMethod: method })) setSheet(null)
           }}
-          busy={busyId !== null}
         />
       )}
-      {sheet?.kind === 'fail' && (
-        <FailSheet
-          picked={PICKED.has(sheet.order.status)}
+      {sheet === 'problem' && (
+        <ProblemSheet
+          order={order}
+          error={error}
+          busy={busy}
           onClose={() => setSheet(null)}
-          onPick={async (reason) => {
-            const ok = await run(sheet.order.id, { step: 'fail', failReason: reason })
-            if (ok) setSheet(null)
+          onRelease={async () => {
+            if (await run({ step: 'release' })) setSheet(null)
           }}
-          busy={busyId !== null}
+          onFail={async (reason) => {
+            if (await run({ step: 'fail', failReason: reason })) setSheet(null)
+          }}
         />
       )}
-    </section>
-  )
-}
-
-function PaymentSheet({
-  fee,
-  onPick,
-  onClose,
-  busy,
-}: {
-  fee: number
-  onPick: (m: CourierPaymentMethod) => Promise<void>
-  onClose: () => void
-  busy: boolean
-}) {
-  const title = `¿Cómo te pagaron los S/ ${fee.toFixed(2)}?`
-  return (
-    <BottomSheet open label={title} onClose={onClose}>
-      <div className="p-5 pb-7">
-        <h2 className="font-display text-title font-bold tracking-tight text-ink">{title}</h2>
-        <p className="mt-1.5 text-body text-ink-muted">Primero Yape a tu QR. Si no, efectivo.</p>
-        <div className="mt-4 flex flex-col gap-2.5">
-          <Button disabled={busy} onClick={() => onPick('yape')}>
-            <Icon name="qr_code_2" size={18} filled /> Yape
-          </Button>
-          <Button variant="secondary" disabled={busy} onClick={() => onPick('cash')}>
-            <Icon name="payments" size={18} filled /> Efectivo
-          </Button>
-        </div>
-      </div>
-    </BottomSheet>
-  )
-}
-
-function FailSheet({
-  picked,
-  onPick,
-  onClose,
-  busy,
-}: {
-  picked: boolean
-  onPick: (r: DriverCourierFailReason) => Promise<void>
-  onClose: () => void
-  busy: boolean
-}) {
-  const title = picked ? 'No se pudo entregar' : 'No se pudo recoger'
-  return (
-    <BottomSheet open label={title} onClose={onClose}>
-      <div className="p-5 pb-7">
-        <h2 className="font-display text-title font-bold tracking-tight text-danger">{title}</h2>
-        {picked && (
-          <p className="mt-2 flex items-start gap-2 rounded-2xl bg-warning/15 px-3 py-2 text-body font-semibold text-ink">
-            <Icon name="warning" size={18} className="mt-0.5 shrink-0" filled />
-            Devuélvelo a quien te lo entregó y llama a Jesús.
-          </p>
-        )}
-        <div className="mt-4 flex flex-col gap-2">
-          {FAIL_REASONS.map((r) => (
-            <button
-              key={r.value}
-              type="button"
-              disabled={busy}
-              onClick={() => onPick(r.value)}
-              className="rounded-2xl border border-ink/[0.08] bg-ink/[0.04] p-3.5 text-left text-body font-semibold text-ink hover:bg-ink/[0.08] disabled:opacity-50"
-            >
-              {r.label}
-            </button>
-          ))}
-        </div>
-      </div>
-    </BottomSheet>
+    </>
   )
 }

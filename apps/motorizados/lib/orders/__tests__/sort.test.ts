@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { byReadyClock, type SortableOrder } from '../sort'
+import { byReadyClock, interleaveByTime, type SortableOrder } from '../sort'
 
 const NOW = Date.parse('2026-08-11T20:00:00.000Z')
 const at = (mins: number) => new Date(NOW + mins * 60_000).toISOString()
@@ -61,5 +61,50 @@ describe('orden de "En espera"', () => {
     const copia = [...rows]
     byReadyClock(rows)
     expect(rows).toEqual(copia)
+  })
+})
+
+describe('comida y entregas en una sola lista', () => {
+  const food = (id: string, etaMin: number | null) => ({
+    id,
+    eta: etaMin == null ? null : at(etaMin),
+  })
+  const courier = (id: string, deadlineMin: number | null) => ({
+    id,
+    deadline: deadlineMin == null ? null : at(deadlineMin),
+  })
+  const mix = (f: ReturnType<typeof food>[], c: ReturnType<typeof courier>[]) =>
+    interleaveByTime(
+      f,
+      (x) => x.eta,
+      c,
+      (x) => x.deadline,
+    ).map((r) => r.item.id)
+
+  it('cada entrega cae donde le toca por su reloj', () => {
+    expect(mix([food('c-2', 2), food('c-9', 9)], [courier('e-5', 5), courier('e-1', 1)])).toEqual([
+      'e-1',
+      'c-2',
+      'e-5',
+      'c-9',
+    ])
+  })
+
+  it('no reordena la comida, aunque venga en otro orden', () => {
+    expect(mix([food('c-9', 9), food('c-2', 2)], [courier('e-5', 5)])).toEqual([
+      'e-5',
+      'c-9',
+      'c-2',
+    ])
+  })
+
+  it('a igual instante va primero la comida; sin reloj, al final', () => {
+    expect(
+      mix([food('c-5', 5), food('c-x', null)], [courier('e-5', 5), courier('e-x', null)]),
+    ).toEqual(['c-5', 'e-5', 'c-x', 'e-x'])
+  })
+
+  it('sin comida quedan solo las entregas, por su reloj', () => {
+    expect(mix([], [courier('e-8', 8), courier('e-3', 3)])).toEqual(['e-3', 'e-8'])
   })
 })

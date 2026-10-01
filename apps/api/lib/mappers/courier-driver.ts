@@ -6,7 +6,7 @@ import type {
 
 /** Columnas de `courier_orders` que necesita la tarjeta del motorizado. */
 export const DRIVER_COURIER_COLUMNS =
-  'id,short_id,status,driver_id,requester_name,origin_name,origin_phone,origin_lat,origin_lng,origin_reference_text,destination_name,destination_phone,destination_lat,destination_lng,destination_reference_text,item_description,is_fragile,driver_note,payer,fee_amount,transport_collected_at,payment_method,created_at,accepted_at' as const
+  'id,short_id,status,driver_id,requester_name,origin_name,origin_phone,origin_lat,origin_lng,origin_reference_text,destination_name,destination_phone,destination_lat,destination_lng,destination_reference_text,item_description,is_fragile,driver_note,payer,fee_amount,transport_collected_at,payment_method,created_at,accepted_at,delivered_at' as const
 
 export interface DriverCourierRow {
   id: string
@@ -33,6 +33,7 @@ export interface DriverCourierRow {
   payment_method: string | null
   created_at: string
   accepted_at: string | null
+  delivered_at: string | null
 }
 
 /**
@@ -42,6 +43,7 @@ export interface DriverCourierRow {
 export function toDriverCourierView(
   row: DriverCourierRow,
   withPhones: boolean,
+  acceptMinutes: number,
 ): DriverCourierOrderView {
   return {
     id: row.id,
@@ -69,5 +71,10 @@ export function toDriverCourierView(
     paymentMethod: (row.payment_method as CourierPaymentMethod | null) ?? null,
     createdAt: row.created_at,
     acceptedAt: row.accepted_at,
+    acceptDeadline:
+      row.status === 'requested'
+        ? new Date(Date.parse(row.created_at) + acceptMinutes * 60_000).toISOString()
+        : null,
+    deliveredAt: row.delivered_at,
   }
 }

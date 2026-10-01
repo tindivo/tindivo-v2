@@ -49,17 +49,26 @@ export async function GET(req: Request): Promise<Response> {
         .eq('driver_id', driver.id)
         .not('status', 'in', '(delivered,cancelled)')
         .order('accepted_at', { ascending: true }),
-      service.from('app_settings').select('value').eq('key', 'courier').maybeSingle(),
+      // Una sola lectura para las dos claves: este endpoint se pide cada 15 s
+      // por motorizado.
+      service.from('app_settings').select('key,value').in('key', ['courier', 'timers']),
     ])
     if (availableRes.error) throw new Error(availableRes.error.message)
     if (mineRes.error) throw new Error(mineRes.error.message)
 
-    const settings = (settingsRes.data?.value ?? {}) as { maxActivePerDriver?: number }
+    const setting = (key: string) => settingsRes.data?.find((r) => r.key === key)?.value ?? {}
+    const settings = setting('courier') as { maxActivePerDriver?: number }
+    // El mismo ajuste que lee `expire_courier_orders`: el reloj de la tarjeta
+    // vence cuando la base cancela, no antes ni después.
+    const timers = setting('timers') as { courierAcceptMinutes?: number }
+    const acceptMinutes = timers.courierAcceptMinutes ?? 15
     const board: DriverCourierBoard = {
       available: (availableRes.data as DriverCourierRow[]).map((r) =>
-        toDriverCourierView(r, false),
+        toDriverCourierView(r, false, acceptMinutes),
       ),
-      mine: (mineRes.data as DriverCourierRow[]).map((r) => toDriverCourierView(r, true)),
+      mine: (mineRes.data as DriverCourierRow[]).map((r) =>
+        toDriverCourierView(r, true, acceptMinutes),
+      ),
       maxActivePerDriver: settings.maxActivePerDriver ?? 2,
     }
     return ok(board, { headers: corsHeaders(req) })

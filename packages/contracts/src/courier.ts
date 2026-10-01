@@ -154,6 +154,20 @@ export interface DriverCourierOrderView {
   paymentMethod: CourierPaymentMethod | null
   createdAt: string
   acceptedAt: string | null
+  /**
+   * Cuándo se cancela sola si nadie la acepta (`created_at` +
+   * `timers.courierAcceptMinutes`). El MISMO plazo que ve el cliente en su
+   * seguimiento (`get_courier_tracking`, 0236). `null` una vez aceptada.
+   */
+  acceptDeadline: string | null
+  /** Cuándo se entregó; `null` mientras siga en curso. Lo usa el historial. */
+  deliveredAt: string | null
+}
+
+/** GET /api/v1/driver/courier-orders/:id — la ficha. `mine`: es suya (trae celulares). */
+export interface DriverCourierDetail {
+  order: DriverCourierOrderView
+  mine: boolean
 }
 
 export interface DriverCourierBoard {

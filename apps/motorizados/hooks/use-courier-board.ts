@@ -10,10 +10,10 @@ import { playCourierChime } from '@/lib/sound'
  * visible. Un solo consumidor (`Home`), así que basta un hook y no un store de
  * módulo como `useTeam`.
  *
- * NO HAY AVISO EN SEGUNDO PLANO: con el celular bloqueado el poll se detiene.
- * Es una regla de operación del MVP (la app queda abierta en el turno y Jesús
- * avisa si una entrega lleva más de 2 min sin aceptar); el push está en
- * `Docs/Entregas/backlog-entregas.md`.
+ * Con el celular bloqueado el poll se detiene, y quien avisa es el push
+ * (`CourierStepped` en `send-push`, 0238): «📦 Entrega nueva» abre
+ * `/entrega/[id]`. Al volver a la pestaña, `visibilitychange` recarga el
+ * tablero sin esperar al siguiente ciclo.
  *
  * DESFASADO 3 s del board de comida (7 s) y del de equipo (0 s): tres polls de
  * 15 s saliendo a la vez son una estampida gratuita con datos móviles.

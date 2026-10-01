@@ -93,30 +93,50 @@ test.afterAll(async () => {
   }
 })
 
-test('el motorizado acepta, recoge y entrega una entrega cobrando por Yape', async ({ page }) => {
+test('el motorizado acepta, recoge, entrega cobrando por Yape y le rinde a Tindivo', async ({
+  page,
+}) => {
   await page.goto(MOTOS)
   await page.getByRole('tab', { name: /En espera/ }).click()
 
   const disponible = page.locator('article').filter({ hasText: descripcion })
   await expect(disponible).toBeVisible({ timeout: 30_000 })
-  await expect(disponible.getByText('Está a nombre de María')).toBeVisible()
-  await expect(disponible.getByText('Cobrar S/ 3.00 al entregar')).toBeVisible()
+  await expect(disponible.getByText('Con indicaciones')).toBeVisible()
+  await expect(disponible.getByText('Cobrar al entregar')).toBeVisible()
   // Una disponible no enseña a quién llamar: eso es solo para la suya.
   await expect(disponible.getByRole('link', { name: /Llamar/ })).toHaveCount(0)
-  await disponible.getByRole('button', { name: 'Aceptar entrega' }).click()
 
-  await page.getByRole('tab', { name: /Míos/ }).click()
-  const mia = page.locator('article').filter({ hasText: descripcion })
-  await expect(mia).toBeVisible({ timeout: 30_000 })
-  await expect(mia.getByRole('link', { name: /Llamar a/ })).toHaveCount(2)
+  // Tocar la tarjeta abre la ficha, una página como la de la comida.
+  await disponible.getByRole('button', { name: /Ver entrega de/ }).click()
+  await expect(page).toHaveURL(/\/entrega\//)
+  await expect(page.getByText('Está a nombre de María')).toBeVisible()
+  await expect(page.getByRole('link', { name: /Llamar/ })).toHaveCount(0)
 
-  await mia.getByRole('button', { name: 'Recogido' }).click()
-  await expect(mia.getByRole('button', { name: 'Entregado' })).toBeVisible({ timeout: 15_000 })
+  // «Ver mapa» abre primero el mapa en una hoja, con el salto a Google Maps.
+  await page.getByRole('button', { name: 'Ver mapa' }).first().click()
+  const mapa = page.getByRole('dialog', { name: /Recoger en/ })
+  await expect(mapa.getByRole('link', { name: /Google Maps/ })).toBeVisible()
+  await mapa.getByRole('button', { name: 'Cerrar mapa' }).click()
+
+  await page.getByRole('button', { name: 'Aceptar entrega' }).click()
+  // Ya es suya: aparecen los dos celulares.
+  await expect(page.getByRole('link', { name: /Llamar a/ })).toHaveCount(2, { timeout: 15_000 })
+
+  // WhatsApp con plantillas: a quien recibe (paga él) se le avisa del cobro.
+  await page.getByRole('button', { name: 'WhatsApp a María E2E' }).click()
+  const wa = page.getByRole('dialog', { name: 'Avisar a quien recibe' })
+  await expect(wa.getByText('Ya estoy afuera', { exact: true })).toBeVisible()
+  await expect(wa.getByText(/Son S\/ 3\.00 del transporte/).first()).toBeVisible()
+  await wa.getByRole('button', { name: 'Cerrar' }).click()
+
+  await page.getByRole('button', { name: 'Ya recogí' }).click()
+  await expect(page.getByRole('button', { name: 'Entregado' })).toBeVisible({ timeout: 15_000 })
 
   // Paga quien recibe: «Entregado» pregunta cómo le pagaron antes de cerrar.
-  await mia.getByRole('button', { name: 'Entregado' }).click()
+  await page.getByRole('button', { name: 'Entregado' }).click()
   await page.getByRole('button', { name: 'Yape' }).click()
-  await expect(mia).toHaveCount(0, { timeout: 15_000 })
+  // Entregada, vuelve al tablero.
+  await expect(page).toHaveURL(/localhost:3004\/?$/, { timeout: 15_000 })
 
   const { data: fila } = await db
     .from('courier_orders')
@@ -127,4 +147,37 @@ test('el motorizado acepta, recoge y entrega una entrega cobrando por Yape', asy
   expect(fila.payment_method).toBe('yape')
   expect(fila.transport_collected_at).not.toBeNull()
   expect(fila.driver_id).toBe(driverId)
+
+  // ── Historial: la entrega aparece junto a la comida entregada hoy.
+  await page.getByRole('link', { name: 'Historial' }).click()
+  await expect(page.locator('article').filter({ hasText: descripcion })).toBeVisible({
+    timeout: 15_000,
+  })
+
+  // ── Deuda: lo cobrado por Yape se le debe a Tindivo. «Entregar» y Jesús confirma.
+  await page.getByRole('link', { name: /Deuda/ }).click()
+  await page.getByRole('tab', { name: /Tindivo/ }).click()
+  const linea = page.locator('li').filter({ hasText: 'María E2E' }).filter({ hasText: 'Yape' })
+  await expect(linea).toBeVisible({ timeout: 15_000 })
+  await expect(linea.getByText('S/ 3.00')).toBeVisible()
+  await linea.getByRole('button', { name: 'Entregar' }).click()
+  await expect(linea.getByText('Entregando…')).toBeVisible({ timeout: 15_000 })
+
+  const { data: rendida } = await db
+    .from('courier_orders')
+    .select('remitted_at, remittance_confirmed_at')
+    .eq('id', courierOrderId)
+    .single()
+  expect(rendida.remitted_at).not.toBeNull()
+  expect(rendida.remittance_confirmed_at).toBeNull()
+
+  // Jesús confirma desde admin (aquí, por la RPC con su usuario).
+  const { error: confirmErr } = await db.rpc('admin_confirm_courier_remittance', {
+    p_courier_order_id: courierOrderId,
+    p_actor_user_id: E2E.ADMIN_USER_ID,
+  })
+  expect(confirmErr).toBeNull()
+  await page.reload()
+  await page.getByRole('tab', { name: /Tindivo/ }).click()
+  await expect(linea).toHaveCount(0, { timeout: 15_000 })
 })

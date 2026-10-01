@@ -7,7 +7,7 @@ import { useDriverOrders } from '@/hooks/use-driver-orders'
 import { useNow } from '@/hooks/use-now'
 import { useTeam } from '@/hooks/use-team'
 import { AvailableTab } from './available-tab'
-import { CourierAvailableList, CourierMineList } from './courier-section'
+import { courierBlockedReason } from './courier-section'
 import { MineTab } from './mine-tab'
 import { TeamTab } from './team-tab'
 
@@ -34,8 +34,8 @@ export function Home() {
   // un `onCount` que solo disparaba con la pestaña montada: el badge que debía
   // llevarte a Equipo exigía que ya estuvieras en Equipo.
   const team = useTeam()
-  // Tindivo Entregas: su propio tablero (otra tabla, otra API), pintado encima
-  // de la comida en «En espera» y en «Míos».
+  // Tindivo Entregas: su propio tablero (otra tabla, otra API), intercalado
+  // con la comida en «En espera» y en «Míos» (`interleaveByTime`).
   const courier = useCourierBoard()
   const [tab, setTab] = useState<Tab>('available')
 
@@ -186,22 +186,24 @@ export function Home() {
             loading={board.loading}
             now={now}
             onTaken={board.refetch}
+            courier={courier.available}
+            courierBlockedReason={courierBlockedReason(
+              courier.mine.length,
+              courier.maxActivePerDriver,
+            )}
+            onCourierChanged={courier.refetch}
           />
         )}
         {tab === 'mine' && (
-          <MineTab mine={board.mine} loading={board.loading} now={now} onChanged={board.refetch} />
-        )}
-        {/* Entregas DEBAJO de la comida: la comida de los partners va
-            primero (regla del piloto; auditoría de Codex). */}
-        {tab === 'available' && (
-          <CourierAvailableList
-            orders={courier.available}
-            mineCount={courier.mine.length}
-            maxActive={courier.maxActivePerDriver}
-            onChanged={courier.refetch}
+          <MineTab
+            mine={board.mine}
+            loading={board.loading}
+            now={now}
+            onChanged={board.refetch}
+            courier={courier.mine}
+            onCourierChanged={courier.refetch}
           />
         )}
-        {tab === 'mine' && <CourierMineList orders={courier.mine} onChanged={courier.refetch} />}
         {tab === 'team' && <TeamTab mySlots={board.mySlots} />}
       </div>
     </main>
