@@ -175,3 +175,37 @@ export interface DriverCourierBoard {
   mine: DriverCourierOrderView[]
   maxActivePerDriver: number
 }
+
+// --- Deuda de Entregas con Tindivo (0237) ---
+// Lo cobrado por el transporte, Yape o efectivo, es de Tindivo: el motorizado
+// lo rinde entrega por entrega («Entregar») y Jesús lo confirma desde admin.
+
+/** `pending`: lo tiene encima · `delivering`: dijo que lo entregó, falta que Jesús confirme. */
+export type CourierDebtState = 'pending' | 'delivering'
+
+export interface CourierDebtItem {
+  id: string
+  shortId: string
+  requesterName: string
+  amount: number
+  paymentMethod: CourierPaymentMethod | null
+  collectedAt: string
+  remittedAt: string | null
+  state: CourierDebtState
+}
+
+/** GET /api/v1/driver/courier-debt */
+export interface DriverCourierDebt {
+  items: CourierDebtItem[]
+}
+
+/** POST /api/v1/driver/courier-debt */
+export const DriverCourierRemitRequestSchema = z.object({
+  courierOrderId: z.string().uuid(),
+})
+export type DriverCourierRemitRequest = z.infer<typeof DriverCourierRemitRequestSchema>
+
+/** GET /api/v1/admin/courier-remittances: la deuda viva de todos, con el motorizado. */
+export interface AdminCourierRemittanceItem extends CourierDebtItem {
+  driverName: string
+}

@@ -1,4 +1,5 @@
 import type {
+  CourierDebtItem,
   CourierPaymentMethod,
   CourierStatus,
   DriverCourierOrderView,
@@ -77,4 +78,48 @@ export function toDriverCourierView(
         : null,
     deliveredAt: row.delivered_at,
   }
+}
+
+// ── Deuda con Tindivo (0237) ────────────────────────────────────────────────
+
+/** Columnas de una línea de deuda. `drivers(full_name)` solo lo usa admin. */
+export const COURIER_DEBT_COLUMNS =
+  'id,short_id,requester_name,fee_amount,payment_method,transport_collected_at,remitted_at' as const
+
+export interface CourierDebtRow {
+  id: string
+  short_id: string
+  requester_name: string
+  fee_amount: number | string
+  payment_method: string | null
+  transport_collected_at: string
+  remitted_at: string | null
+}
+
+export function toCourierDebtItem(row: CourierDebtRow): CourierDebtItem {
+  return {
+    id: row.id,
+    shortId: row.short_id,
+    requesterName: row.requester_name,
+    amount: Number(row.fee_amount),
+    paymentMethod: (row.payment_method as CourierPaymentMethod | null) ?? null,
+    collectedAt: row.transport_collected_at,
+    remittedAt: row.remitted_at,
+    state: row.remitted_at ? 'delivering' : 'pending',
+  }
+}
+
+/** Prefijos de error de las RPC de la 0237 → respuesta HTTP. */
+export const COURIER_DEBT_ERRORS: Record<
+  string,
+  { code: 'conflict' | 'not_found' | 'forbidden'; detail: string }
+> = {
+  courier_not_collected: { code: 'conflict', detail: 'Esta entrega todavía no se cobró.' },
+  courier_not_remitted: {
+    code: 'conflict',
+    detail: 'El motorizado todavía no marcó que la entregó.',
+  },
+  courier_not_admin: { code: 'forbidden', detail: 'Solo un admin puede confirmar.' },
+  courier_not_found: { code: 'not_found', detail: 'No encontramos esa entrega.' },
+  courier_driver_not_found: { code: 'not_found', detail: 'Motorizado no encontrado.' },
 }

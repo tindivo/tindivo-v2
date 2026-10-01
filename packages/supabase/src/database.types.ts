@@ -677,6 +677,9 @@ export type Database = {
           prepaid_confirmed: boolean
           ready_at: string
           ready_in_min: number
+          remittance_confirmed_at: string | null
+          remittance_confirmed_by: string | null
+          remitted_at: string | null
           requester_name: string
           requester_phone: string
           short_id: string
@@ -723,6 +726,9 @@ export type Database = {
           prepaid_confirmed: boolean
           ready_at: string
           ready_in_min?: number
+          remittance_confirmed_at?: string | null
+          remittance_confirmed_by?: string | null
+          remitted_at?: string | null
           requester_name: string
           requester_phone: string
           short_id: string
@@ -769,6 +775,9 @@ export type Database = {
           prepaid_confirmed?: boolean
           ready_at?: string
           ready_in_min?: number
+          remittance_confirmed_at?: string | null
+          remittance_confirmed_by?: string | null
+          remitted_at?: string | null
           requester_name?: string
           requester_phone?: string
           short_id?: string
@@ -798,6 +807,13 @@ export type Database = {
             columns: ["driver_id"]
             isOneToOne: false
             referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courier_orders_remittance_confirmed_by_fkey"
+            columns: ["remittance_confirmed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -2986,6 +3002,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_confirm_courier_remittance: {
+        Args: { p_actor_user_id: string; p_courier_order_id: string }
+        Returns: Json
+      }
       admin_conversion_opportunity_stats: { Args: never; Returns: Json }
       admin_correct_delivery_band: {
         Args: {
@@ -3321,6 +3341,10 @@ export type Database = {
           p_payment_method?: string
           p_step: string
         }
+        Returns: Json
+      }
+      driver_remit_courier_fee: {
+        Args: { p_actor_user_id: string; p_courier_order_id: string }
         Returns: Json
       }
       effective_max_change: { Args: { p_business_id: string }; Returns: number }

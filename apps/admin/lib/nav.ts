@@ -39,6 +39,7 @@ export const NAV_SECTIONS: NavSection[] = [
     title: 'Finanzas',
     items: [
       { href: '/efectivo', label: 'Efectivo', icon: Ico.cash },
+      { href: '/deuda-entregas', label: 'Deuda de entregas', icon: Ico.truck },
       { href: '/cobros', label: 'Cobros', icon: Ico.wallet },
     ],
   },
