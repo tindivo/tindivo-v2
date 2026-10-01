@@ -12,6 +12,42 @@ interface PushPermissionSheetProps {
   shortId: string
   /** Se llama tanto si aceptó como si no: la hoja se cierra igual. */
   onClose: () => void
+  /** Pedido de comida (default) o Tindivo Entregas: cambia los momentos prometidos. */
+  kind?: 'order' | 'courier'
+}
+
+interface Moment {
+  icon: string
+  text: string
+  /** Solo el momento que no conviene perderse lleva nota y va resaltado. */
+  note?: string
+}
+
+/**
+ * Los momentos que se prometen son EXACTAMENTE los que `send-push` le manda al
+ * cliente cuando todo va bien — comida en la rama `OrderStatusChanged`,
+ * entregas en `courierNotes`. Si se añade uno aquí sin su push, se promete un
+ * aviso que no existe.
+ */
+const MOMENTS: Record<'order' | 'courier', Moment[]> = {
+  order: [
+    { icon: 'check', text: 'Cuando el restaurante acepte tu pedido' },
+    { icon: 'sports_motorsports', text: 'Cuando el motorizado salga con tu comida' },
+    {
+      icon: 'location_on',
+      text: 'Cuando llegue a tu puerta',
+      note: 'El que no conviene perderse: solo espera unos minutos',
+    },
+  ],
+  courier: [
+    {
+      icon: 'two_wheeler',
+      text: 'Cuando un motorizado la tome',
+      note: 'Si nadie la toma a tiempo, también te avisamos',
+    },
+    { icon: 'inventory_2', text: 'Cuando la recoja' },
+    { icon: 'check', text: 'Cuando llegue a su destino' },
+  ],
 }
 
 /**
@@ -32,7 +68,12 @@ interface PushPermissionSheetProps {
  * de siete avisos asusta, y prometer avisos que no existen es peor que no
  * prometer nada.
  */
-export function PushPermissionSheet({ open, shortId, onClose }: PushPermissionSheetProps) {
+export function PushPermissionSheet({
+  open,
+  shortId,
+  onClose,
+  kind = 'order',
+}: PushPermissionSheetProps) {
   const [pidiendo, setPidiendo] = useState(false)
 
   const rechazar = () => {
@@ -51,41 +92,35 @@ export function PushPermissionSheet({ open, shortId, onClose }: PushPermissionSh
             {TITULO}
           </h2>
           <p className="text-body text-ink-muted leading-relaxed">
-            Tu pedido pasa por tres momentos en los que vas a querer enterarte, aunque tengas el
-            celular guardado.
+            {kind === 'courier' ? 'Tu entrega' : 'Tu pedido'} pasa por tres momentos en los que vas
+            a querer enterarte, aunque tengas el celular guardado.
           </p>
         </div>
 
         <ul className="flex flex-col gap-3">
-          <li className="flex items-center gap-3">
-            <span className="flex h-8.5 w-8.5 shrink-0 items-center justify-center rounded-[10px] bg-surface-low">
-              <Icon name="check" size={18} className="text-ink-muted" />
-            </span>
-            <span className="text-body font-medium leading-snug">
-              Cuando el restaurante acepte tu pedido
-            </span>
-          </li>
-          <li className="flex items-center gap-3">
-            <span className="flex h-8.5 w-8.5 shrink-0 items-center justify-center rounded-[10px] bg-surface-low">
-              <Icon name="sports_motorsports" size={18} className="text-ink-muted" />
-            </span>
-            <span className="text-body font-medium leading-snug">
-              Cuando el motorizado salga con tu comida
-            </span>
-          </li>
-          <li className="flex items-center gap-3">
-            <span className="flex h-8.5 w-8.5 shrink-0 items-center justify-center rounded-[10px] bg-brand-soft">
-              <Icon name="location_on" size={18} className="text-brand" />
-            </span>
-            <span className="flex flex-col gap-0.5">
-              <span className="text-body font-semibold leading-snug">
-                Cuando llegue a tu puerta
+          {MOMENTS[kind].map((m) => (
+            <li key={m.text} className="flex items-center gap-3">
+              <span
+                className={`flex h-8.5 w-8.5 shrink-0 items-center justify-center rounded-[10px] ${
+                  m.note ? 'bg-brand-soft' : 'bg-surface-low'
+                }`}
+              >
+                <Icon
+                  name={m.icon}
+                  size={18}
+                  className={m.note ? 'text-brand' : 'text-ink-muted'}
+                />
               </span>
-              <span className="text-caption text-warning leading-snug">
-                El que no conviene perderse: solo espera unos minutos
-              </span>
-            </span>
-          </li>
+              {m.note ? (
+                <span className="flex flex-col gap-0.5">
+                  <span className="text-body font-semibold leading-snug">{m.text}</span>
+                  <span className="text-caption text-warning leading-snug">{m.note}</span>
+                </span>
+              ) : (
+                <span className="text-body font-medium leading-snug">{m.text}</span>
+              )}
+            </li>
+          ))}
         </ul>
 
         <div className="flex flex-col gap-2">
