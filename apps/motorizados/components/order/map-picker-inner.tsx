@@ -3,6 +3,7 @@
 import { type RefObject, useEffect, useRef, useState } from 'react'
 import { MapContainer, TileLayer, useMap, useMapEvents } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
+import { STREET_TILES } from '@tindivo/map'
 
 /**
  * Escucha los eventos táctiles/ratón directamente en el contenedor del mapa
@@ -178,8 +179,10 @@ export default function MapPickerInner({
         className="h-full w-full"
       >
         <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          url={STREET_TILES.url}
+          attribution={STREET_TILES.attribution}
+          subdomains={STREET_TILES.subdomains ?? 'abc'}
+          maxNativeZoom={19}
           maxZoom={19}
         />
         <InvalidateSize />

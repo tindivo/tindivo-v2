@@ -19,7 +19,11 @@ export interface CheckoutActions {
     selectedPayment: PaymentIntent,
     skipGps: boolean,
   ) => Promise<{ payload?: GpsValidationPayload; issue?: GeoBlockKind }>
-  placeOrder: (options?: { paymentIntent?: PaymentIntent; skipGps?: boolean }) => Promise<void>
+  placeOrder: (options?: {
+    paymentIntent?: PaymentIntent
+    skipGps?: boolean
+    verifiedPhone?: string
+  }) => Promise<void>
 }
 
 /**
@@ -182,14 +186,25 @@ export function useCheckoutActions(state: CheckoutState): CheckoutActions {
         : Number(cashChoice)
   }
 
-  async function placeOrder(options?: { paymentIntent?: PaymentIntent; skipGps?: boolean }) {
+  async function placeOrder(options?: {
+    paymentIntent?: PaymentIntent
+    skipGps?: boolean
+    verifiedPhone?: string
+  }) {
     const triggerSubmittedSound = createAudioTrigger('orderSubmitted')
     const selectedPayment = options?.paymentIntent ?? payment
     setError(null)
 
-    // Validar cambio de teléfono
+    // Validar cambio de teléfono.
+    //
+    // `options.verifiedPhone` lo pasa la hoja del OTP al terminar, y no es
+    // redundante con el estado: quien llama desde `onVerified` tiene la
+    // `placeOrder` del render en que se abrió la hoja, y en ella
+    // `verifiedPhone` todavía es el de antes. Sin esto la hoja se reabría justo
+    // después de verificar y mandaba otro SMS, que además gastaba uno de los
+    // tres intentos del día.
     const cleanPhone = phone.replace(/\D/g, '')
-    const phoneChanged = cleanPhone !== verifiedPhone
+    const phoneChanged = cleanPhone !== (options?.verifiedPhone ?? verifiedPhone)
     if (phoneChanged) {
       setShowOtpSheet(true)
       return

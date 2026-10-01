@@ -2,6 +2,7 @@
 
 import { GlassTopBar, Icon } from '@tindivo/ui'
 import { type ReactNode, useMemo } from 'react'
+import { useCourierDebt } from '@/features/deuda-tindivo/hooks/use-courier-debt'
 import { useCashSummary } from '@/features/efectivo/hooks/use-cash-summary'
 import { useDriverName } from '@/hooks/use-driver-orders'
 import { useOverdueFeedback } from '@/hooks/use-overdue-feedback'
@@ -58,21 +59,25 @@ function initialsOf(name: string): string {
  */
 export function DriverShell({ children }: { children: ReactNode }) {
   const { businesses } = useCashSummary()
+  const { items: courierDebt } = useCourierDebt()
   const driverName = useDriverName()
 
-  // Conteo de pedidos en efectivo pendientes de liquidar por el motorizado
+  // Lo que tiene pendiente de entregar: efectivo de la comida a los locales
+  // más lo cobrado por Entregas, que se le rinde a Tindivo.
   const pendingCashCount = useMemo(
-    () => businesses.flatMap((b) => b.orders.filter((o) => o.state === 'pending')).length,
-    [businesses],
+    () =>
+      businesses.flatMap((b) => b.orders.filter((o) => o.state === 'pending')).length +
+      courierDebt.filter((o) => o.state === 'pending').length,
+    [businesses, courierDebt],
   )
 
   const navItems: BottomNavItem[] = useMemo(
     () => [
       { href: '/', label: 'Pedidos', icon: 'receipt_long' },
       {
-        href: '/efectivo',
-        label: 'Efectivo',
-        icon: 'payments',
+        href: '/deuda',
+        label: 'Deuda',
+        icon: 'account_balance_wallet',
         badge: pendingCashCount > 0 ? pendingCashCount : undefined,
         badgeColor: 'danger',
       },

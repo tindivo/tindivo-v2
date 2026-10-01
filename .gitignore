@@ -41,6 +41,7 @@ Thumbs.db
 !.vscode/settings.json
 .idea/
 scratch/
+.codex/
 
 # Misc
 *.tsbuildinfo

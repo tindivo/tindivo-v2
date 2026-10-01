@@ -2,6 +2,14 @@
 
 > **v1.0 · 2026-09-19.** Sustituye a la versión anterior (`historico-pre-v2/`). Basado en el repo al 2026-09-19: migraciones hasta la `0228` (**la siguiente libre es la `0229`**; comprobar con `supabase migration list`), `DECISIONS.md`, y las apps `customer`, `motorizados`, `admin` y `api`.
 > **Nada de esto está construido.**
+>
+> **Superado en nombres (2026-09-22, `DECISIONS.md §31`):** el spec v1 de
+> Jesús (`Tindivo — Catálogo de negocios y Encargos (spec v1).md`, 21/22-sep)
+> resolvió `courier_orders`/`directory_businesses` en vez de
+> `courier_requests`/`catalog_places` de este documento, y esos son los
+> nombres que se construyeron. El resto —fases, RLS, riesgos, `driver_payment_qrs`,
+> el patrón de `map_landmarks`— sigue siendo referencia válida para lo que
+> falta (lado motorizado/admin).
 
 ---
 

@@ -1,5 +1,6 @@
 'use client'
 
+import type { DriverCourierOrderView } from '@tindivo/contracts'
 import { EmptyState, SkeletonList } from '@tindivo/ui'
 import { useCallback, useMemo, useState } from 'react'
 import { useTeam } from '@/hooks/use-team'
@@ -7,7 +8,9 @@ import { quickPosition } from '@/lib/geo'
 import { advanceOrder } from '@/lib/orders/advance'
 import { fetchOrderDetail } from '@/lib/orders/detail-cache'
 import { minePhase, prematureMinutes } from '@/lib/orders/phase'
+import { interleaveByTime } from '@/lib/orders/sort'
 import type { BoardOrder } from '@/lib/types'
+import { CourierMineItem } from './courier-section'
 import { type MineSheetIntent, MineSheets, type MineSheetTarget } from './mine-sheets'
 import { OrderCard } from './order-card'
 import { type LeftAction, type RightAction, SwipeCard } from './swipe-card'
@@ -33,6 +36,8 @@ export function MineTab({
   loading,
   now,
   onChanged,
+  courier,
+  onCourierChanged,
 }: {
   mine: BoardOrder[]
   /** Primera carga sin resolver: no se sabe si está vacío. */
@@ -40,6 +45,9 @@ export function MineTab({
   now: number
   /** Refresca el board tras una transición hecha desde una hoja. */
   onChanged: () => Promise<void>
+  /** Mis entregas: en la MISMA lista, intercaladas por cuándo se pidieron. */
+  courier: DriverCourierOrderView[]
+  onCourierChanged: () => Promise<void> | void
 }) {
   /** La hoja abierta sobre la bandeja (cobro, soltar, recogida adelantada). */
   const [sheetTarget, setSheetTarget] = useState<MineSheetTarget | null>(null)
@@ -72,6 +80,17 @@ export function MineTab({
       return Date.parse(a.created_at) - Date.parse(b.created_at)
     })
   }, [mine, requestByOrder])
+
+  const rows = useMemo(
+    () =>
+      interleaveByTime(
+        sorted,
+        (o) => o.created_at,
+        courier,
+        (c) => c.createdAt,
+      ),
+    [sorted, courier],
+  )
 
   /** Abre la hoja sobre la bandeja: el cobro, el motivo de soltar… */
   function openSheet(orderId: string, intent: MineSheetIntent) {
@@ -192,7 +211,18 @@ export function MineTab({
   return (
     <div>
       <div className="flex flex-col gap-3">
-        {sorted.map((o, i) => {
+        {rows.map((row, i) => {
+          if (row.kind === 'courier') {
+            return (
+              <CourierMineItem
+                key={row.item.id}
+                order={row.item}
+                hint={i === 0}
+                onChanged={onCourierChanged}
+              />
+            )
+          }
+          const o = row.item
           const card = (
             <OrderCard
               order={o}
@@ -223,7 +253,7 @@ export function MineTab({
 
       <MineSheets target={sheetTarget} now={now} onClose={closeSheet} onChanged={onChanged} />
 
-      {mine.length === 0 && (
+      {rows.length === 0 && (
         <EmptyState
           icon="local_shipping"
           heading="No tienes pedidos activos"

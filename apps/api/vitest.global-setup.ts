@@ -75,6 +75,13 @@ const USUARIOS_FIXTURE = [
   // contraentrega—, así que reutilizar uno haría verde el caso siguiente por el
   // motivo equivocado.
   'Vecino Recojo',
+  // courier-orders (Tindivo Entregas): un cliente y un motorizado por caso.
+  // `courier_orders.customer_user_id`/`driver_id` son NO ACTION (sin cascade a
+  // propósito, mismo motivo que `orders`), así que hay que vaciar la tabla
+  // ANTES de que el paso 5 intente borrar a estos usuarios o el DELETE falla y
+  // tumba el barrido entero.
+  'Vecino Entregas',
+  'Motorizado Entregas Test',
 ]
 
 /**
@@ -265,6 +272,30 @@ async function barrer(): Promise<Barrido> {
     .in('full_name', USUARIOS_FIXTURE)
   if (usrErr) throw new Error(`barrido: leer users falló: ${usrErr.message}`)
   const userIds = (usuarios ?? []).map((u) => u.id)
+
+  // 4b. `courier_orders` de esos mismos usuarios (cliente O motorizado) — antes
+  // de borrarlos, por la misma razón NO ACTION que el paso 3. `courier_order_events`
+  // cae por cascada al borrar la solicitud (FK con ON DELETE CASCADE, 0232).
+  if (userIds.length > 0) {
+    const { data: drvs, error: drvErr } = await db
+      .from('drivers')
+      .select('id')
+      .in('user_id', userIds)
+    if (drvErr) throw new Error(`barrido: leer drivers falló: ${drvErr.message}`)
+    const driverIds = (drvs ?? []).map((d) => d.id)
+
+    await enLotes(userIds, async (lote) => {
+      const { error } = await db.from('courier_orders').delete().in('customer_user_id', lote)
+      if (error) throw new Error(`barrido: borrar courier_orders (cliente) falló: ${error.message}`)
+    })
+    if (driverIds.length > 0) {
+      await enLotes(driverIds, async (lote) => {
+        const { error } = await db.from('courier_orders').delete().in('driver_id', lote)
+        if (error)
+          throw new Error(`barrido: borrar courier_orders (motorizado) falló: ${error.message}`)
+      })
+    }
+  }
 
   await enLotes(userIds, async (lote) => {
     const { error } = await db.from('users').delete().in('id', lote)

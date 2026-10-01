@@ -2,6 +2,8 @@ import type { InngestFunction } from 'inngest'
 import { processPendingOutboxEvents } from '../outbox/processor'
 import { createServiceClient } from '../supabase/service'
 import {
+  type CourierOrderCreatedData,
+  EVENT_COURIER_ORDER_CREATED,
   EVENT_ORDER_APPEAL_CREATED,
   EVENT_ORDER_CREATED,
   EVENT_ORDER_PAYMENT_TIMEOUT,
@@ -250,6 +252,50 @@ export const orderProofRejectedFallback: InngestFunction.Any = inngest.createFun
 )
 
 /**
+ * Timeout de aceptación de Tindivo Entregas: si ningún motorizado la acepta
+ * dentro de `timers.courierAcceptMinutes` (15), se auto-cancela con
+ * `no_driver`. Mismo patrón que `orderAcceptanceTimeout`: `sleepMs` solo lo
+ * usan los tests, y `expire_courier_orders()` re-chequea el estado bajo la
+ * misma condición (`status='requested'`) — si el motorizado aceptó justo al
+ * saltar el timer, no cancela.
+ */
+export const courierAcceptanceTimeout: InngestFunction.Any = inngest.createFunction(
+  {
+    id: 'courier-order-acceptance-timeout',
+    name: 'Auto-cancelar entrega no aceptada (Tindivo Entregas)',
+    triggers: [{ event: EVENT_COURIER_ORDER_CREATED }],
+  },
+  async ({ event, step }) => {
+    // `courierOrderId` viaja en el evento para el panel de Inngest (saber a
+    // qué solicitud corresponde cada ejecución) pero no hace falta leerlo
+    // aquí: `expire_courier_orders()` barre por estado, no por id.
+    const { sleepMs: override } = event.data as CourierOrderCreatedData
+
+    const sleepMs = await step.run('resolve-deadline', async () => {
+      if (typeof override === 'number') return override
+      const svc = createServiceClient()
+      const { data } = await svc.from('app_settings').select('value').eq('key', 'timers').single()
+      const minutes =
+        (data?.value as { courierAcceptMinutes?: number } | null)?.courierAcceptMinutes ?? 15
+      return minutes * 60_000
+    })
+
+    await step.sleep('courier-acceptance-window', sleepMs)
+
+    return await step.run('expire-if-still-requested', async () => {
+      const svc = createServiceClient()
+      // `expire_courier_orders` barre TODAS las solicitudes vencidas, no solo
+      // ésta — es el mismo failsafe idempotente del cron, así que llamarlo
+      // aquí no duplica cancelaciones: la segunda vez que corra sobre esta
+      // fila ya no la encuentra en `requested`.
+      const { data, error } = await svc.rpc('expire_courier_orders')
+      if (error) throw new Error(error.message)
+      return { expired: data }
+    })
+  },
+)
+
+/**
  * Cron reconciliador de Transactional Outbox ejecutado cada 5 minutos.
  */
 export const processOutboxEventsCron: InngestFunction.Any = inngest.createFunction(
@@ -273,5 +319,6 @@ export const functions: InngestFunction.Any[] = [
   orderPrepayTimeout,
   transferRequestTimeout,
   orderProofRejectedFallback,
+  courierAcceptanceTimeout,
   processOutboxEventsCron,
 ]

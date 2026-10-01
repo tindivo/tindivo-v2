@@ -3,6 +3,7 @@ import type { NextConfig } from 'next'
 const config: NextConfig = {
   transpilePackages: [
     '@tindivo/ui',
+    '@tindivo/map',
     '@tindivo/api-client',
     '@tindivo/contracts',
     '@tindivo/supabase',

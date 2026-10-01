@@ -47,6 +47,7 @@ Copia `.env.example` → `.env.local` (o configúralas en Vercel) por proyecto. 
 | `NEXT_PUBLIC_APP_URL` (= `https://www.tindivo.com`) | ✓ | — | — | — | — |
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | ✓ | ✓ | ✓ | ✓ | — |
 | `NEXT_PUBLIC_SUPPORT_WHATSAPP` (= número real) | ✓ | — | — | — | — |
+| `NEXT_PUBLIC_CARTO_API_KEY` (mapa CARTO; obligatoria en prod, en dev sin ella se usa OSM) | ✓ | — | ✓ | — | — |
 | `SUPABASE_SERVICE_ROLE_KEY` (**secreto**) | — | — | — | — | ✓ |
 | `INNGEST_SIGNING_KEY` / `INNGEST_EVENT_KEY` (**secreto**) | — | — | — | — | ✓ |
 

@@ -1,5 +1,6 @@
 import { HomeShell } from '@/features/catalog/components/home-shell'
 import type { CatalogUser, PublicBusiness } from '@/features/catalog/types'
+import type { CourierServiceStatus } from '@/features/courier/hooks/use-courier-status'
 import { absoluteUrl, SITE_DESCRIPTION, SITE_NAME } from '@/lib/seo'
 import { getServerUser } from '@/lib/supabase/server'
 
@@ -13,6 +14,23 @@ async function fetchInitialBusinesses(): Promise<PublicBusiness[] | null> {
     if (!res.ok) return null
     const envelope = (await res.json()) as { data: PublicBusiness[] | null }
     return envelope.data ?? null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Estado de Tindivo Entregas para las tarjetas de servicio. Misma caché que la
+ * lista: abrir o cerrar el horario se nota en ≤15 s, y el home no paga una
+ * petición más por visita.
+ */
+async function fetchInitialCourierStatus(): Promise<CourierServiceStatus | null> {
+  try {
+    const res = await fetch(`${API_BASE}/public/courier/status`, {
+      next: { revalidate: 15 },
+    })
+    if (!res.ok) return null
+    return (await res.json()) as CourierServiceStatus
   } catch {
     return null
   }
@@ -56,8 +74,9 @@ export default async function Home({
 }: {
   searchParams: Promise<{ q?: string | string[] }>
 }) {
-  const [initialBusinesses, serverUser, params] = await Promise.all([
+  const [initialBusinesses, initialCourierStatus, serverUser, params] = await Promise.all([
     fetchInitialBusinesses(),
+    fetchInitialCourierStatus(),
     getServerUser(),
     searchParams,
   ])
@@ -70,6 +89,7 @@ export default async function Home({
         initialBusinesses={initialBusinesses}
         initialUser={buildInitialUser(serverUser)}
         initialQuery={q ?? ''}
+        initialCourierStatus={initialCourierStatus}
       />
     </>
   )

@@ -46,3 +46,39 @@ export function byReadyClock<T extends SortableOrder>(orders: readonly T[]): T[]
     return Date.parse(a.created_at) - Date.parse(b.created_at)
   })
 }
+
+/**
+ * COMIDA Y ENTREGAS EN UNA SOLA LISTA, sin tocar el orden de cada una.
+ *
+ * Son dos tablas y dos tableros distintos, pero el motorizado tiene una sola
+ * bandeja. Cada lista llega ya ordenada por su propia regla (la comida por
+ * `byReadyClock`, que tiene tests y no se toca); aquí solo se intercala cada
+ * entrega delante de la primera comida cuyo momento es posterior al suyo.
+ *
+ * `key` es el instante que manda en cada tarjeta. En «En espera» es el reloj:
+ * la ETA de la comida y el plazo de aceptar de la entrega, así que los
+ * contadores siguen bajando monótonos con las dos mezcladas. `null` va al
+ * final, igual que en `byReadyClock`. A igual instante, la comida primero
+ * (regla del piloto).
+ */
+export function interleaveByTime<A, B>(
+  food: readonly A[],
+  foodKey: (a: A) => string | null,
+  courier: readonly B[],
+  courierKey: (b: B) => string | null,
+): Array<{ kind: 'food'; item: A } | { kind: 'courier'; item: B }> {
+  const t = (iso: string | null) => (iso ? Date.parse(iso) : Number.POSITIVE_INFINITY)
+  const sortedCourier = [...courier].sort((x, y) => t(courierKey(x)) - t(courierKey(y)))
+  const out: Array<{ kind: 'food'; item: A } | { kind: 'courier'; item: B }> = []
+  let c = 0
+  for (const a of food) {
+    const ta = t(foodKey(a))
+    while (c < sortedCourier.length && t(courierKey(sortedCourier[c] as B)) < ta) {
+      out.push({ kind: 'courier', item: sortedCourier[c] as B })
+      c++
+    }
+    out.push({ kind: 'food', item: a })
+  }
+  for (; c < sortedCourier.length; c++) out.push({ kind: 'courier', item: sortedCourier[c] as B })
+  return out
+}

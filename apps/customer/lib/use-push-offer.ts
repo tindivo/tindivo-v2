@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import type { Tracking } from '@/features/tracking/types'
 import { sePuedeOfrecer } from '@/lib/push'
 
 /**
@@ -40,7 +39,10 @@ export interface PushOffer {
  * El resto de la política —una vez por pedido, tope de descartes— vive en
  * `sePuedeOfrecer`, que es quien conoce la memoria.
  */
-export function usePushOffer(data: Tracking | null, ownedId: string | null): PushOffer {
+export function usePushOffer(
+  data: { shortId: string; status: string } | null,
+  ownedId: string | null,
+): PushOffer {
   const [abierta, setAbierta] = useState(false)
 
   const shortId = data?.shortId ?? ''

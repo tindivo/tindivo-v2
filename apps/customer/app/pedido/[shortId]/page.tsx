@@ -22,12 +22,12 @@ import { TrackingSoundToggle } from '@/features/tracking/components/tracking-sou
 import { TrackingSteps } from '@/features/tracking/components/tracking-steps'
 import { useAlertChannel } from '@/features/tracking/hooks/use-alert-channel'
 import { useCountdown } from '@/features/tracking/hooks/use-countdown'
-import { usePushOffer } from '@/features/tracking/hooks/use-push-offer'
 import { useStatusAlerts } from '@/features/tracking/hooks/use-status-alerts'
 import { useTracking } from '@/features/tracking/hooks/use-tracking'
 import { useWakeLock } from '@/features/tracking/hooks/use-wake-lock'
 import { isCancellable, stepsFor } from '@/features/tracking/lib/format'
 import { prepayStage } from '@/features/tracking/lib/prepay-stage'
+import { usePushOffer } from '@/lib/use-push-offer'
 
 /**
  * El seguimiento del pedido, en tres zonas y en este orden:

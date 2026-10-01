@@ -9,7 +9,9 @@ export function SearchBar({ query, onChange }: SearchBarProps) {
   return (
     <div className="px-4 pb-2">
       <div className="flex items-center gap-2.5 rounded-full border border-white/[0.08] bg-white/[0.78] px-4 py-3 shadow-elev-2 backdrop-blur-2xl">
-        <span className="text-ink-subtle">
+        {/* `flex`: un `span` en línea deja la lupa sobre la línea base del texto,
+            unos píxeles más arriba que el centro del campo. */}
+        <span className="flex shrink-0 items-center text-ink-subtle">
           <Icon name="search" size={20} />
         </span>
         <input

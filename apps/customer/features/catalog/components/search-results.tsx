@@ -39,9 +39,11 @@ export function SearchResults({ search, businesses }: SearchResultsProps) {
         <>
           {search.results.businesses.length > 0 && (
             <>
+              {/* Subtítulos de grupo, no de sección: el buscador ya está bajo
+                  «Restaurantes» (`home-shell`), y repetirlo confundía. */}
               <div className="px-4 pt-3 pb-2">
-                <div className="font-display text-[22px] font-bold tracking-tight">
-                  Restaurantes
+                <div className="font-semibold text-[13px] text-ink-muted uppercase tracking-[0.08em]">
+                  Locales
                 </div>
               </div>
               <div className="flex flex-col gap-3 px-4 md:grid md:grid-cols-2 md:gap-4 lg:grid-cols-3 lg:gap-5">
@@ -55,7 +57,9 @@ export function SearchResults({ search, businesses }: SearchResultsProps) {
           {search.results.items.length > 0 && (
             <>
               <div className="px-4 pt-4 pb-2">
-                <div className="font-display text-[22px] font-bold tracking-tight">Platos</div>
+                <div className="font-semibold text-[13px] text-ink-muted uppercase tracking-[0.08em]">
+                  Platos
+                </div>
               </div>
               <div className="flex flex-col gap-3 px-4 md:grid md:grid-cols-2 md:gap-4 lg:grid-cols-3 lg:gap-5">
                 {search.results.items.map((it) => (

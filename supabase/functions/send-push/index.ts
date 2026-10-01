@@ -1039,6 +1039,138 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
         vibrate: false,
       })
     }
+  } else if (eventType === 'CourierStepped') {
+    out.push(...(await courierNotes(aggregateId, payload)))
+  }
+  return out
+}
+
+/** Recorta una referencia de punto para que quepa en la pantalla bloqueada. */
+function clip(text: unknown, max = 38): string {
+  const s = String(text ?? '')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return s.length > max ? `${s.slice(0, max - 1)}…` : s
+}
+
+const COURIER_CANCEL_BODY: Record<string, string> = {
+  not_ready: 'Tu pedido no estaba listo cuando llegó el motorizado.',
+  unreachable: 'No pudimos contactar a quien entrega o a quien recibe.',
+  driver_rejected: 'El motorizado no pudo llevarla.',
+  transport_unpaid: 'No se pudo cobrar el transporte.',
+}
+
+/**
+ * Tindivo Entregas (0238). Mismo reparto que la comida:
+ *
+ *   · Motorizados — `requested` y `release`: hay trabajo. A TODOS los activos
+ *     y sin mirar `is_available`, por la misma razón que la rama `ready` de
+ *     arriba («notificar no es asignar»). `release` excluye al que la soltó.
+ *   · Cliente — `accept`, `pick_up`, `deliver`, `cancel`, `expired`: los
+ *     momentos que la hoja de permiso le promete (`PushPermissionSheet`).
+ *   · Motorizado dueño — `fee_remittance_confirmed`: el S/ 3 que rindió quedó
+ *     cuadrado, hermano de `CashConfirmed`.
+ *
+ * El tag lleva acción y `short_id` (invariante 5): «aceptada» y «recogida» de
+ * la misma entrega no se pisan, pero un reintento del mismo paso sí.
+ */
+async function courierNotes(aggregateId: string, payload: Record<string, unknown>): Promise<Note[]> {
+  const action = String(payload?.action ?? '')
+  const { data: c } = await db
+    .from('courier_orders')
+    .select(
+      'id,short_id,customer_user_id,driver_id,status,payer,fee_amount,origin_name,origin_reference_text,destination_reference_text,item_description,cancel_reason',
+    )
+    .eq('id', aggregateId)
+    .maybeSingle()
+  if (!c) return []
+
+  const sid = c.short_id as string
+  const tag = `CourierStepped-${action}-${sid}`
+  const fee = soles(c.fee_amount)
+  const customer = c.customer_user_id as string | null
+  const customerUrl = `/entregas/${sid}`
+  const out: Note[] = []
+
+  const toCustomer = (title: string, body: string, urgent = false) => {
+    if (!customer) return
+    out.push({
+      userId: customer,
+      title,
+      body,
+      tag,
+      url: customerUrl,
+      requireInteraction: urgent,
+      vibrate: urgent,
+      renotify: urgent,
+    })
+  }
+
+  if (action === 'requested' || action === 'release') {
+    // Si otro ya la tomó (o se canceló) entre el paso y este aviso, no hay
+    // nada que ofrecer: un push a una entrega que ya no existe en la bolsa
+    // hace que el motorizado abra la app para nada.
+    if (c.status !== 'requested' || c.driver_id) return []
+    const cobro = c.payer === 'origin' ? `Cobra ${fee} al recoger` : `Cobra ${fee} al entregar`
+    const ruta = `${clip(c.origin_reference_text)} → ${clip(c.destination_reference_text)}`
+    const { data: drivers, error } = await db
+      .from('drivers')
+      .select('user_id')
+      .eq('is_active', true)
+    // Igual que `allDriverUserIds`: un fallo no puede parecer «no hay nadie».
+    if (error) throw new Error(`drivers query: ${error.message}`)
+    const except = action === 'release' ? (payload?.actorUserId as string | null) : null
+    for (const d of drivers ?? []) {
+      const userId = d.user_id as string | null
+      if (!userId || userId === except) continue
+      out.push({
+        userId,
+        title: action === 'release' ? '🔓 Entrega libre otra vez' : '📦 Entrega nueva',
+        body: `${ruta} · ${cobro}`,
+        tag,
+        url: `/entrega/${c.id}`,
+        requireInteraction: true,
+        vibrate: true,
+        renotify: true,
+      })
+    }
+  } else if (action === 'accept') {
+    const quien = await driverFirstName(c.driver_id)
+    toCustomer(
+      'Tu entrega ya tiene motorizado',
+      quien ? `${quien} va a recoger en ${c.origin_name}` : `Van a recoger en ${c.origin_name}`,
+    )
+  } else if (action === 'pick_up') {
+    const quien = await driverFirstName(c.driver_id)
+    toCustomer('Ya recogimos tu entrega', quien ? `${quien} va en camino` : 'Va en camino')
+  } else if (action === 'deliver') {
+    toCustomer('Entrega completada', `${clip(c.item_description, 60)} llegó a su destino`)
+  } else if (action === 'cancel') {
+    // Si canceló el propio cliente, ya lo sabe: no se le avisa de su toque.
+    if (payload?.cancelReason === 'customer_cancelled') return []
+    toCustomer(
+      'No se pudo completar tu entrega',
+      COURIER_CANCEL_BODY[String(c.cancel_reason)] ?? 'Se canceló tu entrega.',
+      true,
+    )
+  } else if (action === 'expired') {
+    toCustomer(
+      'Ningún motorizado pudo tomar tu entrega',
+      'Se canceló sola y no se cobró nada · puedes volver a pedirla',
+    )
+  } else if (action === 'fee_remittance_confirmed') {
+    const userId = await driverUserId(c.driver_id)
+    if (userId) {
+      out.push({
+        userId,
+        title: 'Entrega cuadrada',
+        body: `Tindivo confirmó el ${fee} de la entrega #${sid}`,
+        tag,
+        url: '/deuda',
+        requireInteraction: false,
+        vibrate: false,
+      })
+    }
   }
   return out
 }

@@ -18,6 +18,7 @@
     "@tindivo/contracts": "workspace:*",
     "@tindivo/core": "workspace:*",
     "@tindivo/images": "workspace:*",
+    "@tindivo/map": "workspace:*",
     "@tindivo/supabase": "workspace:*",
     "@tindivo/ui": "workspace:*",
     "@vercel/analytics": "catalog:",

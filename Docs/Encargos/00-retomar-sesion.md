@@ -1,10 +1,26 @@
 # 00 · Para retomar el trabajo en una sesión nueva
 
 > **v1.0 · 2026-09-19.** Este archivo existe porque la sesión donde se diseñó el servicio se abrió desde **otro repo** (Mahes), y la memoria de Claude está ligada a la carpeta desde donde se abre. **Una sesión abierta en este repo no verá esa memoria.** Todo lo importante está aquí.
+>
+> **Actualización 2026-09-22 (de madrugada):** el backend completo y el lado
+> cliente ya están CONSTRUIDOS. La fuente de verdad de lo que se hizo, con qué
+> nombres y qué falta es `DECISIONS.md §31` — este archivo (y el resto de esta
+> carpeta) queda como historia del diseño, no como estado actual. En resumen:
+> ganaron los nombres del spec v1 (`courier_orders`/`directory_businesses`, NO
+> `courier_requests`/`catalog_places` de `03-plan-tecnico.md`, ver abajo); se
+> construyó migración+RPC+contracts+core con TDD, las rutas de cliente en
+> `apps/api`, y el flujo completo en `apps/customer/features/courier/`
+> (pedir, seguir, directorio en `/entregas` con lista Y mapa de pines
+> tocables, badge de "Pedidos" y banner del home reflejando una entrega en
+> curso). **No** se tocó `apps/motorizados`/`apps/admin` (fase siguiente).
+> Probado con 22 tests de integración de RPC, unitarios de
+> `packages/core`/`contracts`/`apps/customer`, y tres e2e de Playwright de
+> punta a punta — todo verde. La migración `0232`/`0233` ya
+> está en `tindivo-prod`.
 
 ## Estado en una frase
 
-**Tindivo Entregas** (nombre técnico `courier`) está **diseñado y sin construir**: no hay código, ni migraciones, ni cambios en `DECISIONS.md`. Solo existen los documentos de `docs/Encargos/` y `docs/Home/`.
+**Tindivo Entregas** (nombre técnico `courier`) tiene su **lado cliente construido y probado** (ver arriba); el lado motorizado/admin sigue sin construir. Esta sección y las que siguen describen el estado de diseño de la sesión del 19-sep — histórico, no vigente donde `DECISIONS.md §31` diga otra cosa.
 
 ## Qué es
 

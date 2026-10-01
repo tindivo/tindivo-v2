@@ -13,18 +13,6 @@ export interface HomeBanner {
 
 const DEFAULT_BANNERS: HomeBanner[] = [
   {
-    id: 'promo-6-alitas-al-punto',
-    title: '6 Alitas Crispy · Al Punto',
-    imageUrl: '/banners/6_alitas_promo.webp',
-    href: '/negocio/al-punto',
-  },
-  {
-    id: 'promo-combo-familiar-al-punto',
-    title: 'Combo Familiar · Al Punto',
-    imageUrl: '/banners/familiar_promo.webp',
-    href: '/negocio/al-punto',
-  },
-  {
     id: 'recojo-feature',
     title: 'Recojo en tienda · Pide, paga y recoge',
     imageUrl: '/banners/recojo_feature.webp',
@@ -89,7 +77,7 @@ export function HomeCarousel({ banners = DEFAULT_BANNERS }: { banners?: HomeBann
   return (
     <section
       className="px-4 pb-2"
-      aria-label="Novedades y promociones"
+      aria-label="Novedades"
       onMouseEnter={() => {
         isInteracting.current = true
       }}

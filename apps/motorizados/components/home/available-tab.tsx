@@ -1,10 +1,12 @@
 'use client'
 
+import type { DriverCourierOrderView } from '@tindivo/contracts'
 import { Badge, Card, EmptyState, Icon, SkeletonList } from '@tindivo/ui'
 import { useMemo } from 'react'
 import { overdueIdsOf } from '@/hooks/use-overdue-feedback'
-import { byReadyClock } from '@/lib/orders/sort'
+import { byReadyClock, interleaveByTime } from '@/lib/orders/sort'
 import type { BoardOrder } from '@/lib/types'
+import { CourierAvailableItem } from './courier-section'
 import { OrderCard } from './order-card'
 import { OverdueBanner } from './overdue-banner'
 import { SwipeToTake } from './swipe-to-take'
@@ -21,6 +23,9 @@ export function AvailableTab({
   loading,
   now,
   onTaken,
+  courier,
+  courierBlockedReason,
+  onCourierChanged,
 }: {
   available: BoardOrder[]
   upcoming: BoardOrder[]
@@ -32,6 +37,10 @@ export function AvailableTab({
   now: number
   /** Refresca el board tras un gesto: el pedido ya no vive en esta bandeja. */
   onTaken: () => void
+  /** Entregas por aceptar: van en la MISMA lista, intercaladas por su reloj. */
+  courier: DriverCourierOrderView[]
+  courierBlockedReason?: string
+  onCourierChanged: () => void
 }) {
   const full = mySlots >= 3
 
@@ -51,6 +60,19 @@ export function AvailableTab({
   // en `lib/orders/sort`, con tests: ya se rompió una vez y el síntoma no fue
   // un fallo sino una lista que "no se entendía".
   const sorted = useMemo(() => byReadyClock(available), [available])
+
+  // UNA SOLA BANDEJA. Las entregas caen entre la comida por su reloj (el plazo
+  // para aceptarlas), así que los contadores siguen bajando de arriba abajo.
+  const rows = useMemo(
+    () =>
+      interleaveByTime(
+        sorted,
+        (o) => o.estimated_ready_at,
+        courier,
+        (c) => c.acceptDeadline,
+      ),
+    [sorted, courier],
+  )
 
   // UN VACÍO SOLO SE AFIRMA CUANDO SE SABE VACÍO.
   //
@@ -80,7 +102,19 @@ export function AvailableTab({
       <OverdueBanner count={overdueCount} />
 
       <div className="flex flex-col gap-3">
-        {sorted.map((o, i) => {
+        {rows.map((row, i) => {
+          if (row.kind === 'courier') {
+            return (
+              <CourierAvailableItem
+                key={row.item.id}
+                order={row.item}
+                blockedReason={courierBlockedReason}
+                hint={i === 0}
+                onChanged={onCourierChanged}
+              />
+            )
+          }
+          const o = row.item
           // Del MISMO conjunto que pinta el banner y que dispara la alarma, no
           // de un `orderUrgency` suelto: eran tres llamadas al mismo criterio y
           // cualquiera de las tres podía quedarse atrás al tocar la regla.
@@ -134,7 +168,7 @@ export function AvailableTab({
         })}
       </div>
 
-      {sorted.length === 0 && upcoming.length === 0 && (
+      {rows.length === 0 && upcoming.length === 0 && (
         <EmptyState
           icon="local_shipping"
           heading="Sin pedidos disponibles"

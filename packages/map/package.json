@@ -1,0 +1,35 @@
+{
+  "name": "@tindivo/map",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./leaflet": "./src/leaflet.ts",
+    "./map.css": "./src/map.css"
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@tindivo/contracts": "workspace:*"
+  },
+  "peerDependencies": {
+    "leaflet": "^1.9",
+    "react": "^19",
+    "react-leaflet": "^5"
+  },
+  "devDependencies": {
+    "@tindivo/tsconfig": "workspace:*",
+    "@types/leaflet": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "leaflet": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "react-leaflet": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

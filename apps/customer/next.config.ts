@@ -6,6 +6,7 @@ const config: NextConfig = {
   // compilar y no necesitan transpilarse. Un import de runtime sí.
   transpilePackages: [
     '@tindivo/ui',
+    '@tindivo/map',
     '@tindivo/api-client',
     '@tindivo/contracts',
     '@tindivo/images',

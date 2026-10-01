@@ -6,9 +6,15 @@ import { TINDIVO_SUPPORT_WHATSAPP } from '@tindivo/core'
 import { Button, Card, CardBody, EmptyState, ScreenHeader, StatusPill } from '@tindivo/ui'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import {
+  COURIER_HISTORY_COLUMNS,
+  CourierHistoryCard,
+  type CourierHistoryRow,
+} from '@/features/courier/components/courier-history-card'
 import { ReviewPromptButton } from '@/features/reviews/components/review-prompt-button'
 import { usePendingReview } from '@/features/reviews/hooks/use-pending-review'
+import { useActiveCourierOrders } from '@/lib/active-courier-orders'
 import { api } from '@/lib/api'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import { getSupportWhatsapp } from '@/lib/support'
@@ -73,10 +79,32 @@ function relativeDate(iso: string): string {
   })
 }
 
+type Fila = { kind: 'order'; row: OrderRow } | { kind: 'courier'; row: CourierHistoryRow }
+
+/**
+ * Comida y entregas en una sola lista, lo más reciente arriba — como las vive
+ * el cliente. Las entregas EN CURSO van primero aunque sean más viejas que un
+ * pedido ya entregado: es lo que vino a mirar.
+ */
+function mezclar(orders: OrderRow[], entregas: CourierHistoryRow[]): Fila[] {
+  const filas: Fila[] = [
+    ...orders.map((row) => ({ kind: 'order' as const, row })),
+    ...entregas.map((row) => ({ kind: 'courier' as const, row })),
+  ]
+  const viva = (f: Fila) =>
+    f.kind === 'order'
+      ? ACTIVE_STATUSES.has(f.row.status)
+      : f.row.status !== 'delivered' && f.row.status !== 'cancelled'
+  return filas.sort(
+    (a, b) => Number(viva(b)) - Number(viva(a)) || b.row.created_at.localeCompare(a.row.created_at),
+  )
+}
+
 export default function PedidosPage() {
   const router = useRouter()
   const [ready, setReady] = useState(false)
   const [orders, setOrders] = useState<OrderRow[]>([])
+  const [entregas, setEntregas] = useState<CourierHistoryRow[]>([])
   const [bizNames, setBizNames] = useState<Record<string, string>>({})
   const [wa, setWa] = useState(TINDIVO_SUPPORT_WHATSAPP)
   /**
@@ -91,6 +119,31 @@ export default function PedidosPage() {
     getSupportWhatsapp().then(setWa)
   }, [])
 
+  /*
+   * La lista de entregas sigue al store de activas, que sí está vivo
+   * (Realtime + recargas). Cada vez que una entrega cambia de estado o termina,
+   * se relee solo `courier_orders`: sin esto la tarjeta seguía en «Confirmado»
+   * después de entregada hasta salir y volver a entrar.
+   */
+  const activas = useActiveCourierOrders()
+  const firmaActivas = activas.map((o) => `${o.shortId}:${o.status}`).join(',')
+  const primeraFirma = useRef(true)
+  useEffect(() => {
+    void firmaActivas
+    if (primeraFirma.current) {
+      primeraFirma.current = false
+      return
+    }
+    void getSupabaseBrowser()
+      .from('courier_orders')
+      .select(COURIER_HISTORY_COLUMNS)
+      .order('created_at', { ascending: false })
+      .limit(20)
+      .then(({ data }) => {
+        if (data) setEntregas(data as CourierHistoryRow[])
+      })
+  }, [firmaActivas])
+
   useEffect(() => {
     const supabase = getSupabaseBrowser()
     supabase.auth.getSession().then(async ({ data }) => {
@@ -98,23 +151,34 @@ export default function PedidosPage() {
         router.replace('/entrar?next=/pedidos')
         return
       }
+      // Las tres lecturas son independientes: en paralelo, no una tras otra
+      // (con datos móviles cada viaje de ida y vuelta se nota).
       // RLS ord_customer_read / coi_participant_read: el cliente lee sus propios pedidos + ítems.
-      const { data: rows } = await supabase
-        .from('orders')
-        .select(
-          'id,short_id,status,order_amount,delivery_fee,delivery_method,created_at,business_id,cancel_reason,customer_order_items(item_name_snapshot,quantity)',
-        )
-        .order('created_at', { ascending: false })
-        .limit(40)
-      setOrders((rows ?? []) as OrderRow[])
+      // RLS co_customer_select: y sus propias entregas.
       // `businesses` no es legible por el cliente vía RLS → nombres desde la API pública.
-      try {
-        const res = await api.get<ApiEnvelope<{ id: string; name: string }[]>>('/public/businesses')
+      const [{ data: rows }, { data: courierRows }, negocios] = await Promise.all([
+        supabase
+          .from('orders')
+          .select(
+            'id,short_id,status,order_amount,delivery_fee,delivery_method,created_at,business_id,cancel_reason,customer_order_items(item_name_snapshot,quantity)',
+          )
+          .order('created_at', { ascending: false })
+          .limit(40),
+        supabase
+          .from('courier_orders')
+          .select(COURIER_HISTORY_COLUMNS)
+          .order('created_at', { ascending: false })
+          .limit(20),
+        api
+          .get<ApiEnvelope<{ id: string; name: string }[]>>('/public/businesses')
+          .catch(() => null), // Sin nombres: se muestra "Restaurante" como fallback.
+      ])
+      setOrders((rows ?? []) as OrderRow[])
+      setEntregas((courierRows ?? []) as CourierHistoryRow[])
+      if (negocios) {
         const map: Record<string, string> = {}
-        for (const b of res.data) map[b.id] = b.name
+        for (const b of negocios.data) map[b.id] = b.name
         setBizNames(map)
-      } catch {
-        // Sin nombres: se muestra "Restaurante" como fallback.
       }
       setReady(true)
     })
@@ -136,7 +200,7 @@ export default function PedidosPage() {
       <ScreenHeader title="Historial de pedidos" onBack={() => router.push('/cuenta')} />
 
       <div className="px-4 pt-3">
-        {orders.length === 0 ? (
+        {orders.length === 0 && entregas.length === 0 ? (
           <EmptyState
             icon="receipt_long"
             heading="Aún no tienes pedidos"
@@ -151,7 +215,17 @@ export default function PedidosPage() {
           />
         ) : (
           <div className="flex flex-col gap-3 md:grid md:grid-cols-2 lg:grid-cols-3">
-            {orders.map((o) => {
+            {mezclar(orders, entregas).map((fila) => {
+              if (fila.kind === 'courier') {
+                return (
+                  <CourierHistoryCard
+                    key={`c-${fila.row.id}`}
+                    row={fila.row}
+                    relativeDate={relativeDate(fila.row.created_at)}
+                  />
+                )
+              }
+              const o = fila.row
               const items = o.customer_order_items ?? []
               const summary = items.map((i) => `${i.quantity}× ${i.item_name_snapshot}`).join(' · ')
               const isActive = ACTIVE_STATUSES.has(o.status)

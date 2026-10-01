@@ -1,0 +1,125 @@
+import type {
+  CourierDebtItem,
+  CourierPaymentMethod,
+  CourierStatus,
+  DriverCourierOrderView,
+} from '@tindivo/contracts'
+
+/** Columnas de `courier_orders` que necesita la tarjeta del motorizado. */
+export const DRIVER_COURIER_COLUMNS =
+  'id,short_id,status,driver_id,requester_name,origin_name,origin_phone,origin_lat,origin_lng,origin_reference_text,destination_name,destination_phone,destination_lat,destination_lng,destination_reference_text,item_description,is_fragile,driver_note,payer,fee_amount,transport_collected_at,payment_method,created_at,accepted_at,delivered_at' as const
+
+export interface DriverCourierRow {
+  id: string
+  short_id: string
+  status: string
+  driver_id: string | null
+  requester_name: string
+  origin_name: string
+  origin_phone: string | null
+  origin_lat: number | string
+  origin_lng: number | string
+  origin_reference_text: string
+  destination_name: string
+  destination_phone: string | null
+  destination_lat: number | string
+  destination_lng: number | string
+  destination_reference_text: string
+  item_description: string
+  is_fragile: boolean
+  driver_note: string | null
+  payer: 'origin' | 'destination'
+  fee_amount: number | string
+  transport_collected_at: string | null
+  payment_method: string | null
+  created_at: string
+  accepted_at: string | null
+  delivered_at: string | null
+}
+
+/**
+ * Fila → tarjeta. `withPhones` solo es true para las entregas del propio
+ * motorizado: una disponible muestra dónde y qué, no a quién llamar.
+ */
+export function toDriverCourierView(
+  row: DriverCourierRow,
+  withPhones: boolean,
+  acceptMinutes: number,
+): DriverCourierOrderView {
+  return {
+    id: row.id,
+    shortId: row.short_id,
+    status: row.status as CourierStatus,
+    requesterName: row.requester_name,
+    origin: {
+      name: row.origin_name,
+      phone: withPhones ? row.origin_phone : null,
+      referenceText: row.origin_reference_text,
+      coordinates: { lat: Number(row.origin_lat), lng: Number(row.origin_lng) },
+    },
+    destination: {
+      name: row.destination_name,
+      phone: withPhones ? row.destination_phone : null,
+      referenceText: row.destination_reference_text,
+      coordinates: { lat: Number(row.destination_lat), lng: Number(row.destination_lng) },
+    },
+    itemDescription: row.item_description,
+    isFragile: row.is_fragile,
+    driverNote: row.driver_note,
+    payer: row.payer,
+    feeAmount: Number(row.fee_amount),
+    transportCollected: row.transport_collected_at !== null,
+    paymentMethod: (row.payment_method as CourierPaymentMethod | null) ?? null,
+    createdAt: row.created_at,
+    acceptedAt: row.accepted_at,
+    acceptDeadline:
+      row.status === 'requested'
+        ? new Date(Date.parse(row.created_at) + acceptMinutes * 60_000).toISOString()
+        : null,
+    deliveredAt: row.delivered_at,
+  }
+}
+
+// ── Deuda con Tindivo (0237) ────────────────────────────────────────────────
+
+/** Columnas de una línea de deuda. `drivers(full_name)` solo lo usa admin. */
+export const COURIER_DEBT_COLUMNS =
+  'id,short_id,requester_name,fee_amount,payment_method,transport_collected_at,remitted_at' as const
+
+export interface CourierDebtRow {
+  id: string
+  short_id: string
+  requester_name: string
+  fee_amount: number | string
+  payment_method: string | null
+  transport_collected_at: string
+  remitted_at: string | null
+}
+
+export function toCourierDebtItem(row: CourierDebtRow): CourierDebtItem {
+  return {
+    id: row.id,
+    shortId: row.short_id,
+    requesterName: row.requester_name,
+    amount: Number(row.fee_amount),
+    paymentMethod: (row.payment_method as CourierPaymentMethod | null) ?? null,
+    collectedAt: row.transport_collected_at,
+    remittedAt: row.remitted_at,
+    state: row.remitted_at ? 'delivering' : 'pending',
+  }
+}
+
+/** Prefijos de error de las RPC de la 0237 → respuesta HTTP. */
+export const COURIER_DEBT_ERRORS: Record<
+  string,
+  { code: 'conflict' | 'not_found' | 'forbidden'; detail: string }
+> = {
+  courier_not_collected: { code: 'conflict', detail: 'Esta entrega todavía no se cobró.' },
+  courier_not_remitted: {
+    code: 'conflict',
+    detail: 'El motorizado todavía no marcó que la entregó.',
+  },
+  courier_not_admin: { code: 'forbidden', detail: 'Solo un admin puede confirmar.' },
+  courier_not_found: { code: 'not_found', detail: 'No encontramos esa entrega.' },
+  courier_driver_not_found: { code: 'not_found', detail: 'Motorizado no encontrado.' },
+}

@@ -71,12 +71,25 @@ export function PhoneStep({
     setError(null)
 
     try {
-      await api.post<{ sent: boolean; channel: string }>('/customer/phone/send-code', { phone })
+      const res = await api.post<{ data: { sent: boolean; channel: string; verified?: boolean } }>(
+        '/customer/phone/send-code',
+        { phone },
+      )
+      // Solo el simulacro local responde `verified`: ahí el API ya selló el
+      // teléfono y no hay código que pedir. Con Twilio nunca viene.
+      if (res.data.verified) {
+        onDone()
+        return
+      }
       setPhase('verify')
       startCooldown()
     } catch (err) {
       if (err instanceof ApiError) {
-        if (err.status === 429) {
+        if (err.status === 409) {
+          setError(
+            'Este número ya está registrado en otra cuenta. Si es tuyo, cierra sesión e inicia con esa cuenta.',
+          )
+        } else if (err.status === 429) {
           setError('Demasiados intentos. Intenta mañana.')
         } else if (err.status === 503) {
           setError('Verificación de teléfono no disponible temporalmente.')

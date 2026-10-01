@@ -594,6 +594,230 @@ export type Database = {
           },
         ]
       }
+      courier_order_events: {
+        Row: {
+          actor_role: string | null
+          actor_user_id: string | null
+          courier_order_id: string
+          created_at: string
+          data: Json
+          event_type: string
+          id: string
+        }
+        Insert: {
+          actor_role?: string | null
+          actor_user_id?: string | null
+          courier_order_id: string
+          created_at?: string
+          data?: Json
+          event_type: string
+          id?: string
+        }
+        Update: {
+          actor_role?: string | null
+          actor_user_id?: string | null
+          courier_order_id?: string
+          created_at?: string
+          data?: Json
+          event_type?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "courier_order_events_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courier_order_events_courier_order_id_fkey"
+            columns: ["courier_order_id"]
+            isOneToOne: false
+            referencedRelation: "courier_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      courier_orders: {
+        Row: {
+          accepted_at: string | null
+          arrived_at: string | null
+          cancel_reason:
+            | Database["public"]["Enums"]["courier_cancel_reason"]
+            | null
+          cancelled_at: string | null
+          created_at: string
+          customer_user_id: string
+          delivered_at: string | null
+          departed_at: string | null
+          departed_dropoff_at: string | null
+          destination_lat: number
+          destination_lng: number
+          destination_name: string
+          destination_phone: string | null
+          destination_reference_text: string
+          directory_business_id: string | null
+          distance_m: number | null
+          driver_id: string | null
+          driver_note: string | null
+          fee_amount: number
+          id: string
+          is_fragile: boolean
+          item_description: string
+          order_number: number
+          origin_lat: number
+          origin_lng: number
+          origin_name: string
+          origin_phone: string | null
+          origin_reference_text: string
+          payer: Database["public"]["Enums"]["courier_payer"]
+          payment_method: string | null
+          picked_up_at: string | null
+          prepaid_confirmed: boolean
+          ready_at: string
+          ready_in_min: number
+          remittance_confirmed_at: string | null
+          remittance_confirmed_by: string | null
+          remitted_at: string | null
+          requester_name: string
+          requester_phone: string
+          short_id: string
+          status: Database["public"]["Enums"]["courier_status"]
+          transport_collected_at: string | null
+          updated_at: string
+          utm_source: string | null
+          weight_confirmed: boolean
+        }
+        Insert: {
+          accepted_at?: string | null
+          arrived_at?: string | null
+          cancel_reason?:
+            | Database["public"]["Enums"]["courier_cancel_reason"]
+            | null
+          cancelled_at?: string | null
+          created_at?: string
+          customer_user_id: string
+          delivered_at?: string | null
+          departed_at?: string | null
+          departed_dropoff_at?: string | null
+          destination_lat: number
+          destination_lng: number
+          destination_name: string
+          destination_phone?: string | null
+          destination_reference_text: string
+          directory_business_id?: string | null
+          distance_m?: number | null
+          driver_id?: string | null
+          driver_note?: string | null
+          fee_amount: number
+          id?: string
+          is_fragile?: boolean
+          item_description: string
+          order_number?: number
+          origin_lat: number
+          origin_lng: number
+          origin_name: string
+          origin_phone?: string | null
+          origin_reference_text: string
+          payer?: Database["public"]["Enums"]["courier_payer"]
+          payment_method?: string | null
+          picked_up_at?: string | null
+          prepaid_confirmed: boolean
+          ready_at: string
+          ready_in_min?: number
+          remittance_confirmed_at?: string | null
+          remittance_confirmed_by?: string | null
+          remitted_at?: string | null
+          requester_name: string
+          requester_phone: string
+          short_id: string
+          status?: Database["public"]["Enums"]["courier_status"]
+          transport_collected_at?: string | null
+          updated_at?: string
+          utm_source?: string | null
+          weight_confirmed: boolean
+        }
+        Update: {
+          accepted_at?: string | null
+          arrived_at?: string | null
+          cancel_reason?:
+            | Database["public"]["Enums"]["courier_cancel_reason"]
+            | null
+          cancelled_at?: string | null
+          created_at?: string
+          customer_user_id?: string
+          delivered_at?: string | null
+          departed_at?: string | null
+          departed_dropoff_at?: string | null
+          destination_lat?: number
+          destination_lng?: number
+          destination_name?: string
+          destination_phone?: string | null
+          destination_reference_text?: string
+          directory_business_id?: string | null
+          distance_m?: number | null
+          driver_id?: string | null
+          driver_note?: string | null
+          fee_amount?: number
+          id?: string
+          is_fragile?: boolean
+          item_description?: string
+          order_number?: number
+          origin_lat?: number
+          origin_lng?: number
+          origin_name?: string
+          origin_phone?: string | null
+          origin_reference_text?: string
+          payer?: Database["public"]["Enums"]["courier_payer"]
+          payment_method?: string | null
+          picked_up_at?: string | null
+          prepaid_confirmed?: boolean
+          ready_at?: string
+          ready_in_min?: number
+          remittance_confirmed_at?: string | null
+          remittance_confirmed_by?: string | null
+          remitted_at?: string | null
+          requester_name?: string
+          requester_phone?: string
+          short_id?: string
+          status?: Database["public"]["Enums"]["courier_status"]
+          transport_collected_at?: string | null
+          updated_at?: string
+          utm_source?: string | null
+          weight_confirmed?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "courier_orders_customer_user_id_fkey"
+            columns: ["customer_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courier_orders_directory_business_id_fkey"
+            columns: ["directory_business_id"]
+            isOneToOne: false
+            referencedRelation: "directory_businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courier_orders_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courier_orders_remittance_confirmed_by_fkey"
+            columns: ["remittance_confirmed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_addresses: {
         Row: {
           coordinates_lat: number | null
@@ -994,6 +1218,93 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "delivery_zones_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      directory_businesses: {
+        Row: {
+          category: Database["public"]["Enums"]["directory_business_category"]
+          closes_at: string | null
+          courier_enabled: boolean
+          cover_photo_url: string | null
+          created_at: string
+          has_menu_in_tindivo: boolean
+          id: string
+          is_partner: boolean
+          last_verified_at: string | null
+          lat: number
+          lng: number
+          name: string
+          opens_at: string | null
+          partner_business_id: string | null
+          phone: string | null
+          reference_text: string
+          updated_at: string
+          updated_by: string | null
+          visible_on_map: boolean
+          whatsapp: string | null
+          works_with_zorritos: boolean
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["directory_business_category"]
+          closes_at?: string | null
+          courier_enabled?: boolean
+          cover_photo_url?: string | null
+          created_at?: string
+          has_menu_in_tindivo?: boolean
+          id?: string
+          is_partner?: boolean
+          last_verified_at?: string | null
+          lat: number
+          lng: number
+          name: string
+          opens_at?: string | null
+          partner_business_id?: string | null
+          phone?: string | null
+          reference_text: string
+          updated_at?: string
+          updated_by?: string | null
+          visible_on_map?: boolean
+          whatsapp?: string | null
+          works_with_zorritos?: boolean
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["directory_business_category"]
+          closes_at?: string | null
+          courier_enabled?: boolean
+          cover_photo_url?: string | null
+          created_at?: string
+          has_menu_in_tindivo?: boolean
+          id?: string
+          is_partner?: boolean
+          last_verified_at?: string | null
+          lat?: number
+          lng?: number
+          name?: string
+          opens_at?: string | null
+          partner_business_id?: string | null
+          phone?: string | null
+          reference_text?: string
+          updated_at?: string
+          updated_by?: string | null
+          visible_on_map?: boolean
+          whatsapp?: string | null
+          works_with_zorritos?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "directory_businesses_partner_business_id_fkey"
+            columns: ["partner_business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "directory_businesses_updated_by_fkey"
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "users"
@@ -2691,6 +3002,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_confirm_courier_remittance: {
+        Args: { p_actor_user_id: string; p_courier_order_id: string }
+        Returns: Json
+      }
       admin_conversion_opportunity_stats: { Args: never; Returns: Json }
       admin_correct_delivery_band: {
         Args: {
@@ -2706,6 +3021,16 @@ export type Database = {
         Returns: Json
       }
       admin_promo_free_delivery_stats: { Args: never; Returns: Json }
+      advance_courier_order: {
+        Args: {
+          p_action: string
+          p_actor_user_id: string
+          p_cancel_reason?: Database["public"]["Enums"]["courier_cancel_reason"]
+          p_courier_order_id: string
+          p_payment_method?: string
+        }
+        Returns: Json
+      }
       advance_order: {
         Args: {
           p_action: string
@@ -2771,6 +3096,8 @@ export type Database = {
         Args: { p_business_user_id: string; p_settlement_id: string }
         Returns: Json
       }
+      courier_has_available_driver: { Args: never; Returns: boolean }
+      courier_service_status: { Args: never; Returns: Json }
       create_appeal_report: {
         Args: { p_description?: string; p_order_id: string }
         Returns: Json
@@ -2790,6 +3117,33 @@ export type Database = {
           p_prep_time_minutes?: number
           p_total_amount: number
           p_yape_amount?: number
+        }
+        Returns: Json
+      }
+      create_courier_order: {
+        Args: {
+          p_customer_user_id: string
+          p_destination_lat: number
+          p_destination_lng: number
+          p_destination_name: string
+          p_destination_phone: string
+          p_destination_reference_text: string
+          p_directory_business_id: string
+          p_driver_note?: string
+          p_is_fragile: boolean
+          p_item_description: string
+          p_origin_lat: number
+          p_origin_lng: number
+          p_origin_name: string
+          p_origin_phone: string
+          p_origin_reference_text: string
+          p_payer: Database["public"]["Enums"]["courier_payer"]
+          p_prepaid_confirmed: boolean
+          p_ready_in_min: number
+          p_requester_name: string
+          p_requester_phone: string
+          p_utm_source?: string
+          p_weight_confirmed: boolean
         }
         Returns: Json
       }
@@ -2979,9 +3333,24 @@ export type Database = {
           phone: string
         }[]
       }
+      driver_courier_step: {
+        Args: {
+          p_actor_user_id: string
+          p_cancel_reason?: Database["public"]["Enums"]["courier_cancel_reason"]
+          p_courier_order_id: string
+          p_payment_method?: string
+          p_step: string
+        }
+        Returns: Json
+      }
+      driver_remit_courier_fee: {
+        Args: { p_actor_user_id: string; p_courier_order_id: string }
+        Returns: Json
+      }
       effective_max_change: { Args: { p_business_id: string }; Returns: number }
       enqueue_overdue_orders: { Args: never; Returns: number }
       enqueue_queued_orders: { Args: never; Returns: number }
+      expire_courier_orders: { Args: never; Returns: number }
       expire_order: {
         Args: {
           p_order_id: string
@@ -2995,11 +3364,13 @@ export type Database = {
         Returns: Json
       }
       f_unaccent: { Args: { p_text: string }; Returns: string }
+      generate_courier_short_id: { Args: never; Returns: string }
       generate_short_id: { Args: never; Returns: string }
       geo_distance_km: {
         Args: { p_lat1: number; p_lat2: number; p_lng1: number; p_lng2: number }
         Returns: number
       }
+      get_courier_tracking: { Args: { p_short_id: string }; Returns: Json }
       get_order_intake_status: {
         Args: { p_custom_time?: string }
         Returns: Json
@@ -3010,6 +3381,7 @@ export type Database = {
         Args: { p_business_id: string }
         Returns: boolean
       }
+      is_within_courier_schedule: { Args: never; Returns: boolean }
       is_within_order_intake_window: {
         Args: { p_custom_time?: string }
         Returns: boolean
@@ -3377,7 +3749,35 @@ export type Database = {
         | "disputed"
         | "resolved"
         | "auto_assumed_confirmed"
+      courier_cancel_reason:
+        | "no_driver"
+        | "driver_rejected"
+        | "not_ready"
+        | "transport_unpaid"
+        | "customer_cancelled"
+        | "unreachable"
+        | "other"
+      courier_payer: "origin" | "destination"
+      courier_status:
+        | "requested"
+        | "accepted"
+        | "heading_to_pickup"
+        | "at_pickup"
+        | "picked_up"
+        | "heading_to_dropoff"
+        | "delivered"
+        | "cancelled"
       delivery_method: "delivery" | "pickup"
+      directory_business_category:
+        | "chicken_grill"
+        | "chifa"
+        | "pizza_burgers"
+        | "snacks"
+        | "desserts"
+        | "drinks_liquor"
+        | "pharmacy"
+        | "bodega"
+        | "other"
       distance_band: "near" | "far"
       fraud_claim_status: "pending" | "approved" | "rejected"
       incident_type:
@@ -3603,7 +4003,38 @@ export const Constants = {
         "resolved",
         "auto_assumed_confirmed",
       ],
+      courier_cancel_reason: [
+        "no_driver",
+        "driver_rejected",
+        "not_ready",
+        "transport_unpaid",
+        "customer_cancelled",
+        "unreachable",
+        "other",
+      ],
+      courier_payer: ["origin", "destination"],
+      courier_status: [
+        "requested",
+        "accepted",
+        "heading_to_pickup",
+        "at_pickup",
+        "picked_up",
+        "heading_to_dropoff",
+        "delivered",
+        "cancelled",
+      ],
       delivery_method: ["delivery", "pickup"],
+      directory_business_category: [
+        "chicken_grill",
+        "chifa",
+        "pizza_burgers",
+        "snacks",
+        "desserts",
+        "drinks_liquor",
+        "pharmacy",
+        "bodega",
+        "other",
+      ],
       distance_band: ["near", "far"],
       fraud_claim_status: ["pending", "approved", "rejected"],
       incident_type: [

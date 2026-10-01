@@ -17,6 +17,7 @@
     "@tindivo/api-client": "workspace:*",
     "@tindivo/contracts": "workspace:*",
     "@tindivo/core": "workspace:*",
+    "@tindivo/map": "workspace:*",
     "@tindivo/supabase": "workspace:*",
     "@tindivo/ui": "workspace:*",
     "leaflet": "catalog:",

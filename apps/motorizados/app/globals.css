@@ -1,6 +1,7 @@
 @import 'tailwindcss';
 @import '../../../packages/ui/src/theme.css';
 @import '../../../packages/ui/src/components.css';
+@import '../../../packages/map/src/map.css';
 
 @source '../../../packages/ui/src';
 
