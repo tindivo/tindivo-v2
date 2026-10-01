@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatCourierPrice, formatDistance, formatReadyIn } from '../format'
+import { formatCourierHours, formatCourierPrice, formatDistance, formatOpensAt } from '../format'
 
 describe('formatCourierPrice', () => {
   it('quita los decimales cuando son .00', () => {
@@ -25,12 +25,22 @@ describe('formatDistance', () => {
   })
 })
 
-describe('formatReadyIn', () => {
-  it('"Ya" para 0 minutos', () => {
-    expect(formatReadyIn(0)).toBe('Ya')
+describe('formatCourierHours', () => {
+  it('un solo «pm» cuando los dos extremos son de noche', () => {
+    expect(formatCourierHours({ start: '18:00', end: '23:00' })).toBe('6 a 11 pm')
   })
 
-  it('minutos para el resto', () => {
-    expect(formatReadyIn(20)).toBe('20 min')
+  it('los dos meridianos cuando cruza el mediodía', () => {
+    expect(formatCourierHours({ start: '11:30', end: '15:00' })).toBe('11:30 am a 3 pm')
+  })
+
+  it('vacío sin horario', () => {
+    expect(formatCourierHours(null)).toBe('')
+  })
+})
+
+describe('formatOpensAt', () => {
+  it('dice la hora de apertura', () => {
+    expect(formatOpensAt({ start: '18:00' })).toBe('Abre a las 6 pm')
   })
 })

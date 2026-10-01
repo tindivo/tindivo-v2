@@ -78,6 +78,7 @@ export function RouteSheet() {
                 onClick={() =>
                   openForBusiness({
                     id: b.id,
+                    directoryBusinessId: b.id,
                     name: b.name,
                     lat: b.lat,
                     lng: b.lng,

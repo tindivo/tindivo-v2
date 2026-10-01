@@ -4,18 +4,16 @@ import { BottomSheet, Icon } from '@tindivo/ui'
 import { haversineKm } from '@/lib/coverage'
 import { useCourierRequest } from '../hooks/use-courier-request'
 import { useCourierStatus } from '../hooks/use-courier-status'
-import { formatDistance, formatReadyIn, getUtmSource } from '../lib/format'
+import { formatDistance, getUtmSource } from '../lib/format'
 import { useCourierStore } from '../lib/store'
 import { PayerField } from './payer-field'
 import { PointField } from './point-field'
-
-const READY_OPTIONS = [0, 10, 20, 30]
 
 /** Main / Pedir-3b · Qué llevamos: resumen y envío cuando el origen es un negocio del directorio. */
 export function ConfirmSheet() {
   const open = useCourierStore((s) => s.open && s.step === 'confirm')
   const closeSheet = useCourierStore((s) => s.closeSheet)
-  const goTo = useCourierStore((s) => s.goTo)
+  const beginEditPoint = useCourierStore((s) => s.beginEditPoint)
   const { draft, updateDraft, updatePoint, submitting, error, submit } = useCourierRequest()
   const { status } = useCourierStatus()
 
@@ -75,7 +73,9 @@ export function ConfirmSheet() {
             )}
             <button
               type="button"
-              onClick={() => goTo('route')}
+              // Al mapa del pin de recojo, como el resto del flujo. Antes iba
+              // al buscador del directorio, que está vacío.
+              onClick={() => beginEditPoint('origin')}
               className="shrink-0 text-[14px] font-bold text-brand-dark"
             >
               Cambiar
@@ -94,34 +94,8 @@ export function ConfirmSheet() {
           />
         </div>
 
-        <div className="mb-3 flex items-center gap-3 rounded-[18px] bg-[#F4F4F2] px-3.5 py-2">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white">
-            <Icon name="schedule" size={20} filled className="text-[#2E3236]" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-[12px] font-semibold text-[#5C6368]">Recogida</div>
-            <div className="text-[16px] font-bold text-[#2E3236]">
-              Listo en {formatReadyIn(draft.readyInMin)}
-            </div>
-          </div>
-          <div className="flex gap-1.5">
-            {READY_OPTIONS.map((min) => (
-              <button
-                key={min}
-                type="button"
-                onClick={() => updateDraft({ readyInMin: min })}
-                className={`h-9 rounded-full px-3 text-[13px] font-bold ${
-                  draft.readyInMin === min
-                    ? 'bg-[#FFEDD5] text-brand-dark shadow-[inset_0_0_0_2px_#F97316]'
-                    : 'bg-white text-[#2E3236]'
-                }`}
-              >
-                {formatReadyIn(min)}
-              </button>
-            ))}
-          </div>
-        </div>
-
+        {/* Sin «Listo en Ya / 10 / 20 / 30 min»: desde la 0235 el servidor
+            fuerza «listo ahora» e ignoraba lo elegido aquí. */}
         <div className="mb-3">
           <PayerField
             payer={draft.payer}

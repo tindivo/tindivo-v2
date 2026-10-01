@@ -1,5 +1,5 @@
 /**
- * Tindivo Entregas — directorio (mapa con pines tocables) y el badge de
+ * Tindivo Entregas — lugares (lista y mapa con chapas tocables) y el badge de
  * "Pedidos" reflejando una entrega en curso.
  *
  * Dos specs cortos, no uno largo: cada uno se entiende solo si falla.
@@ -30,36 +30,50 @@ async function login(page: import('@playwright/test').Page) {
   await page.waitForURL((u) => !u.pathname.startsWith('/entrar'), { timeout: 20_000 })
 }
 
-test('el mapa del directorio pinta pines y tocar uno abre su ficha', async ({ page }) => {
+test('/entregas lista los lugares del pueblo y tocar uno en el mapa abre su ficha', async ({
+  page,
+}) => {
   const errores: string[] = []
   page.on('pageerror', (e) => errores.push(e.message))
 
-  await page.goto('/entregas')
-  await expect(page.getByText('Negocios', { exact: true })).toBeVisible()
+  // Los lugares son las referencias del pueblo (`map_landmarks`), no el
+  // directorio de negocios. Se siembra una propia y se borra al final.
+  const { data: lugar, error } = await db
+    .from('map_landmarks')
+    .insert({ name: 'Botica E2E Lugares', category: 'salud', lat: -9.1468, lng: -78.2786 })
+    .select('id')
+    .single()
+  if (error) throw new Error(`sembrar lugar falló: ${error.message}`)
 
-  await page.getByRole('button', { name: 'Mapa' }).click()
+  try {
+    await page.goto('/entregas')
+    await expect(page.getByText('Lugares', { exact: true })).toBeVisible()
+    await expect(page.getByText('Botica E2E Lugares')).toBeVisible()
 
-  const pin = page.locator('.t-dir-pin').first()
-  await expect(pin).toBeVisible({ timeout: 15_000 })
+    await page.getByRole('button', { name: 'Mapa' }).click()
+    await expect(page.locator('.leaflet-container')).toBeVisible()
 
-  await pin.click()
+    // Se acerca hasta que la chapa sale con su nombre, y se toca la chapa.
+    const chapa = page.locator('.t-lm-badge').first()
+    await expect(chapa).toBeVisible({ timeout: 15_000 })
+    const box = await chapa.boundingBox()
+    if (!box) throw new Error('la chapa no tiene caja')
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
 
-  // La ficha "peek" abre docked al fondo (no una hoja con scrim que tape el
-  // mapa): el nombre siempre está, y según su estado trae "Llamar", "Pedir
-  // entrega" o "Pedir en Tindivo".
-  await expect(page.locator('[role="dialog"]')).toBeVisible()
-  await expect(
-    page
-      .locator('[role="dialog"]')
-      .getByText(/Llamar|Pedir entrega|Pedir en Tindivo/)
-      .first(),
-  ).toBeVisible()
+    // Ficha anclada abajo, sin velo: el mapa sigue a la vista.
+    const ficha = page.locator('[role="dialog"]')
+    await expect(ficha).toBeVisible()
+    await expect(ficha.getByRole('button', { name: /Recoger aquí/ })).toBeVisible()
+    // `toBeVisible` no ve solapes: la ficha estuvo tapada por los panes de
+    // Leaflet y seguía «visible». Un click de prueba sí falla si otro
+    // elemento se lleva el puntero.
+    await ficha.getByRole('button', { name: /Recoger aquí/ }).click({ trial: true, timeout: 3000 })
+    await expect(page.locator('.leaflet-container')).toBeVisible()
 
-  // El mapa sigue visible detrás — a diferencia del `BottomSheet` genérico,
-  // esta ficha no pinta un scrim que lo tape.
-  await expect(page.locator('.leaflet-container')).toBeVisible()
-
-  expect(errores, 'la pantalla no debe lanzar errores de JS').toEqual([])
+    expect(errores, 'la pantalla no debe lanzar errores de JS').toEqual([])
+  } finally {
+    await db.from('map_landmarks').delete().eq('id', lugar.id)
+  }
 })
 
 test('el badge de "Pedidos" y el banner del home reflejan una entrega en curso', async ({

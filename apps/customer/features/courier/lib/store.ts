@@ -30,6 +30,11 @@ interface CourierState {
   openSheet: (opts?: { step?: CourierFlowStep }) => void
   openForBusiness: (business: {
     id: string
+    /**
+     * Fila de `directory_businesses`, o null si el punto es una referencia del
+     * pueblo (`map_landmarks`): la columna del pedido tiene FK al directorio.
+     */
+    directoryBusinessId: string | null
     name: string
     lat: number
     lng: number
@@ -107,7 +112,7 @@ export const useCourierStore = create<CourierState>((set, get) => ({
           coordinates: { lat: business.lat, lng: business.lng },
           accuracyM: null,
           referenceText: business.referenceText,
-          directoryBusinessId: business.id,
+          directoryBusinessId: business.directoryBusinessId ?? undefined,
           label: business.name,
         },
         itemDescription: `Pedido de ${business.name}`,

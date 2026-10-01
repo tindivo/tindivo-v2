@@ -1,12 +1,12 @@
 'use client'
 
+import type { Landmark } from '@tindivo/map'
 import dynamic from 'next/dynamic'
 import { useEffect, useState } from 'react'
 import { getCoverage, getCoveragePolygon } from '@/lib/coverage'
-import type { DirectoryBusiness } from '../lib/directory'
 
 // Leaflet toca `window`: solo se carga en cliente (mismo patrón que `MapPicker`).
-const DirectoryMapInner = dynamic(() => import('./directory-map-inner'), {
+const PlacesMapInner = dynamic(() => import('./places-map-inner'), {
   ssr: false,
   loading: () => <div className="h-full w-full animate-pulse bg-[#E8E9EB]" />,
 })
@@ -39,7 +39,7 @@ function boundsFrom(
   }
 }
 
-export function DirectoryMap({ businesses }: { businesses: DirectoryBusiness[] }) {
+export function PlacesMap({ places }: { places: Landmark[] }) {
   const [ready, setReady] = useState<{
     bounds: { south: number; west: number; north: number; east: number }
     center: { lat: number; lng: number }
@@ -69,5 +69,5 @@ export function DirectoryMap({ businesses }: { businesses: DirectoryBusiness[] }
 
   if (!ready) return <div className="h-full w-full animate-pulse bg-[#E8E9EB]" />
 
-  return <DirectoryMapInner businesses={businesses} bounds={ready.bounds} center={ready.center} />
+  return <PlacesMapInner places={places} bounds={ready.bounds} center={ready.center} />
 }
