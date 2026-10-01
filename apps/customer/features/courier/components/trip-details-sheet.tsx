@@ -19,13 +19,13 @@ import { PayerField } from './payer-field'
 
 /**
  * Categorías: solo UI, rellenan `itemDescription` (el contrato no tiene campo
- * de categoría). Sin «Comida»: la comida preparada no va por Entregas (va por
- * los restaurantes aliados), y se dice en una línea para que nadie la pida como
- * «Otro». Si la persona ya escribió algo, elegir una categoría no lo pisa.
+ * de categoría). «Comida» ocupa el sitio que tenía «Paquete» (un paquete
+ * cualquiera cabe en «Otro»). Si la persona ya escribió algo, elegir una
+ * categoría no lo pisa.
  */
 const CATEGORIES = [
   { id: 'documentos', label: 'Documentos', icon: 'description', preset: 'Documentos' },
-  { id: 'paquete', label: 'Paquete', icon: 'package_2', preset: 'Un paquete' },
+  { id: 'comida', label: 'Comida', icon: 'lunch_dining', preset: 'Comida' },
   { id: 'medicinas', label: 'Medicinas', icon: 'medication', preset: 'Medicinas' },
   { id: 'ropa', label: 'Ropa', icon: 'apparel', preset: 'Ropa' },
   { id: 'otro', label: 'Otro', icon: 'more_horiz', preset: '' },
@@ -36,7 +36,7 @@ type CategoryId = (typeof CATEGORIES)[number]['id']
 /**
  * La única pantalla después de los dos mapas (A → B → aquí → seguimiento).
  * Antes eran tres —contactos, «¿Quién paga?» y «¿Qué llevamos?»— y el pedido
- * se sentía largo. Agrupada por tarea: qué llevamos, de quién a quién, quién
+ * se sentía largo. Agrupada por tarea: de quién a quién, qué llevamos, quién
  * paga, y las indicaciones plegadas. Solo el botón queda fijo abajo: una
  * casilla fija también taparía campos con el teclado abierto.
  *
@@ -110,6 +110,28 @@ export function TripDetailsSheet() {
           ref={scroller}
           className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 pb-4"
         >
+          {/* ── De quién a quién ───────────────────────────────────────── */}
+          <PointCard
+            which="origin"
+            title="Recogemos de"
+            point={draft.origin}
+            namePlaceholder="Nombre de quien entrega (opcional)"
+            onChangeLocation={() => beginEditPoint('origin')}
+            onChange={(patch) => updatePoint('origin', patch)}
+            me={me}
+            recents={recents}
+          />
+          <PointCard
+            which="destination"
+            title="Entregamos a"
+            point={draft.destination}
+            namePlaceholder="Nombre de quien recibe (opcional)"
+            onChangeLocation={() => beginEditPoint('destination')}
+            onChange={(patch) => updatePoint('destination', patch)}
+            me={me}
+            recents={recents}
+          />
+
           {/* ── ¿Qué llevamos? ─────────────────────────────────────────── */}
           <section className="flex flex-col gap-2.5">
             <h3 className="text-[18px] font-extrabold tracking-[-0.02em] text-[#2E3236]">
@@ -146,32 +168,7 @@ export function TripDetailsSheet() {
               data-field="item"
               className="h-12 w-full rounded-2xl bg-[#F4F4F2] px-3.5 text-[16px] font-semibold text-[#2E3236] outline-none placeholder:text-[#9AA0A6]"
             />
-            <p className="px-1 text-[12px] font-medium text-[#5C6368]">
-              La comida preparada se pide en Restaurantes.
-            </p>
           </section>
-
-          {/* ── De quién a quién ───────────────────────────────────────── */}
-          <PointCard
-            which="origin"
-            title="Recogemos de"
-            point={draft.origin}
-            namePlaceholder="Nombre de quien entrega (opcional)"
-            onChangeLocation={() => beginEditPoint('origin')}
-            onChange={(patch) => updatePoint('origin', patch)}
-            me={me}
-            recents={recents}
-          />
-          <PointCard
-            which="destination"
-            title="Entregamos a"
-            point={draft.destination}
-            namePlaceholder="Nombre de quien recibe (opcional)"
-            onChangeLocation={() => beginEditPoint('destination')}
-            onChange={(patch) => updatePoint('destination', patch)}
-            me={me}
-            recents={recents}
-          />
 
           {/* ── ¿Quién paga? ───────────────────────────────────────────── */}
           <PayerField
@@ -274,9 +271,8 @@ export function TripDetailsSheet() {
             Qué se puede llevar
           </div>
           <p className="text-[15px] leading-relaxed text-[#5C6368]">
-            Hasta 5 kg, sin foto. Sin comida preparada, sin alcohol, sin nada que necesite receta
-            especial ni refrigeración. El motorizado puede rechazar la entrega si al recoger no
-            cumple esto.
+            Hasta 5 kg, sin foto. Sin alcohol, sin nada que necesite receta especial ni
+            refrigeración. El motorizado puede rechazar la entrega si al recoger no cumple esto.
           </p>
           <button
             type="button"
