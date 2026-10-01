@@ -61,9 +61,27 @@ async function main(): Promise<void> {
   // Las migraciones ya siembran estas claves con valores de producción. Aquí solo
   // se sobrescriben las que harían el e2e no determinista: `platform_schedule`
   // (18:00-23:00) y `order_intake_cutoff` (22:30) bloquean la creación de pedidos
-  // fuera de la tarde-noche, así que en LOCAL se abren 24h.
+  // fuera de la tarde-noche, así que en LOCAL se abren 24h. Entregas, justo
+  // debajo.
   console.log('app_settings')
   await upsert('app_settings', LOCAL_ONLY_SETTINGS, 'key')
+
+  // Entregas, igual: a toda hora en LOCAL. Pero sin tocar su horario —con
+  // 00:00-23:59 el home diría «12 am a 11:59 pm»—, sino con `ignoreSchedule`
+  // (0241). Se fusiona en vez de hacer upsert porque `courier` lleva precio,
+  // límites y demás que las migraciones ya dejaron bien.
+  const { data: courier, error: courierErr } = await raw
+    .from('app_settings')
+    .select('value')
+    .eq('key', 'courier')
+    .single()
+  if (courierErr) throw new Error(`leer app_settings.courier falló: ${courierErr.message}`)
+  const { error: courierUpdErr } = await raw
+    .from('app_settings')
+    .update({ value: { ...courier.value, ignoreSchedule: true } })
+    .eq('key', 'courier')
+  if (courierUpdErr) throw new Error(`abrir Entregas a toda hora falló: ${courierUpdErr.message}`)
+  console.log(`  ✓ ${'courier.ignoreSchedule'.padEnd(28)} true`)
 
   // ── 2. Usuarios (auth primero: todo lo demás tiene FK a public.users) ───────
   console.log('\nusuarios')

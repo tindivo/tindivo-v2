@@ -102,9 +102,24 @@ export async function setCourierHoursClosedNow(): Promise<void> {
     ...(data?.value as Record<string, unknown>),
     enabled: true,
     hours: { start: hhmm(start), end: hhmm(end) },
+    // La base local abre Entregas a toda hora (`ignoreSchedule`, 0241): sin
+    // apagarlo, el horario de arriba no cerraría nada.
+    ignoreSchedule: false,
   }
   const { error } = await localClient.from('app_settings').update({ value }).eq('key', 'courier')
   if (error) throw new Error(`setCourierHoursClosedNow falló: ${error.message}`)
+}
+
+/** Enciende/apaga el «abierto a toda hora» de desarrollo (`ignoreSchedule`, 0241). */
+export async function setCourierIgnoreSchedule(ignore: boolean): Promise<void> {
+  const { data } = await localClient
+    .from('app_settings')
+    .select('value')
+    .eq('key', 'courier')
+    .single()
+  const value = { ...(data?.value as Record<string, unknown>), ignoreSchedule: ignore }
+  const { error } = await localClient.from('app_settings').update({ value }).eq('key', 'courier')
+  if (error) throw new Error(`setCourierIgnoreSchedule falló: ${error.message}`)
 }
 
 export async function setCourierMaxActivePerPhone(max: number): Promise<void> {

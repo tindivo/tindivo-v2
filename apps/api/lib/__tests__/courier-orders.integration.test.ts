@@ -17,6 +17,7 @@ import {
   seedCourierDriver,
   setCourierEnabled,
   setCourierHoursClosedNow,
+  setCourierIgnoreSchedule,
   setCourierMaxActivePerPhone,
 } from './helpers/local-db-courier.ts'
 
@@ -134,6 +135,31 @@ describe('create_courier_order', () => {
       requesterPhone: customer.phone,
     })
     expect(error?.message).toContain('courier_closed')
+  })
+
+  it('con `ignoreSchedule` (solo la base local) se crea fuera de horario (0241)', async () => {
+    await setCourierHoursClosedNow()
+    await setCourierIgnoreSchedule(true)
+    const { error } = await callCreateCourierOrder({
+      customerUserId: customer.userId,
+      requesterPhone: customer.phone,
+    })
+    expect(error).toBeNull()
+  })
+
+  it('con `ignoreSchedule` el home la ve abierta y sigue diciendo el horario real (0241)', async () => {
+    await setCourierHoursClosedNow()
+    await setCourierIgnoreSchedule(true)
+    const { data: settings } = await localClient
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'courier')
+      .single()
+    const { data, error } = await localClient.rpc('courier_service_status')
+    expect(error).toBeNull()
+    const status = data as { openNow: boolean; hours: unknown }
+    expect(status.openNow).toBe(true)
+    expect(status.hours).toEqual((settings?.value as { hours: unknown }).hours)
   })
 
   it('en horario se crea aunque ningún motorizado esté «Disponible» (0240)', async () => {
