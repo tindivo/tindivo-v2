@@ -2,6 +2,7 @@
 
 import { ApiError } from '@tindivo/api-client'
 import { useEffect, useState } from 'react'
+import { useActiveCourierOrdersStore } from '@/lib/active-courier-orders'
 import { useOnboarding } from '@/lib/onboarding-store'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import { createCourierOrder, type Requester } from '../lib/api'
@@ -18,9 +19,12 @@ interface CustomerIdentity {
 
 async function loadIdentity(): Promise<CustomerIdentity> {
   const supabase = getSupabaseBrowser()
+  // `getSession` lee la sesión local; `getUser` iba al servidor de auth en
+  // cada apertura. La RLS de las dos consultas de abajo ya valida el token.
   const {
-    data: { user },
-  } = await supabase.auth.getUser()
+    data: { session },
+  } = await supabase.auth.getSession()
+  const user = session?.user
   if (!user) return { userId: null, name: '', phone: '', phoneVerified: false }
 
   const [{ data: profile }, { data: userRow }] = await Promise.all([
@@ -51,11 +55,42 @@ async function loadRecentContacts(userId: string, myPhone: string): Promise<Cour
   return recentContacts(data ?? [], myPhone)
 }
 
+interface FlowContext {
+  identity: CustomerIdentity
+  recents: CourierContact[]
+}
+
+/** Cuánto vale lo cargado: lo que dura abrir el flujo, no una sesión entera. */
+const CONTEXT_TTL_MS = 10_000
+let contextCache: { at: number; value: Promise<FlowContext> } | null = null
+
+/**
+ * Identidad + contactos recientes, UNA vez por apertura.
+ *
+ * `useCourierRequest` lo usan dos hojas montadas a la vez (`TripDetailsSheet`
+ * y `ConfirmSheet`), y cada una cargaba lo suyo: cuatro o cinco consultas
+ * repetidas cada vez que alguien tocaba Entregas. Ahora la segunda reutiliza
+ * la promesa de la primera.
+ */
+function loadFlowContext(): Promise<FlowContext> {
+  if (contextCache && Date.now() - contextCache.at < CONTEXT_TTL_MS) return contextCache.value
+  const value = loadIdentity().then(async (identity) => ({
+    identity,
+    recents: identity.userId ? await loadRecentContacts(identity.userId, identity.phone) : [],
+  }))
+  contextCache = { at: Date.now(), value }
+  value.catch(() => {
+    contextCache = null
+  })
+  return value
+}
+
 async function loadDefaultAddress() {
   const supabase = getSupabaseBrowser()
   const {
-    data: { user },
-  } = await supabase.auth.getUser()
+    data: { session },
+  } = await supabase.auth.getSession()
+  const user = session?.user
   if (!user) return null
   const { data } = await supabase
     .from('customer_addresses')
@@ -89,18 +124,15 @@ export function useCourierRequest() {
 
   // Se recarga cada vez que se abre Entregas: quien inició sesión con la app
   // ya cargada (login al entrar, `open-flow.ts`) tiene que ver su «Soy yo».
-  const sheetOpen = useCourierStore((s) => s.open)
+  // El seguimiento también abre la hoja, pero no necesita nada de esto.
+  const sheetOpen = useCourierStore((s) => s.open && s.step !== 'tracking')
   useEffect(() => {
     if (!sheetOpen) return
     let on = true
-    loadIdentity().then((id) => {
+    void loadFlowContext().then(({ identity: id, recents: list }) => {
       if (!on) return
       setIdentity(id)
-      if (id.userId) {
-        loadRecentContacts(id.userId, id.phone).then((list) => {
-          if (on) setRecents(list)
-        })
-      }
+      setRecents(list)
     })
     return () => {
       on = false
@@ -146,6 +178,9 @@ export function useCourierRequest() {
     try {
       const result = await createCourierOrder(draft, requester, utmSource)
       submitted(result)
+      // El banner «Entrega en curso» y el badge de «Pedidos» no esperan al
+      // evento de Realtime: quien acaba de pedir tiene que verla al volver.
+      void useActiveCourierOrdersStore.getState().recargar()
       return result
     } catch (err) {
       if (err instanceof ApiError) {

@@ -60,15 +60,11 @@ export function CourierMapHost() {
   const cancelEditPoint = useCourierStore((s) => s.cancelEditPoint)
   const switchEditingPoint = useCourierStore((s) => s.switchEditingPoint)
   const trackingShortId = useCourierStore((s) => s.trackingShortId)
+  const closeSheet = useCourierStore((s) => s.closeSheet)
 
   const isTracking = step === 'tracking'
-  /*
-   * Sondeo propio y no compartido con `TrackingSheet`: las dos hojas pintan la
-   * misma entrega desde vistas distintas (mapa vs. tarjeta) y no hay un canal
-   * ya construido entre ambas fuera del store. Con 8s de intervalo y a lo
-   * sumo un flujo abierto a la vez (piloto, ~10 pedidos/noche), duplicar el
-   * sondeo cuesta una petición extra cada 8s, no un problema de escala.
-   */
+  // Misma fuente que `TrackingSheet` (ver `TrackingFeed`): mirar la entrega
+  // desde el mapa no añade otro sondeo ni otro canal Realtime.
   const { data: tracking } = useCourierTracking(trackingShortId ?? '', open && isTracking)
 
   const [mode, setMode] = useState<MapMode>('street')
@@ -481,6 +477,22 @@ export function CourierMapHost() {
           pinVariant={editingPoint === 'destination' ? 'destination' : 'origin'}
         />
       </div>
+
+      {/* Salir del seguimiento: la flecha arriba a la izquierda, el mismo
+          patrón que los pasos del pin, y no una X dentro de la hoja. Encima
+          del mapa (50) y debajo de la hoja (80). */}
+      {isTracking && (
+        <div className="pointer-events-none fixed inset-x-0 top-0 z-[75] p-3 pt-[calc(0.75rem+env(safe-area-inset-top))]">
+          <button
+            type="button"
+            onClick={closeSheet}
+            aria-label="Salir del seguimiento"
+            className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full border border-ink/[0.06] bg-card text-ink shadow-elev-3 transition-transform active:scale-95"
+          >
+            <Icon name="arrow_back" size={22} />
+          </button>
+        </div>
+      )}
 
       {isPinDrop && editingPoint && (
         <PinDropOverlay
