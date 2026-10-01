@@ -69,12 +69,39 @@ Cliente (seguimiento) ◄── realtime + GET /public/courier/:shortId
 
 | Qué | Consecuencia |
 |---|---|
-| **Push al motorizado** por entrega nueva (la comida sí: `domain_events` → `send-push`, tag por evento y pedido) | Con el celular bloqueado no se entera. Hoy depende de que Jesús avise |
-| **Sonido** al aparecer una entrega (la comida suena al tomar y al entregar) | Nada lo alerta aunque tenga la app abierta |
 | **Panel de admin** de Entregas | Jesús solo ve solicitudes en el panel de Supabase o con `consultas.sql` |
-| **Horario por días** | Si se enciende, funciona también sábado y domingo |
 | **QR de Yape del motorizado en la app** | Lo muestra en su celular o impreso |
 | **Crear pedido «a nombre de» otro cliente** (canal WhatsApp) | Jesús usa su cuenta; su nombre sale como «a nombre de» |
+
+## 5-bis. Hecho el 2026-10-01 (`0238`)
+
+- **Push de Entregas**, por el mismo outbox que la comida (`courier_order_events`
+  → trigger → `domain_events` `CourierStepped` → `send-push`):
+  - Motorizados: «📦 Entrega nueva» y «🔓 Entrega libre otra vez» (abre `/entrega/[id]`).
+  - Cliente: tomada, recogida, entregada, no se pudo, vencida (abre `/entregas/[shortId]`);
+    la hoja de seguimiento le ofrece activar los avisos.
+  - Motorizado: «Entrega cuadrada» cuando Jesús confirma la rendición.
+- **Horario por días**: `courier.hours.days` (ISO 1–7). Encendido 18–23 h, lunes a domingo.
+- **Sin descuentos**: promo de lanzamiento `active: false` y envío gratis por plato en NULL.
+
+- **La entrega activa se ve en vivo** (`0239`): `courier_orders` no estaba en
+  la publicación de Realtime, así que el banner «Entrega en curso», el badge
+  de «Pedidos» y el seguimiento nunca recibían eventos. Además el store recarga
+  al pedir, al volver a la app y al cambiar de sesión.
+- **`/pedidos` lista las entregas** junto a la comida (las vivas primero).
+- **Mapas** (`@tindivo/map`): el mapa del motorizado usa las mismas piezas que
+  el del cliente — pines A/B con su globo, línea punteada y las referencias del
+  pueblo (`map_landmarks`). Mosaicos: CARTO en producción (con su key); en
+  desarrollo sin key, OpenStreetMap.
+
+- **Abre en su horario aunque nadie esté «Disponible»** (`0240`): ni la card
+  ni `create_courier_order` exigen ya un motorizado con el interruptor
+  prendido. El push llega a todos los activos; si nadie la toma, vence a los
+  15 min sin cobro.
+- **`/entregas` muestra «Lugares»** de `map_landmarks` (negocios de todo tipo,
+  colegios, plazas, iglesias…), las mismas referencias de los mapas del
+  cliente y del motorizado, no `directory_businesses`. Tocar uno → «Recoger
+  aquí» abre el pedido con ese punto como recojo.
 
 ## 6. Estado en `tindivo-prod`
 
