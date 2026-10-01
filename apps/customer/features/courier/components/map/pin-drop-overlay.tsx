@@ -151,9 +151,6 @@ export function PinDropOverlay({
     <div
       ref={caja}
       tabIndex={-1}
-      role="dialog"
-      aria-modal="true"
-      aria-label="Fijar el punto en el mapa"
       /*
        * `pointer-events-none` EN EL CONTENEDOR ENTERO. A diferencia de
        * `location-sheet.tsx`, el mapa NO vive dentro de este div — vive en
@@ -163,6 +160,9 @@ export function PinDropOverlay({
        * arrastre necesita que llegue al Leaflet de abajo. Cada control real
        * (botones, segmented, el panel inferior) reactiva `pointer-events-auto`.
        */
+      role="dialog"
+      aria-modal="true"
+      aria-label="Fijar el punto en el mapa"
       className="pointer-events-none fixed inset-0 z-70 flex flex-col focus:outline-none"
     >
       <div className="relative min-h-0 flex-1">

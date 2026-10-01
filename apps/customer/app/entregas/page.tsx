@@ -145,7 +145,7 @@ export default function EntregasLugaresPage() {
       )}
 
       {view === 'mapa' ? (
-        <div className="fixed inset-0 z-30 bg-white">
+        <div role="dialog" aria-label="Mapa de lugares" className="fixed inset-0 z-30 bg-white">
           {filtered === null ? (
             <div className="flex h-full items-center justify-center">
               <Spinner size="md" variant="brand" />
