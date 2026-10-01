@@ -3,6 +3,7 @@
 import { BottomSheet, Button, Icon } from '@tindivo/ui'
 import { mapsDirToCoords } from '@/lib/deeplinks'
 import { MapReadonly } from './map-readonly'
+import type { MapReadonlyProps } from './map-readonly-inner'
 
 /**
  * El mapa, a pantalla casi completa y por encima de todo.
@@ -27,23 +28,34 @@ export function MapSheet({
   lng,
   title,
   subtitle,
+  eyebrow = 'Entregar en',
+  pinLabel,
+  variant,
+  other,
   onClose,
 }: {
   lat: number
   lng: number
   title: string | null
   subtitle?: string | null
+  /** El rótulo de arriba. Las Entregas tienen dos puntos: «Recoger en» y «Entregar en». */
+  eyebrow?: string
+  /** Globo sobre el pin y color (ver `MapReadonlyProps`). */
+  pinLabel?: string | null
+  variant?: MapReadonlyProps['variant']
+  /** Entregas: el otro extremo del viaje, para ver A y B juntos. */
+  other?: MapReadonlyProps['other']
   onClose: () => void
 }) {
   const destino = title ?? 'Ubicación del cliente'
 
   return (
-    <BottomSheet open label={`Entregar en ${destino}`} onClose={onClose}>
+    <BottomSheet open label={`${eyebrow} ${destino}`} onClose={onClose}>
       <div className="flex min-h-0 flex-col">
         <div className="flex items-start justify-between gap-3 px-5 pt-2 pb-3">
           <div className="min-w-0">
             <span className="font-mono text-meta font-semibold uppercase tracking-[0.14em] text-ink-muted">
-              Entregar en
+              {eyebrow}
             </span>
             <p className="mt-0.5 text-body-lg font-semibold leading-snug text-ink">{destino}</p>
             {subtitle && <p className="mt-0.5 text-caption text-ink-muted">{subtitle}</p>}
@@ -62,7 +74,14 @@ export function MapSheet({
             botón, que es lo que se viene a tocar después de mirar. */}
         <div className="min-h-0 flex-1 px-5">
           <div className="overflow-hidden rounded-[18px]">
-            <MapReadonly lat={lat} lng={lng} heightClass="h-[55vh]" />
+            <MapReadonly
+              lat={lat}
+              lng={lng}
+              label={pinLabel}
+              variant={variant}
+              other={other}
+              heightClass="h-[55vh]"
+            />
           </div>
         </div>
 

@@ -1,23 +1,11 @@
 'use client'
 
-import L from 'leaflet'
-import { useEffect } from 'react'
-import { MapContainer, Marker, TileLayer, useMap } from 'react-leaflet'
+import { type Landmark, type RoutePin, STREET_TILES } from '@tindivo/map'
+import { FitBounds, LandmarkLayer, RouteLineLayer, RoutePinLayer } from '@tindivo/map/leaflet'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { MapContainer, TileLayer, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
-
-// Pin idéntico al del customer (los PNG default de Leaflet se rompen con bundlers).
-const pinIcon = L.divIcon({
-  className: '',
-  html: `<div style="position:relative;width:34px;height:44px">
-    <span style="position:absolute;left:10px;bottom:0;width:14px;height:6px;border-radius:50%;background:rgba(26,22,20,0.35)"></span>
-    <svg width="34" height="44" viewBox="0 0 34 44" xmlns="http://www.w3.org/2000/svg" style="position:absolute;left:0;top:0">
-      <path d="M17 2C9.3 2 3 8.2 3 15.9 3 26 17 42 17 42s14-16.1 14-26.1C31 8.2 24.7 2 17 2z" fill="#F97316" stroke="#fff" stroke-width="2.5"/>
-      <circle cx="17" cy="16" r="5" fill="#fff"/>
-    </svg>
-  </div>`,
-  iconSize: [34, 44],
-  iconAnchor: [17, 42],
-})
+import { getLandmarks } from '@/lib/landmarks'
 
 function InvalidateSize() {
   const map = useMap()
@@ -29,16 +17,73 @@ function InvalidateSize() {
   return null
 }
 
-function Recenter({ lat, lng }: { lat: number; lng: number }) {
-  const map = useMap()
-  useEffect(() => {
-    map.setView([lat, lng], map.getZoom())
-  }, [lat, lng, map])
-  return null
+export interface MapReadonlyProps {
+  lat: number
+  lng: number
+  /** El nombre en el globo sobre el pin. */
+  label?: string | null
+  /** Color del pin: naranja = recojo / la comida, oscuro = destino. */
+  variant?: 'origin' | 'destination'
+  /**
+   * El otro punto del viaje (Entregas: A ↔ B). Se pinta con su globo y una
+   * línea discontinua, y el mapa encuadra los dos — como en el seguimiento del
+   * cliente.
+   */
+  other?: { lat: number; lng: number; label?: string | null; variant: 'origin' | 'destination' }
 }
 
-/** Mapa Leaflet de solo lectura (pin fijo). Cargar vía next/dynamic ssr:false. */
-export default function MapReadonlyInner({ lat, lng }: { lat: number; lng: number }) {
+/**
+ * Mapa de solo lectura del motorizado, con las MISMAS piezas que el del
+ * cliente (`@tindivo/map`): el pin con su globo, el otro extremo del viaje si
+ * lo hay, y las referencias del pueblo. Cargar vía next/dynamic ssr:false.
+ */
+export default function MapReadonlyInner({
+  lat,
+  lng,
+  label,
+  variant = 'origin',
+  other,
+}: MapReadonlyProps) {
+  const [landmarks, setLandmarks] = useState<Landmark[]>([])
+  useEffect(() => {
+    let on = true
+    void getLandmarks().then((l) => {
+      if (on) setLandmarks(l)
+    })
+    return () => {
+      on = false
+    }
+  }, [])
+
+  const pins = useMemo<RoutePin[]>(() => {
+    const main: RoutePin = {
+      id: 'main',
+      coordinates: { lat, lng },
+      label: label ?? undefined,
+      variant,
+    }
+    if (!other) return [main]
+    return [
+      main,
+      {
+        id: 'other',
+        coordinates: { lat: other.lat, lng: other.lng },
+        label: other.label ?? undefined,
+        variant: other.variant,
+      },
+    ]
+  }, [lat, lng, label, variant, other])
+
+  // `FitBounds` encuadra cuando cambia el token: uno nuevo solo si cambian
+  // las coordenadas (no por un render cualquiera de la ficha).
+  const coordsKey = pins.map((p) => `${p.coordinates.lat},${p.coordinates.lng}`).join('|')
+  const tokens = useRef({ key: '', n: 0 })
+  if (tokens.current.key !== coordsKey) tokens.current = { key: coordsKey, n: tokens.current.n + 1 }
+  const fit = useMemo(
+    () => ({ coordinates: pins.map((p) => p.coordinates), token: tokens.current.n }),
+    [coordsKey],
+  )
+
   return (
     <MapContainer
       center={[lat, lng]}
@@ -48,12 +93,17 @@ export default function MapReadonlyInner({ lat, lng }: { lat: number; lng: numbe
       className="h-full w-full"
     >
       <TileLayer
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        url={STREET_TILES.url}
+        attribution={STREET_TILES.attribution}
+        subdomains={STREET_TILES.subdomains ?? 'abc'}
+        maxNativeZoom={19}
+        maxZoom={19}
       />
       <InvalidateSize />
-      <Recenter lat={lat} lng={lng} />
-      <Marker position={[lat, lng]} icon={pinIcon} />
+      <LandmarkLayer landmarks={landmarks} showLabels interactivo pines={pins} />
+      {other && <RouteLineLayer from={{ lat, lng }} to={{ lat: other.lat, lng: other.lng }} />}
+      <RoutePinLayer pins={pins} />
+      <FitBounds coordinates={fit.coordinates} token={fit.token} />
     </MapContainer>
   )
 }

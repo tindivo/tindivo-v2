@@ -1,6 +1,7 @@
 'use client'
 
 import dynamic from 'next/dynamic'
+import type { MapReadonlyProps } from './map-readonly-inner'
 
 // Leaflet toca `window`: cliente puro.
 const Inner = dynamic(() => import('./map-readonly-inner'), {
@@ -10,8 +11,6 @@ const Inner = dynamic(() => import('./map-readonly-inner'), {
 
 /** Mapa de la ubicación de entrega (pedidos online con coordenadas). */
 export function MapReadonly({
-  lat,
-  lng,
   heightPx = 180,
   /**
    * Alto por CSS en vez de por píxeles. Lo usa el sheet, que quiere `55vh`:
@@ -20,9 +19,8 @@ export function MapReadonly({
    * la hidratación, y React lo canta.
    */
   heightClass,
-}: {
-  lat: number
-  lng: number
+  ...map
+}: MapReadonlyProps & {
   heightPx?: number
   heightClass?: string
 }) {
@@ -48,7 +46,7 @@ export function MapReadonly({
       className={`relative isolate overflow-hidden ${heightClass ?? ''}`}
       style={{ height: heightClass ? undefined : heightPx, zIndex: 0 }}
     >
-      <Inner lat={lat} lng={lng} />
+      <Inner {...map} />
     </div>
   )
 }
