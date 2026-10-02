@@ -393,6 +393,17 @@ describe('estados con Deshacer', () => {
     expect(undo.json?.data.product.soldAt).toBeNull()
   })
 
+  it('las tarjetas de vendidos traen los mismos campos que la grilla (condición, precio original)', async () => {
+    const p = await published({ title: `${PREFIX} Vendida completa` })
+    await setStatus(p.id, 'sold')
+    const r = await call(publicList, { qs: '?q=ZZ%20Test%20Store' })
+    const card = r.json?.data.sold.find((x: Json) => x.id === p.id)
+    expect(card.condition).toBe('used')
+    expect(card.originalPrice).toBe(60)
+    expect(card.status).toBe('sold')
+    expect(card.thumbUrl).toContain('-t.webp')
+  })
+
   it('«Vendidos recientemente» trae como máximo 6', async () => {
     const r = await call(publicList)
     expect(r.json?.data.sold.length).toBeLessThanOrEqual(6)

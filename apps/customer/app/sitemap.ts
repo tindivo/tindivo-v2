@@ -20,8 +20,22 @@ async function fetchBusinesses(): Promise<PublicBusiness[]> {
   }
 }
 
+/** Artículos de Tindivo Store a indexar: solo disponibles y reservados con slug. */
+async function fetchStoreSlugs(): Promise<string[]> {
+  try {
+    const res = await fetch(`${API_BASE}/public/store`, { next: { revalidate } })
+    if (!res.ok) return []
+    const envelope = (await res.json()) as {
+      data: { products: { slug: string | null }[] } | null
+    }
+    return (envelope.data?.products ?? []).flatMap((p) => (p.slug ? [p.slug] : []))
+  } catch {
+    return []
+  }
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const businesses = await fetchBusinesses()
+  const [businesses, storeSlugs] = await Promise.all([fetchBusinesses(), fetchStoreSlugs()])
   const now = new Date()
 
   return [
@@ -43,6 +57,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         changeFrequency: 'daily' as const,
         priority: 0.8,
       })),
+    {
+      url: absoluteUrl('/store'),
+      lastModified: now,
+      changeFrequency: 'daily' as const,
+      priority: 0.7,
+    },
+    ...storeSlugs.map((slug) => ({
+      url: absoluteUrl(`/store/${slug}`),
+      lastModified: now,
+      changeFrequency: 'daily' as const,
+      priority: 0.6,
+    })),
     {
       url: absoluteUrl('/terminos'),
       changeFrequency: 'yearly' as const,
