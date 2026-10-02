@@ -496,6 +496,9 @@ function MapCanvas({
           maxNativeZoom={tiles.maxNativeZoom}
           maxZoom={19}
           subdomains={tiles.subdomains ?? 'abc'}
+          // No pedir tiles de niveles intermedios mientras dura el gesto de zoom:
+          // se piden al terminar. Es lo que Leaflet hace por defecto solo en móvil.
+          updateWhenZooming={false}
         />
         {mode === 'satellite' && (
           // La capa de referencia sí responde hasta z19 (tiles de 872 bytes:

@@ -174,6 +174,9 @@ export default function MapPickerInner({
         center={[lat, lng]}
         zoom={17}
         zoomControl={false}
+        // Misma razón que en el mapa del cliente: el zoom animado crea y rasteriza
+        // nodos en cada paso, y en un celular eso se nota como tirones.
+        zoomAnimation={false}
         // El scroll del dedo tiene que mover el MAPA, no la hoja que lo contiene.
         scrollWheelZoom={false}
         className="h-full w-full"
@@ -184,6 +187,7 @@ export default function MapPickerInner({
           subdomains={STREET_TILES.subdomains ?? 'abc'}
           maxNativeZoom={19}
           maxZoom={19}
+          updateWhenZooming={false}
         />
         <InvalidateSize />
         <GestureWatch gestureRef={gestureRef} />

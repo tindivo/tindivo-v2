@@ -92,6 +92,9 @@ export default function PlacesMapInner({ places, bounds, center }: PlacesMapProp
           minZoom={14}
           maxZoom={19}
           zoomControl={false}
+          // Mismo motivo que en `map-picker-inner.tsx`: cada paso de zoom animado
+          // crea nodos de tiles e iconos y obliga a rasterizar de nuevo.
+          zoomAnimation={false}
           maxBounds={maxBounds}
           maxBoundsViscosity={1}
           className="h-full w-full"
@@ -102,6 +105,7 @@ export default function PlacesMapInner({ places, bounds, center }: PlacesMapProp
             subdomains={STREET_TILES.subdomains ?? 'abc'}
             maxNativeZoom={19}
             maxZoom={19}
+            updateWhenZooming={false}
           />
           <LandmarkLayer landmarks={places} showLabels interactivo pines={pins} />
           <RoutePinLayer pins={pins} />

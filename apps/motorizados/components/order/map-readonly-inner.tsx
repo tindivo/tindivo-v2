@@ -89,6 +89,9 @@ export default function MapReadonlyInner({
       center={[lat, lng]}
       zoom={16}
       zoomControl={false}
+      // Misma razón que en el mapa del cliente: el zoom animado crea y rasteriza
+      // nodos en cada paso, y en un celular eso se nota como tirones.
+      zoomAnimation={false}
       scrollWheelZoom={false}
       className="h-full w-full"
     >
@@ -98,6 +101,7 @@ export default function MapReadonlyInner({
         subdomains={STREET_TILES.subdomains ?? 'abc'}
         maxNativeZoom={19}
         maxZoom={19}
+        updateWhenZooming={false}
       />
       <InvalidateSize />
       <LandmarkLayer landmarks={landmarks} showLabels interactivo pines={pins} />
