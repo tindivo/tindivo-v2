@@ -43,6 +43,8 @@ export const STORE_MAX_PHOTOS = 6
 export const STORE_TITLE_MAX = 60
 export const STORE_DESCRIPTION_MAX = 600
 export const STORE_SIZE_MAX = 20
+/** Tope (en caracteres de JSON) del `metadata` de un evento anónimo. */
+export const STORE_EVENT_METADATA_MAX = 1000
 
 // ── Modelo mínimo para las reglas ───────────────────────────────────────────
 
@@ -284,7 +286,16 @@ export const storeEventSchema = z.object({
     .transform((r) =>
       (STORE_REFS as readonly string[]).includes(r ?? '') ? (r as StoreRef) : null,
     ),
-  metadata: z.record(z.string(), z.unknown()).nullable().optional().default(null),
+  // El endpoint es público y anónimo: sin tope, cualquiera podría guardar megas por evento.
+  metadata: z
+    .record(z.string(), z.unknown())
+    .refine(
+      (m) => JSON.stringify(m).length <= STORE_EVENT_METADATA_MAX,
+      'metadata demasiado grande',
+    )
+    .nullable()
+    .optional()
+    .default(null),
 })
 export type StoreEventInput = z.infer<typeof storeEventSchema>
 

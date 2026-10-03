@@ -79,6 +79,9 @@
   border-bottom: 1px solid var(--st-line);
 }
 .st-logo {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px; /* target táctil mínimo */
   font-size: 23px;
   font-weight: 800;
   letter-spacing: -0.03em;

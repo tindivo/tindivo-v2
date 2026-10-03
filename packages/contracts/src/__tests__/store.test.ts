@@ -310,6 +310,12 @@ describe('storeEventSchema', () => {
     const r = storeEventSchema.safeParse({ ...base, ref: 'wa_estado' })
     expect(r.success && r.data.ref).toBe('wa_estado')
   })
+  it('metadata anónimo con tope: uno enorme se rechaza', () => {
+    expect(storeEventSchema.safeParse({ ...base, metadata: { a: 'x'.repeat(2000) } }).success).toBe(
+      false,
+    )
+    expect(storeEventSchema.safeParse({ ...base, metadata: { a: 'ok' } }).success).toBe(true)
+  })
   it('exige sessionId razonable', () => {
     expect(storeEventSchema.safeParse({ ...base, sessionId: 'x' }).success).toBe(false)
   })
