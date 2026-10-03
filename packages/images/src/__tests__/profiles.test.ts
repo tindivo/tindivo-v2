@@ -33,7 +33,7 @@ describe('PROFILES', () => {
   })
 
   it('comprime con pérdida el resto de imágenes', () => {
-    for (const profile of ['logo', 'banner', 'product', 'proof'] as const) {
+    for (const profile of ['logo', 'banner', 'product', 'proof', 'store', 'store-thumb'] as const) {
       expect(PROFILES[profile].lossless).toBe(false)
       expect(PROFILES[profile].quality).toBeLessThan(1)
     }
@@ -44,5 +44,15 @@ describe('PROFILES', () => {
     // la foto del plato solo se mira.
     expect(PROFILES.proof.quality).toBeGreaterThan(PROFILES.product.quality)
     expect(PROFILES.proof.maxEdge).toBeGreaterThanOrEqual(PROFILES.product.maxEdge)
+  })
+})
+
+describe('perfiles de Tindivo Store', () => {
+  it('el detalle es ~1080 px y la miniatura es bastante menor', () => {
+    expect(PROFILES.store.maxEdge).toBe(1080)
+    expect(PROFILES['store-thumb'].maxEdge).toBeLessThan(PROFILES.store.maxEdge)
+  })
+  it('la miniatura aguanta una tarjeta de ~180 px CSS en un celular 3x', () => {
+    expect(PROFILES['store-thumb'].maxEdge).toBeGreaterThanOrEqual(540)
   })
 })

@@ -8,6 +8,7 @@ const config: NextConfig = {
     '@tindivo/ui',
     '@tindivo/api-client',
     '@tindivo/contracts',
+    '@tindivo/images',
     '@tindivo/supabase',
   ],
   poweredByHeader: false,

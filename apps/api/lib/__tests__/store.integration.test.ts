@@ -24,6 +24,7 @@ import {
   PATCH as adminPatch,
 } from '../../app/api/v1/admin/store/[id]/route'
 import { POST as adminStatus } from '../../app/api/v1/admin/store/[id]/status/route'
+import { GET as categoriesGet } from '../../app/api/v1/admin/store/categories/route'
 import { POST as adminCreate, GET as adminList } from '../../app/api/v1/admin/store/route'
 import { GET as settingsGet, PUT as settingsPut } from '../../app/api/v1/admin/store/settings/route'
 import { GET as publicDetail } from '../../app/api/v1/public/store/[slug]/route'
@@ -166,6 +167,21 @@ describe('autorización del admin', () => {
     expect((await call(adminList, { auth: false })).status).toBe(401)
     expect((await call(adminCreate, { method: 'POST', auth: false })).status).toBe(401)
     expect((await call(settingsGet, { auth: false })).status).toBe(401)
+  })
+})
+
+describe('categorías del admin', () => {
+  it('devuelve las 8 categorías con id e icono; sin token → 401', async () => {
+    const r = await call(categoriesGet)
+    expect(r.status).toBe(200)
+    expect(r.json?.data).toHaveLength(8)
+    expect(r.json?.data[0]).toEqual({
+      id: expect.any(String),
+      name: 'Ropa',
+      slug: 'ropa',
+      icon: 'checkroom',
+    })
+    expect((await call(categoriesGet, { auth: false })).status).toBe(401)
   })
 })
 

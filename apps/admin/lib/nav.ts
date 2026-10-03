@@ -47,6 +47,7 @@ export const NAV_SECTIONS: NavSection[] = [
     title: 'Gestión',
     items: [
       { href: '/negocios', label: 'Negocios', icon: Ico.store },
+      { href: '/store', label: 'Tienda', icon: Ico.orders },
       // Al lado de Negocios y no en «Casos»: una reseña no es una falta de
       // nadie, y la pregunta que contesta es «¿cómo va este restaurante?».
       { href: '/resenas', label: 'Reseñas', icon: Ico.reports },

@@ -9,7 +9,7 @@ import { MAX_INPUT_BYTES, MAX_UPLOAD_BYTES } from './upload'
  * producto. Ajustar cuando tengamos el inventario completo de anchos.
  */
 
-export type ImageProfile = 'logo' | 'banner' | 'product' | 'qr' | 'proof'
+export type ImageProfile = 'logo' | 'banner' | 'product' | 'qr' | 'proof' | 'store' | 'store-thumb'
 
 export interface ProfileSpec {
   /** Lado mayor máximo en px. Nunca se amplía una imagen que ya sea menor. */
@@ -50,6 +50,14 @@ export const PROFILES: Record<ImageProfile, ProfileSpec> = {
   // Y es el único perfil donde el último recurso llega hasta la entrada entera:
   // que un cliente NO PUEDA PAGAR es peor que cualquier factura de datos.
   proof: { maxEdge: 1600, quality: 0.92, lossless: false, fallbackLimit: MAX_INPUT_BYTES },
+  // Tindivo Store. Cada foto se sube DOS veces: `store` (~1080 px, el detalle y
+  // el visor, donde se revisan los defectos de la segunda mano) y `store-thumb`
+  // (la miniatura de las tarjetas). La miniatura NO se recorta aquí: la grilla
+  // la pinta cuadrada con `object-fit: cover` hacia el punto central que elige
+  // Jesús, y para eso hace falta la foto entera. 600 y no 400: la tarjeta mide
+  // ~180 px CSS y en un celular de 3x necesita ~540 px para no verse borrosa.
+  store: { maxEdge: 1080, quality: 0.82, lossless: false, fallbackLimit: MAX_UPLOAD_BYTES },
+  'store-thumb': { maxEdge: 600, quality: 0.8, lossless: false, fallbackLimit: MAX_UPLOAD_BYTES },
 }
 
 /**

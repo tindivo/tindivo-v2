@@ -125,6 +125,9 @@ importers:
       '@tindivo/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@tindivo/images':
+        specifier: workspace:*
+        version: link:../../packages/images
       '@tindivo/supabase':
         specifier: workspace:*
         version: link:../../packages/supabase
