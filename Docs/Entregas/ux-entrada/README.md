@@ -87,3 +87,40 @@ los lugares no tienen teléfono. En orden:
 Antes de agregar más: **cinco personas con un Android modesto** prueban tres
 recorridos: entrega nueva, repetir una entrega y entrar por el enlace de una
 tienda. Se mide el tiempo, dónde dudan y si terminan sin ayuda.
+
+## 7. Auditoría (7-oct, después de construirlo)
+
+Codex auditó la primera versión como experto en UX/UI y en código, sobre 12
+capturas a 390×844 y el diff (`02-codex-auditoria.md`). Claude respondió qué
+tomaba y qué no (`03-claude-respuesta.md`), lo aplicó, y Codex lo verificó en
+tres pasadas hasta dar **«listo para commit»** (`04` a `06`). Se probó además en
+Chrome real (Escape con la lupa abierta, «Repetir», consola sin errores).
+
+**Lo que cambió por la auditoría:**
+
+- Elegir en la lupa **reemplaza** el contacto (antes, la botica podía quedarse
+  con el celular de «Mamá»).
+- **«Mi dirección»** a la vista en el paso 2, y llena también quién recibe.
+- **«Recogemos en …»** en el paso 2: B arranca en tu GPS y A puede quedar fuera.
+- **Detalles:** los contactos que llegan completos se ven en una línea con
+  «Cambiar», y el botón gris dice qué falta («Completar: qué llevamos») y lleva
+  hasta ahí.
+- La lupa separa **«Tus lugares»** de **«Lugares del pueblo»**, muestra el
+  celular de cada reciente, dice cuándo carga, cuándo falló la red y ofrece
+  «Marcar en el mapa» si no encuentra nada.
+- **Una sola carga por apertura** (`lib/flow-context.ts`): identidad,
+  historial y dirección, compartida por el mapa y las hojas, **atada a la
+  cuenta** (cambiar de sesión no muestra datos de la anterior).
+- **El GPS se lee una vez:** B reutiliza la ubicación de A si tiene menos de
+  1 min; el botón de ubicación ya no pisa lo elegido en la lupa.
+- `/entregas` abre también con navegación interna, no solo al cargar la página.
+- Foco: la lupa aísla el pin de detrás (`inert`, y `useDialogFocus` lo respeta)
+  y devuelve el foco al cerrar.
+
+**Pendiente, acordado con Codex:**
+
+- **Contraste del botón naranja** (blanco sobre el degradado: ~2,3–2,8:1). Es el
+  botón de marca de toda la app: va en un cambio propio de `packages/ui`.
+- Estados de 11 px y contexto de «Crea tu cuenta» («para pedir tu entrega»):
+  componentes compartidos, su propia pasada.
+- Probar con **cinco personas en Android modestos** (§6).

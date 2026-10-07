@@ -41,11 +41,30 @@ describe('recentRoutes', () => {
     const routes = recentRoutes([
       row({ item_description: 'Lo de hoy' }),
       row({ item_description: 'Lo de ayer', origin_lat: -9.14681 }), // ~1 m: es el mismo sitio
+      row({ item_description: 'Cuadrícula', origin_lat: -9.14685001 }), // cruza un redondeo, ~5 m
       row({ destination_lat: -9.16, destination_reference_text: 'Otra casa, por el colegio' }),
     ])
     expect(routes).toHaveLength(2)
     expect(routes[0]?.itemDescription).toBe('Lo de hoy')
     expect(routes[1]?.destination.referenceText).toBe('Otra casa, por el colegio')
+  })
+
+  it('dos puertas a más de 15 m son rutas distintas', () => {
+    const routes = recentRoutes([row(), row({ destination_lat: -9.1497 })]) // ~22 m
+    expect(routes).toHaveLength(2)
+  })
+
+  it('dos casas vecinas (a ~11 m) con otra referencia y otro celular no se funden', () => {
+    const routes = recentRoutes([
+      row(),
+      row({
+        destination_lat: -9.1496,
+        destination_name: 'Daniel',
+        destination_phone: '944444444',
+        destination_reference_text: 'Puerta azul, al lado',
+      }),
+    ])
+    expect(routes).toHaveLength(2)
   })
 
   it('a lo más tres', () => {
@@ -69,6 +88,19 @@ describe('recentPoints', () => {
       row({ status: 'cancelled', destination_lat: -9.16, destination_name: 'Pedro' }),
     ])
     expect(points.map((p) => p.contactName)).toEqual(['María', 'Botica Santa Rosa', 'Pedro'])
+  })
+
+  it('una vecina a ~11 m con otro celular sigue saliendo', () => {
+    const points = recentPoints([
+      row(),
+      row({
+        destination_lat: -9.1496,
+        destination_name: 'Daniel',
+        destination_phone: '944444444',
+        destination_reference_text: 'Puerta azul, al lado',
+      }),
+    ])
+    expect(points.map((p) => p.contactName)).toContain('Daniel')
   })
 
   it('un punto sin nombre se rotula con su referencia', () => {

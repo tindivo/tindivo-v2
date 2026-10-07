@@ -1,6 +1,6 @@
 'use client'
 
-import { Icon } from '@tindivo/ui'
+import { Icon, Spinner } from '@tindivo/ui'
 import { useMemo, useState } from 'react'
 import type { PointOption } from '../../lib/point-search'
 import type { CourierEditingPoint } from '../../types'
@@ -32,11 +32,17 @@ const TITLE: Record<CourierEditingPoint, string> = {
 export function PointSearchSheet({
   point,
   search,
+  ready,
+  failed,
   onPick,
   onClose,
 }: {
   point: CourierEditingPoint
   search: (query: string) => PointOption[]
+  /** `false` mientras se cargan los sitios recientes: no se dice «no hay». */
+  ready: boolean
+  /** No se pudieron cargar los sitios recientes (sin red): se dice, no se calla. */
+  failed: boolean
   onPick: (option: PointOption) => void
   onClose: () => void
 }) {
@@ -71,52 +77,97 @@ export function PointSearchSheet({
             enterKeyHint="search"
             autoComplete="off"
             aria-label={`Buscar: ${TITLE[point]}`}
-            placeholder="Una botica, un colegio, una casa…"
+            placeholder="Un lugar o donde ya pediste"
             className="h-11 min-w-0 flex-1 border-0 bg-transparent text-[16px] font-semibold text-ink outline-none placeholder:font-medium placeholder:text-ink-muted/70"
           />
         </label>
       </div>
 
       <div className="flex-1 overflow-y-auto px-3 pt-2 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-        {!typed && options.length > 0 && (
-          <p className="px-2 pt-2 pb-1 text-[13px] font-bold text-ink-muted">Tus lugares</p>
-        )}
-        {options.map((o) => (
-          <button
-            key={o.key}
-            type="button"
-            onClick={() => onPick(o)}
-            className="flex w-full items-center gap-3 rounded-2xl px-2 py-2.5 text-left transition-colors active:bg-ink/[0.05]"
-          >
-            {o.category ? (
-              <PlaceBadge category={o.category} size={40} />
-            ) : (
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#EEF3FF] text-[#1D4ED8]">
-                <Icon
-                  name={o.kind === 'home' ? 'home' : 'history'}
-                  size={22}
-                  filled={o.kind === 'home'}
-                />
-              </span>
-            )}
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-[16px] font-bold text-ink">{o.title}</span>
-              {o.subtitle && o.subtitle !== o.title && (
-                <span className="block truncate text-[13px] font-medium text-ink-muted">
-                  {o.subtitle}
-                </span>
-              )}
-            </span>
-          </button>
-        ))}
-        {options.length === 0 && (
-          <p className="px-4 py-10 text-center text-[14px] leading-snug text-ink-muted">
-            {typed
-              ? 'No lo encontramos. Vuelve al mapa y muévelo hasta el punto.'
-              : 'Escribe el nombre de un lugar: una botica, un colegio, una tienda.'}
-          </p>
-        )}
+        {SECTIONS.map(({ title, kinds }) => {
+          const rows = options.filter((o) => kinds.includes(o.kind))
+          if (rows.length === 0) return null
+          return (
+            <section key={title} aria-label={title}>
+              <p className="px-2 pt-3 pb-1 text-[13px] font-bold text-ink-muted">{title}</p>
+              {rows.map((o) => (
+                <OptionRow key={o.key} option={o} onPick={onPick} />
+              ))}
+            </section>
+          )
+        })}
+        {options.length === 0 &&
+          (!ready ? (
+            <div className="flex justify-center py-10">
+              <Spinner size="md" variant="brand" />
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
+              <p className="text-[14px] leading-snug text-ink-muted">
+                {typed
+                  ? 'No encontramos ese lugar.'
+                  : failed
+                    ? 'No pudimos cargar tus lugares. Revisa tu conexión, o escribe el nombre de un lugar.'
+                    : 'Escribe el nombre de un lugar: una botica, un colegio, una tienda.'}
+              </p>
+              {/* Lo que no está cargado se marca a mano: la salida es explícita. */}
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex h-12 items-center gap-2 rounded-full bg-[#EEF3FF] px-5 text-[15px] font-bold text-[#1D4ED8]"
+              >
+                <Icon name="pin_drop" size={20} filled />
+                Marcar en el mapa
+              </button>
+            </div>
+          ))}
       </div>
     </div>
+  )
+}
+
+/**
+ * «Tus lugares» (lo propio: tu dirección y donde ya pediste) separado de los
+ * «Lugares del pueblo»: con dos «Botica Central», saber de qué lista viene
+ * dice si trae contacto o no.
+ */
+const SECTIONS: { title: string; kinds: PointOption['kind'][] }[] = [
+  { title: 'Tus lugares', kinds: ['home', 'recent'] },
+  { title: 'Lugares del pueblo', kinds: ['place'] },
+]
+
+function OptionRow({
+  option: o,
+  onPick,
+}: {
+  option: PointOption
+  onPick: (option: PointOption) => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onPick(o)}
+      className="flex w-full items-center gap-3 rounded-2xl px-2 py-2.5 text-left transition-colors active:bg-ink/[0.05]"
+    >
+      {o.category ? (
+        <PlaceBadge category={o.category} size={40} />
+      ) : (
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#EEF3FF] text-[#1D4ED8]">
+          <Icon
+            name={o.kind === 'home' ? 'home' : 'history'}
+            size={22}
+            filled={o.kind === 'home'}
+          />
+        </span>
+      )}
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[16px] font-bold text-ink">{o.title}</span>
+        {o.subtitle && o.subtitle !== o.title && (
+          <span className="block truncate text-[13px] font-medium text-ink-muted">
+            {o.subtitle}
+          </span>
+        )}
+      </span>
+    </button>
   )
 }

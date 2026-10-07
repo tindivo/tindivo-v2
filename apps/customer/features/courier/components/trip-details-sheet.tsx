@@ -8,6 +8,7 @@ import { useCourierStatus } from '../hooks/use-courier-status'
 import { type CourierContact, suggestContacts } from '../lib/contacts'
 import { formatCourierPrice, getUtmSource } from '../lib/format'
 import {
+  formatPePhone,
   isValidPePhone,
   missingPhoneDigits,
   normalizePePhoneInput,
@@ -67,14 +68,26 @@ export function TripDetailsSheet() {
   const ready = itemReady && originReady && destinationReady && draft.weightConfirmed
 
   // Una sola línea, siempre: si el aviso creciera, el pie se movería.
-  const missing: { text: string; target: string } | null = !itemReady
-    ? { text: 'Falta decir qué llevamos', target: 'item' }
+  const missing: { text: string; cta: string; target: string } | null = !itemReady
+    ? { text: 'Falta decir qué llevamos', cta: 'Completar: qué llevamos', target: 'item' }
     : !originReady
-      ? { text: 'Falta el celular de quien entrega', target: 'origin-phone' }
+      ? {
+          text: 'Falta el celular de quien entrega',
+          cta: 'Completar: celular de quien entrega',
+          target: 'origin-phone',
+        }
       : !destinationReady
-        ? { text: 'Falta el celular de quien recibe', target: 'destination-phone' }
+        ? {
+            text: 'Falta el celular de quien recibe',
+            cta: 'Completar: celular de quien recibe',
+            target: 'destination-phone',
+          }
         : !draft.weightConfirmed
-          ? { text: 'Marca que está listo y pagado', target: 'ready' }
+          ? {
+              text: 'Marca que está listo y pagado',
+              cta: 'Marcar: listo y pagado',
+              target: 'ready',
+            }
           : null
 
   function pickCategory(c: (typeof CATEGORIES)[number]) {
@@ -112,6 +125,7 @@ export function TripDetailsSheet() {
         >
           {/* ── De quién a quién ───────────────────────────────────────── */}
           <PointCard
+            key={`origin-${open}`}
             which="origin"
             title="Recogemos de"
             point={draft.origin}
@@ -122,6 +136,7 @@ export function TripDetailsSheet() {
             recents={recents}
           />
           <PointCard
+            key={`destination-${open}`}
             which="destination"
             title="Entregamos a"
             point={draft.destination}
@@ -247,7 +262,10 @@ export function TripDetailsSheet() {
           </p>
           <button
             type="button"
-            aria-disabled={!ready || submitting}
+            // Solo «Enviando…» está deshabilitado de verdad. Gris por falta de
+            // datos, el botón SÍ hace algo («Completar: …» lleva al campo), así
+            // que no se anuncia como deshabilitado.
+            aria-disabled={submitting}
             onClick={() => {
               if (submitting) return
               if (missing) focusField(missing.target)
@@ -260,7 +278,13 @@ export function TripDetailsSheet() {
             }`}
           >
             <Icon name="two_wheeler" size={22} filled={ready} />
-            {submitting ? 'Enviando…' : `Pedir entrega · ${formatCourierPrice(status.price)}`}
+            {/* Gris, el botón dice qué falta y lleva hasta ahí (`focusField`):
+                tras «Repetir», lo pendiente suele quedar abajo, fuera de vista. */}
+            {submitting
+              ? 'Enviando…'
+              : missing
+                ? missing.cta
+                : `Pedir entrega · ${formatCourierPrice(status.price)}`}
           </button>
         </div>
       </div>
@@ -310,6 +334,13 @@ function PointCard({
 }) {
   const missing = missingPhoneDigits(point.contactPhone)
   const dotColor = which === 'origin' ? 'bg-brand' : 'bg-[#2E3236]'
+  // Un contacto que YA llega completo al abrir la hoja («Repetir», «Mi
+  // dirección», un sitio reciente) se muestra como una línea con «Cambiar»:
+  // así lo pendiente («qué llevamos», «listo y pagado») cabe a la vista sin
+  // desplazarse. Se decide al montar (la hoja remonta estas tarjetas en cada
+  // apertura), nunca mientras se escribe: si el celular se colapsara al
+  // completar el noveno dígito, el campo desaparecería bajo los dedos.
+  const [compact, setCompact] = useState(() => isValidPePhone(point.contactPhone))
 
   return (
     <section className="flex flex-col gap-2.5 rounded-[22px] bg-[#F4F4F2] p-3.5">
@@ -337,53 +368,73 @@ function PointCard({
         </button>
       </div>
 
-      <ContactChips
-        me={me}
-        recents={recents}
-        current={point}
-        onPick={(c) => onChange({ contactName: c.name, contactPhone: c.phone })}
-        onClear={() => onChange({ contactName: '', contactPhone: '' })}
-      />
-
-      {/* Contacto: celular (obligatorio) y nombre (opcional) en una sola tarjeta. */}
-      <div className="flex flex-col rounded-2xl bg-white">
-        <div className="flex items-center gap-3 px-3 py-2.5">
+      {compact ? (
+        <div className="flex items-center gap-3 rounded-2xl bg-white px-3 py-2.5">
           <Icon name="call" size={18} className="shrink-0 text-[#6B7075]" />
-          <span className="text-[15px] font-semibold text-[#9AA0A6]">+51</span>
-          <input
-            type="tel"
-            inputMode="tel"
-            autoComplete="tel-national"
-            value={point.contactPhone}
-            onChange={(e) => onChange({ contactPhone: normalizePePhoneInput(e.target.value) })}
-            placeholder="987 654 321"
-            aria-label={`Celular de ${which === 'origin' ? 'quien entrega' : 'quien recibe'}`}
-            data-field={`${which}-phone`}
-            className="min-w-0 flex-1 border-0 bg-transparent text-[15px] font-semibold text-[#2E3236] outline-none"
-          />
-          {isValidPePhone(point.contactPhone) && (
-            <Icon name="check_circle" size={18} filled className="shrink-0 text-success" />
-          )}
+          <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-[#2E3236]">
+            {formatPePhone(point.contactPhone)}
+            {point.contactName.trim() ? ` · ${point.contactName.trim()}` : ''}
+          </span>
+          <button
+            type="button"
+            onClick={() => setCompact(false)}
+            aria-label={`Cambiar el contacto de ${which === 'origin' ? 'quien entrega' : 'quien recibe'}`}
+            className="shrink-0 text-[13px] font-bold text-brand-dark"
+          >
+            Cambiar
+          </button>
         </div>
-        {point.contactPhone.trim().length > 0 && missing > 0 && (
-          <p className="px-3 pb-2 pl-[44px] text-[12px] font-bold text-[#DC2626]">
-            Faltan {missing} dígito{missing === 1 ? '' : 's'}
-          </p>
-        )}
-        <div className="mx-3 border-t border-ink/[0.06]" />
-        <div className="flex items-center gap-3 px-3 py-2.5">
-          <Icon name="person" size={18} className="shrink-0 text-[#6B7075]" />
-          <input
-            type="text"
-            value={point.contactName}
-            onChange={(e) => onChange({ contactName: e.target.value })}
-            placeholder={namePlaceholder}
-            aria-label={namePlaceholder}
-            autoComplete="off"
-            className="min-w-0 flex-1 border-0 bg-transparent text-[15px] font-semibold text-[#2E3236] outline-none placeholder:text-[#9AA0A6]"
+      ) : (
+        <>
+          <ContactChips
+            me={me}
+            recents={recents}
+            current={point}
+            onPick={(c) => onChange({ contactName: c.name, contactPhone: c.phone })}
+            onClear={() => onChange({ contactName: '', contactPhone: '' })}
           />
-        </div>
-      </div>
+
+          {/* Contacto: celular (obligatorio) y nombre (opcional) en una sola tarjeta. */}
+          <div className="flex flex-col rounded-2xl bg-white">
+            <div className="flex items-center gap-3 px-3 py-2.5">
+              <Icon name="call" size={18} className="shrink-0 text-[#6B7075]" />
+              <span className="text-[15px] font-semibold text-[#9AA0A6]">+51</span>
+              <input
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel-national"
+                value={point.contactPhone}
+                onChange={(e) => onChange({ contactPhone: normalizePePhoneInput(e.target.value) })}
+                placeholder="987 654 321"
+                aria-label={`Celular de ${which === 'origin' ? 'quien entrega' : 'quien recibe'}`}
+                data-field={`${which}-phone`}
+                className="min-w-0 flex-1 border-0 bg-transparent text-[15px] font-semibold text-[#2E3236] outline-none"
+              />
+              {isValidPePhone(point.contactPhone) && (
+                <Icon name="check_circle" size={18} filled className="shrink-0 text-success" />
+              )}
+            </div>
+            {point.contactPhone.trim().length > 0 && missing > 0 && (
+              <p className="px-3 pb-2 pl-[44px] text-[12px] font-bold text-[#DC2626]">
+                Faltan {missing} dígito{missing === 1 ? '' : 's'}
+              </p>
+            )}
+            <div className="mx-3 border-t border-ink/[0.06]" />
+            <div className="flex items-center gap-3 px-3 py-2.5">
+              <Icon name="person" size={18} className="shrink-0 text-[#6B7075]" />
+              <input
+                type="text"
+                value={point.contactName}
+                onChange={(e) => onChange({ contactName: e.target.value })}
+                placeholder={namePlaceholder}
+                aria-label={namePlaceholder}
+                autoComplete="off"
+                className="min-w-0 flex-1 border-0 bg-transparent text-[15px] font-semibold text-[#2E3236] outline-none placeholder:text-[#9AA0A6]"
+              />
+            </div>
+          </div>
+        </>
+      )}
     </section>
   )
 }

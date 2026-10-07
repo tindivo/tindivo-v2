@@ -77,6 +77,10 @@ export function PinDropOverlay({
   routes,
   onRepeat,
   search,
+  searchReady,
+  searchFailed,
+  home,
+  originLabel,
   onPick,
 }: {
   mode: MapMode
@@ -101,6 +105,16 @@ export function PinDropOverlay({
   onRepeat: (route: CourierRoute) => void
   /** Las sugerencias de la lupa para lo escrito (ver `searchPoints`). */
   search: (query: string) => PointOption[]
+  /** `false` mientras se cargan los sitios recientes de quien pide. */
+  searchReady: boolean
+  searchFailed: boolean
+  /**
+   * En el paso de la entrega, de dónde se recoge («Recogemos en Botica San
+   * José»): B arranca en tu ubicación y A puede quedar fuera de la pantalla.
+   */
+  originLabel: string | null
+  /** «Mi dirección», a la vista en el paso de la entrega. `null` si no tiene. */
+  home: PointOption | null
   /** Lleva el pin a la sugerencia elegida y deja su referencia escrita. */
   onPick: (option: PointOption) => void
 }) {
@@ -110,6 +124,16 @@ export function PinDropOverlay({
   const [refError, setRefError] = useState<string | null>(null)
   const [confirmLeave, setConfirmLeave] = useState(false)
   const [searching, setSearching] = useState(false)
+  const lupa = useRef<HTMLButtonElement>(null)
+
+  // Al cerrar la lupa (atrás, Escape, «Marcar en el mapa» o al elegir), el
+  // foco vuelve a ella (y no al campo de referencia: eso abriría el teclado
+  // encima del mapa recién movido): sin esto quedaba en un elemento que ya no existe y el siguiente Tab
+  // empezaba desde el principio de la página.
+  function closeSearch() {
+    setSearching(false)
+    requestAnimationFrame(() => lupa.current?.focus({ preventScroll: true }))
+  }
 
   // Salir del paso 1 con algo ya escrito pide confirmación; volver del paso 2 al
   // 1 no (no se pierde nada). La identidad tiene que ser fija: `useDialogFocus`
@@ -118,7 +142,7 @@ export function PinDropOverlay({
   leaveRef.current = () => {
     // Con la búsqueda abierta, Escape (o atrás) la cierra a ella y nada más.
     if (searching) {
-      setSearching(false)
+      closeSearch()
       return
     }
     if (guided && stepIndex === 1 && reference.trim().length > 0) setConfirmLeave(true)
@@ -190,7 +214,9 @@ export function PinDropOverlay({
       aria-label="Fijar el punto en el mapa"
       className="pointer-events-none fixed inset-0 z-70 flex flex-col focus:outline-none"
     >
-      <div className="relative min-h-0 flex-1">
+      {/* `inert` mientras la lupa está abierta: tapa el pin, pero sin esto el
+          Tab seguía pasando por los controles de detrás. */}
+      <div className="relative min-h-0 flex-1" inert={searching}>
         <div
           aria-hidden
           className="pointer-events-none absolute inset-x-0 top-0 z-[725] h-32"
@@ -210,6 +236,7 @@ export function PinDropOverlay({
           </button>
           {guided && (
             <button
+              ref={lupa}
               type="button"
               onClick={() => setSearching(true)}
               className="pointer-events-auto flex h-11 min-w-0 flex-1 items-center gap-2 rounded-full bg-card px-3.5 text-left text-ink-muted shadow-elev-3 border border-ink/[0.06] transition-transform active:scale-[0.98]"
@@ -258,6 +285,7 @@ export function PinDropOverlay({
 
       <div
         ref={panel}
+        inert={searching}
         className="pointer-events-auto shrink-0 rounded-t-[24px] bg-card px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-[0_-16px_40px_-28px_rgba(0,0,0,0.4)]"
       >
         {guided && stepIndex === 1 && point === 'origin' && routes.length > 0 && (
@@ -293,6 +321,13 @@ export function PinDropOverlay({
                 : 'Arrastra el mapa'}
         </p>
 
+        {guided && point === 'destination' && originLabel && (
+          <p className="mt-0.5 flex items-center gap-1.5 truncate text-[13px] font-semibold text-ink-muted">
+            <span aria-hidden className="h-2 w-2 shrink-0 rounded-full bg-brand" />
+            <span className="truncate">Recogemos en {originLabel}</span>
+          </p>
+        )}
+
         <div className="mt-1 flex min-h-[18px] items-center gap-1.5 font-mono text-[11px]">
           <span
             aria-hidden
@@ -317,6 +352,25 @@ export function PinDropOverlay({
             {status.text}
           </span>
         </div>
+
+        {guided && home && point === 'destination' && (
+          <button
+            type="button"
+            onClick={() => {
+              setRefError(null)
+              onPick(home)
+            }}
+            className="mt-3 flex min-h-11 w-full items-center gap-2.5 rounded-2xl bg-[#EEF3FF] px-3.5 py-2 text-left transition-transform active:scale-[0.98]"
+          >
+            <Icon name="home" size={20} filled className="shrink-0 text-[#1D4ED8]" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-[14px] font-bold text-ink">Mi dirección</span>
+              <span className="block truncate text-[12px] font-medium text-ink-muted">
+                {home.subtitle}
+              </span>
+            </span>
+          </button>
+        )}
 
         {guided && (
           <div className="mt-3">
@@ -382,12 +436,14 @@ export function PinDropOverlay({
         <PointSearchSheet
           point={point}
           search={search}
+          ready={searchReady}
+          failed={searchFailed}
           onPick={(o) => {
-            setSearching(false)
+            closeSearch()
             setRefError(null)
             onPick(o)
           }}
-          onClose={() => setSearching(false)}
+          onClose={closeSearch}
         />
       )}
 

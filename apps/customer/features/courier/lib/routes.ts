@@ -1,4 +1,5 @@
 import type { CourierPayer } from '@tindivo/contracts'
+import { haversineKm } from '@/lib/coverage'
 import type { CourierPoint } from '../types'
 import { stripPeCountryCode } from './phone'
 
@@ -47,10 +48,25 @@ function toPoint(
   }
 }
 
-/** ~11 m: dos pines a menos de eso son la misma puerta. */
-function spot(p: CourierPoint): string {
-  const c = p.coordinates
-  return c ? `${c.lat.toFixed(4)},${c.lng.toFixed(4)}` : ''
+/**
+ * Dos puntos son el MISMO sitio si están a menos de 15 m **y** son la misma
+ * persona o la misma referencia. Solo por distancia, dos casas vecinas (a
+ * 11 m, con otro celular y otra puerta) se fundían y la vecina desaparecía de
+ * las sugerencias. Por distancia y no por redondeo de coordenadas: una
+ * cuadrícula separa dos puntos a 2 cm si caen a ambos lados de un corte.
+ */
+const SAME_DOOR_KM = 0.015
+
+function fold(s: string): string {
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
+}
+
+function samePlace(a: CourierPoint, b: CourierPoint): boolean {
+  if (a.coordinates == null || b.coordinates == null) return false
+  if (haversineKm(a.coordinates, b.coordinates) >= SAME_DOOR_KM) return false
+  const samePerson = a.contactPhone !== '' && a.contactPhone === b.contactPhone
+  const sameDoor = fold(a.referenceText) !== '' && fold(a.referenceText) === fold(b.referenceText)
+  return samePerson || sameDoor
 }
 
 /**
@@ -64,7 +80,6 @@ function spot(p: CourierPoint): string {
  * una ruta que valga la pena ofrecer de nuevo.
  */
 export function recentRoutes(rows: readonly RouteRow[]): CourierRoute[] {
-  const seen = new Set<string>()
   const out: CourierRoute[] = []
   for (const r of rows) {
     if (r.status !== 'delivered') continue
@@ -83,9 +98,9 @@ export function recentRoutes(rows: readonly RouteRow[]): CourierRoute[] {
       r.destination_reference_text,
     )
     if (!origin || !destination) continue
-    const key = `${spot(origin)}>${spot(destination)}`
-    if (seen.has(key)) continue
-    seen.add(key)
+    if (out.some((r) => samePlace(r.origin, origin) && samePlace(r.destination, destination))) {
+      continue
+    }
     out.push({
       origin,
       destination,
@@ -105,13 +120,10 @@ export function recentRoutes(rows: readonly RouteRow[]): CourierRoute[] {
  * de la mamá es el destino un día y el recojo otro.
  */
 export function recentPoints(rows: readonly RouteRow[]): CourierPoint[] {
-  const seen = new Set<string>()
   const out: CourierPoint[] = []
   const push = (p: CourierPoint | null) => {
     if (!p || out.length >= MAX_POINTS) return
-    const key = spot(p)
-    if (seen.has(key)) return
-    seen.add(key)
+    if (out.some((q) => samePlace(q, p))) return
     out.push({ ...p, label: p.label || p.referenceText })
   }
   for (const r of rows) {

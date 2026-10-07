@@ -32,29 +32,34 @@ export function RepeatRoutes({
   const shown = all ? routes : [first]
 
   return (
-    <section aria-label="Repetir una entrega" className="mb-3 flex flex-col gap-1.5">
-      {shown.map((r) => (
+    <section aria-label="Repetir una entrega" className="mb-2 flex flex-col gap-1">
+      {/* Desplegada, la lista tiene tope y su propio scroll: cada fila que
+          crece aquí le quita alto al mapa. */}
+      <div className="flex max-h-[8.5rem] flex-col gap-1.5 overflow-y-auto">
+        {shown.map((r) => (
+          <button
+            key={routeTitle(r)}
+            type="button"
+            onClick={() => onRepeat(r)}
+            className="flex items-center gap-3 rounded-2xl bg-[#EEF3FF] px-3 py-2.5 text-left transition-transform active:scale-[0.98]"
+          >
+            <Icon name="history" size={22} className="shrink-0 text-[#1D4ED8]" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-[12px] font-bold text-[#1D4ED8]">Repetir</span>
+              <span className="block truncate text-[15px] font-bold text-ink">{routeTitle(r)}</span>
+            </span>
+            <Icon name="chevron_right" size={22} className="shrink-0 text-ink-muted" />
+          </button>
+        ))}
+      </div>
+      {rest.length > 0 && (
         <button
-          key={routeTitle(r)}
           type="button"
-          onClick={() => onRepeat(r)}
-          className="flex items-center gap-3 rounded-2xl bg-[#EEF3FF] px-3 py-2.5 text-left transition-transform active:scale-[0.98]"
+          onClick={() => setAll((v) => !v)}
+          aria-expanded={all}
+          className="flex min-h-11 items-center self-start px-1 text-[13px] font-bold text-[#1D4ED8]"
         >
-          <Icon name="history" size={22} className="shrink-0 text-[#1D4ED8]" />
-          <span className="min-w-0 flex-1">
-            <span className="block text-[12px] font-bold text-[#1D4ED8]">Repetir</span>
-            <span className="block truncate text-[15px] font-bold text-ink">{routeTitle(r)}</span>
-          </span>
-          <Icon name="chevron_right" size={22} className="shrink-0 text-ink-muted" />
-        </button>
-      ))}
-      {rest.length > 0 && !all && (
-        <button
-          type="button"
-          onClick={() => setAll(true)}
-          className="self-start px-1 text-[13px] font-bold text-[#1D4ED8]"
-        >
-          Ver anteriores ({rest.length})
+          {all ? 'Ocultar anteriores' : `Ver anteriores (${rest.length})`}
         </button>
       )}
     </section>

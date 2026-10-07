@@ -38,3 +38,8 @@ export function normalizePePhoneInput(value: string): string {
   const local = digits.length > 9 && digits.startsWith('51') ? digits.slice(2) : digits
   return local.slice(0, 9)
 }
+
+/** «911 111 111»: de a tres, como se dicta. Para mostrarlo, no para el campo. */
+export function formatPePhone(phone: string): string {
+  return stripPeCountryCode(phone).replace(/(\d{3})(?=\d)/g, '$1 ')
+}

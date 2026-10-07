@@ -22,6 +22,8 @@ const home = {
   coordinates: { lat: -9.12, lng: -78.22 },
 }
 
+const me = { name: 'Cliente', phone: '987654321' }
+
 describe('searchPoints', () => {
   it('sin escribir nada: «Mi dirección» (solo en la entrega) y los recientes, sin lugares', () => {
     const forDestination = searchPoints({
@@ -54,16 +56,26 @@ describe('searchPoints', () => {
     expect(out.map((o) => o.title)).toEqual(['María', 'BÓTICA Santa Rosa'])
   })
 
-  it('un reciente trae su contacto; un lugar solo el punto y la referencia', () => {
+  it('cada sugerencia REEMPLAZA el contacto: reciente el suyo, un lugar ninguno', () => {
     const out = searchPoints({ query: 'a', which: 'origin', landmarks, recents: [recent], home })
     const r = out.find((o) => o.kind === 'recent')
     const l = out.find((o) => o.title === 'Colegio San Jacinto')
     expect(r?.point.contactPhone).toBe('912345678')
+    // Vacío explícito, no ausente: elegir el colegio después de «María» no
+    // puede dejar el celular de María en el colegio.
     expect(l?.point).toEqual({
       coordinates: { lat: -9.2, lng: -78.3 },
       referenceText: 'Colegio San Jacinto',
       label: 'Colegio San Jacinto',
+      contactName: '',
+      contactPhone: '',
     })
+  })
+
+  it('«Mi dirección» trae a quien pide como contacto', () => {
+    const [o] = searchPoints({ query: '', which: 'destination', landmarks, recents: [], home, me })
+    expect(o?.point.contactName).toBe('Cliente')
+    expect(o?.point.contactPhone).toBe('987654321')
   })
 
   it('un lugar de nombre corto completa la referencia', () => {

@@ -100,6 +100,37 @@ test('el enlace de una tienda (/entregas?lugar=) abre el pedido con el recojo ya
   }
 })
 
+test('«Mi dirección» en el paso 2 llena el punto y a quien recibe', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await login(page)
+  await page.goto('/entregas')
+  const pin = page.getByRole('dialog', { name: 'Fijar el punto en el mapa' })
+  await expect(pin.getByText('¿Dónde recogemos?')).toBeVisible({ timeout: 20_000 })
+  await pin.getByLabel('Dirección y referencia').fill('Casa de prueba, frente al parque')
+  // Sin GPS en el navegador de prueba: se asienta el pin arrastrando el mapa.
+  const mapa = page.locator('.leaflet-container')
+  const box = await mapa.boundingBox()
+  if (!box) throw new Error('el mapa no tiene caja')
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(box.x + box.width / 2 + 30, box.y + box.height / 2 + 10, { steps: 5 })
+  await page.mouse.up()
+  await pin.getByRole('button', { name: 'Confirmar recojo' }).click()
+
+  await expect(pin.getByText('¿Dónde entregamos?')).toBeVisible()
+  await pin.getByRole('button', { name: /Mi dirección/ }).click()
+  await pin.getByRole('button', { name: 'Confirmar entrega' }).click()
+
+  const detalles = page.getByRole('dialog', { name: 'Detalles de la entrega' })
+  await expect(detalles).toBeVisible()
+  // Quien recibe es quien pide: llega completo y en una sola línea.
+  await expect(
+    detalles.getByRole('button', { name: 'Cambiar el contacto de quien recibe' }),
+  ).toBeVisible()
+  // El botón dice qué falta en lugar del precio.
+  await expect(detalles.getByRole('button', { name: /Completar: qué llevamos/ })).toBeVisible()
+})
+
 test('«Repetir» una entrega que llegó deja la ruta puesta y lleva a Detalles', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await login(page)

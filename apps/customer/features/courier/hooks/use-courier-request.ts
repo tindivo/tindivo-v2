@@ -4,87 +4,11 @@ import { ApiError } from '@tindivo/api-client'
 import { useEffect, useState } from 'react'
 import { useActiveCourierOrdersStore } from '@/lib/active-courier-orders'
 import { useOnboarding } from '@/lib/onboarding-store'
-import { getSupabaseBrowser } from '@/lib/supabase/client'
 import { createCourierOrder, type Requester } from '../lib/api'
-import { type CourierContact, recentContacts } from '../lib/contacts'
-import { loadDefaultAddress } from '../lib/shortcuts-data'
+import type { CourierContact } from '../lib/contacts'
+import { type CustomerIdentity, loadFlowContext, loadIdentity } from '../lib/flow-context'
 import { useCourierStore } from '../lib/store'
 import type { CourierOrderResult } from '../types'
-
-interface CustomerIdentity {
-  userId: string | null
-  name: string
-  phone: string
-  phoneVerified: boolean
-}
-
-async function loadIdentity(): Promise<CustomerIdentity> {
-  const supabase = getSupabaseBrowser()
-  // `getSession` lee la sesión local; `getUser` iba al servidor de auth en
-  // cada apertura. La RLS de las dos consultas de abajo ya valida el token.
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-  const user = session?.user
-  if (!user) return { userId: null, name: '', phone: '', phoneVerified: false }
-
-  const [{ data: profile }, { data: userRow }] = await Promise.all([
-    supabase
-      .from('customer_profiles')
-      .select('phone, phone_verified_at')
-      .eq('user_id', user.id)
-      .maybeSingle(),
-    supabase.from('users').select('full_name').eq('id', user.id).maybeSingle(),
-  ])
-
-  return {
-    userId: user.id,
-    name: userRow?.full_name ?? '',
-    phone: profile?.phone ?? '',
-    phoneVerified: profile?.phone_verified_at != null,
-  }
-}
-
-async function loadRecentContacts(userId: string, myPhone: string): Promise<CourierContact[]> {
-  const supabase = getSupabaseBrowser()
-  const { data } = await supabase
-    .from('courier_orders')
-    .select('origin_name, origin_phone, destination_name, destination_phone')
-    .eq('customer_user_id', userId)
-    .order('created_at', { ascending: false })
-    .limit(20)
-  return recentContacts(data ?? [], myPhone)
-}
-
-interface FlowContext {
-  identity: CustomerIdentity
-  recents: CourierContact[]
-}
-
-/** Cuánto vale lo cargado: lo que dura abrir el flujo, no una sesión entera. */
-const CONTEXT_TTL_MS = 10_000
-let contextCache: { at: number; value: Promise<FlowContext> } | null = null
-
-/**
- * Identidad + contactos recientes, UNA vez por apertura.
- *
- * `useCourierRequest` lo usan dos hojas montadas a la vez (`TripDetailsSheet`
- * y `ConfirmSheet`), y cada una cargaba lo suyo: cuatro o cinco consultas
- * repetidas cada vez que alguien tocaba Entregas. Ahora la segunda reutiliza
- * la promesa de la primera.
- */
-function loadFlowContext(): Promise<FlowContext> {
-  if (contextCache && Date.now() - contextCache.at < CONTEXT_TTL_MS) return contextCache.value
-  const value = loadIdentity().then(async (identity) => ({
-    identity,
-    recents: identity.userId ? await loadRecentContacts(identity.userId, identity.phone) : [],
-  }))
-  contextCache = { at: Date.now(), value }
-  value.catch(() => {
-    contextCache = null
-  })
-  return value
-}
 
 /**
  * Orquestador del flujo de "pedir entrega" — patrón `use-checkout.ts`: junta
@@ -110,11 +34,14 @@ export function useCourierRequest() {
   useEffect(() => {
     if (!sheetOpen) return
     let on = true
-    void loadFlowContext().then(({ identity: id, recents: list }) => {
-      if (!on) return
-      setIdentity(id)
-      setRecents(list)
-    })
+    void loadFlowContext()
+      .then(({ identity: id, recents: list }) => {
+        if (!on) return
+        setIdentity(id)
+        setRecents(list)
+      })
+      // Sin red, «Soy yo» y los recientes no aparecen; el formulario sigue.
+      .catch(() => {})
     return () => {
       on = false
     }
@@ -126,15 +53,22 @@ export function useCourierRequest() {
   useEffect(() => {
     if (!fromBusiness || draft.destination.coordinates) return
     let on = true
-    loadDefaultAddress().then((addr) => {
-      if (!on || !addr) return
-      updatePoint('destination', {
-        contactName: identity?.name ?? '',
-        contactPhone: identity?.phone ?? '',
-        coordinates: addr.coordinates,
-        referenceText: addr.referenceText,
+    // La dirección viene de la misma carga de la apertura (`loadFlowContext`),
+    // no de una consulta aparte.
+    loadFlowContext()
+      // La identidad de la MISMA carga, no la del render: si no, la dirección
+      // llegaba antes que el nombre y el celular, quedaba guardada sin contacto
+      // y la guarda de coordenadas ya no dejaba completarlo.
+      .then(({ home: addr, identity: who }) => {
+        if (!on || !addr) return
+        updatePoint('destination', {
+          contactName: who.name,
+          contactPhone: who.phone,
+          coordinates: addr.coordinates,
+          referenceText: addr.referenceText,
+        })
       })
-    })
+      .catch(() => {})
     return () => {
       on = false
     }
@@ -145,7 +79,14 @@ export function useCourierRequest() {
     // La sesión pudo iniciarse después de cargar la identidad: se pregunta de
     // nuevo antes de rendirse. Si de verdad no hay, se ABRE el login (antes
     // solo se decía con un texto, al final del pedido).
-    const who = identity?.userId ? identity : await loadIdentity()
+    let who: CustomerIdentity
+    try {
+      who = identity?.userId ? identity : await loadIdentity()
+    } catch {
+      // Sin red al leer el perfil: se dice, no se rompe el botón.
+      setError('No pudimos conectarnos. Revisa tu señal y vuelve a tocar «Pedir entrega».')
+      return null
+    }
     if (!who.userId) {
       setIdentity(who)
       setError('Inicia sesión y vuelve a tocar «Pedir entrega».')

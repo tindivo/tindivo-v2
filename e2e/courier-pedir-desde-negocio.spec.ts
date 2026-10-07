@@ -148,8 +148,9 @@ test('pedir entrega fijando A y B en el mapa llega a "Buscando motorizado"', asy
   await expect(detalles).toBeVisible({ timeout: 10_000 })
   const recibeNombre = detalles.getByPlaceholder('Nombre de quien recibe (opcional)')
   await expect(recibeNombre).toHaveValue('')
-  // `dispatchEvent`: Playwright no hace clic en aria-disabled, y aquí justo se prueba ese clic.
-  await detalles.getByRole('button', { name: /Pedir entrega/ }).dispatchEvent('click')
+  // Gris, el botón dice qué falta en lugar del precio, y lleva hasta ahí: es
+  // un botón normal (no `aria-disabled`), así que se toca como cualquiera.
+  await detalles.getByRole('button', { name: 'Completar: qué llevamos' }).click()
   await expect(detalles.getByText('Falta decir qué llevamos')).toBeVisible()
   await expect(detalles.getByRole('textbox', { name: 'Qué llevamos' })).toBeFocused()
 
