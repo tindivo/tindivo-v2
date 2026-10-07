@@ -33,6 +33,9 @@ export function PointSuggestions({
   failed: boolean
   onPick: (option: PointOption) => void
 }) {
+  const groupCount = GROUPS.filter(({ kinds }) =>
+    options.some((o) => kinds.includes(o.kind)),
+  ).length
   const empty =
     options.length > 0
       ? null
@@ -50,35 +53,47 @@ export function PointSuggestions({
       aria-label="Sugerencias"
       className="absolute inset-x-0 top-[calc(100%+0.5rem)] overflow-hidden rounded-2xl border border-ink/[0.06] bg-card py-1 shadow-elev-3"
     >
-      {options.map((o) => (
-        <button
-          key={o.key}
-          type="button"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() => onPick(o)}
-          className="flex min-h-12 w-full items-center gap-3 px-3 py-2 text-left transition-colors active:bg-ink/[0.05]"
-        >
-          {o.category ? (
-            <PlaceBadge category={o.category} size={32} />
-          ) : (
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#EEF3FF] text-[#1D4ED8]">
-              <Icon
-                name={o.kind === 'home' ? 'home' : 'history'}
-                size={18}
-                filled={o.kind === 'home'}
-              />
-            </span>
-          )}
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-[15px] font-bold text-ink">{o.title}</span>
-            {o.subtitle && o.subtitle !== o.title && (
-              <span className="block truncate text-[13px] font-medium text-ink-muted">
-                {o.subtitle}
-              </span>
+      {GROUPS.map(({ title, kinds }) => {
+        const rows = options.filter((o) => kinds.includes(o.kind))
+        if (rows.length === 0) return null
+        return (
+          <div key={title}>
+            {/* El título solo cuando hay más de un grupo: con uno, sobra. */}
+            {groupCount > 1 && (
+              <p className="px-3 pt-2 pb-0.5 text-[12px] font-bold text-ink-muted">{title}</p>
             )}
-          </span>
-        </button>
-      ))}
+            {rows.map((o) => (
+              <button
+                key={o.key}
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => onPick(o)}
+                className="flex min-h-12 w-full items-center gap-3 px-3 py-2 text-left transition-colors active:bg-ink/[0.05]"
+              >
+                {o.category ? (
+                  <PlaceBadge category={o.category} size={32} />
+                ) : (
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#EEF3FF] text-[#1D4ED8]">
+                    <Icon
+                      name={o.kind === 'home' ? 'home' : 'history'}
+                      size={18}
+                      filled={o.kind === 'home'}
+                    />
+                  </span>
+                )}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[15px] font-bold text-ink">{o.title}</span>
+                  {o.subtitle && o.subtitle !== o.title && (
+                    <span className="block truncate text-[13px] font-medium text-ink-muted">
+                      {o.subtitle}
+                    </span>
+                  )}
+                </span>
+              </button>
+            ))}
+          </div>
+        )
+      })}
       {empty === 'loading' && (
         <div className="flex items-center gap-2 px-3 py-3 text-[14px] text-ink-muted">
           <Spinner size="xs" variant="brand" />
@@ -91,3 +106,13 @@ export function PointSuggestions({
     </section>
   )
 }
+
+/**
+ * Lo propio, después los negocios (de donde se recoge) y al final las
+ * referencias públicas (para ubicarse). `Docs/Entregas/ux-entrada/08`.
+ */
+const GROUPS: { title: string; kinds: PointOption['kind'][] }[] = [
+  { title: 'Tus lugares', kinds: ['home', 'recent'] },
+  { title: 'Negocios', kinds: ['business'] },
+  { title: 'Referencias del pueblo', kinds: ['place'] },
+]

@@ -8,7 +8,7 @@ import type { PointOption } from '../../lib/point-search'
 import type { CourierRoute } from '../../lib/routes'
 import type { CourierEditingPoint } from '../../types'
 import { MAX_SUGGESTIONS, PointSuggestions } from './point-suggestions'
-import { RepeatRoutes } from './repeat-routes'
+import { RepeatRoutesSheet } from './repeat-routes'
 
 const COPY: Record<
   CourierEditingPoint,
@@ -149,7 +149,12 @@ export function PinDropOverlay({
   // re-enfoca el diálogo cada vez que cambia `onClose`.
   const leaveRef = useRef<() => void>(() => {})
   leaveRef.current = () => {
-    // Con la búsqueda abierta, Escape (o atrás) la cierra a ella y nada más.
+    // Con «Entregas anteriores» o la búsqueda abiertas, Escape (o atrás) las
+    // cierra a ellas y nada más.
+    if (showRoutes) {
+      setShowRoutes(false)
+      return
+    }
     if (searching) {
       closeSearch()
       return
@@ -338,165 +343,174 @@ export function PinDropOverlay({
         </button>
       </div>
 
-      <div
-        ref={panel}
-        className="pointer-events-auto shrink-0 rounded-t-[24px] bg-card px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-[0_-16px_40px_-28px_rgba(0,0,0,0.4)]"
-      >
-        {guided && stepIndex && (
-          // Alto fijo en los dos pasos: la flecha solo existe en el 2, y si la
-          // fila cambiara de alto el mapa se re-mediría al pasar de A a B.
-          <div className="-mt-1 mb-0.5 flex h-9 items-center gap-1">
-            {stepIndex === 2 && (
-              <button
-                type="button"
-                onClick={onCancel}
-                aria-label="Volver al recojo"
-                className="-ml-2 flex h-9 w-9 items-center justify-center rounded-full text-ink transition-colors active:bg-ink/[0.06]"
-              >
-                <Icon name="arrow_back" size={20} />
-              </button>
-            )}
-            <p className="flex items-center gap-1.5 font-mono text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
-              <span aria-hidden className={`h-2 w-2 rounded-full ${copy.dot}`} />
-              Paso {stepIndex} de 2
-            </p>
-            {canRepeat && (
-              // En la fila del paso, a la derecha: no suma alto al panel (la
-              // fila es fija) y el mapa no se encoge por un atajo que no se usó.
-              <button
-                type="button"
-                onClick={() => setShowRoutes((v) => !v)}
-                aria-expanded={showRoutes}
-                aria-controls="entregas-anteriores"
-                className="-mr-2 ml-auto flex h-11 items-center gap-1 px-2 text-[13px] font-bold text-[#1D4ED8]"
-              >
-                <Icon name="history" size={18} />
-                {showRoutes ? 'Ocultar' : `Ver anteriores (${routes.length})`}
-              </button>
-            )}
-          </div>
-        )}
-        {canRepeat && showRoutes && <RepeatRoutes routes={routes} onRepeat={onRepeat} />}
-        <p className="font-display font-extrabold text-[20px] leading-tight tracking-tight text-ink">
-          {guided
-            ? copy.title
-            : moving
-              ? 'Ubicando…'
-              : settled
-                ? '¿El pin está en tu puerta?'
-                : 'Arrastra el mapa'}
-        </p>
-
-        {guided && point === 'destination' && originLabel && (
-          <p className="mt-0.5 flex items-center gap-1.5 truncate text-[13px] font-semibold text-ink-muted">
-            <span aria-hidden className="h-2 w-2 shrink-0 rounded-full bg-brand" />
-            <span className="truncate">Recogemos en {originLabel}</span>
+      {/* En el celular, el panel ocupa todo el ancho. En una pantalla ancha, su
+          contenido se centra con el MISMO ancho máximo que las hojas de la app
+          (`BottomSheet`, 768 px): los tres pasos se ven igual. La franja de
+          fuera es del color del mapa, para que no se vea la página de detrás. */}
+      <div ref={panel} className="pointer-events-auto shrink-0 md:bg-[#f4f3ef]">
+        <div className="mx-auto w-full max-w-[768px] rounded-t-[24px] bg-card px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-[0_-16px_40px_-28px_rgba(0,0,0,0.4)]">
+          {guided && stepIndex && (
+            // Alto fijo en los dos pasos: la flecha solo existe en el 2, y si la
+            // fila cambiara de alto el mapa se re-mediría al pasar de A a B.
+            <div className="-mt-1 mb-0.5 flex h-9 items-center gap-1">
+              {stepIndex === 2 && (
+                <button
+                  type="button"
+                  onClick={onCancel}
+                  aria-label="Volver al recojo"
+                  className="-ml-2 flex h-9 w-9 items-center justify-center rounded-full text-ink transition-colors active:bg-ink/[0.06]"
+                >
+                  <Icon name="arrow_back" size={20} />
+                </button>
+              )}
+              <p className="flex items-center gap-1.5 font-mono text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
+                <span aria-hidden className={`h-2 w-2 rounded-full ${copy.dot}`} />
+                {/* «Ubicación», no «Paso»: «Paso 2 de 2» hacía creer que ahí
+                  terminaba, y después viene «Detalles». */}
+                Ubicación {stepIndex} de 2
+              </p>
+              {/* El atajo de cada paso, en la esquina de la fila (alto fijo): no
+                suma alto al panel ni encoge el mapa si no se usa. */}
+              {canRepeat && (
+                <button
+                  type="button"
+                  onClick={() => setShowRoutes(true)}
+                  aria-haspopup="dialog"
+                  className="-mr-2 ml-auto flex h-11 items-center gap-1 px-2 text-[13px] font-bold text-[#1D4ED8]"
+                >
+                  <Icon name="history" size={18} />
+                  Ver anteriores ({routes.length})
+                </button>
+              )}
+              {stepIndex === 2 && home && point === 'destination' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRefError(null)
+                    onPick(home)
+                  }}
+                  className="-mr-2 ml-auto flex h-11 items-center gap-1 px-2 text-[13px] font-bold text-[#1D4ED8]"
+                >
+                  <Icon name="home" size={18} />
+                  Usar mi dirección
+                </button>
+              )}
+            </div>
+          )}
+          <p className="font-display font-extrabold text-[20px] leading-tight tracking-tight text-ink">
+            {guided
+              ? copy.title
+              : moving
+                ? 'Ubicando…'
+                : settled
+                  ? '¿El pin está en tu puerta?'
+                  : 'Arrastra el mapa'}
           </p>
-        )}
 
-        <div className="mt-1 flex min-h-[18px] items-center gap-1.5 font-mono text-[11px]">
-          <span
-            aria-hidden
-            className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${
-              status.tone === 'danger'
-                ? 'bg-danger'
-                : status.tone === 'success'
-                  ? 'bg-success'
-                  : 'bg-brand-dark'
-            }`}
-          />
-          <span
-            aria-live="polite"
-            className={`truncate font-semibold ${
-              status.tone === 'danger'
-                ? 'text-danger'
-                : status.tone === 'success'
-                  ? 'text-success'
-                  : 'text-brand-dark'
-            }`}
-          >
-            {status.text}
-          </span>
-        </div>
-
-        {guided && home && point === 'destination' && (
-          <button
-            type="button"
-            onClick={() => {
-              setRefError(null)
-              onPick(home)
-            }}
-            className="mt-3 flex min-h-11 w-full items-center gap-2.5 rounded-2xl bg-[#EEF3FF] px-3.5 py-2 text-left transition-transform active:scale-[0.98]"
-          >
-            <Icon name="home" size={20} filled className="shrink-0 text-[#1D4ED8]" />
-            <span className="min-w-0 flex-1">
-              <span className="block text-[14px] font-bold text-ink">Mi dirección</span>
-              <span className="block truncate text-[12px] font-medium text-ink-muted">
-                {home.subtitle}
-              </span>
-            </span>
-          </button>
-        )}
-
-        {guided && (
-          <div className="mt-3">
-            <label
-              className={`flex h-12 items-center gap-2.5 rounded-2xl border-2 bg-white px-3.5 transition-colors ${
-                refError ? 'border-danger' : 'border-ink/10 focus-within:border-ink/40'
-              }`}
-            >
-              <Icon name={copy.icon} size={20} className="shrink-0 text-ink-muted" />
-              <input
-                ref={input}
-                type="text"
-                value={reference}
-                maxLength={ADDRESS_REFERENCE_MAX}
-                enterKeyHint="done"
-                autoComplete="off"
-                aria-label="Dirección y referencia"
-                aria-invalid={refError ? true : undefined}
-                placeholder={copy.placeholder}
-                onChange={(e) => {
-                  onReferenceChange(e.target.value)
-                  if (refError) setRefError(null)
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault()
-                    tryConfirm()
-                  }
-                }}
-                className="min-w-0 flex-1 border-0 bg-transparent text-[15px] font-semibold text-ink outline-none placeholder:font-medium placeholder:text-ink-muted/70"
-              />
-            </label>
-            {/* Alto fijo: el aviso reemplaza a la pista sin mover el mapa de arriba. */}
-            <p
-              role={refError ? 'alert' : undefined}
-              className={`mt-1.5 min-h-[16px] px-1 text-[12px] leading-[16px] ${
-                refError ? 'font-bold text-danger' : 'font-medium text-ink-muted'
-              }`}
-            >
-              {refError ?? copy.hint}
+          {guided && point === 'destination' && originLabel && (
+            <p className="mt-0.5 flex items-center gap-1.5 truncate text-[13px] font-semibold text-ink-muted">
+              <span aria-hidden className="h-2 w-2 shrink-0 rounded-full bg-brand" />
+              <span className="truncate">Recojo: {originLabel}</span>
             </p>
-          </div>
-        )}
+          )}
 
-        <Button
-          type="button"
-          variant="brand"
-          className="mt-3 w-full"
-          disabled={!canConfirm}
-          onClick={tryConfirm}
-        >
-          {!settled
-            ? 'Mueve el mapa para marcar el punto'
-            : !inside
-              ? 'Muévelo dentro de la zona'
-              : guided
-                ? copy.confirm
-                : 'Confirmar ubicación'}
-        </Button>
+          {/* Una instrucción tranquila, no una alerta: sin monoespaciada ni
+            mayúsculas; el rojo queda solo para lo que de verdad falla. */}
+          <div className="mt-1 flex min-h-[20px] items-center gap-1.5 text-[13px]">
+            <span
+              aria-hidden
+              className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${
+                status.tone === 'danger'
+                  ? 'bg-danger'
+                  : status.tone === 'success'
+                    ? 'bg-success'
+                    : 'bg-brand-dark'
+              }`}
+            />
+            <span
+              aria-live="polite"
+              className={`truncate font-semibold ${
+                status.tone === 'danger'
+                  ? 'text-danger'
+                  : status.tone === 'success'
+                    ? 'text-success'
+                    : 'text-ink-muted'
+              }`}
+            >
+              {status.text}
+            </span>
+          </div>
+
+          {guided && (
+            <div className="mt-3">
+              <label
+                className={`flex h-12 items-center gap-2.5 rounded-2xl border-2 bg-white px-3.5 transition-colors ${
+                  refError ? 'border-danger' : 'border-ink/10 focus-within:border-ink/40'
+                }`}
+              >
+                <Icon name={copy.icon} size={20} className="shrink-0 text-ink-muted" />
+                <input
+                  ref={input}
+                  type="text"
+                  value={reference}
+                  maxLength={ADDRESS_REFERENCE_MAX}
+                  enterKeyHint="done"
+                  autoComplete="off"
+                  aria-label="Dirección y referencia"
+                  aria-invalid={refError ? true : undefined}
+                  placeholder={copy.placeholder}
+                  onChange={(e) => {
+                    onReferenceChange(e.target.value)
+                    if (refError) setRefError(null)
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      tryConfirm()
+                    }
+                  }}
+                  className="min-w-0 flex-1 border-0 bg-transparent text-[15px] font-semibold text-ink outline-none placeholder:font-medium placeholder:text-ink-muted/70"
+                />
+              </label>
+              {/* Alto fijo: el aviso reemplaza a la pista sin mover el mapa de arriba. */}
+              <p
+                role={refError ? 'alert' : undefined}
+                className={`mt-1.5 min-h-[16px] px-1 text-[12px] leading-[16px] ${
+                  refError ? 'font-bold text-danger' : 'font-medium text-ink-muted'
+                }`}
+              >
+                {refError ?? copy.hint}
+              </p>
+            </div>
+          )}
+
+          <Button
+            type="button"
+            variant="brand"
+            className="mt-3 w-full"
+            disabled={!canConfirm}
+            onClick={tryConfirm}
+          >
+            {!settled
+              ? 'Mueve el mapa para marcar el punto'
+              : !inside
+                ? 'Muévelo dentro de la zona'
+                : guided
+                  ? copy.confirm
+                  : 'Confirmar ubicación'}
+          </Button>
+        </div>
       </div>
+
+      <RepeatRoutesSheet
+        open={showRoutes}
+        routes={routes}
+        onRepeat={(r) => {
+          setShowRoutes(false)
+          onRepeat(r)
+        }}
+        onClose={() => setShowRoutes(false)}
+      />
 
       {confirmLeave && (
         <LeaveConfirm

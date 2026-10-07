@@ -17,6 +17,7 @@ interface RouteRow {
   item_description: string | null
   payer: CourierPayer
   status: string
+  created_at?: string | null
 }
 
 export interface CourierRoute {
@@ -24,7 +25,12 @@ export interface CourierRoute {
   destination: CourierPoint
   itemDescription: string
   payer: CourierPayer
+  /** Cuándo se pidió: «Entregas anteriores» lo muestra para reconocerla. */
+  createdAt: string | null
 }
+
+/** Los nombres que pone el sistema cuando el contacto no tiene uno. */
+const FALLBACK_NAMES = new Set(['quien entrega', 'quien recibe'])
 
 const MAX_ROUTES = 3
 const MAX_POINTS = 6
@@ -37,7 +43,10 @@ function toPoint(
   reference: string | null,
 ): CourierPoint | null {
   if (lat == null || lng == null) return null
-  const n = (name ?? '').trim()
+  const raw = (name ?? '').trim()
+  // «Quien entrega» / «Quien recibe» es lo que se envía cuando nadie escribe
+  // un nombre (`lib/api.ts`): no es un contacto que se pueda reconocer.
+  const n = FALLBACK_NAMES.has(raw.toLowerCase()) ? '' : raw
   return {
     contactName: n,
     contactPhone: stripPeCountryCode(phone ?? ''),
@@ -106,6 +115,7 @@ export function recentRoutes(rows: readonly RouteRow[]): CourierRoute[] {
       destination,
       itemDescription: (r.item_description ?? '').trim(),
       payer: r.payer,
+      createdAt: r.created_at ?? null,
     })
     if (out.length >= MAX_ROUTES) break
   }

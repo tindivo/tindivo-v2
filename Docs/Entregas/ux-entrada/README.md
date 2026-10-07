@@ -136,3 +136,26 @@ Chrome real (Escape con la lupa abierta, «Repetir», consola sin errores).
   escribe, «Mapa / Satélite» se esconde para dejarle el ancho al campo.
 - Arreglado: dos sitios recientes en el mismo punto exacto (vecinos con otro
   celular) repetían la clave de React.
+
+## 9. Segunda tanda de Jesús (7-oct), debatida con Codex
+
+Acuerdo en `08-acuerdo-ronda-jesus.md`; verificación en `09` y `10`.
+
+- **Búsqueda:** negocios antes que referencias públicas; también **por tipo**
+  («botica» trae Inkafarma; «pollo», las pollerías), sin chips. Un nombre
+  completo («Restaurant La Florencia») trae ese lugar, no todos los del tipo.
+- **«Ver anteriores»** abre una hoja aparte, con qué se llevó y la fecha.
+- **Paso 2 más limpio:** «Usar mi dirección» en la esquina, «Recojo: …» en una
+  línea y el estado sin aspecto de alerta. «Ubicación 1 / 2 de 2» en lugar de
+  «Paso», porque después viene Detalles.
+- **Detalles:** flecha de volver (al mapa de B, sin perder nada) en lugar de la
+  X; «Soy yo» en la esquina de cada tarjeta; fuera los chips de contactos
+  recientes; «Completar: …» se ve como acción, no apagado.
+- **Mismo ancho:** en pantalla ancha el panel del pin se centra a 768 px, el
+  de las hojas de la app.
+- **Seed:** `pnpm db:seed:lugares` copia a local los 60 lugares de producción.
+
+**Pendiente:** corregir categorías desde el admin (boticas frente a Essalud y
+la Posta; negocios dentro de «otro») y bajar la densidad de nombres en el mapa
+con los 60 lugares (se ve cargado); probar con teclado abierto en un Android
+pequeño.

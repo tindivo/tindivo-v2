@@ -16,6 +16,7 @@ function row(over: Partial<Parameters<typeof recentRoutes>[0][number]> = {}) {
     item_description: 'Medicinas',
     payer: 'destination' as const,
     status: 'delivered',
+    created_at: '2026-10-07T23:10:00Z',
     ...over,
   }
 }
@@ -35,6 +36,7 @@ describe('recentRoutes', () => {
     expect(r?.destination.referenceText).toBe('Casa celeste, segundo piso')
     expect(r?.itemDescription).toBe('Medicinas')
     expect(r?.payer).toBe('destination')
+    expect(r?.createdAt).toBe('2026-10-07T23:10:00Z')
   })
 
   it('la misma ruta repetida sale una sola vez, la más reciente', () => {
@@ -101,6 +103,12 @@ describe('recentPoints', () => {
       }),
     ])
     expect(points.map((p) => p.contactName)).toContain('Daniel')
+  })
+
+  it('el nombre por defecto («Quien recibe») no es un contacto', () => {
+    const [p] = recentPoints([row({ destination_name: 'Quien recibe' })])
+    expect(p?.contactName).toBe('')
+    expect(p?.label).toBe('Casa celeste, segundo piso')
   })
 
   it('un punto sin nombre se rotula con su referencia', () => {

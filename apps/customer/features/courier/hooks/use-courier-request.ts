@@ -5,7 +5,6 @@ import { useEffect, useState } from 'react'
 import { useActiveCourierOrdersStore } from '@/lib/active-courier-orders'
 import { useOnboarding } from '@/lib/onboarding-store'
 import { createCourierOrder, type Requester } from '../lib/api'
-import type { CourierContact } from '../lib/contacts'
 import { type CustomerIdentity, loadFlowContext, loadIdentity } from '../lib/flow-context'
 import { useCourierStore } from '../lib/store'
 import type { CourierOrderResult } from '../types'
@@ -23,7 +22,6 @@ export function useCourierRequest() {
   const submitted = useCourierStore((s) => s.submitted)
 
   const [identity, setIdentity] = useState<CustomerIdentity | null>(null)
-  const [recents, setRecents] = useState<CourierContact[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -35,12 +33,10 @@ export function useCourierRequest() {
     if (!sheetOpen) return
     let on = true
     void loadFlowContext()
-      .then(({ identity: id, recents: list }) => {
-        if (!on) return
-        setIdentity(id)
-        setRecents(list)
+      .then(({ identity: id }) => {
+        if (on) setIdentity(id)
       })
-      // Sin red, «Soy yo» y los recientes no aparecen; el formulario sigue.
+      // Sin red, «Soy yo» no aparece; el formulario sigue.
       .catch(() => {})
     return () => {
       on = false
@@ -116,5 +112,5 @@ export function useCourierRequest() {
     }
   }
 
-  return { draft, updateDraft, updatePoint, identity, recents, submitting, error, submit }
+  return { draft, updateDraft, updatePoint, identity, submitting, error, submit }
 }

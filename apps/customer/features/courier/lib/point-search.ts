@@ -1,11 +1,12 @@
 import { LANDMARK_CATEGORY_LABEL, type Landmark } from '@tindivo/map'
 import type { CourierEditingPoint, CourierPoint } from '../types'
-import { formatPePhone } from './phone'
+import { formatPePhone, stripPeCountryCode } from './phone'
 import { placeReference } from './places'
 
 export interface PointOption {
   key: string
-  kind: 'home' | 'recent' | 'place'
+  /** `business`: un negocio del pueblo; `place`: una referencia pública (plaza, colegio…). */
+  kind: 'home' | 'recent' | 'business' | 'place'
   title: string
   subtitle: string
   /** Solo en los lugares: para pintar la misma chapa que en el mapa. */
@@ -18,6 +19,56 @@ export interface PointOption {
 }
 
 const MAX_PLACES = 8
+
+/**
+ * Qué categorías son NEGOCIOS: de donde se recoge. El resto (plaza, colegio,
+ * losa, iglesia…) son referencias para ubicarse: se pueden buscar, pero salen
+ * después. «otro» mezcla negocios y referencias en los datos de hoy; hasta que
+ * se corrija desde el admin, va con las referencias.
+ */
+const BUSINESS: ReadonlySet<Landmark['category']> = new Set([
+  'salud',
+  'mercado',
+  'restaurante',
+  'hotel',
+])
+
+/**
+ * Buscar también por TIPO: «botica» trae Inkafarma, «pollo» trae las
+ * pollerías. Hace de filtro sin chips (que con el teclado abierto le quitaban
+ * espacio a los resultados; `Docs/Entregas/ux-entrada/08`).
+ */
+const TYPE_WORDS: Partial<Record<Landmark['category'], readonly string[]>> = {
+  salud: ['botica', 'farmacia', 'salud', 'posta', 'medicina'],
+  mercado: ['bodega', 'tienda', 'mercado', 'minimarket', 'abarrotes', 'licoreria'],
+  restaurante: [
+    'restaurante',
+    'restaurant',
+    'pollo',
+    'polleria',
+    'pizza',
+    'comida',
+    'cevicheria',
+    'chifa',
+  ],
+  hotel: ['hotel', 'hospedaje', 'hostal'],
+  educacion: ['colegio', 'escuela', 'institucion', 'educacion'],
+  recreacion: ['parque', 'plaza'],
+  deporte: ['losa', 'cancha', 'coliseo', 'deporte'],
+  religioso: ['iglesia', 'capilla'],
+}
+
+/**
+ * «bot» ya cuenta como «botica»; «boticas» también. Solo con UNA palabra: una
+ * consulta como «Restaurant La Florencia» es un nombre, no un tipo, y antes
+ * traía todos los restaurantes y dejaba La Florencia fuera de los 5 primeros.
+ */
+function matchesType(category: Landmark['category'], q: string): boolean {
+  if (q.length < 3 || q.includes(' ')) return false
+  return (TYPE_WORDS[category] ?? []).some(
+    (w) => w.startsWith(q) || q === `${w}s` || q === `${w}es`,
+  )
+}
 
 /** «Botica» encuentra «BÓTICA»; «colegio» encuentra «Colegio». */
 function fold(s: string): string {
@@ -69,7 +120,9 @@ export function searchPoints({
           ...home,
           label: 'Mi dirección',
           contactName: me?.name ?? '',
-          contactPhone: me?.phone ?? '',
+          // Sin `+51`: el perfil lo guarda a veces con prefijo y «Soy yo»
+          // compara los 9 dígitos.
+          contactPhone: me ? stripPeCountryCode(me.phone) : '',
         },
       })
     }
@@ -93,15 +146,24 @@ export function searchPoints({
   }
 
   if (q) {
-    let n = 0
-    for (const l of landmarks) {
-      if (n >= MAX_PLACES) break
-      if (!fold(l.name).includes(q)) continue
-      n += 1
+    // Primero lo que coincide por NOMBRE (lo que la persona escribió de
+    // verdad), después lo que solo coincide por tipo; en cada tanda, los
+    // negocios antes que las referencias.
+    const byName = landmarks.filter((l) => fold(l.name).includes(q))
+    const byType = landmarks.filter((l) => !byName.includes(l) && matchesType(l.category, q))
+    const business = (ls: readonly Landmark[]) => ls.filter((l) => BUSINESS.has(l.category))
+    const others = (ls: readonly Landmark[]) => ls.filter((l) => !BUSINESS.has(l.category))
+    const sorted = [
+      ...business(byName),
+      ...business(byType),
+      ...others(byName),
+      ...others(byType),
+    ].slice(0, MAX_PLACES)
+    for (const l of sorted) {
       const name = l.name.trim()
       out.push({
         key: `place:${l.id}`,
-        kind: 'place',
+        kind: BUSINESS.has(l.category) ? 'business' : 'place',
         title: name,
         subtitle: LANDMARK_CATEGORY_LABEL[l.category],
         category: l.category,

@@ -91,7 +91,7 @@ test('el enlace de una tienda (/entregas?lugar=) abre el pedido con el recojo ya
     await page.goto(`/entregas?lugar=${lugarId}`)
     const pin = page.getByRole('dialog', { name: 'Fijar el punto en el mapa' })
     await expect(pin.getByText('¿Dónde entregamos?')).toBeVisible({ timeout: 20_000 })
-    await expect(pin.getByText('Paso 2 de 2')).toBeVisible()
+    await expect(pin.getByText('Ubicación 2 de 2')).toBeVisible()
     // El globo del recojo lleva el nombre del lugar.
     await expect(
       page.locator('.t-route-pin-label', { hasText: 'Botica E2E Lugares' }),
@@ -101,7 +101,7 @@ test('el enlace de una tienda (/entregas?lugar=) abre el pedido con el recojo ya
   }
 })
 
-test('«Mi dirección» en el paso 2 llena el punto y a quien recibe', async ({ page }) => {
+test('«Usar mi dirección» en el paso 2 llena el punto y a quien recibe', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await login(page)
   await page.goto('/entregas')
@@ -119,7 +119,7 @@ test('«Mi dirección» en el paso 2 llena el punto y a quien recibe', async ({ 
   await pin.getByRole('button', { name: 'Confirmar recojo' }).click()
 
   await expect(pin.getByText('¿Dónde entregamos?')).toBeVisible()
-  await pin.getByRole('button', { name: /Mi dirección/ }).click()
+  await pin.getByRole('button', { name: 'Usar mi dirección' }).click()
   await pin.getByRole('button', { name: 'Confirmar entrega' }).click()
 
   const detalles = page.getByRole('dialog', { name: 'Detalles de la entrega' })
@@ -130,6 +130,13 @@ test('«Mi dirección» en el paso 2 llena el punto y a quien recibe', async ({ 
   ).toBeVisible()
   // El botón dice qué falta en lugar del precio.
   await expect(detalles.getByRole('button', { name: /Completar: qué llevamos/ })).toBeVisible()
+
+  // «Soy yo» en la esquina está encendido; apagarlo abre el campo (no deja una
+  // línea vacía y escondida).
+  const soyYo = detalles.getByRole('button', { name: 'Soy yo' }).nth(1)
+  await expect(soyYo).toHaveAttribute('aria-pressed', 'true')
+  await soyYo.click()
+  await expect(detalles.getByRole('textbox', { name: 'Celular de quien recibe' })).toBeVisible()
 })
 
 test('«Mi ubicación» se puede tocar y devuelve el pin a donde estás', async ({ page }) => {
@@ -202,13 +209,14 @@ test('«Repetir» una entrega que llegó deja la ruta puesta y lleva a Detalles'
   try {
     await page.goto('/entregas')
     const pin = page.getByRole('dialog', { name: 'Fijar el punto en el mapa' })
-    // Plegadas: solo «Ver anteriores», a la derecha del paso, sin ocupar alto.
-    const repetir = pin.getByRole('button', { name: /Botica Repetida → Mamá E2E/ })
+    // «Ver anteriores» va a la derecha del paso y abre una hoja aparte: el
+    // panel del pin no crece.
     const ver = pin.getByRole('button', { name: /Ver anteriores/ })
     await expect(ver).toBeVisible({ timeout: 20_000 })
-    await expect(repetir).toHaveCount(0)
     await ver.click()
-    await repetir.click()
+    const anteriores = page.getByRole('dialog', { name: 'Entregas anteriores' })
+    await anteriores.getByRole('button', { name: /Botica Repetida → Mamá E2E/ }).click()
+    await expect(anteriores).toHaveCount(0)
 
     const detalles = page.getByRole('dialog', { name: 'Detalles de la entrega' })
     await expect(detalles).toBeVisible()

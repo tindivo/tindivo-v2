@@ -113,3 +113,69 @@ describe('searchPoints · claves', () => {
     expect(new Set(out.map((o) => o.key)).size).toBe(out.length)
   })
 })
+
+describe('searchPoints · negocios y tipos', () => {
+  const pueblo = [
+    { id: 'p1', name: 'Plaza Mayor', category: 'recreacion' as const, lat: -9.1, lng: -78.2 },
+    { id: 'p2', name: 'Inkafarma', category: 'salud' as const, lat: -9.11, lng: -78.21 },
+    { id: 'p3', name: 'Pollería Nadia', category: 'restaurante' as const, lat: -9.12, lng: -78.22 },
+    {
+      id: 'p4',
+      name: 'Parque Magisterial',
+      category: 'recreacion' as const,
+      lat: -9.13,
+      lng: -78.23,
+    },
+  ]
+  const buscar = (query: string) =>
+    searchPoints({ query, which: 'origin', landmarks: pueblo, recents: [], home: null })
+
+  it('«botica» trae las boticas aunque el nombre no lo diga', () => {
+    expect(buscar('botica').map((o) => o.title)).toEqual(['Inkafarma'])
+  })
+
+  it('«pollo» trae la pollería', () => {
+    expect(buscar('pollo').map((o) => o.title)).toEqual(['Pollería Nadia'])
+  })
+
+  it('un nombre completo con palabra de tipo trae ESE lugar primero, no todos los del tipo', () => {
+    const conFlorencia = [
+      ...pueblo,
+      {
+        id: 'p5',
+        name: 'Restaurant La Florencia',
+        category: 'restaurante' as const,
+        lat: -9.14,
+        lng: -78.24,
+      },
+    ]
+    const out = searchPoints({
+      query: 'Restaurant La Florencia',
+      which: 'origin',
+      landmarks: conFlorencia,
+      recents: [],
+      home: null,
+    })
+    expect(out.map((o) => o.title)).toEqual(['Restaurant La Florencia'])
+  })
+
+  it('una coincidencia por nombre sale antes que una solo por tipo', () => {
+    const conBotica = [
+      ...pueblo,
+      { id: 'p6', name: 'Botica la Merced', category: 'salud' as const, lat: -9.15, lng: -78.25 },
+    ]
+    const out = searchPoints({
+      query: 'botica',
+      which: 'origin',
+      landmarks: conBotica,
+      recents: [],
+      home: null,
+    })
+    expect(out.map((o) => o.title)).toEqual(['Botica la Merced', 'Inkafarma'])
+  })
+
+  it('un negocio es «business» y sale antes que una referencia del pueblo', () => {
+    const out = buscar('a') // coincide en los cuatro nombres
+    expect(out.map((o) => o.kind)).toEqual(['business', 'business', 'place', 'place'])
+  })
+})

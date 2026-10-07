@@ -2,7 +2,6 @@
 
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import type { CourierPoint } from '../types'
-import { type CourierContact, recentContacts } from './contacts'
 import { type CourierRoute, recentPoints, recentRoutes } from './routes'
 
 export interface CustomerIdentity {
@@ -81,7 +80,7 @@ async function loadHistory(userId: string) {
   const { data, error } = await getSupabaseBrowser()
     .from('courier_orders')
     .select(
-      'origin_name, origin_phone, origin_lat, origin_lng, origin_reference_text, destination_name, destination_phone, destination_lat, destination_lng, destination_reference_text, item_description, payer, status',
+      'origin_name, origin_phone, origin_lat, origin_lng, origin_reference_text, destination_name, destination_phone, destination_lat, destination_lng, destination_reference_text, item_description, payer, status, created_at',
     )
     .eq('customer_user_id', userId)
     .order('created_at', { ascending: false })
@@ -92,8 +91,6 @@ async function loadHistory(userId: string) {
 
 export interface FlowContext {
   identity: CustomerIdentity
-  /** Para los chips de contacto de «Detalles». */
-  recents: CourierContact[]
   /** «Repetir una entrega». */
   routes: CourierRoute[]
   /** Los sitios de la lupa. */
@@ -104,7 +101,6 @@ export interface FlowContext {
 
 export const EMPTY_FLOW_CONTEXT: FlowContext = {
   identity: { userId: null, name: '', phone: '', phoneVerified: false },
-  recents: [],
   routes: [],
   points: [],
   home: null,
@@ -146,7 +142,6 @@ export async function loadFlowContext(): Promise<FlowContext> {
     const [rows, home] = await Promise.all([loadHistory(identity.userId), loadDefaultAddress()])
     return {
       identity,
-      recents: recentContacts(rows, identity.phone),
       routes: recentRoutes(rows),
       points: recentPoints(rows),
       home,

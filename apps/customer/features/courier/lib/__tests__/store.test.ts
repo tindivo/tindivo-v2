@@ -202,6 +202,7 @@ describe('useCourierStore · repetir una ruta', () => {
       destination: point('María', -9.15),
       itemDescription: 'Medicinas',
       payer: 'origin',
+      createdAt: null,
     })
     const s = useCourierStore.getState()
     expect(s.step).toBe('trip-details')
@@ -221,6 +222,7 @@ describe('useCourierStore · repetir una ruta', () => {
       destination: point('María', -9.15),
       itemDescription: 'Medicinas',
       payer: 'destination',
+      createdAt: null,
     })
     const { draft } = useCourierStore.getState()
     expect(draft.prepaidConfirmed).toBe(false)

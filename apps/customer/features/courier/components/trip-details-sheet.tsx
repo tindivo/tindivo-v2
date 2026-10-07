@@ -2,10 +2,10 @@
 
 import { COURIER_DRIVER_HINT_MAX, COURIER_ITEM_DESCRIPTION_MAX } from '@tindivo/contracts'
 import { BottomSheet, Icon } from '@tindivo/ui'
-import { useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { useCourierRequest } from '../hooks/use-courier-request'
 import { useCourierStatus } from '../hooks/use-courier-status'
-import { type CourierContact, suggestContacts } from '../lib/contacts'
+import type { CourierContact } from '../lib/contacts'
 import { formatCourierPrice, getUtmSource } from '../lib/format'
 import {
   formatPePhone,
@@ -47,9 +47,12 @@ type CategoryId = (typeof CATEGORIES)[number]['id']
  */
 export function TripDetailsSheet() {
   const open = useCourierStore((s) => s.open && s.step === 'trip-details')
-  const closeSheet = useCourierStore((s) => s.closeSheet)
   const beginEditPoint = useCourierStore((s) => s.beginEditPoint)
-  const { draft, updateDraft, updatePoint, identity, recents, submitting, error, submit } =
+  // Identidad FIJA: `BottomSheet` se lo pasa a `useDialogFocus`, que vuelve a
+  // enfocar el diálogo cada vez que cambia `onClose`. Con una flecha nueva por
+  // render, cada tecla le quitaba el foco al campo que se estaba escribiendo.
+  const goBack = useCallback(() => beginEditPoint('destination'), [beginEditPoint])
+  const { draft, updateDraft, updatePoint, identity, submitting, error, submit } =
     useCourierRequest()
   const { status } = useCourierStatus()
   const me: CourierContact | null =
@@ -103,20 +106,23 @@ export function TripDetailsSheet() {
   }
 
   return (
-    <BottomSheet open={open} onClose={closeSheet} label="Detalles de la entrega" scrim={false}>
+    // Detalles es el tercer paso: atrás (flecha, Escape) vuelve al mapa de la
+    // entrega sin perder nada, igual que en los pasos del pin. Antes había una
+    // X que cerraba el pedido entero.
+    <BottomSheet open={open} onClose={goBack} label="Detalles de la entrega" scrim={false}>
       <div className="flex max-h-[85dvh] min-h-0 flex-col">
-        <div className="flex shrink-0 items-center justify-between px-4 pb-3">
+        <div className="flex shrink-0 items-center gap-2 px-4 pb-3">
+          <button
+            type="button"
+            onClick={goBack}
+            aria-label="Volver al mapa"
+            className="-ml-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#F4F4F2]"
+          >
+            <Icon name="arrow_back" size={22} className="text-[#2E3236]" />
+          </button>
           <div className="text-[24px] font-extrabold tracking-[-0.03em] text-[#2E3236]">
             Detalles de la entrega
           </div>
-          <button
-            type="button"
-            onClick={closeSheet}
-            aria-label="Cerrar"
-            className="flex h-11 w-11 items-center justify-center rounded-full bg-[#F4F4F2]"
-          >
-            <Icon name="close" size={22} className="text-[#2E3236]" />
-          </button>
         </div>
 
         <div
@@ -133,7 +139,6 @@ export function TripDetailsSheet() {
             onChangeLocation={() => beginEditPoint('origin')}
             onChange={(patch) => updatePoint('origin', patch)}
             me={me}
-            recents={recents}
           />
           <PointCard
             key={`destination-${open}`}
@@ -144,7 +149,6 @@ export function TripDetailsSheet() {
             onChangeLocation={() => beginEditPoint('destination')}
             onChange={(patch) => updatePoint('destination', patch)}
             me={me}
-            recents={recents}
           />
 
           {/* ── ¿Qué llevamos? ─────────────────────────────────────────── */}
@@ -274,7 +278,11 @@ export function TripDetailsSheet() {
             className={`flex h-14 w-full items-center justify-center gap-2 rounded-full font-extrabold text-[17px] transition-[transform,box-shadow] active:scale-[0.98] ${
               ready && !submitting
                 ? 'bg-[linear-gradient(135deg,#F97316,#FB923C)] text-white shadow-[0_10px_24px_-10px_rgba(234,88,12,.55)]'
-                : 'bg-[#E8E9EB] text-[#5C6368]'
+                : submitting
+                  ? 'bg-[#E8E9EB] text-[#5C6368]'
+                  : // «Completar: …» es una acción (lleva al campo), no un botón
+                    // apagado: se ve como acción secundaria, no gris.
+                    'border-2 border-brand-dark bg-white text-brand-dark'
             }`}
           >
             <Icon name="two_wheeler" size={22} filled={ready} />
@@ -319,7 +327,6 @@ function PointCard({
   onChangeLocation,
   onChange,
   me,
-  recents,
 }: {
   which: CourierEditingPoint
   title: string
@@ -329,8 +336,6 @@ function PointCard({
   onChange: (patch: Partial<CourierPoint>) => void
   /** La persona que está pidiendo: su atajo «Soy yo». `null` si no hay sesión. */
   me: CourierContact | null
-  /** Contactos de entregas anteriores, para autocompletar nombre y celular. */
-  recents: readonly CourierContact[]
 }) {
   const missing = missingPhoneDigits(point.contactPhone)
   const dotColor = which === 'origin' ? 'bg-brand' : 'bg-[#2E3236]'
@@ -344,9 +349,26 @@ function PointCard({
 
   return (
     <section className="flex flex-col gap-2.5 rounded-[22px] bg-[#F4F4F2] p-3.5">
-      <div className="flex items-center gap-2">
+      <div className="flex min-h-9 items-center gap-2">
         <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${dotColor}`} />
         <h3 className="text-[17px] font-extrabold tracking-[-0.01em] text-[#2E3236]">{title}</h3>
+        {me && (
+          <SoyYo
+            me={me}
+            current={point}
+            onPick={(c) => {
+              setCompact(false)
+              onChange({ contactName: c.name, contactPhone: c.phone })
+            }}
+            onClear={() => {
+              // Al vaciarlo se abre la edición: en una sola línea quedaba un
+              // contacto vacío y escondido, y «Completar: celular…» no
+              // encontraba el campo para llevar hasta él.
+              setCompact(false)
+              onChange({ contactName: '', contactPhone: '' })
+            }}
+          />
+        )}
       </div>
 
       {/* Lugar: la referencia escrita en el mapa, editable aquí; «Cambiar» reabre el mapa. */}
@@ -386,14 +408,6 @@ function PointCard({
         </div>
       ) : (
         <>
-          <ContactChips
-            me={me}
-            recents={recents}
-            current={point}
-            onPick={(c) => onChange({ contactName: c.name, contactPhone: c.phone })}
-            onClear={() => onChange({ contactName: '', contactPhone: '' })}
-          />
-
           {/* Contacto: celular (obligatorio) y nombre (opcional) en una sola tarjeta. */}
           <div className="flex flex-col rounded-2xl bg-white">
             <div className="flex items-center gap-3 px-3 py-2.5">
@@ -440,65 +454,43 @@ function PointCard({
 }
 
 /**
- * Autocompletar quien entrega / quien recibe: «Soy yo» y los contactos de
- * entregas anteriores, como fichas que se activan y se desactivan. No se rellena
- * nada por su cuenta: en un pedido puedes ser quien entrega, quien recibe o
- * ninguno de los dos, y suponerlo mandaría al motorizado a llamar a la persona
- * equivocada. Tocar una ficha activa completa nombre y celular; volver a tocarla
- * la apaga y deja los dos campos vacíos. Lo que se escribe en «nombre» filtra los
- * recientes.
+ * «Soy yo», en la esquina de cada tarjeta: llena nombre y celular con los de
+ * quien pide; tocarlo otra vez lo apaga y deja los dos vacíos. No se rellena
+ * solo: en un pedido puedes ser quien entrega, quien recibe o ninguno de los
+ * dos, y suponerlo mandaría al motorizado a llamar a la persona equivocada.
+ *
+ * Antes compartía una fila de chips con los contactos de entregas anteriores
+ * («Rosa», «Botica Central» tres veces, «Quien recibe»…): ruido repetido en las
+ * dos tarjetas. Los recientes ya están, con su sitio, en «Ver anteriores» y en
+ * la búsqueda del mapa (Jesús, 7-oct; `Docs/Entregas/ux-entrada/08`).
  */
-function ContactChips({
+function SoyYo({
   me,
-  recents,
   current,
   onPick,
   onClear,
 }: {
-  me: CourierContact | null
-  recents: readonly CourierContact[]
+  me: CourierContact
   current: CourierPoint
   onPick: (c: CourierContact) => void
   onClear: () => void
 }) {
-  const same = (c: CourierContact) =>
-    current.contactPhone === c.phone && current.contactName.trim() === c.name.trim()
-  const chips = [
-    ...(me ? [{ key: 'me', label: 'Soy yo', icon: 'person', contact: me }] : []),
-    ...suggestContacts(recents, current.contactName).map((c) => ({
-      key: `${c.phone}|${c.name}`,
-      label: c.name,
-      icon: null,
-      contact: c,
-    })),
-  ]
-  if (chips.length === 0) return null
-
+  const active = current.contactPhone === me.phone && current.contactName.trim() === me.name.trim()
   return (
-    <div className="-mx-1 flex gap-2 overflow-x-auto px-1 py-0.5">
-      {chips.map((chip) => {
-        const active = same(chip.contact)
-        return (
-          <button
-            key={chip.key}
-            type="button"
-            aria-pressed={active}
-            onClick={() => (active ? onClear() : onPick(chip.contact))}
-            className={`flex h-10 max-w-[220px] shrink-0 items-center gap-1.5 rounded-full border-2 px-3.5 text-[14px] font-bold transition-colors ${
-              active
-                ? 'border-brand bg-brand text-white'
-                : 'border-transparent bg-white text-[#2E3236]'
-            }`}
-          >
-            {active ? (
-              <Icon name="check" size={16} />
-            ) : (
-              chip.icon && <Icon name={chip.icon} size={16} className="text-brand-dark" />
-            )}
-            <span className="truncate">{chip.label}</span>
-          </button>
-        )
-      })}
-    </div>
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={() => (active ? onClear() : onPick(me))}
+      className={`ml-auto flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-[14px] font-bold transition-colors ${
+        active ? 'bg-brand text-white' : 'bg-white text-[#2E3236]'
+      }`}
+    >
+      <Icon
+        name={active ? 'check' : 'person'}
+        size={16}
+        className={active ? '' : 'text-brand-dark'}
+      />
+      Soy yo
+    </button>
   )
 }
