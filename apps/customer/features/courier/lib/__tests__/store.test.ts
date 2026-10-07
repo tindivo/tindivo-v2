@@ -79,6 +79,14 @@ describe('useCourierStore · mapa primero (sin negocio)', () => {
     expect(s.returnStep).toBe('trip-details')
   })
 
+  it('atrás desde A, todavía sin nada, cierra el flujo', () => {
+    useCourierStore.getState().openSheet()
+    useCourierStore.getState().cancelEditPoint()
+    const s = useCourierStore.getState()
+    expect(s.open).toBe(false)
+    expect(s.editingPoint).toBeNull()
+  })
+
   it('confirmar A con su referencia pasa al pin de B, sin salir de pin-drop', () => {
     useCourierStore.getState().openSheet()
     useCourierStore.getState().confirmPinDrop(A, 12, 'Frente al mercado')
@@ -108,14 +116,6 @@ describe('useCourierStore · mapa primero (sin negocio)', () => {
     expect(s.step).toBe('pin-drop')
     expect(s.editingPoint).toBe('origin')
     expect(s.draft.origin.coordinates).toEqual(A)
-  })
-
-  it('atrás desde A, todavía sin nada, cierra el flujo', () => {
-    useCourierStore.getState().openSheet()
-    useCourierStore.getState().cancelEditPoint()
-    const s = useCourierStore.getState()
-    expect(s.open).toBe(false)
-    expect(s.editingPoint).toBeNull()
   })
 
   it('corregir un punto desde trip-details vuelve ahí, con el otro punto intacto', () => {
@@ -174,5 +174,101 @@ describe('useCourierStore · mapa primero (sin negocio)', () => {
     })
     useCourierStore.getState().confirmPinDrop(A, null, 'Frente al mercado')
     expect(useCourierStore.getState().step).toBe('trip-details')
+  })
+})
+
+/**
+ * Repetir una entrega anterior: un toque en «¿Dónde recogemos?» llena la ruta
+ * entera y lleva directo a `trip-details`, donde solo se revisa y se pide.
+ */
+describe('useCourierStore · repetir una ruta', () => {
+  beforeEach(() => {
+    useCourierStore.setState(useCourierStore.getInitialState())
+  })
+
+  const point = (name: string, lat: number) => ({
+    contactName: name,
+    contactPhone: '987654321',
+    coordinates: { lat, lng: -78.28 },
+    accuracyM: null,
+    referenceText: `${name}, referencia`,
+    label: name,
+  })
+
+  it('llena los dos puntos, qué y quién paga, y salta a trip-details', () => {
+    useCourierStore.getState().openSheet()
+    useCourierStore.getState().repeatRoute({
+      origin: point('Botica Santa Rosa', -9.14),
+      destination: point('María', -9.15),
+      itemDescription: 'Medicinas',
+      payer: 'origin',
+    })
+    const s = useCourierStore.getState()
+    expect(s.step).toBe('trip-details')
+    expect(s.editingPoint).toBeNull()
+    expect(s.returnStep).toBeNull()
+    expect(s.draft.origin.label).toBe('Botica Santa Rosa')
+    expect(s.draft.destination.coordinates).toEqual({ lat: -9.15, lng: -78.28 })
+    expect(s.draft.itemDescription).toBe('Medicinas')
+    expect(s.draft.payer).toBe('origin')
+  })
+
+  it('«listo y pagado» y el peso se vuelven a confirmar: son de este envío, no del anterior', () => {
+    useCourierStore.getState().openSheet()
+    useCourierStore.getState().updateDraft({ prepaidConfirmed: true, weightConfirmed: true })
+    useCourierStore.getState().repeatRoute({
+      origin: point('Botica Santa Rosa', -9.14),
+      destination: point('María', -9.15),
+      itemDescription: 'Medicinas',
+      payer: 'destination',
+    })
+    const { draft } = useCourierStore.getState()
+    expect(draft.prepaidConfirmed).toBe(false)
+    expect(draft.weightConfirmed).toBe(false)
+  })
+})
+
+/**
+ * El enlace de una tienda (`tindivo.com/entregas?lugar=…`): el flujo abre con
+ * A ya puesto en ese lugar y pasa directo al pin de B.
+ */
+describe('useCourierStore · abrir desde un lugar', () => {
+  const A = { lat: -9.15, lng: -78.5 }
+
+  beforeEach(() => {
+    useCourierStore.setState(useCourierStore.getInitialState())
+  })
+
+  it('fija A con el nombre del lugar y abre el pin de B', () => {
+    useCourierStore.getState().openAtPlace({ name: 'Botica Santa Rosa', lat: A.lat, lng: A.lng })
+    const s = useCourierStore.getState()
+    expect(s.open).toBe(true)
+    expect(s.step).toBe('pin-drop')
+    expect(s.editingPoint).toBe('destination')
+    expect(s.returnStep).toBe('trip-details')
+    expect(s.draft.origin.coordinates).toEqual(A)
+    expect(s.draft.origin.referenceText).toBe('Botica Santa Rosa')
+    expect(s.draft.origin.label).toBe('Botica Santa Rosa')
+    expect(s.draft.origin.contactName).toBe('Botica Santa Rosa')
+  })
+
+  it('arranca de cero aunque hubiera un borrador anterior', () => {
+    useCourierStore.getState().openSheet()
+    useCourierStore.getState().updateDraft({ itemDescription: 'Lo de antes' })
+    useCourierStore.getState().openAtPlace({ name: 'Botica Santa Rosa', lat: A.lat, lng: A.lng })
+    expect(useCourierStore.getState().draft.itemDescription).toBe('')
+  })
+
+  it('un lugar de nombre corto completa la referencia (la base exige ≥ 5 letras)', () => {
+    useCourierStore.getState().openAtPlace({ name: 'Ojo', lat: A.lat, lng: A.lng })
+    expect(useCourierStore.getState().draft.origin.referenceText).toBe('Frente a Ojo')
+  })
+
+  it('atrás desde B vuelve al pin de A, con el lugar puesto', () => {
+    useCourierStore.getState().openAtPlace({ name: 'Botica Santa Rosa', lat: A.lat, lng: A.lng })
+    useCourierStore.getState().cancelEditPoint()
+    const s = useCourierStore.getState()
+    expect(s.editingPoint).toBe('origin')
+    expect(s.draft.origin.coordinates).toEqual(A)
   })
 })

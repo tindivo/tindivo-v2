@@ -7,6 +7,7 @@ import { useOnboarding } from '@/lib/onboarding-store'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import { createCourierOrder, type Requester } from '../lib/api'
 import { type CourierContact, recentContacts } from '../lib/contacts'
+import { loadDefaultAddress } from '../lib/shortcuts-data'
 import { useCourierStore } from '../lib/store'
 import type { CourierOrderResult } from '../types'
 
@@ -83,26 +84,6 @@ function loadFlowContext(): Promise<FlowContext> {
     contextCache = null
   })
   return value
-}
-
-async function loadDefaultAddress() {
-  const supabase = getSupabaseBrowser()
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-  const user = session?.user
-  if (!user) return null
-  const { data } = await supabase
-    .from('customer_addresses')
-    .select('line, reference, coordinates_lat, coordinates_lng')
-    .eq('user_id', user.id)
-    .eq('is_default', true)
-    .maybeSingle()
-  if (!data || data.coordinates_lat == null || data.coordinates_lng == null) return null
-  return {
-    referenceText: data.reference,
-    coordinates: { lat: Number(data.coordinates_lat), lng: Number(data.coordinates_lng) },
-  }
 }
 
 /**

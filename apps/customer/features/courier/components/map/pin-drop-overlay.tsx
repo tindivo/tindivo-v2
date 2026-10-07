@@ -4,7 +4,11 @@ import { ADDRESS_REFERENCE_MAX, AddressReferenceSchema } from '@tindivo/contract
 import { Button, Icon, Segmented, Spinner, useDialogFocus } from '@tindivo/ui'
 import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import type { MapMode } from '@/components/map-picker-inner'
+import type { PointOption } from '../../lib/point-search'
+import type { CourierRoute } from '../../lib/routes'
 import type { CourierEditingPoint } from '../../types'
+import { PointSearchSheet } from './point-search-sheet'
+import { RepeatRoutes } from './repeat-routes'
 
 const COPY: Record<
   CourierEditingPoint,
@@ -48,6 +52,10 @@ const COPY: Record<
  * panel de abajo, en la misma pantalla que el pin: es un solo paso por punto.
  * Sin `guided` (camino de negocio) el panel es solo el pin y la referencia va
  * en un paso aparte.
+ *
+ * Los atajos viven aquí, dentro del pin, y no en una pantalla previa
+ * (`Docs/Entregas/ux-entrada/`): la lupa de arriba (lugares, sitios recientes,
+ * «Mi dirección») y, en el paso 1, «Repetir una entrega».
  */
 export function PinDropOverlay({
   mode,
@@ -66,6 +74,10 @@ export function PinDropOverlay({
   onConfirm,
   onCancel,
   onPanelHeight,
+  routes,
+  onRepeat,
+  search,
+  onPick,
 }: {
   mode: MapMode
   onModeChange: (m: MapMode) => void
@@ -84,18 +96,31 @@ export function PinDropOverlay({
   onConfirm: (reference: string | undefined) => void
   onCancel: () => void
   onPanelHeight: (px: number) => void
+  /** Entregas anteriores que se pueden repetir. Solo se ofrecen en el paso 1. */
+  routes: readonly CourierRoute[]
+  onRepeat: (route: CourierRoute) => void
+  /** Las sugerencias de la lupa para lo escrito (ver `searchPoints`). */
+  search: (query: string) => PointOption[]
+  /** Lleva el pin a la sugerencia elegida y deja su referencia escrita. */
+  onPick: (option: PointOption) => void
 }) {
   const caja = useRef<HTMLDivElement>(null)
   const panel = useRef<HTMLDivElement>(null)
   const input = useRef<HTMLInputElement>(null)
   const [refError, setRefError] = useState<string | null>(null)
   const [confirmLeave, setConfirmLeave] = useState(false)
+  const [searching, setSearching] = useState(false)
 
   // Salir del paso 1 con algo ya escrito pide confirmación; volver del paso 2 al
   // 1 no (no se pierde nada). La identidad tiene que ser fija: `useDialogFocus`
   // re-enfoca el diálogo cada vez que cambia `onClose`.
   const leaveRef = useRef<() => void>(() => {})
   leaveRef.current = () => {
+    // Con la búsqueda abierta, Escape (o atrás) la cierra a ella y nada más.
+    if (searching) {
+      setSearching(false)
+      return
+    }
     if (guided && stepIndex === 1 && reference.trim().length > 0) setConfirmLeave(true)
     else onCancel()
   }
@@ -183,7 +208,17 @@ export function PinDropOverlay({
           >
             <Icon name="arrow_back" size={22} />
           </button>
-          <div className="pointer-events-auto ml-auto rounded-[18px] bg-card p-1 shadow-elev-3 border border-ink/[0.06]">
+          {guided && (
+            <button
+              type="button"
+              onClick={() => setSearching(true)}
+              className="pointer-events-auto flex h-11 min-w-0 flex-1 items-center gap-2 rounded-full bg-card px-3.5 text-left text-ink-muted shadow-elev-3 border border-ink/[0.06] transition-transform active:scale-[0.98]"
+            >
+              <Icon name="search" size={20} className="shrink-0" />
+              <span className="truncate text-[14px] font-semibold">Buscar un lugar</span>
+            </button>
+          )}
+          <div className="pointer-events-auto ml-auto shrink-0 rounded-[18px] bg-card p-1 shadow-elev-3 border border-ink/[0.06]">
             <Segmented
               size="sm"
               value={mode}
@@ -225,6 +260,9 @@ export function PinDropOverlay({
         ref={panel}
         className="pointer-events-auto shrink-0 rounded-t-[24px] bg-card px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-[0_-16px_40px_-28px_rgba(0,0,0,0.4)]"
       >
+        {guided && stepIndex === 1 && point === 'origin' && routes.length > 0 && (
+          <RepeatRoutes routes={routes} onRepeat={onRepeat} />
+        )}
         {guided && stepIndex && (
           // Alto fijo en los dos pasos: la flecha solo existe en el 2, y si la
           // fila cambiara de alto el mapa se re-mediría al pasar de A a B.
@@ -340,6 +378,19 @@ export function PinDropOverlay({
         </Button>
       </div>
 
+      {searching && (
+        <PointSearchSheet
+          point={point}
+          search={search}
+          onPick={(o) => {
+            setSearching(false)
+            setRefError(null)
+            onPick(o)
+          }}
+          onClose={() => setSearching(false)}
+        />
+      )}
+
       {confirmLeave && (
         <LeaveConfirm
           onStay={() => setConfirmLeave(false)}
@@ -359,7 +410,7 @@ function LeaveConfirm({ onStay, onLeave }: { onStay: () => void; onLeave: () => 
       role="alertdialog"
       aria-modal="true"
       aria-label="¿Salir sin pedir?"
-      className="pointer-events-auto fixed inset-0 z-[90] flex items-end justify-center bg-ink/40 backdrop-blur-sm"
+      className="pointer-events-auto fixed inset-0 z-[900] flex items-end justify-center bg-ink/40 backdrop-blur-sm"
     >
       <div className="w-full max-w-sm rounded-t-[28px] bg-white p-5 pb-[calc(1.5rem+env(safe-area-inset-bottom))] shadow-elev-3">
         <div className="text-[19px] font-extrabold tracking-[-0.02em] text-[#2E3236]">
