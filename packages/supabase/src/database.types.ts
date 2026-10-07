@@ -2912,6 +2912,199 @@ export type Database = {
           },
         ]
       }
+      store_categories: {
+        Row: {
+          active: boolean
+          icon: string
+          id: string
+          name: string
+          slug: string
+          sort_order: number
+        }
+        Insert: {
+          active?: boolean
+          icon: string
+          id?: string
+          name: string
+          slug: string
+          sort_order?: number
+        }
+        Update: {
+          active?: boolean
+          icon?: string
+          id?: string
+          name?: string
+          slug?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      store_events: {
+        Row: {
+          created_at: string
+          id: number
+          metadata: Json | null
+          product_id: string | null
+          ref: string | null
+          search_term: string | null
+          session_id: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          metadata?: Json | null
+          product_id?: string | null
+          ref?: string | null
+          search_term?: string | null
+          session_id: string
+          type: string
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          metadata?: Json | null
+          product_id?: string | null
+          ref?: string | null
+          search_term?: string | null
+          session_id?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_events_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "store_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      store_product_images: {
+        Row: {
+          created_at: string
+          id: string
+          position: number
+          product_id: string
+          thumb_url: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          position: number
+          product_id: string
+          thumb_url: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          position?: number
+          product_id?: string
+          thumb_url?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_product_images_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "store_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      store_products: {
+        Row: {
+          audience: string | null
+          category_id: string | null
+          code: string
+          condition: string | null
+          condition_score: number | null
+          cover_focus_x: number
+          cover_focus_y: number
+          created_at: string
+          description: string | null
+          id: string
+          is_clearance: boolean
+          negotiable: boolean
+          original_price: number | null
+          price: number | null
+          published_at: string | null
+          seller_id: string | null
+          size_label: string | null
+          slug: string | null
+          sold_at: string | null
+          status: string
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          audience?: string | null
+          category_id?: string | null
+          code?: string
+          condition?: string | null
+          condition_score?: number | null
+          cover_focus_x?: number
+          cover_focus_y?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_clearance?: boolean
+          negotiable?: boolean
+          original_price?: number | null
+          price?: number | null
+          published_at?: string | null
+          seller_id?: string | null
+          size_label?: string | null
+          slug?: string | null
+          sold_at?: string | null
+          status?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          audience?: string | null
+          category_id?: string | null
+          code?: string
+          condition?: string | null
+          condition_score?: number | null
+          cover_focus_x?: number
+          cover_focus_y?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_clearance?: boolean
+          negotiable?: boolean
+          original_price?: number | null
+          price?: number | null
+          published_at?: string | null
+          seller_id?: string | null
+          size_label?: string | null
+          slug?: string | null
+          sold_at?: string | null
+          status?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "store_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_products_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       terms_acceptance: {
         Row: {
           accepted_at: string
@@ -3387,6 +3580,16 @@ export type Database = {
         Returns: boolean
       }
       is_within_platform_schedule: { Args: never; Returns: boolean }
+      list_store_products: {
+        Args: {
+          p_category?: string
+          p_condition?: string
+          p_order?: string
+          p_query?: string
+        }
+        Returns: Json
+      }
+      list_store_sold: { Args: { p_limit?: number }; Returns: Json }
       manual_order_money: {
         Args: {
           p_cash_amount: number
@@ -3454,6 +3657,10 @@ export type Database = {
           p_report_id: string
         }
         Returns: Json
+      }
+      reorder_store_images: {
+        Args: { p_ids: string[]; p_product_id: string }
+        Returns: undefined
       }
       request_order_transfer: {
         Args: {
@@ -3689,6 +3896,19 @@ export type Database = {
         Returns: Json
       }
       slugify: { Args: { p_text: string }; Returns: string }
+      store_event_counts: {
+        Args: never
+        Returns: {
+          product_id: string
+          views: number
+          whatsapp_clicks: number
+        }[]
+      }
+      store_make_slug: {
+        Args: { p_code: string; p_title: string }
+        Returns: string
+      }
+      store_metrics: { Args: never; Returns: Json }
       unblock_business: { Args: { p_by: string; p_id: string }; Returns: Json }
       update_business_manual_order: {
         Args: {
