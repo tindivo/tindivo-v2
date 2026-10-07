@@ -4,7 +4,11 @@ import type { CourierPayer } from '@tindivo/contracts'
  * Pantallas de la hoja de Tindivo Entregas.
  *
  * El camino por defecto (sin negocio) es MAPA PRIMERO, inspirado en inDrive:
- * `pin-drop (A) → pin-drop (B) → trip-details → tracking`. `pin-drop` es el
+ * `pin-drop (A) → pin-drop (B) → trip-details → tracking`. Es la ÚNICA
+ * entrada a Entregas: la tarjeta del inicio y `tindivo.com/entregas` abren
+ * aquí (antes `/entregas` era otra pantalla, «Lugares», con su propio camino;
+ * ver `Docs/Entregas/ux-entrada/`). Los atajos viven DENTRO del pin: repetir
+ * una entrega, buscar un lugar, «Mi dirección». `pin-drop` es el
  * mapa a pantalla completa con el pin fijo al centro ("arrastra el mapa, no el
  * pin") y, debajo, la referencia del punto en la misma pantalla;
  * `trip-details` es la ÚNICA pantalla de después: qué llevamos, de quién a

@@ -155,16 +155,23 @@ function CenterTracker({
   gestureRef,
   onSettle,
   onMovingChange,
+  pinOffsetY = 0,
 }: {
   gestureRef: RefObject<boolean>
   onSettle: (c: LatLng, byUser: boolean) => void
   onMovingChange: (moving: boolean) => void
+  pinOffsetY?: number
 }) {
   const map = useMapEvents({
     movestart: () => onMovingChange(true),
     moveend: () => {
       onMovingChange(false)
-      const c = map.getCenter()
+      // Con `pinOffsetY` el pin no está en el centro del lienzo sino más
+      // arriba: la coordenada es la del punto bajo el pin.
+      const size = map.getSize()
+      const c = pinOffsetY
+        ? map.containerPointToLatLng([size.x / 2, size.y / 2 - pinOffsetY])
+        : map.getCenter()
       const byUser = gestureRef.current
       gestureRef.current = false
       onSettle({ lat: c.lat, lng: c.lng }, byUser)
@@ -179,11 +186,13 @@ function FlyTo({
   token,
   gestureRef,
   instant = false,
+  pinOffsetY = 0,
 }: {
   target: LatLng
   token: number
   gestureRef: RefObject<boolean>
   instant?: boolean
+  pinOffsetY?: number
 }) {
   const map = useMap()
   // `-1`: mismo motivo que en `FitBounds` — `FlyTo` solo monta cuando
@@ -197,12 +206,35 @@ function FlyTo({
     last.current = token
     gestureRef.current = false
     const zoom = Math.max(map.getZoom(), 17)
+    // El objetivo tiene que quedar BAJO EL PIN: con `pinOffsetY`, el centro
+    // del lienzo va ese tanto más abajo del objetivo.
+    const center = pinOffsetY
+      ? map.unproject(map.project([target.lat, target.lng], zoom).add([0, pinOffsetY]), zoom)
+      : ([target.lat, target.lng] as [number, number])
     if (instant) {
-      map.setView([target.lat, target.lng], zoom, { animate: false })
+      map.setView(center, zoom, { animate: false })
       return
     }
-    map.flyTo([target.lat, target.lng], zoom, { animate: true, duration: 0.9 })
-  }, [token, target, map, gestureRef, instant])
+    map.flyTo(center, zoom, { animate: true, duration: 0.9 })
+    // Con `pinOffsetY` en las dependencias no vuela de más: la guarda del
+    // token devuelve antes si no hubo un vuelo nuevo.
+  }, [token, target, map, gestureRef, instant, pinOffsetY])
+  return null
+}
+
+/**
+ * Cuando cambia `pinOffsetY` (el panel de abajo crece o se achica), el pin
+ * sube o baja en pantalla. Para que el punto bajo el pin siga siendo el mismo,
+ * el mapa se corre exactamente lo mismo, sin animar.
+ */
+function PinOffset({ offset }: { offset: number }) {
+  const map = useMap()
+  const last = useRef(0)
+  useEffect(() => {
+    const delta = offset - last.current
+    last.current = offset
+    if (delta !== 0) map.panBy([0, delta], { animate: false })
+  }, [offset, map])
   return null
 }
 
@@ -265,15 +297,18 @@ const REBOTE = 'cubic-bezier(0.34, 1.56, 0.64, 1)'
 function CenterPin({
   moving,
   variant = 'origin',
+  offsetY = 0,
 }: {
   moving: boolean
   variant?: 'origin' | 'destination'
+  offsetY?: number
 }) {
   const dark = variant === 'destination'
   return (
     <div
-      className="pointer-events-none absolute top-1/2 left-1/2 z-[700]"
+      className="pointer-events-none absolute left-1/2 z-[700]"
       style={{
+        top: `calc(50% - ${offsetY}px)`,
         transform: 'translate3d(-50%, -50%, 0)',
         WebkitTransform: 'translate3d(-50%, -50%, 0)',
       }}
@@ -372,6 +407,7 @@ function MapCanvas({
   fitToPins,
   observeResize = false,
   pinVariant = 'origin',
+  pinOffsetY = 0,
 }: {
   center: LatLng
   interactive: boolean
@@ -409,6 +445,14 @@ function MapCanvas({
   observeResize?: boolean
   /** Color del pin central: naranja = recojo (por defecto), oscuro = entrega. */
   pinVariant?: 'origin' | 'destination'
+  /**
+   * Cuántos píxeles por ENCIMA del centro del lienzo va el pin. Para un mapa
+   * a pantalla completa con un panel encima en la parte de abajo (Entregas):
+   * con la mitad del alto del panel, el pin queda en el centro de lo que se ve
+   * y el mapa sigue a la vista alrededor del panel. La coordenada elegida es
+   * la del punto bajo el pin. 0 = el pin en el centro (checkout).
+   */
+  pinOffsetY?: number
 }) {
   const gestureRef = useRef(false)
   const [moving, setMoving] = useState(false)
@@ -544,13 +588,16 @@ function MapCanvas({
               gestureRef={gestureRef}
               onSettle={handleSettle}
               onMovingChange={handleMoving}
+              pinOffsetY={pinOffsetY}
             />
+            <PinOffset offset={pinOffsetY} />
             {flyTarget && (
               <FlyTo
                 target={flyTarget}
                 token={flyToken}
                 gestureRef={gestureRef}
                 instant={flyInstant}
+                pinOffsetY={pinOffsetY}
               />
             )}
           </>
@@ -558,7 +605,7 @@ function MapCanvas({
           <Follow center={center} />
         )}
       </MapContainer>
-      {showPin && <CenterPin moving={moving} variant={pinVariant} />}
+      {showPin && <CenterPin moving={moving} variant={pinVariant} offsetY={pinOffsetY} />}
     </div>
   )
 }

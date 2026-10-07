@@ -4,5 +4,5 @@
 export { escaparHtml } from './html'
 export { LANDMARK_CATEGORY_LABEL, LANDMARK_STYLE, type Landmark } from './landmarks'
 export type { RoutePin, RoutePinVariant } from './route-types'
-export { STREET_TILES, streetTiles, type TileSource } from './tiles'
+export { OSM_TILES, STREET_TILES, streetTiles, type TileSource } from './tiles'
 export type { LatLng } from './types'

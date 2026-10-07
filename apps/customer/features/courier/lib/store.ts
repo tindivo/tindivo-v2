@@ -8,6 +8,8 @@ import {
   type CourierOrderResult,
   emptyCourierDraft,
 } from '../types'
+import { placeReference } from './places'
+import type { CourierRoute } from './routes'
 
 interface CourierState {
   open: boolean
@@ -41,6 +43,18 @@ interface CourierState {
     referenceText: string
     phone: string | null
   }) => void
+  /**
+   * El enlace de una tienda (`tindivo.com/entregas?lugar=…`): abre el flujo de
+   * cero con A ya puesto en ese lugar (sus coordenadas las cargó Jesús a mano)
+   * y pasa directo al pin de B.
+   */
+  openAtPlace: (place: { name: string; lat: number; lng: number }) => void
+  /**
+   * «Repetir una entrega» (en el pin de A): la ruta entera puesta y directo a
+   * `trip-details`. «Listo y pagado» y el peso NO se copian: se confirman para
+   * cada envío.
+   */
+  repeatRoute: (route: CourierRoute) => void
   closeSheet: () => void
   goTo: (step: CourierFlowStep) => void
   updateDraft: (patch: Partial<CourierDraft>) => void
@@ -97,6 +111,42 @@ export const useCourierStore = create<CourierState>((set, get) => ({
       ...(opts?.step
         ? { step: opts.step, editingPoint: null, returnStep: null }
         : { step: 'pin-drop', editingPoint: 'origin', returnStep: 'trip-details' }),
+    }),
+
+  openAtPlace: (place) => {
+    const name = place.name.trim()
+    const draft = emptyCourierDraft()
+    set({
+      open: true,
+      fromBusiness: false,
+      draft: {
+        ...draft,
+        origin: {
+          ...draft.origin,
+          coordinates: { lat: place.lat, lng: place.lng },
+          referenceText: placeReference(name),
+          label: name,
+          contactName: name,
+        },
+      },
+      step: 'pin-drop',
+      editingPoint: 'destination',
+      returnStep: 'trip-details',
+    })
+  },
+
+  repeatRoute: (route) =>
+    set({
+      draft: {
+        ...emptyCourierDraft(),
+        origin: route.origin,
+        destination: route.destination,
+        itemDescription: route.itemDescription,
+        payer: route.payer,
+      },
+      step: 'trip-details',
+      editingPoint: null,
+      returnStep: null,
     }),
 
   openForBusiness: (business) =>

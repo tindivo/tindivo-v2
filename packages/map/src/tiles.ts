@@ -8,7 +8,8 @@ const OSM_ATTRIBUTION =
   '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
 
 /**
- * El mapa de calles de todas las apps: CARTO Positron.
+ * El mapa de calles del cliente y el admin: CARTO Positron. (El motorizado
+ * usa `OSM_TILES`.)
  *
  * EN PRODUCCIÓN, SIEMPRE CARTO. La key (`NEXT_PUBLIC_CARTO_API_KEY`) está
  * configurada en el despliegue, y Positron es el estilo elegido a propósito
@@ -24,12 +25,28 @@ const OSM_ATTRIBUTION =
  * Las dos variables se leen como `process.env.X` literal para que Next las
  * incruste en el bundle del navegador.
  */
+/**
+ * El mapa ESTÁNDAR de OpenStreetMap (el de Leaflet de siempre), en cualquier
+ * entorno. Es el del motorizado: a diferencia de Positron, rotula comercios,
+ * grifos, colegios y nombres de calle con más detalle, y el motorizado se
+ * orienta por eso, no por el pin solo (decisión de Jesús, 7-oct). El cliente
+ * sigue en `STREET_TILES` (CARTO).
+ *
+ * Política de uso de `tile.openstreetmap.org`: sin uso masivo y con atribución.
+ * Con uno o dos motorizados a la vez está muy por debajo de cualquier límite;
+ * si eso cambiara, pasar a un proveedor propio.
+ */
+export const OSM_TILES: TileSource = {
+  url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+  attribution: OSM_ATTRIBUTION,
+}
+
 export function streetTiles(
   cartoKey: string | undefined = process.env.NEXT_PUBLIC_CARTO_API_KEY,
   production: boolean = process.env.NODE_ENV === 'production',
 ): TileSource {
   if (!cartoKey && !production) {
-    return { url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: OSM_ATTRIBUTION }
+    return OSM_TILES
   }
   return {
     url:

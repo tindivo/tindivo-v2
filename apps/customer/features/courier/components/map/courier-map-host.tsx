@@ -3,13 +3,15 @@
 import { toCourierTrackingStep } from '@tindivo/contracts'
 import { Icon, Spinner } from '@tindivo/ui'
 import dynamic from 'next/dynamic'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { boundsFor } from '@/components/map-picker'
 import type { LatLng, MapBounds, MapMode, RoutePin } from '@/components/map-picker-inner'
 import { getCoverage, getCoveragePolygon, haversineKm, pointInPolygon } from '@/lib/coverage'
 import { GeolocationError, geoErrorMessage, getCurrentPositionHA } from '@/lib/geolocation'
 import { getLandmarks, type Landmark } from '@/lib/landmarks'
 import { useCourierTracking } from '../../hooks/use-courier-tracking'
+import { EMPTY_FLOW_CONTEXT, type FlowContext, loadFlowContext } from '../../lib/flow-context'
+import { type PointOption, searchPoints } from '../../lib/point-search'
 import { useCourierStore } from '../../lib/store'
 import type { CourierFlowStep, CourierPoint } from '../../types'
 import { PinDropOverlay } from './pin-drop-overlay'
@@ -29,6 +31,23 @@ const PIN_NOTE_MAP_HEIGHT = 220
 const PIN_PANEL_ESTIMATE = 250
 
 const OUTSIDE_MESSAGE = 'Estás fuera de San Jacinto. Mueve el mapa hasta el punto.'
+
+/** ~20 m: si tu ubicación está así de cerca de A, B no arranca encima de A. */
+const SAME_SPOT_KM = 0.02
+
+/**
+ * Una ubicación de hace menos de esto sirve para ARRANCAR otro pin: A y B se
+ * fijan en segundos, y pedirle al GPS otra lectura de alta precisión para B
+ * eran varios segundos más de «Buscando tu ubicación…» en un 4G flojo. El
+ * botón «mi ubicación» sí pide una lectura nueva: la persona la pidió.
+ */
+const FIX_REUSE_MS = 60_000
+
+interface GpsFix {
+  c: LatLng
+  accuracyM: number
+  at: number
+}
 
 const STEPS_WITH_ROUTE_PINS = new Set<CourierFlowStep>([
   'pin-drop',
@@ -61,6 +80,8 @@ export function CourierMapHost() {
   const switchEditingPoint = useCourierStore((s) => s.switchEditingPoint)
   const trackingShortId = useCourierStore((s) => s.trackingShortId)
   const closeSheet = useCourierStore((s) => s.closeSheet)
+  const updatePoint = useCourierStore((s) => s.updatePoint)
+  const repeatRoute = useCourierStore((s) => s.repeatRoute)
 
   const isTracking = step === 'tracking'
   // Misma fuente que `TrackingSheet` (ver `TrackingFeed`): mirar la entrega
@@ -74,6 +95,39 @@ export function CourierMapHost() {
   const [coverageRadiusKm, setCoverageRadiusKm] = useState(3)
   const [landmarks, setLandmarks] = useState<Landmark[]>([])
   const [loaded, setLoaded] = useState(false)
+  const [flow, setFlow] = useState<FlowContext>(EMPTY_FLOW_CONTEXT)
+  const [flowReady, setFlowReady] = useState(false)
+  const [flowFailed, setFlowFailed] = useState(false)
+
+  // Los atajos (repetir, sitios recientes, «Mi dirección») se vuelven a leer
+  // en CADA apertura, no una vez como la cobertura: la entrega que se acaba de
+  // pedir tiene que aparecer la próxima vez. Al cerrar se vacían: si en medio
+  // cambia la cuenta, la apertura siguiente no puede enseñar ni un instante
+  // las rutas y teléfonos de la anterior.
+  useEffect(() => {
+    if (!open) {
+      setFlow(EMPTY_FLOW_CONTEXT)
+      setFlowReady(false)
+      setFlowFailed(false)
+      return
+    }
+    let on = true
+    void loadFlowContext()
+      .then((ctx) => {
+        if (on) setFlow(ctx)
+      })
+      // Sin red, los atajos no aparecen y la lupa lo dice; el pin sigue
+      // funcionando.
+      .catch(() => {
+        if (on) setFlowFailed(true)
+      })
+      .finally(() => {
+        if (on) setFlowReady(true)
+      })
+    return () => {
+      on = false
+    }
+  }, [open])
 
   // Datos de cobertura: los mismos que ya usa `MapPicker`, cacheados a nivel
   // de módulo (`getCoverage`/`getCoveragePolygon`), así que pedirlos aquí
@@ -136,6 +190,31 @@ export function CourierMapHost() {
     setPinFlyToken((n) => n + 1)
   }, [])
 
+  const lastFix = useRef<GpsFix | null>(null)
+  const readGps = useCallback(async (reuse: boolean): Promise<GpsFix> => {
+    const f = lastFix.current
+    if (reuse && f && Date.now() - f.at < FIX_REUSE_MS) return f
+    const fix = await getCurrentPositionHA()
+    const v = {
+      c: { lat: fix.lat, lng: fix.lng },
+      accuracyM: Math.round(fix.accuracyM),
+      at: Date.now(),
+    }
+    lastFix.current = v
+    return v
+  }, [])
+
+  /** Lleva el pin a `c` y lo da por asentado (confirmable sin arrastrar). */
+  const settleAt = useCallback(
+    (c: LatLng, accuracyM: number | null) => {
+      flyTo(c)
+      setPinCoords(c)
+      setPinAccuracyM(accuracyM)
+      setPinSettled(true)
+    },
+    [flyTo],
+  )
+
   /*
    * Se re-siembra cada vez que el pin arranca para un punto (al entrar a
    * `pin-drop` o al pasar de A a B sin salir de él), no en cada render:
@@ -182,24 +261,38 @@ export function CourierMapHost() {
     setPinSettled(false)
     const origin = key === 'destination' ? d.origin.coordinates : null
     if (origin) {
-      // B nace a unos 30 m de A (hacia abajo, para no tapar el globo de A que
-      // va arriba), no encima: así los dos pines se distinguen
-      // desde el primer instante. Si ese desvío cayera fuera de la zona, sobre A.
+      // B también arranca en tu ubicación (decisión de Jesús, 7-oct): con la
+      // lupa, A puede ser la botica, y lo normal es que la entrega llegue a
+      // donde está quien pide. Mientras llega el GPS, B espera a unos 30 m de A
+      // (hacia abajo, para no tapar el globo de A que va arriba) y no encima,
+      // para que los dos pines se distingan. Si tu ubicación ES A (mandas
+      // desde tu casa) o está fuera de la zona, B se queda ahí, sin aviso: es un
+      // valor por defecto, no algo que la persona pidió.
       const shifted = { lat: origin.lat - 0.00025, lng: origin.lng + 0.0002 }
       const anchor = isInsideRef.current(shifted) ? shifted : origin
       setPinCoords(anchor)
-      setLocating(false)
       flyTo(anchor, true)
+      setLocating(true)
+      const run = gpsRun.current
+      readGps(true)
+        .then(({ c, accuracyM }) => {
+          if (run !== gpsRun.current) return
+          if (!isInsideRef.current(c) || haversineKm(c, origin) < SAME_SPOT_KM) return
+          settleAt(c, accuracyM)
+        })
+        .catch(() => {})
+        .finally(() => {
+          if (run === gpsRun.current) setLocating(false)
+        })
       return
     }
 
     setPinCoords(coverageCenter)
     setLocating(true)
     const run = gpsRun.current
-    getCurrentPositionHA()
-      .then((fix) => {
+    readGps(true)
+      .then(({ c, accuracyM }) => {
         if (run !== gpsRun.current) return
-        const c = { lat: fix.lat, lng: fix.lng }
         // Quien pide desde otra ciudad (para alguien de San Jacinto) no debe ver
         // el mapa volar a un lugar sin tiles ni zona de reparto: se queda en el
         // pueblo y se le dice por qué.
@@ -207,16 +300,13 @@ export function CourierMapHost() {
           setLocateError(OUTSIDE_MESSAGE)
           return
         }
-        flyTo(c)
-        setPinCoords(c)
-        setPinAccuracyM(Math.round(fix.accuracyM))
-        setPinSettled(true)
+        settleAt(c, accuracyM)
       })
       .catch(() => {})
       .finally(() => {
         if (run === gpsRun.current) setLocating(false)
       })
-  }, [open, step, editingPoint, coverageCenter, flyTo])
+  }, [open, step, editingPoint, coverageCenter, flyTo, readGps, settleAt])
 
   const handleSettle = useCallback((c: LatLng, byUser: boolean) => {
     setPinCoords(c)
@@ -238,26 +328,72 @@ export function CourierMapHost() {
   const useMyLocation = useCallback(async () => {
     if (locating) return
     gpsRun.current += 1
+    // Como en el arranque: si mientras tanto la persona eligió algo en la lupa
+    // o movió el mapa, esta lectura llega tarde y no pisa lo que ella puso.
+    const run = gpsRun.current
     setLocating(true)
     setLocateError(null)
     try {
-      const fix = await getCurrentPositionHA()
-      const c = { lat: fix.lat, lng: fix.lng }
+      const { c, accuracyM } = await readGps(false)
+      if (run !== gpsRun.current) return
       if (!isInsideRef.current(c)) {
         setLocateError(OUTSIDE_MESSAGE)
         return
       }
-      flyTo(c)
-      setPinCoords(c)
-      setPinAccuracyM(Math.round(fix.accuracyM))
-      setPinSettled(true)
+      settleAt(c, accuracyM)
     } catch (err) {
+      if (run !== gpsRun.current) return
       const code = err instanceof GeolocationError ? err.code : 'position_unavailable'
       setLocateError(geoErrorMessage(code))
     } finally {
-      setLocating(false)
+      if (run === gpsRun.current) setLocating(false)
     }
-  }, [locating, flyTo])
+  }, [locating, readGps, settleAt])
+
+  const searchFor = useCallback(
+    (query: string) =>
+      searchPoints({
+        query,
+        which: editingPoint ?? 'origin',
+        landmarks,
+        recents: flow.points,
+        home: flow.home,
+        me: flow.identity.userId ? flow.identity : null,
+      }),
+    [editingPoint, landmarks, flow],
+  )
+
+  // «Mi dirección» a la vista en el paso de la entrega, sin abrir la lupa.
+  const homeOption = useMemo(
+    () =>
+      searchPoints({
+        query: '',
+        which: 'destination',
+        landmarks: [],
+        recents: [],
+        home: flow.home,
+        me: flow.identity.userId ? flow.identity : null,
+      })[0] ?? null,
+    [flow],
+  )
+
+  // Elegir en la lupa NO confirma: el mapa vuela al sitio, el pin queda
+  // asentado ahí y la referencia escrita. La persona ajusta la puerta (un
+  // lugar trae el centro del local, no siempre su puerta) y confirma. Un sitio
+  // reciente trae además quién estaba ahí.
+  const pickOption = useCallback(
+    (o: PointOption) => {
+      if (!editingPoint) return
+      gpsRun.current += 1
+      setLocating(false)
+      setLocateError(null)
+      settleAt(o.point.coordinates, null)
+      setReference(o.point.referenceText)
+      const { coordinates: _c, referenceText: _r, accuracyM: _a, ...rest } = o.point
+      if (Object.keys(rest).length > 0) updatePoint(editingPoint, rest)
+    },
+    [editingPoint, settleAt, updatePoint],
+  )
 
   const isPinDrop = step === 'pin-drop'
   const isPinNote = step === 'pin-note'
@@ -415,12 +551,14 @@ export function CourierMapHost() {
   if (!center) return null
 
   const guided = isPinDrop && returnStep === 'trip-details' && editingPoint != null
-  const stepIndex: 1 | 2 | null =
-    guided && !(isPointComplete(draft.origin) && isPointComplete(draft.destination))
-      ? editingPoint === 'origin'
-        ? 1
-        : 2
-      : null
+  // El número del punto SIEMPRE, también al volver desde «Detalles»: antes,
+  // con los dos puntos completos, la fila del paso desaparecía y con ella la
+  // flecha, «Ver anteriores» y «Usar mi dirección».
+  const stepIndex: 1 | 2 | null = guided ? (editingPoint === 'origin' ? 1 : 2) : null
+  const bothComplete = isPointComplete(draft.origin) && isPointComplete(draft.destination)
+  // Atrás desde A sale del pedido solo si todavía se está armando la ruta; con
+  // los dos puntos ya fijados, vuelve a «Detalles» (`cancelEditPoint`).
+  const backLeavesFlow = guided && editingPoint === 'origin' && !bothComplete
 
   // Del paso 2 al 1 sin salir del mapa. Lo ya avanzado en B (referencia y, si el
   // pin estaba asentado dentro de la zona, su coordenada) se guarda para que al
@@ -439,21 +577,32 @@ export function CourierMapHost() {
     <>
       <div
         /*
-         * `z-50`, NO `z-0`. `app/entregas/page.tsx` pinta su propio mapa del
-         * directorio a pantalla completa con `z-30` (y su botón de volver con
-         * `z-40`) y NO se desmonta solo porque este flujo se abra encima —
-         * tocar "Pedir entrega" desde la ficha de un negocio en esa vista deja
-         * el mapa del directorio montado debajo. Con `z-0` este mapa persistente
-         * quedaba TAPADO por el del directorio; `z-50` lo gana sin acercarse a
-         * `PinDropOverlay` (70) ni a `BottomSheet` (80).
+         * `z-50`, NO `z-0`: este flujo se abre encima de cualquier pantalla
+         * (el inicio, el catálogo, la ficha de un negocio), y alguna pinta
+         * capas propias con `z-30`/`z-40`. `z-50` las gana sin acercarse a
+         * `PinDropOverlay` (70) ni a `BottomSheet` (80). (Antes lo exigía la
+         * vieja página «Lugares» de `/entregas`, con su propio mapa a pantalla
+         * completa.)
          *
-         * En `pin-drop` el mapa termina donde empieza el panel del pin, de modo
-         * que el pin fijo (el centro del lienzo) queda en el centro de lo que
-         * se ve, no escondido detrás de la tarjeta.
+         * En `pin-drop` el mapa ocupa TODA la pantalla, también detrás del
+         * panel del pin, y el pin sube la mitad del alto del panel
+         * (`pinOffsetY`): queda en el centro de lo que se ve y el mapa sigue a
+         * la vista alrededor del panel (en pantalla ancha, a sus costados).
+         * Antes el mapa terminaba donde empezaba el panel, y en pantalla ancha
+         * los costados del panel quedaban sin mapa.
          */
-        className={`fixed inset-x-0 top-0 z-50 overflow-hidden bg-[#f4f3ef] ${isPinDrop || isPinNote ? '' : 'bottom-0'}`}
+        className={`fixed inset-x-0 top-0 z-50 overflow-hidden bg-[#f4f3ef] [&_.leaflet-bottom]:[bottom:var(--pin-panel-h,0px)]! ${isPinNote ? '' : 'bottom-0'}`}
         style={
-          isPinNote ? { height: PIN_NOTE_MAP_HEIGHT } : isPinDrop ? { bottom: panelH } : undefined
+          isPinNote
+            ? { height: PIN_NOTE_MAP_HEIGHT }
+            : isPinDrop
+              ? // El crédito de OpenStreetMap (obligatorio por la licencia)
+                // va pegado abajo: con el mapa detrás del panel, se sube
+                // justo encima de él para que no quede tapado. Con `!`
+                // (important): `leaflet.css` no está en una capa y le gana a
+                // cualquier utilidad de Tailwind, que sí lo está.
+                ({ '--pin-panel-h': `${panelH}px` } as CSSProperties)
+              : undefined
         }
       >
         <MapCanvas
@@ -475,6 +624,7 @@ export function CourierMapHost() {
           fitToPins={fitToPins}
           observeResize
           pinVariant={editingPoint === 'destination' ? 'destination' : 'origin'}
+          pinOffsetY={isPinDrop ? Math.round(panelH / 2) : 0}
         />
       </div>
 
@@ -501,6 +651,7 @@ export function CourierMapHost() {
           point={editingPoint}
           guided={guided}
           stepIndex={stepIndex}
+          backLeavesFlow={backLeavesFlow}
           reference={reference}
           onReferenceChange={setReference}
           moving={pinMoving}
@@ -512,6 +663,14 @@ export function CourierMapHost() {
           onConfirm={(ref) => pinCoords && confirmPinDrop(pinCoords, pinAccuracyM, ref)}
           onCancel={handleBack}
           onPanelHeight={setPanelH}
+          routes={flow.routes}
+          onRepeat={repeatRoute}
+          search={searchFor}
+          searchReady={flowReady}
+          searchFailed={flowFailed}
+          originLabel={draft.origin.label || draft.origin.referenceText.trim() || null}
+          home={homeOption}
+          onPick={pickOption}
         />
       )}
     </>

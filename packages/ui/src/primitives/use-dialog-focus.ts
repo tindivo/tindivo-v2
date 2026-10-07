@@ -61,8 +61,12 @@ export function useDialogFocus(
         return
       }
       if (e.key !== 'Tab' || !caja) return
+      // Fuera lo que está detrás de una capa `inert` (p. ej. el pin mientras la
+      // lupa está abierta): `offsetParent` no lo excluye, y el Tab intentaba
+      // enfocar un control bloqueado y se perdía.
       const focusables = [...caja.querySelectorAll<HTMLElement>(FOCUSABLES)].filter(
-        (el) => el.offsetParent !== null || el === document.activeElement,
+        (el) =>
+          (el.offsetParent !== null || el === document.activeElement) && !el.closest('[inert]'),
       )
       if (focusables.length === 0) {
         // Sin nada que enfocar dentro, el Tab se llevaría el foco a la página de

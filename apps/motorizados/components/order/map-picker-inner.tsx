@@ -3,7 +3,7 @@
 import { type RefObject, useEffect, useRef, useState } from 'react'
 import { MapContainer, TileLayer, useMap, useMapEvents } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
-import { STREET_TILES } from '@tindivo/map'
+import { OSM_TILES } from '@tindivo/map'
 
 /**
  * Escucha los eventos táctiles/ratón directamente en el contenedor del mapa
@@ -182,9 +182,8 @@ export default function MapPickerInner({
         className="h-full w-full"
       >
         <TileLayer
-          url={STREET_TILES.url}
-          attribution={STREET_TILES.attribution}
-          subdomains={STREET_TILES.subdomains ?? 'abc'}
+          url={OSM_TILES.url}
+          attribution={OSM_TILES.attribution}
           maxNativeZoom={19}
           maxZoom={19}
           updateWhenZooming={false}

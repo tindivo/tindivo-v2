@@ -1,5 +1,10 @@
 # Tindivo Entregas
 
+> **2026-10-06 · Hay un servicio nuevo en propuesta: Tindivo Encargos** («te lo
+> compramos y te lo llevamos»), en [`compras/`](compras/README.md). Es **otro
+> servicio**: lo de esta carpeta, incluido «no compramos ni pagamos por ti»,
+> sigue valiendo **para Entregas**.
+
 > **Estado:** documentación **v1.0** · 2026-09-19 · diseñada, **sin construir**. Reemplaza a las versiones «Encargos» anteriores (guardadas en `historico-pre-v2/`).
 > **Dueño de las decisiones:** Jesús. **Redacción:** Claude, sobre lo leído en el repo (`DECISIONS.md`, migraciones hasta la `0228`, apps `customer`, `motorizados`, `admin`, `api`) y los documentos de Jesús (`origen-jesus/` v1, `origen-jesus-v2/`).
 > **Nombre público:** **Tindivo Entregas** · **nombre técnico:** `courier`. La carpeta se llama `Encargos` por historia.

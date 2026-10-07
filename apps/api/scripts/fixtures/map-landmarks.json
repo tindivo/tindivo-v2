@@ -1,0 +1,422 @@
+[
+  {
+    "id": "5fe8f185-2474-4e8a-b0c1-aff4ad9c1aa4",
+    "name": "Botica la Merced",
+    "category": "salud",
+    "lat": -9.1496283,
+    "lng": -78.2811711
+  },
+  {
+    "id": "96289bfe-c2cc-444a-a00b-cb00a03eee9d",
+    "name": "Essalud San Jacinto",
+    "category": "salud",
+    "lat": -9.1475868,
+    "lng": -78.2805675
+  },
+  {
+    "id": "af382a33-4235-47b3-bfd4-a29ecd18fe04",
+    "name": "Inkafarma",
+    "category": "salud",
+    "lat": -9.1472735,
+    "lng": -78.2806507
+  },
+  {
+    "id": "e3b19fc8-e837-4388-9521-294c402870f4",
+    "name": "Posta Médica",
+    "category": "salud",
+    "lat": -9.1452407,
+    "lng": -78.2766757
+  },
+  {
+    "id": "8a6cd66c-4d09-4d47-b0f7-b9037f334c12",
+    "name": "Bodega Aida Mota",
+    "category": "mercado",
+    "lat": -9.1453855,
+    "lng": -78.2829926
+  },
+  {
+    "id": "52de5d99-45a0-4fbe-a070-f9a7f071fcfe",
+    "name": "Bodega Kira",
+    "category": "mercado",
+    "lat": -9.1501904,
+    "lng": -78.278052
+  },
+  {
+    "id": "63cafbd5-3ea9-4a09-830e-b6a041b7b491",
+    "name": "Hogar Plaza",
+    "category": "mercado",
+    "lat": -9.1499173,
+    "lng": -78.2809404
+  },
+  {
+    "id": "c1d17163-7f01-4b0c-9fe8-4fe56632d800",
+    "name": "Licorería Linder",
+    "category": "mercado",
+    "lat": -9.1527076,
+    "lng": -78.2836256
+  },
+  {
+    "id": "df5d6cfd-3fa9-4623-a559-38d81476e923",
+    "name": "Megatac",
+    "category": "mercado",
+    "lat": -9.1510375,
+    "lng": -78.2809753
+  },
+  {
+    "id": "bc805c73-e4b8-4a13-81d5-53a6cd1783c1",
+    "name": "Tienda Mass",
+    "category": "mercado",
+    "lat": -9.1522371,
+    "lng": -78.2792777
+  },
+  {
+    "id": "f93705d4-467a-4893-87d7-a459cbfe2669",
+    "name": "Fe y Alegría",
+    "category": "educacion",
+    "lat": -9.1441731,
+    "lng": -78.2799161
+  },
+  {
+    "id": "fe60e9b0-72b4-4d5d-a2a0-01d3a8c2f607",
+    "name": "I.E. Amanda Miasta Gutierrez",
+    "category": "educacion",
+    "lat": -9.1473745,
+    "lng": -78.2835209
+  },
+  {
+    "id": "ed1ba45c-b56f-4c0c-9254-adffa41ed4cc",
+    "name": "I.E. Inicial Piloto San Jacinto",
+    "category": "educacion",
+    "lat": -9.1478395,
+    "lng": -78.2849426
+  },
+  {
+    "id": "dc40dda3-f021-4a50-a92c-62850c93e7de",
+    "name": "I.E. Manuel Encarnación Rojo Castillo",
+    "category": "educacion",
+    "lat": -9.1476646,
+    "lng": -78.2841432
+  },
+  {
+    "id": "a0639e89-64b5-47ca-8379-a54aca23cfae",
+    "name": "I.E. Secundaria San Jacinto",
+    "category": "educacion",
+    "lat": -9.1515412,
+    "lng": -78.2817075
+  },
+  {
+    "id": "75f564ee-e13b-4af2-8173-f107cb585c2d",
+    "name": "Institución Educativa School Kinder King",
+    "category": "educacion",
+    "lat": -9.1463896,
+    "lng": -78.2837168
+  },
+  {
+    "id": "81df9af7-417d-40ed-8d23-09209be85642",
+    "name": "Capilla San Martín",
+    "category": "religioso",
+    "lat": -9.1518799,
+    "lng": -78.2790521
+  },
+  {
+    "id": "fe1b606d-eab6-451d-b324-07a9a2cf7607",
+    "name": "Iglesia San Jacinto",
+    "category": "religioso",
+    "lat": -9.1478094,
+    "lng": -78.2799909
+  },
+  {
+    "id": "e104b2e4-1f4b-482b-8588-f9986a3eb389",
+    "name": "Coliseo Unión Obrero",
+    "category": "deporte",
+    "lat": -9.1491382,
+    "lng": -78.2790281
+  },
+  {
+    "id": "56975c3f-7d59-4159-b191-316c867bc204",
+    "name": "Losa Barrio Nuevo",
+    "category": "deporte",
+    "lat": -9.1518823,
+    "lng": -78.2833116
+  },
+  {
+    "id": "52621dce-ddef-4d9d-8913-be7d5849bf3c",
+    "name": "Losa de Ancón",
+    "category": "deporte",
+    "lat": -9.144601,
+    "lng": -78.2801462
+  },
+  {
+    "id": "6f5a23eb-a30b-4fb8-aa8e-4a535b5357fc",
+    "name": "Losa de Miraflores",
+    "category": "deporte",
+    "lat": -9.1480201,
+    "lng": -78.277346
+  },
+  {
+    "id": "41633bf3-93ef-4968-99dd-cdf627303286",
+    "name": "Losa de Santa Rosa",
+    "category": "deporte",
+    "lat": -9.1446656,
+    "lng": -78.2752056
+  },
+  {
+    "id": "6a083558-89db-43e6-b82d-1e1170742edf",
+    "name": "Losa del Pozo Hermoso",
+    "category": "deporte",
+    "lat": -9.1540293,
+    "lng": -78.2799698
+  },
+  {
+    "id": "c2b0a821-2a3e-4eaf-aa46-09366ca43e57",
+    "name": "Losa Municipal San Jacinto",
+    "category": "deporte",
+    "lat": -9.1483265,
+    "lng": -78.2808813
+  },
+  {
+    "id": "6d05cb7a-194e-4dc3-a9a3-5c68cac3a15b",
+    "name": "Losa San Francisco",
+    "category": "deporte",
+    "lat": -9.1426548,
+    "lng": -78.2805005
+  },
+  {
+    "id": "9ba54a4a-912f-4bc9-8cf3-5e0f02832dc4",
+    "name": "Parque Hortensia Arevalo San Jacinto",
+    "category": "recreacion",
+    "lat": -9.1510499,
+    "lng": -78.2823194
+  },
+  {
+    "id": "2f83e64b-4a18-4d4a-a20c-929807efc167",
+    "name": "Parque Magisterial",
+    "category": "recreacion",
+    "lat": -9.1527615,
+    "lng": -78.282196
+  },
+  {
+    "id": "9348c539-e9c3-4d90-8ee5-4a6b723c4b79",
+    "name": "Parque media luna",
+    "category": "recreacion",
+    "lat": -9.1520352,
+    "lng": -78.2829682
+  },
+  {
+    "id": "2d181561-70b2-44b5-b4d3-368617aa98c9",
+    "name": "Parque San Pedro",
+    "category": "recreacion",
+    "lat": -9.148984,
+    "lng": -78.2782502
+  },
+  {
+    "id": "32d681eb-5f1d-4b24-a4f6-0494c0372206",
+    "name": "Parques Solidex Alto",
+    "category": "recreacion",
+    "lat": -9.1457648,
+    "lng": -78.2840546
+  },
+  {
+    "id": "2c6b8e68-fa06-49ac-ad2d-477fab2051b0",
+    "name": "Plaza Mayor de San Jacinto",
+    "category": "recreacion",
+    "lat": -9.1474213,
+    "lng": -78.2801088
+  },
+  {
+    "id": "06986ac7-074b-47e5-a80a-06b132a72bc3",
+    "name": "Comedor popular Cuna Más",
+    "category": "gobierno",
+    "lat": -9.1473663,
+    "lng": -78.2767189
+  },
+  {
+    "id": "0d5e5f98-3c59-4fb3-be14-bf6bb937c6c9",
+    "name": "Taller Municipal",
+    "category": "gobierno",
+    "lat": -9.1506795,
+    "lng": -78.2786635
+  },
+  {
+    "id": "d33007eb-0e0f-4be1-859a-b65c1574bfdb",
+    "name": "Al Punto",
+    "category": "restaurante",
+    "lat": -9.1501605,
+    "lng": -78.2819546
+  },
+  {
+    "id": "a592ee1b-0e29-4a4a-8c0e-508914f2ce4c",
+    "name": "Cevichería Leyton",
+    "category": "restaurante",
+    "lat": -9.1445995,
+    "lng": -78.2771213
+  },
+  {
+    "id": "dfaa863e-5351-4531-b253-ef321f8ce335",
+    "name": "Pizza Priamo",
+    "category": "restaurante",
+    "lat": -9.1481399,
+    "lng": -78.2802943
+  },
+  {
+    "id": "5e76b198-1934-4a6a-a6f7-c11712122b64",
+    "name": "Pollería Alicia",
+    "category": "restaurante",
+    "lat": -9.1437787,
+    "lng": -78.2751445
+  },
+  {
+    "id": "aed8bc6c-bdad-4dc3-b18d-0454717ade78",
+    "name": "Pollería Nadia",
+    "category": "restaurante",
+    "lat": -9.148497,
+    "lng": -78.2807261
+  },
+  {
+    "id": "e9b53e10-d442-4a22-b205-453cd3fd6412",
+    "name": "Qhawana",
+    "category": "restaurante",
+    "lat": -9.1439138,
+    "lng": -78.2861335
+  },
+  {
+    "id": "e61a6b58-8855-42b3-b2a1-25fa934ed3e7",
+    "name": "Restaurant La Florencia",
+    "category": "restaurante",
+    "lat": -9.1496762,
+    "lng": -78.279554
+  },
+  {
+    "id": "0ca87030-7c71-4cdf-b69c-74f68bd44b1b",
+    "name": "Hospedaje Aquino",
+    "category": "hotel",
+    "lat": -9.1462097,
+    "lng": -78.2804874
+  },
+  {
+    "id": "ec3108db-a8df-4a78-9630-54cb38077cd4",
+    "name": "Hospedaje Ono",
+    "category": "hotel",
+    "lat": -9.143564,
+    "lng": -78.2803077
+  },
+  {
+    "id": "4bd2eff6-417c-47af-a8d0-b5c319611c24",
+    "name": "Hospedaje Oviedo",
+    "category": "hotel",
+    "lat": -9.15141,
+    "lng": -78.2830811
+  },
+  {
+    "id": "30bd861e-e241-44f5-b584-4be9ab6249c3",
+    "name": "Hostal Imperial",
+    "category": "hotel",
+    "lat": -9.1486116,
+    "lng": -78.2810587
+  },
+  {
+    "id": "9276591a-c8b5-47aa-8084-3600c3c9db6b",
+    "name": "Hotel Montenegro",
+    "category": "hotel",
+    "lat": -9.1517044,
+    "lng": -78.2790256
+  },
+  {
+    "id": "4a2e3707-97c9-4e1f-ab04-5fd2d661bf5e",
+    "name": "Antiguo Essalud",
+    "category": "otro",
+    "lat": -9.1435398,
+    "lng": -78.2790524
+  },
+  {
+    "id": "af81b0ad-f106-44d0-9711-1e98ed3d485f",
+    "name": "Bar Los Ficus",
+    "category": "otro",
+    "lat": -9.1482646,
+    "lng": -78.2754744
+  },
+  {
+    "id": "46be36a4-f1aa-4172-8c93-88abb62624e5",
+    "name": "Comité 11",
+    "category": "otro",
+    "lat": -9.1470409,
+    "lng": -78.2810507
+  },
+  {
+    "id": "1e3806aa-8b8f-4a29-a647-8c2e00ab40f2",
+    "name": "Divina Spa",
+    "category": "otro",
+    "lat": -9.1525698,
+    "lng": -78.2828719
+  },
+  {
+    "id": "bd61940b-15c0-428c-b54f-7ed9184d6275",
+    "name": "Entrada de Trailers Agroindustrias San Jacinto",
+    "category": "otro",
+    "lat": -9.1483416,
+    "lng": -78.2786873
+  },
+  {
+    "id": "426acd58-53bd-4454-8cb9-a7899b041f40",
+    "name": "Entrada fábrica",
+    "category": "otro",
+    "lat": -9.1469119,
+    "lng": -78.2797976
+  },
+  {
+    "id": "616f281f-93e2-43ab-92a4-12af6b775224",
+    "name": "Estación de Servicios “Grupo HSJ”",
+    "category": "otro",
+    "lat": -9.1552787,
+    "lng": -78.2850445
+  },
+  {
+    "id": "1000c867-05a6-41c7-b0cb-045b89bfdcac",
+    "name": "Grifo Primax",
+    "category": "otro",
+    "lat": -9.1552129,
+    "lng": -78.2872761
+  },
+  {
+    "id": "25d78261-dcdf-43ae-8e5c-b03a744721a5",
+    "name": "Hidrandina",
+    "category": "otro",
+    "lat": -9.1438289,
+    "lng": -78.2813404
+  },
+  {
+    "id": "c7107028-5a76-426a-ad11-c4881c4b50ae",
+    "name": "Librería Leni",
+    "category": "otro",
+    "lat": -9.1501628,
+    "lng": -78.2783363
+  },
+  {
+    "id": "cd81cda7-248c-49b6-b63d-23fc4776141b",
+    "name": "Losa de San Pedro",
+    "category": "otro",
+    "lat": -9.149493,
+    "lng": -78.2782478
+  },
+  {
+    "id": "7e33a6de-8abf-4d49-bb58-af0e0b7e5c95",
+    "name": "Óvalo Machetero",
+    "category": "otro",
+    "lat": -9.1523465,
+    "lng": -78.2790816
+  },
+  {
+    "id": "839ccf82-de28-4719-8505-23a6b199ffdd",
+    "name": "Patelería Arlita",
+    "category": "otro",
+    "lat": -9.1498089,
+    "lng": -78.277993
+  },
+  {
+    "id": "42fa52c7-f00e-4d02-9780-a232b80c86c7",
+    "name": "Sport San Jacinto",
+    "category": "otro",
+    "lat": -9.1507115,
+    "lng": -78.2790793
+  }
+]

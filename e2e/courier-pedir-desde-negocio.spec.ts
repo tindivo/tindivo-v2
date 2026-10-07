@@ -148,8 +148,9 @@ test('pedir entrega fijando A y B en el mapa llega a "Buscando motorizado"', asy
   await expect(detalles).toBeVisible({ timeout: 10_000 })
   const recibeNombre = detalles.getByPlaceholder('Nombre de quien recibe (opcional)')
   await expect(recibeNombre).toHaveValue('')
-  // `dispatchEvent`: Playwright no hace clic en aria-disabled, y aquí justo se prueba ese clic.
-  await detalles.getByRole('button', { name: /Pedir entrega/ }).dispatchEvent('click')
+  // Gris, el botón dice qué falta en lugar del precio, y lleva hasta ahí: es
+  // un botón normal (no `aria-disabled`), así que se toca como cualquiera.
+  await detalles.getByRole('button', { name: 'Completar: qué llevamos' }).click()
   await expect(detalles.getByText('Falta decir qué llevamos')).toBeVisible()
   await expect(detalles.getByRole('textbox', { name: 'Qué llevamos' })).toBeFocused()
 
@@ -377,4 +378,66 @@ test('sin sesión, Entregas pide la cuenta al entrar y después abre el mapa sol
   })
 
   expect(errores, 'la pantalla no debe lanzar errores de JS').toEqual([])
+})
+
+/**
+ * La coordenada que se guarda es la del punto BAJO EL PIN. El mapa ocupa toda
+ * la pantalla (también detrás del panel) y el pin va subido la mitad del alto
+ * del panel (`pinOffsetY`): si esa cuenta se descuadra, el pedido se guarda en
+ * otro sitio que el que la persona vio. Con el GPS en un punto conocido, el
+ * recojo tiene que quedar ahí; y «Usar mi dirección», en la dirección guardada.
+ */
+test('el punto guardado es el que está bajo el pin (GPS y «Usar mi dirección»)', async ({
+  page,
+}) => {
+  const GPS = { latitude: -9.1488, longitude: -78.2806 }
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.context().grantPermissions(['geolocation'])
+  await page.context().setGeolocation(GPS)
+  await loginAsCustomer(page)
+
+  const { data: users } = await db.auth.admin.listUsers()
+  const cliente = users.users.find((u) => u.email === E2E.CUSTOMER_EMAIL)
+  const { data: casa } = await db
+    .from('customer_addresses')
+    .select('coordinates_lat, coordinates_lng')
+    .eq('user_id', cliente?.id ?? '')
+    .eq('is_default', true)
+    .single()
+  if (!casa) throw new Error('el cliente sembrado no tiene dirección por defecto')
+
+  await page.goto('/entregas')
+  const pin = page.getByRole('dialog', { name: 'Fijar el punto en el mapa' })
+  await expect(pin.getByText('✓ Dentro de la zona de reparto')).toBeVisible({ timeout: 20_000 })
+  await pin.getByLabel('Dirección y referencia').fill('Casa de prueba del GPS')
+  await pin.getByRole('button', { name: 'Confirmar recojo' }).click()
+
+  await expect(pin.getByText('¿Dónde entregamos?')).toBeVisible()
+  await pin.getByRole('button', { name: 'Usar mi dirección' }).click()
+  // Que el vuelo termine: el punto se vuelve a leer bajo el pin al posarse.
+  await page.waitForTimeout(1500)
+  await pin.getByRole('button', { name: 'Confirmar entrega' }).click()
+
+  const detalles = page.getByRole('dialog', { name: 'Detalles de la entrega' })
+  await expect(detalles).toBeVisible()
+  const descripcion = `GPS bajo el pin ${Date.now()}`
+  await detalles.getByRole('textbox', { name: 'Qué llevamos' }).fill(descripcion)
+  await detalles.getByRole('button', { name: 'Soy yo' }).first().click()
+  await detalles.getByRole('checkbox', { name: /Ya está listo y pagado/ }).check()
+  await page.getByRole('button', { name: /Pedir entrega/ }).click()
+  await expect(page.getByText('Buscando motorizado')).toBeVisible({ timeout: 20_000 })
+
+  const { data: rows } = await db
+    .from('courier_orders')
+    .select('id, origin_lat, origin_lng, destination_lat, destination_lng')
+    .eq('item_description', descripcion)
+    .limit(1)
+  createdOrderIds = (rows ?? []).map((r) => r.id)
+  const r = rows?.[0]
+  expect(r, 'la solicitud tiene que haber quedado en la base').toBeTruthy()
+  // ~1 m de tolerancia (1e-5 grados): lo que redondea el mapa al posarse.
+  expect(Math.abs(Number(r?.origin_lat) - GPS.latitude)).toBeLessThan(1e-5)
+  expect(Math.abs(Number(r?.origin_lng) - GPS.longitude)).toBeLessThan(1e-5)
+  expect(Math.abs(Number(r?.destination_lat) - Number(casa.coordinates_lat))).toBeLessThan(1e-5)
+  expect(Math.abs(Number(r?.destination_lng) - Number(casa.coordinates_lng))).toBeLessThan(1e-5)
 })

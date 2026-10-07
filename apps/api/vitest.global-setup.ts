@@ -128,6 +128,18 @@ interface Barrido {
 }
 
 async function barrer(): Promise<Barrido> {
+  // 0. Artículos de prueba de Tindivo Store (store.integration.test.ts). Sus
+  //    fotos y eventos caen por cascada / set null. Se identifican por el prefijo
+  //    del título, que ningún artículo real lleva.
+  {
+    // biome-ignore lint/suspicious/noExplicitAny: las tablas de Store aún no están en database.types.ts
+    const { error } = await (db as any)
+      .from('store_products')
+      .delete()
+      .like('title', 'ZZ Test Store%')
+    if (error) throw new Error(`barrido: borrar store_products falló: ${error.message}`)
+  }
+
   // 1. Negocios de fixture (por nombre exacto o por el prefijo del ledger).
   //
   // El filtro se hace en JS, no con `.or()` de PostgREST: los nombres llevan

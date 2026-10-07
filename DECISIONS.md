@@ -1210,3 +1210,28 @@ Tras el primer resumen de esta entrada quedaban tres huecos del propio scope de 
 ### Cómo se probó
 
 Migración aplicada y probada en local (`supabase db reset`), y empujada a `tindivo-prod` (aditiva — tablas/enums nuevos, nada existente cambia — de madrugada, fuera del horario de pedidos; `pnpm db:types` + `get_advisors` limpios salvo lo ya corregido). 22 tests de integración de RPC contra la base local (`apps/api/lib/__tests__/courier-orders.integration.test.ts`) cubren las guardas de creación, la carrera de `accept`, las dos guardas de cobro por `payer`, `release`, cancelación y `expire_courier_orders`. Tests unitarios en `packages/core`/`packages/contracts` (máquina de estados, `haversineMeters`) y `apps/customer/features/courier/lib` (formato, prioridad de estado de tarjeta). Tres e2e de Playwright en Chromium: el flujo completo (home → banner → buscar "Elmer" → confirmar, destino precargado de `customer_addresses` → enviar → "Buscando motorizado"), el mapa del directorio (pines visibles, tocar uno abre su ficha) y el badge/banner de una entrega en curso (sembrada directo en la base, viewport móvil porque la `BottomNav` es `lg:hidden`) — los tres sin errores de JS y sin dejar residuos en la base. `pnpm lint`/`type-check` limpios en todos los paquetes tocados; suites completas de `apps/api` (366/366) y `apps/customer` (224/224) verdes.
+
+---
+
+## 32. Tindivo Store: el catálogo de segunda mano de San Jacinto (2026-10-02)
+
+**Qué es.** `/store` (comprador) y «Tienda» en el admin: un solo vendedor (Jesús), piezas únicas,
+sin carrito ni pago web; todo se cierra por WhatsApp. Spec: `Docs/Store/tindivo-store-prd-v2.md`.
+Implementación, decisiones, límites y pasos de despliegue: `Docs/Store/IMPLEMENTACION.md`;
+estado de aceptación y qué no se pudo verificar: `Docs/Store/ACEPTACION.md`. Migraciones 0242–0245.
+
+**Lo que conviene no deshacer.**
+- Los invariantes (≤ 6 fotos, ≥ 1 para publicar, campos obligatorios, nada vuelve a borrador,
+  `sold_at` lo decide el estado, slug fijo al publicar) están en **triggers y un CHECK**, no solo en
+  la API. La regla de «qué falta para publicar» existe dos veces a sabiendas
+  (`missingForPublish` en contratos y `store_products_publishable_chk`): si cambia una, cambia la otra.
+- Las tablas **no tienen lectura anónima**: el público pasa por la API (RPC solo `service_role`).
+  Un borrador nunca debe poder pedirse por REST.
+- `loading.tsx` NO puede cubrir `/store/[slug]`: el streaming manda 200 antes de que `notFound()`
+  fije el 404 (soft 404). Por eso el listado vive en el grupo `(list)`.
+- El estilo v4 está acotado a `/store` (`.st-root`); no migrar el tema global sin pasada de diseño.
+- Open Graph en PNG vía el optimizador de Next: WhatsApp y Satori no manejan bien el WebP.
+
+**Gotcha de pruebas.** Un Chrome en segundo plano (`visibilityState: hidden`) pausa
+`requestAnimationFrame` y Next no revela el streaming ni hidrata: parece un bug de la app y no lo es.
+Para probar la UI usa Playwright (`e2e/store*.spec.ts`).

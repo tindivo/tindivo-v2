@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { normalizePePhoneInput } from '../phone'
+import { formatPePhone, normalizePePhoneInput } from '../phone'
 
 describe('normalizePePhoneInput', () => {
   it('deja pasar hasta 9 dígitos y corta el resto', () => {
@@ -20,5 +20,15 @@ describe('normalizePePhoneInput', () => {
 
   it('vacío sigue vacío', () => {
     expect(normalizePePhoneInput('')).toBe('')
+  })
+})
+
+describe('formatPePhone', () => {
+  it('agrupa de a tres, como se dicta un celular', () => {
+    expect(formatPePhone('911111111')).toBe('911 111 111')
+  })
+
+  it('quita el prefijo del país', () => {
+    expect(formatPePhone('+51 987654321')).toBe('987 654 321')
   })
 })
