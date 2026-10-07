@@ -29,6 +29,7 @@
     "db:seed:demo:clean": "node apps/api/scripts/seed-demo-board.ts --clean",
     "db:seed:addresses": "node apps/api/scripts/seed-address-directory.ts",
     "db:seed:courier-directory": "node apps/api/scripts/seed-courier-directory.ts",
+    "db:seed:lugares": "node apps/api/scripts/seed-map-landmarks.ts",
     "pdf:assets": "node apps/api/scripts/build-pdf-assets.ts",
     "test:e2e": "playwright test --ignore-snapshots",
     "test:e2e:visual": "playwright test --project=visual",

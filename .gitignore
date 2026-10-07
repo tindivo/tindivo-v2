@@ -74,3 +74,7 @@ e2e/.auth/
 # ANONIMIZADA de `anonymize-address-directory.ts`.
 apps/api/scripts/fixtures/*.json
 !apps/api/scripts/fixtures/address-directory.json
+# Los lugares del mapa son públicos (nombre, tipo y punto de negocios y plazas,
+# sin personas): se commitean para que `pnpm db:seed:lugares` funcione en un
+# clon nuevo.
+!apps/api/scripts/fixtures/map-landmarks.json
