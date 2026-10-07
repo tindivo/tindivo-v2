@@ -354,8 +354,17 @@ function repartirRotulos(
       y2,
     }
 
+    // Los CUATRO bordes, no solo izquierda y derecha. Con solo los laterales,
+    // una referencia pegada al borde de arriba o de abajo escribía su nombre
+    // medio fuera del lienzo: con el racimo de prueba no pasaba nunca, con los
+    // 60 lugares reales del pueblo sí («Bodega Aida Mota», «Losa del Pozo
+    // Hermoso»; lo caza `mapa-reparto-de-rotulos.spec.ts`).
     const cabe = (c: Caja) =>
-      c.x1 >= 4 && c.x2 <= lienzo.x - 4 && !ocupado.some((o) => chocan(c, o))
+      c.x1 >= 4 &&
+      c.x2 <= lienzo.x - 4 &&
+      c.y1 >= 4 &&
+      c.y2 <= lienzo.y - 4 &&
+      !ocupado.some((o) => chocan(c, o))
 
     let elegida: Caja | null = null
     let aLaIzquierda = false

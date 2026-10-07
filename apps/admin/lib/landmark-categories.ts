@@ -6,7 +6,8 @@ export { MAP_LANDMARK_CATEGORIES }
 /** Rótulo y color por categoría. El color es lo que distingue los puntos en el mapa. */
 export const LANDMARK_CATEGORY_META: Record<MapLandmarkCategory, { label: string; color: string }> =
   {
-    salud: { label: 'Salud (botica, posta)', color: '#ef4444' },
+    salud: { label: 'Salud pública (posta, Essalud)', color: '#0f766e' },
+    farmacia: { label: 'Botica / farmacia', color: '#ef4444' },
     mercado: { label: 'Mercado / tienda', color: '#f59e0b' },
     educacion: { label: 'Educación (colegio)', color: '#3b82f6' },
     religioso: { label: 'Religioso (iglesia)', color: '#8b5cf6' },
@@ -15,5 +16,6 @@ export const LANDMARK_CATEGORY_META: Record<MapLandmarkCategory, { label: string
     gobierno: { label: 'Gobierno', color: '#64748b' },
     restaurante: { label: 'Restaurante / menú', color: '#f97316' },
     hotel: { label: 'Hotel / hospedaje', color: '#6366f1' },
+    comercio: { label: 'Comercio (librería, grifo, pastelería…)', color: '#a21caf' },
     otro: { label: 'Otro', color: '#94a3b8' },
   }

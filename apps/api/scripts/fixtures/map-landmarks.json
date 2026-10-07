@@ -2,7 +2,7 @@
   {
     "id": "5fe8f185-2474-4e8a-b0c1-aff4ad9c1aa4",
     "name": "Botica la Merced",
-    "category": "salud",
+    "category": "farmacia",
     "lat": -9.1496283,
     "lng": -78.2811711
   },
@@ -16,7 +16,7 @@
   {
     "id": "af382a33-4235-47b3-bfd4-a29ecd18fe04",
     "name": "Inkafarma",
-    "category": "salud",
+    "category": "farmacia",
     "lat": -9.1472735,
     "lng": -78.2806507
   },
@@ -331,7 +331,7 @@
   {
     "id": "af81b0ad-f106-44d0-9711-1e98ed3d485f",
     "name": "Bar Los Ficus",
-    "category": "otro",
+    "category": "comercio",
     "lat": -9.1482646,
     "lng": -78.2754744
   },
@@ -345,7 +345,7 @@
   {
     "id": "1e3806aa-8b8f-4a29-a647-8c2e00ab40f2",
     "name": "Divina Spa",
-    "category": "otro",
+    "category": "comercio",
     "lat": -9.1525698,
     "lng": -78.2828719
   },
@@ -366,14 +366,14 @@
   {
     "id": "616f281f-93e2-43ab-92a4-12af6b775224",
     "name": "Estación de Servicios “Grupo HSJ”",
-    "category": "otro",
+    "category": "comercio",
     "lat": -9.1552787,
     "lng": -78.2850445
   },
   {
     "id": "1000c867-05a6-41c7-b0cb-045b89bfdcac",
     "name": "Grifo Primax",
-    "category": "otro",
+    "category": "comercio",
     "lat": -9.1552129,
     "lng": -78.2872761
   },
@@ -387,14 +387,14 @@
   {
     "id": "c7107028-5a76-426a-ad11-c4881c4b50ae",
     "name": "Librería Leni",
-    "category": "otro",
+    "category": "comercio",
     "lat": -9.1501628,
     "lng": -78.2783363
   },
   {
     "id": "cd81cda7-248c-49b6-b63d-23fc4776141b",
     "name": "Losa de San Pedro",
-    "category": "otro",
+    "category": "deporte",
     "lat": -9.149493,
     "lng": -78.2782478
   },
@@ -408,7 +408,7 @@
   {
     "id": "839ccf82-de28-4719-8505-23a6b199ffdd",
     "name": "Patelería Arlita",
-    "category": "otro",
+    "category": "comercio",
     "lat": -9.1498089,
     "lng": -78.277993
   },

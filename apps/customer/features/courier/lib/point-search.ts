@@ -22,15 +22,17 @@ const MAX_PLACES = 8
 
 /**
  * Qué categorías son NEGOCIOS: de donde se recoge. El resto (plaza, colegio,
- * losa, iglesia…) son referencias para ubicarse: se pueden buscar, pero salen
- * después. «otro» mezcla negocios y referencias en los datos de hoy; hasta que
- * se corrija desde el admin, va con las referencias.
+ * losa, iglesia, la posta…) son referencias para ubicarse: se pueden buscar,
+ * pero salen después. `salud` es lo público (posta, Essalud) desde que las
+ * boticas tienen `farmacia`, y `otro` es la bolsa de lo que no es negocio
+ * desde que los negocios tienen `comercio` (0246).
  */
 const BUSINESS: ReadonlySet<Landmark['category']> = new Set([
-  'salud',
+  'farmacia',
   'mercado',
   'restaurante',
   'hotel',
+  'comercio',
 ])
 
 /**
@@ -39,7 +41,8 @@ const BUSINESS: ReadonlySet<Landmark['category']> = new Set([
  * espacio a los resultados; `Docs/Entregas/ux-entrada/08`).
  */
 const TYPE_WORDS: Partial<Record<Landmark['category'], readonly string[]>> = {
-  salud: ['botica', 'farmacia', 'salud', 'posta', 'medicina'],
+  farmacia: ['botica', 'farmacia', 'medicina'],
+  salud: ['salud', 'posta', 'essalud', 'hospital'],
   mercado: ['bodega', 'tienda', 'mercado', 'minimarket', 'abarrotes', 'licoreria'],
   restaurante: [
     'restaurante',
@@ -52,6 +55,7 @@ const TYPE_WORDS: Partial<Record<Landmark['category'], readonly string[]>> = {
     'chifa',
   ],
   hotel: ['hotel', 'hospedaje', 'hostal'],
+  comercio: ['libreria', 'grifo', 'pasteleria', 'panaderia', 'comercio', 'spa', 'bar'],
   educacion: ['colegio', 'escuela', 'institucion', 'educacion'],
   recreacion: ['parque', 'plaza'],
   deporte: ['losa', 'cancha', 'coliseo', 'deporte'],

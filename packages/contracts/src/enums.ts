@@ -232,6 +232,9 @@ export type VehicleType = z.infer<typeof VehicleTypeSchema>
 // --- Categoría de landmark del mapa (0208) ---
 export const MAP_LANDMARK_CATEGORIES = [
   'salud',
+  // 0246. Las boticas salen de `salud`, que queda para lo público (posta,
+  // Essalud); va junto a `salud` en el desplegable.
+  'farmacia',
   'mercado',
   'educacion',
   'religioso',
@@ -243,6 +246,8 @@ export const MAP_LANDMARK_CATEGORIES = [
   // tiene que quedarse la última.
   'restaurante',
   'hotel',
+  // 0246. Los negocios que caían en `otro` (librería, grifo, pastelería…).
+  'comercio',
   'otro',
 ] as const
 export const MapLandmarkCategorySchema = z.enum(MAP_LANDMARK_CATEGORIES)

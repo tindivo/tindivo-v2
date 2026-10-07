@@ -1,0 +1,34 @@
+-- =============================================================================
+-- 0246 · El mapa del pueblo distingue una botica de una posta
+-- =============================================================================
+--
+-- Dos categorías nuevas de referencia: `farmacia` y `comercio`.
+--
+-- POR QUÉ. La búsqueda de Entregas pone los NEGOCIOS (de donde se recoge)
+-- antes que las referencias públicas (para ubicarse), y lo decide por la
+-- categoría. Con las de la 0208 no se podía:
+--   · `salud` mezclaba boticas (Inkafarma, Botica la Merced) con Essalud y la
+--     Posta: buscar «botica» traía la Posta, y la Posta no vende nada.
+--   · `otro` mezclaba negocios (librería, pastelería, grifo, spa, bar) con
+--     referencias («Entrada fábrica», Hidrandina, un óvalo).
+-- `farmacia` saca las boticas de `salud`, y `comercio` saca los negocios de
+-- `otro`. `salud` queda para lo público (posta, Essalud).
+--
+-- EL ORDEN es el del desplegable del panel (`MAP_LANDMARK_CATEGORIES` se
+-- recorre tal cual): `farmacia` junto a `salud`, y `comercio` antes de `otro`,
+-- que tiene que seguir siendo la última opción (ver 0214).
+--
+-- SOLO DECLARA LOS VALORES. Reclasificar los lugares va en la 0247: un valor
+-- nuevo de enum no se puede USAR en la misma transacción que lo crea.
+--
+-- IDEMPOTENTE por `IF NOT EXISTS`.
+--
+-- LO QUE ESTA MIGRACIÓN NO TRAE, y hace falta para que sirva:
+--   · el enum espejo de contratos   -> packages/contracts/src/enums.ts
+--     (sin él, packages/core/src/enum-drift.ts tumba el type-check)
+--   · el dibujo y el rótulo del mapa -> packages/map/src/landmarks.ts
+--   · el rótulo y el color del panel -> apps/admin/lib/landmark-categories.ts
+-- =============================================================================
+
+ALTER TYPE public.map_landmark_category ADD VALUE IF NOT EXISTS 'farmacia' AFTER 'salud';
+ALTER TYPE public.map_landmark_category ADD VALUE IF NOT EXISTS 'comercio' BEFORE 'otro';
