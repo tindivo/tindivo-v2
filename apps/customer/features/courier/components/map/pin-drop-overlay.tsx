@@ -2,12 +2,12 @@
 
 import { ADDRESS_REFERENCE_MAX, AddressReferenceSchema } from '@tindivo/contracts'
 import { Button, Icon, Segmented, Spinner, useDialogFocus } from '@tindivo/ui'
-import { useCallback, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { MapMode } from '@/components/map-picker-inner'
 import type { PointOption } from '../../lib/point-search'
 import type { CourierRoute } from '../../lib/routes'
 import type { CourierEditingPoint } from '../../types'
-import { PointSearchSheet } from './point-search-sheet'
+import { MAX_SUGGESTIONS, PointSuggestions } from './point-suggestions'
 import { RepeatRoutes } from './repeat-routes'
 
 const COPY: Record<
@@ -124,15 +124,24 @@ export function PinDropOverlay({
   const [refError, setRefError] = useState<string | null>(null)
   const [confirmLeave, setConfirmLeave] = useState(false)
   const [searching, setSearching] = useState(false)
-  const lupa = useRef<HTMLButtonElement>(null)
+  const [showRoutes, setShowRoutes] = useState(false)
+  // «Ver anteriores» solo en el paso 1, al armar la ruta por primera vez.
+  const canRepeat = guided && stepIndex === 1 && point === 'origin' && routes.length > 0
+  const lupa = useRef<HTMLInputElement>(null)
+  const [query, setQuery] = useState('')
+  const suggestions = useMemo(() => search(query).slice(0, MAX_SUGGESTIONS), [search, query])
+  // Al pasar de A a B el buscador vuelve a empezar vacío.
+  const [queryFor, setQueryFor] = useState(point)
+  if (queryFor !== point) {
+    setQueryFor(point)
+    setQuery('')
+  }
 
-  // Al cerrar la lupa (atrás, Escape, «Marcar en el mapa» o al elegir), el
-  // foco vuelve a ella (y no al campo de referencia: eso abriría el teclado
-  // encima del mapa recién movido): sin esto quedaba en un elemento que ya no existe y el siguiente Tab
-  // empezaba desde el principio de la página.
+  // Cerrar la búsqueda es soltar el campo: el desplegable vive mientras el
+  // campo tiene el foco (y en el celular, el teclado se va con él).
   function closeSearch() {
-    setSearching(false)
-    requestAnimationFrame(() => lupa.current?.focus({ preventScroll: true }))
+    setQuery('')
+    lupa.current?.blur()
   }
 
   // Salir del paso 1 con algo ya escrito pide confirmación; volver del paso 2 al
@@ -214,9 +223,7 @@ export function PinDropOverlay({
       aria-label="Fijar el punto en el mapa"
       className="pointer-events-none fixed inset-0 z-70 flex flex-col focus:outline-none"
     >
-      {/* `inert` mientras la lupa está abierta: tapa el pin, pero sin esto el
-          Tab seguía pasando por los controles de detrás. */}
-      <div className="relative min-h-0 flex-1" inert={searching}>
+      <div className="relative min-h-0 flex-1">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-x-0 top-0 z-[725] h-32"
@@ -235,17 +242,60 @@ export function PinDropOverlay({
             <Icon name="arrow_back" size={22} />
           </button>
           {guided && (
-            <button
-              ref={lupa}
-              type="button"
-              onClick={() => setSearching(true)}
-              className="pointer-events-auto flex h-11 min-w-0 flex-1 items-center gap-2 rounded-full bg-card px-3.5 text-left text-ink-muted shadow-elev-3 border border-ink/[0.06] transition-transform active:scale-[0.98]"
-            >
-              <Icon name="search" size={20} className="shrink-0" />
-              <span className="truncate text-[14px] font-semibold">Buscar un lugar</span>
-            </button>
+            <div className="pointer-events-auto relative min-w-0 flex-1">
+              <label className="flex h-11 items-center gap-2 rounded-full border border-ink/[0.06] bg-card px-3.5 shadow-elev-3">
+                <Icon name="search" size={20} className="shrink-0 text-ink-muted" />
+                <input
+                  ref={lupa}
+                  type="text"
+                  role="combobox"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onFocus={() => setSearching(true)}
+                  onBlur={() => setSearching(false)}
+                  enterKeyHint="search"
+                  autoComplete="off"
+                  aria-label="Buscar un lugar"
+                  aria-expanded={searching}
+                  aria-controls="sugerencias-del-pin"
+                  aria-autocomplete="list"
+                  placeholder="Buscar un lugar"
+                  className="min-w-0 flex-1 border-0 bg-transparent text-[15px] font-semibold text-ink outline-none placeholder:font-semibold placeholder:text-ink-muted"
+                />
+                {query && (
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => setQuery('')}
+                    aria-label="Borrar la búsqueda"
+                    className="-mr-1.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-ink-muted"
+                  >
+                    <Icon name="close" size={18} />
+                  </button>
+                )}
+              </label>
+              {searching && (
+                <PointSuggestions
+                  id="sugerencias-del-pin"
+                  options={suggestions}
+                  typed={query.trim().length > 0}
+                  ready={searchReady}
+                  failed={searchFailed}
+                  onPick={(o) => {
+                    closeSearch()
+                    setRefError(null)
+                    onPick(o)
+                  }}
+                />
+              )}
+            </div>
           )}
-          <div className="pointer-events-auto ml-auto shrink-0 rounded-[18px] bg-card p-1 shadow-elev-3 border border-ink/[0.06]">
+          {/* Mientras se busca, el campo se queda con todo el ancho. */}
+          <div
+            className={`pointer-events-auto ml-auto shrink-0 rounded-[18px] bg-card p-1 shadow-elev-3 border border-ink/[0.06] ${
+              searching ? 'hidden' : ''
+            }`}
+          >
             <Segmented
               size="sm"
               value={mode}
@@ -285,12 +335,8 @@ export function PinDropOverlay({
 
       <div
         ref={panel}
-        inert={searching}
         className="pointer-events-auto shrink-0 rounded-t-[24px] bg-card px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-[0_-16px_40px_-28px_rgba(0,0,0,0.4)]"
       >
-        {guided && stepIndex === 1 && point === 'origin' && routes.length > 0 && (
-          <RepeatRoutes routes={routes} onRepeat={onRepeat} />
-        )}
         {guided && stepIndex && (
           // Alto fijo en los dos pasos: la flecha solo existe en el 2, y si la
           // fila cambiara de alto el mapa se re-mediría al pasar de A a B.
@@ -309,8 +355,23 @@ export function PinDropOverlay({
               <span aria-hidden className={`h-2 w-2 rounded-full ${copy.dot}`} />
               Paso {stepIndex} de 2
             </p>
+            {canRepeat && (
+              // En la fila del paso, a la derecha: no suma alto al panel (la
+              // fila es fija) y el mapa no se encoge por un atajo que no se usó.
+              <button
+                type="button"
+                onClick={() => setShowRoutes((v) => !v)}
+                aria-expanded={showRoutes}
+                aria-controls="entregas-anteriores"
+                className="-mr-2 ml-auto flex h-11 items-center gap-1 px-2 text-[13px] font-bold text-[#1D4ED8]"
+              >
+                <Icon name="history" size={18} />
+                {showRoutes ? 'Ocultar' : `Ver anteriores (${routes.length})`}
+              </button>
+            )}
           </div>
         )}
+        {canRepeat && showRoutes && <RepeatRoutes routes={routes} onRepeat={onRepeat} />}
         <p className="font-display font-extrabold text-[20px] leading-tight tracking-tight text-ink">
           {guided
             ? copy.title
@@ -431,21 +492,6 @@ export function PinDropOverlay({
                 : 'Confirmar ubicación'}
         </Button>
       </div>
-
-      {searching && (
-        <PointSearchSheet
-          point={point}
-          search={search}
-          ready={searchReady}
-          failed={searchFailed}
-          onPick={(o) => {
-            closeSearch()
-            setRefError(null)
-            onPick(o)
-          }}
-          onClose={closeSearch}
-        />
-      )}
 
       {confirmLeave && (
         <LeaveConfirm

@@ -75,11 +75,13 @@ export function searchPoints({
     }
   }
 
-  for (const r of recents) {
+  for (const [i, r] of recents.entries()) {
     if (!r.coordinates) continue
     if (q && !fold(`${r.label ?? ''} ${r.contactName} ${r.referenceText}`).includes(q)) continue
     out.push({
-      key: `recent:${r.coordinates.lat},${r.coordinates.lng}`,
+      // Con el índice: dos vecinos pueden compartir el mismo punto exacto (la
+      // deduplicación ya no los funde si son personas distintas).
+      key: `recent:${i}`,
       kind: 'recent',
       title: r.label || r.referenceText,
       // Con el celular: dos «Botica Central» se distinguen por quién atiende.

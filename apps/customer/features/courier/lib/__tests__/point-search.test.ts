@@ -99,3 +99,17 @@ describe('searchPoints', () => {
     expect(out).toEqual([])
   })
 })
+
+describe('searchPoints · claves', () => {
+  it('dos recientes en el mismo punto (vecinos con otro celular) tienen claves distintas', () => {
+    const vecino = { ...recent, contactName: 'Pedro', contactPhone: '955555555', label: 'Pedro' }
+    const out = searchPoints({
+      query: '',
+      which: 'origin',
+      landmarks,
+      recents: [recent, vecino],
+      home,
+    })
+    expect(new Set(out.map((o) => o.key)).size).toBe(out.length)
+  })
+})

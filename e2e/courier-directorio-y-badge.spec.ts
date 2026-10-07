@@ -63,13 +63,14 @@ test('/entregas abre el mismo flujo que la tarjeta, y la lupa lleva el pin a un 
     await expect(pin.getByText('¿Dónde recogemos?')).toBeVisible({ timeout: 20_000 })
     await expect(page.getByText('Lugares', { exact: true })).toHaveCount(0)
 
-    await pin.getByRole('button', { name: 'Buscar un lugar' }).click()
-    const buscar = page.getByRole('dialog', { name: 'Buscar un lugar' })
-    await buscar.getByRole('searchbox').fill('botica e2e')
-    await buscar.getByRole('button', { name: /Botica E2E Lugares/ }).click()
+    // Se escribe en la misma barra del pin: las coincidencias salen debajo, sin
+    // tapar el mapa.
+    await pin.getByRole('combobox', { name: 'Buscar un lugar' }).fill('botica e2e')
+    const sugerencias = pin.getByRole('region', { name: 'Sugerencias' })
+    await sugerencias.getByRole('button', { name: /Botica E2E Lugares/ }).click()
 
     // Elegir NO confirma: vuelve al mapa con la referencia escrita.
-    await expect(buscar).toHaveCount(0)
+    await expect(sugerencias).toHaveCount(0)
     await expect(pin.getByLabel('Dirección y referencia')).toHaveValue('Botica E2E Lugares')
     await expect(pin.getByRole('button', { name: 'Confirmar recojo' })).toBeEnabled()
 
@@ -175,8 +176,12 @@ test('«Repetir» una entrega que llegó deja la ruta puesta y lleva a Detalles'
   try {
     await page.goto('/entregas')
     const pin = page.getByRole('dialog', { name: 'Fijar el punto en el mapa' })
+    // Plegadas: solo «Ver anteriores», a la derecha del paso, sin ocupar alto.
     const repetir = pin.getByRole('button', { name: /Botica Repetida → Mamá E2E/ })
-    await expect(repetir).toBeVisible({ timeout: 20_000 })
+    const ver = pin.getByRole('button', { name: /Ver anteriores/ })
+    await expect(ver).toBeVisible({ timeout: 20_000 })
+    await expect(repetir).toHaveCount(0)
+    await ver.click()
     await repetir.click()
 
     const detalles = page.getByRole('dialog', { name: 'Detalles de la entrega' })

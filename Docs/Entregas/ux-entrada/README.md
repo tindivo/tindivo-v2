@@ -124,3 +124,15 @@ Chrome real (Escape con la lupa abierta, «Repetir», consola sin errores).
 - Estados de 11 px y contexto de «Crea tu cuenta» («para pedir tu entrega»):
   componentes compartidos, su propia pasada.
 - Probar con **cinco personas en Android modestos** (§6).
+
+## 8. Ajustes de Jesús al probarlo (7-oct)
+
+- **«Repetir» ya no es una tarjeta fija.** Queda solo **«Ver anteriores (n)»**,
+  a la derecha de «Paso 1 de 2»; al tocarlo se despliegan las entregas
+  anteriores. La fila del paso tiene alto fijo, así que el mapa no pierde
+  alto por un atajo que no se usa.
+- **La búsqueda no tapa la pantalla.** Se escribe en la misma barra del pin y
+  salen **hasta 5 coincidencias** debajo, con el mapa a la vista. Mientras se
+  escribe, «Mapa / Satélite» se esconde para dejarle el ancho al campo.
+- Arreglado: dos sitios recientes en el mismo punto exacto (vecinos con otro
+  celular) repetían la clave de React.

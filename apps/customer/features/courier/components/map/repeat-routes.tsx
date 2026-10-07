@@ -1,7 +1,6 @@
 'use client'
 
 import { Icon } from '@tindivo/ui'
-import { useState } from 'react'
 import type { CourierRoute } from '../../lib/routes'
 
 function routeTitle(r: CourierRoute): string {
@@ -11,13 +10,15 @@ function routeTitle(r: CourierRoute): string {
 }
 
 /**
- * «Repetir una entrega», arriba del panel del pin de A. Solo aparece si la
- * persona ya tiene entregas que llegaron. Muestra la última y, si hay más,
- * «Ver anteriores» despliega hasta tres. Un toque deja la ruta entera puesta y
- * lleva a «Detalles», donde solo se revisa y se pide.
+ * Las entregas anteriores, desplegadas desde «Ver anteriores» (a la derecha de
+ * «Paso 1 de 2», `PinDropOverlay`). Antes la última se mostraba siempre como
+ * una tarjeta grande arriba del panel y le quitaba ~100 px al mapa en cada
+ * pedido, se repitiera o no; ahora no ocupa nada hasta que se pide (decisión
+ * de Jesús, 7-oct).
  *
- * Una tarjeta compacta y no una lista abierta: cada fila que crece aquí le
- * quita alto al mapa de arriba.
+ * Un toque deja la ruta entera puesta y lleva a «Detalles», donde solo se
+ * revisa y se pide. La lista tiene tope y su propio scroll: cada fila que
+ * crece aquí le quita alto al mapa.
  */
 export function RepeatRoutes({
   routes,
@@ -26,42 +27,27 @@ export function RepeatRoutes({
   routes: readonly CourierRoute[]
   onRepeat: (route: CourierRoute) => void
 }) {
-  const [all, setAll] = useState(false)
-  const [first, ...rest] = routes
-  if (!first) return null
-  const shown = all ? routes : [first]
-
   return (
-    <section aria-label="Repetir una entrega" className="mb-2 flex flex-col gap-1">
-      {/* Desplegada, la lista tiene tope y su propio scroll: cada fila que
-          crece aquí le quita alto al mapa. */}
-      <div className="flex max-h-[8.5rem] flex-col gap-1.5 overflow-y-auto">
-        {shown.map((r) => (
-          <button
-            key={routeTitle(r)}
-            type="button"
-            onClick={() => onRepeat(r)}
-            className="flex items-center gap-3 rounded-2xl bg-[#EEF3FF] px-3 py-2.5 text-left transition-transform active:scale-[0.98]"
-          >
-            <Icon name="history" size={22} className="shrink-0 text-[#1D4ED8]" />
-            <span className="min-w-0 flex-1">
-              <span className="block text-[12px] font-bold text-[#1D4ED8]">Repetir</span>
-              <span className="block truncate text-[15px] font-bold text-ink">{routeTitle(r)}</span>
-            </span>
-            <Icon name="chevron_right" size={22} className="shrink-0 text-ink-muted" />
-          </button>
-        ))}
-      </div>
-      {rest.length > 0 && (
+    <section
+      id="entregas-anteriores"
+      aria-label="Entregas anteriores"
+      className="mb-2 flex max-h-[8.5rem] flex-col gap-1.5 overflow-y-auto"
+    >
+      {routes.map((r) => (
         <button
+          key={routeTitle(r)}
           type="button"
-          onClick={() => setAll((v) => !v)}
-          aria-expanded={all}
-          className="flex min-h-11 items-center self-start px-1 text-[13px] font-bold text-[#1D4ED8]"
+          onClick={() => onRepeat(r)}
+          className="flex items-center gap-3 rounded-2xl bg-[#EEF3FF] px-3 py-2.5 text-left transition-transform active:scale-[0.98]"
         >
-          {all ? 'Ocultar anteriores' : `Ver anteriores (${rest.length})`}
+          <Icon name="history" size={22} className="shrink-0 text-[#1D4ED8]" />
+          <span className="min-w-0 flex-1">
+            <span className="block text-[12px] font-bold text-[#1D4ED8]">Repetir</span>
+            <span className="block truncate text-[15px] font-bold text-ink">{routeTitle(r)}</span>
+          </span>
+          <Icon name="chevron_right" size={22} className="shrink-0 text-ink-muted" />
         </button>
-      )}
+      ))}
     </section>
   )
 }
