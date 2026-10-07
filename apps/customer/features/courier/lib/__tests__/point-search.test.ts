@@ -3,7 +3,7 @@ import type { CourierPoint } from '../../types'
 import { searchPoints } from '../point-search'
 
 const landmarks = [
-  { id: 'l1', name: 'BÓTICA Santa Rosa', category: 'salud' as const, lat: -9.1, lng: -78.2 },
+  { id: 'l1', name: 'BÓTICA Santa Rosa', category: 'farmacia' as const, lat: -9.1, lng: -78.2 },
   { id: 'l2', name: 'Colegio San Jacinto', category: 'educacion' as const, lat: -9.2, lng: -78.3 },
   { id: 'l3', name: 'Ojo', category: 'otro' as const, lat: -9.3, lng: -78.4 },
 ]
@@ -117,7 +117,7 @@ describe('searchPoints · claves', () => {
 describe('searchPoints · negocios y tipos', () => {
   const pueblo = [
     { id: 'p1', name: 'Plaza Mayor', category: 'recreacion' as const, lat: -9.1, lng: -78.2 },
-    { id: 'p2', name: 'Inkafarma', category: 'salud' as const, lat: -9.11, lng: -78.21 },
+    { id: 'p2', name: 'Inkafarma', category: 'farmacia' as const, lat: -9.11, lng: -78.21 },
     { id: 'p3', name: 'Pollería Nadia', category: 'restaurante' as const, lat: -9.12, lng: -78.22 },
     {
       id: 'p4',
@@ -129,6 +129,21 @@ describe('searchPoints · negocios y tipos', () => {
   ]
   const buscar = (query: string) =>
     searchPoints({ query, which: 'origin', landmarks: pueblo, recents: [], home: null })
+
+  it('«posta» trae la salud pública, no las boticas', () => {
+    const conPosta = [
+      ...pueblo,
+      { id: 'p7', name: 'Posta Médica', category: 'salud' as const, lat: -9.16, lng: -78.26 },
+    ]
+    const out = searchPoints({
+      query: 'posta',
+      which: 'origin',
+      landmarks: conPosta,
+      recents: [],
+      home: null,
+    })
+    expect(out.map((o) => [o.title, o.kind])).toEqual([['Posta Médica', 'place']])
+  })
 
   it('«botica» trae las boticas aunque el nombre no lo diga', () => {
     expect(buscar('botica').map((o) => o.title)).toEqual(['Inkafarma'])
@@ -162,7 +177,13 @@ describe('searchPoints · negocios y tipos', () => {
   it('una coincidencia por nombre sale antes que una solo por tipo', () => {
     const conBotica = [
       ...pueblo,
-      { id: 'p6', name: 'Botica la Merced', category: 'salud' as const, lat: -9.15, lng: -78.25 },
+      {
+        id: 'p6',
+        name: 'Botica la Merced',
+        category: 'farmacia' as const,
+        lat: -9.15,
+        lng: -78.25,
+      },
     ]
     const out = searchPoints({
       query: 'botica',

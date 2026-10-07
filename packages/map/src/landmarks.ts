@@ -50,8 +50,16 @@ export interface Landmark {
  * está escrito al lado del icono.
  */
 export const LANDMARK_STYLE: Record<MapLandmarkCategory, { color: string; glyph: string }> = {
-  // Cruz médica: el palo corto arriba y abajo la separa de la latina.
+  // «H» de hospital, en verde azulado: la posta y Essalud son referencias
+  // públicas, no un sitio donde se compra. La cruz roja queda para la botica,
+  // que es la que la gente reconoce como cruz (0246).
   salud: {
+    color: '#0f766e',
+    glyph: '<path d="M6 4h3.2v6.4h5.6V4H18v16h-3.2v-6.4H9.2V20H6z"/>',
+  },
+  // Cruz médica: el palo corto arriba y abajo la separa de la latina. Es la
+  // botica en cualquier mapa.
+  farmacia: {
     color: '#e11d48',
     glyph: '<path d="M10 4h4v6h6v4h-6v6h-4v-6H4v-4h6z"/>',
   },
@@ -169,6 +177,14 @@ export const LANDMARK_STYLE: Record<MapLandmarkCategory, { color: string; glyph:
       '<path d="M4.5 13.8h17.3v4.4H4.5z"/>' +
       '<path d="M19.5 18.9h2.3V21h-2.3z"/>',
   },
+  // Bolsa de compras: un negocio que no es mercado, restaurante ni botica
+  // (librería, grifo, pastelería, spa…; 0246).
+  comercio: {
+    color: '#a21caf',
+    glyph:
+      '<path d="M5 8.4h14l-1.1 12H6.1z"/>' +
+      '<path d="M8.6 8.4V7a3.4 3.4 0 0 1 6.8 0v1.4h-2V7a1.4 1.4 0 0 0-2.8 0v1.4z"/>',
+  },
   // Sin categoría: el punto genérico, igual que el POI sin icono de Google.
   otro: {
     color: '#64748b',
@@ -183,6 +199,7 @@ export const LANDMARK_STYLE: Record<MapLandmarkCategory, { color: string; glyph:
  */
 export const LANDMARK_CATEGORY_LABEL: Record<MapLandmarkCategory, string> = {
   salud: 'Salud',
+  farmacia: 'Boticas',
   mercado: 'Mercados y tiendas',
   educacion: 'Colegios',
   religioso: 'Iglesias',
@@ -191,5 +208,6 @@ export const LANDMARK_CATEGORY_LABEL: Record<MapLandmarkCategory, string> = {
   gobierno: 'Gobierno',
   restaurante: 'Restaurantes',
   hotel: 'Hospedaje',
+  comercio: 'Comercios',
   otro: 'Otros',
 }

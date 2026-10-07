@@ -4010,6 +4010,7 @@ export type Database = {
         | "fraud_attempt"
       map_landmark_category:
         | "salud"
+        | "farmacia"
         | "mercado"
         | "educacion"
         | "religioso"
@@ -4018,6 +4019,7 @@ export type Database = {
         | "gobierno"
         | "restaurante"
         | "hotel"
+        | "comercio"
         | "otro"
       order_source: "customer_pwa" | "business_manual"
       order_status:
@@ -4268,6 +4270,7 @@ export const Constants = {
       ],
       map_landmark_category: [
         "salud",
+        "farmacia",
         "mercado",
         "educacion",
         "religioso",
@@ -4276,6 +4279,7 @@ export const Constants = {
         "gobierno",
         "restaurante",
         "hotel",
+        "comercio",
         "otro",
       ],
       order_source: ["customer_pwa", "business_manual"],
