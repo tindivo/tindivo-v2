@@ -137,6 +137,15 @@ test('«Usar mi dirección» en el paso 2 llena el punto y a quien recibe', asyn
   await expect(soyYo).toHaveAttribute('aria-pressed', 'true')
   await soyYo.click()
   await expect(detalles.getByRole('textbox', { name: 'Celular de quien recibe' })).toBeVisible()
+
+  // La flecha de Detalles vuelve al paso 2 CON su fila: número, flecha al
+  // recojo y «Usar mi dirección» (antes, con los dos puntos completos, la fila
+  // desaparecía entera).
+  await detalles.getByRole('button', { name: 'Volver al mapa' }).click()
+  await expect(pin.getByText('Ubicación 2 de 2')).toBeVisible()
+  await expect(pin.getByRole('button', { name: 'Usar mi dirección' })).toBeVisible()
+  await pin.getByRole('button', { name: 'Volver al recojo' }).click()
+  await expect(pin.getByText('Ubicación 1 de 2')).toBeVisible()
 })
 
 test('«Mi ubicación» se puede tocar y devuelve el pin a donde estás', async ({ page }) => {
@@ -163,6 +172,13 @@ test('«Mi ubicación» se puede tocar y devuelve el pin a donde estás', async 
   await boton.click()
   await expect(pin.getByText('✓ Dentro de la zona de reparto')).toBeVisible()
   await expect(boton).toBeEnabled()
+
+  // El mapa va detrás del panel: el crédito de OpenStreetMap (obligatorio por
+  // la licencia) tiene que quedar encima del panel, no tapado por él.
+  const credito = await page.locator('.leaflet-control-attribution').boundingBox()
+  const titulo = await pin.getByText('¿Dónde recogemos?').boundingBox()
+  if (!credito || !titulo) throw new Error('falta el crédito o el título')
+  expect(credito.y + credito.height).toBeLessThan(titulo.y)
 })
 
 test('«Repetir» una entrega que llegó deja la ruta puesta y lleva a Detalles', async ({ page }) => {

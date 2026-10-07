@@ -3,7 +3,7 @@
 import { toCourierTrackingStep } from '@tindivo/contracts'
 import { Icon, Spinner } from '@tindivo/ui'
 import dynamic from 'next/dynamic'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { boundsFor } from '@/components/map-picker'
 import type { LatLng, MapBounds, MapMode, RoutePin } from '@/components/map-picker-inner'
 import { getCoverage, getCoveragePolygon, haversineKm, pointInPolygon } from '@/lib/coverage'
@@ -551,12 +551,14 @@ export function CourierMapHost() {
   if (!center) return null
 
   const guided = isPinDrop && returnStep === 'trip-details' && editingPoint != null
-  const stepIndex: 1 | 2 | null =
-    guided && !(isPointComplete(draft.origin) && isPointComplete(draft.destination))
-      ? editingPoint === 'origin'
-        ? 1
-        : 2
-      : null
+  // El número del punto SIEMPRE, también al volver desde «Detalles»: antes,
+  // con los dos puntos completos, la fila del paso desaparecía y con ella la
+  // flecha, «Ver anteriores» y «Usar mi dirección».
+  const stepIndex: 1 | 2 | null = guided ? (editingPoint === 'origin' ? 1 : 2) : null
+  const bothComplete = isPointComplete(draft.origin) && isPointComplete(draft.destination)
+  // Atrás desde A sale del pedido solo si todavía se está armando la ruta; con
+  // los dos puntos ya fijados, vuelve a «Detalles» (`cancelEditPoint`).
+  const backLeavesFlow = guided && editingPoint === 'origin' && !bothComplete
 
   // Del paso 2 al 1 sin salir del mapa. Lo ya avanzado en B (referencia y, si el
   // pin estaba asentado dentro de la zona, su coordenada) se guarda para que al
@@ -582,13 +584,25 @@ export function CourierMapHost() {
          * vieja página «Lugares» de `/entregas`, con su propio mapa a pantalla
          * completa.)
          *
-         * En `pin-drop` el mapa termina donde empieza el panel del pin, de modo
-         * que el pin fijo (el centro del lienzo) queda en el centro de lo que
-         * se ve, no escondido detrás de la tarjeta.
+         * En `pin-drop` el mapa ocupa TODA la pantalla, también detrás del
+         * panel del pin, y el pin sube la mitad del alto del panel
+         * (`pinOffsetY`): queda en el centro de lo que se ve y el mapa sigue a
+         * la vista alrededor del panel (en pantalla ancha, a sus costados).
+         * Antes el mapa terminaba donde empezaba el panel, y en pantalla ancha
+         * los costados del panel quedaban sin mapa.
          */
-        className={`fixed inset-x-0 top-0 z-50 overflow-hidden bg-[#f4f3ef] ${isPinDrop || isPinNote ? '' : 'bottom-0'}`}
+        className={`fixed inset-x-0 top-0 z-50 overflow-hidden bg-[#f4f3ef] [&_.leaflet-bottom]:[bottom:var(--pin-panel-h,0px)]! ${isPinNote ? '' : 'bottom-0'}`}
         style={
-          isPinNote ? { height: PIN_NOTE_MAP_HEIGHT } : isPinDrop ? { bottom: panelH } : undefined
+          isPinNote
+            ? { height: PIN_NOTE_MAP_HEIGHT }
+            : isPinDrop
+              ? // El crédito de OpenStreetMap (obligatorio por la licencia)
+                // va pegado abajo: con el mapa detrás del panel, se sube
+                // justo encima de él para que no quede tapado. Con `!`
+                // (important): `leaflet.css` no está en una capa y le gana a
+                // cualquier utilidad de Tailwind, que sí lo está.
+                ({ '--pin-panel-h': `${panelH}px` } as CSSProperties)
+              : undefined
         }
       >
         <MapCanvas
@@ -610,6 +624,7 @@ export function CourierMapHost() {
           fitToPins={fitToPins}
           observeResize
           pinVariant={editingPoint === 'destination' ? 'destination' : 'origin'}
+          pinOffsetY={isPinDrop ? Math.round(panelH / 2) : 0}
         />
       </div>
 
@@ -636,6 +651,7 @@ export function CourierMapHost() {
           point={editingPoint}
           guided={guided}
           stepIndex={stepIndex}
+          backLeavesFlow={backLeavesFlow}
           reference={reference}
           onReferenceChange={setReference}
           moving={pinMoving}

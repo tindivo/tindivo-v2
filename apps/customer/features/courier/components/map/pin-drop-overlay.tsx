@@ -63,6 +63,7 @@ export function PinDropOverlay({
   point,
   guided,
   stepIndex,
+  backLeavesFlow,
   reference,
   onReferenceChange,
   moving,
@@ -87,8 +88,10 @@ export function PinDropOverlay({
   onModeChange: (m: MapMode) => void
   point: CourierEditingPoint
   guided: boolean
-  /** 1 o 2 mientras se arma la ruta por primera vez; `null` al corregir un punto. */
+  /** 1 (recojo) o 2 (entrega) en el camino por defecto; `null` en el camino de negocio. */
   stepIndex: 1 | 2 | null
+  /** Atrás desde aquí sale del pedido (A, armando la ruta): pide confirmar si hay algo escrito. */
+  backLeavesFlow: boolean
   reference: string
   onReferenceChange: (v: string) => void
   moving: boolean
@@ -126,7 +129,7 @@ export function PinDropOverlay({
   const [searching, setSearching] = useState(false)
   const [showRoutes, setShowRoutes] = useState(false)
   // «Ver anteriores» solo en el paso 1, al armar la ruta por primera vez.
-  const canRepeat = guided && stepIndex === 1 && point === 'origin' && routes.length > 0
+  const canRepeat = stepIndex === 1 && point === 'origin' && routes.length > 0
   const lupa = useRef<HTMLInputElement>(null)
   const [query, setQuery] = useState('')
   const suggestions = useMemo(() => search(query).slice(0, MAX_SUGGESTIONS), [search, query])
@@ -159,7 +162,7 @@ export function PinDropOverlay({
       closeSearch()
       return
     }
-    if (guided && stepIndex === 1 && reference.trim().length > 0) setConfirmLeave(true)
+    if (backLeavesFlow && reference.trim().length > 0) setConfirmLeave(true)
     else onCancel()
   }
   const requestLeave = useCallback(() => leaveRef.current(), [])
@@ -241,7 +244,13 @@ export function PinDropOverlay({
           <button
             type="button"
             onClick={requestLeave}
-            aria-label={stepIndex === 2 ? 'Volver al paso 1' : 'Volver sin fijar el punto'}
+            aria-label={
+              stepIndex === 2
+                ? 'Volver al paso 1'
+                : backLeavesFlow
+                  ? 'Volver sin fijar el punto'
+                  : 'Volver a los detalles'
+            }
             className="pointer-events-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-card text-ink shadow-elev-3 border border-ink/[0.06] transition-transform active:scale-95"
           >
             <Icon name="arrow_back" size={22} />
@@ -343,12 +352,13 @@ export function PinDropOverlay({
         </button>
       </div>
 
-      {/* En el celular, el panel ocupa todo el ancho. En una pantalla ancha, su
-          contenido se centra con el MISMO ancho máximo que las hojas de la app
-          (`BottomSheet`, 768 px): los tres pasos se ven igual. La franja de
-          fuera es del color del mapa, para que no se vea la página de detrás. */}
-      <div ref={panel} className="pointer-events-auto shrink-0 md:bg-[#f4f3ef]">
-        <div className="mx-auto w-full max-w-[768px] rounded-t-[24px] bg-card px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-[0_-16px_40px_-28px_rgba(0,0,0,0.4)]">
+      {/* En el celular, el panel ocupa todo el ancho. En una pantalla ancha, se
+          centra con el MISMO ancho máximo que las hojas de la app
+          (`BottomSheet`, 768 px): los tres pasos se ven igual. A los costados
+          se ve el mapa, que sigue detrás (ver `CourierMapHost`), y el envoltorio
+          no captura toques para que ahí se pueda arrastrar. */}
+      <div ref={panel} className="shrink-0">
+        <div className="pointer-events-auto mx-auto w-full max-w-[768px] rounded-t-[24px] bg-card px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-[0_-16px_40px_-28px_rgba(0,0,0,0.4)]">
           {guided && stepIndex && (
             // Alto fijo en los dos pasos: la flecha solo existe en el 2, y si la
             // fila cambiara de alto el mapa se re-mediría al pasar de A a B.

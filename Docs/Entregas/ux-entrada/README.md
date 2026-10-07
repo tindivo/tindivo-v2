@@ -159,3 +159,21 @@ Acuerdo en `08-acuerdo-ronda-jesus.md`; verificación en `09` y `10`.
 la Posta; negocios dentro de «otro») y bajar la densidad de nombres en el mapa
 con los 60 lugares (se ve cargado); probar con teclado abierto en un Android
 pequeño.
+
+## 10. El mapa detrás del panel (7-oct)
+
+- En el pin, el mapa ocupa **toda la pantalla, también detrás del panel**, y el
+  pin sube la mitad del alto del panel (`pinOffsetY` en `MapCanvas`, 0 en el
+  checkout). En pantalla ancha se ve el mapa a los costados del panel; en el
+  celular, por sus esquinas. La coordenada guardada es la del punto bajo el pin:
+  un e2e lo comprueba contra la base con ~1 m de tolerancia.
+- El crédito de OpenStreetMap se sube encima del panel (lo exige la licencia).
+- La fila «Ubicación n de 2» (flecha, «Ver anteriores», «Usar mi dirección») ya
+  no desaparece al volver desde Detalles.
+
+**Hallazgo con los 60 lugares reales:** `e2e/mapa-reparto-de-rotulos.spec.ts`
+falla con `pnpm db:seed:lugares` cargado (pasa sin él): los nombres del mapa
+se pisan entre sí («Bodega Aida Mota» con «Losa del Pozo Hermoso»). Es lo que
+ve hoy el cliente en producción. Pendiente, junto con la densidad del §9.
+`happy-path-order.spec.ts` también falla, pero igual sin estos cambios (el
+cliente de prueba queda en «validando»): no es de este trabajo.
