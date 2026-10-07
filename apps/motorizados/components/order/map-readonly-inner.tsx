@@ -1,6 +1,6 @@
 'use client'
 
-import { type Landmark, type RoutePin, STREET_TILES } from '@tindivo/map'
+import { type Landmark, OSM_TILES, type RoutePin } from '@tindivo/map'
 import { FitBounds, LandmarkLayer, RouteLineLayer, RoutePinLayer } from '@tindivo/map/leaflet'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { MapContainer, TileLayer, useMap } from 'react-leaflet'
@@ -96,9 +96,8 @@ export default function MapReadonlyInner({
       className="h-full w-full"
     >
       <TileLayer
-        url={STREET_TILES.url}
-        attribution={STREET_TILES.attribution}
-        subdomains={STREET_TILES.subdomains ?? 'abc'}
+        url={OSM_TILES.url}
+        attribution={OSM_TILES.attribution}
         maxNativeZoom={19}
         maxZoom={19}
         updateWhenZooming={false}
