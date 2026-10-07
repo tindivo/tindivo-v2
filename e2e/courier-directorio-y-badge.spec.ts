@@ -132,6 +132,32 @@ test('«Mi dirección» en el paso 2 llena el punto y a quien recibe', async ({ 
   await expect(detalles.getByRole('button', { name: /Completar: qué llevamos/ })).toBeVisible()
 })
 
+test('«Mi ubicación» se puede tocar y devuelve el pin a donde estás', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.context().grantPermissions(['geolocation'])
+  await page.context().setGeolocation({ latitude: -9.1488, longitude: -78.2806 })
+  await login(page)
+  await page.goto('/entregas')
+  const pin = page.getByRole('dialog', { name: 'Fijar el punto en el mapa' })
+  const boton = pin.getByRole('button', { name: 'Mi ubicación' })
+  await expect(boton).toBeEnabled({ timeout: 20_000 })
+
+  // Se aleja el mapa a mano…
+  const box = await page.locator('.leaflet-container').boundingBox()
+  if (!box) throw new Error('el mapa no tiene caja')
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(box.x + 60, box.y + 60, { steps: 6 })
+  await page.mouse.up()
+
+  // …y el botón tiene que recibir el toque. Antes el toque lo atravesaba y le
+  // llegaba al mapa (la capa del pin es `pointer-events-none`): Playwright no
+  // deja hacer clic en un elemento tapado, así que esto falla si vuelve a pasar.
+  await boton.click()
+  await expect(pin.getByText('✓ Dentro de la zona de reparto')).toBeVisible()
+  await expect(boton).toBeEnabled()
+})
+
 test('«Repetir» una entrega que llegó deja la ruta puesta y lleva a Detalles', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await login(page)

@@ -318,18 +318,23 @@ export function PinDropOverlay({
           </span>
         </div>
 
+        {/* `pointer-events-auto`: la capa entera es `pointer-events-none` (ver
+            arriba) y este botón no lo reactivaba, así que el toque lo
+            atravesaba y le llegaba al mapa. Nunca funcionó, y ningún e2e lo
+            tocaba. Con texto, no solo la flecha: la flecha sola no decía qué
+            hacía. */}
         <button
           type="button"
           onClick={onUseMyLocation}
           disabled={locating}
-          aria-label="Centrar en mi ubicación"
-          className="absolute right-4 bottom-4 z-[600] flex h-12 w-12 items-center justify-center rounded-full bg-card text-brand-dark shadow-elev-3 border border-ink/[0.06] transition-transform active:scale-95 disabled:opacity-70"
+          className="pointer-events-auto absolute right-4 bottom-4 z-[600] flex h-11 items-center gap-1.5 rounded-full border border-ink/[0.06] bg-card pr-4 pl-3 text-[14px] font-bold text-brand-dark shadow-elev-3 transition-transform active:scale-95 disabled:opacity-80"
         >
           {locating ? (
             <Spinner size="xs" variant="brand" />
           ) : (
-            <Icon name="near_me" size={22} filled />
+            <Icon name="near_me" size={20} filled />
           )}
+          {locating ? 'Buscando…' : 'Mi ubicación'}
         </button>
       </div>
 
