@@ -241,6 +241,10 @@ export function PinDropOverlay({
         />
 
         <div className="pointer-events-none absolute inset-x-0 top-0 z-[730] flex items-start gap-2 p-3 pt-[calc(0.75rem+env(safe-area-inset-top))]">
+          {/* Exento del guardarraíl del design system (`pnpm check:ds`): es un
+              control que FLOTA sobre el mapa, blanco y con sombra para leerse
+              sobre cualquier calle, y `IconButton` no tiene esa superficie
+              (su `filled` es gris tenue, pensado para fondos lisos). */}
           <button
             type="button"
             onClick={requestLeave}
@@ -337,11 +341,12 @@ export function PinDropOverlay({
             atravesaba y le llegaba al mapa. Nunca funcionó, y ningún e2e lo
             tocaba. Con texto, no solo la flecha: la flecha sola no decía qué
             hacía. */}
-        <button
+        <Button
           type="button"
+          variant="outline"
           onClick={onUseMyLocation}
           disabled={locating}
-          className="pointer-events-auto absolute right-4 bottom-4 z-[600] flex h-11 items-center gap-1.5 rounded-full border border-ink/[0.06] bg-card pr-4 pl-3 text-[14px] font-bold text-brand-dark shadow-elev-3 transition-transform active:scale-95 disabled:opacity-80"
+          className="pointer-events-auto absolute right-4 bottom-4 z-[600] gap-1.5 pr-4 pl-3 shadow-elev-3"
         >
           {locating ? (
             <Spinner size="xs" variant="brand" />
@@ -349,7 +354,7 @@ export function PinDropOverlay({
             <Icon name="near_me" size={20} filled />
           )}
           {locating ? 'Buscando…' : 'Mi ubicación'}
-        </button>
+        </Button>
       </div>
 
       {/* En el celular, el panel ocupa todo el ancho. En una pantalla ancha, se

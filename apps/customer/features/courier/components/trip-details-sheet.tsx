@@ -1,7 +1,7 @@
 'use client'
 
 import { COURIER_DRIVER_HINT_MAX, COURIER_ITEM_DESCRIPTION_MAX } from '@tindivo/contracts'
-import { BottomSheet, Icon } from '@tindivo/ui'
+import { BottomSheet, Button, Icon } from '@tindivo/ui'
 import { useCallback, useRef, useState } from 'react'
 import { useCourierRequest } from '../hooks/use-courier-request'
 import { useCourierStatus } from '../hooks/use-courier-status'
@@ -477,20 +477,16 @@ function SoyYo({
 }) {
   const active = current.contactPhone === me.phone && current.contactName.trim() === me.name.trim()
   return (
-    <button
+    <Button
       type="button"
+      size="sm"
+      variant={active ? 'brand' : 'outline'}
       aria-pressed={active}
       onClick={() => (active ? onClear() : onPick(me))}
-      className={`ml-auto flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-[14px] font-bold transition-colors ${
-        active ? 'bg-brand text-white' : 'bg-white text-[#2E3236]'
-      }`}
+      className="ml-auto shrink-0 gap-1.5"
     >
-      <Icon
-        name={active ? 'check' : 'person'}
-        size={16}
-        className={active ? '' : 'text-brand-dark'}
-      />
+      <Icon name={active ? 'check' : 'person'} size={16} />
       Soy yo
-    </button>
+    </Button>
   )
 }
