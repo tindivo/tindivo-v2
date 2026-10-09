@@ -111,7 +111,7 @@ aplican por MCP y `CLAUDE.md` exige la CLI (manda la CLI).
 | D-21 | Superficie de las apps | **REST como contrato del dominio** con las fronteras del §1 (sustituye a la opción C) |
 | D-38 | La PWA se muda al mismo contrato | Sí, gradualmente (paso 6) |
 | D-39 | Representación del dinero en campos **nuevos** | Decimal como cadena (`"12.50"`) con moneda explícita; los campos existentes no cambian de tipo en silencio |
-| D-40 | Formatos y tamaño máximo de los comprobantes | Por acordar tras revisar el flujo actual y probar archivos reales (fotos de Yape/Plin, capturas) |
+| D-40 | Formatos y tamaño máximo de los comprobantes | Por acordar tras revisar el flujo actual y probar archivos reales (fotos de Yape/Plin, capturas). **Decidido el 2026-10-09 (Jesús lo delegó en Claude):** JPEG, PNG, WebP y HEIC/HEIF, 15 MB, el mismo tope que la app ya aplica (`MAX_INPUT_BYTES`); en prod, el más pesado de 56 comprobantes mide 1,4 MB |
 | D-41 | Política de versiones | Mínimos independientes para Negocios Android, Customer Android y Customer iOS |
 | D-42 | Squash | Decidir tras el ensayo del §4 |
 | D-43 | Empezar el paso 0 | Aprobar el arranque. Precondición operativa, no decisión: un entorno aislado disponible para pruebas (Supabase local encendido) |
