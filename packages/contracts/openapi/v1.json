@@ -1,0 +1,2050 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Tindivo API",
+    "version": "v1",
+    "description": "Contrato REST de las apps del cliente. Las rutas heredadas se documentan como son hoy (algunas sin la envoltura `{ data }`). Las operaciones con `x-tindivo-pending` aún no tienen la respuesta descrita: no generes código contra ellas. Los campos con `x-known-values` son enums abiertos: un valor nuevo no debe romper el cliente."
+  },
+  "servers": [
+    {
+      "url": "https://apiv2.tindivo.com/api/v1",
+      "description": "Producción"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Access token de Supabase Auth"
+      }
+    },
+    "schemas": {
+      "ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer"
+          },
+          "code": {
+            "type": "string",
+            "x-known-values": [
+              "validation_error",
+              "unauthorized",
+              "forbidden",
+              "not_found",
+              "conflict",
+              "idempotency_conflict",
+              "rate_limited",
+              "invalid_state_transition",
+              "business_blocked",
+              "order_not_cancellable",
+              "payment_required",
+              "internal_error"
+            ],
+            "description": "Valores conocidos: validation_error, unauthorized, forbidden, not_found, conflict, idempotency_conflict, rate_limited, invalid_state_transition, business_blocked, order_not_cancellable, payment_required, internal_error. Puede llegar uno nuevo; trátalo como desconocido."
+          },
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "field": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "field",
+                "message"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status",
+          "code"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "getHealth",
+        "summary": "Estado de la API",
+        "tags": [
+          "system"
+        ],
+        "responses": {
+          "200": {
+            "description": "La API responde",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "ok"
+                          ]
+                        },
+                        "service": {
+                          "type": "string",
+                          "enum": [
+                            "tindivo-api"
+                          ]
+                        },
+                        "version": {
+                          "type": "string",
+                          "enum": [
+                            "v1"
+                          ]
+                        },
+                        "time": {
+                          "type": "string",
+                          "description": "ISO 8601, UTC"
+                        }
+                      },
+                      "required": [
+                        "status",
+                        "service",
+                        "version",
+                        "time"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/public/schedule": {
+      "get": {
+        "operationId": "getOrderIntakeStatus",
+        "summary": "Si la plataforma recibe pedidos ahora y en qué horario",
+        "tags": [
+          "public"
+        ],
+        "responses": {
+          "200": {
+            "description": "Estado de la recepción",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "isOpen": {
+                          "type": "boolean"
+                        },
+                        "cutoff": {
+                          "type": "string",
+                          "description": "Hora de cierre de la recepción, HH:MM en Lima"
+                        },
+                        "startTime": {
+                          "description": "Hora de apertura, HH:MM en Lima. Falta cuando responde el respaldo de la ruta",
+                          "type": "string"
+                        },
+                        "serverTimeLima": {
+                          "type": "string",
+                          "description": "Hora del servidor. Normalmente «YYYY-MM-DD HH:MM:SS» en Lima; en el respaldo, ISO 8601 en UTC"
+                        },
+                        "message": {
+                          "nullable": true,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "isOpen",
+                        "cutoff",
+                        "serverTimeLima",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/public/search": {
+      "get": {
+        "operationId": "searchCatalog",
+        "summary": "Buscar negocios y platos",
+        "tags": [
+          "public"
+        ],
+        "responses": {
+          "200": {
+            "description": "Hasta 20 negocios y 20 platos, del más parecido al menos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "businesses": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "slug": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "tagline": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "accent_color": {
+                                "type": "string"
+                              },
+                              "logo_url": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "primary_capability": {
+                                "nullable": true,
+                                "type": "string",
+                                "x-known-values": [
+                                  "drivers_only",
+                                  "catalog_pickup",
+                                  "catalog_delivery",
+                                  "catalog_full",
+                                  "pickup_local",
+                                  "catalog_only"
+                                ],
+                                "description": "Valores conocidos: drivers_only, catalog_pickup, catalog_delivery, catalog_full, pickup_local, catalog_only. Puede llegar uno nuevo; trátalo como desconocido."
+                              },
+                              "estimated_eta_min": {
+                                "type": "integer"
+                              },
+                              "estimated_eta_max": {
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "slug",
+                              "name",
+                              "tagline",
+                              "accent_color",
+                              "logo_url",
+                              "primary_capability",
+                              "estimated_eta_min",
+                              "estimated_eta_max"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "business_id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "business_slug": {
+                                "type": "string"
+                              },
+                              "business_name": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "description": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "base_price": {
+                                "type": "number",
+                                "description": "Soles como número JSON (numeric(10,2) en la base). Campo heredado: no cambia de tipo."
+                              },
+                              "image_url": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "image_hue": {
+                                "nullable": true,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "business_id",
+                              "business_slug",
+                              "business_name",
+                              "name",
+                              "description",
+                              "base_price",
+                              "image_url",
+                              "image_hue"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "businesses",
+                        "items"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem Details (RFC 9457). `code`: validation_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 60,
+              "description": "Texto a buscar en negocios y platos"
+            }
+          }
+        ],
+        "security": []
+      }
+    },
+    "/public/businesses": {
+      "get": {
+        "operationId": "listBusinesses",
+        "summary": "Negocios publicados",
+        "tags": [
+          "public"
+        ],
+        "responses": {
+          "200": {
+            "description": "Forma pendiente de documentar (lote MV2b)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Forma pendiente de documentar (lote MV2b)"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "x-tindivo-pending": true
+      }
+    },
+    "/public/businesses/{id}": {
+      "get": {
+        "operationId": "getBusiness",
+        "summary": "Un negocio con su carta",
+        "tags": [
+          "public"
+        ],
+        "responses": {
+          "200": {
+            "description": "Forma pendiente de documentar (lote MV2b)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Forma pendiente de documentar (lote MV2b)"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem Details (RFC 9457). `code`: not_found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "UUID o slug del negocio"
+            }
+          }
+        ],
+        "security": [],
+        "x-tindivo-pending": true
+      }
+    },
+    "/public/pilot-access": {
+      "post": {
+        "operationId": "checkPilotAccess",
+        "summary": "Acceso al piloto cerrado (ya no restringe)",
+        "tags": [
+          "public"
+        ],
+        "responses": {
+          "200": {
+            "description": "Acceso permitido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "allowed": {
+                          "type": "boolean"
+                        },
+                        "pilotActive": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "allowed",
+                        "pilotActive"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "description": "El piloto cerrado terminó: hoy responde siempre `allowed: true, pilotActive: false`.",
+        "security": []
+      }
+    },
+    "/public/orders/{shortId}": {
+      "get": {
+        "operationId": "getOrderTracking",
+        "summary": "Seguimiento público de un pedido (24 h)",
+        "tags": [
+          "public",
+          "orders"
+        ],
+        "responses": {
+          "200": {
+            "description": "Forma pendiente de documentar (lote MV2b)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Forma pendiente de documentar (lote MV2b)"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem Details (RFC 9457). `code`: not_found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "shortId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Identificador corto público (8 caracteres)"
+            }
+          }
+        ],
+        "security": [],
+        "x-tindivo-pending": true
+      }
+    },
+    "/public/courier/status": {
+      "get": {
+        "operationId": "getCourierServiceStatus",
+        "summary": "Si el servicio de Entregas está abierto, su horario y su precio base",
+        "tags": [
+          "public",
+          "courier"
+        ],
+        "responses": {
+          "200": {
+            "description": "Estado del servicio, sin envoltura",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "openNow": {
+                      "type": "boolean"
+                    },
+                    "hours": {
+                      "nullable": true,
+                      "description": "Tal cual `app_settings.courier.hours`. Null en el respaldo de la ruta",
+                      "type": "object",
+                      "properties": {
+                        "start": {
+                          "type": "string",
+                          "description": "HH:MM en Lima"
+                        },
+                        "end": {
+                          "type": "string",
+                          "description": "HH:MM en Lima"
+                        },
+                        "days": {
+                          "type": "array",
+                          "items": {
+                            "type": "integer"
+                          },
+                          "description": "Días ISO: 1 = lunes … 7 = domingo"
+                        }
+                      },
+                      "required": [
+                        "start",
+                        "end",
+                        "days"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "price": {
+                      "type": "number",
+                      "description": "Soles como número JSON (numeric(10,2) en la base). Campo heredado: no cambia de tipo."
+                    },
+                    "pausedMessage": {
+                      "nullable": true,
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "enabled",
+                    "openNow",
+                    "hours",
+                    "price",
+                    "pausedMessage"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/public/courier/{shortId}": {
+      "get": {
+        "operationId": "getCourierTracking",
+        "summary": "Seguimiento público de una entrega",
+        "tags": [
+          "public",
+          "courier"
+        ],
+        "responses": {
+          "200": {
+            "description": "Forma pendiente de documentar (lote MV2b)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Forma pendiente de documentar (lote MV2b)"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem Details (RFC 9457). `code`: not_found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "shortId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Identificador corto público (8 caracteres)"
+            }
+          }
+        ],
+        "security": [],
+        "x-tindivo-pending": true
+      }
+    },
+    "/public/store": {
+      "get": {
+        "operationId": "listStoreProducts",
+        "summary": "Productos de Tindivo Store",
+        "tags": [
+          "public",
+          "store"
+        ],
+        "responses": {
+          "200": {
+            "description": "Forma pendiente de documentar (lote MV2b)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Forma pendiente de documentar (lote MV2b)"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "x-tindivo-pending": true
+      }
+    },
+    "/public/store/{slug}": {
+      "get": {
+        "operationId": "getStoreProduct",
+        "summary": "Un producto de Tindivo Store",
+        "tags": [
+          "public",
+          "store"
+        ],
+        "responses": {
+          "200": {
+            "description": "Forma pendiente de documentar (lote MV2b)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Forma pendiente de documentar (lote MV2b)"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [],
+        "x-tindivo-pending": true
+      }
+    },
+    "/public/store/events": {
+      "post": {
+        "operationId": "trackStoreEvent",
+        "summary": "Registrar un evento de Tindivo Store",
+        "tags": [
+          "public",
+          "store"
+        ],
+        "responses": {
+          "204": {
+            "description": "Registrado; sin cuerpo"
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "x-tindivo-pending": true
+      }
+    },
+    "/customer/orders": {
+      "post": {
+        "operationId": "createOrder",
+        "summary": "Crear un pedido",
+        "tags": [
+          "orders"
+        ],
+        "responses": {
+          "201": {
+            "description": "Forma pendiente de documentar (lote MV2b)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Forma pendiente de documentar (lote MV2b)"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem Details (RFC 9457). `code`: unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem Details (RFC 9457). `code`: forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem Details (RFC 9457). `code`: conflict, idempotency_conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem Details (RFC 9457). `code`: validation_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Repetir la misma clave devuelve el resultado ya creado, sin duplicarlo",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "businessId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "deliveryMethod": {
+                    "type": "string",
+                    "enum": [
+                      "delivery",
+                      "pickup"
+                    ]
+                  },
+                  "paymentIntent": {
+                    "type": "string",
+                    "enum": [
+                      "prepaid",
+                      "pending_yape",
+                      "pending_cash",
+                      "pending_mixed"
+                    ]
+                  },
+                  "customerName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "customerPhone": {
+                    "type": "string"
+                  },
+                  "deliveryAddress": {
+                    "type": "string",
+                    "minLength": 5,
+                    "maxLength": 200
+                  },
+                  "deliveryReference": {
+                    "type": "string",
+                    "minLength": 5,
+                    "maxLength": 140
+                  },
+                  "coordinates": {
+                    "type": "object",
+                    "properties": {
+                      "lat": {
+                        "type": "number",
+                        "minimum": -90,
+                        "maximum": 90
+                      },
+                      "lng": {
+                        "type": "number",
+                        "minimum": -180,
+                        "maximum": 180
+                      }
+                    },
+                    "required": [
+                      "lat",
+                      "lng"
+                    ]
+                  },
+                  "gpsValidation": {
+                    "type": "object",
+                    "properties": {
+                      "lat": {
+                        "type": "number",
+                        "minimum": -90,
+                        "maximum": 90
+                      },
+                      "lng": {
+                        "type": "number",
+                        "minimum": -180,
+                        "maximum": 180
+                      },
+                      "accuracyM": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100000
+                      },
+                      "distanceToCenterKm": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 50000
+                      },
+                      "method": {
+                        "type": "string",
+                        "enum": [
+                          "gps_high_accuracy",
+                          "gps_low_accuracy",
+                          "manual_skip_prepaid",
+                          "failed"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "method"
+                    ]
+                  },
+                  "cashPayingWith": {
+                    "type": "number",
+                    "minimum": 0,
+                    "exclusiveMinimum": true,
+                    "maximum": 1000
+                  },
+                  "customerNotes": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "deliveryPointAccuracyM": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "exclusiveMinimum": true,
+                    "maximum": 100000
+                  },
+                  "deliveryPointConfirmedAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                  },
+                  "pickupTiming": {
+                    "type": "string",
+                    "enum": [
+                      "now",
+                      "later"
+                    ]
+                  },
+                  "items": {
+                    "minItems": 1,
+                    "maxItems": 50,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "menuItemId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "quantity": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 50
+                        },
+                        "note": {
+                          "type": "string",
+                          "maxLength": 140
+                        },
+                        "modifiers": {
+                          "maxItems": 20,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          }
+                        }
+                      },
+                      "required": [
+                        "menuItemId",
+                        "quantity"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "businessId",
+                  "deliveryMethod",
+                  "paymentIntent",
+                  "customerName",
+                  "customerPhone",
+                  "items"
+                ]
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-tindivo-role": "customer",
+        "x-tindivo-pending": true
+      }
+    },
+    "/customer/orders/{id}/cancel": {
+      "post": {
+        "operationId": "cancelOrder",
+        "summary": "Cancelar un pedido propio",
+        "tags": [
+          "orders"
+        ],
+        "responses": {
+          "200": {
+            "description": "Forma pendiente de documentar (lote MV2b)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Forma pendiente de documentar (lote MV2b)"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem Details (RFC 9457). `code`: unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem Details (RFC 9457). `code`: forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-tindivo-role": "customer",
+        "x-tindivo-pending": true
+      }
+    },
+    "/customer/orders/{id}/prepay-info": {
+      "get": {
+        "operationId": "getPrepayInfo",
+        "summary": "Datos para pagar por adelantado (QR, monto, plazo)",
+        "tags": [
+          "orders",
+          "payments"
+        ],
+        "responses": {
+          "200": {
+            "description": "Forma pendiente de documentar (lote MV2b)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Forma pendiente de documentar (lote MV2b)"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem Details (RFC 9457). `code`: unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem Details (RFC 9457). `code`: forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-tindivo-role": "customer",
+        "x-tindivo-pending": true
+      }
+    },
+    "/customer/orders/{id}/prepay-proof": {
+      "post": {
+        "operationId": "confirmPrepayProof",
+        "summary": "Confirmar el comprobante de pago subido",
+        "tags": [
+          "orders",
+          "payments"
+        ],
+        "responses": {
+          "200": {
+            "description": "Forma pendiente de documentar (lote MV2b)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Forma pendiente de documentar (lote MV2b)"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem Details (RFC 9457). `code`: unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem Details (RFC 9457). `code`: forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-tindivo-role": "customer",
+        "x-tindivo-pending": true
+      }
+    },
+    "/customer/orders/{id}/appeal": {
+      "get": {
+        "operationId": "getOrderAppeal",
+        "summary": "Estado de la apelación de un pedido",
+        "tags": [
+          "orders",
+          "appeals"
+        ],
+        "responses": {
+          "200": {
+            "description": "Forma pendiente de documentar (lote MV2b)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Forma pendiente de documentar (lote MV2b)"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem Details (RFC 9457). `code`: unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem Details (RFC 9457). `code`: forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-tindivo-role": "customer",
+        "x-tindivo-pending": true
+      },
+      "post": {
+        "operationId": "createOrderAppeal",
+        "summary": "Apelar un pedido rechazado",
+        "tags": [
+          "orders",
+          "appeals"
+        ],
+        "responses": {
+          "200": {
+            "description": "Forma pendiente de documentar (lote MV2b)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Forma pendiente de documentar (lote MV2b)"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem Details (RFC 9457). `code`: unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem Details (RFC 9457). `code`: forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-tindivo-role": "customer",
+        "x-tindivo-pending": true
+      }
+    },
+    "/customer/appeals": {
+      "get": {
+        "operationId": "listAppeals",
+        "summary": "Apelaciones del cliente",
+        "tags": [
+          "appeals"
+        ],
+        "responses": {
+          "200": {
+            "description": "Forma pendiente de documentar (lote MV2b)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Forma pendiente de documentar (lote MV2b)"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem Details (RFC 9457). `code`: unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem Details (RFC 9457). `code`: forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-tindivo-role": "customer",
+        "x-tindivo-pending": true
+      }
+    },
+    "/customer/courier-orders": {
+      "post": {
+        "operationId": "createCourierOrder",
+        "summary": "Pedir una entrega",
+        "tags": [
+          "courier"
+        ],
+        "responses": {
+          "201": {
+            "description": "Forma pendiente de documentar (lote MV2b)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Forma pendiente de documentar (lote MV2b)"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem Details (RFC 9457). `code`: unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem Details (RFC 9457). `code`: forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem Details (RFC 9457). `code`: conflict, idempotency_conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem Details (RFC 9457). `code`: validation_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Repetir la misma clave devuelve el resultado ya creado, sin duplicarlo",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-tindivo-role": "customer",
+        "x-tindivo-pending": true
+      }
+    },
+    "/customer/courier-orders/{id}/cancel": {
+      "post": {
+        "operationId": "cancelCourierOrder",
+        "summary": "Cancelar una entrega propia",
+        "tags": [
+          "courier"
+        ],
+        "responses": {
+          "200": {
+            "description": "Forma pendiente de documentar (lote MV2b)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Forma pendiente de documentar (lote MV2b)"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem Details (RFC 9457). `code`: unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem Details (RFC 9457). `code`: forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-tindivo-role": "customer",
+        "x-tindivo-pending": true
+      }
+    },
+    "/customer/phone/send-code": {
+      "post": {
+        "operationId": "sendPhoneCode",
+        "summary": "Enviar el código de verificación por SMS",
+        "tags": [
+          "account"
+        ],
+        "responses": {
+          "200": {
+            "description": "Forma pendiente de documentar (lote MV2b)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Forma pendiente de documentar (lote MV2b)"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem Details (RFC 9457). `code`: unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem Details (RFC 9457). `code`: forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem Details (RFC 9457). `code`: conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem Details (RFC 9457). `code`: rate_limited",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-tindivo-role": "customer",
+        "x-tindivo-pending": true
+      }
+    },
+    "/customer/phone/verify": {
+      "post": {
+        "operationId": "verifyPhoneCode",
+        "summary": "Verificar el código recibido por SMS",
+        "tags": [
+          "account"
+        ],
+        "responses": {
+          "200": {
+            "description": "Forma pendiente de documentar (lote MV2b)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Forma pendiente de documentar (lote MV2b)"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem Details (RFC 9457). `code`: unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem Details (RFC 9457). `code`: forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem Details (RFC 9457). `code`: conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem Details (RFC 9457). `code`: validation_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-tindivo-role": "customer",
+        "x-tindivo-pending": true
+      }
+    },
+    "/push/subscriptions": {
+      "post": {
+        "operationId": "createPushSubscription",
+        "summary": "Registrar una suscripción de avisos (Web Push)",
+        "tags": [
+          "push"
+        ],
+        "responses": {
+          "201": {
+            "description": "Forma pendiente de documentar (lote MV2b)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Forma pendiente de documentar (lote MV2b)"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem Details (RFC 9457). `code`: unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem Details (RFC 9457). `code`: validation_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-tindivo-pending": true
+      },
+      "get": {
+        "operationId": "listPushSubscriptions",
+        "summary": "Suscripciones de avisos del usuario",
+        "tags": [
+          "push"
+        ],
+        "responses": {
+          "200": {
+            "description": "Forma pendiente de documentar (lote MV2b)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Forma pendiente de documentar (lote MV2b)"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem Details (RFC 9457). `code`: unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-tindivo-pending": true
+      },
+      "delete": {
+        "operationId": "deletePushSubscription",
+        "summary": "Dar de baja una suscripción de avisos",
+        "tags": [
+          "push"
+        ],
+        "responses": {
+          "200": {
+            "description": "Forma pendiente de documentar (lote MV2b)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Forma pendiente de documentar (lote MV2b)"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem Details (RFC 9457). `code`: unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-tindivo-pending": true
+      }
+    },
+    "/push/subscriptions/me": {
+      "get": {
+        "operationId": "getMyPushSubscription",
+        "summary": "Si este aparato tiene una suscripción activa",
+        "tags": [
+          "push"
+        ],
+        "responses": {
+          "200": {
+            "description": "Forma pendiente de documentar (lote MV2b)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Forma pendiente de documentar (lote MV2b)"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem Details (RFC 9457). `code`: unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-tindivo-pending": true
+      }
+    }
+  }
+}
