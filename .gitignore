@@ -64,6 +64,8 @@ Docs/QA-CATALOGO-CREDENCIALES.md
 /test-results/
 /playwright-report/
 /blob-report/
+# JUnit de la suite de la API que genera el job de integración de CI
+/apps/api/test-results/
 
 # sesiones de Playwright (contienen tokens locales de e2e)
 e2e/.auth/
