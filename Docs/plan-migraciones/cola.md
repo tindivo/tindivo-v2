@@ -14,7 +14,7 @@ Estados: `[ ]` pendiente · `[~]` en curso · `[x]` hecho · `[!]` bloqueado (co
 ## Fase 0 · Cimientos
 
 - [x] **P0.1** · Commit de `Docs/arquitectura/`, `Docs/plan-migraciones/`, esta cola y la bitácora — aprobado por Jesús el 2026-10-09
-- [~] **P0.2** · Inventario de rojos heredados en `develop` limpio (`lint`, `check:ds`, `type-check`, `test --force`)
+- [x] **P0.2** · Inventario de rojos heredados: **ninguno**. `lint` 0 errores (37 avisos), `check:ds` verde, `type-check` 12/12 y 1 063 tests de 10 paquetes, todo con `Cached: 0` (bitácora del 2026-10-09). La suite de `@tindivo/api` se mide en P0.3
 - [x] **P0.4** · Entorno autónomo: bloqueos de §2.2 en `.claude/settings.json`, candado de la base local (`pnpm db:cycle`, `pnpm db:lock status`) y `.env.local` revisados: solo claves locales — rama `chore/p0-entorno-autonomo`
 - [ ] **P0.3** · Job de integración en CI (Supabase fijado, `db reset` + `db:seed:e2e` + suite de la API con `--force`). Va antes que el resto porque las pruebas pesadas corren en GitHub y no en el PC de Jesús
 - [ ] **MV1** · *(carril móvil, adelantado)* Expediente de tiendas: `Docs/customer_app_migration/07-publicacion-tiendas.md` con el checklist de Google Play y App Store, los textos de la ficha, el borrador de la política de privacidad, la nota para el revisor, el inventario de datos por SDK para *Data safety* y *App Privacy*, y el diseño del negocio de demostración para la revisión
