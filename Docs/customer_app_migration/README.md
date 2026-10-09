@@ -21,6 +21,7 @@
 | Quiero… | Lee |
 |---|---|
 | Crear las **cuentas de Apple, Google Play y Firebase** | [`05-arranque/01-cuentas-y-firmas.md`](05-arranque/01-cuentas-y-firmas.md) |
+| **Pasar la revisión** de las tiendas a la primera (privacidad, borrado, cuenta de revisión, ficha) | [`07-publicacion-tiendas.md`](07-publicacion-tiendas.md) |
 | Arreglar **lo urgente hoy** (copias de seguridad, región, planes) | [`05-arranque/02-planes-region-y-mejoras-rapidas.md`](05-arranque/02-planes-region-y-mejoras-rapidas.md) |
 | Ver el **orden de trabajo** y el camino crítico | [`05-arranque/03-plan-de-ejecucion.md`](05-arranque/03-plan-de-ejecucion.md) |
 | Entender **cómo funciona hoy** Tindivo | [`01-sistema-actual/01-mapa-del-sistema.md`](01-sistema-actual/01-mapa-del-sistema.md) y luego `02`…`05` |
