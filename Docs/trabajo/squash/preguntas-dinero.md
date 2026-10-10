@@ -1,53 +1,67 @@
 # Preguntas para Jesús: área de dinero
 
 > 2026-10-10 · Salen de escribir `Docs/negocio/dinero.md` desde las definiciones vivas de `tindivo-prod` (solo
-> lectura). Ninguna es un defecto activo: las rutas dudosas nunca se usaron o se usaron una vez. Se borra cuando estén
-> respondidas.
+> lectura), con la revisión de Codex. El uso escaso o nulo de una ruta no demuestra que no tenga defectos. Que el
+> sistema haga algo tampoco demuestra que esté aprobado: por eso las confirmaciones también son preguntas. Se borra
+> cuando estén respondidas.
 
 ## 1. Prepago verificado y cancelado: ¿quién le devuelve al cliente?
 
-`handle_prepaid_refund_on_cancel` carga al negocio el total del pedido como deuda **con Tindivo** cuando cancela un
-prepago que ya estaba verificado. Eso solo cuadra si **Tindivo** le devuelve el dinero al cliente. Si es el negocio
-quien le devuelve directamente (el Yape fue a su cuenta), con ese cargo pagaría dos veces.
+`handle_prepaid_refund_on_cancel` carga al negocio el total del pedido como deuda **con Tindivo** cuando se cancela un
+prepago ya verificado. Eso solo cuadra si **Tindivo** le devolvió el dinero al cliente; si el negocio le devolvió
+directamente (el Yape fue a su cuenta), con ese cargo pagó dos veces.
 
-Nunca ha ocurrido (el único reembolso de la historia fue por apelación). **Recomendación:** que el negocio le devuelva
-directamente al cliente y que el cargo automático desaparezca; el cargo a la deuda queda solo para cuando Jesús adelanta
-la devolución (apelaciones). **¿Cómo quieres que funcione?**
+**Ya pasó una vez:** pedido `GWYVM24F`, S/ 20.50, cancelado por el negocio el 2026-08-21; el cargo se liquidó el
+2026-08-30. **¿Quién le devolvió al cliente en ese caso?** Y para adelante: **¿quién devuelve, con qué evidencia y
+cuándo corresponde cargar deuda con Tindivo?** Recomendación: que el negocio devuelva directamente y que el cargo
+automático exista solo cuando Tindivo adelantó la devolución.
 
-## 2. La «cobertura de fraude» suma deuda al negocio
+## 2. Cobertura de fraude: ¿quién es el beneficiario y quién financia la pérdida?
 
-`resolve_fraud_claim`, al aprobar una reclamación, crea un `refund_charge` **positivo** contra el negocio: el negocio
-pasa a deber más. Si la cobertura existe para proteger al negocio de un cliente que lo estafó, el signo está al revés
-(debería restar deuda). Nunca se ha usado. **¿Para qué existe la cobertura de fraude?** Si no hay un caso de uso,
-recomiendo retirarla antes de que alguien la use.
+`app_settings.fraud_coverage` dice que Tindivo cubre el 50 % de la pérdida, hasta S/ 200 al mes, pero ninguna función
+lee esos valores. Y `resolve_fraud_claim`, al aprobar una reclamación, **suma** deuda al negocio. Nunca se ha usado.
+Recomendación: definir para quién es la cobertura y quién paga antes de cambiar el signo o retirar el flujo.
 
-## 3. Las apelaciones son la excepción a «no retener fondos»
+## 3. Apelaciones: ¿autorizas que Jesús adelante dinero propio y lo recupere del negocio?
 
-Con una apelación aprobada, Jesús le devuelve el dinero al cliente y se lo cobra al negocio por la deuda: Tindivo
-adelanta. Es lo que hacía el fondo de contingencia que se eliminó en la `0123`. **¿Lo aceptas como la única excepción
-del principio?** Si sí, se escribe así en el canon (hoy `plataforma.md` lo describe como «excepción viva en el
-código», sin aprobación tuya).
+`register_appeal_refund` exige una captura de Yape o Plin y carga el total al negocio. Eso no acredita quién financió
+la devolución. **¿Autorizas que Jesús adelante dinero propio y lo recupere del negocio?** Si sí, el principio de
+`plataforma.md` lo dirá así.
 
-## 4. Bloqueo por deuda
+## 4. Bloqueo por deuda: ¿solo manual?
 
-Existe la marca `blocked_for_debt` y el pago la quita, pero nada la pone: no hay bloqueo automático. **¿Quieres que lo
-haya?** (Con qué umbral o plazo.) Si no, recomiendo retirar la marca para que nadie crea que protege algo.
+Hoy es solo manual (`block_business` con `p_for_debt`, `0180`, comprobado en producción); el automático lo retiró la `0179` como decisión de
+producto, y `debt_block_threshold` (S/ 600) es solo un aviso. **¿Confirmas que así debe quedar?**
 
-## 5. Sueldo del motorizado y punto de equilibrio
+## 5. Comisión y periodicidad frente a `DECISIONS.md §4`
 
-`DECISIONS.md §4` dice: sueldo fijo de **~S/ 30 por noche** (no por entrega) y equilibrio en **~10 pedidos por noche**.
-La base no lo guarda. Hoy hay tres motorizados y ~17 pedidos entregados por noche de media. **¿Siguen valiendo?**
-(Misma pregunta que la 2 de plataforma: se responde una vez.)
+`§4` dice comisión de S/ 1.00 y liquidación de comisiones **semanal** y de efectivo **diaria**. En las semanas
+reportadas desde el 2026-08-03, la comisión fue S/ 1.50 por delivery y S/ 1.00 por recojo. El código permite liquidar
+cuando se registra el pago y registra el efectivo por pedido; esa granularidad no determina si debe rendirse dentro
+del mismo día. **¿Confirmas lo que hace producción
+como regla vigente?** (Misma pregunta que la 1 de plataforma para la comisión.)
 
-## 6. Pendiente operativo (no es pregunta)
+## 6. Sueldo del motorizado y punto de equilibrio
 
-Hay **3 rendiciones de Entregas (S/ 9.00) sin confirmar**: el motorizado las rindió y falta tu confirmación en el
-panel de admin.
+`§4` dice ~S/ 30 por motorizado por noche y equilibrio en ~10 pedidos por noche; la base no lo guarda. **¿Sigue vigente
+el sueldo? ¿Con qué costos y con cuántos motorizados se calcula hoy el equilibrio?**
 
-## Lo que ya no es pregunta (documentación vieja, corregida en el canon)
+## 7. Faltantes de efectivo
 
-- **La comisión es S/ 1.50**, no S/ 1.00 (pregunta 1 de plataforma; evidencia: toda la historia de cargos).
-- **El efectivo se rinde pedido a pedido**, no en una liquidación diaria: 340 rendiciones, una por pedido.
-- **Las comisiones no se liquidan cada semana por regla**: se liquidan cuando el negocio paga.
-- **`advance_order` calcula bien lo que rinde el motorizado** desde la `0146` (la nota que decía lo contrario era de la
-  `0140`).
+Cuando el negocio disputa una rendición, Jesús la resuelve con un monto, pero el código no dice **quién cubre la
+diferencia**: el motorizado, el negocio o Tindivo. Nunca ha habido una disputa. **¿Quién la cubre?**
+
+## 8. Entregas cancelada después de cobrar
+
+Si una entrega se cancela después de que el motorizado cobró los S/ 3, el cobro se conserva y se puede rendir. **¿Se le
+devuelve al cliente? ¿Quién y cuándo?**
+
+## 9. Ventas de Store
+
+Store registra precio y estado vendido, pero no un cobro. **¿Quién cobra una venta de Store y cómo llega ese dinero
+(o la parte de Tindivo) a Tindivo?**
+
+## Pendiente operativo
+
+Hay **3 rendiciones de Entregas (S/ 9.00)** que el motorizado declaró haber rendido y que esperan tu confirmación en
+el panel de admin.
