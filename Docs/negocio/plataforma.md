@@ -49,10 +49,10 @@ Encargos («te lo compramos y te lo llevamos») no existe: se descartó (ADR 003
 
 1. **Tindivo no retiene fondos.** El cliente le paga directo al negocio (Yape, Plin o efectivo) y Tindivo cobra su
    comisión al negocio aparte. **Por qué:** evita el riesgo regulatorio de intermediar dinero. El fondo de contingencia
-   se eliminó en la `0123`. **Una excepción sigue viva en el código:** cuando una apelación se aprueba (el negocio
+   se eliminó en la `0123`. **Una excepción, autorizada por Jesús:** cuando una apelación se aprueba (el negocio
    rechazó por error un comprobante de prepago), Jesús le devuelve el dinero al cliente y lo carga a la deuda del
-   negocio (`register_appeal_refund` → `refund_charge`). No ha ocurrido nunca. Si Jesús lo autoriza como excepción
-   está preguntado en el área de dinero (`Docs/negocio/dinero.md`).
+   negocio (`register_appeal_refund` → `refund_charge`). Es la única forma en que Tindivo pone dinero en el medio:
+   adelanta y recupera, nunca guarda el del cliente (ADR 0036).
 2. **El antifraude es humano.** Ante un cliente nuevo o con strikes que paga contraentrega, **la cajera lo llama**
    antes de cocinar (`validando`). La llamada es antifraude, no un canal para avisarle del estado del pedido.
 3. **Se cobra solo lo entregado.** Un pedido cancelado no genera comisión ni deuda.
@@ -70,5 +70,4 @@ El detalle (deuda, liquidaciones, corte de caja del motorizado) está en `Docs/n
 
 ## Pendientes
 
-Ver `Docs/trabajo/squash/preguntas-plataforma.md`: datos del negocio que la base no guarda (sueldo del motorizado,
-punto de equilibrio) y cómo entrega Pollería Nadia.
+Ver `Docs/trabajo/squash/preguntas-plataforma.md`: cómo entrega Pollería Nadia.

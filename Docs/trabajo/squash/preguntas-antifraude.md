@@ -1,26 +1,23 @@
 # Preguntas para Jesús: área de antifraude
 
-> 2026-10-10 · Salen de escribir `Docs/negocio/antifraude.md` contra `tindivo-prod` (solo lectura). Se borra cuando
-> estén respondidas.
+> 2026-10-10 · Se borra cuando esté respondida.
 
-## 1. ~~Cero no-shows~~ — respondida
+## Tu resumen de las reglas, frente a lo que hace el código
 
-**Jesús, 2026-10-10:** hasta ahora no se usa; si el cliente no sale, el motorizado sigue con otros pedidos. Faltó
-implementar la foto de que el cliente no sale, a partir del minuto 5: al backlog.
+**Jesús, 2026-10-10:** «Para todos, prepago. Contraentrega para quien cumpla: está en San Jacinto con la ubicación, o
+su número está en el directorio. Al menos ha hecho un pedido por la plataforma.»
 
-<details><summary>Lo que se preguntó</summary>
+Coincide en lo esencial con `DECISIONS.md §8` y con producción. Tres diferencias para confirmar, sin prisa (nadie ha
+puesto a prueba el antifraude: no hay ni un no-show):
 
+1. **Ubicación en San Jacinto sin historial:** hoy da contraentrega **con llamada** de la cajera (`validando`), porque
+   el GPS del navegador se falsifica fácil. ¿Se queda así, o debe ser contraentrega directa?
+2. **«Al menos un pedido por la plataforma»:** hoy cuenta cualquier pedido **entregado** a ese teléfono, también los que
+   tecleó la cajera. ¿Así está bien?
+3. **Lo que tu resumen no menciona y el código aplica:** prepago obligatorio por encima de **S/ 80** aunque el cliente
+   sea conocido, y los strikes (con 2, solo prepago; con 3, bloqueo de 30 días). ¿Siguen?
 
-En `tindivo-prod` no hay **ni un** pedido cancelado por no-show (ni en la puerta ni en el mostrador), ni un strike, ni
-un cliente bloqueado, en unos 1,000 pedidos entregados desde el 2026-08-08. **¿Cuando un cliente no aparece, el
-motorizado lo reporta con el botón, o se resuelve de otra forma** (el negocio cancela, se lo come alguien)? Si no se
-reporta, los strikes nunca se activan y el antifraude por historial no protege a nadie. Recomendación: preguntar a
-los motorizados y a las cajeras cómo resuelven hoy un cliente que no sale.
+## Respondido el 2026-10-10
 
-</details>
-
-## 2. Las reglas de `DECISIONS.md §8` como canon
-
-`antifraude.md` describe el orden de decisión de `§8` y lo contrasta con las funciones y parámetros vivos (umbrales de
-strikes, monto de S/ 80, plazo de 5 minutos, reglas del mostrador). **¿Confirmas que esas reglas siguen siendo las que
-quieres?** Hoy nadie las ha puesto a prueba en producción (pregunta 1).
+- El no-show no se ha usado: si el cliente no sale, el motorizado sigue con otros pedidos. La foto de no-show, al
+  backlog.

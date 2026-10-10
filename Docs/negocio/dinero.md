@@ -45,8 +45,8 @@ Mandan los valores de `app_settings`, no este archivo; al 2026-10-10:
    (`recalc_business_balance`) con cada cambio en los cargos; nadie la escribe a mano.
 3. **El pago:** cuando el negocio paga (Yape, efectivo u otro), Jesús lo registra eligiendo los cargos exactos que
    cubre (`settle_business_charges`). El monto tiene que coincidir al céntimo con la suma de esos cargos; queda un
-   `restaurant_payments` y los cargos pasan a `settled`. El código no fija una periodicidad: se liquida cuando el
-   negocio paga (`DECISIONS.md §4` dice «semanal»: pendiente de confirmar).
+   `restaurant_payments` y los cargos pasan a `settled`. **Se liquida cada semana** (Jesús, 2026-10-10); el código no
+   fuerza la fecha: registra el pago cuando llega.
 4. **Bloqueo por deuda: solo manual.** Jesús puede suspender a un negocio y marcar que es por deuda
    (`block_business(…, p_for_debt)`, `0180`; comprobado en la definición viva); registrar un pago levanta esa marca solo si la deuda queda en cero o
    menos. No hay corte automático: la `0178` lo introdujo y la `0179` lo retiró como decisión de producto, porque
@@ -82,9 +82,10 @@ Medido al 2026-10-10: 340 rendiciones confirmadas (S/ 15,776.70), 1 pendiente y 
 
 ## Reembolsos al cliente
 
-El código registra tres caminos de **cargos de reembolso** (`refund_charge`) contra el negocio. **Registrar el cargo no
-ejecuta ninguna devolución**: quién le devuelve al cliente, y cuándo corresponde cargar la deuda con Tindivo, lo
-decide Jesús (preguntas 1 a 3).
+**Quién devuelve** (ADR 0036): si hay que devolverle a un cliente y se llega a un acuerdo con el restaurante, Tindivo
+le devuelve y el restaurante se lo repone por su deuda. Hasta hoy no ha hecho falta: el restaurante siempre entrega la
+comida. El código registra tres caminos de **cargos de reembolso** (`refund_charge`); registrar el cargo no ejecuta
+ninguna devolución.
 
 | Caso | Qué registra el sistema | Función |
 |---|---|---|
@@ -107,10 +108,17 @@ El cliente paga los S/ 3 al motorizado al recoger o al entregar (según quién p
 registra el cobro al avanzar la entrega (`driver_courier_step` → `advance_courier_order`, `transport_collected_at`),
 lo rinde a Tindivo (`driver_remit_courier_fee` → `remitted_at`) y Jesús confirma haberlo recibido
 (`admin_confirm_courier_remittance`). El producto llega siempre pagado: el motorizado no lo cobra ni lo paga. Si una
-entrega se cancela después del cobro, el cobro se conserva y se puede rendir; el código no devuelve nada.
+entrega se cancela después del cobro, el cobro se conserva y se puede rendir; **la devolución la hace Tindivo**
+(ADR 0036), fuera del código.
 
 Medido: 3 entregas con S/ 9.00 **declarados como rendidos** por el motorizado y sin confirmación de Jesús, que todavía
 no ha enseñado a los motorizados el flujo de rendición.
+
+## El motorizado y el punto de equilibrio
+
+El motorizado gana **S/ 30 por noche**, fijo, no por entrega. Cada pedido con entrega le deja a Tindivo S/ 3.50 (S/ 2.00
+de envío más S/ 1.50 de comisión), así que **un motorizado se paga con unos 8.5 pedidos por noche** (Jesús,
+2026-10-10). En los últimos 30 días hubo ~17 pedidos entregados por noche entre los tres motorizados.
 
 ## Tindivo Store
 
