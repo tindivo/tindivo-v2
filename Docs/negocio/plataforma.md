@@ -63,11 +63,12 @@ Encargos («te lo compramos y te lo llevamos») no existe: se descartó (ADR 003
 ## Cómo gana dinero (resumen)
 
 Por cada pedido entregado, el negocio le debe a Tindivo una **comisión** más la **tarifa de envío** que pagó el
-cliente, y lo liquida aparte. Valores vivos en `app_settings` al 2026-10-10: comisión de **S/ 1.50** por pedido con
+cliente, y lo liquida aparte. Valores vivos en `app_settings` al 2026-10-10 (la comisión, confirmada por Jesús el
+mismo día): comisión de **S/ 1.50** por pedido con
 entrega y **S/ 1.00** por recojo; envío de **S/ 2.00** cerca y **S/ 2.50** lejos; Entregas, **S/ 3** que paga el cliente.
-El detalle (deuda, liquidaciones, corte de caja del motorizado) es del área de dinero, pendiente de reescribir.
+El detalle (deuda, liquidaciones, corte de caja del motorizado) está en `Docs/negocio/dinero.md`.
 
 ## Pendientes
 
-Ver `Docs/trabajo/squash/preguntas-plataforma.md`: la comisión que dice `DECISIONS.md §4` no es la que cobra
-producción, y hay datos del negocio que la base no guarda.
+Ver `Docs/trabajo/squash/preguntas-plataforma.md`: datos del negocio que la base no guarda (sueldo del motorizado,
+punto de equilibrio) y cómo entrega Pollería Nadia.

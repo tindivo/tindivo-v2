@@ -105,9 +105,13 @@ tindivo-v2/
 
 | Distancia | Delivery (paga el cliente) | Comisión (pone el restaurante) | **Total a Tindivo** | Restaurante pierde |
 |---|---|---|---|---|
-| **Cerca** (`near`) | S/2.00 | S/1.00 | **S/3.00** | S/1.00 |
-| **Lejos** (`far`) | S/2.50 | S/1.00 | **S/3.50** | S/1.00 |
+| **Cerca** (`near`) | S/2.00 | S/1.50 | **S/3.50** | S/1.50 |
+| **Lejos** (`far`) | S/2.50 | S/1.50 | **S/4.00** | S/1.50 |
 | **Recojo** (`pickup`) | S/0 | S/1.00 | **S/1.00** | S/1.00 |
+
+> **La comisión por pedido con entrega es S/1.50 (corregido 2026-10-10, confirmado por Jesús).** Esta tabla decía
+> S/1.00 y producción cobró S/1.50 desde el primer pedido. El envío lo paga el cliente al negocio, y el negocio se lo
+> paga a Tindivo junto con la comisión. Detalle vivo: `Docs/negocio/dinero.md`.
 
 > **El recojo cobra S/1.00, no S/0.50 (corregido 2026-09-07).** Esta tabla decía
 > S/0.50 desde el principio y el número vivo es 1.00 —
@@ -117,7 +121,7 @@ tindivo-v2/
 > faltaba era que alguien lo escribiera aquí. **El número manda desde
 > `app_settings`, no desde esta tabla.**
 
-- **Narrativa al dueño**: "S/1 de comisión; el delivery lo paga el cliente". La UI de deuda muestra el desglose (delivery del cliente vs. comisión Tindivo) sin mentir.
+- **Narrativa al dueño**: "S/1.50 de comisión; el delivery lo paga el cliente". La UI de deuda muestra el desglose (delivery del cliente vs. comisión Tindivo) sin mentir.
 - El **cliente paga al restaurante** (comida + delivery). El restaurante transfiere a Tindivo el monto conjunto.
 - Motorizado: **sueldo fijo** (~S/30/noche), no por entrega. Sin mensualidad. 100% transaccional.
 - Cobro **solo por pedido entregado** (cancelados no suman comisión ni deuda).

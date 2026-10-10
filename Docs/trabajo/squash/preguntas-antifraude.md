@@ -3,13 +3,21 @@
 > 2026-10-10 · Salen de escribir `Docs/negocio/antifraude.md` contra `tindivo-prod` (solo lectura). Se borra cuando
 > estén respondidas.
 
-## 1. Cero no-shows en toda la historia: ¿no pasan o no se reportan?
+## 1. ~~Cero no-shows~~ — respondida
+
+**Jesús, 2026-10-10:** hasta ahora no se usa; si el cliente no sale, el motorizado sigue con otros pedidos. Faltó
+implementar la foto de que el cliente no sale, a partir del minuto 5: al backlog.
+
+<details><summary>Lo que se preguntó</summary>
+
 
 En `tindivo-prod` no hay **ni un** pedido cancelado por no-show (ni en la puerta ni en el mostrador), ni un strike, ni
 un cliente bloqueado, en unos 1,000 pedidos entregados desde el 2026-08-08. **¿Cuando un cliente no aparece, el
 motorizado lo reporta con el botón, o se resuelve de otra forma** (el negocio cancela, se lo come alguien)? Si no se
 reporta, los strikes nunca se activan y el antifraude por historial no protege a nadie. Recomendación: preguntar a
 los motorizados y a las cajeras cómo resuelven hoy un cliente que no sale.
+
+</details>
 
 ## 2. Las reglas de `DECISIONS.md §8` como canon
 

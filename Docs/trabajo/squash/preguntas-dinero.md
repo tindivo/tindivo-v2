@@ -5,22 +5,37 @@
 > sistema haga algo tampoco demuestra que esté aprobado: por eso las confirmaciones también son preguntas. Se borra
 > cuando estén respondidas.
 
+## 0. Nueva, de la respuesta de Jesús: ¿se le devuelven S/ 20.50 a La Florencia?
+
+`GWYVM24F` no tuvo devolución (Jesús: se canceló para avanzar con el pedido, que se entregó como `EFFF947D`), pero el
+cargo automático le sumó S/ 20.50 y La Florencia los pagó el 2026-08-30 dentro de su Yape de S/ 111.50. **Le pagó a
+Tindivo S/ 20.50 de más.** ¿Se le devuelven o se le descuentan de su próxima liquidación? Corregirlo toca dinero:
+espera tu decisión.
+
 ## 1. Prepago verificado y cancelado: ¿quién le devuelve al cliente?
 
 `handle_prepaid_refund_on_cancel` carga al negocio el total del pedido como deuda **con Tindivo** cuando se cancela un
 prepago ya verificado. Eso solo cuadra si **Tindivo** le devolvió el dinero al cliente; si el negocio le devolvió
 directamente (el Yape fue a su cuenta), con ese cargo pagó dos veces.
 
-**Ya pasó una vez:** pedido `GWYVM24F`, S/ 20.50, cancelado por el negocio el 2026-08-21; el cargo se liquidó el
-2026-08-30. **¿Quién le devolvió al cliente en ese caso?** Y para adelante: **¿quién devuelve, con qué evidencia y
+**El único caso fue un falso positivo** (pregunta 0): la cancelación era para volver a crear el pedido, no una
+devolución. Con la función de adelantar pedido no debería repetirse, pero el cargo automático sigue ahí. Para adelante: **¿quién devuelve, con qué evidencia y
 cuándo corresponde cargar deuda con Tindivo?** Recomendación: que el negocio devuelva directamente y que el cargo
 automático exista solo cuando Tindivo adelantó la devolución.
 
-## 2. Cobertura de fraude: ¿quién es el beneficiario y quién financia la pérdida?
+## 2. ~~Cobertura de fraude~~ — respondida
+
+**Jesús, 2026-10-10:** fue una función «por si acaso» y nunca se usó: los casos se coordinan por WhatsApp. Queda en
+el backlog retirarla del código (`Docs/trabajo/backlog.md`).
+
+<details><summary>Lo que se preguntó</summary>
+
 
 `app_settings.fraud_coverage` dice que Tindivo cubre el 50 % de la pérdida, hasta S/ 200 al mes, pero ninguna función
 lee esos valores. Y `resolve_fraud_claim`, al aprobar una reclamación, **suma** deuda al negocio. Nunca se ha usado.
 Recomendación: definir para quién es la cobertura y quién paga antes de cambiar el signo o retirar el flujo.
+
+</details>
 
 ## 3. Apelaciones: ¿autorizas que Jesús adelante dinero propio y lo recupere del negocio?
 
@@ -38,8 +53,8 @@ producto, y `debt_block_threshold` (S/ 600) es solo un aviso. **¿Confirmas que 
 `§4` dice comisión de S/ 1.00 y liquidación de comisiones **semanal** y de efectivo **diaria**. En las semanas
 reportadas desde el 2026-08-03, la comisión fue S/ 1.50 por delivery y S/ 1.00 por recojo. El código permite liquidar
 cuando se registra el pago y registra el efectivo por pedido; esa granularidad no determina si debe rendirse dentro
-del mismo día. **¿Confirmas lo que hace producción
-como regla vigente?** (Misma pregunta que la 1 de plataforma para la comisión.)
+del mismo día. **La comisión ya la confirmó Jesús (S/ 1.50).** Queda la periodicidad: **¿se liquida cuando el negocio paga, o
+quieres una fecha fija? ¿El efectivo se rinde el mismo día?**
 
 ## 6. Sueldo del motorizado y punto de equilibrio
 
@@ -63,5 +78,5 @@ Jesús es el único vendedor y cobra al cerrar la venta por WhatsApp, fuera de l
 
 ## Pendiente operativo
 
-Hay **3 rendiciones de Entregas (S/ 9.00)** que el motorizado declaró haber rendido y que esperan tu confirmación en
-el panel de admin.
+Las 3 rendiciones de Entregas (S/ 9.00) sin confirmar: no es un problema. Jesús todavía no ha enseñado a los
+motorizados el flujo de rendición (2026-10-10).

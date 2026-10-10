@@ -4,7 +4,13 @@
 > lectura). Según el estándar §4, cuando el código y un documento no coinciden, Claude no elige: pregunta. Cada
 > pregunta trae su recomendación. Este archivo se borra cuando estén respondidas.
 
-## 1. La comisión por pedido con entrega: ¿S/ 1.00 o S/ 1.50?
+## 1. ~~La comisión por pedido con entrega~~ — respondida
+
+**Jesús, 2026-10-10:** S/ 1.50 al restaurante; el cliente paga S/ 2 de envío al negocio, y el negocio se los paga a
+Tindivo. Corregido en `DECISIONS.md §4`, `plataforma.md` y `dinero.md`.
+
+<details><summary>Lo que se preguntó</summary>
+
 
 - `DECISIONS.md §4` dice **S/ 1.00** («S/1 de comisión; el delivery lo paga el cliente»).
 - `tindivo-prod` cobra **S/ 1.50**: `app_settings.commissions = {delivery: 1.5, pickup: 1}`, sin excepciones por
@@ -16,6 +22,8 @@
 
 **Recomendación:** S/ 1.50 es lo vigente y se corrige `§4`. **¿Confirmas que S/ 1.50 es el precio acordado con los
 aliados?**
+
+</details>
 
 ## 2. Datos del negocio que la base no guarda
 
