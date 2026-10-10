@@ -172,7 +172,8 @@ comportamiento, no al aplicar la migración.
 
 Para cualquier tarea de implementación:
 
-1. **Lee el spec** correspondiente en `/specs`. Si no hay spec, pídelo antes de empezar.
+1. **Lee el spec** correspondiente en `Docs/` (no existe `/specs`). La documentación se está reorganizando según
+   `Docs/planes/estandar-docs/estandar.md`: si no hay spec claro o vigente, pídelo antes de empezar.
 2. **Plan corto** de los pasos numerados que vas a ejecutar.
 3. **Implementa** un paso.
 4. **Verifica** ese paso: corre el/los comando(s) de verificación (ver §5) y captura el output.
@@ -185,7 +186,7 @@ Para cualquier tarea de implementación:
 ## 4. Estructura del repo
 
 ```
-/specs         <- markdowns con escenarios y criterios de aceptación (fuente de verdad de qué construir)
+/Docs          <- specs y documentación; en reorganización (Docs/planes/estandar-docs/estandar.md)
 /apps          <- customer, negocios, motorizados, admin, api
 /packages      <- core, contracts, api-client, supabase, ui, tsconfig
 /supabase      <- migrations/ (inmutables), functions/, config.toml

@@ -25,7 +25,7 @@ real de su RLS **no** es reproducible desde sus migraciones.
 
 - **Monorepo** Turborepo + pnpm workspaces (versiones en `pnpm-workspace.yaml` catalog).
 - **5 proyectos**: `apps/api` (REST `/api/v1`) + 4 frontends (`customer`, `negocios`, `motorizados`, `admin`), uno por subdominio.
-- **Sin Server Actions ni BFFs** (Capacitor-ready). **Sin Prisma/Drizzle** (RLS).
+- **Sin Server Actions ni BFFs**: las apps nativas (Swift + Kotlin, no Capacitor: `Docs/customer_app_migration/`) consumen la misma API REST. **Sin Prisma/Drizzle** (RLS).
 - `packages/core` puro: hexagonal solo en `orders`; services+repos para el resto.
 - `packages/contracts`: Zod canónico (primitivas, enums, máquina de estados, errores).
 - Supabase "Web v2" (ref `zpnipajgwfthxhdtzhly`), Postgres 17. **Independiente del v1.**
