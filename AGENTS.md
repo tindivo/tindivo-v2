@@ -15,7 +15,7 @@ al negocio (Yape, Plin o efectivo). Monorepo pnpm + Turborepo: `apps/{api,custom
 
 | Zona | Dónde | ¿Manda? |
 |---|---|---|
-| **Canon** | `Docs/decisiones/` (ADR), `DECISIONS.md` (decisiones §1–§32 e índice), y lo que vaya naciendo en `Docs/negocio/` (por crear), `Docs/arquitectura/`, `Docs/operacion/` | Sí |
+| **Canon** | `Docs/decisiones/` (ADR), `DECISIONS.md` (decisiones §1–§32 e índice), `Docs/glosario.md`, y lo que vaya naciendo en `Docs/negocio/`, `Docs/arquitectura/`, `Docs/operacion/` | Sí |
 | **Planes** | `Docs/planes/` | Sí, solo dentro de su alcance |
 | **Trabajo** | `Docs/trabajo/` | **No**: borradores, debates, análisis |
 | **Historia** | git | No. Lo borrado se cita por commit |

@@ -432,6 +432,10 @@ la atención de la cajera).
 
 ## 9. Fondo de contingencia
 
+> **Obsoleto desde la `0123` (`contingency_is_gone_and_appeals_reach_the_ledger`).** Comprobado el 2026-10-10 en
+> `tindivo-prod`: no quedan ni `contingency_advances` ni funciones de contingencia. Lo que queda de «Tindivo adelanta y
+> se lo cobra al negocio» son las apelaciones aprobadas: `Docs/negocio/plataforma.md`. Lo de abajo es historia.
+
 - Reserva inicial **S/200–300**. Único uso: devolución inmediata al cliente cuando un restaurante falla y el dueño no está.
 - **Registro contable obligatorio** en el pedido: cliente, motivo, monto, captura, timestamp+operador, **actor que carga** (`restaurante` suma a deuda / `tindivo` absorbe).
 - El negocio puede **disputar dentro de 48h** (congela deuda) → reporte tipo `advance_dispute`; el admin resuelve.
