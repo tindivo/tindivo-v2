@@ -1,7 +1,7 @@
 # Tindivo Entregas · Backlog
 
 > **2026-09-30 · Claude + Codex.** Todo lo que **no** entra en el
-> [MVP v1](./mvp-entregas-v1.md). Criterio para entrar: **¿es imprescindible
+> [MVP v1](../../Entregas/mvp-entregas-v1.md). Criterio para entrar: **¿es imprescindible
 > para probar el lunes?** Si no lo es, o ante la duda, viene aquí.
 > Prioridad: **alta** = lo primero cuando salga la señal; **baja** = puede no
 > hacerse nunca.

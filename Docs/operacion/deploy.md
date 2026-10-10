@@ -1,5 +1,8 @@
 # DEPLOY.md — Runbook de go-live (Tindivo 2.0)
 
+> Verificado: 2026-10-10 · solo que las rutas y comandos existen; los pasos de go-live no se han vuelto a ejecutar
+> desde el lanzamiento de agosto **(sin verificar)**. Antes de seguirlo, contrástalo con `Docs/planes/migraciones/`.
+
 Checklist accionable para llevar el piloto a producción (San Jacinto · La Florencia · 1 moto).
 Lo marcado **[tú]** requiere tus credenciales; el resto ya está preparado en el repo.
 

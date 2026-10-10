@@ -3,7 +3,7 @@
 > **2026-09-30 · Claude + Codex** (debate 3, `Docs/nuevo-modelo/debate-3/01`
 > a `04`). Se construye el **jueves 1 y el viernes 2 de octubre**, se ensaya el
 > **domingo 4** y se lanza el **lunes 5**. Todo lo que no está aquí va a
-> [`backlog-entregas.md`](./backlog-entregas.md).
+> [`backlog-entregas.md`](../trabajo/backlogs-viejos/backlog-entregas.md).
 >
 > **Sobre los datos:** en esta ronda ni Claude ni Codex tuvieron acceso a
 > `tindivo-prod` (el MCP respondió `Unauthorized` y no conectó). Las cifras de
@@ -122,7 +122,7 @@ distinguirlas de la comida. La lista (disponibles y mías) se refresca cada
 **No se construye** `courier_remittances` ni `driver_payment_qrs`.
 
 1. Al cerrar el turno, Jesús corre la **consulta de cuadre**
-   (`Docs/Entregas/consultas.sql`) en el panel de Supabase. Da, por
+   (`Docs/operacion/consultas-entregas.sql`) en el panel de Supabase. Da, por
    motorizado y noche (hora de Lima), las entregas **cobradas**, contadas
    **por `transport_collected_at`** (incluidas las canceladas que se cobraron),
    y los totales en Yape y en efectivo.
@@ -159,7 +159,7 @@ campos nuevos**:
 | 5 | Vie AM | **API del motorizado**: `GET /driver/courier-orders` (disponibles y mías) y `POST /driver/courier-orders/[id]/step` (`accept`, `pick_up`, `deliver`, `fail`, `release`), con `requireRole('driver')` | `apps/api/app/api/v1/driver/courier-orders/*` | 3 | Test de integración del ciclo completo con los dos pagadores y los cuatro motivos |
 | 6 | Vie PM | **Sección «Entregas»** en el inicio del motorizado: tarjetas, botones, hoja de método y hoja de motivo, polling de 15 s | `apps/motorizados/components/home/*`, `apps/motorizados/hooks/*` | 5 | Desde un celular, un motorizado acepta, recoge, cobra y entrega; la comida sigue funcionando igual |
 | 7 | Vie PM | **Textos y configuración**: quitar «todos los días» y «5 min» hardcodeados; revisar `app_settings.courier` en producción (precio 3, horario, `enabled`) | `courier-orders/route.ts`, textos de `apps/customer` | 1 | Los textos coinciden con la configuración |
-| 8 | Vie noche | **`consultas.sql`** (cuadre y medición) + regresión de comida + `pnpm lint`, `type-check` y `test` | `Docs/Entregas/consultas.sql` | 2 | Las consultas dan el resultado esperado sobre los pedidos de prueba; todo en verde |
+| 8 | Vie noche | **`consultas.sql`** (cuadre y medición) + regresión de comida + `pnpm lint`, `type-check` y `test` | `Docs/operacion/consultas-entregas.sql` | 2 | Las consultas dan el resultado esperado sobre los pedidos de prueba; todo en verde |
 
 Son **23 h**. Si el viernes a las 8 pm no está todo, **se corta en este
 orden:**

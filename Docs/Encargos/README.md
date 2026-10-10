@@ -36,7 +36,7 @@
 | 03 | [`03-plan-tecnico.md`](03-plan-tecnico.md) | Nombres técnicos, qué se reutiliza, tablas, RPC, rutas, apps, fases y riesgos |
 | 04 | [`04-decisiones-abiertas.md`](04-decisiones-abiertas.md) | **Registro de lo decidido** y lo que se asume por defecto |
 | 05 | [`05-que-se-puede-llevar.md`](05-que-se-puede-llevar.md) | Qué se lleva y qué no, medicinas, alcohol, límites, términos |
-| 06 | [`06-backlog.md`](06-backlog.md) | Lo que **no** entra en v1, cada cosa con su condición de entrada |
+| 06 | [`06-backlog.md`](../trabajo/backlogs-viejos/06-backlog-entregas-v1.md) | Lo que **no** entra en v1, cada cosa con su condición de entrada |
 | 08 | [`08-ux-conversion.md`](08-ux-conversion.md) | **El UX que manda:** pedir en dos toques desde cualquier sitio, superficies, moto en el mapa, modelo del directorio, medición |
 | — | [`../Home/README.md`](../Home/README.md) | El home nuevo tipo Rappi, puerta de entrada del servicio |
 | 09 | [`09-analisis-documentos-v2.md`](https://github.com/tindivo/tindivo-v2/blob/8f26aed/Docs/Encargos/09-analisis-documentos-v2.md) | Registro del razonamiento al pasar a la versión 2 de los documentos de Jesús |

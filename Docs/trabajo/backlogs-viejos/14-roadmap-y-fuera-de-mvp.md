@@ -273,7 +273,7 @@ cocina o la moto) sin costarle la reputación a nadie.
   construidas**, con las condiciones y las consultas de decisión escritas.
 
 📄 **Todo el detalle, los números medidos y las puertas de cada fase están en
-[`Docs/spec/spec_resenas.md`](spec/spec_resenas.md).** Este documento no repite
+[`Docs/spec/spec_resenas.md`](../../spec/spec_resenas.md).** Este documento no repite
 nada de eso: cuando difieran, gana el spec.
 
 ---

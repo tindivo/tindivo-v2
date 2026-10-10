@@ -1,8 +1,8 @@
 # Backlog
 
 > Trabajo, no norma. Ideas y arreglos pendientes, con su origen. Cuando se decide hacer uno, pasa a un plan en
-> `Docs/planes/` o a un PR. Hay cuatro backlogs viejos por fusionar aquí: `Docs/backlog/backlog.md`,
-> `Docs/14-roadmap-y-fuera-de-mvp.md`, `Docs/Entregas/backlog-entregas.md` y `Docs/Encargos/06-backlog.md`.
+> `Docs/planes/` o a un PR. Hay cuatro backlogs viejos por fusionar aquí: `Docs/trabajo/backlogs-viejos/backlog.md`,
+> `Docs/trabajo/backlogs-viejos/14-roadmap-y-fuera-de-mvp.md`, `Docs/trabajo/backlogs-viejos/backlog-entregas.md` y `Docs/trabajo/backlogs-viejos/06-backlog-entregas-v1.md`.
 
 | # | Qué | Por qué | Origen |
 |---|---|---|---|
