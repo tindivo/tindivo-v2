@@ -1,6 +1,6 @@
 # 03 · Plan técnico de Tindivo Entregas
 
-> **v1.0 · 2026-09-19.** Sustituye a la versión anterior (`historico-pre-v2/`). Basado en el repo al 2026-09-19: migraciones hasta la `0228` (**la siguiente libre es la `0229`**; comprobar con `supabase migration list`), `DECISIONS.md`, y las apps `customer`, `motorizados`, `admin` y `api`.
+> **v1.0 · 2026-09-19.** Sustituye a la versión anterior (`historico-pre-v2/` (borrado; en git: `8f26aed`)). Basado en el repo al 2026-09-19: migraciones hasta la `0228` (**la siguiente libre es la `0229`**; comprobar con `supabase migration list`), `DECISIONS.md`, y las apps `customer`, `motorizados`, `admin` y `api`.
 > **Nada de esto está construido.**
 >
 > **Superado en nombres (2026-09-22, `DECISIONS.md §31`):** el spec v1 de

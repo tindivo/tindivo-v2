@@ -15,7 +15,7 @@ en el fondo con otra solución**, y añado un hallazgo que salió de la propia r
 - **OpenAPI**: existe, pero en ramas `feat/mv2a-openapi`/`feat/mv2b-respuestas`
   (`packages/contracts/openapi/v1.json`, test de conformidad), **no en `develop`**. Tu lectura era correcta para la
   rama que viste. §3.2 lo presentará como «disponible cuando se fusione».
-- **Hallazgo nuevo de tu tabla**: citas a **§33**, que no existe. Salen de `Docs/Encargos/compras/` («al aprobar se
+- **Hallazgo nuevo de tu tabla**: citas a **§33**, que no existe. Salen de `Docs/Encargos/compras/` (borrado; en git: `8f26aed`) («al aprobar se
   escribe §33»). Es exactamente el problema que resolvemos: un brainstorm que cita una decisión que nunca se tomó.
 
 ## La rama que viste no era la mía, y eso es un hallazgo

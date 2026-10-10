@@ -97,7 +97,7 @@ un token de APNs de desarrollo no sirve en producción.
 | Google | ✅ (64 cuentas) | En nativo usar el flujo de **ID token** (`signInWithIdToken`) con clientes OAuth de iOS y Android |
 | **Sign in with Apple** | ❌ | **Obligatorio en iOS** al ofrecer Google u otro *login* social (guía 4.8); puede **ocultar el correo** → `users.email` no puede asumirse real |
 | **OTP de teléfono** | 🟡 (propio, Twilio Verify, SMS) | Añadir autocompletado: iOS `oneTimeCode`; Android **SMS Retriever** (requiere el *hash* de la app en el mensaje) |
-| Sesión | 🟡 | Guardar en **Keychain / Keystore**; refresco automático; el cierre de sesión debe ser **local al dispositivo** (`scope: local`), porque el `signOut()` global echó a todos los usuarios ya una vez (`Docs/handoff/2026-08-17-el-logout-que-echaba-a-todos.md`; guarda `check:auth`) |
+| Sesión | 🟡 | Guardar en **Keychain / Keystore**; refresco automático; el cierre de sesión debe ser **local al dispositivo** (`scope: local`), porque el `signOut()` global echó a todos los usuarios ya una vez (`Docs/handoff/2026-08-17-el-logout-que-echaba-a-todos.md` (borrado; en git: `8f26aed`); guarda `check:auth`) |
 | Borrado de cuenta | ❌ | `SEC-09` |
 
 ### MOB-05 · Enlaces profundos

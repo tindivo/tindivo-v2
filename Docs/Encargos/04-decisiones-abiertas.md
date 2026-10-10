@@ -1,6 +1,6 @@
 # 04 · Registro de decisiones de Tindivo Entregas
 
-> **v1.0 · 2026-09-19.** Sustituye a la versión anterior (`historico-pre-v2/`), que arrastraba decisiones superadas. Aquí solo lo **vigente**.
+> **v1.0 · 2026-09-19.** Sustituye a la versión anterior (`historico-pre-v2/` (borrado; en git: `8f26aed`)), que arrastraba decisiones superadas. Aquí solo lo **vigente**.
 > Cerradas por Jesús; lo demás lleva **propuesta por defecto**: si nadie dice lo contrario, se usa.
 
 ---

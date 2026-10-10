@@ -1,6 +1,6 @@
 # 05 · Qué se puede llevar
 
-> **v1.0 · 2026-09-19.** Sustituye a la versión anterior, mucho más larga (categorías del artículo, valor declarado, tratamiento especial de bebidas), que se conserva en `historico-pre-v2/`. Base: `origen-jesus-v2/02` §6 y el brief de publicidad §7.
+> **v1.0 · 2026-09-19.** Sustituye a la versión anterior, mucho más larga (categorías del artículo, valor declarado, tratamiento especial de bebidas), que se conserva en `historico-pre-v2/` (borrado; en git: `8f26aed`). Base: `origen-jesus-v2/02` §6 y el brief de publicidad §7.
 > Los textos legales son un **borrador de producto**; se recomienda revisión legal antes de publicar.
 
 ---

@@ -17,7 +17,7 @@ Hay 20 documentos con reglas que a veces se contradicen. Orden de autoridad:
 2. **`Tindivo_Documento_Maestro.md`** — capa de reconciliación; reglas de dinero y antifraude.
 3. **Specs `00`–`14`** — arquitectura técnica de referencia.
 4. **`Tindivo Design Spec.html` + `FLUJO_TINDIVO.md`** — verdad visual y de comportamiento del cliente.
-5. **`DOCUMENTACION_PANELES_TINDIVO.md`** — inspiración UX, **NO** target estético.
+5. **`DOCUMENTACION_PANELES_TINDIVO.md`** (borrado; en git: `8f26aed`) — inspiración UX, **NO** target estético.
 
 Donde FASE-1 o el Maestro corrigen un spec, ganan ellos. **Confirmado por el usuario (2026-05-29).**
 
@@ -267,7 +267,7 @@ Codificado en `@tindivo/contracts` (`order-status.ts`: `ORDER_TRANSITIONS`, `STA
 - **Validación por llamada** (la hace la **cajera** por default; el admin escala): todo **cliente nuevo** (primer pedido de un número), **monto grande**, y números con **strike** previo. El recurrente confiable fluye sin llamada. Prepago no se llama (ya pagó).
 - **Strikes anclados a número Y dirección** a la vez (cambiar uno no limpia el otro). **2 strikes → contra entrega bloqueada** (solo prepago). **3 strikes → bloqueo total 30 días** (`blocked_until`, tampoco prepago).
   El riesgo manda sobre cualquier historial: `customer_trusted_for_contraentrega` (`0171`, cláusula (3) ensanchada por `0182`) evalúa el bloqueo/prepago-forzado ANTES de mirar `compra_previa` o GPS — 2+ strikes anula esas señales sin importar cuánto historial tenga la cuenta.
-  **Nota de reconciliación (2026-09-05):** el escalón de 2 se eliminó a propósito en `0040` (decisión #3 del refactor antifraude) y se **reintrodujo sin registrar el porqué** 6 días después en `0044` (`prepaymentOnlyThreshold`/`customer_requires_prepayment`). Confirmado con el usuario que el escalón de 2 **se queda vigente tal como está hoy**; esto cierra la discrepancia entre `0040`/`IMPLEMENTACION_ANTIFRAUDE_LOG.md` (que documentan la eliminación) y el código vivo desde `0044` (que la reintrodujo). Los primeros quedan como historia, no como estado actual.
+  **Nota de reconciliación (2026-09-05):** el escalón de 2 se eliminó a propósito en `0040` (decisión #3 del refactor antifraude) y se **reintrodujo sin registrar el porqué** 6 días después en `0044` (`prepaymentOnlyThreshold`/`customer_requires_prepayment`). Confirmado con el usuario que el escalón de 2 **se queda vigente tal como está hoy**; esto cierra la discrepancia entre `0040`/`IMPLEMENTACION_ANTIFRAUDE_LOG.md` (borrado; en git: `8f26aed`) (que documentan la eliminación) y el código vivo desde `0044` (que la reintrodujo). Los primeros quedan como historia, no como estado actual.
 - **Definición exacta de `compra_previa`** (lo que habilita contraentrega libre sin llamada, una vez descartado el riesgo de arriba). Basta CUALQUIERA de estas tres, resueltas siempre por el **teléfono del perfil verificado por OTP**, nunca por el que el cliente escriba en el pedido:
   1. Un pedido `delivered` de ESTA cuenta.
   2. Un pedido `delivered` de este teléfono en v2 (incluye los manuales que tomó la cajera con `customer_user_id NULL`).
@@ -582,7 +582,7 @@ Si algún día se automatiza: el umbral ya está en `app_settings`, pero mete
 - **Color**: Brand `#F97316` · Brand Dark `#C2410C` · Brand Light `#FED7AA` · Ink `#1A1614` · Surface `#FAF6F1` · Card `#FFFFFF` · Border `#EAE7E2` · Success `#16A34A` · Warning `#F59E0B` · Danger `#DC2626` · Info `#0EA5E9`.
 - **Tipografía**: **Geist** para display, body y labels; **JetBrains Mono** solo para datos técnicos (IDs, precios, horas), con `tabular-nums` en contextos numéricos. Máx 3 tamaños por vista. La jerarquía se logra con peso (600-800 displays · 400-600 body · 500-700 microlabels), no con familias distintas.
   > Esta línea decía «Manrope única en toda la plataforma» y contradecía al código
-  > desde la migración del design system (ver `Docs/context/design-system-migration-plan.md`,
+  > desde la migración del design system (ver `Docs/context/design-system-migration-plan.md` (borrado; en git: `8f26aed`),
   > que eligió Geist por ser más cercana al look moderno manteniendo legibilidad en
   > móvil).
 
@@ -1222,8 +1222,8 @@ Migración aplicada y probada en local (`supabase db reset`), y empujada a `tind
 
 **Qué es.** `/store` (comprador) y «Tienda» en el admin: un solo vendedor (Jesús), piezas únicas,
 sin carrito ni pago web; todo se cierra por WhatsApp. Spec: `Docs/Store/tindivo-store-prd-v2.md`.
-Implementación, decisiones, límites y pasos de despliegue: `Docs/Store/IMPLEMENTACION.md`;
-estado de aceptación y qué no se pudo verificar: `Docs/Store/ACEPTACION.md`. Migraciones 0242–0245.
+Implementación, decisiones, límites y pasos de despliegue: `Docs/Store/IMPLEMENTACION.md` (borrado; en git: `8f26aed`);
+estado de aceptación y qué no se pudo verificar: `Docs/Store/ACEPTACION.md` (borrado; en git: `8f26aed`). Migraciones 0242–0245.
 
 **Lo que conviene no deshacer.**
 - Los invariantes (≤ 6 fotos, ≥ 1 para publicar, campos obligatorios, nada vuelve a borrador,
@@ -1240,3 +1240,14 @@ estado de aceptación y qué no se pudo verificar: `Docs/Store/ACEPTACION.md`. M
 **Gotcha de pruebas.** Un Chrome en segundo plano (`visibilityState: hidden`) pausa
 `requestAnimationFrame` y Next no revela el streaming ni hidrata: parece un bug de la app y no lo es.
 Para probar la UI usa Playwright (`e2e/store*.spec.ts`).
+
+---
+
+## 34 · 35. Decisiones nuevas: una por archivo en `Docs/decisiones/`
+
+Desde el 2026-10-10 las decisiones nuevas no se escriben aquí (estándar: `Docs/planes/estandar-docs/estandar.md` §5.1).
+§33 queda vetado (lo citaba un borrador de Encargos que nunca se aprobó).
+
+- **0034** · Encargos queda fuera; la apuesta es el hábito de pedir comida en la app →
+  `Docs/decisiones/0034-encargos-fuera-la-apuesta-es-el-habito-en-la-app.md`
+- **0035** · Tindivo Entregas abre todos los días, de 18:00 a 23:00 → `Docs/decisiones/0035-entregas-abre-todos-los-dias.md`

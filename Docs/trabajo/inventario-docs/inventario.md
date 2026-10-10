@@ -29,21 +29,21 @@ Ninguno está citado desde el código. Las menciones que les hacen otros documen
 | `Docs/` | `CHECKLIST-VERIFICACION.md`, `DOCUMENTACION_PANELES_TINDIVO.md`, `HALLAZGOS_OLD_NEGOCIOS.md`, `INVENTARIO_ESTADO_ACTUAL.md`, `auditoria-legacy-parte2-codigo.md`, `auditoria-legacy-parte2-resultados.md` | auditorías y referencias del v1, mayo-agosto |
 | `Docs/` | `ui-kit-exploration.html`, `ui-kit-v2.html`, `ui-kit-v3.html` | exploraciones de UI de julio; el tema vive en packages/ui |
 | `Docs/Encargos/` | `00-retomar-sesion.md`, `07-integracion-recojo.md`, `09-analisis-documentos-v2.md`, `Flujo UX_UI inDrive Entregas.md` | historia del diseño de Entregas (lo dice el propio 00) |
-| `Docs/Encargos/compras/` | **toda la carpeta** (8) | Encargos descartado por Jesús el 2026-10-07 |
-| `Docs/Encargos/compras/historico-v1/` | **toda la carpeta** (10) | Encargos descartado por Jesús el 2026-10-07 |
-| `Docs/Encargos/historico-pre-v2/` | **toda la carpeta** (11) | versión sustituida por la v1.0 del 19-sep |
-| `Docs/Encargos/origen-jesus/` | `00-maestro.md`, `01-flujo-recojo.md`, `02-negocios-campos-categorias.md`, `03-mapa.md`, `04-visibilidad-y-adquisicion.md`, `05-precio-promos-metricas.md` | v1 de los documentos de Jesús; sustituida por origen-jesus-v2 |
+| `Docs/Encargos/compras/` (borrado; en git: `8f26aed`) | **toda la carpeta** (8) | Encargos descartado por Jesús el 2026-10-07 |
+| `Docs/Encargos/compras/historico-v1/` (borrado; en git: `8f26aed`) | **toda la carpeta** (10) | Encargos descartado por Jesús el 2026-10-07 |
+| `Docs/Encargos/historico-pre-v2/` (borrado; en git: `8f26aed`) | **toda la carpeta** (11) | versión sustituida por la v1.0 del 19-sep |
+| `Docs/Encargos/origen-jesus/` (borrado; en git: `8f26aed`) | `00-maestro.md`, `01-flujo-recojo.md`, `02-negocios-campos-categorias.md`, `03-mapa.md`, `04-visibilidad-y-adquisicion.md`, `05-precio-promos-metricas.md` | v1 de los documentos de Jesús; sustituida por origen-jesus-v2 |
 | `Docs/Entregas/` | `estado-actual.md` | foto del 30-sep |
 | `Docs/Store/` | `ACEPTACION.md`, `IMPLEMENTACION.md`, `Tindivo Store — PRD v1 (MVP).md`, `Tindivo_Store_Prompt_Maestro_Desarrollo_FullStack.md`, `Tindivo_Store_UI_V3_Prompt_Claude_Design.md` | PRD v1 sustituido, prompts usados y entrega/aceptación de una rama ya en producción |
 | `Docs/context/` | 13 de 14; se quedan: `debt-liquidation-audit.md` | auditorías de julio, fotos de un momento |
-| `Docs/handoff/` | **toda la carpeta** (9) | relatos de sesión de agosto |
+| `Docs/handoff/` (borrado; en git: `8f26aed`) | **toda la carpeta** (9) | relatos de sesión de agosto |
 | `Docs/spec/` | `spec-motorizados-rendimiento.md` | auditoría de agosto |
 | `Docs/spec/` | `rollback-0123.sql`, `rollback-0124.sql`, `rollback-0125.sql`, `rollback-0126.sql`, `rollback-0127.sql`, `rollback-0128.sql` | revierte migraciones de agosto; hoy sería destructivo |
 
 ## 2. Lo que decides tú
 
-1. **`Docs/ingresos/`** (11) — conclusión «pendiente de aprobación» con una actualización tuya del 7-oct
-2. **`Docs/nuevo-modelo/`** (21) — plan L–V del 30-sep «pendiente de aprobación»; ingresos (7-oct) parece haberlo superado
+1. **`Docs/ingresos/` (borrado; en git: `8f26aed`)** (11) — conclusión «pendiente de aprobación» con una actualización tuya del 7-oct
+2. **`Docs/nuevo-modelo/` (borrado; en git: `8f26aed`)** (21) — plan L–V del 30-sep «pendiente de aprobación»; ingresos (7-oct) parece haberlo superado
 
 Si un tema está cerrado: se rescata lo decidido al canon y se borra. Si sigue abierto: pasa a `Docs/trabajo/`.
 

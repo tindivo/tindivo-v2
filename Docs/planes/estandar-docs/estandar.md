@@ -27,7 +27,7 @@ Hechos medidos el 2026-10-10 en `feat/mv2b-respuestas@c41f489` (`git grep`/`git 
   (259 líneas) tiene reglas que no están en ellos, y en la prueba de §6.1 Codex no lo cargó.
 - `.agents/AGENTS.md §3` ordena «lee el spec en `/specs`»: la carpeta no existe.
 - `CLAUDE.md` dice «Capacitor-ready»; `Docs/customer_app_migration/` decidió Swift + Kotlin.
-- Hay citas a `DECISIONS §33`, que no existe: salen de un brainstorm (`Docs/Encargos/compras/`) que anunciaba una
+- Hay citas a `DECISIONS §33`, que no existe: salen de un brainstorm (`Docs/Encargos/compras/` (borrado; en git: `8f26aed`)) que anunciaba una
   decisión que nunca se tomó.
 - El código (`apps packages supabase scripts`) cita `DECISIONS …§N` en **51 archivos, 73 menciones**.
 - `DECISIONS.md` (101 KB) mezcla dinero, antifraude, stack, estilos de cards y un bug de `cn()`; §22 va tras §24.
@@ -364,7 +364,7 @@ Se montan **antes del primer movimiento de archivos**, en local; pasan a CI como
 5. **Reescribir el canon por áreas**, desde el código y la base (solo lectura), rescatando el porqué de lo viejo. Por
    área: escribir → discrepancias para Jesús (§4) → aprobar → borrar lo viejo de esa área → actualizar el índice de
    `DECISIONS.md`. Orden: glosario y plataforma → dinero → ciclo del pedido de restaurante → antifraude → Entregas →
-   Store. Encargos no se reescribe: Jesús lo descartó el 2026-10-07 (`Docs/Encargos/compras/README.md`, «ARCHIVADA»),
+   Store. Encargos no se reescribe: Jesús lo descartó el 2026-10-07 (`Docs/Encargos/compras/README.md` (borrado; en git: `8f26aed`), «ARCHIVADA»),
    y se borra entero tras rescatar lo que use Entregas.
 6. **Squash de la memoria de Claude** (§6.6).
 7. **Chequeos en CI como requisito** (§8).

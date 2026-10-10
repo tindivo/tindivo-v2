@@ -1,6 +1,6 @@
 # 01 · Tindivo Entregas: concepto y flujo
 
-> **v1.0 · 2026-09-19.** Sustituye a la versión anterior («Encargos»), que se conserva en `historico-pre-v2/`. Base: los documentos v2 de Jesús (`origen-jesus-v2/`) más las decisiones del chat. Análisis de las diferencias: `09`.
+> **v1.0 · 2026-09-19.** Sustituye a la versión anterior («Encargos»), que se conserva en `historico-pre-v2/` (borrado; en git: `8f26aed`). Base: los documentos v2 de Jesús (`origen-jesus-v2/`) más las decisiones del chat. Análisis de las diferencias: `09`.
 > **Nombre público: «Tindivo Entregas».** Nombre técnico interno: **`courier`** (inglés; ver `03` §1). **Nunca** se dice al usuario «recojo», «encargos» ni «mandado»: el «recojo en tienda» es otra cosa (el cliente va a buscar su comida).
 
 ---

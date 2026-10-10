@@ -1,6 +1,6 @@
 # 02 · Dinero y cuadre de Tindivo Entregas
 
-> **v1.0 · 2026-09-19.** Sustituye a la versión anterior (`historico-pre-v2/`). Base: `origen-jesus-v2/` (quién paga, sin recargos) más el modelo de deuda del motorizado que solo existía en nuestros documentos.
+> **v1.0 · 2026-09-19.** Sustituye a la versión anterior (`historico-pre-v2/` (borrado; en git: `8f26aed`)). Base: `origen-jesus-v2/` (quién paga, sin recargos) más el modelo de deuda del motorizado que solo existía en nuestros documentos.
 
 ---
 

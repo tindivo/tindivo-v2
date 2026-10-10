@@ -1,12 +1,12 @@
 # Tindivo Entregas
 
 > **2026-10-06 · Hay un servicio nuevo en propuesta: Tindivo Encargos** («te lo
-> compramos y te lo llevamos»), en [`compras/`](compras/README.md). Es **otro
+> compramos y te lo llevamos»), en [`compras/` (borrado; en git: `8f26aed`)](https://github.com/tindivo/tindivo-v2/blob/8f26aed/Docs/Encargos/compras/README.md). Es **otro
 > servicio**: lo de esta carpeta, incluido «no compramos ni pagamos por ti»,
 > sigue valiendo **para Entregas**.
 
-> **Estado:** documentación **v1.0** · 2026-09-19 · diseñada, **sin construir**. Reemplaza a las versiones «Encargos» anteriores (guardadas en `historico-pre-v2/`).
-> **Dueño de las decisiones:** Jesús. **Redacción:** Claude, sobre lo leído en el repo (`DECISIONS.md`, migraciones hasta la `0228`, apps `customer`, `motorizados`, `admin`, `api`) y los documentos de Jesús (`origen-jesus/` v1, `origen-jesus-v2/`).
+> **Estado:** documentación **v1.0** · 2026-09-19 · diseñada, **sin construir**. Reemplaza a las versiones «Encargos» anteriores (guardadas en `historico-pre-v2/` (borrado; en git: `8f26aed`)).
+> **Dueño de las decisiones:** Jesús. **Redacción:** Claude, sobre lo leído en el repo (`DECISIONS.md`, migraciones hasta la `0228`, apps `customer`, `motorizados`, `admin`, `api`) y los documentos de Jesús (`origen-jesus/` (borrado; en git: `8f26aed`) v1, `origen-jesus-v2/`).
 > **Nombre público:** **Tindivo Entregas** · **nombre técnico:** `courier`. La carpeta se llama `Encargos` por historia.
 
 ## Qué es
@@ -26,11 +26,11 @@
 
 ## Documentos
 
-**¿Sesión nueva? Empieza por [`00-retomar-sesion.md`](00-retomar-sesion.md).**
+**¿Sesión nueva? Empieza por [`00-retomar-sesion.md`](https://github.com/tindivo/tindivo-v2/blob/8f26aed/Docs/Encargos/00-retomar-sesion.md).**
 
 | # | Documento | Para qué sirve |
 |---|---|---|
-| 00 | [`00-retomar-sesion.md`](00-retomar-sesion.md) | Estado, lo decidido y lo que falta, para retomar sin releer todo |
+| 00 | [`00-retomar-sesion.md`](https://github.com/tindivo/tindivo-v2/blob/8f26aed/Docs/Encargos/00-retomar-sesion.md) | Estado, lo decidido y lo que falta, para retomar sin releer todo |
 | 01 | [`01-concepto-y-flujo.md`](01-concepto-y-flujo.md) | Qué es, la pantalla de pedido, estados, lado del motorizado, cobro, cancelación |
 | 02 | [`02-dinero-y-cuadre.md`](02-dinero-y-cuadre.md) | Precio, quién paga, la deuda del motorizado y la rendición diaria |
 | 03 | [`03-plan-tecnico.md`](03-plan-tecnico.md) | Nombres técnicos, qué se reutiliza, tablas, RPC, rutas, apps, fases y riesgos |
@@ -39,10 +39,10 @@
 | 06 | [`06-backlog.md`](06-backlog.md) | Lo que **no** entra en v1, cada cosa con su condición de entrada |
 | 08 | [`08-ux-conversion.md`](08-ux-conversion.md) | **El UX que manda:** pedir en dos toques desde cualquier sitio, superficies, moto en el mapa, modelo del directorio, medición |
 | — | [`../Home/README.md`](../Home/README.md) | El home nuevo tipo Rappi, puerta de entrada del servicio |
-| 09 | [`09-analisis-documentos-v2.md`](09-analisis-documentos-v2.md) | Registro del razonamiento al pasar a la versión 2 de los documentos de Jesús |
-| 07 | [`07-integracion-recojo.md`](07-integracion-recojo.md) | *(Superado)* Análisis de la versión 1 de los documentos de Jesús |
+| 09 | [`09-analisis-documentos-v2.md`](https://github.com/tindivo/tindivo-v2/blob/8f26aed/Docs/Encargos/09-analisis-documentos-v2.md) | Registro del razonamiento al pasar a la versión 2 de los documentos de Jesús |
+| 07 | [`07-integracion-recojo.md`](https://github.com/tindivo/tindivo-v2/blob/8f26aed/Docs/Encargos/07-integracion-recojo.md) | *(Superado)* Análisis de la versión 1 de los documentos de Jesús |
 | — | [`origen-jesus-v2/`](origen-jesus-v2/) | **Los documentos de Jesús, versión vigente** (incluye el brief de publicidad del afiche) |
-| — | [`origen-jesus/`](origen-jesus/) · [`historico-pre-v2/`](historico-pre-v2/) | Versión 1 de sus documentos y nuestras versiones anteriores |
+| — | [`origen-jesus/` (borrado; en git: `8f26aed`)](https://github.com/tindivo/tindivo-v2/tree/8f26aed/Docs/Encargos/origen-jesus) · [`historico-pre-v2/` (borrado; en git: `8f26aed`)](https://github.com/tindivo/tindivo-v2/tree/8f26aed/Docs/Encargos/historico-pre-v2) | Versión 1 de sus documentos y nuestras versiones anteriores |
 
 ## Resumen en diez líneas
 

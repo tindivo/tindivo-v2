@@ -72,7 +72,7 @@ los lugares no tienen teléfono. En orden:
 
 1. **Entregas recoge de cualquier negocio, también comida** («recoge de
    Chipi, recoge de esta farmacia, normal; no hay por qué exonerar»). **Esto
-   cambia `Docs/nuevo-modelo/plan-final.md` §3**, que dejaba fuera la comida
+   cambia `Docs/nuevo-modelo/plan-final.md` (borrado; en git: `8f26aed`) §3**, que dejaba fuera la comida
    preparada para proteger a los aliados. Se queda la etiqueta «Comida», y las
    rutas de comida también salen en «Repetir».
 2. **GPS:** el mapa de A arranca en tu ubicación, como hoy, **y el de B

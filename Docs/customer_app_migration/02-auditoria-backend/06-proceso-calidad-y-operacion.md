@@ -122,7 +122,7 @@ Contradicciones **verificadas** entre documentos y realidad (2026-09-20):
 | `Docs/13-deploy` | Free tier con «backups diarios, retención 7 días» | **Falso**: el plan gratuito de Supabase no incluye copias de seguridad (`PRO-06`); las copias diarias son del plan Pro |
 | `Docs/07-flujo-cliente` | 13 pantallas conmutables por un `currentScreen` en Zustand | Next App Router con 9 páginas |
 | Comentario en `customer/orders/route.ts:259` | «el pedido sin aceptar expira solo a los 15 minutos» | 8 minutos (`timers.acceptanceMinutes`) |
-| `Docs/INVENTARIO_ESTADO_ACTUAL.md` | Inventario de motorizados y pedidos manuales (2026-07-23) | 100+ migraciones más; solo cubre 2 de 5 proyectos |
+| `Docs/INVENTARIO_ESTADO_ACTUAL.md` (borrado; en git: `8f26aed`) | Inventario de motorizados y pedidos manuales (2026-07-23) | 100+ migraciones más; solo cubre 2 de 5 proyectos |
 
 **Regla de esta migración:** **el código y la base mandan; los documentos son pista.** Cada
 requisito de `03-requisitos/` cita su fuente en código o base.
