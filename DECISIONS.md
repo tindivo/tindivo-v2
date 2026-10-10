@@ -57,9 +57,14 @@ Donde FASE-1 o el Maestro corrigen un spec, ganan ellos. **Confirmado por el usu
 
 ## 2. Proyecto Supabase
 
-- **Cuenta independiente del v1.** Proyecto **"Web v2"** · ref `psjigdoinfpgrnedxeyf` · org `Tindivo` · región `us-east-2`. El v1 ("Delivery", ref `nwcdxmebsozswnjlblip`) sigue intacto.
-- Free tier ($0/mes) para el piloto.
-- Migraciones y tipos se aplican/generan vía el **MCP de Supabase** (no hay CLI local instalado). Las migraciones se versionan en `supabase/migrations/`.
+> **Corregido el 2026-10-10.** Este apartado ordenaba usar el proyecto `psjigdoinfpgrnedxeyf` («Web v2») y aplicar
+> migraciones por el MCP: **las dos cosas son falsas hoy y peligrosas**. Ese proyecto está abandonado. Lo vigente está
+> en `AGENTS.md` §Supabase: producción es **`tindivo-prod`** (ref `zpnipajgwfthxhdtzhly`), y las migraciones se aplican
+> **solo con el CLI de Supabase**, nunca por MCP (`.agents/AGENTS.md §2.1-bis`). El texto original sigue en el
+> historial de git.
+
+- **Cuenta independiente del v1.** El v1 ("Delivery", ref `nwcdxmebsozswnjlblip`) sigue intacto.
+- Las migraciones se versionan en `supabase/migrations/`.
 
 ---
 
