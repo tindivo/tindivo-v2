@@ -1,12 +1,13 @@
-# Estándar de documentación y trabajo con agentes — v2.2
+# Estándar de documentación y trabajo con agentes — v2.3
 
 > Estado: **en ejecución** · Aprobado por Jesús el 2026-10-10 (conversación con Claude Code), con dos condiciones ya
 > incorporadas: graphify para ahorrar tokens (§6.5) y el ejecutor rápido siempre en su modelo más avanzado (§7.6) ·
 > Commit de referencia: `develop@7d00aa4`
+> v2.3 (2026-10-10, decisión de Jesús): **git es el archivo**; desaparece la zona `archivo/` (§2.3).
 > Alcance: la transición de §9. · Criterios de aceptación: los siete pasos de §9 hechos y los chequeos de §8 en CI.
 >
 > Este plan gobierna la transición. Al cerrarse, su contenido normativo pasa a `Docs/README.md` (el estándar) y al
-> `AGENTS.md` raíz (su resumen operativo), y este archivo va a `archivo/`.
+> `AGENTS.md` raíz (su resumen operativo), y este archivo se borra: su historia queda en git.
 > Discusión: `Docs/trabajo/estandar-docs/` — Codex firmó con cambios en dos rondas (`debate/01-codex.md`,
 > `debate/04-codex.md`); todos aplicados salvo el modelo del ejecutor, que decidió Jesús (`debate/05-claude-cierre.md`).
 
@@ -23,7 +24,7 @@ Hechos medidos el 2026-10-10 en `feat/mv2b-respuestas@c41f489` (`git grep`/`git 
 - **Instrucciones peligrosas vigentes:** `DECISIONS.md §2` ordena aplicar migraciones por MCP contra
   `psjigdoinfpgrnedxeyf`, el proyecto abandonado; `AGENTS.md` ordena lo contrario.
 - `CLAUDE.md` y `AGENTS.md` son copias casi idénticas (143 líneas; difieren en la cabecera). `.agents/AGENTS.md`
-  (259 líneas) tiene reglas que no están en ellos, y **Codex no lo carga nunca** (prueba en §6.1).
+  (259 líneas) tiene reglas que no están en ellos, y en la prueba de §6.1 Codex no lo cargó.
 - `.agents/AGENTS.md §3` ordena «lee el spec en `/specs`»: la carpeta no existe.
 - `CLAUDE.md` dice «Capacitor-ready»; `Docs/customer_app_migration/` decidió Swift + Kotlin.
 - Hay citas a `DECISIONS §33`, que no existe: salen de un brainstorm (`Docs/Encargos/compras/`) que anunciaba una
@@ -33,25 +34,25 @@ Hechos medidos el 2026-10-10 en `feat/mv2b-respuestas@c41f489` (`git grep`/`git 
 - Hay autoridad operativa fuera de cualquier canon: `Docs/plan-migraciones/plan-diario.md` y `cola.md` gobiernan la
   sesión autónoma.
 
-## 2. Cuatro zonas
+## 2. Tres zonas, y git como archivo
 
 El estado de un documento lo dice **la carpeta donde está**: una etiqueta se olvida actualizar, una ubicación no se
-puede ignorar. Dentro de cada zona, la cabecera solo dice el avance, nunca si el documento manda.
+puede ignorar. Dentro de cada zona, la cabecera solo dice el avance, nunca si el documento manda. Lo que ya no manda
+ni está abierto **no está en el repo**: está en git (§2.3).
 
 | Zona | Dónde | Qué contiene | Quién escribe | ¿Manda? |
 |---|---|---|---|---|
 | **Canon** | `Docs/negocio/`, `arquitectura/`, `decisiones/`, `operacion/`, `glosario.md`, `README.md` | Lo que es verdad hoy y por qué | Por promoción (§5) o corrección dentro de lo aprobado (§4) | **Sí**, como regla general |
 | **Planes** | `Docs/planes/<tema>/` | Planes y specs **aprobados por Jesús**, en ejecución o por ejecutar | Se crean al aprobarse; se actualiza su avance | **Sí**, solo dentro de su alcance |
 | **Trabajo** | `Docs/trabajo/<tema>/` | Análisis, debates, propuestas, inventarios, bitácoras | Cualquier agente, libremente | **No** |
-| **Archivo** | `Docs/archivo/` | Lo anterior al estándar y lo que se cierra | Nadie: se mueve, no se edita | **No.** Puede citarse como contexto, nunca como fuente de una regla |
 
 ### 2.1 Qué va en cada parte del canon
 
 | Carpeta | Contiene | **No** contiene |
 |---|---|---|
-| `negocio/` | Reglas del negocio y su porqué, sin tecnología: roles, dinero, antifraude, tiempos; un archivo por servicio en `negocio/servicios/` (pedidos de restaurante, Entregas, Store, Encargos…) | Tablas, endpoints, componentes |
+| `negocio/` | Reglas del negocio y su porqué, sin tecnología: roles, dinero, antifraude, tiempos; un archivo por servicio en `negocio/servicios/` (pedidos de restaurante, Entregas, Store…) | Tablas, endpoints, componentes |
 | `arquitectura/` | Cómo está construido y por qué: módulos, fronteras, flujo de datos, estándares de código | Listas de columnas o endpoints (§3.2) |
-| `decisiones/` | ADR de decisiones duraderas (§5.1) | Discusión; queda en `trabajo/` o `archivo/` y se enlaza |
+| `decisiones/` | ADR de decisiones duraderas (§5.1) | Discusión: mientras está abierta vive en `trabajo/`; después, en git, enlazada por commit |
 | `operacion/` | Runbooks (deploy, base local, seed, migraciones) y trampas conocidas con su síntoma. **Son la fuente** de cada procedimiento; las skills los envuelven (§6.3) | — |
 | `glosario.md` | Nombre oficial, nombre en código y nombres retirados | — |
 
@@ -63,10 +64,24 @@ puede ignorar. Dentro de cada zona, la cabecera solo dice el avance, nunca si el
 ```
 
 - A `planes/` pasan **únicamente el plan o spec aprobado y sus anexos normativos**. Análisis, debates, bitácoras y
-  propuestas se quedan en `trabajo/` o van a `archivo/`. La aprobación es por documento, no por carpeta.
+  propuestas se quedan en `trabajo/` y se borran al cerrarse. La aprobación es por documento, no por carpeta.
 - Cambiar alcance o criterios requiere nueva aprobación; actualizar el avance, no.
 - Una entrega parcial actualiza el canon en su PR, sin esperar al cierre del plan.
-- Al cerrarse, el plan pasa a `archivo/`. Si se descarta, también, con una línea que diga por qué.
+- Al cerrarse o descartarse, el plan se borra; el canon o un ADR dicen qué se hizo (o por qué no) y enlazan el commit.
+
+### 2.3 Git es el archivo
+
+No hay carpeta de historia: acumularía la misma basura que hoy hay en `Docs/`, y agentes y grafo seguirían
+tropezando con ella.
+
+- **Al cerrarse un tema, se borra.** Antes, lo que vale se rescata al canon: la decisión, el porqué y las
+  alternativas descartadas (en el ADR, si es duradera). El resto —rondas de debate, borradores, auditorías— no se
+  conserva en el árbol.
+- **La discusión se enlaza por commit, no por ruta**: `Discusión: cf73d45:Docs/trabajo/estandar-docs/`. `git show`
+  la recupera siempre.
+- **Lo que no es documento no entra al repo**: salidas de modelos, muestras, listas intermedias y scripts de un solo
+  uso viven en la carpeta temporal del agente. Al repo llega solo su conclusión.
+- **Antes de borrar, enlaces entrantes** (§8.1): lo que se borra no puede quedar citado como fuente.
 
 ## 3. Reglas de escritura del canon
 
@@ -142,7 +157,7 @@ sola, una decisión abierta de negocio.
 ```
 trabajo/<tema>/ ──(propuesta + revisión)──▶ Jesús aprueba ──┬─▶ decisiones/NNNN + canon      (regla duradera)
                                                             └─▶ planes/<tema>/               (plan o spec a ejecutar)
-planes/<tema>/ ──(se cierra)──▶ lo que cambió el comportamiento → canon · el plan → archivo/
+planes/<tema>/ ──(se cierra)──▶ lo que cambió el comportamiento → canon · el plan se borra (queda en git)
 ```
 
 - **Ningún agente cambia una regla del canon por iniciativa propia.** Erratas, enlaces y correcciones del caso 2 (§4),
@@ -150,7 +165,8 @@ planes/<tema>/ ──(se cierra)──▶ lo que cambió el comportamiento → c
 - **Un PR que cambia comportamiento declara su impacto documental**: «canon: archivos …» o «ninguno, porque …». Si
   contradice el canon, lo actualiza en el mismo PR.
 - **Una revisión periódica de deriva** (canon vs código y base) complementa lo anterior.
-- `trabajo/<tema>/` se archiva al cerrarse su tema. Uno sin actividad en 30 días se revisa: se cierra o se justifica.
+- `trabajo/<tema>/` se borra al cerrarse su tema (§2.3). Uno sin actividad en 30 días se revisa: se cierra o se
+  justifica.
 
 ### 5.1 ADR
 
@@ -163,7 +179,7 @@ decisión aprobada actualizan el canon directamente.
 # NNNN. Título en una frase
 Estado: Vigente | Superada por NNNN · Fecha · Aprobada por Jesús (medio)
 ## Contexto · ## Decisión · ## Alternativas · ## Consecuencias · ## Verificación (test o consulta, si existe)
-Discusión: Docs/trabajo/… o Docs/archivo/…
+Discusión: <commit>:Docs/trabajo/<tema>/  (o la ruta, mientras siga abierta)
 ```
 
 **Numeración:** §1–§32 de `DECISIONS.md` se conservan como identificadores de compatibilidad (`0001`…`0032`); un §
@@ -171,7 +187,7 @@ antiguo puede repartirse en varios destinos. **§33 queda vetado** (tiene citas 
 **0034** y no se reutilizan números.
 
 **`DECISIONS.md` queda en la raíz como índice de compatibilidad**: cada §N con su destino («→ `decisiones/0008-…`»,
-«→ `negocio/dinero.md`», «superada», «nunca se hizo»). Su contenido completo de hoy va a `archivo/`. Así las 73 citas
+«→ `negocio/dinero.md`», «superada», «nunca se hizo») y el commit donde está su texto original. Así las 73 citas
 del código siguen resolviendo y se corrigen cuando se toca ese código.
 
 ## 6. Instrucciones para agentes
@@ -199,7 +215,7 @@ herramienta trabajaba con reglas distintas.
 Entra en `AGENTS.md` solo lo que, si se borra, haría equivocarse a un agente:
 
 1. Qué es Tindivo, en cinco líneas.
-2. Las cuatro zonas y qué manda.
+2. Las tres zonas, qué manda, y que la historia está en git.
 3. El mapa de instrucciones locales.
 4. Los invariantes, en una o dos líneas cada uno, con enlace a su fuente normativa o test.
 5. Cómo se trabaja (§7) y los comandos esenciales.
@@ -227,8 +243,7 @@ Condición de Jesús al aprobar: **ahorrar tokens con graphify**, usado a su má
 - **Antes de una búsqueda amplia** (más de un puñado de archivos, o «¿dónde/cómo se conecta X?»), el agente consulta
   el grafo: `graphify query "<pregunta>" --budget N`, `graphify explain "<símbolo>"`, `graphify path "<A>" "<B>"`.
   Lee archivos solo después, y solo los que el grafo señala.
-- **El grafo indexa solo lo que manda**: código, canon y planes. `Docs/archivo/` y `Docs/trabajo/` van en
-  `.graphifyignore`. Motivo medido: hoy una consulta sobre el modelo de dinero devuelve brainstorms y specs viejos con
+- **El grafo indexa solo lo que manda**: código, canon y planes. `Docs/trabajo/` va en `.graphifyignore`. Motivo medido: hoy una consulta sobre el modelo de dinero devuelve brainstorms y specs viejos con
   el mismo peso que el código.
 - **El grafo se mantiene fresco**: `graphify update .` (AST, sin coste) tras cada commit; la reextracción semántica de
   documentos (DeepSeek, céntimos) tras cada área reescrita del squash. Hoy el grafo es del 2026-10-02 y no hay hook
@@ -316,9 +331,9 @@ Mecanismos:
 - **Codex**: `codex exec -p revisor -m <modelo> -c model_reasoning_effort=<low|medium|high>`. Los modelos que admite la
   cuenta de Jesús se anotan en `operacion/` al comprobarlos.
 - **Antigravity**: `agy -p "<encargo>" --model <id> --mode plan` (sin `--dangerously-skip-permissions`). Siempre el
-  Gemini más avanzado; `agy models` lista los disponibles y se revisa cuando sale uno nuevo. Cuál es «el más avanzado»
-  entre `gemini-3.8-flash-high` (la generación más nueva) y `gemini-3.1-pro-high` (el último Pro) se decide con una
-  prueba sobre el primer encargo real.
+  Gemini más avanzado: **`gemini-3.8-flash-high`**. Jesús fijó el 2026-10-10 usar solo Gemini 3.8 Flash (Antigravity
+  marca los demás como «Leaving Soon»). En la muestra del inventario (25 archivos) acertó la zona en 22 y citó literal
+  las 25. Se revisa con `agy models` cuando salga uno nuevo.
 - **Sin orquestador adicional por ahora**: no hay una necesidad demostrada. Se reevalúa si la coordinación manual
   limita el trabajo.
 
@@ -329,7 +344,7 @@ Se montan **antes del primer movimiento de archivos**, en local; pasan a CI como
 1. **Enlaces y rutas**: todo enlace del canon y de `planes/`, y toda ruta mencionada en `AGENTS.md`/`CLAUDE.md`,
    existe. Las rutas históricas, de ejemplo o futuras se marcan como tales y quedan fuera.
 2. **Cabecera de verificación** (§3.5) en cada archivo del canon; **cabecera de plan** (§2.2) en cada plan.
-3. **Ninguna regla del canon tiene como fuente un archivo de `archivo/` o `trabajo/`.** Excepciones registradas.
+3. **Ninguna regla del canon tiene como fuente un archivo de `trabajo/`.** Excepciones registradas.
 4. **Aviso** si `AGENTS.md` pasa de 120 líneas.
 
 ## 9. Transición (el squash)
@@ -339,21 +354,22 @@ Se montan **antes del primer movimiento de archivos**, en local; pasan a CI como
    «Capacitor-ready» en `CLAUDE.md`/`AGENTS.md`, la ruta `/specs` de `.agents/AGENTS.md`.
 2. **Inventario** de documentos, enlaces entrantes y consumidores (incluida la sesión autónoma) — primer encargo a
    Antigravity, auditado por cobertura — y **chequeo de enlaces** en local.
-3. **Archivar el ruido sin consumidores** (`handoff/`, `context/`, debates cerrados, auditorías del legacy,
-   `historico-*`, ui-kits, prompts de diseño, logs y PNG sueltos de la raíz), con la lista previa aprobada por Jesús.
+3. **Borrar el ruido sin consumidores** (`handoff/`, `context/`, debates cerrados, auditorías del legacy,
+   `historico-*`, ui-kits, prompts de diseño, PNG sueltos de la raíz), con la lista previa aprobada por Jesús.
    **Crear `planes/`** y mover a ella solo los documentos aprobados (de `plan-migraciones/`, de la migración del
-   customer) en una ventana coordinada con la sesión autónoma, verificando una ejecución después. Sus debates y
-   análisis van a `trabajo/` o `archivo/`.
+   customer) en una ventana coordinada con la sesión autónoma, **sin archivo puente**: Jesús pausa el `/loop`, se mueve
+   y se actualizan las referencias en un commit, se relanza con la ruta nueva y se verifica una vuelta. Sus debates y
+   análisis se borran, o pasan a `trabajo/` si siguen abiertos.
 4. **Unificar las instrucciones de agentes** (§6), con prueba propia en Claude Code y en Antigravity.
 5. **Reescribir el canon por áreas**, desde el código y la base (solo lectura), rescatando el porqué de lo viejo. Por
-   área: escribir → discrepancias para Jesús (§4) → aprobar → archivar lo viejo de esa área → actualizar el índice de
+   área: escribir → discrepancias para Jesús (§4) → aprobar → borrar lo viejo de esa área → actualizar el índice de
    `DECISIONS.md`. Orden: glosario y plataforma → dinero → ciclo del pedido de restaurante → antifraude → Entregas →
-   Store → Encargos (probablemente se queda en `trabajo/`: espera D1–D9).
+   Store. Encargos no se reescribe: Jesús lo descartó el 2026-10-07 (`Docs/Encargos/compras/README.md`, «ARCHIVADA»),
+   y se borra entero tras rescatar lo que use Entregas.
 6. **Squash de la memoria de Claude** (§6.6).
 7. **Chequeos en CI como requisito** (§8).
 
 ## 10. Preguntas abiertas
 
 1. ¿La zona `planes/` cubre todo lo que debe gobernar sin ser regla general, o deja algún caso sin dueño?
-2. La sesión autónoma lee `plan-migraciones/cola.md`. ¿Basta con mover la carpeta en una ventana coordinada, o
-   conviene dejar un archivo puente en la ruta vieja durante una semana?
+2. ~~Archivo puente para `cola.md`~~ — resuelta: ventana coordinada, sin puente (§9 paso 3).
