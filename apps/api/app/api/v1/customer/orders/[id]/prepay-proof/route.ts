@@ -1,5 +1,5 @@
+import { PrepayProofRequestSchema } from '@tindivo/contracts'
 import { DomainError } from '@tindivo/core'
-import { z } from 'zod'
 import { requireRole } from '@/lib/http/auth'
 import { corsHeaders, handleOptions } from '@/lib/http/cors'
 import { handleError, ok } from '@/lib/http/problem'
@@ -7,8 +7,6 @@ import { getRequestId } from '@/lib/http/request-id'
 import { createServiceClient } from '@/lib/supabase/service'
 
 export const dynamic = 'force-dynamic'
-
-const Schema = z.object({ path: z.string().trim().min(1).max(500) })
 
 export function OPTIONS(req: Request): Response {
   return handleOptions(req)
@@ -23,7 +21,7 @@ export async function POST(
   try {
     const { user } = await requireRole(req, 'customer')
     const { id } = await params
-    const body = Schema.parse(await req.json())
+    const body = PrepayProofRequestSchema.parse(await req.json())
     // La ruta debe estar dentro de la carpeta del propio usuario (defensa adicional).
     if (!body.path.startsWith(`${user.id}/`)) {
       throw new DomainError('Ruta de comprobante inválida', 'forbidden')

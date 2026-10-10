@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import { PushSubscriptionRequestSchema, PushUnsubscribeRequestSchema } from '@tindivo/contracts'
 import { requireUser } from '@/lib/http/auth'
 import { corsHeaders, handleOptions } from '@/lib/http/cors'
 import { handleError, ok } from '@/lib/http/problem'
@@ -6,35 +6,6 @@ import { getRequestId } from '@/lib/http/request-id'
 import { createServiceClient } from '@/lib/supabase/service'
 
 export const dynamic = 'force-dynamic'
-
-const SubSchema = z.object({
-  endpoint: z.string().url().max(1000),
-  keys: z.object({ p256dh: z.string().min(1).max(300), auth: z.string().min(1).max(300) }),
-  userAgent: z.string().max(400).optional(),
-  /**
-   * UUID por instalación de PWA, generado y guardado por el cliente. Es la
-   * identidad REAL del dispositivo; `userAgent` no lo es (ver el paso 2).
-   * Opcional porque un cliente sin actualizar no lo manda todavía.
-   */
-  installId: z.string().min(8).max(64).optional(),
-})
-
-/**
- * Dar de baja acepta dos formas, y son excluyentes a propósito:
- *
- *   { endpoint }   → este dispositivo. Es el caso de cerrar sesión aquí.
- *   { all: true }  → TODOS los dispositivos del usuario.
- *
- * `all` existe para acompañar a `signOutEverywhere`. Revocar las sesiones sin
- * borrar las suscripciones dejaría al dispositivo perdido sin poder abrir nada
- * pero AÚN recibiendo notificaciones, que llevan nombre y dirección del cliente
- * en la vista previa: el acceso se corta y la fuga de datos sigue.
- */
-const UnsubSchema = z.union([
-  z.object({ endpoint: z.string().url().max(1000) }),
-  z.object({ id: z.string().uuid() }),
-  z.object({ all: z.literal(true) }),
-])
 
 /**
  * Plataforma DEDUCIDA DEL PROVEEDOR, no del `user_agent`.
@@ -69,7 +40,7 @@ export async function POST(req: Request): Promise<Response> {
   const requestId = getRequestId(req)
   try {
     const { user } = await requireUser(req)
-    const body = SubSchema.parse(await req.json())
+    const body = PushSubscriptionRequestSchema.parse(await req.json())
     const service = createServiceClient()
 
     // 1) Endpoint reclamado por OTRO usuario.
@@ -212,7 +183,7 @@ export async function DELETE(req: Request): Promise<Response> {
   const requestId = getRequestId(req)
   try {
     const { user } = await requireUser(req)
-    const body = UnsubSchema.parse(await req.json())
+    const body = PushUnsubscribeRequestSchema.parse(await req.json())
     const service = createServiceClient()
 
     // El filtro por `user_id` va SIEMPRE, también en la rama `all`: sin él,

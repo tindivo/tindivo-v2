@@ -1,13 +1,46 @@
 import { z } from 'zod'
+import {
+  CreateOrderAppealRequestSchema,
+  PrepayProofRequestSchema,
+  PushSubscriptionRequestSchema,
+  PushUnsubscribeRequestSchema,
+  SendPhoneCodeRequestSchema,
+  VerifyPhoneCodeRequestSchema,
+} from '../client-requests'
+import { CreateCourierOrderRequestSchema } from '../courier'
 import type { ApiErrorCode } from '../errors'
 import { CreateOrderRequestSchema } from '../requests'
+import { storeEventSchema } from '../store'
+import {
+  AppealCreatedSchema,
+  CancelledCourierOrderSchema,
+  CancelledOrderSchema,
+  CreatedCourierOrderSchema,
+  CreatedOrderSchema,
+  CustomerAppealListSchema,
+  CustomerAppealSchema,
+  PhoneCodeSentSchema,
+  PhoneVerifiedSchema,
+  PrepayInfoSchema,
+  PrepayProofAcceptedSchema,
+  PushDeviceListSchema,
+  PushSubscribedSchema,
+  PushSubscriptionOwnershipSchema,
+  PushUnsubscribedSchema,
+} from './client-responses'
 import {
   CourierServiceStatusSchema,
+  CourierTrackingSchema,
   HealthResponseSchema,
+  OrderTrackingSchema,
   PilotAccessResponseSchema,
+  PublicBusinessDetailSchema,
+  PublicBusinessListSchema,
   ScheduleStatusSchema,
   SearchCatalogQuerySchema,
   SearchCatalogResponseSchema,
+  StoreDetailResponseSchema,
+  StoreListResponseSchema,
 } from './public-responses'
 
 /**
@@ -17,9 +50,13 @@ import {
  * `apps/api/app/api/v1/{customer,public,push,health}` y falla si una ruta o un
  * método no está aquí: una ruta sin documentar no pasa el CI (estándar API-2).
  *
- * `documented: false` marca lo que aún no tiene esquema de respuesta (lote
- * MV2b): sale en el OpenAPI con `x-tindivo-pending` para que nadie genere un
- * cliente contra una forma inventada.
+ * `documented: false` marca lo que aún no tiene esquema de respuesta: sale en
+ * el OpenAPI con `x-tindivo-pending` para que nadie genere un cliente contra
+ * una forma inventada. Desde el lote MV2b no queda ninguna así; el marcador se
+ * conserva para la próxima ruta que se registre antes de describirla.
+ *
+ * Cada esquema de respuesta se valida contra la respuesta REAL de su ruta en
+ * `apps/api/lib/__tests__/openapi-conformance.integration.test.ts`.
  */
 
 export type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete'
@@ -49,6 +86,8 @@ export interface OperationSpec {
   pathParams?: Record<string, z.ZodType>
   query?: z.ZodObject
   body?: z.ZodType
+  /** La ruta acepta la petición sin cuerpo (lo trata como `{}`). */
+  bodyOptional?: boolean
   /** Acepta la cabecera `Idempotency-Key`. */
   idempotent?: boolean
   success: Record<number, SuccessResponse>
@@ -60,11 +99,8 @@ export interface OperationSpec {
 const uuidParam = z.uuid()
 const shortIdParam = z.string().meta({ description: 'Identificador corto público (8 caracteres)' })
 
-/** Respuesta cuya forma aún no está descrita. La envoltura y el código sí están medidos en la ruta. */
-const pending = (envelope: Envelope): SuccessResponse => ({
-  description: 'Forma pendiente de documentar (lote MV2b)',
-  envelope,
-})
+const endpointQuery = (description: string) =>
+  z.string().meta({ description: `${description}. URL del endpoint de Web Push` })
 
 export const OPERATIONS: OperationSpec[] = [
   // ── Sistema ────────────────────────────────────────────────────────────────
@@ -123,8 +159,14 @@ export const OPERATIONS: OperationSpec[] = [
     summary: 'Negocios publicados',
     tags: ['public'],
     auth: 'none',
-    success: { 200: pending('data') },
-    documented: false,
+    success: {
+      200: {
+        description: 'Negocios publicados, por nombre',
+        envelope: 'data',
+        schema: PublicBusinessListSchema,
+      },
+    },
+    documented: true,
   },
   {
     method: 'get',
@@ -134,9 +176,15 @@ export const OPERATIONS: OperationSpec[] = [
     tags: ['public'],
     auth: 'none',
     pathParams: { id: z.string().meta({ description: 'UUID o slug del negocio' }) },
-    success: { 200: pending('data') },
+    success: {
+      200: {
+        description: 'El negocio, su carta y su horario',
+        envelope: 'data',
+        schema: PublicBusinessDetailSchema,
+      },
+    },
     errors: ['not_found'],
-    documented: false,
+    documented: true,
   },
   {
     method: 'post',
@@ -162,9 +210,15 @@ export const OPERATIONS: OperationSpec[] = [
     tags: ['public', 'orders'],
     auth: 'none',
     pathParams: { shortId: shortIdParam },
-    success: { 200: pending('raw') },
+    success: {
+      200: {
+        description: 'Estado del pedido, sin envoltura',
+        envelope: 'raw',
+        schema: OrderTrackingSchema,
+      },
+    },
     errors: ['not_found'],
-    documented: false,
+    documented: true,
   },
   {
     method: 'get',
@@ -190,9 +244,15 @@ export const OPERATIONS: OperationSpec[] = [
     tags: ['public', 'courier'],
     auth: 'none',
     pathParams: { shortId: shortIdParam },
-    success: { 200: pending('raw') },
+    success: {
+      200: {
+        description: 'Estado de la entrega, sin envoltura',
+        envelope: 'raw',
+        schema: CourierTrackingSchema,
+      },
+    },
     errors: ['not_found'],
-    documented: false,
+    documented: true,
   },
 
   // ── Público: Tindivo Store ─────────────────────────────────────────────────
@@ -203,8 +263,26 @@ export const OPERATIONS: OperationSpec[] = [
     summary: 'Productos de Tindivo Store',
     tags: ['public', 'store'],
     auth: 'none',
-    success: { 200: pending('data') },
-    documented: false,
+    query: z.object({
+      q: z.string().optional().meta({ description: 'Texto a buscar (se recorta a 80)' }),
+      categoria: z.string().optional().meta({ description: 'Slug de la categoría' }),
+      condicion: z
+        .string()
+        .optional()
+        .meta({ description: '`nuevo`, `segunda` o `todo`. Otro valor = todo' }),
+      orden: z
+        .string()
+        .optional()
+        .meta({ description: '`precio_asc` o `precio_desc`. Otro valor = recientes' }),
+    }),
+    success: {
+      200: {
+        description: 'La grilla, los vendidos, las categorías y los ajustes',
+        envelope: 'data',
+        schema: StoreListResponseSchema,
+      },
+    },
+    documented: true,
   },
   {
     method: 'get',
@@ -214,8 +292,15 @@ export const OPERATIONS: OperationSpec[] = [
     tags: ['public', 'store'],
     auth: 'none',
     pathParams: { slug: z.string() },
-    success: { 200: pending('data') },
-    documented: false,
+    success: {
+      200: {
+        description: 'El artículo, sus relacionados y los ajustes',
+        envelope: 'data',
+        schema: StoreDetailResponseSchema,
+      },
+    },
+    errors: ['not_found'],
+    documented: true,
   },
   {
     method: 'post',
@@ -224,8 +309,10 @@ export const OPERATIONS: OperationSpec[] = [
     summary: 'Registrar un evento de Tindivo Store',
     tags: ['public', 'store'],
     auth: 'none',
+    body: storeEventSchema,
     success: { 204: { description: 'Registrado; sin cuerpo', envelope: 'none' } },
-    documented: false,
+    errors: ['validation_error', 'rate_limited'],
+    documented: true,
   },
 
   // ── Cliente: pedidos de restaurante ────────────────────────────────────────
@@ -238,9 +325,18 @@ export const OPERATIONS: OperationSpec[] = [
     auth: 'customer',
     body: CreateOrderRequestSchema,
     idempotent: true,
-    success: { 201: pending('data') },
-    errors: ['validation_error', 'unauthorized', 'forbidden', 'conflict', 'idempotency_conflict'],
-    documented: false,
+    success: {
+      201: { description: 'Pedido creado', envelope: 'data', schema: CreatedOrderSchema },
+    },
+    errors: [
+      'validation_error',
+      'unauthorized',
+      'forbidden',
+      'not_found',
+      'conflict',
+      'idempotency_conflict',
+    ],
+    documented: true,
   },
   {
     method: 'post',
@@ -250,9 +346,11 @@ export const OPERATIONS: OperationSpec[] = [
     tags: ['orders'],
     auth: 'customer',
     pathParams: { id: uuidParam },
-    success: { 200: pending('data') },
-    errors: ['unauthorized', 'forbidden'],
-    documented: false,
+    success: {
+      200: { description: 'Pedido cancelado', envelope: 'data', schema: CancelledOrderSchema },
+    },
+    errors: ['unauthorized', 'forbidden', 'not_found', 'order_not_cancellable'],
+    documented: true,
   },
   {
     method: 'get',
@@ -262,9 +360,11 @@ export const OPERATIONS: OperationSpec[] = [
     tags: ['orders', 'payments'],
     auth: 'customer',
     pathParams: { id: uuidParam },
-    success: { 200: pending('data') },
-    errors: ['unauthorized', 'forbidden'],
-    documented: false,
+    success: {
+      200: { description: 'Cómo y cuánto pagar', envelope: 'data', schema: PrepayInfoSchema },
+    },
+    errors: ['unauthorized', 'forbidden', 'not_found'],
+    documented: true,
   },
   {
     method: 'post',
@@ -274,9 +374,22 @@ export const OPERATIONS: OperationSpec[] = [
     tags: ['orders', 'payments'],
     auth: 'customer',
     pathParams: { id: uuidParam },
-    success: { 200: pending('data') },
-    errors: ['unauthorized', 'forbidden'],
-    documented: false,
+    body: PrepayProofRequestSchema,
+    success: {
+      200: {
+        description: 'Comprobante registrado: el pedido pasa a `validando`',
+        envelope: 'data',
+        schema: PrepayProofAcceptedSchema,
+      },
+    },
+    errors: [
+      'validation_error',
+      'unauthorized',
+      'forbidden',
+      'not_found',
+      'invalid_state_transition',
+    ],
+    documented: true,
   },
   {
     method: 'get',
@@ -286,9 +399,11 @@ export const OPERATIONS: OperationSpec[] = [
     tags: ['orders', 'appeals'],
     auth: 'customer',
     pathParams: { id: uuidParam },
-    success: { 200: pending('data') },
-    errors: ['unauthorized', 'forbidden'],
-    documented: false,
+    success: {
+      200: { description: 'La apelación', envelope: 'data', schema: CustomerAppealSchema },
+    },
+    errors: ['validation_error', 'unauthorized', 'forbidden', 'not_found'],
+    documented: true,
   },
   {
     method: 'post',
@@ -298,9 +413,17 @@ export const OPERATIONS: OperationSpec[] = [
     tags: ['orders', 'appeals'],
     auth: 'customer',
     pathParams: { id: uuidParam },
-    success: { 200: pending('data') },
-    errors: ['unauthorized', 'forbidden'],
-    documented: false,
+    body: CreateOrderAppealRequestSchema,
+    bodyOptional: true,
+    success: {
+      200: {
+        description: 'Apelación creada, o la que ya existía',
+        envelope: 'data',
+        schema: AppealCreatedSchema,
+      },
+    },
+    errors: ['validation_error', 'unauthorized', 'forbidden', 'not_found'],
+    documented: true,
   },
   {
     method: 'get',
@@ -309,9 +432,15 @@ export const OPERATIONS: OperationSpec[] = [
     summary: 'Apelaciones del cliente',
     tags: ['appeals'],
     auth: 'customer',
-    success: { 200: pending('data') },
+    success: {
+      200: {
+        description: 'Sus apelaciones, de la más reciente',
+        envelope: 'data',
+        schema: CustomerAppealListSchema,
+      },
+    },
     errors: ['unauthorized', 'forbidden'],
-    documented: false,
+    documented: true,
   },
 
   // ── Cliente: Entregas ──────────────────────────────────────────────────────
@@ -322,10 +451,17 @@ export const OPERATIONS: OperationSpec[] = [
     summary: 'Pedir una entrega',
     tags: ['courier'],
     auth: 'customer',
+    body: CreateCourierOrderRequestSchema,
     idempotent: true,
-    success: { 201: pending('data') },
+    success: {
+      201: {
+        description: 'Entrega solicitada',
+        envelope: 'data',
+        schema: CreatedCourierOrderSchema,
+      },
+    },
     errors: ['validation_error', 'unauthorized', 'forbidden', 'conflict', 'idempotency_conflict'],
-    documented: false,
+    documented: true,
   },
   {
     method: 'post',
@@ -335,9 +471,15 @@ export const OPERATIONS: OperationSpec[] = [
     tags: ['courier'],
     auth: 'customer',
     pathParams: { id: uuidParam },
-    success: { 200: pending('data') },
-    errors: ['unauthorized', 'forbidden'],
-    documented: false,
+    success: {
+      200: {
+        description: 'Entrega cancelada',
+        envelope: 'data',
+        schema: CancelledCourierOrderSchema,
+      },
+    },
+    errors: ['unauthorized', 'forbidden', 'not_found', 'conflict'],
+    documented: true,
   },
 
   // ── Cliente: teléfono ──────────────────────────────────────────────────────
@@ -348,9 +490,12 @@ export const OPERATIONS: OperationSpec[] = [
     summary: 'Enviar el código de verificación por SMS',
     tags: ['account'],
     auth: 'customer',
-    success: { 200: pending('data') },
-    errors: ['unauthorized', 'forbidden', 'conflict', 'rate_limited'],
-    documented: false,
+    body: SendPhoneCodeRequestSchema,
+    success: {
+      200: { description: 'Código enviado', envelope: 'data', schema: PhoneCodeSentSchema },
+    },
+    errors: ['validation_error', 'unauthorized', 'forbidden', 'conflict', 'rate_limited'],
+    documented: true,
   },
   {
     method: 'post',
@@ -359,9 +504,12 @@ export const OPERATIONS: OperationSpec[] = [
     summary: 'Verificar el código recibido por SMS',
     tags: ['account'],
     auth: 'customer',
-    success: { 200: pending('data') },
+    body: VerifyPhoneCodeRequestSchema,
+    success: {
+      200: { description: 'Teléfono verificado', envelope: 'data', schema: PhoneVerifiedSchema },
+    },
     errors: ['validation_error', 'unauthorized', 'forbidden', 'conflict'],
-    documented: false,
+    documented: true,
   },
 
   // ── Avisos ─────────────────────────────────────────────────────────────────
@@ -372,9 +520,16 @@ export const OPERATIONS: OperationSpec[] = [
     summary: 'Registrar una suscripción de avisos (Web Push)',
     tags: ['push'],
     auth: 'user',
-    success: { 201: pending('data') },
+    body: PushSubscriptionRequestSchema,
+    success: {
+      201: {
+        description: 'Suscripción registrada o reactivada',
+        envelope: 'data',
+        schema: PushSubscribedSchema,
+      },
+    },
     errors: ['validation_error', 'unauthorized'],
-    documented: false,
+    documented: true,
   },
   {
     method: 'get',
@@ -383,9 +538,20 @@ export const OPERATIONS: OperationSpec[] = [
     summary: 'Suscripciones de avisos del usuario',
     tags: ['push'],
     auth: 'user',
-    success: { 200: pending('data') },
+    query: z.object({
+      endpoint: endpointQuery(
+        'Opcional: marca con `current` el dispositivo que pregunta',
+      ).optional(),
+    }),
+    success: {
+      200: {
+        description: 'Sus dispositivos, del más reciente',
+        envelope: 'data',
+        schema: PushDeviceListSchema,
+      },
+    },
     errors: ['unauthorized'],
-    documented: false,
+    documented: true,
   },
   {
     method: 'delete',
@@ -394,9 +560,16 @@ export const OPERATIONS: OperationSpec[] = [
     summary: 'Dar de baja una suscripción de avisos',
     tags: ['push'],
     auth: 'user',
-    success: { 200: pending('data') },
-    errors: ['unauthorized'],
-    documented: false,
+    body: PushUnsubscribeRequestSchema,
+    success: {
+      200: {
+        description: 'Baja hecha; `removed` dice cuántas filas',
+        envelope: 'data',
+        schema: PushUnsubscribedSchema,
+      },
+    },
+    errors: ['validation_error', 'unauthorized'],
+    documented: true,
   },
   {
     method: 'get',
@@ -405,8 +578,15 @@ export const OPERATIONS: OperationSpec[] = [
     summary: 'Si este aparato tiene una suscripción activa',
     tags: ['push'],
     auth: 'user',
-    success: { 200: pending('data') },
-    errors: ['unauthorized'],
-    documented: false,
+    query: z.object({ endpoint: endpointQuery('El de este navegador') }),
+    success: {
+      200: {
+        description: 'Si existe y de quién es',
+        envelope: 'data',
+        schema: PushSubscriptionOwnershipSchema,
+      },
+    },
+    errors: ['validation_error', 'unauthorized'],
+    documented: true,
   },
 ]

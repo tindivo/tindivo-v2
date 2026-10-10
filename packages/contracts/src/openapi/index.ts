@@ -1,3 +1,4 @@
+export * from './client-responses'
 export { buildOpenApiDocument } from './document'
 export * from './public-responses'
 export {
@@ -7,4 +8,10 @@ export {
   type OperationSpec,
   type SuccessResponse,
 } from './registry'
-export { legacyMoney, openEnum, uuidOut } from './schema-helpers'
+export {
+  legacyMoney,
+  legacyMoneyNullable,
+  openEnum,
+  timestampOut,
+  uuidOut,
+} from './schema-helpers'

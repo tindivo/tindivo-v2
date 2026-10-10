@@ -1,3 +1,4 @@
+import { CreateOrderAppealRequestSchema } from '@tindivo/contracts'
 import { DomainError } from '@tindivo/core'
 import { z } from 'zod'
 import { requireRole } from '@/lib/http/auth'
@@ -10,10 +11,6 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { createUserClient } from '@/lib/supabase/user'
 
 export const dynamic = 'force-dynamic'
-
-const Schema = z.object({
-  description: z.string().trim().max(500).optional(),
-})
 
 const OrderIdSchema = z.string().uuid()
 
@@ -77,7 +74,7 @@ export async function POST(
   try {
     const { token } = await requireRole(req, 'customer')
     const { id } = await params
-    const body = Schema.parse(await req.json().catch(() => ({})))
+    const body = CreateOrderAppealRequestSchema.parse(await req.json().catch(() => ({})))
 
     // Invocación a la RPC canónica de 2 parámetros usando el token JWT del cliente
     // El evento order/appeal.created se encola atómicamente en outbox_events dentro de la misma transacción SQL

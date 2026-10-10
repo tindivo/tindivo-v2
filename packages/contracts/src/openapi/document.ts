@@ -134,7 +134,7 @@ function operation(op: OperationSpec): JsonSchema {
   if (params.length) out.parameters = params
   if (op.body) {
     out.requestBody = {
-      required: true,
+      required: !op.bodyOptional,
       content: { 'application/json': { schema: toSchema(op.body, 'input') } },
     }
   }
