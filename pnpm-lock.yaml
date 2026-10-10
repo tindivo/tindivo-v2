@@ -486,6 +486,9 @@ importers:
       '@tindivo/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.12.4
       typescript:
         specifier: 'catalog:'
         version: 6.0.3

@@ -10,6 +10,7 @@
     "includes": [
       "**",
       "!**/database.types.ts",
+      "!packages/contracts/openapi",
       "!**/brand-assets.ts",
       "!**/next-env.d.ts",
       "!**/*.css",

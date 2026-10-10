@@ -38,7 +38,9 @@ Orden de `../customer_app_migration/debate-rest/conclusion.md` §3. El primer bu
 de Google Play en cuanto sea usable contra producción (solo lectura), para que los 14 días de los 12 testers corran
 mientras se construye el resto.
 
-- [ ] **MV2** · OpenAPI del contrato actual, con ejemplos, y modelos que compilan en Swift y Kotlin (paso 1)
+- [x] **MV2a** · OpenAPI: registro de las 27 operaciones del cliente en `packages/contracts/src/openapi`, documento 3.0.3 generado desde Zod (`packages/contracts/openapi/v1.json`, servido en `GET /api/v1/openapi.json`), test de cobertura contra las rutas del disco y respuestas descritas de `health`, `schedule`, `search`, `courier/status` y `pilot-access` — rama `feat/mv2a-openapi`
+- [ ] **MV2b** · Las 21 respuestas pendientes (`x-tindivo-pending`), cada una leída de su ruta y de su función SQL viva, con una prueba de conformidad en el job de integración que valide la respuesta real contra el esquema
+- [ ] **MV2c** · Modelos generados desde el OpenAPI que compilan en Kotlin (runner Linux) y en Swift (runner macOS: cuesta 10 veces más minutos; decidir si en cada PR o a diario)
 - [ ] **MV3** · Compatibilidad: cabeceras de plataforma y build, `GET /config`, versión mínima por app y plataforma (paso 2)
 - [ ] **MV4** · Rutas del primer build: catálogo y horarios por REST, perfil, direcciones atómicas, `quote` (paso 3; necesita `D-39`)
 - [ ] **MV5** · Lo que exige la revisión: borrado de cuenta (en la app y en una página web), Sign in with Apple en Auth, cuenta y negocio de demostración para el revisor
