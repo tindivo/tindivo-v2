@@ -41,8 +41,9 @@ el estado que toca.
 
 Fuera de `advance_order` escriben el estado: la validación de la cajera (`validate_order`), la cancelación del cliente
 (`cancel_customer_order`), los vencimientos (`expire_order`, `cancel_expired_prepay_orders`), la ampliación del tiempo
-de cocina (`extend_order_prep`), el traspaso entre motorizados (`apply_order_transfer`) y la creación
-(`create_customer_order`, que usan **los dos canales**: la app y la cajera).
+de cocina (`extend_order_prep`), el traspaso entre motorizados (`apply_order_transfer`) y la creación, que tiene
+**un camino por canal**: `create_customer_order` para la app (con ítems) y `create_business_manual_order` para la
+cajera (solo el total).
 
 ## Plazos
 
@@ -73,9 +74,9 @@ y `expire_order`.
   validación, 1.
 - **Cómo pagaron los entregados:** Yape 182, efectivo 175, prepago 139, mixto 1.
 - **Solo 12 pedidos pasaron por validación** (zona GPS dudosa, cliente nuevo, regla general: 4 cada uno).
-- **El 84 % lo teclea la cajera**: cualquier regla nueva en la creación del pedido la sufre sobre todo ella. Por eso
-  las reglas de catálogo y horario se aplican solo al canal del cliente (`p_source = 'customer_pwa'`), salvo decisión
-  escrita.
+- **El 84 % lo teclea la cajera**, y por un camino aparte: en 30 días, los 425 pedidos manuales se crearon con
+  `create_business_manual_order`, sin ítems; los 94 de la app, con `create_customer_order`. Una regla que deba valer
+  para los dos canales hay que ponerla en los dos caminos.
 
 ## Pendientes
 
