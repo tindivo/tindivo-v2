@@ -33,7 +33,7 @@ el estado que toca.
 | `cancel` | Negocio o admin | Cancela cualquier pedido no cerrado |
 | `take` | Motorizado | Toma un pedido de la cola y va al local |
 | `arrived` | Motorizado | Llegó al local |
-| `pickup` | Motorizado | Recogió; **declara la banda** (cerca o lejos), que fija el envío |
+| `pickup` | Motorizado | Recogió. La banda ya viene del pedido (`0120`); el código aún acepta que la sustituya, sin recalcular el envío |
 | `arrived_customer` | Motorizado | Llegó al domicilio (necesario antes de un no-show) |
 | `deliver` | Motorizado | Entregó; **declara el cobro real** (efectivo, Yape, mixto o prepago) y calcula lo que rinde |
 | `no_show` | Motorizado | El cliente no aparece, tras esperar el plazo desde que llegó: cancela |
