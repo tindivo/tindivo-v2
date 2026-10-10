@@ -47,7 +47,7 @@ Un mismo usuario puede tener varios roles (`users` + `user_roles`).
 | **Contraentrega** | `payment_intent` `pending_cash` · `pending_yape` · `pending_mixed` | Se paga al recibir: efectivo, Yape o una mezcla |
 | **Prepago** | `payment_intent = 'prepaid'`, estado `awaiting_payment` | Se paga antes y se sube la captura del comprobante |
 | **Cobro real** | `PAYMENT_REALS` (`paid_cash`, `paid_yape`, `paid_mixed`, `paid_prepaid`, `unpaid`, `refunded`) | Cómo se pagó de verdad al entregar |
-| **Banda** (cerca / lejos) | `DISTANCE_BANDS` = `near` · `far` | La declara el motorizado al recoger; fija la tarifa de envío |
+| **Banda** (cerca / lejos) | `DISTANCE_BANDS` = `near` · `far` | Fija la tarifa de envío. La calcula el sistema por ubicación (app) o la pone la cajera (manual) |
 | **Sencillo** o **adelanto de vuelto** | `change_advanced` | El cambio que la cajera le da al motorizado antes de salir. Lo pone siempre la caja |
 | **Lo que rinde el motorizado** | `cash_owed_at_delivery` | Adelanto + parte en efectivo del pedido; única fuente del corte de caja |
 | **Corte de caja** | `cash_settlements` | La rendición del efectivo del motorizado al negocio |
