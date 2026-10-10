@@ -11,9 +11,11 @@
   negocio (`commission_override_delivery` vacío en los cuatro).
 - El debate de ingresos del 7-oct menciona que los no aliados «ya dijeron que no a S/ 1.50», lo que sugiere que 1.50 es
   el precio vigente a propósito.
+- **Toda la historia de producción cobró S/ 1.50**: cada cargo de comisión por pedido con entrega, semana a semana desde
+  el primero (2026-08-03), es de 1.50; los de recojo, de 1.00. El S/ 1.00 de `§4` nunca se cobró.
 
-**Recomendación:** S/ 1.50 es lo vigente; se corrige `§4` y se registra cuándo y por qué subió. **¿Cuándo pasó de 1.00
-a 1.50, y fue decisión tuya?**
+**Recomendación:** S/ 1.50 es lo vigente y se corrige `§4`. **¿Confirmas que S/ 1.50 es el precio acordado con los
+aliados?**
 
 ## 2. Datos del negocio que la base no guarda
 
@@ -36,6 +38,7 @@ le cobra y cómo se cuenta la carga de los motorizados. (Se revisa a fondo en el
 - `CLAUDE.md` y la visión decían «1 restaurante (La Florencia), 1 motorizado»: hoy son cuatro aliados y tres
   motorizados.
 - `FASE-1-TINDIVO.md` daba el **fondo de contingencia** como «única excepción» a no retener fondos: se eliminó en la
-  `0123` (comprobado: no quedan ni la tabla ni sus funciones). `DECISIONS.md §9` está obsoleto.
+  `0123` (comprobado: no quedan ni la tabla ni sus funciones). `DECISIONS.md §9` está obsoleto. Lo que la sustituyó
+  —las apelaciones que llegan a la deuda— se pregunta en el área de dinero.
 - `DECISIONS.md §4` decía que el recojo cobraba S/ 0.50; ya estaba corregido a S/ 1.00 en el propio §4, y coincide con
   producción.

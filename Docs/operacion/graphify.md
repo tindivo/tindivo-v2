@@ -37,6 +37,10 @@ Solo lo que manda: código, canon y planes. `.graphifyignore` excluye `Docs/trab
 
 ## Trampas conocidas
 
+- **No indexa SQL.** El grafo no tiene ni un nodo de `supabase/migrations/` (medido el 2026-10-10), y ahí vive buena
+  parte de la lógica (`advance_order`, las liquidaciones, la deuda). Para la base, consulta `pg_proc` /
+  `pg_get_functiondef` en solo lectura, o busca con `rg` en las migraciones; una consulta del grafo sobre dinero
+  devuelve componentes del mapa y specs viejos.
 - **`graphify label` falla con DeepSeek** en la 0.9.11 (incompatibilidad con `ThinkingBlock`): las comunidades se
   quedan con nombres basados en su archivo principal, que sirven igual.
 - **No genera `graph.html`** por encima de 5.000 nodos (hoy hay más del doble). Para verlo: `--no-viz` lo omite sin
