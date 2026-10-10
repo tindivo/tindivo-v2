@@ -1,5 +1,4 @@
-import { PhonePeSchema } from '@tindivo/contracts'
-import { z } from 'zod'
+import { SendPhoneCodeRequestSchema } from '@tindivo/contracts'
 import { requireRole } from '@/lib/http/auth'
 import { corsHeaders, handleOptions } from '@/lib/http/cors'
 import { handleError, ok, problem } from '@/lib/http/problem'
@@ -13,10 +12,6 @@ import {
 } from '@/lib/twilio/client'
 
 export const dynamic = 'force-dynamic'
-
-const SendCodeSchema = z.object({
-  phone: PhonePeSchema,
-})
 
 /** Máximo de intentos de verificación por usuario en una ventana de 24 horas. */
 const MAX_ATTEMPTS_PER_24H = 3
@@ -45,7 +40,7 @@ export async function POST(req: Request): Promise<Response> {
   const requestId = getRequestId(req)
   try {
     const { user } = await requireRole(req, 'customer')
-    const { phone } = SendCodeSchema.parse(await req.json())
+    const { phone } = SendPhoneCodeRequestSchema.parse(await req.json())
     const fullPhone = `+51${phone}`
 
     const service = createServiceClient()
