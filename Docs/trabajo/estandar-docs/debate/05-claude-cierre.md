@@ -11,7 +11,7 @@ Codex firmó con cambios en las dos rondas. Estado de cada cambio de la ronda 2 
 | 4a | §7.6: quitar «revisión rutinaria de Codex» | Aplicado |
 | 4b | §7.6: Gemini con «modelo validado para la tarea», no siempre el más avanzado | **No aplicado: lo fijó Jesús.** Queda para su decisión |
 | 4c | §7.6: redacción del encargo a subagentes; párrafo de orquestadores reducido | Aplicado |
-| 5 | §6.5: la memoria sin aprobación pasa a `trabajo/`, no al canon; §6.1: la prueba de `.agents/AGENTS.md` acotada a su alcance, con evidencia guardada | Aplicado (`evidencia/carga-agents-md-codex.md`) |
+| 5 | §6.5: la memoria sin aprobación pasa a `trabajo/`, no al canon; §6.1: la prueba de `.agents/AGENTS.md` acotada a su alcance, con evidencia guardada | Aplicado (`evidencia/carga-de-instrucciones.md`) |
 
 **Fallo propio sobre la regla recién acordada:** Codex revisó la v2 sin commitear y yo la edité después sin guardar
 copia, así que el texto exacto que firmó no se conserva. Hash de la v2.1 resultante:

@@ -180,14 +180,17 @@ del código siguen resolviendo y se corrigen cuando se toca ese código.
 
 | Herramienta | Qué carga | Comprobado |
 |---|---|---|
-| **Codex CLI 0.162** | Los `AGENTS.md` desde la raíz del repo hasta el directorio de lanzamiento. Lanzado con `-C <repo>`: **solo el raíz**. Lanzado en `apps/negocios`: raíz + local. En ninguno de los dos lanzamientos cargó `.agents/AGENTS.md` | Prueba en repo de juguete: `Docs/trabajo/estandar-docs/evidencia/carga-agents-md-codex.md` |
+| **Codex CLI 0.162** | Los `AGENTS.md` desde la raíz del repo hasta el directorio de lanzamiento. Lanzado con `-C <repo>`: **solo el raíz**. Lanzado en `apps/negocios`: raíz + local. En ninguno de los dos lanzamientos cargó `.agents/AGENTS.md` | Prueba en repo de juguete: `Docs/trabajo/estandar-docs/evidencia/carga-de-instrucciones.md` |
 | **Claude Code** | `CLAUDE.md`, no `AGENTS.md`. `CLAUDE.md` con `@AGENTS.md` importa el contenido (preferible al symlink en Windows). Los `CLAUDE.md` anidados se cargan al trabajar en esa carpeta | Documentación oficial (code.claude.com/docs/en/memory); falta prueba propia |
-| **Antigravity CLI** (modelos Gemini) | Por verificar. Gemini CLI quedó descartado: Google rechaza su login para cuentas individuales y remite a Antigravity (2026-10-10) | Pendiente de instalar y probar con el mismo repo de juguete |
+| **Antigravity CLI** (`agy` 1.3.3) | `AGENTS.md` y `GEMINI.md` de la raíz, **y también `.agents/AGENTS.md`** (`.agents/` es su convención); los locales hasta el directorio de lanzamiento. Gemini CLI quedó descartado: Google rechaza su login individual y remite a Antigravity (2026-10-10) | Prueba en el mismo repo de juguete (según la respuesta del modelo): misma evidencia |
+
+**Consecuencia medida:** las 259 líneas de `.agents/AGENTS.md` solo las veía Antigravity; ni Claude ni Codex. Cada
+herramienta trabajaba con reglas distintas.
 
 ### 6.2 Un archivo canónico y un mapa
 
-- **`AGENTS.md` raíz es la entrada común.** `CLAUDE.md` = `@AGENTS.md` + lo exclusivo de Claude. `.gemini/settings.json`
-  apunta a `AGENTS.md`. Sin copias de texto.
+- **`AGENTS.md` raíz es la entrada común**, y la leen las tres herramientas. `CLAUDE.md` = `@AGENTS.md` + lo exclusivo
+  de Claude. No hay `GEMINI.md` ni `.agents/AGENTS.md` con reglas propias. Sin copias de texto.
 - **El `AGENTS.md` raíz incluye un mapa de instrucciones locales** («antes de editar en `apps/negocios/` o
   `packages/ui/`, lee `apps/negocios/AGENTS.md`»). El mapa es obligatorio porque Codex, lanzado desde la raíz, no
   carga los locales.
@@ -312,8 +315,10 @@ Mecanismos:
   entradas, restricciones y salida esperada, sin depender de que el subagente herede toda la conversación.
 - **Codex**: `codex exec -p revisor -m <modelo> -c model_reasoning_effort=<low|medium|high>`. Los modelos que admite la
   cuenta de Jesús se anotan en `operacion/` al comprobarlos.
-- **Antigravity**: el modelo más avanzado disponible, fijado en su configuración o por parámetro, y revisado cuando salga
-  uno nuevo.
+- **Antigravity**: `agy -p "<encargo>" --model <id> --mode plan` (sin `--dangerously-skip-permissions`). Siempre el
+  Gemini más avanzado; `agy models` lista los disponibles y se revisa cuando sale uno nuevo. Cuál es «el más avanzado»
+  entre `gemini-3.8-flash-high` (la generación más nueva) y `gemini-3.1-pro-high` (el último Pro) se decide con una
+  prueba sobre el primer encargo real.
 - **Sin orquestador adicional por ahora**: no hay una necesidad demostrada. Se reevalúa si la coordinación manual
   limita el trabajo.
 
