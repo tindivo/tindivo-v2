@@ -14,7 +14,9 @@ distingue al vecino del pedido falso mejor que cualquier regla, y no deja a nadi
 
 ## Cómo se decide si un pedido de la app puede pagar al recibir
 
-En este orden; el riesgo manda sobre cualquier historial:
+**Confirmado por Jesús el 2026-10-10**, en su resumen: «para todos, prepago; contraentrega para quien está en San
+Jacinto con la ubicación o tiene su número en el directorio, o ya hizo al menos un pedido», más el tope de S/ 80 y los
+strikes. En este orden; el riesgo manda sobre cualquier historial:
 
 1. **Cliente bloqueado** (`customer_is_blocked`): no puede pedir.
 2. **Con strikes** (`customer_requires_prepayment`; strikes anclados al teléfono **y** a la dirección, de modo que
@@ -33,7 +35,9 @@ Los pedidos manuales de la cajera no pasan por estas reglas: ella tiene al clien
 
 ## La llamada (`validando`)
 
-La hace la **cajera**; Jesús escala. Tiene **5 minutos** (`timers.validationMinutes`) o el pedido se cancela
+La hace la **cajera**; Jesús escala. **En la práctica la cajera rara vez llama o escribe** (Jesús, 2026-10-10): resuelve
+la validación desde el tablero. Se acepta por ahora, sabiendo que el GPS se puede falsificar; mostrarle qué filtro
+pasó cada cliente nuevo está en el backlog (punto 8). Tiene **5 minutos** (`timers.validationMinutes`) o el pedido se cancela
 (`validation_timeout`). Los umbrales de cuándo pedir llamada viven en `app_settings.validation` (monto, mismo
 teléfono repetido, picos de pedidos; la regla de direcciones cercanas está apagada desde la `0149` porque «tres pedidos
 en media cuadra en una hora es una noche buena, no fraude»).
@@ -78,4 +82,4 @@ de espera. Está en el backlog (`Docs/trabajo/backlog.md`).
 
 ## Pendientes
 
-`Docs/trabajo/squash/preguntas-antifraude.md`: si las reglas de `DECISIONS.md §8` siguen siendo las que quieres.
+Ninguna.

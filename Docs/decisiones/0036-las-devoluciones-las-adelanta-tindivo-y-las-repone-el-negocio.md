@@ -28,8 +28,9 @@ tiene que devolvernos la devolución que se hizo al cliente».
 ## Consecuencias
 
 - Es la única forma en que Tindivo pone dinero en el medio: adelanta y recupera. No retiene fondos del cliente.
-- El cargo a la deuda debe nacer de una devolución hecha, como `register_appeal_refund` (que exige la captura), y no de
-  una cancelación. Revisar el cargo automático está en el backlog (punto 3) y toca dinero.
+- **El cargo a la deuda nace del reclamo del cliente, no de la cancelación** (Jesús, 2026-10-10: «solo si [el cliente]
+  reclamaba, recién se le cargaba»). Cancelar un pedido es una operación normal —por ejemplo, para volver a crearlo—
+  y no debe generar deuda. Cambiar `handle_prepaid_refund_on_cancel` está en el backlog (punto 3) y toca dinero.
 
 ## Verificación
 
