@@ -108,5 +108,5 @@ Medido: 3 entregas con S/ 9.00 **declarados como rendidos** por el motorizado y 
 
 ## Tindivo Store
 
-Store registra precio y estado vendido de cada producto; eso no es un cobro ni una liquidación. Quién cobra una venta
-de Store está preguntado.
+Store registra precio y estado vendido de cada pieza; eso no es un cobro ni una liquidación. El único vendedor es
+Jesús y cobra al cerrar la venta por WhatsApp, fuera de la plataforma (`DECISIONS.md §32`).

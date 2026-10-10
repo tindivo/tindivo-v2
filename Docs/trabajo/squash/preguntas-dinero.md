@@ -56,10 +56,10 @@ diferencia**: el motorizado, el negocio o Tindivo. Nunca ha habido una disputa. 
 Si una entrega se cancela después de que el motorizado cobró los S/ 3, el cobro se conserva y se puede rendir. **¿Se le
 devuelve al cliente? ¿Quién y cuándo?**
 
-## 9. Ventas de Store
+## 9. ~~Ventas de Store~~ — respondida por `DECISIONS.md §32`
 
-Store registra precio y estado vendido, pero no un cobro. **¿Quién cobra una venta de Store y cómo llega ese dinero
-(o la parte de Tindivo) a Tindivo?**
+Jesús es el único vendedor y cobra al cerrar la venta por WhatsApp, fuera de la plataforma. Ver
+`Docs/negocio/servicios/store.md`.
 
 ## Pendiente operativo
 
