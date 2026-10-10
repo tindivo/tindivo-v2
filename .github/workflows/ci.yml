@@ -56,6 +56,11 @@ jobs:
       - name: Límites de sesión (signOut local · cliente de navegador)
         run: pnpm check:auth
 
+      # Lo que manda (canon, planes, AGENTS.md/CLAUDE.md) no puede apuntar a archivos que no existen ni perder su
+      # cabecera: así nació el `/specs` fantasma. Estándar: Docs/planes/estandar-docs/estandar.md §8.
+      - name: Documentación que manda (enlaces, rutas y cabeceras)
+        run: pnpm check:docs
+
       - name: Type-check (incluye el drift de enums compile-time)
         run: pnpm type-check
 

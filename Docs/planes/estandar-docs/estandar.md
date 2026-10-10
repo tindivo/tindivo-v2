@@ -197,7 +197,7 @@ del código siguen resolviendo y se corrigen cuando se toca ese código.
 | Herramienta | Qué carga | Comprobado |
 |---|---|---|
 | **Codex CLI 0.162** | Los `AGENTS.md` desde la raíz del repo hasta el directorio de lanzamiento. Lanzado con `-C <repo>`: **solo el raíz**. Lanzado en `apps/negocios`: raíz + local. En ninguno de los dos lanzamientos cargó `.agents/AGENTS.md` | Prueba en repo de juguete: `Docs/trabajo/estandar-docs/evidencia/carga-de-instrucciones.md` |
-| **Claude Code** | `CLAUDE.md`, no `AGENTS.md`. `CLAUDE.md` con `@AGENTS.md` importa el contenido (preferible al symlink en Windows). Los `CLAUDE.md` anidados se cargan al trabajar en esa carpeta | Documentación oficial (code.claude.com/docs/en/memory); falta prueba propia |
+| **Claude Code 2.1.296** | `CLAUDE.md`, no `AGENTS.md`; `CLAUDE.md` con `@AGENTS.md` importa el contenido. Los `CLAUDE.md` anidados se cargan al leer o editar en su carpeta. **Lanzado desde una subcarpeta, los imports de fuera de ella son externos**: piden aprobación, y con `-p` se ignoran en silencio | Prueba en el worktree real: misma evidencia |
 | **Antigravity CLI** (`agy` 1.3.3) | `AGENTS.md` y `GEMINI.md` de la raíz, **y también `.agents/AGENTS.md`** (`.agents/` es su convención); los locales hasta el directorio de lanzamiento. Gemini CLI quedó descartado: Google rechaza su login individual y remite a Antigravity (2026-10-10) | Prueba en el mismo repo de juguete (según la respuesta del modelo): misma evidencia |
 
 **Consecuencia medida:** las 259 líneas de `.agents/AGENTS.md` solo las veía Antigravity; ni Claude ni Codex. Cada
