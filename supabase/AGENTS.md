@@ -63,8 +63,8 @@ Usa `(now() at time zone 'America/Lima')::date`. Ya escondió un pedido entregad
 
 Verificado contra las 8 funciones que escriben `orders.status` (`advance_order`, `expire_order`,
 `apply_order_transfer`, `cancel_customer_order`, `cancel_expired_prepay_orders`, `extend_order_prep`,
-`validate_order`, `create_customer_order`) y el único `.update()` directo del API (`prepay-proof/route.ts`, que exige
-`awaiting_payment`): **ninguna saca un pedido de `delivered`.** Por eso la rama de reversión de
+`validate_order`, `create_customer_order`) y el único `.update()` directo del API (`apps/api/app/api/v1/customer/orders/[id]/prepay-proof/route.ts`, que exige
+`awaiting_payment`; comprobado el 2026-10-10): **ninguna saca un pedido de `delivered`.** Por eso la rama de reversión de
 `generate_delivery_charges` es código inalcanzable. Desde la `0124`, `balance_due` lo deriva
 `trg_business_charges_recalc_balance`, así que el `DELETE` de cargos `pending` de esa rama ya no descuadra el saldo.
 Si alguna vez se abre un camino para salir de `delivered`, esa rama pasa a ejecutarse: **repásala entera antes**,

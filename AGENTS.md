@@ -15,7 +15,7 @@ al negocio (Yape, Plin o efectivo). Monorepo pnpm + Turborepo: `apps/{api,custom
 
 | Zona | Dónde | ¿Manda? |
 |---|---|---|
-| **Canon** | `Docs/decisiones/` (ADR), `DECISIONS.md` (decisiones §1–§32 e índice), y lo que vaya naciendo en `Docs/negocio/`, `Docs/arquitectura/`, `Docs/operacion/` | Sí |
+| **Canon** | `Docs/decisiones/` (ADR), `DECISIONS.md` (decisiones §1–§32 e índice), y lo que vaya naciendo en `Docs/negocio/` (por crear), `Docs/arquitectura/`, `Docs/operacion/` | Sí |
 | **Planes** | `Docs/planes/` | Sí, solo dentro de su alcance |
 | **Trabajo** | `Docs/trabajo/` | **No**: borradores, debates, análisis |
 | **Historia** | git | No. Lo borrado se cita por commit |
@@ -29,11 +29,12 @@ al negocio (Yape, Plin o efectivo). Monorepo pnpm + Turborepo: `apps/{api,custom
 
 ## Reglas locales: léelas antes de tocar esa carpeta
 
-Codex lanzado desde la raíz **no** las carga solo; Claude y Antigravity sí, al trabajar dentro.
+Codex lanzado desde la raíz **no** carga los locales automáticamente. Claude los carga mediante los `CLAUDE.md`
+anidados. Todos deben seguir este mapa, independientemente de la carga automática.
 
 | Si tocas… | Lee |
 |---|---|
-| `supabase/` (migraciones, funciones, cualquier SQL contra una base) | `supabase/AGENTS.md` |
+| `supabase/`, cualquier SQL contra una base, pruebas de integración de `apps/api` o scripts que usen la base | `supabase/AGENTS.md` |
 | iconos en `apps/negocios`, `apps/motorizados` o `packages/ui` | `apps/negocios/AGENTS.md` |
 | `e2e/` (Playwright) | `e2e/AGENTS.md` |
 
@@ -59,7 +60,11 @@ Codex lanzado desde la raíz **no** las carga solo; Claude y Antigravity sí, al
 - **Evidencia, no afirmaciones.** Nada está «listo» sin evidencia objetiva (salida de consola, test, captura, consulta).
   Distingue **medido** de **estimado**. Un gate en verde prueba que compila y que los tests existentes pasan, no que
   el producto funcione.
-- **Pasos numerados; si uno falla, para** ahí y repórtalo. No acumules cambios sobre algo roto.
+- **Antes de implementar, lee el canon y el plan aplicables**; si falta una definición vigente necesaria, pregunta
+  antes de implementar esa parte.
+- **Pasos numerados; si uno falla, para** ahí y repórtalo. No acumules cambios sobre algo roto. Verifica cada paso
+  antes del siguiente y no declares completa una tarea hasta comprobar todos sus criterios de aceptación. Adjunta la
+  evidencia cruda pertinente, no solo tu conclusión.
 - **Un criterio de aceptación se puede comprobar** con una aserción o una consulta, no es una descripción.
 - **Causa raíz, no parche.** Un workaround se marca como tal, con la causa pendiente.
 - **Decisiones antes de código.** Una decisión de diseño o de negocio abierta se pregunta; no se asume.
@@ -78,20 +83,25 @@ Codex lanzado desde la raíz **no** las carga solo; Claude y Antigravity sí, al
   (`feat(recojo): en el mostrador no se fía`). En Git Bash un heredoc corrompe los acentos: escribe el mensaje en un
   archivo UTF-8 y `git commit -F archivo`. Nunca `--no-verify` ni `push --force` a `main`.
 - **Roles y modelos** (quién decide, quién revisa, qué modelo para qué tarea): estándar §7.
-- Responde y documenta en **español peruano**; el dueño es **Jesús**. Código, base y ramas en inglés.
+- Responde, documenta y escribe el contenido de la UI en **español peruano**; el dueño es **Jesús**. Código, base y
+  ramas en inglés.
 
 ## Convenciones de código
 
 TypeScript **strict** (TS 6) · Zod **v4** · Next **16** + React **19** + Tailwind **v4** · Biome (`pnpm lint`) sin
 errores nuevos y sin bajar reglas a `warn` · vertical slicing por feature (una feature no importa de otra; lo común
-sube a `lib/` o `packages/`) · sin Server Actions ni BFFs: las apps nativas (Swift + Kotlin) usan la misma API REST
+sube a `lib/` o `packages/`) · `packages/core` es dominio puro: hexagonal solo en `orders`, services + repos para el
+resto · `packages/contracts` es la fuente canónica de primitivas, enums, transiciones y errores · coordenadas
+`numeric(10,7)` · sin Server Actions ni BFFs: las apps nativas (Swift + Kotlin) usan la misma API REST
 · sin Prisma/Drizzle (RLS) · TDD en `packages/core` · no se extrae con menos de 3 usos ni se abstrae con menos de 2 implementaciones · lógica
 de dinero con tests unitarios sobre funciones puras.
 
 ## Comandos
 
 ```bash
-pnpm install · pnpm dev · pnpm lint · pnpm type-check · pnpm test   # mira el pie: «Cached: 0» o no se ejecutó nada
+pnpm install · pnpm dev · pnpm lint · pnpm type-check · pnpm test
+# revisa qué tareas se ejecutaron y cuáles salieron de caché (la base no entra en el hash de Turbo):
+# un verde entero puede no haber ejecutado nada; para verificar de nuevo, usa --force
 pnpm db:cycle            # base local bajo candado: reset → seed e2e → tests de la API
 pnpm db:types            # tipos desde tindivo-prod (después del db push)
 pnpm test:e2e            # Playwright

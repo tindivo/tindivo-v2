@@ -16,6 +16,7 @@
     "check:auth": "node scripts/check-auth-boundaries.mjs",
     "check:dialogs": "node scripts/check-dialogs.mjs",
     "check:deploy": "node scripts/check-deploy-order.mjs",
+    "check:docs": "node scripts/check-docs.mjs",
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",
     "type-check": "turbo run type-check",
