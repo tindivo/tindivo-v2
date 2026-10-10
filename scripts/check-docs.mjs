@@ -25,8 +25,7 @@ const tracked = execFileSync('git', ['-c', 'core.quotepath=off', 'ls-files'], { 
   .filter(Boolean)
 
 const esAgentes = (f) => /(^|\/)(AGENTS|CLAUDE)\.md$/.test(f)
-// Docs/arquitectura/ entra cuando la propuesta actual salga a Docs/trabajo/ (estándar §9, paso 3).
-const CANON = ['Docs/negocio/', 'Docs/operacion/', 'Docs/glosario.md', 'Docs/README.md']
+const CANON = ['Docs/negocio/', 'Docs/arquitectura/', 'Docs/operacion/', 'Docs/glosario.md', 'Docs/README.md']
 const esCanon = (f) => CANON.some((c) => f.startsWith(c)) && f.endsWith('.md')
 const esAdr = (f) => /^Docs\/decisiones\/\d{4}-.+\.md$/.test(f)
 const esPlan = (f) => /^Docs\/planes\/[^/]+\/[^/]+\.md$/.test(f)

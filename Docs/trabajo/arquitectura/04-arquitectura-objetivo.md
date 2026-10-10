@@ -3,7 +3,7 @@
 > Propuesta del 2026-10-08, **revisada tras la crítica de Codex** ([`revision-codex.md`](revision-codex.md)). Se apoya en
 > [`01-codigo.md`](01-codigo.md), [`02-base-de-datos.md`](02-base-de-datos.md) y
 > [`03-proveedores-y-vps.md`](03-proveedores-y-vps.md), y en el acuerdo sobre el contrato REST
-> (`../customer_app_migration/debate-rest/conclusion.md`).
+> (`../movil/debate-rest/conclusion.md`).
 
 ## 1. El principio: desacoplamiento
 

@@ -2,7 +2,7 @@
 
 > 2026-10-08. Jesús pide: «a nivel de buenas prácticas, ¿qué recomiendas? Divídelo por fases para entenderte. La idea
 > es que puedas trabajar todos los días en esto, 24/7, para tenerlo listo». El *qué* ya está firmado
-> (`../conclusion.md`, F0-F5, y `../../customer_app_migration/debate-rest/conclusion.md`, pasos 0-7). Esto es el
+> (`../../../planes/migraciones/conclusion.md`, F0-F5, y `../../movil/debate-rest/conclusion.md`, pasos 0-7). Esto es el
 > **cómo**: en qué lotes diarios se parte, qué puedo hacer solo y qué no, y con qué disciplina.
 
 ## Hechos que condicionan la propuesta
@@ -31,7 +31,7 @@ lecturas con efectos (abrir una app con sesión registra push).
 
 ## La disciplina diaria (buenas prácticas)
 
-1. **Una cola** (`Docs/plan-migraciones/cola.md`): lotes con ID estable, dependencias, nivel A/B/C y «hecho cuando».
+1. **Una cola** (`Docs/planes/migraciones/cola.md`): lotes con ID estable, dependencias, nivel A/B/C y «hecho cuando».
    Cada sesión toma el primer lote A desbloqueado. Si lo siguiente es B o C, lo deja preparado y pasa al siguiente A:
    **nunca me quedo parado esperando**, y Jesús encuentra una lista corta de lo que le toca.
 2. **Un lote = una rama = un worktree = un PR a `develop`**, de ≤ 1 día. Nombre `mig/<ID>-<slug>`. El worktree evita
@@ -55,7 +55,7 @@ Numeradas por día de trabajo, no por fecha. Lo que está en la misma fila puede
 
 | ID | Lote | Nivel | Hecho cuando |
 |---|---|---|---|
-| P0.1 | Commit de `Docs/arquitectura/` y `Docs/plan-migraciones/`; crear `cola.md` y `bitacora/` | A | En `develop` |
+| P0.1 | Commit de `Docs/trabajo/arquitectura/` y `Docs/planes/migraciones/`; crear `cola.md` y `bitacora/` | A | En `develop` |
 | P0.2 | Línea base: `lint`, `check:ds`, `type-check`, `test` en `develop` limpio; anotar los rojos heredados | A | Lista de rojos de base en la bitácora |
 | P0.3 | **CI con la suite de la API**: job que levanta Supabase (CLI) en el runner, `db reset` + `db:seed:e2e` + `turbo test --filter=@tindivo/api --force` | A | Un PR muestra la suite de la API corriendo en CI |
 | P0.4 | Copia lógica de prod (esquema + datos) a disco de Jesús, y el procedimiento escrito | B | Archivo restaurable probado en local |

@@ -135,7 +135,7 @@ explícita de denegación) para que el *advisor* y un agente no lo confundan con
 ### B-12 · El historial es la única fuente de verdad del esquema
 
 Para saber cómo es hoy una función hay que encontrar su última versión entre 246 migraciones; ya se acordó resolverlo
-con una foto legible y una CI que reconstruya la base (`../customer_app_migration/debate-rest/conclusion.md` §4).
+con una foto legible y una CI que reconstruya la base (`../movil/debate-rest/conclusion.md` §4).
 
 ## Resumen por prioridad
 
