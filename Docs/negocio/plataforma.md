@@ -51,8 +51,8 @@ Encargos («te lo compramos y te lo llevamos») no existe: se descartó (ADR 003
    comisión al negocio aparte. **Por qué:** evita el riesgo regulatorio de intermediar dinero. El fondo de contingencia
    se eliminó en la `0123`. **Una excepción sigue viva en el código:** cuando una apelación se aprueba (el negocio
    rechazó por error un comprobante de prepago), Jesús le devuelve el dinero al cliente y lo carga a la deuda del
-   negocio (`register_appeal_refund` → `refund_charge`). Ha ocurrido una vez (S/ 20.50). Cómo encaja con el principio
-   está en las preguntas del área.
+   negocio (`register_appeal_refund` → `refund_charge`). No ha ocurrido nunca. Si Jesús lo autoriza como excepción
+   está preguntado en el área de dinero (`Docs/negocio/dinero.md`).
 2. **El antifraude es humano.** Ante un cliente nuevo o con strikes que paga contraentrega, **la cajera lo llama**
    antes de cocinar (`validando`). La llamada es antifraude, no un canal para avisarle del estado del pedido.
 3. **Se cobra solo lo entregado.** Un pedido cancelado no genera comisión ni deuda.
