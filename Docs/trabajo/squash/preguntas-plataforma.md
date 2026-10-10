@@ -25,7 +25,12 @@ aliados?**
 
 </details>
 
-## 2. Datos del negocio que la base no guarda
+## 2. ~~Datos del negocio que la base no guarda~~ — respondida
+
+**Jesús, 2026-10-10:** el motorizado gana S/ 30 por noche, que son unos 8.5 pedidos. En `dinero.md`.
+
+<details><summary>Lo que se preguntó</summary>
+
 
 `DECISIONS.md §4` afirma dos cosas que no se pueden comprobar en la base:
 
@@ -34,6 +39,8 @@ aliados?**
 
 Hoy hay tres motorizados y ~17 pedidos entregados por noche de media en 30 días (497). **¿Siguen valiendo esas dos
 cifras?** Si sí, entran en `negocio/dinero.md` como dato tuyo con fecha; si no, con las nuevas.
+
+</details>
 
 ## 3. Pollería Nadia
 

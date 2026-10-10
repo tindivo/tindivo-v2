@@ -1251,7 +1251,7 @@ Para probar la UI usa Playwright (`e2e/store*.spec.ts`).
 
 ---
 
-## 34 · 35. Decisiones nuevas: una por archivo en `Docs/decisiones/`
+## 34 · 35 · 36. Decisiones nuevas: una por archivo en `Docs/decisiones/`
 
 Desde el 2026-10-10 las decisiones nuevas no se escriben aquí (estándar: `Docs/planes/estandar-docs/estandar.md` §5.1).
 §33 queda vetado (lo citaba un borrador de Encargos que nunca se aprobó).
@@ -1259,3 +1259,5 @@ Desde el 2026-10-10 las decisiones nuevas no se escriben aquí (estándar: `Docs
 - **0034** · Encargos queda fuera; la apuesta es el hábito de pedir comida en la app →
   `Docs/decisiones/0034-encargos-fuera-la-apuesta-es-el-habito-en-la-app.md`
 - **0035** · Tindivo Entregas abre todos los días, de 18:00 a 23:00 → `Docs/decisiones/0035-entregas-abre-todos-los-dias.md`
+- **0036** · Las devoluciones al cliente las adelanta Tindivo y las repone el negocio →
+  `Docs/decisiones/0036-las-devoluciones-las-adelanta-tindivo-y-las-repone-el-negocio.md`
