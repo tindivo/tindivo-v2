@@ -34,4 +34,4 @@ Los criterios de «hecho» son mayormente verificables, pero «estabilizado», �
 
 ## Cómo se aplicó (nota de Claude)
 
-Los seis cambios, aplicados en `../conclusion.md` tras verificar sus referencias: el `grant` a `anon, authenticated` en `0238:237`, el registro automático de push en `push-manager.tsx:23-27`, `OrderPaymentTimeoutData` en `client.ts:81`, `playwright.config.ts:49` y `processor.ts:45`. Además se definió «estabilizado» (una semana de operación sin errores nuevos en las rutas del paso 0) y «tráfico representativo» (el pico de una noche real), como propuesta para que Jesús la apruebe.
+Los seis cambios, aplicados en `../../../planes/migraciones/conclusion.md` tras verificar sus referencias: el `grant` a `anon, authenticated` en `0238:237`, el registro automático de push en `push-manager.tsx:23-27`, `OrderPaymentTimeoutData` en `client.ts:81`, `playwright.config.ts:49` y `processor.ts:45`. Además se definió «estabilizado» (una semana de operación sin errores nuevos en las rutas del paso 0) y «tráfico representativo» (el pico de una noche real), como propuesta para que Jesús la apruebe.

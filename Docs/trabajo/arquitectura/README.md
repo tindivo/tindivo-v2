@@ -97,7 +97,7 @@ Los estándares tienen tres niveles:
 
 | En paralelo | Qué |
 |---|---|
-| **Paso 0 · Corrección** | Lo acordado en `../customer_app_migration/debate-rest/conclusion.md`: comprobante, idempotencia y bucket, más **revocar `anon` en `expire_courier_orders`** comprobando los permisos efectivos. Los parches mínimos no requieren mover código; la extracción al módulo `ordering` se hace después, o junto al arreglo cuando no amplía su riesgo ni retrasa su entrega |
+| **Paso 0 · Corrección** | Lo acordado en `../movil/debate-rest/conclusion.md`: comprobante, idempotencia y bucket, más **revocar `anon` en `expire_courier_orders`** comprobando los permisos efectivos. Los parches mínimos no requieren mover código; la extracción al módulo `ordering` se hace después, o junto al arreglo cuando no amplía su riesgo ni retrasa su entrega |
 | **Paso E · Estándares mínimos** | Aprobar `05-estandares.md`; resumirlo en `CLAUDE.md`; reglas de lint para **código nuevo** (DES-1…4, TS-2); la lista de excepciones; las pruebas de integración en CI; `Docs/adr/` |
 
 Después, los pasos 1-7 del plan acordado, cada uno aplicando los estándares al código que toca.

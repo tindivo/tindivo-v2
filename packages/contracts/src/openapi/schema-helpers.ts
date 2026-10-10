@@ -7,7 +7,7 @@ import { z } from 'zod'
  * falle al decodificar en cuanto la base añade un valor nuevo —`pickup_local`
  * llegó así a `business_primary_capability`—, y una app instalada no se puede
  * recompilar. Las apps tratan un valor desconocido como «otro» (estándar API-3,
- * Docs/arquitectura/05-estandares.md). En las PETICIONES el enum sí es cerrado:
+ * Docs/trabajo/arquitectura/05-estandares.md). En las PETICIONES el enum sí es cerrado:
  * ahí manda el servidor.
  */
 export function openEnum(values: readonly string[], description?: string) {

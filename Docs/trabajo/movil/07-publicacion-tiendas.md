@@ -1,6 +1,6 @@
 # Publicación en Google Play y App Store · expediente del customer
 
-> 2026-10-09 · Lote **MV1** de `../plan-migraciones/cola.md`. Objetivo de Jesús: que la primera revisión pase sin
+> 2026-10-09 · Lote **MV1** de `../../planes/migraciones/cola.md`. Objetivo de Jesús: que la primera revisión pase sin
 > idas y vueltas. Nadie puede garantizar cero observaciones; esto ataca una por una las causas conocidas de rechazo
 > que aplican a Tindivo. Los datos de la base salen de `tindivo-prod` (solo lectura, 2026-10-09); las reglas de las
 > tiendas, de las fuentes del final, y **se vuelven a verificar el día que se sube el primer build**, porque cambian.

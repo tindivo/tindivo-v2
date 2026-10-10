@@ -50,7 +50,7 @@
 (Auth, PostgREST, Storage, Realtime, Edge Functions, panel). Autoalojar todo eso con `docker compose` es posible y
 *open source*, pero para un desarrollador solo significa operar copias de seguridad, actualizaciones y seguridad de
 siete servicios con dinero real dentro. Según el análisis de septiembre (por reverificar en el panel), el plan gratuito no incluye copias de seguridad
-(`../customer_app_migration/02-auditoria-backend/06-proceso-calidad-y-operacion.md`, `PRO-06`).
+(`../movil/02-auditoria-backend/06-proceso-calidad-y-operacion.md`, `PRO-06`).
 
 ## Mi opinión: diseñar para poder irte, no irte
 

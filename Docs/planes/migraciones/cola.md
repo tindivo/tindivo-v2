@@ -1,7 +1,10 @@
 # Cola de lotes
 
+> Estado: **en ejecución** · Aprobado por Jesús el 2026-10-09 (lote P0.1, commit `ef31131`) · Commit de referencia:
+> `develop@99d70a0` · Alcance: el avance: qué lote va ahora · Bitácora y debates: `Docs/trabajo/migraciones/`
+
 > La sesión de trabajo toma de aquí **el primer lote A desbloqueado**, de arriba abajo. Al cerrar un lote se marca
-> `[x]` con el commit o PR y se anota en la bitácora del día (`bitacora/AAAA-MM-DD.md`). Las reglas son las de
+> `[x]` con el commit o PR y se anota en la bitácora del día (`Docs/trabajo/migraciones/bitacora/AAAA-MM-DD.md`). Las reglas son las de
 > [`plan-diario.md`](plan-diario.md) §2; el detalle de cada lote, en su §4.
 
 Estados: `[ ]` pendiente · `[~]` en curso · `[x]` hecho · `[!]` bloqueado (con quién o qué lo desbloquea).
@@ -13,11 +16,11 @@ Estados: `[ ]` pendiente · `[~]` en curso · `[x]` hecho · `[!]` bloqueado (co
 
 ## Fase 0 · Cimientos
 
-- [x] **P0.1** · Commit de `Docs/arquitectura/`, `Docs/plan-migraciones/`, esta cola y la bitácora — aprobado por Jesús el 2026-10-09
+- [x] **P0.1** · Commit de `Docs/trabajo/arquitectura/`, `Docs/planes/migraciones/`, esta cola y la bitácora — aprobado por Jesús el 2026-10-09
 - [x] **P0.2** · Inventario de rojos heredados: **ninguno**. `lint` 0 errores (37 avisos), `check:ds` verde, `type-check` 12/12 y 1 063 tests de 10 paquetes, todo con `Cached: 0` (bitácora del 2026-10-09). La suite de `@tindivo/api` se mide en P0.3
 - [x] **P0.4** · Entorno autónomo: bloqueos de §2.2 en `.claude/settings.json`, candado de la base local (`pnpm db:cycle`, `pnpm db:lock status`) y `.env.local` revisados: solo claves locales — rama `chore/p0-entorno-autonomo`
 - [x] **P0.3** · Job de integración en CI (`api-integration` en `.github/workflows/ci.yml`): Supabase CLI fijada, `supabase start` desde las migraciones, `db:seed:e2e` y la suite de la API con `--force`. Visto correr en el PR #9: 40 ficheros en verde (2026-10-10). Que sea obligatorio para mergear se marca en la protección de rama de GitHub (nivel C, **Jesús**)
-- [x] **MV1** · *(carril móvil, adelantado)* Expediente de tiendas: [`07-publicacion-tiendas.md`](../customer_app_migration/07-publicacion-tiendas.md) — camino crítico, causas de rechazo, lo que le falta a la política (con borrador), inventario de datos medido en prod, diseño del borrado y de la cuenta de revisión, nota al revisor y ficha. Abre D-44…D-47 — rama `docs/mv1-expediente-tiendas`
+- [x] **MV1** · *(carril móvil, adelantado)* Expediente de tiendas: [`07-publicacion-tiendas.md`](../../trabajo/movil/07-publicacion-tiendas.md) — camino crítico, causas de rechazo, lo que le falta a la política (con borrador), inventario de datos medido en prod, diseño del borrado y de la cuenta de revisión, nota al revisor y ficha. Abre D-44…D-47 — rama `docs/mv1-expediente-tiendas`
 - [!] **P0.5** · Copia de prod fuera del PC — **Jesús**: dónde se guarda, y presencia para sacarla (nivel B + C)
 - [!] **P0.6** · Restauración aislada y conciliación — espera a P0.5
 - [ ] **P0.7** · Recorrido e2e real del comprobante (sin `UPDATE` simulado)
@@ -35,7 +38,7 @@ Estados: `[ ]` pendiente · `[~]` en curso · `[x]` hecho · `[!]` bloqueado (co
 
 ## Carril móvil · customer
 
-Orden de `../customer_app_migration/debate-rest/conclusion.md` §3. El primer build Android entra a la prueba cerrada
+Orden de `../../trabajo/movil/debate-rest/conclusion.md` §3. El primer build Android entra a la prueba cerrada
 de Google Play en cuanto sea usable contra producción (solo lectura), para que los 14 días de los 12 testers corran
 mientras se construye el resto.
 

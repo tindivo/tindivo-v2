@@ -1,8 +1,11 @@
 # Plan diario · cómo se trabaja el plan de migraciones todos los días
 
-> 2026-10-08/09. Claude propuso (`debate/04-claude-plan-diario.md`), Codex revisó con el repo delante
-> (`debate/04-codex-plan-diario.md`: «no lo aprobaría tal como está», doce cambios), Claude replicó
-> (`debate/05-claude-replica.md`) y Codex **firmó con cuatro cambios** (`debate/05-codex-firma.md`), ya incorporados.
+> Estado: **en ejecución** · Aprobado por Jesús el 2026-10-09 (lote P0.1, commit `ef31131`) · Commit de referencia:
+> `develop@99d70a0` · Alcance: el cómo: niveles de autonomía, lotes y puertas · Bitácora y debates: `Docs/trabajo/migraciones/`
+
+> 2026-10-08/09. Claude propuso (`../../trabajo/migraciones/debate/04-claude-plan-diario.md`), Codex revisó con el repo delante
+> (`../../trabajo/migraciones/debate/04-codex-plan-diario.md`: «no lo aprobaría tal como está», doce cambios), Claude replicó
+> (`../../trabajo/migraciones/debate/05-claude-replica.md`) y Codex **firmó con cuatro cambios** (`../../trabajo/migraciones/debate/05-codex-firma.md`), ya incorporados.
 > El *qué* es `conclusion.md` (F0-F5); esto es el **cómo**. **Toda sesión, humana o autónoma, sigue esta versión.**
 
 ## 1. Tres niveles de autonomía
@@ -37,7 +40,7 @@
 6. **«Hecho» de un lote** = pruebas del lote verdes **sin caché** (`--force`; Turbo cachea `test`: `turbo.json:36`)
    + `type-check` + `lint` comparado con el rojo heredado inventariado + revisión de Codex (`revisor`) **sobre el
    commit exacto** + evidencia (comandos y salida) en el PR. Esa es la segunda etapa de CLAUDE.md.
-7. **Bitácora diaria** (`bitacora/AAAA-MM-DD.md`): commit de partida y de llegada, qué se cerró, qué verificó y con
+7. **Bitácora diaria** (`Docs/trabajo/migraciones/bitacora/AAAA-MM-DD.md`): commit de partida y de llegada, qué se cerró, qué verificó y con
    qué salida, qué espera a Jesús (con la acción exacta) y qué falló.
 
 ## 3. Reglas de cada despliegue (nivel B)
@@ -61,7 +64,7 @@ Un **lote** es una sesión con un entregable verificable, no un día del calenda
 
 | ID | Lote | Nivel | Hecho cuando |
 |---|---|---|---|
-| P0.1 | Commit de `Docs/arquitectura/` y `Docs/plan-migraciones/`; `cola.md` y `bitacora/` | A (Jesús aprueba el commit) | En `develop` |
+| P0.1 | Commit de `Docs/trabajo/arquitectura/` y `Docs/planes/migraciones/`; `cola.md` y `../../trabajo/migraciones/bitacora/` | A (Jesús aprueba el commit) | En `develop` |
 | P0.2 | Inventario de rojos heredados (`lint`, `check:ds`, `type-check`, `test` en `develop` limpio) | A | Lista exacta en la bitácora; no es licencia para ignorar errores nuevos |
 | P0.3 | **CI de integración**: job independiente y obligatorio, CLI de Supabase fijada, base sana, `db reset` + `db:seed:e2e` + suite de la API con `--force`, credenciales del entorno levantado, resultados guardados | A | Un PR lo muestra corriendo, y falla si la suite falla |
 | P0.4 | Entorno autónomo: bloqueos de §2.2, candado de §2.3, `.env` sin secretos de prod | A | Probado: el `db push` lo rechaza el bloqueo; dos sesiones no pueden resetear a la vez |

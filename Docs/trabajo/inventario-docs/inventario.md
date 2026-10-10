@@ -76,8 +76,8 @@ Si un tema está cerrado: se rescata lo decidido al canon y se borra. Si sigue a
 
 ## 4. Planes, trabajo, agentes y lo que se queda
 
-- **PLANES**: `Docs/customer_app_migration/02-auditoria-backend/` (9); `Docs/customer_app_migration/debate-rest/` (9); `Docs/plan-migraciones/debate/` (9); `Docs/customer_app_migration/03-requisitos/` (8); `Docs/customer_app_migration/` (5); `Docs/customer_app_migration/01-sistema-actual/` (5); `Docs/plan-migraciones/` (5); `Docs/customer_app_migration/anexos/scripts/` (4); `Docs/customer_app_migration/05-arranque/` (3); `Docs/customer_app_migration/anexos/` (3); `Docs/plan-migraciones/bitacora/` (2)
-- **TRABAJO**: `Docs/arquitectura/` (7); `Docs/Encargos/` (2); `Docs/` (1); `Docs/Entregas/` (1); `Docs/backlog/` (1)
+- **PLANES**: `Docs/trabajo/movil/02-auditoria-backend/` (9); `Docs/trabajo/movil/debate-rest/` (9); `Docs/trabajo/migraciones/debate/` (9); `Docs/trabajo/movil/03-requisitos/` (8); `Docs/trabajo/movil/` (5); `Docs/trabajo/movil/01-sistema-actual/` (5); `Docs/planes/migraciones/` (5); `Docs/trabajo/movil/anexos/scripts/` (4); `Docs/trabajo/movil/05-arranque/` (3); `Docs/trabajo/movil/anexos/` (3); `Docs/trabajo/migraciones/bitacora/` (2)
+- **TRABAJO**: `Docs/trabajo/arquitectura/` (7); `Docs/Encargos/` (2); `Docs/` (1); `Docs/Entregas/` (1); `Docs/backlog/` (1)
 - **AGENTES**: `.agents/` (3); `(raíz)` (2); `.agents/rules/` (2); `.agents/workflows/` (1)
 - **QUEDA**: `(raíz)` (2); `Docs/Entregas/` (1)
 

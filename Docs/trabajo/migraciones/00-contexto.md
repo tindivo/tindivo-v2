@@ -1,6 +1,6 @@
 # 00 · Contexto del debate: mudar el hosting, después la base, y llegar a nativo sin romper nada
 
-> 2026-10-08. Datos medidos por Claude en el repo (`develop`, `99d70a0` + `Docs/arquitectura/` sin commitear) y en
+> 2026-10-08. Datos medidos por Claude en el repo (`develop`, `99d70a0` + `Docs/trabajo/arquitectura/` sin commitear) y en
 > `tindivo-prod` (solo lectura). Este fichero lo leen los dos participantes.
 
 ## Lo que pidió Jesús (textual, resumido sin cambiar el sentido)
@@ -16,10 +16,10 @@ propio).
 
 ## Lo ya acordado (no se reabre)
 
-- `Docs/customer_app_migration/debate-rest/conclusion.md`: REST `/api/v1` como contrato del dominio; Supabase para Auth
+- `Docs/trabajo/movil/debate-rest/conclusion.md`: REST `/api/v1` como contrato del dominio; Supabase para Auth
   y aviso Realtime; paso 0 de corrección (comprobante, idempotencia, bucket); compatibilidad antes del primer build;
   orden 0-7.
-- `Docs/arquitectura/` (README, 01-05, `revision-codex.md`): monolito modular; desacoplar al tocar; estándares v2.1
+- `Docs/trabajo/arquitectura/` (README, 01-05, `revision-codex.md`): monolito modular; desacoplar al tocar; estándares v2.1
   (propuesta sin aprobar); Hono, driver de Postgres y esquema por módulo son **ensayos**.
 
 ## Hechos medidos para este debate

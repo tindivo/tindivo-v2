@@ -8,7 +8,7 @@ en el fondo con otra solución**, y añado un hallazgo que salió de la propia r
 - **Las ~375 citas eran falsas.** Mi `grep -rl` contó los cachés de `.next`. Con `git grep` en `apps packages supabase
   scripts`, en `feat/mv2b-respuestas@c41f489`: **51 archivos, 73 menciones `DECISIONS…§N`**. Tus 41/69 son de otra
   rama; el orden de magnitud coincide.
-- **Swift + Kotlin no estaba solo en memoria**: está en `Docs/customer_app_migration/README.md`. Retiro esa frase.
+- **Swift + Kotlin no estaba solo en memoria**: está en `Docs/trabajo/movil/README.md`. Retiro esa frase.
 - **`CLAUDE.md`/`AGENTS.md`**: casi idénticos; difieren en las 5 primeras líneas. Corregido.
 - **`DECISIONS.md §2` es un peligro activo**: ordena migrar por MCP contra `psjigdoinfpgrnedxeyf`, el proyecto
   abandonado. Lo subo a paso inmediato, antes de cualquier otra cosa.
