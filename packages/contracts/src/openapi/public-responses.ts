@@ -59,7 +59,10 @@ export const CourierServiceStatusSchema = z.object({
     .object({
       start: z.string().meta({ description: 'HH:MM en Lima' }),
       end: z.string().meta({ description: 'HH:MM en Lima' }),
-      days: z.array(z.number().int()).meta({ description: 'Días ISO: 1 = lunes … 7 = domingo' }),
+      days: z.array(z.number().int()).optional().meta({
+        description:
+          'Días ISO: 1 = lunes … 7 = domingo. Sin `days`, todos los días: es lo que hace `is_within_courier_schedule()`',
+      }),
     })
     .nullable()
     .meta({ description: 'Tal cual `app_settings.courier.hours`. Null en el respaldo de la ruta' }),

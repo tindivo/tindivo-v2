@@ -1392,17 +1392,16 @@
                           "description": "HH:MM en Lima"
                         },
                         "days": {
+                          "description": "Días ISO: 1 = lunes … 7 = domingo. Sin `days`, todos los días: es lo que hace `is_within_courier_schedule()`",
                           "type": "array",
                           "items": {
                             "type": "integer"
-                          },
-                          "description": "Días ISO: 1 = lunes … 7 = domingo"
+                          }
                         }
                       },
                       "required": [
                         "start",
-                        "end",
-                        "days"
+                        "end"
                       ],
                       "additionalProperties": false
                     },
@@ -2644,10 +2643,11 @@
           {
             "name": "Idempotency-Key",
             "in": "header",
-            "required": false,
-            "description": "Repetir la misma clave devuelve el resultado ya creado, sin duplicarlo",
+            "required": true,
+            "description": "UUID nuevo por intento de compra. Repetir la misma clave devuelve el resultado ya creado, sin duplicarlo. Tiene que ser un UUID: hoy otra cosa revienta en la base y responde 500",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
@@ -3933,10 +3933,11 @@
           {
             "name": "Idempotency-Key",
             "in": "header",
-            "required": false,
-            "description": "Repetir la misma clave devuelve el resultado ya creado, sin duplicarlo",
+            "required": true,
+            "description": "UUID nuevo por intento de compra. Repetir la misma clave devuelve el resultado ya creado, sin duplicarlo. Tiene que ser un UUID: hoy otra cosa revienta en la base y responde 500",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],

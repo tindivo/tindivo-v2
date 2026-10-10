@@ -198,7 +198,6 @@ beforeAll(async () => {
     ...(courierSettings as Record<string, unknown>),
     enabled: true,
     ignoreSchedule: true,
-    hours: { start: '00:00', end: '23:59' },
   }
   await db.from('app_settings').update({ value }).eq('key', 'courier')
 })
@@ -320,7 +319,7 @@ describe('el cliente con sesión', () => {
     const created = await conforms('createOrder', 201, createOrder, {
       method: 'POST',
       bearer: token,
-      headers: { 'idempotency-key': `conformidad-${RUN}-1` },
+      headers: { 'idempotency-key': crypto.randomUUID() },
       body: orderBody(),
     })
     await conforms('getOrderTracking', 200, getOrderTracking, {
@@ -337,7 +336,7 @@ describe('el cliente con sesión', () => {
     const created = await conforms('createOrder', 201, createOrder, {
       method: 'POST',
       bearer: token,
-      headers: { 'idempotency-key': `conformidad-${RUN}-2` },
+      headers: { 'idempotency-key': crypto.randomUUID() },
       body: orderBody(),
     })
     const id = String(created.id)
@@ -377,7 +376,7 @@ describe('el cliente con sesión', () => {
     const created = await conforms('createCourierOrder', 201, createCourierOrder, {
       method: 'POST',
       bearer: token,
-      headers: { 'idempotency-key': `conformidad-${RUN}-courier` },
+      headers: { 'idempotency-key': crypto.randomUUID() },
       body: {
         requesterName: NOMBRE_FIXTURE,
         requesterPhone: TELEFONO,
