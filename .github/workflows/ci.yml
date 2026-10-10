@@ -9,6 +9,16 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# El runner va fijado a `ubuntu-24.04` y no a `ubuntu-latest`: desde el
+# 2026-10-19, `ubuntu-latest` pasa a ser Ubuntu 26 (actions/runner-images#14748),
+# y la suite de la API levanta Supabase en Docker sobre él. Una imagen nueva no
+# puede cambiar el resultado del CI sin un commit que lo diga; subir de imagen
+# es un cambio aparte, que se prueba en su propio PR.
+#
+# Las acciones van en su última versión mayor, todas sobre Node 24: las @v4 (y
+# `supabase/setup-cli@v1`) eran de Node 20, que GitHub ya fuerza a 24 con un
+# aviso en cada job. `setup-cli@v3` instala la CLI desde npm, no desde las
+# releases de GitHub; la versión fijada sigue siendo la misma.
 env:
   NODE_VERSION: 24
   PNPM_VERSION: 9.15.9
@@ -16,17 +26,17 @@ env:
 jobs:
   quality:
     name: Lint · Type-check · Test · Build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           version: ${{ env.PNPM_VERSION }}
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
@@ -71,13 +81,13 @@ jobs:
   # Plan de migraciones, lote P0.3.
   api-integration:
     name: Integración · API contra Supabase local
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     env:
       # Fijada: la misma versión con la que se reconstruye la base en local.
       SUPABASE_CLI_VERSION: 2.109.1
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Las suites se escribieron y se miden en Lima, y Vercel corre en UTC.
       # Aquí se reproduce la línea base local; si la suite depende de la zona
@@ -86,12 +96,12 @@ jobs:
         run: sudo timedatectl set-timezone America/Lima
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           version: ${{ env.PNPM_VERSION }}
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
@@ -99,7 +109,7 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
-      - uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@v3
         with:
           version: ${{ env.SUPABASE_CLI_VERSION }}
 
@@ -133,7 +143,7 @@ jobs:
 
       - name: Guardar resultados
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: api-integration-results
           path: apps/api/test-results/
@@ -148,14 +158,14 @@ jobs:
 
   db-types-drift:
     name: DB types drift (database.types.ts vs Supabase)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # `secrets` NO es un contexto válido en `if` de job (rechaza el workflow entero).
     # Se mapea a env y un step-guard condiciona los pasos siguientes.
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_PROJECT_ID: zpnipajgwfthxhdtzhly
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Guard — ¿hay token de Supabase configurado?
         id: guard
         run: |
@@ -165,7 +175,7 @@ jobs:
             echo "run=false" >> "$GITHUB_OUTPUT"
             echo "Sin SUPABASE_ACCESS_TOKEN; se omite el chequeo de drift."
           fi
-      - uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@v3
         if: steps.guard.outputs.run == 'true'
         with:
           version: latest
