@@ -82,6 +82,10 @@ const USUARIOS_FIXTURE = [
   // tumba el barrido entero.
   'Vecino Entregas',
   'Motorizado Entregas Test',
+  // openapi-conformance: un cliente por corrida. Sus pedidos cuelgan del
+  // negocio e2e (que no se borra) y llevan su propio teléfono, así que no caen
+  // ni por el paso 2 ni por el 3: los recoge el 4c, por `customer_user_id`.
+  'Vecino Conformidad',
 ]
 
 /**
@@ -307,6 +311,32 @@ async function barrer(): Promise<Barrido> {
           throw new Error(`barrido: borrar courier_orders (motorizado) falló: ${error.message}`)
       })
     }
+
+    // 4c. Lo que un cliente de fixture deja en los negocios del SEED con un
+    // teléfono que no está en `TELEFONOS_FIXTURE`: sus pedidos, y las
+    // apelaciones que abrió. Las dos sujetan al usuario con NO ACTION
+    // (`orders.customer_user_id`, `reports.created_by`), así que sin este paso
+    // el borrado de usuarios de abajo falla y tumba el barrido entero.
+    await enLotes(userIds, async (lote) => {
+      const { error } = await db.from('reports').delete().in('created_by', lote)
+      if (error) throw new Error(`barrido: borrar reports (cliente) falló: ${error.message}`)
+    })
+    const pedidosCliente: string[] = []
+    await enLotes(userIds, async (lote) => {
+      const { data, error } = await db.from('orders').select('id').in('customer_user_id', lote)
+      if (error) throw new Error(`barrido: leer orders (cliente) falló: ${error.message}`)
+      pedidosCliente.push(...(data ?? []).map((o) => o.id))
+    })
+    await enLotes(pedidosCliente, async (lote) => {
+      for (const [tabla, col] of [
+        ['business_charges', 'order_id'],
+        ['domain_events', 'aggregate_id'],
+        ['orders', 'id'],
+      ] as const) {
+        const { error } = await db.from(tabla).delete().in(col, lote)
+        if (error) throw new Error(`barrido: borrar ${tabla} (cliente) falló: ${error.message}`)
+      }
+    })
   }
 
   await enLotes(userIds, async (lote) => {

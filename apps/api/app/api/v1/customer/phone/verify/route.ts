@@ -1,5 +1,4 @@
-import { PhonePeSchema } from '@tindivo/contracts'
-import { z } from 'zod'
+import { VerifyPhoneCodeRequestSchema } from '@tindivo/contracts'
 import { requireRole } from '@/lib/http/auth'
 import { corsHeaders, handleOptions } from '@/lib/http/cors'
 import { handleError, ok, problem } from '@/lib/http/problem'
@@ -14,11 +13,6 @@ import {
 
 export const dynamic = 'force-dynamic'
 
-const VerifySchema = z.object({
-  phone: PhonePeSchema,
-  code: z.string().length(6, 'El código debe tener 6 dígitos'),
-})
-
 export function OPTIONS(req: Request): Response {
   return handleOptions(req)
 }
@@ -32,7 +26,7 @@ export async function POST(req: Request): Promise<Response> {
   const requestId = getRequestId(req)
   try {
     const { user } = await requireRole(req, 'customer')
-    const { phone, code } = VerifySchema.parse(await req.json())
+    const { phone, code } = VerifyPhoneCodeRequestSchema.parse(await req.json())
     const fullPhone = `+51${phone}`
 
     /*

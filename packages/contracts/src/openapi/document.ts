@@ -105,9 +105,12 @@ function parameters(op: OperationSpec): JsonSchema[] {
     params.push({
       name: 'Idempotency-Key',
       in: 'header',
-      required: false,
-      description: 'Repetir la misma clave devuelve el resultado ya creado, sin duplicarlo',
-      schema: { type: 'string' },
+      // Obligatoria: sin ella la ruta responde 422 antes de mirar nada más.
+      required: true,
+      description:
+        'UUID nuevo por intento de compra. Repetir la misma clave devuelve el resultado ya creado, ' +
+        'sin duplicarlo. Tiene que ser un UUID: hoy otra cosa revienta en la base y responde 500',
+      schema: { type: 'string', format: 'uuid' },
     })
   }
   return params
@@ -134,7 +137,7 @@ function operation(op: OperationSpec): JsonSchema {
   if (params.length) out.parameters = params
   if (op.body) {
     out.requestBody = {
-      required: true,
+      required: !op.bodyOptional,
       content: { 'application/json': { schema: toSchema(op.body, 'input') } },
     }
   }

@@ -10,10 +10,11 @@ import { z } from 'zod'
  * Docs/arquitectura/05-estandares.md). En las PETICIONES el enum sí es cerrado:
  * ahí manda el servidor.
  */
-export function openEnum<const T extends readonly [string, ...string[]]>(values: T) {
+export function openEnum(values: readonly string[], description?: string) {
+  const known = `Valores conocidos: ${values.join(', ')}. Puede llegar uno nuevo; trátalo como desconocido.`
   return z.string().meta({
     'x-known-values': [...values],
-    description: `Valores conocidos: ${values.join(', ')}. Puede llegar uno nuevo; trátalo como desconocido.`,
+    description: description ? `${description}. ${known}` : known,
   })
 }
 
@@ -32,3 +33,15 @@ export const legacyMoney = z.number().meta({
  * servidor ya garantiza la forma; el patrón solo engorda el cliente generado.
  */
 export const uuidOut = z.string().meta({ format: 'uuid' })
+
+/**
+ * Instante (`timestamptz`) en una RESPUESTA. Sale de Postgres con offset y con
+ * hasta seis decimales de segundo (`2026-10-10T13:39:54.123456+00:00`): el
+ * cliente generado tiene que aceptar las fracciones. No se valida el formato
+ * en tiempo de ejecución para que una variante de Postgres no tumbe la prueba
+ * de conformidad por un detalle que ningún cliente rechaza.
+ */
+export const timestampOut = z.string().meta({ format: 'date-time' })
+
+/** Dinero de un campo que puede no tener valor (`numeric` sin `NOT NULL`). */
+export const legacyMoneyNullable = legacyMoney.nullable()

@@ -16,11 +16,12 @@ Estados: `[ ]` pendiente · `[~]` en curso · `[x]` hecho · `[!]` bloqueado (co
 - [x] **P0.1** · Commit de `Docs/arquitectura/`, `Docs/plan-migraciones/`, esta cola y la bitácora — aprobado por Jesús el 2026-10-09
 - [x] **P0.2** · Inventario de rojos heredados: **ninguno**. `lint` 0 errores (37 avisos), `check:ds` verde, `type-check` 12/12 y 1 063 tests de 10 paquetes, todo con `Cached: 0` (bitácora del 2026-10-09). La suite de `@tindivo/api` se mide en P0.3
 - [x] **P0.4** · Entorno autónomo: bloqueos de §2.2 en `.claude/settings.json`, candado de la base local (`pnpm db:cycle`, `pnpm db:lock status`) y `.env.local` revisados: solo claves locales — rama `chore/p0-entorno-autonomo`
-- [~] **P0.3** · Job de integración en CI (Supabase fijado, `db reset` + `db:seed:e2e` + suite de la API con `--force`). Va antes que el resto porque las pruebas pesadas corren en GitHub y no en el PC de Jesús. Escrito (`api-integration` en `.github/workflows/ci.yml`); **falta verlo correr**, y el CI solo corre en PRs: **Jesús** abre el PR de `chore/p0-entorno-autonomo` o instala `gh`. Que sea obligatorio para mergear se marca en la protección de rama de GitHub (nivel C)
+- [x] **P0.3** · Job de integración en CI (`api-integration` en `.github/workflows/ci.yml`): Supabase CLI fijada, `supabase start` desde las migraciones, `db:seed:e2e` y la suite de la API con `--force`. Visto correr en el PR #9: 40 ficheros en verde (2026-10-10). Que sea obligatorio para mergear se marca en la protección de rama de GitHub (nivel C, **Jesús**)
 - [x] **MV1** · *(carril móvil, adelantado)* Expediente de tiendas: [`07-publicacion-tiendas.md`](../customer_app_migration/07-publicacion-tiendas.md) — camino crítico, causas de rechazo, lo que le falta a la política (con borrador), inventario de datos medido en prod, diseño del borrado y de la cuenta de revisión, nota al revisor y ficha. Abre D-44…D-47 — rama `docs/mv1-expediente-tiendas`
 - [!] **P0.5** · Copia de prod fuera del PC — **Jesús**: dónde se guarda, y presencia para sacarla (nivel B + C)
 - [!] **P0.6** · Restauración aislada y conciliación — espera a P0.5
 - [ ] **P0.7** · Recorrido e2e real del comprobante (sin `UPDATE` simulado)
+- [ ] **CI-1** · *(lote menor)* Runner fijado a `ubuntu-24.04` antes de que `ubuntu-latest` pase a Ubuntu 26 (2026-10-19) y acciones sobre Node 24 (checkout, setup-node y upload-artifact v7, pnpm v6, setup-cli v3) — PR #14, CI verde y sin avisos. Se marca hecho al mergear
 
 ## Fase 1 · Paso 0
 
@@ -39,7 +40,7 @@ de Google Play en cuanto sea usable contra producción (solo lectura), para que 
 mientras se construye el resto.
 
 - [x] **MV2a** · OpenAPI: registro de las 27 operaciones del cliente en `packages/contracts/src/openapi`, documento 3.0.3 generado desde Zod (`packages/contracts/openapi/v1.json`, servido en `GET /api/v1/openapi.json`), test de cobertura contra las rutas del disco y respuestas descritas de `health`, `schedule`, `search`, `courier/status` y `pilot-access` — rama `feat/mv2a-openapi`
-- [ ] **MV2b** · Las 21 respuestas pendientes (`x-tindivo-pending`), cada una leída de su ruta y de su función SQL viva, con una prueba de conformidad en el job de integración que valide la respuesta real contra el esquema
+- [x] **MV2b** · Las 21 respuestas descritas: ya no queda ninguna `x-tindivo-pending`. Cuerpos de petición en `@tindivo/contracts` y prueba de conformidad de las 27 operaciones en `api-integration` (41 ficheros y 440 tests en verde). En su primera corrida destapó dos errores del contrato: `Idempotency-Key` es un UUID obligatorio y `courier.hours.days` es opcional — PR #13, apilado sobre #12
 - [ ] **MV2c** · Modelos generados desde el OpenAPI que compilan en Kotlin (runner Linux) y en Swift (runner macOS: cuesta 10 veces más minutos; decidir si en cada PR o a diario)
 - [ ] **MV3** · Compatibilidad: cabeceras de plataforma y build, `GET /config`, versión mínima por app y plataforma (paso 2)
 - [ ] **MV4** · Rutas del primer build: catálogo y horarios por REST, perfil, direcciones atómicas, `quote` (paso 3; necesita `D-39`)

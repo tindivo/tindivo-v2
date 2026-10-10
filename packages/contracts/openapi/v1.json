@@ -425,11 +425,130 @@
         ],
         "responses": {
           "200": {
-            "description": "Forma pendiente de documentar (lote MV2b)",
+            "description": "Negocios publicados, por nombre",
             "content": {
               "application/json": {
                 "schema": {
-                  "description": "Forma pendiente de documentar (lote MV2b)"
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "slug": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "accent_color": {
+                            "type": "string",
+                            "description": "Hex sin `#`"
+                          },
+                          "logo_url": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "banner_url": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "tagline": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "categoria": {
+                            "nullable": true,
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "primary_capability": {
+                            "nullable": true,
+                            "type": "string",
+                            "x-known-values": [
+                              "drivers_only",
+                              "catalog_pickup",
+                              "catalog_delivery",
+                              "catalog_full",
+                              "pickup_local",
+                              "catalog_only"
+                            ],
+                            "description": "Valores conocidos: drivers_only, catalog_pickup, catalog_delivery, catalog_full, pickup_local, catalog_only. Puede llegar uno nuevo; trátalo como desconocido."
+                          },
+                          "estimated_eta_min": {
+                            "type": "integer"
+                          },
+                          "estimated_eta_max": {
+                            "type": "integer"
+                          },
+                          "coordinates_lat": {
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "coordinates_lng": {
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "address": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "accepts_web_pickup": {
+                            "type": "boolean"
+                          },
+                          "accepts_web_delivery": {
+                            "type": "boolean"
+                          },
+                          "whatsapp_number": {
+                            "nullable": true,
+                            "description": "Contacto público opt-in para pedir por WhatsApp en modo catálogo",
+                            "type": "string"
+                          },
+                          "publishes_catalog": {
+                            "type": "boolean"
+                          },
+                          "is_open_now": {
+                            "nullable": true,
+                            "description": "Según su horario y la apertura confirmada del día. Null = sin horario configurado: no se muestra insignia",
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "slug",
+                          "name",
+                          "accent_color",
+                          "logo_url",
+                          "banner_url",
+                          "tagline",
+                          "categoria",
+                          "primary_capability",
+                          "estimated_eta_min",
+                          "estimated_eta_max",
+                          "coordinates_lat",
+                          "coordinates_lng",
+                          "address",
+                          "accepts_web_pickup",
+                          "accepts_web_delivery",
+                          "whatsapp_number",
+                          "publishes_catalog",
+                          "is_open_now"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -445,8 +564,7 @@
             }
           }
         },
-        "security": [],
-        "x-tindivo-pending": true
+        "security": []
       }
     },
     "/public/businesses/{id}": {
@@ -458,11 +576,374 @@
         ],
         "responses": {
           "200": {
-            "description": "Forma pendiente de documentar (lote MV2b)",
+            "description": "El negocio, su carta y su horario",
             "content": {
               "application/json": {
                 "schema": {
-                  "description": "Forma pendiente de documentar (lote MV2b)"
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "business": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "slug": {
+                              "type": "string"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "accent_color": {
+                              "type": "string",
+                              "description": "Hex sin `#`"
+                            },
+                            "logo_url": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "banner_url": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "tagline": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "categoria": {
+                              "nullable": true,
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "primary_capability": {
+                              "nullable": true,
+                              "type": "string",
+                              "x-known-values": [
+                                "drivers_only",
+                                "catalog_pickup",
+                                "catalog_delivery",
+                                "catalog_full",
+                                "pickup_local",
+                                "catalog_only"
+                              ],
+                              "description": "Valores conocidos: drivers_only, catalog_pickup, catalog_delivery, catalog_full, pickup_local, catalog_only. Puede llegar uno nuevo; trátalo como desconocido."
+                            },
+                            "estimated_eta_min": {
+                              "type": "integer"
+                            },
+                            "estimated_eta_max": {
+                              "type": "integer"
+                            },
+                            "coordinates_lat": {
+                              "nullable": true,
+                              "type": "number"
+                            },
+                            "coordinates_lng": {
+                              "nullable": true,
+                              "type": "number"
+                            },
+                            "address": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "accepts_web_pickup": {
+                              "type": "boolean"
+                            },
+                            "accepts_web_delivery": {
+                              "type": "boolean"
+                            },
+                            "whatsapp_number": {
+                              "nullable": true,
+                              "description": "Contacto público opt-in para pedir por WhatsApp en modo catálogo",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "slug",
+                            "name",
+                            "accent_color",
+                            "logo_url",
+                            "banner_url",
+                            "tagline",
+                            "categoria",
+                            "primary_capability",
+                            "estimated_eta_min",
+                            "estimated_eta_max",
+                            "coordinates_lat",
+                            "coordinates_lng",
+                            "address",
+                            "accepts_web_pickup",
+                            "accepts_web_delivery",
+                            "whatsapp_number"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "categories": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "blurb": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "display_order": {
+                                "type": "integer"
+                              },
+                              "items": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "format": "uuid"
+                                    },
+                                    "category_id": {
+                                      "type": "string",
+                                      "format": "uuid"
+                                    },
+                                    "name": {
+                                      "type": "string"
+                                    },
+                                    "description": {
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
+                                    "base_price": {
+                                      "type": "number",
+                                      "description": "Soles como número JSON (numeric(10,2) en la base). Campo heredado: no cambia de tipo."
+                                    },
+                                    "image_url": {
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
+                                    "image_hue": {
+                                      "nullable": true,
+                                      "type": "integer"
+                                    },
+                                    "is_available": {
+                                      "type": "boolean"
+                                    },
+                                    "is_compact": {
+                                      "type": "boolean",
+                                      "description": "«Destacado» (nombre histórico). Van primero"
+                                    },
+                                    "badges": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "display_order": {
+                                      "type": "integer"
+                                    },
+                                    "available_days": {
+                                      "nullable": true,
+                                      "description": "Franja horaria del plato (0226): 0 = lunes … 6 = domingo, como `schedule`. Null = todos. La franja se resuelve en el cliente contra su reloj, en hora de Lima",
+                                      "type": "array",
+                                      "items": {
+                                        "type": "integer"
+                                      }
+                                    },
+                                    "available_from": {
+                                      "nullable": true,
+                                      "description": "`HH:MM:SS` en Lima. Null = sin franja",
+                                      "type": "string"
+                                    },
+                                    "available_to": {
+                                      "nullable": true,
+                                      "description": "`HH:MM:SS` en Lima. Null = sin franja",
+                                      "type": "string"
+                                    },
+                                    "modifier_groups": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "id": {
+                                            "type": "string",
+                                            "format": "uuid"
+                                          },
+                                          "name": {
+                                            "type": "string"
+                                          },
+                                          "selection_type": {
+                                            "type": "string",
+                                            "x-known-values": [
+                                              "single",
+                                              "multi"
+                                            ],
+                                            "description": "Valores conocidos: single, multi. Puede llegar uno nuevo; trátalo como desconocido."
+                                          },
+                                          "is_required": {
+                                            "type": "boolean"
+                                          },
+                                          "min_selections": {
+                                            "type": "integer"
+                                          },
+                                          "max_selections": {
+                                            "nullable": true,
+                                            "type": "integer"
+                                          },
+                                          "price_display": {
+                                            "type": "string",
+                                            "x-known-values": [
+                                              "delta",
+                                              "total"
+                                            ],
+                                            "description": "`total` enseña el precio final del plato en vez de «+ S/ x». Solo cambia cómo se muestra. Valores conocidos: delta, total. Puede llegar uno nuevo; trátalo como desconocido."
+                                          },
+                                          "options": {
+                                            "type": "array",
+                                            "items": {
+                                              "type": "object",
+                                              "properties": {
+                                                "id": {
+                                                  "type": "string",
+                                                  "format": "uuid"
+                                                },
+                                                "name": {
+                                                  "type": "string"
+                                                },
+                                                "description": {
+                                                  "nullable": true,
+                                                  "type": "string"
+                                                },
+                                                "additional_price": {
+                                                  "type": "number",
+                                                  "description": "Soles como número JSON (numeric(10,2) en la base). Campo heredado: no cambia de tipo."
+                                                }
+                                              },
+                                              "required": [
+                                                "id",
+                                                "name",
+                                                "description",
+                                                "additional_price"
+                                              ],
+                                              "additionalProperties": false
+                                            },
+                                            "description": "Solo las disponibles"
+                                          }
+                                        },
+                                        "required": [
+                                          "id",
+                                          "name",
+                                          "selection_type",
+                                          "is_required",
+                                          "min_selections",
+                                          "max_selections",
+                                          "price_display",
+                                          "options"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "category_id",
+                                    "name",
+                                    "description",
+                                    "base_price",
+                                    "image_url",
+                                    "image_hue",
+                                    "is_available",
+                                    "is_compact",
+                                    "badges",
+                                    "display_order",
+                                    "available_days",
+                                    "available_from",
+                                    "available_to",
+                                    "modifier_groups"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "blurb",
+                              "display_order",
+                              "items"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "schedule": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "day_of_week": {
+                                "type": "integer",
+                                "description": "0 = lunes … 6 = domingo (no es `Date.getDay()`)"
+                              },
+                              "is_open": {
+                                "type": "boolean"
+                              },
+                              "shift1_start": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "shift1_end": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "shift2_start": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "shift2_end": {
+                                "nullable": true,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "day_of_week",
+                              "is_open",
+                              "shift1_start",
+                              "shift1_end",
+                              "shift2_start",
+                              "shift2_end"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "opening_confirmed": {
+                          "nullable": true,
+                          "description": "Si alguien del negocio confirmó que hoy atiende. Null = no se pudo consultar (manda el horario)",
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "business",
+                        "categories",
+                        "schedule",
+                        "opening_confirmed"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -499,8 +980,7 @@
             }
           }
         ],
-        "security": [],
-        "x-tindivo-pending": true
+        "security": []
       }
     },
     "/public/pilot-access": {
@@ -568,11 +1048,275 @@
         ],
         "responses": {
           "200": {
-            "description": "Forma pendiente de documentar (lote MV2b)",
+            "description": "Estado del pedido, sin envoltura",
             "content": {
               "application/json": {
                 "schema": {
-                  "description": "Forma pendiente de documentar (lote MV2b)"
+                  "type": "object",
+                  "properties": {
+                    "shortId": {
+                      "type": "string"
+                    },
+                    "orderNumber": {
+                      "type": "integer"
+                    },
+                    "businessName": {
+                      "type": "string"
+                    },
+                    "businessAccentColor": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "x-known-values": [
+                        "validando",
+                        "pending_acceptance",
+                        "awaiting_payment",
+                        "confirmed",
+                        "preparing",
+                        "waiting_driver",
+                        "heading_to_restaurant",
+                        "waiting_at_restaurant",
+                        "picked_up",
+                        "ready_for_pickup",
+                        "delivered",
+                        "cancelled"
+                      ],
+                      "description": "Valores conocidos: validando, pending_acceptance, awaiting_payment, confirmed, preparing, waiting_driver, heading_to_restaurant, waiting_at_restaurant, picked_up, ready_for_pickup, delivered, cancelled. Puede llegar uno nuevo; trátalo como desconocido."
+                    },
+                    "deliveryMethod": {
+                      "type": "string",
+                      "x-known-values": [
+                        "delivery",
+                        "pickup"
+                      ],
+                      "description": "Valores conocidos: delivery, pickup. Puede llegar uno nuevo; trátalo como desconocido."
+                    },
+                    "paymentIntent": {
+                      "type": "string",
+                      "x-known-values": [
+                        "prepaid",
+                        "pending_yape",
+                        "pending_cash",
+                        "pending_mixed"
+                      ],
+                      "description": "Valores conocidos: prepaid, pending_yape, pending_cash, pending_mixed. Puede llegar uno nuevo; trátalo como desconocido."
+                    },
+                    "cancelReason": {
+                      "nullable": true,
+                      "type": "string",
+                      "x-known-values": [
+                        "pending_acceptance_timeout",
+                        "validation_timeout",
+                        "prepay_timeout",
+                        "business_cancelled",
+                        "admin_cancelled",
+                        "customer_cancelled",
+                        "no_show",
+                        "proof_rejected_final"
+                      ],
+                      "description": "Valores conocidos: pending_acceptance_timeout, validation_timeout, prepay_timeout, business_cancelled, admin_cancelled, customer_cancelled, no_show, proof_rejected_final. Puede llegar uno nuevo; trátalo como desconocido."
+                    },
+                    "paysWith": {
+                      "nullable": true,
+                      "type": "number",
+                      "description": "Soles como número JSON (numeric(10,2) en la base). Campo heredado: no cambia de tipo."
+                    },
+                    "changeToGive": {
+                      "nullable": true,
+                      "type": "number",
+                      "description": "Soles como número JSON (numeric(10,2) en la base). Campo heredado: no cambia de tipo."
+                    },
+                    "estimatedReadyAt": {
+                      "nullable": true,
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "deliveredAt": {
+                      "nullable": true,
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "driverName": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "arrivedAtCustomerAt": {
+                      "nullable": true,
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "readyEarlyUsed": {
+                      "type": "boolean"
+                    },
+                    "readyEarlyAt": {
+                      "nullable": true,
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "travelMinutes": {
+                      "type": "object",
+                      "properties": {
+                        "min": {
+                          "type": "integer"
+                        },
+                        "max": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "min",
+                        "max"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "prepayVerificationMinutes": {
+                      "type": "integer"
+                    },
+                    "acceptanceMinutes": {
+                      "type": "integer"
+                    },
+                    "paymentMinutes": {
+                      "type": "integer"
+                    },
+                    "driverPhone": {
+                      "nullable": true,
+                      "description": "Solo cuando el motorizado ya llegó a la puerta del cliente",
+                      "type": "string"
+                    },
+                    "amount": {
+                      "type": "number",
+                      "description": "Soles como número JSON (numeric(10,2) en la base). Campo heredado: no cambia de tipo."
+                    },
+                    "deliveryFee": {
+                      "type": "number",
+                      "description": "Soles como número JSON (numeric(10,2) en la base). Campo heredado: no cambia de tipo."
+                    },
+                    "total": {
+                      "type": "number",
+                      "description": "Soles como número JSON (numeric(10,2) en la base). Campo heredado: no cambia de tipo."
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "pendingAcceptanceAt": {
+                      "nullable": true,
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "awaitingPaymentAt": {
+                      "nullable": true,
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "validatingAt": {
+                      "nullable": true,
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "proofAttempt": {
+                      "type": "integer"
+                    },
+                    "proofUrl": {
+                      "nullable": true,
+                      "description": "Ruta del comprobante en Storage, no una URL",
+                      "type": "string"
+                    },
+                    "paymentVerifiedAt": {
+                      "nullable": true,
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "hasAppeal": {
+                      "type": "boolean"
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "qty": {
+                            "type": "integer"
+                          },
+                          "lineTotal": {
+                            "type": "number",
+                            "description": "Soles como número JSON (numeric(10,2) en la base). Campo heredado: no cambia de tipo."
+                          },
+                          "modifiers": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "group": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "price": {
+                                  "type": "number",
+                                  "description": "Soles como número JSON (numeric(10,2) en la base). Campo heredado: no cambia de tipo."
+                                }
+                              },
+                              "required": [
+                                "group",
+                                "name",
+                                "price"
+                              ],
+                              "additionalProperties": false
+                            }
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "qty",
+                          "lineTotal",
+                          "modifiers"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "shortId",
+                    "orderNumber",
+                    "businessName",
+                    "businessAccentColor",
+                    "status",
+                    "deliveryMethod",
+                    "paymentIntent",
+                    "cancelReason",
+                    "paysWith",
+                    "changeToGive",
+                    "estimatedReadyAt",
+                    "deliveredAt",
+                    "driverName",
+                    "arrivedAtCustomerAt",
+                    "readyEarlyUsed",
+                    "readyEarlyAt",
+                    "travelMinutes",
+                    "prepayVerificationMinutes",
+                    "acceptanceMinutes",
+                    "paymentMinutes",
+                    "driverPhone",
+                    "amount",
+                    "deliveryFee",
+                    "total",
+                    "createdAt",
+                    "pendingAcceptanceAt",
+                    "awaitingPaymentAt",
+                    "validatingAt",
+                    "proofAttempt",
+                    "proofUrl",
+                    "paymentVerifiedAt",
+                    "hasAppeal",
+                    "items"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -609,8 +1353,7 @@
             }
           }
         ],
-        "security": [],
-        "x-tindivo-pending": true
+        "security": []
       }
     },
     "/public/courier/status": {
@@ -649,17 +1392,16 @@
                           "description": "HH:MM en Lima"
                         },
                         "days": {
+                          "description": "Días ISO: 1 = lunes … 7 = domingo. Sin `days`, todos los días: es lo que hace `is_within_courier_schedule()`",
                           "type": "array",
                           "items": {
                             "type": "integer"
-                          },
-                          "description": "Días ISO: 1 = lunes … 7 = domingo"
+                          }
                         }
                       },
                       "required": [
                         "start",
-                        "end",
-                        "days"
+                        "end"
                       ],
                       "additionalProperties": false
                     },
@@ -708,11 +1450,164 @@
         ],
         "responses": {
           "200": {
-            "description": "Forma pendiente de documentar (lote MV2b)",
+            "description": "Estado de la entrega, sin envoltura",
             "content": {
               "application/json": {
                 "schema": {
-                  "description": "Forma pendiente de documentar (lote MV2b)"
+                  "type": "object",
+                  "properties": {
+                    "shortId": {
+                      "type": "string"
+                    },
+                    "orderNumber": {
+                      "type": "integer"
+                    },
+                    "status": {
+                      "type": "string",
+                      "x-known-values": [
+                        "requested",
+                        "accepted",
+                        "heading_to_pickup",
+                        "at_pickup",
+                        "picked_up",
+                        "heading_to_dropoff",
+                        "delivered",
+                        "cancelled"
+                      ],
+                      "description": "Valores conocidos: requested, accepted, heading_to_pickup, at_pickup, picked_up, heading_to_dropoff, delivered, cancelled. Puede llegar uno nuevo; trátalo como desconocido."
+                    },
+                    "originName": {
+                      "type": "string"
+                    },
+                    "destinationName": {
+                      "type": "string"
+                    },
+                    "originCoordinates": {
+                      "type": "object",
+                      "properties": {
+                        "lat": {
+                          "type": "number"
+                        },
+                        "lng": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "lat",
+                        "lng"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "destinationCoordinates": {
+                      "type": "object",
+                      "properties": {
+                        "lat": {
+                          "type": "number"
+                        },
+                        "lng": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "lat",
+                        "lng"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "itemDescription": {
+                      "type": "string"
+                    },
+                    "feeAmount": {
+                      "type": "number",
+                      "description": "Soles como número JSON (numeric(10,2) en la base). Campo heredado: no cambia de tipo."
+                    },
+                    "payer": {
+                      "type": "string",
+                      "x-known-values": [
+                        "origin",
+                        "destination"
+                      ],
+                      "description": "Valores conocidos: origin, destination. Puede llegar uno nuevo; trátalo como desconocido."
+                    },
+                    "readyAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "driverName": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "acceptedAt": {
+                      "nullable": true,
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "pickedUpAt": {
+                      "nullable": true,
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "deliveredAt": {
+                      "nullable": true,
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "cancelledAt": {
+                      "nullable": true,
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "cancelReason": {
+                      "nullable": true,
+                      "type": "string",
+                      "x-known-values": [
+                        "no_driver",
+                        "driver_rejected",
+                        "not_ready",
+                        "transport_unpaid",
+                        "customer_cancelled",
+                        "unreachable",
+                        "other"
+                      ],
+                      "description": "Valores conocidos: no_driver, driver_rejected, not_ready, transport_unpaid, customer_cancelled, unreachable, other. Puede llegar uno nuevo; trátalo como desconocido."
+                    },
+                    "acceptMinutes": {
+                      "type": "integer"
+                    },
+                    "acceptDeadline": {
+                      "nullable": true,
+                      "description": "Solo mientras nadie la toma (`requested`); si vence, se cancela sola",
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "shortId",
+                    "orderNumber",
+                    "status",
+                    "originName",
+                    "destinationName",
+                    "originCoordinates",
+                    "destinationCoordinates",
+                    "itemDescription",
+                    "feeAmount",
+                    "payer",
+                    "readyAt",
+                    "driverName",
+                    "createdAt",
+                    "acceptedAt",
+                    "pickedUpAt",
+                    "deliveredAt",
+                    "cancelledAt",
+                    "cancelReason",
+                    "acceptMinutes",
+                    "acceptDeadline"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -749,8 +1644,7 @@
             }
           }
         ],
-        "security": [],
-        "x-tindivo-pending": true
+        "security": []
       }
     },
     "/public/store": {
@@ -763,11 +1657,308 @@
         ],
         "responses": {
           "200": {
-            "description": "Forma pendiente de documentar (lote MV2b)",
+            "description": "La grilla, los vendidos, las categorías y los ajustes",
             "content": {
               "application/json": {
                 "schema": {
-                  "description": "Forma pendiente de documentar (lote MV2b)"
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "products": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "code": {
+                                "type": "string"
+                              },
+                              "slug": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "title": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "price": {
+                                "nullable": true,
+                                "type": "number",
+                                "description": "Soles como número JSON (numeric(10,2) en la base). Campo heredado: no cambia de tipo."
+                              },
+                              "originalPrice": {
+                                "nullable": true,
+                                "type": "number",
+                                "description": "Soles como número JSON (numeric(10,2) en la base). Campo heredado: no cambia de tipo."
+                              },
+                              "isClearance": {
+                                "type": "boolean"
+                              },
+                              "condition": {
+                                "nullable": true,
+                                "type": "string",
+                                "x-known-values": [
+                                  "new_with_tag",
+                                  "new_unused",
+                                  "used"
+                                ],
+                                "description": "Valores conocidos: new_with_tag, new_unused, used. Puede llegar uno nuevo; trátalo como desconocido."
+                              },
+                              "conditionScore": {
+                                "nullable": true,
+                                "type": "integer"
+                              },
+                              "sizeLabel": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "status": {
+                                "type": "string",
+                                "x-known-values": [
+                                  "draft",
+                                  "available",
+                                  "reserved",
+                                  "sold",
+                                  "hidden"
+                                ],
+                                "description": "Valores conocidos: draft, available, reserved, sold, hidden. Puede llegar uno nuevo; trátalo como desconocido."
+                              },
+                              "categorySlug": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "categoryName": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "thumbUrl": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "coverFocusX": {
+                                "type": "number"
+                              },
+                              "coverFocusY": {
+                                "type": "number"
+                              },
+                              "soldAt": {
+                                "nullable": true,
+                                "type": "string",
+                                "format": "date-time"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "code",
+                              "slug",
+                              "title",
+                              "price",
+                              "originalPrice",
+                              "isClearance",
+                              "condition",
+                              "conditionScore",
+                              "sizeLabel",
+                              "status",
+                              "categorySlug",
+                              "categoryName",
+                              "thumbUrl",
+                              "coverFocusX",
+                              "coverFocusY",
+                              "soldAt"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "description": "Disponibles y reservados que coinciden con el filtro"
+                        },
+                        "sold": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "code": {
+                                "type": "string"
+                              },
+                              "slug": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "title": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "price": {
+                                "nullable": true,
+                                "type": "number",
+                                "description": "Soles como número JSON (numeric(10,2) en la base). Campo heredado: no cambia de tipo."
+                              },
+                              "originalPrice": {
+                                "nullable": true,
+                                "type": "number",
+                                "description": "Soles como número JSON (numeric(10,2) en la base). Campo heredado: no cambia de tipo."
+                              },
+                              "isClearance": {
+                                "type": "boolean"
+                              },
+                              "condition": {
+                                "nullable": true,
+                                "type": "string",
+                                "x-known-values": [
+                                  "new_with_tag",
+                                  "new_unused",
+                                  "used"
+                                ],
+                                "description": "Valores conocidos: new_with_tag, new_unused, used. Puede llegar uno nuevo; trátalo como desconocido."
+                              },
+                              "conditionScore": {
+                                "nullable": true,
+                                "type": "integer"
+                              },
+                              "sizeLabel": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "status": {
+                                "type": "string",
+                                "x-known-values": [
+                                  "draft",
+                                  "available",
+                                  "reserved",
+                                  "sold",
+                                  "hidden"
+                                ],
+                                "description": "Valores conocidos: draft, available, reserved, sold, hidden. Puede llegar uno nuevo; trátalo como desconocido."
+                              },
+                              "categorySlug": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "categoryName": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "thumbUrl": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "coverFocusX": {
+                                "type": "number"
+                              },
+                              "coverFocusY": {
+                                "type": "number"
+                              },
+                              "soldAt": {
+                                "nullable": true,
+                                "type": "string",
+                                "format": "date-time"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "code",
+                              "slug",
+                              "title",
+                              "price",
+                              "originalPrice",
+                              "isClearance",
+                              "condition",
+                              "conditionScore",
+                              "sizeLabel",
+                              "status",
+                              "categorySlug",
+                              "categoryName",
+                              "thumbUrl",
+                              "coverFocusX",
+                              "coverFocusY",
+                              "soldAt"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "description": "Hasta 6 vendidos, del más reciente"
+                        },
+                        "categories": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "slug": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "icon": {
+                                "type": "string"
+                              },
+                              "count": {
+                                "type": "integer",
+                                "description": "Sobre el catálogo sin filtrar"
+                              }
+                            },
+                            "required": [
+                              "slug",
+                              "name",
+                              "icon",
+                              "count"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "description": "Solo las que tienen algún artículo público"
+                        },
+                        "totalAvailable": {
+                          "type": "integer"
+                        },
+                        "settings": {
+                          "type": "object",
+                          "properties": {
+                            "whatsappNumber": {
+                              "type": "string",
+                              "description": "Solo dígitos, con código de país"
+                            },
+                            "deliveryMin": {
+                              "type": "number",
+                              "description": "Soles como número JSON (numeric(10,2) en la base). Campo heredado: no cambia de tipo."
+                            },
+                            "deliveryMax": {
+                              "type": "number",
+                              "description": "Soles como número JSON (numeric(10,2) en la base). Campo heredado: no cambia de tipo."
+                            },
+                            "deliveryText": {
+                              "nullable": true,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "whatsappNumber",
+                            "deliveryMin",
+                            "deliveryMax",
+                            "deliveryText"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "products",
+                        "sold",
+                        "categories",
+                        "totalAvailable",
+                        "settings"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -783,8 +1974,45 @@
             }
           }
         },
-        "security": [],
-        "x-tindivo-pending": true
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Texto a buscar (se recorta a 80)",
+              "type": "string"
+            }
+          },
+          {
+            "name": "categoria",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Slug de la categoría",
+              "type": "string"
+            }
+          },
+          {
+            "name": "condicion",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "`nuevo`, `segunda` o `todo`. Otro valor = todo",
+              "type": "string"
+            }
+          },
+          {
+            "name": "orden",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "`precio_asc` o `precio_desc`. Otro valor = recientes",
+              "type": "string"
+            }
+          }
+        ],
+        "security": []
       }
     },
     "/public/store/{slug}": {
@@ -797,11 +2025,335 @@
         ],
         "responses": {
           "200": {
-            "description": "Forma pendiente de documentar (lote MV2b)",
+            "description": "El artículo, sus relacionados y los ajustes",
             "content": {
               "application/json": {
                 "schema": {
-                  "description": "Forma pendiente de documentar (lote MV2b)"
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "product": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "code": {
+                              "type": "string"
+                            },
+                            "slug": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "title": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "price": {
+                              "nullable": true,
+                              "type": "number",
+                              "description": "Soles como número JSON (numeric(10,2) en la base). Campo heredado: no cambia de tipo."
+                            },
+                            "originalPrice": {
+                              "nullable": true,
+                              "type": "number",
+                              "description": "Soles como número JSON (numeric(10,2) en la base). Campo heredado: no cambia de tipo."
+                            },
+                            "isClearance": {
+                              "type": "boolean"
+                            },
+                            "condition": {
+                              "nullable": true,
+                              "type": "string",
+                              "x-known-values": [
+                                "new_with_tag",
+                                "new_unused",
+                                "used"
+                              ],
+                              "description": "Valores conocidos: new_with_tag, new_unused, used. Puede llegar uno nuevo; trátalo como desconocido."
+                            },
+                            "conditionScore": {
+                              "nullable": true,
+                              "type": "integer"
+                            },
+                            "sizeLabel": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "status": {
+                              "type": "string",
+                              "x-known-values": [
+                                "draft",
+                                "available",
+                                "reserved",
+                                "sold",
+                                "hidden"
+                              ],
+                              "description": "Valores conocidos: draft, available, reserved, sold, hidden. Puede llegar uno nuevo; trátalo como desconocido."
+                            },
+                            "categorySlug": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "categoryName": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "thumbUrl": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "coverFocusX": {
+                              "type": "number"
+                            },
+                            "coverFocusY": {
+                              "type": "number"
+                            },
+                            "soldAt": {
+                              "nullable": true,
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "description": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "negotiable": {
+                              "type": "boolean"
+                            },
+                            "audience": {
+                              "nullable": true,
+                              "type": "string",
+                              "x-known-values": [
+                                "women",
+                                "men",
+                                "kids",
+                                "unisex"
+                              ],
+                              "description": "Valores conocidos: women, men, kids, unisex. Puede llegar uno nuevo; trátalo como desconocido."
+                            },
+                            "createdAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "images": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "url": {
+                                    "type": "string"
+                                  },
+                                  "thumbUrl": {
+                                    "type": "string"
+                                  },
+                                  "position": {
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "url",
+                                  "thumbUrl",
+                                  "position"
+                                ],
+                                "additionalProperties": false
+                              }
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "code",
+                            "slug",
+                            "title",
+                            "price",
+                            "originalPrice",
+                            "isClearance",
+                            "condition",
+                            "conditionScore",
+                            "sizeLabel",
+                            "status",
+                            "categorySlug",
+                            "categoryName",
+                            "thumbUrl",
+                            "coverFocusX",
+                            "coverFocusY",
+                            "soldAt",
+                            "description",
+                            "negotiable",
+                            "audience",
+                            "createdAt",
+                            "images"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "related": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "code": {
+                                "type": "string"
+                              },
+                              "slug": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "title": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "price": {
+                                "nullable": true,
+                                "type": "number",
+                                "description": "Soles como número JSON (numeric(10,2) en la base). Campo heredado: no cambia de tipo."
+                              },
+                              "originalPrice": {
+                                "nullable": true,
+                                "type": "number",
+                                "description": "Soles como número JSON (numeric(10,2) en la base). Campo heredado: no cambia de tipo."
+                              },
+                              "isClearance": {
+                                "type": "boolean"
+                              },
+                              "condition": {
+                                "nullable": true,
+                                "type": "string",
+                                "x-known-values": [
+                                  "new_with_tag",
+                                  "new_unused",
+                                  "used"
+                                ],
+                                "description": "Valores conocidos: new_with_tag, new_unused, used. Puede llegar uno nuevo; trátalo como desconocido."
+                              },
+                              "conditionScore": {
+                                "nullable": true,
+                                "type": "integer"
+                              },
+                              "sizeLabel": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "status": {
+                                "type": "string",
+                                "x-known-values": [
+                                  "draft",
+                                  "available",
+                                  "reserved",
+                                  "sold",
+                                  "hidden"
+                                ],
+                                "description": "Valores conocidos: draft, available, reserved, sold, hidden. Puede llegar uno nuevo; trátalo como desconocido."
+                              },
+                              "categorySlug": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "categoryName": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "thumbUrl": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "coverFocusX": {
+                                "type": "number"
+                              },
+                              "coverFocusY": {
+                                "type": "number"
+                              },
+                              "soldAt": {
+                                "nullable": true,
+                                "type": "string",
+                                "format": "date-time"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "code",
+                              "slug",
+                              "title",
+                              "price",
+                              "originalPrice",
+                              "isClearance",
+                              "condition",
+                              "conditionScore",
+                              "sizeLabel",
+                              "status",
+                              "categorySlug",
+                              "categoryName",
+                              "thumbUrl",
+                              "coverFocusX",
+                              "coverFocusY",
+                              "soldAt"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "description": "2 a 4 disponibles, de la misma categoría primero"
+                        },
+                        "settings": {
+                          "type": "object",
+                          "properties": {
+                            "whatsappNumber": {
+                              "type": "string",
+                              "description": "Solo dígitos, con código de país"
+                            },
+                            "deliveryMin": {
+                              "type": "number",
+                              "description": "Soles como número JSON (numeric(10,2) en la base). Campo heredado: no cambia de tipo."
+                            },
+                            "deliveryMax": {
+                              "type": "number",
+                              "description": "Soles como número JSON (numeric(10,2) en la base). Campo heredado: no cambia de tipo."
+                            },
+                            "deliveryText": {
+                              "nullable": true,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "whatsappNumber",
+                            "deliveryMin",
+                            "deliveryMax",
+                            "deliveryText"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "product",
+                        "related",
+                        "settings"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem Details (RFC 9457). `code`: not_found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -827,8 +2379,7 @@
             }
           }
         ],
-        "security": [],
-        "x-tindivo-pending": true
+        "security": []
       }
     },
     "/public/store/events": {
@@ -843,6 +2394,26 @@
           "204": {
             "description": "Registrado; sin cuerpo"
           },
+          "422": {
+            "description": "Problem Details (RFC 9457). `code`: validation_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem Details (RFC 9457). `code`: rate_limited",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Problem Details (RFC 9457). `code`: internal_error",
             "content": {
@@ -854,8 +2425,64 @@
             }
           }
         },
-        "security": [],
-        "x-tindivo-pending": true
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "view_list",
+                      "view_product",
+                      "search",
+                      "filter_open",
+                      "filter_apply",
+                      "click_whatsapp",
+                      "click_notify",
+                      "share",
+                      "nav_out"
+                    ]
+                  },
+                  "sessionId": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 64
+                  },
+                  "productId": {
+                    "default": null,
+                    "nullable": true,
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "searchTerm": {
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 80
+                  },
+                  "ref": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "metadata": {
+                    "default": null,
+                    "nullable": true,
+                    "type": "object",
+                    "additionalProperties": {}
+                  }
+                },
+                "required": [
+                  "type",
+                  "sessionId"
+                ]
+              }
+            }
+          }
+        },
+        "security": []
       }
     },
     "/customer/orders": {
@@ -867,11 +2494,86 @@
         ],
         "responses": {
           "201": {
-            "description": "Forma pendiente de documentar (lote MV2b)",
+            "description": "Pedido creado",
             "content": {
               "application/json": {
                 "schema": {
-                  "description": "Forma pendiente de documentar (lote MV2b)"
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "shortId": {
+                          "type": "string"
+                        },
+                        "orderNumber": {
+                          "type": "integer"
+                        },
+                        "status": {
+                          "type": "string",
+                          "x-known-values": [
+                            "validando",
+                            "pending_acceptance",
+                            "awaiting_payment",
+                            "confirmed",
+                            "preparing",
+                            "waiting_driver",
+                            "heading_to_restaurant",
+                            "waiting_at_restaurant",
+                            "picked_up",
+                            "ready_for_pickup",
+                            "delivered",
+                            "cancelled"
+                          ],
+                          "description": "`pending_acceptance`, o `validando` si la cajera tiene que llamar antes. Valores conocidos: validando, pending_acceptance, awaiting_payment, confirmed, preparing, waiting_driver, heading_to_restaurant, waiting_at_restaurant, picked_up, ready_for_pickup, delivered, cancelled. Puede llegar uno nuevo; trátalo como desconocido."
+                        },
+                        "orderAmount": {
+                          "type": "number",
+                          "description": "Soles como número JSON (numeric(10,2) en la base). Campo heredado: no cambia de tipo."
+                        },
+                        "deliveryFee": {
+                          "type": "number",
+                          "description": "Soles como número JSON (numeric(10,2) en la base). Campo heredado: no cambia de tipo."
+                        },
+                        "total": {
+                          "type": "number",
+                          "description": "Soles como número JSON (numeric(10,2) en la base). Campo heredado: no cambia de tipo."
+                        },
+                        "promoApplied": {
+                          "type": "boolean"
+                        },
+                        "pickupTiming": {
+                          "nullable": true,
+                          "type": "string",
+                          "x-known-values": [
+                            "now",
+                            "later"
+                          ],
+                          "description": "Null en un delivery. Valores conocidos: now, later. Puede llegar uno nuevo; trátalo como desconocido."
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "shortId",
+                        "orderNumber",
+                        "status",
+                        "orderAmount",
+                        "deliveryFee",
+                        "total",
+                        "promoApplied",
+                        "pickupTiming"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -888,6 +2590,16 @@
           },
           "403": {
             "description": "Problem Details (RFC 9457). `code`: forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem Details (RFC 9457). `code`: not_found",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -931,10 +2643,11 @@
           {
             "name": "Idempotency-Key",
             "in": "header",
-            "required": false,
-            "description": "Repetir la misma clave devuelve el resultado ya creado, sin duplicarlo",
+            "required": true,
+            "description": "UUID nuevo por intento de compra. Repetir la misma clave devuelve el resultado ya creado, sin duplicarlo. Tiene que ser un UUID: hoy otra cosa revienta en la base y responde 500",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
@@ -1123,8 +2836,7 @@
             "bearerAuth": []
           }
         ],
-        "x-tindivo-role": "customer",
-        "x-tindivo-pending": true
+        "x-tindivo-role": "customer"
       }
     },
     "/customer/orders/{id}/cancel": {
@@ -1136,11 +2848,64 @@
         ],
         "responses": {
           "200": {
-            "description": "Forma pendiente de documentar (lote MV2b)",
+            "description": "Pedido cancelado",
             "content": {
               "application/json": {
                 "schema": {
-                  "description": "Forma pendiente de documentar (lote MV2b)"
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "status": {
+                          "type": "string",
+                          "x-known-values": [
+                            "validando",
+                            "pending_acceptance",
+                            "awaiting_payment",
+                            "confirmed",
+                            "preparing",
+                            "waiting_driver",
+                            "heading_to_restaurant",
+                            "waiting_at_restaurant",
+                            "picked_up",
+                            "ready_for_pickup",
+                            "delivered",
+                            "cancelled"
+                          ],
+                          "description": "Valores conocidos: validando, pending_acceptance, awaiting_payment, confirmed, preparing, waiting_driver, heading_to_restaurant, waiting_at_restaurant, picked_up, ready_for_pickup, delivered, cancelled. Puede llegar uno nuevo; trátalo como desconocido."
+                        },
+                        "cancelReason": {
+                          "type": "string",
+                          "x-known-values": [
+                            "pending_acceptance_timeout",
+                            "validation_timeout",
+                            "prepay_timeout",
+                            "business_cancelled",
+                            "admin_cancelled",
+                            "customer_cancelled",
+                            "no_show",
+                            "proof_rejected_final"
+                          ],
+                          "description": "Valores conocidos: pending_acceptance_timeout, validation_timeout, prepay_timeout, business_cancelled, admin_cancelled, customer_cancelled, no_show, proof_rejected_final. Puede llegar uno nuevo; trátalo como desconocido."
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "status",
+                        "cancelReason"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -1157,6 +2922,26 @@
           },
           "403": {
             "description": "Problem Details (RFC 9457). `code`: forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem Details (RFC 9457). `code`: not_found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem Details (RFC 9457). `code`: order_not_cancellable",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1193,8 +2978,7 @@
             "bearerAuth": []
           }
         ],
-        "x-tindivo-role": "customer",
-        "x-tindivo-pending": true
+        "x-tindivo-role": "customer"
       }
     },
     "/customer/orders/{id}/prepay-info": {
@@ -1207,11 +2991,126 @@
         ],
         "responses": {
           "200": {
-            "description": "Forma pendiente de documentar (lote MV2b)",
+            "description": "Cómo y cuánto pagar",
             "content": {
               "application/json": {
                 "schema": {
-                  "description": "Forma pendiente de documentar (lote MV2b)"
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "businessName": {
+                          "type": "string"
+                        },
+                        "yapeNumber": {
+                          "nullable": true,
+                          "description": "Número del método principal (compatibilidad: usa `paymentQr`)",
+                          "type": "string"
+                        },
+                        "qrUrl": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "paymentQr": {
+                          "nullable": true,
+                          "description": "Solo el método principal: al cliente que prepaga no se le enseña el repuesto",
+                          "type": "object",
+                          "properties": {
+                            "slot": {
+                              "type": "integer"
+                            },
+                            "wallet": {
+                              "type": "string",
+                              "x-known-values": [
+                                "yape",
+                                "plin"
+                              ],
+                              "description": "Valores conocidos: yape, plin. Puede llegar uno nuevo; trátalo como desconocido."
+                            },
+                            "accountNumber": {
+                              "type": "string"
+                            },
+                            "accountName": {
+                              "type": "string"
+                            },
+                            "qrUrl": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "isDefault": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "slot",
+                            "wallet",
+                            "accountNumber",
+                            "accountName",
+                            "qrUrl",
+                            "isDefault"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "total": {
+                          "type": "number",
+                          "description": "Soles como número JSON (numeric(10,2) en la base). Campo heredado: no cambia de tipo."
+                        },
+                        "status": {
+                          "type": "string",
+                          "x-known-values": [
+                            "validando",
+                            "pending_acceptance",
+                            "awaiting_payment",
+                            "confirmed",
+                            "preparing",
+                            "waiting_driver",
+                            "heading_to_restaurant",
+                            "waiting_at_restaurant",
+                            "picked_up",
+                            "ready_for_pickup",
+                            "delivered",
+                            "cancelled"
+                          ],
+                          "description": "Valores conocidos: validando, pending_acceptance, awaiting_payment, confirmed, preparing, waiting_driver, heading_to_restaurant, waiting_at_restaurant, picked_up, ready_for_pickup, delivered, cancelled. Puede llegar uno nuevo; trátalo como desconocido."
+                        },
+                        "hasProof": {
+                          "type": "boolean"
+                        },
+                        "proofAttempt": {
+                          "type": "integer"
+                        },
+                        "comprobantePrepagoUrl": {
+                          "nullable": true,
+                          "description": "Ruta en Storage, no una URL",
+                          "type": "string"
+                        },
+                        "awaitingPaymentAt": {
+                          "nullable": true,
+                          "description": "Hoy es `orders.updated_at`, no el reloj de `awaiting_payment`",
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "businessName",
+                        "yapeNumber",
+                        "qrUrl",
+                        "paymentQr",
+                        "total",
+                        "status",
+                        "hasProof",
+                        "proofAttempt",
+                        "comprobantePrepagoUrl",
+                        "awaitingPaymentAt"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -1228,6 +3127,16 @@
           },
           "403": {
             "description": "Problem Details (RFC 9457). `code`: forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem Details (RFC 9457). `code`: not_found",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1264,8 +3173,7 @@
             "bearerAuth": []
           }
         ],
-        "x-tindivo-role": "customer",
-        "x-tindivo-pending": true
+        "x-tindivo-role": "customer"
       }
     },
     "/customer/orders/{id}/prepay-proof": {
@@ -1278,11 +3186,32 @@
         ],
         "responses": {
           "200": {
-            "description": "Forma pendiente de documentar (lote MV2b)",
+            "description": "Comprobante registrado: el pedido pasa a `validando`",
             "content": {
               "application/json": {
                 "schema": {
-                  "description": "Forma pendiente de documentar (lote MV2b)"
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "ok": {
+                          "type": "boolean",
+                          "enum": [
+                            true
+                          ]
+                        }
+                      },
+                      "required": [
+                        "ok"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -1299,6 +3228,36 @@
           },
           "403": {
             "description": "Problem Details (RFC 9457). `code`: forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem Details (RFC 9457). `code`: not_found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem Details (RFC 9457). `code`: invalid_state_transition",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem Details (RFC 9457). `code`: validation_error",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1330,13 +3289,33 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500,
+                    "description": "Ruta dentro del bucket `payment-proofs`; empieza por `<id del usuario>/`"
+                  }
+                },
+                "required": [
+                  "path"
+                ]
+              }
+            }
+          }
+        },
         "security": [
           {
             "bearerAuth": []
           }
         ],
-        "x-tindivo-role": "customer",
-        "x-tindivo-pending": true
+        "x-tindivo-role": "customer"
       }
     },
     "/customer/orders/{id}/appeal": {
@@ -1349,11 +3328,105 @@
         ],
         "responses": {
           "200": {
-            "description": "Forma pendiente de documentar (lote MV2b)",
+            "description": "La apelación",
             "content": {
               "application/json": {
                 "schema": {
-                  "description": "Forma pendiente de documentar (lote MV2b)"
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "orderId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "appealStatus": {
+                          "type": "string",
+                          "x-known-values": [
+                            "pending",
+                            "in_review",
+                            "approved",
+                            "rejected"
+                          ],
+                          "description": "Valores conocidos: pending, in_review, approved, rejected. Puede llegar uno nuevo; trátalo como desconocido."
+                        },
+                        "refundStatus": {
+                          "nullable": true,
+                          "type": "string",
+                          "x-known-values": [
+                            "pending",
+                            "completed"
+                          ],
+                          "description": "Valores conocidos: pending, completed. Puede llegar uno nuevo; trátalo como desconocido."
+                        },
+                        "refundAmount": {
+                          "nullable": true,
+                          "type": "number",
+                          "description": "Soles como número JSON (numeric(10,2) en la base). Campo heredado: no cambia de tipo."
+                        },
+                        "refundCompletedAt": {
+                          "nullable": true,
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "appealDeadline": {
+                          "nullable": true,
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "description": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "x-known-values": [
+                            "open",
+                            "resolved",
+                            "dismissed"
+                          ],
+                          "description": "Valores conocidos: open, resolved, dismissed. Puede llegar uno nuevo; trátalo como desconocido."
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "refundProofUrl": {
+                          "nullable": true,
+                          "description": "URL firmada del comprobante de devolución, válida una hora",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "orderId",
+                        "appealStatus",
+                        "refundStatus",
+                        "refundAmount",
+                        "refundCompletedAt",
+                        "appealDeadline",
+                        "description",
+                        "status",
+                        "createdAt",
+                        "updatedAt",
+                        "refundProofUrl"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -1370,6 +3443,26 @@
           },
           "403": {
             "description": "Problem Details (RFC 9457). `code`: forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem Details (RFC 9457). `code`: not_found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem Details (RFC 9457). `code`: validation_error",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1406,8 +3499,7 @@
             "bearerAuth": []
           }
         ],
-        "x-tindivo-role": "customer",
-        "x-tindivo-pending": true
+        "x-tindivo-role": "customer"
       },
       "post": {
         "operationId": "createOrderAppeal",
@@ -1418,11 +3510,41 @@
         ],
         "responses": {
           "200": {
-            "description": "Forma pendiente de documentar (lote MV2b)",
+            "description": "Apelación creada, o la que ya existía",
             "content": {
               "application/json": {
                 "schema": {
-                  "description": "Forma pendiente de documentar (lote MV2b)"
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "ok": {
+                          "type": "boolean",
+                          "enum": [
+                            true
+                          ]
+                        },
+                        "alreadyExisted": {
+                          "type": "boolean"
+                        },
+                        "reportId": {
+                          "type": "string",
+                          "format": "uuid"
+                        }
+                      },
+                      "required": [
+                        "ok",
+                        "alreadyExisted",
+                        "reportId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -1439,6 +3561,26 @@
           },
           "403": {
             "description": "Problem Details (RFC 9457). `code`: forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem Details (RFC 9457). `code`: not_found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem Details (RFC 9457). `code`: validation_error",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1470,13 +3612,28 @@
             }
           }
         ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "description": {
+                    "type": "string",
+                    "maxLength": 500
+                  }
+                }
+              }
+            }
+          }
+        },
         "security": [
           {
             "bearerAuth": []
           }
         ],
-        "x-tindivo-role": "customer",
-        "x-tindivo-pending": true
+        "x-tindivo-role": "customer"
       }
     },
     "/customer/appeals": {
@@ -1488,11 +3645,126 @@
         ],
         "responses": {
           "200": {
-            "description": "Forma pendiente de documentar (lote MV2b)",
+            "description": "Sus apelaciones, de la más reciente",
             "content": {
               "application/json": {
                 "schema": {
-                  "description": "Forma pendiente de documentar (lote MV2b)"
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "orderId": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "appealStatus": {
+                                "type": "string",
+                                "x-known-values": [
+                                  "pending",
+                                  "in_review",
+                                  "approved",
+                                  "rejected"
+                                ],
+                                "description": "Valores conocidos: pending, in_review, approved, rejected. Puede llegar uno nuevo; trátalo como desconocido."
+                              },
+                              "refundStatus": {
+                                "nullable": true,
+                                "type": "string",
+                                "x-known-values": [
+                                  "pending",
+                                  "completed"
+                                ],
+                                "description": "Valores conocidos: pending, completed. Puede llegar uno nuevo; trátalo como desconocido."
+                              },
+                              "refundAmount": {
+                                "nullable": true,
+                                "type": "number",
+                                "description": "Soles como número JSON (numeric(10,2) en la base). Campo heredado: no cambia de tipo."
+                              },
+                              "refundCompletedAt": {
+                                "nullable": true,
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "appealDeadline": {
+                                "nullable": true,
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "description": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "status": {
+                                "type": "string",
+                                "x-known-values": [
+                                  "open",
+                                  "resolved",
+                                  "dismissed"
+                                ],
+                                "description": "Valores conocidos: open, resolved, dismissed. Puede llegar uno nuevo; trátalo como desconocido."
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "updatedAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "refundProofUrl": {
+                                "nullable": true,
+                                "description": "URL firmada del comprobante de devolución, válida una hora",
+                                "type": "string"
+                              },
+                              "orderShortId": {
+                                "nullable": true,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "orderId",
+                              "appealStatus",
+                              "refundStatus",
+                              "refundAmount",
+                              "refundCompletedAt",
+                              "appealDeadline",
+                              "description",
+                              "status",
+                              "createdAt",
+                              "updatedAt",
+                              "refundProofUrl",
+                              "orderShortId"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "total": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "items",
+                        "total"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -1533,8 +3805,7 @@
             "bearerAuth": []
           }
         ],
-        "x-tindivo-role": "customer",
-        "x-tindivo-pending": true
+        "x-tindivo-role": "customer"
       }
     },
     "/customer/courier-orders": {
@@ -1546,11 +3817,63 @@
         ],
         "responses": {
           "201": {
-            "description": "Forma pendiente de documentar (lote MV2b)",
+            "description": "Entrega solicitada",
             "content": {
               "application/json": {
                 "schema": {
-                  "description": "Forma pendiente de documentar (lote MV2b)"
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "shortId": {
+                          "type": "string"
+                        },
+                        "orderNumber": {
+                          "type": "integer"
+                        },
+                        "status": {
+                          "type": "string",
+                          "x-known-values": [
+                            "requested",
+                            "accepted",
+                            "heading_to_pickup",
+                            "at_pickup",
+                            "picked_up",
+                            "heading_to_dropoff",
+                            "delivered",
+                            "cancelled"
+                          ],
+                          "description": "Valores conocidos: requested, accepted, heading_to_pickup, at_pickup, picked_up, heading_to_dropoff, delivered, cancelled. Puede llegar uno nuevo; trátalo como desconocido."
+                        },
+                        "feeAmount": {
+                          "type": "number",
+                          "description": "Soles como número JSON (numeric(10,2) en la base). Campo heredado: no cambia de tipo."
+                        },
+                        "distanceM": {
+                          "type": "number",
+                          "description": "Distancia en línea recta de A a B, en metros"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "shortId",
+                        "orderNumber",
+                        "status",
+                        "feeAmount",
+                        "distanceM"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -1610,20 +3933,181 @@
           {
             "name": "Idempotency-Key",
             "in": "header",
-            "required": false,
-            "description": "Repetir la misma clave devuelve el resultado ya creado, sin duplicarlo",
+            "required": true,
+            "description": "UUID nuevo por intento de compra. Repetir la misma clave devuelve el resultado ya creado, sin duplicarlo. Tiene que ser un UUID: hoy otra cosa revienta en la base y responde 500",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "directoryBusinessId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "origin": {
+                    "type": "object",
+                    "properties": {
+                      "contactName": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 120
+                      },
+                      "contactPhone": {
+                        "type": "string"
+                      },
+                      "coordinates": {
+                        "type": "object",
+                        "properties": {
+                          "lat": {
+                            "type": "number",
+                            "minimum": -90,
+                            "maximum": 90
+                          },
+                          "lng": {
+                            "type": "number",
+                            "minimum": -180,
+                            "maximum": 180
+                          }
+                        },
+                        "required": [
+                          "lat",
+                          "lng"
+                        ]
+                      },
+                      "referenceText": {
+                        "type": "string",
+                        "minLength": 5,
+                        "maxLength": 140
+                      }
+                    },
+                    "required": [
+                      "contactName",
+                      "coordinates",
+                      "referenceText"
+                    ]
+                  },
+                  "destination": {
+                    "type": "object",
+                    "properties": {
+                      "contactName": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 120
+                      },
+                      "contactPhone": {
+                        "type": "string"
+                      },
+                      "coordinates": {
+                        "type": "object",
+                        "properties": {
+                          "lat": {
+                            "type": "number",
+                            "minimum": -90,
+                            "maximum": 90
+                          },
+                          "lng": {
+                            "type": "number",
+                            "minimum": -180,
+                            "maximum": 180
+                          }
+                        },
+                        "required": [
+                          "lat",
+                          "lng"
+                        ]
+                      },
+                      "referenceText": {
+                        "type": "string",
+                        "minLength": 5,
+                        "maxLength": 140
+                      }
+                    },
+                    "required": [
+                      "contactName",
+                      "coordinates",
+                      "referenceText"
+                    ]
+                  },
+                  "requesterName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "requesterPhone": {
+                    "type": "string"
+                  },
+                  "itemDescription": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "isFragile": {
+                    "type": "boolean"
+                  },
+                  "readyInMin": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 180
+                  },
+                  "payer": {
+                    "type": "string",
+                    "enum": [
+                      "origin",
+                      "destination"
+                    ]
+                  },
+                  "weightConfirmed": {
+                    "type": "boolean",
+                    "enum": [
+                      true
+                    ]
+                  },
+                  "prepaidConfirmed": {
+                    "type": "boolean",
+                    "enum": [
+                      true
+                    ]
+                  },
+                  "utmSource": {
+                    "type": "string",
+                    "maxLength": 60
+                  },
+                  "driverNote": {
+                    "type": "string",
+                    "maxLength": 140
+                  }
+                },
+                "required": [
+                  "origin",
+                  "destination",
+                  "requesterName",
+                  "requesterPhone",
+                  "itemDescription",
+                  "isFragile",
+                  "readyInMin",
+                  "payer",
+                  "weightConfirmed",
+                  "prepaidConfirmed"
+                ]
+              }
+            }
+          }
+        },
         "security": [
           {
             "bearerAuth": []
           }
         ],
-        "x-tindivo-role": "customer",
-        "x-tindivo-pending": true
+        "x-tindivo-role": "customer"
       }
     },
     "/customer/courier-orders/{id}/cancel": {
@@ -1635,11 +4119,45 @@
         ],
         "responses": {
           "200": {
-            "description": "Forma pendiente de documentar (lote MV2b)",
+            "description": "Entrega cancelada",
             "content": {
               "application/json": {
                 "schema": {
-                  "description": "Forma pendiente de documentar (lote MV2b)"
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "status": {
+                          "type": "string",
+                          "x-known-values": [
+                            "requested",
+                            "accepted",
+                            "heading_to_pickup",
+                            "at_pickup",
+                            "picked_up",
+                            "heading_to_dropoff",
+                            "delivered",
+                            "cancelled"
+                          ],
+                          "description": "Valores conocidos: requested, accepted, heading_to_pickup, at_pickup, picked_up, heading_to_dropoff, delivered, cancelled. Puede llegar uno nuevo; trátalo como desconocido."
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "status"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -1656,6 +4174,26 @@
           },
           "403": {
             "description": "Problem Details (RFC 9457). `code`: forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem Details (RFC 9457). `code`: not_found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem Details (RFC 9457). `code`: conflict",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1692,8 +4230,7 @@
             "bearerAuth": []
           }
         ],
-        "x-tindivo-role": "customer",
-        "x-tindivo-pending": true
+        "x-tindivo-role": "customer"
       }
     },
     "/customer/phone/send-code": {
@@ -1705,11 +4242,44 @@
         ],
         "responses": {
           "200": {
-            "description": "Forma pendiente de documentar (lote MV2b)",
+            "description": "Código enviado",
             "content": {
               "application/json": {
                 "schema": {
-                  "description": "Forma pendiente de documentar (lote MV2b)"
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "sent": {
+                          "type": "boolean",
+                          "enum": [
+                            true
+                          ]
+                        },
+                        "channel": {
+                          "type": "string",
+                          "description": "El que usó Twilio (`sms`). `dev` = simulacro local, sin envío"
+                        },
+                        "verified": {
+                          "description": "Solo en el simulacro local: el teléfono ya quedó verificado y no hay código que pedir",
+                          "type": "boolean",
+                          "enum": [
+                            true
+                          ]
+                        }
+                      },
+                      "required": [
+                        "sent",
+                        "channel"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -1736,6 +4306,16 @@
           },
           "409": {
             "description": "Problem Details (RFC 9457). `code`: conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem Details (RFC 9457). `code`: validation_error",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1765,13 +4345,30 @@
             }
           }
         },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "phone": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "phone"
+                ]
+              }
+            }
+          }
+        },
         "security": [
           {
             "bearerAuth": []
           }
         ],
-        "x-tindivo-role": "customer",
-        "x-tindivo-pending": true
+        "x-tindivo-role": "customer"
       }
     },
     "/customer/phone/verify": {
@@ -1783,11 +4380,37 @@
         ],
         "responses": {
           "200": {
-            "description": "Forma pendiente de documentar (lote MV2b)",
+            "description": "Teléfono verificado",
             "content": {
               "application/json": {
                 "schema": {
-                  "description": "Forma pendiente de documentar (lote MV2b)"
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "verified": {
+                          "type": "boolean",
+                          "enum": [
+                            true
+                          ]
+                        },
+                        "phone": {
+                          "type": "string",
+                          "description": "E.164 (`+519XXXXXXXX`)"
+                        }
+                      },
+                      "required": [
+                        "verified",
+                        "phone"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -1843,13 +4466,36 @@
             }
           }
         },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "phone": {
+                    "type": "string"
+                  },
+                  "code": {
+                    "type": "string",
+                    "minLength": 6,
+                    "maxLength": 6
+                  }
+                },
+                "required": [
+                  "phone",
+                  "code"
+                ]
+              }
+            }
+          }
+        },
         "security": [
           {
             "bearerAuth": []
           }
         ],
-        "x-tindivo-role": "customer",
-        "x-tindivo-pending": true
+        "x-tindivo-role": "customer"
       }
     },
     "/push/subscriptions": {
@@ -1861,11 +4507,32 @@
         ],
         "responses": {
           "201": {
-            "description": "Forma pendiente de documentar (lote MV2b)",
+            "description": "Suscripción registrada o reactivada",
             "content": {
               "application/json": {
                 "schema": {
-                  "description": "Forma pendiente de documentar (lote MV2b)"
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "subscribed": {
+                          "type": "boolean",
+                          "enum": [
+                            true
+                          ]
+                        }
+                      },
+                      "required": [
+                        "subscribed"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -1901,12 +4568,60 @@
             }
           }
         },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "endpoint": {
+                    "type": "string",
+                    "maxLength": 1000,
+                    "format": "uri"
+                  },
+                  "keys": {
+                    "type": "object",
+                    "properties": {
+                      "p256dh": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 300
+                      },
+                      "auth": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 300
+                      }
+                    },
+                    "required": [
+                      "p256dh",
+                      "auth"
+                    ]
+                  },
+                  "userAgent": {
+                    "type": "string",
+                    "maxLength": 400
+                  },
+                  "installId": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 64
+                  }
+                },
+                "required": [
+                  "endpoint",
+                  "keys"
+                ]
+              }
+            }
+          }
+        },
         "security": [
           {
             "bearerAuth": []
           }
-        ],
-        "x-tindivo-pending": true
+        ]
       },
       "get": {
         "operationId": "listPushSubscriptions",
@@ -1916,11 +4631,75 @@
         ],
         "responses": {
           "200": {
-            "description": "Forma pendiente de documentar (lote MV2b)",
+            "description": "Sus dispositivos, del más reciente",
             "content": {
               "application/json": {
                 "schema": {
-                  "description": "Forma pendiente de documentar (lote MV2b)"
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "devices": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "platform": {
+                                "type": "string",
+                                "x-known-values": [
+                                  "apple",
+                                  "android",
+                                  "windows",
+                                  "otro"
+                                ],
+                                "description": "Deducida del proveedor del endpoint, no del user agent. Valores conocidos: apple, android, windows, otro. Puede llegar uno nuevo; trátalo como desconocido."
+                              },
+                              "label": {
+                                "nullable": true,
+                                "description": "User agent crudo: no identifica nada",
+                                "type": "string"
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "lastNotifiedAt": {
+                                "nullable": true,
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "current": {
+                                "type": "boolean",
+                                "description": "Es el `endpoint` que mandaste en la consulta"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "platform",
+                              "label",
+                              "createdAt",
+                              "lastNotifiedAt",
+                              "current"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "devices"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -1946,12 +4725,22 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "endpoint",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Opcional: marca con `current` el dispositivo que pregunta. URL del endpoint de Web Push"
+            }
+          }
+        ],
         "security": [
           {
             "bearerAuth": []
           }
-        ],
-        "x-tindivo-pending": true
+        ]
       },
       "delete": {
         "operationId": "deletePushSubscription",
@@ -1961,17 +4750,53 @@
         ],
         "responses": {
           "200": {
-            "description": "Forma pendiente de documentar (lote MV2b)",
+            "description": "Baja hecha; `removed` dice cuántas filas",
             "content": {
               "application/json": {
                 "schema": {
-                  "description": "Forma pendiente de documentar (lote MV2b)"
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "unsubscribed": {
+                          "type": "boolean",
+                          "enum": [
+                            true
+                          ]
+                        },
+                        "removed": {
+                          "type": "integer",
+                          "description": "Filas borradas de verdad (0 si no había)"
+                        }
+                      },
+                      "required": [
+                        "unsubscribed",
+                        "removed"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
           },
           "401": {
             "description": "Problem Details (RFC 9457). `code`: unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem Details (RFC 9457). `code`: validation_error",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1991,12 +4816,62 @@
             }
           }
         },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "endpoint": {
+                        "type": "string",
+                        "maxLength": 1000,
+                        "format": "uri"
+                      }
+                    },
+                    "required": [
+                      "endpoint"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      }
+                    },
+                    "required": [
+                      "id"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "all": {
+                        "type": "boolean",
+                        "enum": [
+                          true
+                        ]
+                      }
+                    },
+                    "required": [
+                      "all"
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        },
         "security": [
           {
             "bearerAuth": []
           }
-        ],
-        "x-tindivo-pending": true
+        ]
       }
     },
     "/push/subscriptions/me": {
@@ -2008,17 +4883,50 @@
         ],
         "responses": {
           "200": {
-            "description": "Forma pendiente de documentar (lote MV2b)",
+            "description": "Si existe y de quién es",
             "content": {
               "application/json": {
                 "schema": {
-                  "description": "Forma pendiente de documentar (lote MV2b)"
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "owned": {
+                          "type": "boolean",
+                          "description": "La suscripción existe y es de este usuario"
+                        },
+                        "exists": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "owned",
+                        "exists"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
           },
           "401": {
             "description": "Problem Details (RFC 9457). `code`: unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem Details (RFC 9457). `code`: validation_error",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2038,12 +4946,22 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "endpoint",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "El de este navegador. URL del endpoint de Web Push"
+            }
+          }
+        ],
         "security": [
           {
             "bearerAuth": []
           }
-        ],
-        "x-tindivo-pending": true
+        ]
       }
     }
   }
