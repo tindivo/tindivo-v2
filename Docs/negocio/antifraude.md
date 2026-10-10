@@ -72,7 +72,10 @@ vuelto: la cajera ya sabe con cuánto cuenta.
 - En 30 días, **12 pedidos** pasaron por la llamada (4 por zona GPS dudosa, 4 por cliente nuevo con GPS local, 4 por la
   regla general) y **1** se canceló porque nadie validó a tiempo.
 
+**En la práctica** (Jesús, 2026-10-10): el no-show no se ha usado. Si el cliente no sale, el motorizado sigue con
+sus otros pedidos. Falta la prueba: una foto de que el cliente no sale, que debería pedirse al cumplirse los 5 minutos
+de espera. Está en el backlog (`Docs/trabajo/backlog.md`).
+
 ## Pendientes
 
-Que nunca haya habido un strike puede significar que el pueblo no hace fraude o que el no-show no se está reportando.
-Está preguntado en `Docs/trabajo/squash/preguntas-antifraude.md`.
+`Docs/trabajo/squash/preguntas-antifraude.md`: si las reglas de `DECISIONS.md §8` siguen siendo las que quieres.

@@ -27,8 +27,8 @@ Mandan los valores de `app_settings`, no este archivo; al 2026-10-10:
 | Transporte de **Entregas** | S/ 3.00 | `courier.pricing.basePrice` | El cliente, a Tindivo (vía el motorizado) |
 
 - Un negocio puede tener comisión propia (`businesses.commission_override_delivery` / `_pickup`); hoy ninguno la tiene.
-- En todas las semanas con cargos, desde la primera (2026-08-03), la comisión fue S/ 1.50 por pedido con entrega y
-  S/ 1.00 por recojo. `DECISIONS.md §4` dice S/ 1.00: **pendiente de confirmar** (pregunta 1 de plataforma).
+- **La comisión de S/ 1.50 la confirmó Jesús el 2026-10-10**, y es la que se cobró en todas las semanas desde la
+  primera (2026-08-03); el recojo, S/ 1.00. El envío lo paga el cliente al negocio, y el negocio se lo paga a Tindivo.
 - **La banda (cerca o lejos) se fija al crear el pedido**: la calcula el sistema por ubicación en los de la app y la
   pone la cajera en los manuales (desde la `0120`). Al recoger, el código todavía permite que el parámetro `band` del
   motorizado sustituya la banda guardada, sin recalcular el envío. Después de entregar, Jesús puede corregir la banda mientras el cargo de envío siga pendiente
@@ -92,9 +92,14 @@ decide Jesús (preguntas 1 a 3).
 | **Apelación aprobada** (el negocio rechazó por error un comprobante) | Exige la captura del Yape o Plin enviado al cliente; carga el total al negocio | `register_appeal_refund` |
 | **Reclamación de fraude** aprobada | Carga el monto reclamado al negocio | `resolve_fraud_claim` |
 
-Medido: un solo `refund_charge` en la historia, S/ 20.50, del pedido `GWYVM24F`: **el cargo automático** por un prepago
-verificado que canceló el negocio (2026-08-21; liquidado el 2026-08-30). Ninguna apelación con reembolso, ninguna
-reclamación de fraude.
+Medido: un solo `refund_charge` en la historia, y **fue un cargo falso.** La Florencia canceló el prepago `GWYVM24F`
+(S/ 20.50, 2026-08-20 a las 20:22, hora de Lima) porque ya lo había vuelto a crear 46 segundos antes como `EFFF947D`,
+que se entregó y se cobró normal. No hubo devolución al cliente (Jesús, 2026-10-10), pero el cargo automático le sumó
+S/ 20.50 de deuda, y **La Florencia lo pagó** en su Yape del 2026-08-30. De ese caso nació la función de adelantar un
+pedido. Ninguna apelación con reembolso.
+
+**La cobertura de fraude no se usa** (Jesús, 2026-10-10): fue una función «por si acaso»; los casos se coordinan por
+WhatsApp y ahí mismo se resuelven.
 
 ## Tindivo Entregas
 
@@ -104,7 +109,8 @@ lo rinde a Tindivo (`driver_remit_courier_fee` → `remitted_at`) y Jesús confi
 (`admin_confirm_courier_remittance`). El producto llega siempre pagado: el motorizado no lo cobra ni lo paga. Si una
 entrega se cancela después del cobro, el cobro se conserva y se puede rendir; el código no devuelve nada.
 
-Medido: 3 entregas con S/ 9.00 **declarados como rendidos** por el motorizado y sin confirmación de Jesús.
+Medido: 3 entregas con S/ 9.00 **declarados como rendidos** por el motorizado y sin confirmación de Jesús, que todavía
+no ha enseñado a los motorizados el flujo de rendición.
 
 ## Tindivo Store
 
