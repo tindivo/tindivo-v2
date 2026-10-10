@@ -112,6 +112,11 @@ entre cortes. Vercel vivo dos semanas como mínimo.
 **despliegue solo tras cerrar la Fase 3**, en su propia cola. Orden: el de `../customer_app_migration/debate-rest/
 conclusion.md` §3.
 
+> **Cambio del 2026-10-09 (Jesús):** el customer móvil pasa delante y la mudanza al VPS, detrás. El carril móvil ya
+> no espera a la Fase 3: sus cambios aditivos se despliegan en Vercel en cuanto cierra el paso 0 (C7), cada uno con
+> su manifiesto de nivel B. El orden de las apps es customer → Negocios Android. La cola está en
+> [`cola.md`](cola.md), sección «Carril móvil».
+
 ### Fase 5 · Mudar la base
 
 Sin lotes todavía: sus precondiciones (`conclusion.md` F4) salen de la Fase 4.

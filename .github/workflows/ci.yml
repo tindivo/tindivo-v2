@@ -62,6 +62,90 @@ jobs:
       - name: Build
         run: pnpm build
 
+  # La suite de @tindivo/api es de integración: necesita una Supabase de verdad.
+  # Este job levanta una LOCAL en el runner, la reconstruye desde
+  # supabase/migrations, siembra el mundo e2e y corre la suite sin caché. Nunca
+  # toca tindivo-prod: no hay token ni contraseña en el job, `supabase start`
+  # solo conoce el Docker del runner y los helpers de test abortan si la URL no
+  # es 127.0.0.1 (apps/api/lib/__tests__/helpers/local-db.ts).
+  # Plan de migraciones, lote P0.3.
+  api-integration:
+    name: Integración · API contra Supabase local
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      # Fijada: la misma versión con la que se reconstruye la base en local.
+      SUPABASE_CLI_VERSION: 2.109.1
+    steps:
+      - uses: actions/checkout@v4
+
+      # Las suites se escribieron y se miden en Lima, y Vercel corre en UTC.
+      # Aquí se reproduce la línea base local; si la suite depende de la zona
+      # horaria, es un hallazgo aparte, no algo que este job deba esconder.
+      - name: Zona horaria de Lima (la de la línea base local)
+        run: sudo timedatectl set-timezone America/Lima
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: ${{ env.SUPABASE_CLI_VERSION }}
+
+      # `start` sobre un runner vacío equivale a `db reset`: crea la base y
+      # aplica todas las migraciones desde cero. Si una no reconstruye, cae aquí.
+      - name: Supabase local (reconstruye desde las migraciones)
+        run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector
+
+      - name: Credenciales del entorno levantado
+        run: |
+          supabase status -o env > "$RUNNER_TEMP/supabase.env"
+          set -a; . "$RUNNER_TEMP/supabase.env"; set +a
+          case "$API_URL" in
+            http://127.0.0.1:*|http://localhost:*) ;;
+            *) echo "::error::API_URL no es local: $API_URL"; exit 1 ;;
+          esac
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON_KEY"
+            echo "SUPABASE_ANON_KEY=$ANON_KEY"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
+          } >> "$GITHUB_ENV"
+
+      - name: Mundo e2e
+        run: pnpm db:seed:e2e
+
+      - name: Suite de la API (sin caché)
+        run: >
+          pnpm exec turbo run test --filter=@tindivo/api --force --
+          --reporter=default --reporter=junit --outputFile.junit=test-results/junit.xml
+
+      - name: Guardar resultados
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-integration-results
+          path: apps/api/test-results/
+          if-no-files-found: warn
+
+      - name: Diagnóstico de Supabase
+        if: failure()
+        run: |
+          supabase status || true
+          docker ps -a
+          docker logs "$(docker ps -aqf name=supabase_db)" --tail 200 || true
+
   db-types-drift:
     name: DB types drift (database.types.ts vs Supabase)
     runs-on: ubuntu-latest
