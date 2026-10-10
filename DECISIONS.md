@@ -11,15 +11,10 @@
 
 ## 0. Regla de precedencia de documentos
 
-Hay 20 documentos con reglas que a veces se contradicen. Orden de autoridad:
-
-1. **`FASE-1-TINDIVO.md`** — alcance y reglas de la Fase 1 (manda sobre todo lo demás).
-2. **`Tindivo_Documento_Maestro.md`** — capa de reconciliación; reglas de dinero y antifraude.
-3. **Specs `00`–`14`** — arquitectura técnica de referencia.
-4. **`Tindivo Design Spec.html` + `FLUJO_TINDIVO.md`** — verdad visual y de comportamiento del cliente.
-5. **`DOCUMENTACION_PANELES_TINDIVO.md`** (borrado; en git: `8f26aed`) — inspiración UX, **NO** target estético.
-
-Donde FASE-1 o el Maestro corrigen un spec, ganan ellos. **Confirmado por el usuario (2026-05-29).**
+> **Sustituida el 2026-10-10** por el estándar aprobado por Jesús (`Docs/planes/estandar-docs/estandar.md` §4):
+> mandan las decisiones (`Docs/decisiones/` y las secciones de este archivo) y el canon (`Docs/glosario.md`,
+> `Docs/negocio/`); el código y la base de producción son la evidencia de lo que pasa. La regla anterior ponía primero
+> `FASE-1-TINDIVO.md` y el Documento Maestro, que ya no existen: su contenido vigente pasó al canon (en git: `306f025`).
 
 ---
 

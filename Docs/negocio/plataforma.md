@@ -28,11 +28,14 @@ Encargos («te lo compramos y te lo llevamos») no existe: se descartó (ADR 003
   | Negocio | Cómo trabaja con Tindivo | Pedidos entregados en 30 días |
   |---|---|---|
   | Pizza Priamo | Catálogo con pedidos web, entrega y recojo | 332 |
-  | Pollería Nadia | Solo catálogo (pedidos por teléfono) | 87 |
+  | Pollería Nadia | Solo catálogo: la cajera crea los pedidos a mano; los entrega Tindivo | 87 |
   | La Florencia | Catálogo con pedidos web, entrega y recojo | 67 |
   | Al Punto | Catálogo con pedidos web, entrega y recojo | 11 |
 
   Un solo negocio hace dos tercios de los pedidos: es el mayor riesgo del negocio (debate de ingresos, 2026-10-07).
+  Pollería Nadia **depende al 100 % de Tindivo** para entregar (Jesús, 2026-10-10); recibe por WhatsApp porque todavía
+  no tiene sistema web. Su marca `uses_tindivo_drivers = false` está mal y no afecta a ninguna lógica: se corrige desde
+  el admin.
 - **Motorizados.** Tres activos; los tres entregaron en los últimos 30 días.
 - **Jesús**, como administrador: operación, cobros a los negocios y apelaciones.
 
@@ -70,4 +73,4 @@ El detalle (deuda, liquidaciones, corte de caja del motorizado) está en `Docs/n
 
 ## Pendientes
 
-Ver `Docs/trabajo/squash/preguntas-plataforma.md`: cómo entrega Pollería Nadia.
+Ninguno.
