@@ -17,7 +17,7 @@ Estados: `[ ]` pendiente · `[~]` en curso · `[x]` hecho · `[!]` bloqueado (co
 - [x] **P0.2** · Inventario de rojos heredados: **ninguno**. `lint` 0 errores (37 avisos), `check:ds` verde, `type-check` 12/12 y 1 063 tests de 10 paquetes, todo con `Cached: 0` (bitácora del 2026-10-09). La suite de `@tindivo/api` se mide en P0.3
 - [x] **P0.4** · Entorno autónomo: bloqueos de §2.2 en `.claude/settings.json`, candado de la base local (`pnpm db:cycle`, `pnpm db:lock status`) y `.env.local` revisados: solo claves locales — rama `chore/p0-entorno-autonomo`
 - [~] **P0.3** · Job de integración en CI (Supabase fijado, `db reset` + `db:seed:e2e` + suite de la API con `--force`). Va antes que el resto porque las pruebas pesadas corren en GitHub y no en el PC de Jesús. Escrito (`api-integration` en `.github/workflows/ci.yml`); **falta verlo correr**, y el CI solo corre en PRs: **Jesús** abre el PR de `chore/p0-entorno-autonomo` o instala `gh`. Que sea obligatorio para mergear se marca en la protección de rama de GitHub (nivel C)
-- [ ] **MV1** · *(carril móvil, adelantado)* Expediente de tiendas: `Docs/customer_app_migration/07-publicacion-tiendas.md` con el checklist de Google Play y App Store, los textos de la ficha, el borrador de la política de privacidad, la nota para el revisor, el inventario de datos por SDK para *Data safety* y *App Privacy*, y el diseño del negocio de demostración para la revisión
+- [x] **MV1** · *(carril móvil, adelantado)* Expediente de tiendas: [`07-publicacion-tiendas.md`](../customer_app_migration/07-publicacion-tiendas.md) — camino crítico, causas de rechazo, lo que le falta a la política (con borrador), inventario de datos medido en prod, diseño del borrado y de la cuenta de revisión, nota al revisor y ficha. Abre D-44…D-47 — rama `docs/mv1-expediente-tiendas`
 - [!] **P0.5** · Copia de prod fuera del PC — **Jesús**: dónde se guarda, y presencia para sacarla (nivel B + C)
 - [!] **P0.6** · Restauración aislada y conciliación — espera a P0.5
 - [ ] **P0.7** · Recorrido e2e real del comprobante (sin `UPDATE` simulado)
@@ -53,4 +53,5 @@ mientras se construye el resto.
 5. **Contacto** · Correo de soporte y dónde vivirán la política de privacidad y los términos.
 6. **MV6** · El ref del proyecto vacío, para montar staging contigo.
 7. **D-39** · Dinero como cadena (`"12.50"`) en los campos nuevos.
-8. **H8** · Presupuesto del VPS de ensayo — pospuesto: la mudanza va después del móvil.
+8. **D-44…D-47** · Qué se conserva al borrar una cuenta, cómo accede el revisor, edad mínima y versiones mínimas de sistema (`07-publicacion-tiendas.md` §11).
+9. **H8** · Presupuesto del VPS de ensayo — pospuesto: la mudanza va después del móvil.
