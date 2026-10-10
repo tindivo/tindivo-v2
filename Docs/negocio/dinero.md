@@ -29,9 +29,9 @@ Mandan los valores de `app_settings`, no este archivo; al 2026-10-10:
 - Un negocio puede tener comisión propia (`businesses.commission_override_delivery` / `_pickup`); hoy ninguno la tiene.
 - En todas las semanas con cargos, desde la primera (2026-08-03), la comisión fue S/ 1.50 por pedido con entrega y
   S/ 1.00 por recojo. `DECISIONS.md §4` dice S/ 1.00: **pendiente de confirmar** (pregunta 1 de plataforma).
-- **La banda (cerca o lejos) la fija el pedido**, no el motorizado (desde la `0120`): la calcula el sistema por
-  ubicación en los pedidos de la app y la pone la cajera en los manuales. Al recoger, el motorizado no recalcula el
-  envío ya guardado. Después de entregar, Jesús puede corregir la banda mientras el cargo de envío siga pendiente
+- **La banda (cerca o lejos) se fija al crear el pedido**: la calcula el sistema por ubicación en los de la app y la
+  pone la cajera en los manuales (desde la `0120`). Al recoger, el código todavía permite que el parámetro `band` del
+  motorizado sustituya la banda guardada, sin recalcular el envío. Después de entregar, Jesús puede corregir la banda mientras el cargo de envío siga pendiente
   (`admin_correct_delivery_band`): cambia el reparto entre comida y envío y conserva el total que pagó el cliente.
 - Antes de que el motorizado llegue al local, la cajera puede modificar el total y la forma de pago de un pedido manual
   (`update_business_manual_order`).
@@ -48,7 +48,7 @@ Mandan los valores de `app_settings`, no este archivo; al 2026-10-10:
    `restaurant_payments` y los cargos pasan a `settled`. El código no fija una periodicidad: se liquida cuando el
    negocio paga (`DECISIONS.md §4` dice «semanal»: pendiente de confirmar).
 4. **Bloqueo por deuda: solo manual.** Jesús puede suspender a un negocio y marcar que es por deuda
-   (`block_business(…, p_for_debt)`, `0180`); registrar un pago levanta esa marca solo si la deuda queda en cero o
+   (`block_business(…, p_for_debt)`, `0180`; comprobado en la definición viva); registrar un pago levanta esa marca solo si la deuda queda en cero o
    menos. No hay corte automático: la `0178` lo introdujo y la `0179` lo retiró como decisión de producto, porque
    dejaba a un negocio sin vender un viernes por la noche sin que nadie lo hubiera decidido. `debt_block_threshold`
    (S/ 600) es un aviso que ve el negocio, no un corte.

@@ -24,19 +24,21 @@ Recomendación: definir para quién es la cobertura y quién paga antes de cambi
 
 ## 3. Apelaciones: ¿autorizas que Jesús adelante dinero propio y lo recupere del negocio?
 
-`register_appeal_refund` exige la captura del Yape que Jesús le envió al cliente y carga el total al negocio. Adelantar
-dinero propio no es retener fondos del cliente, pero es la única forma en que Tindivo pone plata en el medio. Si lo
-autorizas, el principio de `plataforma.md` lo dirá así.
+`register_appeal_refund` exige una captura de Yape o Plin y carga el total al negocio. Eso no acredita quién financió
+la devolución. **¿Autorizas que Jesús adelante dinero propio y lo recupere del negocio?** Si sí, el principio de
+`plataforma.md` lo dirá así.
 
 ## 4. Bloqueo por deuda: ¿solo manual?
 
-Hoy es solo manual (`block_business` con `p_for_debt`, `0180`); el automático lo retiró la `0179` como decisión de
+Hoy es solo manual (`block_business` con `p_for_debt`, `0180`, comprobado en producción); el automático lo retiró la `0179` como decisión de
 producto, y `debt_block_threshold` (S/ 600) es solo un aviso. **¿Confirmas que así debe quedar?**
 
 ## 5. Comisión y periodicidad frente a `DECISIONS.md §4`
 
-`§4` dice comisión de S/ 1.00 y liquidación de comisiones **semanal** y de efectivo **diaria**. Producción cobró
-siempre S/ 1.50, liquida cuando el negocio paga y rinde el efectivo pedido a pedido. **¿Confirmas lo que hace producción
+`§4` dice comisión de S/ 1.00 y liquidación de comisiones **semanal** y de efectivo **diaria**. En las semanas
+reportadas desde el 2026-08-03, la comisión fue S/ 1.50 por delivery y S/ 1.00 por recojo. El código permite liquidar
+cuando se registra el pago y registra el efectivo por pedido; esa granularidad no determina si debe rendirse dentro
+del mismo día. **¿Confirmas lo que hace producción
 como regla vigente?** (Misma pregunta que la 1 de plataforma para la comisión.)
 
 ## 6. Sueldo del motorizado y punto de equilibrio
@@ -51,7 +53,7 @@ diferencia**: el motorizado, el negocio o Tindivo. Nunca ha habido una disputa. 
 
 ## 8. Entregas cancelada después de cobrar
 
-Si una entrega se cancela después de que el motorizado cobró los S/ 3, el cobro se conserva y se rinde. **¿Se le
+Si una entrega se cancela después de que el motorizado cobró los S/ 3, el cobro se conserva y se puede rendir. **¿Se le
 devuelve al cliente? ¿Quién y cuándo?**
 
 ## 9. Ventas de Store
