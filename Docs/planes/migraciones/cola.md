@@ -28,7 +28,7 @@ Estados: `[ ]` pendiente · `[~]` en curso · `[x]` hecho · `[!]` bloqueado (co
 
 ## Fase 1 · Paso 0
 
-- [!] **C1** · Revocar `expire_courier_orders()` a clientes — escribir y probar en local es A; desplegar espera a P0.5 y a Jesús
+- [x] **C1** · Revocar `expire_courier_orders()` a clientes, y **SEC-1** (los teléfonos y WhatsApp de `directory_businesses` dejan de ser legibles por `anon` y `authenticated`): migración `0255` con un bloque de verificación que aborta si los permisos no quedan bien; Codex firmó con cambios aplicados; CI completa en verde (PR #35). **Sin desplegar:** el `db push` y la web nueva (que ya no pide `phone`/`whatsapp`) deben salir juntos; hoy el directorio está vacío en producción. Efecto: el recojo desde un comercio no precarga el teléfono hasta que exista una ruta que lo devuelva
 - [~] **C2** · Comprobante (a): `UPDATE` condicionado y 409 — rama `fix/c2-c3-comprobante` (2026-10-10, noche)
 - [~] **C3a-d** · Comprobante (b), transaccional — rama `fix/c2-c3-comprobante`
 - [x] **C4a-d** · Idempotencia (c): clave por usuario en `creation_idempotency`, registrada en la misma transacción que el pedido (`create_order_idempotently`, migraciones `0250`-`0252`); replay antes de los guards, 409 para payload distinto o reserva vieja en vuelo, 422 para clave no UUID, purga a los 7 días. 28 pruebas nuevas; Codex firmó en tres rondas; CI completa en verde (PR #31). **Retención de 7 días: propuesta pendiente de Jesús.** Sin desplegar a producción.
