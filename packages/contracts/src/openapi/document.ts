@@ -66,8 +66,13 @@ function successContent(res: SuccessResponse): JsonSchema | undefined {
   return { 'application/json': { schema: toSchema(body, 'output') } }
 }
 
+/** Rutas que el proxy nunca rechaza por versión: una app obsoleta tiene que poder leerlas. */
+const ALWAYS_OPEN_PATHS = new Set(['/config', '/health'])
+
 function errorResponses(op: OperationSpec): Record<string, JsonSchema> {
   const codes: ApiErrorCode[] = [...(op.errors ?? []), 'internal_error']
+  // El proxy evalúa la versión de la app en TODA ruta salvo /config y /health.
+  if (!ALWAYS_OPEN_PATHS.has(op.path)) codes.push('client_upgrade_required')
   const byStatus = new Map<number, ApiErrorCode[]>()
   for (const code of codes) {
     const status = ERROR_CODE_STATUS[code]
@@ -85,6 +90,30 @@ function errorResponses(op: OperationSpec): Record<string, JsonSchema> {
   return out
 }
 
+/**
+ * Cabeceras que mandan las apps nativas. Opcionales: las PWAs no las mandan y
+ * nunca se bloquean. Con versión por debajo del mínimo de su app y plataforma,
+ * la respuesta es 426 `client_upgrade_required`.
+ */
+const CLIENT_HEADER_PARAMS: [string, string, JsonSchema][] = [
+  [
+    'X-Tindivo-Platform',
+    'Plataforma de la app',
+    { type: 'string', enum: ['ios', 'android', 'web'] },
+  ],
+  [
+    'X-Tindivo-App',
+    'App que llama',
+    { type: 'string', enum: ['customer', 'negocios', 'motorizados'] },
+  ],
+  [
+    'X-Tindivo-App-Version',
+    'Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426',
+    { type: 'string', example: '1.2.0' },
+  ],
+  ['X-Tindivo-Build', 'Número de build de la app', { type: 'string', example: '57' }],
+]
+
 function parameters(op: OperationSpec): JsonSchema[] {
   const params: JsonSchema[] = []
   for (const [name, schema] of Object.entries(op.pathParams ?? {})) {
@@ -101,6 +130,11 @@ function parameters(op: OperationSpec): JsonSchema[] {
       })
     }
   }
+  if (!ALWAYS_OPEN_PATHS.has(op.path)) {
+    for (const [name, description, schema] of CLIENT_HEADER_PARAMS) {
+      params.push({ name, in: 'header', required: false, description, schema })
+    }
+  }
   if (op.idempotent) {
     params.push({
       name: 'Idempotency-Key',
@@ -109,7 +143,7 @@ function parameters(op: OperationSpec): JsonSchema[] {
       required: true,
       description:
         'UUID nuevo por intento de compra. Repetir la misma clave devuelve el resultado ya creado, ' +
-        'sin duplicarlo. Tiene que ser un UUID: hoy otra cosa revienta en la base y responde 500',
+        'sin duplicarlo. Tiene que ser un UUID: otra cosa se rechaza con 422',
       schema: { type: 'string', format: 'uuid' },
     })
   }

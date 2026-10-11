@@ -40,6 +40,7 @@ import { POST as adminStoreImage } from '../../app/api/v1/admin/store/[id]/image
 import { PATCH as adminStorePatch } from '../../app/api/v1/admin/store/[id]/route'
 import { POST as adminStoreStatus } from '../../app/api/v1/admin/store/[id]/status/route'
 import { POST as adminStoreCreate } from '../../app/api/v1/admin/store/route'
+import { GET as getClientConfig } from '../../app/api/v1/config/route'
 import { GET as listAppeals } from '../../app/api/v1/customer/appeals/route'
 import { POST as cancelCourierOrder } from '../../app/api/v1/customer/courier-orders/[id]/cancel/route'
 import { POST as createCourierOrder } from '../../app/api/v1/customer/courier-orders/route'
@@ -51,13 +52,18 @@ import { POST as cancelOrder } from '../../app/api/v1/customer/orders/[id]/cance
 import { GET as getPrepayInfo } from '../../app/api/v1/customer/orders/[id]/prepay-info/route'
 import { POST as confirmPrepayProof } from '../../app/api/v1/customer/orders/[id]/prepay-proof/route'
 import { POST as createOrder } from '../../app/api/v1/customer/orders/route'
+import { GET as getPaymentOptions } from '../../app/api/v1/customer/payment-options/route'
 import { POST as sendPhoneCode } from '../../app/api/v1/customer/phone/send-code/route'
 import { POST as verifyPhoneCode } from '../../app/api/v1/customer/phone/verify/route'
+import { GET as getCustomerProfile } from '../../app/api/v1/customer/profile/route'
 import { GET as getHealth } from '../../app/api/v1/health/route'
 import { GET as getBusiness } from '../../app/api/v1/public/businesses/[id]/route'
 import { GET as listBusinesses } from '../../app/api/v1/public/businesses/route'
+import { GET as getPublicConfig } from '../../app/api/v1/public/config/route'
 import { GET as getCourierTracking } from '../../app/api/v1/public/courier/[shortId]/route'
+import { GET as listCourierDirectory } from '../../app/api/v1/public/courier/directory/route'
 import { GET as getCourierServiceStatus } from '../../app/api/v1/public/courier/status/route'
+import { GET as listMapLandmarks } from '../../app/api/v1/public/landmarks/route'
 import { GET as getOrderTracking } from '../../app/api/v1/public/orders/[shortId]/route'
 import { POST as checkPilotAccess } from '../../app/api/v1/public/pilot-access/route'
 import { GET as getOrderIntakeStatus } from '../../app/api/v1/public/schedule/route'
@@ -222,10 +228,24 @@ afterAll(async () => {
 describe('rutas públicas', () => {
   it('sistema, horario, búsqueda y piloto', async () => {
     await conforms('getHealth', 200, getHealth)
+    await conforms('getClientConfig', 200, getClientConfig)
     await conforms('getOrderIntakeStatus', 200, getOrderIntakeStatus)
     await conforms('searchCatalog', 200, searchCatalog, { qs: '?q=pollo' })
     await conforms('checkPilotAccess', 200, checkPilotAccess, { method: 'POST', body: {} })
     await conforms('getCourierServiceStatus', 200, getCourierServiceStatus)
+  })
+
+  it('MV4a: configuración pública, referencias del mapa y directorio', async () => {
+    await conforms('getPublicConfig', 200, getPublicConfig)
+    await conforms('listMapLandmarks', 200, listMapLandmarks)
+    await conforms('listCourierDirectory', 200, listCourierDirectory)
+  })
+
+  it('MV4a: perfil y opciones de pago del cliente', async () => {
+    // El perfil de este fichero se creó sin teléfono: `phone` y `phoneVerifiedAt` salen null.
+    const profile = await conforms('getCustomerProfile', 200, getCustomerProfile, { bearer: token })
+    expect(profile.fullName).toBe(NOMBRE_FIXTURE)
+    await conforms('getPaymentOptions', 200, getPaymentOptions, { bearer: token })
   })
 
   it('el catálogo: la lista y un negocio con su carta y sus modificadores', async () => {

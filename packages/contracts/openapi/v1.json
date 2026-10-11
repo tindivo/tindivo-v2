@@ -47,9 +47,10 @@
               "business_blocked",
               "order_not_cancellable",
               "payment_required",
+              "client_upgrade_required",
               "internal_error"
             ],
-            "description": "Valores conocidos: validation_error, unauthorized, forbidden, not_found, conflict, idempotency_conflict, rate_limited, invalid_state_transition, business_blocked, order_not_cancellable, payment_required, internal_error. Puede llegar uno nuevo; trátalo como desconocido."
+            "description": "Valores conocidos: validation_error, unauthorized, forbidden, not_found, conflict, idempotency_conflict, rate_limited, invalid_state_transition, business_blocked, order_not_cancellable, payment_required, client_upgrade_required, internal_error. Puede llegar uno nuevo; trátalo como desconocido."
           },
           "detail": {
             "type": "string"
@@ -163,6 +164,146 @@
         "security": []
       }
     },
+    "/config": {
+      "get": {
+        "operationId": "getClientConfig",
+        "summary": "Configuración pública para las apps: versión mínima por app y plataforma, y sistema mínimo",
+        "tags": [
+          "system"
+        ],
+        "responses": {
+          "200": {
+            "description": "Configuración vigente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "minAppVersion": {
+                          "type": "object",
+                          "properties": {
+                            "customer": {
+                              "type": "object",
+                              "properties": {
+                                "ios": {
+                                  "type": "string"
+                                },
+                                "android": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "ios",
+                                "android"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "negocios": {
+                              "type": "object",
+                              "properties": {
+                                "ios": {
+                                  "type": "string"
+                                },
+                                "android": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "ios",
+                                "android"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "motorizados": {
+                              "type": "object",
+                              "properties": {
+                                "ios": {
+                                  "type": "string"
+                                },
+                                "android": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "ios",
+                                "android"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "customer",
+                            "negocios",
+                            "motorizados"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "minOs": {
+                          "type": "object",
+                          "properties": {
+                            "android": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "exclusiveMinimum": true
+                            },
+                            "ios": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "exclusiveMinimum": true
+                            }
+                          },
+                          "required": [
+                            "android",
+                            "ios"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "apiVersion": {
+                          "type": "string",
+                          "enum": [
+                            "v1"
+                          ]
+                        },
+                        "serverTime": {
+                          "type": "string",
+                          "description": "ISO 8601, UTC"
+                        }
+                      },
+                      "required": [
+                        "minAppVersion",
+                        "minOs",
+                        "apiVersion",
+                        "serverTime"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "description": "Siempre accesible, sin sesión y sin evaluar la versión de la app. Las apps mandan `X-Tindivo-Platform` (ios|android|web), `X-Tindivo-App` (customer|negocios|motorizados), `X-Tindivo-App-Version` y `X-Tindivo-Build` en cada petición; si la versión está por debajo del mínimo de su app y plataforma, cualquier otra ruta responde 426 con `code: client_upgrade_required` (mostrar «actualiza la app»). Sin esas cabeceras no se bloquea nada.",
+        "security": []
+      }
+    },
     "/public/schedule": {
       "get": {
         "operationId": "getOrderIntakeStatus",
@@ -218,6 +359,16 @@
               }
             }
           },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Problem Details (RFC 9457). `code`: internal_error",
             "content": {
@@ -229,6 +380,56 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
+            }
+          }
+        ],
         "security": []
       }
     },
@@ -389,6 +590,16 @@
               }
             }
           },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Problem Details (RFC 9457). `code`: internal_error",
             "content": {
@@ -410,6 +621,54 @@
               "minLength": 2,
               "maxLength": 60,
               "description": "Texto a buscar en negocios y platos"
+            }
+          },
+          {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
             }
           }
         ],
@@ -553,6 +812,16 @@
               }
             }
           },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Problem Details (RFC 9457). `code`: internal_error",
             "content": {
@@ -564,6 +833,56 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
+            }
+          }
+        ],
         "security": []
       }
     },
@@ -958,6 +1277,16 @@
               }
             }
           },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Problem Details (RFC 9457). `code`: internal_error",
             "content": {
@@ -977,6 +1306,54 @@
             "schema": {
               "type": "string",
               "description": "UUID o slug del negocio"
+            }
+          },
+          {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
             }
           }
         ],
@@ -1023,6 +1400,16 @@
               }
             }
           },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Problem Details (RFC 9457). `code`: internal_error",
             "content": {
@@ -1035,6 +1422,56 @@
           }
         },
         "description": "El piloto cerrado terminó: hoy responde siempre `allowed: true, pilotActive: false`.",
+        "parameters": [
+          {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
+            }
+          }
+        ],
         "security": []
       }
     },
@@ -1331,6 +1768,16 @@
               }
             }
           },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Problem Details (RFC 9457). `code`: internal_error",
             "content": {
@@ -1350,6 +1797,54 @@
             "schema": {
               "type": "string",
               "description": "Identificador corto público (8 caracteres)"
+            }
+          },
+          {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
             }
           }
         ],
@@ -1426,6 +1921,16 @@
               }
             }
           },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Problem Details (RFC 9457). `code`: internal_error",
             "content": {
@@ -1437,6 +1942,56 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
+            }
+          }
+        ],
         "security": []
       }
     },
@@ -1622,6 +2177,16 @@
               }
             }
           },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Problem Details (RFC 9457). `code`: internal_error",
             "content": {
@@ -1641,6 +2206,54 @@
             "schema": {
               "type": "string",
               "description": "Identificador corto público (8 caracteres)"
+            }
+          },
+          {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
             }
           }
         ],
@@ -1963,6 +2576,16 @@
               }
             }
           },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Problem Details (RFC 9457). `code`: internal_error",
             "content": {
@@ -2009,6 +2632,54 @@
             "schema": {
               "description": "`precio_asc` o `precio_desc`. Otro valor = recientes",
               "type": "string"
+            }
+          },
+          {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
             }
           }
         ],
@@ -2358,6 +3029,16 @@
               }
             }
           },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Problem Details (RFC 9457). `code`: internal_error",
             "content": {
@@ -2376,6 +3057,54 @@
             "required": true,
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
             }
           }
         ],
@@ -2396,6 +3125,16 @@
           },
           "422": {
             "description": "Problem Details (RFC 9457). `code`: validation_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2425,6 +3164,56 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -2628,6 +3417,16 @@
               }
             }
           },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Problem Details (RFC 9457). `code`: internal_error",
             "content": {
@@ -2641,10 +3440,58 @@
         },
         "parameters": [
           {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
+            }
+          },
+          {
             "name": "Idempotency-Key",
             "in": "header",
             "required": true,
-            "description": "UUID nuevo por intento de compra. Repetir la misma clave devuelve el resultado ya creado, sin duplicarlo. Tiene que ser un UUID: hoy otra cosa revienta en la base y responde 500",
+            "description": "UUID nuevo por intento de compra. Repetir la misma clave devuelve el resultado ya creado, sin duplicarlo. Tiene que ser un UUID: otra cosa se rechaza con 422",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -2950,6 +3797,16 @@
               }
             }
           },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Problem Details (RFC 9457). `code`: internal_error",
             "content": {
@@ -2970,6 +3827,54 @@
               "type": "string",
               "format": "uuid",
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
             }
           }
         ],
@@ -3145,6 +4050,16 @@
               }
             }
           },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Problem Details (RFC 9457). `code`: internal_error",
             "content": {
@@ -3165,6 +4080,54 @@
               "type": "string",
               "format": "uuid",
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
             }
           }
         ],
@@ -3266,6 +4229,16 @@
               }
             }
           },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Problem Details (RFC 9457). `code`: internal_error",
             "content": {
@@ -3286,6 +4259,54 @@
               "type": "string",
               "format": "uuid",
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
             }
           }
         ],
@@ -3471,6 +4492,16 @@
               }
             }
           },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Problem Details (RFC 9457). `code`: internal_error",
             "content": {
@@ -3491,6 +4522,54 @@
               "type": "string",
               "format": "uuid",
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
             }
           }
         ],
@@ -3589,6 +4668,16 @@
               }
             }
           },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Problem Details (RFC 9457). `code`: internal_error",
             "content": {
@@ -3609,6 +4698,54 @@
               "type": "string",
               "format": "uuid",
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
             }
           }
         ],
@@ -3789,6 +4926,16 @@
               }
             }
           },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Problem Details (RFC 9457). `code`: internal_error",
             "content": {
@@ -3800,6 +4947,56 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
+            }
+          }
+        ],
         "security": [
           {
             "bearerAuth": []
@@ -3918,6 +5115,16 @@
               }
             }
           },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Problem Details (RFC 9457). `code`: internal_error",
             "content": {
@@ -3931,10 +5138,58 @@
         },
         "parameters": [
           {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
+            }
+          },
+          {
             "name": "Idempotency-Key",
             "in": "header",
             "required": true,
-            "description": "UUID nuevo por intento de compra. Repetir la misma clave devuelve el resultado ya creado, sin duplicarlo. Tiene que ser un UUID: hoy otra cosa revienta en la base y responde 500",
+            "description": "UUID nuevo por intento de compra. Repetir la misma clave devuelve el resultado ya creado, sin duplicarlo. Tiene que ser un UUID: otra cosa se rechaza con 422",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -4202,6 +5457,16 @@
               }
             }
           },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Problem Details (RFC 9457). `code`: internal_error",
             "content": {
@@ -4222,6 +5487,54 @@
               "type": "string",
               "format": "uuid",
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
             }
           }
         ],
@@ -4324,6 +5637,16 @@
               }
             }
           },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
           "429": {
             "description": "Problem Details (RFC 9457). `code`: rate_limited",
             "content": {
@@ -4345,6 +5668,56 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -4455,6 +5828,16 @@
               }
             }
           },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Problem Details (RFC 9457). `code`: internal_error",
             "content": {
@@ -4466,6 +5849,56 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -4557,6 +5990,16 @@
               }
             }
           },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Problem Details (RFC 9457). `code`: internal_error",
             "content": {
@@ -4568,6 +6011,56 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -4714,6 +6207,16 @@
               }
             }
           },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Problem Details (RFC 9457). `code`: internal_error",
             "content": {
@@ -4733,6 +6236,54 @@
             "schema": {
               "type": "string",
               "description": "Opcional: marca con `current` el dispositivo que pregunta. URL del endpoint de Web Push"
+            }
+          },
+          {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
             }
           }
         ],
@@ -4805,6 +6356,16 @@
               }
             }
           },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Problem Details (RFC 9457). `code`: internal_error",
             "content": {
@@ -4816,6 +6377,56 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -4935,6 +6546,16 @@
               }
             }
           },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Problem Details (RFC 9457). `code`: internal_error",
             "content": {
@@ -4955,6 +6576,54 @@
               "type": "string",
               "description": "El de este navegador. URL del endpoint de Web Push"
             }
+          },
+          {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
+            }
           }
         ],
         "security": [
@@ -4962,6 +6631,901 @@
             "bearerAuth": []
           }
         ]
+      }
+    },
+    "/customer/profile": {
+      "get": {
+        "operationId": "getCustomerProfile",
+        "summary": "Perfil del cliente: nombre, teléfono, verificación y bloqueo preventivo",
+        "tags": [
+          "customer"
+        ],
+        "responses": {
+          "200": {
+            "description": "Su perfil",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "fullName": {
+                          "type": "string"
+                        },
+                        "phone": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "phoneVerified": {
+                          "type": "boolean"
+                        },
+                        "phoneVerifiedAt": {
+                          "nullable": true,
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "contraentregaBlocked": {
+                          "type": "boolean",
+                          "description": "Bloqueo preventivo: solo puede pagar por adelantado"
+                        },
+                        "blockedUntil": {
+                          "nullable": true,
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "blocked": {
+                          "type": "boolean",
+                          "description": "`true` mientras `blockedUntil` esté en el futuro: no puede pedir"
+                        }
+                      },
+                      "required": [
+                        "fullName",
+                        "phone",
+                        "phoneVerified",
+                        "phoneVerifiedAt",
+                        "contraentregaBlocked",
+                        "blockedUntil",
+                        "blocked"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem Details (RFC 9457). `code`: unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem Details (RFC 9457). `code`: forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem Details (RFC 9457). `code`: not_found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "description": "Siempre el de la sesión: no recibe ningún identificador. Si el cliente aún no completó su perfil responde 404 con `detail: customer_profile_not_found`.",
+        "parameters": [
+          {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-tindivo-role": "customer"
+      }
+    },
+    "/customer/payment-options": {
+      "get": {
+        "operationId": "getPaymentOptions",
+        "summary": "Si el cliente puede pagar contraentrega o debe pagar por adelantado",
+        "tags": [
+          "customer"
+        ],
+        "responses": {
+          "200": {
+            "description": "Opciones vigentes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "contraentregaAllowed": {
+                          "type": "boolean"
+                        },
+                        "prepayRequired": {
+                          "type": "boolean",
+                          "description": "Prepago obligatorio sea cual sea el monto (equivale a `!contraentregaAllowed`)"
+                        },
+                        "reason": {
+                          "type": "string",
+                          "x-known-values": [
+                            "trusted",
+                            "prepay_required"
+                          ],
+                          "description": "`trusted` o `prepay_required`. No distingue la causa (antifraude). Valores conocidos: trusted, prepay_required. Puede llegar uno nuevo; trátalo como desconocido."
+                        }
+                      },
+                      "required": [
+                        "contraentregaAllowed",
+                        "prepayRequired",
+                        "reason"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem Details (RFC 9457). `code`: unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem Details (RFC 9457). `code`: forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "description": "La decisión la toma la base (antifraude); la ruta solo la expone. Sirve para pintar la pantalla de pago: quien decide de verdad es la creación del pedido. El umbral de monto para prepago está en `GET /public/config`.",
+        "parameters": [
+          {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-tindivo-role": "customer"
+      }
+    },
+    "/public/config": {
+      "get": {
+        "operationId": "getPublicConfig",
+        "summary": "Cobertura, bandas de envío, umbral de prepago y topes de efectivo",
+        "tags": [
+          "public"
+        ],
+        "responses": {
+          "200": {
+            "description": "Configuración pública",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "coverage": {
+                          "nullable": true,
+                          "type": "object",
+                          "properties": {
+                            "centerLat": {
+                              "type": "number"
+                            },
+                            "centerLng": {
+                              "type": "number"
+                            },
+                            "radiusKm": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "centerLat",
+                            "centerLng",
+                            "radiusKm"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "coveragePolygon": {
+                          "nullable": true,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "lat": {
+                                "type": "number"
+                              },
+                              "lng": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "lat",
+                              "lng"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "locationValidation": {
+                          "nullable": true,
+                          "type": "object",
+                          "properties": {
+                            "timeoutMs": {
+                              "type": "number"
+                            },
+                            "maxAccuracyM": {
+                              "type": "number"
+                            },
+                            "normalRadiusKm": {
+                              "type": "number"
+                            },
+                            "warningRadiusKm": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "timeoutMs",
+                            "maxAccuracyM",
+                            "normalRadiusKm",
+                            "warningRadiusKm"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "deliveryBands": {
+                          "nullable": true,
+                          "type": "object",
+                          "properties": {
+                            "near": {
+                              "type": "string",
+                              "pattern": "^\\d+\\.\\d{2}$",
+                              "description": "Soles como texto decimal con dos decimales, p. ej. `\"12.50\"` (D-39)."
+                            },
+                            "far": {
+                              "type": "string",
+                              "pattern": "^\\d+\\.\\d{2}$",
+                              "description": "Soles como texto decimal con dos decimales, p. ej. `\"12.50\"` (D-39)."
+                            }
+                          },
+                          "required": [
+                            "near",
+                            "far"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "prepayThreshold": {
+                          "nullable": true,
+                          "description": "Desde este monto el pedido exige prepago",
+                          "type": "string",
+                          "pattern": "^\\d+\\.\\d{2}$"
+                        },
+                        "maxCashBill": {
+                          "nullable": true,
+                          "description": "Billete máximo con el que se puede pagar",
+                          "type": "string",
+                          "pattern": "^\\d+\\.\\d{2}$"
+                        },
+                        "maxChange": {
+                          "nullable": true,
+                          "description": "Vuelto máximo general; el de cada negocio puede ser menor esa noche",
+                          "type": "string",
+                          "pattern": "^\\d+\\.\\d{2}$"
+                        }
+                      },
+                      "required": [
+                        "coverage",
+                        "coveragePolygon",
+                        "locationValidation",
+                        "deliveryBands",
+                        "prepayThreshold",
+                        "maxCashBill",
+                        "maxChange"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "description": "Solo claves públicas de `app_settings`. No es `GET /config`, que trata de la versión mínima de la app.",
+        "parameters": [
+          {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
+            }
+          }
+        ],
+        "security": []
+      }
+    },
+    "/public/landmarks": {
+      "get": {
+        "operationId": "listMapLandmarks",
+        "summary": "Puntos de referencia del mapa",
+        "tags": [
+          "public",
+          "map"
+        ],
+        "responses": {
+          "200": {
+            "description": "Referencias activas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "category": {
+                                "type": "string",
+                                "x-known-values": [
+                                  "salud",
+                                  "farmacia",
+                                  "mercado",
+                                  "educacion",
+                                  "religioso",
+                                  "deporte",
+                                  "recreacion",
+                                  "gobierno",
+                                  "restaurante",
+                                  "hotel",
+                                  "comercio",
+                                  "otro"
+                                ],
+                                "description": "Valores conocidos: salud, farmacia, mercado, educacion, religioso, deporte, recreacion, gobierno, restaurante, hotel, comercio, otro. Puede llegar uno nuevo; trátalo como desconocido."
+                              },
+                              "lat": {
+                                "type": "number"
+                              },
+                              "lng": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "category",
+                              "lat",
+                              "lng"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "items"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
+            }
+          }
+        ],
+        "security": []
+      }
+    },
+    "/public/courier/directory": {
+      "get": {
+        "operationId": "listCourierDirectory",
+        "summary": "Directorio de comercios para el recojo de Entregas",
+        "tags": [
+          "public",
+          "courier"
+        ],
+        "responses": {
+          "200": {
+            "description": "Comercios visibles en el mapa, por nombre",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "category": {
+                                "type": "string",
+                                "x-known-values": [
+                                  "chicken_grill",
+                                  "chifa",
+                                  "pizza_burgers",
+                                  "snacks",
+                                  "desserts",
+                                  "drinks_liquor",
+                                  "pharmacy",
+                                  "bodega",
+                                  "other"
+                                ],
+                                "description": "Valores conocidos: chicken_grill, chifa, pizza_burgers, snacks, desserts, drinks_liquor, pharmacy, bodega, other. Puede llegar uno nuevo; trátalo como desconocido."
+                              },
+                              "lat": {
+                                "type": "number"
+                              },
+                              "lng": {
+                                "type": "number"
+                              },
+                              "referenceText": {
+                                "type": "string"
+                              },
+                              "opensAt": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "closesAt": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "coverPhotoUrl": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "isPartner": {
+                                "type": "boolean"
+                              },
+                              "partnerBusinessId": {
+                                "nullable": true,
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "courierEnabled": {
+                                "type": "boolean"
+                              },
+                              "hasMenuInTindivo": {
+                                "type": "boolean"
+                              },
+                              "worksWithZorritos": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "category",
+                              "lat",
+                              "lng",
+                              "referenceText",
+                              "opensAt",
+                              "closesAt",
+                              "coverPhotoUrl",
+                              "isPartner",
+                              "partnerBusinessId",
+                              "courierEnabled",
+                              "hasMenuInTindivo",
+                              "worksWithZorritos"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "items"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "description": "Sin teléfonos ni WhatsApp de los comercios: no salen por la API pública.",
+        "parameters": [
+          {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
+            }
+          }
+        ],
+        "security": []
       }
     }
   }

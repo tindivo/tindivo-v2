@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { ClientCompatSettingsSchema } from '../client-compat'
 import {
   BUSINESS_PRIMARY_CAPABILITIES,
   CANCEL_REASONS,
@@ -6,11 +7,20 @@ import {
   COURIER_PAYERS,
   COURIER_STATUSES,
   DELIVERY_METHODS,
+  DIRECTORY_BUSINESS_CATEGORIES,
+  MAP_LANDMARK_CATEGORIES,
   ORDER_STATUSES,
   PAYMENT_INTENTS,
 } from '../enums'
 import { STORE_AUDIENCES, STORE_CONDITIONS, STORE_STATUSES } from '../store'
-import { legacyMoney, legacyMoneyNullable, openEnum, timestampOut, uuidOut } from './schema-helpers'
+import {
+  legacyMoney,
+  legacyMoneyNullable,
+  moneyText,
+  openEnum,
+  timestampOut,
+  uuidOut,
+} from './schema-helpers'
 
 /**
  * Respuestas de las rutas públicas, descritas TAL COMO SON HOY (lotes MV2a y
@@ -28,6 +38,15 @@ export const HealthResponseSchema = z.object({
   service: z.literal('tindivo-api'),
   version: z.literal('v1'),
   time: z.string().meta({ description: 'ISO 8601, UTC' }),
+})
+
+/**
+ * GET /config — configuración pública para las apps. Los valores salen de
+ * `app_settings.client_compat`; sin sesión y sin cabeceras de plataforma.
+ */
+export const ClientConfigResponseSchema = ClientCompatSettingsSchema.extend({
+  apiVersion: z.literal('v1'),
+  serverTime: z.string().meta({ description: 'ISO 8601, UTC' }),
 })
 
 /**
@@ -379,4 +398,73 @@ export const StoreDetailResponseSchema = z.object({
     .array(StoreCardSchema)
     .meta({ description: '2 a 4 disponibles, de la misma categoría primero' }),
   settings: StoreSettingsResponseSchema,
+})
+
+// ── Configuración, mapa y directorio (MV4a) ─────────────────────────────────
+
+const LatLngSchema = z.object({ lat: z.number(), lng: z.number() })
+
+/**
+ * GET /public/config — claves públicas de `app_settings` que hoy lee la web
+ * directo. Cada bloque es `null` si la clave no existe. Dinero como texto (D-39).
+ * No confundir con `GET /config` (compatibilidad de versión de la app).
+ */
+export const PublicConfigSchema = z.object({
+  coverage: z
+    .object({ centerLat: z.number(), centerLng: z.number(), radiusKm: z.number() })
+    .nullable(),
+  coveragePolygon: z.array(LatLngSchema).nullable(),
+  locationValidation: z
+    .object({
+      timeoutMs: z.number(),
+      maxAccuracyM: z.number(),
+      normalRadiusKm: z.number(),
+      warningRadiusKm: z.number(),
+    })
+    .nullable(),
+  deliveryBands: z.object({ near: moneyText, far: moneyText }).nullable(),
+  prepayThreshold: moneyText.nullable().meta({
+    description: 'Desde este monto el pedido exige prepago',
+  }),
+  maxCashBill: moneyText
+    .nullable()
+    .meta({ description: 'Billete máximo con el que se puede pagar' }),
+  maxChange: moneyText.nullable().meta({
+    description: 'Vuelto máximo general; el de cada negocio puede ser menor esa noche',
+  }),
+})
+
+/** GET /public/landmarks */
+export const MapLandmarkListSchema = z.object({
+  items: z.array(
+    z.object({
+      id: uuidOut,
+      name: z.string(),
+      category: openEnum(MAP_LANDMARK_CATEGORIES),
+      lat: z.number(),
+      lng: z.number(),
+    }),
+  ),
+})
+
+/** GET /public/courier/directory — sin `phone` ni `whatsapp` a propósito. */
+export const CourierDirectoryListSchema = z.object({
+  items: z.array(
+    z.object({
+      id: uuidOut,
+      name: z.string(),
+      category: openEnum(DIRECTORY_BUSINESS_CATEGORIES),
+      lat: z.number(),
+      lng: z.number(),
+      referenceText: z.string(),
+      opensAt: z.string().nullable(),
+      closesAt: z.string().nullable(),
+      coverPhotoUrl: z.string().nullable(),
+      isPartner: z.boolean(),
+      partnerBusinessId: uuidOut.nullable(),
+      courierEnabled: z.boolean(),
+      hasMenuInTindivo: z.boolean(),
+      worksWithZorritos: z.boolean(),
+    }),
+  ),
 })

@@ -144,6 +144,19 @@ async function barrer(): Promise<Barrido> {
     if (error) throw new Error(`barrido: borrar store_products falló: ${error.message}`)
   }
 
+  // 0b. Referencias del mapa y comercios del directorio de prueba
+  //     (mv4a-customer-routes.integration.test.ts). Sin FK que los retenga;
+  //     se identifican por el prefijo del nombre.
+  {
+    const { error: lmErr } = await db.from('map_landmarks').delete().like('name', 'ZZ Test MV4a%')
+    if (lmErr) throw new Error(`barrido: borrar map_landmarks falló: ${lmErr.message}`)
+    const { error: dbErr } = await db
+      .from('directory_businesses')
+      .delete()
+      .like('name', 'ZZ Test MV4a%')
+    if (dbErr) throw new Error(`barrido: borrar directory_businesses falló: ${dbErr.message}`)
+  }
+
   // 1. Negocios de fixture (por nombre exacto o por el prefijo del ledger).
   //
   // El filtro se hace en JS, no con `.or()` de PostgREST: los nombres llevan

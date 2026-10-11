@@ -2,7 +2,7 @@
 
 > Verificado: 2026-10-10 · entorno: Windows de Jesús, Codex CLI 0.162, Antigravity CLI (`agy`) 1.3.3, Claude Code 2.1.296
 
-Quién hace qué y con qué modelo lo fija el estándar (`Docs/planes/estandar-docs/estandar.md` §7). Aquí, solo cómo se
+Quién hace qué y con qué modelo lo fija el estándar (`Docs/README.md` §7). Aquí, solo cómo se
 invoca cada uno sin que falle.
 
 ## Codex: revisor de solo lectura
@@ -37,6 +37,8 @@ codex exec -p revisor -C "<repo>" --json -o salida2.md resume <thread_id> - < en
 - **Modelo: solo `gemini-3.8-flash-high`** (decisión de Jesús, 2026-10-10; los demás Gemini están «Leaving Soon»).
   `agy models` lista los disponibles; también ofrece Claude Opus/Sonnet 5.5 sobre la cuota de Google.
 - `--mode plan` para que no edite. **Nunca `--dangerously-skip-permissions`.**
+- **En modo `-p` no puede pedir permiso para comandos de terminal:** si intenta uno, lo deniega y termina **sin salida**
+  (`jetski: no output produced`). Pídele en el encargo que lea solo con su herramienta de lectura de archivos.
 - Otras opciones útiles: `--output-format json`, `--json-schema <archivo>`, `--effort`, `--print-timeout`.
 - El prompt va como argumento (unos 6 KB de encargo + lista de rutas funcionaron). Varios lotes en paralelo, sí:
   4 a la vez, ~16 s por archivo leído.

@@ -19,6 +19,8 @@ import {
   CreatedOrderSchema,
   CustomerAppealListSchema,
   CustomerAppealSchema,
+  CustomerProfileSchema,
+  PaymentOptionsSchema,
   PhoneCodeSentSchema,
   PhoneVerifiedSchema,
   PrepayInfoSchema,
@@ -29,13 +31,17 @@ import {
   PushUnsubscribedSchema,
 } from './client-responses'
 import {
+  ClientConfigResponseSchema,
+  CourierDirectoryListSchema,
   CourierServiceStatusSchema,
   CourierTrackingSchema,
   HealthResponseSchema,
+  MapLandmarkListSchema,
   OrderTrackingSchema,
   PilotAccessResponseSchema,
   PublicBusinessDetailSchema,
   PublicBusinessListSchema,
+  PublicConfigSchema,
   ScheduleStatusSchema,
   SearchCatalogQuerySchema,
   SearchCatalogResponseSchema,
@@ -47,7 +53,7 @@ import {
  * Registro de las operaciones de `/api/v1` que usan las apps del cliente.
  *
  * Es la fuente del OpenAPI (`buildOpenApiDocument`). Un test recorre
- * `apps/api/app/api/v1/{customer,public,push,health}` y falla si una ruta o un
+ * `apps/api/app/api/v1/{customer,public,push,health,config}` y falla si una ruta o un
  * método no está aquí: una ruta sin documentar no pasa el CI (estándar API-2).
  *
  * `documented: false` marca lo que aún no tiene esquema de respuesta: sale en
@@ -113,6 +119,30 @@ export const OPERATIONS: OperationSpec[] = [
     auth: 'none',
     success: {
       200: { description: 'La API responde', envelope: 'data', schema: HealthResponseSchema },
+    },
+    documented: true,
+  },
+
+  {
+    method: 'get',
+    path: '/config',
+    operationId: 'getClientConfig',
+    summary:
+      'Configuración pública para las apps: versión mínima por app y plataforma, y sistema mínimo',
+    description:
+      'Siempre accesible, sin sesión y sin evaluar la versión de la app. Las apps mandan `X-Tindivo-Platform` ' +
+      '(ios|android|web), `X-Tindivo-App` (customer|negocios|motorizados), `X-Tindivo-App-Version` y ' +
+      '`X-Tindivo-Build` en cada petición; si la versión está por debajo del mínimo de su app y plataforma, ' +
+      'cualquier otra ruta responde 426 con `code: client_upgrade_required` (mostrar «actualiza la app»). ' +
+      'Sin esas cabeceras no se bloquea nada.',
+    tags: ['system'],
+    auth: 'none',
+    success: {
+      200: {
+        description: 'Configuración vigente',
+        envelope: 'data',
+        schema: ClientConfigResponseSchema,
+      },
     },
     documented: true,
   },
@@ -587,6 +617,84 @@ export const OPERATIONS: OperationSpec[] = [
       },
     },
     errors: ['validation_error', 'unauthorized'],
+    documented: true,
+  },
+
+  // ── MV4a: lo que la web leía directo de Supabase ───────────────────────────
+  {
+    method: 'get',
+    path: '/customer/profile',
+    operationId: 'getCustomerProfile',
+    summary: 'Perfil del cliente: nombre, teléfono, verificación y bloqueo preventivo',
+    description:
+      'Siempre el de la sesión: no recibe ningún identificador. Si el cliente aún no completó su perfil ' +
+      'responde 404 con `detail: customer_profile_not_found`.',
+    tags: ['customer'],
+    auth: 'customer',
+    success: {
+      200: { description: 'Su perfil', envelope: 'data', schema: CustomerProfileSchema },
+    },
+    errors: ['unauthorized', 'forbidden', 'not_found'],
+    documented: true,
+  },
+  {
+    method: 'get',
+    path: '/customer/payment-options',
+    operationId: 'getPaymentOptions',
+    summary: 'Si el cliente puede pagar contraentrega o debe pagar por adelantado',
+    description:
+      'La decisión la toma la base (antifraude); la ruta solo la expone. Sirve para pintar la pantalla de ' +
+      'pago: quien decide de verdad es la creación del pedido. El umbral de monto para prepago está en ' +
+      '`GET /public/config`.',
+    tags: ['customer'],
+    auth: 'customer',
+    success: {
+      200: { description: 'Opciones vigentes', envelope: 'data', schema: PaymentOptionsSchema },
+    },
+    errors: ['unauthorized', 'forbidden'],
+    documented: true,
+  },
+  {
+    method: 'get',
+    path: '/public/config',
+    operationId: 'getPublicConfig',
+    summary: 'Cobertura, bandas de envío, umbral de prepago y topes de efectivo',
+    description:
+      'Solo claves públicas de `app_settings`. No es `GET /config`, que trata de la versión mínima de la app.',
+    tags: ['public'],
+    auth: 'none',
+    success: {
+      200: { description: 'Configuración pública', envelope: 'data', schema: PublicConfigSchema },
+    },
+    documented: true,
+  },
+  {
+    method: 'get',
+    path: '/public/landmarks',
+    operationId: 'listMapLandmarks',
+    summary: 'Puntos de referencia del mapa',
+    tags: ['public', 'map'],
+    auth: 'none',
+    success: {
+      200: { description: 'Referencias activas', envelope: 'data', schema: MapLandmarkListSchema },
+    },
+    documented: true,
+  },
+  {
+    method: 'get',
+    path: '/public/courier/directory',
+    operationId: 'listCourierDirectory',
+    summary: 'Directorio de comercios para el recojo de Entregas',
+    description: 'Sin teléfonos ni WhatsApp de los comercios: no salen por la API pública.',
+    tags: ['public', 'courier'],
+    auth: 'none',
+    success: {
+      200: {
+        description: 'Comercios visibles en el mapa, por nombre',
+        envelope: 'data',
+        schema: CourierDirectoryListSchema,
+      },
+    },
     documented: true,
   },
 ]

@@ -2,11 +2,11 @@
 
 > Verificado: 2026-10-10 · entorno: `tindivo-prod` (solo lectura: definiciones vivas de las funciones y conteos) +
 > `develop@7d00aa4` · Principios: `Docs/negocio/plataforma.md` · Nombres: `Docs/glosario.md` · Revisado por Codex
-> (`Docs/trabajo/squash/debate/02-codex-dinero.md`)
+> (debate en git: `8dcf6ba:Docs/trabajo/squash/debate/`)
 
 Todo cambio en lo que describe este archivo requiere la revisión de Jesús antes de aplicarse (`AGENTS.md`,
 invariante 9). Este archivo describe **lo que hace el sistema**; lo que todavía no aprobó Jesús está marcado y
-preguntado en `Docs/trabajo/squash/preguntas-dinero.md`.
+preguntado en `Docs/trabajo/backlog.md`.
 
 ## En una frase
 

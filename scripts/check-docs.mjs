@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Guardarraíl de la documentación (estándar: Docs/planes/estandar-docs/estandar.md §8).
+ * Guardarraíl de la documentación (estándar: Docs/README.md §8).
  *
  *   pnpm check:docs
  *
