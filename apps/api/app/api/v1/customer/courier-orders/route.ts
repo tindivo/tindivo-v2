@@ -79,6 +79,9 @@ export async function POST(req: Request): Promise<Response> {
         'idempotency_conflict',
       )
     }
+    if (stored && 'inFlight' in stored) {
+      throw new DomainError('Solicitud idéntica en proceso; reintenta en un momento', 'conflict')
+    }
     if (stored) {
       return Response.json(stored.body, {
         status: 201,

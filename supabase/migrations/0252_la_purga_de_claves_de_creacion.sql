@@ -10,7 +10,10 @@
 -- reintento tardío (app que vuelve a abrirse, cola offline) podía crear un
 -- pedido duplicado tras la purga. Pasados 7 días la clave se borra: un cliente
 -- que reenvíe una creación con más de una semana ya no es un reintento.
--- DECISIÓN DE PLAZO propuesta por el implementador; se anota para revisión.
+-- **LOS 7 DÍAS SON UNA PROPUESTA PENDIENTE DE JESÚS.** El plan exige definir la
+-- retención pero no fija el plazo; lo eligió el implementador y no está
+-- aprobado. Cambiarlo es editar `expires_at` en 0250 (o su default) antes de
+-- aplicar, o una migración posterior.
 --
 -- PURGA: `prune_creation_idempotency()` borra solo lo vencido. El cron existente
 -- `prune-idempotency-keys` (0007, reprogramado aquí por nombre) pasa a purgar las

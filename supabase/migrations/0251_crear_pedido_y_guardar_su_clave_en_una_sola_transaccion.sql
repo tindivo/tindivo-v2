@@ -46,6 +46,7 @@ create or replace function public.create_order_idempotently(
 as $$
 declare
   v_claimed int;
+  v_tries int := 0;
   v_existing record;
   v_data jsonb;
 begin
@@ -61,26 +62,46 @@ begin
     raise exception 'idempotency_user_mismatch' using errcode = '42501';
   end if;
 
-  insert into public.creation_idempotency (user_id, scope, key, request_hash)
-  values (p_user_id, p_scope, p_key, p_request_hash)
-  on conflict (user_id, scope, key) do nothing;
-  get diagnostics v_claimed = row_count;
-
-  if v_claimed = 0 then
-    select request_hash, response into v_existing
-      from public.creation_idempotency
-      where user_id = p_user_id and scope = p_scope and key = p_key;
-    -- La fila pudo purgarse justo entre el INSERT y este SELECT: se reintenta
-    -- como creación nueva (la purga solo borra lo vencido, no lo reciente).
-    if found then
-      if v_existing.request_hash <> p_request_hash then
-        raise exception 'idempotency_conflict' using errcode = 'IK409';
-      end if;
-      return jsonb_build_object('replayed', true, 'data', v_existing.response);
+  -- Reclamación en BUCLE: reclamar → si existe, leer CON bloqueo → si desapareció
+  -- (la purga la borró entre medias) o está vencida, volver a reclamar. Un
+  -- segundo INSERT a pelo, sin ON CONFLICT, daba 23505 (500) cuando dos
+  -- llamadas entraban a la vez por esa rama tras una purga.
+  loop
+    v_tries := v_tries + 1;
+    if v_tries > 5 then
+      raise exception 'idempotency_contention' using errcode = 'P0001';
     end if;
+
     insert into public.creation_idempotency (user_id, scope, key, request_hash)
-    values (p_user_id, p_scope, p_key, p_request_hash);
-  end if;
+    values (p_user_id, p_scope, p_key, p_request_hash)
+    on conflict (user_id, scope, key) do nothing;
+    get diagnostics v_claimed = row_count;
+    exit when v_claimed = 1;
+
+    -- FOR UPDATE (no SHARE: dos llamadas con un SHARE cada una y ninguna pudiendo
+    -- tomar el bloqueo exclusivo para borrar la vencida se interbloquean): si la
+    -- purga está borrando esta fila, espera a que confirme y entonces `found` es
+    -- falso; si otra llamada la está creando, ya confirmó (el INSERT de arriba
+    -- esperó por ella).
+    select request_hash, response, expires_at into v_existing
+      from public.creation_idempotency
+      where user_id = p_user_id and scope = p_scope and key = p_key
+      for update;
+    if found then
+      if v_existing.expires_at < now() then
+        -- Vencida pero aún sin purgar: no vale como replay (su respuesta
+        -- puede ser el `{}` de una purga a medias). Se borra y se reclama de nuevo.
+        delete from public.creation_idempotency
+          where user_id = p_user_id and scope = p_scope and key = p_key
+            and expires_at < now();
+      else
+        if v_existing.request_hash <> p_request_hash then
+          raise exception 'idempotency_conflict' using errcode = 'IK409';
+        end if;
+        return jsonb_build_object('replayed', true, 'data', v_existing.response);
+      end if;
+    end if;
+  end loop;
 
   if p_scope = 'create_order' then
     v_data := public.create_customer_order(
@@ -138,6 +159,19 @@ begin
     set response = v_data,
         resource_id = nullif(v_data ->> 'id', '')::uuid
     where user_id = p_user_id and scope = p_scope and key = p_key;
+
+  -- COMPATIBILIDAD DE DESPLIEGUE Y DE ROLLBACK. La API anterior solo conoce
+  -- `idempotency_keys`: si un reintento de una creación hecha por la API NUEVA
+  -- llegara a la VIEJA (rollback del despliegue), duplicaría el pedido. Se deja
+  -- también allí la fila `completed`, en la misma transacción. `do nothing`: la
+  -- PK de esa tabla no lleva usuario y la clave de otro no debe pisarse.
+  -- Se retira cuando ya no pueda volver atrás ninguna API anterior (24 h de TTL).
+  insert into public.idempotency_keys
+    (key, scope, user_id, request_hash, status, response_status, response_body)
+  values
+    (p_key, p_scope, p_user_id, p_request_hash, 'completed', 201,
+     jsonb_build_object('data', v_data))
+  on conflict (key, scope) do nothing;
 
   return jsonb_build_object('replayed', false, 'data', v_data);
 end;

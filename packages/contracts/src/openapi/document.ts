@@ -109,7 +109,7 @@ function parameters(op: OperationSpec): JsonSchema[] {
       required: true,
       description:
         'UUID nuevo por intento de compra. Repetir la misma clave devuelve el resultado ya creado, ' +
-        'sin duplicarlo. Tiene que ser un UUID: hoy otra cosa revienta en la base y responde 500',
+        'sin duplicarlo. Tiene que ser un UUID: otra cosa se rechaza con 422',
       schema: { type: 'string', format: 'uuid' },
     })
   }

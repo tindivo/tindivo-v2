@@ -14,6 +14,9 @@ export function isIdempotencyKey(value: string): boolean {
   return UUID_RE.test(value)
 }
 
+/** Cuánto se considera «en vuelo» una reserva de la API anterior (ver findStoredCreation). */
+const LEGACY_IN_FLIGHT_MS = 2 * 60 * 1000
+
 export type CreationScope = 'create_order' | 'create_courier_order'
 
 /**
@@ -30,17 +33,42 @@ export type CreationScope = 'create_order' | 'create_courier_order'
 export async function findStoredCreation(
   supabase: TypedSupabaseClient,
   args: { userId: string; scope: CreationScope; key: string; requestHash: string },
-): Promise<{ body: { data: unknown } } | { conflict: true } | null> {
+): Promise<{ body: { data: unknown } } | { conflict: true } | { inFlight: true } | null> {
   const { data } = await supabase
     .from('creation_idempotency')
-    .select('request_hash,response')
+    .select('request_hash,response,expires_at')
     .eq('user_id', args.userId)
     .eq('scope', args.scope)
     .eq('key', args.key)
     .maybeSingle()
-  if (!data) return null
-  if (data.request_hash !== args.requestHash) return { conflict: true }
-  return { body: { data: data.response } }
+  // Una fila vencida y sin purgar ya no vale (la RPC la descarta igual).
+  if (data && Date.parse(data.expires_at) > Date.now()) {
+    if (data.request_hash !== args.requestHash) return { conflict: true }
+    return { body: { data: data.response } }
+  }
+
+  // Compatibilidad de despliegue: una creación hecha por la API ANTERIOR solo
+  // dejó su clave en `idempotency_keys`. Sin mirar allí, el primer reintento
+  // tras el despliegue duplicaría el pedido. Siempre filtrado por usuario.
+  const { data: legacy } = await supabase
+    .from('idempotency_keys')
+    .select('status,request_hash,response_body,created_at,expires_at')
+    .eq('key', args.key)
+    .eq('scope', args.scope)
+    .eq('user_id', args.userId)
+    .maybeSingle()
+  if (!legacy || Date.parse(legacy.expires_at) <= Date.now()) return null
+  if (legacy.request_hash !== args.requestHash) return { conflict: true }
+  if (legacy.status === 'completed') {
+    return { body: legacy.response_body as { data: unknown } }
+  }
+  // `reserved`: la API anterior la reclamó y aún no guardó la respuesta. Si es
+  // reciente, está EN VUELO: se pide reintentar (409), como hacía ella; si lleva
+  // más de LEGACY_IN_FLIGHT_MS, el proceso murió (el defecto H-3) y esa clave no
+  // puede bloquear al cliente 24 h: se sigue como creación nueva, y los guards
+  // de pedido activo / solicitud activa de las RPC frenan un posible duplicado.
+  if (Date.now() - Date.parse(legacy.created_at) < LEGACY_IN_FLIGHT_MS) return { inFlight: true }
+  return null
 }
 
 /**

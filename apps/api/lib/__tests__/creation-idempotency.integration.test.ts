@@ -22,13 +22,17 @@
  * que la ruta usa. El canal manual de la cajera NO usa esta idempotencia.
  */
 import { createClient } from '@supabase/supabase-js'
+import { CreateCourierOrderRequestSchema } from '@tindivo/contracts'
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { POST as postCourierOrder } from '../../app/api/v1/customer/courier-orders/route'
-import { createIdempotently, findStoredCreation } from '../http/idempotency'
+import { POST as postOrder } from '../../app/api/v1/customer/orders/route'
+import { sha256Hex } from '../http/hash'
+import { createIdempotently, findStoredCreation, withIdempotency } from '../http/idempotency'
 import { localClient as db } from './helpers/local-db'
 import {
   COURIER_POINT_A,
   COURIER_POINT_B,
+  callCreateCourierOrder,
   cleanupCourier,
   seedCourierCustomer,
   setCourierEnabled,
@@ -147,11 +151,15 @@ afterEach(async () => {
 afterAll(async () => {
   for (const c of clientes.splice(0)) {
     await db.from('creation_idempotency').delete().eq('user_id', c.id)
+    await db.from('idempotency_keys').delete().eq('user_id', c.id)
     await db.from('customer_profiles').delete().eq('user_id', c.id)
+    await db.from('user_roles').delete().eq('user_id', c.id)
     await db.from('users').delete().eq('id', c.id)
     await db.auth.admin.deleteUser(c.id)
   }
   await db.from('creation_idempotency').delete().in('user_id', courierCustomerIds)
+  await db.from('idempotency_keys').delete().in('user_id', courierCustomerIds)
+  await db.from('user_roles').delete().in('user_id', courierCustomerIds)
   await cleanupCourier({ customerUserIds: courierCustomerIds.splice(0) })
   if (courierAntes) {
     await db.from('app_settings').update({ value: courierAntes }).eq('key', 'courier')
@@ -306,12 +314,9 @@ describe('restaurantes: la clave vive con el pedido', () => {
         }),
       ),
     )
-    const ids = new Set<string>()
-    for (const r of rs) {
-      // Alguna puede chocar con el guard de «pedido activo» si llegó antes de que
-      // la clave existiera; lo que NO puede pasar es un segundo pedido.
-      if (r.data) ids.add((r.data.data as { id: string }).id)
-    }
+    // TODAS recuperan el mismo pedido: ninguna error, ninguna se queda sin respuesta.
+    expect(rs.map((r) => r.error?.message ?? null)).toEqual([null, null, null, null, null])
+    const ids = new Set(rs.map((r) => (r.data?.data as { id: string }).id))
     expect(ids.size).toBe(1)
     for (const id of ids) pedidos.push(id)
     expect(await contarPedidos(c.id)).toBe(1)
@@ -342,6 +347,179 @@ describe('restaurantes: la clave vive con el pedido', () => {
     expect(buena.error, buena.error?.message).toBeNull()
     pedidos.push((buena.data?.data as { id: string }).id)
     expect(buena.data?.replayed).toBe(false)
+  })
+})
+
+describe('restaurantes: fallo tras el commit y carrera con la purga', () => {
+  it('respuesta perdida: el cliente reintenta y recupera el pedido ya confirmado', async () => {
+    const c = await crearCliente()
+    const key = crypto.randomUUID()
+    const args = argsPedido(c)
+    // Commit hecho, respuesta descartada (el proceso murió antes de contestar).
+    const perdida = await createIdempotently(db, {
+      userId: c.id,
+      scope: 'create_order',
+      key,
+      requestHash: 'h',
+      args,
+    })
+    const id = (perdida.data?.data as { id: string }).id
+    pedidos.push(id)
+
+    const r = await createIdempotently(db, {
+      userId: c.id,
+      scope: 'create_order',
+      key,
+      requestHash: 'h',
+      args,
+    })
+    expect(r.error, r.error?.message).toBeNull()
+    expect(r.data?.replayed).toBe(true)
+    expect((r.data?.data as { id: string }).id).toBe(id)
+    expect(await contarPedidos(c.id)).toBe(1)
+  })
+
+  /** Una clave de la tabla NUEVA ya vencida pero que la purga aún no borró. */
+  async function sembrarVencida(c: Cliente, key: string) {
+    const { error } = await db.from('creation_idempotency').insert({
+      user_id: c.id,
+      scope: 'create_order',
+      key,
+      request_hash: 'h',
+      response: {},
+      expires_at: new Date(Date.now() - 60_000).toISOString(),
+    })
+    expect(error, error?.message).toBeNull()
+  }
+
+  it('una clave vencida y sin purgar no se reproduce (su respuesta es {}): crea de nuevo', async () => {
+    const c = await crearCliente()
+    const key = crypto.randomUUID()
+    await sembrarVencida(c, key)
+
+    const r = await createIdempotently(db, {
+      userId: c.id,
+      scope: 'create_order',
+      key,
+      requestHash: 'h',
+      args: argsPedido(c),
+    })
+    expect(r.error, r.error?.message).toBeNull()
+    expect(r.data?.replayed).toBe(false)
+    const creado = r.data?.data as { id: string }
+    expect(creado.id).toBeTruthy()
+    pedidos.push(creado.id)
+  })
+
+  it('carrera con la purga: la purga borra la clave vencida mientras 5 llamadas entran; sin 500 y un solo pedido', async () => {
+    // Se repite para barajar distintas intercalaciones entre la purga y los INSERT.
+    for (let ronda = 0; ronda < 5; ronda++) {
+      const c = await crearCliente()
+      const key = crypto.randomUUID()
+      await sembrarVencida(c, key)
+
+      const [purga, ...rs] = await Promise.all([
+        db.rpc('prune_creation_idempotency'),
+        ...Array.from({ length: 5 }, () =>
+          createIdempotently(db, {
+            userId: c.id,
+            scope: 'create_order',
+            key,
+            requestHash: 'h',
+            args: argsPedido(c),
+          }),
+        ),
+      ])
+      expect(purga.error, purga.error?.message).toBeNull()
+      expect(rs.map((r) => r.error?.message ?? null)).toEqual([null, null, null, null, null])
+      const ids = new Set(rs.map((r) => (r.data?.data as { id: string }).id))
+      expect(ids.size).toBe(1)
+      for (const id of ids) pedidos.push(id)
+      expect(await contarPedidos(c.id)).toBe(1)
+      expect(rs.filter((r) => r.data?.replayed === false)).toHaveLength(1)
+    }
+  })
+})
+
+describe('restaurantes por HTTP: el replay va antes de los guards', () => {
+  it('tras pausar el negocio, el reintento de un pedido ya creado devuelve el 201 original', async () => {
+    const c = await crearCliente()
+    await db.from('user_roles').insert({ user_id: c.id, role: 'customer' })
+    const anon = createClient(LOCAL_URL, LOCAL_ANON_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    })
+    const { data: ses, error: lerr } = await anon.auth.signInWithPassword({
+      email: `idem-${c.tel9}@integration.local`,
+      password: CLAVE,
+    })
+    expect(lerr, lerr?.message).toBeNull()
+    c.token = ses.session?.access_token ?? ''
+
+    const key = crypto.randomUUID()
+    const cuerpo = {
+      businessId: BUSINESS_ID,
+      deliveryMethod: 'pickup',
+      paymentIntent: 'pending_cash',
+      pickupTiming: 'now',
+      customerName: 'Vecino',
+      customerPhone: c.tel9,
+      items: [{ menuItemId: ITEM_POLLO_ID, quantity: 1 }],
+    }
+    const pedir = () =>
+      postOrder(
+        new Request(`${LOCAL_URL}/api/v1/customer/orders`, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            authorization: `Bearer ${c.token}`,
+            'idempotency-key': key,
+          },
+          body: JSON.stringify(cuerpo),
+        }),
+      )
+
+    const r1 = await pedir()
+    expect(r1.status, await r1.clone().text()).toBe(201)
+    const id = ((await r1.json()) as { data: { id: string } }).data.id
+    pedidos.push(id)
+
+    // Cambia un guard: el negocio se pausa. Un pedido NUEVO ahora daría 403,
+    // pero el reintento de uno ya creado debe ver su 201 original.
+    const { data: antes } = await db
+      .from('businesses')
+      .select('accepting_orders_until')
+      .eq('id', BUSINESS_ID)
+      .single()
+    await db
+      .from('businesses')
+      .update({ accepting_orders_until: new Date(Date.now() + 3_600_000).toISOString() })
+      .eq('id', BUSINESS_ID)
+    try {
+      const r2 = await pedir()
+      expect(r2.status).toBe(201)
+      expect(r2.headers.get('idempotency-replayed')).toBe('true')
+      expect(((await r2.json()) as { data: { id: string } }).data.id).toBe(id)
+
+      // Y una clave NUEVA sí choca con el guard de pausa: el guard sigue vivo.
+      const r3 = await postOrder(
+        new Request(`${LOCAL_URL}/api/v1/customer/orders`, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            authorization: `Bearer ${c.token}`,
+            'idempotency-key': crypto.randomUUID(),
+          },
+          body: JSON.stringify(cuerpo),
+        }),
+      )
+      expect(r3.status).toBe(403)
+    } finally {
+      await db
+        .from('businesses')
+        .update({ accepting_orders_until: antes?.accepting_orders_until ?? null })
+        .eq('id', BUSINESS_ID)
+    }
+    expect(await contarPedidos(c.id)).toBe(1)
   })
 })
 
@@ -512,17 +690,144 @@ describe('Entregas: por la ruta HTTP real', () => {
     expect(await contarEntregas(c.id)).toBe(1)
   })
 
-  it('H-3: la clave no puede quedar «reservada» en la tabla vieja sin pedido', async () => {
+  it('H-3: la clave nunca queda «reservada»: o está completa con su pedido, o no está', async () => {
     const c = await clienteEntregas()
     const key = crypto.randomUUID()
     const r = await postCourierOrder(peticion(c, key, cuerpoEntrega(c)))
     expect(r.status).toBe(201)
 
-    // Antes la reserva vivía aparte, en otra transacción, y era lo que se
-    // quedaba colgado si el proceso moría. Ya no se usa para crear.
-    const { data: vieja } = await db.from('idempotency_keys').select('key').eq('key', key)
-    expect(vieja ?? []).toHaveLength(0)
+    // La reserva en transacción aparte era lo que se quedaba colgado si el
+    // proceso moría. Ahora la tabla vieja solo recibe la fila COMPLETA (para
+    // el rollback de despliegue), escrita junto al pedido.
+    const { data: vieja } = await db.from('idempotency_keys').select('status').eq('key', key)
+    expect((vieja ?? []).map((f) => f.status)).toEqual(['completed'])
     expect(await filasDeClave(c.id, key)).toHaveLength(1)
+  })
+
+  it('concurrencia: 5 POST simultáneos con la misma clave crean UNA solicitud y todos la recuperan', async () => {
+    const c = await clienteEntregas()
+    const key = crypto.randomUUID()
+    const body = cuerpoEntrega(c)
+    const rs = await Promise.all(
+      Array.from({ length: 5 }, () => postCourierOrder(peticion(c, key, body))),
+    )
+    expect(rs.map((r) => r.status)).toEqual([201, 201, 201, 201, 201])
+    const js = await Promise.all(rs.map((r) => r.json() as Promise<{ data: { id: string } }>))
+    expect(new Set(js.map((j) => j.data.id)).size).toBe(1)
+    expect(rs.filter((r) => r.headers.get('idempotency-replayed') === 'false')).toHaveLength(1)
+    expect(await contarEntregas(c.id)).toBe(1)
+  })
+
+  it('respuesta perdida: el cliente nunca vio el 201 y reintenta; recupera la misma solicitud', async () => {
+    const c = await clienteEntregas()
+    const key = crypto.randomUUID()
+    const body = cuerpoEntrega(c)
+    // El proceso confirmó (commit) y murió antes de responder: nadie lee el cuerpo.
+    const perdida = await postCourierOrder(peticion(c, key, body))
+    expect(perdida.status).toBe(201)
+
+    const r = await postCourierOrder(peticion(c, key, body))
+    expect(r.status).toBe(201)
+    expect(r.headers.get('idempotency-replayed')).toBe('true')
+    expect(await contarEntregas(c.id)).toBe(1)
+  })
+
+  // ── Compatibilidad de despliegue: API vieja ↔ nueva ───────────────────────
+
+  /** Crea una solicitud EXACTAMENTE como lo hacía la API anterior (tabla vieja). */
+  async function crearComoApiVieja(c: Cliente, key: string, body: unknown) {
+    const requestHash = await sha256Hex(JSON.stringify(CreateCourierOrderRequestSchema.parse(body)))
+    const r = await withIdempotency(
+      db,
+      { key, scope: 'create_courier_order', userId: c.id, requestHash },
+      async () => {
+        const { data, error } = await callCreateCourierOrder({
+          customerUserId: c.id,
+          requesterPhone: c.tel9,
+        })
+        if (error) throw new Error(error.message)
+        return { status: 201, body: { data } }
+      },
+    )
+    return { requestHash, id: (r.body as { data: { id: string } }).data.id }
+  }
+
+  it('API vieja → nueva: el reintento de una creación vieja la recupera, no la duplica', async () => {
+    const c = await clienteEntregas()
+    const key = crypto.randomUUID()
+    const body = cuerpoEntrega(c)
+    const vieja = await crearComoApiVieja(c, key, body)
+
+    const r = await postCourierOrder(peticion(c, key, body))
+    expect(r.status).toBe(201)
+    expect(r.headers.get('idempotency-replayed')).toBe('true')
+    expect(((await r.json()) as { data: { id: string } }).data.id).toBe(vieja.id)
+    expect(await contarEntregas(c.id)).toBe(1)
+  })
+
+  it('API vieja → nueva: la clave de OTRO usuario en la tabla vieja no se reproduce', async () => {
+    const a = await clienteEntregas()
+    const b = await clienteEntregas()
+    const key = crypto.randomUUID()
+    await crearComoApiVieja(a, key, cuerpoEntrega(a))
+
+    const r = await postCourierOrder(peticion(b, key, cuerpoEntrega(b)))
+    // La PK vieja no lleva usuario: la clave de A ocupa (key, scope), pero B no
+    // recibe nada de A y crea lo suyo en la tabla nueva.
+    expect(r.status).toBe(201)
+    expect(r.headers.get('idempotency-replayed')).toBe('false')
+    expect(await contarEntregas(b.id)).toBe(1)
+  })
+
+  it('API vieja → nueva: una reserva vieja EN VUELO responde 409; la abandonada no bloquea', async () => {
+    const c = await clienteEntregas()
+    const body = cuerpoEntrega(c)
+    const requestHash = await sha256Hex(JSON.stringify(CreateCourierOrderRequestSchema.parse(body)))
+    const reservar = (key: string, hace: number) =>
+      db.from('idempotency_keys').insert({
+        key,
+        scope: 'create_courier_order',
+        user_id: c.id,
+        request_hash: requestHash,
+        status: 'reserved',
+        created_at: new Date(Date.now() - hace).toISOString(),
+      })
+
+    const enVuelo = crypto.randomUUID()
+    expect((await reservar(enVuelo, 5_000)).error).toBeNull()
+    const r1 = await postCourierOrder(peticion(c, enVuelo, body))
+    expect(r1.status).toBe(409)
+    expect(await contarEntregas(c.id)).toBe(0)
+
+    // El proceso murió hace 10 min (H-3): ya no puede bloquear al cliente 24 h.
+    const abandonada = crypto.randomUUID()
+    expect((await reservar(abandonada, 10 * 60_000)).error).toBeNull()
+    const r2 = await postCourierOrder(peticion(c, abandonada, body))
+    expect(r2.status).toBe(201)
+    expect(await contarEntregas(c.id)).toBe(1)
+  })
+
+  it('rollback nueva → vieja: la API anterior reproduce lo creado por la nueva', async () => {
+    const c = await clienteEntregas()
+    const key = crypto.randomUUID()
+    const body = cuerpoEntrega(c)
+    const r1 = await postCourierOrder(peticion(c, key, body))
+    const id = ((await r1.json()) as { data: { id: string } }).data.id
+
+    // Esto ES el wrapper anterior: si hubiera que volver atrás el despliegue,
+    // un reintento llegaría aquí. El handler no debe ejecutarse.
+    const requestHash = await sha256Hex(JSON.stringify(CreateCourierOrderRequestSchema.parse(body)))
+    const r = await withIdempotency(
+      db,
+      { key, scope: 'create_courier_order', userId: c.id, requestHash },
+      async () => {
+        throw new Error('la API vieja no debía volver a crear')
+      },
+    )
+    expect(r.replayed).toBe(true)
+    expect(r.status).toBe(201)
+    expect((r.body as { data: { id: string } }).data.id).toBe(id)
+    expect(await contarEntregas(c.id)).toBe(1)
   })
 
   it('reintento tras purga de la tabla vieja: recupera el pedido sin duplicarlo', async () => {
