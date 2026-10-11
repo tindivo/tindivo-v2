@@ -345,3 +345,35 @@ export async function cleanup(seed: SeededOrder): Promise<void> {
     await localClient.auth.admin.deleteUser(seed.userId)
   }
 }
+
+// ── Comprobantes en Storage ───────────────────────────────────────────────────
+// La RPC `register_prepay_proof` exige que el archivo EXISTA y que su ruta sea
+// `<usuario>/<pedido>/attempt-<n>-…`: los tests suben uno de verdad (un PNG de
+// 1x1) con service_role y lo borran al terminar.
+const PNG_1X1 = Uint8Array.from(
+  atob(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+  ),
+  (c) => c.charCodeAt(0),
+)
+
+export async function uploadProofObject(
+  userId: string,
+  orderId: string,
+  attempt: number,
+  tag = crypto.randomUUID().slice(0, 8),
+): Promise<string> {
+  const path = `${userId}/${orderId}/attempt-${attempt}-${tag}.png`
+  const { error } = await localClient.storage
+    .from('payment-proofs')
+    .upload(path, PNG_1X1, { contentType: 'image/png' })
+  if (error) throw new Error(`no se pudo subir el comprobante de prueba: ${error.message}`)
+  return path
+}
+
+export async function removeProofObjects(userId: string, orderId: string): Promise<void> {
+  const folder = `${userId}/${orderId}`
+  const { data } = await localClient.storage.from('payment-proofs').list(folder)
+  const names = (data ?? []).map((f) => `${folder}/${f.name}`)
+  if (names.length) await localClient.storage.from('payment-proofs').remove(names)
+}

@@ -27,41 +27,35 @@ export async function POST(
       throw new DomainError('Ruta de comprobante inválida', 'forbidden')
     }
     const service = createServiceClient()
-    const { data: order } = await service
-      .from('orders')
-      .select('customer_user_id,status,payment_intent,proof_attempt')
-      .eq('id', id)
-      .maybeSingle()
-    if (!order || order.customer_user_id !== user.id)
-      throw new DomainError('Pedido no encontrado', 'not_found')
-    if (order.status !== 'awaiting_payment' || order.payment_intent !== 'prepaid')
-      throw new DomainError('El pedido no espera comprobante', 'invalid_state_transition')
-    if (order.proof_attempt >= 2) {
-      throw new DomainError('Límite de intentos de comprobante excedido', 'forbidden')
+    // Todo en UNA transacción (0248): dueño, estado, intentos, comprobante, rastro
+    // y evento del outbox. El FOR UPDATE de la RPC serializa contra el cron de
+    // vencimiento y contra otro comprobante, así que no hay lectura previa que
+    // pueda quedar vieja (H-1) y el evento no se pierde (H-2).
+    const { data, error } = await service.rpc('register_prepay_proof', {
+      p_order_id: id,
+      p_customer_user_id: user.id,
+      p_path: body.path,
+    })
+    if (error) {
+      if (error.code === 'P0002') throw new DomainError('Pedido no encontrado', 'not_found')
+      if (error.code === 'P0001') {
+        if (error.hint === 'order_not_awaiting_proof')
+          throw new DomainError(error.message, 'invalid_state_transition')
+        if (error.hint === 'proof_file_missing')
+          throw new DomainError(error.message, 'validation_error')
+        // Ruta ajena o intentos agotados: lo mismo que respondía antes.
+        throw new DomainError(error.message, 'forbidden')
+      }
+      throw new Error(error.message)
     }
 
-    await service
-      .from('orders')
-      .update({
-        status: 'validando',
-        validation_context: 'proof',
-        comprobante_prepago_url: body.path,
-        payment_proof_status: 'pending',
-        proof_attempt: order.proof_attempt + 1,
-        validating_at: new Date().toISOString(),
-      })
-      .eq('id', id)
-    await service.from('order_event_log').insert({
-      order_id: id,
-      event_type: 'order.prepay_proof_uploaded',
-      actor_role: 'cliente',
-      actor_user_id: user.id,
-      data: {
-        proof_path: body.path,
-        attempt: order.proof_attempt + 1,
-      },
-    })
+    // Reconfirmación del mismo archivo (respuesta perdida): éxito idempotente,
+    // sin gastar intento y sin repetir los avisos.
+    if ((data as { replayed?: boolean } | null)?.replayed) {
+      return ok({ ok: true }, { headers: corsHeaders(req) })
+    }
 
+    // Los avisos solo salen si el comprobante quedó registrado.
     try {
       const { sendOrderPrepayProofUploaded, sendOrderValidation } = await import(
         '@/lib/inngest/client'

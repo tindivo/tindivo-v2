@@ -21,7 +21,7 @@ import { createClient } from '@supabase/supabase-js'
 import { OPERATIONS } from '@tindivo/contracts/openapi'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { E2E as FIXTURES } from '../../scripts/e2e-fixtures'
-import { localClient as db, E2E } from './helpers/local-db'
+import { localClient as db, E2E, uploadProofObject } from './helpers/local-db'
 import { COURIER_POINT_A, COURIER_POINT_B } from './helpers/local-db-courier'
 import { checkedOperations, expectConforms } from './helpers/openapi-conformance'
 
@@ -369,7 +369,7 @@ describe('el cliente con sesión', () => {
       method: 'POST',
       bearer: token,
       params: { id },
-      body: { path: `${userId}/conformidad-${RUN}.webp` },
+      body: { path: await uploadProofObject(userId, id, 1, RUN) },
     })
 
     // La cajera lo rechazó por última vez: es lo único que se puede apelar.
