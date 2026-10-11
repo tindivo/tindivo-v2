@@ -2,7 +2,7 @@
 
 > Verificado: 2026-10-10 · entorno: Windows de Jesús, Codex CLI 0.162, Antigravity CLI (`agy`) 1.3.3, Claude Code 2.1.296
 
-Quién hace qué y con qué modelo lo fija el estándar (`Docs/planes/estandar-docs/estandar.md` §7). Aquí, solo cómo se
+Quién hace qué y con qué modelo lo fija el estándar (`Docs/README.md` §7). Aquí, solo cómo se
 invoca cada uno sin que falle.
 
 ## Codex: revisor de solo lectura

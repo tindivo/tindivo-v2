@@ -15,12 +15,12 @@ al negocio (Yape, Plin o efectivo). Monorepo pnpm + Turborepo: `apps/{api,custom
 
 | Zona | Dónde | ¿Manda? |
 |---|---|---|
-| **Canon** | `Docs/decisiones/` (ADR), `DECISIONS.md` (decisiones §1–§32 e índice), `Docs/glosario.md`, y lo que vaya naciendo en `Docs/negocio/`, `Docs/arquitectura/`, `Docs/operacion/` | Sí |
+| **Canon** | `Docs/decisiones/` (ADR), `DECISIONS.md` (decisiones §1–§32 e índice), `Docs/glosario.md`, y lo que vaya naciendo en `Docs/negocio/`, `Docs/trabajo/arquitectura/`, `Docs/operacion/` | Sí |
 | **Planes** | `Docs/planes/` (hoy: migraciones, la migración móvil y la transición del estándar) | Sí, solo dentro de su alcance |
 | **Trabajo** | `Docs/trabajo/` | **No**: borradores, debates, análisis |
 | **Historia** | git | No. Lo borrado se cita por commit |
 
-- La documentación está en plena reorganización: manda `Docs/planes/estandar-docs/estandar.md`. Lo que queda en
+- La documentación está en plena reorganización: manda `Docs/README.md`. Lo que queda en
   `Docs/` fuera de esas zonas es material anterior, pendiente de reescribir: **no es norma por estar ahí**.
 - **Norma ≠ evidencia.** El código y la base dicen qué pasa; el canon, qué debe pasar. Si no coinciden y ninguna
   decisión explica el cambio, **no elijas ganador: pregunta a Jesús** con alternativas y recomendación, y sigue con lo

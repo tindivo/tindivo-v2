@@ -57,7 +57,7 @@ jobs:
         run: pnpm check:auth
 
       # Lo que manda (canon, planes, AGENTS.md/CLAUDE.md) no puede apuntar a archivos que no existen ni perder su
-      # cabecera: así nació el `/specs` fantasma. Estándar: Docs/planes/estandar-docs/estandar.md §8.
+      # cabecera: así nació el `/specs` fantasma. Estándar: Docs/README.md §8.
       - name: Documentación que manda (enlaces, rutas y cabeceras)
         run: pnpm check:docs
 

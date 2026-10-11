@@ -14,3 +14,6 @@
 | 6 | **Editar un pedido ya enviado** | Clientes que se equivocan de pedido escriben a Jesús para cambiarlo, cuando el restaurante ya lo pasó a cocina | Jesús, 2026-10-10 |
 | 7 | **Confirmar la dirección en el checkout** (un aviso de confirmación o mejor UX al elegir o crear dirección) | Un cliente creó o editó una dirección en el checkout y pidió con la anterior | Jesús, 2026-10-10 |
 | 8 | **Marcar al «usuario nuevo en la plataforma»** en la tarjeta del negocio, con un ícono que diga qué filtro pasó (ubicación en San Jacinto, directorio, pedido previo) | La cajera casi no llama: así ve de un vistazo quién entró solo por ubicación, que es la señal falsificable | Jesús, 2026-10-10 |
+| 9 | **Libro de Reclamaciones** (Ley 29571): de Tindivo hacia el consumidor, formulario público sin sesión, copia por correo con Resend tras `RESEND_API_KEY`, datos del proveedor en `app_settings` | Obligación legal; en stand by hasta tener RUC (de persona natural con negocio basta) | Acordado 2026-08-16 |
+| 10 | **Avisos al cliente y tarjeta del motorizado**: dos propuestas de diseño publicadas en canvas, sin implementar | Retomarlas si se trabaja esa parte | Claude, sep 2026 |
+| 11 | **Decidir quién cubre un faltante de efectivo** (motorizado, negocio o Tindivo) | Nunca ha pasado en 340 rendiciones; se decide el día que ocurra | Squash del canon, 2026-10-10 |

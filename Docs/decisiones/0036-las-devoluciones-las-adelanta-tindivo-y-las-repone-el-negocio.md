@@ -36,4 +36,4 @@ tiene que devolvernos la devolución que se hizo al cliente».
 
 Ninguna automática todavía.
 
-Discusión: `Docs/trabajo/squash/preguntas-dinero.md` (preguntas 1, 3 y 8)
+Discusión: `Docs/trabajo/squash/preguntas-dinero.md` (borrado; en git: `8dcf6ba`) (preguntas 1, 3 y 8)

@@ -17,7 +17,7 @@ dónde está hoy cada sección. **«Vigente aquí»** significa que su texto sig
 
 | § | Tema | Dónde está hoy |
 |---|---|---|
-| §0 | Regla de precedencia de documentos | Sustituida por el estándar (`Docs/planes/estandar-docs/estandar.md` §4) |
+| §0 | Regla de precedencia de documentos | Sustituida por el estándar (`Docs/README.md` §4) |
 | §1 | Stack y versiones (fijadas, verificadas en vivo el 2026-05-29) | Versiones vivas en `pnpm-workspace.yaml`; resumen en `AGENTS.md` y `Docs/trabajo/arquitectura/README.md` |
 | §2 | Proyecto Supabase | Corregida: `supabase/AGENTS.md` (producción es `tindivo-prod`; migraciones solo por CLI) |
 | §3 | Estructura del monorepo | `Docs/trabajo/arquitectura/README.md` |
@@ -57,7 +57,7 @@ dónde está hoy cada sección. **«Vigente aquí»** significa que su texto sig
 
 ## 0. Regla de precedencia de documentos
 
-> **Sustituida el 2026-10-10** por el estándar aprobado por Jesús (`Docs/planes/estandar-docs/estandar.md` §4):
+> **Sustituida el 2026-10-10** por el estándar aprobado por Jesús (`Docs/README.md` §4):
 > mandan las decisiones (`Docs/decisiones/` y las secciones de este archivo) y el canon (`Docs/glosario.md`,
 > `Docs/negocio/`); el código y la base de producción son la evidencia de lo que pasa. La regla anterior ponía primero
 > `FASE-1-TINDIVO.md` y el Documento Maestro, que ya no existen: su contenido vigente pasó al canon (en git: `306f025`).
@@ -1294,7 +1294,7 @@ Para probar la UI usa Playwright (`e2e/store*.spec.ts`).
 
 ## 34 · 35 · 36. Decisiones nuevas: una por archivo en `Docs/decisiones/`
 
-Desde el 2026-10-10 las decisiones nuevas no se escriben aquí (estándar: `Docs/planes/estandar-docs/estandar.md` §5.1).
+Desde el 2026-10-10 las decisiones nuevas no se escriben aquí (estándar: `Docs/README.md` §5.1).
 §33 queda vetado (lo citaba un borrador de Encargos que nunca se aprobó).
 
 - **0034** · Encargos queda fuera; la apuesta es el hábito de pedir comida en la app →

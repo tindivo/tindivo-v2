@@ -1,38 +1,27 @@
-# Estándar de documentación y trabajo con agentes — v2.3
+# Docs: cómo se documenta Tindivo y cómo se trabaja con agentes
 
-> Estado: **en ejecución** · Aprobado por Jesús el 2026-10-10 (conversación con Claude Code), con dos condiciones ya
-> incorporadas: graphify para ahorrar tokens (§6.5) y el ejecutor rápido siempre en su modelo más avanzado (§7.6) ·
-> Commit de referencia: `develop@7d00aa4`
-> v2.3 (2026-10-10, decisión de Jesús): **git es el archivo**; desaparece la zona `archivo/` (§2.3).
-> Alcance: la transición de §9. · Criterios de aceptación: los siete pasos de §9 hechos y los chequeos de §8 en CI.
->
-> Este plan gobierna la transición. Al cerrarse, su contenido normativo pasa a `Docs/README.md` (el estándar) y al
-> `AGENTS.md` raíz (su resumen operativo), y este archivo se borra: su historia queda en git.
-> Discusión: `Docs/trabajo/estandar-docs/` — Codex firmó con cambios en dos rondas (`debate/01-codex.md`,
-> `debate/04-codex.md`); todos aplicados salvo el modelo del ejecutor, que decidió Jesús (`debate/05-claude-cierre.md`).
+> Verificado: 2026-10-10 · Estándar vigente, aprobado por Jesús el 2026-10-10 · Resumen operativo: `AGENTS.md` raíz
+> La transición que lo implantó (el squash de ~255 documentos a este canon) terminó el 2026-10-10; su plan y el debate
+> con Codex, que firmó con cambios en dos rondas, siguen en git (`8dcf6ba`).
 
-## 1. El problema que resuelve
+## 1. Qué resuelve
 
-En `Docs/` hay ~255 archivos. Conviven reglas vigentes, brainstorms, propuestas descartadas, debates, handoffs y
-auditorías, con la misma apariencia de documento oficial. Un agente no puede distinguirlos.
+Antes de este estándar, `Docs/` mezclaba reglas vigentes, brainstorms, propuestas descartadas, debates y relatos de
+sesiones, todos con la misma apariencia de documento oficial, y ningún agente podía distinguirlos. **La causa era que no
+había frontera entre trabajar y decidir**: cada sesión dejaba su análisis en `Docs/` y nada lo separaba de una regla
+aprobada. Este estándar pone esa frontera.
 
-**La causa es que no hay frontera entre trabajar y decidir.** Cada sesión de agente dejó su análisis en `Docs/`, y
-nada lo diferenciaba de una regla aprobada. Este estándar pone esa frontera.
+### Mapa
 
-Hechos medidos el 2026-10-10 en `feat/mv2b-respuestas@c41f489` (`git grep`/`git ls-files`, sin artefactos de build):
-
-- **Instrucciones peligrosas vigentes:** `DECISIONS.md §2` ordena aplicar migraciones por MCP contra
-  `psjigdoinfpgrnedxeyf`, el proyecto abandonado; `AGENTS.md` ordena lo contrario.
-- `CLAUDE.md` y `AGENTS.md` son copias casi idénticas (143 líneas; difieren en la cabecera). `.agents/AGENTS.md`
-  (259 líneas) tiene reglas que no están en ellos, y en la prueba de §6.1 Codex no lo cargó.
-- `.agents/AGENTS.md §3` ordena «lee el spec en `/specs`»: la carpeta no existe.
-- `CLAUDE.md` dice «Capacitor-ready»; `Docs/customer_app_migration/` decidió Swift + Kotlin.
-- Hay citas a `DECISIONS §33`, que no existe: salen de un brainstorm (`Docs/Encargos/compras/` (borrado; en git: `8f26aed`)) que anunciaba una
-  decisión que nunca se tomó.
-- El código (`apps packages supabase scripts`) cita `DECISIONS …§N` en **51 archivos, 73 menciones**.
-- `DECISIONS.md` (101 KB) mezcla dinero, antifraude, stack, estilos de cards y un bug de `cn()`; §22 va tras §24.
-- Hay autoridad operativa fuera de cualquier canon: `Docs/plan-migraciones/plan-diario.md` y `cola.md` gobiernan la
-  sesión autónoma.
+| Dónde | Qué |
+|---|---|
+| `Docs/glosario.md` | El nombre de cada cosa |
+| `Docs/negocio/` | Plataforma, dinero, antifraude, apps, diseño y un archivo por servicio en `servicios/` |
+| `Docs/arquitectura/README.md` | Cómo está construido |
+| `Docs/operacion/` | Runbooks: deploy, trampas conocidas, graphify, cómo llamar a cada agente |
+| `Docs/decisiones/` y `DECISIONS.md` | Las decisiones (ADR desde la 0034; §1–§32 e índice en `DECISIONS.md`) |
+| `Docs/planes/` | Lo aprobado y en ejecución: migraciones y migración móvil |
+| `Docs/trabajo/` | Borradores, análisis, debates y el backlog: **no manda** |
 
 ## 2. Tres zonas, y git como archivo
 
@@ -196,7 +185,7 @@ del código siguen resolviendo y se corrigen cuando se toca ese código.
 
 | Herramienta | Qué carga | Comprobado |
 |---|---|---|
-| **Codex CLI 0.162** | Los `AGENTS.md` desde la raíz del repo hasta el directorio de lanzamiento. Lanzado con `-C <repo>`: **solo el raíz**. Lanzado en `apps/negocios`: raíz + local. En ninguno de los dos lanzamientos cargó `.agents/AGENTS.md` | Prueba en repo de juguete: `Docs/trabajo/estandar-docs/evidencia/carga-de-instrucciones.md` |
+| **Codex CLI 0.162** | Los `AGENTS.md` desde la raíz del repo hasta el directorio de lanzamiento. Lanzado con `-C <repo>`: **solo el raíz**. Lanzado en `apps/negocios`: raíz + local. En ninguno de los dos lanzamientos cargó `.agents/AGENTS.md` | Prueba en repo de juguete (evidencia en git: `8dcf6ba:Docs/trabajo/estandar-docs/evidencia/`) |
 | **Claude Code 2.1.296** | `CLAUDE.md`, no `AGENTS.md`; `CLAUDE.md` con `@AGENTS.md` importa el contenido. Los `CLAUDE.md` anidados se cargan al leer o editar en su carpeta. **Lanzado desde una subcarpeta, los imports de fuera de ella son externos**: piden aprobación, y con `-p` se ignoran en silencio | Prueba en el worktree real: misma evidencia |
 | **Antigravity CLI** (`agy` 1.3.3) | `AGENTS.md` y `GEMINI.md` de la raíz, **y también `.agents/AGENTS.md`** (`.agents/` es su convención); los locales hasta el directorio de lanzamiento. Gemini CLI quedó descartado: Google rechaza su login individual y remite a Antigravity (2026-10-10) | Prueba en el mismo repo de juguete (según la respuesta del modelo): misma evidencia |
 
@@ -346,30 +335,3 @@ Se montan **antes del primer movimiento de archivos**, en local; pasan a CI como
 2. **Cabecera de verificación** (§3.5) en cada archivo del canon; **cabecera de plan** (§2.2) en cada plan.
 3. **Ninguna regla del canon tiene como fuente un archivo de `trabajo/`.** Excepciones registradas.
 4. **Aviso** si `AGENTS.md` pasa de 120 líneas.
-
-## 9. Transición (el squash)
-
-0. **Aprobar este estándar.**
-1. **Inmediato, parches de una línea con puntero**: `DECISIONS.md §2` (proyecto y vía de migración),
-   «Capacitor-ready» en `CLAUDE.md`/`AGENTS.md`, la ruta `/specs` de `.agents/AGENTS.md`.
-2. **Inventario** de documentos, enlaces entrantes y consumidores (incluida la sesión autónoma) — primer encargo a
-   Antigravity, auditado por cobertura — y **chequeo de enlaces** en local.
-3. **Borrar el ruido sin consumidores** (`handoff/`, `context/`, debates cerrados, auditorías del legacy,
-   `historico-*`, ui-kits, prompts de diseño, PNG sueltos de la raíz), con la lista previa aprobada por Jesús.
-   **Crear `planes/`** y mover a ella solo los documentos aprobados (de `plan-migraciones/`, de la migración del
-   customer) en una ventana coordinada con la sesión autónoma, **sin archivo puente**: Jesús pausa el `/loop`, se mueve
-   y se actualizan las referencias en un commit, se relanza con la ruta nueva y se verifica una vuelta. Sus debates y
-   análisis se borran, o pasan a `trabajo/` si siguen abiertos.
-4. **Unificar las instrucciones de agentes** (§6), con prueba propia en Claude Code y en Antigravity.
-5. **Reescribir el canon por áreas**, desde el código y la base (solo lectura), rescatando el porqué de lo viejo. Por
-   área: escribir → discrepancias para Jesús (§4) → aprobar → borrar lo viejo de esa área → actualizar el índice de
-   `DECISIONS.md`. Orden: glosario y plataforma → dinero → ciclo del pedido de restaurante → antifraude → Entregas →
-   Store. Encargos no se reescribe: Jesús lo descartó el 2026-10-07 (`Docs/Encargos/compras/README.md` (borrado; en git: `8f26aed`), «ARCHIVADA»),
-   y se borra entero tras rescatar lo que use Entregas.
-6. **Squash de la memoria de Claude** (§6.6).
-7. **Chequeos en CI como requisito** (§8).
-
-## 10. Preguntas abiertas
-
-1. ¿La zona `planes/` cubre todo lo que debe gobernar sin ser regla general, o deja algún caso sin dueño?
-2. ~~Archivo puente para `cola.md`~~ — resuelta: ventana coordinada, sin puente (§9 paso 3).
