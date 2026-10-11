@@ -40,7 +40,10 @@ export async function POST(
       throw new DomainError('Límite de intentos de comprobante excedido', 'forbidden')
     }
 
-    await service
+    // El UPDATE repite el estado Y el intento que se leyó: si entre la lectura y
+    // aquí el cron de vencimiento canceló el pedido (o llegó otro comprobante),
+    // no actualiza nada y NO se resucita ni se avisa (hallazgo H-1).
+    const { data: updated, error: updateError } = await service
       .from('orders')
       .update({
         status: 'validando',
@@ -51,6 +54,13 @@ export async function POST(
         validating_at: new Date().toISOString(),
       })
       .eq('id', id)
+      .eq('status', 'awaiting_payment')
+      .eq('proof_attempt', order.proof_attempt)
+      .select('id')
+    if (updateError) throw new Error(updateError.message)
+    if (!updated || updated.length === 0) {
+      throw new DomainError('El pedido ya no espera comprobante', 'invalid_state_transition')
+    }
     await service.from('order_event_log').insert({
       order_id: id,
       event_type: 'order.prepay_proof_uploaded',
