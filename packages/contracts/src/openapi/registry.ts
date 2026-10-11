@@ -29,6 +29,7 @@ import {
   PushUnsubscribedSchema,
 } from './client-responses'
 import {
+  ClientConfigResponseSchema,
   CourierServiceStatusSchema,
   CourierTrackingSchema,
   HealthResponseSchema,
@@ -47,7 +48,7 @@ import {
  * Registro de las operaciones de `/api/v1` que usan las apps del cliente.
  *
  * Es la fuente del OpenAPI (`buildOpenApiDocument`). Un test recorre
- * `apps/api/app/api/v1/{customer,public,push,health}` y falla si una ruta o un
+ * `apps/api/app/api/v1/{customer,public,push,health,config}` y falla si una ruta o un
  * método no está aquí: una ruta sin documentar no pasa el CI (estándar API-2).
  *
  * `documented: false` marca lo que aún no tiene esquema de respuesta: sale en
@@ -113,6 +114,30 @@ export const OPERATIONS: OperationSpec[] = [
     auth: 'none',
     success: {
       200: { description: 'La API responde', envelope: 'data', schema: HealthResponseSchema },
+    },
+    documented: true,
+  },
+
+  {
+    method: 'get',
+    path: '/config',
+    operationId: 'getClientConfig',
+    summary:
+      'Configuración pública para las apps: versión mínima por app y plataforma, y sistema mínimo',
+    description:
+      'Siempre accesible, sin sesión y sin evaluar la versión de la app. Las apps mandan `X-Tindivo-Platform` ' +
+      '(ios|android|web), `X-Tindivo-App` (customer|negocios|motorizados), `X-Tindivo-App-Version` y ' +
+      '`X-Tindivo-Build` en cada petición; si la versión está por debajo del mínimo de su app y plataforma, ' +
+      'cualquier otra ruta responde 426 con `code: client_upgrade_required` (mostrar «actualiza la app»). ' +
+      'Sin esas cabeceras no se bloquea nada.',
+    tags: ['system'],
+    auth: 'none',
+    success: {
+      200: {
+        description: 'Configuración vigente',
+        envelope: 'data',
+        schema: ClientConfigResponseSchema,
+      },
     },
     documented: true,
   },

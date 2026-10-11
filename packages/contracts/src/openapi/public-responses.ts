@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { ClientCompatSettingsSchema } from '../client-compat'
 import {
   BUSINESS_PRIMARY_CAPABILITIES,
   CANCEL_REASONS,
@@ -28,6 +29,15 @@ export const HealthResponseSchema = z.object({
   service: z.literal('tindivo-api'),
   version: z.literal('v1'),
   time: z.string().meta({ description: 'ISO 8601, UTC' }),
+})
+
+/**
+ * GET /config — configuración pública para las apps. Los valores salen de
+ * `app_settings.client_compat`; sin sesión y sin cabeceras de plataforma.
+ */
+export const ClientConfigResponseSchema = ClientCompatSettingsSchema.extend({
+  apiVersion: z.literal('v1'),
+  serverTime: z.string().meta({ description: 'ISO 8601, UTC' }),
 })
 
 /**

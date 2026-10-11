@@ -40,6 +40,7 @@ import { POST as adminStoreImage } from '../../app/api/v1/admin/store/[id]/image
 import { PATCH as adminStorePatch } from '../../app/api/v1/admin/store/[id]/route'
 import { POST as adminStoreStatus } from '../../app/api/v1/admin/store/[id]/status/route'
 import { POST as adminStoreCreate } from '../../app/api/v1/admin/store/route'
+import { GET as getClientConfig } from '../../app/api/v1/config/route'
 import { GET as listAppeals } from '../../app/api/v1/customer/appeals/route'
 import { POST as cancelCourierOrder } from '../../app/api/v1/customer/courier-orders/[id]/cancel/route'
 import { POST as createCourierOrder } from '../../app/api/v1/customer/courier-orders/route'
@@ -222,6 +223,7 @@ afterAll(async () => {
 describe('rutas públicas', () => {
   it('sistema, horario, búsqueda y piloto', async () => {
     await conforms('getHealth', 200, getHealth)
+    await conforms('getClientConfig', 200, getClientConfig)
     await conforms('getOrderIntakeStatus', 200, getOrderIntakeStatus)
     await conforms('searchCatalog', 200, searchCatalog, { qs: '?q=pollo' })
     await conforms('checkPilotAccess', 200, checkPilotAccess, { method: 'POST', body: {} })
