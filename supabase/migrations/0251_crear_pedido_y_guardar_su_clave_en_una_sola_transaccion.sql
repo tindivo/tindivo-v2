@@ -163,15 +163,27 @@ begin
   -- COMPATIBILIDAD DE DESPLIEGUE Y DE ROLLBACK. La API anterior solo conoce
   -- `idempotency_keys`: si un reintento de una creación hecha por la API NUEVA
   -- llegara a la VIEJA (rollback del despliegue), duplicaría el pedido. Se deja
-  -- también allí la fila `completed`, en la misma transacción. `do nothing`: la
-  -- PK de esa tabla no lleva usuario y la clave de otro no debe pisarse.
+  -- también allí la fila `completed`, en la misma transacción. Si la API anterior
+  -- había dejado la clave `reserved` (misma persona, mismo payload), se COMPLETA:
+  -- con un `do nothing` seguiría `reserved` y tras un rollback daría 409 para
+  -- siempre. Una fila de otro usuario o de otro payload no se toca (la PK de esa
+  -- tabla no lleva usuario).
+  -- ORDEN DE BLOQUEO: siempre `creation_idempotency` primero y `idempotency_keys`
+  -- después, igual que `prune_creation_idempotency` (0252); así no hay ciclo.
   -- Se retira cuando ya no pueda volver atrás ninguna API anterior (24 h de TTL).
   insert into public.idempotency_keys
     (key, scope, user_id, request_hash, status, response_status, response_body)
   values
     (p_key, p_scope, p_user_id, p_request_hash, 'completed', 201,
      jsonb_build_object('data', v_data))
-  on conflict (key, scope) do nothing;
+  on conflict (key, scope) do update
+    set status = 'completed',
+        response_status = 201,
+        response_body = excluded.response_body,
+        expires_at = now() + interval '24 hours'
+    where public.idempotency_keys.user_id = excluded.user_id
+      and public.idempotency_keys.request_hash = excluded.request_hash
+      and public.idempotency_keys.status = 'reserved';
 
   return jsonb_build_object('replayed', false, 'data', v_data);
 end;

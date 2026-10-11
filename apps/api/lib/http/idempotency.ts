@@ -14,9 +14,6 @@ export function isIdempotencyKey(value: string): boolean {
   return UUID_RE.test(value)
 }
 
-/** Cuánto se considera «en vuelo» una reserva de la API anterior (ver findStoredCreation). */
-const LEGACY_IN_FLIGHT_MS = 2 * 60 * 1000
-
 export type CreationScope = 'create_order' | 'create_courier_order'
 
 /**
@@ -52,7 +49,7 @@ export async function findStoredCreation(
   // tras el despliegue duplicaría el pedido. Siempre filtrado por usuario.
   const { data: legacy } = await supabase
     .from('idempotency_keys')
-    .select('status,request_hash,response_body,created_at,expires_at')
+    .select('status,request_hash,response_body,expires_at')
     .eq('key', args.key)
     .eq('scope', args.scope)
     .eq('user_id', args.userId)
@@ -62,13 +59,13 @@ export async function findStoredCreation(
   if (legacy.status === 'completed') {
     return { body: legacy.response_body as { data: unknown } }
   }
-  // `reserved`: la API anterior la reclamó y aún no guardó la respuesta. Si es
-  // reciente, está EN VUELO: se pide reintentar (409), como hacía ella; si lleva
-  // más de LEGACY_IN_FLIGHT_MS, el proceso murió (el defecto H-3) y esa clave no
-  // puede bloquear al cliente 24 h: se sigue como creación nueva, y los guards
-  // de pedido activo / solicitud activa de las RPC frenan un posible duplicado.
-  if (Date.now() - Date.parse(legacy.created_at) < LEGACY_IN_FLIGHT_MS) return { inFlight: true }
-  return null
+  // `reserved`: la API anterior la reclamó y no guardó la respuesta. No hay forma
+  // de saber si el pedido llegó a crearse (la antigüedad no prueba abandono: si
+  // se creó y ya terminó o se canceló, los guards de activos dejarían crear
+  // otro), y la tabla vieja no guarda a qué pedido corresponde. Sin una
+  // asociación verificable se conserva el 409 hasta que la fila venza (24 h),
+  // que es lo que ya hacía la API anterior.
+  return { inFlight: true }
 }
 
 /**

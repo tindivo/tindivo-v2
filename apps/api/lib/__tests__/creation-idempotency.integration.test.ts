@@ -779,7 +779,7 @@ describe('Entregas: por la ruta HTTP real', () => {
     expect(await contarEntregas(b.id)).toBe(1)
   })
 
-  it('API vieja → nueva: una reserva vieja EN VUELO responde 409; la abandonada no bloquea', async () => {
+  it('API vieja → nueva: toda reserva vieja responde 409, reciente o antigua', async () => {
     const c = await clienteEntregas()
     const body = cuerpoEntrega(c)
     const requestHash = await sha256Hex(JSON.stringify(CreateCourierOrderRequestSchema.parse(body)))
@@ -799,12 +799,123 @@ describe('Entregas: por la ruta HTTP real', () => {
     expect(r1.status).toBe(409)
     expect(await contarEntregas(c.id)).toBe(0)
 
-    // El proceso murió hace 10 min (H-3): ya no puede bloquear al cliente 24 h.
-    const abandonada = crypto.randomUUID()
-    expect((await reservar(abandonada, 10 * 60_000)).error).toBeNull()
-    const r2 = await postCourierOrder(peticion(c, abandonada, body))
-    expect(r2.status).toBe(201)
-    expect(await contarEntregas(c.id)).toBe(1)
+    // Una reserva de hace 10 min TAMPOCO se da por abandonada: la antigüedad no
+    // prueba que el pedido no se creara (y si se creó y ya terminó, los guards
+    // de activos dejarían crear otro). Sin asociación verificable, 409.
+    const vieja = crypto.randomUUID()
+    expect((await reservar(vieja, 10 * 60_000)).error).toBeNull()
+    const r2 = await postCourierOrder(peticion(c, vieja, body))
+    expect(r2.status).toBe(409)
+    expect(await contarEntregas(c.id)).toBe(0)
+  })
+
+  it('rollback: la reserva vieja del mismo usuario y payload se COMPLETA al crear con la nueva', async () => {
+    const c = await crearCliente()
+    const key = crypto.randomUUID()
+    await db.from('idempotency_keys').insert({
+      key,
+      scope: 'create_order',
+      user_id: c.id,
+      request_hash: 'h',
+      status: 'reserved',
+    })
+    const r = await createIdempotently(db, {
+      userId: c.id,
+      scope: 'create_order',
+      key,
+      requestHash: 'h',
+      args: argsPedido(c),
+    })
+    expect(r.error, r.error?.message).toBeNull()
+    pedidos.push((r.data?.data as { id: string }).id)
+    const { data: fila } = await db
+      .from('idempotency_keys')
+      .select('status,response_status,response_body')
+      .eq('key', key)
+      .eq('scope', 'create_order')
+      .single()
+    expect(fila?.status).toBe('completed')
+    expect(fila?.response_status).toBe(201)
+    expect(fila?.response_body).toMatchObject({ data: { id: (r.data?.data as { id: string }).id } })
+
+    // Con otro payload NO se toca: sigue reservada.
+    const otra = crypto.randomUUID()
+    await db.from('idempotency_keys').insert({
+      key: otra,
+      scope: 'create_order',
+      user_id: c.id,
+      request_hash: 'OTRO',
+      status: 'reserved',
+    })
+    const c2 = await crearCliente()
+    const r2 = await createIdempotently(db, {
+      userId: c2.id,
+      scope: 'create_order',
+      key: otra,
+      requestHash: 'h',
+      args: argsPedido(c2),
+    })
+    expect(r2.error, r2.error?.message).toBeNull()
+    pedidos.push((r2.data?.data as { id: string }).id)
+    const { data: intacta } = await db
+      .from('idempotency_keys')
+      .select('status,user_id')
+      .eq('key', otra)
+      .single()
+    expect(intacta).toMatchObject({ status: 'reserved', user_id: c.id })
+  })
+
+  it('purga COMPLETA (las dos tablas) en carrera con creaciones, ambas filas vencidas: sin bloqueo mutuo ni errores', async () => {
+    for (let ronda = 0; ronda < 5; ronda++) {
+      const c = await crearCliente()
+      const key = crypto.randomUUID()
+      const vencida = new Date(Date.now() - 60_000).toISOString()
+      expect(
+        (
+          await db.from('creation_idempotency').insert({
+            user_id: c.id,
+            scope: 'create_order',
+            key,
+            request_hash: 'h',
+            response: {},
+            expires_at: vencida,
+          })
+        ).error,
+      ).toBeNull()
+      expect(
+        (
+          await db.from('idempotency_keys').insert({
+            key,
+            scope: 'create_order',
+            user_id: c.id,
+            request_hash: 'h',
+            status: 'reserved',
+            expires_at: vencida,
+          })
+        ).error,
+      ).toBeNull()
+
+      const [p1, p2, ...rs] = await Promise.all([
+        db.rpc('prune_creation_idempotency'),
+        db.rpc('prune_creation_idempotency'),
+        ...Array.from({ length: 4 }, () =>
+          createIdempotently(db, {
+            userId: c.id,
+            scope: 'create_order',
+            key,
+            requestHash: 'h',
+            args: argsPedido(c),
+          }),
+        ),
+      ])
+      expect(p1.error, p1.error?.message).toBeNull()
+      expect(p2.error, p2.error?.message).toBeNull()
+      expect(rs.map((r) => r.error?.message ?? null)).toEqual([null, null, null, null])
+      const ids = new Set(rs.map((r) => (r.data?.data as { id: string }).id))
+      expect(ids.size).toBe(1)
+      for (const id of ids) pedidos.push(id)
+      expect(await contarPedidos(c.id)).toBe(1)
+    }
   })
 
   it('rollback nueva → vieja: la API anterior reproduce lo creado por la nueva', async () => {

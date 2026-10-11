@@ -29,8 +29,23 @@ as $$
 declare
   v_deleted bigint;
 begin
-  delete from public.creation_idempotency where expires_at < now();
+  -- ORDEN DE BLOQUEO: nueva primero y vieja después, el mismo que sigue
+  -- `create_order_idempotently` (0251); y SKIP LOCKED, para que la purga nunca
+  -- espere a una creación en curso (lo que esté en uso se purga mañana).
+  delete from public.creation_idempotency
+    where ctid in (
+      select ctid from public.creation_idempotency
+      where expires_at < now()
+      for update skip locked
+    );
   get diagnostics v_deleted = row_count;
+
+  delete from public.idempotency_keys
+    where ctid in (
+      select ctid from public.idempotency_keys
+      where expires_at < now()
+      for update skip locked
+    );
   return v_deleted;
 end;
 $$;
@@ -42,6 +57,5 @@ revoke execute on function public.prune_creation_idempotency() from public, anon
 grant execute on function public.prune_creation_idempotency() to service_role;
 
 select cron.schedule('prune-idempotency-keys', '0 5 * * *', $cron$
-  delete from public.idempotency_keys where expires_at < now();
   select public.prune_creation_idempotency();
 $cron$);
