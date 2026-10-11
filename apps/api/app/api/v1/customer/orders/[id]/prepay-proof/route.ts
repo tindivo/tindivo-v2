@@ -27,51 +27,27 @@ export async function POST(
       throw new DomainError('Ruta de comprobante inválida', 'forbidden')
     }
     const service = createServiceClient()
-    const { data: order } = await service
-      .from('orders')
-      .select('customer_user_id,status,payment_intent,proof_attempt')
-      .eq('id', id)
-      .maybeSingle()
-    if (!order || order.customer_user_id !== user.id)
-      throw new DomainError('Pedido no encontrado', 'not_found')
-    if (order.status !== 'awaiting_payment' || order.payment_intent !== 'prepaid')
-      throw new DomainError('El pedido no espera comprobante', 'invalid_state_transition')
-    if (order.proof_attempt >= 2) {
-      throw new DomainError('Límite de intentos de comprobante excedido', 'forbidden')
-    }
-
-    // El UPDATE repite el estado Y el intento que se leyó: si entre la lectura y
-    // aquí el cron de vencimiento canceló el pedido (o llegó otro comprobante),
-    // no actualiza nada y NO se resucita ni se avisa (hallazgo H-1).
-    const { data: updated, error: updateError } = await service
-      .from('orders')
-      .update({
-        status: 'validando',
-        validation_context: 'proof',
-        comprobante_prepago_url: body.path,
-        payment_proof_status: 'pending',
-        proof_attempt: order.proof_attempt + 1,
-        validating_at: new Date().toISOString(),
-      })
-      .eq('id', id)
-      .eq('status', 'awaiting_payment')
-      .eq('proof_attempt', order.proof_attempt)
-      .select('id')
-    if (updateError) throw new Error(updateError.message)
-    if (!updated || updated.length === 0) {
-      throw new DomainError('El pedido ya no espera comprobante', 'invalid_state_transition')
-    }
-    await service.from('order_event_log').insert({
-      order_id: id,
-      event_type: 'order.prepay_proof_uploaded',
-      actor_role: 'cliente',
-      actor_user_id: user.id,
-      data: {
-        proof_path: body.path,
-        attempt: order.proof_attempt + 1,
-      },
+    // Todo en UNA transacción (0248): dueño, estado, intentos, comprobante, rastro
+    // y evento del outbox. El FOR UPDATE de la RPC serializa contra el cron de
+    // vencimiento y contra otro comprobante, así que no hay lectura previa que
+    // pueda quedar vieja (H-1) y el evento no se pierde (H-2).
+    const { error } = await service.rpc('register_prepay_proof', {
+      p_order_id: id,
+      p_customer_user_id: user.id,
+      p_path: body.path,
     })
+    if (error) {
+      if (error.code === 'P0002') throw new DomainError('Pedido no encontrado', 'not_found')
+      if (error.code === 'P0001') {
+        if (error.hint === 'order_not_awaiting_proof')
+          throw new DomainError(error.message, 'invalid_state_transition')
+        // Ruta ajena o intentos agotados: lo mismo que respondía antes.
+        throw new DomainError(error.message, 'forbidden')
+      }
+      throw new Error(error.message)
+    }
 
+    // Los avisos solo salen si el comprobante quedó registrado.
     try {
       const { sendOrderPrepayProofUploaded, sendOrderValidation } = await import(
         '@/lib/inngest/client'

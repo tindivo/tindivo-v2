@@ -37,50 +37,6 @@ vi.mock('@/lib/inngest/client', () => ({
   sendOrderValidation: avisos.validation,
 }))
 
-// Gancho para provocar la carrera: corre justo DESPUÉS de que la ruta lee el pedido.
-const carrera = vi.hoisted(() => ({ trasLectura: null as null | (() => Promise<void>) }))
-vi.mock('@/lib/supabase/service', async () => {
-  const real = await vi.importActual<typeof import('@/lib/supabase/service')>(
-    '@/lib/supabase/service',
-  )
-  // biome-ignore lint/suspicious/noExplicitAny: proxy genérico sobre el builder de PostgREST
-  const envolver = (obj: any, tabla: string): any =>
-    new Proxy(obj, {
-      get(target, prop) {
-        const v = target[prop]
-        if (tabla === 'orders' && prop === 'maybeSingle' && typeof v === 'function') {
-          return async () => {
-            const r = await v.call(target)
-            const h = carrera.trasLectura
-            carrera.trasLectura = null
-            if (h) await h()
-            return r
-          }
-        }
-        if (typeof v === 'function') {
-          return (...args: unknown[]) => {
-            const out = v.apply(target, args)
-            return out && typeof out === 'object' && 'select' in out ? envolver(out, tabla) : out
-          }
-        }
-        return v
-      },
-    })
-  return {
-    ...real,
-    createServiceClient: () => {
-      const c = real.createServiceClient()
-      return new Proxy(c, {
-        get(target, prop) {
-          const v = (target as never)[prop]
-          if (prop === 'from') return (t: string) => envolver((target as never as { from: (t: string) => object }).from(t), t)
-          return typeof v === 'function' ? (v as (...a: unknown[]) => unknown).bind(target) : v
-        },
-      })
-    },
-  }
-})
-
 import { POST } from '../../app/api/v1/customer/orders/[id]/prepay-proof/route'
 
 let accessToken = ''
@@ -175,6 +131,13 @@ describe('comprobante de prepago: la carrera con el vencimiento y la repetición
     expect(o?.comprobante_prepago_url).toBe(`${CUSTOMER_USER_ID}/a.jpg`)
     expect(avisos.proofUploaded).toHaveBeenCalledTimes(1)
     expect(avisos.validation).toHaveBeenCalledTimes(1)
+    // H-2: el evento viaja por el outbox, en la misma transacción.
+    const { data: ev } = await db
+      .from('domain_events')
+      .select('event_type')
+      .eq('aggregate_id', id)
+      .eq('event_type', 'OrderPrepayProofUploaded')
+    expect(ev).toHaveLength(1)
   })
 
   it('el plazo de pago venció (el cron canceló): 409, el pedido sigue cancelado y no se avisa', async () => {
@@ -193,29 +156,6 @@ describe('comprobante de prepago: la carrera con el vencimiento y la repetición
     expect(o?.comprobante_prepago_url).toBeNull()
     expect(avisos.proofUploaded).not.toHaveBeenCalled()
     expect(avisos.validation).not.toHaveBeenCalled()
-  })
-
-  it('el cron cancela ENTRE la lectura y la escritura: no se resucita a validando', async () => {
-    const id = await pedidoEsperandoPago()
-    let disparado = false
-    carrera.trasLectura = async () => {
-      disparado = true
-      await vencerPlazoDePago(id)
-    }
-
-    const res = await proofRequest(id, `${CUSTOMER_USER_ID}/carrera.jpg`)
-    expect(disparado).toBe(true) // la carrera ocurrió de verdad
-    expect(res.status).toBe(409)
-    expect((await res.json()).code).toBe('invalid_state_transition')
-
-    const o = await leer(id)
-    expect(o?.status).toBe('cancelled')
-    expect(o?.comprobante_prepago_url).toBeNull()
-    expect(o?.proof_attempt).toBe(0)
-    expect(avisos.proofUploaded).not.toHaveBeenCalled()
-    expect(avisos.validation).not.toHaveBeenCalled()
-    const { data: log } = await db.from('order_event_log').select('id').eq('order_id', id)
-    expect(log ?? []).toHaveLength(0)
   })
 
   it('repetición: el segundo comprobante sobre un pedido en validando responde 409 y no cambia nada', async () => {

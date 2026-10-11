@@ -3658,6 +3658,10 @@ export type Database = {
         }
         Returns: Json
       }
+      register_prepay_proof: {
+        Args: { p_customer_user_id: string; p_order_id: string; p_path: string }
+        Returns: Json
+      }
       reorder_store_images: {
         Args: { p_ids: string[]; p_product_id: string }
         Returns: undefined
