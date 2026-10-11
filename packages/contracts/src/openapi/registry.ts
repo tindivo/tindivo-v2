@@ -19,6 +19,8 @@ import {
   CreatedOrderSchema,
   CustomerAppealListSchema,
   CustomerAppealSchema,
+  CustomerProfileSchema,
+  PaymentOptionsSchema,
   PhoneCodeSentSchema,
   PhoneVerifiedSchema,
   PrepayInfoSchema,
@@ -30,13 +32,16 @@ import {
 } from './client-responses'
 import {
   ClientConfigResponseSchema,
+  CourierDirectoryListSchema,
   CourierServiceStatusSchema,
   CourierTrackingSchema,
   HealthResponseSchema,
+  MapLandmarkListSchema,
   OrderTrackingSchema,
   PilotAccessResponseSchema,
   PublicBusinessDetailSchema,
   PublicBusinessListSchema,
+  PublicConfigSchema,
   ScheduleStatusSchema,
   SearchCatalogQuerySchema,
   SearchCatalogResponseSchema,
@@ -612,6 +617,84 @@ export const OPERATIONS: OperationSpec[] = [
       },
     },
     errors: ['validation_error', 'unauthorized'],
+    documented: true,
+  },
+
+  // ── MV4a: lo que la web leía directo de Supabase ───────────────────────────
+  {
+    method: 'get',
+    path: '/customer/profile',
+    operationId: 'getCustomerProfile',
+    summary: 'Perfil del cliente: nombre, teléfono, verificación y bloqueo preventivo',
+    description:
+      'Siempre el de la sesión: no recibe ningún identificador. Si el cliente aún no completó su perfil ' +
+      'responde 404 con `detail: customer_profile_not_found`.',
+    tags: ['customer'],
+    auth: 'customer',
+    success: {
+      200: { description: 'Su perfil', envelope: 'data', schema: CustomerProfileSchema },
+    },
+    errors: ['unauthorized', 'forbidden', 'not_found'],
+    documented: true,
+  },
+  {
+    method: 'get',
+    path: '/customer/payment-options',
+    operationId: 'getPaymentOptions',
+    summary: 'Si el cliente puede pagar contraentrega o debe pagar por adelantado',
+    description:
+      'La decisión la toma la base (antifraude); la ruta solo la expone. Sirve para pintar la pantalla de ' +
+      'pago: quien decide de verdad es la creación del pedido. El umbral de monto para prepago está en ' +
+      '`GET /public/config`.',
+    tags: ['customer'],
+    auth: 'customer',
+    success: {
+      200: { description: 'Opciones vigentes', envelope: 'data', schema: PaymentOptionsSchema },
+    },
+    errors: ['unauthorized', 'forbidden'],
+    documented: true,
+  },
+  {
+    method: 'get',
+    path: '/public/config',
+    operationId: 'getPublicConfig',
+    summary: 'Cobertura, bandas de envío, umbral de prepago y topes de efectivo',
+    description:
+      'Solo claves públicas de `app_settings`. No es `GET /config`, que trata de la versión mínima de la app.',
+    tags: ['public'],
+    auth: 'none',
+    success: {
+      200: { description: 'Configuración pública', envelope: 'data', schema: PublicConfigSchema },
+    },
+    documented: true,
+  },
+  {
+    method: 'get',
+    path: '/public/landmarks',
+    operationId: 'listMapLandmarks',
+    summary: 'Puntos de referencia del mapa',
+    tags: ['public', 'map'],
+    auth: 'none',
+    success: {
+      200: { description: 'Referencias activas', envelope: 'data', schema: MapLandmarkListSchema },
+    },
+    documented: true,
+  },
+  {
+    method: 'get',
+    path: '/public/courier/directory',
+    operationId: 'listCourierDirectory',
+    summary: 'Directorio de comercios para el recojo de Entregas',
+    description: 'Sin teléfonos ni WhatsApp de los comercios: no salen por la API pública.',
+    tags: ['public', 'courier'],
+    auth: 'none',
+    success: {
+      200: {
+        description: 'Comercios visibles en el mapa, por nombre',
+        envelope: 'data',
+        schema: CourierDirectoryListSchema,
+      },
+    },
     documented: true,
   },
 ]

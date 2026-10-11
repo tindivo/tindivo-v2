@@ -45,3 +45,12 @@ export const timestampOut = z.string().meta({ format: 'date-time' })
 
 /** Dinero de un campo que puede no tener valor (`numeric` sin `NOT NULL`). */
 export const legacyMoneyNullable = legacyMoney.nullable()
+
+/**
+ * Dinero en un campo NUEVO de la API (D-39): cadena decimal con dos decimales,
+ * `"12.50"`. Nunca un número JSON; el cliente lo lee con su tipo decimal.
+ */
+export const moneyText = z
+  .string()
+  .regex(/^\d+\.\d{2}$/)
+  .meta({ description: 'Soles como texto decimal con dos decimales, p. ej. `"12.50"` (D-39).' })
