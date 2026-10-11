@@ -42,6 +42,12 @@ const E2E = {
 }
 
 const NEGOCIOS = 'http://localhost:3002'
+
+// Captura de prueba (PNG real de 1x1): pasa `validateImageInput` y `compressImage`.
+const CAPTURA_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+  'base64',
+)
 const MOTORIZADOS = 'http://localhost:3004'
 
 let paso = 0
@@ -294,6 +300,7 @@ test('un pedido online viaja de la app del cliente hasta entregado', async ({ br
     .limit(1)
     .single()
   const id = pedido.id as string
+  let rutaProof = ''
   const shortId = pedido.short_id as string
 
   console.log(
@@ -343,30 +350,67 @@ test('un pedido online viaja de la app del cliente hasta entregado', async ({ br
   await pCliente.waitForTimeout(2500)
   await foto(pCliente, 'cliente-debe-pagar')
 
-  // ── PARADA 4 · El cliente sube el comprobante ───────────────────────────────
-  // Réplica de lo que escribe `POST /customer/orders/:id/prepay-proof`. Se
-  // replica en vez de llamar a la ruta porque esta sube un fichero a Storage, y
-  // lo que importa aquí es el estado en que queda el pedido, no el binario.
-  //
-  // `validation_context: 'proof'` NO ES OPCIONAL, y omitirlo me costó una
-  // corrida entera: `validate_order` decide por esa columna si está verificando
-  // un COMPROBANTE (→ `preparing`, pago verificado) o levantando un hold de
-  // ANTIFRAUDE (→ vuelve a `pending_acceptance`, sin tocar el pago). Sin ella
-  // cae al fallback `proof_attempt >= 1`, que también hay que subir. Se ve en
-  // `order_event_log`: `{"context": "antifraud", "nextStatus": "pending_acceptance"}`.
+  // ── PARADA 4 · El cliente sube el comprobante, POR LA PANTALLA REAL ─────────
+  // Sin `UPDATE` a `orders`: el cliente elige una captura en su pantalla de
+  // seguimiento, el navegador la sube a `payment-proofs` con SU sesión y llama a
+  // `POST /customer/orders/:id/prepay-proof`, que ejecuta la RPC transaccional
+  // `register_prepay_proof` (0248). El pedido solo puede pasar a `validando` por
+  // ese camino: la RPC fija además `validation_context = 'proof'`, que es lo que
+  // hace que `validate_order` lo trate como comprobante y no como antifraude.
   console.log('\n═══ 4 · EL CLIENTE SUBE SU COMPROBANTE ═══')
-  await db
+  expect(await estado(shortId), 'antes de subir, el pedido espera el pago').toContain(
+    'awaiting_payment',
+  )
+  const entrada = pCliente.locator('input[type="file"]')
+  await expect(entrada).toBeAttached({ timeout: 20_000 })
+  await entrada.setInputFiles({ name: 'yape.png', mimeType: 'image/png', buffer: CAPTURA_PNG })
+  const enviar = pCliente.getByRole('button', { name: 'Enviar mi comprobante' })
+  await expect(enviar).toBeEnabled({ timeout: 20_000 })
+  const [respProof] = await Promise.all([
+    pCliente.waitForResponse(
+      (r) =>
+        r.request().method() === 'POST' && r.url().includes(`/customer/orders/${id}/prepay-proof`),
+      { timeout: 25_000 },
+    ),
+    enviar.click(),
+  ])
+  expect(respProof.status(), `prepay-proof devolvió: ${await respProof.text()}`).toBe(200)
+
+  const { data: tras } = await db
     .from('orders')
-    .update({
-      status: 'validando',
-      validation_context: 'proof',
-      payment_proof_status: 'pending',
-      comprobante_prepago_url: 'https://ejemplo.local/yape.jpg',
-      proof_attempt: 1,
-    })
+    .select(
+      'status, validation_context, payment_proof_status, comprobante_prepago_url, proof_attempt',
+    )
     .eq('id', id)
+    .single()
   console.log(`  → estado: ${await estado(shortId)}`)
+  expect(tras?.status).toBe('validando')
+  expect(tras?.validation_context).toBe('proof')
+  expect(tras?.payment_proof_status).toBe('pending')
+  expect(tras?.proof_attempt).toBe(1)
+  rutaProof = tras?.comprobante_prepago_url as string
+  expect(rutaProof.startsWith(`${E2E.CUSTOMER_USER_ID}/${id}/attempt-1-`)).toBe(true)
+  // El archivo está de verdad en Storage, en esa ruta.
+  const carpeta = `${E2E.CUSTOMER_USER_ID}/${id}`
+  const { data: objetos } = await db.storage.from('payment-proofs').list(carpeta)
+  expect((objetos ?? []).map((o) => `${carpeta}/${o.name}`)).toContain(rutaProof)
+  // Y el evento viajó por el outbox, en la misma transacción.
+  const { data: eventos } = await db
+    .from('domain_events')
+    .select('id')
+    .eq('aggregate_id', id)
+    .eq('event_type', 'OrderPrepayProofUploaded')
+  expect(eventos).toHaveLength(1)
+
   await verEstadoEnTablero(pCajera, shortId, /Falta verificar el pago/)
+  // La cajera ve el comprobante: abre el pedido y la imagen carga (firma de 10 min).
+  await pCajera.locator('div[role="button"]:visible').filter({ hasText: shortId }).first().click()
+  const imgProof = pCajera.getByRole('img', { name: 'Comprobante del cliente' })
+  await expect(imgProof).toBeVisible({ timeout: 20_000 })
+  await expect
+    .poll(() => imgProof.evaluate((el) => (el as HTMLImageElement).naturalWidth > 0))
+    .toBe(true)
+  console.log('  ✅ la cajera ve el comprobante del cliente')
   await foto(pCajera, 'cajera-falta-verificar')
 
   // ── PARADA 5 · La cajera verifica el pago · AHORA sí a cocina ───────────────
@@ -497,6 +541,8 @@ test('un pedido online viaja de la app del cliente hasta entregado', async ({ br
   // apunta a ningún sitio útil. Quien deja basura la recoge.
   await db.from('domain_events').delete().eq('aggregate_id', id)
   await db.from('customer_order_items').delete().eq('order_id', id)
+  await db.from('order_event_log').delete().eq('order_id', id)
+  if (rutaProof) await db.storage.from('payment-proofs').remove([rutaProof])
   await db.from('orders').delete().eq('id', id)
   console.log(`  🧹 #${shortId} borrado (no debe contar como efectivo sin rendir)`)
 })
