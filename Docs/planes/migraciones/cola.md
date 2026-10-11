@@ -32,7 +32,7 @@ Estados: `[ ]` pendiente · `[~]` en curso · `[x]` hecho · `[!]` bloqueado (co
 - [~] **C2** · Comprobante (a): `UPDATE` condicionado y 409 — rama `fix/c2-c3-comprobante` (2026-10-10, noche)
 - [~] **C3a-d** · Comprobante (b), transaccional — rama `fix/c2-c3-comprobante`
 - [~] **C4a-d** · Idempotencia (c) — rama `fix/c4-idempotencia`
-- [ ] **C5** · Límites del bucket `payment-proofs`: JPEG, PNG, WebP y HEIC/HEIF, 15 MB (`D-40`, delegada por Jesús el 2026-10-09). Los 15 MB son el `MAX_INPUT_BYTES` que la app ya aplica, así que nadie que hoy pueda pagar deja de poder hacerlo; en prod, el comprobante más pesado de 56 mide 1,4 MB
+- [x] **C5** · Bucket `payment-proofs`: JPEG, PNG, WebP y HEIC/HEIF, 15 MB (migración `0254`, 8 pruebas; PR #33). **Sin desplegar a producción.** Nota: la app hoy solo sube JPEG, PNG y WebP (`validateImageInput`); HEIC se rechaza en el cliente.
 - [!] **C6** · Despliegue de C2-C5 — nivel B
 - [!] **C7** · Una semana de observación
 
@@ -45,7 +45,7 @@ mientras se construye el resto.
 - [x] **MV2a** · OpenAPI: registro de las 27 operaciones del cliente en `packages/contracts/src/openapi`, documento 3.0.3 generado desde Zod (`packages/contracts/openapi/v1.json`, servido en `GET /api/v1/openapi.json`), test de cobertura contra las rutas del disco y respuestas descritas de `health`, `schedule`, `search`, `courier/status` y `pilot-access` — rama `feat/mv2a-openapi`
 - [x] **MV2b** · Las 21 respuestas descritas: ya no queda ninguna `x-tindivo-pending`. Cuerpos de petición en `@tindivo/contracts` y prueba de conformidad de las 27 operaciones en `api-integration` (41 ficheros y 440 tests en verde). En su primera corrida destapó dos errores del contrato: `Idempotency-Key` es un UUID obligatorio y `courier.hours.days` es opcional — PR #13, apilado sobre #12
 - [x] **MV2c** · Modelos generados desde el OpenAPI (`pnpm mobile:models kotlin|swift --compile`, `openapi-generator` 7.14.0 fijado con sha256): Kotlin compila en cada PR y push a `develop` (job `mobile-models-kotlin`, verde en el PR #30); Swift, a diario en macOS (`mobile-models-swift.yml`, `D-48`). **El cron solo corre desde `main`:** la primera compilación de Swift llega cuando `develop` pase a `main` (o a mano con `workflow_dispatch`). Hallazgos: los montos heredados salen como número (`Double` en Swift) y los nuevos irán como texto (`D-39`); el `Package.swift` generado declara iOS 12 y `D-47` pide 17
-- [~] **MV3** · Compatibilidad: cabeceras de plataforma y build, `GET /config`, versión mínima por app y plataforma (paso 2)
+- [x] **MV3** · Compatibilidad: cabeceras `X-Tindivo-*`, `GET /api/v1/config` y 426 `client_upgrade_required` por versión mínima (`app_settings.client_compat`, migración `0253`, mínimos de app en `0.0.0` hasta que Jesús los suba); firmado por Codex; CI completa en verde (PR #32). **Sin desplegar a producción.**
 - [ ] **MV4** · Rutas del primer build: catálogo y horarios por REST, perfil, direcciones atómicas, `quote` (paso 3; `D-39` decidida: dinero como texto)
 - [ ] **MV5** · Lo que exige la revisión: borrado de cuenta (en la app y en una página web), Sign in with Apple en Auth, cuenta y negocio de demostración para el revisor
 - [!] **MV6** · Staging en el proyecto de Supabase vacío de Jesús (H7) — crearlo y aplicarle migraciones es nivel B
@@ -59,3 +59,9 @@ mientras se construye el resto.
 5. **Contacto** · Correo de soporte y dónde vivirán la política de privacidad y los términos.
 6. **MV6** · El ref del proyecto vacío, para montar staging contigo.
 9. **H8** · Presupuesto del VPS de ensayo — pospuesto: la mudanza va después del móvil.
+
+## Para el despliegue del paso 0 (C6)
+
+- Las migraciones `0248` a `0254` se aplican **juntas** con un solo `supabase db push` (ninguna está en producción todavía), así que no hay desorden de versiones aunque `0253` y `0254` entraran a `develop` antes que `0248`-`0252`.
+- **Base primero, apps después**; fuera del horario de pedidos (18:00-23:00).
+- Después, `pnpm db:types` y revisar los advisors.
