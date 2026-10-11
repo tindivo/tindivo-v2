@@ -29,6 +29,7 @@ export function AccountMenu({ onSignOut, onSignOutEverywhere }: AccountMenuProps
         <MenuItem href="/pedidos" icon="schedule" label="Historial completo" />
         <MenuItem external href={whatsappUrl} icon="chat" label="Ayuda y soporte" />
         <MenuItem href="/terminos" icon="description" label="Términos y privacidad" />
+        <MenuItem href="/borrar-cuenta" icon="delete" label="Borrar mi cuenta" />
         <button
           type="button"
           onClick={onSignOut}
