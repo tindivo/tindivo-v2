@@ -369,10 +369,12 @@ describe('retención: la purga no reabre una creación reciente', () => {
     const viva = crypto.randomUUID()
     const vencida = crypto.randomUUID()
     const base = { user_id: c.id, scope: 'create_order', request_hash: 'h', response: {} }
-    await db.from('creation_idempotency').insert([
-      { ...base, key: viva },
+    // `expires_at` explícito en las dos: un insert en lote rellena con NULL, no con el default.
+    const { error: insErr } = await db.from('creation_idempotency').insert([
+      { ...base, key: viva, expires_at: new Date(Date.now() + 86_400_000).toISOString() },
       { ...base, key: vencida, expires_at: new Date(Date.now() - 60_000).toISOString() },
     ])
+    expect(insErr, insErr?.message).toBeNull()
 
     const { error } = await db.rpc('prune_creation_idempotency')
     expect(error, error?.message).toBeNull()
