@@ -55,7 +55,7 @@ autorizado). `[CÓDIGO]` `features/*`, `lib/*`:
 ## 4. Propuesta de **superficie móvil v1** (`/api/mobile/v1`)
 
 > **Ojo (2026-09-20):** esto es la superficie **completa**. Para el primer *build* se recomienda la **versión mínima**
-> (opción C de [`04-decisiones-abiertas.md`](../04-decisiones-abiertas.md) §3.1): cabeceras `X-Client-*`, `GET /config`,
+> (opción C de [`04-decisiones-abiertas.md`](../../../planes/movil/decisiones.md) §3.1): cabeceras `X-Client-*`, `GET /config`,
 > `426`, códigos de error estables, OpenAPI de las rutas que usa la app y `source` generalizado. El resto de esta tabla
 > se difiere hasta que una medición lo justifique.
 

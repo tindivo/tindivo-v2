@@ -2,7 +2,7 @@
 
 > 2026-10-08. Jesús pide: «a nivel de buenas prácticas, ¿qué recomiendas? Divídelo por fases para entenderte. La idea
 > es que puedas trabajar todos los días en esto, 24/7, para tenerlo listo». El *qué* ya está firmado
-> (`../../../planes/migraciones/conclusion.md`, F0-F5, y `../../movil/debate-rest/conclusion.md`, pasos 0-7). Esto es el
+> (`../../../planes/migraciones/conclusion.md`, F0-F5, y `../../../planes/movil/contrato-rest.md`, pasos 0-7). Esto es el
 > **cómo**: en qué lotes diarios se parte, qué puedo hacer solo y qué no, y con qué disciplina.
 
 ## Hechos que condicionan la propuesta

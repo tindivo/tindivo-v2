@@ -7,7 +7,7 @@
 >
 > Solo lectura: no se tocó código. Las únicas escrituras del día fueron aplicar la 0246 y la 0247 en la base local.
 
-> **⚠ Superado en parte por el debate con Codex (2026-10-08):** manda [`debate-rest/conclusion.md`](debate-rest/conclusion.md). Cambios principales: tres defectos de corrección van primero (paso 0); la verificación local del JWT y el cambio de región se **miden antes de decidirse** (no está probado que sean gratis ni cuánto ahorran); el plan F0-F5 de abajo queda sustituido por el orden 0-7 de la conclusión.
+> **⚠ Superado en parte por el debate con Codex (2026-10-08):** manda [`../../planes/movil/contrato-rest.md`](../../planes/movil/contrato-rest.md). Cambios principales: tres defectos de corrección van primero (paso 0); la verificación local del JWT y el cambio de región se **miden antes de decidirse** (no está probado que sean gratis ni cuánto ahorran); el plan F0-F5 de abajo queda sustituido por el orden 0-7 de la conclusión.
 
 ## 1. Qué cambió desde el 2026-09-20
 

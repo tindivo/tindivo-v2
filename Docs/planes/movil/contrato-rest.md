@@ -1,8 +1,10 @@
 # Conclusión común · Backend REST para las apps nativas y squash de migraciones
 
+> Estado: **en ejecución** · Aprobado por Jesús el 2026-10-10 (conversación con Claude Code: «oka») · Alcance: el
+> contrato entre las apps nativas y la API, y el orden del paso 0. Debate: `Docs/trabajo/movil/debate-rest/`
 > Debate Claude + Codex, 2026-10-07/08, sobre `develop` en `0306918` y `tindivo-prod` en la migración 0247. Tres
 > rondas, y una consulta de solo lectura a la base viva para cerrar lo que el código no mostraba. **Esta conclusión
-> manda sobre [`../06-contrato-rest-movil.md`](../06-contrato-rest-movil.md)** donde discrepen.
+> manda sobre [`../06-contrato-rest-movil.md`](../../trabajo/movil/06-contrato-rest-movil.md)** donde discrepen.
 
 ## En cinco líneas
 
@@ -120,9 +122,9 @@ aplican por MCP y `CLAUDE.md` exige la CLI (manda la CLI).
 
 | Archivo | Qué es |
 |---|---|
-| [`01-claude.md`](01-claude.md) · [`../06-contrato-rest-movil.md`](../06-contrato-rest-movil.md) | Apertura de Claude, escrita sin leer a Codex |
-| [`00-codex-apertura-sin-acceso.md`](00-codex-apertura-sin-acceso.md) | Primera apertura de Codex, sin acceso al repo: su sandbox de Windows rechazaba todos los comandos |
-| [`01-codex.md`](01-codex.md) | Apertura de Codex con un paquete de evidencia cruda (código y salidas de comandos, sin la postura de Claude). Encontró H-1, H-3 y H-4 |
-| [`02-claude.md`](02-claude.md) · [`02-codex.md`](02-codex.md) | Réplicas. Codex corrige «atascada para siempre» y detecta H-2 |
-| [`03-claude.md`](03-claude.md) · [`03-codex.md`](03-codex.md) | Ronda con la base viva (solo lectura). Codex firma con cambios; sin desacuerdos de fondo |
-| [`04-codex-auditoria.md`](04-codex-auditoria.md) | Auditoría de esta conclusión por Codex |
+| [`01-claude.md`](../../trabajo/movil/debate-rest/01-claude.md) · [`../06-contrato-rest-movil.md`](../../trabajo/movil/06-contrato-rest-movil.md) | Apertura de Claude, escrita sin leer a Codex |
+| [`00-codex-apertura-sin-acceso.md`](../../trabajo/movil/debate-rest/00-codex-apertura-sin-acceso.md) | Primera apertura de Codex, sin acceso al repo: su sandbox de Windows rechazaba todos los comandos |
+| [`01-codex.md`](../../trabajo/movil/debate-rest/01-codex.md) | Apertura de Codex con un paquete de evidencia cruda (código y salidas de comandos, sin la postura de Claude). Encontró H-1, H-3 y H-4 |
+| [`02-claude.md`](../../trabajo/movil/debate-rest/02-claude.md) · [`02-codex.md`](../../trabajo/movil/debate-rest/02-codex.md) | Réplicas. Codex corrige «atascada para siempre» y detecta H-2 |
+| [`03-claude.md`](../../trabajo/movil/debate-rest/03-claude.md) · [`03-codex.md`](../../trabajo/movil/debate-rest/03-codex.md) | Ronda con la base viva (solo lectura). Codex firma con cambios; sin desacuerdos de fondo |
+| [`04-codex-auditoria.md`](../../trabajo/movil/debate-rest/04-codex-auditoria.md) | Auditoría de esta conclusión por Codex |

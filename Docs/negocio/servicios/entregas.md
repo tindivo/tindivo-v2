@@ -52,9 +52,6 @@ lugar** por su nombre (negocios primero, luego referencias públicas) y, en el p
 y pagado» se vuelve a marcar en cada envío. Recoger de un negocio del directorio llega cuando haya negocios cargados con
 su contacto.
 
-**Pendiente de datos (Jesús, desde el admin):** en el directorio de lugares, «salud» mezcla boticas con Essalud y la
-Posta, y «otro» mezcla negocios con referencias; hasta corregirlo, los negocios de «otro» salen como referencias.
-
 ## El motorizado
 
 - Ve las entregas en su propia sección de la app y lleva **como máximo 2 activas** (`maxActivePerDriver`).

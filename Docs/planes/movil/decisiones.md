@@ -1,5 +1,7 @@
 # 04 · Decisiones, supuestos y riesgos de ejecución
 
+> Estado: **en ejecución** · Aprobado por Jesús el 2026-10-10 (conversación con Claude Code: «oka») · Alcance: las
+> decisiones de la migración a apps nativas; manda la sección 1. Análisis y requisitos: `Docs/trabajo/movil/`
 > **Actualizado el 2026-09-20** con tus respuestas. La sección 1 es lo decidido; lo que no me correspondía decidir
 > sigue en las secciones 2 y 3, con opciones, una **recomendación** y de qué depende.
 
@@ -16,6 +18,18 @@
 | D-12 | **Customer: Android e iOS se lanzan a la vez.** | Tú, 2026-09-20 | Android se construye primero e iOS lo sigue de cerca con la misma especificación y vectores (lanzar a la vez ≠ construir a la vez): `05-arranque/03` |
 | D-13 | **Planes gratuitos** (Supabase y Vercel); regiones EE. UU. | Tú, 2026-09-20 | Regiones confirmadas: base `us-west-2`, funciones `iad1` (`PER-02`). Sin copias y Hobby no comercial (`PRO-06`). Ver `D-37` |
 | D-30 | **App de Negocios (cajera): sube de prioridad; solo Android; es lo más urgente.** | Tú, 2026-09-20 | Primer carril de app (N). iOS de Negocios queda fuera por ahora. Ver `D-35` |
+
+
+### Decididas el 2026-10-10
+
+| # | Decisión | Quién / cuándo |
+|---|---|---|
+| D-39 | **El dinero viaja como texto** (`"12.50"`) en los campos nuevos de la API | Jesús, 2026-10-10 |
+| D-44 | Al borrar una cuenta: **pedidos anonimizados para siempre, comprobantes 90 días, directorio y antifraude por teléfono conservados** | Jesús, 2026-10-10 (recomendación aceptada) |
+| D-45 | El revisor de las tiendas entra con un **negocio de demostración**; vídeo solo de respaldo | Jesús, 2026-10-10 |
+| D-46 | Edad mínima de uso: **18 años** | Jesús, 2026-10-10 |
+| D-47 | Versiones mínimas: **Android 8 (API 26) e iOS 17** | Jesús, 2026-10-10 |
+| D-48 | Los modelos de **Swift** se compilan en la CI **a diario**, no en cada PR (el runner de macOS cuesta diez veces más); Kotlin, en cada PR | Jesús, 2026-10-10 |
 
 ## 2. Decisiones abiertas — organización y plazos externos
 

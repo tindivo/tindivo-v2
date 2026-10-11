@@ -6,7 +6,7 @@
 > 2026-10-08/09. Dos rondas sobre el repo (`develop`, `99d70a0`), con Codex **leyendo el código por su cuenta** en
 > modo solo lectura, y datos de `tindivo-prod` medidos por Claude. Debate en [`../../trabajo/migraciones/debate/`](../../trabajo/migraciones/debate/); hechos en
 > [`00-contexto.md`](../../trabajo/migraciones/00-contexto.md). No reabre el contrato REST
-> (`../../trabajo/movil/debate-rest/conclusion.md`) ni la arquitectura (`../../trabajo/arquitectura/`).
+> (`../movil/contrato-rest.md`) ni la arquitectura (`../../trabajo/arquitectura/`).
 
 ## En cinco líneas
 
@@ -49,7 +49,7 @@ Los defectos de producción ya acordados:
   los dos roles de cliente: `supabase/migrations/0238_entregas_abre_de_noche_y_avisa_sin_descuentos.sql:237`),
   conservando la del cron; verificar los permisos efectivos, el rechazo desde clientes y que el cron sigue venciendo.
 
-Los criterios completos son los de `../../trabajo/movil/debate-rest/conclusion.md` §3 (paso 0); este resumen no
+Los criterios completos son los de `../movil/contrato-rest.md` §3 (paso 0); este resumen no
 los sustituye. **Estabilizado** significa: una semana de operación sin errores nuevos en esas rutas ni incidentes
 relacionados, registrada antes de empezar F2.
 
@@ -100,7 +100,7 @@ negocio y motorizado abiertos y Realtime) y con PDF concurrentes; CPU, disco y r
 
 ### F3 · Desacoplamiento y preparación nativa (lo ya acordado)
 
-El orden 0-7 de `../../trabajo/movil/debate-rest/conclusion.md`, con los estándares graduales de
+El orden 0-7 de `../movil/contrato-rest.md`, con los estándares graduales de
 `../../trabajo/arquitectura/05-estandares.md`:
 
 - contrato REST y OpenAPI;

@@ -171,6 +171,6 @@ versión que sirva y se sigue actualizando. **Negocios no tiene esa espera.**
 | [`01-sistema-actual/`](01-sistema-actual/01-mapa-del-sistema.md) | Mapa, modelo de datos, API (y la **propuesta de superficie móvil**), estados/plazos, notificaciones |
 | [`02-auditoria-backend/`](02-auditoria-backend/00-veredicto-y-metodo.md) | 48 hallazgos en 6 documentos + preparación móvil + registro ordenado |
 | [`03-requisitos/`](03-requisitos/00-formato-y-convenciones.md) | Formato, catálogo por app, transversal, nativo nuevo y matriz de disposición |
-| [`04-decisiones-abiertas.md`](04-decisiones-abiertas.md) | Lo decidido, lo que falta por decidir, supuestos y riesgos |
+| [`04-decisiones-abiertas.md`](../../planes/movil/decisiones.md) | Lo decidido, lo que falta por decidir, supuestos y riesgos |
 | [`05-arranque/`](05-arranque/03-plan-de-ejecucion.md) | Cuentas y firmas, planes y región, plan de ejecución |
 | [`anexos/`](anexos/A-superficie-api.md) | Superficie de las 85 rutas, columnas de `orders`, consultas de medición y scripts |

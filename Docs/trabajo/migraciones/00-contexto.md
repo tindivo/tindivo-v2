@@ -16,7 +16,7 @@ propio).
 
 ## Lo ya acordado (no se reabre)
 
-- `Docs/trabajo/movil/debate-rest/conclusion.md`: REST `/api/v1` como contrato del dominio; Supabase para Auth
+- `Docs/planes/movil/contrato-rest.md`: REST `/api/v1` como contrato del dominio; Supabase para Auth
   y aviso Realtime; paso 0 de corrección (comprobante, idempotencia, bucket); compatibilidad antes del primer build;
   orden 0-7.
 - `Docs/trabajo/arquitectura/` (README, 01-05, `revision-codex.md`): monolito modular; desacoplar al tocar; estándares v2.1

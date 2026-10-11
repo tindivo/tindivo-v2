@@ -38,26 +38,24 @@ Estados: `[ ]` pendiente · `[~]` en curso · `[x]` hecho · `[!]` bloqueado (co
 
 ## Carril móvil · customer
 
-Orden de `../../trabajo/movil/debate-rest/conclusion.md` §3. El primer build Android entra a la prueba cerrada
+Orden de `../movil/contrato-rest.md` §3. El primer build Android entra a la prueba cerrada
 de Google Play en cuanto sea usable contra producción (solo lectura), para que los 14 días de los 12 testers corran
 mientras se construye el resto.
 
 - [x] **MV2a** · OpenAPI: registro de las 27 operaciones del cliente en `packages/contracts/src/openapi`, documento 3.0.3 generado desde Zod (`packages/contracts/openapi/v1.json`, servido en `GET /api/v1/openapi.json`), test de cobertura contra las rutas del disco y respuestas descritas de `health`, `schedule`, `search`, `courier/status` y `pilot-access` — rama `feat/mv2a-openapi`
 - [x] **MV2b** · Las 21 respuestas descritas: ya no queda ninguna `x-tindivo-pending`. Cuerpos de petición en `@tindivo/contracts` y prueba de conformidad de las 27 operaciones en `api-integration` (41 ficheros y 440 tests en verde). En su primera corrida destapó dos errores del contrato: `Idempotency-Key` es un UUID obligatorio y `courier.hours.days` es opcional — PR #13, apilado sobre #12
-- [ ] **MV2c** · Modelos generados desde el OpenAPI que compilan en Kotlin (runner Linux) y en Swift (runner macOS: cuesta 10 veces más minutos; decidir si en cada PR o a diario)
+- [ ] **MV2c** · Modelos generados desde el OpenAPI que compilan en Kotlin (runner Linux, en cada PR) y en Swift (runner macOS, **a diario**: `D-48`)
 - [ ] **MV3** · Compatibilidad: cabeceras de plataforma y build, `GET /config`, versión mínima por app y plataforma (paso 2)
-- [ ] **MV4** · Rutas del primer build: catálogo y horarios por REST, perfil, direcciones atómicas, `quote` (paso 3; necesita `D-39`)
+- [ ] **MV4** · Rutas del primer build: catálogo y horarios por REST, perfil, direcciones atómicas, `quote` (paso 3; `D-39` decidida: dinero como texto)
 - [ ] **MV5** · Lo que exige la revisión: borrado de cuenta (en la app y en una página web), Sign in with Apple en Auth, cuenta y negocio de demostración para el revisor
 - [!] **MV6** · Staging en el proyecto de Supabase vacío de Jesús (H7) — crearlo y aplicarle migraciones es nivel B
 
 ## Lo que espera a Jesús
 
-1. **P0.5** · Dónde guardar la copia de producción fuera del PC.
+1. **P0.5** · Dónde guardar la copia de producción fuera del PC: en otro repositorio (Jesús, 2026-10-10); el detalle, más adelante.
 2. **Cuentas** · Apple Developer (US$ 99/año) y Google Play (US$ 25, un pago). La verificación de Google puede tardar días.
 3. **Testers** · 15-16 personas con Gmail y Android que vayan a usar la app (el mínimo es 12 durante 14 días seguidos).
 4. **Mac** · Confirmar macOS Sequoia 15.6+ o Tahoe 26.2+ (Xcode 26 es obligatorio desde el 2026-04-28).
 5. **Contacto** · Correo de soporte y dónde vivirán la política de privacidad y los términos.
 6. **MV6** · El ref del proyecto vacío, para montar staging contigo.
-7. **D-39** · Dinero como cadena (`"12.50"`) en los campos nuevos.
-8. **D-44…D-47** · Qué se conserva al borrar una cuenta, cómo accede el revisor, edad mínima y versiones mínimas de sistema (`07-publicacion-tiendas.md` §11).
 9. **H8** · Presupuesto del VPS de ensayo — pospuesto: la mudanza va después del móvil.

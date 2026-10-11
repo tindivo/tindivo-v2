@@ -7,13 +7,13 @@
 
 ## Empieza aquí
 
-0. **[`debate-rest/conclusion.md`](debate-rest/conclusion.md) (2026-10-08)** — conclusión común de Claude y Codex: REST como
+0. **[`../../planes/movil/contrato-rest.md`](../../planes/movil/contrato-rest.md) (2026-10-08)** — conclusión común de Claude y Codex: REST como
    contrato del dominio de las apps, tres defectos de corrección primero, el orden de trabajo 0-7 y la postura sobre el
    squash de migraciones. **Manda sobre todo lo demás de esta carpeta.** Su respaldo:
    [`06-contrato-rest-movil.md`](06-contrato-rest-movil.md) (la puesta al día tras Entregas y Store) y las rondas en
    [`debate-rest/`](debate-rest/).
 1. [`00-resumen-ejecutivo.md`](00-resumen-ejecutivo.md) — veredicto, novedades, bloqueadores, qué replicar, plan y qué necesito de ti.
-2. [`04-decisiones-abiertas.md`](04-decisiones-abiertas.md) — lo decidido, lo que falta por decidir y mis supuestos.
+2. [`04-decisiones-abiertas.md`](../../planes/movil/decisiones.md) — lo decidido, lo que falta por decidir y mis supuestos.
 3. [`05-arranque/`](05-arranque/03-plan-de-ejecucion.md) — **por dónde empezar**: cuentas de tienda, planes y región, plan de ejecución.
 
 ## Según lo que quieras hacer
@@ -28,7 +28,7 @@
 | Saber **qué está mal** en el backend | [`02-auditoria-backend/00-veredicto-y-metodo.md`](02-auditoria-backend/00-veredicto-y-metodo.md) → [`registro-de-hallazgos.md`](02-auditoria-backend/registro-de-hallazgos.md) |
 | Entender por qué **no llegan los avisos** | [`02-auditoria-backend/03-notificaciones.md`](02-auditoria-backend/03-notificaciones.md) y [`01-sistema-actual/05-notificaciones-hoy.md`](01-sistema-actual/05-notificaciones-hoy.md) |
 | Saber qué le **falta al backend para el móvil** | [`02-auditoria-backend/07-preparacion-para-cliente-nativo.md`](02-auditoria-backend/07-preparacion-para-cliente-nativo.md) |
-| **Construir la app** de clientes | [`03-requisitos/CUS-cliente.md`](03-requisitos/CUS-cliente.md) + [`01-sistema-actual/03-superficie-api.md`](01-sistema-actual/03-superficie-api.md) §4 (API móvil propuesta; para el primer *build* basta la versión mínima de [`04-decisiones-abiertas.md`](04-decisiones-abiertas.md) §3.1) |
+| **Construir la app** de clientes | [`03-requisitos/CUS-cliente.md`](03-requisitos/CUS-cliente.md) + [`01-sistema-actual/03-superficie-api.md`](01-sistema-actual/03-superficie-api.md) §4 (API móvil propuesta; para el primer *build* basta la versión mínima de [`04-decisiones-abiertas.md`](../../planes/movil/decisiones.md) §3.1) |
 | **Construir la app de la cajera** (Android) | [`03-requisitos/NEG-negocios.md`](03-requisitos/NEG-negocios.md) + alcance N1 en [`05-arranque/03-plan-de-ejecucion.md`](05-arranque/03-plan-de-ejecucion.md) §7 |
 | Ver lo **nuevo** que habilita lo nativo | [`03-requisitos/NAT-capacidades-nativas.md`](03-requisitos/NAT-capacidades-nativas.md) |
 | Saber **qué no se migra** | [`03-requisitos/matriz-disposicion-movil.md`](03-requisitos/matriz-disposicion-movil.md) §5 |

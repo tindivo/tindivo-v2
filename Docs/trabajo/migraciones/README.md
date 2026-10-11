@@ -15,5 +15,5 @@
 | [`debate/04-claude-plan-diario.md`](debate/04-claude-plan-diario.md) · [`debate/04-codex-plan-diario.md`](debate/04-codex-plan-diario.md) · [`debate/05-claude-replica.md`](debate/05-claude-replica.md) · [`debate/05-codex-firma.md`](debate/05-codex-firma.md) | El plan diario: propuesta, revisión («no lo aprobaría tal como está»), réplica y firma |
 | [`debate/03-codex-auditoria.md`](debate/03-codex-auditoria.md) | Auditoría de la conclusión: «firmo con cambios». Los seis cambios están aplicados |
 
-Relacionado: [`../movil/debate-rest/conclusion.md`](../movil/debate-rest/conclusion.md)
+Relacionado: [`../../planes/movil/contrato-rest.md`](../../planes/movil/contrato-rest.md)
 (contrato REST y paso 0) y [`../arquitectura/`](../arquitectura/) (desacoplamiento y estándares).

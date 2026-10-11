@@ -97,7 +97,7 @@ Medido: un solo `refund_charge` en la historia, y **fue un cargo falso.** La Flo
 (S/ 20.50, 2026-08-20 a las 20:22, hora de Lima) porque ya lo había vuelto a crear 46 segundos antes como `EFFF947D`,
 que se entregó y se cobró normal. No hubo devolución al cliente (Jesús, 2026-10-10), pero el cargo automático le sumó
 S/ 20.50 de deuda, y **La Florencia lo pagó** en su Yape del 2026-08-30. De ese caso nació la función de adelantar un
-pedido. Ninguna apelación con reembolso.
+pedido. Jesús lo da por cerrado. Ninguna apelación con reembolso.
 
 **La cobertura de fraude no se usa** (Jesús, 2026-10-10): fue una función «por si acaso»; los casos se coordinan por
 WhatsApp y ahí mismo se resuelven.
