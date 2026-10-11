@@ -86,6 +86,10 @@ const USUARIOS_FIXTURE = [
   // negocio e2e (que no se borra) y llevan su propio teléfono, así que no caen
   // ni por el paso 2 ni por el 3: los recoge el 4c, por `customer_user_id`.
   'Vecino Conformidad',
+  // mv4b-customer-routes: un cliente por caso (direcciones, términos y pedidos
+  // propios). Las direcciones y los términos caen por cascada con el usuario;
+  // los pedidos y las entregas, por los pasos 4b y 4c.
+  'Vecino MV4b',
 ]
 
 /**
@@ -155,6 +159,20 @@ async function barrer(): Promise<Barrido> {
       .delete()
       .like('name', 'ZZ Test MV4a%')
     if (dbErr) throw new Error(`barrido: borrar directory_businesses falló: ${dbErr.message}`)
+  }
+
+  // 0c. Lo que deja una corrida muerta de mv4b-customer-routes: la zona lejana
+  //     de prueba (cobraría la tarifa lejana a todos los pines) y el envío
+  //     gratis puesto a mano en el pollo del seed.
+  {
+    const { error: zErr } = await db.from('delivery_zones').delete().like('name', 'ZZ Test MV4b%')
+    if (zErr) throw new Error(`barrido: borrar delivery_zones falló: ${zErr.message}`)
+    const { error: fdErr } = await db
+      .from('menu_items')
+      .update({ free_delivery_until: null })
+      .eq('id', 'e2e00000-0000-4000-8000-000000000031')
+      .eq('free_delivery_until', '2099-12-31')
+    if (fdErr) throw new Error(`barrido: restaurar el pollo falló: ${fdErr.message}`)
   }
 
   // 1. Negocios de fixture (por nombre exacto o por el prefijo del ledger).

@@ -1,10 +1,12 @@
 import { CreateCourierOrderRequestSchema } from '@tindivo/contracts'
 import { DomainError } from '@tindivo/core'
+import { listCustomerCourierOrders } from '@/lib/customer/courier-history'
 import { requireRole } from '@/lib/http/auth'
 import { corsHeaders, handleOptions } from '@/lib/http/cors'
 import { sha256Hex } from '@/lib/http/hash'
 import { createIdempotently, findStoredCreation, isIdempotencyKey } from '@/lib/http/idempotency'
-import { handleError, problem } from '@/lib/http/problem'
+import { privateHeaders } from '@/lib/http/private-response'
+import { handleError, ok, problem } from '@/lib/http/problem'
 import { getRequestId } from '@/lib/http/request-id'
 import { sendCourierOrderCreated } from '@/lib/inngest/client'
 import { createServiceClient } from '@/lib/supabase/service'
@@ -37,6 +39,17 @@ function courierErrorDetail(message: string): {
 
 export function OPTIONS(req: Request): Response {
   return handleOptions(req)
+}
+
+/** Historial de Entregas de la cliente de la sesión y sus contactos frecuentes, paginado por cursor. */
+export async function GET(req: Request): Promise<Response> {
+  const requestId = getRequestId(req)
+  try {
+    const { token } = await requireRole(req, 'customer')
+    return ok(await listCustomerCourierOrders(token, req), { headers: privateHeaders(req) })
+  } catch (err) {
+    return handleError(err, requestId, req)
+  }
 }
 
 /** Crea una solicitud de Tindivo Entregas. Requiere sesión de cliente + Idempotency-Key. */

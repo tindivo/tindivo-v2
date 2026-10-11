@@ -1,5 +1,12 @@
 import { z } from 'zod'
-import { PhonePeSchema } from './primitives'
+import { DeliveryMethodSchema } from './enums'
+import {
+  AddressLineSchema,
+  AddressReferenceSchema,
+  CoordinatesSchema,
+  PhonePeSchema,
+  UuidSchema,
+} from './primitives'
 
 /**
  * Cuerpos de las rutas del cliente que vivían escritos dentro de su `route.ts`.
@@ -62,3 +69,79 @@ export const PushUnsubscribeRequestSchema = z.union([
   z.object({ id: z.string().uuid() }),
   z.object({ all: z.literal(true) }),
 ])
+
+// ── Lote MV4b: lo que la app nativa del cliente hacía directo contra Supabase ──
+
+/**
+ * POST /customer/checkout/quote. Las líneas son las del carrito; el servidor
+ * pone los precios (nunca confía en uno que venga del cliente).
+ */
+export const CheckoutQuoteRequestSchema = z.object({
+  businessId: UuidSchema,
+  deliveryMethod: DeliveryMethodSchema,
+  /** Punto de entrega. Sin él, un delivery se cotiza en la banda cercana. */
+  coordinates: CoordinatesSchema.optional(),
+  items: z
+    .array(
+      z.object({
+        menuItemId: UuidSchema,
+        quantity: z.number().int().min(1).max(50),
+        modifiers: z.array(UuidSchema).max(20).optional(),
+      }),
+    )
+    .min(1)
+    .max(50),
+})
+
+const AddressLabelSchema = z.string().trim().min(1).max(30)
+const AccuracySchema = z.number().positive().max(100_000)
+
+/** POST /customer/addresses */
+export const CreateCustomerAddressRequestSchema = z.object({
+  label: AddressLabelSchema.default('Casa'),
+  line: AddressLineSchema.optional(),
+  reference: AddressReferenceSchema,
+  coordinates: CoordinatesSchema.optional(),
+  accuracyM: AccuracySchema.optional().meta({
+    description: 'Precisión del GPS en metros; solo cuenta junto con `coordinates`',
+  }),
+  isDefault: z.literal(true).optional().meta({
+    description:
+      'Hacerla la predeterminada. Si se omite, lo es solo cuando el cliente aún no tiene ninguna',
+  }),
+})
+
+/** PATCH /customer/addresses/{id}. Lo que no se manda no se toca. */
+export const UpdateCustomerAddressRequestSchema = z
+  .object({
+    label: AddressLabelSchema,
+    line: AddressLineSchema,
+    reference: AddressReferenceSchema,
+    coordinates: CoordinatesSchema.nullable().meta({
+      description:
+        '`null` borra el punto. El mismo punto de antes conserva su sello de confirmación',
+    }),
+    accuracyM: AccuracySchema,
+    isDefault: z.literal(true).meta({
+      description: 'Solo se puede marcar; la predeterminada deja de serlo al marcar otra',
+    }),
+  })
+  .partial()
+  .refine((v) => Object.keys(v).length > 0, { message: 'No hay nada que actualizar' })
+
+/** POST /customer/terms-acceptance */
+export const TermsAcceptanceRequestSchema = z.object({
+  version: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z0-9._-]{1,32}$/, 'Versión de términos inválida')
+    .meta({ description: 'La versión del texto que la persona vio, p. ej. `2026-05`' }),
+})
+
+/** Paginación por cursor de las listas del cliente. */
+export const CUSTOMER_PAGE_MAX = 50
+export const CUSTOMER_PAGE_DEFAULT = 20
+export const CustomerPageQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(CUSTOMER_PAGE_MAX).default(CUSTOMER_PAGE_DEFAULT),
+  cursor: z.string().min(1).max(300).optional(),
+})

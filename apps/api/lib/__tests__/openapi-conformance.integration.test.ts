@@ -41,9 +41,21 @@ import { PATCH as adminStorePatch } from '../../app/api/v1/admin/store/[id]/rout
 import { POST as adminStoreStatus } from '../../app/api/v1/admin/store/[id]/status/route'
 import { POST as adminStoreCreate } from '../../app/api/v1/admin/store/route'
 import { GET as getClientConfig } from '../../app/api/v1/config/route'
+import {
+  DELETE as deleteCustomerAddress,
+  PATCH as updateCustomerAddress,
+} from '../../app/api/v1/customer/addresses/[id]/route'
+import {
+  POST as createCustomerAddress,
+  GET as listCustomerAddresses,
+} from '../../app/api/v1/customer/addresses/route'
 import { GET as listAppeals } from '../../app/api/v1/customer/appeals/route'
+import { POST as quoteCheckout } from '../../app/api/v1/customer/checkout/quote/route'
 import { POST as cancelCourierOrder } from '../../app/api/v1/customer/courier-orders/[id]/cancel/route'
-import { POST as createCourierOrder } from '../../app/api/v1/customer/courier-orders/route'
+import {
+  POST as createCourierOrder,
+  GET as listCustomerCourierOrders,
+} from '../../app/api/v1/customer/courier-orders/route'
 import {
   POST as createOrderAppeal,
   GET as getOrderAppeal,
@@ -51,11 +63,16 @@ import {
 import { POST as cancelOrder } from '../../app/api/v1/customer/orders/[id]/cancel/route'
 import { GET as getPrepayInfo } from '../../app/api/v1/customer/orders/[id]/prepay-info/route'
 import { POST as confirmPrepayProof } from '../../app/api/v1/customer/orders/[id]/prepay-proof/route'
-import { POST as createOrder } from '../../app/api/v1/customer/orders/route'
+import { GET as getCustomerOrder } from '../../app/api/v1/customer/orders/[id]/route'
+import {
+  POST as createOrder,
+  GET as listCustomerOrders,
+} from '../../app/api/v1/customer/orders/route'
 import { GET as getPaymentOptions } from '../../app/api/v1/customer/payment-options/route'
 import { POST as sendPhoneCode } from '../../app/api/v1/customer/phone/send-code/route'
 import { POST as verifyPhoneCode } from '../../app/api/v1/customer/phone/verify/route'
 import { GET as getCustomerProfile } from '../../app/api/v1/customer/profile/route'
+import { POST as acceptTerms } from '../../app/api/v1/customer/terms-acceptance/route'
 import { GET as getHealth } from '../../app/api/v1/health/route'
 import { GET as getBusiness } from '../../app/api/v1/public/businesses/[id]/route'
 import { GET as listBusinesses } from '../../app/api/v1/public/businesses/route'
@@ -453,6 +470,63 @@ describe('el cliente con sesión', () => {
       body: { endpoint: PUSH_ENDPOINT },
     })
     expect(removed.removed).toBe(1)
+  })
+
+  it('MV4b: cotiza, guarda direcciones, lee su historial y acepta los términos', async () => {
+    const quote = await conforms('quoteCheckout', 200, quoteCheckout, {
+      method: 'POST',
+      bearer: token,
+      body: {
+        businessId: E2E.BUSINESS_ID,
+        deliveryMethod: 'delivery',
+        coordinates: COURIER_POINT_A,
+        items: [{ menuItemId: FIXTURES.ITEM_POLLO_ID, quantity: 2 }],
+      },
+    })
+    expect(quote.total).toMatch(/^\d+\.\d{2}$/)
+
+    const created = await conforms('createCustomerAddress', 201, createCustomerAddress, {
+      method: 'POST',
+      bearer: token,
+      body: {
+        label: 'Casa',
+        line: 'Jr. Conformidad 123',
+        reference: 'Casa verde, prueba de conformidad',
+        coordinates: COURIER_POINT_B,
+        accuracyM: 12,
+      },
+    })
+    const addressId = String(created.id)
+    await conforms('listCustomerAddresses', 200, listCustomerAddresses, { bearer: token })
+    await conforms('updateCustomerAddress', 200, updateCustomerAddress, {
+      method: 'PATCH',
+      bearer: token,
+      params: { id: addressId },
+      body: { label: 'Trabajo' },
+    })
+    await conforms('deleteCustomerAddress', 204, deleteCustomerAddress, {
+      method: 'DELETE',
+      bearer: token,
+      params: { id: addressId },
+    })
+
+    const orders = await conforms('listCustomerOrders', 200, listCustomerOrders, { bearer: token })
+    const first = (orders.items as { id: string }[])[0]
+    expect(first).toBeDefined()
+    await conforms('getCustomerOrder', 200, getCustomerOrder, {
+      bearer: token,
+      params: { id: String(first?.id) },
+    })
+    const courier = await conforms('listCustomerCourierOrders', 200, listCustomerCourierOrders, {
+      bearer: token,
+    })
+    expect((courier.items as unknown[]).length).toBeGreaterThan(0)
+
+    await conforms('acceptTerms', 201, acceptTerms, {
+      method: 'POST',
+      bearer: token,
+      body: { version: `conf-${RUN}` },
+    })
   })
 })
 
