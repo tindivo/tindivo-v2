@@ -42,7 +42,7 @@ async function fetchDirectory(): Promise<DirectoryBusiness[]> {
     const { data } = await getSupabaseBrowser()
       .from('directory_businesses')
       .select(
-        'id,name,category,lat,lng,reference_text,phone,whatsapp,opens_at,closes_at,cover_photo_url,is_partner,partner_business_id,courier_enabled,has_menu_in_tindivo,works_with_zorritos',
+        'id,name,category,lat,lng,reference_text,opens_at,closes_at,cover_photo_url,is_partner,partner_business_id,courier_enabled,has_menu_in_tindivo,works_with_zorritos',
       )
       // Redundante con la policy, explícito por la misma razón que `landmarks.ts`.
       .eq('visible_on_map', true)
@@ -55,8 +55,9 @@ async function fetchDirectory(): Promise<DirectoryBusiness[]> {
       lat: Number(r.lat),
       lng: Number(r.lng),
       referenceText: r.reference_text,
-      phone: r.phone,
-      whatsapp: r.whatsapp,
+      // `phone`/`whatsapp` ya no son legibles desde el navegador (0255).
+      phone: null,
+      whatsapp: null,
       opensAt: r.opens_at,
       closesAt: r.closes_at,
       coverPhotoUrl: r.cover_photo_url,
