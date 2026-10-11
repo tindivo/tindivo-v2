@@ -119,7 +119,8 @@ const shortIdParam = z.string().meta({ description: 'Identificador corto públic
 const pageQuery = z.object({
   limit: z.string().optional().meta({ description: 'Tamaño de página, 1 a 50 (20 por defecto)' }),
   cursor: z.string().optional().meta({
-    description: '`nextCursor` de la página anterior. Opaco: no lo armes ni lo interpretes',
+    description:
+      '`nextCursor` de la página anterior. Opaco: no lo armes ni lo interpretes. Uno mal formado responde 422; el cursor no está firmado, pero solo ordena MIS filas (la lista siempre se filtra por la sesión)',
   }),
 })
 

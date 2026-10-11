@@ -63,17 +63,43 @@ export async function POST(req: Request): Promise<Response> {
     const [{ data: dishes, error: dishErr }, { data: options, error: optErr }] = await Promise.all([
       service
         .from('menu_items')
-        .select('id,name,base_price,business_id,is_available,deleted_at')
+        .select(
+          'id,name,base_price,business_id,is_available,deleted_at,available_days,available_from,available_to',
+        )
         .in('id', itemIds),
       modifierIds.length > 0
         ? service
             .from('menu_modifier_options')
-            .select('id,additional_price,is_available')
+            .select('id,additional_price,is_available,group_id')
             .in('id', modifierIds)
         : Promise.resolve({ data: [], error: null }),
     ])
     if (dishErr) throw new Error(dishErr.message)
     if (optErr) throw new Error(optErr.message)
+
+    // Los grupos de modificadores vinculados a cada plato: la creación del pedido
+    // rechaza una opción cuyo grupo no esté vinculado al plato (0230).
+    const { data: links, error: linkErr } = await service
+      .from('menu_item_modifier_groups')
+      .select('item_id,group_id')
+      .in('item_id', itemIds)
+    if (linkErr) throw new Error(linkErr.message)
+    const linked = new Set((links ?? []).map((l) => `${l.item_id}:${l.group_id}`))
+
+    // Disponibilidad por franja: la misma función que aplica la creación del
+    // pedido del cliente (`menu_item_orderable_now`).
+    const orderable = new Map<string, boolean>()
+    await Promise.all(
+      (dishes ?? []).map(async (d) => {
+        const { data, error } = await service.rpc('menu_item_orderable_now', {
+          p_days: d.available_days as number[],
+          p_from: d.available_from as string,
+          p_to: d.available_to as string,
+        })
+        if (error) throw new Error(error.message)
+        orderable.set(d.id, data === true)
+      }),
+    )
 
     const dishById = new Map((dishes ?? []).map((d) => [d.id, d]))
     const optionById = new Map((options ?? []).map((o) => [o.id, o]))
@@ -87,10 +113,13 @@ export async function POST(req: Request): Promise<Response> {
           'validation_error',
         )
       }
+      if (orderable.get(dish.id) !== true) {
+        throw new DomainError(`"${dish.name}" no se sirve en este turno.`, 'validation_error')
+      }
       let unitCents = cents(Number(dish.base_price))
       for (const optionId of line.modifiers ?? []) {
         const option = optionById.get(optionId)
-        if (!option || !option.is_available) {
+        if (!option || !option.is_available || !linked.has(`${dish.id}:${option.group_id}`)) {
           throw new DomainError(
             'Hay opciones de tu bolsa que ya no están disponibles.',
             'validation_error',

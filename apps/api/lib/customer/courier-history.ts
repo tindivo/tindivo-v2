@@ -101,12 +101,13 @@ function frequentContacts(rows: CourierRow[]) {
  * contactos frecuentes (solo en la primera página). Con la sesión del usuario:
  * la policy `co_customer_select` limita todo a lo suyo.
  */
-export async function listCustomerCourierOrders(token: string, req: Request) {
+export async function listCustomerCourierOrders(token: string, userId: string, req: Request) {
   const { limit, cursor } = parsePage(req)
   const asUser = createUserClient(token)
   let query = asUser
     .from('courier_orders')
     .select(COURIER_COLUMNS)
+    .eq('customer_user_id', userId)
     .order('created_at', { ascending: false })
     .order('id', { ascending: false })
     .limit(limit + 1)
@@ -117,6 +118,7 @@ export async function listCustomerCourierOrders(token: string, req: Request) {
     : asUser
         .from('courier_orders')
         .select(COURIER_COLUMNS)
+        .eq('customer_user_id', userId)
         .order('created_at', { ascending: false })
         .order('id', { ascending: false })
         .limit(CONTACT_WINDOW)

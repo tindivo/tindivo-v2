@@ -36,7 +36,7 @@ export async function PATCH(
 ): Promise<Response> {
   const requestId = getRequestId(req)
   try {
-    const { token } = await requireRole(req, 'customer')
+    const { token, user } = await requireRole(req, 'customer')
     const id = UuidSchema.parse((await params).id)
     const body = UpdateCustomerAddressRequestSchema.parse(await req.json())
     const asUser = createUserClient(token)
@@ -45,6 +45,7 @@ export async function PATCH(
       .from('customer_addresses')
       .select(ADDRESS_COLUMNS)
       .eq('id', id)
+      .eq('user_id', user.id)
       .maybeSingle()
     if (readErr) throw new Error(readErr.message)
     if (!previous) throw new DomainError(NOT_FOUND, 'not_found')
@@ -86,6 +87,7 @@ export async function PATCH(
       .from('customer_addresses')
       .select(ADDRESS_COLUMNS)
       .eq('id', id)
+      .eq('user_id', user.id)
       .single()
     if (afterErr) throw new Error(afterErr.message)
     return ok(toAddressDto(row as AddressRow), { headers: privateHeaders(req) })

@@ -45,8 +45,10 @@ export function OPTIONS(req: Request): Response {
 export async function GET(req: Request): Promise<Response> {
   const requestId = getRequestId(req)
   try {
-    const { token } = await requireRole(req, 'customer')
-    return ok(await listCustomerCourierOrders(token, req), { headers: privateHeaders(req) })
+    const { token, user } = await requireRole(req, 'customer')
+    return ok(await listCustomerCourierOrders(token, user.id, req), {
+      headers: privateHeaders(req),
+    })
   } catch (err) {
     return handleError(err, requestId, req)
   }

@@ -35,13 +35,14 @@ export async function GET(
 ): Promise<Response> {
   const requestId = getRequestId(req)
   try {
-    const { token } = await requireRole(req, 'customer')
+    const { token, user } = await requireRole(req, 'customer')
     const id = UuidSchema.parse((await params).id)
 
     const { data, error } = await createUserClient(token)
       .from('orders')
       .select(ORDER_DETAIL_COLUMNS)
       .eq('id', id)
+      .eq('customer_user_id', user.id)
       .maybeSingle()
     if (error) throw new Error(error.message)
     if (!data) throw new DomainError('Ese pedido no existe', 'not_found')

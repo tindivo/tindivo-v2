@@ -812,3 +812,99 @@ describe('POST /customer/terms-acceptance', () => {
     expect((await pedir(postTerms, { bearer: c.token, method: 'POST', body: {} })).status).toBe(422)
   })
 })
+
+// ─────────────────────────────────────────────────────────────────────────────
+describe('quote: lo que la creación rechazaría, la cotización también', () => {
+  it('un modificador que no es de ese plato: 422', async () => {
+    const c = await crearCliente()
+    // Extra queso está vinculado al pollo, no al medio pollo.
+    const r = await pedir(postQuote, {
+      bearer: c.token,
+      method: 'POST',
+      body: {
+        businessId: FIXTURES.BUSINESS_ID,
+        deliveryMethod: 'pickup',
+        items: [
+          {
+            menuItemId: FIXTURES.ITEM_MEDIO_ID,
+            quantity: 1,
+            modifiers: [FIXTURES.MODOPT_QUESO_ID],
+          },
+        ],
+      },
+    })
+    expect(r.status).toBe(422)
+  })
+
+  it('un plato fuera de su franja horaria: 422', async () => {
+    const c = await crearCliente()
+    await db
+      .from('menu_items')
+      .update({ available_from: '03:00', available_to: '03:01' })
+      .eq('id', FIXTURES.ITEM_MEDIO_ID)
+    try {
+      const r = await pedir(postQuote, {
+        bearer: c.token,
+        method: 'POST',
+        body: {
+          businessId: FIXTURES.BUSINESS_ID,
+          deliveryMethod: 'pickup',
+          items: [{ menuItemId: FIXTURES.ITEM_MEDIO_ID, quantity: 1 }],
+        },
+      })
+      expect(r.status).toBe(422)
+      expect(r.body.detail).toContain('turno')
+    } finally {
+      await db
+        .from('menu_items')
+        .update({ available_from: null, available_to: null })
+        .eq('id', FIXTURES.ITEM_MEDIO_ID)
+    }
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+describe('un usuario multirol no ve datos de otro cliente', () => {
+  it('cliente+admin pide pedido, direcciones y Entregas de OTRO cliente: 404 / sin sus datos', async () => {
+    const victima = await crearCliente()
+    const multi = await crearCliente() // 'Vecino MV4b': lo barre el globalSetup con sus roles
+    const { error } = await db.from('user_roles').insert({ user_id: multi.id, role: 'admin' })
+    if (error) throw new Error(`rol admin: ${error.message}`)
+
+    const idPedido = await pedidoCancelado(victima)
+    const dir = await pedir(postAddress, {
+      bearer: victima.token,
+      method: 'POST',
+      body: { label: 'Casa', line: 'Jr. Ajena 1', reference: REF },
+    })
+    const ce = await callCreateCourierOrder({
+      customerUserId: victima.id,
+      requesterPhone: telefonoNuevo(),
+    })
+    if (ce.error) throw new Error(ce.error.message)
+
+    // La RLS de admin SÍ le dejaría leer estas filas: lo impide el filtro de dueño.
+    const detalle = await pedir(getOrder, { bearer: multi.token, params: { id: idPedido } })
+    expect(detalle.status).toBe(404)
+    expect((await pedir(getOrders, { bearer: multi.token })).body.data.items).toEqual([])
+    expect((await pedir(getAddresses, { bearer: multi.token })).body.data.items).toEqual([])
+    const entregas = await pedir(getCourierHistory, { bearer: multi.token })
+    expect(entregas.body.data).toEqual({ items: [], nextCursor: null, frequentContacts: [] })
+    const id = dir.body.data.id
+    const patch = await pedir(patchAddress, {
+      bearer: multi.token,
+      method: 'PATCH',
+      params: { id },
+      body: { label: 'X' },
+    })
+    expect(patch.status).toBe(404)
+    const del = await pedir(deleteAddress, {
+      bearer: multi.token,
+      method: 'DELETE',
+      params: { id },
+    })
+    expect(del.status).toBe(404)
+    const { data } = await db.from('customer_addresses').select('label').eq('id', id).single()
+    expect(data?.label).toBe('Casa')
+  })
+})

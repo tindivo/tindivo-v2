@@ -27,11 +27,12 @@ export function parsePage(req: Request) {
  * limita todo a lo suyo, y la función no recibe ningún id de usuario. Se pide
  * una fila de más para saber si hay página siguiente sin un `count`.
  */
-export async function listCustomerOrders(token: string, req: Request) {
+export async function listCustomerOrders(token: string, userId: string, req: Request) {
   const { limit, cursor } = parsePage(req)
   let query = createUserClient(token)
     .from('orders')
     .select(ORDER_SUMMARY_COLUMNS)
+    .eq('customer_user_id', userId)
     .order('created_at', { ascending: false })
     .order('id', { ascending: false })
     .limit(limit + 1)

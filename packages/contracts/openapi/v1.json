@@ -3934,7 +3934,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "description": "`nextCursor` de la página anterior. Opaco: no lo armes ni lo interpretes",
+              "description": "`nextCursor` de la página anterior. Opaco: no lo armes ni lo interpretes. Uno mal formado responde 422; el cursor no está firmado, pero solo ordena MIS filas (la lista siempre se filtra por la sesión)",
               "type": "string"
             }
           },
@@ -5994,7 +5994,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "description": "`nextCursor` de la página anterior. Opaco: no lo armes ni lo interpretes",
+              "description": "`nextCursor` de la página anterior. Opaco: no lo armes ni lo interpretes. Uno mal formado responde 422; el cursor no está firmado, pero solo ordena MIS filas (la lista siempre se filtra por la sesión)",
               "type": "string"
             }
           },
