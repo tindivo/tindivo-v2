@@ -3,7 +3,7 @@ import { DomainError } from '@tindivo/core'
 import { requireRole } from '@/lib/http/auth'
 import { corsHeaders, handleOptions } from '@/lib/http/cors'
 import { sha256Hex } from '@/lib/http/hash'
-import { findCompletedReplay, withIdempotency } from '@/lib/http/idempotency'
+import { createIdempotently, findStoredCreation, isIdempotencyKey } from '@/lib/http/idempotency'
 import { handleError, problem } from '@/lib/http/problem'
 import { getRequestId } from '@/lib/http/request-id'
 import { sendOrderCreated, sendOrderValidation } from '@/lib/inngest/client'
@@ -37,10 +37,43 @@ export async function POST(req: Request): Promise<Response> {
       })
     }
 
+    if (!isIdempotencyKey(idempotencyKey)) {
+      return problem('validation_error', {
+        detail: 'Idempotency-Key debe ser un UUID',
+        requestId,
+        headers: corsHeaders(req),
+      })
+    }
+
     const { user } = await requireRole(req, 'customer')
     const body = CreateOrderRequestSchema.parse(await req.json())
     const requestHash = await sha256Hex(JSON.stringify(body))
     const service = createServiceClient()
+
+    // Replay temprano, ANTES de TODOS los guards que dependen del estado actual
+    // (teléfono, contraentrega, tope, pausa, capacidades, horario, apertura): el
+    // estado pudo cambiar entre el intento original y el reintento (el negocio
+    // cerró a las 23:00, el cliente ya tiene historial…) y un reintento de un
+    // pedido YA creado debe ver su 201 original (H-4). Aislado por usuario: la
+    // clave de A no devuelve nada a B.
+    const stored = await findStoredCreation(service, {
+      userId: user.id,
+      scope: 'create_order',
+      key: idempotencyKey,
+      requestHash,
+    })
+    if (stored && 'conflict' in stored) {
+      throw new DomainError(
+        'Idempotency-Key reutilizada con un payload distinto',
+        'idempotency_conflict',
+      )
+    }
+    if (stored) {
+      return Response.json(stored.body, {
+        status: 201,
+        headers: { ...corsHeaders(req), 'idempotency-replayed': 'true' },
+      })
+    }
 
     // Defensa en profundidad: verificar teléfono verificado
     const { data: profile } = await service
@@ -176,22 +209,6 @@ export async function POST(req: Request): Promise<Response> {
       }
     }
 
-    // Replay temprano: si esta Idempotency-Key ya completó, devuelve la respuesta
-    // original ANTES de los guards de pausa/capacidades/horario — el estado del
-    // negocio pudo cambiar entre el intento original y el retry (p. ej. cerró a
-    // las 23:00) y un retry de un pedido YA creado debe ver su 201 original.
-    const cached = await findCompletedReplay(service, {
-      key: idempotencyKey,
-      scope: 'create_order',
-      requestHash,
-    })
-    if (cached) {
-      return Response.json(cached.body, {
-        status: cached.status,
-        headers: { ...corsHeaders(req), 'idempotency-replayed': 'true' },
-      })
-    }
-
     // Negocio inactivo, bloqueado o inexistente: no recibe pedidos.
     const { data: biz } = await service
       .from('businesses')
@@ -267,11 +284,16 @@ export async function POST(req: Request): Promise<Response> {
       })
     }
 
-    const result = await withIdempotency(
-      service,
-      { key: idempotencyKey, scope: 'create_order', userId: user.id, requestHash },
-      async () => {
-        const { data, error } = await service.rpc('create_customer_order', {
+    // El pedido y su clave de idempotencia se guardan en UNA transacción (0251):
+    // si el proceso cae después del commit, el reintento recupera el pedido en
+    // vez de duplicarlo o quedarse en un 409 «en proceso».
+    const result = await (async () => {
+      const { data, error } = await createIdempotently(service, {
+        userId: user.id,
+        scope: 'create_order',
+        key: idempotencyKey,
+        requestHash,
+        args: {
           p_customer_user_id: user.id,
           p_business_id: body.businessId,
           p_delivery_method: body.deliveryMethod,
@@ -322,41 +344,51 @@ export async function POST(req: Request): Promise<Response> {
           // tal cual: la RPC lo vuelve a normalizar por su cuenta, y su default
           // es el lado caro ('later'), no el permisivo.
           p_pickup_timing: body.pickupTiming,
-        })
-        if (error) {
-          // El guard de pedido activo no puede dejar su propio rastro: el RAISE
-          // revierte la transacción. Viaja en `details` y se registra aquí, contra
-          // el pedido que bloqueó. Sirve para decidir con datos si hace falta un
-          // "agregar a mi pedido": si salta tres veces al mes se deja así; si
-          // salta veinte, se construye.
-          const blocked = /^active_order_block:([^:]+):([^:]+):(.+)$/.exec(error.details ?? '')
-          if (blocked?.[1] && blocked[2] && blocked[3]) {
-            const [, blockingOrderId, blockingShortId, blockingStatus] = blocked
-            await service
-              .from('order_event_log')
-              .insert({
-                order_id: blockingOrderId,
-                event_type: 'order.active_order_block',
-                actor_role: 'cliente',
-                actor_user_id: user.id,
-                data: {
-                  blockingShortId,
-                  blockingStatus,
-                  businessId: body.businessId,
-                  attemptedPaymentIntent: body.paymentIntent,
-                },
-              })
-              .then(undefined, () => {
-                /* el registro es best-effort: nunca debe tapar el error real */
-              })
-          }
-          if (error.code === 'P0002') throw new DomainError(error.message, 'not_found')
-          if (error.code === 'P0001') throw new DomainError(error.message, 'validation_error')
-          throw new Error(error.message)
+        },
+      })
+      if (error) {
+        if (error.code === 'IK409') {
+          throw new DomainError(
+            'Idempotency-Key reutilizada con un payload distinto',
+            'idempotency_conflict',
+          )
         }
-        return { status: 201, body: { data } }
-      },
-    )
+        // El guard de pedido activo no puede dejar su propio rastro: el RAISE
+        // revierte la transacción. Viaja en `details` y se registra aquí, contra
+        // el pedido que bloqueó. Sirve para decidir con datos si hace falta un
+        // "agregar a mi pedido": si salta tres veces al mes se deja así; si
+        // salta veinte, se construye.
+        const blocked = /^active_order_block:([^:]+):([^:]+):(.+)$/.exec(error.details ?? '')
+        if (blocked?.[1] && blocked[2] && blocked[3]) {
+          const [, blockingOrderId, blockingShortId, blockingStatus] = blocked
+          await service
+            .from('order_event_log')
+            .insert({
+              order_id: blockingOrderId,
+              event_type: 'order.active_order_block',
+              actor_role: 'cliente',
+              actor_user_id: user.id,
+              data: {
+                blockingShortId,
+                blockingStatus,
+                businessId: body.businessId,
+                attemptedPaymentIntent: body.paymentIntent,
+              },
+            })
+            .then(undefined, () => {
+              /* el registro es best-effort: nunca debe tapar el error real */
+            })
+        }
+        if (error.code === 'P0002') throw new DomainError(error.message, 'not_found')
+        if (error.code === 'P0001') throw new DomainError(error.message, 'validation_error')
+        throw new Error(error.message)
+      }
+      return {
+        status: 201,
+        body: { data: data?.data },
+        replayed: data?.replayed === true,
+      }
+    })()
 
     // Agenda el timeout de aceptación SOLO en creación real (no en replay).
     // Best-effort: un fallo de Inngest nunca debe romper la creación del pedido.

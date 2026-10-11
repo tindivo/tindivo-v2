@@ -7,33 +7,80 @@ export interface IdempotentResult {
   replayed: boolean
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/** Las claves de creación son UUID (la columna lo es): se rechaza antes de tocar la base. */
+export function isIdempotencyKey(value: string): boolean {
+  return UUID_RE.test(value)
+}
+
+export type CreationScope = 'create_order' | 'create_courier_order'
+
 /**
- * Replay temprano: devuelve la respuesta cacheada si esta clave ya COMPLETÓ con
- * el mismo payload; null en cualquier otro caso. Úsalo ANTES de guards que
- * dependen del estado actual (pausa/capacidades/horario): un retry de una
- * request ya ejecutada debe devolver la respuesta original aunque el estado
- * del negocio haya cambiado entre medio (contrato estilo Stripe). Los casos
- * hash-distinto / en-vuelo se dejan a withIdempotency, que ya los rechaza.
+ * Replay temprano de una CREACIÓN (restaurantes / Entregas), aislado por usuario:
+ * la clave de A nunca devuelve nada a B (H-4). Úsalo ANTES de los guards que
+ * dependen del estado actual (teléfono, tope de contraentrega, pausa, horario):
+ * un reintento de un pedido ya creado debe ver su respuesta original aunque el
+ * estado haya cambiado entre medio.
+ *
+ *  · `null`      → no hay clave guardada para este usuario: sigue el flujo normal.
+ *  · `{ conflict: true }` → la clave existe con OTRO payload.
+ *  · `{ body }`  → la respuesta original (`{ data }`), tal como se devolvió al crear.
  */
-export async function findCompletedReplay(
+export async function findStoredCreation(
   supabase: TypedSupabaseClient,
-  args: { key: string; scope: string; requestHash: string },
-): Promise<{ status: number; body: unknown } | null> {
+  args: { userId: string; scope: CreationScope; key: string; requestHash: string },
+): Promise<{ body: { data: unknown } } | { conflict: true } | null> {
   const { data } = await supabase
-    .from('idempotency_keys')
-    .select('status,request_hash,response_status,response_body')
-    .eq('key', args.key)
+    .from('creation_idempotency')
+    .select('request_hash,response')
+    .eq('user_id', args.userId)
     .eq('scope', args.scope)
+    .eq('key', args.key)
     .maybeSingle()
-  if (data?.status !== 'completed' || data.request_hash !== args.requestHash) return null
-  return { status: data.response_status ?? 200, body: data.response_body }
+  if (!data) return null
+  if (data.request_hash !== args.requestHash) return { conflict: true }
+  return { body: { data: data.response } }
 }
 
 /**
- * Idempotencia estilo Stripe. Reclama la clave con un INSERT atómico
- * (ON CONFLICT DO NOTHING vía upsert ignoreDuplicates). Si la reclama, ejecuta
- * la operación y guarda la respuesta. Si ya existía: reproduce la respuesta
- * almacenada, o rechaza si el payload difiere / sigue en vuelo.
+ * Crea el pedido y registra su clave EN LA MISMA TRANSACCIÓN
+ * (`create_order_idempotently`, 0251). No hay estado «reservado» que pueda
+ * quedar colgado si el proceso cae: o están el pedido y su clave, o ninguno.
+ * Devuelve el error de PostgREST tal cual para que la ruta conserve su propia
+ * traducción de errores (`IK409` = misma clave con otro payload).
+ */
+export async function createIdempotently(
+  supabase: TypedSupabaseClient,
+  args: {
+    userId: string
+    scope: CreationScope
+    key: string
+    requestHash: string
+    args: Record<string, unknown>
+  },
+): Promise<{
+  data: { replayed: boolean; data: unknown } | null
+  error: { code: string; message: string; details?: string } | null
+}> {
+  const { data, error } = await supabase.rpc('create_order_idempotently', {
+    p_user_id: args.userId,
+    p_scope: args.scope,
+    p_key: args.key,
+    p_request_hash: args.requestHash,
+    p_args: args.args as never,
+  })
+  if (error) return { data: null, error }
+  return { data: data as { replayed: boolean; data: unknown }, error: null }
+}
+
+/**
+ * Idempotencia estilo Stripe del wrapper LEGADO (fraude, incidentes, traspasos;
+ * la creación de pedidos usa `createIdempotently`). Reclama la clave con un
+ * INSERT atómico (ON CONFLICT DO NOTHING vía upsert ignoreDuplicates). Si la
+ * reclama, ejecuta la operación y guarda la respuesta. Si ya existía: reproduce
+ * la respuesta almacenada, o rechaza si el payload difiere / sigue en vuelo.
+ * La respuesta almacenada solo se reproduce al MISMO usuario (H-4).
  */
 export async function withIdempotency(
   supabase: TypedSupabaseClient,
@@ -70,6 +117,7 @@ export async function withIdempotency(
     .select('status,request_hash,response_status,response_body')
     .eq('key', key)
     .eq('scope', scope)
+    .eq('user_id', userId)
     .maybeSingle()
   if (!existing) {
     throw new DomainError('Conflicto de idempotencia', 'idempotency_conflict')
