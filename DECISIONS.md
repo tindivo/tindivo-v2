@@ -5,7 +5,53 @@
 > este documento difieran, **gana este documento**. Se mantiene vivo: cada
 > decisión nueva o cambio se registra aquí, no en specs paralelos.
 >
-> Última actualización: 2026-09-22 (Tindivo Entregas: backend + lado cliente construidos, nombres `courier_orders`/`directory_businesses` — §31).
+> Última actualización: 2026-10-10 (índice de compatibilidad; §34 en adelante, en `Docs/decisiones/`).
+
+---
+
+## Índice de compatibilidad (2026-10-10)
+
+El código cita este archivo como `DECISIONS §N`. Desde el estándar de documentación, las decisiones nuevas van en
+`Docs/decisiones/` y el canon vive en `Docs/negocio/`, `Docs/arquitectura/` y `Docs/glosario.md`. Esta tabla dice
+dónde está hoy cada sección. **«Vigente aquí»** significa que su texto sigue mandando desde este archivo.
+
+| § | Tema | Dónde está hoy |
+|---|---|---|
+| §0 | Regla de precedencia de documentos | Sustituida por el estándar (`Docs/planes/estandar-docs/estandar.md` §4) |
+| §1 | Stack y versiones (fijadas, verificadas en vivo el 2026-05-29) | Versiones vivas en `pnpm-workspace.yaml`; resumen en `AGENTS.md` y `Docs/arquitectura/README.md` |
+| §2 | Proyecto Supabase | Corregida: `supabase/AGENTS.md` (producción es `tindivo-prod`; migraciones solo por CLI) |
+| §3 | Estructura del monorepo | `Docs/arquitectura/README.md` |
+| §4 | Modelo de dinero (Documento Maestro — corrige specs 09/11/12) | `Docs/negocio/dinero.md` (comisión corregida a S/ 1.50) |
+| §5 | Máquina de estados del pedido | Estados en `packages/contracts` (`ORDER_TRANSITIONS`); reglas en `Docs/negocio/servicios/pedidos-restaurante.md` |
+| §6 | `short_id` y número de pedido | `AGENTS.md`, invariantes 1 y 2 |
+| §7 | Pagos del cliente | `Docs/negocio/dinero.md` y `Docs/negocio/antifraude.md` |
+| §8 | Antifraude: strikes y validación humana | `Docs/negocio/antifraude.md` (confirmada por Jesús el 2026-10-10) |
+| §9 | Fondo de contingencia | Obsoleta desde la `0123`; sustituida por el ADR 0036 |
+| §10 | Reglas de tiempo | Plazos en `app_settings.timers`: `Docs/negocio/servicios/pedidos-restaurante.md` |
+| §11 | Outbox, push y scheduling | `Docs/arquitectura/README.md` (cómo viajan los avisos) |
+| §12 | Seguridad / RLS | `AGENTS.md`, invariante 3, y `Docs/arquitectura/README.md` |
+| §13 | Resolución de las 24 contradicciones detectadas | Historia (resolvió contradicciones de los specs de mayo, ya borrados) |
+| §14 | Alcance Fase 1 — qué se activa vs qué se modela pero no | Historia (alcance de la Fase 1) |
+| §15 | Comportamiento del cliente (verdad visual = demo + spec v2) | `Docs/negocio/apps.md` (las fuentes que citaba se borraron) |
+| §16 | Diseño (fuente: `packages/ui/src/theme.css` + `apps/motorizados`) | Vigente aquí (no re-verificada en el squash) |
+| §17 | Pendientes que aún requieren confirmación del usuario | Por revisar: pendientes de mayo, probablemente resueltos |
+| §18 | Modo "solo catálogo (WhatsApp)" — `catalog_only` | Vigente aquí (no re-verificada en el squash) |
+| §19 | Horario de atención visible al cliente + estado abierto/cerrado | Vigente aquí (no re-verificada en el squash) |
+| §20 | Buscador del catálogo en el cliente | Vigente aquí (no re-verificada en el squash) |
+| §21 | Color de papelito: paleta establecida, fin de la unicidad | Vigente aquí (no re-verificada en el squash) |
+| §22 | Pedido manual: la cajera teclea el TOTAL, la comida se deduce | Vigente aquí (no re-verificada en el squash) |
+| §23 | Regla de los 10 minutos post-Pedido Listo, co-existencia del temporizador y diferenciación de copy | Vigente aquí (no re-verificada en el squash) |
+| §24 | Rediseño Estructural de Cards: 3 Bandas en Motorizados y Ordenación por Urgencia en Negocios | Vigente aquí (no re-verificada en el squash) |
+| §25 | El motorizado se entera: qué momentos disparan push | Vigente aquí (no re-verificada en el squash) |
+| §26 | La tarjeta del motorizado: qué dice cada sitio y por qué | Vigente aquí (no re-verificada en el squash) |
+| §27 | `cn()` borraba en silencio las tallas de texto del tema | Vigente aquí (no re-verificada en el squash) |
+| §28 | Reseñas: se capturan desde el día 1, no se publican hasta que los números lo permitan | Vigente aquí (no re-verificada en el squash) |
+| §29 | El motorizado avanza el pedido arrastrando, y la cola se entera al instante | Vigente aquí (no re-verificada en el squash) |
+| §30 | Motor de mapa compartido: qué se reusa del selector de ubicación para el Catálogo de negocios | Vigente aquí (no re-verificada en el squash) |
+| §31 | Tindivo Entregas — lado cliente: nombres, tablas y alcance de la primera noche de build | `Docs/negocio/servicios/entregas.md`; nombres en `Docs/glosario.md` |
+| §32 | Tindivo Store: el catálogo de segunda mano de San Jacinto | `Docs/negocio/servicios/store.md` |
+| §33 | — | Vetado: lo citaba un borrador de Encargos que nunca se aprobó |
+| §34 en adelante | — | Una decisión por archivo en `Docs/decisiones/` (ADR 0034, 0035, 0036…) |
 
 ---
 

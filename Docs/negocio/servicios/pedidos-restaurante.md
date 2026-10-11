@@ -68,6 +68,29 @@ de la `0174`, el mismo plazo estaba escrito en tres sitios y cambiar uno no camb
 aplica el cron `auto-cancel-prepay-timeout` (`cancel_expired_prepay_orders`, que cubre aceptación, validación y pago)
 y `expire_order`.
 
+## Horario, apertura y carta
+
+- **Cada noche el negocio confirma que atiende** (`business_service_days`): **una fila por día**, no por turno. El turno
+  no existe en la base; se deriva del horario (`currentShift`, `declarationIsStale` y `hasLaterShiftToday` en
+  `packages/contracts/src/schedule.ts`). Una confirmación vale si se hizo después de que terminara el turno anterior:
+  así un negocio con dos turnos el mismo día (La Florencia, los sábados) no queda invisible horas por arrastrar la
+  confirmación del mediodía.
+- **Esa fila guarda lo declarado, no lo trabajado.** En producción se contradice con los pedidos. Para saber si un
+  negocio trabajó una noche se cuentan jornadas con al menos un pedido `delivered`, como hace
+  `business_performance_metrics` desde la `0222`.
+- **Un plato puede tener franja horaria** (`menu_items.available_days`, `available_from`, `available_to`, desde la
+  `0226`; los días van de 0 = lunes a 6 = domingo). Disponible = «no se acabó» (`is_available`, lo decide la cajera)
+  **y** «es su turno» (la franja). **Se calcula en cada lectura, sin cron**, porque un cron que reescribiera
+  `is_available` le borraría a la cajera el «se acabó» de la noche. La API manda la regla y no el resultado, por la
+  caché de 15 segundos del catálogo; por eso la regla existe en TypeScript y en SQL a la vez, a sabiendas.
+
+## El directorio de direcciones
+
+`address_directory` mezcla dos épocas: las filas con `legacy_address_id` son entregas consumadas del v1 (el corte a v2
+fue hacia el 2026-08-11); las que no lo tienen las crea la cajera **al tomar** un pedido. Estar en el directorio no
+prueba que alguien haya recibido una entrega; para eso, `orders` con `status = 'delivered'`. (El antifraude sí cuenta
+cualquier fila del directorio como señal de conocido, a propósito: `Docs/negocio/antifraude.md`.)
+
 ## Lo que pasa de verdad (30 días al 2026-10-10)
 
 - **497 entregados y 22 cancelados (4 %).** Motivos: el negocio, 13; el cliente, 6; venció la aceptación, 2; venció la
