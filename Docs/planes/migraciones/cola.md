@@ -29,9 +29,9 @@ Estados: `[ ]` pendiente · `[~]` en curso · `[x]` hecho · `[!]` bloqueado (co
 ## Fase 1 · Paso 0
 
 - [!] **C1** · Revocar `expire_courier_orders()` a clientes — escribir y probar en local es A; desplegar espera a P0.5 y a Jesús
-- [ ] **C2** · Comprobante (a): `UPDATE` condicionado y 409
-- [ ] **C3a-d** · Comprobante (b), transaccional
-- [ ] **C4a-d** · Idempotencia (c)
+- [~] **C2** · Comprobante (a): `UPDATE` condicionado y 409 — rama `fix/c2-c3-comprobante` (2026-10-10, noche)
+- [~] **C3a-d** · Comprobante (b), transaccional — rama `fix/c2-c3-comprobante`
+- [~] **C4a-d** · Idempotencia (c) — rama `fix/c4-idempotencia`
 - [ ] **C5** · Límites del bucket `payment-proofs`: JPEG, PNG, WebP y HEIC/HEIF, 15 MB (`D-40`, delegada por Jesús el 2026-10-09). Los 15 MB son el `MAX_INPUT_BYTES` que la app ya aplica, así que nadie que hoy pueda pagar deja de poder hacerlo; en prod, el comprobante más pesado de 56 mide 1,4 MB
 - [!] **C6** · Despliegue de C2-C5 — nivel B
 - [!] **C7** · Una semana de observación
@@ -44,8 +44,8 @@ mientras se construye el resto.
 
 - [x] **MV2a** · OpenAPI: registro de las 27 operaciones del cliente en `packages/contracts/src/openapi`, documento 3.0.3 generado desde Zod (`packages/contracts/openapi/v1.json`, servido en `GET /api/v1/openapi.json`), test de cobertura contra las rutas del disco y respuestas descritas de `health`, `schedule`, `search`, `courier/status` y `pilot-access` — rama `feat/mv2a-openapi`
 - [x] **MV2b** · Las 21 respuestas descritas: ya no queda ninguna `x-tindivo-pending`. Cuerpos de petición en `@tindivo/contracts` y prueba de conformidad de las 27 operaciones en `api-integration` (41 ficheros y 440 tests en verde). En su primera corrida destapó dos errores del contrato: `Idempotency-Key` es un UUID obligatorio y `courier.hours.days` es opcional — PR #13, apilado sobre #12
-- [ ] **MV2c** · Modelos generados desde el OpenAPI que compilan en Kotlin (runner Linux, en cada PR) y en Swift (runner macOS, **a diario**: `D-48`)
-- [ ] **MV3** · Compatibilidad: cabeceras de plataforma y build, `GET /config`, versión mínima por app y plataforma (paso 2)
+- [~] **MV2c** · Modelos generados desde el OpenAPI que compilan en Kotlin (runner Linux, en cada PR) y en Swift (runner macOS, **a diario**: `D-48`)
+- [~] **MV3** · Compatibilidad: cabeceras de plataforma y build, `GET /config`, versión mínima por app y plataforma (paso 2)
 - [ ] **MV4** · Rutas del primer build: catálogo y horarios por REST, perfil, direcciones atómicas, `quote` (paso 3; `D-39` decidida: dinero como texto)
 - [ ] **MV5** · Lo que exige la revisión: borrado de cuenta (en la app y en una página web), Sign in with Apple en Auth, cuenta y negocio de demostración para el revisor
 - [!] **MV6** · Staging en el proyecto de Supabase vacío de Jesús (H7) — crearlo y aplicarle migraciones es nivel B

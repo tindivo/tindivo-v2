@@ -37,6 +37,8 @@ codex exec -p revisor -C "<repo>" --json -o salida2.md resume <thread_id> - < en
 - **Modelo: solo `gemini-3.8-flash-high`** (decisión de Jesús, 2026-10-10; los demás Gemini están «Leaving Soon»).
   `agy models` lista los disponibles; también ofrece Claude Opus/Sonnet 5.5 sobre la cuota de Google.
 - `--mode plan` para que no edite. **Nunca `--dangerously-skip-permissions`.**
+- **En modo `-p` no puede pedir permiso para comandos de terminal:** si intenta uno, lo deniega y termina **sin salida**
+  (`jetski: no output produced`). Pídele en el encargo que lea solo con su herramienta de lectura de archivos.
 - Otras opciones útiles: `--output-format json`, `--json-schema <archivo>`, `--effort`, `--print-timeout`.
 - El prompt va como argumento (unos 6 KB de encargo + lista de rutas funcionaron). Varios lotes en paralelo, sí:
   4 a la vez, ~16 s por archivo leído.
