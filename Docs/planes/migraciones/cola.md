@@ -46,7 +46,7 @@ mientras se construye el resto.
 - [x] **MV2b** · Las 21 respuestas descritas: ya no queda ninguna `x-tindivo-pending`. Cuerpos de petición en `@tindivo/contracts` y prueba de conformidad de las 27 operaciones en `api-integration` (41 ficheros y 440 tests en verde). En su primera corrida destapó dos errores del contrato: `Idempotency-Key` es un UUID obligatorio y `courier.hours.days` es opcional — PR #13, apilado sobre #12
 - [x] **MV2c** · Modelos generados desde el OpenAPI (`pnpm mobile:models kotlin|swift --compile`, `openapi-generator` 7.14.0 fijado con sha256): Kotlin compila en cada PR y push a `develop` (job `mobile-models-kotlin`, verde en el PR #30); Swift, a diario en macOS (`mobile-models-swift.yml`, `D-48`). **El cron solo corre desde `main`:** la primera compilación de Swift llega cuando `develop` pase a `main` (o a mano con `workflow_dispatch`). Hallazgos: los montos heredados salen como número (`Double` en Swift) y los nuevos irán como texto (`D-39`); el `Package.swift` generado declara iOS 12 y `D-47` pide 17
 - [x] **MV3** · Compatibilidad: cabeceras `X-Tindivo-*`, `GET /api/v1/config` y 426 `client_upgrade_required` por versión mínima (`app_settings.client_compat`, migración `0253`, mínimos de app en `0.0.0` hasta que Jesús los suba); firmado por Codex; CI completa en verde (PR #32). **Sin desplegar a producción.**
-- [ ] **MV4** · Rutas del primer build: catálogo y horarios por REST, perfil, direcciones atómicas, `quote` (paso 3; `D-39` decidida: dinero como texto)
+- [~] **MV4** · Rutas del primer build (`Docs/trabajo/movil/mv4-inventario-rutas.md`). **MV4a hecho** (PR #34): `GET /customer/profile`, `/customer/payment-options`, `/public/config`, `/public/landmarks`, `/public/courier/directory`. **MV4b pendiente:** cotización (`quote`), libreta de direcciones (CRUD), historial de pedidos y de Entregas, reseñas, aceptación de términos, subida del comprobante, lectura de un pedido propio. Falta además **un límite de tasa** en las rutas públicas (no existe infraestructura: `@upstash/ratelimit` está instalado y sin usar)
 - [ ] **MV5** · Lo que exige la revisión: borrado de cuenta (en la app y en una página web), Sign in with Apple en Auth, cuenta y negocio de demostración para el revisor
 - [!] **MV6** · Staging en el proyecto de Supabase vacío de Jesús (H7) — crearlo y aplicarle migraciones es nivel B
 
@@ -65,3 +65,14 @@ mientras se construye el resto.
 - Las migraciones `0248` a `0254` se aplican **juntas** con un solo `supabase db push` (ninguna está en producción todavía), así que no hay desorden de versiones aunque `0253` y `0254` entraran a `develop` antes que `0248`-`0252`.
 - **Base primero, apps después**; fuera del horario de pedidos (18:00-23:00).
 - Después, `pnpm db:types` y revisar los advisors.
+
+## Para retomar (sesión nueva) — 2026-10-11
+
+Nada depende de una conversación: todo está en el repo.
+
+1. **Leer:** `AGENTS.md`, este archivo y `Docs/trabajo/migraciones/bitacora/2026-10-10.md`.
+2. **En vuelo al cerrar la noche:** C2+C3 (comprobante, rama `fix/c2-c3-comprobante`, migraciones 0248-0249, **aún sin subir**: su worktree está en `.claude/worktrees/agent-a9183f14d08b3f562`) y el PR #35 (C1 + SEC-1, migración 0255, esperando CI).
+3. **Orden de lo que sigue:** terminar C2-C3 (Codex revisa: toca el flujo de pago) → P0.7 (e2e real del comprobante, sin `UPDATE` simulado) → MV4b → MV5 (borrado de cuenta, Sign in with Apple, cuenta demo para el revisor) → límite de tasa de las rutas públicas.
+4. **No se despliega a producción** sin Jesús: `supabase db push` (migraciones 0248-0255 juntas, base primero, fuera de 18:00-23:00), Vercel y `main` están bloqueados para los agentes a propósito.
+5. **Revisión:** todo lo que toca dinero, seguridad o producción pasa por Codex (`Docs/operacion/agentes-en-esta-maquina.md`); Antigravity solo para volumen, siempre auditado.
+6. **La base local** de esta máquina necesita, una vez, `net stop winnat` y `net start winnat` en una terminal de administrador (puertos 54321 y siguientes). Sin eso, las pruebas de integración solo corren en la CI.
