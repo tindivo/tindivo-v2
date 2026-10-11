@@ -16,6 +16,7 @@ export const API_ERROR_CODES = [
   'business_blocked',
   'order_not_cancellable',
   'payment_required',
+  'client_upgrade_required',
   'internal_error',
 ] as const
 export type ApiErrorCode = (typeof API_ERROR_CODES)[number]
@@ -33,6 +34,7 @@ export const ERROR_CODE_STATUS: Record<ApiErrorCode, number> = {
   business_blocked: 403,
   order_not_cancellable: 409,
   payment_required: 402,
+  client_upgrade_required: 426,
   internal_error: 500,
 }
 

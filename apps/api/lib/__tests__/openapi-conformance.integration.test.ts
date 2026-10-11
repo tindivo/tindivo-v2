@@ -53,6 +53,7 @@ import { POST as confirmPrepayProof } from '../../app/api/v1/customer/orders/[id
 import { POST as createOrder } from '../../app/api/v1/customer/orders/route'
 import { POST as sendPhoneCode } from '../../app/api/v1/customer/phone/send-code/route'
 import { POST as verifyPhoneCode } from '../../app/api/v1/customer/phone/verify/route'
+import { GET as getClientConfig } from '../../app/api/v1/config/route'
 import { GET as getHealth } from '../../app/api/v1/health/route'
 import { GET as getBusiness } from '../../app/api/v1/public/businesses/[id]/route'
 import { GET as listBusinesses } from '../../app/api/v1/public/businesses/route'
@@ -222,6 +223,7 @@ afterAll(async () => {
 describe('rutas públicas', () => {
   it('sistema, horario, búsqueda y piloto', async () => {
     await conforms('getHealth', 200, getHealth)
+    await conforms('getClientConfig', 200, getClientConfig)
     await conforms('getOrderIntakeStatus', 200, getOrderIntakeStatus)
     await conforms('searchCatalog', 200, searchCatalog, { qs: '?q=pollo' })
     await conforms('checkPilotAccess', 200, checkPilotAccess, { method: 'POST', body: {} })

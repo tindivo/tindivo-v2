@@ -47,9 +47,10 @@
               "business_blocked",
               "order_not_cancellable",
               "payment_required",
+              "client_upgrade_required",
               "internal_error"
             ],
-            "description": "Valores conocidos: validation_error, unauthorized, forbidden, not_found, conflict, idempotency_conflict, rate_limited, invalid_state_transition, business_blocked, order_not_cancellable, payment_required, internal_error. Puede llegar uno nuevo; trátalo como desconocido."
+            "description": "Valores conocidos: validation_error, unauthorized, forbidden, not_found, conflict, idempotency_conflict, rate_limited, invalid_state_transition, business_blocked, order_not_cancellable, payment_required, client_upgrade_required, internal_error. Puede llegar uno nuevo; trátalo como desconocido."
           },
           "detail": {
             "type": "string"
@@ -160,6 +161,146 @@
             }
           }
         },
+        "security": []
+      }
+    },
+    "/config": {
+      "get": {
+        "operationId": "getClientConfig",
+        "summary": "Configuración pública para las apps: versión mínima por app y plataforma, y sistema mínimo",
+        "tags": [
+          "system"
+        ],
+        "responses": {
+          "200": {
+            "description": "Configuración vigente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "minAppVersion": {
+                          "type": "object",
+                          "properties": {
+                            "customer": {
+                              "type": "object",
+                              "properties": {
+                                "ios": {
+                                  "type": "string"
+                                },
+                                "android": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "ios",
+                                "android"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "negocios": {
+                              "type": "object",
+                              "properties": {
+                                "ios": {
+                                  "type": "string"
+                                },
+                                "android": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "ios",
+                                "android"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "motorizados": {
+                              "type": "object",
+                              "properties": {
+                                "ios": {
+                                  "type": "string"
+                                },
+                                "android": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "ios",
+                                "android"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "customer",
+                            "negocios",
+                            "motorizados"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "minOs": {
+                          "type": "object",
+                          "properties": {
+                            "android": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "exclusiveMinimum": true
+                            },
+                            "ios": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "exclusiveMinimum": true
+                            }
+                          },
+                          "required": [
+                            "android",
+                            "ios"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "apiVersion": {
+                          "type": "string",
+                          "enum": [
+                            "v1"
+                          ]
+                        },
+                        "serverTime": {
+                          "type": "string",
+                          "description": "ISO 8601, UTC"
+                        }
+                      },
+                      "required": [
+                        "minAppVersion",
+                        "minOs",
+                        "apiVersion",
+                        "serverTime"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "description": "Siempre accesible, sin sesión y sin evaluar la versión de la app. Las apps mandan `X-Tindivo-Platform` (ios|android|web), `X-Tindivo-App` (customer|negocios|motorizados), `X-Tindivo-App-Version` y `X-Tindivo-Build` en cada petición; si la versión está por debajo del mínimo de su app y plataforma, cualquier otra ruta responde 426 con `code: client_upgrade_required` (mostrar «actualiza la app»). Sin esas cabeceras no se bloquea nada.",
         "security": []
       }
     },

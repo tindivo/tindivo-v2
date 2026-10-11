@@ -8,7 +8,7 @@ const here = dirname(fileURLToPath(import.meta.url))
 const API_V1 = join(here, '../../../../apps/api/app/api/v1')
 
 /** Áreas de la API que consumen las apps del cliente. Admin, negocio y motorizado van aparte. */
-const CLIENT_AREAS = ['customer', 'public', 'push', 'health']
+const CLIENT_AREAS = ['customer', 'public', 'push', 'health', 'config']
 
 function routeFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((name: string) => {
