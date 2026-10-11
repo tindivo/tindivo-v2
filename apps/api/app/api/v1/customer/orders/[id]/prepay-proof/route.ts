@@ -31,7 +31,7 @@ export async function POST(
     // y evento del outbox. El FOR UPDATE de la RPC serializa contra el cron de
     // vencimiento y contra otro comprobante, así que no hay lectura previa que
     // pueda quedar vieja (H-1) y el evento no se pierde (H-2).
-    const { error } = await service.rpc('register_prepay_proof', {
+    const { data, error } = await service.rpc('register_prepay_proof', {
       p_order_id: id,
       p_customer_user_id: user.id,
       p_path: body.path,
@@ -41,10 +41,18 @@ export async function POST(
       if (error.code === 'P0001') {
         if (error.hint === 'order_not_awaiting_proof')
           throw new DomainError(error.message, 'invalid_state_transition')
+        if (error.hint === 'proof_file_missing')
+          throw new DomainError(error.message, 'validation_error')
         // Ruta ajena o intentos agotados: lo mismo que respondía antes.
         throw new DomainError(error.message, 'forbidden')
       }
       throw new Error(error.message)
+    }
+
+    // Reconfirmación del mismo archivo (respuesta perdida): éxito idempotente,
+    // sin gastar intento y sin repetir los avisos.
+    if ((data as { replayed?: boolean } | null)?.replayed) {
+      return ok({ ok: true }, { headers: corsHeaders(req) })
     }
 
     // Los avisos solo salen si el comprobante quedó registrado.

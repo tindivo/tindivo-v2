@@ -21,9 +21,13 @@
 -- hoy (el aviso a la cajera sigue yendo por Inngest desde la ruta, y solo si
 -- esta función tuvo éxito). Meterlo en la lista es otra decisión.
 --
+-- IDEMPOTENTE: si el pedido ya está en `validando` con la MISMA ruta, devuelve
+-- el estado actual (`replayed: true`) sin gastar intento ni escribir evento.
+--
 -- ERRORES (todos `P0001`/`P0002`; la ruta los distingue por `hint`):
 --   P0002                       · no existe, o no es de este cliente
---   P0001 / invalid_proof_path  · la ruta no cuelga de la carpeta del cliente
+--   P0001 / invalid_proof_path  · la ruta no es de este pedido y de este intento
+--   P0001 / proof_file_missing  · el objeto no existe en `payment-proofs`
 --   P0001 / order_not_awaiting_proof · no está en `awaiting_payment` prepago
 --   P0001 / proof_attempts_exhausted · ya hizo 2 intentos
 --
@@ -54,10 +58,14 @@ BEGIN
     RAISE EXCEPTION 'Pedido no encontrado' USING ERRCODE = 'P0002';
   END IF;
 
-  IF p_path IS NULL OR btrim(p_path) = ''
-     OR left(p_path, length(p_customer_user_id::text) + 1) <> p_customer_user_id::text || '/' THEN
-    RAISE EXCEPTION 'Ruta de comprobante inválida'
-      USING ERRCODE = 'P0001', HINT = 'invalid_proof_path';
+  -- RECONFIRMAR EL MISMO ARCHIVO ES IDEMPOTENTE. Si la respuesta se perdió tras
+  -- el commit, el reintento ve el pedido ya en `validando` con ESTA ruta y
+  -- recibe el estado actual: no gasta intento ni escribe otro evento. Otra ruta
+  -- distinta sigue siendo un conflicto (el comprobante registrado no se cambia).
+  IF v_order.status = 'validando' AND v_order.payment_intent = 'prepaid'
+     AND p_path IS NOT NULL AND v_order.comprobante_prepago_url IS NOT DISTINCT FROM p_path THEN
+    RETURN jsonb_build_object('id', p_order_id, 'status', 'validando',
+                              'attempt', v_order.proof_attempt, 'replayed', true);
   END IF;
 
   IF v_order.status <> 'awaiting_payment' OR v_order.payment_intent <> 'prepaid' THEN
@@ -71,6 +79,22 @@ BEGIN
   END IF;
 
   v_attempt := v_order.proof_attempt + 1;
+
+  -- La ruta tiene que ser de ESTE pedido y de ESTE intento. La app sube a
+  -- `<usuario>/<pedido>/attempt-<n>-<ts>.<ext>` (prepay-proof-section.tsx).
+  IF p_path IS NULL OR NOT starts_with(
+       p_path, p_customer_user_id::text || '/' || p_order_id::text || '/attempt-' || v_attempt || '-') THEN
+    RAISE EXCEPTION 'Ruta de comprobante inválida'
+      USING ERRCODE = 'P0001', HINT = 'invalid_proof_path';
+  END IF;
+
+  -- Y el archivo tiene que existir de verdad en Storage.
+  IF NOT EXISTS (
+    SELECT 1 FROM storage.objects o WHERE o.bucket_id = 'payment-proofs' AND o.name = p_path
+  ) THEN
+    RAISE EXCEPTION 'El archivo del comprobante no existe'
+      USING ERRCODE = 'P0001', HINT = 'proof_file_missing';
+  END IF;
 
   UPDATE public.orders
      SET status = 'validando',

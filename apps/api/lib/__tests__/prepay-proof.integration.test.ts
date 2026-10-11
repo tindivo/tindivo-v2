@@ -9,12 +9,21 @@
  *    (`cancel_expired_prepay_orders`) canceló el pedido, el comprobante NO lo
  *    resucita a `validando`: responde 409 con `invalid_state_transition` y no
  *    emite avisos.
- *  · Repetición: un segundo POST sobre un pedido que ya está en `validando`
- *    responde 409, no suma intento y no vuelve a avisar.
+ *  · Repetición: reconfirmar el MISMO archivo es idempotente (200, sin gastar
+ *    intento ni avisar otra vez); un archivo DISTINTO responde 409.
+ *  · Carrera real: el cron y el comprobante a la vez nunca dejan un pedido
+ *    resucitado.
  */
 import { createClient } from '@supabase/supabase-js'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, localClient as db, type SeededOrder, seedPrepaidOrder } from './helpers/local-db'
+import {
+  cleanup,
+  localClient as db,
+  removeProofObjects,
+  type SeededOrder,
+  seedPrepaidOrder,
+  uploadProofObject,
+} from './helpers/local-db'
 
 const LOCAL_URL = 'http://127.0.0.1:54321'
 const LOCAL_ANON_KEY =
@@ -78,6 +87,10 @@ async function leer(orderId: string) {
   return data
 }
 
+/** Sube un archivo de verdad, con la ruta que exige la RPC (pedido + intento). */
+const ruta = (orderId: string, attempt = 1, tag?: string) =>
+  uploadProofObject(CUSTOMER_USER_ID, orderId, attempt, tag)
+
 /** Lo que hace el cron cada minuto, sobre un pedido cuyo plazo de pago ya pasó. */
 async function vencerPlazoDePago(orderId: string) {
   const { error: e1 } = await db
@@ -116,6 +129,7 @@ describe('comprobante de prepago: la carrera con el vencimiento y la repetición
       const s = sembrados.pop()
       if (s) {
         await db.from('order_event_log').delete().eq('order_id', s.orderId)
+        await removeProofObjects(CUSTOMER_USER_ID, s.orderId)
         await cleanup(s)
       }
     }
@@ -123,12 +137,13 @@ describe('comprobante de prepago: la carrera con el vencimiento y la repetición
 
   it('camino feliz: awaiting_payment pasa a validando y avisa una vez', async () => {
     const id = await pedidoEsperandoPago()
-    const res = await proofRequest(id, `${CUSTOMER_USER_ID}/a.jpg`)
+    const path = await ruta(id)
+    const res = await proofRequest(id, path)
     expect(res.status).toBe(200)
     const o = await leer(id)
     expect(o?.status).toBe('validando')
     expect(o?.proof_attempt).toBe(1)
-    expect(o?.comprobante_prepago_url).toBe(`${CUSTOMER_USER_ID}/a.jpg`)
+    expect(o?.comprobante_prepago_url).toBe(path)
     expect(avisos.proofUploaded).toHaveBeenCalledTimes(1)
     expect(avisos.validation).toHaveBeenCalledTimes(1)
     // H-2: el evento viaja por el outbox, en la misma transacción.
@@ -142,10 +157,11 @@ describe('comprobante de prepago: la carrera con el vencimiento y la repetición
 
   it('el plazo de pago venció (el cron canceló): 409, el pedido sigue cancelado y no se avisa', async () => {
     const id = await pedidoEsperandoPago()
+    const path = await ruta(id)
     await vencerPlazoDePago(id)
     expect((await leer(id))?.status).toBe('cancelled')
 
-    const res = await proofRequest(id, `${CUSTOMER_USER_ID}/tarde.jpg`)
+    const res = await proofRequest(id, path)
     expect(res.status).toBe(409)
     expect((await res.json()).code).toBe('invalid_state_transition')
 
@@ -158,31 +174,99 @@ describe('comprobante de prepago: la carrera con el vencimiento y la repetición
     expect(avisos.validation).not.toHaveBeenCalled()
   })
 
-  it('repetición: el segundo comprobante sobre un pedido en validando responde 409 y no cambia nada', async () => {
+  it('carrera REAL: el cron y el comprobante a la vez nunca resucitan el pedido', async () => {
+    const resultados = new Set<string>()
+    for (let ronda = 0; ronda < 8; ronda++) {
+      avisos.proofUploaded.mockClear()
+      const id = await pedidoEsperandoPago()
+      const path = await ruta(id)
+      // El plazo ya venció: el cron QUIERE cancelar justo cuando llega el comprobante.
+      await db
+        .from('orders')
+        .update({ awaiting_payment_at: new Date(Date.now() - 60 * 60_000).toISOString() })
+        .eq('id', id)
+      const [res] = await Promise.all([
+        proofRequest(id, path),
+        db.rpc('cancel_expired_prepay_orders'),
+      ])
+      const o = await leer(id)
+      if (o?.status === 'cancelled') {
+        // Ganó el cron: el comprobante recibe 409 y no hay rastro de él.
+        expect(res.status).toBe(409)
+        expect(o.comprobante_prepago_url).toBeNull()
+        expect(o.proof_attempt).toBe(0)
+        expect(avisos.proofUploaded).not.toHaveBeenCalled()
+        resultados.add('cancelado')
+      } else {
+        // Ganó el comprobante: queda validando, con su intento y su aviso.
+        expect(res.status).toBe(200)
+        expect(o?.status).toBe('validando')
+        expect(o?.proof_attempt).toBe(1)
+        expect(avisos.proofUploaded).toHaveBeenCalledTimes(1)
+        resultados.add('validando')
+      }
+    }
+    // Nunca un tercer estado (p. ej. cancelado CON comprobante registrado).
+    expect([...resultados].every((r) => r === 'cancelado' || r === 'validando')).toBe(true)
+  })
+
+  it('reconfirmar el MISMO archivo es idempotente: 200, sin gastar intento ni avisar otra vez', async () => {
     const id = await pedidoEsperandoPago()
-    expect((await proofRequest(id, `${CUSTOMER_USER_ID}/uno.jpg`)).status).toBe(200)
+    const path = await ruta(id)
+    expect((await proofRequest(id, path)).status).toBe(200)
     avisos.proofUploaded.mockClear()
     avisos.validation.mockClear()
 
-    const res = await proofRequest(id, `${CUSTOMER_USER_ID}/dos.jpg`)
+    const res = await proofRequest(id, path)
+    expect(res.status).toBe(200)
+
+    const o = await leer(id)
+    expect(o?.status).toBe('validando')
+    expect(o?.proof_attempt).toBe(1)
+    expect(o?.comprobante_prepago_url).toBe(path)
+    expect(avisos.proofUploaded).not.toHaveBeenCalled()
+    expect(avisos.validation).not.toHaveBeenCalled()
+    const { data: ev } = await db
+      .from('domain_events')
+      .select('id')
+      .eq('aggregate_id', id)
+      .eq('event_type', 'OrderPrepayProofUploaded')
+    expect(ev).toHaveLength(1)
+  })
+
+  it('otro archivo sobre un pedido en validando responde 409 y no cambia nada', async () => {
+    const id = await pedidoEsperandoPago()
+    const uno = await ruta(id, 1, 'uno')
+    expect((await proofRequest(id, uno)).status).toBe(200)
+    avisos.proofUploaded.mockClear()
+    avisos.validation.mockClear()
+
+    const res = await proofRequest(id, await ruta(id, 1, 'dos'))
     expect(res.status).toBe(409)
     expect((await res.json()).code).toBe('invalid_state_transition')
 
     const o = await leer(id)
     expect(o?.status).toBe('validando')
     expect(o?.proof_attempt).toBe(1)
-    expect(o?.comprobante_prepago_url).toBe(`${CUSTOMER_USER_ID}/uno.jpg`)
+    expect(o?.comprobante_prepago_url).toBe(uno)
     expect(avisos.proofUploaded).not.toHaveBeenCalled()
     expect(avisos.validation).not.toHaveBeenCalled()
   })
 
-  it('dos comprobantes a la vez: gana uno, el otro recibe 409 y se avisa una sola vez', async () => {
+  it('un archivo que no existe en Storage se rechaza sin avisar', async () => {
     const id = await pedidoEsperandoPago()
-    const [a, b] = await Promise.all([
-      proofRequest(id, `${CUSTOMER_USER_ID}/a.jpg`),
-      proofRequest(id, `${CUSTOMER_USER_ID}/b.jpg`),
-    ])
-    expect([a.status, b.status].sort()).toEqual([200, 409])
+    const res = await proofRequest(id, `${CUSTOMER_USER_ID}/${id}/attempt-1-fantasma.png`)
+    expect(res.status).toBe(422)
+    expect((await leer(id))?.status).toBe('awaiting_payment')
+    expect(avisos.proofUploaded).not.toHaveBeenCalled()
+  })
+
+  it('dos comprobantes distintos a la vez: gana uno, el otro recibe 409 y se avisa una sola vez', async () => {
+    const id = await pedidoEsperandoPago()
+    const a = await ruta(id, 1, 'a')
+    const b = await ruta(id, 1, 'b')
+    const [ra, rb] = await Promise.all([proofRequest(id, a), proofRequest(id, b)])
+    expect([ra.status, rb.status].sort()).toEqual([200, 409])
     const o = await leer(id)
     expect(o?.status).toBe('validando')
     expect(o?.proof_attempt).toBe(1)
