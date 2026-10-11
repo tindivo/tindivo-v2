@@ -818,6 +818,39 @@ export type Database = {
           },
         ]
       }
+      creation_idempotency: {
+        Row: {
+          created_at: string
+          expires_at: string
+          key: string
+          request_hash: string
+          resource_id: string | null
+          response: Json
+          scope: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          key: string
+          request_hash: string
+          resource_id?: string | null
+          response?: Json
+          scope: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          key?: string
+          request_hash?: string
+          resource_id?: string | null
+          response?: Json
+          scope?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       customer_addresses: {
         Row: {
           coordinates_lat: number | null
@@ -3433,6 +3466,16 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_order_idempotently: {
+        Args: {
+          p_args: Json
+          p_key: string
+          p_request_hash: string
+          p_scope: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       create_order_review: {
         Args: {
           p_comment?: string
@@ -3644,6 +3687,7 @@ export type Database = {
         Args: { p_lat: number; p_lng: number; p_ring: Json }
         Returns: boolean
       }
+      prune_creation_idempotency: { Args: never; Returns: number }
       queue_lead_minutes: { Args: never; Returns: number }
       refresh_customer_profile_risk: {
         Args: { p_phone: string; p_user_id: string }

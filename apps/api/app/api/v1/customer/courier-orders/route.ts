@@ -3,7 +3,7 @@ import { DomainError } from '@tindivo/core'
 import { requireRole } from '@/lib/http/auth'
 import { corsHeaders, handleOptions } from '@/lib/http/cors'
 import { sha256Hex } from '@/lib/http/hash'
-import { withIdempotency } from '@/lib/http/idempotency'
+import { createIdempotently, findStoredCreation, isIdempotencyKey } from '@/lib/http/idempotency'
 import { handleError, problem } from '@/lib/http/problem'
 import { getRequestId } from '@/lib/http/request-id'
 import { sendCourierOrderCreated } from '@/lib/inngest/client'
@@ -52,30 +52,63 @@ export async function POST(req: Request): Promise<Response> {
       })
     }
 
+    if (!isIdempotencyKey(idempotencyKey)) {
+      return problem('validation_error', {
+        detail: 'Idempotency-Key debe ser un UUID',
+        requestId,
+        headers: corsHeaders(req),
+      })
+    }
+
     const { user } = await requireRole(req, 'customer')
     const body = CreateCourierOrderRequestSchema.parse(await req.json())
     const requestHash = await sha256Hex(JSON.stringify(body))
     const service = createServiceClient()
 
-    const result = await withIdempotency(
-      service,
-      { key: idempotencyKey, scope: 'create_courier_order', userId: user.id, requestHash },
-      async () => {
-        const { data, error } = await service.rpc('create_courier_order', {
+    // Replay temprano, aislado por usuario: un reintento de una solicitud ya
+    // creada devuelve la original aunque el estado del servicio haya cambiado.
+    const stored = await findStoredCreation(service, {
+      userId: user.id,
+      scope: 'create_courier_order',
+      key: idempotencyKey,
+      requestHash,
+    })
+    if (stored && 'conflict' in stored) {
+      throw new DomainError(
+        'Idempotency-Key reutilizada con un payload distinto',
+        'idempotency_conflict',
+      )
+    }
+    if (stored && 'inFlight' in stored) {
+      throw new DomainError('Solicitud idéntica en proceso; reintenta en un momento', 'conflict')
+    }
+    if (stored) {
+      return Response.json(stored.body, {
+        status: 201,
+        headers: { ...corsHeaders(req), 'idempotency-replayed': 'true' },
+      })
+    }
+
+    // La solicitud y su clave se guardan en UNA transacción (0251): si el
+    // proceso cae después del commit, el reintento recupera la solicitud.
+    const result = await (async () => {
+      const { data, error } = await createIdempotently(service, {
+        userId: user.id,
+        scope: 'create_courier_order',
+        key: idempotencyKey,
+        requestHash,
+        args: {
           p_customer_user_id: user.id,
           p_requester_name: body.requesterName,
           p_requester_phone: body.requesterPhone,
-          // Columnas nullable sin DEFAULT en Postgres: la RPC exige `null`
-          // explícito, y el tipo generado las declara `string` a secas (mismo
-          // caso que `p_delivery_address` en customer/orders/route.ts).
-          p_directory_business_id: (body.directoryBusinessId ?? null) as unknown as string,
+          p_directory_business_id: body.directoryBusinessId ?? null,
           p_origin_name: body.origin.contactName,
-          p_origin_phone: (body.origin.contactPhone ?? null) as unknown as string,
+          p_origin_phone: body.origin.contactPhone ?? null,
           p_origin_lat: body.origin.coordinates.lat,
           p_origin_lng: body.origin.coordinates.lng,
           p_origin_reference_text: body.origin.referenceText,
           p_destination_name: body.destination.contactName,
-          p_destination_phone: (body.destination.contactPhone ?? null) as unknown as string,
+          p_destination_phone: body.destination.contactPhone ?? null,
           p_destination_lat: body.destination.coordinates.lat,
           p_destination_lng: body.destination.coordinates.lng,
           p_destination_reference_text: body.destination.referenceText,
@@ -87,17 +120,27 @@ export async function POST(req: Request): Promise<Response> {
           p_prepaid_confirmed: body.prepaidConfirmed,
           p_utm_source: body.utmSource,
           p_driver_note: body.driverNote,
-        })
-        if (error) {
-          if (error.code === 'P0001') {
-            const { code, detail } = courierErrorDetail(error.message)
-            throw new DomainError(detail, code)
-          }
-          throw new Error(error.message)
+        },
+      })
+      if (error) {
+        if (error.code === 'IK409') {
+          throw new DomainError(
+            'Idempotency-Key reutilizada con un payload distinto',
+            'idempotency_conflict',
+          )
         }
-        return { status: 201, body: { data } }
-      },
-    )
+        if (error.code === 'P0001') {
+          const { code, detail } = courierErrorDetail(error.message)
+          throw new DomainError(detail, code)
+        }
+        throw new Error(error.message)
+      }
+      return {
+        status: 201,
+        body: { data: data?.data },
+        replayed: data?.replayed === true,
+      }
+    })()
 
     // Agenda el timeout de aceptación SOLO en creación real (no en replay).
     // Best-effort: un fallo de Inngest nunca debe romper la creación.
