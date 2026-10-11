@@ -167,14 +167,14 @@ describe('GET /customer/payment-options', () => {
     expect((await pedir(getPaymentOptions)).status).toBe(401)
   })
 
-  it('cliente nuevo: prepago, por falta de historial', async () => {
+  it('cliente nuevo: prepago', async () => {
     const c = await crearCliente()
     const res = await pedir(getPaymentOptions, c.token)
     expect(res.status).toBe(200)
     expect((await res.json()).data).toEqual({
       contraentregaAllowed: false,
       prepayRequired: true,
-      reason: 'no_history',
+      reason: 'prepay_required',
     })
   })
 
@@ -194,7 +194,7 @@ describe('GET /customer/payment-options', () => {
     }
   })
 
-  it('el riesgo manda sobre el historial: bloqueo de contraentrega', async () => {
+  it('el riesgo manda sobre el historial: bloqueo de contraentrega (sin decir la causa)', async () => {
     const c = await crearCliente({ contraentregaBloqueada: true })
     const { error } = await db
       .from('address_directory')
@@ -205,7 +205,7 @@ describe('GET /customer/payment-options', () => {
       expect(data).toEqual({
         contraentregaAllowed: false,
         prepayRequired: true,
-        reason: 'risk_blocked',
+        reason: 'prepay_required',
       })
     } finally {
       await db.from('address_directory').delete().eq('phone', c.tel9)
@@ -219,7 +219,7 @@ describe('GET /customer/payment-options', () => {
     if (error) throw new Error(error.message)
     for (const s of ins ?? []) strikes.push(s.id)
     const { data } = await (await pedir(getPaymentOptions, c.token)).json()
-    expect(data.reason).toBe('risk_blocked')
+    expect(data.reason).toBe('prepay_required')
     expect(data.contraentregaAllowed).toBe(false)
   })
 })
@@ -227,6 +227,7 @@ describe('GET /customer/payment-options', () => {
 describe('GET /public/config', () => {
   it('sin sesión, con las claves públicas y el dinero como texto', async () => {
     const res = await pedir(getPublicConfig)
+    expect(res.headers.get('cache-control')).toContain('s-maxage')
     expect(res.status).toBe(200)
     const { data } = await res.json()
     expect(Object.keys(data).sort()).toEqual(
@@ -296,6 +297,7 @@ describe('GET /public/landmarks', () => {
 
   it('lista las activas y no las apagadas', async () => {
     const res = await pedir(getLandmarks)
+    expect(res.headers.get('cache-control')).toContain('s-maxage')
     expect(res.status).toBe(200)
     const { items } = (await res.json()).data as {
       items: { name: string; lat: number; lng: number; category: string }[]
@@ -333,6 +335,7 @@ describe('GET /public/courier/directory', () => {
 
   it('lista los visibles y NUNCA expone teléfono ni WhatsApp', async () => {
     const res = await pedir(getDirectory)
+    expect(res.headers.get('cache-control')).toContain('s-maxage')
     expect(res.status).toBe(200)
     const { items } = (await res.json()).data as { items: Record<string, unknown>[] }
     const mios = items.filter((i) => String(i.name).startsWith(PREFIJO))

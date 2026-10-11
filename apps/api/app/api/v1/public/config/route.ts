@@ -6,6 +6,9 @@ import { createServiceClient } from '@/lib/supabase/service'
 
 export const dynamic = 'force-dynamic'
 
+/** Cambia rara vez (lo edita el admin): la CDN la sirve 1 min y revalida 5 sin que nadie espere. */
+const CACHE = 'public, s-maxage=60, stale-while-revalidate=300'
+
 export function OPTIONS(req: Request): Response {
   return handleOptions(req)
 }
@@ -84,7 +87,7 @@ export async function GET(req: Request): Promise<Response> {
         maxCashBill: toMoneyText(s.max_cash_bill),
         maxChange: toMoneyText(s.max_change),
       },
-      { headers: corsHeaders(req) },
+      { headers: { ...corsHeaders(req), 'Cache-Control': CACHE } },
     )
   } catch (err) {
     return handleError(err, requestId, req)

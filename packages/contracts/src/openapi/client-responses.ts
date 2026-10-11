@@ -202,11 +202,11 @@ export const CustomerProfileSchema = z.object({
   }),
 })
 
-export const CONTRAENTREGA_REASONS = ['trusted', 'no_history', 'risk_blocked'] as const
+export const CONTRAENTREGA_REASONS = ['trusted', 'prepay_required'] as const
 
 /**
  * GET /customer/payment-options. La decisión es de la base
- * (`current_customer_trusted_for_contraentrega` y `customer_requires_prepayment`);
+ * (`current_customer_trusted_for_contraentrega`);
  * la ruta solo la expone. El umbral de monto para prepago está en `GET /public/config`.
  */
 export const PaymentOptionsSchema = z.object({
@@ -216,6 +216,6 @@ export const PaymentOptionsSchema = z.object({
   }),
   reason: openEnum(
     CONTRAENTREGA_REASONS,
-    '`trusted` (ya le entregaron), `no_history` (cliente nuevo) o `risk_blocked` (antifraude)',
+    '`trusted` o `prepay_required`. No distingue la causa (antifraude)',
   ),
 })

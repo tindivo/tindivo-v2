@@ -6839,10 +6839,9 @@
                           "type": "string",
                           "x-known-values": [
                             "trusted",
-                            "no_history",
-                            "risk_blocked"
+                            "prepay_required"
                           ],
-                          "description": "`trusted` (ya le entregaron), `no_history` (cliente nuevo) o `risk_blocked` (antifraude). Valores conocidos: trusted, no_history, risk_blocked. Puede llegar uno nuevo; trátalo como desconocido."
+                          "description": "`trusted` o `prepay_required`. No distingue la causa (antifraude). Valores conocidos: trusted, prepay_required. Puede llegar uno nuevo; trátalo como desconocido."
                         }
                       },
                       "required": [
