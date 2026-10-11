@@ -28,7 +28,7 @@ Lee la propuesta y **contrástala con el repo por tu cuenta** (`Docs/`, `DECISIO
    ¿Cambia eso la §6.1/§6.3? Si no lo sabes con certeza, dilo.
 4. **Responde las preguntas abiertas de §10** con una recomendación cada una.
 5. **El plan de transición (§9)**: ¿el orden es correcto? ¿Qué riesgo concreto ves en mover archivos (enlaces, la
-   sesión autónoma de `Docs/plan-migraciones/`, las ~375 citas a `DECISIONS §N`)? Si puedes, mide cuántas citas hay
+   sesión autónoma de `Docs/planes/migraciones/`, las ~375 citas a `DECISIONS §N`)? Si puedes, mide cuántas citas hay
    y a qué secciones.
 
 ## Formato de la respuesta

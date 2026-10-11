@@ -14,7 +14,7 @@ export const RESTAURANTS_ANCHOR = 'restaurantes'
  * color de la marca y de la comida.
  *
  * Baja a la lista en la misma página en vez de abrir una ruta nueva
- * (`Docs/Home/README.md` §3.2): mientras Restaurantes sea el único servicio
+ * (`Docs/Home/README.md` §3.2, en git: `fd44b16`): mientras Restaurantes sea el único servicio
  * con catálogo, una página aparte solo sería un toque más.
  *
  * `openCount` es `null` mientras la lista no ha llegado: mejor no decir nada

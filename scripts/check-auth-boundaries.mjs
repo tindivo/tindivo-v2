@@ -8,7 +8,7 @@
  * síntoma en producción: dos teléfonos con la misma cuenta de motorizado,
  * cerrar sesión en uno echaba al otro.
  *
- * Los specs ya lo prohibían por escrito desde el principio (`Docs/05-api-rest.md`
+ * Los specs ya lo prohibían por escrito desde el principio (`Docs/05-api-rest.md` (borrado; en git: `438e1b3`)
  * §2, RNF-SEC-01, HU-X-005). No sirvió de nada, porque nada lo comprobaba. Esto
  * lo comprueba.
  *

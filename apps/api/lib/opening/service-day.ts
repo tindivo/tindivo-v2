@@ -7,7 +7,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
  * abrió de verdad. Sin declaración, el horario es papel mojado: el negocio
  * figura cerrado aunque su horario diga que a esta hora atiende.
  *
- * Ver `Docs/spec/spec-horarios-y-apertura.md` (R7-R11) y la migración 0154.
+ * Ver `Docs/spec/spec-horarios-y-apertura.md` (en git: b98e5e5) (R7-R11) y la migración 0154.
  */
 
 // biome-ignore lint/suspicious/noExplicitAny: el service client va sin tipar en el resto de rutas

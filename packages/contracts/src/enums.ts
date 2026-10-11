@@ -254,11 +254,11 @@ export const MapLandmarkCategorySchema = z.enum(MAP_LANDMARK_CATEGORIES)
 export type MapLandmarkCategory = z.infer<typeof MapLandmarkCategorySchema>
 
 // Los enums del fondo de contingencia se eliminaron en la migración 0123 junto
-// con la tabla y sus tres RPC. Ver Docs/spec/spec-0123-eliminar-contingencia.md.
+// con la tabla y sus tres RPC. Ver Docs/spec/spec-0123-eliminar-contingencia.md (en git: b98e5e5).
 
 // --- Tindivo Entregas (`courier`): estado de la solicitud de recojo ---
 // Tabla propia `courier_orders`, no `orders` — la máquina de estados es
-// deliberadamente distinta (Docs/Encargos/03-plan-tecnico.md §1.2).
+// deliberadamente distinta (Docs/Encargos/03-plan-tecnico.md §1.2, en git: fd44b16).
 export const COURIER_STATUSES = [
   'requested', // el cliente pidió; nadie lo tomó todavía
   'accepted', // un motorizado lo aceptó

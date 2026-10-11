@@ -7,7 +7,7 @@
  * 'restaurante'— se eliminó en la migración 0123: esa tabla ya no existe y
  * `resolve_fraud_claim` escribe solo en el ledger. Con él se va la nota de
  * "DEBE SALIR ROJO", que además llevaba obsoleta desde 0102 (el FIX #5 ya
- * estaba aplicado y el test pasaba en verde). Ver M-4 en Docs/RIESGOS-LEDGER.md.
+ * estaba aplicado y el test pasaba en verde). Ver M-4 en Docs/RIESGOS-LEDGER.md (en git: b98e5e5).
  *
  * Asserts:
  *   (B) business_charges tiene 1 fila con charge_type = 'refund_charge', amount correcto

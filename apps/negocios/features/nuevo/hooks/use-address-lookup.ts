@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
 /**
- * Autocompletado por teléfono (spec_ui_cajera.md PARTE B).
+ * Autocompletado por teléfono (spec_ui_cajera.md (en git: b98e5e5) PARTE B).
  *
  * El directorio tiene 701 direcciones curadas a lo largo del piloto: la cajera
  * escribe 9 dígitos y sale la dirección del cliente, sin volver a teclearla con

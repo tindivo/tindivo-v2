@@ -2,7 +2,7 @@
  * Distancia en línea recta (círculo máximo, fórmula haversine). Tercer uso de
  * esta fórmula en el repo (ya existía en `apps/customer/lib/coverage.ts` y
  * `apps/motorizados/lib/geo.ts`) — regla del repo: extraer con 3+ usos
- * (Docs/Encargos/03-plan-tecnico.md §1.3). `create_courier_order` la usa en el
+ * (Docs/Encargos/03-plan-tecnico.md §1.3, en git: fd44b16). `create_courier_order` la usa en el
  * servidor para guardar `distance_m` (no decide el precio todavía).
  */
 export function haversineMeters(

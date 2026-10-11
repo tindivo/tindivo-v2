@@ -39,7 +39,7 @@ const SUFICIENTE_M = 20
 const MAX_ESPERA_MS = 15_000
 
 /**
- * El motorizado apunta dónde está la casa (spec del motorizado, `PENDIENTES.md`).
+ * El motorizado apunta dónde está la casa (spec del motorizado, `PENDIENTES.md` (en git: b98e5e5)).
  *
  * SOLO PARA PEDIDOS MANUALES. Un pedido B2C trae la dirección de la libreta del
  * cliente, que es otra tabla y no es del negocio; el RPC lo rechaza igualmente.

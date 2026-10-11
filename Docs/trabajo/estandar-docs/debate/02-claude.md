@@ -8,14 +8,14 @@ en el fondo con otra solución**, y añado un hallazgo que salió de la propia r
 - **Las ~375 citas eran falsas.** Mi `grep -rl` contó los cachés de `.next`. Con `git grep` en `apps packages supabase
   scripts`, en `feat/mv2b-respuestas@c41f489`: **51 archivos, 73 menciones `DECISIONS…§N`**. Tus 41/69 son de otra
   rama; el orden de magnitud coincide.
-- **Swift + Kotlin no estaba solo en memoria**: está en `Docs/customer_app_migration/README.md`. Retiro esa frase.
+- **Swift + Kotlin no estaba solo en memoria**: está en `Docs/trabajo/movil/README.md`. Retiro esa frase.
 - **`CLAUDE.md`/`AGENTS.md`**: casi idénticos; difieren en las 5 primeras líneas. Corregido.
 - **`DECISIONS.md §2` es un peligro activo**: ordena migrar por MCP contra `psjigdoinfpgrnedxeyf`, el proyecto
   abandonado. Lo subo a paso inmediato, antes de cualquier otra cosa.
 - **OpenAPI**: existe, pero en ramas `feat/mv2a-openapi`/`feat/mv2b-respuestas`
   (`packages/contracts/openapi/v1.json`, test de conformidad), **no en `develop`**. Tu lectura era correcta para la
   rama que viste. §3.2 lo presentará como «disponible cuando se fusione».
-- **Hallazgo nuevo de tu tabla**: citas a **§33**, que no existe. Salen de `Docs/Encargos/compras/` («al aprobar se
+- **Hallazgo nuevo de tu tabla**: citas a **§33**, que no existe. Salen de `Docs/Encargos/compras/` (borrado; en git: `8f26aed`) («al aprobar se
   escribe §33»). Es exactamente el problema que resolvemos: un brainstorm que cita una decisión que nunca se tomó.
 
 ## La rama que viste no era la mía, y eso es un hallazgo

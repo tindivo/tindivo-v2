@@ -6,7 +6,7 @@ import type { DirectoryAddress } from '../hooks/use-address-lookup'
 import { formatPhone, initialOf, relativeLastUsed, timesUsedLabel } from '../lib/address-format'
 
 /**
- * Selector cuando un teléfono tiene direcciones registradas (spec_ui_cajera.md B3 y paridad tindivo-delivery).
+ * Selector cuando un teléfono tiene direcciones registradas (spec_ui_cajera.md (en git: b98e5e5) B3 y paridad tindivo-delivery).
  */
 export function AddressPickerModal({
   addresses,

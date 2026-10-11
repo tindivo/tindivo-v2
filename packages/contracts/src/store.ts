@@ -1,7 +1,7 @@
 /**
  * Tindivo Store — contratos y reglas puras.
  *
- * Spec: Docs/Store/tindivo-store-prd-v2.md. Todo lo de aquí es TS puro (sin I/O)
+ * Spec: Docs/Store/tindivo-store-prd-v2.md (en git: b98e5e5). Todo lo de aquí es TS puro (sin I/O)
  * para que lo usen igual la API, el customer y el admin.
  *
  * Los IDENTIFICADORES van en inglés (convención del repo) y los TEXTOS que ve

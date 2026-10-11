@@ -38,7 +38,7 @@ export interface ServerClientConfig extends BrowserClientOptions {
  * indistinguible de un visitante anónimo. Eso es exactamente lo que le pasaba
  * al cliente de servidor de `apps/api`, muerto desde que se escribió.
  *
- * `Docs/03-arquitectura.md` §5.4 prescribía wrappers para los dos lados desde el
+ * `Docs/03-arquitectura.md` §5.4 (borrado; en git: `438e1b3`) prescribía wrappers para los dos lados desde el
  * primer día; este es el segundo, y `pnpm check:auth` ya lo vigila.
  */
 export function createTindivoServerClient({

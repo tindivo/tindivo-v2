@@ -9,7 +9,7 @@ import { AddressReferenceSchema, CoordinatesSchema, PhonePeSchema, UuidSchema } 
 /**
  * Tindivo Entregas: «recogemos lo que ya pagaste y lo llevamos». Contratos de
  * `courier_orders` (la solicitud) y `directory_businesses` (el catálogo que la
- * alimenta). Ver Docs/Encargos/`Tindivo — Catálogo de negocios y Encargos (spec v1).md`.
+ * alimenta). Ver Docs/Encargos/`Tindivo — Catálogo de negocios y Encargos (spec v1).md` (en git: fd44b16) y Docs/negocio/servicios/entregas.md.
  */
 
 // --- Límites (fuente única; los usan UI y backend) ---

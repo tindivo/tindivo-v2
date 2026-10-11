@@ -2,7 +2,7 @@ import type { CourierStatus } from './enums'
 
 /**
  * Máquina de estados de `courier_orders` (Tindivo Entregas). Tabla propia,
- * máquina propia — no la de `orders` (Docs/Encargos/03-plan-tecnico.md §1.2).
+ * máquina propia — no la de `orders` (Docs/Encargos/03-plan-tecnico.md §1.2, en git: fd44b16).
  *
  *   requested -> accepted -> heading_to_pickup -> at_pickup -> picked_up
  *     -> heading_to_dropoff -> delivered

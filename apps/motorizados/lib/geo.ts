@@ -1,7 +1,7 @@
 /**
  * Constantes geográficas de San Jacinto.
  *
- * Pedidas por `Docs/spec/PENDIENTES.md §4` ("CREAR, no existen en v2").
+ * Pedidas por `Docs/spec/PENDIENTES.md §4` (en git: b98e5e5) ("CREAR, no existen en v2").
  */
 
 /**

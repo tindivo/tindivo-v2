@@ -1,113 +1,72 @@
-# Arquitectura y estándares de Tindivo
+# Arquitectura: cómo está construido Tindivo
 
-> 2026-10-08. Jesús pidió mejorar el código y las buenas prácticas **antes** de migrar a nativo, preparar el sistema
-> para crecer (promociones, mototaxi, quizá microservicios) sin una gran refactorización después, auditar la base de
-> datos y saber cuánto dependemos de Supabase y Vercel. Y fijó la prioridad: **desacoplamiento**.
->
-> Medido en el repo (`develop`, `99d70a0`) y en `tindivo-prod` con consultas de solo lectura. Revisado por Codex
-> ([`revision-codex.md`](revision-codex.md)) en dos rondas: en la primera rechazó la versión inicial de los estándares;
-> en la segunda **firmó con cambios** README, 04 y 05. Todos sus cambios están aplicados.
+> Verificado: 2026-10-10 · entorno: `develop@7d00aa4` (estructura, rutas, jobs) y `tindivo-prod` (solo lectura:
+> tablas, RLS, crons, triggers) · La propuesta de estándares y de arquitectura objetivo, **sin aprobar**, está en
+> `Docs/trabajo/arquitectura/`
 
-## Documentos
+## Las piezas
 
-| Documento | Responde a |
-|---|---|
-| [`01-codigo.md`](01-codigo.md) | ¿El código sigue un estándar? (C-01…C-11) |
-| [`02-base-de-datos.md`](02-base-de-datos.md) | ¿La base está bien estructurada? (B-01…B-12) |
-| [`03-proveedores-y-vps.md`](03-proveedores-y-vps.md) | ¿Dependemos siempre de Supabase y Vercel? ¿VPS? ¿Notificaciones? |
-| [`04-arquitectura-objetivo.md`](04-arquitectura-objetivo.md) | Desacoplamiento, microservicios, promociones y mototaxi |
-| [`05-estandares.md`](05-estandares.md) | **Las reglas**, por niveles y con cómo se verifica cada una |
-| [`revision-codex.md`](revision-codex.md) | La crítica de Codex y cómo se aplicó |
+Monorepo pnpm + Turborepo. Cinco aplicaciones Next.js y paquetes compartidos:
 
-## Tus preguntas, en corto
-
-**¿Seguimos un estándar?** En el detalle sí: tipos estrictos, validación, errores bien formados, tests y un linter
-casi limpio (0 errores). **En la arquitectura, no:**
-
-- la mayoría de las 107 rutas mezclan controlador, reglas y consultas;
-- el núcleo de dominio (`packages/core`) es casi nominal;
-- las reglas de dinero están copiadas en varias capas.
-
-**¿Qué es lo prioritario?** Lo que dijiste: **desacoplar**. Hoy cuestan cuatro acoplamientos medidos:
-
-- **los clientes con la base:** 180 llamadas directas a Supabase, 99 de ellas en Negocios;
-- **las rutas con las tablas:** 216 consultas dentro de los controladores;
-- **el código con el proveedor:** 300 llamadas a Supabase en la API;
-- **las reglas con la interfaz:** el checkout calcula dinero en React.
-
-Desacoplar es poner una frontera entre dos cosas que hoy se tocan directamente, **al trabajar en ellas**. No es
-montar infraestructura nueva.
-
-**¿La base está bien?**
-
-- **Cimientos sólidos:** RLS y clave primaria en las 52 tablas, dinero exacto, fechas con zona horaria y `search_path`
-  fijado.
-- **Organización con riesgos de mantenimiento:**
-  - un solo esquema;
-  - `orders` con 98 columnas;
-  - funciones de hasta 39 KB **sin ningún test SQL**;
-  - la base no protege su máquina de estados;
-  - dos outbox.
-
-**¿Dependemos de Vercel?** Poco. Es Next sobre Node: en un VPS puede funcionar igual, pero hay que probarlo (caché,
-procesos, recuperación), y el PDF necesita un cambio.
-
-**¿Y de Supabase?** Mucho, pero no por la base, que es Postgres estándar, sino por lo de alrededor:
-
-- 480 llamadas a su cliente en código de producción;
-- el login;
-- Storage y Realtime;
-- la función de push.
-
-La salida no es mudarse ahora, sino **desacoplar**: que solo unos pocos adaptadores conozcan a Supabase.
-
-**¿Las notificaciones son de Supabase?** No. Supabase no envía push; hoy lo hace una función propia (Web Push). Las
-apps nativas necesitan **FCM y APNs** (Google y Apple; sin coste por envío, APNs requiere la cuenta de Apple
-Developer) en cualquier caso.
-
-**¿Microservicios?** **No todavía.** Para una persona costarían más de lo que resuelven. La dirección es un
-**monolito modular**: los módulos se crean donde hay trabajo real, empezando por `ordering`. Eso abarata separar un
-servicio el día que haga falta, aunque separarlo siempre exigirá diseño y pruebas propios.
-
-**¿Promociones?** Ya hay varias modalidades (global, por plato, de lanzamiento), cada una cableada a su manera.
-Propongo:
-
-- empezar por **las dos o tres campañas concretas que quieras lanzar**;
-- pasar a una tabla de campañas cuando necesites dos a la vez;
-- especificar antes las reglas que hoy no existen: acumulación, prioridad, quién financia, reserva del presupuesto,
-  devolución y la foto de las condiciones de cada canje;
-- que el canje se reserve en la misma transacción que el pedido.
-
-**¿Mototaxi independiente?** Hipótesis: un módulo propio (`rides`). Antes de decidir qué comparte (conductores,
-vehículos, cobro, app) hay que definir su operación; no se generaliza nada por adelantado.
-
-## Cómo se aplica sin una gran refactorización
-
-1. **Lo nuevo nace desacoplado.**
-2. **Lo que se toca, se deja mejor.**
-3. **Lo que no se toca, no se toca.**
-
-Los estándares tienen tres niveles:
-
-- **obligatorio solo para código nuevo**;
-- **alertas**;
-- **una lista de excepciones** para lo existente, que solo puede encoger.
-
-**El paso 0 (los defectos de producción) no espera**: los estándares mínimos se montan en paralelo.
-
-| En paralelo | Qué |
-|---|---|
-| **Paso 0 · Corrección** | Lo acordado en `../customer_app_migration/debate-rest/conclusion.md`: comprobante, idempotencia y bucket, más **revocar `anon` en `expire_courier_orders`** comprobando los permisos efectivos. Los parches mínimos no requieren mover código; la extracción al módulo `ordering` se hace después, o junto al arreglo cuando no amplía su riesgo ni retrasa su entrega |
-| **Paso E · Estándares mínimos** | Aprobar `05-estandares.md`; resumirlo en `CLAUDE.md`; reglas de lint para **código nuevo** (DES-1…4, TS-2); la lista de excepciones; las pruebas de integración en CI; `Docs/adr/` |
-
-Después, los pasos 1-7 del plan acordado, cada uno aplicando los estándares al código que toca.
-
-## Decisiones que te tocan
-
-| # | Decisión | Recomendación |
+| App | Para quién | Puerto local |
 |---|---|---|
-| E-01 | Aprobar `05-estandares.md` (v2) | Revísalo regla por regla: cada una es negociable **antes** de entrar en la CI |
-| A-01 | Monolito modular como dirección | Sí |
-| A-02, A-03, A-04 | Esquema por módulo, framework HTTP, driver de base | **Ensayos opcionales** con criterio de aceptación (`04` §7), no requisitos |
-| P-01 | Las próximas campañas de promoción | Dime cuáles quieres lanzar: el modelo sale de ahí |
-| R-01 | Mototaxi | Cuando lo quieras, definimos primero la operación (conductores, vehículos, cobro, seguridad) |
+| `apps/customer` | El cliente (tindivo.com): catálogo, checkout, seguimiento, Entregas, Store | 3000 |
+| `apps/api` | La API REST `/api/v1` (`apiv2.tindivo.com`), única puerta de escritura de las apps | 3001 |
+| `apps/negocios` | La cajera: tablero de pedidos, pedidos manuales, deuda, configuración | 3002 |
+| `apps/admin` | Jesús: operación, negocios, cobros, reportes, Store | 3003 |
+| `apps/motorizados` | El motorizado: cola, pedidos, Entregas, rendición | 3004 |
+
+| Paquete | Qué es |
+|---|---|
+| `packages/contracts` | **La fuente canónica** de primitivas, enums, máquinas de estados, errores y el OpenAPI (Zod v4) |
+| `packages/core` | Dominio puro; hexagonal solo en `orders` |
+| `packages/api-client` | Cliente HTTP de la API para las apps |
+| `packages/supabase` | Clientes de Supabase y tipos generados de la base |
+| `packages/ui` | Sistema de diseño (Tailwind v4) |
+| `packages/map`, `packages/images` | Mapa compartido y tratamiento de imágenes |
+
+## Decisiones de construcción (vigentes)
+
+- **Sin Server Actions ni BFFs.** Toda escritura pasa por la API REST, porque las apps nativas (Swift + Kotlin) usarán
+  la misma API.
+- **Sin ORM.** La base se protege con RLS y con funciones `SECURITY DEFINER`; un ORM la saltaría.
+- **La lógica que tiene que ser atómica vive en la base**, en funciones SQL: el ciclo del pedido (`advance_order`), la
+  creación de pedidos, la deuda y las rendiciones. Por eso buena parte de las reglas están en `supabase/migrations/`,
+  no en TypeScript (y graphify no las ve: `Docs/operacion/graphify.md`).
+- **Los parámetros del negocio viven en `app_settings`**, no en el código.
+
+## La referencia se genera, no se copia
+
+| Qué | Fuente |
+|---|---|
+| Esquema de la base | `supabase/migrations/` (vale la última migración que define cada objeto) y `packages/supabase/src/database.types.ts` (`pnpm db:types`) |
+| API REST | `packages/contracts/openapi/v1.json` (107 rutas en `apps/api/app/api/v1`; una ruta sin documentar no pasa la CI) |
+| Estados del pedido y de Entregas | `ORDER_TRANSITIONS` y `COURIER_TRANSITIONS` en `packages/contracts` |
+
+## La base (`tindivo-prod`, al 2026-10-10)
+
+Postgres 17 en Supabase. **52 tablas, las 52 con RLS**; 127 funciones; última migración aplicada, `0247`. Las
+migraciones se aplican solo con el CLI de Supabase (`supabase/AGENTS.md`).
+
+- **Realtime** en 8 tablas: `orders`, `courier_orders`, `cash_settlements`, `businesses`, `driver_availability`,
+  `order_transfer_requests`, `reports`, `admin_alerts`. Así las apps ven los cambios sin recargar.
+- **12 crons** (`pg_cron`): cinco cada minuto (anunciar pedidos a la cola, vencer prepagos y aceptaciones, vencer
+  Entregas, vencer traspasos, marcar pedidos atrasados), uno cada 15 minutos (cerrar turnos de motorizados) y seis de
+  limpieza diaria (eventos de dominio, outbox, rechazos, claves de idempotencia, registro de push, suscripciones
+  viejas).
+
+## Cómo viajan los avisos
+
+Dos caminos, los dos nacen **dentro de la transacción** del cambio (invariante 4: outbox transaccional):
+
+1. **Avisos push:** las funciones escriben un evento en `domain_events`; un trigger (`trg_dispatch_event` →
+   `dispatch_event`) llama por HTTP a la Edge Function `send-push`, que envía el Web Push. El tag de cada aviso es
+   `${event_type}-${shortId}` (invariante 5). Lo enviado queda en `push_delivery_log`.
+2. **Plazos:** los cambios de `orders` y de `courier_order_events` dejan una fila en `outbox_events` (triggers
+   `trg_orders_outbox_events` y `courier_event_to_outbox`); un job de Inngest (`process-outbox-events-cron`) las
+   reclama y programa los vencimientos (aceptación, validación, pago, comprobante, traspaso, Entregas).
+
+## Autenticación
+
+Supabase Auth, con un rol por fila en `user_roles` (un usuario puede tener varios) que viaja en el JWT. El cliente
+verifica su teléfono por SMS (OTP de Twilio).

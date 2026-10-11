@@ -145,7 +145,7 @@ const NOT_A_NAME = new Set([
  * se convierte en "SANTA CARMEN" en todas las referencias que lo mencionan. Y
  * eso rompe justo lo que el fixture tiene que reproducir: varias direcciones
  * que comparten prefijo de barrio y se distinguen SOLO por el final. Es el caso
- * duro del modal de múltiples direcciones (`spec_ui_cajera.md` B3-bis).
+ * duro del modal de múltiples direcciones (`spec_ui_cajera.md` (en git: b98e5e5) B3-bis).
  */
 const PLACE_PREFIXES = [
   'SAN', 'SANTA', 'SANTO', 'AV', 'AVENIDA', 'JR', 'JIRON', 'CALLE',
@@ -405,7 +405,7 @@ function main(): void {
   writeFileSync(outputPath, `${JSON.stringify(out, null, 2)}\n`, 'utf8')
 
   // ── 5 · Reporte de forma ───────────────────────────────────────────────────
-  // Estos números deben coincidir con los de `PENDIENTES.md:17`. Si no
+  // Estos números deben coincidir con los de `PENDIENTES.md:17` (en git: b98e5e5). Si no
   // coinciden, el dump de entrada no es el que creemos.
   const phones = new Map<string, number>()
   for (const row of out) phones.set(row.phone, (phones.get(row.phone) ?? 0) + 1)

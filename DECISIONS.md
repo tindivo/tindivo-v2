@@ -5,21 +5,62 @@
 > este documento difieran, **gana este documento**. Se mantiene vivo: cada
 > decisión nueva o cambio se registra aquí, no en specs paralelos.
 >
-> Última actualización: 2026-09-22 (Tindivo Entregas: backend + lado cliente construidos, nombres `courier_orders`/`directory_businesses` — §31).
+> Última actualización: 2026-10-10 (índice de compatibilidad; §34 en adelante, en `Docs/decisiones/`).
+
+---
+
+## Índice de compatibilidad (2026-10-10)
+
+El código cita este archivo como `DECISIONS §N`. Desde el estándar de documentación, las decisiones nuevas van en
+`Docs/decisiones/` y el canon vive en `Docs/negocio/`, `Docs/arquitectura/` y `Docs/glosario.md`. Esta tabla dice
+dónde está hoy cada sección. **«Vigente aquí»** significa que su texto sigue mandando desde este archivo.
+
+| § | Tema | Dónde está hoy |
+|---|---|---|
+| §0 | Regla de precedencia de documentos | Sustituida por el estándar (`Docs/planes/estandar-docs/estandar.md` §4) |
+| §1 | Stack y versiones (fijadas, verificadas en vivo el 2026-05-29) | Versiones vivas en `pnpm-workspace.yaml`; resumen en `AGENTS.md` y `Docs/arquitectura/README.md` |
+| §2 | Proyecto Supabase | Corregida: `supabase/AGENTS.md` (producción es `tindivo-prod`; migraciones solo por CLI) |
+| §3 | Estructura del monorepo | `Docs/arquitectura/README.md` |
+| §4 | Modelo de dinero (Documento Maestro — corrige specs 09/11/12) | `Docs/negocio/dinero.md` (comisión corregida a S/ 1.50) |
+| §5 | Máquina de estados del pedido | Estados en `packages/contracts` (`ORDER_TRANSITIONS`); reglas en `Docs/negocio/servicios/pedidos-restaurante.md` |
+| §6 | `short_id` y número de pedido | `AGENTS.md`, invariantes 1 y 2 |
+| §7 | Pagos del cliente | `Docs/negocio/dinero.md` y `Docs/negocio/antifraude.md` |
+| §8 | Antifraude: strikes y validación humana | `Docs/negocio/antifraude.md` (confirmada por Jesús el 2026-10-10) |
+| §9 | Fondo de contingencia | Obsoleta desde la `0123`; sustituida por el ADR 0036 |
+| §10 | Reglas de tiempo | Plazos en `app_settings.timers`: `Docs/negocio/servicios/pedidos-restaurante.md` |
+| §11 | Outbox, push y scheduling | `Docs/arquitectura/README.md` (cómo viajan los avisos) |
+| §12 | Seguridad / RLS | `AGENTS.md`, invariante 3, y `Docs/arquitectura/README.md` |
+| §13 | Resolución de las 24 contradicciones detectadas | Historia (resolvió contradicciones de los specs de mayo, ya borrados) |
+| §14 | Alcance Fase 1 — qué se activa vs qué se modela pero no | Historia (alcance de la Fase 1) |
+| §15 | Comportamiento del cliente (verdad visual = demo + spec v2) | `Docs/negocio/apps.md` (las fuentes que citaba se borraron) |
+| §16 | Diseño (fuente: `packages/ui/src/theme.css` + `apps/motorizados`) | Vigente aquí (no re-verificada en el squash) |
+| §17 | Pendientes que aún requieren confirmación del usuario | Por revisar: pendientes de mayo, probablemente resueltos |
+| §18 | Modo "solo catálogo (WhatsApp)" — `catalog_only` | Vigente aquí (no re-verificada en el squash) |
+| §19 | Horario de atención visible al cliente + estado abierto/cerrado | Vigente aquí (no re-verificada en el squash) |
+| §20 | Buscador del catálogo en el cliente | Vigente aquí (no re-verificada en el squash) |
+| §21 | Color de papelito: paleta establecida, fin de la unicidad | Vigente aquí (no re-verificada en el squash) |
+| §22 | Pedido manual: la cajera teclea el TOTAL, la comida se deduce | Vigente aquí (no re-verificada en el squash) |
+| §23 | Regla de los 10 minutos post-Pedido Listo, co-existencia del temporizador y diferenciación de copy | Vigente aquí (no re-verificada en el squash) |
+| §24 | Rediseño Estructural de Cards: 3 Bandas en Motorizados y Ordenación por Urgencia en Negocios | Vigente aquí (no re-verificada en el squash) |
+| §25 | El motorizado se entera: qué momentos disparan push | Vigente aquí (no re-verificada en el squash) |
+| §26 | La tarjeta del motorizado: qué dice cada sitio y por qué | Vigente aquí (no re-verificada en el squash) |
+| §27 | `cn()` borraba en silencio las tallas de texto del tema | Vigente aquí (no re-verificada en el squash) |
+| §28 | Reseñas: se capturan desde el día 1, no se publican hasta que los números lo permitan | Vigente aquí (no re-verificada en el squash) |
+| §29 | El motorizado avanza el pedido arrastrando, y la cola se entera al instante | Vigente aquí (no re-verificada en el squash) |
+| §30 | Motor de mapa compartido: qué se reusa del selector de ubicación para el Catálogo de negocios | Vigente aquí (no re-verificada en el squash) |
+| §31 | Tindivo Entregas — lado cliente: nombres, tablas y alcance de la primera noche de build | `Docs/negocio/servicios/entregas.md`; nombres en `Docs/glosario.md` |
+| §32 | Tindivo Store: el catálogo de segunda mano de San Jacinto | `Docs/negocio/servicios/store.md` |
+| §33 | — | Vetado: lo citaba un borrador de Encargos que nunca se aprobó |
+| §34 en adelante | — | Una decisión por archivo en `Docs/decisiones/` (ADR 0034, 0035, 0036…) |
 
 ---
 
 ## 0. Regla de precedencia de documentos
 
-Hay 20 documentos con reglas que a veces se contradicen. Orden de autoridad:
-
-1. **`FASE-1-TINDIVO.md`** — alcance y reglas de la Fase 1 (manda sobre todo lo demás).
-2. **`Tindivo_Documento_Maestro.md`** — capa de reconciliación; reglas de dinero y antifraude.
-3. **Specs `00`–`14`** — arquitectura técnica de referencia.
-4. **`Tindivo Design Spec.html` + `FLUJO_TINDIVO.md`** — verdad visual y de comportamiento del cliente.
-5. **`DOCUMENTACION_PANELES_TINDIVO.md`** — inspiración UX, **NO** target estético.
-
-Donde FASE-1 o el Maestro corrigen un spec, ganan ellos. **Confirmado por el usuario (2026-05-29).**
+> **Sustituida el 2026-10-10** por el estándar aprobado por Jesús (`Docs/planes/estandar-docs/estandar.md` §4):
+> mandan las decisiones (`Docs/decisiones/` y las secciones de este archivo) y el canon (`Docs/glosario.md`,
+> `Docs/negocio/`); el código y la base de producción son la evidencia de lo que pasa. La regla anterior ponía primero
+> `FASE-1-TINDIVO.md` y el Documento Maestro, que ya no existen: su contenido vigente pasó al canon (en git: `306f025`).
 
 ---
 
@@ -105,9 +146,13 @@ tindivo-v2/
 
 | Distancia | Delivery (paga el cliente) | Comisión (pone el restaurante) | **Total a Tindivo** | Restaurante pierde |
 |---|---|---|---|---|
-| **Cerca** (`near`) | S/2.00 | S/1.00 | **S/3.00** | S/1.00 |
-| **Lejos** (`far`) | S/2.50 | S/1.00 | **S/3.50** | S/1.00 |
+| **Cerca** (`near`) | S/2.00 | S/1.50 | **S/3.50** | S/1.50 |
+| **Lejos** (`far`) | S/2.50 | S/1.50 | **S/4.00** | S/1.50 |
 | **Recojo** (`pickup`) | S/0 | S/1.00 | **S/1.00** | S/1.00 |
+
+> **La comisión por pedido con entrega es S/1.50 (corregido 2026-10-10, confirmado por Jesús).** Esta tabla decía
+> S/1.00 y producción cobró S/1.50 desde el primer pedido. El envío lo paga el cliente al negocio, y el negocio se lo
+> paga a Tindivo junto con la comisión. Detalle vivo: `Docs/negocio/dinero.md`.
 
 > **El recojo cobra S/1.00, no S/0.50 (corregido 2026-09-07).** Esta tabla decía
 > S/0.50 desde el principio y el número vivo es 1.00 —
@@ -117,7 +162,7 @@ tindivo-v2/
 > faltaba era que alguien lo escribiera aquí. **El número manda desde
 > `app_settings`, no desde esta tabla.**
 
-- **Narrativa al dueño**: "S/1 de comisión; el delivery lo paga el cliente". La UI de deuda muestra el desglose (delivery del cliente vs. comisión Tindivo) sin mentir.
+- **Narrativa al dueño**: "S/1.50 de comisión; el delivery lo paga el cliente". La UI de deuda muestra el desglose (delivery del cliente vs. comisión Tindivo) sin mentir.
 - El **cliente paga al restaurante** (comida + delivery). El restaurante transfiere a Tindivo el monto conjunto.
 - Motorizado: **sueldo fijo** (~S/30/noche), no por entrega. Sin mensualidad. 100% transaccional.
 - Cobro **solo por pedido entregado** (cancelados no suman comisión ni deuda).
@@ -267,7 +312,7 @@ Codificado en `@tindivo/contracts` (`order-status.ts`: `ORDER_TRANSITIONS`, `STA
 - **Validación por llamada** (la hace la **cajera** por default; el admin escala): todo **cliente nuevo** (primer pedido de un número), **monto grande**, y números con **strike** previo. El recurrente confiable fluye sin llamada. Prepago no se llama (ya pagó).
 - **Strikes anclados a número Y dirección** a la vez (cambiar uno no limpia el otro). **2 strikes → contra entrega bloqueada** (solo prepago). **3 strikes → bloqueo total 30 días** (`blocked_until`, tampoco prepago).
   El riesgo manda sobre cualquier historial: `customer_trusted_for_contraentrega` (`0171`, cláusula (3) ensanchada por `0182`) evalúa el bloqueo/prepago-forzado ANTES de mirar `compra_previa` o GPS — 2+ strikes anula esas señales sin importar cuánto historial tenga la cuenta.
-  **Nota de reconciliación (2026-09-05):** el escalón de 2 se eliminó a propósito en `0040` (decisión #3 del refactor antifraude) y se **reintrodujo sin registrar el porqué** 6 días después en `0044` (`prepaymentOnlyThreshold`/`customer_requires_prepayment`). Confirmado con el usuario que el escalón de 2 **se queda vigente tal como está hoy**; esto cierra la discrepancia entre `0040`/`IMPLEMENTACION_ANTIFRAUDE_LOG.md` (que documentan la eliminación) y el código vivo desde `0044` (que la reintrodujo). Los primeros quedan como historia, no como estado actual.
+  **Nota de reconciliación (2026-09-05):** el escalón de 2 se eliminó a propósito en `0040` (decisión #3 del refactor antifraude) y se **reintrodujo sin registrar el porqué** 6 días después en `0044` (`prepaymentOnlyThreshold`/`customer_requires_prepayment`). Confirmado con el usuario que el escalón de 2 **se queda vigente tal como está hoy**; esto cierra la discrepancia entre `0040`/`IMPLEMENTACION_ANTIFRAUDE_LOG.md` (borrado; en git: `8f26aed`) (que documentan la eliminación) y el código vivo desde `0044` (que la reintrodujo). Los primeros quedan como historia, no como estado actual.
 - **Definición exacta de `compra_previa`** (lo que habilita contraentrega libre sin llamada, una vez descartado el riesgo de arriba). Basta CUALQUIERA de estas tres, resueltas siempre por el **teléfono del perfil verificado por OTP**, nunca por el que el cliente escriba en el pedido:
   1. Un pedido `delivered` de ESTA cuenta.
   2. Un pedido `delivered` de este teléfono en v2 (incluye los manuales que tomó la cajera con `customer_user_id NULL`).
@@ -432,6 +477,10 @@ la atención de la cajera).
 
 ## 9. Fondo de contingencia
 
+> **Obsoleto desde la `0123` (`contingency_is_gone_and_appeals_reach_the_ledger`).** Comprobado el 2026-10-10 en
+> `tindivo-prod`: no quedan ni `contingency_advances` ni funciones de contingencia. Lo que queda de «Tindivo adelanta y
+> se lo cobra al negocio» son las apelaciones aprobadas: `Docs/negocio/plataforma.md`. Lo de abajo es historia.
+
 - Reserva inicial **S/200–300**. Único uso: devolución inmediata al cliente cuando un restaurante falla y el dueño no está.
 - **Registro contable obligatorio** en el pedido: cliente, motivo, monto, captura, timestamp+operador, **actor que carga** (`restaurante` suma a deuda / `tindivo` absorbe).
 - El negocio puede **disputar dentro de 48h** (congela deuda) → reporte tipo `advance_dispute`; el admin resuelve.
@@ -582,7 +631,7 @@ Si algún día se automatiza: el umbral ya está en `app_settings`, pero mete
 - **Color**: Brand `#F97316` · Brand Dark `#C2410C` · Brand Light `#FED7AA` · Ink `#1A1614` · Surface `#FAF6F1` · Card `#FFFFFF` · Border `#EAE7E2` · Success `#16A34A` · Warning `#F59E0B` · Danger `#DC2626` · Info `#0EA5E9`.
 - **Tipografía**: **Geist** para display, body y labels; **JetBrains Mono** solo para datos técnicos (IDs, precios, horas), con `tabular-nums` en contextos numéricos. Máx 3 tamaños por vista. La jerarquía se logra con peso (600-800 displays · 400-600 body · 500-700 microlabels), no con familias distintas.
   > Esta línea decía «Manrope única en toda la plataforma» y contradecía al código
-  > desde la migración del design system (ver `Docs/context/design-system-migration-plan.md`,
+  > desde la migración del design system (ver `Docs/context/design-system-migration-plan.md` (borrado; en git: `8f26aed`),
   > que eligió Geist por ser más cercana al look moderno manteniendo legibilidad en
   > móvil).
 
@@ -647,7 +696,7 @@ Si algún día se automatiza: el umbral ya está en `app_settings`, pero mete
 
 ## 20. Buscador del catálogo en el cliente (2026-07-02)
 
-Supera el "search bar no funcional v1.0" de `Docs/07-flujo-cliente.md` RF-CAT-03. Busca **negocios** (nombre + eslogan) y **platos** (nombre + descripción), insensible a **mayúsculas y tildes** en ambas direcciones ("PIÑA" ↔ "pina").
+Supera el "search bar no funcional v1.0" de `Docs/07-flujo-cliente.md` (borrado; en git: `52045ae`) RF-CAT-03. Busca **negocios** (nombre + eslogan) y **platos** (nombre + descripción), insensible a **mayúsculas y tildes** en ambas direcciones ("PIÑA" ↔ "pina").
 
 - **Filtrado en Postgres, no en el cliente** (migración `0052`): extensiones `unaccent` + `pg_trgm` (schema `extensions`), wrapper **`public.f_unaccent`** (IMMUTABLE para poder indexar; si cambian las reglas del diccionario → REINDEX) e **índices GIN trigram** sobre `f_unaccent(lower(name || ' ' || descripción/eslogan))`.
 - ⚠️ **Grants de `f_unaccent`**: los índices de expresión evalúan la función con el rol que ESCRIBE la fila → EXECUTE para `authenticated` (el panel escribe `menu_items` directo vía PostgREST; revocarlo rompería el editor de menú) y `service_role` (la API escribe `businesses`). Revocada de `public`/`anon` (no escriben filas; el default de Supabase la dejaba invocable vía `/rest/v1/rpc/`).
@@ -719,7 +768,7 @@ El formulario de `apps/negocios/nuevo` rotulaba su campo "Total del pedido" pero
 - **Consecuencia económica asumida**: con el total fijo, elegir "Lejos" ya no le cobra S/0.50 más al cliente — se los resta a la comida, o sea que **el negocio absorbe** la diferencia (le sigue debiendo el envío íntegro a Tindivo vía `business_charges`, §4). Si se decide lo contrario, la salida es igualar `far` a `near` en `app_settings` (precedente de la `0110` con `commissions`), no revertir la `0129`.
 - **Renombre deliberado del campo del endpoint** (`orderAmount` → `totalAmount`), sin alias de compatibilidad: un cliente viejo se lleva un 422 en vez de colar un total por comida. `apps/api` y `apps/negocios` se despliegan juntos.
 - **Arregla de rebote dos defectos vivos** que nacían de la misma asimetría: el pago **mixto** era imposible de enviar (la pantalla exigía `billetera + efectivo = comida`, el servidor `= comida + envío`) y el **vuelto** se mostraba inflado por el importe del envío.
-- **Supersede** `Docs/spec/spec_ui_cajera.md` en su punto "«Monto del pedido» pasa a ser solo comida" (líneas 62 y 374): sigue siendo `orders.order_amount`, pero ya no es lo que teclea la cajera.
+- **Supersede** `Docs/spec/spec_ui_cajera.md` (borrado; en git: `b98e5e5`) en su punto "«Monto del pedido» pasa a ser solo comida" (líneas 62 y 374): sigue siendo `orders.order_amount`, pero ya no es lo que teclea la cajera.
 
 ---
 
@@ -1089,7 +1138,7 @@ Se cumplen **las cuatro** o no se abre:
 moderación, derecho de réplica y política escrita antes del primer caso.
 
 > Las consultas SQL que miden las cuatro condiciones —verificadas contra prod—
-> y todo el detalle están en **`Docs/spec/spec_resenas.md`**.
+> y todo el detalle están en **`Docs/spec/spec_resenas.md` (borrado; en git: `52045ae`)**.
 
 
 ## 29. El motorizado avanza el pedido arrastrando, y la cola se entera al instante (2026-09-19)
@@ -1160,7 +1209,7 @@ con el trigger apagado. Si el canal no engancha, el poll de 15 s sigue cubriendo
 
 ## 30. Motor de mapa compartido: qué se reusa del selector de ubicación para el Catálogo de negocios (2026-09-22)
 
-**Contexto**: el selector de ubicación del cliente (`apps/customer/components/map-picker-inner.tsx`) recibió hoy dos optimizaciones medidas — cache de tiles en el service worker (`759e0c1`) y `zoomAnimation={false}` (`0a75dd2`), este último verificado con un trace de rendering de Chrome DevTools Protocol, no con el profiler de JS (que no ve el costo de repintado/rasterizado que causaba el tirón). En paralelo surge `Docs/Encargos/Tindivo — Catálogo de negocios y Encargos (spec v1).md` (sin construir aún al momento de esta entrada), que necesita su propio mapa: potencialmente **gran parte de San Jacinto** en pines, con `directory_businesses` como fuente. Antes de que ese feature arranque su propio mapa desde cero — o, peor, importe el del cliente cruzado —, queda dicho qué se reusa y qué no.
+**Contexto**: el selector de ubicación del cliente (`apps/customer/components/map-picker-inner.tsx`) recibió hoy dos optimizaciones medidas — cache de tiles en el service worker (`759e0c1`) y `zoomAnimation={false}` (`0a75dd2`), este último verificado con un trace de rendering de Chrome DevTools Protocol, no con el profiler de JS (que no ve el costo de repintado/rasterizado que causaba el tirón). En paralelo surge `Docs/Encargos/Tindivo — Catálogo de negocios y Encargos (spec v1).md` (borrado; en git: `fd44b16`) (sin construir aún al momento de esta entrada), que necesita su propio mapa: potencialmente **gran parte de San Jacinto** en pines, con `directory_businesses` como fuente. Antes de que ese feature arranque su propio mapa desde cero — o, peor, importe el del cliente cruzado —, queda dicho qué se reusa y qué no.
 
 ### Decisiones
 
@@ -1180,7 +1229,7 @@ con el trigger apagado. Si el canal no engancha, el poll de 15 s sigue cubriendo
 
 ## 31. Tindivo Entregas — lado cliente: nombres, tablas y alcance de la primera noche de build (2026-09-22)
 
-**Contexto**: `Docs/Encargos/` traía dos documentos con nombres técnicos distintos para el mismo servicio — recoger algo ya pagado en un punto A y llevarlo a un punto B por S/ 3. `03-plan-tecnico.md` (19-sep) proponía `courier_requests`/`catalog_places`; el spec más reciente, `Docs/Encargos/Tindivo — Catálogo de negocios y Encargos (spec v1).md` (21/22-sep), resuelve en su §10 `courier_orders`/`directory_businesses` con razonamiento explícito. Jesús confirmó en esta sesión que el segundo manda: **"la verdad que se confundió el agente creo... deberia de ser el más reciente"**. Esta entrada formaliza lo construido, con Jesús dormido y autorización para decidir en su nombre lo que hiciera falta ("trata de ahora tomar decisiones por tu cuenta en pro del proyecto").
+**Contexto**: `Docs/Encargos/` (borrado; en git: `fd44b16`) traía dos documentos con nombres técnicos distintos para el mismo servicio — recoger algo ya pagado en un punto A y llevarlo a un punto B por S/ 3. `03-plan-tecnico.md` (19-sep) proponía `courier_requests`/`catalog_places`; el spec más reciente, `Docs/Encargos/Tindivo — Catálogo de negocios y Encargos (spec v1).md` (borrado; en git: `fd44b16`) (21/22-sep), resuelve en su §10 `courier_orders`/`directory_businesses` con razonamiento explícito. Jesús confirmó en esta sesión que el segundo manda: **"la verdad que se confundió el agente creo... deberia de ser el más reciente"**. Esta entrada formaliza lo construido, con Jesús dormido y autorización para decidir en su nombre lo que hiciera falta ("trata de ahora tomar decisiones por tu cuenta en pro del proyecto").
 
 ### Nombres (fuente única: `packages/contracts/src/enums.ts`, `courier.ts`, `courier-status.ts`)
 
@@ -1221,9 +1270,9 @@ Migración aplicada y probada en local (`supabase db reset`), y empujada a `tind
 ## 32. Tindivo Store: el catálogo de segunda mano de San Jacinto (2026-10-02)
 
 **Qué es.** `/store` (comprador) y «Tienda» en el admin: un solo vendedor (Jesús), piezas únicas,
-sin carrito ni pago web; todo se cierra por WhatsApp. Spec: `Docs/Store/tindivo-store-prd-v2.md`.
-Implementación, decisiones, límites y pasos de despliegue: `Docs/Store/IMPLEMENTACION.md`;
-estado de aceptación y qué no se pudo verificar: `Docs/Store/ACEPTACION.md`. Migraciones 0242–0245.
+sin carrito ni pago web; todo se cierra por WhatsApp. Spec: `Docs/Store/tindivo-store-prd-v2.md` (borrado; en git: `b98e5e5`).
+Implementación, decisiones, límites y pasos de despliegue: `Docs/Store/IMPLEMENTACION.md` (borrado; en git: `8f26aed`);
+estado de aceptación y qué no se pudo verificar: `Docs/Store/ACEPTACION.md` (borrado; en git: `8f26aed`). Migraciones 0242–0245.
 
 **Lo que conviene no deshacer.**
 - Los invariantes (≤ 6 fotos, ≥ 1 para publicar, campos obligatorios, nada vuelve a borrador,
@@ -1240,3 +1289,16 @@ estado de aceptación y qué no se pudo verificar: `Docs/Store/ACEPTACION.md`. M
 **Gotcha de pruebas.** Un Chrome en segundo plano (`visibilityState: hidden`) pausa
 `requestAnimationFrame` y Next no revela el streaming ni hidrata: parece un bug de la app y no lo es.
 Para probar la UI usa Playwright (`e2e/store*.spec.ts`).
+
+---
+
+## 34 · 35 · 36. Decisiones nuevas: una por archivo en `Docs/decisiones/`
+
+Desde el 2026-10-10 las decisiones nuevas no se escriben aquí (estándar: `Docs/planes/estandar-docs/estandar.md` §5.1).
+§33 queda vetado (lo citaba un borrador de Encargos que nunca se aprobó).
+
+- **0034** · Encargos queda fuera; la apuesta es el hábito de pedir comida en la app →
+  `Docs/decisiones/0034-encargos-fuera-la-apuesta-es-el-habito-en-la-app.md`
+- **0035** · Tindivo Entregas abre todos los días, de 18:00 a 23:00 → `Docs/decisiones/0035-entregas-abre-todos-los-dias.md`
+- **0036** · Las devoluciones al cliente las adelanta Tindivo y las repone el negocio →
+  `Docs/decisiones/0036-las-devoluciones-las-adelanta-tindivo-y-las-repone-el-negocio.md`
