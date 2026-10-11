@@ -1,0 +1,49 @@
+name: Modelos móviles · Swift
+
+# MV2c, D-48: los modelos de Swift se compilan a diario y no en cada PR, porque el runner de macOS cuesta diez
+# veces más que el de Linux. Los de Kotlin se compilan en cada PR (job `mobile-models-kotlin` de ci.yml).
+# Si el contrato cambia y rompe Swift, se verá a lo sumo al día siguiente; para verlo antes, lánzalo a mano
+# (Actions > Modelos móviles · Swift > Run workflow).
+on:
+  schedule:
+    # 09:00 UTC = 04:00 en Lima, fuera del horario de pedidos.
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: mobile-models-swift
+  cancel-in-progress: true
+
+jobs:
+  swift:
+    name: Modelos de Swift compilan
+    # macOS fijado (no `macos-latest`) por la misma razón que `ubuntu-24.04` en ci.yml.
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      # El cron corre sobre la rama por defecto del repo; se pide `develop` a propósito para medir el contrato
+      # que va a salir. Con workflow_dispatch se puede elegir otra rama en la interfaz, y entonces manda esa.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'schedule' && 'develop' || github.ref }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      # Java es del generador (openapi-generator es un .jar), no de Swift.
+      - name: Setup JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Xcode 16.4 (Swift 6)
+        run: sudo xcode-select -s /Applications/Xcode_16.4.app
+
+      - name: Versión de Swift
+        run: swift --version
+
+      - name: Generar y compilar los modelos de Swift
+        run: node scripts/generate-mobile-models.mjs swift --compile

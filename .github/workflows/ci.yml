@@ -196,3 +196,33 @@ jobs:
             exit 1
           fi
           echo "Sin drift: los tipos están sincronizados con la DB."
+
+  # MV2c: los modelos de Kotlin se generan desde el contrato OpenAPI y se compilan en cada PR. Si un cambio del
+  # contrato rompe la app Android, cae aquí y no al construir la app. Los de Swift se compilan a diario en
+  # `mobile-models-swift.yml` (D-48: el runner de macOS cuesta diez veces más). Los modelos no se versionan.
+  # Todo va fijado: generador (con sha256) y plugins en scripts/generate-mobile-models.mjs; JDK y Gradle, aquí.
+  mobile-models-kotlin:
+    name: Modelos móviles · Kotlin compila
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          gradle-version: 9.8.1
+
+      - name: Generar y compilar los modelos de Kotlin
+        run: node scripts/generate-mobile-models.mjs kotlin --compile
