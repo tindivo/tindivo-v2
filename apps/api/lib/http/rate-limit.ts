@@ -37,8 +37,10 @@ export const DEFAULT_LIMITS: Limits = {
 }
 
 export function classifyRoute(method: string, pathname: string): Bucket | null {
-  const m = method.toUpperCase()
+  let m = method.toUpperCase()
   if (m === 'OPTIONS') return null
+  // Next ejecuta HEAD con el handler de GET: debe contar en el mismo cubo.
+  if (m === 'HEAD') m = 'GET'
   const p = pathname.replace(/\/+$/, '')
   if (
     m === 'POST' &&
@@ -150,27 +152,76 @@ export async function checkRateLimit(req: Request, deps: RateLimitDeps): Promise
 // --- Cableado de producción (no se prueba en unitarios) ---------------------
 
 const TTL_MS = 30_000
-let limitsCache: { at: number; value: Limits } | null = null
+const LOAD_TIMEOUT_MS = 1_000
 
-async function loadLimits(now = Date.now()): Promise<Limits> {
-  if (limitsCache && now - limitsCache.at < TTL_MS) return limitsCache.value
-  let overrides: LimitOverrides | null = null
-  try {
-    const { data } = await createServiceClient()
+/**
+ * Lector de umbrales con caché, timeout y single-flight: una sola lectura en
+ * vuelo aunque lleguen muchas peticiones, y si falla o vence se conserva el
+ * último valor bueno (o los defaults). Nunca deja colgado al proxy.
+ */
+export function createLimitsLoader(opts: {
+  fetchOverrides: () => Promise<unknown>
+  now?: () => number
+  ttlMs?: number
+  timeoutMs?: number
+}): () => Promise<Limits> {
+  const now = opts.now ?? Date.now
+  const ttl = opts.ttlMs ?? TTL_MS
+  const timeoutMs = opts.timeoutMs ?? LOAD_TIMEOUT_MS
+  let cache: { at: number; value: Limits } | null = null
+  let inflight: Promise<Limits> | null = null
+
+  async function refresh(): Promise<Limits> {
+    const previous = cache?.value ?? DEFAULT_LIMITS
+    let timer: ReturnType<typeof setTimeout> | undefined
+    try {
+      const timeout = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error('timeout')), timeoutMs)
+      })
+      const raw = await Promise.race([opts.fetchOverrides(), timeout])
+      const parsed = parseLimitOverrides(raw)
+      return parsed || raw == null ? resolveLimits(parsed) : previous
+    } catch {
+      return previous
+    } finally {
+      clearTimeout(timer)
+    }
+  }
+
+  return async () => {
+    if (cache && now() - cache.at < ttl) return cache.value
+    if (!inflight) {
+      inflight = refresh()
+        .then((value) => {
+          cache = { at: now(), value }
+          return value
+        })
+        .finally(() => {
+          inflight = null
+        })
+    }
+    return inflight
+  }
+}
+
+const loadLimits = createLimitsLoader({
+  fetchOverrides: async () => {
+    const { data, error } = await createServiceClient()
       .from('app_settings')
       .select('value')
       .eq('key', 'rate_limits')
       .maybeSingle()
-    overrides = parseLimitOverrides(data?.value)
-  } catch {
-    overrides = null
-  }
-  const value = resolveLimits(overrides)
-  limitsCache = { at: now, value }
-  return value
-}
+    if (error) throw new Error(error.message)
+    return data?.value ?? null
+  },
+})
 
 let upstashStore: RateLimitStore | null | undefined
+
+/** Para los tests: olvida el almacén ya creado. */
+export function resetUpstashStore(): void {
+  upstashStore = undefined
+}
 
 async function getUpstashStore(): Promise<RateLimitStore | null> {
   if (upstashStore !== undefined) return upstashStore
@@ -210,7 +261,12 @@ async function getUpstashStore(): Promise<RateLimitStore | null> {
 export async function rateLimitRequest(req: Request): Promise<Response | null> {
   const bucket = classifyRoute(req.method, new URL(req.url).pathname)
   if (!bucket) return null
-  const store = await getUpstashStore()
-  if (!store) return null
-  return checkRateLimit(req, { store, limits: await loadLimits() })
+  try {
+    const store = await getUpstashStore()
+    if (!store) return null
+    return await checkRateLimit(req, { store, limits: await loadLimits() })
+  } catch (err) {
+    console.error('[rate-limit] fallo al preparar el límite, se deja pasar:', err)
+    return null
+  }
 }

@@ -1,11 +1,15 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { corsHeaders } from '../http/cors'
 import {
   checkRateLimit,
   classifyRoute,
   clientIp,
+  createLimitsLoader,
   DEFAULT_LIMITS,
   memoryStore,
   parseLimitOverrides,
+  rateLimitRequest,
+  resetUpstashStore,
   resolveLimits,
 } from '../http/rate-limit'
 
@@ -118,5 +122,88 @@ describe('límites desde app_settings', () => {
     const o = parseLimitOverrides({ tracking: { limit: 5, windowSec: 30 } })
     expect(resolveLimits(o).tracking).toEqual({ limit: 5, windowSec: 30 })
     expect(resolveLimits(o).search).toEqual(DEFAULT_LIMITS.search)
+  })
+})
+
+describe('HEAD cuenta como GET', () => {
+  it('HEAD cae en el mismo cubo que GET', () => {
+    expect(classifyRoute('HEAD', '/api/v1/public/search')).toBe('search')
+    expect(classifyRoute('HEAD', '/api/v1/public/orders/ABCD2345')).toBe('tracking')
+  })
+
+  it('HEAD y GET comparten contador', async () => {
+    const limits = { ...DEFAULT_LIMITS, tracking: { limit: 2, windowSec: 60 } }
+    const store = memoryStore(() => 1_000)
+    const mk = (m: string) => req('/api/v1/public/orders/ABCD2345', m, { 'x-real-ip': '5.5.5.5' })
+    await checkRateLimit(mk('GET'), { store, limits })
+    await checkRateLimit(mk('HEAD'), { store, limits })
+    expect((await checkRateLimit(mk('HEAD'), { store, limits }))?.status).toBe(429)
+    expect((await checkRateLimit(mk('GET'), { store, limits }))?.status).toBe(429)
+  })
+})
+
+describe('createLimitsLoader', () => {
+  const custom = { tracking: { limit: 5, windowSec: 30 } }
+
+  it('un timeout real no cuelga y cae a los defaults', async () => {
+    const load = createLimitsLoader({
+      fetchOverrides: () => new Promise(() => {}),
+      timeoutMs: 20,
+    })
+    const t0 = Date.now()
+    expect(await load()).toEqual(DEFAULT_LIMITS)
+    expect(Date.now() - t0).toBeLessThan(500)
+  })
+
+  it('10 solicitudes concurrentes hacen una sola lectura', async () => {
+    const fetchOverrides = vi.fn(async () => {
+      await new Promise((r) => setTimeout(r, 10))
+      return custom
+    })
+    const load = createLimitsLoader({ fetchOverrides })
+    const out = await Promise.all(Array.from({ length: 10 }, () => load()))
+    expect(fetchOverrides).toHaveBeenCalledTimes(1)
+    expect(out.every((l) => l.tracking.limit === 5)).toBe(true)
+  })
+
+  it('si la relectura falla o vence, conserva el último valor bueno', async () => {
+    let now = 0
+    let fail = false
+    const load = createLimitsLoader({
+      fetchOverrides: async () => {
+        if (fail) throw new Error('supabase caído')
+        return custom
+      },
+      now: () => now,
+      ttlMs: 100,
+    })
+    expect((await load()).tracking.limit).toBe(5)
+    fail = true
+    now = 1_000
+    expect((await load()).tracking.limit).toBe(5)
+  })
+})
+
+describe('Upstash mal configurado', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    resetUpstashStore()
+  })
+
+  it('con URL inválida falla abierto en vez de romper el proxy', async () => {
+    vi.stubEnv('UPSTASH_REDIS_REST_URL', 'esto no es una url')
+    vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 'x')
+    resetUpstashStore()
+    const r = req('/api/v1/public/search', 'GET', { 'x-real-ip': '7.7.7.7' })
+    await expect(rateLimitRequest(r)).resolves.toBeNull()
+  })
+})
+
+describe('CORS expone Retry-After', () => {
+  it('Access-Control-Expose-Headers incluye retry-after', () => {
+    const h = corsHeaders(
+      req('/api/v1/public/search', 'GET', { origin: 'https://www.tindivo.com' }),
+    )
+    expect(h['access-control-expose-headers']).toContain('retry-after')
   })
 })
