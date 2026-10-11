@@ -28,8 +28,8 @@ export interface ProfileSpec {
    *
    * Es el límite del bucket, no una preferencia: por encima de esto Storage
    * rechaza la subida, así que más vale un error claro. Y por eso `proof` es
-   * distinto — `payment-proofs` se quedó fuera de la migración 0151 y no tiene
-   * tope, o sea que ahí el único techo real es el de la entrada.
+   * distinto — `payment-proofs` tiene desde la 0254 un tope de 15 MB, el mismo de
+   * la entrada, así que ahí el original nunca se rechaza por tamaño en Storage.
    */
   fallbackLimit: number
 }
