@@ -10,7 +10,7 @@ import { errorText, needsPayment, PaymentSheet, ProblemSheet, sendStep } from '.
 import { type LeftAction, type RightAction, SwipeCard } from './swipe-card'
 
 /**
- * Tindivo Entregas en el tablero del motorizado (MVP, Docs/Entregas/mvp-entregas-v1.md §4).
+ * Tindivo Entregas en el tablero del motorizado (MVP, Docs/Entregas/mvp-entregas-v1.md §4, en git: fd44b16).
  *
  * MISMA MANO QUE LA COMIDA: la tarjeta se arrastra a la derecha para avanzar
  * (Aceptar → Ya recogí → Entregado) y a la izquierda para «No se pudo», y

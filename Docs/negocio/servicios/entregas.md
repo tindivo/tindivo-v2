@@ -33,6 +33,28 @@ terminal, igual que en los pedidos de restaurante.
 - **La comida preparada no va por Entregas**: el formulario no ofrece «Comida». **Por qué:** un restaurante que quiere
   entregas es un aliado por conseguir, y Entregas no debe hacerle la competencia a la comisión.
 
+## Qué se lleva y qué no
+
+Regla central: **solo lo que ya está coordinado, pagado y listo, hasta 5 kg**. Se llevan productos de bodega ya
+pagados, medicinas comunes ya compradas **en su bolsa sellada** (decisión de Jesús), objetos pequeños que quepan en la
+mochila (45 × 45 × 45 cm) y sobres sencillos. La comida preparada no (ver arriba): la lista del 19-sep la permitía y
+el MVP del 30-sep la quitó del formulario. **No** se lleva dinero ni
+valores, documentos de identidad, medicinas con receta retenida, **alcohol**, animales ni nada peligroso, ni nada que
+el motorizado tenga que comprar. Lo frágil no se prohíbe: el cliente lo marca y el motorizado decide si puede llevarlo.
+(Versión 1.0 del 2026-09-19; los términos de responsabilidad, con tope de S/ 200, son un **borrador sin revisión
+legal**.)
+
+## Cómo se pide
+
+Aprobado por Jesús el 2026-10-07: **una sola entrada** (la tarjeta del inicio y `tindivo.com/entregas` abren lo mismo),
+el **mapa del punto A primero**, y los atajos dentro del mapa: **repetir una entrega** (hasta 3 anteriores), **buscar un
+lugar** por su nombre (negocios primero, luego referencias públicas) y, en el punto B, **«Usar mi dirección»**. «Listo
+y pagado» se vuelve a marcar en cada envío. Recoger de un negocio del directorio llega cuando haya negocios cargados con
+su contacto.
+
+**Pendiente de datos (Jesús, desde el admin):** en el directorio de lugares, «salud» mezcla boticas con Essalud y la
+Posta, y «otro» mezcla negocios con referencias; hasta corregirlo, los negocios de «otro» salen como referencias.
+
 ## El motorizado
 
 - Ve las entregas en su propia sección de la app y lleva **como máximo 2 activas** (`maxActivePerDriver`).

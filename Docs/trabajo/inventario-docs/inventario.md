@@ -28,12 +28,12 @@ Ninguno está citado desde el código. Las menciones que les hacen otros documen
 | `(raíz)` | `AUDITORIA_ANTIFRAUDE_ACTUAL.md`, `IMPLEMENTACION_ANTIFRAUDE_LOG.md` | junio, contra el proyecto abandonado |
 | `Docs/` | `CHECKLIST-VERIFICACION.md`, `DOCUMENTACION_PANELES_TINDIVO.md`, `HALLAZGOS_OLD_NEGOCIOS.md`, `INVENTARIO_ESTADO_ACTUAL.md`, `auditoria-legacy-parte2-codigo.md`, `auditoria-legacy-parte2-resultados.md` | auditorías y referencias del v1, mayo-agosto |
 | `Docs/` | `ui-kit-exploration.html`, `ui-kit-v2.html`, `ui-kit-v3.html` | exploraciones de UI de julio; el tema vive en packages/ui |
-| `Docs/Encargos/` | `00-retomar-sesion.md`, `07-integracion-recojo.md`, `09-analisis-documentos-v2.md`, `Flujo UX_UI inDrive Entregas.md` | historia del diseño de Entregas (lo dice el propio 00) |
+| `Docs/Encargos/` (borrado; en git: `fd44b16`) | `00-retomar-sesion.md`, `07-integracion-recojo.md`, `09-analisis-documentos-v2.md`, `Flujo UX_UI inDrive Entregas.md` | historia del diseño de Entregas (lo dice el propio 00) |
 | `Docs/Encargos/compras/` (borrado; en git: `8f26aed`) | **toda la carpeta** (8) | Encargos descartado por Jesús el 2026-10-07 |
 | `Docs/Encargos/compras/historico-v1/` (borrado; en git: `8f26aed`) | **toda la carpeta** (10) | Encargos descartado por Jesús el 2026-10-07 |
 | `Docs/Encargos/historico-pre-v2/` (borrado; en git: `8f26aed`) | **toda la carpeta** (11) | versión sustituida por la v1.0 del 19-sep |
 | `Docs/Encargos/origen-jesus/` (borrado; en git: `8f26aed`) | `00-maestro.md`, `01-flujo-recojo.md`, `02-negocios-campos-categorias.md`, `03-mapa.md`, `04-visibilidad-y-adquisicion.md`, `05-precio-promos-metricas.md` | v1 de los documentos de Jesús; sustituida por origen-jesus-v2 |
-| `Docs/Entregas/` | `estado-actual.md` | foto del 30-sep |
+| `Docs/Entregas/` (borrado; en git: `fd44b16`) | `estado-actual.md` | foto del 30-sep |
 | `Docs/Store/` | `ACEPTACION.md`, `IMPLEMENTACION.md`, `Tindivo Store — PRD v1 (MVP).md`, `Tindivo_Store_Prompt_Maestro_Desarrollo_FullStack.md`, `Tindivo_Store_UI_V3_Prompt_Claude_Design.md` | PRD v1 sustituido, prompts usados y entrega/aceptación de una rama ya en producción |
 | `Docs/context/` | 13 de 14; se quedan: `debt-liquidation-audit.md` | auditorías de julio, fotos de un momento |
 | `Docs/handoff/` (borrado; en git: `8f26aed`) | **toda la carpeta** (9) | relatos de sesión de agosto |
@@ -77,9 +77,9 @@ Si un tema está cerrado: se rescata lo decidido al canon y se borra. Si sigue a
 ## 4. Planes, trabajo, agentes y lo que se queda
 
 - **PLANES**: `Docs/trabajo/movil/02-auditoria-backend/` (9); `Docs/trabajo/movil/debate-rest/` (9); `Docs/trabajo/migraciones/debate/` (9); `Docs/trabajo/movil/03-requisitos/` (8); `Docs/trabajo/movil/` (5); `Docs/trabajo/movil/01-sistema-actual/` (5); `Docs/planes/migraciones/` (5); `Docs/trabajo/movil/anexos/scripts/` (4); `Docs/trabajo/movil/05-arranque/` (3); `Docs/trabajo/movil/anexos/` (3); `Docs/trabajo/migraciones/bitacora/` (2)
-- **TRABAJO**: `Docs/trabajo/arquitectura/` (7); `Docs/Encargos/` (2); `Docs/` (1); `Docs/Entregas/` (1); `Docs/backlog/` (1)
+- **TRABAJO**: `Docs/trabajo/arquitectura/` (7); `Docs/Encargos/` (borrado; en git: `fd44b16`) (2); `Docs/` (1); `Docs/Entregas/` (borrado; en git: `fd44b16`) (1); `Docs/backlog/` (1)
 - **AGENTES**: `.agents/` (3); `(raíz)` (2); `.agents/rules/` (2); `.agents/workflows/` (1)
-- **QUEDA**: `(raíz)` (2); `Docs/Entregas/` (1)
+- **QUEDA**: `(raíz)` (2); `Docs/Entregas/` (borrado; en git: `fd44b16`) (1)
 
 ## 5. Auditoría (estándar §7.3)
 

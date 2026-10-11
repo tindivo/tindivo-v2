@@ -258,7 +258,7 @@ export type MapLandmarkCategory = z.infer<typeof MapLandmarkCategorySchema>
 
 // --- Tindivo Entregas (`courier`): estado de la solicitud de recojo ---
 // Tabla propia `courier_orders`, no `orders` — la máquina de estados es
-// deliberadamente distinta (Docs/Encargos/03-plan-tecnico.md §1.2).
+// deliberadamente distinta (Docs/Encargos/03-plan-tecnico.md §1.2, en git: fd44b16).
 export const COURIER_STATUSES = [
   'requested', // el cliente pidió; nadie lo tomó todavía
   'accepted', // un motorizado lo aceptó

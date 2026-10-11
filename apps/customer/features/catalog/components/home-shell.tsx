@@ -110,7 +110,7 @@ export function HomeShell({
         <ReviewCard estado={resena} />
       )}
 
-      {/* Primero QUÉ quieres hacer, después DÓNDE (`Docs/Home/README.md`).
+      {/* Primero QUÉ quieres hacer, después DÓNDE (`Docs/Home/README.md`, en git: `fd44b16`).
           Con Entregas apagado del todo solo queda un servicio, y una tarjeta
           sola no es una elección: el home vuelve a ser la lista.
           Siempre en dos columnas: cuadros en móvil, y en escritorio Entregas

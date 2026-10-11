@@ -650,7 +650,7 @@ Si algún día se automatiza: el umbral ya está en `app_settings`, pero mete
 
 ## 20. Buscador del catálogo en el cliente (2026-07-02)
 
-Supera el "search bar no funcional v1.0" de `Docs/07-flujo-cliente.md` RF-CAT-03. Busca **negocios** (nombre + eslogan) y **platos** (nombre + descripción), insensible a **mayúsculas y tildes** en ambas direcciones ("PIÑA" ↔ "pina").
+Supera el "search bar no funcional v1.0" de `Docs/07-flujo-cliente.md` (borrado; en git: `52045ae`) RF-CAT-03. Busca **negocios** (nombre + eslogan) y **platos** (nombre + descripción), insensible a **mayúsculas y tildes** en ambas direcciones ("PIÑA" ↔ "pina").
 
 - **Filtrado en Postgres, no en el cliente** (migración `0052`): extensiones `unaccent` + `pg_trgm` (schema `extensions`), wrapper **`public.f_unaccent`** (IMMUTABLE para poder indexar; si cambian las reglas del diccionario → REINDEX) e **índices GIN trigram** sobre `f_unaccent(lower(name || ' ' || descripción/eslogan))`.
 - ⚠️ **Grants de `f_unaccent`**: los índices de expresión evalúan la función con el rol que ESCRIBE la fila → EXECUTE para `authenticated` (el panel escribe `menu_items` directo vía PostgREST; revocarlo rompería el editor de menú) y `service_role` (la API escribe `businesses`). Revocada de `public`/`anon` (no escriben filas; el default de Supabase la dejaba invocable vía `/rest/v1/rpc/`).
@@ -1092,7 +1092,7 @@ Se cumplen **las cuatro** o no se abre:
 moderación, derecho de réplica y política escrita antes del primer caso.
 
 > Las consultas SQL que miden las cuatro condiciones —verificadas contra prod—
-> y todo el detalle están en **`Docs/spec/spec_resenas.md`**.
+> y todo el detalle están en **`Docs/spec/spec_resenas.md` (borrado; en git: `52045ae`)**.
 
 
 ## 29. El motorizado avanza el pedido arrastrando, y la cola se entera al instante (2026-09-19)
@@ -1163,7 +1163,7 @@ con el trigger apagado. Si el canal no engancha, el poll de 15 s sigue cubriendo
 
 ## 30. Motor de mapa compartido: qué se reusa del selector de ubicación para el Catálogo de negocios (2026-09-22)
 
-**Contexto**: el selector de ubicación del cliente (`apps/customer/components/map-picker-inner.tsx`) recibió hoy dos optimizaciones medidas — cache de tiles en el service worker (`759e0c1`) y `zoomAnimation={false}` (`0a75dd2`), este último verificado con un trace de rendering de Chrome DevTools Protocol, no con el profiler de JS (que no ve el costo de repintado/rasterizado que causaba el tirón). En paralelo surge `Docs/Encargos/Tindivo — Catálogo de negocios y Encargos (spec v1).md` (sin construir aún al momento de esta entrada), que necesita su propio mapa: potencialmente **gran parte de San Jacinto** en pines, con `directory_businesses` como fuente. Antes de que ese feature arranque su propio mapa desde cero — o, peor, importe el del cliente cruzado —, queda dicho qué se reusa y qué no.
+**Contexto**: el selector de ubicación del cliente (`apps/customer/components/map-picker-inner.tsx`) recibió hoy dos optimizaciones medidas — cache de tiles en el service worker (`759e0c1`) y `zoomAnimation={false}` (`0a75dd2`), este último verificado con un trace de rendering de Chrome DevTools Protocol, no con el profiler de JS (que no ve el costo de repintado/rasterizado que causaba el tirón). En paralelo surge `Docs/Encargos/Tindivo — Catálogo de negocios y Encargos (spec v1).md` (borrado; en git: `fd44b16`) (sin construir aún al momento de esta entrada), que necesita su propio mapa: potencialmente **gran parte de San Jacinto** en pines, con `directory_businesses` como fuente. Antes de que ese feature arranque su propio mapa desde cero — o, peor, importe el del cliente cruzado —, queda dicho qué se reusa y qué no.
 
 ### Decisiones
 
@@ -1183,7 +1183,7 @@ con el trigger apagado. Si el canal no engancha, el poll de 15 s sigue cubriendo
 
 ## 31. Tindivo Entregas — lado cliente: nombres, tablas y alcance de la primera noche de build (2026-09-22)
 
-**Contexto**: `Docs/Encargos/` traía dos documentos con nombres técnicos distintos para el mismo servicio — recoger algo ya pagado en un punto A y llevarlo a un punto B por S/ 3. `03-plan-tecnico.md` (19-sep) proponía `courier_requests`/`catalog_places`; el spec más reciente, `Docs/Encargos/Tindivo — Catálogo de negocios y Encargos (spec v1).md` (21/22-sep), resuelve en su §10 `courier_orders`/`directory_businesses` con razonamiento explícito. Jesús confirmó en esta sesión que el segundo manda: **"la verdad que se confundió el agente creo... deberia de ser el más reciente"**. Esta entrada formaliza lo construido, con Jesús dormido y autorización para decidir en su nombre lo que hiciera falta ("trata de ahora tomar decisiones por tu cuenta en pro del proyecto").
+**Contexto**: `Docs/Encargos/` (borrado; en git: `fd44b16`) traía dos documentos con nombres técnicos distintos para el mismo servicio — recoger algo ya pagado en un punto A y llevarlo a un punto B por S/ 3. `03-plan-tecnico.md` (19-sep) proponía `courier_requests`/`catalog_places`; el spec más reciente, `Docs/Encargos/Tindivo — Catálogo de negocios y Encargos (spec v1).md` (borrado; en git: `fd44b16`) (21/22-sep), resuelve en su §10 `courier_orders`/`directory_businesses` con razonamiento explícito. Jesús confirmó en esta sesión que el segundo manda: **"la verdad que se confundió el agente creo... deberia de ser el más reciente"**. Esta entrada formaliza lo construido, con Jesús dormido y autorización para decidir en su nombre lo que hiciera falta ("trata de ahora tomar decisiones por tu cuenta en pro del proyecto").
 
 ### Nombres (fuente única: `packages/contracts/src/enums.ts`, `courier.ts`, `courier-status.ts`)
 

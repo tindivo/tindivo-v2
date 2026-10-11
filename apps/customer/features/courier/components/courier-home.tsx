@@ -142,13 +142,13 @@ function Circles({ light, dark }: { light: string; dark: string }) {
  * que se lee) y el dato del momento; abajo, a la izquierda, un botón
  * secundario, y a la derecha la ilustración.
  *
- * Azul, el color propio del servicio (`Docs/Home/README.md` §3.0): el mismo que
+ * Azul, el color propio del servicio (`Docs/Home/README.md` §3.0, en git: `fd44b16`): el mismo que
  * identifica las entregas en la app del motorizado, para que no se confunda
  * con la comida (naranja).
  *
  * El texto dice TRANSPORTE DE COSAS, no «recoger lo que pagaste»: el servicio
  * lleva cualquier cosa que quepa en la caja de un punto a otro del pueblo
- * (`Docs/Encargos/05`). La bajada y la caja de la ilustración evitan que
+ * (`Docs/Encargos/05`, en git: `fd44b16`). La bajada y la caja de la ilustración evitan que
  * «Solicitar» se lea como mototaxi.
  *
  * Fuera de horario NO se apaga ni desaparece: el servicio existe y la gente
