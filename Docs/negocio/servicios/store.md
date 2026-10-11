@@ -1,7 +1,7 @@
 # Tindivo Store: el catálogo de segunda mano de San Jacinto
 
 > Verificado: 2026-10-10 · entorno: `tindivo-prod` (solo lectura: tablas `store_*`, `app_settings.store`) +
-> `develop@7d00aa4` · Decisión: `DECISIONS.md §32` · Especificación: `Docs/Store/tindivo-store-prd-v2.md`
+> `develop@7d00aa4` · Decisión: `DECISIONS.md §32` · Especificación: `Docs/Store/tindivo-store-prd-v2.md` (borrado; en git: `b98e5e5`)
 
 ## Qué es
 

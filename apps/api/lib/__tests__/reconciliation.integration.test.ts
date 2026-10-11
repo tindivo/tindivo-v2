@@ -27,7 +27,7 @@
  * `trg_business_charges_recalc_balance` recalcula el saldo completo desde
  * `business_charges` en cada escritura. Este test es lo que convierte
  * "balance_due = SUM del ledger" de aspiración documental en aserción
- * verificable — R-L1 en Docs/RIESGOS-LEDGER.md.
+ * verificable — R-L1 en Docs/RIESGOS-LEDGER.md (en git: b98e5e5).
  *
  * NO SIEMBRA NADA. Mide el estado de la base tal como lo dejaron los demás
  * tests. Por eso es también un detector de regresiones ajenas: si cualquier

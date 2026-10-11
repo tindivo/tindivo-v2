@@ -35,7 +35,7 @@ export function NuevoForm() {
   // sin que nadie se entere.
   const [band, setBand] = useState<DistanceBand | null>(null)
 
-  // ── Autocompletado por teléfono (spec_ui_cajera.md PARTE B) ────────────────
+  // ── Autocompletado por teléfono (spec_ui_cajera.md (en git: b98e5e5) PARTE B) ────────────────
   const { state: lookup } = useAddressLookup(phone)
 
   /** La fila del directorio que se está usando, si el texto sigue coincidiendo.

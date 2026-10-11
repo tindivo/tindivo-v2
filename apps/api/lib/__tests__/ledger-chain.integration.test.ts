@@ -160,7 +160,7 @@ describe('cadena del ledger — entrega, cargos y liquidación', () => {
   // ── A2.4 ────────────────────────────────────────────────────────────────────
   // El desbloqueo por mora es una REGLA DE NEGOCIO que hoy depende de
   // `balance_due <= 0` (campo deprecado por AGENTS.md §2.2). Ver R-L1 en
-  // Docs/RIESGOS-LEDGER.md: este test fija el comportamiento actual para que la
+  // Docs/RIESGOS-LEDGER.md (en git: b98e5e5): este test fija el comportamiento actual para que la
   // Parte B pueda cambiarlo sin romperlo en silencio.
   it('A2.4 tras liquidar todo, el negocio bloqueado por mora queda desbloqueado', async () => {
     const world = await seedLedgerWorld()

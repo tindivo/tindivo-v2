@@ -722,7 +722,7 @@ El formulario de `apps/negocios/nuevo` rotulaba su campo "Total del pedido" pero
 - **Consecuencia económica asumida**: con el total fijo, elegir "Lejos" ya no le cobra S/0.50 más al cliente — se los resta a la comida, o sea que **el negocio absorbe** la diferencia (le sigue debiendo el envío íntegro a Tindivo vía `business_charges`, §4). Si se decide lo contrario, la salida es igualar `far` a `near` en `app_settings` (precedente de la `0110` con `commissions`), no revertir la `0129`.
 - **Renombre deliberado del campo del endpoint** (`orderAmount` → `totalAmount`), sin alias de compatibilidad: un cliente viejo se lleva un 422 en vez de colar un total por comida. `apps/api` y `apps/negocios` se despliegan juntos.
 - **Arregla de rebote dos defectos vivos** que nacían de la misma asimetría: el pago **mixto** era imposible de enviar (la pantalla exigía `billetera + efectivo = comida`, el servidor `= comida + envío`) y el **vuelto** se mostraba inflado por el importe del envío.
-- **Supersede** `Docs/spec/spec_ui_cajera.md` en su punto "«Monto del pedido» pasa a ser solo comida" (líneas 62 y 374): sigue siendo `orders.order_amount`, pero ya no es lo que teclea la cajera.
+- **Supersede** `Docs/spec/spec_ui_cajera.md` (borrado; en git: `b98e5e5`) en su punto "«Monto del pedido» pasa a ser solo comida" (líneas 62 y 374): sigue siendo `orders.order_amount`, pero ya no es lo que teclea la cajera.
 
 ---
 
@@ -1224,7 +1224,7 @@ Migración aplicada y probada en local (`supabase db reset`), y empujada a `tind
 ## 32. Tindivo Store: el catálogo de segunda mano de San Jacinto (2026-10-02)
 
 **Qué es.** `/store` (comprador) y «Tienda» en el admin: un solo vendedor (Jesús), piezas únicas,
-sin carrito ni pago web; todo se cierra por WhatsApp. Spec: `Docs/Store/tindivo-store-prd-v2.md`.
+sin carrito ni pago web; todo se cierra por WhatsApp. Spec: `Docs/Store/tindivo-store-prd-v2.md` (borrado; en git: `b98e5e5`).
 Implementación, decisiones, límites y pasos de despliegue: `Docs/Store/IMPLEMENTACION.md` (borrado; en git: `8f26aed`);
 estado de aceptación y qué no se pudo verificar: `Docs/Store/ACEPTACION.md` (borrado; en git: `8f26aed`). Migraciones 0242–0245.
 

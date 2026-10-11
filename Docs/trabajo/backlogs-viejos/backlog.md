@@ -534,4 +534,4 @@ Consumidores al día: panel del negocio (alta, edición, elegir principal), moto
 
 - Los ítems marcados **✅ DONE** no necesitan discusión de prioridad — son solo para que quede registrado que ya existen.
 - Los ítems **📋 DECISIÓN** conviene discutirlos primero, aparte de la lista de código: cambian el diseño de lo que se construye después.
-- Este documento no reemplaza `PENDIENTES.md` ni `Docs/RIESGOS-LEDGER.md` — es un nivel de zoom distinto (producto/roadmap, no estado técnico de migraciones).
+- Este documento no reemplaza `PENDIENTES.md` ni `Docs/RIESGOS-LEDGER.md` (borrado; en git: `b98e5e5`) — es un nivel de zoom distinto (producto/roadmap, no estado técnico de migraciones).

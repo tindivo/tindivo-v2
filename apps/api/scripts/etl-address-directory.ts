@@ -1,9 +1,9 @@
 /**
  * ETL del directorio de direcciones: export crudo del legacy → dataset limpio.
  *
- * Implementa las reglas R0–R7 de `Docs/spec/spec_manual.md` §Parte 3, con la
+ * Implementa las reglas R0–R7 de `Docs/spec/spec_manual.md` (en git: b98e5e5) §Parte 3, con la
  * misma semántica y EL MISMO ORDEN que la implementación de referencia en
- * `Docs/spec/etl-parte3-staging.sql`. Si divergen, manda el SQL: fue el que
+ * `Docs/spec/etl-parte3-staging.sql` (en git: b98e5e5). Si divergen, manda el SQL: fue el que
  * corrió contra el legacy el 2026-08-04 y produjo las 658 filas de prod.
  *
  * POR QUÉ EXISTE SI YA CORRIÓ UNA VEZ

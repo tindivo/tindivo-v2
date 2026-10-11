@@ -34,11 +34,11 @@ Ninguno está citado desde el código. Las menciones que les hacen otros documen
 | `Docs/Encargos/historico-pre-v2/` (borrado; en git: `8f26aed`) | **toda la carpeta** (11) | versión sustituida por la v1.0 del 19-sep |
 | `Docs/Encargos/origen-jesus/` (borrado; en git: `8f26aed`) | `00-maestro.md`, `01-flujo-recojo.md`, `02-negocios-campos-categorias.md`, `03-mapa.md`, `04-visibilidad-y-adquisicion.md`, `05-precio-promos-metricas.md` | v1 de los documentos de Jesús; sustituida por origen-jesus-v2 |
 | `Docs/Entregas/` (borrado; en git: `fd44b16`) | `estado-actual.md` | foto del 30-sep |
-| `Docs/Store/` | `ACEPTACION.md`, `IMPLEMENTACION.md`, `Tindivo Store — PRD v1 (MVP).md`, `Tindivo_Store_Prompt_Maestro_Desarrollo_FullStack.md`, `Tindivo_Store_UI_V3_Prompt_Claude_Design.md` | PRD v1 sustituido, prompts usados y entrega/aceptación de una rama ya en producción |
-| `Docs/context/` | 13 de 14; se quedan: `debt-liquidation-audit.md` | auditorías de julio, fotos de un momento |
+| `Docs/Store/` (borrado; en git: `b98e5e5`) | `ACEPTACION.md`, `IMPLEMENTACION.md`, `Tindivo Store — PRD v1 (MVP).md`, `Tindivo_Store_Prompt_Maestro_Desarrollo_FullStack.md`, `Tindivo_Store_UI_V3_Prompt_Claude_Design.md` | PRD v1 sustituido, prompts usados y entrega/aceptación de una rama ya en producción |
+| `Docs/context/` (borrado; en git: `b98e5e5`) | 13 de 14; se quedan: `debt-liquidation-audit.md` | auditorías de julio, fotos de un momento |
 | `Docs/handoff/` (borrado; en git: `8f26aed`) | **toda la carpeta** (9) | relatos de sesión de agosto |
-| `Docs/spec/` | `spec-motorizados-rendimiento.md` | auditoría de agosto |
-| `Docs/spec/` | `rollback-0123.sql`, `rollback-0124.sql`, `rollback-0125.sql`, `rollback-0126.sql`, `rollback-0127.sql`, `rollback-0128.sql` | revierte migraciones de agosto; hoy sería destructivo |
+| `Docs/spec/` (borrado; en git: `b98e5e5`) | `spec-motorizados-rendimiento.md` | auditoría de agosto |
+| `Docs/spec/` (borrado; en git: `b98e5e5`) | `rollback-0123.sql`, `rollback-0124.sql`, `rollback-0125.sql`, `rollback-0126.sql`, `rollback-0127.sql`, `rollback-0128.sql` | revierte migraciones de agosto; hoy sería destructivo |
 
 ## 2. Lo que decides tú
 

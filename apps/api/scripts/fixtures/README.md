@@ -17,7 +17,7 @@ El ETL de la `0122` corrió contra prod el 2026-08-04 y dejó 658 filas, pero
 creciendo desde entonces y prod quedó congelada. Para tener el directorio al día
 hay que volver a extraer del origen.
 
-> El spec (`spec_manual.md`, REGLA DURA #5) dice que este ETL corre UNA VEZ. Eso
+> El spec (`spec_manual.md` (en git: b98e5e5), REGLA DURA #5) dice que este ETL corre UNA VEZ. Eso
 > asumía que los 4 negocios migraban el mismo día. Mientras el piloto siga en el
 > legacy, la limpieza hay que poder re-correrla.
 
@@ -30,7 +30,7 @@ hay que volver a extraer del origen.
 En el **SQL editor** del panel de `tindivo-delivery`. Los dos exports van
 envueltos en `json_agg` a propósito: devuelven **una sola fila**, así que no los
 alcanza ningún tope de filas. El PostgREST del legacy trunca a 1000 en silencio
-(ver `spec_manual.md` §2.2) y ese truncamiento ya falseó una corrida.
+(ver `spec_manual.md` (en git: b98e5e5) §2.2) y ese truncamiento ya falseó una corrida.
 
 **Export A — el directorio** (obligatorio):
 
@@ -71,8 +71,8 @@ node apps/api/scripts/etl-address-directory.ts /ruta/export-a.json \
   --out /ruta/limpio.json
 ```
 
-Aplica R0–R7 de `spec_manual.md` §Parte 3 en el **mismo orden** que la
-implementación de referencia (`Docs/spec/etl-parte3-staging.sql`) — el orden no
+Aplica R0–R7 de `spec_manual.md` (en git: b98e5e5) §Parte 3 en el **mismo orden** que la
+implementación de referencia (`Docs/spec/etl-parte3-staging.sql`, en git: `b98e5e5`) — el orden no
 es cosmético: R3 va antes que R2 porque si no, un pin falso con `accuracy = 0`
 queda indistinguible de una medición legítima.
 

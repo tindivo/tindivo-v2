@@ -2,7 +2,7 @@
  * Test de INTEGRACIÓN de `admin_correct_delivery_band` (migración 0213).
  *
  * Cierra la deuda que dejó escrita la cabecera de la 0190 y el spec
- * `Docs/spec/spec-edicion-pedido-manual.md` §3.2: la banda de un pedido manual
+ * `Docs/spec/spec-edicion-pedido-manual.md` (en git: b98e5e5) §3.2: la banda de un pedido manual
  * la elige la cajera al crear, pero si la marcó mal (todo "Cerca" por apuro)
  * hasta ahora NO había forma de corregirla — "lo corrige un admin" era una
  * frase sin código detrás.
