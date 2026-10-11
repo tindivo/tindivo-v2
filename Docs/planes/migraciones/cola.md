@@ -31,7 +31,7 @@ Estados: `[ ]` pendiente · `[~]` en curso · `[x]` hecho · `[!]` bloqueado (co
 - [!] **C1** · Revocar `expire_courier_orders()` a clientes — escribir y probar en local es A; desplegar espera a P0.5 y a Jesús
 - [~] **C2** · Comprobante (a): `UPDATE` condicionado y 409 — rama `fix/c2-c3-comprobante` (2026-10-10, noche)
 - [~] **C3a-d** · Comprobante (b), transaccional — rama `fix/c2-c3-comprobante`
-- [~] **C4a-d** · Idempotencia (c) — rama `fix/c4-idempotencia`
+- [x] **C4a-d** · Idempotencia (c): clave por usuario en `creation_idempotency`, registrada en la misma transacción que el pedido (`create_order_idempotently`, migraciones `0250`-`0252`); replay antes de los guards, 409 para payload distinto o reserva vieja en vuelo, 422 para clave no UUID, purga a los 7 días. 28 pruebas nuevas; Codex firmó en tres rondas; CI completa en verde (PR #31). **Retención de 7 días: propuesta pendiente de Jesús.** Sin desplegar a producción.
 - [x] **C5** · Bucket `payment-proofs`: JPEG, PNG, WebP y HEIC/HEIF, 15 MB (migración `0254`, 8 pruebas; PR #33). **Sin desplegar a producción.** Nota: la app hoy solo sube JPEG, PNG y WebP (`validateImageInput`); HEIC se rechaza en el cliente.
 - [!] **C6** · Despliegue de C2-C5 — nivel B
 - [!] **C7** · Una semana de observación
