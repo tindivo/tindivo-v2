@@ -184,3 +184,38 @@ export const PushSubscriptionOwnershipSchema = z.object({
   owned: z.boolean().meta({ description: 'La suscripción existe y es de este usuario' }),
   exists: z.boolean(),
 })
+
+// ── Perfil y opciones de pago (MV4a) ─────────────────────────────────────────
+
+/** GET /customer/profile — fila propia de `customer_profiles`, leída con la sesión del cliente. */
+export const CustomerProfileSchema = z.object({
+  fullName: z.string(),
+  phone: z.string().nullable(),
+  phoneVerified: z.boolean(),
+  phoneVerifiedAt: timestampOut.nullable(),
+  contraentregaBlocked: z.boolean().meta({
+    description: 'Bloqueo preventivo: solo puede pagar por adelantado',
+  }),
+  blockedUntil: timestampOut.nullable(),
+  blocked: z.boolean().meta({
+    description: '`true` mientras `blockedUntil` esté en el futuro: no puede pedir',
+  }),
+})
+
+export const CONTRAENTREGA_REASONS = ['trusted', 'no_history', 'risk_blocked'] as const
+
+/**
+ * GET /customer/payment-options. La decisión es de la base
+ * (`current_customer_trusted_for_contraentrega` y `customer_requires_prepayment`);
+ * la ruta solo la expone. El umbral de monto para prepago está en `GET /public/config`.
+ */
+export const PaymentOptionsSchema = z.object({
+  contraentregaAllowed: z.boolean(),
+  prepayRequired: z.boolean().meta({
+    description: 'Prepago obligatorio sea cual sea el monto (equivale a `!contraentregaAllowed`)',
+  }),
+  reason: openEnum(
+    CONTRAENTREGA_REASONS,
+    '`trusted` (ya le entregaron), `no_history` (cliente nuevo) o `risk_blocked` (antifraude)',
+  ),
+})
