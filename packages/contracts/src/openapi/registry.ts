@@ -1,10 +1,14 @@
 import { z } from 'zod'
 import {
+  CheckoutQuoteRequestSchema,
+  CreateCustomerAddressRequestSchema,
   CreateOrderAppealRequestSchema,
   PrepayProofRequestSchema,
   PushSubscriptionRequestSchema,
   PushUnsubscribeRequestSchema,
   SendPhoneCodeRequestSchema,
+  TermsAcceptanceRequestSchema,
+  UpdateCustomerAddressRequestSchema,
   VerifyPhoneCodeRequestSchema,
 } from '../client-requests'
 import { CreateCourierOrderRequestSchema } from '../courier'
@@ -15,10 +19,16 @@ import {
   AppealCreatedSchema,
   CancelledCourierOrderSchema,
   CancelledOrderSchema,
+  CheckoutQuoteSchema,
   CreatedCourierOrderSchema,
   CreatedOrderSchema,
+  CustomerAddressListSchema,
+  CustomerAddressSchema,
   CustomerAppealListSchema,
   CustomerAppealSchema,
+  CustomerCourierOrderListSchema,
+  CustomerOrderDetailSchema,
+  CustomerOrderListSchema,
   CustomerProfileSchema,
   PaymentOptionsSchema,
   PhoneCodeSentSchema,
@@ -29,6 +39,7 @@ import {
   PushSubscribedSchema,
   PushSubscriptionOwnershipSchema,
   PushUnsubscribedSchema,
+  TermsAcceptedSchema,
 } from './client-responses'
 import {
   ClientConfigResponseSchema,
@@ -104,6 +115,14 @@ export interface OperationSpec {
 
 const uuidParam = z.uuid()
 const shortIdParam = z.string().meta({ description: 'Identificador corto público (8 caracteres)' })
+
+const pageQuery = z.object({
+  limit: z.string().optional().meta({ description: 'Tamaño de página, 1 a 50 (20 por defecto)' }),
+  cursor: z.string().optional().meta({
+    description:
+      '`nextCursor` de la página anterior. Opaco: no lo armes ni lo interpretes. Uno mal formado responde 422; el cursor no está firmado, pero solo ordena MIS filas (la lista siempre se filtra por la sesión)',
+  }),
+})
 
 const endpointQuery = (description: string) =>
   z.string().meta({ description: `${description}. URL del endpoint de Web Push` })
@@ -652,6 +671,161 @@ export const OPERATIONS: OperationSpec[] = [
       200: { description: 'Opciones vigentes', envelope: 'data', schema: PaymentOptionsSchema },
     },
     errors: ['unauthorized', 'forbidden'],
+    documented: true,
+  },
+  {
+    method: 'post',
+    path: '/customer/checkout/quote',
+    operationId: 'quoteCheckout',
+    summary: 'Cotizar un carrito: total, envío, envío gratis, vuelto máximo y umbral de prepago',
+    description:
+      'Todo lo que el checkout pinta, decidido en el servidor con las mismas funciones que usa la creación del ' +
+      'pedido: la app no replica ninguna regla. Es solo para pintar; `POST /customer/orders` vuelve a decidir. ' +
+      'Un plato que ya no está disponible responde 422.',
+    tags: ['customer'],
+    auth: 'customer',
+    body: CheckoutQuoteRequestSchema,
+    success: {
+      200: { description: 'La cotización', envelope: 'data', schema: CheckoutQuoteSchema },
+    },
+    errors: ['validation_error', 'unauthorized', 'forbidden', 'not_found', 'conflict'],
+    documented: true,
+  },
+  {
+    method: 'get',
+    path: '/customer/addresses',
+    operationId: 'listCustomerAddresses',
+    summary: 'Libreta de direcciones del cliente',
+    tags: ['customer'],
+    auth: 'customer',
+    success: {
+      200: {
+        description: 'Sus direcciones, la predeterminada primero',
+        envelope: 'data',
+        schema: CustomerAddressListSchema,
+      },
+    },
+    errors: ['unauthorized', 'forbidden'],
+    documented: true,
+  },
+  {
+    method: 'post',
+    path: '/customer/addresses',
+    operationId: 'createCustomerAddress',
+    summary: 'Guardar una dirección',
+    description:
+      'Nace predeterminada si el cliente no tenía ninguna (o si se pide `isDefault`); marcarla despeja a la ' +
+      'anterior en la misma transacción: nunca quedan dos.',
+    tags: ['customer'],
+    auth: 'customer',
+    body: CreateCustomerAddressRequestSchema,
+    success: {
+      201: { description: 'La dirección creada', envelope: 'data', schema: CustomerAddressSchema },
+    },
+    errors: ['validation_error', 'unauthorized', 'forbidden'],
+    documented: true,
+  },
+  {
+    method: 'patch',
+    path: '/customer/addresses/{id}',
+    operationId: 'updateCustomerAddress',
+    summary: 'Editar una dirección propia',
+    tags: ['customer'],
+    auth: 'customer',
+    pathParams: { id: uuidParam },
+    body: UpdateCustomerAddressRequestSchema,
+    success: {
+      200: {
+        description: 'La dirección actualizada',
+        envelope: 'data',
+        schema: CustomerAddressSchema,
+      },
+    },
+    errors: ['validation_error', 'unauthorized', 'forbidden', 'not_found'],
+    documented: true,
+  },
+  {
+    method: 'delete',
+    path: '/customer/addresses/{id}',
+    operationId: 'deleteCustomerAddress',
+    summary: 'Borrar una dirección propia',
+    description: 'Si era la predeterminada, la más antigua de las que quedan hereda el puesto.',
+    tags: ['customer'],
+    auth: 'customer',
+    pathParams: { id: uuidParam },
+    success: { 204: { description: 'Borrada; sin cuerpo', envelope: 'none' } },
+    errors: ['validation_error', 'unauthorized', 'forbidden', 'not_found'],
+    documented: true,
+  },
+  {
+    method: 'get',
+    path: '/customer/orders',
+    operationId: 'listCustomerOrders',
+    summary: 'Historial de pedidos de comida del cliente',
+    tags: ['orders'],
+    auth: 'customer',
+    query: pageQuery,
+    success: {
+      200: {
+        description: 'Una página de pedidos con sus platos',
+        envelope: 'data',
+        schema: CustomerOrderListSchema,
+      },
+    },
+    errors: ['validation_error', 'unauthorized', 'forbidden'],
+    documented: true,
+  },
+  {
+    method: 'get',
+    path: '/customer/orders/{id}',
+    operationId: 'getCustomerOrder',
+    summary: 'Un pedido propio, con notas y motorizado',
+    description:
+      'A diferencia del seguimiento público: incluye `customerNotes`, la dirección y el motorizado asignado. ' +
+      'El teléfono del motorizado llega solo cuando ya está en la puerta, como en el seguimiento. ' +
+      'Un pedido ajeno responde 404, igual que uno que no existe.',
+    tags: ['orders'],
+    auth: 'customer',
+    pathParams: { id: uuidParam },
+    success: {
+      200: { description: 'El pedido', envelope: 'data', schema: CustomerOrderDetailSchema },
+    },
+    errors: ['validation_error', 'unauthorized', 'forbidden', 'not_found'],
+    documented: true,
+  },
+  {
+    method: 'get',
+    path: '/customer/courier-orders',
+    operationId: 'listCustomerCourierOrders',
+    summary: 'Historial de Entregas del cliente y contactos frecuentes',
+    tags: ['courier'],
+    auth: 'customer',
+    query: pageQuery,
+    success: {
+      200: {
+        description: 'Una página de solicitudes y sus contactos frecuentes',
+        envelope: 'data',
+        schema: CustomerCourierOrderListSchema,
+      },
+    },
+    errors: ['validation_error', 'unauthorized', 'forbidden'],
+    documented: true,
+  },
+  {
+    method: 'post',
+    path: '/customer/terms-acceptance',
+    operationId: 'acceptTerms',
+    summary: 'Registrar la aceptación de términos y privacidad',
+    description:
+      'Idempotente por versión: repetirla devuelve la fecha original con `alreadyAccepted: true`.',
+    tags: ['customer'],
+    auth: 'customer',
+    body: TermsAcceptanceRequestSchema,
+    success: {
+      200: { description: 'Ya estaba aceptada', envelope: 'data', schema: TermsAcceptedSchema },
+      201: { description: 'Aceptación registrada', envelope: 'data', schema: TermsAcceptedSchema },
+    },
+    errors: ['validation_error', 'unauthorized', 'forbidden'],
     documented: true,
   },
   {

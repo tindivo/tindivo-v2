@@ -1,10 +1,12 @@
 import { CreateOrderRequestSchema, getOpenStatus } from '@tindivo/contracts'
 import { DomainError } from '@tindivo/core'
+import { listCustomerOrders } from '@/lib/customer/history'
 import { requireRole } from '@/lib/http/auth'
 import { corsHeaders, handleOptions } from '@/lib/http/cors'
 import { sha256Hex } from '@/lib/http/hash'
 import { createIdempotently, findStoredCreation, isIdempotencyKey } from '@/lib/http/idempotency'
-import { handleError, problem } from '@/lib/http/problem'
+import { privateHeaders } from '@/lib/http/private-response'
+import { handleError, ok, problem } from '@/lib/http/problem'
 import { getRequestId } from '@/lib/http/request-id'
 import { sendOrderCreated, sendOrderValidation } from '@/lib/inngest/client'
 import { hasConfirmedOpening } from '@/lib/opening/service-day'
@@ -22,6 +24,17 @@ function isBusinessPaused(until: string | null): boolean {
 
 export function OPTIONS(req: Request): Response {
   return handleOptions(req)
+}
+
+/** Historial de pedidos de comida del cliente de la sesión, paginado por cursor. */
+export async function GET(req: Request): Promise<Response> {
+  const requestId = getRequestId(req)
+  try {
+    const { token, user } = await requireRole(req, 'customer')
+    return ok(await listCustomerOrders(token, user.id, req), { headers: privateHeaders(req) })
+  } catch (err) {
+    return handleError(err, requestId, req)
+  }
 }
 
 /** Crea un pedido del cliente. Requiere sesión de cliente + Idempotency-Key. */

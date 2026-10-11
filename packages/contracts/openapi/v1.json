@@ -3684,6 +3684,315 @@
           }
         ],
         "x-tindivo-role": "customer"
+      },
+      "get": {
+        "operationId": "listCustomerOrders",
+        "summary": "Historial de pedidos de comida del cliente",
+        "tags": [
+          "orders"
+        ],
+        "responses": {
+          "200": {
+            "description": "Una página de pedidos con sus platos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "shortId": {
+                                "type": "string"
+                              },
+                              "orderNumber": {
+                                "type": "integer"
+                              },
+                              "status": {
+                                "type": "string",
+                                "x-known-values": [
+                                  "validando",
+                                  "pending_acceptance",
+                                  "awaiting_payment",
+                                  "confirmed",
+                                  "preparing",
+                                  "waiting_driver",
+                                  "heading_to_restaurant",
+                                  "waiting_at_restaurant",
+                                  "picked_up",
+                                  "ready_for_pickup",
+                                  "delivered",
+                                  "cancelled"
+                                ],
+                                "description": "Valores conocidos: validando, pending_acceptance, awaiting_payment, confirmed, preparing, waiting_driver, heading_to_restaurant, waiting_at_restaurant, picked_up, ready_for_pickup, delivered, cancelled. Puede llegar uno nuevo; trátalo como desconocido."
+                              },
+                              "deliveryMethod": {
+                                "type": "string",
+                                "x-known-values": [
+                                  "delivery",
+                                  "pickup"
+                                ],
+                                "description": "Valores conocidos: delivery, pickup. Puede llegar uno nuevo; trátalo como desconocido."
+                              },
+                              "paymentIntent": {
+                                "type": "string",
+                                "x-known-values": [
+                                  "prepaid",
+                                  "pending_yape",
+                                  "pending_cash",
+                                  "pending_mixed"
+                                ],
+                                "description": "Valores conocidos: prepaid, pending_yape, pending_cash, pending_mixed. Puede llegar uno nuevo; trátalo como desconocido."
+                              },
+                              "cancelReason": {
+                                "nullable": true,
+                                "type": "string",
+                                "x-known-values": [
+                                  "pending_acceptance_timeout",
+                                  "validation_timeout",
+                                  "prepay_timeout",
+                                  "business_cancelled",
+                                  "admin_cancelled",
+                                  "customer_cancelled",
+                                  "no_show",
+                                  "proof_rejected_final"
+                                ],
+                                "description": "Valores conocidos: pending_acceptance_timeout, validation_timeout, prepay_timeout, business_cancelled, admin_cancelled, customer_cancelled, no_show, proof_rejected_final. Puede llegar uno nuevo; trátalo como desconocido."
+                              },
+                              "businessId": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "businessName": {
+                                "nullable": true,
+                                "description": "Null si el negocio ya no existe",
+                                "type": "string"
+                              },
+                              "amount": {
+                                "type": "string",
+                                "pattern": "^\\d+\\.\\d{2}$",
+                                "description": "Soles como texto decimal con dos decimales, p. ej. `\"12.50\"` (D-39)."
+                              },
+                              "deliveryFee": {
+                                "type": "string",
+                                "pattern": "^\\d+\\.\\d{2}$",
+                                "description": "Soles como texto decimal con dos decimales, p. ej. `\"12.50\"` (D-39)."
+                              },
+                              "total": {
+                                "type": "string",
+                                "pattern": "^\\d+\\.\\d{2}$",
+                                "description": "Soles como texto decimal con dos decimales, p. ej. `\"12.50\"` (D-39)."
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "deliveredAt": {
+                                "nullable": true,
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "items": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "name": {
+                                      "type": "string"
+                                    },
+                                    "quantity": {
+                                      "type": "integer"
+                                    },
+                                    "lineTotal": {
+                                      "type": "string",
+                                      "pattern": "^\\d+\\.\\d{2}$",
+                                      "description": "Soles como texto decimal con dos decimales, p. ej. `\"12.50\"` (D-39)."
+                                    }
+                                  },
+                                  "required": [
+                                    "name",
+                                    "quantity",
+                                    "lineTotal"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "shortId",
+                              "orderNumber",
+                              "status",
+                              "deliveryMethod",
+                              "paymentIntent",
+                              "cancelReason",
+                              "businessId",
+                              "businessName",
+                              "amount",
+                              "deliveryFee",
+                              "total",
+                              "createdAt",
+                              "deliveredAt",
+                              "items"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "nextCursor": {
+                          "nullable": true,
+                          "description": "Pásalo como `cursor` para la página siguiente; null = no hay más",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "items",
+                        "nextCursor"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem Details (RFC 9457). `code`: unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem Details (RFC 9457). `code`: forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem Details (RFC 9457). `code`: validation_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Tamaño de página, 1 a 50 (20 por defecto)",
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "`nextCursor` de la página anterior. Opaco: no lo armes ni lo interpretes. Uno mal formado responde 422; el cursor no está firmado, pero solo ordena MIS filas (la lista siempre se filtra por la sesión)",
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-tindivo-role": "customer"
       }
     },
     "/customer/orders/{id}/cancel": {
@@ -5363,6 +5672,387 @@
           }
         ],
         "x-tindivo-role": "customer"
+      },
+      "get": {
+        "operationId": "listCustomerCourierOrders",
+        "summary": "Historial de Entregas del cliente y contactos frecuentes",
+        "tags": [
+          "courier"
+        ],
+        "responses": {
+          "200": {
+            "description": "Una página de solicitudes y sus contactos frecuentes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "shortId": {
+                                "type": "string"
+                              },
+                              "orderNumber": {
+                                "type": "integer"
+                              },
+                              "status": {
+                                "type": "string",
+                                "x-known-values": [
+                                  "requested",
+                                  "accepted",
+                                  "heading_to_pickup",
+                                  "at_pickup",
+                                  "picked_up",
+                                  "heading_to_dropoff",
+                                  "delivered",
+                                  "cancelled"
+                                ],
+                                "description": "Valores conocidos: requested, accepted, heading_to_pickup, at_pickup, picked_up, heading_to_dropoff, delivered, cancelled. Puede llegar uno nuevo; trátalo como desconocido."
+                              },
+                              "cancelReason": {
+                                "nullable": true,
+                                "type": "string",
+                                "x-known-values": [
+                                  "no_driver",
+                                  "driver_rejected",
+                                  "not_ready",
+                                  "transport_unpaid",
+                                  "customer_cancelled",
+                                  "unreachable",
+                                  "other"
+                                ],
+                                "description": "Valores conocidos: no_driver, driver_rejected, not_ready, transport_unpaid, customer_cancelled, unreachable, other. Puede llegar uno nuevo; trátalo como desconocido."
+                              },
+                              "origin": {
+                                "type": "object",
+                                "properties": {
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "phone": {
+                                    "nullable": true,
+                                    "type": "string"
+                                  },
+                                  "coordinates": {
+                                    "type": "object",
+                                    "properties": {
+                                      "lat": {
+                                        "type": "number"
+                                      },
+                                      "lng": {
+                                        "type": "number"
+                                      }
+                                    },
+                                    "required": [
+                                      "lat",
+                                      "lng"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "referenceText": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "name",
+                                  "phone",
+                                  "coordinates",
+                                  "referenceText"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "destination": {
+                                "type": "object",
+                                "properties": {
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "phone": {
+                                    "nullable": true,
+                                    "type": "string"
+                                  },
+                                  "coordinates": {
+                                    "type": "object",
+                                    "properties": {
+                                      "lat": {
+                                        "type": "number"
+                                      },
+                                      "lng": {
+                                        "type": "number"
+                                      }
+                                    },
+                                    "required": [
+                                      "lat",
+                                      "lng"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "referenceText": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "name",
+                                  "phone",
+                                  "coordinates",
+                                  "referenceText"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "itemDescription": {
+                                "type": "string"
+                              },
+                              "isFragile": {
+                                "type": "boolean"
+                              },
+                              "payer": {
+                                "type": "string",
+                                "x-known-values": [
+                                  "origin",
+                                  "destination"
+                                ],
+                                "description": "Valores conocidos: origin, destination. Puede llegar uno nuevo; trátalo como desconocido."
+                              },
+                              "feeAmount": {
+                                "type": "string",
+                                "pattern": "^\\d+\\.\\d{2}$",
+                                "description": "Soles como texto decimal con dos decimales, p. ej. `\"12.50\"` (D-39)."
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "deliveredAt": {
+                                "nullable": true,
+                                "type": "string",
+                                "format": "date-time"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "shortId",
+                              "orderNumber",
+                              "status",
+                              "cancelReason",
+                              "origin",
+                              "destination",
+                              "itemDescription",
+                              "isFragile",
+                              "payer",
+                              "feeAmount",
+                              "createdAt",
+                              "deliveredAt"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "nextCursor": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "frequentContacts": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string"
+                              },
+                              "phone": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "coordinates": {
+                                "type": "object",
+                                "properties": {
+                                  "lat": {
+                                    "type": "number"
+                                  },
+                                  "lng": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "lat",
+                                  "lng"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "referenceText": {
+                                "type": "string"
+                              },
+                              "timesUsed": {
+                                "type": "integer"
+                              },
+                              "lastUsedAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "phone",
+                              "coordinates",
+                              "referenceText",
+                              "timesUsed",
+                              "lastUsedAt"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "description": "De sus últimas 50 solicitudes, los más usados primero (máximo 6). Solo en la primera página (sin cursor); vacío en las siguientes"
+                        }
+                      },
+                      "required": [
+                        "items",
+                        "nextCursor",
+                        "frequentContacts"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem Details (RFC 9457). `code`: unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem Details (RFC 9457). `code`: forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem Details (RFC 9457). `code`: validation_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Tamaño de página, 1 a 50 (20 por defecto)",
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "`nextCursor` de la página anterior. Opaco: no lo armes ni lo interpretes. Uno mal formado responde 422; el cursor no está firmado, pero solo ordena MIS filas (la lista siempre se filtra por la sesión)",
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-tindivo-role": "customer"
       }
     },
     "/customer/courier-orders/{id}/cancel": {
@@ -6952,6 +7642,1898 @@
             }
           }
         ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-tindivo-role": "customer"
+      }
+    },
+    "/customer/checkout/quote": {
+      "post": {
+        "operationId": "quoteCheckout",
+        "summary": "Cotizar un carrito: total, envío, envío gratis, vuelto máximo y umbral de prepago",
+        "tags": [
+          "customer"
+        ],
+        "responses": {
+          "200": {
+            "description": "La cotización",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "businessId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "deliveryMethod": {
+                          "type": "string",
+                          "x-known-values": [
+                            "delivery",
+                            "pickup"
+                          ],
+                          "description": "Valores conocidos: delivery, pickup. Puede llegar uno nuevo; trátalo como desconocido."
+                        },
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "menuItemId": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "quantity": {
+                                "type": "integer"
+                              },
+                              "unitPrice": {
+                                "type": "string",
+                                "pattern": "^\\d+\\.\\d{2}$",
+                                "description": "Precio del plato más sus modificadores"
+                              },
+                              "lineTotal": {
+                                "type": "string",
+                                "pattern": "^\\d+\\.\\d{2}$",
+                                "description": "Soles como texto decimal con dos decimales, p. ej. `\"12.50\"` (D-39)."
+                              }
+                            },
+                            "required": [
+                              "menuItemId",
+                              "name",
+                              "quantity",
+                              "unitPrice",
+                              "lineTotal"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "subtotal": {
+                          "type": "string",
+                          "pattern": "^\\d+\\.\\d{2}$",
+                          "description": "Soles como texto decimal con dos decimales, p. ej. `\"12.50\"` (D-39)."
+                        },
+                        "deliveryBand": {
+                          "nullable": true,
+                          "type": "string",
+                          "x-known-values": [
+                            "near",
+                            "far"
+                          ],
+                          "description": "Null en un recojo. Valores conocidos: near, far. Puede llegar uno nuevo; trátalo como desconocido."
+                        },
+                        "nominalDeliveryFee": {
+                          "type": "string",
+                          "pattern": "^\\d+\\.\\d{2}$",
+                          "description": "Lo que costaría el envío sin promoción (para el tachado). `\"0.00\"` en un recojo"
+                        },
+                        "deliveryFee": {
+                          "type": "string",
+                          "pattern": "^\\d+\\.\\d{2}$",
+                          "description": "Lo que se cobra: `\"0.00\"` si hay envío gratis"
+                        },
+                        "freeDelivery": {
+                          "type": "object",
+                          "properties": {
+                            "applies": {
+                              "type": "boolean"
+                            },
+                            "reason": {
+                              "nullable": true,
+                              "type": "string",
+                              "x-known-values": [
+                                "launch_promo",
+                                "dish"
+                              ],
+                              "description": "Valores conocidos: launch_promo, dish. Puede llegar uno nuevo; trátalo como desconocido."
+                            }
+                          },
+                          "required": [
+                            "applies",
+                            "reason"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "total": {
+                          "type": "string",
+                          "pattern": "^\\d+\\.\\d{2}$",
+                          "description": "Soles como texto decimal con dos decimales, p. ej. `\"12.50\"` (D-39)."
+                        },
+                        "maxChange": {
+                          "type": "string",
+                          "pattern": "^\\d+\\.\\d{2}$",
+                          "description": "Vuelto máximo que el negocio puede dar esta noche; `\"0.00\"` = solo pago exacto"
+                        },
+                        "prepayThreshold": {
+                          "type": "string",
+                          "pattern": "^\\d+\\.\\d{2}$",
+                          "description": "Soles como texto decimal con dos decimales, p. ej. `\"12.50\"` (D-39)."
+                        },
+                        "exceedsPrepayThreshold": {
+                          "type": "boolean",
+                          "description": "El total pasa del umbral: el pago debe ser adelantado"
+                        }
+                      },
+                      "required": [
+                        "businessId",
+                        "deliveryMethod",
+                        "items",
+                        "subtotal",
+                        "deliveryBand",
+                        "nominalDeliveryFee",
+                        "deliveryFee",
+                        "freeDelivery",
+                        "total",
+                        "maxChange",
+                        "prepayThreshold",
+                        "exceedsPrepayThreshold"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem Details (RFC 9457). `code`: unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem Details (RFC 9457). `code`: forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem Details (RFC 9457). `code`: not_found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem Details (RFC 9457). `code`: conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem Details (RFC 9457). `code`: validation_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "description": "Todo lo que el checkout pinta, decidido en el servidor con las mismas funciones que usa la creación del pedido: la app no replica ninguna regla. Es solo para pintar; `POST /customer/orders` vuelve a decidir. Un plato que ya no está disponible responde 422.",
+        "parameters": [
+          {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "businessId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "deliveryMethod": {
+                    "type": "string",
+                    "enum": [
+                      "delivery",
+                      "pickup"
+                    ]
+                  },
+                  "coordinates": {
+                    "type": "object",
+                    "properties": {
+                      "lat": {
+                        "type": "number",
+                        "minimum": -90,
+                        "maximum": 90
+                      },
+                      "lng": {
+                        "type": "number",
+                        "minimum": -180,
+                        "maximum": 180
+                      }
+                    },
+                    "required": [
+                      "lat",
+                      "lng"
+                    ]
+                  },
+                  "items": {
+                    "minItems": 1,
+                    "maxItems": 50,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "menuItemId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "quantity": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 50
+                        },
+                        "modifiers": {
+                          "maxItems": 20,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          }
+                        }
+                      },
+                      "required": [
+                        "menuItemId",
+                        "quantity"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "businessId",
+                  "deliveryMethod",
+                  "items"
+                ]
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-tindivo-role": "customer"
+      }
+    },
+    "/customer/addresses": {
+      "get": {
+        "operationId": "listCustomerAddresses",
+        "summary": "Libreta de direcciones del cliente",
+        "tags": [
+          "customer"
+        ],
+        "responses": {
+          "200": {
+            "description": "Sus direcciones, la predeterminada primero",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "label": {
+                                "type": "string"
+                              },
+                              "line": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "reference": {
+                                "type": "string"
+                              },
+                              "coordinates": {
+                                "nullable": true,
+                                "type": "object",
+                                "properties": {
+                                  "lat": {
+                                    "type": "number"
+                                  },
+                                  "lng": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "lat",
+                                  "lng"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "isDefault": {
+                                "type": "boolean"
+                              },
+                              "locationConfirmedAt": {
+                                "nullable": true,
+                                "description": "Null = el punto nunca lo eligió una persona (no te fíes del pin)",
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "locationAccuracyM": {
+                                "nullable": true,
+                                "type": "number"
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "updatedAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "label",
+                              "line",
+                              "reference",
+                              "coordinates",
+                              "isDefault",
+                              "locationConfirmedAt",
+                              "locationAccuracyM",
+                              "createdAt",
+                              "updatedAt"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "items"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem Details (RFC 9457). `code`: unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem Details (RFC 9457). `code`: forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-tindivo-role": "customer"
+      },
+      "post": {
+        "operationId": "createCustomerAddress",
+        "summary": "Guardar una dirección",
+        "tags": [
+          "customer"
+        ],
+        "responses": {
+          "201": {
+            "description": "La dirección creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "label": {
+                          "type": "string"
+                        },
+                        "line": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "reference": {
+                          "type": "string"
+                        },
+                        "coordinates": {
+                          "nullable": true,
+                          "type": "object",
+                          "properties": {
+                            "lat": {
+                              "type": "number"
+                            },
+                            "lng": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "lat",
+                            "lng"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "isDefault": {
+                          "type": "boolean"
+                        },
+                        "locationConfirmedAt": {
+                          "nullable": true,
+                          "description": "Null = el punto nunca lo eligió una persona (no te fíes del pin)",
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "locationAccuracyM": {
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "label",
+                        "line",
+                        "reference",
+                        "coordinates",
+                        "isDefault",
+                        "locationConfirmedAt",
+                        "locationAccuracyM",
+                        "createdAt",
+                        "updatedAt"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem Details (RFC 9457). `code`: unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem Details (RFC 9457). `code`: forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem Details (RFC 9457). `code`: validation_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "description": "Nace predeterminada si el cliente no tenía ninguna (o si se pide `isDefault`); marcarla despeja a la anterior en la misma transacción: nunca quedan dos.",
+        "parameters": [
+          {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "default": "Casa",
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 30
+                  },
+                  "line": {
+                    "type": "string",
+                    "minLength": 5,
+                    "maxLength": 200
+                  },
+                  "reference": {
+                    "type": "string",
+                    "minLength": 5,
+                    "maxLength": 140
+                  },
+                  "coordinates": {
+                    "type": "object",
+                    "properties": {
+                      "lat": {
+                        "type": "number",
+                        "minimum": -90,
+                        "maximum": 90
+                      },
+                      "lng": {
+                        "type": "number",
+                        "minimum": -180,
+                        "maximum": 180
+                      }
+                    },
+                    "required": [
+                      "lat",
+                      "lng"
+                    ]
+                  },
+                  "accuracyM": {
+                    "description": "Precisión del GPS en metros; solo cuenta junto con `coordinates`",
+                    "type": "number",
+                    "minimum": 0,
+                    "exclusiveMinimum": true,
+                    "maximum": 100000
+                  },
+                  "isDefault": {
+                    "description": "Hacerla la predeterminada. Si se omite, lo es solo cuando el cliente aún no tiene ninguna",
+                    "type": "boolean",
+                    "enum": [
+                      true
+                    ]
+                  }
+                },
+                "required": [
+                  "reference"
+                ]
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-tindivo-role": "customer"
+      }
+    },
+    "/customer/addresses/{id}": {
+      "patch": {
+        "operationId": "updateCustomerAddress",
+        "summary": "Editar una dirección propia",
+        "tags": [
+          "customer"
+        ],
+        "responses": {
+          "200": {
+            "description": "La dirección actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "label": {
+                          "type": "string"
+                        },
+                        "line": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "reference": {
+                          "type": "string"
+                        },
+                        "coordinates": {
+                          "nullable": true,
+                          "type": "object",
+                          "properties": {
+                            "lat": {
+                              "type": "number"
+                            },
+                            "lng": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "lat",
+                            "lng"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "isDefault": {
+                          "type": "boolean"
+                        },
+                        "locationConfirmedAt": {
+                          "nullable": true,
+                          "description": "Null = el punto nunca lo eligió una persona (no te fíes del pin)",
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "locationAccuracyM": {
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "label",
+                        "line",
+                        "reference",
+                        "coordinates",
+                        "isDefault",
+                        "locationConfirmedAt",
+                        "locationAccuracyM",
+                        "createdAt",
+                        "updatedAt"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem Details (RFC 9457). `code`: unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem Details (RFC 9457). `code`: forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem Details (RFC 9457). `code`: not_found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem Details (RFC 9457). `code`: validation_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 30
+                  },
+                  "line": {
+                    "type": "string",
+                    "minLength": 5,
+                    "maxLength": 200
+                  },
+                  "reference": {
+                    "type": "string",
+                    "minLength": 5,
+                    "maxLength": 140
+                  },
+                  "coordinates": {
+                    "nullable": true,
+                    "description": "`null` borra el punto. El mismo punto de antes conserva su sello de confirmación",
+                    "type": "object",
+                    "properties": {
+                      "lat": {
+                        "type": "number",
+                        "minimum": -90,
+                        "maximum": 90
+                      },
+                      "lng": {
+                        "type": "number",
+                        "minimum": -180,
+                        "maximum": 180
+                      }
+                    },
+                    "required": [
+                      "lat",
+                      "lng"
+                    ]
+                  },
+                  "accuracyM": {
+                    "type": "number",
+                    "minimum": 0,
+                    "exclusiveMinimum": true,
+                    "maximum": 100000
+                  },
+                  "isDefault": {
+                    "type": "boolean",
+                    "enum": [
+                      true
+                    ],
+                    "description": "Solo se puede marcar; la predeterminada deja de serlo al marcar otra"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-tindivo-role": "customer"
+      },
+      "delete": {
+        "operationId": "deleteCustomerAddress",
+        "summary": "Borrar una dirección propia",
+        "tags": [
+          "customer"
+        ],
+        "responses": {
+          "204": {
+            "description": "Borrada; sin cuerpo"
+          },
+          "401": {
+            "description": "Problem Details (RFC 9457). `code`: unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem Details (RFC 9457). `code`: forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem Details (RFC 9457). `code`: not_found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem Details (RFC 9457). `code`: validation_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "description": "Si era la predeterminada, la más antigua de las que quedan hereda el puesto.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-tindivo-role": "customer"
+      }
+    },
+    "/customer/orders/{id}": {
+      "get": {
+        "operationId": "getCustomerOrder",
+        "summary": "Un pedido propio, con notas y motorizado",
+        "tags": [
+          "orders"
+        ],
+        "responses": {
+          "200": {
+            "description": "El pedido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "shortId": {
+                          "type": "string"
+                        },
+                        "orderNumber": {
+                          "type": "integer"
+                        },
+                        "status": {
+                          "type": "string",
+                          "x-known-values": [
+                            "validando",
+                            "pending_acceptance",
+                            "awaiting_payment",
+                            "confirmed",
+                            "preparing",
+                            "waiting_driver",
+                            "heading_to_restaurant",
+                            "waiting_at_restaurant",
+                            "picked_up",
+                            "ready_for_pickup",
+                            "delivered",
+                            "cancelled"
+                          ],
+                          "description": "Valores conocidos: validando, pending_acceptance, awaiting_payment, confirmed, preparing, waiting_driver, heading_to_restaurant, waiting_at_restaurant, picked_up, ready_for_pickup, delivered, cancelled. Puede llegar uno nuevo; trátalo como desconocido."
+                        },
+                        "deliveryMethod": {
+                          "type": "string",
+                          "x-known-values": [
+                            "delivery",
+                            "pickup"
+                          ],
+                          "description": "Valores conocidos: delivery, pickup. Puede llegar uno nuevo; trátalo como desconocido."
+                        },
+                        "paymentIntent": {
+                          "type": "string",
+                          "x-known-values": [
+                            "prepaid",
+                            "pending_yape",
+                            "pending_cash",
+                            "pending_mixed"
+                          ],
+                          "description": "Valores conocidos: prepaid, pending_yape, pending_cash, pending_mixed. Puede llegar uno nuevo; trátalo como desconocido."
+                        },
+                        "cancelReason": {
+                          "nullable": true,
+                          "type": "string",
+                          "x-known-values": [
+                            "pending_acceptance_timeout",
+                            "validation_timeout",
+                            "prepay_timeout",
+                            "business_cancelled",
+                            "admin_cancelled",
+                            "customer_cancelled",
+                            "no_show",
+                            "proof_rejected_final"
+                          ],
+                          "description": "Valores conocidos: pending_acceptance_timeout, validation_timeout, prepay_timeout, business_cancelled, admin_cancelled, customer_cancelled, no_show, proof_rejected_final. Puede llegar uno nuevo; trátalo como desconocido."
+                        },
+                        "businessId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "businessName": {
+                          "nullable": true,
+                          "description": "Null si el negocio ya no existe",
+                          "type": "string"
+                        },
+                        "amount": {
+                          "type": "string",
+                          "pattern": "^\\d+\\.\\d{2}$",
+                          "description": "Soles como texto decimal con dos decimales, p. ej. `\"12.50\"` (D-39)."
+                        },
+                        "deliveryFee": {
+                          "type": "string",
+                          "pattern": "^\\d+\\.\\d{2}$",
+                          "description": "Soles como texto decimal con dos decimales, p. ej. `\"12.50\"` (D-39)."
+                        },
+                        "total": {
+                          "type": "string",
+                          "pattern": "^\\d+\\.\\d{2}$",
+                          "description": "Soles como texto decimal con dos decimales, p. ej. `\"12.50\"` (D-39)."
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "deliveredAt": {
+                          "nullable": true,
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string"
+                              },
+                              "quantity": {
+                                "type": "integer"
+                              },
+                              "lineTotal": {
+                                "type": "string",
+                                "pattern": "^\\d+\\.\\d{2}$",
+                                "description": "Soles como texto decimal con dos decimales, p. ej. `\"12.50\"` (D-39)."
+                              },
+                              "note": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "modifiers": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "group": {
+                                      "type": "string"
+                                    },
+                                    "name": {
+                                      "type": "string"
+                                    },
+                                    "price": {
+                                      "type": "string",
+                                      "pattern": "^\\d+\\.\\d{2}$",
+                                      "description": "Soles como texto decimal con dos decimales, p. ej. `\"12.50\"` (D-39)."
+                                    }
+                                  },
+                                  "required": [
+                                    "group",
+                                    "name",
+                                    "price"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "quantity",
+                              "lineTotal",
+                              "note",
+                              "modifiers"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "customerNotes": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "deliveryAddress": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "deliveryReference": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "deliveryCoordinates": {
+                          "nullable": true,
+                          "type": "object",
+                          "properties": {
+                            "lat": {
+                              "type": "number"
+                            },
+                            "lng": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "lat",
+                            "lng"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "paysWith": {
+                          "nullable": true,
+                          "type": "string",
+                          "pattern": "^\\d+\\.\\d{2}$",
+                          "description": "Soles como texto decimal con dos decimales, p. ej. `\"12.50\"` (D-39)."
+                        },
+                        "changeToGive": {
+                          "nullable": true,
+                          "type": "string",
+                          "pattern": "^\\d+\\.\\d{2}$",
+                          "description": "Soles como texto decimal con dos decimales, p. ej. `\"12.50\"` (D-39)."
+                        },
+                        "estimatedReadyAt": {
+                          "nullable": true,
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "arrivedAtCustomerAt": {
+                          "nullable": true,
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "proofAttempt": {
+                          "type": "integer"
+                        },
+                        "paymentVerifiedAt": {
+                          "nullable": true,
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "driver": {
+                          "nullable": true,
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string"
+                            },
+                            "phone": {
+                              "nullable": true,
+                              "description": "Solo cuando el motorizado ya llegó a la puerta del cliente",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "phone"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "shortId",
+                        "orderNumber",
+                        "status",
+                        "deliveryMethod",
+                        "paymentIntent",
+                        "cancelReason",
+                        "businessId",
+                        "businessName",
+                        "amount",
+                        "deliveryFee",
+                        "total",
+                        "createdAt",
+                        "deliveredAt",
+                        "items",
+                        "customerNotes",
+                        "deliveryAddress",
+                        "deliveryReference",
+                        "deliveryCoordinates",
+                        "paysWith",
+                        "changeToGive",
+                        "estimatedReadyAt",
+                        "arrivedAtCustomerAt",
+                        "proofAttempt",
+                        "paymentVerifiedAt",
+                        "driver"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem Details (RFC 9457). `code`: unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem Details (RFC 9457). `code`: forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem Details (RFC 9457). `code`: not_found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem Details (RFC 9457). `code`: validation_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "description": "A diferencia del seguimiento público: incluye `customerNotes`, la dirección y el motorizado asignado. El teléfono del motorizado llega solo cuando ya está en la puerta, como en el seguimiento. Un pedido ajeno responde 404, igual que uno que no existe.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-tindivo-role": "customer"
+      }
+    },
+    "/customer/terms-acceptance": {
+      "post": {
+        "operationId": "acceptTerms",
+        "summary": "Registrar la aceptación de términos y privacidad",
+        "tags": [
+          "customer"
+        ],
+        "responses": {
+          "200": {
+            "description": "Ya estaba aceptada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "version": {
+                          "type": "string"
+                        },
+                        "acceptedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "alreadyAccepted": {
+                          "type": "boolean",
+                          "description": "Repetirla no crea otra fila: devuelve la fecha original"
+                        }
+                      },
+                      "required": [
+                        "version",
+                        "acceptedAt",
+                        "alreadyAccepted"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Aceptación registrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "version": {
+                          "type": "string"
+                        },
+                        "acceptedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "alreadyAccepted": {
+                          "type": "boolean",
+                          "description": "Repetirla no crea otra fila: devuelve la fecha original"
+                        }
+                      },
+                      "required": [
+                        "version",
+                        "acceptedAt",
+                        "alreadyAccepted"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem Details (RFC 9457). `code`: unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem Details (RFC 9457). `code`: forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem Details (RFC 9457). `code`: validation_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "description": "Idempotente por versión: repetirla devuelve la fecha original con `alreadyAccepted: true`.",
+        "parameters": [
+          {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "version": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9._-]{1,32}$",
+                    "description": "La versión del texto que la persona vio, p. ej. `2026-05`"
+                  }
+                },
+                "required": [
+                  "version"
+                ]
+              }
+            }
+          }
+        },
         "security": [
           {
             "bearerAuth": []

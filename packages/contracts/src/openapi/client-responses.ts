@@ -2,13 +2,25 @@ import { z } from 'zod'
 import { AppealStatusSchema, RefundStatusSchema } from '../appeal'
 import {
   CANCEL_REASONS,
+  COURIER_CANCEL_REASONS,
+  COURIER_PAYERS,
   COURIER_STATUSES,
+  DELIVERY_METHODS,
+  DISTANCE_BANDS,
   ORDER_STATUSES,
+  PAYMENT_INTENTS,
   PAYMENT_WALLETS,
   PICKUP_TIMINGS,
   REPORT_STATUSES,
 } from '../enums'
-import { legacyMoney, legacyMoneyNullable, openEnum, timestampOut, uuidOut } from './schema-helpers'
+import {
+  legacyMoney,
+  legacyMoneyNullable,
+  moneyText,
+  openEnum,
+  timestampOut,
+  uuidOut,
+} from './schema-helpers'
 
 /**
  * Respuestas de las rutas con sesión (`customer` y `push`), descritas TAL COMO
@@ -218,4 +230,182 @@ export const PaymentOptionsSchema = z.object({
     CONTRAENTREGA_REASONS,
     '`trusted` o `prepay_required`. No distingue la causa (antifraude)',
   ),
+})
+
+// ── Lote MV4b ────────────────────────────────────────────────────────────────
+
+const coordinatesOut = z.object({ lat: z.number(), lng: z.number() })
+
+export const FREE_DELIVERY_REASONS = ['launch_promo', 'dish'] as const
+
+/**
+ * POST /customer/checkout/quote. Todo lo que el checkout pinta, decidido en el
+ * servidor: la app no calcula banda, envío gratis, vuelto ni umbral. Es solo
+ * para pintar; la creación del pedido vuelve a decidir. Dinero como texto (D-39).
+ */
+export const CheckoutQuoteSchema = z.object({
+  businessId: uuidOut,
+  deliveryMethod: openEnum(DELIVERY_METHODS),
+  items: z.array(
+    z.object({
+      menuItemId: uuidOut,
+      name: z.string(),
+      quantity: z.number().int(),
+      unitPrice: moneyText.meta({ description: 'Precio del plato más sus modificadores' }),
+      lineTotal: moneyText,
+    }),
+  ),
+  subtotal: moneyText,
+  deliveryBand: openEnum(DISTANCE_BANDS, 'Null en un recojo').nullable(),
+  nominalDeliveryFee: moneyText.meta({
+    description: 'Lo que costaría el envío sin promoción (para el tachado). `"0.00"` en un recojo',
+  }),
+  deliveryFee: moneyText.meta({ description: 'Lo que se cobra: `"0.00"` si hay envío gratis' }),
+  freeDelivery: z.object({
+    applies: z.boolean(),
+    reason: openEnum(FREE_DELIVERY_REASONS).nullable(),
+  }),
+  total: moneyText,
+  maxChange: moneyText.meta({
+    description: 'Vuelto máximo que el negocio puede dar esta noche; `"0.00"` = solo pago exacto',
+  }),
+  prepayThreshold: moneyText,
+  exceedsPrepayThreshold: z.boolean().meta({
+    description: 'El total pasa del umbral: el pago debe ser adelantado',
+  }),
+})
+
+/** Una dirección de la libreta del cliente. */
+export const CustomerAddressSchema = z.object({
+  id: uuidOut,
+  label: z.string(),
+  line: z.string().nullable(),
+  reference: z.string(),
+  coordinates: coordinatesOut.nullable(),
+  isDefault: z.boolean(),
+  locationConfirmedAt: timestampOut.nullable().meta({
+    description: 'Null = el punto nunca lo eligió una persona (no te fíes del pin)',
+  }),
+  locationAccuracyM: z.number().nullable(),
+  createdAt: timestampOut,
+  updatedAt: timestampOut,
+})
+
+/** GET /customer/addresses — la predeterminada primero. Una libreta es corta: sin cursor. */
+export const CustomerAddressListSchema = z.object({ items: z.array(CustomerAddressSchema) })
+
+const customerOrderItem = z.object({
+  name: z.string(),
+  quantity: z.number().int(),
+  lineTotal: moneyText,
+  note: z.string().nullable(),
+  modifiers: z.array(z.object({ group: z.string(), name: z.string(), price: moneyText })),
+})
+
+const customerOrderBase = {
+  id: uuidOut,
+  shortId: z.string(),
+  orderNumber: z.number().int(),
+  status: openEnum(ORDER_STATUSES),
+  deliveryMethod: openEnum(DELIVERY_METHODS),
+  paymentIntent: openEnum(PAYMENT_INTENTS),
+  cancelReason: openEnum(CANCEL_REASONS).nullable(),
+  businessId: uuidOut,
+  businessName: z.string().nullable().meta({ description: 'Null si el negocio ya no existe' }),
+  amount: moneyText,
+  deliveryFee: moneyText,
+  total: moneyText,
+  createdAt: timestampOut,
+  deliveredAt: timestampOut.nullable(),
+}
+
+/** Un pedido en el historial. */
+export const CustomerOrderSummarySchema = z.object({
+  ...customerOrderBase,
+  items: z.array(customerOrderItem.pick({ name: true, quantity: true, lineTotal: true })),
+})
+
+/** GET /customer/orders — del más reciente al más antiguo. */
+export const CustomerOrderListSchema = z.object({
+  items: z.array(CustomerOrderSummarySchema),
+  nextCursor: z.string().nullable().meta({
+    description: 'Pásalo como `cursor` para la página siguiente; null = no hay más',
+  }),
+})
+
+/** GET /customer/orders/{id} — un pedido propio, con lo que el seguimiento público oculta. */
+export const CustomerOrderDetailSchema = z.object({
+  ...customerOrderBase,
+  items: z.array(customerOrderItem),
+  customerNotes: z.string().nullable(),
+  deliveryAddress: z.string().nullable(),
+  deliveryReference: z.string().nullable(),
+  deliveryCoordinates: coordinatesOut.nullable(),
+  paysWith: moneyText.nullable(),
+  changeToGive: moneyText.nullable(),
+  estimatedReadyAt: timestampOut.nullable(),
+  arrivedAtCustomerAt: timestampOut.nullable(),
+  proofAttempt: z.number().int(),
+  paymentVerifiedAt: timestampOut.nullable(),
+  driver: z
+    .object({
+      name: z.string(),
+      phone: z.string().nullable().meta({
+        description: 'Solo cuando el motorizado ya llegó a la puerta del cliente',
+      }),
+    })
+    .nullable(),
+})
+
+const courierPoint = z.object({
+  name: z.string(),
+  phone: z.string().nullable(),
+  coordinates: coordinatesOut,
+  referenceText: z.string(),
+})
+
+/** Una solicitud de Entregas en el historial. */
+export const CustomerCourierOrderSchema = z.object({
+  id: uuidOut,
+  shortId: z.string(),
+  orderNumber: z.number().int(),
+  status: openEnum(COURIER_STATUSES),
+  cancelReason: openEnum(COURIER_CANCEL_REASONS).nullable(),
+  origin: courierPoint,
+  destination: courierPoint,
+  itemDescription: z.string(),
+  isFragile: z.boolean(),
+  payer: openEnum(COURIER_PAYERS),
+  feeAmount: moneyText,
+  createdAt: timestampOut,
+  deliveredAt: timestampOut.nullable(),
+})
+
+/** Un contacto de las últimas entregas, para sugerirlo al pedir otra. */
+export const CourierFrequentContactSchema = z.object({
+  name: z.string(),
+  phone: z.string().nullable(),
+  coordinates: coordinatesOut,
+  referenceText: z.string(),
+  timesUsed: z.number().int(),
+  lastUsedAt: timestampOut,
+})
+
+/** GET /customer/courier-orders */
+export const CustomerCourierOrderListSchema = z.object({
+  items: z.array(CustomerCourierOrderSchema),
+  nextCursor: z.string().nullable(),
+  frequentContacts: z.array(CourierFrequentContactSchema).meta({
+    description:
+      'De sus últimas 50 solicitudes, los más usados primero (máximo 6). Solo en la primera página (sin cursor); vacío en las siguientes',
+  }),
+})
+
+/** POST /customer/terms-acceptance */
+export const TermsAcceptedSchema = z.object({
+  version: z.string(),
+  acceptedAt: timestampOut,
+  alreadyAccepted: z.boolean().meta({
+    description: 'Repetirla no crea otra fila: devuelve la fecha original',
+  }),
 })
