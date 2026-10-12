@@ -2,7 +2,9 @@ import { SendPhoneCodeRequestSchema } from '@tindivo/contracts'
 import { requireRole } from '@/lib/http/auth'
 import { corsHeaders, handleOptions } from '@/lib/http/cors'
 import { handleError, ok, problem } from '@/lib/http/problem'
+import { loadLimits } from '@/lib/http/rate-limit'
 import { getRequestId } from '@/lib/http/request-id'
+import { getPhoneLogStore, otpPhoneSecret, reserveOtpPhone } from '@/lib/otp/phone-limit'
 import { createServiceClient } from '@/lib/supabase/service'
 import {
   DEV_OTP_CODE,
@@ -15,6 +17,17 @@ export const dynamic = 'force-dynamic'
 
 /** Máximo de intentos de verificación por usuario en una ventana de 24 horas. */
 const MAX_ATTEMPTS_PER_24H = 3
+
+/**
+ * ¿Twilio rechazó el envío sin ambigüedad? Solo el error de su API (el
+ * `RestException` del SDK: `status` HTTP 4xx y `code` numérico de Twilio).
+ * Timeout, red caída o 5xx NO lo son: la petición pudo haberse aceptado.
+ */
+function isTwilioRejection(e: { code?: unknown; status?: unknown }): boolean {
+  return (
+    typeof e.status === 'number' && e.status >= 400 && e.status < 500 && typeof e.code === 'number'
+  )
+}
 
 export function OPTIONS(req: Request): Response {
   return handleOptions(req)
@@ -120,6 +133,24 @@ export async function POST(req: Request): Promise<Response> {
       })
     }
 
+    // Tope por NÚMERO de destino (SEC-03), además del de arriba por usuario:
+    // quien crea cuentas gratis no puede disparar SMS a un número ajeno.
+    // Ventana móvil de 24 h y solo cuentan los envíos que Twilio acepta: se
+    // aparta la plaza aquí y se devuelve si Twilio rechaza. Falla abierto sin
+    // Upstash, con Redis caído o sin secreto (ver lib/otp/phone-limit.ts).
+    const phoneLimit = await reserveOtpPhone(fullPhone, {
+      store: await getPhoneLogStore(),
+      rule: (await loadLimits()).otp_phone,
+      secret: otpPhoneSecret(),
+    })
+    if (!phoneLimit.allowed) {
+      return problem('rate_limited', {
+        detail: `Ya se pidieron demasiados códigos para este número. Intenta de nuevo en ${phoneLimit.retryAfterSec} s o escríbenos por WhatsApp.`,
+        requestId,
+        headers: { ...corsHeaders(req), 'retry-after': String(phoneLimit.retryAfterSec) },
+      })
+    }
+
     // Enviar OTP via Twilio Verify (WhatsApp primario, SMS fallback automático).
     //
     // EL FALLO DE TWILIO NO PUEDE SALIR COMO "error interno" A SECAS. Sin este
@@ -149,9 +180,27 @@ export async function POST(req: Request): Promise<Response> {
           ` · to=${fullPhone} channel=sms locale=es` +
           ` · serviceSid=${VERIFY_SERVICE_SID.slice(0, 2)}…(${VERIFY_SERVICE_SID.length})`,
       )
+      if (isTwilioRejection(e)) {
+        // Rechazo inequívoco (4xx con código de la API de Twilio): el SMS no
+        // salió y no gasta el cupo del número.
+        await phoneLimit.release()
+        return problem('internal_error', {
+          detail:
+            'No pudimos enviarte el SMS. Escríbenos por WhatsApp y te verificamos el número a mano.',
+          requestId,
+          headers: corsHeaders(req),
+        })
+      }
+      // RESULTADO INCIERTO (timeout, red caída, 5xx): Twilio pudo aceptar el
+      // envío y el SMS llegar. Se conserva la plaza del número y se apunta el
+      // intento personal como si hubiera salido: ante la duda se manda MENOS.
+      await service.from('customer_otp_attempts').insert({
+        user_id: user.id,
+        phone: fullPhone,
+      })
       return problem('internal_error', {
         detail:
-          'No pudimos enviarte el SMS. Escríbenos por WhatsApp y te verificamos el número a mano.',
+          'No pudimos confirmar el envío del SMS. Si el código te llega, úsalo; si no, escríbenos por WhatsApp y te verificamos el número a mano.',
         requestId,
         headers: corsHeaders(req),
       })
