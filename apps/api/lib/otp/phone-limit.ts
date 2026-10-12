@@ -47,46 +47,65 @@ export interface PhoneLogStore {
   /**
    * Atómico: descarta los envíos con instante `<= now - ventana`; si quedan
    * menos de `limit`, apunta `member` en `now` y deja pasar; si no, dice
-   * cuánto falta para que salga el más viejo.
+   * cuánto falta para que salga el más viejo. `now` solo lo usa la versión en
+   * memoria (tests); en Redis el instante lo da el propio servidor (`TIME`).
    */
-  reserve(key: string, member: string, rule: LimitRule, now: number): Promise<ReserveResult>
+  reserve(key: string, member: string, rule: LimitRule, now?: number): Promise<ReserveResult>
   release(key: string, member: string): Promise<void>
 }
 
 /**
  * Misma lógica que el script de Redis, en memoria: para los tests y como
- * referencia. Un envío en `ts` cuenta mientras `ts > now - ventana`.
+ * referencia. Un envío en `ts` cuenta mientras `ts > now - ventana`. Imita
+ * también el `PEXPIRE`: cada plaza concedida fija la caducidad del conjunto
+ * entero en `now + ventana`.
  */
 export function memoryPhoneLog(): PhoneLogStore {
   const sets = new Map<string, Map<string, number>>()
+  const expiresAt = new Map<string, number>()
   return {
-    async reserve(key, member, rule, now) {
+    async reserve(key, member, rule, now = Date.now()) {
       const win = rule.windowSec * 1000
+      if ((expiresAt.get(key) ?? Number.POSITIVE_INFINITY) <= now) {
+        sets.delete(key)
+        expiresAt.delete(key)
+      }
       const set = sets.get(key) ?? new Map<string, number>()
       sets.set(key, set)
       for (const [m, ts] of set) if (ts <= now - win) set.delete(m)
       if (set.size < rule.limit) {
         set.set(member, now)
+        expiresAt.set(key, now + win)
         return { allowed: true }
       }
       const oldest = Math.min(...set.values())
       return { allowed: false, retryAfterMs: oldest + win - now }
     },
     async release(key, member) {
-      sets.get(key)?.delete(member)
+      const set = sets.get(key)
+      set?.delete(member)
+      if (set?.size === 0) {
+        sets.delete(key)
+        expiresAt.delete(key)
+      }
     },
   }
 }
 
-/** KEYS[1] = clave · ARGV = now(ms), ventana(ms), límite, miembro. */
+/**
+ * KEYS[1] = clave · ARGV = ventana(ms), límite, miembro.
+ * El instante sale de `TIME` de Redis (no del servidor de la app): relojes de
+ * varias instancias serverless desfasados no mueven la ventana.
+ */
 export const RESERVE_SCRIPT = `
 local key = KEYS[1]
-local now = tonumber(ARGV[1])
-local win = tonumber(ARGV[2])
-local limit = tonumber(ARGV[3])
+local t = redis.call('TIME')
+local now = tonumber(t[1]) * 1000 + math.floor(tonumber(t[2]) / 1000)
+local win = tonumber(ARGV[1])
+local limit = tonumber(ARGV[2])
 redis.call('ZREMRANGEBYSCORE', key, '-inf', now - win)
 if redis.call('ZCARD', key) < limit then
-  redis.call('ZADD', key, now, ARGV[4])
+  redis.call('ZADD', key, now, ARGV[3])
   redis.call('PEXPIRE', key, win)
   return {1, 0}
 end
@@ -101,11 +120,11 @@ interface RedisLike {
 
 export function redisPhoneLog(redis: RedisLike): PhoneLogStore {
   return {
-    async reserve(key, member, rule, now) {
+    async reserve(key, member, rule) {
       const out = (await redis.eval(
         RESERVE_SCRIPT,
         [key],
-        [now, rule.windowSec * 1000, rule.limit, member],
+        [rule.windowSec * 1000, rule.limit, member],
       )) as [number, number]
       return Number(out[0]) === 1
         ? { allowed: true }
@@ -139,34 +158,38 @@ export type PhoneGate =
 
 const NOOP = async () => {}
 
-/** Aparta una plaza para este número; `release()` si el envío no salió. */
+/**
+ * Aparta una plaza para este número; `release()` si Twilio rechazó el envío.
+ *
+ * `release` va SIEMPRE ligado al `member` de esta reserva, también si `reserve`
+ * venció por timeout: el EVAL pudo aplicarse en Redis aunque la respuesta no
+ * llegara, y entonces hay una plaza fantasma que solo ese `member` identifica.
+ * Carrera residual: si el ZREM llega a Redis ANTES que un EVAL retrasado, no
+ * borra nada y la plaza queda hasta que caduque. Yerra del lado de mandar
+ * MENOS SMS, que es el que importa.
+ */
 export async function reserveOtpPhone(e164: string, deps: PhoneLimitDeps): Promise<PhoneGate> {
   if (!deps.store || !deps.secret) return { allowed: true, release: NOOP }
   const store = deps.store
   const timeoutMs = deps.timeoutMs ?? TIMEOUT_MS
   const key = phoneLimitKey(e164, deps.secret)
   const member = randomUUID()
+  const release = async () => {
+    try {
+      await withTimeout(store.release(key, member), timeoutMs)
+    } catch (err) {
+      console.error('[otp-phone-limit] no se pudo devolver la plaza:', err)
+    }
+  }
   try {
-    const res = await withTimeout(
-      store.reserve(key, member, deps.rule, (deps.now ?? Date.now)()),
-      timeoutMs,
-    )
+    const res = await withTimeout(store.reserve(key, member, deps.rule, deps.now?.()), timeoutMs)
     if (!res.allowed) {
       return { allowed: false, retryAfterSec: Math.max(1, Math.ceil(res.retryAfterMs / 1000)) }
     }
-    return {
-      allowed: true,
-      release: async () => {
-        try {
-          await withTimeout(store.release(key, member), timeoutMs)
-        } catch (err) {
-          console.error('[otp-phone-limit] no se pudo devolver la plaza:', err)
-        }
-      },
-    }
+    return { allowed: true, release }
   } catch (err) {
     console.error('[otp-phone-limit] almacén no disponible, se deja pasar:', err)
-    return { allowed: true, release: NOOP }
+    return { allowed: true, release }
   }
 }
 

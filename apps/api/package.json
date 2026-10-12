@@ -36,6 +36,7 @@
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
+    "ioredis": "^6.0.0",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }

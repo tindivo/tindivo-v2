@@ -144,6 +144,21 @@ describe('falla abierto', () => {
     expect(g.allowed).toBe(true)
     expect(Date.now() - t0).toBeLessThan(500)
   })
+  it('reserve vence por timeout: el release queda ligado al member y hace ZREM de él', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const reserve = vi.fn(() => new Promise<never>(() => {}))
+    const release = vi.fn(async () => {})
+    const g = await reserveOtpPhone(PHONE, {
+      store: { reserve, release },
+      rule,
+      secret: SECRET,
+      timeoutMs: 10,
+    })
+    expect(g.allowed).toBe(true)
+    if (g.allowed) await g.release()
+    const [, member] = reserve.mock.calls[0] as unknown as [string, string]
+    expect(release).toHaveBeenCalledWith(phoneLimitKey(PHONE, SECRET), member)
+  })
   it('un release que falla no rompe la respuesta', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     const store = {
@@ -172,15 +187,50 @@ describe('otpPhoneSecret', () => {
   })
 })
 
+describe('memoryPhoneLog imita el PEXPIRE del conjunto', () => {
+  it('pasada la ventana desde la última plaza concedida, el conjunto caduca entero', async () => {
+    const log = memoryPhoneLog()
+    const r = { limit: 1, windowSec: 60 }
+    expect((await log.reserve('k', 'a', r, 0)).allowed).toBe(true)
+    expect((await log.reserve('k', 'b', r, 59_000)).allowed).toBe(false)
+    expect((await log.reserve('k', 'c', r, 60_000)).allowed).toBe(true)
+  })
+})
+
+describe('OTP_PHONE_HMAC_SECRET vacío no tumba serverEnv() (caché FRÍA)', () => {
+  it("'' se trata como ausente: serverEnv() no lanza y el límite falla abierto registrándolo", async () => {
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'http://127.0.0.1:54321')
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', 'anon')
+    vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY', 'service')
+    vi.stubEnv('OTP_PHONE_HMAC_SECRET', '')
+    vi.resetModules() // descarta la caché de serverEnv(): nadie la ha calentado
+    const { serverEnv } = await import('../env')
+    expect(() => serverEnv()).not.toThrow()
+    expect(serverEnv().OTP_PHONE_HMAC_SECRET).toBeUndefined()
+    expect(otpPhoneSecret()).toBeNull()
+    expect(err).toHaveBeenCalled()
+  })
+  it('con valor lo conserva', async () => {
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'http://127.0.0.1:54321')
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', 'anon')
+    vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY', 'service')
+    vi.stubEnv('OTP_PHONE_HMAC_SECRET', 'abc')
+    vi.resetModules()
+    const { serverEnv } = await import('../env')
+    expect(serverEnv().OTP_PHONE_HMAC_SECRET).toBe('abc')
+  })
+})
+
 describe('redisPhoneLog llama al script con la forma esperada', () => {
-  it('reserve → EVAL(script, [clave], [now, ventana ms, límite, miembro]); release → ZREM', async () => {
+  it('reserve → EVAL(script, [clave], [ventana ms, límite, miembro]); el reloj lo da TIME; release → ZREM', async () => {
     const redis = {
       eval: vi.fn(async () => [0, 1234]),
       zrem: vi.fn(async () => 1),
     }
     const store = redisPhoneLog(redis)
-    expect(await store.reserve('k', 'm', rule, 42)).toEqual({ allowed: false, retryAfterMs: 1234 })
-    expect(redis.eval).toHaveBeenCalledWith(RESERVE_SCRIPT, ['k'], [42, 86_400_000, 5, 'm'])
+    expect(await store.reserve('k', 'm', rule)).toEqual({ allowed: false, retryAfterMs: 1234 })
+    expect(redis.eval).toHaveBeenCalledWith(RESERVE_SCRIPT, ['k'], [86_400_000, 5, 'm'])
     await store.release('k', 'm')
     expect(redis.zrem).toHaveBeenCalledWith('k', 'm')
   })

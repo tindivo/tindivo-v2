@@ -91,6 +91,19 @@ jobs:
     env:
       # Fijada: la misma versión con la que se reconstruye la base en local.
       SUPABASE_CLI_VERSION: 2.109.1
+      # Redis real para probar el script Lua del tope de OTP por número
+      # (apps/api/lib/__tests__/otp-phone-limit.redis.test.ts).
+      REDIS_URL: redis://127.0.0.1:6379
+    services:
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v7
 

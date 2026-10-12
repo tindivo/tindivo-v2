@@ -18,6 +18,17 @@ export const dynamic = 'force-dynamic'
 /** Máximo de intentos de verificación por usuario en una ventana de 24 horas. */
 const MAX_ATTEMPTS_PER_24H = 3
 
+/**
+ * ¿Twilio rechazó el envío sin ambigüedad? Solo el error de su API (el
+ * `RestException` del SDK: `status` HTTP 4xx y `code` numérico de Twilio).
+ * Timeout, red caída o 5xx NO lo son: la petición pudo haberse aceptado.
+ */
+function isTwilioRejection(e: { code?: unknown; status?: unknown }): boolean {
+  return (
+    typeof e.status === 'number' && e.status >= 400 && e.status < 500 && typeof e.code === 'number'
+  )
+}
+
 export function OPTIONS(req: Request): Response {
   return handleOptions(req)
 }
@@ -169,11 +180,27 @@ export async function POST(req: Request): Promise<Response> {
           ` · to=${fullPhone} channel=sms locale=es` +
           ` · serviceSid=${VERIFY_SERVICE_SID.slice(0, 2)}…(${VERIFY_SERVICE_SID.length})`,
       )
-      // El SMS no salió: no gasta el cupo del número.
-      await phoneLimit.release()
+      if (isTwilioRejection(e)) {
+        // Rechazo inequívoco (4xx con código de la API de Twilio): el SMS no
+        // salió y no gasta el cupo del número.
+        await phoneLimit.release()
+        return problem('internal_error', {
+          detail:
+            'No pudimos enviarte el SMS. Escríbenos por WhatsApp y te verificamos el número a mano.',
+          requestId,
+          headers: corsHeaders(req),
+        })
+      }
+      // RESULTADO INCIERTO (timeout, red caída, 5xx): Twilio pudo aceptar el
+      // envío y el SMS llegar. Se conserva la plaza del número y se apunta el
+      // intento personal como si hubiera salido: ante la duda se manda MENOS.
+      await service.from('customer_otp_attempts').insert({
+        user_id: user.id,
+        phone: fullPhone,
+      })
       return problem('internal_error', {
         detail:
-          'No pudimos enviarte el SMS. Escríbenos por WhatsApp y te verificamos el número a mano.',
+          'No pudimos confirmar el envío del SMS. Si el código te llega, úsalo; si no, escríbenos por WhatsApp y te verificamos el número a mano.',
         requestId,
         headers: corsHeaders(req),
       })

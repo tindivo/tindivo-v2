@@ -7,8 +7,8 @@
  * (variables, import de `@upstash/redis`, EVAL, ZREM, timeout).
  *
  * Lo sustituido: Twilio (`create`) y el cliente `@upstash/redis`, cuyo EVAL lo
- * atiende `memoryPhoneLog` (misma lógica que el script Lua). El script en sí se
- * probó aparte contra un Redis 7 real (evidencia en el PR).
+ * atiende `memoryPhoneLog` (misma lógica que el script Lua). El script en sí lo
+ * prueba `otp-phone-limit.redis.test.ts` contra un Redis 7 real.
  */
 import { createClient } from '@supabase/supabase-js'
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -52,13 +52,11 @@ vi.mock('@upstash/redis', async () => {
       if (fake.modo === 'timeout') return new Promise(() => {})
       if (fake.modo === 'down') throw new Error('redis caído')
       fake.keys.push(keys[0] as string)
-      const [now, win, limit, member] = args
-      const r = await log.reserve(
-        keys[0] as string,
-        String(member),
-        { limit: Number(limit), windowSec: Number(win) / 1000 },
-        Number(now),
-      )
+      const [win, limit, member] = args
+      const r = await log.reserve(keys[0] as string, String(member), {
+        limit: Number(limit),
+        windowSec: Number(win) / 1000,
+      })
       return r.allowed ? [1, 0] : [0, r.retryAfterMs]
     }
     async zrem(key: string, member: string) {
@@ -182,7 +180,9 @@ describe('send-code · tope por número de destino', () => {
   it('un envío que Twilio rechaza no gasta el cupo del número', async () => {
     const t = tel(2)
     const v = await crearVecino()
-    create.mockRejectedValueOnce(Object.assign(new Error('rechazado'), { code: 60200 }))
+    create.mockRejectedValueOnce(
+      Object.assign(new Error('rechazado'), { code: 60200, status: 400 }),
+    )
     expect((await pedir(v, t)).status).toBe(500)
     expect((await pedir(v, t)).status).toBe(200)
     expect((await pedir(v, t)).status).toBe(200)
@@ -190,6 +190,55 @@ describe('send-code · tope por número de destino', () => {
     const res = await pedir(v, t)
     expect(res.status).toBe(429)
     expect(((await res.json()) as { detail: string }).detail).toContain('este número')
+  })
+
+  /** Cuántos intentos personales hay apuntados para este usuario. */
+  async function intentos(v: Vecino): Promise<number> {
+    const { count } = await localClient
+      .from('customer_otp_attempts')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', v.userId)
+    return count ?? 0
+  }
+
+  it('rechazo inequívoco (4xx de Twilio): libera la plaza y no cuenta el intento personal', async () => {
+    const t = tel(7)
+    const v = await crearVecino()
+    create.mockRejectedValueOnce(
+      Object.assign(new Error('número inválido'), { code: 21211, status: 400 }),
+    )
+    expect((await pedir(v, t)).status).toBe(500)
+    expect(await intentos(v)).toBe(0)
+    expect((await pedir(v, t)).status).toBe(200)
+    expect((await pedir(v, t)).status).toBe(200)
+    expect((await pedir(v, t)).status).toBe(429) // cupo del número (2) lleno con los 2 aceptados
+  })
+
+  it('timeout tras aceptación (sin status): conserva la plaza y cuenta en AMBOS topes', async () => {
+    const t = tel(8)
+    const v = await crearVecino()
+    create.mockRejectedValueOnce(
+      Object.assign(new Error('timeout of 30000ms exceeded'), { code: 'ECONNABORTED' }),
+    )
+    expect((await pedir(v, t)).status).toBe(500)
+    expect(await intentos(v)).toBe(1)
+    expect((await pedir(v, t)).status).toBe(200) // segunda plaza
+    const res = await pedir(v, t) // tercera: el cupo del número (2) ya incluye la incierta
+    expect(res.status).toBe(429)
+    expect(((await res.json()) as { detail: string }).detail).toContain('este número')
+    expect(await intentos(v)).toBe(2)
+  })
+
+  it('5xx de Twilio: conserva la plaza y cuenta el intento personal', async () => {
+    const t = tel(9)
+    const v = await crearVecino()
+    create.mockRejectedValueOnce(
+      Object.assign(new Error('servicio no disponible'), { code: 20500, status: 503 }),
+    )
+    expect((await pedir(v, t)).status).toBe(500)
+    expect(await intentos(v)).toBe(1)
+    expect((await pedir(v, t)).status).toBe(200)
+    expect((await pedir(v, t)).status).toBe(429)
   })
 
   it('borrar la cuenta y crear otra no reinicia el contador del número', async () => {
