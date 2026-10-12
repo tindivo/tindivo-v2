@@ -60,7 +60,7 @@ export function corsHeaders(req: Request): Record<string, string> {
     'access-control-allow-headers':
       'authorization,content-type,idempotency-key,x-request-id,accept,x-requested-with,' +
       'x-tindivo-platform,x-tindivo-app,x-tindivo-app-version,x-tindivo-build',
-    'access-control-expose-headers': 'x-tindivo-min-version,x-request-id',
+    'access-control-expose-headers': 'x-tindivo-min-version,x-request-id,retry-after',
     'access-control-max-age': '86400',
     vary: 'Origin',
   }
