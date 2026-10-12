@@ -42,6 +42,59 @@ borran** (el plazo de 90 días de D-44 no está decidido ni implementado).
 8. Los textos de `/borrar-cuenta` y de la política los revisa Jesús (nivel C: responsable, correo de privacidad). La
    página solo ofrece WhatsApp como alternativa; Google pide un medio de contacto: falta el correo.
 
+### Segunda ronda (revisión de Codex)
+
+- **Inventario medido** (ver la tercera ronda: ahora se descubre por llaves foráneas). El test `account-deletion-coverage` obliga a que toda columna
+  con pinta personal esté en la lista de **anonimizadas** o en la de **conservadas a propósito**; una columna nueva lo
+  rompe. Faltaban `arrived_at_customer_lat/lng/accuracy_m` (0114), ahora cubiertas.
+- **Carrera cerrada:** `users.deleted_at` marca la lápida y `reject_deleted_account` (BEFORE INSERT, `FOR SHARE` sobre
+  `users`) rechaza pedidos, carreras de Entregas, perfil, direcciones, avisos, términos, reseñas, descartes y canjes
+  sobre una cuenta borrada. Probado de forma determinista (test) y con dos sesiones `psql`: el insert esperó 5 s al
+  `FOR UPDATE` de la RPC y fue rechazado al confirmarse (`cannot write because the account was deleted`).
+- **Reseñas:** `customer_user_id` pasa a NULL dentro de la RPC (la FK `SET NULL` no dispara al borrar `auth.users`).
+- **Notas y logs:** se vacían `business_notes`, `driver_notes`, `cancel_note`, `rejection_reason_text`, la nota de cada
+  renglón y `order_status_history.notes`; `order_event_log.data`, `courier_order_events.data` y `domain_events` pasan por
+  `redact_personal_json` (sustituye por `[eliminado]` el valor de toda clave con teléfono, nombre, dirección, referencia,
+  nota, coordenadas…, y respeta booleanos e importes).
+
+**Preguntas nuevas para Jesús (no se asumieron; la RPC hace hoy lo recomendado):**
+
+9. **Texto libre del personal** (`business_notes`, `driver_notes`, `cancel_note`, `rejection_reason_text`): se vacía
+   porque puede nombrar al cliente. Si la caja o los reclamos necesitan esas notas, alternativa: conservarlas. El motivo
+   estructurado (`cancel_reason`, `rejection_reason_code`) se queda siempre. **Recomiendo vaciarlas.**
+10. **Comentario de la reseña** (`order_reviews.comment`): se conserva sin autor, según el expediente §8, pero es texto libre
+    y puede contener un nombre. Alternativa: conservar solo la nota numérica. **Recomiendo conservar el comentario**, y
+    decirlo en la política.
+11. **`comprobante_prepago_url`** y los antifraude (`customer_strikes`, `customer_incidents`, `reports`, `address_directory`)
+    siguen conservados (D-44).
+12. **Repetir el borrado por HTTP:** responde 401, no 204, porque la autenticación valida el JWT contra `auth.users` y
+    esa fila ya no existe. Se documentó así en el OpenAPI (alternativa **a**). La alternativa **b** (aceptar un JWT válido
+    sin fila viva) debilita `requireUser` para toda la API; **recomiendo mantener (a)**. Para la RPC, repetir sigue
+    devolviendo `already_deleted`.
+
+### Tercera ronda (PR `fix/mv5-borrado-completo`)
+
+- **Registros con lista de PERMITIDAS:** `redact_personal_json` ya no busca claves "personales" (un motivo escrito a mano cabe
+  en `reasonText`, `reason`, `motivo`…); solo conserva las claves declaradas seguras (ids, estados, enums, importes, fechas,
+  contadores) y los booleanos. Toda clave nueva queda redactada hasta que alguien la añada a la lista, en la migración.
+- **Inventario por llaves foráneas** (`personal_data_inventory`): descubre solas las tablas que cuelgan, directa o
+  indirectamente, de `orders` y `courier_orders`, las que apuntan a `users` y `customer_otp_attempts`. El test exige una
+  decisión por tabla (borrada / conservada / ajena / revisada por columna). Faltaban `order_transfer_requests.reason` y
+  `order_assignment_rejections.reason` (texto libre del motorizado): ahora se vacían.
+- **OTP en vuelo:** `customer_otp_attempts` tiene el mismo guard; `/phone/send-code` revisa el resultado del `INSERT` y
+  responde 401 si la cuenta ya fue borrada mientras Twilio respondía.
+- **Candados:** orden común en todo el borrado y la libreta: candado de aviso de la libreta → `users` → direcciones
+  (`customer_address_save` ya tomaba el de aviso primero; la RPC de borrado ahora también). Probado con dos sesiones
+  `psql` en los dos órdenes, sin `deadlock`.
+- **Origen del directorio en Entregas:** con `directory_business_id`, el origen se sustituye por los datos canónicos del
+  directorio (nombre, teléfono, punto y referencia), no por lo que mandó el cliente.
+- **UPDATE:** el guard cubre también UPDATE: cambiar el vínculo hacia una cuenta borrada, o tocar datos personales de una fila
+  ya anonimizada, se rechaza. El negocio puede seguir cerrando la caja de ese pedido. La RPC se salta el guard solo
+  para su propio usuario y solo durante su transacción (`tindivo.deleting_account`).
+- **Conservado a propósito, pregunta 13 para Jesús:** `fraud_coverage_claims` (`reason`, `resolution_note`: texto libre del
+  negocio ligado al dinero) y `business_charges.description` (ledger). **Recomiendo conservarlas** hasta que el ledger tenga
+  su plazo; si algún día se vacían, requiere revisión de dinero.
+
 **Antes de aplicar a producción:** revisión de Jesús y de Codex (datos personales); `db push` fuera de 18:00-23:00;
 `pnpm db:types` después; una llamada real por HTTP (ya cubierta en local por los tests).
 

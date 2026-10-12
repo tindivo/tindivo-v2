@@ -158,10 +158,22 @@ export async function POST(req: Request): Promise<Response> {
     }
 
     // Registrar intento para rate limiting.
-    await service.from('customer_otp_attempts').insert({
+    //
+    // Aquí se vuelve a comprobar la cuenta: mientras Twilio respondía, la persona
+    // pudo borrarla (0259). La tabla no tiene FK, y el disparador
+    // `reject_deleted_account` es lo que impide sellar un intento con teléfono
+    // sobre una cuenta ya borrada.
+    const { error: attemptErr } = await service.from('customer_otp_attempts').insert({
       user_id: user.id,
       phone: fullPhone,
     })
+    if (attemptErr?.message.includes('account was deleted')) {
+      return problem('unauthorized', {
+        detail: 'Esta cuenta ya fue borrada.',
+        requestId,
+        headers: corsHeaders(req),
+      })
+    }
 
     return ok(
       { sent: true, channel: verification.channel },

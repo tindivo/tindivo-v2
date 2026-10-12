@@ -834,7 +834,7 @@ export const OPERATIONS: OperationSpec[] = [
     operationId: 'deleteCustomerAccount',
     summary: 'Borrar la cuenta propia',
     description:
-      'Anonimiza los pedidos, borra lo personal y la identidad, en una transacción. Idempotente: repetirla sobre una cuenta ya borrada también responde 204. Responde 409 (con el motivo en `detail`) si hay un pedido en curso, una apelación o devolución sin resolver, o un rol que no es de cliente.',
+      'Anonimiza los pedidos y sus registros, borra lo personal y la identidad, en una transacción. Repetirla con el mismo token responde 401: la identidad ya no existe, y eso significa «ya borrada». Responde 409 (con el motivo en `detail`) si hay un pedido en curso, una apelación o devolución sin resolver, o un rol que no es de cliente.',
     tags: ['customer'],
     auth: 'customer',
     success: { 204: { description: 'Cuenta borrada; sin cuerpo', envelope: 'none' } },
