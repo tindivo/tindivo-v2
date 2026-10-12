@@ -63,3 +63,22 @@ export function serviceDayStart(at: Date = new Date()): string {
   const hh = String(SERVICE_DAY_START_HOUR).padStart(2, '0')
   return `${serviceDate(at)}T${hh}:00:00-05:00`
 }
+
+/**
+ * Ventana de `days` jornadas que termina en la jornada de `at` (inclusive):
+ * `from = to − (days − 1)`. Es lo que espera `admin_online_orders_stats`
+ * (0192), que compara `p_from`/`p_to` contra `current_service_date(created_at)`.
+ *
+ * La resta se hace sobre la cadena `YYYY-MM-DD` con `Date.UTC` (mediodía, sin
+ * zona), nunca sobre milisegundos del instante: así el cambio de mes o de año
+ * no depende de la hora del día ni de la zona del navegador.
+ */
+export function serviceDateRange(
+  days: number,
+  at: Date = new Date(),
+): { from: string; to: string } {
+  const to = serviceDate(at)
+  const [y, m, d] = to.split('-').map(Number) as [number, number, number]
+  const from = new Date(Date.UTC(y, m - 1, d - (days - 1), 12)).toISOString().slice(0, 10)
+  return { from, to }
+}
