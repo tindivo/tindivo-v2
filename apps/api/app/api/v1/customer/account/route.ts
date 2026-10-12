@@ -24,9 +24,10 @@ type LooseRpc = (
  *
  * No recibe ningún id: borra la cuenta del token, y solo esa. Lo hace
  * `delete_customer_account` (0259) en una transacción: anonimiza los pedidos,
- * borra lo personal y la identidad. 204 sin cuerpo si se borró (o ya estaba
- * borrada); 409 con el motivo en español si hay un pedido en curso, dinero sin
- * resolver o un rol que no es de cliente.
+ * borra lo personal y la identidad. 204 sin cuerpo si se borró; 409 con el motivo
+ * en español si hay un pedido en curso, dinero sin resolver o un rol que no es de
+ * cliente. Repetirla con el mismo token da 401 (la identidad ya no existe: es la
+ * forma de saber que ya está borrada; la autenticación no se debilita por eso).
  *
  * Lo que se conserva y por qué: `Docs/trabajo/movil/07-publicacion-tiendas.md` §8.
  */

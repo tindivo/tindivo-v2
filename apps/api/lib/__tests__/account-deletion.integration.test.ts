@@ -117,9 +117,58 @@ async function pedidoEntregadoDe(c: Cliente): Promise<SeededOrder> {
       customer_notes: 'Toca dos veces',
       customer_gps_lat: -9.1466,
       customer_gps_lng: -78.278,
+      customer_gps_accuracy_m: 12,
+      customer_gps_distance_to_center_km: 1.2,
+      delivery_coordinates_accuracy_m: 9,
+      arrived_at_customer_lat: -9.1467,
+      arrived_at_customer_lng: -78.2781,
+      arrived_at_customer_accuracy_m: 7,
+      business_notes: 'Llamar a Doña Rosa',
+      driver_notes: 'Vive al fondo, casa verde',
+      cancel_note: 'Rosa no contestó',
+      rejection_reason_text: 'Rosa dijo que no',
     })
     .eq('id', seed.orderId)
   if (error) throw new Error(`personalizar pedido falló: ${error.message}`)
+
+  // Las tablas hijas y los logs, con los mismos datos.
+  const items = await db.from('customer_order_items').insert({
+    order_id: seed.orderId,
+    item_name_snapshot: 'Pollo',
+    base_price_snapshot: 45,
+    quantity: 1,
+    unit_price: 45,
+    line_total: 45,
+    note: 'Sin ají, para Rosa',
+  })
+  if (items.error) throw new Error(`renglón falló: ${items.error.message}`)
+  await db.from('order_event_log').insert({
+    order_id: seed.orderId,
+    event_type: 'order.manual_edited',
+    actor_role: 'negocio',
+    data: {
+      customerPhone: { de: c.phone, a: '999999999' },
+      customerName: { de: 'Rosa', a: 'Doña Rosa' },
+      deliveryReference: { de: 'verde', a: 'Casa de la señora' },
+      samePhoneBurst: true,
+      total: { de: 47, a: 50 },
+    },
+  })
+  await db
+    .from('order_status_history')
+    .update({ notes: 'cliente Rosa pidió llamar' })
+    .eq('order_id', seed.orderId)
+  await db.from('order_status_history').insert({
+    order_id: seed.orderId,
+    status: 'waiting_driver',
+    notes: 'cliente Rosa pidió llamar',
+  })
+  await db.from('domain_events').insert({
+    aggregate_type: 'order',
+    aggregate_id: seed.orderId,
+    event_type: 'Prueba',
+    payload: { customerName: 'Rosa', status: 'x' },
+  })
   return seed
 }
 
