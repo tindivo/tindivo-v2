@@ -1,5 +1,5 @@
 import { DomainError } from '@tindivo/core'
-import { parseDeletionResult } from '@/lib/customer/account-deletion'
+import { parseDeletionResult, withTxRetry } from '@/lib/customer/account-deletion'
 import { requireRole } from '@/lib/http/auth'
 import { handleOptions } from '@/lib/http/cors'
 import { privateHeaders } from '@/lib/http/private-response'
@@ -16,7 +16,7 @@ export function OPTIONS(req: Request): Response {
 type LooseRpc = (
   fn: string,
   args: Record<string, unknown>,
-) => Promise<{ data: unknown; error: { message: string } | null }>
+) => Promise<{ data: unknown; error: { message: string; code?: string } | null }>
 
 /**
  * DELETE /customer/account: borra la cuenta de la sesión (Apple 5.1.1(v), Google
@@ -37,7 +37,11 @@ export async function DELETE(req: Request): Promise<Response> {
     const { user } = await requireRole(req, 'customer')
     const service = createServiceClient()
     const rpc = service.rpc.bind(service) as unknown as LooseRpc
-    const { data, error } = await rpc('delete_customer_account', { p_user_id: user.id })
+    // Un deadlock (40P01) o fallo de serialización (40001) aborta la transacción sin
+    // dejar nada a medias: se reintenta (3 intentos, espera corta). Ver 0259.
+    const { data, error } = await withTxRetry(() =>
+      rpc('delete_customer_account', { p_user_id: user.id }),
+    )
     if (error) throw new Error(error.message)
 
     const outcome = parseDeletionResult(data)

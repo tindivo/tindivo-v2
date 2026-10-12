@@ -18,6 +18,7 @@ import { DELETE as deleteAccount } from '../../app/api/v1/customer/account/route
 import {
   cleanup,
   localClient as db,
+  E2E,
   type SeededOrder,
   seedContraentregaOrder,
   setOrderStatus,
@@ -43,6 +44,7 @@ const PASSWORD = 'test-password-12345'
 const seeds: SeededOrder[] = []
 const clientes: string[] = []
 let courierSettings: unknown = null
+const liquidaciones: string[] = []
 let telSeq = 50
 
 interface Cliente {
@@ -164,6 +166,11 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
+  for (const id of liquidaciones) {
+    await db.from('orders').update({ cash_settlement_id: null }).eq('cash_settlement_id', id)
+    await db.from('domain_events').delete().eq('aggregate_id', id)
+    await db.from('cash_settlements').delete().eq('id', id)
+  }
   for (const seed of seeds) await cleanup(seed)
   for (const id of clientes) {
     await db.from('courier_orders').delete().eq('customer_user_id', id)
@@ -250,6 +257,7 @@ const POR_COLUMNA = new Set([
   'order_reviews',
   'order_transfer_requests',
   'order_assignment_rejections',
+  'domain_events', // sin FK: la RPC lo busca por aggregate_id y por ids dentro del payload
 ])
 
 /** Columnas que el borrado VACÍA, redacta o sustituye. `tabla.columna`. */
@@ -278,6 +286,8 @@ const ANONIMIZADAS = new Set([
   'order_assignment_rejections.reason',
   'domain_events.payload',
   'domain_events.metadata',
+  'domain_events.last_error', // texto de error del despacho: puede arrastrar el payload
+  'courier_orders.utm_source', // texto libre de hasta 60 (contrato de Entregas)
 ])
 
 /**
@@ -302,8 +312,27 @@ const CONSERVADAS_COLUMNA = new Set([
   'customer_order_item_modifiers.option_name_snapshot',
 ])
 
-const PINTA_PERSONAL =
-  /(lat|lng|coord|address|reference|phone|name|note|gps|accuracy|maps|comment|description|text|data|payload|metadata|url|reason|motivo|detail|label|line|title|message|email|search|tags)/
+/**
+ * Columnas de texto/JSON que NO son personales, cada una con su porqué. Es una decisión
+ * explícita, igual que las otras dos listas: no hay heurística por nombre.
+ */
+const NO_PERSONAL = new Set([
+  'orders.short_id', // id público del pedido, no identifica a la persona
+  'courier_orders.short_id',
+  'orders.payment_proof_status', // enum con CHECK
+  'orders.delivery_fee_source', // enum con CHECK
+  'orders.pickup_timing', // enum con CHECK
+  'orders.validation_result', // enum con CHECK
+  'courier_orders.payment_method', // enum con CHECK
+  'courier_order_events.actor_role', // rol, no persona
+  'courier_order_events.event_type', // tipo de evento
+  'order_event_log.actor_role',
+  'order_event_log.event_type',
+  'domain_events.aggregate_type',
+  'domain_events.event_type',
+])
+
+const TIPOS_LIBRES = new Set(['text', 'character varying', 'character', 'jsonb', 'json', 'ARRAY'])
 
 describe('inventario de tablas y columnas personales (medido por llaves foráneas)', () => {
   it('toda tabla con vínculo a pedidos o usuarios tiene una decisión', async () => {
@@ -327,19 +356,20 @@ describe('inventario de tablas y columnas personales (medido por llaves foránea
     expect(sinDecision).toEqual([])
   })
 
-  it('toda columna con pinta personal de las tablas revisadas está anonimizada o conservada a propósito', async () => {
+  it('TODA columna de texto o JSON de las tablas revisadas tiene una decisión explícita', async () => {
     const { data, error } = await raw.rpc('personal_data_inventory')
     if (error) throw new Error(`personal_data_inventory falló: ${error.message}`)
     const cols = data as { table_name: string; column_name: string; data_type: string }[]
-    const sinDecidir = [
-      ...cols.filter((c) => POR_COLUMNA.has(c.table_name)),
-      // `domain_events` no tiene FK (apunta por `aggregate_id`), así que se añade a mano.
-      { table_name: 'domain_events', column_name: 'payload', data_type: 'jsonb' },
-      { table_name: 'domain_events', column_name: 'metadata', data_type: 'jsonb' },
-    ]
-      .filter((c) => PINTA_PERSONAL.test(c.column_name) || c.data_type === 'jsonb')
+    const revisadas = cols.filter(
+      (c) => POR_COLUMNA.has(c.table_name) && TIPOS_LIBRES.has(c.data_type),
+    )
+    // Sin heurística por nombre: si la columna es de texto libre o JSON, se decide.
+    expect(revisadas.map((c) => `${c.table_name}.${c.column_name}`)).toContain(
+      'courier_orders.utm_source',
+    )
+    const sinDecidir = revisadas
       .map((c) => `${c.table_name}.${c.column_name}`)
-      .filter((k) => !ANONIMIZADAS.has(k) && !CONSERVADAS_COLUMNA.has(k))
+      .filter((k) => !ANONIMIZADAS.has(k) && !CONSERVADAS_COLUMNA.has(k) && !NO_PERSONAL.has(k))
     expect(sinDecidir).toEqual([])
   })
 })
@@ -468,7 +498,11 @@ describe('notas libres y logs sin rastro de la persona', () => {
     const courierId = (created.data as { id: string }).id
     await db
       .from('courier_orders')
-      .update({ status: 'delivered', delivered_at: new Date().toISOString() })
+      .update({
+        status: 'delivered',
+        delivered_at: new Date().toISOString(),
+        utm_source: 'campaña de Rosa Quispe',
+      })
       .eq('id', courierId)
     await db
       .from('courier_order_events')
@@ -510,6 +544,57 @@ describe('notas libres y logs sin rastro de la persona', () => {
       .eq('courier_order_id', courierId)
     expect(JSON.stringify(deCarrera)).not.toMatch(new RegExp(`Rosa|${c.phone}`))
     expect(JSON.stringify(deCarrera)).toMatch(/"feeAmount":3/)
+    const { data: carrera } = await db
+      .from('courier_orders')
+      .select('utm_source')
+      .eq('id', courierId)
+      .single()
+    expect(carrera?.utm_source).toBeNull()
+  })
+})
+
+// ── 5b. Eventos de OTRO agregado que referencian el pedido ───────────────────
+async function entregarEfectivo(orderId: string): Promise<string> {
+  // El efectivo que se debe sale de `payment_real` (52 = 50 + 2 de envío).
+  const pago = await db.from('orders').update({ payment_real: 'paid_cash' }).eq('id', orderId)
+  if (pago.error) throw new Error(`payment_real falló: ${pago.error.message} [${pago.error.hint}]`)
+  const { data, error } = await db.rpc('deliver_order_cash', {
+    p_driver_user_id: E2E.DRIVER_USER_ID,
+    p_order_id: orderId,
+  })
+  if (error) throw new Error(`deliver_order_cash falló: ${error.message}`)
+  const id = (data as { id: string }).id
+  liquidaciones.push(id)
+  return id
+}
+
+describe('el evento de la liquidación (CashDelivered) también se redacta', () => {
+  it('pedido entregado, efectivo declarado, cuenta borrada: sin nombre y con el importe', async () => {
+    const c = await crearCliente()
+    const seed = await pedidoCompleto(c)
+    const liquidacion = await entregarEfectivo(seed.orderId)
+    const { data: antes } = await db
+      .from('domain_events')
+      .select('payload')
+      .eq('aggregate_id', liquidacion)
+      .eq('event_type', 'CashDelivered')
+      .single()
+    expect(antes?.payload).toMatchObject({ customerName: 'Doña Rosa Quispe' })
+
+    expect((await borrar(c.token)).status).toBe(204)
+
+    const { data: evento } = await db
+      .from('domain_events')
+      .select('payload')
+      .eq('aggregate_id', liquidacion)
+      .eq('event_type', 'CashDelivered')
+      .single()
+    expect(JSON.stringify(evento?.payload)).not.toMatch(/Rosa|Quispe/)
+    expect(evento?.payload).toMatchObject({
+      customerName: '[eliminado]',
+      amount: 52,
+      orderId: seed.orderId,
+    })
   })
 })
 
@@ -678,8 +763,8 @@ describe('el origen de una carrera con negocio del directorio no se conserva tal
 })
 
 // ── 10. UPDATE sobre una cuenta borrada ──────────────────────────────────────
-describe('un UPDATE tampoco puede devolver datos personales a la lápida', () => {
-  it('cambiar un dato personal se rechaza; el cierre de caja del pedido, no', async () => {
+describe('un UPDATE sobre una cuenta borrada solo puede tocar columnas OPERATIVAS', () => {
+  it('cualquier columna personal o de texto libre se rechaza, venga de donde venga', async () => {
     const c = await crearCliente()
     const seed = await pedidoCompleto(c)
     expect((await borrar(c.token)).status).toBe(204)
@@ -689,20 +774,43 @@ describe('un UPDATE tampoco puede devolver datos personales a la lápida', () =>
       { customer_name: 'Rosa' },
       { delivery_address: 'Jr. Secreto 123' },
       { delivery_coordinates_lat: -9.1 },
+      { business_notes: 'Llamar a Doña Rosa' },
+      { driver_notes: 'Vive al fondo' },
+      { cancel_note: 'Rosa no contestó' },
+      { rejection_reason_text: 'Rosa dijo que no' },
+      { arrived_at_customer_lat: -9.1467 },
+      { arrived_at_customer_lng: -78.2781 },
+      { arrived_at_customer_accuracy_m: 7 },
+      { customer_notes: 'Toca dos veces' },
     ]) {
       const r = await db.from('orders').update(cambio).eq('id', seed.orderId)
       expect(r.error?.message, JSON.stringify(cambio)).toMatch(/account was deleted/)
     }
-    // Lo que el negocio sigue haciendo con un pedido anonimizado.
-    const ok = await db
-      .from('orders')
-      .update({ business_notes: 'caja revisada' })
-      .eq('id', seed.orderId)
-    expect(ok.error).toBeNull()
-    await setOrderStatus(seed.orderId, 'delivered')
   })
 
-  it('una carrera de Entregas anonimizada tampoco admite datos personales nuevos', async () => {
+  it('el cierre de caja real (el motorizado entrega el efectivo) sigue pasando', async () => {
+    const c = await crearCliente()
+    const seed = await pedidoCompleto(c)
+    expect((await borrar(c.token)).status).toBe(204)
+    // `deliver_order_cash` escribe `orders.cash_settlement_id` sobre un pedido ya anonimizado.
+    const liquidacion = await entregarEfectivo(seed.orderId)
+    const { data } = await db
+      .from('orders')
+      .select('cash_settlement_id,customer_name')
+      .eq('id', seed.orderId)
+      .single()
+    expect(data).toEqual({ cash_settlement_id: liquidacion, customer_name: 'Cuenta eliminada' })
+    // Y el evento nace ya sin nombre: la RPC lo lee del pedido anonimizado.
+    const { data: ev } = await db
+      .from('domain_events')
+      .select('payload')
+      .eq('aggregate_id', liquidacion)
+      .single()
+    expect(ev?.payload).toMatchObject({ customerName: 'Cuenta eliminada', amount: 52 })
+    await setOrderStatus(seed.orderId, 'delivered') // sin cambios: pasa
+  })
+
+  it('una carrera de Entregas anonimizada: lo personal se rechaza, lo operativo pasa', async () => {
     const c = await crearCliente()
     const created = await callCreateCourierOrder({
       customerUserId: c.userId,
@@ -714,9 +822,20 @@ describe('un UPDATE tampoco puede devolver datos personales a la lápida', () =>
       .update({ status: 'delivered', delivered_at: new Date().toISOString() })
       .eq('id', id)
     expect((await borrar(c.token)).status).toBe(204)
-    const r = await db.from('courier_orders').update({ destination_name: 'Rosa' }).eq('id', id)
-    expect(r.error?.message).toMatch(/account was deleted/)
-    const ok = await db.from('courier_orders').update({ driver_note: null }).eq('id', id)
+    for (const cambio of [
+      { destination_name: 'Rosa' },
+      { driver_note: 'Rosa vive lejos' },
+      { utm_source: 'campaña de Rosa' },
+      { requester_phone: '999000999' },
+    ]) {
+      const r = await db.from('courier_orders').update(cambio).eq('id', id)
+      expect(r.error?.message, JSON.stringify(cambio)).toMatch(/account was deleted/)
+    }
+    const ahora = new Date().toISOString()
+    const ok = await db
+      .from('courier_orders')
+      .update({ transport_collected_at: ahora, remitted_at: ahora })
+      .eq('id', id)
     expect(ok.error).toBeNull()
   })
 })
@@ -754,7 +873,8 @@ function guardarDireccionComo(userId: string, pausa: number): string {
   )
 }
 
-describe.skipIf(sinPsql)('candados con dos sesiones psql', () => {
+// En la CI NO se salta: si falta Docker o el contenedor, el job debe ponerse rojo, no verde.
+describe.skipIf(sinPsql && !process.env.CI)('candados con dos sesiones psql', () => {
   it('guardar una dirección y borrar la cuenta a la vez: sin abrazo mortal (libreta primero)', async () => {
     const c = await crearCliente()
     await db.from('customer_addresses').insert({
@@ -824,5 +944,35 @@ describe.skipIf(sinPsql)('candados con dos sesiones psql', () => {
       .select('*', { count: 'exact', head: true })
       .eq('short_id', 'RACE3333')
     expect(count).toBe(0)
+  })
+  it('un UPDATE directo del perfil cruzado con el borrado: el borrado termina (con reintento) y no queda nada', async () => {
+    const c = await crearCliente()
+    const seed = await pedidoCompleto(c)
+    // A (como /customer/phone/verify): bloquea la fila del perfil y, tras una pausa, hace el
+    // UPDATE, cuyo guard pide `FOR SHARE` sobre `users`. Para entonces la RPC ya tiene `users`
+    // FOR UPDATE y espera la fila del perfil: abrazo mortal de verdad. PostgreSQL aborta a uno
+    // (40P01) y el otro sigue. Aquí el que cae es A (esperó el último); si cayera la RPC, la
+    // ruta reintenta (ver `withTxRetry` y su prueba unitaria).
+    const a = psql(
+      `begin; select 1 from public.customer_profiles where user_id='${c.userId}' for update; ` +
+        `select pg_sleep(4); ` +
+        `update public.customer_profiles set phone_verified_at = now() where user_id='${c.userId}'; commit;`,
+    )
+    await sleep(1500)
+    const respuesta = await borrar(c.token)
+    const ra = await a
+    expect(respuesta.status).toBe(204)
+    expect(ra.err, 'el cruce debe producir un deadlock real').toMatch(/deadlock detected/)
+    const { count } = await db
+      .from('customer_profiles')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', c.userId)
+    expect(count).toBe(0)
+    const { data: pedido } = await db
+      .from('orders')
+      .select('customer_name,customer_phone')
+      .eq('id', seed.orderId)
+      .single()
+    expect(pedido).toEqual({ customer_name: 'Cuenta eliminada', customer_phone: null })
   })
 })

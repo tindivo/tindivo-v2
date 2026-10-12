@@ -39,6 +39,28 @@
 -- entra primero y el pedido se rechaza contra la lápida. Sin esto el FK aceptaba el
 -- insert sobre la lápida y dejaba un pedido ACTIVO con datos personales.
 --
+-- EVENTOS QUE NO CUELGAN DEL PEDIDO. `domain_events.aggregate_id` no siempre es el pedido:
+-- `CashDelivered` (0176) usa el id de la LIQUIDACIÓN y lleva `customerName` en el payload.
+-- Por eso se redactan los eventos cuyo aggregate_id es un pedido o carrera del usuario Y los
+-- que lo REFERENCIAN dentro del payload (`orderId`, `order_id`, `courierOrderId`, `shortId`).
+-- Los importes sobreviven (están en la lista de permitidas); los nombres no.
+--
+-- GUARD DE UPDATE POR LISTA DE PERMITIDAS. Sobre una fila de una cuenta borrada, un UPDATE
+-- solo puede cambiar las columnas OPERATIVAS (estado, caja, liquidación, marcas de tiempo
+-- del flujo…) que se declaran por tabla abajo. Cualquier otra columna —incluida una
+-- columna nueva que nadie declaró— se rechaza. Antes se enumeraban las personales y se
+-- escapaban las notas libres (`business_notes`, `driver_notes`, `cancel_note`…).
+--
+-- DEADLOCK. Los UPDATE directos de otras rutas sobre `customer_profiles` / `customer_addresses`
+-- (p. ej. `/customer/phone/verify`, la barra de direcciones del cliente) toman el
+-- `FOR SHARE` del guard sobre `users` y la fila de la tabla en otro orden que esta RPC
+-- (`FOR UPDATE` sobre `users`, luego borra esas filas). Si coinciden en la misma ventana,
+-- PostgreSQL detecta el abrazo mortal y aborta UNA de las dos transacciones con SQLSTATE
+-- 40P01, sin corromper datos. NO se persigue un orden perfecto de candados en todos los
+-- caminos: el caso es raro y esos UPDATE directos PUEDEN recibir 40P01 en esa ventana
+-- (reintentar es seguro). La ruta `DELETE /customer/account` reintenta 40P01 y 40001
+-- (3 intentos, espera corta); ver `withTxRetry` en la API.
+--
 -- Idempotente: sobre una cuenta ya borrada, la RPC devuelve `already_deleted`.
 
 alter table public.users add column if not exists deleted_at timestamptz;
@@ -76,7 +98,7 @@ declare
     'minutes', 'minutesToReady', 'minutesWaiting', 'prepTimeMinutes', 'count',
     -- fechas
     'expiresAt', 'notifiedAt', 'confirmedAt', 'cancelledAt', 'updatedAt',
-    'arrivedAtCustomerAt', 'remittedAt', 'readyEarlyAt', 'appeal_deadline',
+    'arrivedAtCustomerAt', 'remittedAt', 'readyEarlyAt', 'appeal_deadline', 'deliveredAt',
     -- estructuras de números y banderas
     'cambios', 'de', 'a', 'riskFlags'
   ];
@@ -109,9 +131,9 @@ $$;
 -- ── Rechazo contra la lápida ─────────────────────────────────────────────────
 -- BEFORE INSERT OR UPDATE en cada tabla donde el cliente deja datos.
 --   TG_ARGV[0] = la columna que apunta a `users`.
---   TG_ARGV[1] = qué columnas cuentan como personales en un UPDATE: '*' (cualquiera)
---                o una lista separada por comas. Un UPDATE que no las toca (el
---                negocio cierra la caja de un pedido ya anonimizado) pasa.
+--   TG_ARGV[1] = columnas OPERATIVAS que un UPDATE puede cambiar sobre una cuenta
+--                borrada (lista separada por comas; '' = ninguna). LISTA DE PERMITIDAS:
+--                si cambia cualquier otra columna (salvo `updated_at`), se rechaza.
 -- Un UPDATE que CAMBIA el vínculo hacia una cuenta borrada se trata como un alta.
 -- La propia RPC de borrado se salta el guard con `tindivo.deleting_account` = el id
 -- del usuario (solo para ese usuario, solo durante su transacción).
@@ -126,7 +148,7 @@ declare
   v_user uuid := nullif(v_new ->> tg_argv[0], '')::uuid;
   v_deleted timestamptz;
   v_cols text[];
-  v_col text;
+  v_hint text;
   v_touched boolean := false;
 begin
   if v_user is null then
@@ -138,17 +160,12 @@ begin
 
   if tg_op = 'UPDATE' then
     if (v_new ->> tg_argv[0]) is not distinct from (to_jsonb(old) ->> tg_argv[0]) then
-      -- Mismo vínculo: solo importa si toca datos personales.
-      if tg_argv[1] = '*' then
-        v_touched := (v_new - 'updated_at') is distinct from (to_jsonb(old) - 'updated_at');
-      else
-        v_cols := string_to_array(tg_argv[1], ',');
-        foreach v_col in array v_cols loop
-          if (v_new -> v_col) is distinct from (to_jsonb(old) -> v_col) then
-            v_touched := true;
-            exit;
-          end if;
-        end loop;
+      -- Mismo vínculo: solo pasa si lo ÚNICO que cambia son columnas operativas.
+      v_cols := array_append(string_to_array(tg_argv[1], ','), 'updated_at');
+      v_touched := (v_new - v_cols) is distinct from (to_jsonb(old) - v_cols);
+      if v_touched then
+        select string_agg(e.key, ', ') into v_hint from jsonb_each(v_new - v_cols) e
+        where e.value is distinct from (to_jsonb(old) - v_cols) -> e.key;
       end if;
       if not v_touched then
         return new;
@@ -160,7 +177,9 @@ begin
   -- actualizada (READ COMMITTED): ve `deleted_at`.
   select u.deleted_at into v_deleted from public.users u where u.id = v_user for share;
   if v_deleted is not null then
-    raise exception 'cannot write because the account was deleted' using errcode = 'P0001';
+    -- El hint nombra las columnas que chocaron (solo nombres, nunca valores).
+    raise exception 'cannot write because the account was deleted' using errcode = 'P0001',
+      hint = coalesce(v_hint, '');
   end if;
   return new;
 end;
@@ -173,22 +192,34 @@ begin
   for t in
     select * from (values
       ('orders', 'customer_user_id',
-        'customer_name,customer_phone,delivery_address,delivery_reference,delivery_maps_url,'
-        'delivery_coordinates_lat,delivery_coordinates_lng,delivery_coordinates_accuracy_m,'
-        'customer_notes,customer_gps_lat,customer_gps_lng,customer_gps_accuracy_m,'
-        'customer_gps_distance_to_center_km,address_directory_id'),
+        'driver_id,status,is_manual,delivery_method,delivery_distance_band,order_amount,delivery_fee,'
+        'payment_intent,payment_real,yape_amount,cash_amount,client_pays_with,change_to_give,'
+        'yape_confirmed,cash_owed_at_delivery,tindivo_commission,commission_amount,'
+        'delivery_fee_charged,delivery_fee_source,change_advanced,comprobante_prepago_url,'
+        'prep_time_minutes,estimated_ready_at,appears_in_queue_at,prep_extended_at,'
+        'prep_extension_count,ready_early_used,occupancy_slots,urgent_since,assigned_at,'
+        'validating_at,pending_acceptance_at,confirmed_at,preparing_at,waiting_driver_at,'
+        'heading_at,waiting_at_restaurant_at,picked_up_at,delivered_at,cancelled_at,'
+        'cancelled_by,cancel_reason,cancel_reason_detail,tracking_link_sent_at,'
+        'tracking_link_sent_by,payment_verified_at,payment_verified_by,payment_proof_status,'
+        'rejection_reason_code,rejected_at,rejected_by,requires_validation,validated_at,'
+        'validated_by,validation_result,validation_reason_code,validation_context,'
+        'proof_attempt,risk_flags,awaiting_payment_at,ready_early_at,cash_settlement_id,'
+        'arrived_at_customer_at,queue_notified_at,delivery_location_confirmed_at,'
+        'customer_gps_method,customer_gps_validated_at,pickup_timing,ready_for_pickup_at'),
       ('courier_orders', 'customer_user_id',
-        'requester_name,requester_phone,destination_name,destination_phone,destination_lat,'
-        'destination_lng,destination_reference_text,item_description,origin_name,origin_phone,'
-        'origin_lat,origin_lng,origin_reference_text'),
-      ('customer_profiles', 'user_id', '*'),
-      ('customer_addresses', 'user_id', '*'),
-      ('push_subscriptions', 'user_id', '*'),
-      ('terms_acceptance', 'user_id', '*'),
-      ('order_reviews', 'customer_user_id', '*'),
-      ('order_review_dismissals', 'customer_user_id', '*'),
-      ('promo_redemptions', 'customer_user_id', '*'),
-      ('customer_otp_attempts', 'user_id', '*')
+        'status,driver_id,payer,payment_method,transport_collected_at,fee_amount,distance_m,'
+        'is_fragile,weight_confirmed,prepaid_confirmed,ready_in_min,ready_at,accepted_at,'
+        'departed_at,arrived_at,picked_up_at,departed_dropoff_at,delivered_at,cancelled_at,'
+        'cancel_reason,remitted_at,remittance_confirmed_at,remittance_confirmed_by'),
+      ('customer_profiles', 'user_id', ''),
+      ('customer_addresses', 'user_id', ''),
+      ('push_subscriptions', 'user_id', ''),
+      ('terms_acceptance', 'user_id', ''),
+      ('order_reviews', 'customer_user_id', ''),
+      ('order_review_dismissals', 'customer_user_id', ''),
+      ('promo_redemptions', 'customer_user_id', ''),
+      ('customer_otp_attempts', 'user_id', '')
     ) as v(tbl, col, cols)
   loop
     execute format('drop trigger if exists trg_reject_deleted_account on public.%I', t.tbl);
@@ -255,6 +286,8 @@ declare
   v_courier    integer;
   v_order_ids  uuid[];
   v_courier_ids uuid[];
+  v_ref_ids    text[];
+  v_short_ids  text[];
   -- Centro de San Jacinto: las carreras de Entregas exigen coordenadas dentro del
   -- pueblo (`co_*_in_town`), así que el punto exacto se sustituye por uno válido.
   c_lat constant numeric := -9.15;
@@ -304,6 +337,13 @@ begin
   from public.orders where customer_user_id = p_user_id;
   select coalesce(array_agg(id), '{}') into v_courier_ids
   from public.courier_orders where customer_user_id = p_user_id;
+  -- Con qué ids puede aparecer el usuario DENTRO de un payload (no solo como aggregate_id).
+  v_ref_ids := (select coalesce(array_agg(x::text), '{}') from unnest(v_order_ids || v_courier_ids) x);
+  select coalesce(array_agg(short_id), '{}') into v_short_ids from (
+    select short_id from public.orders where customer_user_id = p_user_id
+    union all
+    select short_id from public.courier_orders where customer_user_id = p_user_id
+  ) s;
 
   -- Pedidos del restaurante: se queda la fila con su importe, estado y fechas.
   update public.orders set
@@ -341,8 +381,15 @@ begin
   where order_id = any (v_order_ids);
   update public.domain_events set
     payload = public.redact_personal_json(payload),
-    metadata = public.redact_personal_json(metadata)
-  where aggregate_id = any (v_order_ids || v_courier_ids);
+    metadata = public.redact_personal_json(metadata),
+    -- Texto de error del despacho: puede arrastrar el payload tal cual.
+    last_error = null
+  where aggregate_id = any (v_order_ids || v_courier_ids)
+     -- Eventos de OTRO agregado que lo referencian (p. ej. `CashDelivered`, de la liquidación).
+     or payload ->> 'orderId' = any (v_ref_ids)
+     or payload ->> 'order_id' = any (v_ref_ids)
+     or payload ->> 'courierOrderId' = any (v_ref_ids)
+     or payload ->> 'shortId' = any (v_short_ids);
 
   -- Entregas: los datos de quien pidió y de quien recibe. El origen NO se conserva
   -- tal cual aunque haya `directory_business_id`: la ruta acepta ese id y los
@@ -359,6 +406,7 @@ begin
     destination_reference_text = 'Dato eliminado',
     item_description = 'Dato eliminado',
     driver_note = null,
+    utm_source = null,
     origin_phone = (select d.phone from public.directory_businesses d
                     where d.id = courier_orders.directory_business_id),
     origin_name = coalesce((select d.name from public.directory_businesses d
@@ -406,7 +454,8 @@ $$;
 --
 -- Las tablas se descubren por llaves foráneas, no por una lista a mano: las que
 -- cuelgan (directa o indirectamente) de `orders` y `courier_orders`, las que
--- apuntan directo a `users`, y `customer_otp_attempts` (guarda `user_id` sin FK).
+-- apuntan directo a `users`, y las que apuntan SIN FK: `customer_otp_attempts` (guarda
+-- `user_id`) y `domain_events` (por `aggregate_id` y por ids dentro del payload).
 create or replace function public.personal_data_inventory()
 returns table (table_name text, column_name text, data_type text)
 language sql
@@ -429,6 +478,7 @@ as $$
     where c.contype = 'f' and c.confrelid = 'public.users'::regclass
       and c.connamespace = 'public'::regnamespace
     union select 'public.customer_otp_attempts'::regclass
+    union select 'public.domain_events'::regclass
   )
   select k.relname::text, c.column_name::text, c.data_type::text
   from rels
