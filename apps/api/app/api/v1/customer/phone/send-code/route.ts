@@ -1,11 +1,10 @@
 import { SendPhoneCodeRequestSchema } from '@tindivo/contracts'
-import { serverEnv } from '@/lib/env'
 import { requireRole } from '@/lib/http/auth'
 import { corsHeaders, handleOptions } from '@/lib/http/cors'
 import { handleError, ok, problem } from '@/lib/http/problem'
-import { getUpstashStore, loadLimits } from '@/lib/http/rate-limit'
+import { loadLimits } from '@/lib/http/rate-limit'
 import { getRequestId } from '@/lib/http/request-id'
-import { checkOtpPhoneLimit } from '@/lib/otp/phone-limit'
+import { getPhoneLogStore, otpPhoneSecret, reserveOtpPhone } from '@/lib/otp/phone-limit'
 import { createServiceClient } from '@/lib/supabase/service'
 import {
   DEV_OTP_CODE,
@@ -125,14 +124,13 @@ export async function POST(req: Request): Promise<Response> {
 
     // Tope por NÚMERO de destino (SEC-03), además del de arriba por usuario:
     // quien crea cuentas gratis no puede disparar SMS a un número ajeno.
-    // Falla abierto sin Upstash o con Redis caído (ver lib/otp/phone-limit.ts).
-    const phoneLimit = await checkOtpPhoneLimit(fullPhone, {
-      store: await getUpstashStore().catch((err) => {
-        console.error('[otp-phone-limit] sin almacén, se deja pasar:', err)
-        return null
-      }),
+    // Ventana móvil de 24 h y solo cuentan los envíos que Twilio acepta: se
+    // aparta la plaza aquí y se devuelve si Twilio rechaza. Falla abierto sin
+    // Upstash, con Redis caído o sin secreto (ver lib/otp/phone-limit.ts).
+    const phoneLimit = await reserveOtpPhone(fullPhone, {
+      store: await getPhoneLogStore(),
       rule: (await loadLimits()).otp_phone,
-      secret: serverEnv().SUPABASE_SERVICE_ROLE_KEY,
+      secret: otpPhoneSecret(),
     })
     if (!phoneLimit.allowed) {
       return problem('rate_limited', {
@@ -171,6 +169,8 @@ export async function POST(req: Request): Promise<Response> {
           ` · to=${fullPhone} channel=sms locale=es` +
           ` · serviceSid=${VERIFY_SERVICE_SID.slice(0, 2)}…(${VERIFY_SERVICE_SID.length})`,
       )
+      // El SMS no salió: no gasta el cupo del número.
+      await phoneLimit.release()
       return problem('internal_error', {
         detail:
           'No pudimos enviarte el SMS. Escríbenos por WhatsApp y te verificamos el número a mano.',

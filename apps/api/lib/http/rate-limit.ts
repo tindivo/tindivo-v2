@@ -42,8 +42,10 @@ export const DEFAULT_LIMITS: Limits = {
   write: { limit: 10, windowSec: 600 }, // pilot-access
   events: { limit: 120, windowSec: 60 },
   otp: { limit: 10, windowSec: 600 }, // coste de SMS, por IP
-  // Por NÚMERO de destino (hasheado): ver lib/otp/phone-limit.ts. classifyRoute no devuelve este cubo.
-  otp_phone: { limit: 3, windowSec: 24 * 60 * 60 },
+  // Por NÚMERO de destino (hasheado), en ventana MÓVIL de 24 h y contando solo
+  // envíos aceptados por Twilio: ver lib/otp/phone-limit.ts (no usa `hit`).
+  // classifyRoute no devuelve este cubo. 5 en 24 h: decisión de Jesús, 2026-10-12.
+  otp_phone: { limit: 5, windowSec: 24 * 60 * 60 },
 }
 
 export function classifyRoute(method: string, pathname: string): Bucket | null {
@@ -86,19 +88,27 @@ export interface RateLimitStore {
   hit(key: string, rule: LimitRule): Promise<HitResult>
 }
 
-/** Ventana fija en memoria: para los tests y como referencia del contrato. */
+/**
+ * Ventana fija en memoria, con la MISMA semántica que `Ratelimit.fixedWindow`
+ * de Upstash: la ventana es `floor(t / ventana)`, alineada a la época (para
+ * 24 h, corta a medianoche UTC), no «desde el primer golpe». Así los tests ven
+ * el corte que verá producción.
+ */
 export function memoryStore(now: () => number = Date.now): RateLimitStore {
-  const windows = new Map<string, { count: number; resetAt: number }>()
+  const windows = new Map<string, { bucket: number; count: number }>()
   return {
     async hit(key, rule) {
       const t = now()
-      let w = windows.get(key)
-      if (!w || w.resetAt <= t) {
-        w = { count: 0, resetAt: t + rule.windowSec * 1000 }
-        windows.set(key, w)
+      const ms = rule.windowSec * 1000
+      const bucket = Math.floor(t / ms)
+      const id = `${key}|${ms}`
+      let w = windows.get(id)
+      if (!w || w.bucket !== bucket) {
+        w = { bucket, count: 0 }
+        windows.set(id, w)
       }
       w.count += 1
-      return { allowed: w.count <= rule.limit, resetInMs: Math.max(0, w.resetAt - t) }
+      return { allowed: w.count <= rule.limit, resetInMs: Math.max(0, (bucket + 1) * ms - t) }
     },
   }
 }
@@ -234,7 +244,7 @@ export function resetUpstashStore(): void {
   upstashStore = undefined
 }
 
-export async function getUpstashStore(): Promise<RateLimitStore | null> {
+async function getUpstashStore(): Promise<RateLimitStore | null> {
   if (upstashStore !== undefined) return upstashStore
   const url = process.env.UPSTASH_REDIS_REST_URL
   const token = process.env.UPSTASH_REDIS_REST_TOKEN

@@ -1,13 +1,17 @@
 /**
  * Tope de envíos de OTP por NÚMERO de destino (SEC-03) en `send-code`.
  *
- * Twilio y Upstash se sustituyen (no hay ni uno ni otro en local); lo real es la
- * ruta, `requireRole` contra el GoTrue local y los umbrales de `app_settings`.
- * Dos usuarios distintos piden código al MISMO número: el segundo, aunque no haya
- * gastado su cupo personal, topa con el límite del número.
+ * Lo real: la ruta, `requireRole` contra el GoTrue local, el tope por usuario
+ * en `customer_otp_attempts`, los umbrales de `app_settings`, el borrado de
+ * cuenta (`DELETE /customer/account`) y TODO el cableado de `phone-limit.ts`
+ * (variables, import de `@upstash/redis`, EVAL, ZREM, timeout).
+ *
+ * Lo sustituido: Twilio (`create`) y el cliente `@upstash/redis`, cuyo EVAL lo
+ * atiende `memoryPhoneLog` (misma lógica que el script Lua). El script en sí se
+ * probó aparte contra un Redis 7 real (evidencia en el PR).
  */
 import { createClient } from '@supabase/supabase-js'
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { localClient } from './helpers/local-db'
 
 const LOCAL_URL = 'http://127.0.0.1:54321'
@@ -18,9 +22,11 @@ const LOCAL_SERVICE_ROLE_KEY =
 process.env.NEXT_PUBLIC_SUPABASE_URL ??= LOCAL_URL
 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??= LOCAL_ANON_KEY
 process.env.SUPABASE_SERVICE_ROLE_KEY ??= LOCAL_SERVICE_ROLE_KEY
+process.env.UPSTASH_REDIS_REST_URL = 'https://upstash.falso.local'
+process.env.UPSTASH_REDIS_REST_TOKEN = 'token-falso'
+process.env.OTP_PHONE_HMAC_SECRET = 'secreto-de-la-prueba'
 
 const { create } = vi.hoisted(() => ({ create: vi.fn() }))
-
 vi.mock('../twilio/client', () => ({
   DEV_OTP_CODE: '000000',
   OTP_DEV_SIMULATION: false,
@@ -28,26 +34,51 @@ vi.mock('../twilio/client', () => ({
   twilioClient: { verify: { v2: { services: () => ({ verifications: { create } }) } } },
 }))
 
-const hits = vi.hoisted(() => ({ keys: [] as string[] }))
-vi.mock('../http/rate-limit', async (importOriginal) => {
-  const real = await importOriginal<typeof import('../http/rate-limit')>()
-  const mem = real.memoryStore()
-  return {
-    ...real,
-    getUpstashStore: async () => ({
-      hit: (key: string, rule: import('../http/rate-limit').LimitRule) => {
-        hits.keys.push(key)
-        return mem.hit(key, rule)
-      },
-    }),
+type Modo = 'ok' | 'init-fail' | 'timeout' | 'down'
+const fake = vi.hoisted(() => ({
+  modo: 'ok' as string,
+  keys: [] as string[],
+  log: null as unknown,
+}))
+vi.mock('@upstash/redis', async () => {
+  const { memoryPhoneLog } = await import('../otp/phone-limit')
+  const log = memoryPhoneLog()
+  fake.log = log
+  class Redis {
+    constructor() {
+      if (fake.modo === 'init-fail') throw new Error('Upstash no arranca')
+    }
+    async eval(_s: string, keys: string[], args: (string | number)[]) {
+      if (fake.modo === 'timeout') return new Promise(() => {})
+      if (fake.modo === 'down') throw new Error('redis caído')
+      fake.keys.push(keys[0] as string)
+      const [now, win, limit, member] = args
+      const r = await log.reserve(
+        keys[0] as string,
+        String(member),
+        { limit: Number(limit), windowSec: Number(win) / 1000 },
+        Number(now),
+      )
+      return r.allowed ? [1, 0] : [0, r.retryAfterMs]
+    }
+    async zrem(key: string, member: string) {
+      await log.release(key, member)
+      return 1
+    }
   }
+  return { Redis }
 })
 
+import { DELETE as deleteAccount } from '../../app/api/v1/customer/account/route'
 import { POST as sendCode } from '../../app/api/v1/customer/phone/send-code/route'
+import { resetPhoneLogStore } from '../otp/phone-limit'
 
 const BASE = 'http://localhost:3001/api/v1'
-const TELEFONO = `9${String(Date.now()).slice(-8)}`
 const NOMBRE = 'Vecino OTP'
+const RAIZ = `9${String(Date.now()).slice(-7)}`
+/** Un número propio de esta corrida por caso: 9 dígitos que empiezan por 9. */
+const tel = (i: number) => `${RAIZ}${i}`
+const LIMITE = 2
 
 interface Vecino {
   userId: string
@@ -56,8 +87,13 @@ interface Vecino {
 const vecinos: Vecino[] = []
 let previo: unknown = null
 
-async function crearVecino(tag: string): Promise<Vecino> {
-  const email = `otp-phone-${tag}-${Date.now()}@integration.local`
+function modo(m: Modo) {
+  fake.modo = m
+  resetPhoneLogStore()
+}
+
+async function crearVecino(): Promise<Vecino> {
+  const email = `otp-phone-${vecinos.length}-${Date.now()}@integration.local`
   const password = 'test-password-12345'
   const { data, error } = await localClient.auth.admin.createUser({
     email,
@@ -91,19 +127,29 @@ function pedir(v: Vecino, phone: string): Promise<Response> {
 
 describe('send-code · tope por número de destino', () => {
   beforeAll(async () => {
-    create.mockResolvedValue({ channel: 'sms' })
     const { data } = await localClient
       .from('app_settings')
       .select('value')
       .eq('key', 'rate_limits')
       .maybeSingle()
     previo = data?.value ?? null
-    // Umbral desde app_settings (no del código): 2 envíos por número.
+    // Umbral desde app_settings, no del código.
     const { error } = await localClient.from('app_settings').upsert({
       key: 'rate_limits',
-      value: { ...((previo as object | null) ?? {}), otp_phone: { limit: 2, windowSec: 86400 } },
+      value: {
+        ...((previo as object | null) ?? {}),
+        otp_phone: { limit: LIMITE, windowSec: 86400 },
+      },
     })
     if (error) throw new Error(`sembrar rate_limits falló: ${error.message}`)
+  })
+
+  beforeEach(() => {
+    create.mockReset()
+    create.mockResolvedValue({ channel: 'sms' })
+    modo('ok')
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
   })
 
   afterAll(async () => {
@@ -113,30 +159,88 @@ describe('send-code · tope por número de destino', () => {
       await localClient.from('customer_otp_attempts').delete().eq('user_id', v.userId)
       await localClient.from('customer_profiles').delete().eq('user_id', v.userId)
       await localClient.from('users').delete().eq('id', v.userId)
-      await localClient.auth.admin.deleteUser(v.userId)
+      await localClient.auth.admin.deleteUser(v.userId).catch(() => {})
     }
   })
 
-  it('el tercer pedido al mismo número es 429 aunque lo pida OTRO usuario, y no llama a Twilio', async () => {
-    const a = await crearVecino('a')
-    const b = await crearVecino('b')
-    expect((await pedir(a, TELEFONO)).status).toBe(200)
-    expect((await pedir(b, TELEFONO)).status).toBe(200)
-    create.mockClear()
-    const res = await pedir(a, TELEFONO)
+  it('el mismo número escrito de tres formas cuenta como uno, aunque lo pidan usuarios distintos', async () => {
+    const t = tel(1)
+    const [a, b, c] = [await crearVecino(), await crearVecino(), await crearVecino()]
+    expect((await pedir(a, t)).status).toBe(200)
+    expect((await pedir(b, `+51 ${t.slice(0, 3)} ${t.slice(3, 6)} ${t.slice(6)}`)).status).toBe(200)
+    const res = await pedir(c, `51${t}`)
     expect(res.status).toBe(429)
     expect(Number(res.headers.get('retry-after'))).toBeGreaterThan(0)
-    expect(create).not.toHaveBeenCalled()
+    // Twilio solo recibió los dos aceptados, y siempre en el mismo E.164.
+    expect(create).toHaveBeenCalledTimes(2)
+    expect(create.mock.calls.map((call) => call[0].to)).toEqual([`+51${t}`, `+51${t}`])
+    // La clave del contador no lleva el teléfono en claro.
+    expect(fake.keys.length).toBeGreaterThan(0)
+    for (const k of fake.keys) expect(k).not.toContain(t)
   })
 
-  it('otro número no se ve afectado', async () => {
-    const c = await crearVecino('c')
-    const otro = `9${String(Date.now() + 1).slice(-7)}0`
-    expect((await pedir(c, otro)).status).toBe(200)
+  it('un envío que Twilio rechaza no gasta el cupo del número', async () => {
+    const t = tel(2)
+    const v = await crearVecino()
+    create.mockRejectedValueOnce(Object.assign(new Error('rechazado'), { code: 60200 }))
+    expect((await pedir(v, t)).status).toBe(500)
+    expect((await pedir(v, t)).status).toBe(200)
+    expect((await pedir(v, t)).status).toBe(200)
+    // Dos aceptados = cupo lleno; el tope personal (3) aún no llegó.
+    const res = await pedir(v, t)
+    expect(res.status).toBe(429)
+    expect(((await res.json()) as { detail: string }).detail).toContain('este número')
   })
 
-  it('la clave del contador no lleva el teléfono en claro', () => {
-    expect(hits.keys.length).toBeGreaterThan(0)
-    for (const k of hits.keys) expect(k).not.toContain(TELEFONO)
+  it('borrar la cuenta y crear otra no reinicia el contador del número', async () => {
+    const t = tel(3)
+    const v = await crearVecino()
+    expect((await pedir(v, t)).status).toBe(200)
+    expect((await pedir(v, t)).status).toBe(200)
+    const borrado = await deleteAccount(
+      new Request(`${BASE}/customer/account`, {
+        method: 'DELETE',
+        headers: { authorization: `Bearer ${v.token}` },
+      }),
+    )
+    expect(borrado.status).toBe(204)
+    const nueva = await crearVecino()
+    expect((await pedir(nueva, t)).status).toBe(429)
+  })
+
+  it('con Redis caído el límite por número falla abierto, pero el tope personal de 3 sigue', async () => {
+    const t = tel(4)
+    const v = await crearVecino()
+    modo('down')
+    for (let i = 0; i < 3; i++) expect((await pedir(v, t)).status).toBe(200)
+    const res = await pedir(v, t)
+    expect(res.status).toBe(429)
+    expect(((await res.json()) as { detail: string }).detail).toContain('Máximo 3 intentos')
+  })
+
+  it('si Upstash no contesta, la ruta no se cuelga: pasa al vencer el timeout', async () => {
+    const v = await crearVecino()
+    modo('timeout')
+    const t0 = Date.now()
+    expect((await pedir(v, tel(5))).status).toBe(200)
+    expect(Date.now() - t0).toBeLessThan(5_000)
+  })
+
+  it('si Upstash no arranca, la ruta falla abierto', async () => {
+    const v = await crearVecino()
+    modo('init-fail')
+    expect((await pedir(v, tel(6))).status).toBe(200)
+    expect(create).toHaveBeenCalledTimes(1)
+  })
+
+  it('sin OTP_PHONE_HMAC_SECRET el límite por número se apaga (no usa otro secreto)', async () => {
+    const t = tel(1) // agotado en el primer caso
+    const v = await crearVecino()
+    vi.stubEnv('OTP_PHONE_HMAC_SECRET', '')
+    try {
+      expect((await pedir(v, t)).status).toBe(200)
+    } finally {
+      vi.unstubAllEnvs()
+    }
   })
 })

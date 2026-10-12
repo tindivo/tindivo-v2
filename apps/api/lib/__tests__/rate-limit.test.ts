@@ -112,6 +112,21 @@ describe('checkRateLimit', () => {
   })
 })
 
+describe('memoryStore reproduce el fixedWindow de Upstash', () => {
+  it('la ventana se alinea a la época, no al primer golpe: corta en el múltiplo', async () => {
+    const rule = { limit: 2, windowSec: 60 }
+    let now = 59_000 // a 1 s del corte de la ventana [0, 60 000)
+    const store = memoryStore(() => now)
+    expect((await store.hit('k', rule)).allowed).toBe(true)
+    const r = await store.hit('k', rule)
+    expect(r.allowed).toBe(true)
+    expect(r.resetInMs).toBe(1_000)
+    expect((await store.hit('k', rule)).allowed).toBe(false)
+    now = 60_000 // nueva ventana, solo 1 s después
+    expect((await store.hit('k', rule)).allowed).toBe(true)
+  })
+})
+
 describe('límites desde app_settings', () => {
   it('sin clave o con basura se usan los valores por defecto', () => {
     expect(resolveLimits(null)).toEqual(DEFAULT_LIMITS)
