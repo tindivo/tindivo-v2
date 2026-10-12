@@ -42,6 +42,38 @@ borran** (el plazo de 90 días de D-44 no está decidido ni implementado).
 8. Los textos de `/borrar-cuenta` y de la política los revisa Jesús (nivel C: responsable, correo de privacidad). La
    página solo ofrece WhatsApp como alternativa; Google pide un medio de contacto: falta el correo.
 
+### Segunda ronda (revisión de Codex)
+
+- **Inventario medido** (`table_columns_inventory` sobre `information_schema`, 9 tablas: `orders`, `courier_orders`,
+  `customer_order_items`, `customer_order_item_modifiers`, `order_status_history`, `order_event_log`,
+  `courier_order_events`, `domain_events`, `order_reviews`). El test `account-deletion-coverage` obliga a que toda columna
+  con pinta personal esté en la lista de **anonimizadas** o en la de **conservadas a propósito**; una columna nueva lo
+  rompe. Faltaban `arrived_at_customer_lat/lng/accuracy_m` (0114), ahora cubiertas.
+- **Carrera cerrada:** `users.deleted_at` marca la lápida y `reject_deleted_account` (BEFORE INSERT, `FOR SHARE` sobre
+  `users`) rechaza pedidos, carreras de Entregas, perfil, direcciones, avisos, términos, reseñas, descartes y canjes
+  sobre una cuenta borrada. Probado de forma determinista (test) y con dos sesiones `psql`: el insert esperó 5 s al
+  `FOR UPDATE` de la RPC y fue rechazado al confirmarse (`cannot write because the account was deleted`).
+- **Reseñas:** `customer_user_id` pasa a NULL dentro de la RPC (la FK `SET NULL` no dispara al borrar `auth.users`).
+- **Notas y logs:** se vacían `business_notes`, `driver_notes`, `cancel_note`, `rejection_reason_text`, la nota de cada
+  renglón y `order_status_history.notes`; `order_event_log.data`, `courier_order_events.data` y `domain_events` pasan por
+  `redact_personal_json` (sustituye por `[eliminado]` el valor de toda clave con teléfono, nombre, dirección, referencia,
+  nota, coordenadas…, y respeta booleanos e importes).
+
+**Preguntas nuevas para Jesús (no se asumieron; la RPC hace hoy lo recomendado):**
+
+9. **Texto libre del personal** (`business_notes`, `driver_notes`, `cancel_note`, `rejection_reason_text`): se vacía
+   porque puede nombrar al cliente. Si la caja o los reclamos necesitan esas notas, alternativa: conservarlas. El motivo
+   estructurado (`cancel_reason`, `rejection_reason_code`) se queda siempre. **Recomiendo vaciarlas.**
+10. **Comentario de la reseña** (`order_reviews.comment`): se conserva sin autor, según el expediente §8, pero es texto libre
+    y puede contener un nombre. Alternativa: conservar solo la nota numérica. **Recomiendo conservar el comentario**, y
+    decirlo en la política.
+11. **`comprobante_prepago_url`** y los antifraude (`customer_strikes`, `customer_incidents`, `reports`, `address_directory`)
+    siguen conservados (D-44).
+12. **Repetir el borrado por HTTP:** responde 401, no 204, porque la autenticación valida el JWT contra `auth.users` y
+    esa fila ya no existe. Se documentó así en el OpenAPI (alternativa **a**). La alternativa **b** (aceptar un JWT válido
+    sin fila viva) debilita `requireUser` para toda la API; **recomiendo mantener (a)**. Para la RPC, repetir sigue
+    devolviendo `already_deleted`.
+
 **Antes de aplicar a producción:** revisión de Jesús y de Codex (datos personales); `db push` fuera de 18:00-23:00;
 `pnpm db:types` después; una llamada real por HTTP (ya cubierta en local por los tests).
 
