@@ -44,9 +44,7 @@ borran** (el plazo de 90 días de D-44 no está decidido ni implementado).
 
 ### Segunda ronda (revisión de Codex)
 
-- **Inventario medido** (`table_columns_inventory` sobre `information_schema`, 9 tablas: `orders`, `courier_orders`,
-  `customer_order_items`, `customer_order_item_modifiers`, `order_status_history`, `order_event_log`,
-  `courier_order_events`, `domain_events`, `order_reviews`). El test `account-deletion-coverage` obliga a que toda columna
+- **Inventario medido** (ver la tercera ronda: ahora se descubre por llaves foráneas). El test `account-deletion-coverage` obliga a que toda columna
   con pinta personal esté en la lista de **anonimizadas** o en la de **conservadas a propósito**; una columna nueva lo
   rompe. Faltaban `arrived_at_customer_lat/lng/accuracy_m` (0114), ahora cubiertas.
 - **Carrera cerrada:** `users.deleted_at` marca la lápida y `reject_deleted_account` (BEFORE INSERT, `FOR SHARE` sobre
@@ -73,6 +71,29 @@ borran** (el plazo de 90 días de D-44 no está decidido ni implementado).
     esa fila ya no existe. Se documentó así en el OpenAPI (alternativa **a**). La alternativa **b** (aceptar un JWT válido
     sin fila viva) debilita `requireUser` para toda la API; **recomiendo mantener (a)**. Para la RPC, repetir sigue
     devolviendo `already_deleted`.
+
+### Tercera ronda (PR `fix/mv5-borrado-completo`)
+
+- **Registros con lista de PERMITIDAS:** `redact_personal_json` ya no busca claves "personales" (un motivo escrito a mano cabe
+  en `reasonText`, `reason`, `motivo`…); solo conserva las claves declaradas seguras (ids, estados, enums, importes, fechas,
+  contadores) y los booleanos. Toda clave nueva queda redactada hasta que alguien la añada a la lista, en la migración.
+- **Inventario por llaves foráneas** (`personal_data_inventory`): descubre solas las tablas que cuelgan, directa o
+  indirectamente, de `orders` y `courier_orders`, las que apuntan a `users` y `customer_otp_attempts`. El test exige una
+  decisión por tabla (borrada / conservada / ajena / revisada por columna). Faltaban `order_transfer_requests.reason` y
+  `order_assignment_rejections.reason` (texto libre del motorizado): ahora se vacían.
+- **OTP en vuelo:** `customer_otp_attempts` tiene el mismo guard; `/phone/send-code` revisa el resultado del `INSERT` y
+  responde 401 si la cuenta ya fue borrada mientras Twilio respondía.
+- **Candados:** orden común en todo el borrado y la libreta: candado de aviso de la libreta → `users` → direcciones
+  (`customer_address_save` ya tomaba el de aviso primero; la RPC de borrado ahora también). Probado con dos sesiones
+  `psql` en los dos órdenes, sin `deadlock`.
+- **Origen del directorio en Entregas:** con `directory_business_id`, el origen se sustituye por los datos canónicos del
+  directorio (nombre, teléfono, punto y referencia), no por lo que mandó el cliente.
+- **UPDATE:** el guard cubre también UPDATE: cambiar el vínculo hacia una cuenta borrada, o tocar datos personales de una fila
+  ya anonimizada, se rechaza. El negocio puede seguir cerrando la caja de ese pedido. La RPC se salta el guard solo
+  para su propio usuario y solo durante su transacción (`tindivo.deleting_account`).
+- **Conservado a propósito, pregunta 13 para Jesús:** `fraud_coverage_claims` (`reason`, `resolution_note`: texto libre del
+  negocio ligado al dinero) y `business_charges.description` (ledger). **Recomiendo conservarlas** hasta que el ledger tenga
+  su plazo; si algún día se vacían, requiere revisión de dinero.
 
 **Antes de aplicar a producción:** revisión de Jesús y de Codex (datos personales); `db push` fuera de 18:00-23:00;
 `pnpm db:types` después; una llamada real por HTTP (ya cubierta en local por los tests).

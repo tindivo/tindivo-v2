@@ -11,6 +11,7 @@
  *  4. RESEÑAS: la reseña queda sin autor.
  *  5. NOTAS Y LOGS: notas libres y datos de los logs, redactados.
  */
+import { execFile } from 'node:child_process'
 import { createClient } from '@supabase/supabase-js'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { DELETE as deleteAccount } from '../../app/api/v1/customer/account/route'
@@ -180,8 +181,78 @@ afterAll(async () => {
 
 // ── 1. Inventario ────────────────────────────────────────────────────────────
 /**
- * Columnas que el borrado VACÍA o sustituye. `tabla.columna`.
+ * Las tablas las descubre la base (`personal_data_inventory`: todas las que cuelgan,
+ * directa o indirectamente, de orders / courier_orders / users, más
+ * `customer_otp_attempts`). Aquí solo se DECIDE qué se hace con cada una. Una tabla
+ * nueva con FK, o una columna personal nueva en una tabla revisada, rompe el test
+ * hasta que alguien decida.
  */
+
+/** Se borran enteras (o se desvinculan) en la RPC. */
+const BORRADAS = new Set([
+  'customer_profiles',
+  'customer_addresses',
+  'push_subscriptions',
+  'terms_acceptance',
+  'order_review_dismissals',
+  'promo_redemptions',
+  'customer_otp_attempts',
+  'user_roles',
+])
+
+/**
+ * Se CONSERVAN a propósito. Cada una es una pregunta para Jesús en
+ * `Docs/trabajo/movil/08-mv5-requisitos-revision.md` (antifraude, dinero, directorio).
+ */
+const CONSERVADAS = new Set([
+  'customer_strikes',
+  'customer_incidents',
+  'reports',
+  'address_directory',
+  'fraud_coverage_claims',
+  'business_charges', // el ledger: dinero
+])
+
+/** Datos del negocio, del motorizado o de la configuración: no son de la persona que se va. */
+const AJENAS = new Set([
+  'businesses',
+  'drivers',
+  'driver_restaurants',
+  'app_settings',
+  'admin_alerts',
+  'cash_settlements',
+  'restaurant_payments',
+  'business_service_days',
+  'delivery_zones',
+  'directory_businesses',
+  'map_landmarks',
+  'store_products',
+  'menu_categories',
+  'menu_items',
+  'menu_modifier_groups',
+  'menu_modifier_options',
+  'business_payment_qrs',
+  'business_schedule',
+  'push_delivery_log',
+  'store_events',
+  'store_product_images',
+])
+
+/** Tablas que se revisan columna por columna. */
+const POR_COLUMNA = new Set([
+  'orders',
+  'courier_orders',
+  'customer_order_items',
+  'customer_order_item_modifiers',
+  'order_status_history',
+  'order_event_log',
+  'courier_order_events',
+  'order_reviews',
+  'order_transfer_requests',
+  'order_assignment_rejections',
+])
+
+/** Columnas que el borrado VACÍA, redacta o sustituye. `tabla.columna`. */
 const ANONIMIZADAS = new Set([
   ...Object.keys(ORDER_PII).map((c) => `orders.${c}`),
   'orders.address_directory_id',
@@ -203,50 +274,72 @@ const ANONIMIZADAS = new Set([
   'order_status_history.notes',
   'order_event_log.data',
   'courier_order_events.data',
+  'order_transfer_requests.reason',
+  'order_assignment_rejections.reason',
   'domain_events.payload',
   'domain_events.metadata',
 ])
 
 /**
- * Columnas con pinta de dato personal que se CONSERVAN a propósito. Cada una es una
- * pregunta para Jesús en `Docs/trabajo/movil/08-mv5-requisitos-revision.md`.
+ * Columnas con pinta de texto o dato libre que se CONSERVAN a propósito, con su porqué.
  */
-const CONSERVADAS = new Set([
+const CONSERVADAS_COLUMNA = new Set([
   'orders.comprobante_prepago_url', // plazo de los comprobantes (D-44)
   'orders.customer_gps_method', // método, no ubicación
   'orders.customer_gps_validated_at', // fecha
   'orders.validation_context', // 'antifraud' | 'proof'
+  'orders.cancel_reason_detail', // enum con CHECK, no texto libre
+  'orders.rejection_reason_code', // enum con CHECK
+  'orders.validation_reason_code', // código
+  'orders.cancel_reason', // enum, no texto
+  'courier_orders.cancel_reason', // enum, no texto
+  'customer_order_items.line_total', // importe
+  'orders.risk_flags', // banderas booleanas de antifraude
+  'order_reviews.tags', // etiquetas predefinidas
   'order_reviews.comment', // la nota de la reseña, sin autor (expediente §8)
   'customer_order_items.item_name_snapshot', // nombre del plato
   'customer_order_item_modifiers.group_name_snapshot',
   'customer_order_item_modifiers.option_name_snapshot',
 ])
 
-const TABLAS = [
-  'orders',
-  'courier_orders',
-  'customer_order_items',
-  'customer_order_item_modifiers',
-  'order_status_history',
-  'order_event_log',
-  'courier_order_events',
-  'domain_events',
-  'order_reviews',
-]
 const PINTA_PERSONAL =
-  /(lat|lng|coord|address|reference|phone|name|note|gps|accuracy|maps|comment|description|text|data|payload|metadata|url)/
+  /(lat|lng|coord|address|reference|phone|name|note|gps|accuracy|maps|comment|description|text|data|payload|metadata|url|reason|motivo|detail|label|line|title|message|email|search|tags)/
 
-describe('inventario de columnas personales (medido)', () => {
-  it('toda columna con pinta personal está anonimizada o conservada a propósito', async () => {
-    const { data: cols, error: e2 } = await raw.rpc('table_columns_inventory', {
-      p_tables: TABLAS,
-    })
-    if (e2) throw new Error(`table_columns_inventory falló: ${e2.message}`)
-    expect((cols as unknown[]).length).toBeGreaterThan(50)
-    const sinDecidir = (cols as { table_name: string; column_name: string }[])
-      .filter((c) => PINTA_PERSONAL.test(c.column_name))
+describe('inventario de tablas y columnas personales (medido por llaves foráneas)', () => {
+  it('toda tabla con vínculo a pedidos o usuarios tiene una decisión', async () => {
+    const { data, error } = await raw.rpc('personal_data_inventory')
+    if (error) throw new Error(`personal_data_inventory falló: ${error.message}`)
+    const cols = data as { table_name: string; column_name: string; data_type: string }[]
+    const tablas = [...new Set(cols.map((c) => c.table_name))]
+    expect(tablas.length).toBeGreaterThan(25)
+    // El recorrido tiene que alcanzar las tablas que antes se escaparon.
+    for (const t of [
+      'order_transfer_requests',
+      'order_assignment_rejections',
+      'customer_otp_attempts',
+      'customer_order_item_modifiers',
+    ]) {
+      expect(tablas, t).toContain(t)
+    }
+    const sinDecision = tablas.filter(
+      (t) => !BORRADAS.has(t) && !CONSERVADAS.has(t) && !AJENAS.has(t) && !POR_COLUMNA.has(t),
+    )
+    expect(sinDecision).toEqual([])
+  })
+
+  it('toda columna con pinta personal de las tablas revisadas está anonimizada o conservada a propósito', async () => {
+    const { data, error } = await raw.rpc('personal_data_inventory')
+    if (error) throw new Error(`personal_data_inventory falló: ${error.message}`)
+    const cols = data as { table_name: string; column_name: string; data_type: string }[]
+    const sinDecidir = [
+      ...cols.filter((c) => POR_COLUMNA.has(c.table_name)),
+      // `domain_events` no tiene FK (apunta por `aggregate_id`), así que se añade a mano.
+      { table_name: 'domain_events', column_name: 'payload', data_type: 'jsonb' },
+      { table_name: 'domain_events', column_name: 'metadata', data_type: 'jsonb' },
+    ]
+      .filter((c) => PINTA_PERSONAL.test(c.column_name) || c.data_type === 'jsonb')
       .map((c) => `${c.table_name}.${c.column_name}`)
-      .filter((k) => !ANONIMIZADAS.has(k) && !CONSERVADAS.has(k))
+      .filter((k) => !ANONIMIZADAS.has(k) && !CONSERVADAS_COLUMNA.has(k))
     expect(sinDecidir).toEqual([])
   })
 })
@@ -284,7 +377,8 @@ describe('nada nuevo se escribe sobre la lápida', () => {
       .from('orders')
       .update({ customer_user_id: c.userId, customer_name: 'Rosa' })
       .eq('id', seed.orderId)
-    expect(pedido.error).toBeNull() // un UPDATE no es un alta: el guard es de INSERT
+    // VINCULAR un pedido existente a la lápida también se rechaza (UPDATE).
+    expect(pedido.error?.message).toMatch(/account was deleted/)
     const insert = await db.from('orders').insert({
       business_id: seed.businessId,
       short_id: 'ZZZZ2222',
@@ -425,5 +519,310 @@ describe('repetir el borrado por HTTP', () => {
     const c = await crearCliente()
     expect((await borrar(c.token)).status).toBe(204)
     expect((await borrar(c.token)).status).toBe(401)
+  })
+})
+
+// ── 7. Registros con texto libre: lista de PERMITIDAS ────────────────────────
+describe('los registros solo conservan claves declaradas seguras', () => {
+  it('un motivo escrito a mano no sobrevive, venga en la clave que venga', async () => {
+    const c = await crearCliente()
+    const seed = await pedidoCompleto(c)
+    await db.from('order_event_log').insert({
+      order_id: seed.orderId,
+      event_type: 'order.cancelled',
+      actor_role: 'negocio',
+      data: {
+        reasonText: 'Rosa, celular 999111222',
+        reason: 'Rosa no contesta',
+        motivo: 'Rosa',
+        clave_nueva_del_futuro: 'Jr. Secreto 123',
+        anidado: { cualquiera: 'Rosa' },
+        cancelReason: 'customer_request',
+        total: { de: 47, a: 50 },
+        ok: true,
+      },
+    })
+    expect((await borrar(c.token)).status).toBe(204)
+    const { data } = await db
+      .from('order_event_log')
+      .select('data')
+      .eq('order_id', seed.orderId)
+      .eq('event_type', 'order.cancelled')
+      .single()
+    expect(JSON.stringify(data?.data)).not.toMatch(/Rosa|999111222|Secreto/)
+    expect(data?.data).toMatchObject({
+      reasonText: '[eliminado]',
+      reason: '[eliminado]',
+      motivo: '[eliminado]',
+      clave_nueva_del_futuro: '[eliminado]',
+      cancelReason: 'customer_request',
+      total: { de: 47, a: 50 },
+      ok: true,
+    })
+  })
+
+  it('el motivo libre de traspasos y de rechazos de asignación se vacía', async () => {
+    const c = await crearCliente()
+    const seed = await pedidoCompleto(c)
+    const t = await db.from('order_transfer_requests').insert({
+      order_id: seed.orderId,
+      from_driver_id: 'e2e00000-0000-4000-8000-000000000050',
+      to_driver_id: 'e2e00000-0000-4000-8000-0000000000d2',
+      reason: 'La clienta Rosa vive lejos',
+    })
+    expect(t.error).toBeNull()
+    const r = await db.from('order_assignment_rejections').insert({
+      order_id: seed.orderId,
+      driver_id: 'e2e00000-0000-4000-8000-000000000050',
+      reason: 'Rosa no me da confianza',
+    })
+    expect(r.error).toBeNull()
+    expect((await borrar(c.token)).status).toBe(204)
+    const { data: tr } = await db
+      .from('order_transfer_requests')
+      .select('reason')
+      .eq('order_id', seed.orderId)
+    expect(tr).toEqual([{ reason: null }])
+    const { data: re } = await db
+      .from('order_assignment_rejections')
+      .select('reason')
+      .eq('order_id', seed.orderId)
+    expect(re).toEqual([{ reason: null }])
+  })
+})
+
+// ── 8. OTP en vuelo ──────────────────────────────────────────────────────────
+describe('un OTP que se estaba enviando no deja rastro', () => {
+  it('sellar un intento con teléfono sobre una cuenta borrada se rechaza', async () => {
+    const c = await crearCliente()
+    const antes = await db
+      .from('customer_otp_attempts')
+      .insert({ user_id: c.userId, phone: c.phone })
+    expect(antes.error).toBeNull()
+    expect((await borrar(c.token)).status).toBe(204)
+    const { count } = await db
+      .from('customer_otp_attempts')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', c.userId)
+    expect(count).toBe(0)
+    // Lo que haría /phone/send-code si Twilio tarda y la cuenta se borra mientras tanto.
+    const tarde = await db
+      .from('customer_otp_attempts')
+      .insert({ user_id: c.userId, phone: c.phone })
+    expect(tarde.error?.message).toMatch(/account was deleted/)
+  })
+})
+
+// ── 9. Origen del directorio en Entregas ─────────────────────────────────────
+describe('el origen de una carrera con negocio del directorio no se conserva tal cual', () => {
+  it('se sustituye por los datos canónicos del directorio', async () => {
+    const c = await crearCliente()
+    const dir = await db
+      .from('directory_businesses')
+      .insert({
+        name: 'ZZ Test MV4a Bodega Canónica',
+        category: 'bodega',
+        lat: -9.146,
+        lng: -78.278,
+        reference_text: 'Esquina del parque, referencia canónica',
+        phone: '900555000',
+        courier_enabled: true,
+      })
+      .select('id')
+      .single()
+    if (dir.error) throw new Error(`directorio falló: ${dir.error.message}`)
+    const created = await raw.rpc('create_courier_order', {
+      p_customer_user_id: c.userId,
+      p_requester_name: 'Doña Rosa',
+      p_requester_phone: c.phone,
+      p_directory_business_id: dir.data.id,
+      p_origin_name: 'Rosa (contacto personal)',
+      p_origin_phone: '999000111',
+      p_origin_lat: -9.146,
+      p_origin_lng: -78.278,
+      p_origin_reference_text: 'Casa de Rosa, puerta verde',
+      p_destination_name: 'Pedro',
+      p_destination_phone: '999000222',
+      p_destination_lat: -9.1495,
+      p_destination_lng: -78.2795,
+      p_destination_reference_text: 'Casa de dos pisos, prueba',
+      p_item_description: 'Un paquete',
+      p_is_fragile: false,
+      p_ready_in_min: 0,
+      p_payer: 'destination',
+      p_weight_confirmed: true,
+      p_prepaid_confirmed: true,
+    })
+    expect(created.error).toBeNull()
+    const id = (created.data as { id: string }).id
+    await db
+      .from('courier_orders')
+      .update({ status: 'delivered', delivered_at: new Date().toISOString() })
+      .eq('id', id)
+    expect((await borrar(c.token)).status).toBe(204)
+    const { data } = await db
+      .from('courier_orders')
+      .select('origin_name,origin_phone,origin_reference_text,origin_lat,origin_lng')
+      .eq('id', id)
+      .single()
+    expect(data).toEqual({
+      origin_name: 'ZZ Test MV4a Bodega Canónica',
+      origin_phone: '900555000',
+      origin_reference_text: 'Esquina del parque, referencia canónica',
+      origin_lat: -9.146,
+      origin_lng: -78.278,
+    })
+    await db.from('courier_orders').delete().eq('id', id)
+    await db.from('directory_businesses').delete().eq('id', dir.data.id)
+  })
+})
+
+// ── 10. UPDATE sobre una cuenta borrada ──────────────────────────────────────
+describe('un UPDATE tampoco puede devolver datos personales a la lápida', () => {
+  it('cambiar un dato personal se rechaza; el cierre de caja del pedido, no', async () => {
+    const c = await crearCliente()
+    const seed = await pedidoCompleto(c)
+    expect((await borrar(c.token)).status).toBe(204)
+
+    for (const cambio of [
+      { customer_phone: '999000999' },
+      { customer_name: 'Rosa' },
+      { delivery_address: 'Jr. Secreto 123' },
+      { delivery_coordinates_lat: -9.1 },
+    ]) {
+      const r = await db.from('orders').update(cambio).eq('id', seed.orderId)
+      expect(r.error?.message, JSON.stringify(cambio)).toMatch(/account was deleted/)
+    }
+    // Lo que el negocio sigue haciendo con un pedido anonimizado.
+    const ok = await db
+      .from('orders')
+      .update({ business_notes: 'caja revisada' })
+      .eq('id', seed.orderId)
+    expect(ok.error).toBeNull()
+    await setOrderStatus(seed.orderId, 'delivered')
+  })
+
+  it('una carrera de Entregas anonimizada tampoco admite datos personales nuevos', async () => {
+    const c = await crearCliente()
+    const created = await callCreateCourierOrder({
+      customerUserId: c.userId,
+      requesterPhone: c.phone,
+    })
+    const id = (created.data as { id: string }).id
+    await db
+      .from('courier_orders')
+      .update({ status: 'delivered', delivered_at: new Date().toISOString() })
+      .eq('id', id)
+    expect((await borrar(c.token)).status).toBe(204)
+    const r = await db.from('courier_orders').update({ destination_name: 'Rosa' }).eq('id', id)
+    expect(r.error?.message).toMatch(/account was deleted/)
+    const ok = await db.from('courier_orders').update({ driver_note: null }).eq('id', id)
+    expect(ok.error).toBeNull()
+  })
+})
+
+// ── 11. Dos sesiones psql: candados ──────────────────────────────────────────
+const DB_CONTAINER = 'supabase_db_zpnipajgwfthxhdtzhly'
+
+function psql(sql: string): Promise<{ out: string; err: string; ms: number }> {
+  const t0 = Date.now()
+  return new Promise((resolve) => {
+    execFile(
+      'docker',
+      ['exec', DB_CONTAINER, 'psql', '-U', 'postgres', '-At', '-c', sql],
+      { timeout: 60_000 },
+      (_e, out, err) => resolve({ out, err, ms: Date.now() - t0 }),
+    )
+  })
+}
+
+async function haySesionesPsql(): Promise<boolean> {
+  const r = await psql('select 1')
+  return r.out.trim() === '1'
+}
+
+const sinPsql = !(await haySesionesPsql())
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+/** La libreta guarda como `authenticated`, con el candado de aviso, igual que la API. */
+function guardarDireccionComo(userId: string, pausa: number): string {
+  return (
+    `begin; set local role authenticated; ` +
+    `select set_config('request.jwt.claims', '{"sub":"${userId}","role":"authenticated"}', true); ` +
+    `select public.customer_address_save(null,'Casa','Jr. Nueva 1','ref nueva',-9.1465,-78.2779,now(),8,true); ` +
+    `select pg_sleep(${pausa}); commit;`
+  )
+}
+
+describe.skipIf(sinPsql)('candados con dos sesiones psql', () => {
+  it('guardar una dirección y borrar la cuenta a la vez: sin abrazo mortal (libreta primero)', async () => {
+    const c = await crearCliente()
+    await db.from('customer_addresses').insert({
+      user_id: c.userId,
+      label: 'Casa',
+      line: 'Jr. Secreto 123',
+      reference: 'x',
+      coordinates_lat: -9.1465,
+      coordinates_lng: -78.2779,
+      is_default: true,
+    })
+    const a = psql(guardarDireccionComo(c.userId, 3))
+    await sleep(1000)
+    const b = psql(`select public.delete_customer_account('${c.userId}')`)
+    const [ra, rb] = await Promise.all([a, b])
+    expect(`${ra.err}${rb.err}`).not.toMatch(/deadlock/i)
+    expect(ra.err).toBe('')
+    expect(rb.out).toMatch(/"status": "deleted"/)
+    expect(rb.ms).toBeGreaterThan(1500) // esperó a que la libreta terminara
+  })
+
+  it('al revés: el borrado primero, la dirección después, se rechaza sin abrazo mortal', async () => {
+    const c = await crearCliente()
+    await db.from('customer_addresses').insert({
+      user_id: c.userId,
+      label: 'Casa',
+      line: 'Jr. Secreto 123',
+      reference: 'x',
+      coordinates_lat: -9.1465,
+      coordinates_lng: -78.2779,
+      is_default: true,
+    })
+    const b = psql(
+      `begin; select public.delete_customer_account('${c.userId}'); select pg_sleep(3); commit;`,
+    )
+    await sleep(1000)
+    const a = psql(guardarDireccionComo(c.userId, 0))
+    const [rb, ra] = await Promise.all([b, a])
+    expect(`${ra.err}${rb.err}`).not.toMatch(/deadlock/i)
+    expect(rb.out).toMatch(/"status": "deleted"/)
+    expect(ra.err).toMatch(/account was deleted/)
+    const { count } = await db
+      .from('customer_addresses')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', c.userId)
+    expect(count).toBe(0)
+  })
+
+  it('un pedido que llega mientras se borra espera y se rechaza al confirmarse el borrado', async () => {
+    const c = await crearCliente()
+    const seed = await seedContraentregaOrder()
+    seeds.push(seed)
+    const b = psql(
+      `begin; select public.delete_customer_account('${c.userId}'); select pg_sleep(3); commit;`,
+    )
+    await sleep(1000)
+    const a = psql(
+      `insert into public.orders (business_id, short_id, customer_user_id, customer_name, order_amount, delivery_fee, payment_intent, status) ` +
+        `values ('${seed.businessId}','RACE3333','${c.userId}','Rosa',10,2,'pending_cash','pending_acceptance')`,
+    )
+    const [rb, ra] = await Promise.all([b, a])
+    expect(rb.out).toMatch(/"status": "deleted"/)
+    expect(ra.err).toMatch(/account was deleted/)
+    expect(ra.ms).toBeGreaterThan(1500)
+    const { count } = await db
+      .from('orders')
+      .select('*', { count: 'exact', head: true })
+      .eq('short_id', 'RACE3333')
+    expect(count).toBe(0)
   })
 })
