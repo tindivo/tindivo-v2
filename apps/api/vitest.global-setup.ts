@@ -90,6 +90,9 @@ const USUARIOS_FIXTURE = [
   // propios). Las direcciones y los términos caen por cascada con el usuario;
   // los pedidos y las entregas, por los pasos 4b y 4c.
   'Vecino MV4b',
+  // account-deletion: un cliente por caso. Tras borrarse queda de lápida sin
+  // nombre (su propio afterAll la quita); esto cubre la corrida que muere antes.
+  'Vecino Borrado',
 ]
 
 /**

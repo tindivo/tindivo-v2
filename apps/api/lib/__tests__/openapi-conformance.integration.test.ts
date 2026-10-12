@@ -41,6 +41,7 @@ import { PATCH as adminStorePatch } from '../../app/api/v1/admin/store/[id]/rout
 import { POST as adminStoreStatus } from '../../app/api/v1/admin/store/[id]/status/route'
 import { POST as adminStoreCreate } from '../../app/api/v1/admin/store/route'
 import { GET as getClientConfig } from '../../app/api/v1/config/route'
+import { DELETE as deleteCustomerAccount } from '../../app/api/v1/customer/account/route'
 import {
   DELETE as deleteCustomerAddress,
   PATCH as updateCustomerAddress,
@@ -527,6 +528,32 @@ describe('el cliente con sesión', () => {
       bearer: token,
       body: { version: `conf-${RUN}` },
     })
+  })
+})
+
+describe('MV5: borrar la cuenta', () => {
+  it('una cuenta propia, recién creada y sin pedidos, se borra con 204', async () => {
+    const email = `conformidad-borrar-${RUN}@integration.local`
+    const { data, error } = await db.auth.admin.createUser({
+      email,
+      password: 'test-password-12345',
+      email_confirm: true,
+      user_metadata: { full_name: NOMBRE_FIXTURE },
+    })
+    if (error) throw new Error(`crear el cliente a borrar falló: ${error.message}`)
+    const id = data.user.id
+    try {
+      await db.from('customer_profiles').insert({ user_id: id, full_name: NOMBRE_FIXTURE })
+      const own = await signIn(email, 'test-password-12345')
+      await conforms('deleteCustomerAccount', 204, deleteCustomerAccount, {
+        method: 'DELETE',
+        bearer: own,
+      })
+    } finally {
+      // Queda la lápida de `public.users`: no tiene pedidos, se puede quitar.
+      await db.from('users').delete().eq('id', id)
+      await db.auth.admin.deleteUser(id)
+    }
   })
 })
 
