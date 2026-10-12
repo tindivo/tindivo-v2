@@ -1,8 +1,11 @@
 import { SendPhoneCodeRequestSchema } from '@tindivo/contracts'
+import { serverEnv } from '@/lib/env'
 import { requireRole } from '@/lib/http/auth'
 import { corsHeaders, handleOptions } from '@/lib/http/cors'
 import { handleError, ok, problem } from '@/lib/http/problem'
+import { getUpstashStore, loadLimits } from '@/lib/http/rate-limit'
 import { getRequestId } from '@/lib/http/request-id'
+import { checkOtpPhoneLimit } from '@/lib/otp/phone-limit'
 import { createServiceClient } from '@/lib/supabase/service'
 import {
   DEV_OTP_CODE,
@@ -117,6 +120,25 @@ export async function POST(req: Request): Promise<Response> {
         detail: `Máximo ${MAX_ATTEMPTS_PER_24H} intentos de verificación en 24 horas. Intenta de nuevo más tarde.`,
         requestId,
         headers: corsHeaders(req),
+      })
+    }
+
+    // Tope por NÚMERO de destino (SEC-03), además del de arriba por usuario:
+    // quien crea cuentas gratis no puede disparar SMS a un número ajeno.
+    // Falla abierto sin Upstash o con Redis caído (ver lib/otp/phone-limit.ts).
+    const phoneLimit = await checkOtpPhoneLimit(fullPhone, {
+      store: await getUpstashStore().catch((err) => {
+        console.error('[otp-phone-limit] sin almacén, se deja pasar:', err)
+        return null
+      }),
+      rule: (await loadLimits()).otp_phone,
+      secret: serverEnv().SUPABASE_SERVICE_ROLE_KEY,
+    })
+    if (!phoneLimit.allowed) {
+      return problem('rate_limited', {
+        detail: `Ya se pidieron demasiados códigos para este número. Intenta de nuevo en ${phoneLimit.retryAfterSec} s o escríbenos por WhatsApp.`,
+        requestId,
+        headers: { ...corsHeaders(req), 'retry-after': String(phoneLimit.retryAfterSec) },
       })
     }
 

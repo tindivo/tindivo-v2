@@ -17,7 +17,15 @@ import { problem } from './problem'
  * - Las rutas con sesión (negocio, motorizado, admin) no se limitan aquí.
  */
 
-export const BUCKETS = ['tracking', 'search', 'read', 'write', 'events', 'otp'] as const
+export const BUCKETS = [
+  'tracking',
+  'search',
+  'read',
+  'write',
+  'events',
+  'otp',
+  'otp_phone',
+] as const
 export type Bucket = (typeof BUCKETS)[number]
 
 export interface LimitRule {
@@ -33,7 +41,9 @@ export const DEFAULT_LIMITS: Limits = {
   read: { limit: 120, windowSec: 60 },
   write: { limit: 10, windowSec: 600 }, // pilot-access
   events: { limit: 120, windowSec: 60 },
-  otp: { limit: 10, windowSec: 600 }, // coste de SMS
+  otp: { limit: 10, windowSec: 600 }, // coste de SMS, por IP
+  // Por NÚMERO de destino (hasheado): ver lib/otp/phone-limit.ts. classifyRoute no devuelve este cubo.
+  otp_phone: { limit: 3, windowSec: 24 * 60 * 60 },
 }
 
 export function classifyRoute(method: string, pathname: string): Bucket | null {
@@ -104,6 +114,7 @@ const OverridesSchema = z.object({
   write: RuleSchema.optional(),
   events: RuleSchema.optional(),
   otp: RuleSchema.optional(),
+  otp_phone: RuleSchema.optional(),
 })
 
 export type LimitOverrides = z.infer<typeof OverridesSchema>
@@ -204,7 +215,7 @@ export function createLimitsLoader(opts: {
   }
 }
 
-const loadLimits = createLimitsLoader({
+export const loadLimits = createLimitsLoader({
   fetchOverrides: async () => {
     const { data, error } = await createServiceClient()
       .from('app_settings')
@@ -223,7 +234,7 @@ export function resetUpstashStore(): void {
   upstashStore = undefined
 }
 
-async function getUpstashStore(): Promise<RateLimitStore | null> {
+export async function getUpstashStore(): Promise<RateLimitStore | null> {
   if (upstashStore !== undefined) return upstashStore
   const url = process.env.UPSTASH_REDIS_REST_URL
   const token = process.env.UPSTASH_REDIS_REST_TOKEN
