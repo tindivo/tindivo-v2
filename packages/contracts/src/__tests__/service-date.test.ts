@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { SERVICE_DAY_START_HOUR, serviceDate, serviceDayStart } from '../service-date'
+import {
+  SERVICE_DAY_START_HOUR,
+  serviceDate,
+  serviceDateRange,
+  serviceDayStart,
+} from '../service-date'
 
 /**
  * Los instantes se escriben en UTC a propósito. Lima es UTC−5, así que
@@ -69,5 +74,32 @@ describe('serviceDayStart', () => {
     // Si alguien mueve el corte sin tocar la 0154, esto no lo caza — pero deja
     // dicho que las dos mitades tienen que moverse juntas.
     expect(SERVICE_DAY_START_HOUR).toBe(5)
+  })
+})
+
+describe('serviceDateRange', () => {
+  // 23:30 Lima del 11-oct = 04:30 UTC del 12-oct: la fecha UTC ya es "mañana".
+  const noche = at('2026-10-11T23:30:00-05:00')
+
+  it('7 días: to es la jornada de Lima (11) y from 6 días antes, no corrida por UTC', () => {
+    expect(serviceDateRange(7, noche)).toEqual({ from: '2026-10-05', to: '2026-10-11' })
+  })
+
+  it('14 y 30 días incluyen el día de hoy en la cuenta', () => {
+    expect(serviceDateRange(14, noche)).toEqual({ from: '2026-09-28', to: '2026-10-11' })
+    expect(serviceDateRange(30, noche)).toEqual({ from: '2026-09-12', to: '2026-10-11' })
+  })
+
+  it('de madrugada usa la jornada anterior', () => {
+    // 02:00 Lima del 12 = 07:00 UTC del 12; la jornada sigue siendo la del 11
+    expect(serviceDateRange(7, at('2026-10-12T07:00:00Z')).to).toBe('2026-10-11')
+  })
+
+  it('cruza mes y año restando sobre la cadena', () => {
+    expect(serviceDateRange(7, at('2027-01-03T12:00:00-05:00'))).toEqual({
+      from: '2026-12-28',
+      to: '2027-01-03',
+    })
+    expect(serviceDateRange(2, at('2028-03-01T12:00:00-05:00')).from).toBe('2028-02-29')
   })
 })

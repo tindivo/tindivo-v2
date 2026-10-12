@@ -1,6 +1,7 @@
 'use client'
 
 import type { ApiEnvelope } from '@tindivo/api-client'
+import { serviceDateRange } from '@tindivo/contracts'
 import { Button, Icon } from '@tindivo/ui'
 import { type CSSProperties, useCallback, useEffect, useMemo, useState } from 'react'
 import {
@@ -140,18 +141,12 @@ export default function MonitoreoPage() {
     setOnlineError(null)
     try {
       let query = ''
-      const today = new Date()
-      const toStr = today.toISOString().slice(0, 10)
+      const presetDays = { '7d': 7, '14d': 14, '30d': 30 } as const
 
-      if (rangePreset === '7d') {
-        const fromDate = new Date(today.getTime() - 6 * 86400000)
-        query = `?from=${fromDate.toISOString().slice(0, 10)}&to=${toStr}`
-      } else if (rangePreset === '14d') {
-        const fromDate = new Date(today.getTime() - 13 * 86400000)
-        query = `?from=${fromDate.toISOString().slice(0, 10)}&to=${toStr}`
-      } else if (rangePreset === '30d') {
-        const fromDate = new Date(today.getTime() - 29 * 86400000)
-        query = `?from=${fromDate.toISOString().slice(0, 10)}&to=${toStr}`
+      if (rangePreset === '7d' || rangePreset === '14d' || rangePreset === '30d') {
+        // La RPC filtra por jornada operativa de Lima (current_service_date), no por UTC.
+        const { from, to } = serviceDateRange(presetDays[rangePreset])
+        query = `?from=${from}&to=${to}`
       } else if (rangePreset === 'custom') {
         if (customFrom && customTo) {
           query = `?from=${customFrom}&to=${customTo}`
