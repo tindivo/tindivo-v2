@@ -26,7 +26,7 @@ Discusión: `Docs/trabajo/arquitectura/04-arquitectura-objetivo.md`
 | `courier_order_events` | tabla | courier |  |
 | `courier_orders` | tabla | courier |  |
 | `creation_idempotency` | tabla | sin asignar |  |
-| `customer_addresses` | tabla | sin asignar |  |
+| `customer_addresses` | tabla | geo | Libreta del cliente; decisión de Jesús, 2026-10-13. Excepción de escritura en el borrado de cuenta (`excepciones.md`) |
 | `customer_incidents` | tabla | sin asignar |  |
 | `customer_order_item_modifiers` | tabla | ordering |  |
 | `customer_order_items` | tabla | ordering |  |
@@ -218,8 +218,8 @@ Discusión: `Docs/trabajo/arquitectura/04-arquitectura-objetivo.md`
 | `courier_order_events.courier_event_to_outbox` | trigger | courier | en `courier_order_events` |
 | `courier_orders.touch_courier_orders` | trigger | courier | en `courier_orders` |
 | `courier_orders.trg_reject_deleted_account` | trigger | courier | en `courier_orders` |
-| `customer_addresses.touch_customer_addresses` | trigger | sin asignar | en `customer_addresses` |
-| `customer_addresses.trg_reject_deleted_account` | trigger | sin asignar | en `customer_addresses` |
+| `customer_addresses.touch_customer_addresses` | trigger | geo | en `customer_addresses` |
+| `customer_addresses.trg_reject_deleted_account` | trigger | geo | en `customer_addresses` |
 | `customer_incidents.trg_incident_apply_strike` | trigger | sin asignar | en `customer_incidents` |
 | `customer_otp_attempts.trg_reject_deleted_account` | trigger | identity | en `customer_otp_attempts` |
 | `customer_profiles.touch_customer_profiles` | trigger | identity | en `customer_profiles` |
