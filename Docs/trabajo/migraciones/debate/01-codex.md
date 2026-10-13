@@ -38,7 +38,7 @@ Los puntos de fallo concretos:
 **2. Qué no mezclar y cómo ordenar**
 
 1. **Paso 0 inmediatamente:** comprobante condicionado y luego transaccional, evento durable, recuperación idempotente aislada por usuario y límites/inmutabilidad de archivos. El acuerdo ya establece pruebas y condiciones (`Docs/customer_app_migration/debate-rest/conclusion.md:77`).
-2. **Estándares y desacoplamiento al tocar:** rutas finas, casos de uso y adaptadores, con excepciones para legado. La v2.1 sigue siendo propuesta pendiente de aprobación (`Docs/arquitectura/05-estandares.md:3`).
+2. **Estándares y desacoplamiento al tocar:** rutas finas, casos de uso y adaptadores, con excepciones para legado. La v2.1 sigue siendo propuesta pendiente de aprobación (`archive/estandares-v2:Docs/trabajo/arquitectura/05-estandares.md`, en git).
 3. **Mudanza:** cambios de ejecución, configuración y PDF necesarios para demostrar equivalencia.
 4. **Preparación nativa:** inventario REST, OpenAPI, integración en CI, compatibilidad, rutas faltantes y recorrido temprano en dispositivos; conservar el orden acordado.
 5. **Base:** proyecto posterior con restauración y ensayo propios.

@@ -1,8 +1,8 @@
 # Arquitectura: cómo está construido Tindivo
 
 > Verificado: 2026-10-10 · entorno: `develop@7d00aa4` (estructura, rutas, jobs) y `tindivo-prod` (solo lectura:
-> tablas, RLS, crons, triggers) · La propuesta de estándares y de arquitectura objetivo, **sin aprobar**, está en
-> `Docs/trabajo/arquitectura/`
+> tablas, RLS, crons, triggers) · Los estándares de código están aprobados (más abajo). La propuesta de arquitectura
+> objetivo, **sin aprobar**, está en `Docs/trabajo/arquitectura/`
 
 ## Las piezas
 
@@ -19,11 +19,24 @@ Monorepo pnpm + Turborepo. Cinco aplicaciones Next.js y paquetes compartidos:
 | Paquete | Qué es |
 |---|---|
 | `packages/contracts` | **La fuente canónica** de primitivas, enums, máquinas de estados, errores y el OpenAPI (Zod v4) |
-| `packages/core` | Dominio puro; hexagonal solo en `orders` |
+| `packages/core` | Dominio puro compartido por las apps web; la lógica de negocio nueva del backend va en `packages/backend` (ADR 0039, por crear) |
 | `packages/api-client` | Cliente HTTP de la API para las apps |
 | `packages/supabase` | Clientes de Supabase y tipos generados de la base |
 | `packages/ui` | Sistema de diseño (Tailwind v4) |
 | `packages/map`, `packages/images` | Mapa compartido y tratamiento de imágenes |
+
+## Estándares de código
+
+Aprobados por Jesús el 2026-10-12 (`Docs/decisiones/0038-estandares-de-codigo-v2.md`). Cada regla se define en un solo
+archivo; lee solo el de los lenguajes que toque tu cambio.
+
+| Qué | Dónde |
+|---|---|
+| Reglas transversales (DES, API, CLI, MIG, TST, OPS) y mecanismos | [`estandares/README.md`](estandares/README.md) |
+| TypeScript · SQL · Swift · Kotlin | [`typescript.md`](estandares/typescript.md) · [`sql.md`](estandares/sql.md) · [`swift.md`](estandares/swift.md) · [`kotlin.md`](estandares/kotlin.md) |
+| Lo heredado que incumple una regla (la cuenta solo puede bajar) | [`excepciones.md`](excepciones.md) |
+| Módulo dueño de cada tabla, función, trigger y vista (DES-7) | [`propiedad.md`](propiedad.md) |
+| Dónde viven los módulos del backend | `Docs/decisiones/0039-el-backend-es-un-paquete-y-la-api-su-interfaz.md` |
 
 ## Decisiones de construcción (vigentes)
 

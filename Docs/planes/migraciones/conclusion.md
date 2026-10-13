@@ -101,7 +101,7 @@ negocio y motorizado abiertos y Realtime) y con PDF concurrentes; CPU, disco y r
 ### F3 · Desacoplamiento y preparación nativa (lo ya acordado)
 
 El orden 0-7 de `../movil/contrato-rest.md`, con los estándares graduales de
-`../../trabajo/arquitectura/05-estandares.md`:
+`../../arquitectura/estandares/README.md`:
 
 - contrato REST y OpenAPI;
 - integración en CI;
@@ -166,7 +166,7 @@ conexión», porque hoy el acceso es `supabase-js`.
 | M-02 | **Región**, con las mediciones de latencia delante |
 | M-03 | **Docker o procesos gestionados**, según cómo quiera operar el servidor |
 | M-04 | **Aprobación de cada corte** (fecha y hora fuera del horario de pedidos) |
-| E-01 | Los estándares pendientes (`../../trabajo/arquitectura/05-estandares.md`) |
+| E-01 | Los estándares pendientes (`../../arquitectura/estandares/README.md`) |
 | D-40 | Formatos y límites de los comprobantes (paso 0) |
 
 ## Lo que no afirmamos

@@ -5,7 +5,7 @@
 > datos y saber cuánto dependemos de Supabase y Vercel. Y fijó la prioridad: **desacoplamiento**.
 >
 > Medido en el repo (`develop`, `99d70a0`) y en `tindivo-prod` con consultas de solo lectura. Revisado por Codex
-> ([`revision-codex.md`](revision-codex.md)) en dos rondas: en la primera rechazó la versión inicial de los estándares;
+> (`revision-codex.md`, archivada en git: `archive/estandares-v2`) en dos rondas: en la primera rechazó la versión inicial de los estándares;
 > en la segunda **firmó con cambios** README, 04 y 05. Todos sus cambios están aplicados.
 
 ## Documentos
@@ -16,8 +16,7 @@
 | [`02-base-de-datos.md`](02-base-de-datos.md) | ¿La base está bien estructurada? (B-01…B-12) |
 | [`03-proveedores-y-vps.md`](03-proveedores-y-vps.md) | ¿Dependemos siempre de Supabase y Vercel? ¿VPS? ¿Notificaciones? |
 | [`04-arquitectura-objetivo.md`](04-arquitectura-objetivo.md) | Desacoplamiento, microservicios, promociones y mototaxi |
-| [`05-estandares.md`](05-estandares.md) | **Las reglas**, por niveles y con cómo se verifica cada una |
-| [`revision-codex.md`](revision-codex.md) | La crítica de Codex y cómo se aplicó |
+| `05-estandares.md` y `revision-codex.md` | Ya no están aquí: los estándares aprobados viven en `Docs/arquitectura/estandares/` (ADR 0038); la propuesta y la crítica de Codex, en git (`archive/estandares-v2`) |
 
 ## Tus preguntas, en corto
 
@@ -98,7 +97,7 @@ Los estándares tienen tres niveles:
 | En paralelo | Qué |
 |---|---|
 | **Paso 0 · Corrección** | Lo acordado en `../../planes/movil/contrato-rest.md`: comprobante, idempotencia y bucket, más **revocar `anon` en `expire_courier_orders`** comprobando los permisos efectivos. Los parches mínimos no requieren mover código; la extracción al módulo `ordering` se hace después, o junto al arreglo cuando no amplía su riesgo ni retrasa su entrega |
-| **Paso E · Estándares mínimos** | Aprobar `05-estandares.md`; resumirlo en `CLAUDE.md`; reglas de lint para **código nuevo** (DES-1…4, TS-2); la lista de excepciones; las pruebas de integración en CI; `Docs/adr/` |
+| **Paso E · Estándares mínimos** | Estándares aprobados el 2026-10-12 (ADR 0038, resumen en `AGENTS.md`); reglas de lint para **código nuevo** (DES-1…4, TS-2); la lista de excepciones; las pruebas de integración en CI; `Docs/adr/` |
 
 Después, los pasos 1-7 del plan acordado, cada uno aplicando los estándares al código que toca.
 
@@ -106,7 +105,7 @@ Después, los pasos 1-7 del plan acordado, cada uno aplicando los estándares al
 
 | # | Decisión | Recomendación |
 |---|---|---|
-| E-01 | Aprobar `05-estandares.md` (v2) | Revísalo regla por regla: cada una es negociable **antes** de entrar en la CI |
+| E-01 | Estándares v2.2 | Aprobados el 2026-10-12: `Docs/arquitectura/estandares/` |
 | A-01 | Monolito modular como dirección | Sí |
 | A-02, A-03, A-04 | Esquema por módulo, framework HTTP, driver de base | **Ensayos opcionales** con criterio de aceptación (`04` §7), no requisitos |
 | P-01 | Las próximas campañas de promoción | Dime cuáles quieres lanzar: el modelo sale de ahí |

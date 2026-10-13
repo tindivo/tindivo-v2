@@ -50,10 +50,16 @@ anidados. Todos deben seguir este mapa, independientemente de la carga automáti
 8. **`delivered` es terminal.** Ninguna función puede sacar un pedido de ahí; si alguna vez se abre ese camino, antes
    lee el detalle en `supabase/AGENTS.md`.
 9. **Dinero:** `numeric(10,2)`; la deuda de los negocios vive en `business_charges`, y todo ajuste de saldo
-   (apelaciones, reembolsos) se escribe ahí y en ninguna otra tabla; `balance_due` es derivado, no se escribe a mano. **Todo cambio que toque dinero** (ledger, apelaciones, reembolsos, comisiones, tarifas) **requiere
-   la revisión explícita de Jesús antes de aplicarse.**
+   (apelaciones, reembolsos) se escribe ahí y en ninguna otra tabla; `balance_due` es derivado, no se escribe a mano.
+   **Todo cambio que toque dinero** (ledger, apelaciones, reembolsos, comisiones, tarifas) **requiere la revisión
+   explícita de Jesús antes de aplicarse.**
 10. **Fechas operativas en hora de Lima**: `(now() at time zone 'America/Lima')::date`, nunca `current_date` (es UTC,
     y de 19:00 a medianoche ya es mañana). Parámetros operativos en `app_settings`, no en el código.
+11. **Contrato REST v1** (`Docs/planes/movil/contrato-rest.md`): manda en rutas, códigos, cabeceras y formas; una app instalada no se rompe (API-3).
+12. **Backend**: la lógica nueva va en `packages/backend` (por crear), que solo importa `apps/api`, y este solo enlaza
+    rutas (DES-3, DES-9, DES-11). Los clientes solo hablan con la API; el SDK de un proveedor, solo en `infra/` (DES-1, DES-2).
+13. En la API el dinero es una cadena decimal, nunca `float` ni `Double`; los instantes viajan en UTC (API-8, TS-11).
+14. Nadie revisa su propio trabajo (`Docs/README.md` §7.1); lo por decidir va a `Docs/trabajo/decisiones-abiertas.md` (por crear).
 
 ## Cómo se trabaja
 
@@ -90,11 +96,15 @@ anidados. Todos deben seguir este mapa, independientemente de la carga automáti
 
 TypeScript **strict** (TS 6) · Zod **v4** · Next **16** + React **19** + Tailwind **v4** · Biome (`pnpm lint`) sin
 errores nuevos y sin bajar reglas a `warn` · vertical slicing por feature (una feature no importa de otra; lo común
-sube a `lib/` o `packages/`) · `packages/core` es dominio puro: hexagonal solo en `orders`, services + repos para el
-resto · `packages/contracts` es la fuente canónica de primitivas, enums, transiciones y errores · coordenadas
-`numeric(10,7)` · sin Server Actions ni BFFs: las apps nativas (Swift + Kotlin) usan la misma API REST
-· sin Prisma/Drizzle (RLS) · TDD en `packages/core` · no se extrae con menos de 3 usos ni se abstrae con menos de 2 implementaciones · lógica
-de dinero con tests unitarios sobre funciones puras.
+sube a `lib/` o `packages/`) · los módulos de negocio del backend van en `packages/backend` (por crear) y `packages/core`
+(ADR 0039) se queda con lo que comparten las apps web · `packages/contracts` es la fuente canónica de primitivas, enums,
+transiciones y errores · coordenadas `numeric(10,7)` · sin Server Actions ni BFFs: las apps nativas (Swift + Kotlin) usan
+la misma API REST · sin Prisma/Drizzle (RLS) · TDD en `packages/core` · abstracciones: TS-6 · dinero: tests unitarios
+sobre funciones puras.
+
+**Estándares:** `Docs/arquitectura/estandares/README.md` (transversales) y, por lenguaje, `typescript.md`, `sql.md`,
+`swift.md`, `kotlin.md`: lee solo los que toque tu cambio. OBLIGATORIA bloquea, ALERTA avisa, GUÍA orienta; aplican a lo
+que añades o cambias; lo existente que incumple va a `Docs/arquitectura/excepciones.md`. Sin mecanismo, el PR cita evidencia.
 
 ## Comandos
 

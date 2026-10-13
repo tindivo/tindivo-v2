@@ -1303,3 +1303,6 @@ Desde el 2026-10-10 las decisiones nuevas no se escriben aquí (estándar: `Docs
 - **0036** · Las devoluciones al cliente las adelanta Tindivo y las repone el negocio →
   `Docs/decisiones/0036-las-devoluciones-las-adelanta-tindivo-y-las-repone-el-negocio.md`
 - **0037** · Desacoplar es la prioridad de arquitectura → `Docs/decisiones/0037-desacoplar-es-la-prioridad-de-arquitectura.md`
+- **0038** · Estándares de código v2 → `Docs/decisiones/0038-estandares-de-codigo-v2.md`
+- **0039** · El backend es un paquete y la API su interfaz REST →
+  `Docs/decisiones/0039-el-backend-es-un-paquete-y-la-api-su-interfaz.md`

@@ -19,8 +19,8 @@ propio).
 - `Docs/planes/movil/contrato-rest.md`: REST `/api/v1` como contrato del dominio; Supabase para Auth
   y aviso Realtime; paso 0 de corrección (comprobante, idempotencia, bucket); compatibilidad antes del primer build;
   orden 0-7.
-- `Docs/trabajo/arquitectura/` (README, 01-05, `revision-codex.md`): monolito modular; desacoplar al tocar; estándares v2.1
-  (propuesta sin aprobar); Hono, driver de Postgres y esquema por módulo son **ensayos**.
+- `Docs/trabajo/arquitectura/` (README y 01-04; 05 y `revision-codex.md` están en git: `archive/estandares-v2`): monolito modular; desacoplar al tocar; estándares v2.2
+  (aprobados el 2026-10-12, en `Docs/arquitectura/estandares/`); Hono, driver de Postgres y esquema por módulo son **ensayos**.
 
 ## Hechos medidos para este debate
 

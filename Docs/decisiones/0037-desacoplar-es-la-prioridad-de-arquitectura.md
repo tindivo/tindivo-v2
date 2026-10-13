@@ -29,8 +29,9 @@ La dirección es un **monolito modular**: los módulos nacen donde hay trabajo r
 ## Consecuencias
 
 - Las apps nativas hablan solo con la API REST (`Docs/planes/movil/contrato-rest.md`): es la primera frontera nueva.
-- **Los estándares concretos que desarrollan esta prioridad siguen siendo una propuesta sin aprobar**
-  (`Docs/trabajo/arquitectura/05-estandares.md`), igual que la arquitectura objetivo detallada.
+- **Los estándares concretos que desarrollan esta prioridad** se aprobaron el 2026-10-12
+  (`Docs/decisiones/0038-estandares-de-codigo-v2.md`); la arquitectura objetivo detallada sigue siendo una propuesta
+  sin aprobar.
 
 ## Verificación
 
