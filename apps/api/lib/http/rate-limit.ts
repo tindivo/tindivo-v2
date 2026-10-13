@@ -9,7 +9,8 @@ import { problem } from './problem'
  * límite por olvido y las apps nativas, que llaman a la misma API, quedan igual
  * de cubiertas.
  *
- * - Almacén: Upstash Redis (DECISIONS: «Rate limit · Upstash Ratelimit»). Sin
+ * - Almacén: Upstash Redis (DECISIONS: «Rate limit · Upstash Ratelimit»). APAGADO
+ *   por defecto: solo con `RATE_LIMIT_PUBLIC_ENABLED=true`. Sin
  *   `UPSTASH_REDIS_REST_*` (dev, CI) o con Redis caído, FALLA ABIERTO: un
  *   límite de tasa no puede tumbar los pedidos.
  * - Umbrales: `app_settings.rate_limits` (override parcial por cubo); si falta,
@@ -278,8 +279,22 @@ async function getUpstashStore(): Promise<RateLimitStore | null> {
   return upstashStore
 }
 
+/**
+ * Flag PROPIO del límite público por IP: apagado por defecto. Antes se activaba
+ * solo con poner `UPSTASH_REDIS_REST_*`, pero ese Upstash también lo usa el
+ * límite de OTP por número (`lib/otp/phone-limit.ts`, que NO depende de este
+ * flag): configurarlo para el SEC-03 no debe encender de rebote un límite por IP
+ * que nadie ha calibrado. Solo el valor exacto `true` lo enciende.
+ */
+export function publicRateLimitEnabled(
+  env: Record<string, string | undefined> = process.env,
+): boolean {
+  return env.RATE_LIMIT_PUBLIC_ENABLED?.trim() === 'true'
+}
+
 /** Punto de entrada de `proxy.ts`. */
 export async function rateLimitRequest(req: Request): Promise<Response | null> {
+  if (!publicRateLimitEnabled()) return null
   const bucket = classifyRoute(req.method, new URL(req.url).pathname)
   if (!bucket) return null
   try {
