@@ -35,6 +35,8 @@ import type { LimitRule } from '../http/rate-limit'
 
 export const HMAC_CONTEXT = 'tindivo:otp-phone:v1:'
 export const TIMEOUT_MS = 1_000
+/** Tope de espera del `release` a un `reserve` que sigue en vuelo. */
+export const RELEASE_WAIT_MS = 10_000
 
 export function phoneLimitKey(e164: string, secret: string): string {
   return `tindivo:otp_phone:${createHmac('sha256', secret).update(`${HMAC_CONTEXT}${e164}`).digest('hex')}`
@@ -150,6 +152,7 @@ export interface PhoneLimitDeps {
   secret: string | null
   now?: () => number
   timeoutMs?: number
+  releaseWaitMs?: number
 }
 
 export type PhoneGate =
@@ -164,9 +167,11 @@ const NOOP = async () => {}
  * `release` va SIEMPRE ligado al `member` de esta reserva, también si `reserve`
  * venció por timeout: el EVAL pudo aplicarse en Redis aunque la respuesta no
  * llegara, y entonces hay una plaza fantasma que solo ese `member` identifica.
- * Carrera residual: si el ZREM llega a Redis ANTES que un EVAL retrasado, no
- * borra nada y la plaza queda hasta que caduque. Yerra del lado de mandar
- * MENOS SMS, que es el que importa.
+ * Si `reserve` venció por timeout su EVAL sigue en vuelo y puede insertar el
+ * miembro DESPUÉS de un ZREM inmediato (cinco casos así agotarían el número sin
+ * ningún SMS aceptado). Por eso `release` espera primero a que ese EVAL termine
+ * (con tope `releaseWaitMs`) y recién entonces hace el ZREM; si el EVAL falla o
+ * no inserta, el ZREM es inocuo. Llámalo fuera de la respuesta (`after()`).
  */
 export async function reserveOtpPhone(e164: string, deps: PhoneLimitDeps): Promise<PhoneGate> {
   if (!deps.store || !deps.secret) return { allowed: true, release: NOOP }
@@ -174,15 +179,26 @@ export async function reserveOtpPhone(e164: string, deps: PhoneLimitDeps): Promi
   const timeoutMs = deps.timeoutMs ?? TIMEOUT_MS
   const key = phoneLimitKey(e164, deps.secret)
   const member = randomUUID()
+  const releaseWaitMs = deps.releaseWaitMs ?? RELEASE_WAIT_MS
+  let reserving: Promise<unknown> = Promise.resolve()
   const release = async () => {
     try {
+      let timer: ReturnType<typeof setTimeout> | undefined
+      await Promise.race([
+        reserving.catch(() => {}),
+        new Promise((resolve) => {
+          timer = setTimeout(resolve, releaseWaitMs)
+        }),
+      ]).finally(() => clearTimeout(timer))
       await withTimeout(store.release(key, member), timeoutMs)
     } catch (err) {
       console.error('[otp-phone-limit] no se pudo devolver la plaza:', err)
     }
   }
   try {
-    const res = await withTimeout(store.reserve(key, member, deps.rule, deps.now?.()), timeoutMs)
+    const pending = store.reserve(key, member, deps.rule, deps.now?.())
+    reserving = pending
+    const res = await withTimeout(pending, timeoutMs)
     if (!res.allowed) {
       return { allowed: false, retryAfterSec: Math.max(1, Math.ceil(res.retryAfterMs / 1000)) }
     }

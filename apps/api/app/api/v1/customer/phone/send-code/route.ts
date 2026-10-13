@@ -1,4 +1,5 @@
 import { SendPhoneCodeRequestSchema } from '@tindivo/contracts'
+import { after } from 'next/server'
 import { requireRole } from '@/lib/http/auth'
 import { corsHeaders, handleOptions } from '@/lib/http/cors'
 import { handleError, ok, problem } from '@/lib/http/problem'
@@ -182,8 +183,9 @@ export async function POST(req: Request): Promise<Response> {
       )
       if (isTwilioRejection(e)) {
         // Rechazo inequívoco (4xx con código de la API de Twilio): el SMS no
-        // salió y no gasta el cupo del número.
-        await phoneLimit.release()
+        // salió y no gasta el cupo del número. La devolución va tras la
+        // respuesta: espera al EVAL de la reserva si sigue en vuelo.
+        after(phoneLimit.release)
         return problem('internal_error', {
           detail:
             'No pudimos enviarte el SMS. Escríbenos por WhatsApp y te verificamos el número a mano.',

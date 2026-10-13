@@ -153,11 +153,55 @@ describe('falla abierto', () => {
       rule,
       secret: SECRET,
       timeoutMs: 10,
+      releaseWaitMs: 10,
     })
     expect(g.allowed).toBe(true)
     if (g.allowed) await g.release()
     const [, member] = reserve.mock.calls[0] as unknown as [string, string]
     expect(release).toHaveBeenCalledWith(phoneLimitKey(PHONE, SECRET), member)
+  })
+  it('carrera: el release espera al EVAL pendiente; cinco rechazos con EVAL tardío no agotan el número', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const mem = memoryPhoneLog()
+    const pendientes: Array<() => void> = []
+    // El EVAL tarda más que el timeout de reserve y se aplica DESPUÉS de que
+    // el release ya fue pedido (como el EVAL en vuelo de Upstash).
+    const store = {
+      reserve: (k: string, m: string, r: typeof rule, now?: number) =>
+        new Promise<Awaited<ReturnType<typeof mem.reserve>>>((resolve) => {
+          pendientes.push(() => resolve(mem.reserve(k, m, r, now)))
+        }),
+      release: mem.release,
+    }
+    const gates = await Promise.all(
+      Array.from({ length: 5 }, () =>
+        reserveOtpPhone(PHONE, { store, rule, secret: SECRET, now: () => 1, timeoutMs: 10 }),
+      ),
+    )
+    const liberaciones = gates.map((g) => (g.allowed ? g.release() : Promise.resolve()))
+    for (const aplicar of pendientes) aplicar() // los EVAL llegan después del release
+    await Promise.all(liberaciones)
+    const g = await reserveOtpPhone(PHONE, { store: mem, rule, secret: SECRET, now: () => 2 })
+    expect(g.allowed).toBe(true)
+    // Y de verdad quedan los 5 huecos libres, no solo uno.
+    for (let i = 0; i < 4; i++) {
+      expect(
+        (await reserveOtpPhone(PHONE, { store: mem, rule, secret: SECRET, now: () => 2 })).allowed,
+      ).toBe(true)
+    }
+  })
+  it('el release no espera para siempre a un EVAL que nunca vuelve', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const release = vi.fn(async () => {})
+    const g = await reserveOtpPhone(PHONE, {
+      store: { reserve: () => new Promise<never>(() => {}), release },
+      rule,
+      secret: SECRET,
+      timeoutMs: 10,
+      releaseWaitMs: 30,
+    })
+    if (g.allowed) await g.release()
+    expect(release).toHaveBeenCalledTimes(1)
   })
   it('un release que falla no rompe la respuesta', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
