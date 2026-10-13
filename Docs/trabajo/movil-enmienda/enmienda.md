@@ -1,7 +1,7 @@
 # Enmienda al plan móvil (D-49 a D-53)
 
 > **Resuelta por Jesús el 2026-10-13. No manda: lo aprobado manda en `Docs/planes/movil/decisiones.md`.** 2026-10-12,
-> actualizada el 2026-10-13 · Trabajo, no canon. Sale del diff entre la spec de la app nativa ([`spec.md`](spec.md)) y el
+> actualizada el 2026-10-13 · Trabajo, no canon. Sale del diff entre la spec de la app nativa ([`insumos.md`](insumos.md)) y el
 > plan móvil aprobado (`Docs/planes/movil/`); solo recoge los puntos clasificados **nuevo** en
 > [`clasificacion.md`](clasificacion.md). Campañas y consentimientos no están aquí: van aparte en
 > [`../campanas/propuesta.md`](../campanas/propuesta.md). **Estado de cada decisión:** D-49, D-50 (con condición), D-51,

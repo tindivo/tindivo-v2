@@ -10,7 +10,8 @@ base_ref="${1:?Uso: scripts/check-excepciones.sh <ref-base>}"
 
 count_rows() {
   # Fila de datos = empieza por «|» y no es el encabezado («| Regla |») ni la línea de guiones.
-  grep -E '^\|' | grep -Ev '^\|[[:space:]]*Regla[[:space:]]*\|' | grep -Ev '^\|[-: |]+\|?$' | wc -l | tr -d ' '
+  # grep -c imprime 0 y sale con 1 cuando no hay filas: el «|| true» conserva el 0.
+  grep -E '^\|' | grep -Ev '^\|[[:space:]]*Regla[[:space:]]*\|' | { grep -cEv '^\|[-: |]+\|?$' || true; }
 }
 
 head_count="$(count_rows < "$FILE")"
