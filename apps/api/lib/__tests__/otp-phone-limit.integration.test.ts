@@ -4,7 +4,7 @@
  * Lo real: la ruta, `requireRole` contra el GoTrue local, el tope por usuario
  * en `customer_otp_attempts`, los umbrales de `app_settings`, el borrado de
  * cuenta (`DELETE /customer/account`) y TODO el cableado de `phone-limit.ts`
- * (variables, import de `@upstash/redis`, EVAL, ZREM, timeout).
+ * (variables, import de `@upstash/redis`, EVAL, lápida + ZREM, timeout).
  *
  * Lo sustituido: Twilio (`create`) y el cliente `@upstash/redis`, cuyo EVAL lo
  * atiende `memoryPhoneLog` (misma lógica que el script Lua). El script en sí lo
@@ -34,6 +34,16 @@ vi.mock('../twilio/client', () => ({
   twilioClient: { verify: { v2: { services: () => ({ verifications: { create } }) } } },
 }))
 
+// `after()` solo existe dentro de una petición de Next: aquí guarda las tareas
+// y `pedir` las espera antes de devolver, como haría el runtime tras responder.
+const tareas = vi.hoisted(() => [] as Promise<unknown>[])
+vi.mock('next/server', async (orig) => ({
+  ...(await orig<typeof import('next/server')>()),
+  after: (fn: () => unknown) => {
+    tareas.push(Promise.resolve().then(fn))
+  },
+}))
+
 type Modo = 'ok' | 'init-fail' | 'timeout' | 'down'
 const fake = vi.hoisted(() => ({
   modo: 'ok' as string,
@@ -41,7 +51,7 @@ const fake = vi.hoisted(() => ({
   log: null as unknown,
 }))
 vi.mock('@upstash/redis', async () => {
-  const { memoryPhoneLog } = await import('../otp/phone-limit')
+  const { memoryPhoneLog, RELEASE_SCRIPT, TIME_SCRIPT } = await import('../otp/phone-limit')
   const log = memoryPhoneLog()
   fake.log = log
   class Redis {
@@ -51,17 +61,20 @@ vi.mock('@upstash/redis', async () => {
     async eval(_s: string, keys: string[], args: (string | number)[]) {
       if (fake.modo === 'timeout') return new Promise(() => {})
       if (fake.modo === 'down') throw new Error('redis caído')
+      if (_s === TIME_SCRIPT) return Date.now()
+      if (_s === RELEASE_SCRIPT) {
+        await log.release(keys[0] as string, String(args[1]))
+        return 1
+      }
       fake.keys.push(keys[0] as string)
-      const [win, limit, member] = args
-      const r = await log.reserve(keys[0] as string, String(member), {
-        limit: Number(limit),
-        windowSec: Number(win) / 1000,
-      })
+      const [win, limit, member, t0] = args
+      const r = await log.reserve(
+        keys[0] as string,
+        String(member),
+        { limit: Number(limit), windowSec: Number(win) / 1000 },
+        Number(t0),
+      )
       return r.allowed ? [1, 0] : [0, r.retryAfterMs]
-    }
-    async zrem(key: string, member: string) {
-      await log.release(key, member)
-      return 1
     }
   }
   return { Redis }
@@ -73,9 +86,9 @@ import { resetPhoneLogStore } from '../otp/phone-limit'
 
 const BASE = 'http://localhost:3001/api/v1'
 const NOMBRE = 'Vecino OTP'
-const RAIZ = `9${String(Date.now()).slice(-7)}`
+const RAIZ = `9${String(Date.now()).slice(-6)}`
 /** Un número propio de esta corrida por caso: 9 dígitos que empiezan por 9. */
-const tel = (i: number) => `${RAIZ}${i}`
+const tel = (i: number) => `${RAIZ}${String(i).padStart(2, '0')}`
 const LIMITE = 2
 
 interface Vecino {
@@ -113,14 +126,16 @@ async function crearVecino(): Promise<Vecino> {
   return v
 }
 
-function pedir(v: Vecino, phone: string): Promise<Response> {
-  return sendCode(
+async function pedir(v: Vecino, phone: string): Promise<Response> {
+  const res = await sendCode(
     new Request(`${BASE}/customer/phone/send-code`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${v.token}` },
       body: JSON.stringify({ phone }),
     }),
   )
+  await Promise.all(tareas.splice(0))
+  return res
 }
 
 describe('send-code · tope por número de destino', () => {
@@ -212,6 +227,29 @@ describe('send-code · tope por número de destino', () => {
     expect((await pedir(v, t)).status).toBe(200)
     expect((await pedir(v, t)).status).toBe(200)
     expect((await pedir(v, t)).status).toBe(429) // cupo del número (2) lleno con los 2 aceptados
+  })
+
+  it('Twilio 429 con código (20429, no procesado): libera la plaza y no cuenta el intento personal', async () => {
+    const t = tel(0)
+    const v = await crearVecino()
+    create.mockRejectedValueOnce(
+      Object.assign(new Error('Too many requests'), { code: 20429, status: 429 }),
+    )
+    expect((await pedir(v, t)).status).toBe(500)
+    expect(await intentos(v)).toBe(0)
+    expect((await pedir(v, t)).status).toBe(200)
+    expect((await pedir(v, t)).status).toBe(200)
+    expect((await pedir(v, t)).status).toBe(429) // los 2 aceptados llenan el cupo (2): la plaza del 429 se liberó
+  })
+
+  it('4xx sin código de Twilio: resultado incierto, conserva la plaza y cuenta el intento', async () => {
+    const t = tel(10)
+    const v = await crearVecino()
+    create.mockRejectedValueOnce(Object.assign(new Error('proxy dijo no'), { status: 403 }))
+    expect((await pedir(v, t)).status).toBe(500)
+    expect(await intentos(v)).toBe(1)
+    expect((await pedir(v, t)).status).toBe(200) // segunda plaza
+    expect((await pedir(v, t)).status).toBe(429) // la incierta sigue ocupando una
   })
 
   it('timeout tras aceptación (sin status): conserva la plaza y cuenta en AMBOS topes', async () => {
