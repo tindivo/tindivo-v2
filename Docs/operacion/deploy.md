@@ -56,6 +56,29 @@ Copia `.env.example` → `.env.local` (o configúralas en Vercel) por proyecto. 
 
 > El service_role y las keys de Inngest **solo** van en `apps/api`. Nunca en las apps frontend.
 
+### 1.1 Variables del límite de OTP por número (SEC-03) y la puerta del build
+
+Si el entorno **puede mandar SMS reales** (las tres `TWILIO_*` presentes, sea production, preview o
+development), `apps/api` exige además **`OTP_PHONE_HMAC_SECRET`**, **`UPSTASH_REDIS_REST_URL`** y
+**`UPSTASH_REDIS_REST_TOKEN`**:
+
+- **En el build:** `pnpm build` de `apps/api` corre antes `scripts/check-sms-config.mjs` y **falla** (exit 1)
+  nombrando las que faltan, sin imprimir valores. Sin Twilio (dev, CI) no exige nada.
+- **En ejecución:** si aun así se llega a desplegar así, `POST /customer/phone/send-code` responde **503**, no
+  envía SMS y manda una alerta push a los admins (una por tipo cada 30 min). Requiere desplegar la Edge Function
+  `send-push` (`supabase functions deploy send-push`), que ahora entiende el evento `OpsAlert`.
+- `RATE_LIMIT_PUBLIC_ENABLED=true` enciende el límite de tasa por IP de las rutas públicas; **apagado por
+  defecto**. Poner Upstash no lo activa. El límite por número no depende de este flag.
+- `turbo.json` pasa estas variables al build (`globalPassThroughEnv`) y además las lista en `tasks.build.env`, que
+  entra en el hash: sin eso, un build cacheado de una corrida sin Twilio se reutilizaría y la puerta no correría.
+  Si añades otra que el build deba ver, hay que listarla en ambos sitios.
+- Despliegue de `send-push`: ver el PR; hay que desplegarla **antes** que la API. Mientras no esté desplegada, la
+  alerta es inocua (la función ignora el evento) pero el admin no se entera.
+- Vercel: los valores **Secret** (antes «Sensitive») son de solo escritura en el panel pero se inyectan en el
+  build y en las funciones; la propia doc habla de redactarlos «During builds» si salen en los logs
+  (<https://vercel.com/docs/environment-variables/sensitive-environment-variables>). Hay que asignarlas al
+  entorno correcto (Production / Preview) y **redesplegar** tras cambiarlas.
+
 > `NEXT_PUBLIC_APP_URL` es lo que `customer` usa como `metadataBase`: de ahí salen las URLs
 > canónicas, las de Open Graph y las del `sitemap.xml`. Si apunta a otro dominio, el enlace
 > compartido y lo que indexe Google apuntan ahí. Sin la variable cae en `https://www.tindivo.com`,
