@@ -1,6 +1,6 @@
 # 04 · Arquitectura objetivo: desacoplar para poder crecer
 
-> Propuesta del 2026-10-08, **revisada tras la crítica de Codex** ([`revision-codex.md`](revision-codex.md)). Se apoya en
+> Propuesta del 2026-10-08, **revisada tras la crítica de Codex** (`revision-codex.md`, archivada en git: `archive/estandares-v2`). Se apoya en
 > [`01-codigo.md`](01-codigo.md), [`02-base-de-datos.md`](02-base-de-datos.md) y
 > [`03-proveedores-y-vps.md`](03-proveedores-y-vps.md), y en el acuerdo sobre el contrato REST
 > (`../../planes/movil/contrato-rest.md`).
@@ -67,7 +67,7 @@ real en ellos, empezando por los que ya tienen límites claros.
   index.ts       lo único que otros módulos pueden importar
 ```
 
-**Las reglas de dependencia** (verificables en la CI, ver `05-estandares.md`):
+**Las reglas de dependencia** (verificables en la CI, ver `Docs/arquitectura/estandares/README.md`):
 
 - un módulo solo importa el `index.ts` de otro;
 - el SDK de un proveedor solo se importa en `infra/`;
@@ -150,5 +150,5 @@ del §2).
    se le añaden tests.
 3. **Lo que no se toca, no se toca.**
 
-**El paso 0 no espera a nada.** Las reglas mínimas (`05-estandares.md`) se aplican en paralelo, empezando por el código
+**El paso 0 no espera a nada.** Las reglas mínimas (`Docs/arquitectura/estandares/README.md`) se aplican en paralelo, empezando por el código
 nuevo y con una lista de excepciones para lo existente.

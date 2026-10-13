@@ -239,3 +239,50 @@ jobs:
 
       - name: Generar y compilar los modelos de Kotlin
         run: node scripts/generate-mobile-models.mjs kotlin --compile
+
+  # Mecanismos baratos de los estándares (Docs/arquitectura/estandares/README.md §8). Todo va fijado a una versión
+  # exacta: subir cualquiera es un cambio aparte, que se prueba en su propio PR.
+  #  - Spectral: el estilo del contrato (API-1, API-4, API-5, API-8). Falla solo con errores; lo heredado que no
+  #    cumple está en Docs/arquitectura/excepciones.md.
+  #  - sync-openapi --check: las copias del contrato en las apps nativas (CLI-1). Omite las apps que aún no existen.
+  #  - Excepciones: el número de filas de excepciones.md no puede subir contra la rama base. Si Jesús aprueba que
+  #    suba, el PR lleva la etiqueta `excepciones-aprobadas`.
+  #  - oasdiff: ningún cambio incompatible del contrato contra la rama base (DES-6, API-3).
+  contract:
+    name: Contrato · Spectral · oasdiff · excepciones
+    runs-on: ubuntu-24.04
+    env:
+      SPECTRAL_CLI_VERSION: 6.17.0
+      OASDIFF_VERSION: 1.32.1
+      OASDIFF_SHA256: 7c8939fc49b75ee11fec66a5b83b37a2fca6aee109fed85013b1ba2ac2a1ee7f
+      BASE_REF: ${{ github.base_ref }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Spectral (estilo del contrato)
+        run: >
+          npx --yes "@stoplight/spectral-cli@${SPECTRAL_CLI_VERSION}" lint
+          packages/contracts/openapi/v1.json --ruleset .spectral.yaml --fail-severity=error
+
+      - name: Copias del contrato en las apps nativas
+        run: scripts/sync-openapi.sh --check
+
+      - name: Excepciones (el número solo puede bajar)
+        if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'excepciones-aprobadas')
+        run: scripts/check-excepciones.sh "origin/${BASE_REF}"
+
+      - name: oasdiff (cambios incompatibles del contrato)
+        if: github.event_name == 'pull_request'
+        run: |
+          curl -fsSLo "$RUNNER_TEMP/oasdiff.tar.gz" "https://github.com/oasdiff/oasdiff/releases/download/v${OASDIFF_VERSION}/oasdiff_${OASDIFF_VERSION}_linux_amd64.tar.gz"
+          echo "${OASDIFF_SHA256}  $RUNNER_TEMP/oasdiff.tar.gz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/oasdiff.tar.gz" -C "$RUNNER_TEMP" oasdiff
+          git show "origin/${BASE_REF}:packages/contracts/openapi/v1.json" > "$RUNNER_TEMP/base-v1.json"
+          "$RUNNER_TEMP/oasdiff" breaking "$RUNNER_TEMP/base-v1.json" packages/contracts/openapi/v1.json --fail-on ERR

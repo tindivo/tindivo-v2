@@ -1,0 +1,69 @@
+# Reglas de Spectral para el contrato v1 (estándares: API-1, API-4, API-5, API-8).
+# Uso: spectral lint packages/contracts/openapi/v1.json --ruleset .spectral.yaml
+# Probadas con Spectral 6 sobre un contrato de ejemplo: cada regla marcó su caso malo y ninguno bueno.
+# Antes de hacerlas bloqueantes, correrlas contra v1.json y registrar las rutas heredadas que no cumplan
+# en Docs/arquitectura/excepciones.md.
+extends: ["spectral:oas"]
+
+rules:
+  tindivo-api1-path-style:
+    description: "API-1: segmentos de ruta en kebab-case y parámetros en camelCase. La forma (por actor, /api/v1/<actor>/…) la fija el contrato; si su estilo difiere, se ajusta esta regla al contrato"
+    severity: error
+    given: "$.paths"
+    then:
+      field: "@key"
+      function: pattern
+      functionOptions:
+        match: "^(/([a-z0-9]+(-[a-z0-9]+)*|\\{[a-z][a-zA-Z0-9]*\\}))+$"
+
+  tindivo-api4-data-envelope:
+    description: "API-4: las respuestas 2xx con cuerpo JSON llevan la propiedad data"
+    severity: error
+    given: "$.paths[*][get,put,post,patch,delete].responses[?(@property.match(/^2/))].content['application/json'].schema"
+    then:
+      field: "properties.data"
+      function: truthy
+
+  tindivo-api5-problem-json:
+    description: "API-5: las respuestas 4xx y 5xx con cuerpo usan application/problem+json"
+    severity: error
+    given: "$.paths[*][get,put,post,patch,delete].responses[?(@property.match(/^[45]/))].content"
+    then:
+      field: "application/problem+json"
+      function: truthy
+
+  tindivo-api5-problem-code:
+    description: "API-5: los errores declaran un code estable"
+    severity: error
+    given: "$.paths[*][get,put,post,patch,delete].responses[?(@property.match(/^[45]/))].content['application/problem+json'].schema"
+    then:
+      field: "properties.code"
+      function: truthy
+
+  tindivo-api8-datetime:
+    description: "API-8: los campos que terminan en At son fechas ISO 8601 (format: date-time)"
+    severity: error
+    given: "$..properties[?(@property.match(/At$/))]"
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          type: object
+          required: [format]
+          properties:
+            format:
+              const: date-time
+
+# Lo heredado que no cumple, una entrada por cada fila de Docs/arquitectura/excepciones.md (API-4 y API-8).
+# Quitar la entrada al corregir la ruta y bajar la fila.
+overrides:
+  - files:
+      - "**/v1.json#/paths/~1public~1orders~1%7BshortId%7D"
+      - "**/v1.json#/paths/~1public~1courier~1status"
+      - "**/v1.json#/paths/~1public~1courier~1%7BshortId%7D"
+    rules:
+      tindivo-api4-data-envelope: "off"
+  - files:
+      - "**/v1.json#/paths/~1public~1courier~1directory"
+    rules:
+      tindivo-api8-datetime: "off"
