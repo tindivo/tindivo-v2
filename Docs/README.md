@@ -20,7 +20,7 @@ aprobada. Este estándar pone esa frontera.
 | `Docs/arquitectura/README.md` | Cómo está construido; los estándares de código, en `arquitectura/estandares/` |
 | `Docs/operacion/` | Runbooks: deploy, publicación de apps nativas, trampas conocidas, graphify, cómo llamar a cada agente |
 | `Docs/decisiones/` y `DECISIONS.md` | Las decisiones (ADR desde la 0034; §1–§32 e índice en `DECISIONS.md`) |
-| `Docs/planes/` | Lo aprobado y en ejecución: migraciones, migración móvil, app de clientes nativa |
+| `Docs/planes/` | Lo aprobado y en ejecución: migraciones y migración móvil |
 | `Docs/trabajo/` | Borradores, análisis, debates, el backlog y la cola de decisiones abiertas (`decisiones-abiertas.md`): **no manda** |
 
 ## 2. Tres zonas, y git como archivo

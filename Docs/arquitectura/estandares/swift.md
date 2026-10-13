@@ -37,7 +37,7 @@ apps/customer-ios/
 │   │   ├── Home/       # HomeView + HomeScreenModel (contenido servido por la API, DES-8)
 │   │   ├── Catalog/
 │   │   ├── Cart/
-│   │   ├── Checkout/   # los tres pasos (spec §4)
+│   │   ├── Checkout/   # confirmar el pedido
 │   │   ├── Orders/
 │   │   ├── Account/    # direcciones, consentimientos, borrado de cuenta
 │   │   └── Update/     # actualización obligatoria (CLI-4)

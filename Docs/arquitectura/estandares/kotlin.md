@@ -40,7 +40,7 @@ apps/customer-android/
 │   │   ├── home/              # contenido servido por la API (DES-8)
 │   │   ├── catalog/
 │   │   ├── cart/
-│   │   ├── checkout/          # los tres pasos (spec §4)
+│   │   ├── checkout/          # confirmar el pedido
 │   │   ├── orders/
 │   │   ├── account/           # direcciones, consentimientos, borrado de cuenta
 │   │   └── update/            # actualización obligatoria (CLI-4)
