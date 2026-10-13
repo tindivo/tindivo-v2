@@ -16,8 +16,9 @@
   frecuencia y ventana horaria; envío por FCM/APNs; «probar en mi dispositivo»; embudo enviado → abierto → pedido → ingresos.
 - **Atribución** (§7): `campaignId` en el *deep link*, guardado con el carrito y enviado al crear el pedido
   (`orders.campaign_id`), ventana de 24 h desde la apertura.
-- **Inicio por segmento** (§5): bloques comerciales «para el segmento del usuario» (la parte sin segmento está en
-  D-52 de la enmienda).
+- **Inicio por segmento** (§5): bloques comerciales «para el segmento del usuario» (la parte sin segmento es la D-52,
+  aprobada acotada el 2026-10-13 y ya en `Docs/planes/movil/decisiones.md`). **El admin para editar los bloques del
+  inicio entra con esta iniciativa**, por decisión de Jesús.
 
 ## 2. Lo que el plan ya dice y esta propuesta debe respetar
 

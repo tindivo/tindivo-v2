@@ -1,10 +1,14 @@
-# Enmienda propuesta al plan móvil (D-49 a D-55)
+# Enmienda al plan móvil (D-49 a D-53)
 
-> **Propuesta pendiente de aprobación de Jesús. No manda.** 2026-10-12 · Trabajo, no canon. Sale del diff entre la spec
-> de la app nativa ([`spec.md`](spec.md)) y el plan móvil aprobado (`Docs/planes/movil/`); solo recoge los puntos
-> clasificados **nuevo** en [`clasificacion.md`](clasificacion.md). Campañas y consentimientos no están aquí: van aparte en
-> [`../campanas/propuesta.md`](../campanas/propuesta.md). Si Jesús aprueba, cada decisión se añade a
-> `Docs/planes/movil/decisiones.md` (§1, tabla «Decididas») y esta nota se borra.
+> **Resuelta por Jesús el 2026-10-13. No manda: lo aprobado manda en `Docs/planes/movil/decisiones.md`.** 2026-10-12,
+> actualizada el 2026-10-13 · Trabajo, no canon. Sale del diff entre la spec de la app nativa ([`spec.md`](spec.md)) y el
+> plan móvil aprobado (`Docs/planes/movil/`); solo recoge los puntos clasificados **nuevo** en
+> [`clasificacion.md`](clasificacion.md). Campañas y consentimientos no están aquí: van aparte en
+> [`../campanas/propuesta.md`](../campanas/propuesta.md). **Estado de cada decisión:** D-49, D-50 (con condición), D-51,
+> D-52 (acotada) y D-53, aprobadas y *promovidas a `decisiones.md`* (sección «Decididas el 2026-10-13»). `D-54` y `D-55`
+> **no son decisiones del plan**: ya son reglas de los estándares de código v2 (`DES-6` y `CLI-14`, PR #50) y la
+> numeración queda libre desde `D-54`. El texto que sigue se conserva como análisis y alternativas; esta nota se borra
+> al cerrarse el PR de campañas, que es lo único pendiente que cuelga de ella.
 >
 > **Reglas con las que se redactó:** ninguna decisión contradice una D-xx vigente ni `contrato-rest.md` (REST como única
 > superficie, `D-21`; dinero como texto en lo nuevo, `D-39`; mínimos por app y plataforma, `D-41`; conservar `customer_pwa`
@@ -14,19 +18,21 @@
 
 ## 1. Resumen
 
-| # | Decisión | Recomendación | ¿Backend nuevo? | ¿Migración? |
+| # | Decisión | Estado | ¿Backend nuevo? | ¿Migración? |
 |---|---|---|---|---|
-| D-49 | Pedir en tres pasos y el recurrente en dos toques son **criterio de aceptación** de la app | Sí, medido en el flujo crítico con la API simulada | No | No |
-| D-50 | Método de pago por defecto | Sin estado nuevo: el último método usado, si `payment-options` lo sigue permitiendo | No | No |
-| D-51 | Repetir un pedido | Ruta de solo lectura que devuelve el carrito con precios y disponibilidad actuales | **Sí**, una ruta | No |
-| D-52 | Banners y ofertas del inicio administrables | Tabla mínima y una ruta pública, sin agregador y sin segmentos | **Sí**, ruta + admin | **Sí** |
-| D-53 | Métricas de la app: base propia, sin SDK de analítica | Consultas sobre la base + rastreador de fallos aparte (OPS-4) | Poco (columnas ya decididas en D-33) | Solo las de D-33 |
-| D-54 | Guardia de compatibilidad del contrato en CI | `oasdiff` contra la rama base; Spectral solo si hace falta | No (CI) | No |
-| D-55 | Publicación: liberación gradual y prueba del 426 sin riesgo | Liberación gradual en ambas tiendas; probar el 426 con una app sin usuarios | No | No |
+| D-49 | Pedir en tres pasos y el recurrente en dos toques son **criterio de aceptación** de la app | Aprobada. Promovido a `decisiones.md` | No | No |
+| D-50 | Método de pago por defecto | Aprobada con condición (se filtra por lo que permita la cotización o `payment-options`). Promovido a `decisiones.md` | No | No |
+| D-51 | Repetir un pedido | Aprobada. Promovido a `decisiones.md` | **Sí**, una ruta | No |
+| D-52 | Banners y ofertas del inicio administrables | Aprobada **acotada**: solo los bloques tipados que sirve la API; el admin que los edita va con campañas. Promovido a `decisiones.md` | **Sí**, ruta + admin | **Sí** |
+| D-53 | Métricas de la app: base propia, sin SDK de analítica | Aprobada. Promovido a `decisiones.md` | Poco (columnas ya decididas en D-33) | Solo las de D-33 |
+| ~~D-54~~ | Guardia de compatibilidad del contrato en CI | **No es decisión del plan:** es la regla `DES-6` de los estándares (#50). Número libre | No (CI) | No |
+| ~~D-55~~ | Publicación: liberación gradual y prueba del 426 sin riesgo | **No es decisión del plan:** es la regla `CLI-14` de los estándares (#50). Número libre | No | No |
 
 ## 2. Las decisiones
 
 ### D-49 · El recorrido «tres pasos» y el «dos toques» como criterio de aceptación
+
+**Estado: aprobada el 2026-10-13; promovida a `decisiones.md`.**
 
 *Origen:* spec §1, §4 (filas 1, 30 de la clasificación).
 
@@ -47,6 +53,8 @@ que hay sesión.
 
 ### D-50 · Método de pago por defecto
 
+**Estado: aprobada con condición el 2026-10-13; promovida a `decisiones.md`.** La condición: el valor por defecto se filtra por lo que permita la cotización o `payment-options`.
+
 *Origen:* spec §2.4 (fila 8). Hoy no existe una preferencia guardada; `payment-options` solo dice si hay contraentrega.
 
 | Alternativa | Qué implica |
@@ -61,6 +69,8 @@ puede quedar desfasado (la lección de `H-7`). Si C no basta tras medir (D-53), 
 *Backend:* ninguno. *Contradice:* nada.
 
 ### D-51 · Repetir un pedido
+
+**Estado: aprobada el 2026-10-13; promovida a `decisiones.md`.**
 
 *Origen:* spec §2.5, §4, §5 (filas 9, 31, 39). Hoy «Volver a pedir» solo abre el negocio y `cart.replace` no se usa en
 producción (`CUS-CRT-012`); `NAT-MKT-004` lo pide para M2, pero `contrato-rest.md` y `mv4-inventario-rutas.md` no lo
@@ -79,6 +89,8 @@ ajeno: un pedido de otro cliente da 404). Sin migración. *Contradice:* nada. Re
 (`backlog-entregas.md`) queda fuera.
 
 ### D-52 · Banners y ofertas del inicio administrables
+
+**Estado: aprobada acotada el 2026-10-13; promovida a `decisiones.md`.** Se aprobó solo la parte de los bloques tipados que sirve la API; la pantalla del admin para editarlos va con campañas. Lo que sigue describe la propuesta original.
 
 *Origen:* spec §2.7, §3, §6 (filas 11, 22, 53). Los banners están escritos en el código (`CUS-CAT-020`); en una app nativa
 cambiarlos exigiría pasar la revisión de la tienda. `NAT-MKT-002` los proponía como `home_banners` en M2.
@@ -99,6 +111,8 @@ en el admin web para editarlos. *Contradice:* nada, siempre que no se llame «ho
 
 ### D-53 · Métricas de la app: base propia, sin SDK de analítica
 
+**Estado: aprobada el 2026-10-13; promovida a `decisiones.md`.**
+
 *Origen:* spec §2 («No entra: analítica de terceros»), §10 (filas 20, 95, 98, 100). `07` §6 dejó «uso de la app» por decidir;
 `NAT-ANA-002` proponía analítica de producto (M2).
 
@@ -115,39 +129,18 @@ necesario.
 `D-33`. Las consultas viven en `Docs/operacion/` o, si Jesús las quiere a la vista, amplían `GET /admin/online-stats`.
 *Contradice:* nada; precisa `NAT-ANA-002`, que es análisis y no plan.
 
-### D-54 · Guardia de compatibilidad del contrato en CI
+### D-54 y D-55 · No son decisiones del plan
 
-*Origen:* spec §9 F0 (filas 78, 82). Hoy el OpenAPI se genera de Zod y un test comprueba cobertura y conformidad de las
-27 operaciones (MV2a/b); no hay nada que avise de un cambio **incompatible** entre un PR y `develop`. `oasdiff`, Spectral y
-`scripts/sync-openapi.sh` no existen en el repo.
+Jesús (2026-10-13): ya son reglas de los estándares de código v2 (PR #50, ADR 0038), así que el plan las cita sin número
+propio y no se enmiendan.
 
-| Alternativa | Qué implica |
-|---|---|
-| A. `oasdiff breaking` del documento del PR contra el de la rama base, en CI | Un PR que quita un campo, cambia un tipo o retira una ruta falla; protege a las apps ya instaladas (`D-41`) |
-| B. A + Spectral con reglas propias | Más control de estilo; más mantenimiento |
-| C. Nada nuevo | El test de conformidad no ve una ruptura si la ruta y la prueba cambian a la vez |
-
-**Recomendación: A**, y B solo si aparece un problema de estilo. Antes de montarlo, comprobar si el test de cobertura ya
-falla cuando `packages/contracts/openapi/v1.json` está desactualizado respecto de Zod (no se verificó).
-
-*Backend:* ninguno en runtime; es un paso de `.github/workflows/ci.yml`. *Contradice:* nada.
-
-### D-55 · Publicación: liberación gradual y prueba del 426 sin riesgo
-
-*Origen:* spec §9 F4 (filas 92, 94). El plan cubre cuentas, pistas y revisión (`07`, `01-cuentas-y-firmas.md`), pero no dice
-nada de liberar por porcentaje ni de probar el 426 en producción.
-
-| Alternativa | Qué implica |
-|---|---|
-| A. Liberación gradual en Play y *phased release* en App Store, y probar el 426 en producción | La spec: sube el mínimo con una versión de prueba |
-| B. Lanzamiento completo y 426 solo probado en CI | Más rápido, menos red |
-| C. Liberación gradual, y el 426 probado subiendo el mínimo de una **app sin usuarios** (los mínimos son por app y plataforma, `D-41`; por ejemplo `motorizados` en iOS) y enviando una cabecera de versión baja | Sin riesgo para los clientes reales: no se toca el mínimo de `customer` |
-
-**Recomendación: C.** Subir el mínimo de `customer` en producción para probarlo bloquearía a quien ya tenga la app; el
-mecanismo es el mismo con otra app. Una vez Jesús suba los mínimos reales (hoy `0.0.0`), esa prueba se repite una vez.
-Los mínimos se cambian en `app_settings.client_compat`, nunca en el código.
-
-*Backend:* ninguno. *Contradice:* nada.
+- **Guardia de compatibilidad del contrato** (antes D-54, spec §9 F0, filas 78 y 82): `DES-6` (`oasdiff` contra la rama
+  base, OBLIGATORIA), con `API-1` (Spectral) y `CLI-1` (`scripts/sync-openapi.sh`). Pendiente de comprobar antes de
+  montarla: si el test de cobertura ya falla cuando `packages/contracts/openapi/v1.json` está desactualizado respecto de
+  Zod (no se verificó).
+- **Publicación gradual** (antes D-55, filas 92 y 94): `CLI-14`. Queda una práctica sin regla: la prueba del 426 en
+  producción subiendo el mínimo de una app sin usuarios (los mínimos son por app y plataforma, `D-41`; por ejemplo
+  `motorizados` en iOS). `CLI-14` no la pide; se anota en el runbook de publicación cuando se escriba.
 
 ## 3. Lo que el backend necesita para la app, y debe entrar ahora
 
@@ -158,30 +151,30 @@ que ya está decidido con lo que esta enmienda propone:
 
 | Pieza | Fuente | Estado |
 |---|---|---|
-| Registro de dispositivos nativos (APNs/FCM): token, plataforma, versión de app, estado del permiso, rotación, baja y cambio de usuario, **manteniendo Web Push** | `contrato-rest.md` §3 paso 5 (línea 67); `NAT-PSH-001`, `NAT-CON-003` | `push/subscriptions` solo guarda `endpoint` y claves de Web Push; **`cola.md` no tiene ningún lote para el paso 5**. Propongo que Jesús abra uno |
+| Registro de dispositivos nativos (APNs/FCM): token, plataforma, versión de app, estado del permiso, rotación, baja y cambio de usuario, **manteniendo Web Push** | `contrato-rest.md` §3 paso 5 (línea 67); `NAT-PSH-001`, `NAT-CON-003` | `push/subscriptions` solo guarda `endpoint` y claves de Web Push; **`cola.md` no tenía ningún lote para el paso 5**. Ahora es **MV7** (Jesús, 2026-10-13: el próximo lote de servicios) |
 | Envío push nativo desde el outbox, con reintentos | mismo paso 5; invariantes 4 y 5 de `AGENTS.md` | Sin construir |
 | Columnas `client_platform` y `client_version` en `orders`, y generalizar el `source` fijo `customer_pwa` | `D-33`; `customer/orders/route.ts:339` | Sin construir; toca `create_customer_order`, así que pasa por Codex |
-| *Kill switch* y *flags* en `GET /config` | `decisiones.md` línea 85 | `ClientCompatSettingsSchema` solo tiene `minAppVersion` y `minOs` |
+| *Kill switch* y *flags* en `GET /config` | `decisiones.md` línea 85 | `ClientCompatSettingsSchema` solo tiene `minAppVersion` y `minOs`. **Lote MV3b en `cola.md`** (Jesús, 2026-10-13) |
 | Contrato formal del payload de push (tipo, id de pedido, estado, deep link, título y cuerpo) | `NAT-PSH-004/005` | Se escribe con el paso 5 |
 
-**Nuevo, solo si Jesús aprueba:**
+**Nuevo, aprobado el 2026-10-13:**
 
 | Pieza | Decisión | Tamaño |
 |---|---|---|
 | `GET /customer/orders/{id}/reorder` | D-51 | Una ruta, sin migración |
-| `home_blocks` + `GET /public/home-blocks` + edición en el admin | D-52 | Migración, dos rutas, una pantalla de admin |
-| Guardia `oasdiff` en CI | D-54 | Un paso de workflow |
+| Bloques tipados del inicio + `GET /public/home-blocks` (D-52 acotada) | D-52 | Migración y una ruta pública. **Sin** ruta ni pantalla de admin: van con campañas |
+| Guardia `oasdiff` en CI | regla `DES-6` (no es decisión del plan) | Un paso de workflow |
 | Consultas de métricas | D-53 | Documento en `Docs/operacion/` |
 
-**Orden sugerido (propuesta):** primero D-33 (columnas), luego el registro de dispositivos y el envío nativo del paso 5, y
-después D-51 y D-52, que no bloquean a los otros. Nada de esto se despliega a producción sin Jesús (`cola.md`, «Para
+**Orden:** el próximo lote de servicios es el push nativo (MV7), con los kill switches en el lote de `config` (MV3b); D-33
+(columnas) y después D-51 y D-52, que no bloquean a los otros. Nada de esto se despliega a producción sin Jesús (`cola.md`, «Para
 retomar», punto 4).
 
 ## 4. Lo que esta enmienda no resuelve
 
-- **D-22 (identidad del cliente)**, abierta: la spec supone OTP del teléfono como identidad y cotizar sin sesión. El plan
+- **D-22 (identidad del cliente)**, abierta (planteada en [`d-22.md`](d-22.md)): la spec supone OTP del teléfono como identidad y cotizar sin sesión. El plan
   exige sesión de cliente en todas las rutas de pedido y cotización (`quote/route.ts:44`). Es una pregunta para Jesús, no
   una decisión nueva.
 - **Campañas y consentimientos:** [`../campanas/propuesta.md`](../campanas/propuesta.md).
 - **Estándares v2.2 y `packages/backend`:** son arquitectura, sin aprobar.
-- **DA-01…DA-12 de la spec:** su fuente (`Docs/trabajo/decisiones-abiertas.md`) no está en el repo.
+- **DA-01…DA-12 de la spec:** están en la cola `Docs/trabajo/decisiones-abiertas.md` del PR #49 (DA-02, 06, 08, 11 y 12 abiertas; DA-01, 04 y 07 remiten a D-22, D-21/D-38 y D-24). Se resuelven allí, no aquí.

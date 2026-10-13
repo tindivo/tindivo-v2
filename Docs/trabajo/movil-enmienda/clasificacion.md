@@ -1,6 +1,6 @@
 # Clasificación de la spec de la app nativa contra el plan móvil
 
-> Trabajo, no norma. 2026-10-12 · Decisión de Jesús: la spec de otro Claude sin acceso al repo ([`spec.md`](spec.md)) no entra
+> Trabajo, no norma. 2026-10-12, revisada el 2026-10-13 con la cola de decisiones abiertas (PR #49), los estándares de código v2 (PR #50) y las decisiones de Jesús sobre la enmienda · Decisión de Jesús: la spec de otro Claude sin acceso al repo ([`spec.md`](spec.md)) no entra
 > en `Docs/planes/`; se trabaja por diff. Aquí, cada punto contra el plan móvil aprobado y en ejecución
 > (`Docs/planes/movil/{contrato-rest,decisiones}.md`, las fases MV de `Docs/planes/migraciones/cola.md`), el análisis de
 > `Docs/trabajo/movil/` y el código de `develop` (591ec569). Lo **nuevo** pasa a [`enmienda.md`](enmienda.md); lo de
@@ -15,11 +15,14 @@ gana el plan. *Nuevo*: no está en el plan. *Fuera de alcance*: no es del plan m
 
 ## Hallazgos que afectan a toda la spec
 
-- **Cita estándares que no existen en el repo.** `CLI-1…14`, `DES-8`, `TS-17`, `TST-6`, `SW-2`, `KT-2`, `DB-13/14/19`,
-  `API-10`, `OPS-9/10` no están en `Docs/trabajo/arquitectura/05-estandares.md` (los «v2.2» que menciona la spec no
-  llegaron). Sí existen `API-1/3/6/7`, `DB-2/3/4/6/8`, `DES-7`, `OPS-4/5`. Las filas que dependen de un ID ausente lo
-  dicen. Tampoco existen `Docs/trabajo/decisiones-abiertas.md` (DA-01…DA-12), `Docs/operacion/publicar-apps-nativas.md`,
-  `Docs/arquitectura/propiedad.md` ni `Docs/arquitectura/estandares/` (hoy `Docs/arquitectura/` solo tiene un README).
+- **Los IDs de la spec sí existen, pero en ramas aún no integradas.** `CLI-1…15`, `DES-1…11`, `TS-17`, `TST-6`,
+  `SW-2`, `KT-2`, `DB-13/14/19`, `API-1…12` y `OPS-4/5/9/10` están en el paquete de estándares de código v2
+  (`Docs/arquitectura/estandares/`, aprobado por Jesús el 2026-10-12, ADR 0038) del **PR #50**, y las DA en la cola
+  `Docs/trabajo/decisiones-abiertas.md` del **PR #49**. Ninguno está todavía en `develop`: por eso este documento los
+  nombra como texto y no los enlaza. La primera versión (2026-10-12) los buscó en
+  `Docs/trabajo/arquitectura/05-estandares.md` (v2.1) y los dio por ausentes; esta revisión los resuelve contra el #50
+  y el #49. Siguen sin existir `Docs/operacion/publicar-apps-nativas.md` y `Docs/operacion/incidentes.md`: los
+  estándares los marcan «por crear».
 - **El plan ya tiene su propia numeración** (D-xx, MV, pasos del contrato). La spec la ignora, así que casi todo lo que
   llama «a completar» ya existe o ya está decidido.
 
@@ -48,7 +51,7 @@ gana el plan. *Nuevo*: no está en el plan. *Fuera de alcance*: no es del plan m
 | 19 | No entra: chat, programa de puntos (§2) | Cubierto | Ninguno está en el plan | Coincide |
 | 20 | No entra: analítica de terceros (§2, §10) | Nuevo | `07` §6 deja «uso de la app: por decidir» (hoy `@vercel/analytics` en la web); `NAT-ANA-002` (analítica de producto, M2) la propone | Decide una pregunta abierta del plan → D-53 |
 | 21 | Principio: el servidor decide precios, envío, promociones y contraentrega (§3) | Cubierto | `cr` §1 («reglas de dinero y de estado en el servidor»), `quote/route.ts` (solo pinta; `create_customer_order` vuelve a decidir), `payment-options/route.ts:13-23` | Mismo principio |
-| 22 | Principio: nada comercial en el binario, DES-8 (§3) | Cubierto (parámetros) / Nuevo (contenido comercial) | Parámetros ⚙ por `GET /config` (`dec` línea 85); `DES-8` no existe en el repo. El contenido comercial es la fila 11 | La parte de parámetros ya está; banners → D-52 |
+| 22 | Principio: nada comercial en el binario, DES-8 (§3) | Cubierto (parámetros) / Nuevo (contenido comercial) | Parámetros ⚙ por `GET /config` (`dec` línea 85); regla `DES-8` de los estándares (#50: ningún contenido comercial en el binario; la ruta que lo sirva la fija el contrato). El contenido comercial es la fila 11 | La parte de parámetros ya está; banners → D-52 |
 | 23 | Principio: una app instalada no se rompe, API-3/CLI-2 (§3) | Cubierto | `dec` D-41 (mínimos independientes), MV3, 426; `API-3` existe en `05-estandares.md` | Hecho |
 | 24 | Principio: todo se mide por plataforma y por campaña (§3) | Cubierto (plataforma) / Fuera de alcance → campañas (campaña) | Plataforma: `dec` D-33 (conservar `customer_pwa` y añadir `client_platform`); hoy `p_source: 'customer_pwa'` fijo (`customer/orders/route.ts:339`) | Pendiente de implementar, ya decidido |
 | 25 | Paso 1 «Armar»: inicio → negocio → producto, o repetir (§4) | Cubierto / Nuevo | Catálogo cubierto (fila 4); «Repetir» es la fila 9 | — |
@@ -71,11 +74,11 @@ gana el plan. *Nuevo*: no está en el plan. *Fuera de alcance*: no es del plan m
 | 42 | Ruta «Registrar y quitar el dispositivo de push: token, plataforma, versión, permiso» (§5) | Cubierto | `cr` §3 paso 5 (línea 67: registro APNs/FCM, rotación, baja, cambio de usuario, manteniendo Web Push); `NAT-PSH-001` (`devices`: versión de app, `notifications_enabled`). Hoy `push/subscriptions` es solo Web Push (`endpoint` + claves) | Decidido y sin construir; **`cola` no tiene lote** para el paso 5 → ver enmienda §3 |
 | 43 | Ruta «Consentimientos transaccional y promocional» (§5) | Fuera de alcance → campañas | Fila 12 | Consentimientos |
 | 44 | Ruta «Registrar la apertura de un push» (§5) | Fuera de alcance → campañas | `NAT-PSH-006` (acuse, M1) ya cubre abrir un aviso transaccional; la apertura con `campaign_id` es de campañas | Se separa por destino |
-| 45 | Ruta «Borrar la cuenta» (DB-13, D-44) (§5) | Cubierto | `DELETE /customer/account` (fila 13); `dec` D-44 | Hecho. `DB-13` no existe en el repo |
-| 46 | Página web de borrado en el dominio de DA-11 con OTP, mismo caso de uso (§5) | Cubierto | `/borrar-cuenta` (`apps/customer/app/borrar-cuenta/`) usa la misma ruta; DA-11 no está en el repo | Hecho (revisa Codex) |
+| 45 | Ruta «Borrar la cuenta» (DB-13, D-44) (§5) | Cubierto | `DELETE /customer/account` (fila 13); `dec` D-44 | Hecho. `DB-13` (estándares, #50) pide anonimizar y D-44 lo concreta |
+| 46 | Página web de borrado en el dominio de DA-11 con OTP, mismo caso de uso (§5) | Cubierto | `/borrar-cuenta` (`apps/customer/app/borrar-cuenta/`) usa la misma ruta; DA-11 (dominio de la página) sigue abierta en la cola del #49 | Hecho (revisa Codex) |
 | 47 | Admin: listar, crear, editar campañas; programar, cancelar, probar; embudo; bloques de inicio (§5) | Fuera de alcance → campañas (los bloques de inicio: fila 11) | Ninguna ruta `admin/campaigns` | Campañas |
 | 48 | Admin: rol administrador comprobado en el caso de uso, API-7 (§5) | Cubierto | `API-7` existe; ya se cumple en `admin/*` | Mismo estándar |
-| 49 | Payloads de push (CLI-8): tipo de evento, id de pedido/campaña, estado, deep link, título y cuerpo (§5) | Cubierto | `NAT-PSH-004/005` (prioridad, TTL, colapso, `deep_link`), invariante 5 de `AGENTS.md` (tag `${event_type}-${shortId}`), `SYS-transversal` (catálogo de 15 avisos). El contrato formal del payload se escribe en el paso 5 | `CLI-8` no existe; el campo `campaignId` es de campañas |
+| 49 | Payloads de push (CLI-8): tipo de evento, id de pedido/campaña, estado, deep link, título y cuerpo (§5) | Cubierto | `NAT-PSH-004/005` (prioridad, TTL, colapso, `deep_link`), invariante 5 de `AGENTS.md` (tag `${event_type}-${shortId}`), `SYS-transversal` (catálogo de 15 avisos). El contrato formal del payload se escribe en el paso 5 | `CLI-8` (estándares, #50) pide el esquema del payload en `packages/contracts`, que es lo que se escribe en el paso 5; el campo `campaignId` es de campañas |
 | 50 | Modelo: tabla `devices` (§6) | Cubierto | `NAT-PSH-001`/`MOB-03`, `cr` paso 5; hoy existe `push_subscriptions` con `install_id` (`push/subscriptions/route.ts`) | Mismo objeto, otro nombre; se amplía o se crea al hacer el paso 5 |
 | 51 | Modelo: `consent_events` (§6) | Fuera de alcance → campañas | `NAT-CON-002` (`consent_log`), `dec` D-24 | Consentimientos |
 | 52 | Modelo: `campaigns`, `campaign_deliveries`, `notification_opens` (§6) | Fuera de alcance → campañas | `NAT-MKT-001` | Campañas |
@@ -84,7 +87,7 @@ gana el plan. *Nuevo*: no está en el plan. *Fuera de alcance*: no es del plan m
 | 55 | Modelo: `orders.campaign_id` (§6) | Fuera de alcance → campañas | — | Campañas |
 | 56 | Idempotencia con el mecanismo existente (API-6) (§6) | Cubierto | C4: `creation_idempotency` (`0250`-`0252`) | Mismo mecanismo |
 | 57 | Borrado de cuenta: anonimizar, borrar direcciones y dispositivos, revocar sesiones; no depender en cascada de Auth (§6) | Cubierto | `0259` anonimiza `orders`/`courier_orders` (`ON DELETE NO ACTION`, `07` §8), borra perfil, direcciones y `push_subscriptions`, y borra `auth.users` | Hecho; la spec lo dejó «sin verificar» |
-| 58 | Todo objeto nuevo entra en `Docs/arquitectura/propiedad.md` (DES-7) (§6) | Fuera de alcance → arquitectura | `DES-7` existe en `05-estandares.md`; el archivo `propiedad.md` no | Depende de la arquitectura, sin aprobar |
+| 58 | Todo objeto nuevo entra en `Docs/arquitectura/propiedad.md` (DES-7) (§6) | Fuera de alcance → arquitectura | `DES-7` (estándares, #50); el registro `Docs/arquitectura/propiedad.md` nace con ese PR | Depende de la arquitectura; entra con el #50 |
 | 59 | Tabla del modelo la revisa Codex antes de migrar (§6) | Cubierto | `cola` y `Docs/operacion/agentes-en-esta-maquina.md`: lo que toca datos personales, seguridad o dinero pasa por Codex | Ya es la regla |
 | 60 | Notificaciones transaccionales: cambios de estado, sin consentimiento promocional, con permiso del sistema (§7) | Cubierto | `NAT-PSH-003` (canales: `order_updates` fuera del control comercial), `07` R7 | Mismo diseño |
 | 61 | Notificaciones promocionales con permiso y consentimiento vigente, CLI-9 (§7) | Fuera de alcance → campañas | `07` R7 (Apple 4.5.4) exige el interruptor aparte y apagado si hay promos | Campañas |
@@ -101,26 +104,26 @@ gana el plan. *Nuevo*: no está en el plan. *Fuera de alcance*: no es del plan m
 | 72 | Google: `targetSdk` 36 (§8) | Cubierto | `07` §3 (línea 50) y `dec` línea 57 | Mismo requisito |
 | 73 | Google: permiso `POST_NOTIFICATIONS` (§8) | Cubierto | `07` §3 (permisos), `NAT-PSH-002` | Mismo requisito |
 | 74 | Google: formulario de seguridad de datos (§8) | Cubierto | `07` §6 | Mismo requisito |
-| 75 | Ambas: bundle ID y `applicationId` decididos antes de la primera subida, DA-12 (§8) | Cubierto | `Docs/trabajo/movil/05-arranque/01-cuentas-y-firmas.md:49` (tabla) y `:241` (no se puede cambiar) | Pendiente de Jesús (no del repo) |
-| 76 | F0: DA-01, DA-02, DA-08, DA-11, DA-12 decididas; mínimos de D-47 (§9) | Cubierto (D-47) / No verificable (DA) | `dec` D-47; `Docs/trabajo/decisiones-abiertas.md` no existe | No se puede contrastar qué es DA-01/02/08/11 |
-| 77 | F0: estándares v2.2 aprobados y resumidos en `AGENTS.md` (§9) | Fuera de alcance → arquitectura | `Docs/trabajo/arquitectura/05-estandares.md` (no aprobado) | La aprobación de los estándares no es del plan móvil |
-| 78 | F0: CI del contrato con `oasdiff`, Spectral y `scripts/sync-openapi.sh --check` (§9) | Nuevo | Hoy: OpenAPI generado de Zod y test de cobertura/conformidad (MV2a/b, `pnpm mobile:models`), sin detección de cambios incompatibles; ninguno de los tres existe en `scripts/` ni en `.github/` | → D-54 |
-| 79 | F0: `packages/backend` con `defineHandler` (TS-17) y `/config` migrado (§9) | Fuera de alcance → arquitectura | `AGENTS.md` fija los paquetes; `dec` §5 «no se reescribe el dominio»; `TS-17` y el ADR «backend-y-api» no existen | Una reestructura del backend es decisión de arquitectura, no del móvil |
+| 75 | Ambas: bundle ID y `applicationId` decididos antes de la primera subida, DA-12 (§8) | Cubierto | `Docs/trabajo/movil/05-arranque/01-cuentas-y-firmas.md:49` (tabla) y `:241` (no se puede cambiar); DA-12 abierta en la cola del #49, con recomendación `com.tindivo.customer` | Pendiente de Jesús (no del repo) |
+| 76 | F0: DA-01, DA-02, DA-08, DA-11, DA-12 decididas; mínimos de D-47 (§9) | Cubierto (D-47) / No verificable (DA) | `dec` D-47. DA-01 → D-22 (abierta); DA-02, DA-08, DA-11 y DA-12 están abiertas en la cola `decisiones-abiertas.md` del #49, cada una con la fase que bloquea (F0) | Contrastado: ninguna de las cinco está decidida, así que la condición de F0 de la spec sigue sin cumplirse. Es un asunto de Jesús, no una discrepancia |
+| 77 | F0: estándares v2.2 aprobados y resumidos en `AGENTS.md` (§9) | Fuera de alcance → arquitectura | Los estándares de código v2 (`Docs/arquitectura/estandares/`, ADR 0038) están aprobados por Jesús el 2026-10-12 y entran con el PR #50; la v2.1 de `Docs/trabajo/arquitectura/05-estandares.md` queda superada | La aprobación de los estándares no es del plan móvil; ya se dio fuera de él |
+| 78 | F0: CI del contrato con `oasdiff`, Spectral y `scripts/sync-openapi.sh --check` (§9) | Cubierto | Regla `DES-6` (estándares, #50): `oasdiff` contra la rama base, OBLIGATORIA; `API-1` (Spectral) y `CLI-1` (`scripts/sync-openapi.sh`). Hoy: OpenAPI generado de Zod y test de cobertura/conformidad (MV2a/b, `pnpm mobile:models`); ninguno de los tres existe aún en `scripts/` ni en `.github/` | Regla de los estándares, no decisión del plan (Jesús, 2026-10-13); se implementa con el #50 |
+| 79 | F0: `packages/backend` con `defineHandler` (TS-17) y `/config` migrado (§9) | Fuera de alcance → arquitectura | `AGENTS.md` fija los paquetes; `dec` §5 «no se reescribe el dominio»; `TS-17` y el ADR 0039 (el backend es un paquete y la API su interfaz) entran con el PR #50 | Es decisión de arquitectura, ya tomada en el #50; no la toma el plan móvil |
 | 80 | F0: cabeceras de CLI-3 registradas por la API (§9) | Cubierto | MV3: `X-Tindivo-Platform/App/App-Version/Build` (`client-compat.ts`) | Hecho |
-| 81 | F0: proyectos `apps/customer-ios/` y `apps/customer-android/` con `AGENTS.md` local, lint y un test en CI (§9) | En conflicto | `dec` D-14 recomienda `apps/ios` y `apps/android` (abierta); CI de modelos: Kotlin por PR, Swift diario (D-48, `mobile-models-*`) | Gana el plan en nombres; `SW-2`/`KT-2` no existen. Resolver al decidir D-14 |
-| 82 | F0 aceptación: un PR que rompe el contrato falla en CI; ambas apps muestran la pantalla de actualización con 426 (§9) | Nuevo (primera mitad) / Cubierto (segunda) | Primera: fila 78. Segunda: MV3 + `cr` paso 2 («versión vieja recibe el error documentado») | — |
+| 81 | F0: proyectos `apps/customer-ios/` y `apps/customer-android/` con `AGENTS.md` local, lint y un test en CI (§9) | En conflicto | `dec` D-14 recomienda `apps/ios` y `apps/android` (abierta); CI de modelos: Kotlin por PR, Swift diario (D-48, `mobile-models-*`) | Gana el plan en nombres; `SW-2` y `KT-2` (estándares, #50) llaman a las carpetas `apps/customer-ios/` y `apps/customer-android/`, como la spec. Resolver al decidir D-14 |
+| 82 | F0 aceptación: un PR que rompe el contrato falla en CI; ambas apps muestran la pantalla de actualización con 426 (§9) | Cubierto | Primera: `DES-6` (fila 78). Segunda: MV3 + `cr` paso 2 («versión vieja recibe el error documentado») y `CLI-4` | — |
 | 83 | F1: rutas de cliente con tests de integración, acceso ajeno e idempotencia con concurrencia (§9) | Cubierto | `cr` paso 3 («cada ruta con prueba de integración y en OpenAPI»), C4 (concurrencia), `mv4b-customer-routes.integration.test.ts` | Hecho para lo existente |
 | 84 | F1: tablas nuevas con pgTAP, RLS y permisos (§9) | Cubierto | `AGENTS.md` invariante 3; `DB-2/3/4/6` | Ya es la regla (la base se prueba con tests de integración, no pgTAP, hoy) |
-| 85 | F1: borrado de cuenta y su página; límites de uso (API-10) (§9) | Cubierto | Borrado: fila 13. Límites: `apps/api/lib/http/rate-limit.ts` (PR #38) y OTP por número (SEC-03b, `lib/otp/phone-limit.ts`, umbral 5 en 24 h) | `API-10` no existe; ambos límites siguen inactivos hasta definir Upstash |
+| 85 | F1: borrado de cuenta y su página; límites de uso (API-10) (§9) | Cubierto | Borrado: fila 13. Límites: `apps/api/lib/http/rate-limit.ts` (PR #38) y OTP por número (SEC-03b, `lib/otp/phone-limit.ts`, umbral 5 en 24 h) | `API-10` (estándares, #50) exige ambos límites; siguen inactivos hasta definir Upstash |
 | 86 | F1 aceptación: borrar deja al cliente sin datos personales y los cargos intactos; la misma clave dos veces a la vez crea un solo pedido (§9) | Cubierto | `0259` (no toca `business_charges`, `08` §A); concurrencia de C4 | Hecho |
-| 87 | F2: flujos de §2 y §4 en cada plataforma (TST-6), CLI-1…14 (§9) | Cubierto (alcance) / No verificable (IDs) | `dec` D-12 (lanzar a la vez; Android primero, iOS lo sigue), vectores de conformidad (`dec` §5) | `TST-6` y `CLI-*` no existen |
+| 87 | F2: flujos de §2 y §4 en cada plataforma (TST-6), CLI-1…14 (§9) | Cubierto | `dec` D-12 (lanzar a la vez; Android primero, iOS lo sigue), vectores de conformidad (`dec` §5); `TST-6` (prueba de UI del flujo crítico por plataforma contra una API simulada) y `CLI-1…14` (estándares, #50) | Mismo enfoque; los IDs existen |
 | 88 | F2 aceptación: flujo crítico contra una API simulada; fixtures de compatibilidad futura; cerrar la app al confirmar no duplica (§9) | Cubierto | Vectores de conformidad y clientes generados (MV2c); C4 | Mismo enfoque |
 | 89 | F3: campañas, tope y ventana horaria, estadísticas (§9) | Fuera de alcance → campañas | — | Campañas |
 | 90 | F4: TestFlight y pista interna con un grupo pequeño de clientes reales (§9) | Cubierto | `07` §1, `cola` «Carril móvil» (pista cerrada de 12 testers × 14 días), `dec` D-11 | Mismo plan |
-| 91 | F4: lista de §8 completa; OPS-4, OPS-5, OPS-9, OPS-10 (§9) | Cubierto (OPS-4/5) / No verificable (OPS-9/10) | `05-estandares.md` §7: OPS-4/5 «obligatoria antes del lanzamiento nativo»; OPS-9/10 no existen | — |
-| 92 | F4: primera publicación según `Docs/operacion/publicar-apps-nativas.md`, con liberación gradual (§9) | Nuevo | El runbook no existe; `07` y `01-cuentas-y-firmas.md` cubren cuentas y revisión, pero ninguno habla de liberación gradual | → D-55 |
+| 91 | F4: lista de §8 completa; OPS-4, OPS-5, OPS-9, OPS-10 (§9) | Cubierto | `OPS-4/5/9/10` (estándares, #50): OPS-4/5 y OPS-9 «obligatoria antes del lanzamiento nativo»; `Docs/operacion/incidentes.md` (OPS-9) está por crear (DA-14) | — |
+| 92 | F4: primera publicación según `Docs/operacion/publicar-apps-nativas.md`, con liberación gradual (§9) | Cubierto | Regla `CLI-14` (estándares, #50): pruebas internas y luego liberación gradual (App Store) o escalonada (Google Play), con registro en `Docs/operacion/publicar-apps-nativas.md` (por crear). `07` y `01-cuentas-y-firmas.md` cubren cuentas y revisión | Regla de los estándares, no decisión del plan (Jesús, 2026-10-13) |
 | 93 | F4 aceptación: crashes y errores se ven en el rastreador (§9) | Cubierto | **OPS-4** (`05-estandares.md:102`) y `NAT-ANA-001` (rastreador de fallos; Crashlytics o Sentry «por decidir», `07` §6) | Regla del encargo: los *crashes* no son alcance nuevo |
-| 94 | F4 aceptación: la actualización obligatoria se probó en producción con un mínimo de prueba (§9) | Nuevo | MV3 lo prueba en CI; ningún texto del plan pide la prueba en producción | → D-55 |
+| 94 | F4 aceptación: la actualización obligatoria se probó en producción con un mínimo de prueba (§9) | Cubierto | MV3 lo prueba en CI; `CLI-4` (comportamiento ante el 426) y `CLI-14` (pruebas internas antes de producción) | Sin certeza: `CLI-14` no pide probar el 426 en producción. El método de la enmienda (subir el mínimo de una app sin usuarios) queda como práctica de publicación, no como decisión |
 | 95 | Métrica: aceptación del permiso de push por plataforma (§10) | Nuevo | Requiere guardar el permiso del sistema por dispositivo (`NAT-CON-003` lo propone: `PATCH /me/devices/:id`); ninguna medición definida | → D-53 |
 | 96 | Métrica: consentimiento promocional vigente (§10) | Fuera de alcance → campañas | — | Consentimientos |
 | 97 | Métrica: pedidos por canal (`client_platform`) (§10) | Cubierto | `dec` D-33; `ADM-OPE-006` (`GET /admin/online-stats`, `/admin/conversion-stats`) y riesgo «cajera como canal dominante» (`dec` §5) | Misma medida, hay que añadir la columna |
@@ -133,12 +136,12 @@ gana el plan. *Nuevo*: no está en el plan. *Fuera de alcance*: no es del plan m
 | 104 | Riesgo: abuso del OTP (§11) | Cubierto | SEC-03 / SEC-03b (límite por IP y por número), `rate-limit.ts`; `NAT-FRD-004` | Hecho en el repo, inactivo hasta Upstash |
 | 105 | Riesgo: iOS y Android se comportan distinto (§11) | Cubierto | `dec` §5 («especificación única, vectores, tokens»), D-48 | Misma respuesta |
 | 106 | Riesgo: un agente en la nube no puede compilar iOS (§11) | Cubierto | `dec` D-10 (tienes Mac), riesgo «iOS exige macOS y Xcode 26» | Misma respuesta |
-| 107 | Decisiones abiertas: DA-01, 02, 04, 06, 07, 08, 11, 12 (§12) | No verificable | `Docs/trabajo/decisiones-abiertas.md` no existe | No se puede saber qué decide cada DA |
+| 107 | Decisiones abiertas: DA-01, 02, 04, 06, 07, 08, 11, 12 (§12) | Cubierto | Cada DA tiene destino en el canon: DA-02 (dominio de la API, F0), DA-06 (versiones soportadas, F4), DA-08 (herramienta de *crashes*, F0), DA-11 (dominio de deep links y borrado, F0) y DA-12 (identificadores de las apps, F0) son entradas abiertas de la cola del #49. DA-01 (camino del OTP) → D-22, abierta; DA-04 (pagos) → D-21/D-38 y `DECISIONS.md` §7; DA-07 (tope y ventana de promociones) → D-24, abierta | Ya existe la cola; ninguna DA nace de la spec |
 | 108 | Decisiones cerradas: D-44 y D-47 no se reabren (§12) | Cubierto | `dec` D-44, D-47 | Coincide |
-| 109 | Cabecera de la spec: «Estado: aprobado… {FECHA_APROBACION}», alcance «§2», estándares en `Docs/arquitectura/estandares/` | En conflicto | `Docs/README.md` §2: solo Jesús aprueba, por documento; la ruta de estándares no existe | La spec no está aprobada; entra por esta enmienda |
+| 109 | Cabecera de la spec: «Estado: aprobado… {FECHA_APROBACION}», alcance «§2», estándares en `Docs/arquitectura/estandares/` | En conflicto | `Docs/README.md` §2: solo Jesús aprueba, por documento; los estándares que cita ya están aprobados (ADR 0038) y entran con el #50 | La spec no está aprobada; entra por esta enmienda |
 
-Las filas con dos clases se cuentan en la **primera**. «No verificable» no es una quinta clase: marca el único punto
-(fila 107) que no se pudo clasificar porque su fuente no está en el repo.
+Las filas con dos clases se cuentan en la **primera**. Tras la revisión del 2026-10-13 no queda ninguna fila sin
+clasificar: los IDs que faltaban se resolvieron contra el #49 y el #50.
 
 ## Un punto que la spec no menciona y el plan sí
 
@@ -152,19 +155,21 @@ Conteo de las 109 filas (medido con un script sobre esta tabla), por la primera 
 
 | Clase | Filas |
 |---|---|
-| Cubierto | 66 |
+| Cubierto | 71 |
 | En conflicto | 7 |
-| Nuevo | 16 |
+| Nuevo | 12 |
 | Fuera de alcance | 19 (16 → campañas, 3 → arquitectura) |
-| Sin clasificar (fuente ausente) | 1 |
+| Sin clasificar | 0 |
 | **Total** | **109** |
 
-- **Nuevo (16 filas), agrupado en las decisiones de [`enmienda.md`](enmienda.md):** D-49 (filas 1, 30), D-50 (8), D-51 (9, 31,
-  39), D-52 (11, 53), D-53 (20, 95, 98, 100), D-54 (78, 82), D-55 (92, 94).
+- **Nuevo (12 filas), agrupado en las decisiones de [`enmienda.md`](enmienda.md):** D-49 (filas 1, 30), D-50 (8), D-51 (9, 31,
+  39), D-52 (11, 53), D-53 (20, 95, 98, 100). Las cinco están aprobadas por Jesús (2026-10-13) y promovidas a
+  `Docs/planes/movil/decisiones.md`. Las filas 78, 82, 92 y 94, que la primera versión agrupaba en D-54 y D-55, son
+  **reglas de los estándares** (`DES-6`, `CLI-14`), no decisiones del plan: pasan a Cubierto.
 - **Fuera de alcance → campañas (16):** filas 3, 12, 15, 43, 44, 47, 51, 52, 55, 61, 63, 64, 65, 89, 96, 99. Además,
   las partes de campaña de las filas 24 y 38 (clasificadas Cubierto por su parte principal).
-- **Fuera de alcance → arquitectura (3):** 58 (`propiedad.md`), 77 (estándares v2.2), 79 (`packages/backend`).
+- **Fuera de alcance → arquitectura (3):** 58, 77, 79 (`propiedad.md`, estándares v2, `packages/backend`): ya decididas en el #50.
 - **En conflicto (7):** 6 y 29 (OTP como identidad, D-22), 28 (cotizar sin sesión), 35 (agregador `GET /home`), 81 (nombres
   de carpetas, D-14), 101 (Negocios no espera a las métricas, D-30), 109 (la spec no está aprobada). Gana el plan en todos.
-- **Sin clasificar (1):** 107, las DA-xx de la spec; `Docs/trabajo/decisiones-abiertas.md` no existe en el repo.
-- **Choque con una decisión abierta de Jesús:** D-22 (identidad del cliente). No se enmienda: se le pregunta.
+- **Sin clasificar (0).** La fila 107 (las DA-xx) se resolvió contra la cola del #49: cada DA tiene destino.
+- **Choque con una decisión abierta de Jesús:** D-22 (identidad del cliente). Su planteamiento está en [`d-22.md`](d-22.md).

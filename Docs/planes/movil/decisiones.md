@@ -1,6 +1,7 @@
 # 04 · Decisiones, supuestos y riesgos de ejecución
 
-> Estado: **en ejecución** · Aprobado por Jesús el 2026-10-10 (conversación con Claude Code: «oka») · Alcance: las
+> Estado: **en ejecución** · Aprobado por Jesús el 2026-10-10 (conversación con Claude Code: «oka»); alcance ampliado con
+> D-49 a D-53, aprobado por Jesús el 2026-10-13 (conversación con Claude Code) · Alcance: las
 > decisiones de la migración a apps nativas; manda la sección 1. Análisis y requisitos: `Docs/trabajo/movil/`
 > **Actualizado el 2026-09-20** con tus respuestas. La sección 1 es lo decidido; lo que no me correspondía decidir
 > sigue en las secciones 2 y 3, con opciones, una **recomendación** y de qué depende.
@@ -30,6 +31,21 @@
 | D-46 | Edad mínima de uso: **18 años** | Jesús, 2026-10-10 |
 | D-47 | Versiones mínimas: **Android 8 (API 26) e iOS 17** | Jesús, 2026-10-10 |
 | D-48 | Los modelos de **Swift** se compilan en la CI **a diario**, no en cada PR (el runner de macOS cuesta diez veces más); Kotlin, en cada PR | Jesús, 2026-10-10 |
+
+### Decididas el 2026-10-13
+
+| # | Decisión | Quién / cuándo |
+|---|---|---|
+| D-49 | **Pedir en tres pasos** (armar, revisar, confirmar) y **el recurrente en dos toques** (Revisar → Confirmar, con dirección y pago por defecto) son **criterio de aceptación** de la app, comprobado en el flujo crítico contra la API simulada. Mientras `D-22` siga abierta, el recorrido se mide desde que hay sesión; no se asume «OTP solo la primera vez» | Jesús, 2026-10-13 |
+| D-50 | **Método de pago por defecto = el del último pedido** (`GET /customer/orders`), sin estado nuevo en el servidor. **Condición:** el valor por defecto se filtra por los métodos que permita la cotización (`POST /customer/checkout/quote`) o `GET /customer/payment-options`; si el cliente ya no puede pagar contraentrega, no se le preselecciona | Jesús, 2026-10-13 (aprobada con condición) |
+| D-51 | **Repetir un pedido** con `GET /customer/orders/{id}/reorder`, ruta **de solo lectura**: devuelve el carrito con precios y disponibilidad actuales y las diferencias respecto del pedido original (plato retirado, precio distinto, opción retirada). No crea pedido: eso sigue siendo `POST /customer/orders` con `Idempotency-Key`. Dinero como texto (`D-39`); un pedido ajeno da 404. Repetir una Entrega queda fuera | Jesús, 2026-10-13 |
+| D-52 | **Inicio administrable, acotado:** solo **bloques tipados** que sirve la API (esquema en `@tindivo/contracts`; sin agregador `GET /home`, sin segmentos y sin campañas), para que un cambio comercial no exija actualizar la app. **El admin para editarlos va con la iniciativa de campañas, no en este plan** | Jesús, 2026-10-13 (aprobada acotada) |
+| D-53 | **Métricas de la app desde la base propia, sin SDK de analítica de producto:** pedidos por `client_platform`, recompra a 30 días app frente a PWA, aceptación del permiso de push por plataforma (guardar el estado del permiso por dispositivo es parte del registro de dispositivos del paso 5). Los fallos, con el rastreador de errores de `OPS-4`, que no es analítica de producto. Revisión semanal el primer mes | Jesús, 2026-10-13 |
+
+**Reglas aplicables que no son decisiones del plan** (ya están en los estándares de código v2, ADR 0038, y se citan sin
+número D propio): `DES-6` (el contrato es compatible hacia atrás; `oasdiff` contra la rama base en la CI) y `CLI-14`
+(toda publicación pasa por pruebas internas y sale con liberación gradual o escalonada). Los números `D-54` y `D-55`
+quedan **libres**: la siguiente decisión del plan toma `D-54`.
 
 ## 2. Decisiones abiertas — organización y plazos externos
 
