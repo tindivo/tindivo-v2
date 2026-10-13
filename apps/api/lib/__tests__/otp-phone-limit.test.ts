@@ -272,6 +272,14 @@ describe('memoryPhoneLog: lápida y antigüedad de la reserva con UN solo reloj 
     await log.reserve('f', 'm', una, T0 + 10 * MIN, T0)
     expect(await ocupo(log, 'f', T0)).toBe(true)
   })
+  it('t0 NaN o infinito: no inserta, igual que el Lua', async () => {
+    const log = memoryPhoneLog()
+    for (const t0 of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
+      const res = await log.reserve('n', 'm', una, t0, T0)
+      expect(res).toMatchObject({ allowed: true, skipped: 'stale' })
+    }
+    expect(await ocupo(log, 'n', T0)).toBe(false)
+  })
   it('la antigüedad máxima deja margen frente a la lápida', () => {
     expect(MAX_RESERVE_AGE_MS).toBe(5 * MIN)
     expect(MAX_RESERVE_AGE_MS).toBeLessThan(TOMBSTONE_TTL_MS)

@@ -123,7 +123,9 @@ export function memoryPhoneLog(): PhoneLogStore {
     async reserve(key, member, rule, t0, now = t0) {
       // Un solo reloj (`now`) para la lápida, su caducidad y la antigüedad, como el Lua con TIME.
       if ((tombstones.get(member) ?? 0) > now) return { allowed: true, skipped: 'tombstone' }
-      if (now - t0 > MAX_RESERVE_AGE_MS) return { allowed: true, skipped: 'stale' }
+      if (!Number.isFinite(t0) || now - t0 > MAX_RESERVE_AGE_MS) {
+        return { allowed: true, skipped: 'stale' }
+      }
       const win = rule.windowSec * 1000
       if ((expiresAt.get(key) ?? Number.POSITIVE_INFINITY) <= now) {
         sets.delete(key)
