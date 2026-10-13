@@ -1144,6 +1144,217 @@ function leerArgumentos(s: string, abre: number): { args: string[]; cierra: numb
 const CONSTRUCTOR_OPACO =
   /\b(to_jsonb?|row_to_json|array_to_json|jsonb?_agg|jsonb?_object_agg|array_agg|jsonb?_build_array|jsonb?_object|jsonb_(?:set|insert|strip_nulls|populate\w*|path\w*|each\w*|array_elements\w*|extract\w*|concat)|row|select)\b|\|\||::\s*jsonb?\b|->(?!>)|#>|@>|\[/
 
+// ── Lista de PERMITIDOS para los VALORES de un payload `sin_datos_del_cliente` ─
+// Una lista de prohibidos nunca cierra: `jsonb_build_object('amount', contact_json())` esconde
+// `customerName` dentro de un auxiliar. Por eso el valor de cada clave, a cualquier profundidad, solo
+// pasa si es una de estas formas; todo lo demás pide REVISIÓN MANUAL con su motivo:
+//  - literal (cadena, número, true/false, NULL);
+//  - un constructor json(b)_build_object (de pg_catalog o public), cuyas claves y valores se leen aparte;
+//  - `x::tipo` o `CAST(x AS tipo)` de algo permitido, a un tipo ESCALAR (no json/jsonb/record);
+//  - una variable o parámetro cuyo tipo se resuelve como escalar (DECLARE + argumentos de la función);
+//  - `v.campo` de un registro, solo si se resuelve (por el catálogo) que el campo es escalar;
+//  - una función de FUNCIONES_ESCALARES con argumentos también permitidos.
+// Límite residual, revisión HUMANA: un valor escalar de TEXTO que venga de una variable (puede llevar
+// un nombre) y el SQL dinámico ofuscado.
+
+/** Variables/parámetros (`nombre → tipo`) y columnas del catálogo (`tabla.columna → tipo`). */
+type ContextoTipos = {
+  vars: Map<string, string>
+  campos: Map<string, string>
+  /** Más de un DECLARE (bloques anidados): un nombre puede estar tapado por otro de un bloque interno. */
+  anidado?: boolean
+  /** `proconfig` con `search_path` vacío: sin esquema, las funciones se resuelven solo en pg_catalog. */
+  searchPathVacio?: boolean
+}
+const SIN_CONTEXTO: ContextoTipos = { vars: new Map(), campos: new Map() }
+
+const TIPOS_ESCALARES = new Set([
+  'uuid',
+  'text',
+  'varchar',
+  'character varying',
+  'char',
+  'character',
+  'bpchar',
+  'numeric',
+  'decimal',
+  'integer',
+  'int',
+  'int4',
+  'bigint',
+  'int8',
+  'smallint',
+  'int2',
+  'real',
+  'float4',
+  'double precision',
+  'float8',
+  'boolean',
+  'bool',
+  'date',
+  'time',
+  'time without time zone',
+  'time with time zone',
+  'timestamp',
+  'timestamp without time zone',
+  'timestamp with time zone',
+  'timestamptz',
+])
+// Funciones escalares puras permitidas con argumentos permitidos. Ningún productor vigente las usa
+// en un payload (hoy solo hay variables, parámetros y campos de registro): se admiten porque son
+// puras, y hay que volver a revisar esta lista cuando un productor real pida otra.
+const FUNCIONES_ESCALARES = new Set(['now', 'round', 'coalesce'])
+
+const quitaTipoDecoracion = (t: string) =>
+  t
+    .toLowerCase()
+    .replace(/\(.*?\)/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/^(?:public|pg_catalog)\./, '')
+function esTipoEscalar(t: string): boolean {
+  return TIPOS_ESCALARES.has(quitaTipoDecoracion(t))
+}
+
+/** `p_id uuid, p_data jsonb DEFAULT x` (de `pg_get_function_arguments`) → `nombre → tipo`. */
+function argumentosDe(args: string | undefined): Record<string, string> {
+  const out: Record<string, string> = {}
+  if (!args?.trim()) return out
+  const trozos = leerArgumentos(`(${sinCadenas(args, () => "''")})`, 0)?.args ?? []
+  for (const t of trozos) {
+    const sinDefecto = t.replace(/\s+(?:default|=)\s.*$/i, '').trim()
+    const m = /^(?:(?:in|out|inout|variadic)\s+)?([A-Za-z_]\w*)\s+(.+)$/i.exec(sinDefecto)
+    if (m) out[(m[1] as string).toLowerCase()] = (m[2] as string).trim()
+  }
+  return out
+}
+
+/** Variables de la sección DECLARE del cuerpo (ya normalizado) → `nombre → tipo`. */
+function declaradasEn(norm: string): Record<string, string> {
+  const out: Record<string, string> = {}
+  const t = sinCadenas(norm, () => "''")
+  const d = /(?<![\w$])declare(?![\w$])/.exec(t)
+  if (!d) return out
+  const resto = t.slice(d.index + d[0].length)
+  const b = /(?<![\w$])begin(?![\w$])/.exec(resto)
+  const seccion = b ? resto.slice(0, b.index) : resto
+  for (const decl of seccion.split(';')) {
+    const m =
+      /^\s*([a-z_][\w$]*)\s+(?:constant\s+)?(.+?)(?:\s*(?::=|=|default)\s.*|\s*(?::=|=).*)?$/.exec(
+        decl,
+      )
+    if (m) out[m[1] as string] = (m[2] as string).trim()
+  }
+  return out
+}
+
+/** Contexto de tipos de una función: sus argumentos y su DECLARE (este gana si se repite). */
+function contextoDe(
+  norm: string,
+  args: string | undefined,
+  campos: Map<string, string>,
+  config?: string[] | null,
+): ContextoTipos {
+  const t = sinCadenas(norm, () => "''")
+  return {
+    vars: new Map(Object.entries({ ...argumentosDe(args), ...declaradasEn(norm) })),
+    campos,
+    anidado: [...t.matchAll(/(?<![w$])declare(?![w$])/g)].length > 1,
+    searchPathVacio: (config ?? []).some((c) => /^search_paths*=s*(?:""|'')?s*$/i.test(c)),
+  }
+}
+
+/** Posición del último `::` de nivel 0 (fuera de paréntesis), o -1. */
+function ultimoCast(t: string): number {
+  let prof = 0
+  let ult = -1
+  for (let i = 0; i < t.length; i++) {
+    const c = t[i]
+    if (c === '(') prof++
+    else if (c === ')') prof--
+    else if (prof === 0 && c === ':' && t[i + 1] === ':') {
+      ult = i
+      i++
+    }
+  }
+  return ult
+}
+
+const MOTIVO_ANIDADO =
+  'la función tiene bloques DECLARE anidados y un nombre podría estar tapado: no se resuelve el tipo'
+
+/** null si el valor es una forma permitida; si no, el motivo por el que pide revisión manual. */
+function motivoNoPermitido(valor: string, ctx: ContextoTipos): string | null {
+  const t = sinCadenas(valor, () => "''")
+    .trim()
+    .toLowerCase()
+  const manual = (motivo: string) => `${motivo}: ${valor.trim().slice(0, 60)}`
+  if (t === '') return manual('valor vacío')
+  if (t === "''" || /^-?\d+(?:\.\d+)?$/.test(t) || /^(?:true|false|null)$/.test(t)) return null
+  if (t.startsWith('(')) {
+    const par = leerArgumentos(t, 0)
+    if (par && par.cierra === t.length - 1 && par.args.length === 1)
+      return motivoNoPermitido((par.args[0] as string).trim(), ctx)
+  }
+  const cast = ultimoCast(t)
+  if (cast >= 0) {
+    const tipo = t.slice(cast + 2).trim()
+    if (!esTipoEscalar(tipo)) return manual(`conversión a un tipo que no es escalar (${tipo})`)
+    return motivoNoPermitido(t.slice(0, cast), ctx)
+  }
+  const llamada = /^((?:[a-z_]\w*\s*\.\s*)?)([a-z_]\w*)\s*\(/.exec(t)
+  if (llamada) {
+    const par = leerArgumentos(t, llamada[0].length - 1)
+    if (!par || par.cierra !== t.length - 1) return manual('expresión compuesta (operador)')
+    const esquema = (llamada[1] ?? '').replace(/\s+/g, '')
+    const nombre = llamada[2] as string
+    const args = par.args.filter((a) => a !== '')
+    if (
+      /^json(?:b)?_build_object$/.test(nombre) &&
+      ['', 'pg_catalog.', 'public.'].includes(esquema)
+    )
+      return null // sus claves y valores se leen por separado, uno a uno
+    if (nombre === 'cast' && esquema === '') {
+      const m = /^(.*)\s+as\s+([^()]+(?:\(\s*\d+(?:\s*,\s*\d+)?\s*\))?)$/.exec(args[0] ?? '')
+      if (args.length !== 1 || !m) return manual('CAST no reconocido')
+      if (!esTipoEscalar(m[2] as string))
+        return manual(`conversión a un tipo que no es escalar (${(m[2] as string).trim()})`)
+      return motivoNoPermitido(m[1] as string, ctx)
+    }
+    if (FUNCIONES_ESCALARES.has(nombre) && ['', 'pg_catalog.'].includes(esquema)) {
+      // `coalesce` es sintaxis SQL: no se resuelve por search_path. `now` y `round` sí: sin esquema
+      // solo valen si el productor tiene el search_path vacío (así solo ve pg_catalog).
+      if (nombre !== 'coalesce' && esquema === '' && !ctx.searchPathVacio)
+        return manual(
+          `llamada sin esquema a ${nombre} en un productor cuyo search_path no está vacío (podría ejecutarse otra función)`,
+        )
+      for (const a of args) {
+        const m = motivoNoPermitido(a, ctx)
+        if (m) return m
+      }
+      return null
+    }
+    return manual(`llamada a una función que no está en la lista (${esquema}${nombre})`)
+  }
+  if (/^[a-z_][\w$]*$/.test(t)) {
+    if (ctx.anidado) return manual(MOTIVO_ANIDADO)
+    const tipo = ctx.vars.get(t)
+    if (tipo === undefined) return manual('identificador sin tipo resuelto')
+    return esTipoEscalar(tipo) ? null : manual(`variable de tipo no escalar (${tipo})`)
+  }
+  const campo = /^([a-z_][\w$]*)\.([a-z_][\w$]*)$/.exec(t)
+  if (campo) {
+    if (ctx.anidado) return manual(MOTIVO_ANIDADO)
+    const tipo = ctx.vars.get(campo[1] as string)
+    if (tipo === undefined) return manual('registro sin tipo resuelto')
+    const tabla = quitaTipoDecoracion(tipo.replace(/%rowtype$/i, ''))
+    const tipoCampo = ctx.campos.get(`${tabla}.${campo[2]}`)
+    if (tipoCampo === undefined) return manual(`campo de registro sin tipo resuelto (${tipo})`)
+    return esTipoEscalar(tipoCampo) ? null : manual(`campo no escalar (${tipoCampo})`)
+  }
+  return manual('forma no permitida (operador, subselect u otra expresión)')
+}
+
 type PayloadLeido = {
   /** Claves del primer nivel (null si el payload no es un `jsonb_build_object` literal). */
   top: string[] | null
@@ -1154,7 +1365,7 @@ type PayloadLeido = {
 }
 
 /** Claves literales de un payload, con los constructores anidados incluidos. */
-function leerPayload(payload: string): PayloadLeido {
+function leerPayload(payload: string, ctx: ContextoTipos = SIN_CONTEXTO): PayloadLeido {
   const todas: string[] = []
   const errores: string[] = []
   let top: string[] | null = null
@@ -1180,6 +1391,11 @@ function leerPayload(payload: string): PayloadLeido {
       if (k === undefined) errores.push(`clave que no es un literal: ${a.slice(0, 40)}`)
       else claves.push(k)
     })
+    p.args.forEach((a, i) => {
+      if (i % 2 === 0) return
+      const motivo = motivoNoPermitido(a, ctx)
+      if (motivo) errores.push(`valor no permitido, revisión manual: ${motivo}`)
+    })
     todas.push(...claves)
     if (m.index === 0 && p.cierra === payload.length - 1) top = claves
   }
@@ -1192,7 +1408,7 @@ function leerPayload(payload: string): PayloadLeido {
 type InsercionLeida = { agregado: string; evento: string; payload: PayloadLeido }
 
 /** Una inserción (texto normalizado, desde `insert into`): agregado, evento y payload. */
-function leerInsercion(s: string): InsercionLeida | string {
+function leerInsercion(s: string, ctx: ContextoTipos = SIN_CONTEXTO): InsercionLeida | string {
   const cols = /^insert into (?:\w+\.)?domain_events\s*\(/.exec(s)
   if (!cols) return 'inserción con forma no reconocida'
   const c = leerArgumentos(s, cols[0].length - 1)
@@ -1205,7 +1421,7 @@ function leerInsercion(s: string): InsercionLeida | string {
   const agregado = /^'(\w+)'$/.exec(col('aggregate_type') ?? '')?.[1]
   const evento = /^'([^']+)'$/.exec(col('event_type') ?? '')?.[1]
   if (!agregado || !evento) return 'aggregate_type o event_type no son literales'
-  return { agregado, evento, payload: leerPayload(col('payload') ?? '') }
+  return { agregado, evento, payload: leerPayload(col('payload') ?? '', ctx) }
 }
 
 // Menciones de `domain_events` que NO son inserciones, justificadas una a una (función → cuántas).
@@ -1224,14 +1440,14 @@ const NO_INSERCIONES: Record<string, { n: number; motivo: string }> = {
 // Hoy ninguna: una nueva rompe el test hasta que alguien la lea y la anote aquí con su motivo.
 const EXECUTE_REVISADOS: Record<string, string> = {}
 
-type FuenteFuncion = { f: string; s: string }
+type FuenteFuncion = { f: string; s: string; args?: string; config?: string[] | null }
 type Productor = { n: number; top: Set<string> | null; todas: Set<string>; error: string | null }
 
 /**
  * Toda mención de `domain_events` queda justificada: o es una inserción leída y clasificada, o
  * está en `NO_INSERCIONES`. Un `EXECUTE` que pueda armar el nombre obliga a revisión manual.
  */
-function analizarFunciones(funciones: FuenteFuncion[]) {
+function analizarFunciones(funciones: FuenteFuncion[], campos: Map<string, string> = new Map()) {
   const reales = new Map<string, Productor>()
   const otras = new Map<string, number>()
   const problemas: string[] = []
@@ -1247,6 +1463,7 @@ function analizarFunciones(funciones: FuenteFuncion[]) {
       problemas.push(
         `${fn.f}: EXECUTE que puede armar el nombre de domain_events; revísalo a mano y anótalo en EXECUTE_REVISADOS`,
       )
+    const ctx = contextoDe(norm, fn.args, campos, fn.config)
     let leidas = 0
     for (const m of norm.matchAll(INSERCION_TABLA)) {
       leidas++
@@ -1254,7 +1471,7 @@ function analizarFunciones(funciones: FuenteFuncion[]) {
         problemas.push(`${fn.f}: inserción en el esquema '${m[1]}' (clasifícalo a mano)`)
         continue
       }
-      const ins = leerInsercion(norm.slice(m.index, m.index + 6000))
+      const ins = leerInsercion(norm.slice(m.index, m.index + 6000), ctx)
       if (typeof ins === 'string') {
         problemas.push(`${fn.f}: ${ins} (clasifícalo a mano)`)
         continue
@@ -1288,6 +1505,12 @@ function analizarFunciones(funciones: FuenteFuncion[]) {
 
 // Pruebas puras del lector: texto SQL de entrada → resultado. No tocan la base.
 describe('lector de SQL de los productores de domain_events (puro)', () => {
+  /** Contexto de tipos: variables/parámetros y columnas `tabla.columna` ya resueltas. */
+  const ctx = (vars: Record<string, string>, campos: Record<string, string> = {}) => ({
+    vars: new Map(Object.entries(vars)),
+    campos: new Map(Object.entries(campos)),
+    searchPathVacio: true,
+  })
   const ins = (cuerpo: string) => analizarFunciones([{ f: 'f_prueba', s: cuerpo }])
   const CUERPO = `values ('cash_settlement', gen_random_uuid(), 'CashConfirmed', jsonb_build_object('amount', v))`
 
@@ -1340,6 +1563,7 @@ describe('lector de SQL de los productores de domain_events (puro)', () => {
   it('(d) lee las claves de los constructores anidados a cualquier profundidad', () => {
     const p = leerPayload(
       `jsonb_build_object('amount', jsonb_build_object('customerName', 'Rosa', 'x', coalesce(json_build_object('deep', 1), null)), 'driverId', d)`,
+      ctx({ d: 'uuid' }),
     )
     expect(p.error).toBeNull()
     expect(p.top).toEqual(['amount', 'driverId'])
@@ -1362,9 +1586,12 @@ describe('lector de SQL de los productores de domain_events (puro)', () => {
     expect(leerPayload(`v_payload`).error).toMatch(/no es un jsonb_build_object literal/)
     expect(leerPayload(`jsonb_build_object(v_k, 1)`).error).toMatch(/clave que no es un literal/)
     expect(leerPayload(`to_jsonb(v) || jsonb_build_object('a', 1)`).error).not.toBeNull()
-    // Un escalar normal (columna, `->>`, cast de texto) sí se acepta.
+    // Un escalar normal (campo de registro resuelto, literal, cast escalar) sí se acepta.
     expect(
-      leerPayload(`jsonb_build_object('a', v.id, 'b', p->>'k', 'c', 1::numeric)`).error,
+      leerPayload(
+        `jsonb_build_object('a', v.id, 'b', 'x', 'c', 1::numeric)`,
+        ctx({ v: 'public.t' }, { 't.id': 'uuid' }),
+      ).error,
     ).toBeNull()
   })
 
@@ -1372,6 +1599,7 @@ describe('lector de SQL de los productores de domain_events (puro)', () => {
     // El ejemplo de la revisión de Codex: el `.` no puede esconder `customerName`.
     const p = leerPayload(
       `jsonb_build_object('amount', pg_catalog.jsonb_build_object('customerName','Rosa'), 'businessId', b, 'driverId', d)`,
+      ctx({ b: 'uuid', d: 'uuid' }),
     )
     expect(p.error).toBeNull()
     expect(p.top).toEqual(['amount', 'businessId', 'driverId'])
@@ -1380,6 +1608,130 @@ describe('lector de SQL de los productores de domain_events (puro)', () => {
     expect(q.error).toBeNull()
     expect(q.top).toEqual(['a'])
     expect([...q.todas].sort()).toEqual(['a', 'b'])
+  })
+
+  describe('lista de PERMITIDOS para los valores del payload', () => {
+    const val = (valor: string, c = ctx({})) =>
+      leerPayload(`jsonb_build_object('amount', ${valor})`, c).error
+
+    it('(a) el auxiliar desconocido que devuelve un constructor con PII pide revisión manual', () => {
+      // El ejemplo de Codex: `contact_json()` devuelve jsonb_build_object('customerName','Rosa').
+      expect(val('contact_json()')).toMatch(/revisión manual/)
+      expect(val('contact_json()')).toMatch(/contact_json/)
+    })
+
+    it('(b) la misma llamada cualificada (public., pg_catalog.) también', () => {
+      expect(val('public.make_contact_json()')).toMatch(/revisión manual/)
+      expect(val('pg_catalog.make_contact_json()')).toMatch(/revisión manual/)
+      // Una función de usuario no se hace pasar por una de la lista cualificándola con public.
+      expect(val('public.round(1, 2)')).toMatch(/revisión manual/)
+    })
+
+    it('(c) una variable jsonb usada como valor pide revisión manual', () => {
+      const c = ctx({ v: 'jsonb', w: 'json', r: 'record', t: 'public.cash_settlements' })
+      for (const x of ['v', 'w', 'r', 't', 'desconocida'])
+        expect(val(x, c), x).toMatch(/revisión manual/)
+    })
+
+    it('(d) un parámetro jsonb pide revisión manual', () => {
+      const c = ctx(argumentosDe('p_id uuid, p_data jsonb'))
+      expect(val('p_data', c)).toMatch(/revisión manual/)
+      expect(val('p_id', c)).toBeNull()
+    })
+
+    it('(e) variables y parámetros escalares se permiten', () => {
+      const c = ctx({ v_amount: 'numeric(10,2)', p_by: 'uuid', p_for_debt: 'boolean' })
+      expect(val('v_amount', c)).toBeNull()
+      expect(val('p_by', c)).toBeNull()
+      expect(val('p_for_debt', c)).toBeNull()
+    })
+
+    it('el campo de un registro solo vale si se resuelve que es escalar', () => {
+      const campos = {
+        'cash_settlements.delivered_amount': 'numeric',
+        'cash_settlements.meta': 'jsonb',
+      }
+      const c = ctx({ v_cs: 'public.cash_settlements' }, campos)
+      expect(val('v_cs.delivered_amount', c)).toBeNull()
+      expect(val('v_cs.meta', c)).toMatch(/revisión manual/)
+      expect(val('v_cs.no_existe', c)).toMatch(/revisión manual/)
+      expect(val('v_otro.delivered_amount', c)).toMatch(/revisión manual/)
+    })
+
+    it('(f) round(...), now() y coalesce(...) de cosas permitidas se permiten', () => {
+      const c = ctx({ v_amount: 'numeric', v_j: 'jsonb' })
+      expect(val('round(v_amount, 2)', c)).toBeNull()
+      expect(val('now()', c)).toBeNull()
+      expect(val('pg_catalog.now()', c)).toBeNull()
+      expect(val('coalesce(v_amount, 0)', c)).toBeNull()
+      // ...pero no si un argumento no lo es.
+      expect(val('coalesce(v_j, 0)', c)).toMatch(/revisión manual/)
+      expect(val('round(contact_json(), 2)', c)).toMatch(/revisión manual/)
+    })
+
+    it('(h) shadowing: con DECLARE anidado no se resuelven tipos; con uno solo, sí', () => {
+      const ins1 = (cuerpo: string) =>
+        analizarFunciones([{ f: 'f_prueba', s: cuerpo }]).reales.get('f_prueba|x|Ev')?.error ?? null
+      const insercion = `insert into public.domain_events (aggregate_type, aggregate_id, event_type, payload) values ('x', gen_random_uuid(), 'Ev', jsonb_build_object('amount', v))`
+      const anidado = `declare v numeric; begin declare v jsonb := jsonb_build_object('customerName','Rosa'); begin ${insercion}; end; end;`
+      expect(ins1(anidado)).toMatch(/DECLARE anidados/)
+      expect(ins1(`declare v numeric; begin ${insercion}; end;`)).toBeNull()
+    })
+
+    it('(i) now/round sin esquema solo con search_path vacío; pg_catalog. siempre', () => {
+      const cuerpo = (llamada: string) =>
+        `begin insert into public.domain_events (aggregate_type, aggregate_id, event_type, payload) values ('x', gen_random_uuid(), 'Ev', jsonb_build_object('amount', ${llamada})); end;`
+      const err = (llamada: string, config?: string[] | null) =>
+        analizarFunciones([{ f: 'f_prueba', s: cuerpo(llamada), config }]).reales.get(
+          'f_prueba|x|Ev',
+        )?.error ?? null
+      expect(err('round(1)', ['search_path=""'])).toBeNull()
+      expect(err('round(1)', ['search_path='])).toBeNull()
+      expect(err('round(1)', ['search_path=public, pg_catalog'])).toMatch(/revisión manual/)
+      expect(err('round(1)', ['search_path=pg_catalog'])).toMatch(/revisión manual/)
+      expect(err('pg_catalog.round(1)', ['search_path=public, pg_catalog'])).toBeNull()
+      expect(err('pg_catalog.round(1)', null)).toBeNull()
+      expect(err('now()', null)).toMatch(/revisión manual/)
+      expect(err('now()')).toMatch(/revisión manual/)
+      expect(err('coalesce(1, 2)', null)).toBeNull()
+    })
+
+    it('(j) el cast a un tipo escalar de algo permitido se permite; el de una variable json, no', () => {
+      const c = ctx({ v_amount: 'numeric', v_json: 'jsonb' })
+      expect(val('v_amount::text', c)).toBeNull()
+      expect(val('cast(v_amount as text)', c)).toBeNull()
+      expect(val('1::numeric', c)).toBeNull()
+      expect(val('v_json::text', c)).toMatch(/revisión manual/)
+      expect(val('cast(v_json as text)', c)).toMatch(/revisión manual/)
+      expect(val('v_amount::jsonb', c)).toMatch(/revisión manual/)
+      expect(val('v_amount::record', c)).toMatch(/revisión manual/)
+    })
+
+    it('literales y NULL se permiten; operadores y subselects, no', () => {
+      const c = ctx({ a: 'numeric', b: 'numeric' })
+      for (const x of [`'texto'`, '12', '-1.5', 'true', 'false', 'null', '(a)'])
+        expect(val(x, c), x).toBeNull()
+      for (const x of [
+        'a + b',
+        `a || 'x'`,
+        '(select 1)',
+        'case when a > 0 then 1 end',
+        'a is null',
+      ])
+        expect(val(x, c), x).toMatch(/revisión manual/)
+    })
+
+    it('las variables se leen de DECLARE y de los argumentos de la función', () => {
+      const cuerpo = `declare v_amount numeric(10,2) := 0; v_j jsonb; v_cs public.cash_settlements; begin insert into public.domain_events (aggregate_type, aggregate_id, event_type, payload) values ('cash_settlement', p_id, 'Ev', jsonb_build_object('a', v_amount, 'b', p_data, 'c', v_j, 'd', v_cs.id)); end`
+      const r = analizarFunciones(
+        [{ f: 'f_prueba', s: cuerpo, args: 'p_id uuid, p_data jsonb' }],
+        new Map([['cash_settlements.id', 'uuid']]),
+      )
+      const real = r.reales.get('f_prueba|cash_settlement|Ev')
+      expect(real?.error).toMatch(/p_data/)
+      expect(real?.error).toMatch(/v_j/)
+      expect(real?.error).not.toMatch(/v_amount|v_cs/)
+    })
   })
 
   it('(f) un constructor cualificado de otro esquema se rechaza como opaco', () => {
@@ -1438,15 +1790,26 @@ describe.skipIf(sinPsql && !process.env.CI)('candados con dos sesiones psql', ()
     // (función · agregado · evento · claves del payload) y se compara con el inventario de arriba.
     // Se leen TODAS las funciones de `public` que puedan mencionar la tabla (o armar SQL dinámico),
     // con su cuerpo normalizado: la detección es por mención, no por la forma del INSERT.
+    // Basta que el cuerpo del PRODUCTOR mencione la tabla: ya no hace falta encontrar al auxiliar que
+    // arme un payload, porque llamarlo desde un payload `sin_datos_del_cliente` falla por sí mismo.
     const r = await psql(
-      `select coalesce(json_agg(json_build_object('f', f, 's', s) order by f), '[]') from (` +
-        `select proname as f, coalesce(nullif(prosrc, ''), pg_get_function_sqlbody(oid)) as s from pg_proc ` +
+      `select coalesce(json_agg(json_build_object('f', f, 's', s, 'args', a, 'config', c) order by f), '[]') from (` +
+        `select proname as f, coalesce(nullif(prosrc, ''), pg_get_function_sqlbody(oid)) as s, ` +
+        `pg_get_function_arguments(oid) as a, proconfig as c from pg_proc ` +
         `where pronamespace = 'public'::regnamespace and prokind in ('f', 'p')) t ` +
         `where s ~* 'domain|events|execute'`,
     )
     const funciones = JSON.parse(r.out.trim()) as FuenteFuncion[]
     expect(funciones.length).toBeGreaterThan(0)
-    const { reales, otras, problemas } = analizarFunciones(funciones)
+    // Tipos de las columnas de `public` (tabla.columna → tipo), para resolver `v_registro.campo`.
+    const cols = await psql(
+      `select coalesce(json_object_agg(c.relname || '.' || a.attname, format_type(a.atttypid, a.atttypmod)), '{}') ` +
+        `from pg_class c join pg_attribute a on a.attrelid = c.oid and a.attnum > 0 and not a.attisdropped ` +
+        `where c.relnamespace = 'public'::regnamespace and c.relkind in ('r', 'v', 'm', 'p')`,
+    )
+    const campos = new Map(Object.entries(JSON.parse(cols.out.trim()) as Record<string, string>))
+    expect(campos.size).toBeGreaterThan(0)
+    const { reales, otras, problemas } = analizarFunciones(funciones, campos)
     expect(reales.size).toBeGreaterThan(0)
     for (const f of Object.keys(NO_INSERCIONES))
       if (!otras.has(f))
