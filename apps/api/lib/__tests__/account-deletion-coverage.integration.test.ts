@@ -910,7 +910,7 @@ function psql(sql: string): Promise<{ out: string; err: string; ms: number }> {
     execFile(
       'docker',
       ['exec', DB_CONTAINER, 'psql', '-U', 'postgres', '-At', '-c', sql],
-      { timeout: 60_000 },
+      { timeout: 60_000, maxBuffer: 64 * 1024 * 1024 },
       (_e, out, err) => resolve({ out, err, ms: Date.now() - t0 }),
     )
   })
@@ -934,43 +934,240 @@ function guardarDireccionComo(userId: string, pausa: number): string {
   )
 }
 
+// ── Inventario de productores de `domain_events` ─────────────────────────────
+// Cada fila es UNA función que inserta en `domain_events`, con (agregado, evento). La clase dice
+// cómo la alcanza el borrado de cuenta (`delete_customer_account`, migración 0259):
+//  - por_aggregate: el agregado es un pedido o una carrera; se redacta por `aggregate_id`. El
+//    payload puede llevar datos del cliente (p. ej. `CustomerNoShow.phone`) y no importa.
+//  - por_payload_uuid: otro agregado que lleva datos del cliente y referencia el pedido por UUID
+//    en el payload (`CashDelivered`); el filtro de 0259 lo busca por `event_type` + esa clave.
+//  - sin_datos_del_cliente: no lleva datos de personas del cliente. `claves` es la lista
+//    PERMITIDA del payload: una clave nueva rompe el test hasta que alguien decida si es PII.
+// `n` es cuántas inserciones de esa fila hay en la función.
+type ClaseProductor =
+  | { clase: 'por_aggregate'; n: number }
+  | { clase: 'por_payload_uuid'; n: number }
+  | { clase: 'sin_datos_del_cliente'; n: number; claves: string[] }
+const PA = (n = 1): ClaseProductor => ({ clase: 'por_aggregate', n })
+const INVENTARIO_PRODUCTORES: Record<string, ClaseProductor> = {
+  'admin_correct_delivery_band|order|AdminCorrectedDeliveryBand': PA(),
+  'advance_order|order|CustomerNoShow': PA(2),
+  'advance_order|order|OrderReleased': PA(),
+  'advance_order|order|OrderStatusChanged': PA(),
+  'apply_order_transfer|order|TransferResolved': PA(),
+  'block_business|business|BusinessBlocked': {
+    clase: 'sin_datos_del_cliente',
+    n: 1,
+    claves: ['by', 'forDebt', 'reason'],
+  },
+  'cancel_customer_order|order|OrderStatusChanged': PA(),
+  'confirm_order_cash|cash_settlement|CashConfirmed': {
+    clase: 'sin_datos_del_cliente',
+    n: 1,
+    claves: ['amount', 'businessId', 'driverId'],
+  },
+  'courier_event_to_outbox|courier_order|CourierStepped': PA(),
+  'create_appeal_report|order|order/appeal.created': PA(),
+  'create_business_manual_order|order|OrderCreated': PA(),
+  'create_customer_order|order|OrderCreated': PA(),
+  'deliver_order_cash|cash_settlement|CashDelivered': { clase: 'por_payload_uuid', n: 1 },
+  'dispute_cash_settlement|cash_settlement|CashDisputed': {
+    clase: 'sin_datos_del_cliente',
+    n: 1,
+    claves: ['declared', 'reported'],
+  },
+  'enqueue_overdue_orders|order|OrderOverdue': PA(),
+  'enqueue_queued_orders|order|OrderQueued': PA(),
+  'expire_order|order|OrderExpired': PA(),
+  'extend_order_prep|order|OrderPrepExtended': PA(),
+  'register_prepay_proof|order|OrderPrepayProofUploaded': PA(),
+  'request_order_transfer|order|TransferRequested': PA(),
+  'resolve_cash_settlement|cash_settlement|CashResolved': {
+    clase: 'sin_datos_del_cliente',
+    n: 1,
+    claves: ['amount'],
+  },
+  'respond_order_transfer|order|TransferResolved': PA(),
+  'unblock_business|business|BusinessUnblocked': {
+    clase: 'sin_datos_del_cliente',
+    n: 1,
+    claves: ['by'],
+  },
+  'validate_order|order|OrderProofVerified': PA(2),
+  'validate_order|order|OrderStatusChanged': PA(2),
+  'validate_order|order|OrderValidated': PA(2),
+}
+
+/** Recorre `s` desde el `(` de `abre` y devuelve los argumentos de primer nivel. Sin comentarios SQL. */
+function leerArgumentos(s: string, abre: number): { args: string[]; cierra: number } | null {
+  const args: string[] = []
+  let actual = ''
+  let prof = 0
+  for (let i = abre; i < s.length; i++) {
+    const c = s[i] as string
+    if (c === "'") {
+      const ini = i
+      i++
+      while (i < s.length && !(s[i] === "'" && s[i + 1] !== "'")) i += s[i] === "'" ? 2 : 1
+      actual += s.slice(ini, i + 1)
+      continue
+    }
+    if (c === '-' && s[i + 1] === '-') {
+      while (i < s.length && s[i] !== '\n') i++
+      continue
+    }
+    if (c === '(') {
+      prof++
+      if (prof === 1) continue
+    } else if (c === ')') {
+      prof--
+      if (prof === 0) {
+        args.push(actual.trim())
+        return { args, cierra: i }
+      }
+    } else if (c === ',' && prof === 1) {
+      args.push(actual.trim())
+      actual = ''
+      continue
+    }
+    actual += c
+  }
+  return null
+}
+
+/** Una inserción: agregado, evento y claves literales del payload (null si no se pueden leer). */
+function leerInsercion(
+  s: string,
+): { agregado: string; evento: string; claves: string[] | null } | string {
+  const cols = /^insert\s+into\s+(?:public\.)?"?domain_events"?\s*\(/i.exec(s)
+  if (!cols) return 'inserción con forma no reconocida'
+  const c = leerArgumentos(s, cols[0].length - 1)
+  if (!c) return 'lista de columnas sin cerrar'
+  const v = /^\s*values\s*\(/i.exec(s.slice(c.cierra + 1))
+  if (!v) return 'no es INSERT … VALUES (…)'
+  const a = leerArgumentos(s, c.cierra + 1 + v[0].length - 1)
+  if (!a || a.args.length !== c.args.length) return 'valores no alineados con las columnas'
+  const col = (n: string) => a.args[c.args.map((x) => x.trim().toLowerCase()).indexOf(n)]
+  const agregado = /^'(\w+)'$/.exec(col('aggregate_type') ?? '')?.[1]
+  const evento = /^'([^']+)'$/.exec(col('event_type') ?? '')?.[1]
+  if (!agregado || !evento) return 'aggregate_type o event_type no son literales'
+  const payload = col('payload') ?? ''
+  const jb = /^jsonb_build_object\s*\(/i.exec(payload)
+  let claves: string[] | null = null
+  if (jb) {
+    const p = leerArgumentos(payload, jb[0].length - 1)
+    if (p && p.cierra === payload.length - 1) {
+      const lit = p.args.filter((_, i) => i % 2 === 0).map((k) => /^'([^']*)'$/.exec(k)?.[1])
+      if (lit.every((k) => k !== undefined)) claves = lit as string[]
+    }
+  }
+  return { agregado, evento, claves }
+}
+
 // En la CI NO se salta: si falta Docker o el contenedor, el job debe ponerse rojo, no verde.
 describe.skipIf(sinPsql && !process.env.CI)('candados con dos sesiones psql', () => {
-  it('los productores de eventos son los inventariados: uno nuevo obliga a revisar la redacción', async () => {
-    // El borrado localiza los eventos por `aggregate_id` (pedido o carrera) y, para los que
-    // cuelgan de otro agregado, por `event_type` + ids del payload. Un productor nuevo que
-    // no encaje aquí puede dejar datos del cliente sin redactar.
-    const todas = String.raw`insert\s+into\s+public\.domain_events`
-    const literales = String.raw`insert\s+into\s+public\.domain_events\s*\([^)]*\)\s*values\s*\(\s*'(\w+)',\s*[\w.]+,\s*'([^']+)'`
-    const q = (re: string) => re.replaceAll("'", "''")
+  it('cada productor de eventos está inventariado y clasificado: uno nuevo, o con una clave nueva, obliga a decidir', async () => {
+    // El borrado redacta `domain_events` por `aggregate_id` (pedido o carrera) y, para el resto,
+    // por `event_type` + ids del payload. Un productor nuevo (o uno viejo que añada datos del
+    // cliente al payload) puede dejar datos sin redactar: por eso se identifica CADA inserción
+    // (función · agregado · evento · claves del payload) y se compara con el inventario de arriba.
     const r = await psql(
-      `select (select count(*) from pg_proc p cross join lateral regexp_matches(p.prosrc, '${q(todas)}', 'gi') x ` +
-        `where p.pronamespace = 'public'::regnamespace) || '|' || ` +
-        `coalesce((select string_agg(distinct m[1] || ':' || m[2], ',') from pg_proc p ` +
-        `cross join lateral regexp_matches(p.prosrc, '${q(literales)}', 'gi') m ` +
-        `where p.pronamespace = 'public'::regnamespace), '') || '|' || ` +
-        `(select count(*) from pg_proc p cross join lateral regexp_matches(p.prosrc, '${q(literales)}', 'gi') m ` +
-        `where p.pronamespace = 'public'::regnamespace)`,
+      `select coalesce(json_agg(json_build_object('f', f, 's', s) order by f), '[]') from (` +
+        `select p.proname as f, 'insert into public.domain_events' || left(t.piece, 6000) as s from pg_proc p ` +
+        `cross join lateral regexp_split_to_table(p.prosrc, 'insert[[:space:]]+into[[:space:]]+(public[.])?domain_events', 'i') ` +
+        `with ordinality t(piece, ord) where p.pronamespace = 'public'::regnamespace and t.ord > 1) t`,
     )
-    const [nTodas, tipos, nLiterales] = r.out.trim().split('|')
-    // Toda inserción tiene la forma (agregado literal, id, evento literal)…
-    expect(Number(nTodas)).toBeGreaterThan(0)
-    expect(nLiterales).toBe(nTodas)
-    // …y los agregados son solo estos. Los de `cash_settlement` y `business` no cuelgan de un
-    // pedido; solo `CashDelivered` lleva dentro un `orderId` (y por eso se busca por tipo).
-    const lista = (tipos ?? '').split(',')
-    expect([...new Set(lista.map((t) => t.split(':')[0]))].sort()).toEqual([
-      'business',
-      'cash_settlement',
-      'courier_order',
-      'order',
-    ])
-    expect(lista.filter((t) => t.startsWith('cash_settlement:')).sort()).toEqual([
-      'cash_settlement:CashConfirmed',
-      'cash_settlement:CashDelivered',
-      'cash_settlement:CashDisputed',
-      'cash_settlement:CashResolved',
-    ])
+    const trozos = JSON.parse(r.out.trim()) as { f: string; s: string }[]
+    expect(trozos.length).toBeGreaterThan(0)
+
+    const problemas: string[] = []
+    const reales = new Map<string, { n: number; claves: Set<string> | null }>()
+    for (const t of trozos) {
+      const ins = leerInsercion(t.s)
+      if (typeof ins === 'string') {
+        problemas.push(`${t.f}: ${ins} (clasifícalo a mano)`)
+        continue
+      }
+      const k = `${t.f}|${ins.agregado}|${ins.evento}`
+      const previo = reales.get(k) ?? { n: 0, claves: new Set<string>() }
+      previo.n += 1
+      previo.claves =
+        ins.claves && previo.claves ? new Set([...previo.claves, ...ins.claves]) : null
+      reales.set(k, previo)
+    }
+
+    // Lo que la redacción cubre, leído de la función VIVA y no de la migración.
+    const del = await psql(
+      `select prosrc from pg_proc where proname = 'delete_customer_account' and pronamespace = 'public'::regnamespace`,
+    )
+    const trozo = /update\s+public\.domain_events\s+set[^;]*;/i.exec(
+      del.out.replace(/--[^\n]*/g, ''),
+    )?.[0]
+    expect(
+      trozo,
+      'no se encontró el UPDATE de domain_events en delete_customer_account',
+    ).toBeTruthy()
+    const agregadosCubiertos = new Set(
+      [
+        ...(/aggregate_type\s+in\s*\(([^)]*)\)/i.exec(trozo ?? '')?.[1] ?? '').matchAll(/'(\w+)'/g),
+      ].map((m) => m[1] as string),
+    )
+    const eventosCubiertos = new Set(
+      [...(trozo ?? '').matchAll(/event_type\s*=\s*'(\w+)'/gi)].map((m) => m[1] as string),
+    )
+    const clavesCubiertas = new Set(
+      [...(trozo ?? '').matchAll(/payload\s*->>\s*'(\w+)'/gi)].map((m) => m[1] as string),
+    )
+    expect([...agregadosCubiertos].sort()).toEqual(['courier_order', 'order'])
+    expect(eventosCubiertos.size).toBeGreaterThan(0)
+
+    for (const [k, real] of reales) {
+      const inv = INVENTARIO_PRODUCTORES[k]
+      const [, agregado, evento] = k.split('|') as [string, string, string]
+      if (!inv) {
+        problemas.push(
+          `productor NUEVO sin clasificar: ${k} claves=${real.claves ? [...real.claves].sort().join(',') : '(dinámico)'}`,
+        )
+        continue
+      }
+      if (inv.n !== real.n)
+        problemas.push(`${k}: ${real.n} inserciones y el inventario dice ${inv.n}`)
+      if (inv.clase === 'por_aggregate') {
+        if (!agregadosCubiertos.has(agregado))
+          problemas.push(`${k}: es por_aggregate pero 0259 no redacta el agregado '${agregado}'`)
+      } else if (inv.clase === 'por_payload_uuid') {
+        if (!eventosCubiertos.has(evento))
+          problemas.push(`${k}: es por_payload_uuid pero el filtro de 0259 no incluye '${evento}'`)
+        if (!real.claves || ![...real.claves].some((c) => clavesCubiertas.has(c)))
+          problemas.push(
+            `${k}: ninguna clave del payload es una de las que busca el filtro (${[...clavesCubiertas].join(',')})`,
+          )
+      } else {
+        if (!real.claves)
+          problemas.push(`${k}: payload dinámico en un productor sin_datos_del_cliente`)
+        else {
+          const nuevas = [...real.claves].filter((c) => !inv.claves.includes(c))
+          if (nuevas.length > 0)
+            problemas.push(
+              `${k}: clave(s) nueva(s) en el payload: ${nuevas.join(',')}; decide si llevan datos del cliente`,
+            )
+        }
+      }
+    }
+    for (const k of Object.keys(INVENTARIO_PRODUCTORES))
+      if (!reales.has(k)) problemas.push(`el inventario lista ${k} pero ya no existe: actualízalo`)
+    // Todo evento que el filtro de 0259 busca por payload tiene un productor inventariado.
+    for (const e of eventosCubiertos)
+      if (
+        !Object.entries(INVENTARIO_PRODUCTORES).some(
+          ([k, v]) => v.clase === 'por_payload_uuid' && k.endsWith(`|${e}`),
+        )
+      )
+        problemas.push(
+          `el filtro de 0259 busca '${e}' pero el inventario no lo tiene como por_payload_uuid`,
+        )
+
+    expect(problemas).toEqual([])
   })
 
   it('guardar una dirección y borrar la cuenta a la vez: sin abrazo mortal (libreta primero)', async () => {
