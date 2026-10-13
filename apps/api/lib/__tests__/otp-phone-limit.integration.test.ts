@@ -51,7 +51,7 @@ const fake = vi.hoisted(() => ({
   log: null as unknown,
 }))
 vi.mock('@upstash/redis', async () => {
-  const { memoryPhoneLog, RELEASE_SCRIPT } = await import('../otp/phone-limit')
+  const { memoryPhoneLog, RELEASE_SCRIPT, TIME_SCRIPT } = await import('../otp/phone-limit')
   const log = memoryPhoneLog()
   fake.log = log
   class Redis {
@@ -61,16 +61,19 @@ vi.mock('@upstash/redis', async () => {
     async eval(_s: string, keys: string[], args: (string | number)[]) {
       if (fake.modo === 'timeout') return new Promise(() => {})
       if (fake.modo === 'down') throw new Error('redis caído')
+      if (_s === TIME_SCRIPT) return Date.now()
       if (_s === RELEASE_SCRIPT) {
         await log.release(keys[0] as string, String(args[1]))
         return 1
       }
       fake.keys.push(keys[0] as string)
-      const [win, limit, member] = args
-      const r = await log.reserve(keys[0] as string, String(member), {
-        limit: Number(limit),
-        windowSec: Number(win) / 1000,
-      })
+      const [win, limit, member, t0] = args
+      const r = await log.reserve(
+        keys[0] as string,
+        String(member),
+        { limit: Number(limit), windowSec: Number(win) / 1000 },
+        Number(t0),
+      )
       return r.allowed ? [1, 0] : [0, r.retryAfterMs]
     }
   }
