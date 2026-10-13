@@ -538,22 +538,34 @@ describe('0171/0182 · el historial del teléfono y el directorio abren la contr
       })
       expect(loginError, `no se pudo iniciar sesión: ${loginError?.message}`).toBeNull()
 
-      const { data: sinGps, error: errSinGps } = await navegador.rpc(
-        'current_customer_contraentrega_outcome',
-      )
-      expect(errSinGps, `falta el grant a authenticated: ${errSinGps?.message}`).toBeNull()
-      expect(sinGps, 'sin GPS, sin historial: no_history').toBe('no_history')
-
-      const { data: conGps, error: errConGps } = await navegador.rpc(
-        'current_customer_contraentrega_outcome',
+      // `current_customer_contraentrega_outcome` ya no la ejecuta `authenticated`
+      // (0261: ningún cliente la llama, el checkout resuelve esto dentro de
+      // `create_customer_order`). Se prueba lo mismo por las piezas con las que
+      // se compone, que sí se mantienen para service_role: la decisión por
+      // historial y el crédito de GPS en el polígono de San Jacinto.
+      const { data: decision, error: errDecision } = await db.rpc(
+        'customer_contraentrega_decision',
         {
-          p_customer_gps_lat: LAT,
-          p_customer_gps_lng: LNG,
-          p_customer_gps_method: 'gps_high_accuracy',
+          p_customer_user_id: cliente.id,
         },
       )
-      expect(errConGps).toBeNull()
-      expect(conGps).toBe('local_review')
+      expect(errDecision).toBeNull()
+      expect(decision, 'sin historial: no_history').toBe('no_history')
+
+      const { data: gpsReal, error: errGps } = await db.rpc('customer_gps_in_coverage', {
+        p_lat: LAT,
+        p_lng: LNG,
+        p_method: 'gps_high_accuracy',
+      })
+      expect(errGps).toBeNull()
+      expect(gpsReal, 'GPS de sensor dentro de SJ: crédito -> local_review').toBe(true)
+
+      const { data: gpsFallido } = await db.rpc('customer_gps_in_coverage', {
+        p_lat: LAT,
+        p_lng: LNG,
+        p_method: 'failed',
+      })
+      expect(gpsFallido, 'sin sensor, sin crédito').toBe(false)
 
       // El predicado crudo tampoco se expone aquí: preguntaría por cuentas ajenas.
       const { error: prohibido } = await navegador.rpc('customer_contraentrega_decision', {
