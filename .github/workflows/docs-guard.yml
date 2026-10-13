@@ -1,0 +1,40 @@
+# Los dos mecanismos de Docs/README.md §8 que no caben en ci.yml: uno lee el cuerpo del PR (solo existe en
+# `pull_request`) y el otro corre por calendario (ci.yml correría entera cada semana). El resto está en el job `docs`
+# de ci.yml.
+name: docs-guard
+
+on:
+  pull_request:
+    branches: [develop, main]
+    types: [opened, edited, synchronize, reopened]
+  schedule:
+    - cron: "0 13 * * 1" # lunes 08:00 en Lima: aviso de temas de Docs/trabajo/ sin actividad
+
+permissions:
+  contents: read
+
+jobs:
+  impacto-documental:
+    name: Impacto documental declarado en el PR
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Línea «Impacto documental:» completa (Docs/README.md §5)
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          if ! printf '%s\n' "$PR_BODY" | tr -d '\r' | grep -qE '^Impacto documental: *[^[:space:]<]'; then
+            echo "::error::Falta la línea «Impacto documental: canon: … | ninguno, porque …» en la descripción del PR."
+            exit 1
+          fi
+
+  trabajo-age:
+    name: Temas de Docs/trabajo/ sin actividad
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Sin actividad en 30 días
+        run: bash scripts/check-trabajo-age.sh 30

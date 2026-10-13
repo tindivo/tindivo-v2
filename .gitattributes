@@ -11,6 +11,8 @@
 *.yaml text eol=lf
 *.toml text eol=lf
 *.sql text eol=lf
+*.sh text eol=lf
+.githooks/* text eol=lf
 
 # Archivos binarios que no deben ser normalizados.
 *.png binary
