@@ -2,6 +2,7 @@
 
 import { ApiError } from '@tindivo/api-client'
 import { TINDIVO_SUPPORT_WHATSAPP } from '@tindivo/core'
+import { Button } from '@tindivo/ui'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { api } from '@/lib/api'
@@ -94,14 +95,15 @@ export function DeleteAccountPanel() {
               {error}
             </p>
           )}
-          <button
+          <Button
             type="button"
+            variant="danger"
             onClick={handleDelete}
             disabled={!confirmed || phase === 'working'}
-            className="mt-3 w-full rounded-xl bg-danger px-4 py-3 text-[14px] font-semibold text-white disabled:opacity-40"
+            className="mt-3 w-full"
           >
             {phase === 'working' ? 'Borrando…' : 'Borrar mi cuenta definitivamente'}
-          </button>
+          </Button>
         </>
       )}
 
