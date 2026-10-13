@@ -1158,7 +1158,14 @@ const CONSTRUCTOR_OPACO =
 // un nombre) y el SQL dinámico ofuscado.
 
 /** Variables/parámetros (`nombre → tipo`) y columnas del catálogo (`tabla.columna → tipo`). */
-type ContextoTipos = { vars: Map<string, string>; campos: Map<string, string> }
+type ContextoTipos = {
+  vars: Map<string, string>
+  campos: Map<string, string>
+  /** Más de un DECLARE (bloques anidados): un nombre puede estar tapado por otro de un bloque interno. */
+  anidado?: boolean
+  /** `proconfig` con `search_path` vacío: sin esquema, las funciones se resuelven solo en pg_catalog. */
+  searchPathVacio?: boolean
+}
 const SIN_CONTEXTO: ContextoTipos = { vars: new Map(), campos: new Map() }
 
 const TIPOS_ESCALARES = new Set([
@@ -1246,10 +1253,14 @@ function contextoDe(
   norm: string,
   args: string | undefined,
   campos: Map<string, string>,
+  config?: string[] | null,
 ): ContextoTipos {
+  const t = sinCadenas(norm, () => "''")
   return {
     vars: new Map(Object.entries({ ...argumentosDe(args), ...declaradasEn(norm) })),
     campos,
+    anidado: [...t.matchAll(/(?<![w$])declare(?![w$])/g)].length > 1,
+    searchPathVacio: (config ?? []).some((c) => /^search_paths*=s*(?:""|'')?s*$/i.test(c)),
   }
 }
 
@@ -1268,6 +1279,9 @@ function ultimoCast(t: string): number {
   }
   return ult
 }
+
+const MOTIVO_ANIDADO =
+  'la función tiene bloques DECLARE anidados y un nombre podría estar tapado: no se resuelve el tipo'
 
 /** null si el valor es una forma permitida; si no, el motivo por el que pide revisión manual. */
 function motivoNoPermitido(valor: string, ctx: ContextoTipos): string | null {
@@ -1308,6 +1322,12 @@ function motivoNoPermitido(valor: string, ctx: ContextoTipos): string | null {
       return motivoNoPermitido(m[1] as string, ctx)
     }
     if (FUNCIONES_ESCALARES.has(nombre) && ['', 'pg_catalog.'].includes(esquema)) {
+      // `coalesce` es sintaxis SQL: no se resuelve por search_path. `now` y `round` sí: sin esquema
+      // solo valen si el productor tiene el search_path vacío (así solo ve pg_catalog).
+      if (nombre !== 'coalesce' && esquema === '' && !ctx.searchPathVacio)
+        return manual(
+          `llamada sin esquema a ${nombre} en un productor cuyo search_path no está vacío (podría ejecutarse otra función)`,
+        )
       for (const a of args) {
         const m = motivoNoPermitido(a, ctx)
         if (m) return m
@@ -1317,12 +1337,14 @@ function motivoNoPermitido(valor: string, ctx: ContextoTipos): string | null {
     return manual(`llamada a una función que no está en la lista (${esquema}${nombre})`)
   }
   if (/^[a-z_][\w$]*$/.test(t)) {
+    if (ctx.anidado) return manual(MOTIVO_ANIDADO)
     const tipo = ctx.vars.get(t)
     if (tipo === undefined) return manual('identificador sin tipo resuelto')
     return esTipoEscalar(tipo) ? null : manual(`variable de tipo no escalar (${tipo})`)
   }
   const campo = /^([a-z_][\w$]*)\.([a-z_][\w$]*)$/.exec(t)
   if (campo) {
+    if (ctx.anidado) return manual(MOTIVO_ANIDADO)
     const tipo = ctx.vars.get(campo[1] as string)
     if (tipo === undefined) return manual('registro sin tipo resuelto')
     const tabla = quitaTipoDecoracion(tipo.replace(/%rowtype$/i, ''))
@@ -1418,7 +1440,7 @@ const NO_INSERCIONES: Record<string, { n: number; motivo: string }> = {
 // Hoy ninguna: una nueva rompe el test hasta que alguien la lea y la anote aquí con su motivo.
 const EXECUTE_REVISADOS: Record<string, string> = {}
 
-type FuenteFuncion = { f: string; s: string; args?: string }
+type FuenteFuncion = { f: string; s: string; args?: string; config?: string[] | null }
 type Productor = { n: number; top: Set<string> | null; todas: Set<string>; error: string | null }
 
 /**
@@ -1441,7 +1463,7 @@ function analizarFunciones(funciones: FuenteFuncion[], campos: Map<string, strin
       problemas.push(
         `${fn.f}: EXECUTE que puede armar el nombre de domain_events; revísalo a mano y anótalo en EXECUTE_REVISADOS`,
       )
-    const ctx = contextoDe(norm, fn.args, campos)
+    const ctx = contextoDe(norm, fn.args, campos, fn.config)
     let leidas = 0
     for (const m of norm.matchAll(INSERCION_TABLA)) {
       leidas++
@@ -1487,6 +1509,7 @@ describe('lector de SQL de los productores de domain_events (puro)', () => {
   const ctx = (vars: Record<string, string>, campos: Record<string, string> = {}) => ({
     vars: new Map(Object.entries(vars)),
     campos: new Map(Object.entries(campos)),
+    searchPathVacio: true,
   })
   const ins = (cuerpo: string) => analizarFunciones([{ f: 'f_prueba', s: cuerpo }])
   const CUERPO = `values ('cash_settlement', gen_random_uuid(), 'CashConfirmed', jsonb_build_object('amount', v))`
@@ -1646,7 +1669,34 @@ describe('lector de SQL de los productores de domain_events (puro)', () => {
       expect(val('round(contact_json(), 2)', c)).toMatch(/revisión manual/)
     })
 
-    it('(g) el cast a un tipo escalar de algo permitido se permite; el de una variable json, no', () => {
+    it('(h) shadowing: con DECLARE anidado no se resuelven tipos; con uno solo, sí', () => {
+      const ins1 = (cuerpo: string) =>
+        analizarFunciones([{ f: 'f_prueba', s: cuerpo }]).reales.get('f_prueba|x|Ev')?.error ?? null
+      const insercion = `insert into public.domain_events (aggregate_type, aggregate_id, event_type, payload) values ('x', gen_random_uuid(), 'Ev', jsonb_build_object('amount', v))`
+      const anidado = `declare v numeric; begin declare v jsonb := jsonb_build_object('customerName','Rosa'); begin ${insercion}; end; end;`
+      expect(ins1(anidado)).toMatch(/DECLARE anidados/)
+      expect(ins1(`declare v numeric; begin ${insercion}; end;`)).toBeNull()
+    })
+
+    it('(i) now/round sin esquema solo con search_path vacío; pg_catalog. siempre', () => {
+      const cuerpo = (llamada: string) =>
+        `begin insert into public.domain_events (aggregate_type, aggregate_id, event_type, payload) values ('x', gen_random_uuid(), 'Ev', jsonb_build_object('amount', ${llamada})); end;`
+      const err = (llamada: string, config?: string[] | null) =>
+        analizarFunciones([{ f: 'f_prueba', s: cuerpo(llamada), config }]).reales.get(
+          'f_prueba|x|Ev',
+        )?.error ?? null
+      expect(err('round(1)', ['search_path=""'])).toBeNull()
+      expect(err('round(1)', ['search_path='])).toBeNull()
+      expect(err('round(1)', ['search_path=public, pg_catalog'])).toMatch(/revisión manual/)
+      expect(err('round(1)', ['search_path=pg_catalog'])).toMatch(/revisión manual/)
+      expect(err('pg_catalog.round(1)', ['search_path=public, pg_catalog'])).toBeNull()
+      expect(err('pg_catalog.round(1)', null)).toBeNull()
+      expect(err('now()', null)).toMatch(/revisión manual/)
+      expect(err('now()')).toMatch(/revisión manual/)
+      expect(err('coalesce(1, 2)', null)).toBeNull()
+    })
+
+    it('(j) el cast a un tipo escalar de algo permitido se permite; el de una variable json, no', () => {
       const c = ctx({ v_amount: 'numeric', v_json: 'jsonb' })
       expect(val('v_amount::text', c)).toBeNull()
       expect(val('cast(v_amount as text)', c)).toBeNull()
@@ -1743,9 +1793,9 @@ describe.skipIf(sinPsql && !process.env.CI)('candados con dos sesiones psql', ()
     // Basta que el cuerpo del PRODUCTOR mencione la tabla: ya no hace falta encontrar al auxiliar que
     // arme un payload, porque llamarlo desde un payload `sin_datos_del_cliente` falla por sí mismo.
     const r = await psql(
-      `select coalesce(json_agg(json_build_object('f', f, 's', s, 'args', a) order by f), '[]') from (` +
+      `select coalesce(json_agg(json_build_object('f', f, 's', s, 'args', a, 'config', c) order by f), '[]') from (` +
         `select proname as f, coalesce(nullif(prosrc, ''), pg_get_function_sqlbody(oid)) as s, ` +
-        `pg_get_function_arguments(oid) as a from pg_proc ` +
+        `pg_get_function_arguments(oid) as a, proconfig as c from pg_proc ` +
         `where pronamespace = 'public'::regnamespace and prokind in ('f', 'p')) t ` +
         `where s ~* 'domain|events|execute'`,
     )
