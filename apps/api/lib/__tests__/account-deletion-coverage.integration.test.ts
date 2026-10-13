@@ -998,7 +998,70 @@ const INVENTARIO_PRODUCTORES: Record<string, ClaseProductor> = {
   'validate_order|order|OrderValidated': PA(2),
 }
 
-/** Recorre `s` desde el `(` de `abre` y devuelve los argumentos de primer nivel. Sin comentarios SQL. */
+// ── Lector de SQL de los productores (puro: texto SQL de entrada → resultado) ─
+// Límite residual, revisión HUMANA (no se verifica en estático): el VALOR de una clave permitida
+// que salga de una variable de texto, y el SQL dinámico ofuscado a propósito (cadenas partidas en
+// trozos que ya no dicen `domain` ni `events`).
+
+/**
+ * Deja el cuerpo de una función listo para BUSCAR en él, sin importar cómo esté escrito: quita
+ * los comentarios de línea y de bloque (anidados), quita las comillas dobles de los identificadores,
+ * pasa el código a minúsculas y colapsa el espacio en blanco. Las cadenas (`'…'` y `$tag$…$tag$`)
+ * se conservan tal cual: sus claves distinguen mayúsculas (`'customerName'`).
+ */
+function normalizarSql(src: string): string {
+  let out = ''
+  const espacio = () => {
+    if (!out.endsWith(' ')) out += ' '
+  }
+  for (let i = 0; i < src.length; i++) {
+    const c = src[i] as string
+    const dolar = c === '$' && !/\w/.test(src[i - 1] ?? ' ') ? /^\$\w*\$/.exec(src.slice(i)) : null
+    if (c === "'") {
+      const ini = i
+      i++
+      while (i < src.length && !(src[i] === "'" && src[i + 1] !== "'")) i += src[i] === "'" ? 2 : 1
+      out += src.slice(ini, i + 1)
+    } else if (dolar) {
+      const fin = src.indexOf(dolar[0], i + dolar[0].length)
+      const hasta = fin < 0 ? src.length : fin + dolar[0].length
+      out += src.slice(i, hasta)
+      i = hasta - 1
+    } else if (c === '-' && src[i + 1] === '-') {
+      while (i < src.length && src[i] !== '\n') i++
+      espacio()
+    } else if (c === '/' && src[i + 1] === '*') {
+      let prof = 1
+      i += 2
+      while (i < src.length && prof > 0) {
+        if (src[i] === '/' && src[i + 1] === '*') {
+          prof++
+          i++
+        } else if (src[i] === '*' && src[i + 1] === '/') {
+          prof--
+          i++
+        }
+        i++
+      }
+      i--
+      espacio()
+    } else if (c === '"') {
+      // comilla de identificador: fuera
+    } else if (/\s/.test(c)) {
+      espacio()
+    } else {
+      out += c.toLowerCase()
+    }
+  }
+  return out
+}
+
+const LITERAL_SQL = /'(?:[^']|'')*'|\$(\w*)\$[\s\S]*?\$\1\$/g
+/** Toda mención de la tabla, escrita como se escriba (el texto ya viene normalizado). */
+const MENCION_TABLA = /(?<![\w$])domain_events(?![\w$])/g
+const INSERCION_TABLA = /(?<![\w$])insert into (?:(\w+)\.)?domain_events(?![\w$])/g
+
+/** Recorre `s` desde el `(` de `abre` y devuelve los argumentos de primer nivel. */
 function leerArgumentos(s: string, abre: number): { args: string[]; cierra: number } | null {
   const args: string[] = []
   let actual = ''
@@ -1010,10 +1073,6 @@ function leerArgumentos(s: string, abre: number): { args: string[]; cierra: numb
       i++
       while (i < s.length && !(s[i] === "'" && s[i + 1] !== "'")) i += s[i] === "'" ? 2 : 1
       actual += s.slice(ini, i + 1)
-      continue
-    }
-    if (c === '-' && s[i + 1] === '-') {
-      while (i < s.length && s[i] !== '\n') i++
       continue
     }
     if (c === '(') {
@@ -1035,34 +1094,229 @@ function leerArgumentos(s: string, abre: number): { args: string[]; cierra: numb
   return null
 }
 
-/** Una inserción: agregado, evento y claves literales del payload (null si no se pueden leer). */
-function leerInsercion(
-  s: string,
-): { agregado: string; evento: string; claves: string[] | null } | string {
-  const cols = /^insert\s+into\s+(?:public\.)?"?domain_events"?\s*\(/i.exec(s)
+// Constructores que no se saben analizar como valor de una clave: su contenido puede traer claves
+// que no se ven en el texto (`to_jsonb(fila)`, `a || b`, una variable jsonb…). Piden clasificación manual.
+const CONSTRUCTOR_OPACO =
+  /\b(to_jsonb?|row_to_json|array_to_json|jsonb?_agg|jsonb?_object_agg|array_agg|jsonb?_build_array|jsonb?_object|jsonb_(?:set|insert|strip_nulls|populate\w*|path\w*|each\w*|array_elements\w*|extract\w*|concat)|row|select)\b|\|\||::\s*jsonb?\b|->(?!>)|#>|@>|\[/
+
+type PayloadLeido = {
+  /** Claves del primer nivel (null si el payload no es un `jsonb_build_object` literal). */
+  top: string[] | null
+  /** Claves de TODOS los `jsonb_build_object` / `json_build_object`, a cualquier profundidad. */
+  todas: string[]
+  /** Por qué no se puede analizar (null si se pudo): obliga a clasificar a mano. */
+  error: string | null
+}
+
+/** Claves literales de un payload, con los constructores anidados incluidos. */
+function leerPayload(payload: string): PayloadLeido {
+  const todas: string[] = []
+  const errores: string[] = []
+  let top: string[] | null = null
+  // Se buscan fuera de las cadenas: se tapan con espacios, que no cambian las posiciones.
+  const tapado = payload.replace(LITERAL_SQL, (m) => ' '.repeat(m.length))
+  for (const m of tapado.matchAll(/(?<![\w.])json(?:b)?_build_object\s*\(/g)) {
+    const p = leerArgumentos(payload, m.index + m[0].length - 1)
+    if (!p) {
+      errores.push('constructor sin cerrar')
+      continue
+    }
+    if (p.args.length % 2 !== 0) errores.push('jsonb_build_object con argumentos impares')
+    const claves: string[] = []
+    p.args.forEach((a, i) => {
+      if (i % 2 !== 0) return
+      const k = /^'([^']*)'(?:::text)?$/.exec(a)?.[1]
+      if (k === undefined) errores.push(`clave que no es un literal: ${a.slice(0, 40)}`)
+      else claves.push(k)
+    })
+    todas.push(...claves)
+    if (m.index === 0 && p.cierra === payload.length - 1) top = claves
+  }
+  if (top === null) errores.push('el payload no es un jsonb_build_object literal')
+  const opaco = CONSTRUCTOR_OPACO.exec(payload.replace(LITERAL_SQL, "''"))
+  if (opaco) errores.push(`construcción no analizable: ${opaco[0]}`)
+  return { top, todas, error: errores.length > 0 ? errores.join('; ') : null }
+}
+
+type InsercionLeida = { agregado: string; evento: string; payload: PayloadLeido }
+
+/** Una inserción (texto normalizado, desde `insert into`): agregado, evento y payload. */
+function leerInsercion(s: string): InsercionLeida | string {
+  const cols = /^insert into (?:\w+\.)?domain_events\s*\(/.exec(s)
   if (!cols) return 'inserción con forma no reconocida'
   const c = leerArgumentos(s, cols[0].length - 1)
   if (!c) return 'lista de columnas sin cerrar'
-  const v = /^\s*values\s*\(/i.exec(s.slice(c.cierra + 1))
+  const v = /^\s*values\s*\(/.exec(s.slice(c.cierra + 1))
   if (!v) return 'no es INSERT … VALUES (…)'
   const a = leerArgumentos(s, c.cierra + 1 + v[0].length - 1)
   if (!a || a.args.length !== c.args.length) return 'valores no alineados con las columnas'
-  const col = (n: string) => a.args[c.args.map((x) => x.trim().toLowerCase()).indexOf(n)]
+  const col = (n: string) => a.args[c.args.map((x) => x.trim()).indexOf(n)]
   const agregado = /^'(\w+)'$/.exec(col('aggregate_type') ?? '')?.[1]
   const evento = /^'([^']+)'$/.exec(col('event_type') ?? '')?.[1]
   if (!agregado || !evento) return 'aggregate_type o event_type no son literales'
-  const payload = col('payload') ?? ''
-  const jb = /^jsonb_build_object\s*\(/i.exec(payload)
-  let claves: string[] | null = null
-  if (jb) {
-    const p = leerArgumentos(payload, jb[0].length - 1)
-    if (p && p.cierra === payload.length - 1) {
-      const lit = p.args.filter((_, i) => i % 2 === 0).map((k) => /^'([^']*)'$/.exec(k)?.[1])
-      if (lit.every((k) => k !== undefined)) claves = lit as string[]
-    }
-  }
-  return { agregado, evento, claves }
+  return { agregado, evento, payload: leerPayload(col('payload') ?? '') }
 }
+
+// Menciones de `domain_events` que NO son inserciones, justificadas una a una (función → cuántas).
+const NO_INSERCIONES: Record<string, { n: number; motivo: string }> = {
+  delete_customer_account: {
+    n: 1,
+    motivo: 'el UPDATE que redacta los eventos del cliente (0259); se lee más abajo',
+  },
+  personal_data_inventory: {
+    n: 1,
+    motivo:
+      'lectura de catálogo: suma la tabla a las relaciones que inventaría (UNION SELECT ::regclass)',
+  },
+}
+// Funciones con EXECUTE que pueden nombrar `domain_events`, revisadas a mano (nombre → qué hacen).
+// Hoy ninguna: una nueva rompe el test hasta que alguien la lea y la anote aquí con su motivo.
+const EXECUTE_REVISADOS: Record<string, string> = {}
+
+type FuenteFuncion = { f: string; s: string }
+type Productor = { n: number; top: Set<string> | null; todas: Set<string>; error: string | null }
+
+/**
+ * Toda mención de `domain_events` queda justificada: o es una inserción leída y clasificada, o
+ * está en `NO_INSERCIONES`. Un `EXECUTE` que pueda armar el nombre obliga a revisión manual.
+ */
+function analizarFunciones(funciones: FuenteFuncion[]) {
+  const reales = new Map<string, Productor>()
+  const otras = new Map<string, number>()
+  const problemas: string[] = []
+  for (const fn of funciones) {
+    const norm = normalizarSql(fn.s)
+    const menciones = [...norm.matchAll(MENCION_TABLA)].length
+    const literales = [...norm.matchAll(LITERAL_SQL)].map((m) => m[0].toLowerCase())
+    if (
+      /(?<![\w$])execute(?![\w$])/.test(norm) &&
+      (menciones > 0 || literales.some((l) => /domain|events/.test(l))) &&
+      !(fn.f in EXECUTE_REVISADOS)
+    )
+      problemas.push(
+        `${fn.f}: EXECUTE que puede armar el nombre de domain_events; revísalo a mano y anótalo en EXECUTE_REVISADOS`,
+      )
+    let leidas = 0
+    for (const m of norm.matchAll(INSERCION_TABLA)) {
+      leidas++
+      if (m[1] && m[1] !== 'public') {
+        problemas.push(`${fn.f}: inserción en el esquema '${m[1]}' (clasifícalo a mano)`)
+        continue
+      }
+      const ins = leerInsercion(norm.slice(m.index, m.index + 6000))
+      if (typeof ins === 'string') {
+        problemas.push(`${fn.f}: ${ins} (clasifícalo a mano)`)
+        continue
+      }
+      const k = `${fn.f}|${ins.agregado}|${ins.evento}`
+      const p = reales.get(k) ?? {
+        n: 0,
+        top: new Set<string>(),
+        todas: new Set<string>(),
+        error: null,
+      }
+      p.n += 1
+      p.top = ins.payload.top && p.top ? new Set([...p.top, ...ins.payload.top]) : null
+      for (const c of ins.payload.todas) p.todas.add(c)
+      p.error = p.error ?? ins.payload.error
+      reales.set(k, p)
+    }
+    if (menciones > leidas) otras.set(fn.f, menciones - leidas)
+  }
+  for (const [f, n] of otras) {
+    const ok = NO_INSERCIONES[f]
+    if (!ok)
+      problemas.push(
+        `${f}: ${n} mención(es) de domain_events sin justificar (ni inserción ni NO_INSERCIONES)`,
+      )
+    else if (ok.n !== n)
+      problemas.push(`${f}: ${n} mención(es) que no son inserción y NO_INSERCIONES dice ${ok.n}`)
+  }
+  return { reales, otras, problemas }
+}
+
+// Pruebas puras del lector: texto SQL de entrada → resultado. No tocan la base.
+describe('lector de SQL de los productores de domain_events (puro)', () => {
+  const ins = (cuerpo: string) => analizarFunciones([{ f: 'f_prueba', s: cuerpo }])
+  const CUERPO = `values ('cash_settlement', gen_random_uuid(), 'CashConfirmed', jsonb_build_object('amount', v))`
+
+  it('detecta la inserción escrita de forma normal', () => {
+    const r = ins(
+      `begin insert into public.domain_events (aggregate_type, aggregate_id, event_type, payload) ${CUERPO}; end`,
+    )
+    expect(r.problemas).toEqual([])
+    expect([...r.reales.keys()]).toEqual(['f_prueba|cash_settlement|CashConfirmed'])
+  })
+
+  it('(a) con un comentario de bloque entre INSERT e INTO', () => {
+    const r = ins(
+      `INSERT /* x */ INTO public.domain_events (aggregate_type, aggregate_id, event_type, payload) ${CUERPO};`,
+    )
+    expect(r.problemas).toEqual([])
+    expect([...r.reales.keys()]).toEqual(['f_prueba|cash_settlement|CashConfirmed'])
+  })
+
+  it('(b) con el identificador entre comillas dobles y comentarios de línea', () => {
+    const r = ins(
+      `INSERT -- x\n INTO public."domain_events" (aggregate_type, aggregate_id, event_type, payload) ${CUERPO};`,
+    )
+    expect(r.problemas).toEqual([])
+    expect([...r.reales.keys()]).toEqual(['f_prueba|cash_settlement|CashConfirmed'])
+  })
+
+  it('(c) un EXECUTE con la cadena partida no pasa en silencio', () => {
+    const entera = ins(`execute 'INSERT INTO ' || 'public.domain_events (payload) values (1)';`)
+    expect(entera.problemas.join('|')).toMatch(/f_prueba: EXECUTE/)
+    expect(entera.problemas.join('|')).toMatch(/mención\(es\) de domain_events sin justificar/)
+    const partida = ins(`execute 'insert into public.domain_' || 'events (payload) values (1)';`)
+    expect(partida.problemas.join('|')).toMatch(/f_prueba: EXECUTE/)
+  })
+
+  it('una mención que no es inserción (UPDATE, SELECT) pide justificación', () => {
+    const r = ins(
+      `update public.domain_events set payload = '{}'; select count(*) from "public"."DOMAIN_EVENTS";`,
+    )
+    expect(r.problemas).toEqual([
+      expect.stringMatching(/2 mención\(es\) de domain_events sin justificar/),
+    ])
+  })
+
+  it('una inserción que no es INSERT … VALUES se manda a clasificar a mano', () => {
+    const r = ins(`insert into public.domain_events select * from otra;`)
+    expect(r.problemas).toEqual([expect.stringMatching(/forma no reconocida/)])
+  })
+
+  it('(d) lee las claves de los constructores anidados a cualquier profundidad', () => {
+    const p = leerPayload(
+      `jsonb_build_object('amount', jsonb_build_object('customerName', 'Rosa', 'x', coalesce(json_build_object('deep', 1), null)), 'driverId', d)`,
+    )
+    expect(p.error).toBeNull()
+    expect(p.top).toEqual(['amount', 'driverId'])
+    expect([...p.todas].sort()).toEqual(['amount', 'customerName', 'deep', 'driverId', 'x'])
+  })
+
+  it('un constructor que no sabe analizar obliga a clasificar a mano', () => {
+    for (const valor of [
+      `to_jsonb(v_fila)`,
+      `row_to_json(v_fila)`,
+      `(select jsonb_agg(x) from t)`,
+      `v_a || v_b`,
+      `v_extra::jsonb`,
+      `v_doc -> 'a'`,
+      `jsonb_build_array(1)`,
+    ])
+      expect(leerPayload(`jsonb_build_object('amount', ${valor})`).error, valor).toMatch(
+        /no analizable/,
+      )
+    expect(leerPayload(`v_payload`).error).toMatch(/no es un jsonb_build_object literal/)
+    expect(leerPayload(`jsonb_build_object(v_k, 1)`).error).toMatch(/clave que no es un literal/)
+    expect(leerPayload(`to_jsonb(v) || jsonb_build_object('a', 1)`).error).not.toBeNull()
+    // Un escalar normal (columna, `->>`, cast de texto) sí se acepta.
+    expect(
+      leerPayload(`jsonb_build_object('a', v.id, 'b', p->>'k', 'c', 1::numeric)`).error,
+    ).toBeNull()
+  })
+})
 
 // En la CI NO se salta: si falta Docker o el contenedor, el job debe ponerse rojo, no verde.
 describe.skipIf(sinPsql && !process.env.CI)('candados con dos sesiones psql', () => {
@@ -1071,38 +1325,38 @@ describe.skipIf(sinPsql && !process.env.CI)('candados con dos sesiones psql', ()
     // por `event_type` + ids del payload. Un productor nuevo (o uno viejo que añada datos del
     // cliente al payload) puede dejar datos sin redactar: por eso se identifica CADA inserción
     // (función · agregado · evento · claves del payload) y se compara con el inventario de arriba.
+    // Se leen TODAS las funciones de `public` que puedan mencionar la tabla (o armar SQL dinámico),
+    // con su cuerpo normalizado: la detección es por mención, no por la forma del INSERT.
     const r = await psql(
       `select coalesce(json_agg(json_build_object('f', f, 's', s) order by f), '[]') from (` +
-        `select p.proname as f, 'insert into public.domain_events' || left(t.piece, 6000) as s from pg_proc p ` +
-        `cross join lateral regexp_split_to_table(p.prosrc, 'insert[[:space:]]+into[[:space:]]+(public[.])?domain_events', 'i') ` +
-        `with ordinality t(piece, ord) where p.pronamespace = 'public'::regnamespace and t.ord > 1) t`,
+        `select proname as f, coalesce(nullif(prosrc, ''), pg_get_function_sqlbody(oid)) as s from pg_proc ` +
+        `where pronamespace = 'public'::regnamespace and prokind in ('f', 'p')) t ` +
+        `where s ~* 'domain|events|execute'`,
     )
-    const trozos = JSON.parse(r.out.trim()) as { f: string; s: string }[]
-    expect(trozos.length).toBeGreaterThan(0)
+    const funciones = JSON.parse(r.out.trim()) as FuenteFuncion[]
+    expect(funciones.length).toBeGreaterThan(0)
+    const { reales, otras, problemas } = analizarFunciones(funciones)
+    expect(reales.size).toBeGreaterThan(0)
+    for (const f of Object.keys(NO_INSERCIONES))
+      if (!otras.has(f))
+        problemas.push(`NO_INSERCIONES lista ${f} pero ya no menciona la tabla: actualízalo`)
 
-    const problemas: string[] = []
-    const reales = new Map<string, { n: number; claves: Set<string> | null }>()
-    for (const t of trozos) {
-      const ins = leerInsercion(t.s)
-      if (typeof ins === 'string') {
-        problemas.push(`${t.f}: ${ins} (clasifícalo a mano)`)
-        continue
-      }
-      const k = `${t.f}|${ins.agregado}|${ins.evento}`
-      const previo = reales.get(k) ?? { n: 0, claves: new Set<string>() }
-      previo.n += 1
-      previo.claves =
-        ins.claves && previo.claves ? new Set([...previo.claves, ...ins.claves]) : null
-      reales.set(k, previo)
-    }
+    // Nada fuera del análisis: ni funciones de otro esquema, ni vistas o reglas que dependan de la tabla.
+    const fuera = await psql(
+      `select n.nspname || '.' || p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace ` +
+        `where n.nspname not in ('public', 'pg_catalog', 'information_schema') and p.prosrc ~* 'domain_events' ` +
+        `union all select 'regla ' || r.rulename || ' sobre ' || r.ev_class::regclass from pg_depend d ` +
+        `join pg_rewrite r on r.oid = d.objid where d.classid = 'pg_rewrite'::regclass ` +
+        `and d.refobjid = 'public.domain_events'::regclass`,
+    )
+    for (const l of fuera.out.split(/\r?\n/).filter(Boolean))
+      problemas.push(`${l} depende de domain_events y queda fuera del análisis`)
 
     // Lo que la redacción cubre, leído de la función VIVA y no de la migración.
     const del = await psql(
       `select prosrc from pg_proc where proname = 'delete_customer_account' and pronamespace = 'public'::regnamespace`,
     )
-    const trozo = /update\s+public\.domain_events\s+set[^;]*;/i.exec(
-      del.out.replace(/--[^\n]*/g, ''),
-    )?.[0]
+    const trozo = /update public\.domain_events set[^;]*;/.exec(normalizarSql(del.out))?.[0]
     expect(
       trozo,
       'no se encontró el UPDATE de domain_events en delete_customer_account',
@@ -1126,7 +1380,7 @@ describe.skipIf(sinPsql && !process.env.CI)('candados con dos sesiones psql', ()
       const [, agregado, evento] = k.split('|') as [string, string, string]
       if (!inv) {
         problemas.push(
-          `productor NUEVO sin clasificar: ${k} claves=${real.claves ? [...real.claves].sort().join(',') : '(dinámico)'}`,
+          `productor NUEVO sin clasificar: ${k} claves=${[...real.todas].sort().join(',')}${real.error ? ` [${real.error}]` : ''}`,
         )
         continue
       }
@@ -1138,15 +1392,18 @@ describe.skipIf(sinPsql && !process.env.CI)('candados con dos sesiones psql', ()
       } else if (inv.clase === 'por_payload_uuid') {
         if (!eventosCubiertos.has(evento))
           problemas.push(`${k}: es por_payload_uuid pero el filtro de 0259 no incluye '${evento}'`)
-        if (!real.claves || ![...real.claves].some((c) => clavesCubiertas.has(c)))
+        if (!real.top || ![...real.top].some((c) => clavesCubiertas.has(c)))
           problemas.push(
             `${k}: ninguna clave del payload es una de las que busca el filtro (${[...clavesCubiertas].join(',')})`,
           )
       } else {
-        if (!real.claves)
-          problemas.push(`${k}: payload dinámico en un productor sin_datos_del_cliente`)
+        if (real.error)
+          problemas.push(
+            `${k}: payload no analizable (${real.error}); clasifícalo a mano antes de inventariarlo`,
+          )
         else {
-          const nuevas = [...real.claves].filter((c) => !inv.claves.includes(c))
+          // Todas las claves, de todos los niveles: una anidada también es una clave nueva.
+          const nuevas = [...real.todas].filter((c) => !inv.claves.includes(c))
           if (nuevas.length > 0)
             problemas.push(
               `${k}: clave(s) nueva(s) en el payload: ${nuevas.join(',')}; decide si llevan datos del cliente`,
