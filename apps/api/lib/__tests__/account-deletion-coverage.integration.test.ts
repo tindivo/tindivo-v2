@@ -18,6 +18,7 @@ import { DELETE as deleteAccount } from '../../app/api/v1/customer/account/route
 import {
   cleanup,
   localClient as db,
+  E2E,
   type SeededOrder,
   seedContraentregaOrder,
   setOrderStatus,
@@ -43,6 +44,7 @@ const PASSWORD = 'test-password-12345'
 const seeds: SeededOrder[] = []
 const clientes: string[] = []
 let courierSettings: unknown = null
+const liquidaciones: string[] = []
 let telSeq = 50
 
 interface Cliente {
@@ -164,6 +166,11 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
+  for (const id of liquidaciones) {
+    await db.from('orders').update({ cash_settlement_id: null }).eq('cash_settlement_id', id)
+    await db.from('domain_events').delete().eq('aggregate_id', id)
+    await db.from('cash_settlements').delete().eq('id', id)
+  }
   for (const seed of seeds) await cleanup(seed)
   for (const id of clientes) {
     await db.from('courier_orders').delete().eq('customer_user_id', id)
@@ -250,6 +257,7 @@ const POR_COLUMNA = new Set([
   'order_reviews',
   'order_transfer_requests',
   'order_assignment_rejections',
+  'domain_events', // sin FK: la RPC lo busca por aggregate_id y por ids dentro del payload
 ])
 
 /** Columnas que el borrado VACÍA, redacta o sustituye. `tabla.columna`. */
@@ -278,6 +286,8 @@ const ANONIMIZADAS = new Set([
   'order_assignment_rejections.reason',
   'domain_events.payload',
   'domain_events.metadata',
+  'domain_events.last_error', // texto de error del despacho: puede arrastrar el payload
+  'courier_orders.utm_source', // texto libre de hasta 60 (contrato de Entregas)
 ])
 
 /**
@@ -302,8 +312,27 @@ const CONSERVADAS_COLUMNA = new Set([
   'customer_order_item_modifiers.option_name_snapshot',
 ])
 
-const PINTA_PERSONAL =
-  /(lat|lng|coord|address|reference|phone|name|note|gps|accuracy|maps|comment|description|text|data|payload|metadata|url|reason|motivo|detail|label|line|title|message|email|search|tags)/
+/**
+ * Columnas de texto/JSON que NO son personales, cada una con su porqué. Es una decisión
+ * explícita, igual que las otras dos listas: no hay heurística por nombre.
+ */
+const NO_PERSONAL = new Set([
+  'orders.short_id', // id público del pedido, no identifica a la persona
+  'courier_orders.short_id',
+  'orders.payment_proof_status', // enum con CHECK
+  'orders.delivery_fee_source', // enum con CHECK
+  'orders.pickup_timing', // enum con CHECK
+  'orders.validation_result', // enum con CHECK
+  'courier_orders.payment_method', // enum con CHECK
+  'courier_order_events.actor_role', // rol, no persona
+  'courier_order_events.event_type', // tipo de evento
+  'order_event_log.actor_role',
+  'order_event_log.event_type',
+  'domain_events.aggregate_type',
+  'domain_events.event_type',
+])
+
+const TIPOS_LIBRES = new Set(['text', 'character varying', 'character', 'jsonb', 'json', 'ARRAY'])
 
 describe('inventario de tablas y columnas personales (medido por llaves foráneas)', () => {
   it('toda tabla con vínculo a pedidos o usuarios tiene una decisión', async () => {
@@ -327,19 +356,20 @@ describe('inventario de tablas y columnas personales (medido por llaves foránea
     expect(sinDecision).toEqual([])
   })
 
-  it('toda columna con pinta personal de las tablas revisadas está anonimizada o conservada a propósito', async () => {
+  it('TODA columna de texto o JSON de las tablas revisadas tiene una decisión explícita', async () => {
     const { data, error } = await raw.rpc('personal_data_inventory')
     if (error) throw new Error(`personal_data_inventory falló: ${error.message}`)
     const cols = data as { table_name: string; column_name: string; data_type: string }[]
-    const sinDecidir = [
-      ...cols.filter((c) => POR_COLUMNA.has(c.table_name)),
-      // `domain_events` no tiene FK (apunta por `aggregate_id`), así que se añade a mano.
-      { table_name: 'domain_events', column_name: 'payload', data_type: 'jsonb' },
-      { table_name: 'domain_events', column_name: 'metadata', data_type: 'jsonb' },
-    ]
-      .filter((c) => PINTA_PERSONAL.test(c.column_name) || c.data_type === 'jsonb')
+    const revisadas = cols.filter(
+      (c) => POR_COLUMNA.has(c.table_name) && TIPOS_LIBRES.has(c.data_type),
+    )
+    // Sin heurística por nombre: si la columna es de texto libre o JSON, se decide.
+    expect(revisadas.map((c) => `${c.table_name}.${c.column_name}`)).toContain(
+      'courier_orders.utm_source',
+    )
+    const sinDecidir = revisadas
       .map((c) => `${c.table_name}.${c.column_name}`)
-      .filter((k) => !ANONIMIZADAS.has(k) && !CONSERVADAS_COLUMNA.has(k))
+      .filter((k) => !ANONIMIZADAS.has(k) && !CONSERVADAS_COLUMNA.has(k) && !NO_PERSONAL.has(k))
     expect(sinDecidir).toEqual([])
   })
 })
@@ -468,7 +498,11 @@ describe('notas libres y logs sin rastro de la persona', () => {
     const courierId = (created.data as { id: string }).id
     await db
       .from('courier_orders')
-      .update({ status: 'delivered', delivered_at: new Date().toISOString() })
+      .update({
+        status: 'delivered',
+        delivered_at: new Date().toISOString(),
+        utm_source: 'campaña de Rosa Quispe',
+      })
       .eq('id', courierId)
     await db
       .from('courier_order_events')
@@ -510,6 +544,105 @@ describe('notas libres y logs sin rastro de la persona', () => {
       .eq('courier_order_id', courierId)
     expect(JSON.stringify(deCarrera)).not.toMatch(new RegExp(`Rosa|${c.phone}`))
     expect(JSON.stringify(deCarrera)).toMatch(/"feeAmount":3/)
+    const { data: carrera } = await db
+      .from('courier_orders')
+      .select('utm_source')
+      .eq('id', courierId)
+      .single()
+    expect(carrera?.utm_source).toBeNull()
+  })
+})
+
+// ── 5b. Eventos de OTRO agregado que referencian el pedido ───────────────────
+async function entregarEfectivo(orderId: string): Promise<string> {
+  // El efectivo que se debe sale de `payment_real` (52 = 50 + 2 de envío).
+  const pago = await db.from('orders').update({ payment_real: 'paid_cash' }).eq('id', orderId)
+  if (pago.error) throw new Error(`payment_real falló: ${pago.error.message} [${pago.error.hint}]`)
+  const { data, error } = await db.rpc('deliver_order_cash', {
+    p_driver_user_id: E2E.DRIVER_USER_ID,
+    p_order_id: orderId,
+  })
+  if (error) throw new Error(`deliver_order_cash falló: ${error.message}`)
+  const id = (data as { id: string }).id
+  liquidaciones.push(id)
+  return id
+}
+
+describe('el evento de la liquidación (CashDelivered) también se redacta', () => {
+  it('pedido entregado, efectivo declarado, cuenta borrada: sin nombre y con el importe', async () => {
+    const c = await crearCliente()
+    const seed = await pedidoCompleto(c)
+    const liquidacion = await entregarEfectivo(seed.orderId)
+    const { data: antes } = await db
+      .from('domain_events')
+      .select('payload')
+      .eq('aggregate_id', liquidacion)
+      .eq('event_type', 'CashDelivered')
+      .single()
+    expect(antes?.payload).toMatchObject({ customerName: 'Doña Rosa Quispe' })
+
+    expect((await borrar(c.token)).status).toBe(204)
+
+    const { data: evento } = await db
+      .from('domain_events')
+      .select('payload')
+      .eq('aggregate_id', liquidacion)
+      .eq('event_type', 'CashDelivered')
+      .single()
+    expect(JSON.stringify(evento?.payload)).not.toMatch(/Rosa|Quispe/)
+    expect(evento?.payload).toMatchObject({
+      customerName: '[eliminado]',
+      amount: 52,
+      orderId: seed.orderId,
+    })
+  })
+})
+
+describe('la redacción de eventos solo localiza por UUID, nunca por shortId', () => {
+  it('un evento de OTRO pedido con el mismo shortId no se toca', async () => {
+    const c = await crearCliente()
+    const created = await callCreateCourierOrder({
+      customerUserId: c.userId,
+      requesterPhone: c.phone,
+    })
+    const courierId = (created.data as { id: string }).id
+    await db
+      .from('courier_orders')
+      .update({ status: 'delivered', delivered_at: new Date().toISOString() })
+      .eq('id', courierId)
+    const { data: carrera } = await db
+      .from('courier_orders')
+      .select('short_id')
+      .eq('id', courierId)
+      .single()
+    // `short_id` es único por tabla, no entre `orders` y `courier_orders`: un pedido
+    // AJENO puede llevar el mismo.
+    const ajeno = await seedContraentregaOrder()
+    seeds.push(ajeno)
+    const forzado = await db
+      .from('orders')
+      .update({ short_id: carrera?.short_id as string })
+      .eq('id', ajeno.orderId)
+    expect(forzado.error).toBeNull()
+    const { data: evento } = await db
+      .from('domain_events')
+      .insert({
+        aggregate_type: 'order',
+        aggregate_id: ajeno.orderId,
+        event_type: 'Prueba',
+        payload: { shortId: carrera?.short_id, customerName: 'Otra Persona' },
+      })
+      .select('id')
+      .single()
+
+    expect((await borrar(c.token)).status).toBe(204)
+
+    const { data: despues } = await db
+      .from('domain_events')
+      .select('payload')
+      .eq('id', evento?.id as string)
+      .single()
+    expect(despues?.payload).toMatchObject({ customerName: 'Otra Persona' })
   })
 })
 
@@ -678,8 +811,8 @@ describe('el origen de una carrera con negocio del directorio no se conserva tal
 })
 
 // ── 10. UPDATE sobre una cuenta borrada ──────────────────────────────────────
-describe('un UPDATE tampoco puede devolver datos personales a la lápida', () => {
-  it('cambiar un dato personal se rechaza; el cierre de caja del pedido, no', async () => {
+describe('un UPDATE sobre una cuenta borrada solo puede tocar columnas OPERATIVAS', () => {
+  it('cualquier columna personal o de texto libre se rechaza, venga de donde venga', async () => {
     const c = await crearCliente()
     const seed = await pedidoCompleto(c)
     expect((await borrar(c.token)).status).toBe(204)
@@ -689,20 +822,56 @@ describe('un UPDATE tampoco puede devolver datos personales a la lápida', () =>
       { customer_name: 'Rosa' },
       { delivery_address: 'Jr. Secreto 123' },
       { delivery_coordinates_lat: -9.1 },
+      { business_notes: 'Llamar a Doña Rosa' },
+      { driver_notes: 'Vive al fondo' },
+      { cancel_note: 'Rosa no contestó' },
+      { rejection_reason_text: 'Rosa dijo que no' },
+      { arrived_at_customer_lat: -9.1467 },
+      { arrived_at_customer_lng: -78.2781 },
+      { arrived_at_customer_accuracy_m: 7 },
+      { customer_notes: 'Toca dos veces' },
     ]) {
       const r = await db.from('orders').update(cambio).eq('id', seed.orderId)
       expect(r.error?.message, JSON.stringify(cambio)).toMatch(/account was deleted/)
     }
-    // Lo que el negocio sigue haciendo con un pedido anonimizado.
-    const ok = await db
-      .from('orders')
-      .update({ business_notes: 'caja revisada' })
-      .eq('id', seed.orderId)
-    expect(ok.error).toBeNull()
-    await setOrderStatus(seed.orderId, 'delivered')
   })
 
-  it('una carrera de Entregas anonimizada tampoco admite datos personales nuevos', async () => {
+  it('validation_reason_code y risk_flags (texto y JSON libres) tampoco se pueden escribir', async () => {
+    const c = await crearCliente()
+    const seed = await pedidoCompleto(c)
+    expect((await borrar(c.token)).status).toBe(204)
+    for (const cambio of [
+      { validation_reason_code: 'Rosa, celular 999111222' },
+      { risk_flags: { nota: 'Rosa, celular 999111222' } },
+    ]) {
+      const r = await db.from('orders').update(cambio).eq('id', seed.orderId)
+      expect(r.error?.message, JSON.stringify(cambio)).toMatch(/account was deleted/)
+    }
+  })
+
+  it('el cierre de caja real (el motorizado entrega el efectivo) sigue pasando', async () => {
+    const c = await crearCliente()
+    const seed = await pedidoCompleto(c)
+    expect((await borrar(c.token)).status).toBe(204)
+    // `deliver_order_cash` escribe `orders.cash_settlement_id` sobre un pedido ya anonimizado.
+    const liquidacion = await entregarEfectivo(seed.orderId)
+    const { data } = await db
+      .from('orders')
+      .select('cash_settlement_id,customer_name')
+      .eq('id', seed.orderId)
+      .single()
+    expect(data).toEqual({ cash_settlement_id: liquidacion, customer_name: 'Cuenta eliminada' })
+    // Y el evento nace ya sin nombre: la RPC lo lee del pedido anonimizado.
+    const { data: ev } = await db
+      .from('domain_events')
+      .select('payload')
+      .eq('aggregate_id', liquidacion)
+      .single()
+    expect(ev?.payload).toMatchObject({ customerName: 'Cuenta eliminada', amount: 52 })
+    await setOrderStatus(seed.orderId, 'delivered') // sin cambios: pasa
+  })
+
+  it('una carrera de Entregas anonimizada: lo personal se rechaza, lo operativo pasa', async () => {
     const c = await crearCliente()
     const created = await callCreateCourierOrder({
       customerUserId: c.userId,
@@ -714,9 +883,20 @@ describe('un UPDATE tampoco puede devolver datos personales a la lápida', () =>
       .update({ status: 'delivered', delivered_at: new Date().toISOString() })
       .eq('id', id)
     expect((await borrar(c.token)).status).toBe(204)
-    const r = await db.from('courier_orders').update({ destination_name: 'Rosa' }).eq('id', id)
-    expect(r.error?.message).toMatch(/account was deleted/)
-    const ok = await db.from('courier_orders').update({ driver_note: null }).eq('id', id)
+    for (const cambio of [
+      { destination_name: 'Rosa' },
+      { driver_note: 'Rosa vive lejos' },
+      { utm_source: 'campaña de Rosa' },
+      { requester_phone: '999000999' },
+    ]) {
+      const r = await db.from('courier_orders').update(cambio).eq('id', id)
+      expect(r.error?.message, JSON.stringify(cambio)).toMatch(/account was deleted/)
+    }
+    const ahora = new Date().toISOString()
+    const ok = await db
+      .from('courier_orders')
+      .update({ transport_collected_at: ahora, remitted_at: ahora })
+      .eq('id', id)
     expect(ok.error).toBeNull()
   })
 })
@@ -730,7 +910,7 @@ function psql(sql: string): Promise<{ out: string; err: string; ms: number }> {
     execFile(
       'docker',
       ['exec', DB_CONTAINER, 'psql', '-U', 'postgres', '-At', '-c', sql],
-      { timeout: 60_000 },
+      { timeout: 60_000, maxBuffer: 64 * 1024 * 1024 },
       (_e, out, err) => resolve({ out, err, ms: Date.now() - t0 }),
     )
   })
@@ -754,7 +934,610 @@ function guardarDireccionComo(userId: string, pausa: number): string {
   )
 }
 
-describe.skipIf(sinPsql)('candados con dos sesiones psql', () => {
+// ── Inventario de productores de `domain_events` ─────────────────────────────
+// Cada fila es UNA función que inserta en `domain_events`, con (agregado, evento). La clase dice
+// cómo la alcanza el borrado de cuenta (`delete_customer_account`, migración 0259):
+//  - por_aggregate: el agregado es un pedido o una carrera; se redacta por `aggregate_id`. El
+//    payload puede llevar datos del cliente (p. ej. `CustomerNoShow.phone`) y no importa.
+//  - por_payload_uuid: otro agregado que lleva datos del cliente y referencia el pedido por UUID
+//    en el payload (`CashDelivered`); el filtro de 0259 lo busca por `event_type` + esa clave.
+//  - sin_datos_del_cliente: no lleva datos de personas del cliente. `claves` es la lista
+//    PERMITIDA del payload: una clave nueva rompe el test hasta que alguien decida si es PII.
+// `n` es cuántas inserciones de esa fila hay en la función.
+type ClaseProductor =
+  | { clase: 'por_aggregate'; n: number }
+  | { clase: 'por_payload_uuid'; n: number }
+  | { clase: 'sin_datos_del_cliente'; n: number; claves: string[] }
+const PA = (n = 1): ClaseProductor => ({ clase: 'por_aggregate', n })
+const INVENTARIO_PRODUCTORES: Record<string, ClaseProductor> = {
+  'admin_correct_delivery_band|order|AdminCorrectedDeliveryBand': PA(),
+  'advance_order|order|CustomerNoShow': PA(2),
+  'advance_order|order|OrderReleased': PA(),
+  'advance_order|order|OrderStatusChanged': PA(),
+  'apply_order_transfer|order|TransferResolved': PA(),
+  'block_business|business|BusinessBlocked': {
+    clase: 'sin_datos_del_cliente',
+    n: 1,
+    claves: ['by', 'forDebt', 'reason'],
+  },
+  'cancel_customer_order|order|OrderStatusChanged': PA(),
+  'confirm_order_cash|cash_settlement|CashConfirmed': {
+    clase: 'sin_datos_del_cliente',
+    n: 1,
+    claves: ['amount', 'businessId', 'driverId'],
+  },
+  'courier_event_to_outbox|courier_order|CourierStepped': PA(),
+  'create_appeal_report|order|order/appeal.created': PA(),
+  'create_business_manual_order|order|OrderCreated': PA(),
+  'create_customer_order|order|OrderCreated': PA(),
+  'deliver_order_cash|cash_settlement|CashDelivered': { clase: 'por_payload_uuid', n: 1 },
+  'dispute_cash_settlement|cash_settlement|CashDisputed': {
+    clase: 'sin_datos_del_cliente',
+    n: 1,
+    claves: ['declared', 'reported'],
+  },
+  'enqueue_overdue_orders|order|OrderOverdue': PA(),
+  'enqueue_queued_orders|order|OrderQueued': PA(),
+  'expire_order|order|OrderExpired': PA(),
+  'extend_order_prep|order|OrderPrepExtended': PA(),
+  'register_prepay_proof|order|OrderPrepayProofUploaded': PA(),
+  'request_order_transfer|order|TransferRequested': PA(),
+  'resolve_cash_settlement|cash_settlement|CashResolved': {
+    clase: 'sin_datos_del_cliente',
+    n: 1,
+    claves: ['amount'],
+  },
+  'respond_order_transfer|order|TransferResolved': PA(),
+  'unblock_business|business|BusinessUnblocked': {
+    clase: 'sin_datos_del_cliente',
+    n: 1,
+    claves: ['by'],
+  },
+  'validate_order|order|OrderProofVerified': PA(2),
+  'validate_order|order|OrderStatusChanged': PA(2),
+  'validate_order|order|OrderValidated': PA(2),
+}
+
+// ── Lector de SQL de los productores (puro: texto SQL de entrada → resultado) ─
+// Límite residual, revisión HUMANA (no se verifica en estático): el VALOR de una clave permitida
+// que salga de una variable de texto, y el SQL dinámico ofuscado a propósito (cadenas partidas en
+// trozos que ya no dicen `domain` ni `events`).
+
+/**
+ * Tokenizador de cadenas ÚNICO (lo usan la normalización y los lectores de argumentos): si en `s[i]`
+ * empieza una cadena, devuelve el índice SIGUIENTE a su final (o `s.length` si no cierra); si no, -1.
+ * Reconoce `'…'` (con `''`), `E'…'` (con `\'` y `\\`, sin distinguir mayúsculas) y `$tag$…$tag$` / `$$…$$`.
+ */
+function finCadena(s: string, i: number): number {
+  const c = s[i]
+  const prev = s[i - 1] ?? ' '
+  const recorre = (desde: number, escapes: boolean): number => {
+    let j = desde
+    while (j < s.length) {
+      if (escapes && s[j] === '\\') j += 2
+      else if (s[j] === "'") {
+        if (s[j + 1] === "'") j += 2
+        else return j + 1
+      } else j++
+    }
+    return s.length
+  }
+  if (c === "'") return recorre(i + 1, false)
+  if ((c === 'e' || c === 'E') && s[i + 1] === "'" && !/[\w$]/.test(prev))
+    return recorre(i + 2, true)
+  if (c === '$' && !/\w/.test(prev)) {
+    const tag = /^\$(?:[A-Za-z_]\w*)?\$/.exec(s.slice(i, i + 80))?.[0]
+    if (!tag) return -1
+    const fin = s.indexOf(tag, i + tag.length)
+    return fin < 0 ? s.length : fin + tag.length
+  }
+  return -1
+}
+
+/** Posiciones [ini, fin) de todas las cadenas de `s`. */
+function cadenasDe(s: string): Array<[number, number]> {
+  const out: Array<[number, number]> = []
+  for (let i = 0; i < s.length; i++) {
+    const fin = finCadena(s, i)
+    if (fin < 0) continue
+    out.push([i, fin])
+    i = fin - 1
+  }
+  return out
+}
+
+/** `s` con cada cadena sustituida por `f(cadena)`. */
+function sinCadenas(s: string, f: (cadena: string) => string): string {
+  let out = ''
+  let ult = 0
+  for (const [a, b] of cadenasDe(s)) {
+    out += s.slice(ult, a) + f(s.slice(a, b))
+    ult = b
+  }
+  return out + s.slice(ult)
+}
+
+/**
+ * Deja el cuerpo de una función listo para BUSCAR en él, sin importar cómo esté escrito: quita
+ * los comentarios de línea y de bloque (anidados), quita las comillas dobles de los identificadores,
+ * pasa el código a minúsculas y colapsa el espacio en blanco. Las cadenas (`finCadena`) se
+ * conservan tal cual, byte a byte: sus claves distinguen mayúsculas (`'customerName'`).
+ */
+function normalizarSql(src: string): string {
+  let out = ''
+  const espacio = () => {
+    if (!out.endsWith(' ')) out += ' '
+  }
+  for (let i = 0; i < src.length; i++) {
+    const c = src[i] as string
+    const fin = finCadena(src, i)
+    if (fin >= 0) {
+      out += src.slice(i, fin)
+      i = fin - 1
+    } else if (c === '-' && src[i + 1] === '-') {
+      while (i < src.length && src[i] !== '\n') i++
+      espacio()
+    } else if (c === '/' && src[i + 1] === '*') {
+      let prof = 1
+      i += 2
+      while (i < src.length && prof > 0) {
+        if (src[i] === '/' && src[i + 1] === '*') {
+          prof++
+          i++
+        } else if (src[i] === '*' && src[i + 1] === '/') {
+          prof--
+          i++
+        }
+        i++
+      }
+      i--
+      espacio()
+    } else if (c === '"') {
+      // comilla de identificador: fuera
+    } else if (/\s/.test(c)) {
+      espacio()
+    } else {
+      out += c.toLowerCase()
+    }
+  }
+  return out
+}
+
+/** Toda mención de la tabla, escrita como se escriba (el texto ya viene normalizado). */
+const MENCION_TABLA = /(?<![\w$])domain_events(?![\w$])/g
+const INSERCION_TABLA = /(?<![\w$])insert into (?:(\w+)\.)?domain_events(?![\w$])/g
+
+/** Recorre `s` desde el `(` de `abre` y devuelve los argumentos de primer nivel. */
+function leerArgumentos(s: string, abre: number): { args: string[]; cierra: number } | null {
+  const args: string[] = []
+  let actual = ''
+  let prof = 0
+  for (let i = abre; i < s.length; i++) {
+    const c = s[i] as string
+    const fin = finCadena(s, i)
+    if (fin >= 0) {
+      actual += s.slice(i, fin)
+      i = fin - 1
+      continue
+    }
+    if (c === '(') {
+      prof++
+      if (prof === 1) continue
+    } else if (c === ')') {
+      prof--
+      if (prof === 0) {
+        args.push(actual.trim())
+        return { args, cierra: i }
+      }
+    } else if (c === ',' && prof === 1) {
+      args.push(actual.trim())
+      actual = ''
+      continue
+    }
+    actual += c
+  }
+  return null
+}
+
+// Constructores que no se saben analizar como valor de una clave: su contenido puede traer claves
+// que no se ven en el texto (`to_jsonb(fila)`, `a || b`, una variable jsonb…). Piden clasificación manual.
+const CONSTRUCTOR_OPACO =
+  /\b(to_jsonb?|row_to_json|array_to_json|jsonb?_agg|jsonb?_object_agg|array_agg|jsonb?_build_array|jsonb?_object|jsonb_(?:set|insert|strip_nulls|populate\w*|path\w*|each\w*|array_elements\w*|extract\w*|concat)|row|select)\b|\|\||::\s*jsonb?\b|->(?!>)|#>|@>|\[/
+
+type PayloadLeido = {
+  /** Claves del primer nivel (null si el payload no es un `jsonb_build_object` literal). */
+  top: string[] | null
+  /** Claves de TODOS los `jsonb_build_object` / `json_build_object`, a cualquier profundidad. */
+  todas: string[]
+  /** Por qué no se puede analizar (null si se pudo): obliga a clasificar a mano. */
+  error: string | null
+}
+
+/** Claves literales de un payload, con los constructores anidados incluidos. */
+function leerPayload(payload: string): PayloadLeido {
+  const todas: string[] = []
+  const errores: string[] = []
+  let top: string[] | null = null
+  // Se buscan fuera de las cadenas: se tapan con espacios, que no cambian las posiciones.
+  const tapado = sinCadenas(payload, (m) => ' '.repeat(m.length))
+  // Con o sin esquema delante (`pg_catalog.jsonb_build_object`): el `.` no esconde el constructor.
+  for (const m of tapado.matchAll(/(?<![\w.])((?:\w+\s*\.\s*)*)json(?:b)?_build_object\s*\(/g)) {
+    const esquema = (m[1] ?? '').replace(/\s+/g, '')
+    if (esquema !== '' && esquema !== 'pg_catalog.' && esquema !== 'public.') {
+      errores.push(`constructor de otro esquema (${esquema.slice(0, -1)}): revisión manual`)
+      continue
+    }
+    const p = leerArgumentos(payload, m.index + m[0].length - 1)
+    if (!p) {
+      errores.push('constructor sin cerrar')
+      continue
+    }
+    if (p.args.length % 2 !== 0) errores.push('jsonb_build_object con argumentos impares')
+    const claves: string[] = []
+    p.args.forEach((a, i) => {
+      if (i % 2 !== 0) return
+      const k = /^'([^']*)'(?:::text)?$/.exec(a)?.[1]
+      if (k === undefined) errores.push(`clave que no es un literal: ${a.slice(0, 40)}`)
+      else claves.push(k)
+    })
+    todas.push(...claves)
+    if (m.index === 0 && p.cierra === payload.length - 1) top = claves
+  }
+  if (top === null) errores.push('el payload no es un jsonb_build_object literal')
+  const opaco = CONSTRUCTOR_OPACO.exec(sinCadenas(payload, () => "''"))
+  if (opaco) errores.push(`construcción no analizable: ${opaco[0]}`)
+  return { top, todas, error: errores.length > 0 ? errores.join('; ') : null }
+}
+
+type InsercionLeida = { agregado: string; evento: string; payload: PayloadLeido }
+
+/** Una inserción (texto normalizado, desde `insert into`): agregado, evento y payload. */
+function leerInsercion(s: string): InsercionLeida | string {
+  const cols = /^insert into (?:\w+\.)?domain_events\s*\(/.exec(s)
+  if (!cols) return 'inserción con forma no reconocida'
+  const c = leerArgumentos(s, cols[0].length - 1)
+  if (!c) return 'lista de columnas sin cerrar'
+  const v = /^\s*values\s*\(/.exec(s.slice(c.cierra + 1))
+  if (!v) return 'no es INSERT … VALUES (…)'
+  const a = leerArgumentos(s, c.cierra + 1 + v[0].length - 1)
+  if (!a || a.args.length !== c.args.length) return 'valores no alineados con las columnas'
+  const col = (n: string) => a.args[c.args.map((x) => x.trim()).indexOf(n)]
+  const agregado = /^'(\w+)'$/.exec(col('aggregate_type') ?? '')?.[1]
+  const evento = /^'([^']+)'$/.exec(col('event_type') ?? '')?.[1]
+  if (!agregado || !evento) return 'aggregate_type o event_type no son literales'
+  return { agregado, evento, payload: leerPayload(col('payload') ?? '') }
+}
+
+// Menciones de `domain_events` que NO son inserciones, justificadas una a una (función → cuántas).
+const NO_INSERCIONES: Record<string, { n: number; motivo: string }> = {
+  delete_customer_account: {
+    n: 1,
+    motivo: 'el UPDATE que redacta los eventos del cliente (0259); se lee más abajo',
+  },
+  personal_data_inventory: {
+    n: 1,
+    motivo:
+      'lectura de catálogo: suma la tabla a las relaciones que inventaría (UNION SELECT ::regclass)',
+  },
+}
+// Funciones con EXECUTE que pueden nombrar `domain_events`, revisadas a mano (nombre → qué hacen).
+// Hoy ninguna: una nueva rompe el test hasta que alguien la lea y la anote aquí con su motivo.
+const EXECUTE_REVISADOS: Record<string, string> = {}
+
+type FuenteFuncion = { f: string; s: string }
+type Productor = { n: number; top: Set<string> | null; todas: Set<string>; error: string | null }
+
+/**
+ * Toda mención de `domain_events` queda justificada: o es una inserción leída y clasificada, o
+ * está en `NO_INSERCIONES`. Un `EXECUTE` que pueda armar el nombre obliga a revisión manual.
+ */
+function analizarFunciones(funciones: FuenteFuncion[]) {
+  const reales = new Map<string, Productor>()
+  const otras = new Map<string, number>()
+  const problemas: string[] = []
+  for (const fn of funciones) {
+    const norm = normalizarSql(fn.s)
+    const menciones = [...norm.matchAll(MENCION_TABLA)].length
+    const literales = cadenasDe(norm).map(([a, b]) => norm.slice(a, b).toLowerCase())
+    if (
+      /(?<![\w$])execute(?![\w$])/.test(norm) &&
+      (menciones > 0 || literales.some((l) => /domain|events/.test(l))) &&
+      !(fn.f in EXECUTE_REVISADOS)
+    )
+      problemas.push(
+        `${fn.f}: EXECUTE que puede armar el nombre de domain_events; revísalo a mano y anótalo en EXECUTE_REVISADOS`,
+      )
+    let leidas = 0
+    for (const m of norm.matchAll(INSERCION_TABLA)) {
+      leidas++
+      if (m[1] && m[1] !== 'public') {
+        problemas.push(`${fn.f}: inserción en el esquema '${m[1]}' (clasifícalo a mano)`)
+        continue
+      }
+      const ins = leerInsercion(norm.slice(m.index, m.index + 6000))
+      if (typeof ins === 'string') {
+        problemas.push(`${fn.f}: ${ins} (clasifícalo a mano)`)
+        continue
+      }
+      const k = `${fn.f}|${ins.agregado}|${ins.evento}`
+      const p = reales.get(k) ?? {
+        n: 0,
+        top: new Set<string>(),
+        todas: new Set<string>(),
+        error: null,
+      }
+      p.n += 1
+      p.top = ins.payload.top && p.top ? new Set([...p.top, ...ins.payload.top]) : null
+      for (const c of ins.payload.todas) p.todas.add(c)
+      p.error = p.error ?? ins.payload.error
+      reales.set(k, p)
+    }
+    if (menciones > leidas) otras.set(fn.f, menciones - leidas)
+  }
+  for (const [f, n] of otras) {
+    const ok = NO_INSERCIONES[f]
+    if (!ok)
+      problemas.push(
+        `${f}: ${n} mención(es) de domain_events sin justificar (ni inserción ni NO_INSERCIONES)`,
+      )
+    else if (ok.n !== n)
+      problemas.push(`${f}: ${n} mención(es) que no son inserción y NO_INSERCIONES dice ${ok.n}`)
+  }
+  return { reales, otras, problemas }
+}
+
+// Pruebas puras del lector: texto SQL de entrada → resultado. No tocan la base.
+describe('lector de SQL de los productores de domain_events (puro)', () => {
+  const ins = (cuerpo: string) => analizarFunciones([{ f: 'f_prueba', s: cuerpo }])
+  const CUERPO = `values ('cash_settlement', gen_random_uuid(), 'CashConfirmed', jsonb_build_object('amount', v))`
+
+  it('detecta la inserción escrita de forma normal', () => {
+    const r = ins(
+      `begin insert into public.domain_events (aggregate_type, aggregate_id, event_type, payload) ${CUERPO}; end`,
+    )
+    expect(r.problemas).toEqual([])
+    expect([...r.reales.keys()]).toEqual(['f_prueba|cash_settlement|CashConfirmed'])
+  })
+
+  it('(a) con un comentario de bloque entre INSERT e INTO', () => {
+    const r = ins(
+      `INSERT /* x */ INTO public.domain_events (aggregate_type, aggregate_id, event_type, payload) ${CUERPO};`,
+    )
+    expect(r.problemas).toEqual([])
+    expect([...r.reales.keys()]).toEqual(['f_prueba|cash_settlement|CashConfirmed'])
+  })
+
+  it('(b) con el identificador entre comillas dobles y comentarios de línea', () => {
+    const r = ins(
+      `INSERT -- x\n INTO public."domain_events" (aggregate_type, aggregate_id, event_type, payload) ${CUERPO};`,
+    )
+    expect(r.problemas).toEqual([])
+    expect([...r.reales.keys()]).toEqual(['f_prueba|cash_settlement|CashConfirmed'])
+  })
+
+  it('(c) un EXECUTE con la cadena partida no pasa en silencio', () => {
+    const entera = ins(`execute 'INSERT INTO ' || 'public.domain_events (payload) values (1)';`)
+    expect(entera.problemas.join('|')).toMatch(/f_prueba: EXECUTE/)
+    expect(entera.problemas.join('|')).toMatch(/mención\(es\) de domain_events sin justificar/)
+    const partida = ins(`execute 'insert into public.domain_' || 'events (payload) values (1)';`)
+    expect(partida.problemas.join('|')).toMatch(/f_prueba: EXECUTE/)
+  })
+
+  it('una mención que no es inserción (UPDATE, SELECT) pide justificación', () => {
+    const r = ins(
+      `update public.domain_events set payload = '{}'; select count(*) from "public"."DOMAIN_EVENTS";`,
+    )
+    expect(r.problemas).toEqual([
+      expect.stringMatching(/2 mención\(es\) de domain_events sin justificar/),
+    ])
+  })
+
+  it('una inserción que no es INSERT … VALUES se manda a clasificar a mano', () => {
+    const r = ins(`insert into public.domain_events select * from otra;`)
+    expect(r.problemas).toEqual([expect.stringMatching(/forma no reconocida/)])
+  })
+
+  it('(d) lee las claves de los constructores anidados a cualquier profundidad', () => {
+    const p = leerPayload(
+      `jsonb_build_object('amount', jsonb_build_object('customerName', 'Rosa', 'x', coalesce(json_build_object('deep', 1), null)), 'driverId', d)`,
+    )
+    expect(p.error).toBeNull()
+    expect(p.top).toEqual(['amount', 'driverId'])
+    expect([...p.todas].sort()).toEqual(['amount', 'customerName', 'deep', 'driverId', 'x'])
+  })
+
+  it('un constructor que no sabe analizar obliga a clasificar a mano', () => {
+    for (const valor of [
+      `to_jsonb(v_fila)`,
+      `row_to_json(v_fila)`,
+      `(select jsonb_agg(x) from t)`,
+      `v_a || v_b`,
+      `v_extra::jsonb`,
+      `v_doc -> 'a'`,
+      `jsonb_build_array(1)`,
+    ])
+      expect(leerPayload(`jsonb_build_object('amount', ${valor})`).error, valor).toMatch(
+        /no analizable/,
+      )
+    expect(leerPayload(`v_payload`).error).toMatch(/no es un jsonb_build_object literal/)
+    expect(leerPayload(`jsonb_build_object(v_k, 1)`).error).toMatch(/clave que no es un literal/)
+    expect(leerPayload(`to_jsonb(v) || jsonb_build_object('a', 1)`).error).not.toBeNull()
+    // Un escalar normal (columna, `->>`, cast de texto) sí se acepta.
+    expect(
+      leerPayload(`jsonb_build_object('a', v.id, 'b', p->>'k', 'c', 1::numeric)`).error,
+    ).toBeNull()
+  })
+
+  it('(e) un constructor cualificado con pg_catalog o public se analiza igual que el simple', () => {
+    // El ejemplo de la revisión de Codex: el `.` no puede esconder `customerName`.
+    const p = leerPayload(
+      `jsonb_build_object('amount', pg_catalog.jsonb_build_object('customerName','Rosa'), 'businessId', b, 'driverId', d)`,
+    )
+    expect(p.error).toBeNull()
+    expect(p.top).toEqual(['amount', 'businessId', 'driverId'])
+    expect([...p.todas].sort()).toEqual(['amount', 'businessId', 'customerName', 'driverId'])
+    const q = leerPayload(`pg_catalog.jsonb_build_object('a', public.json_build_object('b', 1))`)
+    expect(q.error).toBeNull()
+    expect(q.top).toEqual(['a'])
+    expect([...q.todas].sort()).toEqual(['a', 'b'])
+  })
+
+  it('(f) un constructor cualificado de otro esquema se rechaza como opaco', () => {
+    for (const q of ['miesquema.', 'extensions.', 'a.b.'])
+      expect(
+        leerPayload(`jsonb_build_object('amount', ${q}jsonb_build_object('customerName', 'Rosa'))`)
+          .error,
+        q,
+      ).toMatch(/esquema/)
+    expect(leerPayload(`otro.jsonb_build_object('a', 1)`).error).toMatch(/esquema/)
+  })
+
+  it('(g) los opacos cualificados con esquema también se rechazan', () => {
+    for (const valor of [
+      `pg_catalog.to_jsonb(x)`,
+      `pg_catalog.row_to_json(x)`,
+      `public.jsonb_agg(x)`,
+      `pg_catalog.jsonb_build_array(1)`,
+    ])
+      expect(leerPayload(`jsonb_build_object('amount', ${valor})`).error, valor).toMatch(
+        /no analizable/,
+      )
+  })
+
+  it('(h) las cadenas con comas, paréntesis y comentarios falsos se leen enteras', () => {
+    const p = leerPayload(
+      String.raw`jsonb_build_object('a', $tag$Rosa, () -- /* ' $tag$, 'b', $$a,b$$, 'c', E'O\'Brien, (x)', 'd', E'barra\\', 'e', 'it''s, (y)')`,
+    )
+    expect(p.error).toBeNull()
+    expect(p.top).toEqual(['a', 'b', 'c', 'd', 'e'])
+    expect([...p.todas]).toEqual(['a', 'b', 'c', 'd', 'e'])
+    // Lo mismo pasa por la normalización completa de una inserción.
+    const r = ins(
+      String.raw`insert into public.domain_events (aggregate_type, aggregate_id, event_type, payload) values ('x', gen_random_uuid(), 'Ev', jsonb_build_object('a', $tag$Rosa, () -- /* ' $tag$, 'c', E'O\'Brien, (x)')) ;`,
+    )
+    expect(r.problemas).toEqual([])
+    expect([...(r.reales.get('f_prueba|x|Ev')?.top ?? [])]).toEqual(['a', 'c'])
+  })
+
+  it('(i) la normalización no toca el contenido de las cadenas', () => {
+    expect(normalizarSql(`select '-- no es comentario' -- sí lo es\n, 'A  /* b */  C'`)).toBe(
+      `select '-- no es comentario' , 'A  /* b */  C'`,
+    )
+    expect(
+      normalizarSql(String.raw`SELECT E'O\'Brien -- x', $q$ Hola  "Mundo" /* y */ $q$ FROM T`),
+    ).toBe(String.raw`select E'O\'Brien -- x', $q$ Hola  "Mundo" /* y */ $q$ from t`)
+  })
+})
+
+// En la CI NO se salta: si falta Docker o el contenedor, el job debe ponerse rojo, no verde.
+describe.skipIf(sinPsql && !process.env.CI)('candados con dos sesiones psql', () => {
+  it('cada productor de eventos está inventariado y clasificado: uno nuevo, o con una clave nueva, obliga a decidir', async () => {
+    // El borrado redacta `domain_events` por `aggregate_id` (pedido o carrera) y, para el resto,
+    // por `event_type` + ids del payload. Un productor nuevo (o uno viejo que añada datos del
+    // cliente al payload) puede dejar datos sin redactar: por eso se identifica CADA inserción
+    // (función · agregado · evento · claves del payload) y se compara con el inventario de arriba.
+    // Se leen TODAS las funciones de `public` que puedan mencionar la tabla (o armar SQL dinámico),
+    // con su cuerpo normalizado: la detección es por mención, no por la forma del INSERT.
+    const r = await psql(
+      `select coalesce(json_agg(json_build_object('f', f, 's', s) order by f), '[]') from (` +
+        `select proname as f, coalesce(nullif(prosrc, ''), pg_get_function_sqlbody(oid)) as s from pg_proc ` +
+        `where pronamespace = 'public'::regnamespace and prokind in ('f', 'p')) t ` +
+        `where s ~* 'domain|events|execute'`,
+    )
+    const funciones = JSON.parse(r.out.trim()) as FuenteFuncion[]
+    expect(funciones.length).toBeGreaterThan(0)
+    const { reales, otras, problemas } = analizarFunciones(funciones)
+    expect(reales.size).toBeGreaterThan(0)
+    for (const f of Object.keys(NO_INSERCIONES))
+      if (!otras.has(f))
+        problemas.push(`NO_INSERCIONES lista ${f} pero ya no menciona la tabla: actualízalo`)
+
+    // Nada fuera del análisis: ni funciones de otro esquema, ni vistas o reglas que dependan de la tabla.
+    const fuera = await psql(
+      `select n.nspname || '.' || p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace ` +
+        `where n.nspname not in ('public', 'pg_catalog', 'information_schema') and p.prosrc ~* 'domain_events' ` +
+        `union all select 'regla ' || r.rulename || ' sobre ' || r.ev_class::regclass from pg_depend d ` +
+        `join pg_rewrite r on r.oid = d.objid where d.classid = 'pg_rewrite'::regclass ` +
+        `and d.refobjid = 'public.domain_events'::regclass`,
+    )
+    for (const l of fuera.out.split(/\r?\n/).filter(Boolean))
+      problemas.push(`${l} depende de domain_events y queda fuera del análisis`)
+
+    // Lo que la redacción cubre, leído de la función VIVA y no de la migración.
+    const del = await psql(
+      `select prosrc from pg_proc where proname = 'delete_customer_account' and pronamespace = 'public'::regnamespace`,
+    )
+    const trozo = /update public\.domain_events set[^;]*;/.exec(normalizarSql(del.out))?.[0]
+    expect(
+      trozo,
+      'no se encontró el UPDATE de domain_events en delete_customer_account',
+    ).toBeTruthy()
+    const agregadosCubiertos = new Set(
+      [
+        ...(/aggregate_type\s+in\s*\(([^)]*)\)/i.exec(trozo ?? '')?.[1] ?? '').matchAll(/'(\w+)'/g),
+      ].map((m) => m[1] as string),
+    )
+    const eventosCubiertos = new Set(
+      [...(trozo ?? '').matchAll(/event_type\s*=\s*'(\w+)'/gi)].map((m) => m[1] as string),
+    )
+    const clavesCubiertas = new Set(
+      [...(trozo ?? '').matchAll(/payload\s*->>\s*'(\w+)'/gi)].map((m) => m[1] as string),
+    )
+    expect([...agregadosCubiertos].sort()).toEqual(['courier_order', 'order'])
+    expect(eventosCubiertos.size).toBeGreaterThan(0)
+
+    for (const [k, real] of reales) {
+      const inv = INVENTARIO_PRODUCTORES[k]
+      const [, agregado, evento] = k.split('|') as [string, string, string]
+      if (!inv) {
+        problemas.push(
+          `productor NUEVO sin clasificar: ${k} claves=${[...real.todas].sort().join(',')}${real.error ? ` [${real.error}]` : ''}`,
+        )
+        continue
+      }
+      if (inv.n !== real.n)
+        problemas.push(`${k}: ${real.n} inserciones y el inventario dice ${inv.n}`)
+      if (inv.clase === 'por_aggregate') {
+        if (!agregadosCubiertos.has(agregado))
+          problemas.push(`${k}: es por_aggregate pero 0259 no redacta el agregado '${agregado}'`)
+      } else if (inv.clase === 'por_payload_uuid') {
+        if (!eventosCubiertos.has(evento))
+          problemas.push(`${k}: es por_payload_uuid pero el filtro de 0259 no incluye '${evento}'`)
+        if (!real.top || ![...real.top].some((c) => clavesCubiertas.has(c)))
+          problemas.push(
+            `${k}: ninguna clave del payload es una de las que busca el filtro (${[...clavesCubiertas].join(',')})`,
+          )
+      } else {
+        if (real.error)
+          problemas.push(
+            `${k}: payload no analizable (${real.error}); clasifícalo a mano antes de inventariarlo`,
+          )
+        else {
+          // Todas las claves, de todos los niveles: una anidada también es una clave nueva.
+          const nuevas = [...real.todas].filter((c) => !inv.claves.includes(c))
+          if (nuevas.length > 0)
+            problemas.push(
+              `${k}: clave(s) nueva(s) en el payload: ${nuevas.join(',')}; decide si llevan datos del cliente`,
+            )
+        }
+      }
+    }
+    for (const k of Object.keys(INVENTARIO_PRODUCTORES))
+      if (!reales.has(k)) problemas.push(`el inventario lista ${k} pero ya no existe: actualízalo`)
+    // Todo evento que el filtro de 0259 busca por payload tiene un productor inventariado.
+    for (const e of eventosCubiertos)
+      if (
+        !Object.entries(INVENTARIO_PRODUCTORES).some(
+          ([k, v]) => v.clase === 'por_payload_uuid' && k.endsWith(`|${e}`),
+        )
+      )
+        problemas.push(
+          `el filtro de 0259 busca '${e}' pero el inventario no lo tiene como por_payload_uuid`,
+        )
+
+    expect(problemas).toEqual([])
+  })
+
   it('guardar una dirección y borrar la cuenta a la vez: sin abrazo mortal (libreta primero)', async () => {
     const c = await crearCliente()
     await db.from('customer_addresses').insert({
@@ -824,5 +1607,35 @@ describe.skipIf(sinPsql)('candados con dos sesiones psql', () => {
       .select('*', { count: 'exact', head: true })
       .eq('short_id', 'RACE3333')
     expect(count).toBe(0)
+  })
+  it('un UPDATE directo del perfil cruzado con el borrado: el borrado termina (con reintento) y no queda nada', async () => {
+    const c = await crearCliente()
+    const seed = await pedidoCompleto(c)
+    // A (como /customer/phone/verify): bloquea la fila del perfil y, tras una pausa, hace el
+    // UPDATE, cuyo guard pide `FOR SHARE` sobre `users`. Para entonces la RPC ya tiene `users`
+    // FOR UPDATE y espera la fila del perfil: abrazo mortal de verdad. PostgreSQL aborta a uno
+    // (40P01) y el otro sigue. Aquí el que cae es A (esperó el último); si cayera la RPC, la
+    // ruta reintenta (ver `withTxRetry` y su prueba unitaria).
+    const a = psql(
+      `begin; select 1 from public.customer_profiles where user_id='${c.userId}' for update; ` +
+        `select pg_sleep(4); ` +
+        `update public.customer_profiles set phone_verified_at = now() where user_id='${c.userId}'; commit;`,
+    )
+    await sleep(1500)
+    const respuesta = await borrar(c.token)
+    const ra = await a
+    expect(respuesta.status).toBe(204)
+    expect(ra.err, 'el cruce debe producir un deadlock real').toMatch(/deadlock detected/)
+    const { count } = await db
+      .from('customer_profiles')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', c.userId)
+    expect(count).toBe(0)
+    const { data: pedido } = await db
+      .from('orders')
+      .select('customer_name,customer_phone')
+      .eq('id', seed.orderId)
+      .single()
+    expect(pedido).toEqual({ customer_name: 'Cuenta eliminada', customer_phone: null })
   })
 })
