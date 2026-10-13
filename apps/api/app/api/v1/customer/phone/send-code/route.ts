@@ -5,7 +5,9 @@ import { corsHeaders, handleOptions } from '@/lib/http/cors'
 import { handleError, ok, problem } from '@/lib/http/problem'
 import { loadLimits } from '@/lib/http/rate-limit'
 import { getRequestId } from '@/lib/http/request-id'
+import { alertOps } from '@/lib/ops/alert-ops'
 import { getPhoneLogStore, otpPhoneSecret, reserveOtpPhone } from '@/lib/otp/phone-limit'
+import { missingPhoneLimitConfig } from '@/lib/otp/sms-guard.mjs'
 import { createServiceClient } from '@/lib/supabase/service'
 import {
   DEV_OTP_CODE,
@@ -115,6 +117,43 @@ export async function POST(req: Request): Promise<Response> {
         requestId,
         headers: corsHeaders(req),
       })
+    }
+
+    /*
+     * SEGUNDA DEFENSA (la primera es la puerta del build, scripts/check-sms-config.mjs).
+     * Si ESTE proceso manda SMS reales (aquí `twilioClient` no es null, que es
+     * exactamente `canSendRealSms`) y falta la configuración del límite por
+     * número, no se envía nada: el límite se apagaría en silencio y se podría
+     * abusar del envío. 503 y alerta al admin (deduplicada, sin datos
+     * personales). El resto de la API no se toca. La caída de Redis EN CALIENTE
+     * no pasa por aquí: sigue abriendo con log (lib/otp/phone-limit.ts).
+     *
+     * Código del cuerpo: `internal_error` (el más cercano que existe) con
+     * status 503 puesto a mano. PENDIENTE de Jesús: `service_unavailable` en
+     * packages/contracts/src/errors.ts.
+     */
+    const missingConfig = missingPhoneLimitConfig(process.env)
+    if (missingConfig.length > 0) {
+      after(() =>
+        alertOps(
+          'otp_phone_limit_misconfigured',
+          `send-code bloqueado: faltan ${missingConfig.join(', ')}`,
+        ),
+      )
+      return Response.json(
+        {
+          type: 'about:blank',
+          title: 'Servicio no disponible',
+          status: 503,
+          code: 'internal_error',
+          detail: 'Verificación de teléfono no disponible temporalmente.',
+          requestId,
+        },
+        {
+          status: 503,
+          headers: { 'content-type': 'application/problem+json', ...corsHeaders(req) },
+        },
+      )
     }
 
     // Rate limiting: ventana de 24h (no día calendario) para evitar

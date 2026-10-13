@@ -416,10 +416,40 @@ async function newOrderBusinessNotes(orderId: string): Promise<Note[]> {
   ]
 }
 
+/** Alertas operativas permitidas (`kind` -> texto fijo). */
+const OPS_ALERTS: Record<string, { title: string; body: string }> = {
+  otp_phone_limit_misconfigured: {
+    title: 'Tindivo: verificación por SMS bloqueada',
+    body: 'Falta configurar el límite de SMS por número. Revisa las variables en Vercel.',
+  },
+}
+
 async function buildNotes(eventType: string, aggregateId: string, payload: Record<string, unknown>): Promise<Note[]> {
   const out: Note[] = []
   const action = (payload?.action as string) ?? ''
   const tagOf = (sid: string) => `${eventType}-${action}-${sid}`
+
+  // Alerta operativa de la API (`apps/api/lib/ops/alert-ops.ts`) a los admins.
+  // El texto sale de una lista CERRADA por `kind`: quien llame solo elige entre
+  // mensajes fijos, sin datos personales ni texto libre. Tag = `${event_type}-${kind}`.
+  if (eventType === 'OpsAlert') {
+    const kind = String(payload?.kind ?? aggregateId)
+    const text = OPS_ALERTS[kind]
+    if (!text) return out
+    const { data: admins } = await db.from('user_roles').select('user_id').eq('role', 'admin')
+    for (const a of admins ?? []) {
+      out.push({
+        userId: a.user_id as string,
+        title: text.title,
+        body: text.body,
+        tag: `${eventType}-${kind}`,
+        url: '/',
+        requireInteraction: true,
+        vibrate: false,
+      })
+    }
+    return out
+  }
 
   if (eventType === 'OrderStatusChanged' || eventType === 'OrderExpired') {
     const { data: o } = await db

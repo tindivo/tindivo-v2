@@ -320,12 +320,16 @@ describe('send-code · tope por número de destino', () => {
     expect(create).toHaveBeenCalledTimes(1)
   })
 
-  it('sin OTP_PHONE_HMAC_SECRET el límite por número se apaga (no usa otro secreto)', async () => {
-    const t = tel(1) // agotado en el primer caso
+  it('sin OTP_PHONE_HMAC_SECRET y con Twilio configurado, send-code responde 503 y no envía (decisión 2026-10-13)', async () => {
+    const t = tel(1)
     const v = await crearVecino()
     vi.stubEnv('OTP_PHONE_HMAC_SECRET', '')
+    // `twilioClient` está simulado como no nulo: aquí el proceso «puede mandar SMS reales».
+    // El criterio real de `canSendRealSms` lo cubre sms-guard.test.ts; la ruta se guía por `twilioClient`.
     try {
-      expect((await pedir(v, t)).status).toBe(200)
+      const res = await pedir(v, t)
+      expect(res.status).toBe(503)
+      expect(create).not.toHaveBeenCalled()
     } finally {
       vi.unstubAllEnvs()
     }
