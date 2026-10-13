@@ -598,6 +598,54 @@ describe('el evento de la liquidación (CashDelivered) también se redacta', () 
   })
 })
 
+describe('la redacción de eventos solo localiza por UUID, nunca por shortId', () => {
+  it('un evento de OTRO pedido con el mismo shortId no se toca', async () => {
+    const c = await crearCliente()
+    const created = await callCreateCourierOrder({
+      customerUserId: c.userId,
+      requesterPhone: c.phone,
+    })
+    const courierId = (created.data as { id: string }).id
+    await db
+      .from('courier_orders')
+      .update({ status: 'delivered', delivered_at: new Date().toISOString() })
+      .eq('id', courierId)
+    const { data: carrera } = await db
+      .from('courier_orders')
+      .select('short_id')
+      .eq('id', courierId)
+      .single()
+    // `short_id` es único por tabla, no entre `orders` y `courier_orders`: un pedido
+    // AJENO puede llevar el mismo.
+    const ajeno = await seedContraentregaOrder()
+    seeds.push(ajeno)
+    const forzado = await db
+      .from('orders')
+      .update({ short_id: carrera?.short_id as string })
+      .eq('id', ajeno.orderId)
+    expect(forzado.error).toBeNull()
+    const { data: evento } = await db
+      .from('domain_events')
+      .insert({
+        aggregate_type: 'order',
+        aggregate_id: ajeno.orderId,
+        event_type: 'Prueba',
+        payload: { shortId: carrera?.short_id, customerName: 'Otra Persona' },
+      })
+      .select('id')
+      .single()
+
+    expect((await borrar(c.token)).status).toBe(204)
+
+    const { data: despues } = await db
+      .from('domain_events')
+      .select('payload')
+      .eq('id', evento?.id as string)
+      .single()
+    expect(despues?.payload).toMatchObject({ customerName: 'Otra Persona' })
+  })
+})
+
 // ── 6. Repetir por HTTP ──────────────────────────────────────────────────────
 describe('repetir el borrado por HTTP', () => {
   it('responde 401, no 204: la identidad ya no existe (el OpenAPI lo dice así)', async () => {
@@ -788,6 +836,19 @@ describe('un UPDATE sobre una cuenta borrada solo puede tocar columnas OPERATIVA
     }
   })
 
+  it('validation_reason_code y risk_flags (texto y JSON libres) tampoco se pueden escribir', async () => {
+    const c = await crearCliente()
+    const seed = await pedidoCompleto(c)
+    expect((await borrar(c.token)).status).toBe(204)
+    for (const cambio of [
+      { validation_reason_code: 'Rosa, celular 999111222' },
+      { risk_flags: { nota: 'Rosa, celular 999111222' } },
+    ]) {
+      const r = await db.from('orders').update(cambio).eq('id', seed.orderId)
+      expect(r.error?.message, JSON.stringify(cambio)).toMatch(/account was deleted/)
+    }
+  })
+
   it('el cierre de caja real (el motorizado entrega el efectivo) sigue pasando', async () => {
     const c = await crearCliente()
     const seed = await pedidoCompleto(c)
@@ -875,6 +936,43 @@ function guardarDireccionComo(userId: string, pausa: number): string {
 
 // En la CI NO se salta: si falta Docker o el contenedor, el job debe ponerse rojo, no verde.
 describe.skipIf(sinPsql && !process.env.CI)('candados con dos sesiones psql', () => {
+  it('los productores de eventos son los inventariados: uno nuevo obliga a revisar la redacción', async () => {
+    // El borrado localiza los eventos por `aggregate_id` (pedido o carrera) y, para los que
+    // cuelgan de otro agregado, por `event_type` + ids del payload. Un productor nuevo que
+    // no encaje aquí puede dejar datos del cliente sin redactar.
+    const todas = String.raw`insert\s+into\s+public\.domain_events`
+    const literales = String.raw`insert\s+into\s+public\.domain_events\s*\([^)]*\)\s*values\s*\(\s*'(\w+)',\s*[\w.]+,\s*'([^']+)'`
+    const q = (re: string) => re.replaceAll("'", "''")
+    const r = await psql(
+      `select (select count(*) from pg_proc p cross join lateral regexp_matches(p.prosrc, '${q(todas)}', 'gi') x ` +
+        `where p.pronamespace = 'public'::regnamespace) || '|' || ` +
+        `coalesce((select string_agg(distinct m[1] || ':' || m[2], ',') from pg_proc p ` +
+        `cross join lateral regexp_matches(p.prosrc, '${q(literales)}', 'gi') m ` +
+        `where p.pronamespace = 'public'::regnamespace), '') || '|' || ` +
+        `(select count(*) from pg_proc p cross join lateral regexp_matches(p.prosrc, '${q(literales)}', 'gi') m ` +
+        `where p.pronamespace = 'public'::regnamespace)`,
+    )
+    const [nTodas, tipos, nLiterales] = r.out.trim().split('|')
+    // Toda inserción tiene la forma (agregado literal, id, evento literal)…
+    expect(Number(nTodas)).toBeGreaterThan(0)
+    expect(nLiterales).toBe(nTodas)
+    // …y los agregados son solo estos. Los de `cash_settlement` y `business` no cuelgan de un
+    // pedido; solo `CashDelivered` lleva dentro un `orderId` (y por eso se busca por tipo).
+    const lista = (tipos ?? '').split(',')
+    expect([...new Set(lista.map((t) => t.split(':')[0]))].sort()).toEqual([
+      'business',
+      'cash_settlement',
+      'courier_order',
+      'order',
+    ])
+    expect(lista.filter((t) => t.startsWith('cash_settlement:')).sort()).toEqual([
+      'cash_settlement:CashConfirmed',
+      'cash_settlement:CashDelivered',
+      'cash_settlement:CashDisputed',
+      'cash_settlement:CashResolved',
+    ])
+  })
+
   it('guardar una dirección y borrar la cuenta a la vez: sin abrazo mortal (libreta primero)', async () => {
     const c = await crearCliente()
     await db.from('customer_addresses').insert({

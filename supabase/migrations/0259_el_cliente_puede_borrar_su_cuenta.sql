@@ -42,7 +42,8 @@
 -- EVENTOS QUE NO CUELGAN DEL PEDIDO. `domain_events.aggregate_id` no siempre es el pedido:
 -- `CashDelivered` (0176) usa el id de la LIQUIDACIÓN y lleva `customerName` en el payload.
 -- Por eso se redactan los eventos cuyo aggregate_id es un pedido o carrera del usuario Y los
--- que lo REFERENCIAN dentro del payload (`orderId`, `order_id`, `courierOrderId`, `shortId`).
+-- `CashDelivered` que lo REFERENCIAN por UUID dentro del payload (`orderId`, `order_id`,
+-- `courierOrderId`). Nunca por `shortId`: no es único entre pedidos y carreras.
 -- Los importes sobreviven (están en la lista de permitidas); los nombres no.
 --
 -- GUARD DE UPDATE POR LISTA DE PERMITIDAS. Sobre una fila de una cuenta borrada, un UPDATE
@@ -203,8 +204,8 @@ begin
         'cancelled_by,cancel_reason,cancel_reason_detail,tracking_link_sent_at,'
         'tracking_link_sent_by,payment_verified_at,payment_verified_by,payment_proof_status,'
         'rejection_reason_code,rejected_at,rejected_by,requires_validation,validated_at,'
-        'validated_by,validation_result,validation_reason_code,validation_context,'
-        'proof_attempt,risk_flags,awaiting_payment_at,ready_early_at,cash_settlement_id,'
+        'validated_by,validation_result,validation_context,'
+        'proof_attempt,awaiting_payment_at,ready_early_at,cash_settlement_id,'
         'arrived_at_customer_at,queue_notified_at,delivery_location_confirmed_at,'
         'customer_gps_method,customer_gps_validated_at,pickup_timing,ready_for_pickup_at'),
       ('courier_orders', 'customer_user_id',
@@ -287,7 +288,6 @@ declare
   v_order_ids  uuid[];
   v_courier_ids uuid[];
   v_ref_ids    text[];
-  v_short_ids  text[];
   -- Centro de San Jacinto: las carreras de Entregas exigen coordenadas dentro del
   -- pueblo (`co_*_in_town`), así que el punto exacto se sustituye por uno válido.
   c_lat constant numeric := -9.15;
@@ -339,11 +339,6 @@ begin
   from public.courier_orders where customer_user_id = p_user_id;
   -- Con qué ids puede aparecer el usuario DENTRO de un payload (no solo como aggregate_id).
   v_ref_ids := (select coalesce(array_agg(x::text), '{}') from unnest(v_order_ids || v_courier_ids) x);
-  select coalesce(array_agg(short_id), '{}') into v_short_ids from (
-    select short_id from public.orders where customer_user_id = p_user_id
-    union all
-    select short_id from public.courier_orders where customer_user_id = p_user_id
-  ) s;
 
   -- Pedidos del restaurante: se queda la fila con su importe, estado y fechas.
   update public.orders set
@@ -384,12 +379,15 @@ begin
     metadata = public.redact_personal_json(metadata),
     -- Texto de error del despacho: puede arrastrar el payload tal cual.
     last_error = null
-  where aggregate_id = any (v_order_ids || v_courier_ids)
-     -- Eventos de OTRO agregado que lo referencian (p. ej. `CashDelivered`, de la liquidación).
-     or payload ->> 'orderId' = any (v_ref_ids)
-     or payload ->> 'order_id' = any (v_ref_ids)
-     or payload ->> 'courierOrderId' = any (v_ref_ids)
-     or payload ->> 'shortId' = any (v_short_ids);
+  where (aggregate_type in ('order', 'courier_order') and aggregate_id = any (v_order_ids || v_courier_ids))
+     -- Único evento de otro agregado (la liquidación) que lleva datos del cliente: se
+     -- localiza por UUID del payload, nunca por `short_id` (único por tabla, no entre
+     -- `orders` y `courier_orders`). Acotado por tipo para usar `de_event_type_idx`; un
+     -- test de integración falla si aparece otro productor.
+     or (event_type = 'CashDelivered' and (
+           payload ->> 'orderId' = any (v_ref_ids)
+        or payload ->> 'order_id' = any (v_ref_ids)
+        or payload ->> 'courierOrderId' = any (v_ref_ids)));
 
   -- Entregas: los datos de quien pidió y de quien recibe. El origen NO se conserva
   -- tal cual aunque haya `directory_business_id`: la ruta acepta ese id y los
