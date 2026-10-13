@@ -14,6 +14,7 @@
 import { Redis } from 'ioredis'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import {
+  MAX_RESERVE_AGE_MS,
   type PhoneLogStore,
   RESERVE_SCRIPT,
   redisPhoneLog,
@@ -29,6 +30,7 @@ const RUN = `${process.pid}-${Date.now()}`
 const KEY = `tindivo:test:otp_phone:${RUN}`
 /** Members únicos por ejecución: las lápidas viven 1 h en un Redis compartido. */
 const mb = (n: string) => `${RUN}:${n}`
+const ALL = ['tarde', 'antes', 'vieja', 'fresca', 'futura'].map(mb)
 
 if (!REDIS_URL) {
   console.warn(
@@ -64,10 +66,10 @@ describe.skipIf(!REDIS_URL)('RESERVE_SCRIPT contra Redis real', () => {
     })
   })
   beforeEach(async () => {
-    await redis.del(KEY, tombstoneKey(mb('tarde')), tombstoneKey(mb('antes')))
+    await redis.del(KEY, ...[...ALL].map(tombstoneKey))
   })
   afterAll(async () => {
-    await redis.del(KEY, tombstoneKey(mb('tarde')), tombstoneKey(mb('antes')))
+    await redis.del(KEY, ...[...ALL].map(tombstoneKey))
     redis.disconnect()
   })
 
@@ -130,6 +132,55 @@ describe.skipIf(!REDIS_URL)('RESERVE_SCRIPT contra Redis real', () => {
     expect(await redis.zcard(KEY)).toBe(1)
     await store.release(KEY, mb('antes'))
     expect(await redis.zcard(KEY)).toBe(0)
+  })
+
+  describe('antigüedad máxima de la reserva (lápida caducada)', () => {
+    const evalRaw = (member: string, issuedAtMs: number) =>
+      redis.eval(
+        RESERVE_SCRIPT,
+        2,
+        KEY,
+        tombstoneKey(member),
+        rule.windowSec * 1000,
+        rule.limit,
+        member,
+        issuedAtMs,
+      ) as Promise<[number, number, string]>
+
+    it('emitida hace 6 min: no inserta y el script lo distingue', async () => {
+      const out = await evalRaw(mb('vieja'), Date.now() - 6 * MIN)
+      expect(out).toEqual([1, 0, 'stale'])
+      expect(await redis.zcard(KEY)).toBe(0)
+    })
+    it('emitida ahora: inserta', async () => {
+      const out = await evalRaw(mb('fresca'), Date.now())
+      expect(out).toEqual([1, 0, 'ok'])
+      expect(await redis.zcard(KEY)).toBe(1)
+    })
+    it('emitida en el futuro (reloj de la app adelantado): inserta', async () => {
+      expect((await evalRaw(mb('futura'), Date.now() + 10 * MIN))[2]).toBe('ok')
+      expect(await redis.zcard(KEY)).toBe(1)
+    })
+    it('por el store: reserva de hace 6 min no inserta; la de ahora sí', async () => {
+      await store.reserve(KEY, mb('vieja'), rule, undefined, Date.now() - 6 * MIN)
+      expect(await redis.zcard(KEY)).toBe(0)
+      await store.reserve(KEY, mb('fresca'), rule, undefined, Date.now())
+      expect(await redis.zcard(KEY)).toBe(1)
+    })
+    it('release, la lápida caduca y llega la reserva vieja: no inserta', async () => {
+      await store.release(KEY, mb('tarde'))
+      await redis.pexpire(tombstoneKey(mb('tarde')), 1)
+      await new Promise((r) => setTimeout(r, 20))
+      expect(await redis.exists(tombstoneKey(mb('tarde')))).toBe(0)
+      await store.reserve(
+        KEY,
+        mb('tarde'),
+        rule,
+        undefined,
+        Date.now() - (MAX_RESERVE_AGE_MS + MIN),
+      )
+      expect(await redis.zcard(KEY)).toBe(0)
+    })
   })
 
   it('PEXPIRE: la clave caduca con la ventana y se renueva en cada plaza concedida', async () => {

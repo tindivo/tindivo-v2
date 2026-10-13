@@ -42,6 +42,14 @@ export const TIMEOUT_MS = 1_000
  * (un UUID, sin teléfono) no se acumula.
  */
 export const TOMBSTONE_TTL_MS = 60 * 60 * 1000
+/**
+ * Antigüedad máxima admisible de una reserva: 5 min. Pasada la lápida (1 h) un
+ * EVAL rezagado reinsertaría la plaza 24 h; si el script rechaza toda reserva
+ * emitida hace más de esto, ya no puede. Debe cumplirse MAX_RESERVE_AGE_MS +
+ * desfase de reloj app↔Redis tolerado < TOMBSTONE_TTL_MS: 5 min deja ~55 min de
+ * margen al desfase, y está muy por encima de una reserva normal (timeout 1 s).
+ */
+export const MAX_RESERVE_AGE_MS = 5 * 60 * 1000
 
 /** Lápida del `member`: el UUID es aleatorio y no contiene el teléfono. */
 export function tombstoneKey(member: string): string {
@@ -52,7 +60,10 @@ export function phoneLimitKey(e164: string, secret: string): string {
   return `tindivo:otp_phone:${createHmac('sha256', secret).update(`${HMAC_CONTEXT}${e164}`).digest('hex')}`
 }
 
-export type ReserveResult = { allowed: true } | { allowed: false; retryAfterMs: number }
+/** `skipped`: la reserva permitida NO ocupó plaza (lápida, o emitida hace más de `MAX_RESERVE_AGE_MS`). */
+export type ReserveResult =
+  | { allowed: true; skipped?: 'tombstone' | 'stale' }
+  | { allowed: false; retryAfterMs: number }
 
 /** Registro de envíos con ventana móvil. */
 export interface PhoneLogStore {
@@ -61,13 +72,21 @@ export interface PhoneLogStore {
    * menos de `limit`, apunta `member` en `now` y deja pasar; si no, dice
    * cuánto falta para que salga el más viejo. `now` solo lo usa la versión en
    * memoria (tests); en Redis el instante lo da el propio servidor (`TIME`).
+   * `issuedAtMs` es la hora (reloj de la app) en que se emitió la reserva: si
+   * al aplicarse han pasado más de `MAX_RESERVE_AGE_MS`, no inserta.
    */
-  reserve(key: string, member: string, rule: LimitRule, now?: number): Promise<ReserveResult>
+  reserve(
+    key: string,
+    member: string,
+    rule: LimitRule,
+    now?: number,
+    issuedAtMs?: number,
+  ): Promise<ReserveResult>
   /**
    * Atómico e independiente del orden: deja una lápida del `member` y lo quita
    * del conjunto. Si su `reserve` llega DESPUÉS, la lápida impide la inserción.
    */
-  release(key: string, member: string): Promise<void>
+  release(key: string, member: string, now?: number): Promise<void>
 }
 
 /**
@@ -81,8 +100,10 @@ export function memoryPhoneLog(): PhoneLogStore {
   const expiresAt = new Map<string, number>()
   const tombstones = new Map<string, number>() // member → caduca en
   return {
-    async reserve(key, member, rule, now = Date.now()) {
-      if ((tombstones.get(member) ?? 0) > now) return { allowed: true } // ya devuelta: no ocupa plaza
+    async reserve(key, member, rule, now = Date.now(), issuedAtMs = now) {
+      // Un solo reloj (`now`) para la lápida, su caducidad y la antigüedad, como el Lua con TIME.
+      if ((tombstones.get(member) ?? 0) > now) return { allowed: true, skipped: 'tombstone' }
+      if (now - issuedAtMs > MAX_RESERVE_AGE_MS) return { allowed: true, skipped: 'stale' }
       const win = rule.windowSec * 1000
       if ((expiresAt.get(key) ?? Number.POSITIVE_INFINITY) <= now) {
         sets.delete(key)
@@ -99,8 +120,8 @@ export function memoryPhoneLog(): PhoneLogStore {
       const oldest = Math.min(...set.values())
       return { allowed: false, retryAfterMs: oldest + win - now }
     },
-    async release(key, member) {
-      tombstones.set(member, Date.now() + TOMBSTONE_TTL_MS)
+    async release(key, member, now = Date.now()) {
+      tombstones.set(member, now + TOMBSTONE_TTL_MS)
       const set = sets.get(key)
       set?.delete(member)
       if (set?.size === 0) {
@@ -112,26 +133,32 @@ export function memoryPhoneLog(): PhoneLogStore {
 }
 
 /**
- * KEYS[1] = clave, KEYS[2] = lápida del miembro · ARGV = ventana(ms), límite, miembro.
+ * KEYS[1] = clave, KEYS[2] = lápida del miembro · ARGV = ventana(ms), límite, miembro, issuedAtMs.
  * Con lápida (el `release` llegó antes) no inserta ni cuenta: el SMS ya fue
- * rechazado y nadie lee esta respuesta.
+ * rechazado y nadie lee esta respuesta (`'tombstone'`). Con una reserva emitida
+ * hace más de MAX_RESERVE_AGE_MS tampoco (`'stale'`): la lápida ya pudo caducar.
+ * Si `issuedAtMs` falta o está en el futuro, no cuenta como vieja.
  * El instante sale de `TIME` de Redis (no del servidor de la app): relojes de
  * varias instancias serverless desfasados no mueven la ventana.
  */
 export const RESERVE_SCRIPT = `
 local key = KEYS[1]
 if redis.call('EXISTS', KEYS[2]) == 1 then
-  return {1, 0}
+  return {1, 0, 'tombstone'}
 end
 local t = redis.call('TIME')
 local now = tonumber(t[1]) * 1000 + math.floor(tonumber(t[2]) / 1000)
+local issued = tonumber(ARGV[4]) or now
+if now - issued > ${MAX_RESERVE_AGE_MS} then
+  return {1, 0, 'stale'}
+end
 local win = tonumber(ARGV[1])
 local limit = tonumber(ARGV[2])
 redis.call('ZREMRANGEBYSCORE', key, '-inf', now - win)
 if redis.call('ZCARD', key) < limit then
   redis.call('ZADD', key, now, ARGV[3])
   redis.call('PEXPIRE', key, win)
-  return {1, 0}
+  return {1, 0, 'ok'}
 end
 local oldest = redis.call('ZRANGE', key, 0, 0, 'WITHSCORES')
 return {0, tonumber(oldest[2]) + win - now}
@@ -150,11 +177,11 @@ interface RedisLike {
 
 export function redisPhoneLog(redis: RedisLike): PhoneLogStore {
   return {
-    async reserve(key, member, rule) {
+    async reserve(key, member, rule, now, issuedAtMs) {
       const out = (await redis.eval(
         RESERVE_SCRIPT,
         [key, tombstoneKey(member)],
-        [rule.windowSec * 1000, rule.limit, member],
+        [rule.windowSec * 1000, rule.limit, member, issuedAtMs ?? now ?? Date.now()],
       )) as [number, number]
       return Number(out[0]) === 1
         ? { allowed: true }
@@ -214,7 +241,12 @@ export async function reserveOtpPhone(e164: string, deps: PhoneLimitDeps): Promi
     }
   }
   try {
-    const res = await withTimeout(store.reserve(key, member, deps.rule, deps.now?.()), timeoutMs)
+    const injected = deps.now?.()
+    const issuedAt = injected ?? Date.now()
+    const res = await withTimeout(
+      store.reserve(key, member, deps.rule, injected, issuedAt),
+      timeoutMs,
+    )
     if (!res.allowed) {
       return { allowed: false, retryAfterSec: Math.max(1, Math.ceil(res.retryAfterMs / 1000)) }
     }

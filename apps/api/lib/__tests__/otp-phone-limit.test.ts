@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_LIMITS, resolveLimits } from '../http/rate-limit'
 import {
   HMAC_CONTEXT,
+  MAX_RESERVE_AGE_MS,
   memoryPhoneLog,
   otpPhoneSecret,
   phoneLimitKey,
@@ -221,6 +222,53 @@ describe('falla abierto', () => {
   })
 })
 
+describe('memoryPhoneLog: lápida y antigüedad de la reserva con UN solo reloj (el inyectado)', () => {
+  const T0 = 1_700_000_000_000 // muy anterior al Date.now() real: delata mezclar relojes
+  const una = { limit: 1, windowSec: 24 * 60 * 60 }
+  /** ¿la reserva ocupó plaza? Con límite 1, un segundo member solo pasa si no. */
+  async function ocupo(log: ReturnType<typeof memoryPhoneLog>, key: string, at: number) {
+    return !(await log.reserve(key, `sonda-${key}`, una, at)).allowed
+  }
+
+  it('lápida viva antes del TTL: la reserva no ocupa plaza', async () => {
+    const log = memoryPhoneLog()
+    await log.release('k', 'm', T0)
+    await log.reserve('k', 'm', una, T0 + TOMBSTONE_TTL_MS - 1)
+    expect(await ocupo(log, 'k', T0 + TOMBSTONE_TTL_MS - 1)).toBe(false)
+  })
+  it('lápida caducada (en el TTL exacto) con reserva fresca: ya no frena, ocupa plaza', async () => {
+    const log = memoryPhoneLog()
+    await log.release('k', 'm', T0)
+    const at = T0 + TOMBSTONE_TTL_MS
+    expect((await log.reserve('k', 'm', una, at, at)).allowed).toBe(true)
+    expect(await ocupo(log, 'k', at)).toBe(true)
+  })
+  it('lápida caducada y reserva ANTIGUA (emitida antes del release): no inserta', async () => {
+    const log = memoryPhoneLog()
+    await log.release('k', 'm', T0)
+    const res = await log.reserve('k', 'm', una, T0 + TOMBSTONE_TTL_MS + 1, T0)
+    expect(res).toMatchObject({ allowed: true, skipped: 'stale' })
+    expect(await ocupo(log, 'k', T0 + TOMBSTONE_TTL_MS + 1)).toBe(false)
+  })
+  it('reserva que llega pasada su antigüedad máxima no inserta; en el límite sí', async () => {
+    const log = memoryPhoneLog()
+    const r1 = await log.reserve('a', 'm', una, T0 + MAX_RESERVE_AGE_MS + 1, T0)
+    expect(r1).toMatchObject({ allowed: true, skipped: 'stale' })
+    expect(await ocupo(log, 'a', T0 + MAX_RESERVE_AGE_MS + 1)).toBe(false)
+    await log.reserve('b', 'm', una, T0 + MAX_RESERVE_AGE_MS, T0)
+    expect(await ocupo(log, 'b', T0 + MAX_RESERVE_AGE_MS)).toBe(true)
+  })
+  it('emitida en el futuro (desfase de reloj negativo): no rompe, inserta', async () => {
+    const log = memoryPhoneLog()
+    await log.reserve('f', 'm', una, T0, T0 + 10 * MIN)
+    expect(await ocupo(log, 'f', T0)).toBe(true)
+  })
+  it('la antigüedad máxima deja margen frente a la lápida', () => {
+    expect(MAX_RESERVE_AGE_MS).toBe(5 * MIN)
+    expect(MAX_RESERVE_AGE_MS).toBeLessThan(TOMBSTONE_TTL_MS)
+  })
+})
+
 describe('otpPhoneSecret', () => {
   it('sin variable devuelve null y lo registra; nunca cae a otro secreto', () => {
     const err = vi.spyOn(console, 'error').mockImplementation(() => {})
@@ -276,11 +324,14 @@ describe('redisPhoneLog llama al script con la forma esperada', () => {
       eval: vi.fn(async () => [0, 1234]),
     }
     const store = redisPhoneLog(redis)
-    expect(await store.reserve('k', 'm', rule)).toEqual({ allowed: false, retryAfterMs: 1234 })
+    expect(await store.reserve('k', 'm', rule, 1_000)).toEqual({
+      allowed: false,
+      retryAfterMs: 1234,
+    })
     expect(redis.eval).toHaveBeenCalledWith(
       RESERVE_SCRIPT,
       ['k', tombstoneKey('m')],
-      [86_400_000, 5, 'm'],
+      [86_400_000, 5, 'm', 1_000],
     )
     await store.release('k', 'm')
     expect(redis.eval).toHaveBeenLastCalledWith(
