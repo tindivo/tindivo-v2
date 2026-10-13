@@ -20,7 +20,11 @@ archivo antes de afirmarlo. `--budget` corta la salida; si se queda corta, súbe
 
 - **`graphify update .`** — reextrae el código por AST. Sin coste, ~1-2 min. Tras cambios de código, o si
   `graphify-out/` no existe (no se versiona desde el 2026-10-10: cada worktree tiene el suyo).
-- **`pnpm graphify:hooks`** — instala un hook `post-commit` que lo actualiza solo en este worktree.
+- **Hook versionado `.githooks/post-commit`** — lanza `graphify update .` en segundo plano tras cada commit; si
+  `graphify` no está instalado, no hace nada y nunca bloquea el commit. Se activa **una vez por clon** (los worktrees
+  comparten la configuración del clon): `git config core.hooksPath .githooks`. Se comprueba con
+  `git config core.hooksPath` (imprime `.githooks`). Con `core.hooksPath` puesto, git deja de mirar `.git/hooks`, así
+  que `pnpm graphify:hooks` (que escribe ahí) ya no hace falta.
 - **`graphify . --backend deepseek`** y luego **`graphify cluster-only .`** — reextracción completa, incluida la
   semántica de los documentos. Céntimos. Se corre tras reescribir cada área del canon.
 

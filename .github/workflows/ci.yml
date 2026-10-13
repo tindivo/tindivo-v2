@@ -77,6 +77,32 @@ jobs:
       - name: Build
         run: pnpm build
 
+  # Mecanismos de Docs/README.md §8 que no necesitan pnpm: referencias a git (etiquetas archive/* o ancestros de la rama
+  # base) y revisión de los scripts de shell y de los workflows. `fetch-depth: 0` trae la historia y las etiquetas, que
+  # check-archive-refs.sh necesita. `pnpm check:docs` (§8.1 a §8.4) corre en el job `quality`.
+  docs:
+    name: Docs · referencias a git · shellcheck · actionlint
+    runs-on: ubuntu-24.04
+    env:
+      ACTIONLINT_VERSION: 1.7.7
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Referencias a git (etiquetas archive/* o ancestros de la rama base)
+        run: bash scripts/check-archive-refs.sh "origin/${{ github.base_ref || github.ref_name }}"
+
+      # shellcheck viene en la imagen del runner (ubuntu-24.04).
+      - name: shellcheck (scripts de shell y hook)
+        run: shellcheck scripts/*.sh .githooks/post-commit
+
+      # Binario fijado por versión: el script de descarga es el del propio proyecto, en la misma etiqueta.
+      - name: actionlint (workflows)
+        run: |
+          bash <(curl -fsSL "https://raw.githubusercontent.com/rhysd/actionlint/v${ACTIONLINT_VERSION}/scripts/download-actionlint.bash") "${ACTIONLINT_VERSION}"
+          ./actionlint -color
+
   # La suite de @tindivo/api es de integración: necesita una Supabase de verdad.
   # Este job levanta una LOCAL en el runner, la reconstruye desde
   # supabase/migrations, siembra el mundo e2e y corre la suite sin caché. Nunca

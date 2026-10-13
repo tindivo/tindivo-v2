@@ -47,3 +47,11 @@ Comandos habituales: `pnpm lint`, `pnpm type-check`, `pnpm test`, `pnpm check:do
 La base local, las migraciones y los tests de integración tienen sus reglas en
 [`supabase/AGENTS.md`](./supabase/AGENTS.md); las trampas conocidas, en
 [`Docs/operacion/trampas.md`](./Docs/operacion/trampas.md).
+
+## Cómo se trabaja
+
+- Una rama por cambio y un PR contra `develop`, con la línea `Impacto documental:` completa (la plantilla del PR la trae
+  y la CI falla si queda vacía).
+- Nadie revisa su propio trabajo.
+- Una vez por clon, activa el hook que mantiene al día el grafo del repo: `git config core.hooksPath .githooks`
+  (detalle en [`Docs/operacion/graphify.md`](./Docs/operacion/graphify.md)).
