@@ -5,9 +5,12 @@ import {
   memoryPhoneLog,
   otpPhoneSecret,
   phoneLimitKey,
+  RELEASE_SCRIPT,
   RESERVE_SCRIPT,
   redisPhoneLog,
   reserveOtpPhone,
+  TOMBSTONE_TTL_MS,
+  tombstoneKey,
 } from '../otp/phone-limit'
 
 const SECRET = 'secreto-de-prueba'
@@ -144,7 +147,7 @@ describe('falla abierto', () => {
     expect(g.allowed).toBe(true)
     expect(Date.now() - t0).toBeLessThan(500)
   })
-  it('reserve vence por timeout: el release queda ligado al member y hace ZREM de él', async () => {
+  it('reserve vence por timeout: el release queda ligado al member y no espera a la reserva', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     const reserve = vi.fn(() => new Promise<never>(() => {}))
     const release = vi.fn(async () => {})
@@ -153,55 +156,56 @@ describe('falla abierto', () => {
       rule,
       secret: SECRET,
       timeoutMs: 10,
-      releaseWaitMs: 10,
     })
     expect(g.allowed).toBe(true)
     if (g.allowed) await g.release()
     const [, member] = reserve.mock.calls[0] as unknown as [string, string]
     expect(release).toHaveBeenCalledWith(phoneLimitKey(PHONE, SECRET), member)
   })
-  it('carrera: el release espera al EVAL pendiente; cinco rechazos con EVAL tardío no agotan el número', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {})
-    const mem = memoryPhoneLog()
-    const pendientes: Array<() => void> = []
-    // El EVAL tarda más que el timeout de reserve y se aplica DESPUÉS de que
-    // el release ya fue pedido (como el EVAL en vuelo de Upstash).
-    const store = {
-      reserve: (k: string, m: string, r: typeof rule, now?: number) =>
-        new Promise<Awaited<ReturnType<typeof mem.reserve>>>((resolve) => {
-          pendientes.push(() => resolve(mem.reserve(k, m, r, now)))
-        }),
-      release: mem.release,
-    }
-    const gates = await Promise.all(
-      Array.from({ length: 5 }, () =>
-        reserveOtpPhone(PHONE, { store, rule, secret: SECRET, now: () => 1, timeoutMs: 10 }),
-      ),
-    )
-    const liberaciones = gates.map((g) => (g.allowed ? g.release() : Promise.resolve()))
-    for (const aplicar of pendientes) aplicar() // los EVAL llegan después del release
-    await Promise.all(liberaciones)
-    const g = await reserveOtpPhone(PHONE, { store: mem, rule, secret: SECRET, now: () => 2 })
-    expect(g.allowed).toBe(true)
-    // Y de verdad quedan los 5 huecos libres, no solo uno.
-    for (let i = 0; i < 4; i++) {
-      expect(
-        (await reserveOtpPhone(PHONE, { store: mem, rule, secret: SECRET, now: () => 2 })).allowed,
-      ).toBe(true)
+  it('carrera: el EVAL de reserva se aplica DESPUES del release (y de cualquier tope de espera); cinco rechazos no agotan el número', async () => {
+    vi.useFakeTimers()
+    try {
+      vi.spyOn(console, 'error').mockImplementation(() => {})
+      const mem = memoryPhoneLog()
+      const pendientes: Array<() => void> = []
+      // El EVAL llega a Redis tarde: tras vencer el timeout de reserve, tras el
+      // release completo y tras 11 s (más que el antiguo tope de espera de 10 s).
+      const store = {
+        reserve: (k: string, m: string, r: typeof rule, now?: number) =>
+          new Promise<Awaited<ReturnType<typeof mem.reserve>>>((resolve) => {
+            pendientes.push(() => resolve(mem.reserve(k, m, r, now)))
+          }),
+        release: mem.release,
+      }
+      const gatesP = Promise.all(
+        Array.from({ length: 5 }, () =>
+          reserveOtpPhone(PHONE, { store, rule, secret: SECRET, now: () => 1, timeoutMs: 10 }),
+        ),
+      )
+      await vi.advanceTimersByTimeAsync(20)
+      const gates = await gatesP
+      const liberaciones = Promise.all(gates.map((g) => (g.allowed ? g.release() : undefined)))
+      await vi.advanceTimersByTimeAsync(11_000)
+      await liberaciones
+      for (const aplicar of pendientes) aplicar() // los EVAL llegan después de todo
+      await vi.advanceTimersByTimeAsync(0)
+      // Los 5 huecos siguen libres: 5 envíos aceptados más caben.
+      for (let i = 0; i < 5; i++) {
+        const g = await reserveOtpPhone(PHONE, { store: mem, rule, secret: SECRET, now: () => 2 })
+        expect(g.allowed).toBe(true)
+      }
+      const sexta = await reserveOtpPhone(PHONE, { store: mem, rule, secret: SECRET, now: () => 2 })
+      expect(sexta.allowed).toBe(false)
+    } finally {
+      vi.useRealTimers()
     }
   })
-  it('el release no espera para siempre a un EVAL que nunca vuelve', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {})
-    const release = vi.fn(async () => {})
-    const g = await reserveOtpPhone(PHONE, {
-      store: { reserve: () => new Promise<never>(() => {}), release },
-      rule,
-      secret: SECRET,
-      timeoutMs: 10,
-      releaseWaitMs: 30,
-    })
-    if (g.allowed) await g.release()
-    expect(release).toHaveBeenCalledTimes(1)
+  it('memoryPhoneLog: release antes de reserve deja una lápida y la reserva no ocupa plaza', async () => {
+    const mem = memoryPhoneLog()
+    await mem.release('k', 'm1')
+    expect((await mem.reserve('k', 'm1', rule, 1)).allowed).toBe(true)
+    for (let i = 0; i < 5; i++)
+      expect((await mem.reserve('k', `n${i}`, rule, 2)).allowed).toBe(true)
   })
   it('un release que falla no rompe la respuesta', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
@@ -267,16 +271,23 @@ describe('OTP_PHONE_HMAC_SECRET vacío no tumba serverEnv() (caché FRÍA)', () 
 })
 
 describe('redisPhoneLog llama al script con la forma esperada', () => {
-  it('reserve → EVAL(script, [clave], [ventana ms, límite, miembro]); el reloj lo da TIME; release → ZREM', async () => {
+  it('reserve → EVAL(script, [clave, lápida], [ventana ms, límite, miembro]); release → EVAL(lápida + ZREM)', async () => {
     const redis = {
       eval: vi.fn(async () => [0, 1234]),
-      zrem: vi.fn(async () => 1),
     }
     const store = redisPhoneLog(redis)
     expect(await store.reserve('k', 'm', rule)).toEqual({ allowed: false, retryAfterMs: 1234 })
-    expect(redis.eval).toHaveBeenCalledWith(RESERVE_SCRIPT, ['k'], [86_400_000, 5, 'm'])
+    expect(redis.eval).toHaveBeenCalledWith(
+      RESERVE_SCRIPT,
+      ['k', tombstoneKey('m')],
+      [86_400_000, 5, 'm'],
+    )
     await store.release('k', 'm')
-    expect(redis.zrem).toHaveBeenCalledWith('k', 'm')
+    expect(redis.eval).toHaveBeenLastCalledWith(
+      RELEASE_SCRIPT,
+      ['k', tombstoneKey('m')],
+      [TOMBSTONE_TTL_MS, 'm'],
+    )
   })
 })
 

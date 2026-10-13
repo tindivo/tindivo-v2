@@ -35,8 +35,18 @@ import type { LimitRule } from '../http/rate-limit'
 
 export const HMAC_CONTEXT = 'tindivo:otp-phone:v1:'
 export const TIMEOUT_MS = 1_000
-/** Tope de espera del `release` a un `reserve` que sigue en vuelo. */
-export const RELEASE_WAIT_MS = 10_000
+/**
+ * Vida de la lápida de un `release`: 1 h. Un EVAL de reserva en vuelo solo
+ * puede llegar tarde por un reintento de red o una función serverless
+ * congelada (segundos a unos minutos); 1 h lo cubre con margen y la clave
+ * (un UUID, sin teléfono) no se acumula.
+ */
+export const TOMBSTONE_TTL_MS = 60 * 60 * 1000
+
+/** Lápida del `member`: el UUID es aleatorio y no contiene el teléfono. */
+export function tombstoneKey(member: string): string {
+  return `tindivo:otp_phone_rel:${member}`
+}
 
 export function phoneLimitKey(e164: string, secret: string): string {
   return `tindivo:otp_phone:${createHmac('sha256', secret).update(`${HMAC_CONTEXT}${e164}`).digest('hex')}`
@@ -53,6 +63,10 @@ export interface PhoneLogStore {
    * memoria (tests); en Redis el instante lo da el propio servidor (`TIME`).
    */
   reserve(key: string, member: string, rule: LimitRule, now?: number): Promise<ReserveResult>
+  /**
+   * Atómico e independiente del orden: deja una lápida del `member` y lo quita
+   * del conjunto. Si su `reserve` llega DESPUÉS, la lápida impide la inserción.
+   */
   release(key: string, member: string): Promise<void>
 }
 
@@ -65,8 +79,10 @@ export interface PhoneLogStore {
 export function memoryPhoneLog(): PhoneLogStore {
   const sets = new Map<string, Map<string, number>>()
   const expiresAt = new Map<string, number>()
+  const tombstones = new Map<string, number>() // member → caduca en
   return {
     async reserve(key, member, rule, now = Date.now()) {
+      if ((tombstones.get(member) ?? 0) > now) return { allowed: true } // ya devuelta: no ocupa plaza
       const win = rule.windowSec * 1000
       if ((expiresAt.get(key) ?? Number.POSITIVE_INFINITY) <= now) {
         sets.delete(key)
@@ -84,6 +100,7 @@ export function memoryPhoneLog(): PhoneLogStore {
       return { allowed: false, retryAfterMs: oldest + win - now }
     },
     async release(key, member) {
+      tombstones.set(member, Date.now() + TOMBSTONE_TTL_MS)
       const set = sets.get(key)
       set?.delete(member)
       if (set?.size === 0) {
@@ -95,12 +112,17 @@ export function memoryPhoneLog(): PhoneLogStore {
 }
 
 /**
- * KEYS[1] = clave · ARGV = ventana(ms), límite, miembro.
+ * KEYS[1] = clave, KEYS[2] = lápida del miembro · ARGV = ventana(ms), límite, miembro.
+ * Con lápida (el `release` llegó antes) no inserta ni cuenta: el SMS ya fue
+ * rechazado y nadie lee esta respuesta.
  * El instante sale de `TIME` de Redis (no del servidor de la app): relojes de
  * varias instancias serverless desfasados no mueven la ventana.
  */
 export const RESERVE_SCRIPT = `
 local key = KEYS[1]
+if redis.call('EXISTS', KEYS[2]) == 1 then
+  return {1, 0}
+end
 local t = redis.call('TIME')
 local now = tonumber(t[1]) * 1000 + math.floor(tonumber(t[2]) / 1000)
 local win = tonumber(ARGV[1])
@@ -115,9 +137,15 @@ local oldest = redis.call('ZRANGE', key, 0, 0, 'WITHSCORES')
 return {0, tonumber(oldest[2]) + win - now}
 `
 
+/** KEYS[1] = clave, KEYS[2] = lápida · ARGV = TTL de la lápida (ms), miembro. Atómico. */
+export const RELEASE_SCRIPT = `
+redis.call('SET', KEYS[2], '1', 'PX', tonumber(ARGV[1]))
+redis.call('ZREM', KEYS[1], ARGV[2])
+return 1
+`
+
 interface RedisLike {
   eval(script: string, keys: string[], args: (string | number)[]): Promise<unknown>
-  zrem(key: string, member: string): Promise<unknown>
 }
 
 export function redisPhoneLog(redis: RedisLike): PhoneLogStore {
@@ -125,7 +153,7 @@ export function redisPhoneLog(redis: RedisLike): PhoneLogStore {
     async reserve(key, member, rule) {
       const out = (await redis.eval(
         RESERVE_SCRIPT,
-        [key],
+        [key, tombstoneKey(member)],
         [rule.windowSec * 1000, rule.limit, member],
       )) as [number, number]
       return Number(out[0]) === 1
@@ -133,7 +161,7 @@ export function redisPhoneLog(redis: RedisLike): PhoneLogStore {
         : { allowed: false, retryAfterMs: Number(out[1]) }
     },
     async release(key, member) {
-      await redis.zrem(key, member)
+      await redis.eval(RELEASE_SCRIPT, [key, tombstoneKey(member)], [TOMBSTONE_TTL_MS, member])
     },
   }
 }
@@ -152,7 +180,6 @@ export interface PhoneLimitDeps {
   secret: string | null
   now?: () => number
   timeoutMs?: number
-  releaseWaitMs?: number
 }
 
 export type PhoneGate =
@@ -167,11 +194,11 @@ const NOOP = async () => {}
  * `release` va SIEMPRE ligado al `member` de esta reserva, también si `reserve`
  * venció por timeout: el EVAL pudo aplicarse en Redis aunque la respuesta no
  * llegara, y entonces hay una plaza fantasma que solo ese `member` identifica.
- * Si `reserve` venció por timeout su EVAL sigue en vuelo y puede insertar el
- * miembro DESPUÉS de un ZREM inmediato (cinco casos así agotarían el número sin
- * ningún SMS aceptado). Por eso `release` espera primero a que ese EVAL termine
- * (con tope `releaseWaitMs`) y recién entonces hace el ZREM; si el EVAL falla o
- * no inserta, el ZREM es inocuo. Llámalo fuera de la respuesta (`after()`).
+ * Si `reserve` venció por timeout su EVAL sigue en vuelo y puede llegar a Redis
+ * DESPUÉS del `release` (o la función morir antes). Por eso el `release` no
+ * espera: deja una lápida del `member` y hace el ZREM en un solo script; si la
+ * reserva llega después, la lápida impide la inserción, y si llegó antes, el
+ * ZREM la quita. Llámalo fuera de la respuesta (`after()`).
  */
 export async function reserveOtpPhone(e164: string, deps: PhoneLimitDeps): Promise<PhoneGate> {
   if (!deps.store || !deps.secret) return { allowed: true, release: NOOP }
@@ -179,26 +206,15 @@ export async function reserveOtpPhone(e164: string, deps: PhoneLimitDeps): Promi
   const timeoutMs = deps.timeoutMs ?? TIMEOUT_MS
   const key = phoneLimitKey(e164, deps.secret)
   const member = randomUUID()
-  const releaseWaitMs = deps.releaseWaitMs ?? RELEASE_WAIT_MS
-  let reserving: Promise<unknown> = Promise.resolve()
   const release = async () => {
     try {
-      let timer: ReturnType<typeof setTimeout> | undefined
-      await Promise.race([
-        reserving.catch(() => {}),
-        new Promise((resolve) => {
-          timer = setTimeout(resolve, releaseWaitMs)
-        }),
-      ]).finally(() => clearTimeout(timer))
       await withTimeout(store.release(key, member), timeoutMs)
     } catch (err) {
       console.error('[otp-phone-limit] no se pudo devolver la plaza:', err)
     }
   }
   try {
-    const pending = store.reserve(key, member, deps.rule, deps.now?.())
-    reserving = pending
-    const res = await withTimeout(pending, timeoutMs)
+    const res = await withTimeout(store.reserve(key, member, deps.rule, deps.now?.()), timeoutMs)
     if (!res.allowed) {
       return { allowed: false, retryAfterSec: Math.max(1, Math.ceil(res.retryAfterMs / 1000)) }
     }

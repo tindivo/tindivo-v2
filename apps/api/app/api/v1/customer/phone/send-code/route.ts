@@ -184,7 +184,7 @@ export async function POST(req: Request): Promise<Response> {
       if (isTwilioRejection(e)) {
         // Rechazo inequívoco (4xx con código de la API de Twilio): el SMS no
         // salió y no gasta el cupo del número. La devolución va tras la
-        // respuesta: espera al EVAL de la reserva si sigue en vuelo.
+        // respuesta (no espera a Redis); la lápida cubre un EVAL aún en vuelo.
         after(phoneLimit.release)
         return problem('internal_error', {
           detail:

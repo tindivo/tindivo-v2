@@ -13,13 +13,22 @@
  */
 import { Redis } from 'ioredis'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
-import { type PhoneLogStore, RESERVE_SCRIPT, redisPhoneLog } from '../otp/phone-limit'
+import {
+  type PhoneLogStore,
+  RESERVE_SCRIPT,
+  redisPhoneLog,
+  TOMBSTONE_TTL_MS,
+  tombstoneKey,
+} from '../otp/phone-limit'
 
 const REDIS_URL = process.env.REDIS_URL
 const H = 60 * 60 * 1000
 const MIN = 60 * 1000
 const rule = { limit: 5, windowSec: 24 * 60 * 60 }
-const KEY = `tindivo:test:otp_phone:${process.pid}:${Date.now()}`
+const RUN = `${process.pid}-${Date.now()}`
+const KEY = `tindivo:test:otp_phone:${RUN}`
+/** Members únicos por ejecución: las lápidas viven 1 h en un Redis compartido. */
+const mb = (n: string) => `${RUN}:${n}`
 
 if (!REDIS_URL) {
   console.warn(
@@ -52,22 +61,21 @@ describe.skipIf(!REDIS_URL)('RESERVE_SCRIPT contra Redis real', () => {
     redis = new Redis(REDIS_URL as string)
     store = redisPhoneLog({
       eval: (script, keys, args) => redis.eval(script, keys.length, ...keys, ...args),
-      zrem: (key, member) => redis.zrem(key, member),
     })
   })
   beforeEach(async () => {
-    await redis.del(KEY)
+    await redis.del(KEY, tombstoneKey(mb('tarde')), tombstoneKey(mb('antes')))
   })
   afterAll(async () => {
-    await redis.del(KEY)
+    await redis.del(KEY, tombstoneKey(mb('tarde')), tombstoneKey(mb('antes')))
     redis.disconnect()
   })
 
   it('límite exacto: 5 pasan, la 6ª no y dice cuánto falta', async () => {
     for (let i = 0; i < 5; i++) {
-      expect((await store.reserve(KEY, `m${i}`, rule)).allowed).toBe(true)
+      expect((await store.reserve(KEY, mb(`m${i}`), rule)).allowed).toBe(true)
     }
-    const r = await store.reserve(KEY, 'm5', rule)
+    const r = await store.reserve(KEY, mb('m5'), rule)
     expect(r.allowed).toBe(false)
     if (!r.allowed) {
       // El más viejo se pidió hace instantes: faltan ~24 h.
@@ -98,10 +106,30 @@ describe.skipIf(!REDIS_URL)('RESERVE_SCRIPT contra Redis real', () => {
   })
 
   it('release devuelve la plaza (ZREM del member)', async () => {
-    for (let i = 0; i < 5; i++) await store.reserve(KEY, `m${i}`, rule)
-    expect((await store.reserve(KEY, 'x', rule)).allowed).toBe(false)
-    await store.release(KEY, 'm2')
-    expect((await store.reserve(KEY, 'x', rule)).allowed).toBe(true)
+    for (let i = 0; i < 5; i++) await store.reserve(KEY, mb(`m${i}`), rule)
+    expect((await store.reserve(KEY, mb('x'), rule)).allowed).toBe(false)
+    await store.release(KEY, mb('m2'))
+    expect((await store.reserve(KEY, mb('x'), rule)).allowed).toBe(true)
+  })
+
+  it('lápida: release ANTES de reserve con el mismo member, la reserva no inserta y la lápida tiene TTL', async () => {
+    await store.release(KEY, mb('tarde'))
+    const r = await store.reserve(KEY, mb('tarde'), rule)
+    expect(r.allowed).toBe(true)
+    expect(await redis.zcard(KEY)).toBe(0)
+    const ttl = await redis.pttl(tombstoneKey(mb('tarde')))
+    expect(ttl).toBeGreaterThan(TOMBSTONE_TTL_MS - 5_000)
+    expect(ttl).toBeLessThanOrEqual(TOMBSTONE_TTL_MS)
+    // Otro member sí ocupa plaza.
+    await store.reserve(KEY, mb('otro'), rule)
+    expect(await redis.zcard(KEY)).toBe(1)
+  })
+
+  it('lápida: release DESPUÉS de reserve quita la plaza', async () => {
+    expect((await store.reserve(KEY, mb('antes'), rule)).allowed).toBe(true)
+    expect(await redis.zcard(KEY)).toBe(1)
+    await store.release(KEY, mb('antes'))
+    expect(await redis.zcard(KEY)).toBe(0)
   })
 
   it('PEXPIRE: la clave caduca con la ventana y se renueva en cada plaza concedida', async () => {

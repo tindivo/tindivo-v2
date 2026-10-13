@@ -4,7 +4,7 @@
  * Lo real: la ruta, `requireRole` contra el GoTrue local, el tope por usuario
  * en `customer_otp_attempts`, los umbrales de `app_settings`, el borrado de
  * cuenta (`DELETE /customer/account`) y TODO el cableado de `phone-limit.ts`
- * (variables, import de `@upstash/redis`, EVAL, ZREM, timeout).
+ * (variables, import de `@upstash/redis`, EVAL, lápida + ZREM, timeout).
  *
  * Lo sustituido: Twilio (`create`) y el cliente `@upstash/redis`, cuyo EVAL lo
  * atiende `memoryPhoneLog` (misma lógica que el script Lua). El script en sí lo
@@ -51,7 +51,7 @@ const fake = vi.hoisted(() => ({
   log: null as unknown,
 }))
 vi.mock('@upstash/redis', async () => {
-  const { memoryPhoneLog } = await import('../otp/phone-limit')
+  const { memoryPhoneLog, RELEASE_SCRIPT } = await import('../otp/phone-limit')
   const log = memoryPhoneLog()
   fake.log = log
   class Redis {
@@ -61,6 +61,10 @@ vi.mock('@upstash/redis', async () => {
     async eval(_s: string, keys: string[], args: (string | number)[]) {
       if (fake.modo === 'timeout') return new Promise(() => {})
       if (fake.modo === 'down') throw new Error('redis caído')
+      if (_s === RELEASE_SCRIPT) {
+        await log.release(keys[0] as string, String(args[1]))
+        return 1
+      }
       fake.keys.push(keys[0] as string)
       const [win, limit, member] = args
       const r = await log.reserve(keys[0] as string, String(member), {
@@ -68,10 +72,6 @@ vi.mock('@upstash/redis', async () => {
         windowSec: Number(win) / 1000,
       })
       return r.allowed ? [1, 0] : [0, r.retryAfterMs]
-    }
-    async zrem(key: string, member: string) {
-      await log.release(key, member)
-      return 1
     }
   }
   return { Redis }
