@@ -1004,10 +1004,64 @@ const INVENTARIO_PRODUCTORES: Record<string, ClaseProductor> = {
 // trozos que ya no dicen `domain` ni `events`).
 
 /**
+ * Tokenizador de cadenas ÚNICO (lo usan la normalización y los lectores de argumentos): si en `s[i]`
+ * empieza una cadena, devuelve el índice SIGUIENTE a su final (o `s.length` si no cierra); si no, -1.
+ * Reconoce `'…'` (con `''`), `E'…'` (con `\'` y `\\`, sin distinguir mayúsculas) y `$tag$…$tag$` / `$$…$$`.
+ */
+function finCadena(s: string, i: number): number {
+  const c = s[i]
+  const prev = s[i - 1] ?? ' '
+  const recorre = (desde: number, escapes: boolean): number => {
+    let j = desde
+    while (j < s.length) {
+      if (escapes && s[j] === '\\') j += 2
+      else if (s[j] === "'") {
+        if (s[j + 1] === "'") j += 2
+        else return j + 1
+      } else j++
+    }
+    return s.length
+  }
+  if (c === "'") return recorre(i + 1, false)
+  if ((c === 'e' || c === 'E') && s[i + 1] === "'" && !/[\w$]/.test(prev))
+    return recorre(i + 2, true)
+  if (c === '$' && !/\w/.test(prev)) {
+    const tag = /^\$(?:[A-Za-z_]\w*)?\$/.exec(s.slice(i, i + 80))?.[0]
+    if (!tag) return -1
+    const fin = s.indexOf(tag, i + tag.length)
+    return fin < 0 ? s.length : fin + tag.length
+  }
+  return -1
+}
+
+/** Posiciones [ini, fin) de todas las cadenas de `s`. */
+function cadenasDe(s: string): Array<[number, number]> {
+  const out: Array<[number, number]> = []
+  for (let i = 0; i < s.length; i++) {
+    const fin = finCadena(s, i)
+    if (fin < 0) continue
+    out.push([i, fin])
+    i = fin - 1
+  }
+  return out
+}
+
+/** `s` con cada cadena sustituida por `f(cadena)`. */
+function sinCadenas(s: string, f: (cadena: string) => string): string {
+  let out = ''
+  let ult = 0
+  for (const [a, b] of cadenasDe(s)) {
+    out += s.slice(ult, a) + f(s.slice(a, b))
+    ult = b
+  }
+  return out + s.slice(ult)
+}
+
+/**
  * Deja el cuerpo de una función listo para BUSCAR en él, sin importar cómo esté escrito: quita
  * los comentarios de línea y de bloque (anidados), quita las comillas dobles de los identificadores,
- * pasa el código a minúsculas y colapsa el espacio en blanco. Las cadenas (`'…'` y `$tag$…$tag$`)
- * se conservan tal cual: sus claves distinguen mayúsculas (`'customerName'`).
+ * pasa el código a minúsculas y colapsa el espacio en blanco. Las cadenas (`finCadena`) se
+ * conservan tal cual, byte a byte: sus claves distinguen mayúsculas (`'customerName'`).
  */
 function normalizarSql(src: string): string {
   let out = ''
@@ -1016,17 +1070,10 @@ function normalizarSql(src: string): string {
   }
   for (let i = 0; i < src.length; i++) {
     const c = src[i] as string
-    const dolar = c === '$' && !/\w/.test(src[i - 1] ?? ' ') ? /^\$\w*\$/.exec(src.slice(i)) : null
-    if (c === "'") {
-      const ini = i
-      i++
-      while (i < src.length && !(src[i] === "'" && src[i + 1] !== "'")) i += src[i] === "'" ? 2 : 1
-      out += src.slice(ini, i + 1)
-    } else if (dolar) {
-      const fin = src.indexOf(dolar[0], i + dolar[0].length)
-      const hasta = fin < 0 ? src.length : fin + dolar[0].length
-      out += src.slice(i, hasta)
-      i = hasta - 1
+    const fin = finCadena(src, i)
+    if (fin >= 0) {
+      out += src.slice(i, fin)
+      i = fin - 1
     } else if (c === '-' && src[i + 1] === '-') {
       while (i < src.length && src[i] !== '\n') i++
       espacio()
@@ -1056,7 +1103,6 @@ function normalizarSql(src: string): string {
   return out
 }
 
-const LITERAL_SQL = /'(?:[^']|'')*'|\$(\w*)\$[\s\S]*?\$\1\$/g
 /** Toda mención de la tabla, escrita como se escriba (el texto ya viene normalizado). */
 const MENCION_TABLA = /(?<![\w$])domain_events(?![\w$])/g
 const INSERCION_TABLA = /(?<![\w$])insert into (?:(\w+)\.)?domain_events(?![\w$])/g
@@ -1068,11 +1114,10 @@ function leerArgumentos(s: string, abre: number): { args: string[]; cierra: numb
   let prof = 0
   for (let i = abre; i < s.length; i++) {
     const c = s[i] as string
-    if (c === "'") {
-      const ini = i
-      i++
-      while (i < s.length && !(s[i] === "'" && s[i + 1] !== "'")) i += s[i] === "'" ? 2 : 1
-      actual += s.slice(ini, i + 1)
+    const fin = finCadena(s, i)
+    if (fin >= 0) {
+      actual += s.slice(i, fin)
+      i = fin - 1
       continue
     }
     if (c === '(') {
@@ -1114,8 +1159,14 @@ function leerPayload(payload: string): PayloadLeido {
   const errores: string[] = []
   let top: string[] | null = null
   // Se buscan fuera de las cadenas: se tapan con espacios, que no cambian las posiciones.
-  const tapado = payload.replace(LITERAL_SQL, (m) => ' '.repeat(m.length))
-  for (const m of tapado.matchAll(/(?<![\w.])json(?:b)?_build_object\s*\(/g)) {
+  const tapado = sinCadenas(payload, (m) => ' '.repeat(m.length))
+  // Con o sin esquema delante (`pg_catalog.jsonb_build_object`): el `.` no esconde el constructor.
+  for (const m of tapado.matchAll(/(?<![\w.])((?:\w+\s*\.\s*)*)json(?:b)?_build_object\s*\(/g)) {
+    const esquema = (m[1] ?? '').replace(/\s+/g, '')
+    if (esquema !== '' && esquema !== 'pg_catalog.' && esquema !== 'public.') {
+      errores.push(`constructor de otro esquema (${esquema.slice(0, -1)}): revisión manual`)
+      continue
+    }
     const p = leerArgumentos(payload, m.index + m[0].length - 1)
     if (!p) {
       errores.push('constructor sin cerrar')
@@ -1133,7 +1184,7 @@ function leerPayload(payload: string): PayloadLeido {
     if (m.index === 0 && p.cierra === payload.length - 1) top = claves
   }
   if (top === null) errores.push('el payload no es un jsonb_build_object literal')
-  const opaco = CONSTRUCTOR_OPACO.exec(payload.replace(LITERAL_SQL, "''"))
+  const opaco = CONSTRUCTOR_OPACO.exec(sinCadenas(payload, () => "''"))
   if (opaco) errores.push(`construcción no analizable: ${opaco[0]}`)
   return { top, todas, error: errores.length > 0 ? errores.join('; ') : null }
 }
@@ -1187,7 +1238,7 @@ function analizarFunciones(funciones: FuenteFuncion[]) {
   for (const fn of funciones) {
     const norm = normalizarSql(fn.s)
     const menciones = [...norm.matchAll(MENCION_TABLA)].length
-    const literales = [...norm.matchAll(LITERAL_SQL)].map((m) => m[0].toLowerCase())
+    const literales = cadenasDe(norm).map(([a, b]) => norm.slice(a, b).toLowerCase())
     if (
       /(?<![\w$])execute(?![\w$])/.test(norm) &&
       (menciones > 0 || literales.some((l) => /domain|events/.test(l))) &&
@@ -1315,6 +1366,66 @@ describe('lector de SQL de los productores de domain_events (puro)', () => {
     expect(
       leerPayload(`jsonb_build_object('a', v.id, 'b', p->>'k', 'c', 1::numeric)`).error,
     ).toBeNull()
+  })
+
+  it('(e) un constructor cualificado con pg_catalog o public se analiza igual que el simple', () => {
+    // El ejemplo de la revisión de Codex: el `.` no puede esconder `customerName`.
+    const p = leerPayload(
+      `jsonb_build_object('amount', pg_catalog.jsonb_build_object('customerName','Rosa'), 'businessId', b, 'driverId', d)`,
+    )
+    expect(p.error).toBeNull()
+    expect(p.top).toEqual(['amount', 'businessId', 'driverId'])
+    expect([...p.todas].sort()).toEqual(['amount', 'businessId', 'customerName', 'driverId'])
+    const q = leerPayload(`pg_catalog.jsonb_build_object('a', public.json_build_object('b', 1))`)
+    expect(q.error).toBeNull()
+    expect(q.top).toEqual(['a'])
+    expect([...q.todas].sort()).toEqual(['a', 'b'])
+  })
+
+  it('(f) un constructor cualificado de otro esquema se rechaza como opaco', () => {
+    for (const q of ['miesquema.', 'extensions.', 'a.b.'])
+      expect(
+        leerPayload(`jsonb_build_object('amount', ${q}jsonb_build_object('customerName', 'Rosa'))`)
+          .error,
+        q,
+      ).toMatch(/esquema/)
+    expect(leerPayload(`otro.jsonb_build_object('a', 1)`).error).toMatch(/esquema/)
+  })
+
+  it('(g) los opacos cualificados con esquema también se rechazan', () => {
+    for (const valor of [
+      `pg_catalog.to_jsonb(x)`,
+      `pg_catalog.row_to_json(x)`,
+      `public.jsonb_agg(x)`,
+      `pg_catalog.jsonb_build_array(1)`,
+    ])
+      expect(leerPayload(`jsonb_build_object('amount', ${valor})`).error, valor).toMatch(
+        /no analizable/,
+      )
+  })
+
+  it('(h) las cadenas con comas, paréntesis y comentarios falsos se leen enteras', () => {
+    const p = leerPayload(
+      String.raw`jsonb_build_object('a', $tag$Rosa, () -- /* ' $tag$, 'b', $$a,b$$, 'c', E'O\'Brien, (x)', 'd', E'barra\\', 'e', 'it''s, (y)')`,
+    )
+    expect(p.error).toBeNull()
+    expect(p.top).toEqual(['a', 'b', 'c', 'd', 'e'])
+    expect([...p.todas]).toEqual(['a', 'b', 'c', 'd', 'e'])
+    // Lo mismo pasa por la normalización completa de una inserción.
+    const r = ins(
+      String.raw`insert into public.domain_events (aggregate_type, aggregate_id, event_type, payload) values ('x', gen_random_uuid(), 'Ev', jsonb_build_object('a', $tag$Rosa, () -- /* ' $tag$, 'c', E'O\'Brien, (x)')) ;`,
+    )
+    expect(r.problemas).toEqual([])
+    expect([...(r.reales.get('f_prueba|x|Ev')?.top ?? [])]).toEqual(['a', 'c'])
+  })
+
+  it('(i) la normalización no toca el contenido de las cadenas', () => {
+    expect(normalizarSql(`select '-- no es comentario' -- sí lo es\n, 'A  /* b */  C'`)).toBe(
+      `select '-- no es comentario' , 'A  /* b */  C'`,
+    )
+    expect(
+      normalizarSql(String.raw`SELECT E'O\'Brien -- x', $q$ Hola  "Mundo" /* y */ $q$ FROM T`),
+    ).toBe(String.raw`select E'O\'Brien -- x', $q$ Hola  "Mundo" /* y */ $q$ from t`)
   })
 })
 
