@@ -5,6 +5,7 @@ import type { CourierStatus } from '@tindivo/contracts'
 import { canalUnico } from '@tindivo/supabase'
 import { useEffect } from 'react'
 import { create } from 'zustand'
+import { api } from '@/lib/api'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 
 /** Estados vivos de `courier_orders` — complemento de `delivered`/`cancelled` (0232). */
@@ -80,20 +81,24 @@ async function cargar(): Promise<void> {
      * El nombre del motorizado NO se lee de `drivers` directo: la RLS de esa
      * tabla (0004) solo deja pasar al admin y al PROPIO motorizado
      * (`user_id = auth.uid()`), nunca al cliente — aunque sea el dueño del
-     * pedido. `get_courier_tracking` (0232) sí lo trae, porque es
-     * `SECURITY DEFINER` y no pasa por esa RLS. Con `maxActivePerPhone=1` el
-     * caso normal es 0 o 1 fila, así que llamarla por cada activa no pesa.
+     * pedido. Tampoco de `get_courier_tracking`: desde la 0262 no la ejecutan
+     * ni anon ni authenticated (con un `short_id` ajeno devolvía la carrera de
+     * otro). Lo trae `GET /customer/courier-orders`, que verifica la propiedad
+     * con la sesión y lee el nombre en el servidor. Las activas son las más
+     * recientes (y con `maxActivePerPhone=1`, 0 o 1), así que la primera página
+     * basta: una sola llamada, y solo si alguna ya tiene motorizado.
      */
-    const conDriver = (data ?? []).filter((o) => o.driver_id)
     const nombres = new Map<string, string | null>()
-    await Promise.all(
-      conDriver.map(async (o) => {
-        const { data: tracking } = await getSupabaseBrowser().rpc('get_courier_tracking', {
-          p_short_id: o.short_id,
-        })
-        nombres.set(o.short_id, (tracking as { driverName?: string } | null)?.driverName ?? null)
-      }),
-    )
+    if ((data ?? []).some((o) => o.driver_id)) {
+      try {
+        const res = await api.get<{
+          data: { items: { shortId: string; driverName: string | null }[] }
+        }>('/customer/courier-orders')
+        for (const it of res.data.items) nombres.set(it.shortId, it.driverName)
+      } catch {
+        // Sin el nombre, el banner dice «Confirmado»: mejor eso que ocultar la entrega.
+      }
+    }
 
     orders = (data ?? []).map((o) => ({
       shortId: o.short_id,

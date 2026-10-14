@@ -376,6 +376,9 @@ export const CustomerCourierOrderSchema = z.object({
   itemDescription: z.string(),
   isFragile: z.boolean(),
   payer: openEnum(COURIER_PAYERS),
+  driverName: z.string().nullable().meta({
+    description: 'Nombre del motorizado de ESTA solicitud; null mientras nadie la acepta',
+  }),
   feeAmount: moneyText,
   createdAt: timestampOut,
   deliveredAt: timestampOut.nullable(),

@@ -8,7 +8,6 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { localClient as service } from './helpers/local-db'
 import {
   type CourierCustomer,
-  callCreateCourierOrder,
   cleanupCourier,
   seedCourierCustomer,
   setCourierEnabled,
@@ -33,12 +32,13 @@ const AMBOS: Llamada[] = [
   ['point_in_coverage_polygon', { p_lat: -9.146, p_lng: -78.278 }],
   ['current_customer_contraentrega_outcome'],
   ['queue_lead_minutes'],
+  // 0262: también se cierra a authenticated (con un short_id ajeno leía la carrera de otro).
+  ['get_courier_tracking', { p_short_id: 'ZZZZZZZZ' }],
 ]
 // Se cierran solo a anon: authenticated las sigue llamando.
 const SOLO_ANON: Llamada[] = [
   ['current_service_date'],
   ['effective_max_change', { p_business_id: BUSINESS_ID }],
-  ['get_courier_tracking', { p_short_id: 'ZZZZZZZZ' }],
 ]
 
 const anonClient = () => createClient(URL, ANON_KEY, opts)
@@ -46,7 +46,6 @@ const anonClient = () => createClient(URL, ANON_KEY, opts)
 describe('0261 · funciones definer sin uso, cerradas', () => {
   let customer: CourierCustomer
   let user: ReturnType<typeof anonClient>
-  let shortId = ''
 
   beforeAll(async () => {
     await setCourierEnabled(true)
@@ -59,13 +58,6 @@ describe('0261 · funciones definer sin uso, cerradas', () => {
       password: 'test-password-12345',
     })
     if (error) throw new Error(`login del cliente falló: ${error.message}`)
-
-    const { data: created, error: cErr } = await callCreateCourierOrder({
-      customerUserId: customer.userId,
-      requesterPhone: customer.phone,
-    })
-    if (cErr) throw new Error(cErr.message)
-    shortId = (created as { shortId: string }).shortId
   })
 
   afterAll(async () => {
@@ -109,14 +101,6 @@ describe('0261 · funciones definer sin uso, cerradas', () => {
       p_business_id: BUSINESS_ID,
     })
     expect(data).toBe(esperado)
-  })
-
-  it('authenticated sigue obteniendo get_courier_tracking de un pedido de Entregas', async () => {
-    const { data, error } = await user.rpc('get_courier_tracking', { p_short_id: shortId })
-    expect(error).toBeNull()
-    const tracking = data as { shortId: string; status: string } | null
-    expect(tracking?.shortId).toBe(shortId)
-    expect(tracking?.status).toBe('requested')
   })
 
   it('service_role sigue ejecutando las 3 que conservan authenticated', async () => {
