@@ -4,6 +4,11 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import webpush from 'npm:web-push@3.6.7'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
+import {
+  DISPATCH_SECRET_HEADER,
+  isDispatchCaller,
+  needsDispatchSecret,
+} from './dispatch-auth.ts'
 
 const url = Deno.env.get('SUPABASE_URL') ?? ''
 const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -1219,6 +1224,19 @@ Deno.serve(async (req: Request) => {
 
   try {
     const { event_type, aggregate_id, payload } = await req.json()
+
+    // Los eventos normales solo los manda el trigger `dispatch_event` de la base, con el
+    // secreto de despacho (no con la clave anónima, que es pública). Se comprueba ANTES de
+    // cualquier consulta con service role. `OpsAlert` (otro emisor) tiene su propio secreto.
+    if (
+      needsDispatchSecret(event_type) &&
+      !isDispatchCaller(req.headers.get(DISPATCH_SECRET_HEADER), Deno.env.get('PUSH_DISPATCH_SECRET'))
+    ) {
+      return new Response(JSON.stringify({ ok: false, error: 'forbidden' }), {
+        status: 403,
+        headers: { 'content-type': 'application/json' },
+      })
+    }
     const notes = await buildNotes(event_type, aggregate_id, payload ?? {})
     let sent = 0
     let failed = 0
