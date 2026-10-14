@@ -1,6 +1,6 @@
 # Clasificación de la spec de la app nativa contra el plan móvil
 
-> Trabajo, no norma. 2026-10-12, revisada el 2026-10-13 con la cola de decisiones abiertas (PR #49), los estándares de código v2 (PR #50) y las decisiones de Jesús sobre la enmienda · Decisión de Jesús: la spec de otro Claude sin acceso al repo ([`spec.md`](spec.md)) no entra
+> Trabajo, no norma. 2026-10-12, revisada el 2026-10-13 con la cola de decisiones abiertas (PR #49), los estándares de código v2 (PR #50) y las decisiones de Jesús sobre la enmienda · Decisión de Jesús: la spec de otro Claude sin acceso al repo ([`insumos.md`](insumos.md)) no entra
 > en `Docs/planes/`; se trabaja por diff. Aquí, cada punto contra el plan móvil aprobado y en ejecución
 > (`Docs/planes/movil/{contrato-rest,decisiones}.md`, las fases MV de `Docs/planes/migraciones/cola.md`), el análisis de
 > `Docs/trabajo/movil/` y el código de `develop` (591ec569). Lo **nuevo** pasa a [`enmienda.md`](enmienda.md); lo de

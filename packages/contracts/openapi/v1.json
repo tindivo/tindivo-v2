@@ -5823,6 +5823,11 @@
                                 ],
                                 "description": "Valores conocidos: origin, destination. Puede llegar uno nuevo; trátalo como desconocido."
                               },
+                              "driverName": {
+                                "nullable": true,
+                                "description": "Nombre del motorizado de ESTA solicitud; null mientras nadie la acepta",
+                                "type": "string"
+                              },
                               "feeAmount": {
                                 "type": "string",
                                 "pattern": "^\\d+\\.\\d{2}$",
@@ -5849,6 +5854,7 @@
                               "itemDescription",
                               "isFragile",
                               "payer",
+                              "driverName",
                               "feeAmount",
                               "createdAt",
                               "deliveredAt"

@@ -296,8 +296,8 @@ test('el badge de "Pedidos" y el banner del home reflejan una entrega en curso',
     // Con motorizado asignado, el banner tiene que traer su nombre — leído
     // como el CLIENTE (sesión real, no service_role): `drivers` tiene RLS
     // que solo deja pasar al admin y al propio motorizado, así que esto
-    // prueba que `active-courier-orders.ts` lo trae por `get_courier_tracking`
-    // (SECURITY DEFINER) y no por una lectura directa que la RLS bloquearía.
+    // prueba que `active-courier-orders.ts` lo trae por `GET /customer/courier-orders`
+    // (el servidor lo lee) y no por una lectura directa que la RLS bloquearía.
     const { error: updErr } = await db
       .from('courier_orders')
       .update({ status: 'accepted', driver_id: 'e2e00000-0000-4000-8000-000000000050' })
