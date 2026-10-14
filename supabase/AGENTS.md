@@ -54,6 +54,13 @@ Usa `(now() at time zone 'America/Lima')::date`. Ya escondió un pedido entregad
 
 - La suite de `apps/api` es de **integración** contra la base local, y borra y siembra fixtures. Usa siempre el
   candado: `pnpm db:cycle` (reset → `db:seed:e2e` → tests) o `pnpm db:lock run -- "<comando>"`.
+- **El candado se exige, no se recomienda** (2026-10-13). El `globalSetup` de la integración de `apps/api` y `local-db.ts`
+  (fixtures, `cleanup`, seeds, `afterAll`) se niegan a correr sin él: `pnpm db:lock` exporta `TINDIVO_DB_LOCK_TOKEN` a su
+  hijo, y la guardia (`scripts/db-lock-guard.mjs`) lo contrasta con el `holder.json` del candado (en el HOME, fuera del repo) (mismo
+  token y proceso vivo). Un archivo suelto: `pnpm db:lock run pnpm --filter @tindivo/api exec vitest run lib/__tests__/<archivo>.integration.test.ts`
+  (`pnpm db:lock status` dice quién la tiene). Sin candado el vitest falla al instante y no borra nada; antes borraba los
+  datos de la sesión que sí lo tenía (trampa en `Docs/operacion/trampas.md`). La CI usa su propia base: allí vale
+  `CI=true` + `TINDIVO_DB_LOCK_BYPASS=ci-isolated-db` (job `api-integration`); nunca en local. Los unitarios no lo piden.
 - **`supabase db reset` borra el mundo e2e y no lo repone** (no hay `seed.sql`): después, `pnpm db:seed:e2e`. Sin eso,
   los tests fallan en masa con errores que apuntan a otro sitio (`seed orders failed`, FK de `business_id`).
 - Para comparar funciones entre dos bases, normaliza comentarios y espacios antes de hashear

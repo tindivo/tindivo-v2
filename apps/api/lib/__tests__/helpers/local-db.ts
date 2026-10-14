@@ -6,6 +6,7 @@
  */
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@tindivo/supabase'
+import { assertDbLock } from '../../../../../scripts/db-lock-guard.mjs'
 
 // ── Keys locales de Supabase CLI (hardcodeadas, son públicas en la documentación) ──
 // https://supabase.com/docs/guides/local-development/cli/getting-started#local-environment-variables
@@ -26,6 +27,14 @@ function assertLocalOnly(url: string): void {
     )
   }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CANDADO — la base local es compartida entre sesiones.
+// Todo lo que importa este módulo escribe en ella (fixtures, `cleanup`, seeds,
+// `afterAll`): sin el candado, borra los datos de otra sesión en plena corrida.
+// Falla al IMPORTAR, antes de crear el cliente. Ver scripts/db-lock-guard.mjs.
+// ═══════════════════════════════════════════════════════════════════════════════
+assertDbLock()
 
 // ── Cliente service_role tipado ────────────────────────────────────────────────
 assertLocalOnly(LOCAL_URL)

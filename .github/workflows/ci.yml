@@ -120,6 +120,10 @@ jobs:
       # Redis real para probar el script Lua del tope de OTP por número
       # (apps/api/lib/__tests__/otp-phone-limit.redis.test.ts).
       REDIS_URL: redis://127.0.0.1:6379
+      # Esta base es del runner, no compartida: aquí no hay otra sesión a la que
+      # pisar, así que los tests no exigen el candado de `pnpm db:lock`. Junto con
+      # `CI=true` (lo pone Actions) es la señal explícita de scripts/db-lock-guard.mjs.
+      TINDIVO_DB_LOCK_BYPASS: ci-isolated-db
     services:
       redis:
         image: redis:7
