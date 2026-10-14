@@ -1259,8 +1259,8 @@ function contextoDe(
   return {
     vars: new Map(Object.entries({ ...argumentosDe(args), ...declaradasEn(norm) })),
     campos,
-    anidado: [...t.matchAll(/(?<![w$])declare(?![w$])/g)].length > 1,
-    searchPathVacio: (config ?? []).some((c) => /^search_paths*=s*(?:""|'')?s*$/i.test(c)),
+    anidado: [...t.matchAll(/(?<![\w$])declare(?![\w$])/g)].length > 1,
+    searchPathVacio: (config ?? []).some((c) => /^search_path\s*=\s*(?:""|'')?\s*$/i.test(c)),
   }
 }
 
