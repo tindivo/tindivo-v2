@@ -1206,16 +1206,22 @@ const TIPOS_ESCALARES = new Set([
 // puras, y hay que volver a revisar esta lista cuando un productor real pida otra.
 const FUNCIONES_ESCALARES = new Set(['now', 'round', 'coalesce'])
 
-const quitaTipoDecoracion = (t: string) =>
+const sinDecoracion = (t: string) =>
   t
     .toLowerCase()
     .replace(/\(.*?\)/g, '')
     .replace(/\s+/g, ' ')
     .trim()
-    .replace(/^(?:public|pg_catalog)\./, '')
+/**
+ * TIPOS (variables, parámetros, casts, columnas): solo es escalar el que viene sin esquema o con
+ * `pg_catalog.` y está en la lista. Cualquier otro esquema (`public.` incluido) pide revisión manual:
+ * `CREATE DOMAIN public.text AS jsonb` haría pasar JSON por un `text`.
+ */
 function esTipoEscalar(t: string): boolean {
-  return TIPOS_ESCALARES.has(quitaTipoDecoracion(t))
+  return TIPOS_ESCALARES.has(sinDecoracion(t).replace(/^pg_catalog\./, ''))
 }
+/** TABLAS (`v public.cash_settlements`, `%rowtype`): aquí `public.` y `pg_catalog.` solo cualifican el nombre. */
+const nombreDeTabla = (t: string) => sinDecoracion(t).replace(/^(?:public|pg_catalog)\./, '')
 
 /** `p_id uuid, p_data jsonb DEFAULT x` (de `pg_get_function_arguments`) → `nombre → tipo`. */
 function argumentosDe(args: string | undefined): Record<string, string> {
@@ -1353,7 +1359,7 @@ function motivoNoPermitido(valor: string, ctx: ContextoTipos): string | null {
     if (ctx.anidado) return manual(MOTIVO_ANIDADO)
     const tipo = ctx.vars.get(campo[1] as string)
     if (tipo === undefined) return manual('registro sin tipo resuelto')
-    const tabla = quitaTipoDecoracion(tipo.replace(/%rowtype$/i, ''))
+    const tabla = nombreDeTabla(tipo.replace(/%rowtype$/i, ''))
     const tipoCampo = ctx.campos.get(`${tabla}.${campo[2]}`)
     if (tipoCampo === undefined) return manual(`campo de registro sin tipo resuelto (${tipo})`)
     return esTipoEscalar(tipoCampo) ? null : manual(`campo no escalar (${tipoCampo})`)
@@ -1663,6 +1669,41 @@ describe('lector de SQL de los productores de domain_events (puro)', () => {
       expect(val('v_otro.delivered_amount', c)).toMatch(/revisión manual/)
     })
 
+    describe('tipos cualificados: solo pg_catalog o sin esquema valen como escalares', () => {
+      // `CREATE DOMAIN public.text AS jsonb` haría pasar JSON por escalar si `public.` se quitara.
+      it('(a) una variable `public.text` pide revisión manual', () => {
+        expect(val('v', ctx({ v: 'public.text' }))).toMatch(/revisión manual/)
+      })
+      it('(b) un parámetro `public.text` pide revisión manual', () => {
+        const c = ctx(argumentosDe('p public.text'))
+        expect(val('p', c)).toMatch(/revisión manual/)
+      })
+      it('(c) un cast a `public.text` pide revisión manual, con :: y con CAST', () => {
+        const c = ctx({ x: 'text' })
+        expect(val('x::public.text', c)).toMatch(/revisión manual/)
+        expect(val('cast(x as public.text)', c)).toMatch(/revisión manual/)
+        expect(val('x::pg_catalog.text', c)).toBeNull()
+        expect(val('cast(x as pg_catalog.text)', c)).toBeNull()
+      })
+      it('(d) una variable `pg_catalog.text` se permite', () => {
+        expect(val('v', ctx({ v: 'pg_catalog.text' }))).toBeNull()
+      })
+      it('(e) una variable `text` se permite', () => {
+        expect(val('v', ctx({ v: 'text' }))).toBeNull()
+      })
+      it('(f) el campo de un registro cuya columna es un dominio pide revisión manual', () => {
+        // La consulta del catálogo informa `esquema.nombre` para todo tipo que no sea base de
+        // pg_catalog (un dominio, o un tipo de otro esquema); aquí se simula esa salida.
+        const campos = {
+          'cash_settlements.nota': 'public.text',
+          'cash_settlements.monto': 'numeric',
+        }
+        const c = ctx({ v_cs: 'public.cash_settlements' }, campos)
+        expect(val('v_cs.nota', c)).toMatch(/revisión manual/)
+        expect(val('v_cs.monto', c)).toBeNull()
+      })
+    })
+
     it('(f) round(...), now() y coalesce(...) de cosas permitidas se permiten', () => {
       const c = ctx({ v_amount: 'numeric', v_j: 'jsonb' })
       expect(val('pg_catalog.round(v_amount, 2)', c)).toBeNull()
@@ -1851,9 +1892,14 @@ describe.skipIf(sinPsql && !process.env.CI)('candados con dos sesiones psql', ()
     const funciones = JSON.parse(r.out.trim()) as FuenteFuncion[]
     expect(funciones.length).toBeGreaterThan(0)
     // Tipos de las columnas de `public` (tabla.columna → tipo), para resolver `v_registro.campo`.
+    // Solo un tipo BASE de `pg_catalog` se informa con su nombre (`format_type` omite el esquema);
+    // un dominio o un tipo de otro esquema se informa como `esquema.nombre`, que `esTipoEscalar` rechaza.
     const cols = await psql(
-      `select coalesce(json_object_agg(c.relname || '.' || a.attname, format_type(a.atttypid, a.atttypmod)), '{}') ` +
+      `select coalesce(json_object_agg(c.relname || '.' || a.attname, ` +
+        `case when t.typnamespace = 'pg_catalog'::regnamespace and t.typtype = 'b' ` +
+        `then format_type(a.atttypid, a.atttypmod) else t.typnamespace::regnamespace::text || '.' || t.typname end), '{}') ` +
         `from pg_class c join pg_attribute a on a.attrelid = c.oid and a.attnum > 0 and not a.attisdropped ` +
+        `join pg_type t on t.oid = a.atttypid ` +
         `where c.relnamespace = 'public'::regnamespace and c.relkind in ('r', 'v', 'm', 'p')`,
     )
     const campos = new Map(Object.entries(JSON.parse(cols.out.trim()) as Record<string, string>))
