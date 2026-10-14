@@ -1901,6 +1901,20 @@ describe.skipIf(sinPsql && !process.env.CI)('candados con dos sesiones psql', ()
     expect(problemas).toEqual([])
   })
 
+  it('ningún tipo fuera de pg_catalog se llama como un escalar permitido (un dominio no suplanta a `text`)', async () => {
+    // El lector acepta tipos SIN esquema por su nombre (`v text`). Eso solo es seguro si ese nombre
+    // resuelve a pg_catalog con cualquier search_path: un `CREATE DOMAIN public.text AS jsonb` lo
+    // suplantaría y colaría JSON estructurado como «escalar». Se comprueba en el catálogo vivo.
+    const nombres = [...TIPOS_ESCALARES].map((t) => `'${t.replace(/'/g, "''")}'`).join(',')
+    const r = await psql(
+      `select n.nspname || '.' || t.typname from pg_catalog.pg_type t ` +
+        `join pg_catalog.pg_namespace n on n.oid = t.typnamespace ` +
+        `where n.nspname <> 'pg_catalog' and t.typname in (${nombres}) order by 1`,
+    )
+    expect(r.err).toBe('')
+    expect(r.out.trim().split('\n').filter(Boolean)).toEqual([])
+  })
+
   it('guardar una dirección y borrar la cuenta a la vez: sin abrazo mortal (libreta primero)', async () => {
     const c = await crearCliente()
     await db.from('customer_addresses').insert({
