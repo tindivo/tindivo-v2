@@ -4,6 +4,12 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import webpush from 'npm:web-push@3.6.7'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
+import {
+  isOpsCaller,
+  OPS_ALERT_SECRET_HEADER,
+  OPS_ALERT_WINDOW,
+  opsAlertText,
+} from './ops-alert.ts'
 
 const url = Deno.env.get('SUPABASE_URL') ?? ''
 const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -416,14 +422,6 @@ async function newOrderBusinessNotes(orderId: string): Promise<Note[]> {
   ]
 }
 
-/** Alertas operativas permitidas (`kind` -> texto fijo). */
-const OPS_ALERTS: Record<string, { title: string; body: string }> = {
-  otp_phone_limit_misconfigured: {
-    title: 'Tindivo: verificación por SMS bloqueada',
-    body: 'Falta configurar el límite de SMS por número. Revisa las variables en Vercel.',
-  },
-}
-
 async function buildNotes(eventType: string, aggregateId: string, payload: Record<string, unknown>): Promise<Note[]> {
   const out: Note[] = []
   const action = (payload?.action as string) ?? ''
@@ -434,7 +432,7 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
   // mensajes fijos, sin datos personales ni texto libre. Tag = `${event_type}-${kind}`.
   if (eventType === 'OpsAlert') {
     const kind = String(payload?.kind ?? aggregateId)
-    const text = OPS_ALERTS[kind]
+    const text = opsAlertText(kind)
     if (!text) return out
     const { data: admins } = await db.from('user_roles').select('user_id').eq('role', 'admin')
     for (const a of admins ?? []) {
@@ -1219,6 +1217,42 @@ Deno.serve(async (req: Request) => {
 
   try {
     const { event_type, aggregate_id, payload } = await req.json()
+
+    // `OpsAlert` solo lo manda la API (apps/api/lib/ops/alert-ops.ts). Las demás
+    // ramas las dispara el trigger de la base con la clave anónima (hallazgo
+    // aparte, no se toca aquí); ESTA consulta destinatarios con service role y
+    // por eso exige además un emisor interno y su propio límite de frecuencia.
+    if (event_type === 'OpsAlert') {
+      if (!isOpsCaller(req.headers.get(OPS_ALERT_SECRET_HEADER), Deno.env.get('OPS_ALERT_SECRET'))) {
+        return new Response(JSON.stringify({ ok: false, error: 'forbidden' }), {
+          status: 403,
+          headers: { 'content-type': 'application/json' },
+        })
+      }
+      const kind = String(payload?.kind ?? aggregate_id)
+      if (!opsAlertText(kind)) {
+        return new Response(JSON.stringify({ ok: false, error: 'kind desconocido' }), {
+          status: 400,
+          headers: { 'content-type': 'application/json' },
+        })
+      }
+      const { data: turno, error: turnoErr } = await db.rpc('claim_ops_alert', {
+        p_kind: kind,
+        p_window: OPS_ALERT_WINDOW,
+      })
+      if (turnoErr) {
+        console.error('[send-push] claim_ops_alert falló:', turnoErr.message)
+        return new Response(JSON.stringify({ ok: false, error: 'throttle' }), {
+          status: 503,
+          headers: { 'content-type': 'application/json' },
+        })
+      }
+      if (!turno) {
+        return new Response(JSON.stringify({ ok: true, throttled: true, recipients: 0 }), {
+          headers: { 'content-type': 'application/json' },
+        })
+      }
+    }
     const notes = await buildNotes(event_type, aggregate_id, payload ?? {})
     let sent = 0
     let failed = 0

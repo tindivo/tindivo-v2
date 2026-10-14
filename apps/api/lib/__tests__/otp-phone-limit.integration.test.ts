@@ -334,4 +334,30 @@ describe('send-code · tope por número de destino', () => {
       vi.unstubAllEnvs()
     }
   })
+
+  it.each([
+    '',
+    '   ',
+  ])('UPSTASH_REDIS_REST_URL=%j: lo vacío cuenta como ausente y llega al 503, no a un error de validación', async (blank) => {
+    const v = await crearVecino()
+    // Entorno y módulos nuevos: `serverEnv()` se valida una sola vez por proceso,
+    // y aquí NO se sustituye ni él ni `requireRole` (GoTrue local real).
+    vi.stubEnv('UPSTASH_REDIS_REST_URL', blank)
+    vi.resetModules()
+    try {
+      const { POST } = await import('../../app/api/v1/customer/phone/send-code/route')
+      const res = await POST(
+        new Request(`${BASE}/customer/phone/send-code`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', authorization: `Bearer ${v.token}` },
+          body: JSON.stringify({ phone: tel(7) }),
+        }),
+      )
+      await Promise.all(tareas.splice(0))
+      expect(res.status).toBe(503)
+      expect(create).not.toHaveBeenCalled()
+    } finally {
+      vi.unstubAllEnvs()
+    }
+  })
 })
