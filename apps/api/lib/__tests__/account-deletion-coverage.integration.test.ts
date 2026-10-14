@@ -1161,10 +1161,11 @@ const CONSTRUCTOR_OPACO =
 type ContextoTipos = {
   vars: Map<string, string>
   campos: Map<string, string>
-  /** Más de un DECLARE (bloques anidados): un nombre puede estar tapado por otro de un bloque interno. */
+  /**
+   * Hay algo que puede tapar o cambiar el tipo de un nombre: más de un DECLARE, un bucle
+   * `FOR … IN` / `FOREACH … IN`, o un cursor (PL/pgSQL redeclara la variable del bucle como record).
+   */
   anidado?: boolean
-  /** `proconfig` con `search_path` vacío: sin esquema, las funciones se resuelven solo en pg_catalog. */
-  searchPathVacio?: boolean
 }
 const SIN_CONTEXTO: ContextoTipos = { vars: new Map(), campos: new Map() }
 
@@ -1248,19 +1249,23 @@ function declaradasEn(norm: string): Record<string, string> {
   return out
 }
 
+// Construcciones que declaran variables de forma implícita o cambian su tipo: `FOR x IN …` (rango,
+// SELECT, cursor, EXECUTE), `FOREACH x IN ARRAY …` y los cursores. Los bloques EXCEPTION no
+// redeclaran nada y no cuentan. Un falso positivo solo pide una revisión manual de más.
+const AMBITO_IMPLICITO =
+  /(?<![\w$])(?:for\s+(?!(?:update|share|no|key)(?![\w$]))[a-z_][\w$.]*(?:\s*,\s*[a-z_][\w$.]*)*\s+in(?![\w$])|foreach(?![\w$])|(?:ref)?cursor(?![\w$]))/
+
 /** Contexto de tipos de una función: sus argumentos y su DECLARE (este gana si se repite). */
 function contextoDe(
   norm: string,
   args: string | undefined,
   campos: Map<string, string>,
-  config?: string[] | null,
 ): ContextoTipos {
   const t = sinCadenas(norm, () => "''")
   return {
     vars: new Map(Object.entries({ ...argumentosDe(args), ...declaradasEn(norm) })),
     campos,
-    anidado: [...t.matchAll(/(?<![\w$])declare(?![\w$])/g)].length > 1,
-    searchPathVacio: (config ?? []).some((c) => /^search_path\s*=\s*(?:""|'')?\s*$/i.test(c)),
+    anidado: [...t.matchAll(/(?<![\w$])declare(?![\w$])/g)].length > 1 || AMBITO_IMPLICITO.test(t),
   }
 }
 
@@ -1281,7 +1286,7 @@ function ultimoCast(t: string): number {
 }
 
 const MOTIVO_ANIDADO =
-  'la función tiene bloques DECLARE anidados y un nombre podría estar tapado: no se resuelve el tipo'
+  'la función tiene bloques DECLARE anidados, bucles FOR/FOREACH o cursores y un nombre podría estar tapado o redeclarado: no se resuelve el tipo'
 
 /** null si el valor es una forma permitida; si no, el motivo por el que pide revisión manual. */
 function motivoNoPermitido(valor: string, ctx: ContextoTipos): string | null {
@@ -1322,11 +1327,12 @@ function motivoNoPermitido(valor: string, ctx: ContextoTipos): string | null {
       return motivoNoPermitido(m[1] as string, ctx)
     }
     if (FUNCIONES_ESCALARES.has(nombre) && ['', 'pg_catalog.'].includes(esquema)) {
-      // `coalesce` es sintaxis SQL: no se resuelve por search_path. `now` y `round` sí: sin esquema
-      // solo valen si el productor tiene el search_path vacío (así solo ve pg_catalog).
-      if (nombre !== 'coalesce' && esquema === '' && !ctx.searchPathVacio)
+      // `coalesce` es sintaxis SQL: no se resuelve por search_path. `now` y `round` sí: solo valen
+      // escritas con esquema (`pg_catalog.now()`); ni siquiera un `proconfig` vacío lo garantiza,
+      // porque un `set_config('search_path', …)` en el cuerpo lo cambia en tiempo de ejecución.
+      if (nombre !== 'coalesce' && esquema === '')
         return manual(
-          `llamada sin esquema a ${nombre} en un productor cuyo search_path no está vacío (podría ejecutarse otra función)`,
+          `llamada sin esquema a ${nombre} (escríbela pg_catalog.${nombre}: el search_path puede cambiar en tiempo de ejecución)`,
         )
       for (const a of args) {
         const m = motivoNoPermitido(a, ctx)
@@ -1463,7 +1469,7 @@ function analizarFunciones(funciones: FuenteFuncion[], campos: Map<string, strin
       problemas.push(
         `${fn.f}: EXECUTE que puede armar el nombre de domain_events; revísalo a mano y anótalo en EXECUTE_REVISADOS`,
       )
-    const ctx = contextoDe(norm, fn.args, campos, fn.config)
+    const ctx = contextoDe(norm, fn.args, campos)
     let leidas = 0
     for (const m of norm.matchAll(INSERCION_TABLA)) {
       leidas++
@@ -1509,7 +1515,6 @@ describe('lector de SQL de los productores de domain_events (puro)', () => {
   const ctx = (vars: Record<string, string>, campos: Record<string, string> = {}) => ({
     vars: new Map(Object.entries(vars)),
     campos: new Map(Object.entries(campos)),
-    searchPathVacio: true,
   })
   const ins = (cuerpo: string) => analizarFunciones([{ f: 'f_prueba', s: cuerpo }])
   const CUERPO = `values ('cash_settlement', gen_random_uuid(), 'CashConfirmed', jsonb_build_object('amount', v))`
@@ -1660,8 +1665,9 @@ describe('lector de SQL de los productores de domain_events (puro)', () => {
 
     it('(f) round(...), now() y coalesce(...) de cosas permitidas se permiten', () => {
       const c = ctx({ v_amount: 'numeric', v_j: 'jsonb' })
-      expect(val('round(v_amount, 2)', c)).toBeNull()
-      expect(val('now()', c)).toBeNull()
+      expect(val('pg_catalog.round(v_amount, 2)', c)).toBeNull()
+      expect(val('round(v_amount, 2)', c)).toMatch(/revisión manual/)
+      expect(val('now()', c)).toMatch(/revisión manual/)
       expect(val('pg_catalog.now()', c)).toBeNull()
       expect(val('coalesce(v_amount, 0)', c)).toBeNull()
       // ...pero no si un argumento no lo es.
@@ -1678,22 +1684,65 @@ describe('lector de SQL de los productores de domain_events (puro)', () => {
       expect(ins1(`declare v numeric; begin ${insercion}; end;`)).toBeNull()
     })
 
-    it('(i) now/round sin esquema solo con search_path vacío; pg_catalog. siempre', () => {
+    it('(i) now/round solo escritas con pg_catalog.; sin esquema piden revisión sea cual sea proconfig', () => {
       const cuerpo = (llamada: string) =>
         `begin insert into public.domain_events (aggregate_type, aggregate_id, event_type, payload) values ('x', gen_random_uuid(), 'Ev', jsonb_build_object('amount', ${llamada})); end;`
       const err = (llamada: string, config?: string[] | null) =>
         analizarFunciones([{ f: 'f_prueba', s: cuerpo(llamada), config }]).reales.get(
           'f_prueba|x|Ev',
         )?.error ?? null
-      expect(err('round(1)', ['search_path=""'])).toBeNull()
-      expect(err('round(1)', ['search_path='])).toBeNull()
+      // `set_config('search_path', …)` en el cuerpo anula el proconfig: ya no se confía en él.
+      expect(err('round(1)', ['search_path=""'])).toMatch(/revisión manual/)
+      expect(err('round(1)', ['search_path='])).toMatch(/revisión manual/)
       expect(err('round(1)', ['search_path=public, pg_catalog'])).toMatch(/revisión manual/)
-      expect(err('round(1)', ['search_path=pg_catalog'])).toMatch(/revisión manual/)
-      expect(err('pg_catalog.round(1)', ['search_path=public, pg_catalog'])).toBeNull()
-      expect(err('pg_catalog.round(1)', null)).toBeNull()
+      expect(err('now()', ['search_path=""'])).toMatch(/revisión manual/)
       expect(err('now()', null)).toMatch(/revisión manual/)
-      expect(err('now()')).toMatch(/revisión manual/)
+      expect(err('pg_catalog.round(1)', ['search_path=""'])).toBeNull()
+      expect(err('pg_catalog.round(1)', null)).toBeNull()
+      expect(err('pg_catalog.now()', null)).toBeNull()
       expect(err('coalesce(1, 2)', null)).toBeNull()
+    })
+
+    it('(k) ámbitos implícitos: bucles FOR/FOREACH y cursores piden revisión manual; un DECLARE simple, no', () => {
+      const ins2 = (cuerpo: string) =>
+        analizarFunciones([{ f: 'f_prueba', s: cuerpo }]).reales.get('f_prueba|x|Ev')?.error ?? null
+      const insercion = (v: string) =>
+        `insert into public.domain_events (aggregate_type, aggregate_id, event_type, payload) values ('x', gen_random_uuid(), 'Ev', jsonb_build_object('amount', ${v}))`
+      // El ejemplo de Codex: dentro del bucle `v` se redeclara como record.
+      const cursor = `declare v numeric; c cursor for select 'Rosa' as "customerName"; begin for v in c loop ${insercion('v')}; end loop; end;`
+      expect(ins2(cursor)).toMatch(/revisión manual/)
+      expect(
+        ins2(`declare v numeric; begin for i in 1..3 loop ${insercion('i')}; end loop; end;`),
+      ).toMatch(/revisión manual/)
+      expect(
+        ins2(
+          `declare v numeric; begin for i in reverse 3..1 loop ${insercion('v')}; end loop; end;`,
+        ),
+      ).toMatch(/revisión manual/)
+      expect(
+        ins2(
+          `declare v numeric; begin for r in select 1 as a loop ${insercion('v')}; end loop; end;`,
+        ),
+      ).toMatch(/revisión manual/)
+      expect(
+        ins2(
+          `declare v numeric; begin for r in execute 'select 1' loop ${insercion('v')}; end loop; end;`,
+        ),
+      ).toMatch(/revisión manual/)
+      expect(
+        ins2(
+          `declare v numeric; x text; begin foreach x in array array['a'] loop ${insercion('v')}; end loop; end;`,
+        ),
+      ).toMatch(/revisión manual/)
+      expect(
+        ins2(`declare v numeric; c refcursor; begin open c for select 1; ${insercion('v')}; end;`),
+      ).toMatch(/revisión manual/)
+      // El texto dentro de una cadena no cuenta.
+      expect(
+        ins2(`declare v numeric; begin perform 'for i in 1..3 loop'; ${insercion('v')}; end;`),
+      ).toBeNull()
+      // (f) un productor sencillo: un DECLARE, una variable numeric, sin bucles.
+      expect(ins2(`declare v numeric(10,2) := 0; begin ${insercion('v')}; end;`)).toBeNull()
     })
 
     it('(j) el cast a un tipo escalar de algo permitido se permite; el de una variable json, no', () => {
