@@ -71,7 +71,8 @@ BEGIN
   EXCEPTION WHEN OTHERS THEN
     GET STACKED DIAGNOSTICS v_err_sqlstate = RETURNED_SQLSTATE, v_err_message = MESSAGE_TEXT;
     IF v_err_sqlstate = 'P9999' THEN RAISE EXCEPTION '%', v_err_message; END IF;
-    ASSERT v_err_sqlstate = 'P0001' AND v_err_message LIKE '%No autorizado%', 'TEST 2 FALLIDO: Mensaje inesperado';
+    -- Desde la 0262 un pedido ajeno da el mismo error que uno inexistente (no revela que existe).
+    ASSERT v_err_sqlstate = 'P0002' AND v_err_message LIKE '%Pedido no existe%', 'TEST 2 FALLIDO: Mensaje inesperado';
     RAISE NOTICE 'Test 2 Aprobado: Rechazo a usuario ajeno (SQLSTATE: %)', v_err_sqlstate;
   END;
 
