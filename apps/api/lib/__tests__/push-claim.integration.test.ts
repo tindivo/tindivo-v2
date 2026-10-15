@@ -34,12 +34,12 @@ describe('dispatch_event · cuerpo con event_id y sin secreto (0264)', () => {
 begin;
 ${CONFIG}
 delete from net.http_request_queue;
-with e as (
-  insert into public.domain_events (aggregate_type, aggregate_id, event_type, payload)
-  values ('order', gen_random_uuid(), 'OrderStatusChanged', '{"toStatus":"accepted"}')
-  returning id, aggregate_id)
+insert into public.domain_events (id, aggregate_type, aggregate_id, event_type, payload)
+  values ('00000000-0000-4000-8000-0000000000b1', 'order', '00000000-0000-4000-8000-0000000000b2', 'OrderStatusChanged', '{"toStatus":"accepted"}');
 select 'FILA|' || (select row_to_json(q)::text from (
-  select url, headers, convert_from(body,'utf8')::jsonb as body, (select id from e) as event_id, (select aggregate_id from e) as aggregate_id
+  select url, headers, convert_from(body,'utf8')::jsonb as body,
+    (select id from public.domain_events where id = '00000000-0000-4000-8000-0000000000b1') as event_id,
+    (select aggregate_id from public.domain_events where id = '00000000-0000-4000-8000-0000000000b1') as aggregate_id
   from net.http_request_queue limit 1) q);
 rollback;
 `)
