@@ -1,5 +1,6 @@
 import { createHmac, randomUUID } from 'node:crypto'
 import type { LimitRule } from '../http/rate-limit'
+import { envValue } from './sms-guard.mjs'
 
 /**
  * Límite de envíos de OTP por NÚMERO DE DESTINO (SEC-03). El tope por usuario
@@ -315,7 +316,7 @@ export async function reserveOtpPhone(e164: string, deps: PhoneLimitDeps): Promi
 
 /** El secreto del HMAC, o `null` (y un aviso) si falta. Nunca otro secreto de respaldo. */
 export function otpPhoneSecret(): string | null {
-  const s = process.env.OTP_PHONE_HMAC_SECRET?.trim()
+  const s = envValue(process.env, 'OTP_PHONE_HMAC_SECRET')
   if (!s) {
     console.error('[otp-phone-limit] falta OTP_PHONE_HMAC_SECRET: límite por número APAGADO')
     return null
@@ -333,8 +334,8 @@ export function resetPhoneLogStore(): void {
 /** El registro en Upstash, o `null` si no está configurado o no arranca. Nunca lanza. */
 export async function getPhoneLogStore(): Promise<PhoneLogStore | null> {
   if (cached !== undefined) return cached
-  const url = process.env.UPSTASH_REDIS_REST_URL
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN
+  const url = envValue(process.env, 'UPSTASH_REDIS_REST_URL')
+  const token = envValue(process.env, 'UPSTASH_REDIS_REST_TOKEN')
   if (!url || !token) {
     cached = null
     return null

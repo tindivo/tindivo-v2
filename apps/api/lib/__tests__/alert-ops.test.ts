@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createAlertOps, OPS_ALERT_DEDUPE_MS } from '../ops/alert-ops'
+import { buildOpsAlertRequest, createAlertOps, OPS_ALERT_DEDUPE_MS } from '../ops/alert-ops'
 
 describe('alertOps · deduplicación', () => {
   it('la primera alerta de un tipo se manda', async () => {
@@ -55,5 +55,26 @@ describe('alertOps · deduplicación', () => {
     const alertOps = createAlertOps({ send, now: () => 0 })
     await Promise.all([alertOps('k', 'd'), alertOps('k', 'd'), alertOps('k', 'd')])
     expect(send).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('buildOpsAlertRequest · el emisor interno se autentica', () => {
+  const cfg = { url: 'https://x.supabase.co/functions/v1/send-push', anonKey: 'anon' }
+
+  it('lleva el secreto en la cabecera y solo el kind en el cuerpo', () => {
+    const r = buildOpsAlertRequest(cfg, 'otp_phone_limit_misconfigured', ' s3cr3t ')
+    const h = r.init.headers as Record<string, string>
+    expect(h['x-ops-alert-secret']).toBe('s3cr3t')
+    expect(h.authorization).toBe('Bearer anon')
+    expect(JSON.parse(String(r.init.body))).toEqual({
+      event_type: 'OpsAlert',
+      aggregate_id: 'otp_phone_limit_misconfigured',
+      payload: { kind: 'otp_phone_limit_misconfigured' },
+    })
+  })
+
+  it('sin secreto (o solo espacios) lanza: no se manda una petición que será rechazada', () => {
+    expect(() => buildOpsAlertRequest(cfg, 'k', undefined)).toThrow(/OPS_ALERT_SECRET/)
+    expect(() => buildOpsAlertRequest(cfg, 'k', '  ')).toThrow(/OPS_ALERT_SECRET/)
   })
 })

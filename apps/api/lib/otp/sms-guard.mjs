@@ -27,9 +27,25 @@ export const PHONE_LIMIT_VARS = [
   'UPSTASH_REDIS_REST_TOKEN',
 ]
 
-function present(env, name) {
+/**
+ * EL valor de una variable, normalizado: recortado, y vacío o solo espacios es
+ * ausente (`undefined`). Es la única normalización: la usan la puerta del build
+ * y el código que lee la variable en ejecución, para que lo que aprueba una sea
+ * exactamente lo que usa la otra (un token `' tok '` no puede pasar la puerta y
+ * fallar después contra Redis).
+ * @param {Record<string, string | undefined>} env
+ * @param {string} name
+ * @returns {string | undefined}
+ */
+export function envValue(env, name) {
   const v = env[name]
-  return typeof v === 'string' && v.trim() !== ''
+  if (typeof v !== 'string') return undefined
+  const t = v.trim()
+  return t === '' ? undefined : t
+}
+
+function present(env, name) {
+  return envValue(env, name) !== undefined
 }
 
 /** @param {Record<string, string | undefined>} env */
