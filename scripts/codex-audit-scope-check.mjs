@@ -5,72 +5,147 @@
  *
  *   node scripts/codex-audit-scope-check.mjs <eventos.jsonl> <AUDIT_ROOT>
  *
- * Sale con 0 si no hay nada que marcar y con 1 si hay algo: entonces la ronda NO vale y se trata
- * como incidente (§13.1 bis). Es DETECCIÓN, no prevención: un comando que arme una ruta por
- * partes o la lea de una variable puede escaparse. Por eso no convierte el modo en aislamiento.
+ * Sale con 0 solo si el registro está completo y no hay nada que marcar; con 1 si hay algo (la
+ * ronda NO vale y se trata como incidente, §13.1 bis); con 2 ante un uso incorrecto o cualquier
+ * error no previsto (nunca 0 por accidente).
+ *
+ * QUÉ EXIGE
+ * - Registro completo: archivo legible, todas las líneas JSON, al menos un evento, `thread.started`,
+ *   `turn.completed`, y ningún `turn.failed` ni `error`.
+ * - Todos los eventos de item (`item.started`, `item.updated`, `item.completed`) son de un tipo
+ *   permitido: `agent_message`, `reasoning` o `command_execution`. Cualquier otro (mcp_tool_call,
+ *   file_change, web_search, tipos nuevos) se marca.
+ *
+ * QUÉ DETECTA EN CADA COMANDO
+ * - PowerShell sin `-NoProfile`.
+ * - Tras sustituir por `<ROOT>` las rutas internas a AUDIT_ROOT (con `\` o `/`, con espacios,
+ *   con o sin comillas): unidades `X:` de una letra, UNC (`\\`), segmentos `..` y `~`, variables
+ *   de entorno (`$env:`, `%X%`, `$HOME`), proveedores de PowerShell (`HKCU:`, `Env:`, `Cert:`…),
+ *   cambios de directorio (`cd`, `Set-Location`…) y nombres sensibles (auth.json, .env, .ssh…).
+ *
+ * QUÉ NO DETECTA (es DETECCIÓN, no prevención)
+ * - Rutas armadas por partes en tiempo de ejecución (concatenaciones, `-join`, `[char]`…).
+ * - Rutas leídas del contenido de una variable, de otro archivo o de la salida de otro comando.
+ * - Comandos codificados (base64 con `-EncodedCommand`, `Invoke-Expression` sobre texto armado).
+ * - Accesos hechos por un programa que el comando lanza (el script no ve lo que éste abre).
+ * Por eso este chequeo no convierte el modo provisional en aislamiento.
  */
 import { readFileSync } from 'node:fs'
-import { resolve, win32 } from 'node:path'
+import { win32 } from 'node:path'
 
-const [eventsPath, auditRootArg] = process.argv.slice(2)
-if (!eventsPath || !auditRootArg) {
-  console.error('uso: node scripts/codex-audit-scope-check.mjs <eventos.jsonl> <AUDIT_ROOT>')
-  process.exit(2)
-}
-
-const norm = (p) => win32.normalize(p.replaceAll('/', '\\')).replace(/\\+$/, '').toLowerCase()
-const auditRoot = norm(resolve(auditRootArg))
+const ITEM_EVENTS = new Set(['item.started', 'item.updated', 'item.completed'])
+const ALLOWED_ITEMS = new Set(['agent_message', 'reasoning', 'command_execution'])
 
 /** Nombres que un auditor de esta copia no tiene por qué tocar, estén donde estén. */
 const SENSITIVE =
-  /auth\.json|\.env(?!\.example)\b|\.npmrc|\.git-credentials|\.ssh\b|\.supabase\b|\\appdata\b|\.claude\b|\.codex\b|id_rsa|id_ed25519|credentials?\b|cookies|login data|hosts\.yml|\.pgpass/i
-/** Formas de llegar a otra ruta sin escribirla entera. */
-const INDIRECT =
-  /\$env:|%[a-z_]+%|\$home\b|~[\\/]|\.\.[\\/]|(^|\s)(cd|set-location|push-location|pushd)\s/i
-/** Rutas absolutas de Windows dentro del comando. */
-const ABSOLUTE = /[a-z]:\\[^"'\s|;&<>]*/gi
+  /auth\.json|\.env(?!\.example)\b|\.npmrc|\.git-credentials|\.ssh\b|\.supabase\b|appdata|\.claude\b|\.codex\b|id_rsa|id_ed25519|credentials?\b|cookies|login data|hosts\.yml|\.pgpass/i
+/** Unidad de una letra (no parte de una palabra) seguida de `\`, fin, espacio, comilla o `;|&)`. */
+const DRIVE = /(?<![A-Za-z0-9])[A-Za-z]:(?=[\\\s'";|&)]|$)/
+const UNC = /\\\\/
+const PARENT = /(?<![A-Za-z0-9_.-])\.\.(?=[\\\s'";|&)]|$)/
+const HOME_TILDE = /(?<![A-Za-z0-9_.-])~(?=[\\\s'";|&)]|$)/
+const ENV_VARS = /\$env:|\$\{env:|%[A-Za-z_][A-Za-z0-9_]*%|\$home\b/i
+const PS_PROVIDERS =
+  /(?<![A-Za-z0-9])(?:HKCU|HKLM|HKCR|HKU|Env|Cert|Variable|Function):|Registry::/i
+const CHDIR = /(?<![\w.\\-])(?:cd|chdir|set-location|sl|push-location|pushd)(?![\w.\\-])/i
 
-const findings = []
-const lines = readFileSync(eventsPath, 'utf8').split(/\r?\n/).filter(Boolean)
-for (const [n, line] of lines.entries()) {
-  let event
+const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+function main() {
+  const [eventsPath, auditRootArg] = process.argv.slice(2)
+  if (!eventsPath || !auditRootArg) {
+    console.error('uso: node scripts/codex-audit-scope-check.mjs <eventos.jsonl> <AUDIT_ROOT>')
+    return 2
+  }
+
+  const auditRoot = win32.normalize(auditRootArg.replaceAll('/', '\\')).replace(/\\+$/, '')
+  const rootRe = new RegExp(`${escapeRegExp(auditRoot)}(?=[\\\\"'\\s;|)]|$)`, 'gi')
+
+  const findings = new Set()
+  const add = (msg) => findings.add(msg)
+
+  let text
   try {
-    event = JSON.parse(line)
-  } catch {
-    findings.push(`línea ${n + 1}: JSON ilegible`)
-    continue
+    text = readFileSync(eventsPath, 'utf8')
+  } catch (error) {
+    add(`registro incompleto: no se puede leer ${eventsPath} (${error.code ?? error.message})`)
   }
-  if (event.type !== 'item.started') continue
-  const item = event.item ?? {}
-  if (item.type === 'agent_message' || item.type === 'reasoning') continue
-  if (item.type !== 'command_execution') {
-    findings.push(
-      `${item.id}: herramienta no permitida en el modo provisional (${item.type} ${item.server ?? ''} ${item.tool ?? ''})`.trim(),
+
+  const events = []
+  if (text !== undefined) {
+    for (const [n, line] of text.split(/\r?\n/).entries()) {
+      if (!line.trim()) continue
+      try {
+        const event = JSON.parse(line)
+        if (event === null || typeof event !== 'object' || Array.isArray(event))
+          throw new Error('no es un objeto')
+        events.push(event)
+      } catch {
+        add(`registro incompleto: línea ${n + 1} no es JSON`)
+      }
+    }
+    if (events.length === 0) add('registro incompleto: no hay eventos')
+    const types = events.map((e) => e.type)
+    if (!types.includes('thread.started')) add('registro incompleto: falta thread.started')
+    if (!types.includes('turn.completed')) add('registro incompleto: falta turn.completed')
+    if (types.includes('turn.failed')) add('registro incompleto: hay turn.failed')
+    if (types.includes('error')) add('registro incompleto: hay un evento error')
+  }
+
+  for (const event of events) {
+    if (!ITEM_EVENTS.has(event.type)) continue
+    const item = event.item
+    if (item === null || typeof item !== 'object') {
+      add(`${event.type}: evento de item sin item`)
+      continue
+    }
+    const id = item.id ?? '(sin id)'
+    if (!ALLOWED_ITEMS.has(item.type)) {
+      add(
+        `${id}: herramienta no permitida en el modo provisional (${item.type} ${item.server ?? ''} ${item.tool ?? ''})`.trim(),
+      )
+      continue
+    }
+    if (item.type !== 'command_execution') continue
+
+    const command = String(item.command ?? '')
+    // Sin -NoProfile, PowerShell carga el perfil del usuario, fuera de la copia.
+    if (/(?:powershell|pwsh)(?:\.exe)?"?\s/i.test(command) && !/\s-NoProfile\b/i.test(command))
+      add(`${id}: PowerShell sin -NoProfile (carga el perfil del usuario)`)
+
+    // Las rutas internas a la copia pasan a <ROOT>; lo que quede fuera de ella se busca después.
+    let scan = command.replaceAll('/', '\\').replace(rootRe, '<ROOT>')
+    // Solo se ignora el primer token si es el intérprete (su propia ruta no cuenta).
+    scan = scan.replace(
+      /^\s*(?:"[^"]*(?:powershell|pwsh|cmd)(?:\.exe)?"|\S*(?:powershell|pwsh|cmd)(?:\.exe)?)(?=\s|$)/i,
+      '',
     )
-    continue
+
+    const checks = [
+      [SENSITIVE.test(scan), 'nombre sensible'],
+      [DRIVE.test(scan), 'ruta con unidad fuera de AUDIT_ROOT'],
+      [UNC.test(scan), 'ruta UNC'],
+      [PARENT.test(scan), 'segmento ..'],
+      [HOME_TILDE.test(scan), 'segmento ~'],
+      [ENV_VARS.test(scan), 'variable de entorno'],
+      [PS_PROVIDERS.test(scan), 'proveedor de PowerShell'],
+      [CHDIR.test(scan), 'cambio de directorio'],
+    ]
+    for (const [hit, why] of checks) if (hit) add(`${id}: ${why} → ${command}`)
   }
-  // Sin -NoProfile, PowerShell carga el perfil del usuario, fuera de la copia (allow_login_shell=false).
-  if (
-    /powershell(\.exe)?"?\s/i.test(item.command ?? '') &&
-    !/\s-NoProfile\b/i.test(item.command ?? '')
-  )
-    findings.push(`${item.id}: PowerShell sin -NoProfile (carga el perfil del usuario)`)
-  // El primer token es el intérprete (powershell.exe); lo que importa es lo que le piden.
-  const command = String(item.command ?? '').replace(/^"[^"]+"\s*|^\S+\s*/, '')
-  if (SENSITIVE.test(command)) findings.push(`${item.id}: nombre sensible → ${command}`)
-  if (INDIRECT.test(command))
-    findings.push(`${item.id}: ruta indirecta o cambio de directorio → ${command}`)
-  for (const path of command.match(ABSOLUTE) ?? []) {
-    const p = norm(path)
-    if (p !== auditRoot && !p.startsWith(`${auditRoot}\\`))
-      findings.push(`${item.id}: ruta fuera de AUDIT_ROOT → ${path}`)
+
+  if (findings.size === 0) {
+    console.log(`OK · ${events.length} eventos · ningún acceso fuera de ${auditRoot} detectado`)
+    return 0
   }
+  console.log(`MARCADO · ${findings.size} hallazgos · la ronda no vale (§13.1 bis)`)
+  for (const f of findings) console.log(`- ${f}`)
+  return 1
 }
 
-if (findings.length === 0) {
-  console.log(`OK · ${lines.length} eventos · ningún acceso fuera de ${auditRoot} detectado`)
-  process.exit(0)
+try {
+  process.exitCode = main()
+} catch (error) {
+  console.error(`error no previsto: ${error?.stack ?? error}`)
+  process.exitCode = 2
 }
-console.log(`MARCADO · ${findings.length} hallazgos · la ronda no vale (§13.1 bis)`)
-for (const f of findings) console.log(`- ${f}`)
-process.exit(1)

@@ -667,10 +667,18 @@ registro o resumen puede llamarlo «aislado» ni «sandbox seguro».
    `../tindivo-auditorias/<tema>/audit-root`): sin `.env.local`, `node_modules` ni `.git`. `--cd` apunta a esa
    copia.
 2. Después de cada ronda, antes de leer el veredicto: `node scripts/codex-audit-scope-check.mjs
-   <NN-codex.events.jsonl> <AUDIT_ROOT>`. Si sale con 1, **la ronda no vale**, no cuenta como firma y se abre
-   incidente; si el comando marcado toca una credencial, se rota esa credencial. Es detección, no prevención: un
-   comando que arme la ruta por partes puede escapar.
-3. Cada expediente de este modo lleva la línea literal `MODO: PROVISIONAL_RIESGO_ACEPTADO (§13.1 bis)` y el
+   <NN-codex.events.jsonl> <AUDIT_ROOT>`. **Solo un 0 explícito valida la ronda.** Con 1 (algo marcado o registro
+   incompleto: vacío, sin `thread.started` o `turn.completed`, con `turn.failed`/`error`, líneas que no son JSON, o
+   herramientas no permitidas en cualquier evento de item) o con 2 (uso incorrecto o error del propio control),
+   **la ronda no vale**, no cuenta como firma y se abre incidente; si el comando marcado toca una credencial, se
+   rota esa credencial. Un hallazgo puede ser un falso positivo (por ejemplo, rutas inventadas dentro de un script
+   de prueba del auditor): se documenta en el expediente con el comando completo, pero la ronda sigue sin valer.
+   Es detección, no prevención: la cabecera del script enumera lo que no ve (rutas armadas por partes, leídas de
+   variables o archivos, comandos codificados, accesos de programas lanzados).
+3. El expediente conserva `NN-codex.events.jsonl`, `NN-codex.stderr.log`, `NN-codex.exit` y `NN-alcance.txt` (la
+   salida del control) **fuera del candidato**, y el sobre de atestación registra el SHA-256 del JSONL y de
+   `NN-alcance.txt` junto al candidato y al thread.
+4. Cada expediente de este modo lleva la línea literal `MODO: PROVISIONAL_RIESGO_ACEPTADO (§13.1 bis)` y el
    resultado del paso 2.
 
 ### 13.2. Variables y opciones comunes
