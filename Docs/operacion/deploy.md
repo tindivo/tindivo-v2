@@ -64,16 +64,40 @@ development), `apps/api` exige además **`OTP_PHONE_HMAC_SECRET`**, **`UPSTASH_R
 
 - **En el build:** `pnpm build` de `apps/api` corre antes `scripts/check-sms-config.mjs` y **falla** (exit 1)
   nombrando las que faltan, sin imprimir valores. Sin Twilio (dev, CI) no exige nada.
+- **El build carga el entorno como Next** (`loadEnvConfig` de `@next/env`, que viene con `next`): un Twilio puesto
+  en `.env.local` o `.env.production` también activa la puerta. Lo ya exportado en la shell o inyectado por Vercel
+  manda sobre los archivos, igual que en Next. La normalización es una sola (`envValue` en `lib/otp/sms-guard.mjs`):
+  se recorta y vacío o solo espacios cuenta como ausente, tanto en la puerta como en ejecución (un token `' tok '`
+  se usa como `'tok'`; no pasa la puerta para fallar luego contra Redis). En `apps/api/lib/env.ts`, la URL y el
+  token de Upstash y el secreto del HMAC en blanco también cuentan como ausentes.
 - **En ejecución:** si aun así se llega a desplegar así, `POST /customer/phone/send-code` responde **503**, no
   envía SMS y manda una alerta push a los admins (una por tipo cada 30 min). Requiere desplegar la Edge Function
-  `send-push` (`supabase functions deploy send-push`), que ahora entiende el evento `OpsAlert`.
-- `RATE_LIMIT_PUBLIC_ENABLED=true` enciende el límite de tasa por IP de las rutas públicas; **apagado por
-  defecto**. Poner Upstash no lo activa. El límite por número no depende de este flag.
+  `send-push` (`supabase functions deploy send-push`), que entiende el evento `OpsAlert`.
+- **Alerta operativa (`OpsAlert`): emisor autenticado.** `send-push` solo atiende `OpsAlert` si la petición trae la
+  cabecera `x-ops-alert-secret` con el valor de **`OPS_ALERT_SECRET`** (comparación en tiempo constante; sin
+  secreto configurado en la función, rechaza todo con 403) y reserva su turno en la base con `claim_ops_alert`
+  (migración `0263`: una alerta por tipo cada 30 min, atómico). Hay que poner **el mismo valor** en dos sitios
+  (32+ bytes aleatorios; no se reutiliza `OTP_PHONE_HMAC_SECRET`):
+  - Vercel, proyecto `tindivo-api`: `OPS_ALERT_SECRET` (solo en ejecución; no hace falta en el build).
+  - Edge Function: `supabase secrets set --project-ref zpnipajgwfthxhdtzhly OPS_ALERT_SECRET="<valor>"`.
+
+  Orden: `db push` (0263) → `secrets set` → `functions deploy send-push` → desplegar la API. Sin el secreto en la
+  API, `alertOps` lo deja en el log y no manda nada; la alerta es un aviso, no sustituye a la puerta ni al 503.
+- **Límite público por IP: hoy está INACTIVO en producción.** Upstash no está configurado en `tindivo-prod`
+  (cola del plan, MV4 y SEC-03b), así que ese límite no corre. `RATE_LIMIT_PUBLIC_ENABLED=true` lo enciende y está
+  **apagado por defecto**: poner Upstash NO lo activa. Si algún día se configura Upstash y se quiere el límite
+  público, hay que poner **también** `RATE_LIMIT_PUBLIC_ENABLED=true`. El límite por número de OTP no depende de
+  este flag.
+- **Build Command en Vercel (confirmar en el panel, [tú]).** El repo no tiene `vercel.json` ni sobrescribe el
+  comando de build; la puerta vive en el script `build` de `apps/api/package.json` (`node
+  scripts/check-sms-config.mjs && next build`). En el proyecto `tindivo-api`, Settings > Build & Development >
+  **Build Command** debe estar **sin sobrescribir** (o ser `pnpm build` / `turbo build`), **no** `next build` a
+  secas: con eso la puerta no corre.
 - `turbo.json` pasa estas variables al build (`globalPassThroughEnv`) y además las lista en `tasks.build.env`, que
   entra en el hash: sin eso, un build cacheado de una corrida sin Twilio se reutilizaría y la puerta no correría.
   Si añades otra que el build deba ver, hay que listarla en ambos sitios.
-- Despliegue de `send-push`: ver el PR; hay que desplegarla **antes** que la API. Mientras no esté desplegada, la
-  alerta es inocua (la función ignora el evento) pero el admin no se entera.
+- Despliegue de `send-push`: antes que la API (orden arriba). Mientras no esté desplegada con la rama nueva,
+  la alerta no llega.
 - Vercel: los valores **Secret** (antes «Sensitive») son de solo escritura en el panel pero se inyectan en el
   build y en las funciones; la propia doc habla de redactarlos «During builds» si salen en los logs
   (<https://vercel.com/docs/environment-variables/sensitive-environment-variables>). Hay que asignarlas al

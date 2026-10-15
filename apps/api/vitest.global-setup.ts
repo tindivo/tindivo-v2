@@ -23,7 +23,14 @@
  * negocio real ni del seed e2e se llama así—, y el guard anti-producción de
  * `local-db.ts` (aborta si la URL no es 127.0.0.1) se hereda al importarlo.
  */
-import { localClient as db, TELEFONOS_FIXTURE } from './lib/__tests__/helpers/local-db.ts'
+import type { TestProject } from 'vitest/node'
+import { assertDbLock } from '../../scripts/db-lock-guard.mjs'
+
+// `local-db.ts` se importa de forma dinámica (más abajo) para que el candado
+// se compruebe ANTES de que exista un cliente contra la base.
+type LocalDb = typeof import('./lib/__tests__/helpers/local-db.ts')
+let db: LocalDb['localClient']
+let TELEFONOS_FIXTURE: LocalDb['TELEFONOS_FIXTURE']
 
 /** Negocios que crean los fixtures. Ver `local-db.ts` y `ledger-fixtures.ts`. */
 const NEGOCIOS_FIXTURE = [
@@ -470,10 +477,37 @@ async function barrerYReportar(momento: 'antes' | 'después'): Promise<void> {
   }
 }
 
-export async function setup(): Promise<void> {
+/**
+ * El barrido borra de la base compartida: solo corre si ESTA corrida va a
+ * ejecutar tests de integración, y entonces exige el candado. Una corrida solo
+ * de unitarios (sin base) ni lo pide ni barre.
+ */
+async function hayIntegracion(project: TestProject): Promise<boolean> {
+  const vitest = project.vitest as unknown as {
+    filenamePattern?: string[]
+    specifications: { getRelevantTestSpecifications(f?: string[]): Promise<{ moduleId: string }[]> }
+  }
+  const specs = await vitest.specifications.getRelevantTestSpecifications(vitest.filenamePattern)
+  return specs.some((s) => /\.(integration|redis)\.test\.ts$/.test(s.moduleId))
+}
+
+let barre = false
+
+export async function setup(project: TestProject): Promise<void> {
+  barre = await hayIntegracion(project)
+  if (!barre) return
+  try {
+    assertDbLock()
+  } catch (error) {
+    barre = false // sin candado tampoco hay teardown que barra
+    throw error
+  }
+  ;({ localClient: db, TELEFONOS_FIXTURE } = await import('./lib/__tests__/helpers/local-db.ts'))
   await barrerYReportar('antes')
 }
 
 export async function teardown(): Promise<void> {
+  if (!barre) return
+  assertDbLock()
   await barrerYReportar('después')
 }
