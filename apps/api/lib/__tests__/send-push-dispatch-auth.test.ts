@@ -5,6 +5,7 @@ import {
   isDispatchCaller,
   needsDispatchSecret,
 } from '../../../../supabase/functions/send-push/dispatch-auth.ts'
+import { isOpsCaller } from '../../../../supabase/functions/send-push/ops-alert.ts'
 
 const SECRET = 'secreto-de-despacho-0123456789abcdef'
 
@@ -55,5 +56,26 @@ describe('send-push · needsDispatchSecret (qué eventos exigen el secreto de de
   it('OpsAlert tiene su propio secreto (x-ops-alert-secret) y es la única excepción', () => {
     expect(DISPATCH_EXEMPT_EVENTS).toEqual(['OpsAlert'])
     expect(needsDispatchSecret('OpsAlert')).toBe(false)
+  })
+})
+
+describe('send-push · selección excluyente del emisor (despacho vs OpsAlert)', () => {
+  const OPS = 'secreto-de-alertas-9876543210fedcba'
+
+  it('cada secreto falla en la rama contraria', () => {
+    expect(isDispatchCaller(OPS, SECRET)).toBe(false)
+    expect(isOpsCaller(SECRET, OPS)).toBe(false)
+    expect(isDispatchCaller(SECRET, SECRET)).toBe(true)
+    expect(isOpsCaller(OPS, OPS)).toBe(true)
+  })
+
+  it.each([
+    'opsalert',
+    'OPSALERT',
+    'OpsAlert ',
+    ' OpsAlert',
+    'opsAlert',
+  ])('la variante «%s» de OpsAlert cae en la rama normal (exige el secreto de despacho)', (ev) => {
+    expect(needsDispatchSecret(ev)).toBe(true)
   })
 })
