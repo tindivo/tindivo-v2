@@ -127,33 +127,34 @@ supabase secrets set --project-ref zpnipajgwfthxhdtzhly \
 
 > **Rota** la llave privada VAPID y la signing key de Inngest si se compartieron en texto plano.
 
-## 2.2 send-push solo acepta al trigger: secreto de despacho **[tú]**
+## 2.2 send-push reclama el evento en la base **[tú]**
 
 Hasta la migración 0264, `send-push` aceptaba a cualquiera con la clave anónima (pública en los bundles web):
 un `POST /functions/v1/send-push` con un `event_type` real y el UUID de un pedido mandaba pushes falsos. Ahora
-el trigger `dispatch_event` envía además la cabecera `x-push-dispatch-secret` y la función la compara en tiempo
-constante con `PUSH_DISPATCH_SECRET`; sin coincidencia (o sin secreto configurado) responde **403** antes de
-consultar nada. `OpsAlert` queda aparte: tiene su propio secreto (`x-ops-alert-secret`, `OPS_ALERT_SECRET`).
+el trigger `dispatch_event` manda además el `event_id` del evento y la función lo **reclama en la base**
+(`claim_push_event`, solo `service_role`): un solo uso por evento y solo si tiene menos de 15 minutos. Lo que
+notifica sale de la base, no del cuerpo. Sin `event_id` UUID responde **400**; con uno inexistente, viejo o ya
+reclamado, **409**; en ambos casos sin enviar nada. `OpsAlert` queda aparte: tiene su propio secreto
+(`x-ops-alert-secret`, `OPS_ALERT_SECRET`).
 
-El secreto vive en **Supabase Vault** (`push_dispatch_secret`), no en `app_settings`: `anon` y `authenticated`
-no tienen acceso al esquema `vault`, mientras que `as_admin_all` deja leer a cualquier admin todo `app_settings`.
+No hay secreto compartido entre el trigger y la función a propósito: `pg_net` guarda las cabeceras en claro en
+`net.http_request_queue` y el esquema `net` es de `supabase_admin` (legible por PUBLIC); ninguna migración puede cerrarlo.
 
-**Orden seguro (no lo cambies).** Genera un valor largo y aleatorio (p. ej. `openssl rand -hex 32`) y úsalo en 2 y 3:
+**Orden seguro (no lo cambies).** Fuera de 18:00-23:00 (hora de Lima):
 
-1. `supabase db push` (aplica la 0264). Aún no hay secreto en el Vault: el trigger sigue despachando como antes.
-2. Crea el secreto en el Vault (consulta única, el valor no se commitea):
-   `select vault.create_secret('<valor>', 'push_dispatch_secret');`
-   A partir de aquí el trigger manda la cabecera; la función vieja la ignora, así que nada se corta.
-3. `supabase secrets set --project-ref zpnipajgwfthxhdtzhly PUSH_DISPATCH_SECRET="<valor>"`
-4. `supabase functions deploy send-push`. Desde aquí rechaza lo que no traiga el secreto.
-5. Smoke: un `POST` con solo la clave anónima debe dar **403**; un pedido de prueba real debe seguir notificando.
+1. `supabase db push` (aplica la 0264: columna y función nuevas; el cuerpo conserva los campos viejos, así que la
+   función hoy desplegada sigue funcionando).
+2. Espera al menos 1 minuto y comprueba con una consulta de solo lectura que la cola está vacía (no se borra):
+   `select count(*) from net.http_request_queue;` debe dar 0. Una petición encolada antes del push no lleva
+   `event_id` y la función nueva la rechazaría con 400.
+3. `supabase secrets set --project-ref zpnipajgwfthxhdtzhly OPS_ALERT_SECRET="<valor>"` (el mismo que usa la API).
+4. `supabase functions deploy send-push`.
+5. Despliega la API.
+6. Smoke: un `POST` con solo la clave anónima y un `event_id` inventado debe dar **409**; sin `event_id`, **400**;
+   un pedido de prueba real debe seguir notificando.
 
-**Por qué ese orden.** Si la función se despliega antes que el trigger (o antes del paso 2), los push reales
-reciben 403 y se pierden (pg_net no reintenta). Con este orden no hay ventana: no se necesita doble aceptación.
-**Rotar** el secreto sí abre una ventana corta entre cambiar el Vault y `secrets set`: hazlo fuera de horario
-de pedidos, y primero `secrets set` y enseguida el Vault (la función de un instante pierde unos pocos push).
-En local, sin secreto en el Vault, el trigger no manda la cabecera: una función servida con
-`PUSH_DISPATCH_SECRET` los rechazará; sin esa variable, rechaza todo (falla cerrado).
+**Rollback.** Redesplegar la función anterior funciona porque el cuerpo conserva `event_type`, `aggregate_id` y
+`payload`. Para volver también la base: `supabase/rollbacks/0264_send_push_reclama_el_evento_en_la_base.rollback.sql`.
 
 ## 2.1 Supabase Auth — onboarding del cliente **[tú]**
 
