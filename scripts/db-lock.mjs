@@ -9,7 +9,7 @@
  * usuario y no en el repo, y lo comparten todos los worktrees.
  *
  *   node scripts/db-lock.mjs cycle            reset → seed e2e → tests de la API (--force)
- *   node scripts/db-lock.mjs run -- "<cmd>"   cualquier comando bajo el candado (va a la shell tal cual)
+ *   node scripts/db-lock.mjs run [--] <cmd>   cualquier comando bajo el candado (va a la shell tal cual)
  *   node scripts/db-lock.mjs status           quién lo tiene
  *
  * Reglas:
@@ -19,35 +19,17 @@
  *    declara huérfano si el proceso que lo tomó y todos los hijos que lanzó
  *    están muertos; y entonces se aparta con `rename` (atómico) antes de
  *    retomarlo, para que dos sesiones no lo hereden a la vez.
+ *  - Los hijos reciben `TINDIVO_DB_LOCK_TOKEN`; el `globalSetup` de la API y los helpers
+ *    destructivos lo verifican (db-lock-guard.mjs) y se niegan a correr sin él.
  *  - Nunca toca una base remota: `cycle` usa `supabase db reset` sin `--linked`
  *    y se niega a correr si el entorno apunta a otra URL que no sea local.
  */
 import { spawn } from 'node:child_process'
-import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
+import { randomUUID } from 'node:crypto'
+import { mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
-
-const LOCK_DIR = join(homedir(), '.tindivo', 'db-local-54322.lock')
-const INFO = join(LOCK_DIR, 'holder.json')
-
-function isAlive(pid) {
-  if (!Number.isInteger(pid) || pid <= 0) return false
-  try {
-    process.kill(pid, 0)
-    return true
-  } catch (error) {
-    // EPERM: existe pero es de otro usuario. Vivo, a efectos del candado.
-    return error.code === 'EPERM'
-  }
-}
-
-function readHolder() {
-  try {
-    return JSON.parse(readFileSync(INFO, 'utf8'))
-  } catch {
-    return null
-  }
-}
+import { INFO, isAlive, LOCK_DIR, readHolder, TOKEN_ENV } from './db-lock-guard.mjs'
 
 function writeHolder(holder) {
   writeFileSync(INFO, `${JSON.stringify(holder, null, 2)}\n`)
@@ -71,6 +53,8 @@ function acquire(command) {
       mkdirSync(LOCK_DIR)
       const holder = {
         pid: process.pid,
+        // Lo verifica `assertDbLock` (db-lock-guard.mjs): los hijos lo heredan por entorno.
+        token: randomUUID(),
         children: [],
         startedAt: new Date().toISOString(),
         command,
@@ -122,7 +106,11 @@ function assertLocalEnv() {
 function runStep(holder, command) {
   return new Promise((resolve) => {
     console.error(`\n▶ ${command}`)
-    const child = spawn(command, { stdio: 'inherit', shell: true })
+    const child = spawn(command, {
+      stdio: 'inherit',
+      shell: true,
+      env: { ...process.env, [TOKEN_ENV]: holder.token },
+    })
     holder.children.push(child.pid)
     writeHolder(holder)
     child.on('exit', (code, signal) => resolve(code ?? (signal ? 1 : 0)))
@@ -166,10 +154,11 @@ if (verb === 'status') {
     'pnpm db:seed:e2e',
     'pnpm turbo run test --filter=@tindivo/api --force',
   ])
-} else if (verb === 'run' && rest[0] === '--' && rest.length > 1) {
-  const command = rest.slice(1).join(' ')
+} else if (verb === 'run' && rest.length > 0 && !(rest[0] === '--' && rest.length === 1)) {
+  // `run -- "<cmd>"` y `run <cmd…>` son lo mismo: el `--` es opcional.
+  const command = (rest[0] === '--' ? rest.slice(1) : rest).join(' ')
   await runUnderLock(command, [command])
 } else {
-  console.error('Uso: node scripts/db-lock.mjs cycle | run -- "<comando>" | status')
+  console.error('Uso: node scripts/db-lock.mjs cycle | run [--] <comando…> | status')
   process.exit(64)
 }
