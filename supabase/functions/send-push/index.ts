@@ -9,6 +9,12 @@ import {
   isDispatchCaller,
   needsDispatchSecret,
 } from './dispatch-auth.ts'
+import {
+  isOpsCaller,
+  OPS_ALERT_SECRET_HEADER,
+  OPS_ALERT_WINDOW,
+  opsAlertText,
+} from './ops-alert.ts'
 
 const url = Deno.env.get('SUPABASE_URL') ?? ''
 const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -421,14 +427,6 @@ async function newOrderBusinessNotes(orderId: string): Promise<Note[]> {
   ]
 }
 
-/** Alertas operativas permitidas (`kind` -> texto fijo). */
-const OPS_ALERTS: Record<string, { title: string; body: string }> = {
-  otp_phone_limit_misconfigured: {
-    title: 'Tindivo: verificación por SMS bloqueada',
-    body: 'Falta configurar el límite de SMS por número. Revisa las variables en Vercel.',
-  },
-}
-
 async function buildNotes(eventType: string, aggregateId: string, payload: Record<string, unknown>): Promise<Note[]> {
   const out: Note[] = []
   const action = (payload?.action as string) ?? ''
@@ -439,7 +437,7 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
   // mensajes fijos, sin datos personales ni texto libre. Tag = `${event_type}-${kind}`.
   if (eventType === 'OpsAlert') {
     const kind = String(payload?.kind ?? aggregateId)
-    const text = OPS_ALERTS[kind]
+    const text = opsAlertText(kind)
     if (!text) return out
     const { data: admins } = await db.from('user_roles').select('user_id').eq('role', 'admin')
     for (const a of admins ?? []) {
@@ -1225,17 +1223,51 @@ Deno.serve(async (req: Request) => {
   try {
     const { event_type, aggregate_id, payload } = await req.json()
 
-    // Los eventos normales solo los manda el trigger `dispatch_event` de la base, con el
-    // secreto de despacho (no con la clave anónima, que es pública). Se comprueba ANTES de
-    // cualquier consulta con service role. `OpsAlert` (otro emisor) tiene su propio secreto.
-    if (
-      needsDispatchSecret(event_type) &&
-      !isDispatchCaller(req.headers.get(DISPATCH_SECRET_HEADER), Deno.env.get('PUSH_DISPATCH_SECRET'))
-    ) {
-      return new Response(JSON.stringify({ ok: false, error: 'forbidden' }), {
-        status: 403,
-        headers: { 'content-type': 'application/json' },
+    // Selección EXCLUYENTE del emisor, antes de cualquier consulta con service role:
+    //  - `OpsAlert` (exactamente esa cadena) solo lo manda la API y exige su secreto
+    //    (`x-ops-alert-secret` / `OPS_ALERT_SECRET`) más su límite de frecuencia.
+    //  - Cualquier otro `event_type` solo lo manda el trigger `dispatch_event` de la base y
+    //    exige `x-push-dispatch-secret` / `PUSH_DISPATCH_SECRET`. La clave anónima es pública
+    //    y no prueba nada. Nunca vale «cualquiera de los dos secretos».
+    if (needsDispatchSecret(event_type)) {
+      if (
+        !isDispatchCaller(req.headers.get(DISPATCH_SECRET_HEADER), Deno.env.get('PUSH_DISPATCH_SECRET'))
+      ) {
+        return new Response(JSON.stringify({ ok: false, error: 'forbidden' }), {
+          status: 403,
+          headers: { 'content-type': 'application/json' },
+        })
+      }
+    } else {
+      if (!isOpsCaller(req.headers.get(OPS_ALERT_SECRET_HEADER), Deno.env.get('OPS_ALERT_SECRET'))) {
+        return new Response(JSON.stringify({ ok: false, error: 'forbidden' }), {
+          status: 403,
+          headers: { 'content-type': 'application/json' },
+        })
+      }
+      const kind = String(payload?.kind ?? aggregate_id)
+      if (!opsAlertText(kind)) {
+        return new Response(JSON.stringify({ ok: false, error: 'kind desconocido' }), {
+          status: 400,
+          headers: { 'content-type': 'application/json' },
+        })
+      }
+      const { data: turno, error: turnoErr } = await db.rpc('claim_ops_alert', {
+        p_kind: kind,
+        p_window: OPS_ALERT_WINDOW,
       })
+      if (turnoErr) {
+        console.error('[send-push] claim_ops_alert falló:', turnoErr.message)
+        return new Response(JSON.stringify({ ok: false, error: 'throttle' }), {
+          status: 503,
+          headers: { 'content-type': 'application/json' },
+        })
+      }
+      if (!turno) {
+        return new Response(JSON.stringify({ ok: true, throttled: true, recipients: 0 }), {
+          headers: { 'content-type': 'application/json' },
+        })
+      }
     }
     const notes = await buildNotes(event_type, aggregate_id, payload ?? {})
     let sent = 0

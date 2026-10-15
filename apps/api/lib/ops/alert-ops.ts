@@ -50,11 +50,38 @@ export function createAlertOps(deps: { send: Send; now?: () => number; dedupeMs?
 }
 
 /**
- * Envío real: reutiliza el canal existente (Edge Function `send-push`, la misma
- * que dispara el outbox) con `event_type: 'OpsAlert'`. La función resuelve a los
- * usuarios con rol admin y manda el push a sus `push_subscriptions`. URL y llave
- * salen de `app_settings.push_dispatch`, como en el trigger `dispatch_event`.
- * Sin esquema nuevo.
+ * La petición a `send-push` para una alerta. Lleva el secreto compartido de
+ * servidor (`OPS_ALERT_SECRET`) en una cabecera: la Edge Function solo atiende
+ * `OpsAlert` de quien lo conoce. Lanza si falta: sin él la función rechazaría.
+ * `detail` NO viaja (queda en el log de la API; el push lleva texto fijo por `kind`).
+ */
+export function buildOpsAlertRequest(
+  cfg: { url: string; anonKey?: string },
+  kind: string,
+  secret: string | undefined,
+): { url: string; init: RequestInit } {
+  const s = secret?.trim()
+  if (!s) throw new Error('OPS_ALERT_SECRET no configurado')
+  return {
+    url: cfg.url,
+    init: {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${cfg.anonKey ?? ''}`,
+        'x-ops-alert-secret': s,
+      },
+      body: JSON.stringify({ event_type: 'OpsAlert', aggregate_id: kind, payload: { kind } }),
+    },
+  }
+}
+
+/**
+ * Envío real: reutiliza el canal existente (Edge Function `send-push`) con
+ * `event_type: 'OpsAlert'`. La función resuelve a los usuarios con rol admin y
+ * manda el push a sus `push_subscriptions`. URL y llave (la anónima, que pide el
+ * gateway de Supabase) salen de `app_settings.push_dispatch`; la autorización
+ * propia de la rama es `OPS_ALERT_SECRET`.
  */
 async function sendViaPushFunction(kind: string, _detail: string): Promise<void> {
   const { data, error } = await createServiceClient()
@@ -65,13 +92,12 @@ async function sendViaPushFunction(kind: string, _detail: string): Promise<void>
   if (error) throw new Error(error.message)
   const cfg = data?.value as { url?: string; anonKey?: string } | null
   if (!cfg?.url) throw new Error('push_dispatch no configurado')
-  const res = await fetch(cfg.url, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', authorization: `Bearer ${cfg.anonKey ?? ''}` },
-    // `_detail` NO viaja: queda en el log de la API; el push lleva texto fijo por `kind`.
-    body: JSON.stringify({ event_type: 'OpsAlert', aggregate_id: kind, payload: { kind } }),
-    signal: AbortSignal.timeout(5_000),
-  })
+  const req = buildOpsAlertRequest(
+    { url: cfg.url, anonKey: cfg.anonKey },
+    kind,
+    process.env.OPS_ALERT_SECRET,
+  )
+  const res = await fetch(req.url, { ...req.init, signal: AbortSignal.timeout(5_000) })
   if (!res.ok) throw new Error(`send-push respondió ${res.status}`)
 }
 
