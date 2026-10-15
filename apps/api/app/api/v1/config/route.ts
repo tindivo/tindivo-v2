@@ -30,8 +30,10 @@ export async function GET(req: Request) {
     const valorDe = (key: string) => data?.find((row) => row.key === key)?.value
     const settings = ClientCompatSettingsSchema.parse(valorDe('client_compat'))
     const rawFeatures = valorDe('client_features')
-    const { features } =
-      rawFeatures === undefined ? { features: {} } : ClientFeaturesSettingsSchema.parse(rawFeatures)
+    const parsed =
+      rawFeatures === undefined ? undefined : ClientFeaturesSettingsSchema.safeParse(rawFeatures)
+    if (parsed && !parsed.success) throw new Error('app_settings.client_features inválida')
+    const features = parsed ? parsed.data.features : {}
     return ok(
       { ...settings, features, apiVersion: 'v1' as const, serverTime: new Date().toISOString() },
       { headers: corsHeaders(req) },
