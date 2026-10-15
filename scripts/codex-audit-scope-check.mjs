@@ -49,6 +49,12 @@ for (const [n, line] of lines.entries()) {
     )
     continue
   }
+  // Sin -NoProfile, PowerShell carga el perfil del usuario, fuera de la copia (allow_login_shell=false).
+  if (
+    /powershell(\.exe)?"?\s/i.test(item.command ?? '') &&
+    !/\s-NoProfile\b/i.test(item.command ?? '')
+  )
+    findings.push(`${item.id}: PowerShell sin -NoProfile (carga el perfil del usuario)`)
   // El primer token es el intérprete (powershell.exe); lo que importa es lo que le piden.
   const command = String(item.command ?? '').replace(/^"[^"]+"\s*|^\S+\s*/, '')
   if (SENSITIVE.test(command)) findings.push(`${item.id}: nombre sensible → ${command}`)

@@ -644,7 +644,8 @@ cumpla el punto 7 de §13.1.
 
 **Configuración obligatoria del modo** (cada una verificada en el preflight): backend `windows.sandbox="unelevated"`,
 `:read-only`, red de comandos desactivada, `web_search` desactivado, `agents.enabled=false` (quita `spawn_agent` y
-el resto de herramientas de colaboración, que `--disable multi_agent` no quita), `--disable goals`, y el resto de
+el resto de herramientas de colaboración, que `--disable multi_agent` no quita), `allow_login_shell=false`
+(PowerShell sin el perfil del usuario), `--disable goals`, y el resto de
 `--disable` de §13.2. Sin MCP: `--ignore-user-config` evita cargar los servidores de `config.toml`.
 
 **Riesgo residual aceptado — NO es aislamiento.** El estado es `PROVISIONAL_RIESGO_ACEPTADO`; ningún documento,
@@ -655,8 +656,9 @@ registro o resumen puede llamarlo «aislado» ni «sandbox seguro».
    `~/.npmrc`, historiales de shell. Lo que lea viaja a OpenAI como contexto del modelo.
 2. Solo lo frena la instrucción del encargo; un contenido hostil dentro del código auditado podría intentar
    desviarla (§1.6).
-3. PowerShell intenta cargar el perfil personal del usuario en cada comando (el modo de lenguaje restringido lo
-   bloquea, pero el intento existe).
+3. **Mitigado:** sin `allow_login_shell=false`, PowerShell carga el perfil personal del usuario en cada comando
+   (medido; Codex lo marcó como acceso fuera de la copia en la Ronda 1 del #61, CAX-003). Con esa opción, Codex
+   lanza `powershell.exe -NoProfile` (medido el 2026-10-15). Es obligatoria en `COMMON`.
 4. Escritura y red: **verificadas** como denegadas; no forman parte del riesgo aceptado.
 
 **Mitigaciones obligatorias** (no convierten el modo en aislamiento):
@@ -696,6 +698,7 @@ COMMON=(
   -c 'web_search="disabled"'
   -c 'windows.sandbox="unelevated"'
   -c 'agents.enabled=false'
+  -c 'allow_login_shell=false'
   --disable apps --disable plugins --disable hooks --disable multi_agent
   --disable browser_use --disable browser_use_external --disable computer_use
   --disable image_generation --disable memories --disable shell_snapshot
