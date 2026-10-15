@@ -1,3 +1,4 @@
+import { ClientFeaturesSettingsSchema } from '@tindivo/contracts'
 import { DomainError } from '@tindivo/core'
 import type { Database } from '@tindivo/supabase'
 import { z } from 'zod'
@@ -45,6 +46,9 @@ const EDITABLE: Record<string, z.ZodTypeAny> = {
     startHHMM: hhmm,
     endHHMM: hhmm,
   }),
+  // Interruptores de las apps nativas (CLI-4). El admin solo cambia enabled y
+  // message: las claves las crea una migración, y el PATCH lo comprueba abajo.
+  client_features: ClientFeaturesSettingsSchema,
   // Polígono de cobertura (San Jacinto). El admin lo dibuja con Leaflet-draw; el
   // cliente lo lee para restringir la selección de dirección (point-in-polygon).
   coverage_polygon: z.object({
@@ -95,6 +99,26 @@ export async function PATCH(req: Request): Promise<Response> {
     const parsed = validator.parse(body.value)
     const service = createServiceClient()
     let value = parsed as AppSettingValue
+    if (body.key === 'client_features') {
+      // El admin no crea ni borra funciones: las declara una migración.
+      const { data: current, error: readError } = await service
+        .from('app_settings')
+        .select('value')
+        .eq('key', body.key)
+        .single()
+      if (readError) throw new Error(readError.message)
+      const actual = ClientFeaturesSettingsSchema.parse(current.value)
+      const nuevo = parsed as z.infer<typeof ClientFeaturesSettingsSchema>
+      const mismas =
+        Object.keys(actual.features).sort().join(',') ===
+        Object.keys(nuevo.features).sort().join(',')
+      if (!mismas) {
+        throw new DomainError(
+          'El admin no puede crear ni borrar funciones con interruptor: se declaran por migración',
+          'forbidden',
+        )
+      }
+    }
     if (MERGED_KEYS.has(body.key)) {
       const { data: current, error: readError } = await service
         .from('app_settings')
