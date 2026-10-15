@@ -1,6 +1,7 @@
 export * from './accent-colors'
 export * from './appeal'
 export * from './client-compat'
+export * from './client-features'
 export * from './client-requests'
 export * from './courier'
 export * from './courier-status'

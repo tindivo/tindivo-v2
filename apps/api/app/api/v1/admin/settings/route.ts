@@ -1,3 +1,4 @@
+import { ClientFeaturesSettingsSchema } from '@tindivo/contracts'
 import { DomainError } from '@tindivo/core'
 import type { Database } from '@tindivo/supabase'
 import { z } from 'zod'
@@ -45,6 +46,9 @@ const EDITABLE: Record<string, z.ZodTypeAny> = {
     startHHMM: hhmm,
     endHHMM: hhmm,
   }),
+  // Interruptores de las apps nativas (CLI-4). El admin solo cambia enabled y
+  // message: las claves las crea una migración, y el PATCH lo comprueba abajo.
+  client_features: ClientFeaturesSettingsSchema,
   // Polígono de cobertura (San Jacinto). El admin lo dibuja con Leaflet-draw; el
   // cliente lo lee para restringir la selección de dirección (point-in-polygon).
   coverage_polygon: z.object({
@@ -64,7 +68,21 @@ const EDITABLE: Record<string, z.ZodTypeAny> = {
  */
 const MERGED_KEYS = new Set(['timers'])
 
-const PatchSchema = z.object({ key: z.string(), value: z.unknown() })
+const PatchSchema = z
+  .object({
+    key: z.string(),
+    value: z.unknown(),
+    // Marca de la lectura sobre la que el panel basó su cambio. Solo la usa
+    // `client_features` (escritura condicional); en las demás claves se ignora.
+    expectedUpdatedAt: z.string().optional(),
+  })
+  .refine((b) => b.key !== 'client_features' || b.expectedUpdatedAt !== undefined, {
+    path: ['expectedUpdatedAt'],
+    message: 'Falta expectedUpdatedAt: recarga la página y vuelve a intentar',
+  })
+
+const CONFLICTO_INTERRUPTORES =
+  'Alguien cambió los interruptores mientras tenías esta página abierta. Recarga.'
 
 export function OPTIONS(req: Request): Response {
   return handleOptions(req)
@@ -95,6 +113,31 @@ export async function PATCH(req: Request): Promise<Response> {
     const parsed = validator.parse(body.value)
     const service = createServiceClient()
     let value = parsed as AppSettingValue
+    if (body.key === 'client_features') {
+      // El admin no crea ni borra funciones: las declara una migración.
+      const { data: current, error: readError } = await service
+        .from('app_settings')
+        .select('value,updated_at')
+        .eq('key', body.key)
+        .single()
+      if (readError) throw new Error(readError.message)
+      // Sin esto, un panel abierto con datos viejos reemplazaría el mapa entero
+      // y reactivaría sin aviso un interruptor que otro admin apagó (CAX-001).
+      if (current.updated_at !== body.expectedUpdatedAt) {
+        throw new DomainError(CONFLICTO_INTERRUPTORES, 'conflict')
+      }
+      const actual = ClientFeaturesSettingsSchema.parse(current.value)
+      const nuevo = parsed as z.infer<typeof ClientFeaturesSettingsSchema>
+      const mismas =
+        Object.keys(actual.features).sort().join(',') ===
+        Object.keys(nuevo.features).sort().join(',')
+      if (!mismas) {
+        throw new DomainError(
+          'El admin no puede crear ni borrar funciones con interruptor: se declaran por migración',
+          'forbidden',
+        )
+      }
+    }
     if (MERGED_KEYS.has(body.key)) {
       const { data: current, error: readError } = await service
         .from('app_settings')
@@ -104,6 +147,20 @@ export async function PATCH(req: Request): Promise<Response> {
       if (readError) throw new Error(readError.message)
       const base = (current.value ?? {}) as Record<string, unknown>
       value = { ...base, ...(parsed as Record<string, unknown>) } as AppSettingValue
+    }
+    if (body.key === 'client_features') {
+      // Condición atómica: si otra escritura se coló entre la lectura y este
+      // UPDATE, `updated_at` ya no coincide y no se actualiza ninguna fila.
+      const { data, error } = await service
+        .from('app_settings')
+        .update({ value, updated_by: user.id })
+        .eq('key', body.key)
+        .eq('updated_at', body.expectedUpdatedAt as string)
+        .select('key,value,updated_at')
+        .maybeSingle()
+      if (error) throw new Error(error.message)
+      if (!data) throw new DomainError(CONFLICTO_INTERRUPTORES, 'conflict')
+      return ok(data, { headers: corsHeaders(req) })
     }
     const { data, error } = await service
       .from('app_settings')

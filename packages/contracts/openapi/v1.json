@@ -261,6 +261,26 @@
                           ],
                           "additionalProperties": false
                         },
+                        "features": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "object",
+                            "properties": {
+                              "enabled": {
+                                "type": "boolean"
+                              },
+                              "message": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 140
+                              }
+                            },
+                            "required": [
+                              "enabled"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
                         "apiVersion": {
                           "type": "string",
                           "enum": [
@@ -275,6 +295,7 @@
                       "required": [
                         "minAppVersion",
                         "minOs",
+                        "features",
                         "apiVersion",
                         "serverTime"
                       ],

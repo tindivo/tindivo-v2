@@ -128,3 +128,71 @@ describe('versión mínima en el proxy', () => {
     expect((await proxy(pedir('/api/v1/driver/x', vieja))).status).toBe(426)
   })
 })
+
+describe('GET /config · features (interruptores, 0265)', () => {
+  const FEATURES = {
+    features: {
+      pago_yape: { enabled: false, message: 'Pago con Yape en mantenimiento' },
+      mapa_vivo: { enabled: true },
+    },
+  }
+  let original: unknown
+  let existia = false
+
+  beforeAll(async () => {
+    const { data } = await db
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'client_features')
+      .maybeSingle()
+    existia = data !== null
+    original = data?.value
+  })
+
+  afterAll(async () => {
+    if (existia) {
+      await db
+        .from('app_settings')
+        .upsert({ key: 'client_features', value: original as never }, { onConflict: 'key' })
+    } else {
+      await db.from('app_settings').delete().eq('key', 'client_features')
+    }
+  })
+
+  const pedirConfig = () => getConfig(new Request('http://localhost:3001/api/v1/config'))
+
+  it('la migración siembra la fila con features vacío', () => {
+    expect(existia).toBe(true)
+    expect(original).toEqual({ features: {} })
+  })
+
+  it('fila ausente: 200 con features {} (API desplegada antes del db push)', async () => {
+    await db.from('app_settings').delete().eq('key', 'client_features')
+    const res = await pedirConfig()
+    expect(res.status).toBe(200)
+    const { data } = await res.json()
+    expect(data.features).toEqual({})
+    expect(data.minOs).toEqual({ android: 26, ios: 17 })
+  })
+
+  it('fila válida: devuelve los interruptores tal cual', async () => {
+    await db
+      .from('app_settings')
+      .upsert({ key: 'client_features', value: FEATURES }, { onConflict: 'key' })
+    const res = await pedirConfig()
+    expect(res.status).toBe(200)
+    const { data } = await res.json()
+    expect(data.features).toEqual(FEATURES.features)
+  })
+
+  it('fila inválida: 500, nunca reactiva en silencio lo apagado', async () => {
+    await db
+      .from('app_settings')
+      .upsert(
+        { key: 'client_features', value: { features: { 'Mala-Clave': { enabled: true } } } },
+        { onConflict: 'key' },
+      )
+    const res = await pedirConfig()
+    expect(res.status).toBe(500)
+  })
+})
