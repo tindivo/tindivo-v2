@@ -100,16 +100,20 @@ function FeatureCard({
 export default function AppsPage() {
   const [compat, setCompat] = useState<ClientCompatSettings | null>(null)
   const [features, setFeatures] = useState<ClientFeaturesSettings | null>(null)
+  // `updated_at` de la fila que el panel leyó: el servidor lo exige para no pisar
+  // un cambio que otro admin hizo mientras esta página estaba abierta.
+  const [featuresUpdatedAt, setFeaturesUpdatedAt] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [msg, setMsg] = useState<string | null>(null)
 
   const load = useCallback(() => {
     api
-      .get<ApiEnvelope<{ key: string; value: unknown }[]>>('/admin/settings')
+      .get<ApiEnvelope<{ key: string; value: unknown; updated_at: string }[]>>('/admin/settings')
       .then((r) => {
         const byKey = Object.fromEntries(r.data.map((s) => [s.key, s.value]))
         setCompat(ClientCompatSettingsSchema.parse(byKey.client_compat))
         setFeatures(ClientFeaturesSettingsSchema.parse(byKey.client_features ?? { features: {} }))
+        setFeaturesUpdatedAt(r.data.find((s) => s.key === 'client_features')?.updated_at ?? null)
       })
       .catch((e) => setError(errMsg(e)))
   }, [])
@@ -118,7 +122,7 @@ export default function AppsPage() {
   }, [load])
 
   const save = async (name: string, next: ClientFeature) => {
-    if (!features) return
+    if (!features || !featuresUpdatedAt) return
     setMsg(null)
     setError(null)
     const value = ClientFeaturesSettingsSchema.safeParse({
@@ -129,7 +133,11 @@ export default function AppsPage() {
       return
     }
     try {
-      await api.patch('/admin/settings', { key: 'client_features', value: value.data })
+      await api.patch('/admin/settings', {
+        key: 'client_features',
+        value: value.data,
+        expectedUpdatedAt: featuresUpdatedAt,
+      })
       setMsg(`Guardado: ${name}`)
       load()
     } catch (e) {
