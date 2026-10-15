@@ -8,7 +8,7 @@
 |---|---|
 | `curl 127.0.0.1:54321` da 000 con los contenedores `Up (healthy)`; `supabase start` falla con `bind: An attempt was made to access a socket in a way forbidden by its access permissions` | [Windows reserva los puertos de Supabase](#windows-reserva-los-puertos-de-supabase) |
 | `docker` falla con `npipe:////./pipe/dockerDesktopLinuxEngine … cannot find the file specified` | [Docker Desktop no está en Program Files](#docker-desktop-no-está-en-program-files) |
-| Tras reiniciar el PC, los `supabase_*` salen `Exited (255)` y `supabase start` dice «supabase start is already running» | `docker start supabase_db_zpnipajgwfthxhdtzhly`, espera a `pg_isready` («accepting connections»), y luego `docker start` del resto (una vez, el 2026-10-15) |
+| Tras reiniciar el PC, los `supabase_*` salen `Exited (255)` y `supabase start` dice «supabase start is already running» | `docker start supabase_db_zpnipajgwfthxhdtzhly`, espera a `pg_isready` («accepting connections»), y luego `docker start` del resto (medido una vez, el 2026-10-15; salidas en `../tindivo-auditorias/evidencia-502/reinicio-2026-10-15.txt`) |
 | Con el candado tomado, un test falla una vez con «invalid response from the upstream server» y al repetir pasa | [Un 502 suelto de PostgREST con el candado tomado](#un-502-suelto-de-postgrest-con-el-candado-tomado) |
 | «Mi arreglo no hace efecto» y `curl` responde 200; el servidor nuevo murió con `EADDRINUSE` | [pkill no mata Next en Windows](#pkill-no-mata-next-en-windows) |
 | Un test busca `ah√≠` en vez de `ahí` | [Un heredoc de Bash corrompe los acentos](#un-heredoc-de-bash-corrompe-los-acentos) |

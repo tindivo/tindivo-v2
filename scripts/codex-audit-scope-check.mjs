@@ -12,14 +12,19 @@
  * QUÉ EXIGE
  * - Registro completo: archivo legible, todas las líneas JSON, al menos un evento, `thread.started`,
  *   `turn.completed`, y ningún `turn.failed` ni `error`.
+ * - Cada `command_execution` trae `command` (texto no vacío) y, si aparece en `item.started` o
+ *   `item.updated`, tiene su `item.completed`. Un `item.completed` sin `started` es válido.
+ * - Ningún evento de item después del último `turn.completed`.
  * - Todos los eventos de item (`item.started`, `item.updated`, `item.completed`) son de un tipo
  *   permitido: `agent_message`, `reasoning` o `command_execution`. Cualquier otro (mcp_tool_call,
  *   file_change, web_search, tipos nuevos) se marca.
  *
  * QUÉ DETECTA EN CADA COMANDO
  * - PowerShell sin `-NoProfile`.
- * - Tras sustituir por `<ROOT>` las rutas internas a AUDIT_ROOT (con `\` o `/`, con espacios,
- *   con o sin comillas): unidades `X:` de una letra, UNC (`\\`), segmentos `..` y `~`, variables
+ * - Tras sustituir por `<ROOT>` las rutas internas a AUDIT_ROOT (con `\` o `/`, con espacios y
+ *   comillas; la raíz solo termina en `\`, `/`, comilla, `;`, `|`, `)` o fin: `audit-root copia`
+ *   y una raíz seguida de espacio sin comillas se marcan): cualquier unidad `X:` de una letra
+ *   (incluida la relativa `D:x`), UNC (`\\`), segmentos `..` y `~`, variables
  *   de entorno (`$env:`, `%X%`, `$HOME`), proveedores de PowerShell (`HKCU:`, `Env:`, `Cert:`…),
  *   cambios de directorio (`cd`, `Set-Location`…) y nombres sensibles (auth.json, .env, .ssh…).
  *
@@ -39,8 +44,8 @@ const ALLOWED_ITEMS = new Set(['agent_message', 'reasoning', 'command_execution'
 /** Nombres que un auditor de esta copia no tiene por qué tocar, estén donde estén. */
 const SENSITIVE =
   /auth\.json|\.env(?!\.example)\b|\.npmrc|\.git-credentials|\.ssh\b|\.supabase\b|appdata|\.claude\b|\.codex\b|id_rsa|id_ed25519|credentials?\b|cookies|login data|hosts\.yml|\.pgpass/i
-/** Unidad de una letra (no parte de una palabra) seguida de `\`, fin, espacio, comilla o `;|&)`. */
-const DRIVE = /(?<![A-Za-z0-9])[A-Za-z]:(?=[\\\s'";|&)]|$)/
+/** Unidad de una letra (no parte de una palabra), siga lo que siga: también `D:x` (relativa). */
+const DRIVE = /(?<![A-Za-z0-9_])[A-Za-z]:/
 const UNC = /\\\\/
 const PARENT = /(?<![A-Za-z0-9_.-])\.\.(?=[\\\s'";|&)]|$)/
 const HOME_TILDE = /(?<![A-Za-z0-9_.-])~(?=[\\\s'";|&)]|$)/
@@ -59,7 +64,7 @@ function main() {
   }
 
   const auditRoot = win32.normalize(auditRootArg.replaceAll('/', '\\')).replace(/\\+$/, '')
-  const rootRe = new RegExp(`${escapeRegExp(auditRoot)}(?=[\\\\"'\\s;|)]|$)`, 'gi')
+  const rootRe = new RegExp(`${escapeRegExp(auditRoot)}(?=[\\\\"';|)]|$)`, 'gi')
 
   const findings = new Set()
   const add = (msg) => findings.add(msg)
@@ -86,12 +91,17 @@ function main() {
     }
     if (events.length === 0) add('registro incompleto: no hay eventos')
     const types = events.map((e) => e.type)
+    const lastTurn = types.lastIndexOf('turn.completed')
+    if (lastTurn >= 0 && types.slice(lastTurn + 1).some((t) => ITEM_EVENTS.has(t)))
+      add('registro incompleto: actividad después del cierre del turno')
     if (!types.includes('thread.started')) add('registro incompleto: falta thread.started')
     if (!types.includes('turn.completed')) add('registro incompleto: falta turn.completed')
     if (types.includes('turn.failed')) add('registro incompleto: hay turn.failed')
     if (types.includes('error')) add('registro incompleto: hay un evento error')
   }
 
+  const opened = new Set()
+  const closed = new Set()
   for (const event of events) {
     if (!ITEM_EVENTS.has(event.type)) continue
     const item = event.item
@@ -108,7 +118,13 @@ function main() {
     }
     if (item.type !== 'command_execution') continue
 
-    const command = String(item.command ?? '')
+    if (event.type === 'item.completed') closed.add(id)
+    else opened.add(id)
+    if (typeof item.command !== 'string' || !item.command.trim()) {
+      add(`${id}: registro incompleto: comando sin texto`)
+      continue
+    }
+    const command = item.command
     // Sin -NoProfile, PowerShell carga el perfil del usuario, fuera de la copia.
     if (/(?:powershell|pwsh)(?:\.exe)?"?\s/i.test(command) && !/\s-NoProfile\b/i.test(command))
       add(`${id}: PowerShell sin -NoProfile (carga el perfil del usuario)`)
@@ -133,6 +149,9 @@ function main() {
     ]
     for (const [hit, why] of checks) if (hit) add(`${id}: ${why} → ${command}`)
   }
+
+  for (const id of opened)
+    if (!closed.has(id)) add(`${id}: registro incompleto: ejecución sin cerrar`)
 
   if (findings.size === 0) {
     console.log(`OK · ${events.length} eventos · ningún acceso fuera de ${auditRoot} detectado`)

@@ -33,7 +33,8 @@ function run(content, root = ROOT) {
   const r = spawnSync(process.execPath, [script, file, root], { encoding: 'utf8' })
   return { status: r.status, out: `${r.stdout}${r.stderr}` }
 }
-const withCmd = (command, ...more) => jl(started, cmd(command), ...more, done)
+const withCmd = (command, ...more) =>
+  jl(started, cmd(command), cmd(command, 'item.completed'), ...more, done)
 
 describe('marca (exit 1)', () => {
   const bad = [
@@ -78,6 +79,28 @@ describe('marca (exit 1)', () => {
   test('item.started de tipo file_change', () => {
     const r = run(jl(started, item('file_change'), done))
     assert.equal(r.status, 1, r.out)
+  })
+  for (const [name, command] of [
+    [
+      'hermana con espacio entre comillas',
+      ps("Get-Content 'D:\\Copia Auditoria\\audit-root copia\\probe.txt'"),
+    ],
+    ['unidad relativa D:probe.txt', ps('Get-Content D:probe.txt')],
+    ['unidad relativa Z:probe.txt', ps('Get-Content Z:probe.txt')],
+  ])
+    test(name, () => assert.equal(run(withCmd(command)).status, 1))
+  test('command_execution completed sin command', () => {
+    const r = run(
+      jl(started, { type: 'item.completed', item: { id: 'i', type: 'command_execution' } }, done),
+    )
+    assert.equal(r.status, 1, r.out)
+  })
+  test('actividad después de turn.completed', () => {
+    const c = ps('Get-Content MANIFEST.sha256')
+    assert.equal(run(jl(started, done, cmd(c), cmd(c, 'item.completed'))).status, 1)
+  })
+  test('started sin completed aunque haya turn.completed después', () => {
+    assert.equal(run(jl(started, cmd(ps('Get-Content MANIFEST.sha256')), done)).status, 1)
   })
   test('JSONL vacío', () => assert.equal(run('').status, 1))
   test('solo thread.started', () => assert.equal(run(jl(started)).status, 1))
@@ -125,6 +148,10 @@ describe('no marca (exit 0)', () => {
       assert.equal(r.status, 0, r.out)
     })
 
+  test('completed sin started con comando interno válido', () => {
+    const c = ps("Get-Content 'D:\\Copia Auditoria\\audit-root\\x.txt'")
+    assert.equal(run(jl(started, cmd(c, 'item.completed'), done)).status, 0)
+  })
   test('agent_message y reasoning junto a comandos permitidos', () => {
     const r = run(
       jl(
