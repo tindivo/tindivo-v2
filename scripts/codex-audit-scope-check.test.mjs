@@ -85,6 +85,18 @@ describe('marca (exit 1)', () => {
       'hermana con espacio entre comillas',
       ps("Get-Content 'D:\\Copia Auditoria\\audit-root copia\\probe.txt'"),
     ],
+    [
+      'hermana con ; entre comillas simples',
+      ps("Get-Content 'D:\\Copia Auditoria\\audit-root;x\\probe.txt'"),
+    ],
+    [
+      'hermana con ) entre comillas dobles',
+      'cmd /c type "D:\\Copia Auditoria\\audit-root)x\\probe.txt"',
+    ],
+    [
+      'hermana con | entre comillas',
+      ps("Get-Content 'D:\\Copia Auditoria\\audit-root|x\\probe.txt'"),
+    ],
     ['unidad relativa D:probe.txt', ps('Get-Content D:probe.txt')],
     ['unidad relativa Z:probe.txt', ps('Get-Content Z:probe.txt')],
   ])

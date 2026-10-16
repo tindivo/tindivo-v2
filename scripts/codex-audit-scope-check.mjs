@@ -22,8 +22,8 @@
  * QUÉ DETECTA EN CADA COMANDO
  * - PowerShell sin `-NoProfile`.
  * - Tras sustituir por `<ROOT>` las rutas internas a AUDIT_ROOT (con `\` o `/`, con espacios y
- *   comillas; la raíz solo termina en `\`, `/`, comilla, `;`, `|`, `)` o fin: `audit-root copia`
- *   y una raíz seguida de espacio sin comillas se marcan): cualquier unidad `X:` de una letra
+ *   comillas; la raíz solo termina en `\`, `/`, comilla simple o doble, o fin: `audit-root copia`,
+ *   `audit-root;x` y una raíz seguida de espacio, `;`, `|` o `)` sin comillas se marcan): cualquier unidad `X:` de una letra
  *   (incluida la relativa `D:x`), UNC (`\\`), segmentos `..` y `~`, variables
  *   de entorno (`$env:`, `%X%`, `$HOME`), proveedores de PowerShell (`HKCU:`, `Env:`, `Cert:`…),
  *   cambios de directorio (`cd`, `Set-Location`…) y nombres sensibles (auth.json, .env, .ssh…).
@@ -64,7 +64,7 @@ function main() {
   }
 
   const auditRoot = win32.normalize(auditRootArg.replaceAll('/', '\\')).replace(/\\+$/, '')
-  const rootRe = new RegExp(`${escapeRegExp(auditRoot)}(?=[\\\\"';|)]|$)`, 'gi')
+  const rootRe = new RegExp(`${escapeRegExp(auditRoot)}(?=[\\\\"']|$)`, 'gi')
 
   const findings = new Set()
   const add = (msg) => findings.add(msg)
