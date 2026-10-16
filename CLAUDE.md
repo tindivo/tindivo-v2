@@ -9,5 +9,12 @@
   `AGENTS.md`.
 - **Tu memoria local no es documentación**: nadie más la ve. Una regla que encuentres ahí se contrasta con el código y
   con lo aprobado; si es norma, va al canon (con aprobación) y la nota se borra (estándar §6.6).
-- Para tareas de volumen o acotadas, delega en un subagente con modelo más barato o en Antigravity, con un encargo
-  cerrado (estándar §7.2 y §7.6). Codex solo para decisiones de impacto (§7.4).
+- **Aplica siempre `.claude/rules/`** (`gemini-worker.md`, `codex-worker.md`): se cargan solas, pero no se aplican
+  solas. Antes de cada tarea, decide y di el reparto:
+  - **Gemini** (Antigravity, `--mode plan`, lista cerrada de archivos): exploración, barridos y contraste
+    documento↔código.
+  - **Subagente Sonnet** con encargo cerrado: desarrollo.
+  - **Codex**: todo lo que dispare `codex-worker.md` §2 (dinero, seguridad, irreversibilidad, producción).
+  - **Tú**: diseño, archivo piloto y auditoría de lo que entregan los demás.
+
+  Si haces tú algo que le toca a Gemini, di por qué. Estándar §7.2, §7.4 y §7.6.
