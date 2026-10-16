@@ -132,29 +132,50 @@ supabase secrets set --project-ref zpnipajgwfthxhdtzhly \
 Hasta la migración 0264, `send-push` aceptaba a cualquiera con la clave anónima (pública en los bundles web):
 un `POST /functions/v1/send-push` con un `event_type` real y el UUID de un pedido mandaba pushes falsos. Ahora
 el trigger `dispatch_event` manda además el `event_id` del evento y la función lo **reclama en la base**
-(`claim_push_event`, solo `service_role`): un solo uso por evento y solo si tiene menos de 15 minutos. Lo que
-notifica sale de la base, no del cuerpo. Sin `event_id` UUID responde **400**; con uno inexistente, viejo o ya
-reclamado, **409**; en ambos casos sin enviar nada. `OpsAlert` queda aparte: tiene su propio secreto
-(`x-ops-alert-secret`, `OPS_ALERT_SECRET`).
+(`claim_push_event`, solo `service_role`): un solo uso por evento, solo si tiene menos de 15 minutos y solo si es
+posterior al **corte** `app_settings.push_claim_since`. Lo que notifica sale de la base, no del cuerpo. Sin
+`event_id` UUID responde **400**; con uno inexistente, viejo, anterior al corte o ya reclamado, **409**; en ambos
+casos sin enviar nada. `OpsAlert` queda aparte: tiene su propio secreto (`x-ops-alert-secret`,
+`OPS_ALERT_SECRET`).
 
 No hay secreto compartido entre el trigger y la función a propósito: `pg_net` guarda las cabeceras en claro en
 `net.http_request_queue` y el esquema `net` es de `supabase_admin` (legible por PUBLIC); ninguna migración puede cerrarlo.
+
+**Por qué existe el corte.** La función vieja notifica sin escribir `push_claimed_at`. Sin corte, tras desplegar la
+nueva, quien conociera el `event_id` de un evento ya enviado por la vieja podría reclamarlo (< 15 min) y provocar un
+segundo envío. El corte deja **no reclamable todo evento anterior a él**, que es justo lo que la vieja ya envió.
+Falla cerrado: sin fila, valor nulo o valor que no sea una fecha ISO válida, la función no reclama nada. La
+migración **no** inserta la fila: la fija el operador (el PATCH de ajustes de la API no la expone).
 
 **Orden seguro (no lo cambies).** Fuera de 18:00-23:00 (hora de Lima):
 
 1. `supabase db push` (aplica la 0264: columna y función nuevas; el cuerpo conserva los campos viejos, así que la
    función hoy desplegada sigue funcionando).
-2. Espera al menos 1 minuto y comprueba con una consulta de solo lectura que la cola está vacía (no se borra):
-   `select count(*) from net.http_request_queue;` debe dar 0. Una petición encolada antes del push no lleva
-   `event_id` y la función nueva la rechazaría con 400.
-3. `supabase secrets set --project-ref zpnipajgwfthxhdtzhly OPS_ALERT_SECRET="<valor>"` (el mismo que usa la API).
-4. `supabase functions deploy send-push`.
-5. Despliega la API.
-6. Smoke: un `POST` con solo la clave anónima y un `event_id` inventado debe dar **409**; sin `event_id`, **400**;
+2. `supabase secrets set --project-ref zpnipajgwfthxhdtzhly OPS_ALERT_SECRET="<valor>"` (el mismo que usa la API),
+   si falta.
+3. `supabase functions deploy send-push`.
+4. **Espera 1 minuto**, para que drenen las instancias viejas de la función.
+5. Fija el corte (SQL de escritura contra `tindivo-prod`, ejecutado por ti):
+
+   ```sql
+   insert into public.app_settings (key, value)
+   values ('push_claim_since', to_jsonb(to_char(now() at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')))
+   on conflict (key) do update set value = excluded.value, updated_at = now();
+   ```
+
+6. Comprueba (solo lectura): `select key, value, updated_at from public.app_settings where key = 'push_claim_since';`
+   debe mostrar la hora de hace un momento.
+7. Despliega la API.
+8. Smoke: un `POST` con solo la clave anónima y un `event_id` inventado debe dar **409**; sin `event_id`, **400**;
    un pedido de prueba real debe seguir notificando.
 
-**Rollback.** Redesplegar la función anterior funciona porque el cuerpo conserva `event_type`, `aggregate_id` y
-`payload`. Para volver también la base: `supabase/rollbacks/0264_send_push_reclama_el_evento_en_la_base.rollback.sql`.
+**Entre el deploy y el corte** la función nueva responde **409 a todo**: los avisos de esos instantes se pierden.
+El dueño lo aceptó; por eso el paso 5 va justo después del minuto de espera.
+
+**Rollback.** Redesplegar la función anterior (el cuerpo conserva `event_type`, `aggregate_id` y `payload`).
+Para volver a la nueva: `functions deploy send-push` → esperar 1 minuto → repetir el paso 5 (el corte pasa a
+`now()`), de modo que lo que la vieja envió entre medias quede no reclamable. Para volver también la base:
+`supabase/rollbacks/0264_send_push_reclama_el_evento_en_la_base.rollback.sql` (no borra la fila del corte).
 
 ## 2.1 Supabase Auth — onboarding del cliente **[tú]**
 

@@ -22,6 +22,13 @@ const CONFIG = `insert into public.app_settings (key, value)
   values ('push_dispatch', '{"url":"http://host.docker.internal:54321/functions/v1/send-push","anonKey":"anon-de-prueba"}')
   on conflict (key) do update set value = excluded.value;`
 
+/** Fija el corte `push_claim_since` dentro de la transacción (se revierte con el rollback). */
+function corte(valor: string): string {
+  return `insert into public.app_settings (key, value) values ('push_claim_since', ${valor})
+  on conflict (key) do update set value = excluded.value;`
+}
+const CORTE_PASADO = corte(`to_jsonb('2020-01-01T00:00:00Z'::text)`)
+
 function marca(out: string, tag: string): string {
   const line = out.split('\n').find((l) => l.startsWith(`${tag}|`))
   if (!line) throw new Error(`sin ${tag}: ${out}`)
@@ -77,6 +84,7 @@ describe('claim_push_event · un solo uso, solo eventos recientes (0264)', () =>
   it('el primer claim devuelve la fila de la base y el segundo, nada', () => {
     const out = psql(`
 begin;
+${CORTE_PASADO}
 insert into public.domain_events (id, aggregate_type, aggregate_id, event_type, payload)
   values ('00000000-0000-4000-8000-0000000000a1','order',gen_random_uuid(),'OrderCreated','{"k":1}');
 select 'A|' || (select count(*) from public.claim_push_event('00000000-0000-4000-8000-0000000000a1'));
@@ -94,6 +102,7 @@ rollback;
   it('devuelve el tipo, el agregado y el payload de la BASE', () => {
     const out = psql(`
 begin;
+${CORTE_PASADO}
 insert into public.domain_events (id, aggregate_type, aggregate_id, event_type, payload)
   values ('00000000-0000-4000-8000-0000000000a2','order','11111111-1111-4111-8111-111111111111','CashDelivered','{"x":"y"}');
 select 'R|' || (select row_to_json(c)::text from public.claim_push_event('00000000-0000-4000-8000-0000000000a2') c);
@@ -109,6 +118,7 @@ rollback;
   it('un evento de hace 16 minutos no se reclama', () => {
     const out = psql(`
 begin;
+${CORTE_PASADO}
 insert into public.domain_events (id, aggregate_type, aggregate_id, event_type, payload, occurred_at)
   values ('00000000-0000-4000-8000-0000000000a3','order',gen_random_uuid(),'OrderCreated','{}', now() - interval '16 minutes'),
          ('00000000-0000-4000-8000-0000000000a4','order',gen_random_uuid(),'OrderCreated','{}', now() - interval '14 minutes');
@@ -131,5 +141,112 @@ select 'D|' || count(*) from pg_proc where proname = 'dispatch_event';
     expect(marca(out, 'P')).toBe('false,false,true')
     expect(marca(out, 'N')).toBe('1')
     expect(marca(out, 'D')).toBe('1')
+  })
+})
+
+describe('claim_push_event · corte push_claim_since (CAX-001)', () => {
+  const EV = (n: number, extra = '') =>
+    `insert into public.domain_events (id, aggregate_type, aggregate_id, event_type, payload${extra ? ', occurred_at' : ''})
+  values ('00000000-0000-4000-8000-0000000000c${n}','order',gen_random_uuid(),'OrderCreated','{}'${extra ? `, ${extra}` : ''});`
+  const CLAIM = (n: number) =>
+    `(select count(*) from public.claim_push_event('00000000-0000-4000-8000-0000000000c${n}'))`
+
+  it('sin fila de corte no reclama ni un evento fresco (fallo cerrado)', () => {
+    const out = psql(`
+begin;
+delete from public.app_settings where key = 'push_claim_since';
+${EV(1)}
+select 'R|' || ${CLAIM(1)};
+select 'S|' || (select push_claimed_at is null from public.domain_events where id = '00000000-0000-4000-8000-0000000000c1');
+rollback;
+`)
+    expect(marca(out, 'R')).toBe('0')
+    expect(marca(out, 'S')).toBe('true')
+  })
+
+  it('un valor nulo, no-cadena o no convertible a fecha tampoco permite reclamar', () => {
+    const valores = [
+      `'null'::jsonb`,
+      `'42'::jsonb`,
+      `'{"since":"2020-01-01T00:00:00Z"}'::jsonb`,
+      `to_jsonb('mañana'::text)`,
+      `to_jsonb('2020-13-45T00:00:00Z'::text)`,
+      `to_jsonb('now'::text)`,
+      `to_jsonb('-infinity'::text)`,
+      `to_jsonb(''::text)`,
+    ]
+    const sql = valores
+      .map(
+        (v, i) => `
+savepoint sp${i};
+${corte(v)}
+${EV(2)}
+select 'V${i}|' || ${CLAIM(2)};
+rollback to savepoint sp${i};`,
+      )
+      .join(String.fromCharCode(10))
+    const out = psql(`begin;
+${sql}
+rollback;
+`)
+    valores.forEach((_, i) => {
+      expect(marca(out, `V${i}`)).toBe('0')
+    })
+  })
+
+  it('evento anterior al corte (ya enviado por la función vieja) no se reclama', () => {
+    const out = psql(`
+begin;
+${corte(`to_jsonb(to_char(now() at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'))`)}
+${EV(3, "now() - interval '1 minute'")}
+select 'ANTES|' || ${CLAIM(3)};
+select 'MARCA|' || (select push_claimed_at is null from public.domain_events where id = '00000000-0000-4000-8000-0000000000c3');
+rollback;
+`)
+    expect(marca(out, 'ANTES')).toBe('0')
+    expect(marca(out, 'MARCA')).toBe('true')
+  })
+
+  it('evento posterior al corte se reclama una vez y la segunda no', () => {
+    const out = psql(`
+begin;
+${corte(`to_jsonb(to_char((now() - interval '2 minutes') at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'))`)}
+${EV(4, "now() - interval '1 minute'")}
+select 'UNO|' || ${CLAIM(4)};
+select 'DOS|' || ${CLAIM(4)};
+rollback;
+`)
+    expect(marca(out, 'UNO')).toBe('1')
+    expect(marca(out, 'DOS')).toBe('0')
+  })
+
+  it('rollback -> versión nueva: mover el corte a now() deja no reclamables los eventos intermedios', () => {
+    const out = psql(`
+begin;
+${corte(`to_jsonb('2020-01-01T00:00:00Z'::text)`)}
+${EV(5, "now() - interval '3 minutes'")}
+${EV(6, "now() - interval '1 minute'")}
+-- la función vieja volvió a estar viva y envió c5 y c6 sin reclamarlos; se vuelve a la nueva
+-- y el operador mueve el corte a ahora:
+${corte(`to_jsonb(to_char(now() at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'))`)}
+select 'I5|' || ${CLAIM(5)};
+select 'I6|' || ${CLAIM(6)};
+rollback;
+`)
+    expect(marca(out, 'I5')).toBe('0')
+    expect(marca(out, 'I6')).toBe('0')
+  })
+
+  it('la fila real de app_settings queda como estaba (los tests no la tocan fuera de transacción)', () => {
+    const antes = psql(
+      `select coalesce((select value::text from public.app_settings where key='push_claim_since'),'SIN-FILA');`,
+    )
+    psql(`begin;
+${corte(`to_jsonb('2030-01-01T00:00:00Z'::text)`)}
+rollback;`)
+    const despues = psql(
+      `select coalesce((select value::text from public.app_settings where key='push_claim_since'),'SIN-FILA');`,
+    )
+    expect(despues).toBe(antes)
   })
 })

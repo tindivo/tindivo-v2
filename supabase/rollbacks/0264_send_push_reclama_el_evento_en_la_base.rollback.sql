@@ -3,6 +3,9 @@
 -- Quita `claim_push_event` y la columna `push_claimed_at`, y deja `dispatch_event` tal cual la 0238
 -- (cuerpo sin `event_id`). SIN ESTO, si queda desplegada la función nueva de send-push, rechaza
 -- todo evento normal con 400. Redesplegar antes la función anterior.
+-- La fila `app_settings.push_claim_since` (si el operador la fijó) NO se borra: es un dato y, sin
+-- `claim_push_event`, no hace nada. Si se vuelve a aplicar la 0264, el corte sigue vigente; hay que
+-- actualizarlo a now() tras redesplegar la función nueva (Docs/operacion/deploy.md §2.2).
 
 DROP FUNCTION IF EXISTS public.claim_push_event(uuid);
 ALTER TABLE public.domain_events DROP COLUMN IF EXISTS push_claimed_at;

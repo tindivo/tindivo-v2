@@ -1,0 +1,401 @@
+/**
+ * send-push por HTTP, contra la Edge Function REAL servida en local (CAX-002).
+ *
+ * Los demás tests de send-push prueban el SQL (`claim_push_event`, `push-claim.integration.test.ts`) y el
+ * clasificador (`send-push-request-kind.test.ts`) por separado. Este ejecuta el candidato entero: gateway
+ * de Supabase -> runtime de Edge Functions -> `supabase/functions/send-push/index.ts` -> base.
+ *
+ * CÓMO CORRERLO EN LOCAL (no corre en CI: el job `api-integration` arranca el stack con
+ * `-x ...edge-runtime...`, así que aquí NO hay funciones que servir; el test se salta con un aviso
+ * visible y NO pasa en falso):
+ *
+ *   1. Un archivo de entorno FUERA del repo, con valores sintéticos. Las llaves VAPID deben ser válidas
+ *      (si no, la función responde 500 `config`); el secreto de OpsAlert, el que sea:
+ *        VAPID_PUBLIC_KEY=<65 bytes P-256 en base64url>
+ *        VAPID_PRIVATE_KEY=<32 bytes en base64url>
+ *        VAPID_SUBJECT=mailto:test@example.com
+ *        OPS_ALERT_SECRET=secreto-sintetico-local
+ *   2. Desde la raíz del worktree que quieres probar (el runtime monta SU supabase/functions):
+ *        supabase functions serve send-push --env-file <ruta-fuera-del-repo>/send-push.env
+ *      y comprueba el montaje con
+ *        docker inspect supabase_edge_runtime_zpnipajgwfthxhdtzhly --format '{{json .Mounts}}'
+ *   3. Con el candado (la base es compartida):
+ *        TINDIVO_EDGE_HTTP=1 TINDIVO_EDGE_OPS_ALERT_SECRET=secreto-sintetico-local \
+ *          pnpm db:lock run pnpm --filter @tindivo/api exec vitest run lib/__tests__/send-push-http.integration.test.ts
+ *
+ * LA CARRERA DEL TRIGGER. Si el test insertara un evento de un tipo que `dispatch_event` despacha, el propio
+ * trigger (pg_net) llamaría a la función y lo reclamaría antes que el test. Se evita quitando la fila
+ * `push_dispatch` de `app_settings` mientras corre el archivo (sin URL el trigger no hace nada) y devolviéndola
+ * intacta (valor y `updated_at`) al terminar, también si algo falla. Lo mismo con `push_claim_since` y con la
+ * fila de `ops_alert_throttle`.
+ */
+import { createClient } from '@supabase/supabase-js'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { cleanup, localClient, type SeededOrder, seedPrepaidOrder } from './helpers/local-db'
+
+const ENABLED = process.env.TINDIVO_EDGE_HTTP === '1'
+const OPS_SECRET = process.env.TINDIVO_EDGE_OPS_ALERT_SECRET ?? ''
+
+if (!ENABLED) {
+  console.warn(
+    '[send-push-http] SALTADO: falta TINDIVO_EDGE_HTTP=1. Este test necesita la Edge Function servida ' +
+      '(`supabase functions serve send-push --env-file …`); la CI no la tiene. Ver la cabecera del archivo.',
+  )
+}
+
+const BASE = 'http://127.0.0.1:54321'
+const FN_URL = `${BASE}/functions/v1/send-push`
+// Clave anónima del stack local de Supabase CLI: pública, está en su documentación.
+const ANON_KEY =
+  process.env.SUPABASE_ANON_KEY ??
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0'
+
+type Reply = { status: number; json: Record<string, unknown> }
+
+async function post(
+  body: unknown,
+  extraHeaders: Record<string, string> = {},
+  bearer: string = ANON_KEY,
+): Promise<Reply> {
+  const res = await fetch(FN_URL, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      authorization: `Bearer ${bearer}`,
+      ...extraHeaders,
+    },
+    body: JSON.stringify(body),
+  })
+  const text = await res.text()
+  let json: Record<string, unknown> = {}
+  try {
+    json = JSON.parse(text)
+  } catch {
+    json = { raw: text }
+  }
+  return { status: res.status, json }
+}
+
+const iso = (msFromNow: number): string => new Date(Date.now() + msFromNow).toISOString()
+const MIN = 60_000
+
+async function insertEvent(opts: {
+  eventType: string
+  aggregateId: string
+  occurredAt?: string
+  payload?: Record<string, unknown>
+}): Promise<string> {
+  const id = crypto.randomUUID()
+  const { error } = await localClient.from('domain_events').insert({
+    id,
+    aggregate_type: 'order',
+    aggregate_id: opts.aggregateId,
+    event_type: opts.eventType,
+    payload: (opts.payload ?? {}) as never,
+    ...(opts.occurredAt ? { occurred_at: opts.occurredAt } : {}),
+  })
+  if (error) throw new Error(`insert domain_events: ${error.message}`)
+  return id
+}
+
+async function claimedAt(eventId: string): Promise<string | null> {
+  const { data, error } = await localClient
+    .from('domain_events')
+    .select('push_claimed_at')
+    .eq('id', eventId)
+    .single()
+  if (error) throw new Error(error.message)
+  return (data as { push_claimed_at: string | null }).push_claimed_at
+}
+
+async function setCut(value: string): Promise<void> {
+  const { error } = await localClient
+    .from('app_settings')
+    .upsert({ key: 'push_claim_since', value }, { onConflict: 'key' })
+  if (error) throw new Error(`push_claim_since: ${error.message}`)
+}
+
+async function deliveryLogCount(subscriptionId: string): Promise<number> {
+  const { count, error } = await localClient
+    .from('push_delivery_log')
+    .select('id', { count: 'exact', head: true })
+    .eq('subscription_id', subscriptionId)
+  if (error) throw new Error(error.message)
+  return count ?? 0
+}
+
+describe.skipIf(!ENABLED)('send-push · HTTP real contra la Edge Function servida (CAX-002)', () => {
+  let seed: SeededOrder
+  let subscriptionId = ''
+  const eventIds: string[] = []
+  const savedRows = new Map<string, Record<string, unknown> | null>()
+  let throttleRow: Record<string, unknown> | null = null
+
+  async function track(id: string): Promise<string> {
+    eventIds.push(id)
+    return id
+  }
+
+  beforeAll(async () => {
+    if (!OPS_SECRET) {
+      throw new Error(
+        'Falta TINDIVO_EDGE_OPS_ALERT_SECRET (el mismo OPS_ALERT_SECRET del --env-file).',
+      )
+    }
+    // Guardar y quitar/restaurar las filas que cambian el comportamiento (ver «LA CARRERA DEL TRIGGER»).
+    for (const key of ['push_dispatch', 'push_claim_since']) {
+      const { data, error } = await localClient
+        .from('app_settings')
+        .select('*')
+        .eq('key', key)
+        .maybeSingle()
+      if (error) throw new Error(error.message)
+      savedRows.set(key, (data as Record<string, unknown> | null) ?? null)
+    }
+    const del = await localClient.from('app_settings').delete().eq('key', 'push_dispatch')
+    if (del.error) throw new Error(del.error.message)
+    const { data: thr } = await localClient
+      .from('ops_alert_throttle')
+      .select('*')
+      .eq('kind', 'otp_phone_limit_misconfigured')
+      .maybeSingle()
+    throttleRow = (thr as Record<string, unknown> | null) ?? null
+
+    // Un negocio con un pedido en pending_acceptance y UNA suscripción (endpoint que no existe: el envío
+    // falla, pero cada intento queda en push_delivery_log, que es lo observable).
+    seed = await seedPrepaidOrder({ status: 'pending_acceptance' })
+    const { data: sub, error: subErr } = await localClient
+      .from('push_subscriptions')
+      .insert({
+        user_id: seed.userId,
+        endpoint: 'http://127.0.0.1:9/send-push-http-test',
+        p256dh:
+          'BNcRdreALRFXTkOOUHK1EtK2wtaz5Ry4YfYCA_0QTpQtUbVlUls0VJXg7A8u-Ts1XbjhazAkj7I99e8QcYP7DkM',
+        auth: 'tBHItJI5svbpez7KI4CCXg',
+      })
+      .select('id')
+      .single()
+    if (subErr) throw new Error(`push_subscriptions: ${subErr.message}`)
+    subscriptionId = sub.id
+  })
+
+  afterAll(async () => {
+    try {
+      if (eventIds.length) await localClient.from('domain_events').delete().in('id', eventIds)
+      if (seed) await cleanup(seed)
+    } finally {
+      for (const key of ['push_dispatch', 'push_claim_since']) {
+        const row = savedRows.get(key) ?? null
+        if (row) await localClient.from('app_settings').upsert(row as never, { onConflict: 'key' })
+        else await localClient.from('app_settings').delete().eq('key', key)
+      }
+      await localClient
+        .from('ops_alert_throttle')
+        .delete()
+        .eq('kind', 'otp_phone_limit_misconfigured')
+      if (throttleRow) await localClient.from('ops_alert_throttle').insert(throttleRow as never)
+    }
+  })
+
+  // ── Validación del cuerpo ──────────────────────────────────────────────────
+  it('400 sin event_id y con event_id que no es UUID', async () => {
+    expect((await post({})).status).toBe(400)
+    expect((await post({ event_type: 'OrderCreated', aggregate_id: seed.orderId })).status).toBe(
+      400,
+    )
+    const noUuid = await post({ event_id: 'no-soy-un-uuid' })
+    expect(noUuid.status).toBe(400)
+    expect(noUuid.json.ok).toBe(false)
+    expect((await post({ event_id: 12345 })).status).toBe(400)
+  })
+
+  // ── Rechazos del reclamo ───────────────────────────────────────────────────
+  it('409 con un UUID que no existe', async () => {
+    await setCut('2020-01-01T00:00:00Z')
+    const r = await post({ event_id: crypto.randomUUID() })
+    expect(r.status).toBe(409)
+    expect(r.json.ok).toBe(false)
+  })
+
+  it('409 con un evento de más de 15 minutos, y queda sin reclamar', async () => {
+    await setCut('2020-01-01T00:00:00Z')
+    const id = await track(
+      await insertEvent({
+        eventType: 'OrderCreated',
+        aggregateId: seed.orderId,
+        occurredAt: iso(-16 * MIN),
+      }),
+    )
+    expect((await post({ event_id: id })).status).toBe(409)
+    expect(await claimedAt(id)).toBeNull()
+  })
+
+  it('409 con un evento anterior al corte push_claim_since (ya lo envió la función vieja)', async () => {
+    const ocurrido = iso(-2 * MIN)
+    const id = await track(
+      await insertEvent({
+        eventType: 'OrderCreated',
+        aggregateId: seed.orderId,
+        occurredAt: ocurrido,
+      }),
+    )
+    await setCut(iso(-1 * MIN)) // el corte se fijó DESPUÉS del evento
+    const r = await post({ event_id: id })
+    expect(r.status).toBe(409)
+    expect(await claimedAt(id)).toBeNull()
+  })
+
+  it('409 con todo evento si no existe la fila de corte (fallo cerrado)', async () => {
+    const { error } = await localClient.from('app_settings').delete().eq('key', 'push_claim_since')
+    expect(error).toBeNull()
+    const id = await track(
+      await insertEvent({ eventType: 'OrderCreated', aggregateId: seed.orderId }),
+    )
+    expect((await post({ event_id: id })).status).toBe(409)
+    expect(await claimedAt(id)).toBeNull()
+  })
+
+  // ── Éxito, un solo uso y concurrencia ──────────────────────────────────────
+  it('éxito con un evento fresco posterior al corte: notifica y escribe push_claimed_at; el 2º POST es 409', async () => {
+    await setCut(iso(-5 * MIN))
+    const id = await track(
+      await insertEvent({ eventType: 'OrderCreated', aggregateId: seed.orderId }),
+    )
+    const antes = await deliveryLogCount(subscriptionId)
+
+    const r1 = await post({ event_id: id })
+    expect(r1.status).toBe(200)
+    expect(r1.json.ok).toBe(true)
+    expect(r1.json.recipients).toBe(1) // el dueño del negocio, resuelto desde la base
+    expect(await claimedAt(id)).not.toBeNull()
+    expect(await deliveryLogCount(subscriptionId)).toBe(antes + 1) // intentó enviar a su suscripción
+
+    const r2 = await post({ event_id: id })
+    expect(r2.status).toBe(409)
+    expect(await deliveryLogCount(subscriptionId)).toBe(antes + 1) // y no hubo segundo envío
+  })
+
+  it('dos POST concurrentes del mismo id fresco: exactamente un éxito', async () => {
+    await setCut(iso(-5 * MIN))
+    const id = await track(
+      await insertEvent({ eventType: 'OrderCreated', aggregateId: seed.orderId }),
+    )
+    const antes = await deliveryLogCount(subscriptionId)
+    const rs = await Promise.all([post({ event_id: id }), post({ event_id: id })])
+    const estados = rs.map((r) => r.status).sort()
+    expect(estados).toEqual([200, 409])
+    expect(await deliveryLogCount(subscriptionId)).toBe(antes + 1)
+  })
+
+  // ── El cuerpo no se cree ───────────────────────────────────────────────────
+  it('un cuerpo con event_type/aggregate_id/payload falsos usa lo de la base', async () => {
+    await setCut(iso(-5 * MIN))
+    // En la base el evento es de un tipo que NO notifica a nadie; el cuerpo finge un OrderCreated del pedido
+    // del negocio con suscripción. Si la función creyera el cuerpo, `recipients` sería 1 (ver el test de
+    // éxito, donde el mismo tipo en la BASE sí da 1) y habría una fila nueva en push_delivery_log.
+    const id = await track(
+      await insertEvent({ eventType: 'BusinessBlocked', aggregateId: seed.orderId }),
+    )
+    const antes = await deliveryLogCount(subscriptionId)
+    const r = await post({
+      event_id: id,
+      event_type: 'OrderCreated',
+      aggregate_id: seed.orderId,
+      payload: { action: 'accept' },
+    })
+    expect(r.status).toBe(200)
+    expect(r.json.recipients).toBe(0)
+    expect(await deliveryLogCount(subscriptionId)).toBe(antes)
+    expect(await claimedAt(id)).not.toBeNull()
+  })
+
+  it('sin event_id real, un cuerpo falso solo NO notifica (el ataque original)', async () => {
+    const antes = await deliveryLogCount(subscriptionId)
+    const r = await post({
+      event_type: 'OrderCreated',
+      aggregate_id: seed.orderId,
+      payload: {},
+      event_id: crypto.randomUUID(),
+    })
+    expect(r.status).toBe(409)
+    expect(await deliveryLogCount(subscriptionId)).toBe(antes)
+  })
+
+  // ── OpsAlert ───────────────────────────────────────────────────────────────
+  const ops = {
+    event_type: 'OpsAlert',
+    aggregate_id: 'otp_phone_limit_misconfigured',
+    payload: { kind: 'otp_phone_limit_misconfigured' },
+  }
+
+  it('OpsAlert sin secreto o con uno equivocado: 403', async () => {
+    expect((await post(ops)).status).toBe(403)
+    expect((await post(ops, { 'x-ops-alert-secret': 'otro-secreto' })).status).toBe(403)
+    expect((await post(ops, { 'x-ops-alert-secret': '' })).status).toBe(403)
+  })
+
+  it('OpsAlert con el secreto correcto: aceptado (y la segunda, frenada por la ventana)', async () => {
+    await localClient
+      .from('ops_alert_throttle')
+      .delete()
+      .eq('kind', 'otp_phone_limit_misconfigured')
+    const r = await post(ops, { 'x-ops-alert-secret': OPS_SECRET })
+    expect(r.status).toBe(200)
+    expect(r.json.ok).toBe(true)
+    expect(r.json.throttled).toBeUndefined()
+    const again = await post(ops, { 'x-ops-alert-secret': OPS_SECRET })
+    expect(again.status).toBe(200)
+    expect(again.json.throttled).toBe(true)
+  })
+
+  // ── La RPC no se llama desde fuera ─────────────────────────────────────────
+  it('/rest/v1/rpc/claim_push_event con la clave anónima y con un JWT de usuario: rechazada y sin reclamar', async () => {
+    await setCut(iso(-5 * MIN))
+    const id = await track(
+      await insertEvent({ eventType: 'BusinessBlocked', aggregateId: seed.orderId }),
+    )
+
+    const anon = await fetch(`${BASE}/rest/v1/rpc/claim_push_event`, {
+      method: 'POST',
+      headers: {
+        apikey: ANON_KEY,
+        authorization: `Bearer ${ANON_KEY}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ p_event_id: id }),
+    })
+    expect(anon.ok).toBe(false)
+    expect([401, 403, 404]).toContain(anon.status)
+
+    // JWT de un usuario autenticado real (el dueño del negocio sembrado).
+    const email = `edge-http-${crypto.randomUUID().slice(0, 8)}@integration.local`
+    const password = 'test-password-12345'
+    const created = await localClient.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+    })
+    if (created.error) throw new Error(created.error.message)
+    try {
+      const anonClient = createClient(BASE, ANON_KEY, { auth: { persistSession: false } })
+      const sess = await anonClient.auth.signInWithPassword({ email, password })
+      const jwt = sess.data.session?.access_token
+      expect(jwt).toBeTruthy()
+      const authd = await fetch(`${BASE}/rest/v1/rpc/claim_push_event`, {
+        method: 'POST',
+        headers: {
+          apikey: ANON_KEY,
+          authorization: `Bearer ${jwt}`,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ p_event_id: id }),
+      })
+      expect(authd.ok).toBe(false)
+      expect([401, 403, 404]).toContain(authd.status)
+    } finally {
+      await localClient.from('users').delete().eq('id', created.data.user.id)
+      await localClient.auth.admin.deleteUser(created.data.user.id)
+    }
+    expect(await claimedAt(id)).toBeNull()
+  })
+})

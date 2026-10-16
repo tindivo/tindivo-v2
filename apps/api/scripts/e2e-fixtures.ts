@@ -209,4 +209,11 @@ export const LOCAL_ONLY_SETTINGS = [
       anonKey: LOCAL_ANON_KEY,
     },
   },
+  /**
+   * Corte de `claim_push_event` (0264): sin esta fila la función no reclama ningún evento y
+   * el push local no sale. En producción lo fija el operador con `now()` tras el deploy; en
+   * local es una fecha pasada fija, para que reclame los eventos que siembran los tests y los
+   * specs (el corte existe para el cambio de versión de la función, no para el entorno local).
+   */
+  { key: 'push_claim_since', value: '2020-01-01T00:00:00Z' },
 ]
