@@ -97,6 +97,14 @@ describe('marca (exit 1)', () => {
       'hermana con | entre comillas',
       ps("Get-Content 'D:\\Copia Auditoria\\audit-root|x\\probe.txt'"),
     ],
+    [
+      "hermana con ' entre comillas dobles",
+      `cmd /c type "D:\\Copia Auditoria\\audit-root'x\\probe.txt"`,
+    ],
+    [
+      'raíz sola entre comillas (falso positivo aceptado)',
+      ps("Get-ChildItem 'D:\\Copia Auditoria\\audit-root'"),
+    ],
     ['unidad relativa D:probe.txt', ps('Get-Content D:probe.txt')],
     ['unidad relativa Z:probe.txt', ps('Get-Content Z:probe.txt')],
   ])
@@ -153,6 +161,7 @@ describe('no marca (exit 0)', () => {
       ps("Get-Content 'D:/Copia Auditoria/audit-root/Docs/operacion/trampas.md'"),
     ],
     ['Get-FileHash', ps('Get-FileHash -Algorithm SHA256 MANIFEST.sha256')],
+    ['raíz con barra final', 'cmd /c dir "D:\\Copia Auditoria\\audit-root\\"'],
   ]
   for (const [name, command] of good)
     test(name, () => {
