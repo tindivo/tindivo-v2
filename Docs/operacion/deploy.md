@@ -189,7 +189,8 @@ eventos serían posteriores a él y reclamables otra vez (segundo envío, CAX-00
    (fallo cerrado).
 2. Redespliega la función anterior: `supabase functions deploy send-push` desde el commit previo a la 0264 (el
    cuerpo conserva `event_type`, `aggregate_id` y `payload`, así que sigue funcionando).
-   Comprueba (solo lectura): un pedido de prueba real notifica.
+   Comprueba (solo lectura): `supabase functions list --project-ref zpnipajgwfthxhdtzhly` muestra `send-push` con
+   la hora de este deploy, y el siguiente aviso real llega con normalidad. No crees pedidos de prueba en producción.
 3. Solo si también vuelve la base: `supabase/rollbacks/0264_send_push_reclama_el_evento_en_la_base.rollback.sql`
    (borra además la fila del corte, por si se hubiera vuelto a fijar). Comprueba (solo lectura):
    `select count(*) from pg_proc where proname = 'claim_push_event';` debe dar **0**.
